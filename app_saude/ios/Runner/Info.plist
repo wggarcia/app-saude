@@ -85,29 +85,24 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 
-	<!-- ✅ PERMISSÕES (AGORA NO LUGAR CERTO) -->
+	<!-- 🔥 PERMISSÕES (CORRETAS E SEM DUPLICAÇÃO) -->
 
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Este app usa o microfone para analisar sintomas por voz</string>
+	<string>Este app usa o microfone para análise de sintomas.</string>
 
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Este app usa sua localização para mapear sintomas</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-    <string>Precisamos da sua localização para registrar seus dados de saúde.</string>
+	<string>Este app usa sua localização para mapear sintomas.</string>
 
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>Usamos sua localização para monitoramento contínuo.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Este app usa sua localização para monitoramento contínuo.</string>
 
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Precisamos do microfone para análise de voz.</string> 
-	<key>NSMicrophoneUsageDescription</key>
-    <string>Precisamos do microfone para gravar áudio.</string>
+	<!-- 🔥 PERMITE HTTP/HTTPS (caso necessário) -->
 
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Usamos sua localização no app.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 
-    <key>NSAppTransportSecurity</key>
-    <key>NSAllowsArbitraryLoads</key>
-    <true/> 
 </dict>
 </plist>

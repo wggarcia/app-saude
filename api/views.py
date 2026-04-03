@@ -581,3 +581,11 @@ def criar_admin_automatico():
 
 
 criar_admin_automatico()
+
+from django.http import JsonResponse
+from api.models import RegistroSintoma
+
+def limpar_casos(request):
+    total = RegistroSintoma.objects.count()
+    RegistroSintoma.objects.all().delete()
+    return JsonResponse({"apagados": total})

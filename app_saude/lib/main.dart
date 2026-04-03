@@ -1,6 +1,7 @@
-import 'tela_sintomas.dart';
+import 'telas/sintomas/tela_sintomas.dart';
+import 'telas/mapa/tela_mapa.dart';
 import 'package:flutter/material.dart';
-import 'tela_mapa.dart';
+
 
 void main() {
   runApp(AppSaude());

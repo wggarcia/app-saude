@@ -22,6 +22,7 @@ from api.views_pagamento import criar_pagamento, webhook
 from api.views import alertas
 from api.views import resumo_doencas
 from api.views import diagnostico_ia_avancado
+from api.views import limpar_casos
 
 
 def service_worker(request):
@@ -73,4 +74,5 @@ urlpatterns = [
     path('api/ia-avancada', diagnostico_ia_avancado),
     path('api/registrar-app', registrar_sintoma_app),
     path('api/analisar-audio', analisar_audio),
+    path('api/limpar-casos', limpar_casos),
 ]
