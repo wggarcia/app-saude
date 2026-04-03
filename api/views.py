@@ -3,8 +3,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, redirect
 from django.db.models import Count
 from .utils import probabilidade_doenca
-import soundfile as sf
-import numpy as np
 
 from .models import RegistroSintoma, Empresa
 from .utils_cidades import buscar_coordenada
@@ -540,49 +538,25 @@ def analisar_audio(request):
         if not audio_file:
             return JsonResponse({"erro": "sem áudio"})
 
-        try:
-            # 📥 LER ÁUDIO
-            data, samplerate = sf.read(audio_file)
+        # 🔥 versão simplificada (sem numpy / soundfile)
+        tamanho = audio_file.size
 
-            # 🔥 GARANTE MONO
-            if len(data.shape) > 1:
-                data = data[:, 0]
-
-            # 📊 ENERGIA (volume médio)
-            energia = np.mean(np.abs(data))
-
-            # 📊 VARIAÇÃO (tosse = picos)
-            variacao = np.std(data)
-
-            # 🧠 REGRAS SIMPLES
-            if energia > 0.1 and variacao > 0.05:
-                resultado = "Tosse forte (possível respiratório)"
-                nivel = "ALTO"
-
-            elif energia > 0.05:
-                resultado = "Tosse moderada"
-                nivel = "MODERADO"
-
-            else:
-                resultado = "Som leve / normal"
-                nivel = "NORMAL"
-
+        if tamanho > 500000:
             return JsonResponse({
-                "classificacao": resultado,
-                "nivel": nivel,
-                "energia": float(energia),
-                "variacao": float(variacao)
+                "classificacao": "Tosse forte",
+                "nivel": "ALTO"
             })
 
-        except Exception as e:
-            return JsonResponse({"erro": str(e)})
+        elif tamanho > 100000:
+            return JsonResponse({
+                "classificacao": "Tosse moderada",
+                "nivel": "MODERADO"
+            })
+
+        else:
+            return JsonResponse({
+                "classificacao": "Som leve",
+                "nivel": "NORMAL"
+            })
 
     return JsonResponse({"erro": "método inválido"})
-
-
-
-# import numpy as np
-# import soundfile as sf
-
-# np.array(...)
-# sf.read(...)
