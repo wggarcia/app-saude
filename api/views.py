@@ -560,3 +560,24 @@ def analisar_audio(request):
             })
 
     return JsonResponse({"erro": "método inválido"})
+
+from django.db.utils import OperationalError
+
+def criar_admin_automatico():
+    try:
+        from .models import Empresa
+
+        if not Empresa.objects.exists():
+            Empresa.objects.create(
+                nome="Admin",
+                email="admin@admin.com",
+                senha="123456",
+                ativo=True,
+                plano="premium"
+            )
+            print("✅ Admin criado automaticamente")
+    except OperationalError:
+        pass
+
+
+criar_admin_automatico()
