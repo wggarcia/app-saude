@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Criar Conta</title>
+</head>
+
+<body>
+
+<h2>Criar Conta</h2>
+
+<input id="nome" placeholder="Nome"><br><br>
+<input id="email" placeholder="Email"><br><br>
+<input id="senha" type="password" placeholder="Senha"><br><br>
+
+<button onclick="cadastrar()">Criar Conta</button>
+
+<script>
+async function cadastrar(){
+
+  const res = await fetch("/api/registrar_empresa", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      nome: document.getElementById("nome").value,
+      email: document.getElementById("email").value,
+      senha: document.getElementById("senha").value
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.status === "ok") {
+    alert("Conta criada com sucesso!");
+    window.location.href = "/";
+  } else {
+    alert("Erro ao cadastrar");
+  }
+}
+</script>
+
+</body>
+</html>

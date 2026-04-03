@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Painel Inteligente de Saúde</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    html, body { height:100%; margin:0; font-family:Arial; }
+    #map { position:absolute; width:100%; height:100%; }
+
+    .painel {
+      position:absolute;
+      top:20px;
+      left:20px;
+      z-index:1000;
+      width:340px;
+      background:white;
+      padding:15px;
+      border-radius:12px;
+      box-shadow:0 4px 25px rgba(0,0,0,0.3);
+    }
+
+    .titulo { font-size:16px; font-weight:bold; margin-bottom:10px; }
+
+    .topo {
+      position:absolute;
+      top:20px;
+      right:20px;
+      z-index:1000;
+      display:flex;
+      gap:10px;
+    }
+
+    .btn {
+      padding:8px 12px;
+      border-radius:8px;
+      border:none;
+      cursor:pointer;
+      color:white;
+    }
+
+    .logout { background:red; }
+    .premium { background:green; }
+
+    #ranking {
+      margin-top:10px;
+      font-size:13px;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+
+    /* 🔥 EFEITO SURTO */
+    .pulse {
+      animation: pulseAnim 1.5s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.3); opacity: 0.2; }
+      100% { transform: scale(1); opacity: 0.6; }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="topo">
+  <button class="btn premium" onclick="upgrade()">Premium</button>
+  <button class="btn logout" onclick="logout()">Sair</button>
+</div>
+
+<div class="painel">
+  <div class="titulo">Monitoramento de Saúde</div>
+
+  <!-- 🔥 FILTRO -->
+  <select id="filtroDoenca" onchange="atualizarTudo()" style="width:100%; padding:6px; border-radius:6px;">
+    <option value="todas">Todas</option>
+    <option value="Dengue">Dengue</option>
+    <option value="COVID">COVID</option>
+    <option value="Chikungunya">Chikungunya</option>
+  </select>
+  
+
+  <br><br>
+
+  <!-- 🎤 IA -->
+  <button onclick="gravarAudio()" style="width:100%; background:#333; color:white; padding:8px; border:none; border-radius:8px;">
+    🎤 Testar Tosse
+  </button>
+  <div style="background:#111; padding:10px; border-radius:10px; width:250px;">
+
+  <b style="color:#fff;">🌎 Filtrar por Estado</b><br><br>
+
+  <select id="filtroEstado" style="width:100%; padding:6px;">
+    <option value="">Todos</option>
+  </select>
+
+  <br><br>
+
+  <button onclick="aplicarFiltroEstado()" style="width:100%;">
+    Aplicar Filtro
+  </button>
+  <br><br>
+
+<!-- 🔥 NOVO: CONTROLE DO MAPA -->
+<label style="color:#fff;">🗺️ Tipo de Visualização</label><br><br>
+
+<select onchange="mudarModo(this.value)" style="width:100%; padding:6px;">
+  <option value="municipios">Municípios</option>
+  <option value="surtos">Surtos</option>
+  <option value="heatmap">Heatmap</option>
+</select>
+
+</div>
+  <div id="resultadoIA" style="margin-top:10px;"></div>
+
+  <hr>
+
+  <!-- 📊 DADOS -->
+  <div id="risco">Carregando...</div>
+  <canvas id="grafico"></canvas>
+  
+</div>
+
+<div id="map"></div>
+
+</body>
+</html>
+
+<script>
+
+// 🔥 MAPA ESTADOS
+const mapaEstados = {
+  "Acre": "AC","Alagoas": "AL","Amapá": "AP","Amazonas": "AM",
+  "Bahia": "BA","Ceará": "CE","Distrito Federal": "DF","Espírito Santo": "ES",
+  "Goiás": "GO","Maranhão": "MA","Mato Grosso": "MT","Mato Grosso do Sul": "MS",
+  "Minas Gerais": "MG","Pará": "PA","Paraíba": "PB","Paraná": "PR",
+  "Pernambuco": "PE","Piauí": "PI","Rio de Janeiro": "RJ","Rio Grande do Norte": "RN",
+  "Rio Grande do Sul": "RS","Rondônia": "RO","Roraima": "RR",
+  "Santa Catarina": "SC","São Paulo": "SP","Sergipe": "SE","Tocantins": "TO"
+};
+
+// 🔐 AUTH
+const token = localStorage.getItem("token");
+if (!token) window.location.href = "/";
+
+// 🔥 VAR
+let map;
+let heat;
+let usuarioMarker;
+let camadaEstados;
+let surtosAtivos = [];
+let municipiosCirculos = [];
+let grafico;
+let niveisAnteriores = {};
+// 🚀 MAPA
+function iniciarMapa() {
+  map = L.map('map', {
+    zoomControl: false,
+    maxZoom: 18,
+    minZoom: 2
+  }).setView([-14.2, -51.9], 4);
+
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  L.tileLayer(
+    'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=pk.eyJ1Ijoid2ZnZ2FyY2lhIiwiYSI6ImNtbjgxNHV1NjA1eTUyd29jYjRhaXg1bGYifQ.N4JTgjeO7QIb_7m2LijOAQ',
+    { tileSize: 512, zoomOffset: -1 }
+  ).addTo(map);
+}
+
+// 📍 LOCALIZAÇÃO
+navigator.geolocation.getCurrentPosition(pos => {
+  let lat = pos.coords.latitude;
+  let lng = pos.coords.longitude;
+
+  usuarioMarker = L.marker([lat, lng]).addTo(map)
+    .bindPopup("📍 Você está aqui")
+    .openPopup();
+
+  map.setView([lat, lng], 6);
+});
+
+// 🎨 COR
+function corRisco(total){
+  if (total > 100) return "red";
+  if (total > 50) return "orange";
+  return "green";
+}
+
+// 🔥 NÍVEL DE ALERTA
+function nivelAlerta(total){
+  return Math.floor(total / 50);
+}
+function piscarCirculo(circle){
+
+  if (circle._piscando) return; // evita duplicar
+
+  circle._piscando = true;
+
+  let piscando = true;
+
+  circle._intervalo = setInterval(() => {
+
+    circle.setStyle({
+      fillColor: piscando ? "orange" : circle.options.color,
+      fillOpacity: piscando ? 0.9 : 0.4
+    });
+
+    piscando = !piscando;
+
+  }, 400);
+}
+
+function getFiltro(){
+  return document.getElementById("filtroDoenca").value;
+}
+
+function tocarAlerta(){
+  let audio = new Audio("https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg");
+  audio.play();
+}
+
+// 📊 GRÁFICO (corrigido)
+function gerarGraficoEstados(estados){
+
+  const labels = Object.keys(estados);
+  const valores = Object.values(estados);
+
+  if (grafico) {
+    grafico.destroy();
+  }
+
+  grafico = new Chart(document.getElementById("grafico"), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Casos por Estado',
+        data: valores
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
+
+// 🔥 MUNICÍPIOS (REAL)
+async function carregarMunicipiosReais(){
+
+  municipiosCirculos.forEach(c => map.removeLayer(c));
+  municipiosCirculos = [];
+
+  const res = await fetch("/api/resumo-municipios", {
+    headers: { "Authorization": "Bearer " + token }
+  });
+
+  const dados = await res.json();
+
+  dados.forEach(c => {
+
+    if (!c.latitude || !c.longitude) return;
+
+    let lat = c.latitude;
+    let lon = c.longitude;
+
+    if (!lat || !lon) return;
+
+    let chave = (c.cidade + "-" + c.estado).trim();
+
+let totalAtual = c.total;
+let totalAnterior = niveisAnteriores[chave] || 0;
+
+let acimaDe100 = totalAtual >= 100;
+
+let cruzouMultiplo =
+  Math.floor(totalAtual / 50) > Math.floor(totalAnterior / 50);
+
+// 🔥 UM ÚNICO CÍRCULO
+let circle = L.circle([lat, lon], {
+  radius: Math.min(totalAtual * 150, 3000),
+  color: corRisco(totalAtual),
+  fillOpacity: 0.4
+}).addTo(map);
+
+// 🔥 ALERTA
+if (acimaDe100 && cruzouMultiplo) {
+
+  console.log("🔥 SURTO:", c.cidade, totalAnterior, "→", totalAtual);
+
+  piscarCirculo(circle);
+}
+
+// 🔥 SALVA HISTÓRICO (ESSENCIAL)
+niveisAnteriores[chave] = totalAtual;
+
+// POPUP (mantém o seu)
+circle.bindPopup(
+  "🏙️ " + c.cidade +
+  "<br>Estado: " + c.estado +
+  "<br>Tipo: " + (c.grupo || "Não definido") +
+  "<br>Casos: " + c.total
+);
+
+// TOOLTIP (mantém o seu)
+circle.bindTooltip(
+  c.cidade + " (" + c.total + ")",
+  {
+    permanent: false,
+    direction: "top"
+  }
+);
+
+municipiosCirculos.push(circle);
+  });
+
+  gerarRanking(dados);
+}
+
+// 🔥 ESTADOS (CORRIGIDO)
+async function carregarEstados(){
+
+  const res = await fetch("/api/resumo-municipios", {
+    headers: { "Authorization": "Bearer " + token }
+  });
+
+  const dados = await res.json();
+
+  let estados = {};
+
+  dados.forEach(d => {
+
+    // 🔥 CORREÇÃO AQUI (ESSENCIAL)
+    let sigla = mapaEstados[d.estado] || d.estado;
+
+    if (!estados[sigla]) {
+      estados[sigla] = 0;
+    }
+
+    estados[sigla] += d.total;
+  });
+
+  const geo = await fetch("https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson")
+    .then(r => r.json());
+
+  if (camadaEstados) map.removeLayer(camadaEstados);
+
+  camadaEstados = L.geoJSON(geo, {
+
+    style: function(feature){
+
+      let nomeEstado = feature.properties.name;
+      let sigla = mapaEstados[nomeEstado];
+
+      let total = estados[sigla] || estados[nomeEstado] || 0;
+
+      return {
+        fillColor: corRisco(total),
+        weight: 1,
+        color: "#555",
+        fillOpacity: 0.3
+      };
+    },
+
+    onEachFeature: function(feature, layer){
+
+      let nomeEstado = feature.properties.name;
+      let sigla = mapaEstados[nomeEstado];
+
+      let total = estados[sigla] || estados[nomeEstado] || 0;
+
+      layer.bindPopup(`📍 ${nomeEstado}<br>Casos: ${total}`);
+    }
+
+  }).addTo(map);
+
+  let totalCasos = Object.values(estados).reduce((a,b)=>a+b,0);
+
+  let status = "CONTROLADO";
+  if (totalCasos > 200) status = "ALERTA";
+  if (totalCasos > 400) status = "CRÍTICO";
+
+  let topEstados = Object.entries(estados)
+  .sort((a,b) => b[1] - a[1]); // ❌ SEM slice
+let select = document.getElementById("filtroEstado");
+
+select.innerHTML = '<option value="">Todos</option>';
+
+topEstados.forEach(e => {
+  select.innerHTML += `<option value="${e[0]}">${e[0]} (${e[1]})</option>`;
+});
+
+
+let lista = topEstados.map(e => 
+  `<div onclick="filtrarEstado('${e[0]}')" 
+        style="
+          cursor:pointer;
+          padding:6px;
+          border-bottom:1px solid #333;
+        ">
+        ${e[0]}: ${e[1]}
+   </div>`
+).join("");
+
+  document.getElementById("risco").innerHTML =
+  "<b>📊 Total de Casos:</b> " + totalCasos +
+  "<br><b>🚨 Status:</b> " + status;
+
+  gerarGraficoEstados(estados);
+}
+
+function aplicarFiltroEstado(){
+
+  let sigla = document.getElementById("filtroEstado").value;
+
+  municipiosCirculos.forEach(c => map.removeLayer(c));
+  municipiosCirculos = [];
+
+  fetch("/api/resumo-municipios", {
+    headers: { "Authorization": "Bearer " + token }
+  })
+  .then(res => res.json())
+  .then(dados => {
+
+    dados.forEach(c => {
+
+      let estado = mapaEstados[c.estado] || c.estado;
+
+      if (sigla && estado !== sigla) return;
+
+      if (!c.latitude || !c.longitude) return;
+
+      let circle = L.circle([c.latitude, c.longitude], {
+        radius: Math.min(c.total * 150, 3000),
+        color: corRisco(c.total),
+        fillOpacity: 0.5
+      }).addTo(map);
+
+      circle.bindPopup(
+        `🏙️ ${c.cidade}<br>${c.total} casos`
+      );
+
+      municipiosCirculos.push(circle);
+    });
+
+  });
+}
+
+function filtrarEstado(sigla){
+
+  municipiosCirculos.forEach(c => map.removeLayer(c));
+  municipiosCirculos = [];
+
+  fetch("/api/resumo-municipios", {
+    headers: { "Authorization": "Bearer " + token }
+  })
+  .then(res => res.json())
+  .then(dados => {
+
+    dados.forEach(c => {
+
+      let estado = mapaEstados[c.estado] || c.estado;
+
+      if (estado !== sigla) return;
+
+      if (!c.latitude || !c.longitude) return;
+
+      let circle = L.circle([c.latitude, c.longitude], {
+        radius: Math.min(c.total * 150, 3000),
+        color: corRisco(c.total),
+        fillOpacity: 0.5
+      }).addTo(map);
+
+      circle.bindPopup(
+        `🏙️ ${c.cidade}<br>${c.total} casos`
+      );
+
+      municipiosCirculos.push(circle);
+    });
+
+  });
+}
+
+function limparFiltro(){
+  carregarMunicipiosReais();
+}
+
+
+function gerarRanking(municipios){
+
+  let top = municipios
+    .sort((a,b) => b.total - a.total)
+    .slice(0,5);
+
+  let html = "<b>🏆 Top Cidades:</b><br>";
+
+  top.forEach(c => {
+    html += c.cidade + " (" + c.estado + ") - " + c.total + "<br>";
+  });
+
+  document.getElementById("ranking").innerHTML = html;
+}
+
+// 🔥 HEATMAP (REAL)
+async function mostrarPrevisao(){
+
+  const res = await fetch("/api/previsao-surtos");
+  const dados = await res.json();
+
+  dados.forEach(d => {
+
+    if (d.risco === "CRITICO"){
+
+      let lat = d.latitude;
+      let lon = d.longitude;
+
+if (!lat || !lon) return;
+
+      L.circle([lat, lon], {
+        radius: 40000,
+        color: "purple",
+        fillOpacity: 0.2
+      }).addTo(map)
+      .bindPopup("🔮 PREVISÃO CRÍTICA<br>" + d.cidade);
+    }
+
+  });
+}
+setInterval(mostrarPrevisao, 15000);
+
+async function carregarHeatmap(){
+
+  const res = await fetch("/api/resumo-municipios", {
+    headers: { "Authorization": "Bearer " + token }
+  });
+
+  const dados = await res.json();
+
+  let pontos = [];
+
+  dados.forEach(d => {
+    if (d.latitude && d.longitude) {
+      pontos.push([d.latitude, d.longitude, d.total / 10]);
+    }
+  });
+
+  if (heat) map.removeLayer(heat);
+
+  heat = L.heatLayer(pontos, {
+    radius: 30,
+    blur: 20
+  }).addTo(map);
+}
+
+function nivelAlerta(total){
+  return Math.floor(total / 50);
+}
+
+// 🚨 SURTOS (REAL)
+let ultimoAlerta = "";
+
+async function verificarAlertas(){
+
+  const res = await fetch("/api/surtos");
+  const dados = await res.json();
+
+  let critico = dados.find(d => d.nivel === "CRITICO");
+
+  if (critico && critico.cidade !== ultimoAlerta){
+
+    ultimoAlerta = critico.cidade;
+
+    alert("🚨 SURTO CRÍTICO em " + critico.cidade + " - " + critico.estado);
+  }
+}
+
+
+async function carregarSurtos(){
+
+  // 🔄 Limpa surtos anteriores
+  surtosAtivos.forEach(c => map.removeLayer(c));
+  surtosAtivos = [];
+
+  // 🌐 Requisição API
+  const res = await fetch("/api/surtos", {
+    headers: { "Authorization": "Bearer " + token }
+  });
+
+  const dados = await res.json();
+
+  // 🔁 Percorre dados
+  dados.forEach(d => {
+
+    // 🚫 ignora casos sem relevância
+    if (d.nivel === "NORMAL") return;
+    if (!d.latitude || !d.longitude) return;
+
+    // 🎨 COR POR NÍVEL
+    let cor = "#00FF00"; // padrão (verde)
+
+    if (d.nivel === "ATENCAO") cor = "#FFFF00";
+    if (d.nivel === "MODERADO") cor = "#FFA500";
+    if (d.nivel === "ALTO") cor = "#FF0000";
+
+    // 📏 TAMANHO DINÂMICO (substitui "tamanho")
+    let raio = Math.min((d.total || 1) * 200, 50000);
+
+    // 🗺️ DESENHA CÍRCULO
+    let circle = L.circle([d.latitude, d.longitude], {
+      radius: raio,
+      color: cor,
+      fillColor: cor,
+      fillOpacity: 0.5,
+    }).addTo(map);
+
+    // 📊 POPUP COMPLETO
+    circle.bindPopup(`
+      <b>${d.cidade || "Cidade desconhecida"}</b><br>
+      Tipo: ${d.grupo || "Não definido"}<br>
+      Casos: ${d.total || 0}<br>
+      ⚠️ ${d.mensagem || "Monitorando situação"}
+    `);
+
+    // 💾 guarda no array
+    surtosAtivos.push(circle);
+  });
+}
+// 🎤 IA
+async function gravarAudio(){
+  let res = await fetch("/api/analisar-tosse", { method: "POST" });
+  let dados = await res.json();
+
+  document.getElementById("resultadoIA").innerHTML =
+    `Risco: ${dados.risco}<br>Possível: ${dados.possivel}`;
+}
+
+async function carregarRanking(){
+
+  const res = await fetch("/api/resumo-municipios", {
+    headers: { Authorization: "Bearer " + token }
+  });
+
+  const dados = await res.json();
+
+  dados.sort((a,b)=>b.total - a.total);
+
+  let top = dados.slice(0,5);
+
+  let html = "<b>🔥 Top cidades:</b><br>";
+
+  top.forEach((c,i)=>{
+    html += `${i+1}. ${c.cidade} (${c.total})<br>`;
+  });
+
+  document.getElementById("ranking").innerHTML = html;
+}
+
+// 🔄 CENTRAL
+async function atualizarTudo(){
+
+  try {
+
+    const res = await fetch("/api/painel", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+
+    const dados = await res.json();
+
+    await carregarEstados();
+
+// 🔥 CONTROLE POR MODO
+if (modo === "municipios") {
+  await carregarMunicipiosReais();
+}
+
+if (modo === "surtos") {
+  await carregarSurtos();
+}
+
+if (modo === "heatmap") {
+  await carregarHeatmap();
+}
+
+  } catch(e){
+    console.log("Erro ao atualizar:", e);
+  }
+
+}
+
+let modo = "municipios";
+
+function mudarModo(novoModo){
+  modo = novoModo;
+  atualizarTudo();
+}
+// 🚀 START
+async function iniciarSistema(){
+  iniciarMapa();
+  await atualizarTudo();
+  setInterval(atualizarTudo, 2000);
+  setInterval(verificarAlertas, 8000);
+}
+
+iniciarSistema();
+
+// 🔥 BOTÕES
+window.logout = function(){
+  localStorage.removeItem("token");
+  window.location.href = "/";
+}
+
+window.upgrade = function(){
+  window.location.href = "/pagamento/";
+}
+
+</script>
