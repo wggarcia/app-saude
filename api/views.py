@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, redirect
 from django.db.models import Count
 from .utils import probabilidade_doenca
+import soundfile as sf
 import numpy as np
 
 from .models import RegistroSintoma, Empresa
@@ -540,6 +541,8 @@ def analisar_audio(request):
             return JsonResponse({"erro": "sem áudio"})
 
         try:
+            # 📥 LER ÁUDIO
+            data, samplerate = sf.read(audio_file)
 
             # 🔥 GARANTE MONO
             if len(data.shape) > 1:
@@ -575,3 +578,11 @@ def analisar_audio(request):
             return JsonResponse({"erro": str(e)})
 
     return JsonResponse({"erro": "método inválido"})
+
+
+
+# import numpy as np
+# import soundfile as sf
+
+# np.array(...)
+# sf.read(...)
