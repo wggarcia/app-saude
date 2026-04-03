@@ -3,3 +3,4 @@ gunicorn
 whitenoise
 djangorestframework
 django-cors-headers
+django-extensions
