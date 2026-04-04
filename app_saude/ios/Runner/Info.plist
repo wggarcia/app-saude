@@ -39,6 +39,25 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 
+	<!-- 🔥 INTERNET LIBERADA -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+
+	<!-- 🔥 LOCALIZAÇÃO -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Precisamos da sua localização para mostrar os casos no mapa.</string>
+
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Usamos sua localização para monitoramento de saúde.</string>
+
+	<!-- 🔥 MICROFONE -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Este app usa o microfone para captura de áudio.</string>
+
+	<!-- 🔥 UI -->
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -84,25 +103,6 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-
-	<!-- 🔥 PERMISSÕES (CORRETAS E SEM DUPLICAÇÃO) -->
-
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Este app usa o microfone para análise de sintomas.</string>
-
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Este app usa sua localização para mapear sintomas.</string>
-
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Este app usa sua localização para monitoramento contínuo.</string>
-
-	<!-- 🔥 PERMITE HTTP/HTTPS (caso necessário) -->
-
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-	</dict>
 
 </dict>
 </plist>

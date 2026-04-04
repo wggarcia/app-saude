@@ -84,10 +84,10 @@ def registrar_sintoma(request):
 
     dados = json.loads(request.body or "{}")
 
-    lat = dados.get("latitude")
-    lon = dados.get("longitude")
+    latitude = dados.get("latitude")
+    longitude = dados.get("longitude")
 
-    local = obter_localizacao(lat, lon)
+    local = obter_localizacao(latitude, longitude)
 
     # 🔥 CORREÇÃO AQUI (ANTES DO CREATE)
     mapa_estados = {
@@ -110,8 +110,8 @@ def registrar_sintoma(request):
     dor_corpo=dados.get("dor_corpo", False),
     cansaco=dados.get("cansaco", False),
     falta_ar=dados.get("falta_ar", False),
-    latitude=lat,
-    longitude=lon,
+    latitude=latitude,
+    longitude=longitude,
     pais=local.get("pais"),
     estado=local.get("estado"),
     cidade=local.get("cidade"),

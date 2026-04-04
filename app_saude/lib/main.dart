@@ -1,13 +1,14 @@
+import 'package:flutter/material.dart';
 import 'telas/sintomas/tela_sintomas.dart';
 import 'telas/mapa/tela_mapa.dart';
-import 'package:flutter/material.dart';
-
 
 void main() {
-  runApp(AppSaude());
+  runApp(const AppSaude());
 }
 
 class AppSaude extends StatelessWidget {
+  const AppSaude({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -15,28 +16,30 @@ class AppSaude extends StatelessWidget {
       title: 'Monitoramento de Saúde',
       theme: ThemeData(
         primarySwatch: Colors.red,
+        scaffoldBackgroundColor: const Color(0xFFF5F7FB),
+        fontFamily: 'Roboto',
       ),
-      home: TelaInicial(),
+      home: const TelaInicial(),
     );
   }
 }
 
 class TelaInicial extends StatelessWidget {
+  const TelaInicial({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
 
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
 
               // 🧠 TÍTULO
-              Text(
+              const Text(
                 "Monitoramento de Saúde",
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -45,7 +48,7 @@ class TelaInicial extends StatelessWidget {
                 ),
               ),
 
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
 
               Text(
                 "Acompanhe riscos e registre sintomas em tempo real",
@@ -56,7 +59,7 @@ class TelaInicial extends StatelessWidget {
                 ),
               ),
 
-              SizedBox(height: 60),
+              const SizedBox(height: 60),
 
               // 🔴 BOTÃO SINTOMAS
               SizedBox(
@@ -64,25 +67,26 @@ class TelaInicial extends StatelessWidget {
                 height: 60,
                 child: ElevatedButton(
                   onPressed: () {
-                   Navigator.push(
-                   context,
-                   MaterialPageRoute(builder: (_) => TelaSintomas()),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const TelaSintomas()),
                     );
-                   },
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
+                    elevation: 3,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     "Estou com sintomas",
                     style: TextStyle(fontSize: 18),
                   ),
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // 🗺️ BOTÃO MAPA
               SizedBox(
@@ -90,18 +94,18 @@ class TelaInicial extends StatelessWidget {
                 height: 60,
                 child: OutlinedButton(
                   onPressed: () {
-                  Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => TelaMapa()),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const TelaMapa()),
                     );
                   },
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.red),
+                    side: const BorderSide(color: Colors.red),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     "Ver mapa da minha região",
                     style: TextStyle(
                       fontSize: 18,
@@ -111,10 +115,10 @@ class TelaInicial extends StatelessWidget {
                 ),
               ),
 
-              Spacer(),
+              const Spacer(),
 
-              // ⚠️ AVISO LEGAL
-              Text(
+              // ⚠️ AVISO
+              const Text(
                 "Este app não substitui diagnóstico médico",
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -123,7 +127,7 @@ class TelaInicial extends StatelessWidget {
                 ),
               ),
 
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
             ],
           ),
         ),
@@ -131,4 +135,3 @@ class TelaInicial extends StatelessWidget {
     );
   }
 }
-

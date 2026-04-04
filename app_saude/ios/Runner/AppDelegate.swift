@@ -10,10 +10,7 @@ import GoogleMaps
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
 
-    // 🔥 ESSENCIAL (SEM ISSO CRASHA)
-    GMSServices.provideAPIKey("AIzaSyBrWjZDPIcB-yu2Mo8R5nZUpNSHNiuFTiM")
-
-    GeneratedPluginRegistrant.register(with: self)
+    GMSServices.provideAPIKey("AIzaSyDdgJLI8PGI4IO2yIRTwZOnwQKu23O6hZU")
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }

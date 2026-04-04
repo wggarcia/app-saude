@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -12,7 +13,9 @@ class TelaMapa extends StatefulWidget {
 
 class _TelaMapaState extends State<TelaMapa> {
 
-  Set<Marker> marcadores = {};
+  String token = "COLE_AQUI_SEU_TOKEN";
+
+  List<Marker> marcadores = [];
 
   @override
   void initState() {
@@ -21,40 +24,53 @@ class _TelaMapaState extends State<TelaMapa> {
   }
 
   Future<void> carregarDados() async {
-    final url = Uri.parse("https://app-saude-p9n8.onrender.com/api/mapa-casos");
+  final url = Uri.parse(
+    "https://app-saude-p9n8.onrender.com/api/mapa-casos"
+  );
 
-    try {
-      final response = await http.get(url);
+  try {
+    final response = await http.get(url);
 
-      if (response.statusCode == 200) {
-        final List dados = jsonDecode(response.body);
+    print("STATUS: ${response.statusCode}");
+    print("BODY: ${response.body}");
 
-        Set<Marker> novos = {};
+    if (response.statusCode == 200) {
+      final List dados = jsonDecode(response.body);
 
-        for (var item in dados) {
+      List<Marker> novos = [];
 
-          double lat = double.parse(item['latitude'].toString());
-          double lon = double.parse(item['longitude'].toString());
+      for (var item in dados) {
+        double lat = (item['latitude'] ?? 0).toDouble();
+        double lon = (item['longitude'] ?? 0).toDouble();
 
-          novos.add(
-            Marker(
-              markerId: MarkerId(lat.toString() + lon.toString()),
-              position: LatLng(lat, lon),
-              infoWindow: InfoWindow(
-                title: item['cidade'] ?? "Local",
-              ),
+        if (lat == 0 || lon == 0) continue;
+
+        novos.add(
+          Marker(
+            point: LatLng(lat, lon),
+            width: 50,
+            height: 50,
+            child: Column(
+              children: [
+                Icon(Icons.location_on, color: Colors.red, size: 30),
+                Text(
+                  item['grupo'] ?? '',
+                  style: TextStyle(fontSize: 10),
+                ),
+              ],
             ),
-          );
-        }
-
-        setState(() {
-          marcadores = novos;
-        });
+          ),
+        );
       }
-    } catch (e) {
-      print("Erro mapa: $e");
+
+      setState(() {
+        marcadores = novos;
+      });
     }
+  } catch (e) {
+    print("Erro mapa: $e");
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -63,12 +79,21 @@ class _TelaMapaState extends State<TelaMapa> {
         title: const Text("Mapa de Casos"),
         backgroundColor: Colors.blue,
       ),
-      body: GoogleMap(
-        initialCameraPosition: const CameraPosition(
-          target: LatLng(-22.8832, -43.1034),
-          zoom: 12,
+      body: FlutterMap(
+        options: MapOptions(
+          initialCenter: LatLng(-22.8832, -43.1034),
+          initialZoom: 12,
         ),
-        markers: marcadores,
+        children: [
+          TileLayer(
+               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                 userAgentPackageName: 'app_saude',
+                ),
+
+          MarkerLayer(
+            markers: marcadores,
+          ),
+        ],
       ),
     );
   }

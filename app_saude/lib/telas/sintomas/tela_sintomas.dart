@@ -67,18 +67,18 @@ print("LAT: ${pos.latitude}");
 print("LON: ${pos.longitude}");
 
     await http.post(
-      Uri.parse("https://app-saude-p9n8.onrender.com/api/registrar"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "febre": febre,
-        "tosse": tosse,
-        "dor_corpo": dorCorpo,
-        "cansaco": cansaco,
-        "falta_ar": faltaAr,
-        "latitude": pos.latitude,
-        "longitude": pos.longitude,
-      }),
-    );
+  Uri.parse("https://app-saude-p9n8.onrender.com/api/registrar-app"), // 👈 vírgula aqui
+  headers: {"Content-Type": "application/json"},
+  body: jsonEncode({
+    "febre": febre,
+    "tosse": tosse,
+    "dor_corpo": dorCorpo,
+    "cansaco": cansaco,
+    "falta_ar": faltaAr,
+    "latitude": pos.latitude,
+    "longitude": pos.longitude,
+  }),
+);
 
     setState(() => carregando = false);
 

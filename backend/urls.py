@@ -23,6 +23,7 @@ from api.views import alertas
 from api.views import resumo_doencas
 from api.views import diagnostico_ia_avancado
 from api.views import limpar_casos
+from api.views import mapa_casos
 
 
 def service_worker(request):
@@ -75,4 +76,5 @@ urlpatterns = [
     path('api/registrar-app', registrar_sintoma_app),
     path('api/analisar-audio', analisar_audio),
     path('api/limpar-casos', limpar_casos),
+    path('api/mapa-casos', mapa_casos),
 ]

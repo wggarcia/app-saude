@@ -14,14 +14,11 @@ PODS:
   - GoogleMaps/Base (8.4.0)
   - GoogleMaps/Maps (8.4.0):
     - GoogleMaps/Base
-  - record_ios (1.2.0):
-    - Flutter
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
   - google_maps_flutter_ios (from `.symlinks/plugins/google_maps_flutter_ios/ios`)
-  - record_ios (from `.symlinks/plugins/record_ios/ios`)
 
 SPEC REPOS:
   trunk:
@@ -35,8 +32,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/geolocator_apple/darwin"
   google_maps_flutter_ios:
     :path: ".symlinks/plugins/google_maps_flutter_ios/ios"
-  record_ios:
-    :path: ".symlinks/plugins/record_ios/ios"
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
@@ -44,8 +39,7 @@ SPEC CHECKSUMS:
   Google-Maps-iOS-Utils: 66d6de12be1ce6d3742a54661e7a79cb317a9321
   google_maps_flutter_ios: 17552876e72723da1d41accc22f03b5f7afbde69
   GoogleMaps: 8939898920281c649150e0af74aa291c60f2e77d
-  record_ios: 412daca2350b228e698fffcd08f1f94ceb1e3844
 
-PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
+PODFILE CHECKSUM: da0a94f1a5386c300d4eb5b2f828ba16320b4f85
 
 COCOAPODS: 1.16.2
