@@ -202,3 +202,21 @@ def pendente(request):
 
 def erro(request):
     return HttpResponse("Pagamento falhou ❌")
+
+
+def status_pagamento(request):
+    empresa_id = request.GET.get("empresa_id")
+
+    if not empresa_id:
+        return JsonResponse({"status": "erro"})
+
+    try:
+        empresa = Empresa.objects.get(id=empresa_id)
+
+        if empresa.ativo:
+            return JsonResponse({"status": "aprovado"})
+
+        return JsonResponse({"status": "pendente"})
+
+    except:
+        return JsonResponse({"status": "erro"})
