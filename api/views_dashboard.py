@@ -3,6 +3,7 @@ from django.shortcuts import render
 from .models import RegistroSintoma
 from .inteligencia import nivel_risco
 
+
 # API (JSON)
 def dados_dashboard(request):
     total = RegistroSintoma.objects.count()
@@ -41,3 +42,7 @@ def global_paises(request):
         })
 
     return JsonResponse(resultado, safe=False)
+
+
+def dashboard_farmacia(request):
+    return render(request, "dashboard_farmacia.html")

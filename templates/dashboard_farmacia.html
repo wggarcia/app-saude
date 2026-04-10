@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Farmácia</title>
+    <style>
+        body { font-family: Arial; background: #f5f7fb; padding: 20px; }
+        h1 { text-align: center; }
+
+        .card {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .alto { border-left: 6px solid red; }
+        .moderado { border-left: 6px solid orange; }
+        .baixo { border-left: 6px solid green; }
+    </style>
+</head>
+
+<body>
+
+<h1>💊 Inteligência de Saúde para Farmácias</h1>
+<p style="text-align:center;">Dados em tempo real para abastecimento estratégico</p>
+
+<div id="dados"></div>
+
+<script>
+
+// 🔐 VERIFICA TOKEN (AGORA NO LUGAR CERTO)
+const token = localStorage.getItem("token");
+
+if (!token) {
+    alert("Faça login primeiro");
+    window.location.href = "/";
+}
+
+// 🚀 CARREGAR DADOS
+async function carregar() {
+
+    const res = await fetch("/api/insights-farmacia/", {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    });
+
+    const data = await res.json();
+
+    const container = document.getElementById("dados");
+    container.innerHTML = "";
+
+    data.forEach(item => {
+
+        let classe = item.nivel.toLowerCase();
+
+        container.innerHTML += `
+        <div class="card ${classe}">
+            <h3>${item.estado} - ${item.cidade}</h3>
+            <p><b>🦠 Doença:</b> ${item.doenca}</p>
+            <p><b>📊 Casos:</b> ${item.total}</p>
+            <p><b>🚨 Nível:</b> ${item.nivel}</p>
+            <p><b>💊 Ação:</b> ${item.recomendacao}</p>
+        </div>
+        `;
+    });
+}
+
+// ▶️ EXECUTA
+carregar();
+
+</script>
+
+</body>
+</html>

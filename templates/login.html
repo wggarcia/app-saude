@@ -1,39 +1,238 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-  <title>Login Empresa</title>
+<meta charset="UTF-8">
+<title>Solus CRT Saúde</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
+
+body{
+  height:100vh;
+  background:#020617;
+  overflow:hidden;
+  color:white;
+}
+
+/* 🔥 FUNDO PROFUNDO */
+.bg{
+  position:absolute;
+  width:100%;
+  height:100%;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(56,189,248,0.15), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(99,102,241,0.15), transparent 40%),
+    #020617;
+}
+
+/* 🔥 GRID TECH */
+.grid{
+  position:absolute;
+  width:100%;
+  height:100%;
+  background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size:40px 40px;
+}
+
+/* 🔥 CONTAINER */
+.container{
+  position:relative;
+  z-index:2;
+  display:flex;
+  height:100%;
+}
+
+/* ESQUERDA */
+.left{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:100px;
+}
+
+.logo{
+  font-size:40px;
+  font-weight:600;
+  letter-spacing:-1px;
+}
+
+.logo span{
+  color:#38bdf8;
+}
+
+.desc{
+  margin-top:20px;
+  font-size:18px;
+  color:#94a3b8;
+  max-width:500px;
+  line-height:1.6;
+}
+
+/* 🔥 CARD ULTRA */
+.right{
+  width:450px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.card{
+  width:100%;
+  padding:45px;
+  border-radius:24px;
+
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(30px);
+
+  border:1px solid rgba(255,255,255,0.08);
+
+  box-shadow:
+    0 0 60px rgba(56,189,248,0.1),
+    inset 0 0 30px rgba(255,255,255,0.03);
+}
+
+/* TÍTULO */
+.card h2{
+  font-size:22px;
+}
+
+.card p{
+  font-size:13px;
+  color:#94a3b8;
+  margin-bottom:25px;
+}
+
+/* INPUT */
+.input{
+  width:100%;
+  padding:14px;
+  margin-bottom:15px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:white;
+  outline:none;
+  transition:0.3s;
+}
+
+.input:focus{
+  border-color:#38bdf8;
+  box-shadow:0 0 10px rgba(56,189,248,0.4);
+}
+
+/* BOTÃO */
+.btn{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(135deg,#38bdf8,#2563eb);
+  font-weight:600;
+  color:white;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+.btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 30px rgba(56,189,248,0.4);
+}
+
+/* ERRO */
+.erro{
+  margin-top:10px;
+  color:#f87171;
+  display:none;
+}
+
+/* RESPONSIVO */
+@media(max-width:900px){
+  .left{display:none;}
+  .right{width:100%;}
+}
+</style>
 </head>
 
 <body>
 
-<h2>Login Empresa</h2>
+<div class="bg"></div>
+<div class="grid"></div>
 
-<input type="email" id="email" placeholder="Email"><br><br>
-<input type="password" id="senha" placeholder="Senha"><br><br>
+<div class="container">
 
-<button onclick="login()">Entrar</button>
+  <div class="left">
+    <div class="logo">Solus <span>CRT</span> Saúde</div>
+
+    <div class="desc">
+      Inteligência epidemiológica em tempo real.
+      Antecipe surtos, proteja populações e tome decisões com dados.
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="card">
+
+      <h2>Acessar Plataforma</h2>
+      <p>Ambiente corporativo seguro</p>
+
+      <input id="email" class="input" placeholder="Email">
+      <input id="senha" type="password" class="input" placeholder="Senha">
+
+      <button class="btn" onclick="login()">Entrar</button>
+      <div style="margin-top:15px; text-align:center; font-size:13px; color:#94a3b8;">
+  Não tem conta?
+  <span 
+    onclick="window.location.href='/cadastro/'"
+    style="color:#38bdf8; cursor:pointer; font-weight:600;"
+  >
+    Criar conta
+  </span>
+</div>
+      </button>
+
+      <div id="erro" class="erro">Credenciais inválidas</div>
+
+    </div>
+  </div>
+
+</div>
 
 <script>
-async function login() {
+async function login(){
   const email = document.getElementById("email").value;
   const senha = document.getElementById("senha").value;
+  const erro = document.getElementById("erro");
+
+  erro.style.display = "none";
 
   const res = await fetch("/api/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ email, senha })
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ email, senha })
   });
 
   const data = await res.json();
 
-  if (data.status === "ok") {
-    localStorage.setItem("token", data.token);"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbXByZXNhX2lkIjoyfQ.bFZZZbzkceHbVWkOINEekedQ7vSoo9UphK7BUTsyaLw"
-    window.location.href = "/dashboard/";
-  } else {
-    alert("Login inválido");
-  }
+  if(data.token){
+
+  // 🔐 salva token
+  localStorage.setItem("token", data.token);
+
+  // 🏢 salva empresa_id (ESSENCIAL)
+  localStorage.setItem("empresa_id", data.empresa_id);
+
+  console.log("EMPRESA ID SALVO:", data.empresa_id);
+
+  window.location.href = "/dashboard/";
+
+} else {
+  erro.style.display = "block";
+}
 }
 </script>
 

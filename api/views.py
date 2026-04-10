@@ -7,6 +7,8 @@ from .utils import probabilidade_doenca
 from .models import RegistroSintoma, Empresa
 from .utils_cidades import buscar_coordenada
 from .utils import obter_localizacao
+from django.conf import settings
+
 
 import json
 import uuid
@@ -21,7 +23,7 @@ from .utils import (
     risco_por_doenca
 )
 
-SECRET_KEY = "chave_super_segura_123456789_abc"
+
 
 
 # ================= LOGIN =================
@@ -37,22 +39,18 @@ def verificar_acesso(request):
 
     try:
         token = token.replace("Bearer ", "")
-        dados = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        dados = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
         return Empresa.objects.get(id=dados["empresa_id"])
     except:
         return None
 
 
 def dashboard(request):
-    empresa = verificar_acesso(request)
-
-    if not empresa:
-        return redirect("/")
-
-    if not empresa.ativo:
-        return redirect("/pagamento/")
-
     return render(request, "dashboard.html")
+
+
+def dashboard_farmacia(request):
+    return render(request, "dashboard_farmacia.html")
 
 
 # ================= TOKEN =================
@@ -65,7 +63,7 @@ def validar_token(request):
 
     try:
         token = auth.split(" ")[1]
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
         return payload["empresa_id"], None
     except:
         return None, JsonResponse({"erro": "token inválido"}, status=403)
@@ -159,11 +157,6 @@ def resumo_municipios(request):
 
     for d in dados:
 
-        total = d.get("total")
-        grupo = d.get("grupo")
-
-        nivel, mensagem = gerar_alerta(total, grupo)
-
         cidade = d.get("cidade")
         estado = d.get("estado")
 
@@ -176,15 +169,13 @@ def resumo_municipios(request):
             continue
 
         resultado.append({
-    "cidade": cidade,
-    "estado": estado,
-    "grupo": grupo,
-    "total": total,
-    "nivel": nivel,
-    "mensagem": mensagem,
-    "latitude": lat,
-    "longitude": lon
-})
+            "cidade": cidade,
+            "estado": estado,
+            "grupo": d.get("grupo"),
+            "total": d.get("total"),
+            "latitude": lat,
+            "longitude": lon
+        })
 
     return JsonResponse(resultado, safe=False)
 # ================= SURTOS =================
@@ -271,19 +262,7 @@ def analisar_tosse(request):
 # ================= PAINEL =================
 
 def painel_geral(request):
-    return JsonResponse({
-        "estados": list(
-            RegistroSintoma.objects.values("estado").annotate(total=Count("id"))
-        ),
-        "municipios": list(
-            RegistroSintoma.objects.values("cidade", "estado").annotate(total=Count("id"))
-        ),
-    })
-
-
-def clusters(request):
-    dados = RegistroSintoma.objects.values("cidade", "estado").annotate(total=Count("id"))
-    return JsonResponse(list(dados), safe=False)
+    return JsonResponse({"status": "ok"})
 
 
 # ================= ALERTAS =================
@@ -328,17 +307,6 @@ def relatorio_municipios(request):
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-@api_view(['POST'])
-def ativar_plano(request, empresa_id):
-    try:
-        empresa = Empresa.objects.get(id=empresa_id)
-        empresa.plano = "premium"
-        empresa.ativo = True
-        empresa.save()
-
-        return Response({"status": "Plano ativado"})
-    except Empresa.DoesNotExist:
-        return Response({"erro": "Empresa não encontrada"}, status=404)
     
 
 def calcular_risco(total, crescimento):
@@ -582,10 +550,410 @@ def criar_admin_automatico():
 
 criar_admin_automatico()
 
-from django.http import JsonResponse
 from api.models import RegistroSintoma
 
 def limpar_casos(request):
     total = RegistroSintoma.objects.count()
     RegistroSintoma.objects.all().delete()
     return JsonResponse({"apagados": total})
+
+
+def insights_nacional(request):
+
+    dados = RegistroSintoma.objects.values(
+        "estado", "cidade", "grupo"
+    ).annotate(total=Count("id"))
+
+    def sugestao_estoque(grupo):
+        if grupo == "Respiratório":
+            return "Comprar: Antigripais, Xaropes, Vitamina C"
+        if grupo == "Dengue":
+            return "Comprar: Paracetamol, Soro, Repelente"
+        return "Estoque básico"
+
+    resultado = []
+
+    for d in dados:
+
+        total = d["total"]
+        grupo = d["grupo"]
+        cidade = d["cidade"]
+        estado = d["estado"]
+
+        if total > 50:
+            nivel = "ALTO"
+        elif total > 20:
+            nivel = "MODERADO"
+        else:
+            nivel = "BAIXO"
+
+        recomendacao = sugestao_estoque(grupo)
+
+        resultado.append({
+            "estado": estado,
+            "cidade": cidade,
+            "doenca": grupo,
+            "total": total,
+            "nivel": nivel,
+            "recomendacao": recomendacao
+        })
+
+    return JsonResponse(resultado, safe=False)
+
+
+
+def insights_farmacia(request):
+
+    dados = RegistroSintoma.objects.values(
+        "cidade", "estado", "grupo"
+    ).annotate(total=Count("id"))
+
+    resultado = []
+
+    for d in dados:
+
+        total = d["total"]
+        grupo = d["grupo"] or "Geral"
+
+        # 🎯 NÍVEL
+        nivel = "BAIXO"
+        if total > 50:
+            nivel = "MODERADO"
+        if total > 100:
+            nivel = "ALTO"
+
+        # 💊 RECOMENDAÇÃO INTELIGENTE
+        recomendacao = "Estoque normal"
+
+        if grupo == "Dengue":
+            recomendacao = "💊 Paracetamol + Repelente"
+
+        elif grupo == "Respiratório":
+            recomendacao = "💊 Antigripais + Vitamina C"
+
+        elif grupo == "COVID":
+            recomendacao = "💊 Antigripais + Máscaras"
+
+        resultado.append({
+            "cidade": d["cidade"],
+            "estado": d["estado"],
+            "doenca": grupo,
+            "total": total,
+            "nivel": nivel,
+            "recomendacao": recomendacao
+        })
+
+    return JsonResponse(resultado, safe=False)
+
+
+
+from django.http import HttpResponse
+
+def tela_cadastro(request):
+    return HttpResponse("""
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Solus CRT Saúde • Criar Conta</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
+
+body{
+  height:100vh;
+  background:#020617;
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* 🔥 FUNDO */
+.bg{
+  position:absolute;
+  width:100%;
+  height:100%;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(56,189,248,0.15), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(99,102,241,0.15), transparent 40%),
+    #020617;
+}
+
+/* 🔥 CARD */
+.card{
+  position:relative;
+  z-index:2;
+  width:420px;
+  padding:40px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.04);
+  backdrop-filter:blur(25px);
+  border:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 20px 80px rgba(0,0,0,0.7);
+}
+
+/* LOGO */
+.logo{
+  font-size:22px;
+  font-weight:600;
+  margin-bottom:20px;
+}
+.logo span{color:#38bdf8}
+
+/* TITULO */
+h2{
+  font-size:20px;
+  margin-bottom:5px;
+}
+
+p{
+  font-size:13px;
+  color:#94a3b8;
+  margin-bottom:25px;
+}
+
+/* INPUT */
+.input{
+  width:100%;
+  padding:14px;
+  margin-bottom:14px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:white;
+  outline:none;
+  transition:0.3s;
+}
+
+.input:focus{
+  border-color:#38bdf8;
+  box-shadow:0 0 10px rgba(56,189,248,0.3);
+}
+
+/* BOTÃO */
+.btn{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:10px;
+  background:linear-gradient(135deg,#38bdf8,#2563eb);
+  font-weight:600;
+  color:white;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+.btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 30px rgba(56,189,248,0.4);
+}
+
+/* LOADING */
+.loading{
+  display:none;
+  text-align:center;
+  margin-top:10px;
+  font-size:13px;
+  color:#38bdf8;
+}
+
+/* ERRO */
+.erro{
+  margin-top:10px;
+  color:#f87171;
+  display:none;
+  font-size:13px;
+}
+
+/* FOOTER */
+.footer{
+  margin-top:20px;
+  text-align:center;
+  font-size:13px;
+  color:#94a3b8;
+  cursor:pointer;
+}
+
+.footer:hover{
+  color:#38bdf8;
+}
+</style>
+</head>
+
+<body>
+
+<div class="bg"></div>
+
+<div class="card">
+
+  <div class="logo">Solus <span>CRT</span> Saúde</div>
+
+  <h2>Criar Conta</h2>
+  <p>Ative inteligência epidemiológica em minutos</p>
+
+  <input id="nome" class="input" placeholder="Nome da empresa">
+  <input id="email" class="input" placeholder="Email corporativo">
+  <input id="senha" type="password" class="input" placeholder="Senha segura">
+
+  <button class="btn" onclick="cadastrar()">Criar Conta</button>
+
+  <div id="loading" class="loading">Criando conta...</div>
+  <div id="erro" class="erro"></div>
+
+  <div class="footer" onclick="window.location.href='/'">
+    Já tenho conta
+  </div>
+
+</div>
+
+<script>
+async function cadastrar(){
+
+  const nome = document.getElementById("nome").value;
+  const email = document.getElementById("email").value;
+  const senha = document.getElementById("senha").value;
+  const erro = document.getElementById("erro");
+  const loading = document.getElementById("loading");
+
+  erro.style.display = "none";
+
+  // 🔥 VALIDAÇÃO PROFISSIONAL
+  if(!nome || !email || !senha){
+    erro.innerText = "Preencha todos os campos";
+    erro.style.display = "block";
+    return;
+  }
+
+  if(senha.length < 6){
+    erro.innerText = "Senha deve ter no mínimo 6 caracteres";
+    erro.style.display = "block";
+    return;
+  }
+
+  loading.style.display = "block";
+
+  try{
+    const res = await fetch("/api/registrar_empresa", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ nome, email, senha })
+    });
+
+    const data = await res.json();
+
+    loading.style.display = "none";
+
+    if(data.token){
+      localStorage.setItem("token", data.token);
+
+      // 🔥 FLUXO PROFISSIONAL
+      window.location.href = "/pagamento/";
+    }else{
+      erro.innerText = data.erro || "Erro ao criar conta";
+      erro.style.display = "block";
+    }
+
+  }catch(e){
+    loading.style.display = "none";
+    erro.innerText = "Erro de conexão";
+    erro.style.display = "block";
+  }
+}
+</script>
+
+</body>
+</html>
+""", content_type="text/html")
+
+def login(request):
+    body = json.loads(request.body)
+
+    email = body.get("email")
+    senha = body.get("senha")
+
+    empresa = Empresa.objects.filter(email=email).first()
+
+    if not empresa:
+        return JsonResponse({"erro": "Empresa não encontrada"}, status=401)
+
+    # 🔥 IGNORA SENHA TEMPORARIAMENTE
+    token = jwt.encode(
+        {"empresa_id": empresa.id},
+        settings.JWT_SECRET_KEY,
+        algorithm="HS256"
+    )
+
+    return JsonResponse({
+        "status": "ok",
+        "token": token,
+        "empresa_id": empresa.id
+    })
+
+
+def pagamento(request):
+
+    # 🔍 DEBUG DO HEADER
+    auth_header = request.headers.get("Authorization")
+
+    print("HEADER COMPLETO:", auth_header)
+
+    if not auth_header:
+        return JsonResponse({"erro": "Token não enviado"}, status=401)
+
+    if not auth_header.startswith("Bearer "):
+        return JsonResponse({"erro": "Formato inválido"}, status=401)
+
+    token = auth_header.split(" ")[1]
+
+    print("TOKEN RECEBIDO:", token)
+    print("TAMANHO TOKEN:", len(token))
+
+    # 🔐 DECODE
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=["HS256"]
+        )
+
+        print("PAYLOAD:", payload)
+
+    except Exception as e:
+        print("ERRO REAL:", str(e))
+        return JsonResponse({"erro": "Token inválido"}, status=401)
+
+    return JsonResponse({
+        "status": "ok",
+        "empresa_id": payload["empresa_id"]
+    })
+
+def pagamento(request):
+
+    auth_header = request.headers.get("Authorization")
+
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return JsonResponse({"erro": "não autorizado"}, status=401)
+
+    token = auth_header.split(" ")[1]
+
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=["HS256"]
+        )
+
+        empresa_id = payload["empresa_id"]
+
+    except Exception as e:
+        print("ERRO:", str(e))
+        return JsonResponse({"erro": "Token inválido"}, status=401)
+
+    return JsonResponse({
+        "status": "ok",
+        "empresa_id": empresa_id
+    })

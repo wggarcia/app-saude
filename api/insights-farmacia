@@ -1,0 +1,10 @@
+[
+  {
+    "cidade": "Niterói",
+    "doenca": "Gripe",
+    "total": 120,
+    "crescimento": 32,
+    "nivel": "ALTO",
+    "recomendacao": "Aumentar estoque de antigripais"
+  }
+]

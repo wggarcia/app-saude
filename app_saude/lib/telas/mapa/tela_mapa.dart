@@ -13,26 +13,26 @@ class TelaMapa extends StatefulWidget {
 
 class _TelaMapaState extends State<TelaMapa> {
 
-  String token = "COLE_AQUI_SEU_TOKEN";
-
   List<Marker> marcadores = [];
 
-  @override
-  void initState() {
-    super.initState();
+  bool carregou = false;
+
+@override
+void didChangeDependencies() {
+  super.didChangeDependencies();
+
+  if (!carregou) {
     carregarDados();
+    carregou = true;
   }
+}
 
   Future<void> carregarDados() async {
-  final url = Uri.parse(
-    "https://app-saude-p9n8.onrender.com/api/mapa-casos"
-  );
+    final url = Uri.parse(
+      "https://app-saude-p9n8.onrender.com/api/mapa-casos"
+    );
 
-  try {
     final response = await http.get(url);
-
-    print("STATUS: ${response.statusCode}");
-    print("BODY: ${response.body}");
 
     if (response.statusCode == 200) {
       final List dados = jsonDecode(response.body);
@@ -40,23 +40,26 @@ class _TelaMapaState extends State<TelaMapa> {
       List<Marker> novos = [];
 
       for (var item in dados) {
-        double lat = (item['latitude'] ?? 0).toDouble();
-        double lon = (item['longitude'] ?? 0).toDouble();
-
-        if (lat == 0 || lon == 0) continue;
+        double lat = double.parse(item['latitude'].toString());
+        double lon = double.parse(item['longitude'].toString());
 
         novos.add(
           Marker(
             point: LatLng(lat, lon),
-            width: 50,
-            height: 50,
+            width: 60,
+            height: 60,
             child: Column(
               children: [
-                Icon(Icons.location_on, color: Colors.red, size: 30),
-                Text(
-                  item['grupo'] ?? '',
-                  style: TextStyle(fontSize: 10),
+                Container(
+                  padding: EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.coronavirus, color: Colors.white),
                 ),
+                Text("${item['total'] ?? 1}",
+                    style: TextStyle(fontSize: 10)),
               ],
             ),
           ),
@@ -67,32 +70,23 @@ class _TelaMapaState extends State<TelaMapa> {
         marcadores = novos;
       });
     }
-  } catch (e) {
-    print("Erro mapa: $e");
   }
-}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Mapa de Casos"),
-        backgroundColor: Colors.blue,
-      ),
+      appBar: AppBar(title: const Text("Mapa")),
       body: FlutterMap(
         options: MapOptions(
-          initialCenter: LatLng(-22.8832, -43.1034),
-          initialZoom: 12,
+          initialCenter: LatLng(-22.9, -43.1),
+          initialZoom: 10,
         ),
         children: [
           TileLayer(
-               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                 userAgentPackageName: 'app_saude',
-                ),
-
-          MarkerLayer(
-            markers: marcadores,
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'app_saude',
           ),
+          MarkerLayer(markers: marcadores),
         ],
       ),
     );

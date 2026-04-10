@@ -1,29 +1,28 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.http import FileResponse
-from api.views import resumo_estados, resumo_municipios
 import os
 
 from api.views import (
     registrar_sintoma, listar_sintomas,
     alertas, tela_login, tela_pagamento,
-    sucesso, erro, pendente,
     relatorio_regioes, relatorio_municipios,
     analisar_tosse,
     resumo_municipios, resumo_estados,
     detectar_surtos, prever_surtos,
     painel_geral,
-    clusters, diagnostico_ia, registrar_sintoma_app, analisar_audio
+    diagnostico_ia, registrar_sintoma_app, analisar_audio,
+    resumo_doencas, diagnostico_ia_avancado,
+    limpar_casos, mapa_casos,
+    insights_nacional,
+    tela_cadastro
 )
 
 from api.views_auth import registrar_empresa, login_empresa
-from api.views_dashboard import dados_dashboard, dashboard, global_paises
-from api.views_pagamento import criar_pagamento, webhook
-from api.views import alertas
-from api.views import resumo_doencas
-from api.views import diagnostico_ia_avancado
-from api.views import limpar_casos
-from api.views import mapa_casos
+from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia
+
+# 🔥 IMPORT CORRETO (APENAS UM)
+from api.views_pagamento import criar_pagamento, webhook, pagar_direto, sucesso, erro, pendente
 
 
 def service_worker(request):
@@ -33,31 +32,27 @@ def service_worker(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
 
+    # 🔐 LOGIN
+    path('', tela_login),
+    path('api/login', login_empresa),
+
+    # 🧠 DASHBOARD
+    path('dashboard/', dashboard),
+    path('dashboard-farmacia/', dashboard_farmacia),
+
+    # 💰 PAGAMENTO
+    path('pagamento/', tela_pagamento),
+
+    # 📊 API PRINCIPAL
     path('api/registrar', registrar_sintoma),
     path('api/sintomas', listar_sintomas),
     path('api/dashboard', dados_dashboard),
-
-    path('dashboard/', dashboard),
-    path('api/login', login_empresa),
-    path('', tela_login),
-
-    path('api/pagamento', criar_pagamento),
-    path('pagamento/', tela_pagamento),
-    path('sucesso/', sucesso),
-    path('erro/', erro),
-    path('pendente/', pendente),
-
-    path("api/relatorio", relatorio_regioes),
-    path('api/municipios', relatorio_municipios),
-
     path('api/alertas', alertas),
-    path('api/clusters', clusters),
 
     path('api/registrar_empresa', registrar_empresa),
     path('api/global-paises', global_paises),
 
     path("api/analisar-tosse", analisar_tosse),
-    path("api/webhook", webhook),
 
     path('api/resumo-municipios', resumo_municipios),
     path('api/resumo-estados', resumo_estados),
@@ -67,14 +62,32 @@ urlpatterns = [
 
     path("api/painel", painel_geral),
 
-    path('sw.js', service_worker),
-
-    path('api/', include('api.urls')),
     path('api/doencas', resumo_doencas),
     path('api/diagnostico', diagnostico_ia),
     path('api/ia-avancada', diagnostico_ia_avancado),
+
     path('api/registrar-app', registrar_sintoma_app),
     path('api/analisar-audio', analisar_audio),
+
     path('api/limpar-casos', limpar_casos),
     path('api/mapa-casos', mapa_casos),
+
+    # 🔥 INSIGHTS
+    path('api/insights-nacional', insights_nacional),
+
+    # 🔐 API CENTRALIZADA
+    path('api/', include('api.urls')),
+
+    # 🧾 CADASTRO
+    path('cadastro/', tela_cadastro),
+
+    # 💳 PAGAMENTO (FUNCIONAL)
+    path('api/assinatura/<int:empresa_id>/', criar_pagamento),
+    path('api/webhook', webhook),
+    path('api/pagar-direto/', pagar_direto),
+
+    # 🔁 RETORNOS DO PAGAMENTO
+    path('sucesso/', sucesso),
+    path('erro/', erro),
+    path('pendente/', pendente),
 ]

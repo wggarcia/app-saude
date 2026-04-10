@@ -1,107 +1,205 @@
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-import json
-import datetime
-from .models import Empresa
 import mercadopago
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse, HttpResponse
+import json
+from .models import Empresa
+import datetime
+from django.shortcuts import redirect
 
 
-SDK = mercadopago.SDK("APP_USR-610cd28b-180f-4d89-8a91-703f0bf40d48")
+# 🔥 SEU TOKEN DE TESTE
+SDK = mercadopago.SDK("APP_USR-6311717538175038-040823-5a46ef16617f80bcc8641773b8313c57-57115072")
 
-def criar_pagamento(request):
 
-    token = request.headers.get("Authorization").replace("Bearer ", "")
-    dados = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+# =====================================================
+# 💳 CHECKOUT REDIRECT (RECOMENDADO)
+# =====================================================
+@csrf_exempt
+def criar_pagamento(request, empresa_id=None):
 
-    empresa_id = dados["empresa_id"]
+    print("🔥 NOVA REQUISIÇÃO PAGAMENTO")
+
+    if not empresa_id:
+        return JsonResponse({"erro": "empresa não identificada"}, status=400)
 
     preference_data = {
-        "items": [
-            {
-                "title": "Plataforma Vigilância Saúde AI",
-                "quantity": 1,
-                "currency_id": "BRL",
-                "unit_price": 29.90
-            }
-        ],
-        "external_reference": str(empresa_id),  # 🔥 ESSENCIAL
-        "notification_url": "https://lissette-congestus-will.ngrok-free.dev/api/webhook"
-    }
+    "items": [
+        {
+            "title": "Plano SaaS Saúde",
+            "quantity": 1,
+            "currency_id": "BRL",
+            "unit_price": 29.90
+        }
+    ],
 
-    response = SDK.preference().create(preference_data)
 
-    return JsonResponse({
-        "init_point": response["response"]["init_point"]
-    })
+    "external_reference": str(empresa_id),
 
-def ativar_plano(request, empresa_id):
+    "back_urls": {
+        "success": "https://SEU-APP.onrender.com/sucesso/",
+        "failure": "https://SEU-APP.onrender.com/erro/",
+        "pending": "https://SEU-APP.onrender.com/pendente/",
+    },
 
-    empresa = Empresa.objects.get(id=empresa_id)
+    "auto_return": "approved",
+    
+    "notification_url": "https://SEU-APP.onrender.com/api/webhook"
 
-    empresa.plano = "premium"
-    empresa.data_pagamento = datetime.date.today()
-    empresa.ativo = True
-    empresa.save()
+}
 
-    return JsonResponse({"status": "premium_ativado"})
+    try:
+        response = SDK.preference().create(preference_data)
+        print("MP RESPONSE:", response)
 
-def sucesso(request):
-    # aqui você ativa plano
-    # (depois vamos ligar com Stripe)
-    return HttpResponse("Pagamento aprovado ✅")
+        return JsonResponse({
+         "status": "ok",
+         "init_point": response["response"]["init_point"]
+   })
 
-from django.views.decorators.csrf import csrf_exempt
-import json
+    except Exception as e:
+        print("ERRO MP:", e)
+        return JsonResponse({"erro": str(e)}, status=500)
 
+
+# =====================================================
+# 🔔 WEBHOOK (ATIVA AUTOMATICAMENTE)
+# =====================================================
 @csrf_exempt
 def webhook(request):
 
     print("🔥 WEBHOOK CHAMADO")
 
-    # aceita GET sem quebrar
     if request.method != "POST":
-        print("⚠️ Não é POST")
         return JsonResponse({"status": "ok"})
 
-    # tenta ler JSON com segurança
     try:
-        if not request.body:
-            print("⚠️ Body vazio")
-            return JsonResponse({"status": "vazio"})
-
-        data = json.loads(request.body)
-
-    except Exception as e:
-        print("❌ Erro JSON:", e)
+        data = json.loads(request.body or "{}")
+    except:
         return JsonResponse({"status": "erro_json"})
 
-    print("📦 Dados recebidos:", data)
+    print("📦 DATA:", data)
 
     if data.get("type") == "payment":
 
         payment_id = data.get("data", {}).get("id")
 
         if not payment_id:
-            print("⚠️ Sem payment_id")
             return JsonResponse({"status": "sem_id"})
 
-        pagamento = SDK.payment().get(payment_id)
-        pagamento_info = pagamento["response"]
+        try:
+            pagamento = SDK.payment().get(payment_id)
+            info = pagamento["response"]
 
-        print("💰 Pagamento:", pagamento_info)
+            print("💰 INFO:", info)
 
-        if pagamento_info.get("status") == "approved":
+            if info.get("status") == "approved":
 
-            empresa_id = pagamento_info.get("external_reference")
+                empresa_id = info.get("external_reference")
 
-            if empresa_id:
-                empresa = Empresa.objects.get(id=empresa_id)
+                if empresa_id:
+                    empresa = Empresa.objects.get(id=empresa_id)
 
-                empresa.plano = "premium"
-                empresa.ativo = True
-                empresa.data_pagamento = datetime.date.today()
-                empresa.save()
+                    empresa.plano = "premium"
+                    empresa.ativo = True
+                    empresa.data_pagamento = datetime.date.today()
+                    empresa.save()
 
-                print(f"✅ Empresa {empresa_id} ativada")
+                    print(f"✅ Empresa {empresa_id} ativada")
+
+        except Exception as e:
+            print("ERRO WEBHOOK:", e)
 
     return JsonResponse({"status": "ok"})
+
+
+# =====================================================
+# 💳 PAGAMENTO DIRETO (OPCIONAL - MAIS AVANÇADO)
+# =====================================================
+@csrf_exempt
+def pagar_direto(request):
+
+    if request.method != "POST":
+        return JsonResponse({"erro": "método inválido"}, status=400)
+
+    data = json.loads(request.body or "{}")
+
+    token = data.get("token")
+    email = data.get("email")
+    empresa_id = data.get("empresa_id")
+
+    if not token or not email or not empresa_id:
+        return JsonResponse({"erro": "dados incompletos"}, status=400)
+
+    payment_data = {
+        "transaction_amount": 29.90,
+        "token": token,
+        "description": "Plano SaaS Saúde",
+        "installments": 1,
+        "payment_method_id": "visa",
+        "payer": {
+            "email": email
+        }
+    }
+
+    try:
+        result = SDK.payment().create(payment_data)
+        response = result["response"]
+
+        print("MP RESPONSE:", response)
+
+        if response.get("status") == "approved":
+
+            empresa = Empresa.objects.get(id=empresa_id)
+            empresa.plano = "premium"
+            empresa.ativo = True
+            empresa.data_pagamento = datetime.date.today()
+            empresa.save()
+
+            return JsonResponse({"status": "aprovado"})
+
+        else:
+            return JsonResponse({
+                "status": "recusado",
+                "detalhe": response
+            })
+
+    except Exception as e:
+        return JsonResponse({"erro": str(e)}, status=500)
+
+
+# =====================================================
+# 📄 PÁGINAS DE RETORNO
+# =====================================================
+
+
+def sucesso(request):
+
+    status = request.GET.get("status") or request.GET.get("collection_status")
+    empresa_id = request.GET.get("external_reference")
+
+    print("STATUS:", status)
+    print("EMPRESA ID:", empresa_id)
+
+    if status == "approved" and empresa_id:
+
+        empresa = Empresa.objects.filter(id=empresa_id).first()
+
+        if empresa:
+            empresa.plano = "premium"
+            empresa.ativo = True
+            empresa.save()
+
+            print("✅ EMPRESA ATIVADA")
+
+            return redirect("/dashboard/")  # 🔥 AQUI
+
+        return redirect("/pagamento/")
+
+    return redirect("/pagamento/")
+
+
+def pendente(request):
+    return HttpResponse("Pagamento pendente ⏳")
+
+def erro(request):
+    return HttpResponse("Pagamento falhou ❌")

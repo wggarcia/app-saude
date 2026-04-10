@@ -1,10 +1,8 @@
-# api/middleware.py
-
 import jwt
 from django.http import JsonResponse
+from django.conf import settings
 from .models import Empresa
 
-SECRET_KEY = "chave_super_segura_123456789_abc"
 
 class EmpresaMiddleware:
 
@@ -13,16 +11,48 @@ class EmpresaMiddleware:
 
     def __call__(self, request):
 
+        # 🔓 ROTAS LIVRES (não precisam de pagamento)
+        rotas_livres = [
+            "/",
+            "/api/login",
+            "/api/assinatura/",
+            "/pagamento/",
+            "/sucesso/",
+            "/erro/",
+            "/pendente/"
+        ]
+
+        for rota in rotas_livres:
+            if request.path.startswith(rota):
+                return self.get_response(request)
+
+        # 🔐 AUTENTICAÇÃO JWT
         auth = request.headers.get("Authorization")
 
-        if auth and "Bearer" in auth:
-            try:
-                token = auth.split(" ")[1]
-                data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        if not auth or "Bearer" not in auth:
+            return JsonResponse({"erro": "não autenticado"}, status=401)
 
-                request.empresa = Empresa.objects.get(id=data["empresa_id"])
+        try:
+            token = auth.split(" ")[1]
 
-            except:
-                return JsonResponse({"erro": "Token inválido"}, status=401)
+            data = jwt.decode(
+                token,
+                settings.JWT_SECRET_KEY,
+                algorithms=["HS256"]
+            )
+
+            empresa = Empresa.objects.get(id=data["empresa_id"])
+            request.empresa = empresa
+
+        except Exception as e:
+            print("ERRO TOKEN:", e)
+            return JsonResponse({"erro": "Token inválido"}, status=401)
+
+        # 💣 BLOQUEIO DE ACESSO SEM PAGAMENTO
+        if not empresa.ativo:
+            return JsonResponse({
+                "erro": "plano não ativo",
+                "redirect": "/pagamento/"
+            }, status=403)
 
         return self.get_response(request)

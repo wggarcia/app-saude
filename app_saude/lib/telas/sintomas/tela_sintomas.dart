@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class TelaSintomas extends StatefulWidget {
   const TelaSintomas({super.key});
@@ -11,7 +11,6 @@ class TelaSintomas extends StatefulWidget {
 }
 
 class _TelaSintomasState extends State<TelaSintomas> {
-
   bool febre = false;
   bool tosse = false;
   bool dorCorpo = false;
@@ -20,76 +19,66 @@ class _TelaSintomasState extends State<TelaSintomas> {
 
   bool carregando = false;
 
-  Future<Position?> obterLocalizacao() async {
-  bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-  if (!serviceEnabled) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Ative o GPS no iPhone")),
-    );
-    return null;
-  }
-
-  LocationPermission permission = await Geolocator.checkPermission();
-
-  if (permission == LocationPermission.denied) {
-    permission = await Geolocator.requestPermission();
-  }
-
-  if (permission == LocationPermission.denied ||
-      permission == LocationPermission.deniedForever) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Permita acesso à localização")),
-    );
-    return null;
-  }
-
-  return await Geolocator.getCurrentPosition(
-    desiredAccuracy: LocationAccuracy.high,
-  );
-}
-
   Future<void> enviarDados() async {
     setState(() => carregando = true);
 
     final pos = await obterLocalizacao();
 
     if (pos == null) {
-  print("GPS falhou");
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text("Ative o GPS")),
-  );
-  setState(() => carregando = false);
-  return;
-}
+      setState(() => carregando = false);
+      return;
+    }
 
-// 👇 AQUI É O DEBUG
-print("LAT: ${pos.latitude}");
-print("LON: ${pos.longitude}");
+    double lat = pos["lat"]!;
+    double lon = pos["lon"]!;
 
-    await http.post(
-  Uri.parse("https://app-saude-p9n8.onrender.com/api/registrar-app"), // 👈 vírgula aqui
-  headers: {"Content-Type": "application/json"},
-  body: jsonEncode({
-    "febre": febre,
-    "tosse": tosse,
-    "dor_corpo": dorCorpo,
-    "cansaco": cansaco,
-    "falta_ar": faltaAr,
-    "latitude": pos.latitude,
-    "longitude": pos.longitude,
-  }),
-);
+    print("LAT: $lat");
+    print("LON: $lon");
+
+    try {
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(lat, lon);
+
+      String cidade = placemarks.first.locality ?? "Desconhecido";
+
+      final response = await http.post(
+        Uri.parse("https://app-saude-p9n8.onrender.com/api/registrar-app"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "febre": febre,
+          "tosse": tosse,
+          "dor_corpo": dorCorpo,
+          "cansaco": cansaco,
+          "falta_ar": faltaAr,
+          "latitude": lat,
+          "longitude": lon,
+          "cidade": cidade,
+        }),
+      );
+
+      print("STATUS ENVIO: ${response.statusCode}");
+      print("BODY ENVIO: ${response.body}");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Enviado com sucesso")),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      print("ERRO ENVIO: $e");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erro ao enviar")),
+      );
+
+      Navigator.pop(context);
+    }
 
     setState(() => carregando = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Dados enviados com sucesso")),
-    );
   }
 
   Widget item(String texto, bool valor, Function(bool?) onChanged) {
     return Card(
-      elevation: 2,
       child: CheckboxListTile(
         value: valor,
         onChanged: onChanged,
@@ -101,16 +90,11 @@ print("LON: ${pos.longitude}");
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(
-        title: const Text("Registrar Sintomas"),
-        backgroundColor: Colors.blue,
-      ),
+      appBar: AppBar(title: const Text("Registrar Sintomas")),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-
             item("Febre", febre, (v) => setState(() => febre = v!)),
             item("Tosse", tosse, (v) => setState(() => tosse = v!)),
             item("Dor no corpo", dorCorpo, (v) => setState(() => dorCorpo = v!)),
@@ -123,12 +107,6 @@ print("LON: ${pos.longitude}");
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
                     onPressed: enviarDados,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 55),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                     child: const Text("Enviar"),
                   ),
           ],
@@ -136,4 +114,26 @@ print("LON: ${pos.longitude}");
       ),
     );
   }
+}
+
+// 🔥 LOCALIZAÇÃO VIA IP (funcionando)
+Future<Map<String, double>?> obterLocalizacao() async {
+  try {
+    final response = await http.get(
+      Uri.parse("https://ipapi.co/json/"),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      return {
+        "lat": (data["latitude"] as num).toDouble(),
+        "lon": (data["longitude"] as num).toDouble(),
+      };
+    }
+  } catch (e) {
+    print("Erro localização: $e");
+  }
+
+  return null;
 }

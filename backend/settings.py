@@ -3,7 +3,8 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-chave'
+SECRET_KEY = "solus-crt-saude-chave-super-segura-123456789"
+JWT_SECRET_KEY = "solus-crt-chave-super-segura-123"
 
 DEBUG = True
 ALLOWED_HOSTS = ['*']

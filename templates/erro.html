@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Erro no pagamento</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #2c0f0f, #431f1f, #642c2c);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .box {
+      background: rgba(255,255,255,0.08);
+      padding: 30px;
+      border-radius: 20px;
+      text-align: center;
+      width: 360px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    h2 {
+      margin-bottom: 10px;
+      color: #ff5252;
+    }
+
+    p {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-bottom: 20px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-weight: bold;
+      background: linear-gradient(135deg, #ff5252, #ff1744);
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .secondary {
+      margin-top: 10px;
+      background: #555;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="box">
+    <h2>Pagamento não concluído ❌</h2>
+
+    <p>
+      O pagamento não foi finalizado.  
+      Você pode tentar novamente ou escolher outro método.
+    </p>
+
+    <button onclick="tentarNovamente()">
+      Tentar novamente
+    </button>
+
+    <button class="secondary" onclick="voltar()">
+      Voltar
+    </button>
+  </div>
+
+  <script>
+    function tentarNovamente() {
+      window.location.href = "/pagamento/";
+    }
+
+    function voltar() {
+      window.location.href = "/";
+    }
+  </script>
+
+</body>
+</html>
