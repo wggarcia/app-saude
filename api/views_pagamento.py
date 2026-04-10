@@ -32,19 +32,18 @@ def criar_pagamento(request, empresa_id=None):
         }
     ],
 
-
     "external_reference": str(empresa_id),
 
     "back_urls": {
-        "success": "https://SEU-APP.onrender.com/sucesso/",
-        "failure": "https://SEU-APP.onrender.com/erro/",
-        "pending": "https://SEU-APP.onrender.com/pendente/",
+        "success": "https://app-saude-p9n8.onrender.com/sucesso/",
+        "failure": "https://app-saude-p9n8.onrender.com/erro/",
+        "pending": "https://app-saude-p9n8.onrender.com/pendente/"
     },
 
     "auto_return": "approved",
-    
-    "notification_url": "https://SEU-APP.onrender.com/api/webhook"
 
+    # 🔥 AGORA PODE USAR (PRODUÇÃO REAL)
+    "notification_url": "https://app-saude-p9n8.onrender.com/api/webhook"
 }
 
     try:
