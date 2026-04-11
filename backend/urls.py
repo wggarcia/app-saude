@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.http import FileResponse
 import os
+from api.views_dashboard import dashboard
 
 from api.views import (
     registrar_sintoma, listar_sintomas,

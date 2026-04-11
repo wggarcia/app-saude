@@ -2,6 +2,9 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from .models import RegistroSintoma
 from .inteligencia import nivel_risco
+from .models import Empresa
+from django.shortcuts import render, redirect
+
 
 
 # API (JSON)
@@ -15,12 +18,22 @@ def dados_dashboard(request):
 
 # HTML (dashboard)
 def dashboard(request):
-    total = RegistroSintoma.objects.count()
 
-    return render(request, 'dashboard.html', {
-        'total': total,
-        'risco': nivel_risco()
-    })
+    empresa_id = request.GET.get("empresa_id")
+
+    if not empresa_id:
+      return render(request, "dashboard.html")
+
+    empresa = Empresa.objects.filter(id=empresa_id).first()
+
+    if not empresa:
+        return redirect("/")
+
+    # 🔥 BLOQUEIO CORRETO
+    if not empresa.ativo:
+        return redirect("/pagamento/")
+
+    return render(request, "dashboard.html")
 
 from django.db.models import Count
 
