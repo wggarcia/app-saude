@@ -5,6 +5,7 @@ import json
 from .models import Empresa
 import datetime
 from django.shortcuts import redirect
+from django.shortcuts import render
 
 
 # 🔥 SEU TOKEN DE TESTE
@@ -198,7 +199,7 @@ def sucesso(request):
 
 
 def pendente(request):
-    return HttpResponse("Pagamento pendente ⏳")
+    return render(request, "pendente.html")
 
 def erro(request):
     return HttpResponse("Pagamento falhou ❌")

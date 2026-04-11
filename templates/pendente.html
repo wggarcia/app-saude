@@ -88,29 +88,43 @@
       window.location.href = "/";
     }
 
+
     function verificarPagamento() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const empresaId = urlParams.get("external_reference");
 
-      if (!empresaId) return;
+  const urlParams = new URLSearchParams(window.location.search);
+  const empresaId = urlParams.get("external_reference");
 
-      fetch(`/api/status-pagamento?empresa_id=${empresaId}`)
-        .then(res => res.json())
-        .then(data => {
+  console.log("🔎 Empresa ID:", empresaId);
 
-          console.log("STATUS:", data.status);
+  if (!empresaId) {
+    console.log("❌ Sem empresa_id na URL");
+    return;
+  }
 
-          if (data.status === "aprovado") {
-            window.location.href = "/dashboard/";
-          }
+  fetch(`/api/status-pagamento?empresa_id=${empresaId}`)
+    .then(res => res.json())
+    .then(data => {
 
-        })
-        .catch(err => console.log("erro:", err));
-    }
+      console.log("📡 STATUS:", data.status);
 
-    // 🔥 roda a cada 3 segundos
-    setInterval(verificarPagamento, 3000);
-  </script>
+      // 🔥 COMPARAÇÃO SEGURA
+      if (String(data.status).trim() === "aprovado") {
+
+        console.log("🔥 REDIRECIONANDO AGORA");
+        window.location.href = "/dashboard/";
+
+      }
+
+    })
+    .catch(err => console.log("ERRO:", err));
+}
+
+// roda a cada 3 segundos
+setInterval(verificarPagamento, 3000);
+
+// roda imediatamente
+verificarPagamento();
+</script>
 
 </body>
 </html>
