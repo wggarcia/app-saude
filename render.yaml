@@ -37,6 +37,26 @@ services:
         sync: false
       - key: GOOGLE_MAPS_IOS_KEY
         sync: false
+      - key: SOLUSCRT_BOOTSTRAP_EMPRESA_EMAIL
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_EMPRESA_PASSWORD
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_EMPRESA_NOME
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_GOVERNO_EMAIL
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_GOVERNO_PASSWORD
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_GOVERNO_NOME
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_OWNER_EMAIL
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_OWNER_PASSWORD
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_OWNER_NOME
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_RESET_PASSWORDS
+        value: "false"
 
 databases:
   - name: soluscrt-saude-db
