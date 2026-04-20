@@ -225,10 +225,11 @@ async function login(){
 
   // 🏢 salva empresa_id (ESSENCIAL)
   localStorage.setItem("empresa_id", data.empresa_id);
+  localStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
 
   console.log("EMPRESA ID SALVO:", data.empresa_id);
 
-  window.location.href = "/dashboard/";
+  window.location.href = data.destination || "/dashboard/";
 
 } else {
   erro.style.display = "block";

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT Empresa</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
+body{min-height:100vh;background:#04121c;color:#eef8ff;overflow:hidden;}
+.bg{position:fixed;inset:0;background:
+radial-gradient(circle at 20% 30%, rgba(124,242,154,0.16), transparent 38%),
+radial-gradient(circle at 80% 70%, rgba(102,199,255,0.16), transparent 40%),
+#04121c;}
+.grid{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:42px 42px;}
+.container{position:relative;z-index:2;display:flex;min-height:100vh;}
+.left{flex:1;display:flex;flex-direction:column;justify-content:center;padding:84px;}
+.logo{font-size:42px;font-weight:700;letter-spacing:-1px;}
+.logo span{color:#7cf29a;}
+.desc{margin-top:18px;font-size:18px;color:#9cc8d8;max-width:560px;line-height:1.7;}
+.pill-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;}
+.pill{padding:9px 12px;border-radius:999px;background:rgba(255,255,255,0.05);font-size:.84rem;color:#ddf8eb;border:1px solid rgba(255,255,255,0.08);}
+.right{width:470px;display:flex;align-items:center;justify-content:center;padding:24px;}
+.card{width:100%;padding:42px;border-radius:26px;background:rgba(255,255,255,0.05);backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 0 60px rgba(124,242,154,0.08), inset 0 0 24px rgba(255,255,255,0.03);}
+.eyebrow{font-size:.74rem;text-transform:uppercase;letter-spacing:.12em;color:#7cf29a;font-weight:800;}
+.card h2{font-size:24px;margin-top:10px;}
+.card p{font-size:13px;color:#94a3b8;margin:10px 0 24px;line-height:1.6;}
+.input{width:100%;padding:14px;margin-bottom:15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:white;outline:none;transition:.3s;}
+.input:focus{border-color:#7cf29a;box-shadow:0 0 10px rgba(124,242,154,.25);}
+.btn{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#7cf29a,#3ccf82);font-weight:700;color:#052011;cursor:pointer;transition:.3s;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(124,242,154,0.25);}
+.erro{margin-top:10px;color:#f87171;display:none;}
+.footer{margin-top:15px;text-align:center;font-size:13px;color:#94a3b8;line-height:1.7;}
+.footer a{color:#7cf29a;text-decoration:none;font-weight:600;}
+@media(max-width:900px){.left{display:none;}.right{width:100%;}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="grid"></div>
+<div class="container">
+  <div class="left">
+    <div class="logo">SolusCRT <span>Empresa</span></div>
+    <div class="desc">Acesso exclusivo para empresas contratantes, farmácias, laboratórios e hospitais. Este ambiente não compartilha entrada com módulos governamentais ou administrativos.</div>
+    <div class="pill-row">
+      <span class="pill">SaaS empresarial</span>
+      <span class="pill">Farmácia</span>
+      <span class="pill">Hospital</span>
+      <span class="pill">Operação territorial</span>
+    </div>
+  </div>
+  <div class="right">
+    <div class="card">
+      <div class="eyebrow">Acesso empresarial</div>
+      <h2>Entrar na operação</h2>
+      <p>Use sua credencial empresarial. Contas inativas seguem para contratação e pagamento; contas ativas entram na camada operacional correspondente.</p>
+      <input id="email" class="input" placeholder="Email">
+      <input id="senha" type="password" class="input" placeholder="Senha">
+      <button class="btn" onclick="login()">Entrar</button>
+      <div class="footer">
+        <div><a href="/cadastro/">Criar conta empresarial</a></div>
+      </div>
+      <div id="erro" class="erro">Credenciais inválidas</div>
+    </div>
+  </div>
+</div>
+<script>
+function getDeviceId() {
+  let deviceId = localStorage.getItem("device_id");
+  if (!deviceId) {
+    deviceId = "dev-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem("device_id", deviceId);
+  }
+  return deviceId;
+}
+
+async function login(){
+  const email = document.getElementById("email").value;
+  const senha = document.getElementById("senha").value;
+  const erro = document.getElementById("erro");
+  erro.style.display = "none";
+  const res = await fetch("/api/login-empresa", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      email,
+      senha,
+      device_id: getDeviceId(),
+      device_name: navigator.platform || "Computador",
+    })
+  });
+  const data = await res.json();
+  if(data.token){
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("empresa_id", data.empresa_id);
+    localStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
+    if (data.device_id) localStorage.setItem("device_id", data.device_id);
+    window.location.href = data.destination || "/dashboard/";
+  } else {
+    erro.textContent = data.mensagem || data.erro || "Credenciais inválidas";
+    erro.style.display = "block";
+  }
+}
+</script>
+</body>
+</html>

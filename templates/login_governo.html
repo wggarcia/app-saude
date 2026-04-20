@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT Governo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
+body{min-height:100vh;background:#031019;color:#edf8ff;overflow:hidden;}
+.bg{position:fixed;inset:0;background:
+radial-gradient(circle at 15% 20%, rgba(90,240,211,0.16), transparent 30%),
+radial-gradient(circle at 85% 75%, rgba(255,85,116,0.12), transparent 34%),
+#031019;}
+.grid{position:fixed;inset:0;background-image:linear-gradient(rgba(111,180,255,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(111,180,255,0.05) 1px,transparent 1px);background-size:44px 44px;}
+.shell{position:relative;z-index:2;min-height:100vh;display:grid;grid-template-columns:1.15fr .95fr;gap:22px;padding:28px;}
+.hero,.card{border-radius:30px;border:1px solid rgba(255,255,255,0.08);background:rgba(5,15,24,0.76);backdrop-filter:blur(20px);box-shadow:0 28px 80px rgba(0,0,0,0.42);}
+.hero{padding:40px;display:flex;flex-direction:column;justify-content:space-between;}
+.eyebrow{color:#5af0d3;text-transform:uppercase;letter-spacing:.14em;font-size:.76rem;font-weight:800;}
+h1{margin-top:18px;font-size:2.8rem;line-height:1;}
+.lead{margin-top:18px;color:#97bfd9;line-height:1.7;max-width:720px;}
+.gridcards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:28px;}
+.gcard{padding:18px;border-radius:22px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);}
+.gcard span{display:block;font-size:.76rem;text-transform:uppercase;letter-spacing:.08em;color:#97bfd9;}
+.gcard strong{display:block;margin-top:8px;font-size:1.12rem;}
+.card{padding:38px;display:flex;flex-direction:column;justify-content:center;}
+.card h2{font-size:1.8rem;}
+.card p{margin-top:10px;color:#97bfd9;line-height:1.6;font-size:.95rem;}
+.input{width:100%;padding:14px;margin-top:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:#fff;outline:none;}
+.input:focus{border-color:#5af0d3;box-shadow:0 0 10px rgba(90,240,211,.25);}
+.btn{margin-top:16px;width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#5af0d3,#6fb4ff);color:#04111a;font-weight:800;cursor:pointer;}
+.erro{margin-top:12px;color:#ff8c9f;display:none;}
+.footer{margin-top:18px;color:#97bfd9;font-size:13px;line-height:1.8;}
+.footer a{color:#5af0d3;text-decoration:none;font-weight:600;}
+@media(max-width:980px){.shell{grid-template-columns:1fr;padding:18px;}h1{font-size:2.1rem;}.gridcards{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="grid"></div>
+<main class="shell">
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Acesso governamental dedicado</div>
+      <h1>Vigilância territorial, briefing executivo e resposta institucional em um trilho separado.</h1>
+      <div class="lead">Esse ambiente é reservado para estado, prefeitura, secretaria e órgãos com contrato governamental. A entrada, validação e painel são separados do ambiente empresarial.</div>
+      <div class="gridcards">
+        <div class="gcard"><span>Monitoramento</span><strong>Bairro, município e estado</strong></div>
+        <div class="gcard"><span>Resposta</span><strong>Prioridade, pressão e gabinete tático</strong></div>
+        <div class="gcard"><span>Briefing</span><strong>Situação, exportação e histórico</strong></div>
+        <div class="gcard"><span>Segurança</span><strong>Acesso isolado do trilho empresarial</strong></div>
+      </div>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Entrar como governo</h2>
+    <p>Use a credencial contratada para o módulo governamental. Contas governamentais inativas são levadas para a contratação dedicada.</p>
+    <input id="email" class="input" placeholder="Email institucional">
+    <input id="senha" type="password" class="input" placeholder="Senha">
+    <button class="btn" onclick="login()">Acessar centro governamental</button>
+    <div class="footer">
+      <div><a href="/contrato-governo/">Ver contratação governamental</a></div>
+    </div>
+    <div id="erro" class="erro">Credenciais inválidas</div>
+  </section>
+</main>
+<script>
+function getDeviceId() {
+  let deviceId = localStorage.getItem("device_id");
+  if (!deviceId) {
+    deviceId = "gov-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem("device_id", deviceId);
+  }
+  return deviceId;
+}
+
+async function login(){
+  const email = document.getElementById("email").value;
+  const senha = document.getElementById("senha").value;
+  const erro = document.getElementById("erro");
+  erro.style.display = "none";
+  const res = await fetch("/api/login-governo", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      email,
+      senha,
+      device_id: getDeviceId(),
+      device_name: navigator.platform || "Estacao",
+    })
+  });
+  const data = await res.json();
+  if(data.token){
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("empresa_id", data.empresa_id);
+    localStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
+    if (data.device_id) localStorage.setItem("device_id", data.device_id);
+    window.location.href = data.destination || "/dashboard-governo/";
+  } else {
+    erro.textContent = data.mensagem || data.erro || "Credenciais inválidas";
+    erro.style.display = "block";
+  }
+}
+</script>
+</body>
+</html>

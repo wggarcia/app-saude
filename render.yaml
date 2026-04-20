@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: soluscrt-saude-api
+    env: python
+    plan: starter
+    buildCommand: "./build.sh"
+    startCommand: "./start.sh"
+    healthCheckPath: /api/public/resumo
+    envVars:
+      - key: DJANGO_ENV
+        value: production
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: app-saude-p9n8.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://app-saude-p9n8.onrender.com
+      - key: PUBLIC_BASE_URL
+        value: https://app-saude-p9n8.onrender.com
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: soluscrt-saude-db
+          property: connectionString
+      - key: MERCADO_PAGO_ACCESS_TOKEN
+        sync: false
+      - key: MERCADO_PAGO_WEBHOOK_SECRET
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: MAPBOX_ACCESS_TOKEN
+        sync: false
+      - key: GOOGLE_MAPS_BROWSER_KEY
+        sync: false
+      - key: GOOGLE_MAPS_IOS_KEY
+        sync: false
+
+databases:
+  - name: soluscrt-saude-db
+    plan: starter

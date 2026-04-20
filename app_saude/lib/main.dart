@@ -1,137 +1,50 @@
 import 'package:flutter/material.dart';
-import 'telas/sintomas/tela_sintomas.dart';
-import 'telas/mapa/tela_mapa.dart';
 
-void main() {
-  runApp(const AppSaude());
+import 'servicos/push_service.dart';
+import 'telas/home/tela_home.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await PushService.initialize();
+  runApp(const SolusCrtAppSaude());
 }
 
-class AppSaude extends StatelessWidget {
-  const AppSaude({super.key});
+class SolusCrtAppSaude extends StatelessWidget {
+  const SolusCrtAppSaude({super.key});
 
   @override
   Widget build(BuildContext context) {
+    const background = Color(0xFF04131F);
+    const panel = Color(0xFF0B2333);
+    const accent = Color(0xFF39D0C3);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Monitoramento de Saúde',
+      title: 'SolusCRT Saude',
       theme: ThemeData(
-        primarySwatch: Colors.red,
-        scaffoldBackgroundColor: const Color(0xFFF5F7FB),
-        fontFamily: 'Roboto',
-      ),
-      home: const TelaInicial(),
-    );
-  }
-}
-
-class TelaInicial extends StatelessWidget {
-  const TelaInicial({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-
-              const SizedBox(height: 40),
-
-              // 🧠 TÍTULO
-              const Text(
-                "Monitoramento de Saúde",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              Text(
-                "Acompanhe riscos e registre sintomas em tempo real",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
-              ),
-
-              const SizedBox(height: 60),
-
-              // 🔴 BOTÃO SINTOMAS
-              SizedBox(
-                width: double.infinity,
-                height: 60,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const TelaSintomas()),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
-                    "Estou com sintomas",
-                    style: TextStyle(fontSize: 18),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // 🗺️ BOTÃO MAPA
-              SizedBox(
-                width: double.infinity,
-                height: 60,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const TelaMapa()),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
-                    "Ver mapa da minha região",
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.red,
-                    ),
-                  ),
-                ),
-              ),
-
-              const Spacer(),
-
-              // ⚠️ AVISO
-              const Text(
-                "Este app não substitui diagnóstico médico",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-            ],
+        useMaterial3: true,
+        scaffoldBackgroundColor: background,
+        colorScheme: const ColorScheme.dark(
+          primary: accent,
+          secondary: Color(0xFFFFA657),
+          surface: panel,
+          error: Color(0xFFFF6B6B),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: background,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: false,
+        ),
+        cardTheme: CardThemeData(
+          color: panel,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
         ),
       ),
+      home: const TelaHome(),
     );
   }
 }

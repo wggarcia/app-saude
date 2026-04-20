@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>SolusCRT Governo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: #eaf6ff;
+      background:
+        radial-gradient(circle at top left, rgba(0, 209, 178, 0.16), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(116, 192, 252, 0.18), transparent 30%),
+        linear-gradient(135deg, #06111b, #0c2232 58%, #0f2e42);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .panel {
+      width: min(760px, 100%);
+      padding: 32px;
+      border-radius: 28px;
+      background: rgba(4, 11, 18, 0.84);
+      border: 1px solid rgba(170, 214, 255, 0.14);
+      box-shadow: 0 26px 70px rgba(0, 0, 0, 0.38);
+      backdrop-filter: blur(18px);
+    }
+
+    .eyebrow {
+      font-size: 0.8rem;
+      color: #74c0fc;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 10px 0 12px;
+      font-size: 2rem;
+      line-height: 1.08;
+    }
+
+    p {
+      color: #a9cbe1;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 26px;
+    }
+
+    .card {
+      border-radius: 20px;
+      padding: 18px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 26px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    .primary {
+      color: #04131d;
+      background: linear-gradient(135deg, #00d1b2, #74c0fc);
+    }
+
+    .secondary {
+      color: #eaf6ff;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="eyebrow">SolusCRT Governo</div>
+    <h1>Ambiente governamental separado e protegido</h1>
+    <p>
+      {{ empresa_nome }} possui conta de perfil governamental. A liberação do módulo premium ocorre por contrato institucional,
+      ativação de segurança e parametrização de acesso para prefeitura, estado ou secretaria.
+    </p>
+
+    <div class="grid">
+      <div class="card">
+        <strong>O que a ativação libera</strong>
+        Vigilância aprofundada, briefing executivo, prioridade territorial, pressão de recursos e resposta intersetorial.
+      </div>
+      <div class="card">
+        <strong>Por que é separado</strong>
+        O ambiente de governo tem proteção extra, fluxo próprio e política de acesso diferente das contas empresariais.
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" onclick="window.location.href='mailto:governo@soluscrt.com?subject=Ativacao%20Governamental'">
+        Solicitar ativação governamental
+      </button>
+      <button class="btn secondary" onclick="window.location.href='/logout/'">
+        Sair
+      </button>
+    </div>
+  </div>
+</body>
+</html>

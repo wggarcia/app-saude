@@ -4,10 +4,154 @@ from django.shortcuts import render, redirect
 from django.db.models import Count
 from .utils import probabilidade_doenca
 
-from .models import RegistroSintoma, Empresa
+from .models import RegistroSintoma, Empresa, AlertaGovernamental, DispositivoPushPublico
 from .utils_cidades import buscar_coordenada
 from .utils import obter_localizacao
 from django.conf import settings
+from api.utils_ia import classificar_padrao
+from api.utils_geo import obter_endereco
+from api.utils_auth import validar_token
+from api.models import Empresa, RegistroSintoma
+from django.db.models import Count, Avg, Q
+from django.db.models.functions import TruncDate
+from django.contrib.auth.hashers import make_password
+from collections import defaultdict
+
+# ============================
+# 🧠 IA GLOBAL (MOVER PRA CIMA)
+# ============================
+
+historico = defaultdict(list)
+
+STATE_ALIASES = {
+    "AC": "Acre",
+    "AL": "Alagoas",
+    "AP": "Amapa",
+    "AM": "Amazonas",
+    "BA": "Bahia",
+    "CE": "Ceara",
+    "DF": "Distrito Federal",
+    "ES": "Espirito Santo",
+    "GO": "Goias",
+    "MA": "Maranhao",
+    "MT": "Mato Grosso",
+    "MS": "Mato Grosso do Sul",
+    "MG": "Minas Gerais",
+    "PA": "Para",
+    "PB": "Paraiba",
+    "PR": "Parana",
+    "PE": "Pernambuco",
+    "PI": "Piaui",
+    "RJ": "Rio de Janeiro",
+    "RN": "Rio Grande do Norte",
+    "RS": "Rio Grande do Sul",
+    "RO": "Rondonia",
+    "RR": "Roraima",
+    "SC": "Santa Catarina",
+    "SP": "Sao Paulo",
+    "SE": "Sergipe",
+    "TO": "Tocantins",
+}
+
+
+def _state_terms(value):
+    raw = (value or "").strip()
+    if not raw:
+        return []
+    upper = raw.upper()
+    terms = {raw, upper}
+    alias = STATE_ALIASES.get(upper)
+    if alias:
+        terms.add(alias)
+    for uf, name in STATE_ALIASES.items():
+        if raw.lower() == name.lower():
+            terms.add(uf)
+            terms.add(name)
+    return list(terms)
+
+
+JANELA_ESTABILIDADE_FOCO_DIAS = 10
+JANELA_DECAIMENTO_FOCO_DIAS = 30
+
+
+def _peso_temporal_publico(day, agora=None):
+    agora = agora or timezone.now()
+    if not day:
+        return 1.0
+    if hasattr(day, "date"):
+        day = day.date()
+    dias = max((agora.date() - day).days, 0)
+    if dias <= JANELA_ESTABILIDADE_FOCO_DIAS:
+        return 1.0
+    if dias >= JANELA_DECAIMENTO_FOCO_DIAS:
+        return 0.0
+    janela_queda = JANELA_DECAIMENTO_FOCO_DIAS - JANELA_ESTABILIDADE_FOCO_DIAS
+    dias_em_queda = dias - JANELA_ESTABILIDADE_FOCO_DIAS
+    return round(max(0.0, 1 - (dias_em_queda / janela_queda)), 3)
+
+
+def _indice_temporal_publico(queryset, agora=None):
+    agora = agora or timezone.now()
+    rows = (
+        queryset.annotate(day=TruncDate("data_registro"))
+        .values("day")
+        .annotate(total=Count("id"))
+    )
+    return round(sum(item["total"] * _peso_temporal_publico(item["day"], agora) for item in rows), 2)
+
+
+def _nivel_por_indice_publico(indice, crescimento=0):
+    if indice >= 500 or crescimento >= 60:
+        return "alto"
+    if indice >= 180 or crescimento >= 25:
+        return "moderado"
+    if indice >= 60 or crescimento > 0:
+        return "atencao"
+    return "baixo"
+
+
+def _nivel_local_por_indice_publico(indice, crescimento=0):
+    if indice >= 45 or crescimento >= 60:
+        return "alto"
+    if indice >= 20 or crescimento >= 25:
+        return "moderado"
+    if indice >= 8 or crescimento > 0:
+        return "atencao"
+    return "baixo"
+
+def calcular_previsao(cidade, estado, total):
+
+    chave = f"{cidade}_{estado}"
+    hist = historico[chave]
+
+    # 🔥 SALVA O DADO ATUAL (ESSA LINHA FALTAVA)
+    hist.append(total)
+
+    # mantém últimos 5
+    if len(hist) > 5:
+        hist.pop(0)
+
+    if len(hist) < 2:
+        return "SEM DADOS", 0
+
+    atual = hist[-1]
+    anterior = hist[-2]
+
+    if anterior == 0:
+        return "ESTÁVEL", 0
+
+    crescimento = ((atual - anterior) / anterior) * 100
+
+    if crescimento > 70:
+        return "EXPLOSÃO IMINENTE", crescimento
+    elif crescimento > 30:
+        return "FORTE CRESCIMENTO", crescimento
+    elif crescimento > 10:
+        return "TENDÊNCIA DE ALTA", crescimento
+    elif crescimento < -10:
+        return "QUEDA", crescimento
+    else:
+        return "ESTÁVEL", crescimento
 
 
 import json
@@ -29,7 +173,15 @@ from .utils import (
 # ================= LOGIN =================
 
 def tela_login(request):
-    return render(request, 'login.html')
+    return render(request, 'login_empresa.html')
+
+
+def tela_login_empresa(request):
+    return render(request, 'login_empresa.html')
+
+
+def tela_login_governo(request):
+    return render(request, 'login_governo.html')
 
 
 def verificar_acesso(request):
@@ -69,65 +221,402 @@ def validar_token(request):
         return None, JsonResponse({"erro": "token inválido"}, status=403)
 
 
+def _client_ip(request):
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
+
+
+def _device_id_request(request):
+    return (request.headers.get("X-Device-Id") or "").strip()[:120] or None
+
+
+def _score_suspeita(empresa, request, dados):
+    agora = timezone.now()
+    ip = _client_ip(request)
+    device_id = _device_id_request(request)
+    janela_10m = agora - timedelta(minutes=10)
+    janela_15m = agora - timedelta(minutes=15)
+    filtros_recentes = RegistroSintoma.objects.filter(empresa=empresa, data_registro__gte=janela_10m)
+    filtros_duplicados = RegistroSintoma.objects.filter(empresa=empresa, data_registro__gte=janela_15m)
+
+    score = 1.0
+    motivos = []
+
+    if ip:
+        volume_ip = filtros_recentes.filter(ip=ip).count()
+        if volume_ip >= 20:
+            score -= 0.55
+            motivos.append("volume_ip_extremo")
+        elif volume_ip >= 10:
+            score -= 0.25
+            motivos.append("volume_ip_alto")
+
+    if device_id:
+        volume_device = filtros_recentes.filter(device_id=device_id).count()
+        if volume_device >= 18:
+            score -= 0.45
+            motivos.append("volume_device_extremo")
+        elif volume_device >= 8:
+            score -= 0.2
+            motivos.append("volume_device_alto")
+
+    duplicate_filters = {
+        "latitude": dados.get("latitude"),
+        "longitude": dados.get("longitude"),
+        "febre": bool(dados.get("febre", False)),
+        "tosse": bool(dados.get("tosse", False)),
+        "dor_corpo": bool(dados.get("dor_corpo", False)),
+        "cansaco": bool(dados.get("cansaco", False)),
+        "falta_ar": bool(dados.get("falta_ar", False)),
+    }
+    if ip:
+        duplicate_filters["ip"] = ip
+    if device_id:
+        duplicate_filters["device_id"] = device_id
+
+    duplicados = filtros_duplicados.filter(**duplicate_filters).count()
+    if duplicados >= 3:
+        score -= 0.5
+        motivos.append("duplicado_em_massa")
+    elif duplicados >= 1:
+        score -= 0.18
+        motivos.append("duplicado_recente")
+
+    return max(round(score, 2), 0.0), motivos, ip, device_id
+
+
+def _empresa_app_publico():
+    empresa, _ = Empresa.objects.get_or_create(
+        email="populacao@soluscrt.com",
+        defaults={
+            "nome": "SolusCRT Populacao",
+            "senha": make_password("publico_app"),
+            "ativo": True,
+            "plano": "publico",
+            "pacote_codigo": "national_1000",
+            "max_usuarios": 1000,
+            "max_dispositivos": 1000,
+        },
+    )
+    return empresa
+
+
+def _bloqueio_envio_publico(empresa, ip, device_id):
+    agora = timezone.now()
+    janela_curta = agora - timedelta(hours=6)
+    janela_longa = agora - timedelta(hours=24)
+
+    if ip:
+        envios_ip_6h = RegistroSintoma.objects.filter(
+            empresa=empresa,
+            ip=ip,
+            data_registro__gte=janela_curta,
+        ).count()
+        if envios_ip_6h >= 1:
+            return False, "Ja recebemos um envio recente desta rede. Tente novamente mais tarde."
+
+        envios_ip_24h = RegistroSintoma.objects.filter(
+            empresa=empresa,
+            ip=ip,
+            data_registro__gte=janela_longa,
+        ).count()
+        if envios_ip_24h >= 3:
+            return False, "Limite diario de envios desta rede atingido."
+
+    if device_id:
+        envios_device_6h = RegistroSintoma.objects.filter(
+            empresa=empresa,
+            device_id=device_id,
+            data_registro__gte=janela_curta,
+        ).count()
+        if envios_device_6h >= 1:
+            return False, "Ja recebemos um envio recente deste aparelho. Tente novamente mais tarde."
+
+        envios_device_24h = RegistroSintoma.objects.filter(
+            empresa=empresa,
+            device_id=device_id,
+            data_registro__gte=janela_longa,
+        ).count()
+        if envios_device_24h >= 3:
+            return False, "Limite diario de envios deste aparelho atingido."
+
+    return True, None
+
+
+def _semaforo_publico(nivel):
+    mapa = {
+        "baixo": {
+            "faixa": "Verde",
+            "cor": "#1DD1A1",
+            "descricao": "Sinais sob monitoramento, sem pressao relevante no momento.",
+        },
+        "atencao": {
+            "faixa": "Amarelo",
+            "cor": "#FFD166",
+            "descricao": "Oscilacao perceptivel de sinais, com necessidade de atencao local.",
+        },
+        "moderado": {
+            "faixa": "Laranja",
+            "cor": "#FF9B54",
+            "descricao": "Crescimento consistente de sinais na regiao, com foco reforcado de vigilancia.",
+        },
+        "alto": {
+            "faixa": "Vermelho",
+            "cor": "#FF6B6B",
+            "descricao": "Alta concentracao de sinais e crescimento acima do esperado para a area.",
+        },
+    }
+    return mapa.get(nivel, mapa["baixo"])
+
+
+def _orientacao_publica(nivel, grupo_top=None):
+    if nivel == "alto":
+        return {
+            "titulo": "Momento de cautela reforcada",
+            "resumo": "Reduza exposicao desnecessaria, acompanhe sinais respiratorios ou febris e procure atendimento se houver piora.",
+            "acoes": [
+                "Evite exposicoes prolongadas em locais fechados e muito cheios.",
+                "Acompanhe febre persistente, falta de ar ou agravamento rapido.",
+                "Busque avaliacao profissional diante de sinais de alerta.",
+            ],
+        }
+    if nivel == "moderado":
+        return {
+            "titulo": "Atencao preventiva na regiao",
+            "resumo": "Ha crescimento relevante de sinais locais. Mantenha observacao ativa da sua saude e das pessoas proximas.",
+            "acoes": [
+                "Observe evolucao de sintomas nas proximas 24 a 48 horas.",
+                "Reforce medidas basicas de higiene e ventilacao.",
+                "Se houver pessoas vulneraveis em casa, redobre a atencao.",
+            ],
+        }
+    if nivel == "atencao":
+        return {
+            "titulo": "Sinais em observacao",
+            "resumo": "O territorio apresenta variacao acima do habitual, mas ainda sem pressao alta.",
+            "acoes": [
+                "Monitore como os sintomas evoluem ao longo do dia.",
+                "Evite automedicacao inadequada.",
+                "Consulte orientacao profissional se o quadro persistir.",
+            ],
+        }
+    grupo = grupo_top or "monitoramento geral"
+    return {
+        "titulo": "Cenario estavel no momento",
+        "resumo": f"A regiao segue em observacao publica, com predominio recente de {grupo.lower()}.",
+        "acoes": [
+            "Mantenha cuidados basicos de saude e hidratação.",
+            "Use o app para acompanhar mudancas no seu territorio.",
+            "Se surgirem sintomas, registre apenas uma vez por periodo.",
+        ],
+    }
+
+
+def _alerta_publico(nivel, crescimento, grupo_top=None):
+    if nivel == "alto":
+        return {
+            "titulo": "Alerta elevado na sua area",
+            "mensagem": f"Crescimento de {crescimento}% com concentracao relevante de sinais recentes.",
+            "gravidade": "critica",
+        }
+    if nivel == "moderado":
+        return {
+            "titulo": "Atencao reforcada para a sua area",
+            "mensagem": f"A regiao apresenta crescimento de {crescimento}% e exige observacao preventiva.",
+            "gravidade": "alta",
+        }
+    if nivel == "atencao":
+        return {
+            "titulo": "Mudanca detectada no territorio",
+            "mensagem": "Ha oscilacao de sinais locais. Continue acompanhando o radar da sua regiao.",
+            "gravidade": "moderada",
+        }
+    grupo = grupo_top or "sinais gerais"
+    return {
+        "titulo": "Situacao sob controle",
+        "mensagem": f"Nao ha alerta elevado no momento. O principal sinal recente e {grupo.lower()}.",
+        "gravidade": "leve",
+    }
+
+
 # ================= REGISTRO =================
 
 @csrf_exempt
 def registrar_sintoma(request):
 
+    # 🔐 valida token
     empresa_id, erro = validar_token(request)
     if erro:
         return erro
 
-    empresa = Empresa.objects.get(id=empresa_id)
+    try:
+        empresa = Empresa.objects.get(id=empresa_id)
+    except Empresa.DoesNotExist:
+        return JsonResponse({"erro": "empresa não encontrada"}, status=404)
 
-    dados = json.loads(request.body or "{}")
+    try:
+        dados = json.loads(request.body or "{}")
+    except:
+        return JsonResponse({"erro": "json inválido"}, status=400)
 
+    # 📍 coordenadas
     latitude = dados.get("latitude")
     longitude = dados.get("longitude")
 
-    local = obter_localizacao(latitude, longitude)
+    if not latitude or not longitude:
+        return JsonResponse({"erro": "latitude/longitude obrigatórios"}, status=400)
 
-    # 🔥 CORREÇÃO AQUI (ANTES DO CREATE)
-    mapa_estados = {
-        "Rio de Janeiro": "RJ",
-        "São Paulo": "SP",
-        "Minas Gerais": "MG",
-        "Bahia": "BA",
-        "Rio Grande do Sul": "RS"
-    }
+    # 🌎 GEOLOCALIZAÇÃO (BRASIL INTEIRO)
+    geo = obter_endereco(latitude, longitude)
 
-    estado_raw = local.get("estado")
-    estado = mapa_estados.get(estado_raw, estado_raw)
+    # 🧠 classificação
     grupo, classificacao = classificar_padrao(dados)
+    confianca, motivos_suspeita, ip, device_id = _score_suspeita(empresa, request, dados)
 
-    # 🔥 CREATE LIMPO
+    if confianca <= 0.3:
+        return JsonResponse({
+            "erro": "envio bloqueado por protecao antifraude",
+            "motivos": motivos_suspeita,
+        }, status=429)
+
+    # 💾 salvar
     RegistroSintoma.objects.create(
-    id_anonimo=str(uuid.uuid4()),
-    febre=dados.get("febre", False),
-    tosse=dados.get("tosse", False),
-    dor_corpo=dados.get("dor_corpo", False),
-    cansaco=dados.get("cansaco", False),
-    falta_ar=dados.get("falta_ar", False),
-    latitude=latitude,
-    longitude=longitude,
-    pais=local.get("pais"),
-    estado=local.get("estado"),
-    cidade=local.get("cidade"),
-    bairro=local.get("bairro"),
-    condado=local.get("condado"),
-    empresa=empresa,
+        id_anonimo=uuid.uuid4(),
+        febre=dados.get("febre", False),
+        tosse=dados.get("tosse", False),
+        dor_corpo=dados.get("dor_corpo", False),
+        cansaco=dados.get("cansaco", False),
+        falta_ar=dados.get("falta_ar", False),
 
-    # 👇 NOVO
-    grupo=grupo,
-    classificacao=classificacao
-)
+        latitude=latitude,
+        longitude=longitude,
+
+        pais=geo.get("pais"),
+        estado=geo.get("estado"),
+        cidade=geo.get("cidade"),
+        bairro=geo.get("bairro") or "Centro",
+        condado=geo.get("condado"),
+
+        empresa=empresa,
+
+        grupo=grupo,
+        classificacao=classificacao,
+        ip=ip,
+        device_id=device_id,
+        confianca=confianca,
+        suspeito=confianca < 0.75,
+    )
 
     return JsonResponse({
-    "status": "ok",
-    "grupo": grupo,
-    "classificacao": classificacao
-})
+        "status": "ok",
+        "grupo": grupo,
+        "classificacao": classificacao,
+        "confianca": confianca,
+        "suspeito": confianca < 0.75,
+        "local": {
+            "bairro": geo.get("bairro"),
+            "cidade": geo.get("cidade"),
+            "estado": geo.get("estado")
+        }
+    })
 
+
+@csrf_exempt
+def registrar_sintoma_publico(request):
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    latitude = dados.get("latitude")
+    longitude = dados.get("longitude")
+    location_source = (dados.get("location_source") or "current").strip()
+    if latitude in [None, ""] or longitude in [None, ""]:
+        return JsonResponse({"erro": "latitude/longitude obrigatórios"}, status=400)
+
+    empresa = _empresa_app_publico()
+    if settings.DEBUG and request.headers.get("X-Solus-Simulation") == "true":
+        geo = {
+            "bairro": (dados.get("bairro") or "Centro").strip(),
+            "cidade": (dados.get("cidade") or "Rio de Janeiro").strip(),
+            "estado": (dados.get("estado") or "Rio de Janeiro").strip(),
+            "pais": (dados.get("pais") or "Brasil").strip(),
+        }
+    else:
+        geo = obter_endereco(latitude, longitude)
+    grupo, classificacao = classificar_padrao(dados)
+    confianca, motivos_suspeita, ip, device_id = _score_suspeita(empresa, request, dados)
+    if location_source == "public_reference":
+        confianca = min(confianca, 0.55)
+        motivos_suspeita.append("referencia_regional_inicial")
+    permitido, motivo_bloqueio = _bloqueio_envio_publico(empresa, ip, device_id)
+
+    if not permitido:
+        return JsonResponse({
+            "status": "ja_considerado",
+            "mensagem": "Seu envio recente ja foi considerado no monitoramento regional.",
+            "grupo": grupo,
+            "classificacao": classificacao,
+            "confianca": 1,
+            "suspeito": False,
+            "motivos_suspeita": [],
+            "local": {
+                "bairro": geo.get("bairro"),
+                "cidade": geo.get("cidade"),
+                "estado": geo.get("estado"),
+            },
+            "erro": motivo_bloqueio,
+            "codigo": "rate_limit_publico",
+        })
+
+    if confianca <= 0.3:
+        return JsonResponse({
+            "erro": "envio bloqueado por proteção antifraude",
+            "motivos": motivos_suspeita,
+        }, status=429)
+
+    registro = RegistroSintoma.objects.create(
+        id_anonimo=uuid.uuid4(),
+        empresa=empresa,
+        febre=bool(dados.get("febre", False)),
+        tosse=bool(dados.get("tosse", False)),
+        dor_corpo=bool(dados.get("dor_corpo", False)),
+        cansaco=bool(dados.get("cansaco", False)),
+        falta_ar=bool(dados.get("falta_ar", False)),
+        latitude=latitude,
+        longitude=longitude,
+        pais=geo.get("pais"),
+        estado=geo.get("estado"),
+        cidade=geo.get("cidade"),
+        bairro=geo.get("bairro") or "Centro",
+        condado=geo.get("condado"),
+        grupo=grupo,
+        classificacao=classificacao,
+        ip=ip,
+        device_id=device_id,
+        confianca=confianca,
+        suspeito=confianca < 0.75,
+    )
+
+    return JsonResponse({
+        "status": "ok",
+        "registro_id": str(registro.id_anonimo),
+        "grupo": grupo,
+        "classificacao": classificacao,
+        "confianca": confianca,
+        "suspeito": confianca < 0.75,
+        "motivos_suspeita": motivos_suspeita,
+        "local": {
+            "bairro": registro.bairro,
+            "cidade": registro.cidade,
+            "estado": registro.estado,
+        },
+    })
 
 def listar_sintomas(request):
     empresa_id, erro = validar_token(request)
@@ -180,31 +669,78 @@ def resumo_municipios(request):
     return JsonResponse(resultado, safe=False)
 # ================= SURTOS =================
 
+from django.db.models import Sum
+from django.db.models import Count, Q
+
 def detectar_surtos(request):
 
-    dados = RegistroSintoma.objects.values("cidade", "estado").annotate(total=Count("id"))
+    dados = RegistroSintoma.objects.values("cidade", "estado").annotate(
 
-    resultado = []
+        total=Count("id"),
+
+        # 🧠 SINTOMAS
+        febre=Count("id", filter=Q(febre=True)),
+        tosse=Count("id", filter=Q(tosse=True)),
+        falta_ar=Count("id", filter=Q(falta_ar=True)),
+        dor_corpo=Count("id", filter=Q(dor_corpo=True)),
+        cansaco=Count("id", filter=Q(cansaco=True)),
+
+        # 🦠 DOENÇAS
+        # 🦠 DOENÇAS (CERTO BASEADO NO SEU MODEL)
+        dengue=Count("id", filter=Q(grupo__icontains="dengue")),
+        covid=Count("id", filter=Q(grupo__icontains="covid")),
+        influenza=Count("id", filter=Q(grupo__icontains="influenza")),
+        zika=Count("id", filter=Q(grupo__icontains="zika")),
+        chikungunya=Count("id", filter=Q(grupo__icontains="chikungunya")),
+        srag=Count("id", filter=Q(grupo__icontains="srag")),
+        gastro=Count("id", filter=Q(grupo__icontains="gastro")),
+    )
+
+    resposta = []
 
     for d in dados:
 
-        lat, lon = buscar_coordenada(d["cidade"], d["estado"])
+        cidade = d["cidade"]
+        estado = d["estado"]
+        total = d["total"] or 0
 
-        crescimento = "ESTAVEL"  # pode evoluir depois
+        lat, lon = buscar_coordenada(cidade, estado)
 
-        nivel = calcular_risco(d["total"], crescimento)
+        # 🧠 IA
+        previsao, crescimento = calcular_previsao(cidade, estado, total)
 
-        resultado.append({
-            "cidade": d["cidade"],
-            "estado": d["estado"],
-            "total": d["total"],
+        nivel = calcular_risco(total, crescimento)
+
+        resposta.append({
+            "cidade": cidade,
+            "estado": estado,
+            "total": total,
+
+            "crescimento": round(crescimento, 2),
+            "previsao": previsao,
             "nivel": nivel,
+
             "latitude": lat,
-            "longitude": lon
+            "longitude": lon,
+
+            # 🧠 sintomas
+            "febre": d["febre"],
+            "tosse": d["tosse"],
+            "falta_ar": d["falta_ar"],
+            "dor_corpo": d["dor_corpo"],
+            "cansaco": d["cansaco"],
+
+            # 🦠 doenças
+            "dengue": d["dengue"],
+            "covid": d["covid"],
+            "influenza": d["influenza"],
+            "zika": d["zika"],
+            "chikungunya": d["chikungunya"],
+            "srag": d["srag"],
+            "gastro": d["gastro"],
         })
 
-    return JsonResponse(resultado, safe=False)
-
+    return JsonResponse(resposta, safe=False)
 
 # ================= PREVISÃO =================
 
@@ -228,25 +764,58 @@ def prever_surtos(request):
     resultado = []
 
     for d in ultimas_24h:
-        anterior = mapa_48h.get((d["cidade"], d["estado"]), 1)
-        crescimento = d["total"] / anterior
 
-        risco = "NORMAL"
-        if crescimento > 1.5:
-            risco = "ALERTA"
-        if crescimento > 2:
+        cidade = d["cidade"]
+        estado = d["estado"]
+        atual = d["total"]
+
+        anterior = mapa_48h.get((cidade, estado), 0)
+
+        # 🔥 CRESCIMENTO REAL (%)
+        if anterior > 0:
+            crescimento = ((atual - anterior) / anterior) * 100
+        else:
+            crescimento = 100  # novo surto
+
+        # ============================
+        # 🧠 IA DE DECISÃO
+        # ============================
+
+        risco = "BAIXO"
+        previsao = "ESTÁVEL"
+        interpretacao = "Situação sob controle"
+
+        if crescimento > 100 and atual > 50:
             risco = "CRITICO"
+            previsao = "EXPLOSÃO IMINENTE"
+            interpretacao = "Alta probabilidade de surto grave nas próximas horas"
+
+        elif crescimento > 50:
+            risco = "ALTO"
+            previsao = "FORTE CRESCIMENTO"
+            interpretacao = "Disseminação acelerada detectada"
+
+        elif crescimento > 20:
+            risco = "MEDIO"
+            previsao = "TENDÊNCIA DE ALTA"
+            interpretacao = "Aumento consistente de casos"
+
+        elif crescimento < -20:
+            risco = "BAIXO"
+            previsao = "QUEDA"
+            interpretacao = "Redução de casos"
 
         resultado.append({
-            "cidade": d["cidade"],
-            "estado": d["estado"],
-            "total": d["total"],
+            "cidade": cidade,
+            "estado": estado,
+            "total": atual,
             "crescimento": round(crescimento, 2),
-            "risco": risco
+            "risco": risco,
+            "previsao": previsao,
+            "interpretacao": interpretacao
         })
 
     return JsonResponse(resultado, safe=False)
-
 
 # ================= IA =================
 
@@ -259,10 +828,6 @@ def analisar_tosse(request):
     ]))
 
 
-# ================= PAINEL =================
-
-def painel_geral(request):
-    return JsonResponse({"status": "ok"})
 
 
 # ================= ALERTAS =================
@@ -276,7 +841,10 @@ def alertas(request):
 # ================= PAGAMENTO =================
 
 def tela_pagamento(request):
-    return render(request, "pagamento.html")
+    from .planos import PACOTES_SAAS
+    return render(request, "pagamento.html", {
+        "pacotes": PACOTES_SAAS,
+    })
 
 
 def sucesso(request):
@@ -384,45 +952,6 @@ def diagnostico_ia_avancado(request):
     })
 
 
-@csrf_exempt
-def registrar_sintoma_app(request):
-
-    dados = json.loads(request.body or "{}")
-
-    lat = dados.get("latitude")
-    lon = dados.get("longitude")
-
-    local = obter_localizacao(lat, lon)
-
-    empresa = Empresa.objects.first()
-
-    grupo, classificacao = classificar_padrao(dados)
-
-    RegistroSintoma.objects.create(
-    id_anonimo=str(uuid.uuid4()),
-    febre=dados.get("febre", False),
-    tosse=dados.get("tosse", False),
-    dor_corpo=dados.get("dor_corpo", False),
-    cansaco=dados.get("cansaco", False),
-    falta_ar=dados.get("falta_ar", False),
-    latitude=lat,
-    longitude=lon,
-    pais=local.get("pais"),
-    estado=local.get("estado"),
-    cidade=local.get("cidade"),
-    bairro=local.get("bairro"),
-    condado=local.get("condado"),
-    empresa=empresa,
-
-    grupo=grupo,
-    classificacao=classificacao
-)
-
-    return JsonResponse({
-    "status": "ok",
-    "grupo": grupo,
-    "classificacao": classificacao
-})
 
 def classificar_padrao(dados):
 
@@ -497,6 +1026,298 @@ def mapa_casos(request):
 
     return JsonResponse(resultado, safe=False)
 
+
+def app_resumo_publico(request):
+    agora = timezone.now()
+    ultimas_24h = RegistroSintoma.objects.filter(data_registro__gte=agora - timedelta(hours=24))
+    ultimos_7d = RegistroSintoma.objects.filter(data_registro__gte=agora - timedelta(days=7))
+    ativos_30d = RegistroSintoma.objects.filter(data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS))
+    dias_anteriores = RegistroSintoma.objects.filter(
+        data_registro__gte=agora - timedelta(days=14),
+        data_registro__lt=agora - timedelta(days=7),
+    )
+
+    total_7d = ultimos_7d.count()
+    total_30d = ativos_30d.count()
+    indice_ativo_30d = _indice_temporal_publico(ativos_30d, agora)
+    base_anterior = dias_anteriores.count()
+    crescimento = 0.0
+    if base_anterior:
+        crescimento = round(((total_7d - base_anterior) / base_anterior) * 100, 2)
+
+    doencas = (
+        ativos_30d.exclude(grupo__isnull=True).exclude(grupo="")
+        .values("grupo")
+        .annotate(total=Count("id"))
+        .order_by("-total")[:6]
+    )
+    top_grupo = doencas[0]["grupo"] if doencas else "monitoramento geral"
+    nivel_nacional = _nivel_por_indice_publico(indice_ativo_30d, crescimento)
+
+    return JsonResponse({
+        "resumo": {
+            "registros_24h": ultimas_24h.count(),
+            "registros_7d": total_7d,
+            "registros_30d": total_30d,
+            "indice_ativo_7d": indice_ativo_30d,
+            "indice_ativo_30d": indice_ativo_30d,
+            "crescimento_7d": crescimento,
+            "suspeitos_24h": ultimas_24h.filter(suspeito=True).count(),
+            "nivel_nacional": nivel_nacional,
+            "decaimento_temporal": "indice ativo fica estavel por 10 dias sem novos envios e depois reduz gradualmente ate zerar em 30 dias, evitando falsa queda precoce",
+        },
+        "semaforo": _semaforo_publico(nivel_nacional),
+        "alerta_publico": _alerta_publico(nivel_nacional, crescimento, top_grupo),
+        "orientacao_publica": _orientacao_publica(nivel_nacional, top_grupo),
+        "doencas_top": [
+            {
+                "grupo": item["grupo"],
+                "total": item["total"],
+                "percentual": round((item["total"] / max(total_30d, 1)) * 100, 2),
+            }
+            for item in doencas
+        ],
+    })
+
+
+def app_radar_local(request):
+    latitude = request.GET.get("latitude")
+    longitude = request.GET.get("longitude")
+    cidade = request.GET.get("cidade")
+    estado = request.GET.get("estado")
+    bairro = request.GET.get("bairro")
+
+    geo = {}
+    if latitude and longitude:
+        geo = obter_endereco(latitude, longitude)
+        cidade = cidade or geo.get("cidade")
+        estado = estado or geo.get("estado")
+        bairro = bairro or geo.get("bairro")
+
+    if not cidade or not estado:
+        return JsonResponse({"erro": "cidade/estado ou latitude/longitude obrigatórios"}, status=400)
+
+    agora = timezone.now()
+    atuais = RegistroSintoma.objects.filter(
+        cidade=cidade,
+        estado=estado,
+        data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS),
+    )
+    atuais_7d = atuais.filter(data_registro__gte=agora - timedelta(days=7))
+    anteriores = RegistroSintoma.objects.filter(
+        cidade=cidade,
+        estado=estado,
+        data_registro__gte=agora - timedelta(days=14),
+        data_registro__lt=agora - timedelta(days=7),
+    )
+
+    if bairro:
+        atuais_bairro = atuais.filter(bairro=bairro)
+        atuais_bairro_7d = atuais_7d.filter(bairro=bairro)
+    else:
+        atuais_bairro = atuais.none()
+        atuais_bairro_7d = atuais_7d.none()
+
+    total_atuais = atuais_7d.count()
+    total_ativos = atuais.count()
+    indice_ativo = _indice_temporal_publico(atuais, agora)
+    total_anteriores = anteriores.count()
+    crescimento = 0.0
+    if total_anteriores:
+        crescimento = round(((total_atuais - total_anteriores) / total_anteriores) * 100, 2)
+
+    nivel = _nivel_local_por_indice_publico(indice_ativo, crescimento)
+
+    doencas = (
+        atuais.exclude(grupo__isnull=True).exclude(grupo="")
+        .values("grupo")
+        .annotate(total=Count("id"))
+        .order_by("-total")[:6]
+    )
+    grupo_top = doencas[0]["grupo"] if doencas else "monitoramento geral"
+
+    sintomas = {
+        "febre": atuais.filter(febre=True).count(),
+        "tosse": atuais.filter(tosse=True).count(),
+        "dor_corpo": atuais.filter(dor_corpo=True).count(),
+        "cansaco": atuais.filter(cansaco=True).count(),
+        "falta_ar": atuais.filter(falta_ar=True).count(),
+    }
+
+    return JsonResponse({
+        "local": {
+            "bairro": bairro or geo.get("bairro"),
+            "cidade": cidade,
+            "estado": estado,
+        },
+        "radar": {
+            "nivel": nivel,
+            "registros_7d": total_atuais,
+            "registros_30d": total_ativos,
+            "indice_ativo_7d": indice_ativo,
+            "indice_ativo_30d": indice_ativo,
+            "crescimento_7d": crescimento,
+            "suspeitos_7d": atuais_7d.filter(suspeito=True).count(),
+            "bairro_registros_7d": atuais_bairro_7d.count(),
+            "bairro_registros_30d": atuais_bairro.count(),
+            "grupo_top": grupo_top,
+            "decaimento_temporal": "sem novos envios, o indice local permanece estavel por 10 dias e depois cai de forma gradual ate 30 dias para evitar conclusoes falsas",
+        },
+        "semaforo": _semaforo_publico(nivel),
+        "alerta_publico": _alerta_publico(nivel, crescimento, grupo_top),
+        "orientacao_publica": _orientacao_publica(nivel, grupo_top),
+        "doencas": [
+            {
+                "grupo": item["grupo"],
+                "total": item["total"],
+                "percentual": round((item["total"] / max(total_ativos, 1)) * 100, 2),
+            }
+            for item in doencas
+        ],
+        "sintomas": sintomas,
+    })
+
+
+def app_mapa_publico(request):
+    agora = timezone.now()
+    base = RegistroSintoma.objects.filter(
+        data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS),
+        latitude__isnull=False,
+        longitude__isnull=False,
+    )
+    cidade = request.GET.get("cidade")
+    estado = request.GET.get("estado")
+    if cidade:
+        base = base.filter(cidade=cidade)
+    if estado:
+        base = base.filter(estado__in=_state_terms(estado))
+
+    hotspots_por_dia = (
+        base.annotate(day=TruncDate("data_registro"))
+        .values("cidade", "estado", "bairro", "day")
+        .annotate(total=Count("id"), latitude_media=Avg("latitude"), longitude_media=Avg("longitude"))
+    )
+
+    areas = {}
+    for row in hotspots_por_dia:
+        key = (row["cidade"], row["estado"], row["bairro"])
+        peso = _peso_temporal_publico(row["day"], agora)
+        area = areas.setdefault(key, {
+            "cidade": row["cidade"],
+            "estado": row["estado"],
+            "bairro": row["bairro"],
+            "total": 0,
+            "indice_ativo": 0.0,
+            "latitude_soma": 0.0,
+            "longitude_soma": 0.0,
+            "peso_geo": 0,
+        })
+        total = row["total"] or 0
+        area["total"] += total
+        area["indice_ativo"] += total * peso
+        area["latitude_soma"] += float(row["latitude_media"]) * total
+        area["longitude_soma"] += float(row["longitude_media"]) * total
+        area["peso_geo"] += total
+
+    hotspots = sorted(areas.values(), key=lambda item: item["indice_ativo"], reverse=True)[:250]
+    total_indice_mapa = sum(item["indice_ativo"] for item in hotspots) or 1
+
+    resultado = []
+    for item in hotspots:
+        grupo_top = (
+            base.filter(
+                cidade=item["cidade"],
+                estado=item["estado"],
+                bairro=item["bairro"],
+            )
+            .exclude(grupo__isnull=True)
+            .exclude(grupo="")
+            .values("grupo")
+            .annotate(total=Count("id"))
+            .order_by("-total")
+            .first()
+        )
+        indice_ativo = round(item["indice_ativo"], 2)
+        nivel = "alto" if indice_ativo >= 45 else "moderado" if indice_ativo >= 20 else "atencao" if indice_ativo >= 8 else "baixo"
+        peso_geo = max(item["peso_geo"], 1)
+        resultado.append({
+            "cidade": item["cidade"],
+            "estado": item["estado"],
+            "bairro": item["bairro"],
+            "total": item["total"],
+            "indice_ativo": indice_ativo,
+            "percentual_ativo": round((indice_ativo / total_indice_mapa) * 100, 2),
+            "latitude": round(item["latitude_soma"] / peso_geo, 6),
+            "longitude": round(item["longitude_soma"] / peso_geo, 6),
+            "grupo_dominante": grupo_top["grupo"] if grupo_top else "Monitoramento geral",
+            "semaforo": _semaforo_publico(nivel),
+            "decaimento_temporal": "foco preservado por 10 dias sem novos envios; depois a intensidade reduz gradualmente ate 30 dias",
+        })
+
+    return JsonResponse({"hotspots": resultado}, safe=False)
+
+
+def app_alertas_publicos(request):
+    cidade = request.GET.get("cidade")
+    estado = request.GET.get("estado")
+    bairro = request.GET.get("bairro")
+
+    alertas = AlertaGovernamental.objects.filter(
+        ativo=True,
+        status=AlertaGovernamental.STATUS_PUBLICADO,
+    ).order_by("-criado_em")
+    if estado:
+        alertas = alertas.filter(Q(estado__isnull=True) | Q(estado="") | Q(estado__in=_state_terms(estado)))
+    if cidade:
+        alertas = alertas.filter(Q(cidade__isnull=True) | Q(cidade="") | Q(cidade=cidade))
+    if bairro:
+        alertas = alertas.filter(Q(bairro__isnull=True) | Q(bairro="") | Q(bairro=bairro))
+
+    return JsonResponse({
+        "alertas": [
+            {
+                "id": alerta.id,
+                "titulo": alerta.titulo,
+                "mensagem": alerta.mensagem,
+                "estado": alerta.estado,
+                "cidade": alerta.cidade,
+                "bairro": alerta.bairro,
+                "nivel": alerta.nivel,
+                "criado_em": alerta.criado_em.isoformat(),
+            }
+            for alerta in alertas[:12]
+        ]
+    })
+
+
+@csrf_exempt
+def registrar_push_publico(request):
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    token = (dados.get("token") or "").strip()
+    device_id = (dados.get("device_id") or "").strip()
+    if not token or not device_id:
+        return JsonResponse({"erro": "token e device_id são obrigatórios"}, status=400)
+
+    registro, _ = DispositivoPushPublico.objects.update_or_create(
+        token=token,
+        defaults={
+            "device_id": device_id[:120],
+            "plataforma": (dados.get("plataforma") or "unknown")[:20],
+            "estado": (dados.get("estado") or "").strip() or None,
+            "cidade": (dados.get("cidade") or "").strip() or None,
+            "bairro": (dados.get("bairro") or "").strip() or None,
+            "ativo": True,
+        },
+    )
+    return JsonResponse({"status": "ok", "push_id": registro.id})
+
 @csrf_exempt
 def analisar_audio(request):
 
@@ -528,27 +1349,6 @@ def analisar_audio(request):
             })
 
     return JsonResponse({"erro": "método inválido"})
-
-from django.db.utils import OperationalError
-
-def criar_admin_automatico():
-    try:
-        from .models import Empresa
-
-        if not Empresa.objects.exists():
-            Empresa.objects.create(
-                nome="Admin",
-                email="admin@admin.com",
-                senha="123456",
-                ativo=True,
-                plano="premium"
-            )
-            print("✅ Admin criado automaticamente")
-    except OperationalError:
-        pass
-
-
-criar_admin_automatico()
 
 from api.models import RegistroSintoma
 
@@ -804,13 +1604,22 @@ p{
   <div id="loading" class="loading">Criando conta...</div>
   <div id="erro" class="erro"></div>
 
-  <div class="footer" onclick="window.location.href='/'">
+  <div class="footer" onclick="window.location.href='/login-empresa/'">
     Já tenho conta
   </div>
 
 </div>
 
 <script>
+function getDeviceId(){
+  let deviceId = localStorage.getItem("device_id");
+  if(!deviceId){
+    deviceId = "dev-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem("device_id", deviceId);
+  }
+  return deviceId;
+}
+
 async function cadastrar(){
 
   const nome = document.getElementById("nome").value;
@@ -840,7 +1649,13 @@ async function cadastrar(){
     const res = await fetch("/api/registrar_empresa", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ nome, email, senha })
+      body: JSON.stringify({
+        nome,
+        email,
+        senha,
+        device_id: getDeviceId(),
+        device_name: navigator.platform || "Computador"
+      })
     });
 
     const data = await res.json();
@@ -849,9 +1664,11 @@ async function cadastrar(){
 
     if(data.token){
       localStorage.setItem("token", data.token);
+      if(data.device_id){
+        localStorage.setItem("device_id", data.device_id);
+      }
 
-      // 🔥 FLUXO PROFISSIONAL
-      window.location.href = "/pagamento/";
+      window.location.href = data.destination || "/pagamento/";
     }else{
       erro.innerText = data.erro || "Erro ao criar conta";
       erro.style.display = "block";
@@ -896,10 +1713,7 @@ def login(request):
 
 def pagamento(request):
 
-    # 🔍 DEBUG DO HEADER
     auth_header = request.headers.get("Authorization")
-
-    print("HEADER COMPLETO:", auth_header)
 
     if not auth_header:
         return JsonResponse({"erro": "Token não enviado"}, status=401)
@@ -909,10 +1723,6 @@ def pagamento(request):
 
     token = auth_header.split(" ")[1]
 
-    print("TOKEN RECEBIDO:", token)
-    print("TAMANHO TOKEN:", len(token))
-
-    # 🔐 DECODE
     try:
         payload = jwt.decode(
             token,
@@ -920,10 +1730,7 @@ def pagamento(request):
             algorithms=["HS256"]
         )
 
-        print("PAYLOAD:", payload)
-
     except Exception as e:
-        print("ERRO REAL:", str(e))
         return JsonResponse({"erro": "Token inválido"}, status=401)
 
     return JsonResponse({
@@ -949,11 +1756,180 @@ def pagamento(request):
 
         empresa_id = payload["empresa_id"]
 
-    except Exception as e:
-        print("ERRO:", str(e))
+    except Exception:
         return JsonResponse({"erro": "Token inválido"}, status=401)
 
     return JsonResponse({
         "status": "ok",
         "empresa_id": empresa_id
     })
+
+
+
+def painel(request):
+
+    empresa_id = request.GET.get("empresa_id")
+
+    if not empresa_id:
+        return JsonResponse({"erro": "sem empresa"}, status=400)
+
+    dados = RegistroSintoma.objects.filter(empresa_id=empresa_id)
+
+    total = dados.count()
+
+    risco = "Alto" if total > 2 else "Baixo"
+    crescimento = "Subindo" if total > 1 else "Estável"
+
+    alerta = None
+    if total > 2:
+        alerta = "Possível surto na região"
+
+    insight = "Aumento de sintomas detectado" if total > 0 else "Sem registros"
+
+    return JsonResponse({
+        "total": total,
+        "risco": risco,
+        "crescimento": crescimento,
+        "alerta": alerta,
+        "insight": insight
+    })
+
+
+def casos_por_regiao(request):
+
+    empresa_id = request.GET.get("empresa_id")
+
+    dados = (
+        RegistroSintoma.objects
+        .filter(empresa_id=empresa_id)
+        .values("bairro", "cidade", "estado")
+        .annotate(
+            total=Count("id"),
+            lat=Avg("latitude"),
+            lng=Avg("longitude"),
+
+            # sintomas
+            febre=Count("id", filter=Q(febre=True)),
+            tosse=Count("id", filter=Q(tosse=True)),
+            falta_ar=Count("id", filter=Q(falta_ar=True)),
+            dor_corpo=Count("id", filter=Q(dor_corpo=True)),
+            cansaco=Count("id", filter=Q(cansaco=True)),
+
+            # doenças (nível OMS)
+            covid=Count("id", filter=Q(grupo="COVID-19")),
+            influenza=Count("id", filter=Q(grupo="Influenza")),
+            dengue=Count("id", filter=Q(grupo="Dengue")),
+            zika=Count("id", filter=Q(grupo="Zika")),
+            chikungunya=Count("id", filter=Q(grupo="Chikungunya")),
+            srag=Count("id", filter=Q(grupo="SRAG")),
+            gastro=Count("id", filter=Q(grupo="Gastroviral")),
+        )
+    )
+
+    resultado = []
+
+    for d in dados:
+
+        total = d["total"]
+
+        if total >= 10:
+            risco = "alto"
+        elif total >= 5:
+            risco = "medio"
+        else:
+            risco = "baixo"
+
+        # dominante
+        tipos = {
+            "COVID-19": d["covid"],
+            "Influenza": d["influenza"],
+            "Dengue": d["dengue"],
+            "Zika": d["zika"],
+            "Chikungunya": d["chikungunya"],
+            "SRAG": d["srag"],
+            "Gastroviral": d["gastro"],
+        }
+
+        dominante = max(tipos, key=tipos.get) if total > 0 else "N/D"
+
+        resultado.append({
+            "regiao": f"{d['bairro']} - {d['cidade']}/{d['estado']}",
+            "total": total,
+            "lat": d["lat"],
+            "lng": d["lng"],
+            "risco": risco,
+
+            # sintomas
+            "febre": d["febre"],
+            "tosse": d["tosse"],
+            "falta_ar": d["falta_ar"],
+            "dor_corpo": d["dor_corpo"],
+            "cansaco": d["cansaco"],
+
+            # doenças
+            "covid": d["covid"],
+            "influenza": d["influenza"],
+            "dengue": d["dengue"],
+            "zika": d["zika"],
+            "chikungunya": d["chikungunya"],
+            "srag": d["srag"],
+            "gastro": d["gastro"],
+
+            "dominante": dominante
+        })
+
+    return JsonResponse(resultado, safe=False)
+
+
+def mapa_risco(request):
+
+    dados = (
+        RegistroSintoma.objects
+        .values("bairro", "latitude", "longitude")
+        .annotate(total=Count("id"))
+    )
+
+    resultado = []
+
+    for d in dados:
+
+        total = d["total"]
+
+        if total > 5:
+            risco = "alto"
+            cor = "red"
+        elif total > 2:
+            risco = "medio"
+            cor = "orange"
+        else:
+            risco = "baixo"
+            cor = "green"
+
+        resultado.append({
+            "bairro": d["bairro"],
+            "lat": d["latitude"],
+            "lng": d["longitude"],
+            "total": total,
+            "risco": risco,
+            "cor": cor
+        })
+
+    return JsonResponse(resultado, safe=False)
+
+
+def bairros_por_cidade(request):
+
+    cidade = request.GET.get("cidade")
+    estado = request.GET.get("estado")
+
+    if not cidade or not estado:
+        return JsonResponse([], safe=False)
+
+    dados = RegistroSintoma.objects.filter(
+        cidade=cidade,
+        estado=estado
+    ).values("bairro").annotate(
+        total=Count("id")
+    ).order_by("-total")
+
+    return JsonResponse(list(dados), safe=False)

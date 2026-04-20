@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Painel Inteligente de Saúde</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -11,47 +12,67 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
-    html, body { height:100%; margin:0; font-family:Arial; }
-    #map { position:absolute; width:100%; height:100%; }
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      font-family: Arial;
+    }
+
+    #map {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+    }
 
     .painel {
-      position:absolute;
-      top:20px;
-      left:20px;
-      z-index:1000;
-      width:340px;
-      background:white;
-      padding:15px;
-      border-radius:12px;
-      box-shadow:0 4px 25px rgba(0,0,0,0.3);
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1000;
+      width: 340px;
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.3);
       transition: all 0.3s ease;
     }
 
-    .titulo { font-size:16px; font-weight:bold; margin-bottom:10px; }
-
-    .topo {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 99999; /* 🔥 MUITO IMPORTANTE */
-  display: flex;
-  gap: 10px;
-}
-
-    .btn {
-      padding:8px 12px;
-      border-radius:8px;
-      border:none;
-      cursor:pointer;
-      color:white;
+    .titulo {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 10px;
     }
 
-    .logout { background:red; }
-    .premium { background:green; }
+    .topo {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 99999;
+      /* 🔥 MUITO IMPORTANTE */
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      color: white;
+    }
+
+    .logout {
+      background: red;
+    }
+
+    .premium {
+      background: green;
+    }
 
     #ranking {
-      margin-top:10px;
-      font-size:13px;
+      margin-top: 10px;
+      font-size: 13px;
     }
 
     button:hover {
@@ -64,473 +85,929 @@
     }
 
     @keyframes pulseAnim {
-      0% { transform: scale(1); opacity: 0.6; }
-      50% { transform: scale(1.3); opacity: 0.2; }
-      100% { transform: scale(1); opacity: 0.6; }
+      0% {
+        transform: scale(1);
+        opacity: 0.6;
+      }
+
+      50% {
+        transform: scale(1.3);
+        opacity: 0.2;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 0.6;
+      }
     }
 
     @media (max-width: 768px) {
 
-  .painel {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    top: auto;
+      .painel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        top: auto;
 
-    width: 100%;
-    max-height: 45%;
+        width: 100%;
+        max-height: 45%;
 
-    border-radius: 20px 20px 0 0;
-    overflow-y: auto;
+        border-radius: 20px 20px 0 0;
+        overflow-y: auto;
 
-    padding: 15px;
-  }
+        padding: 15px;
+      }
 
-  #map {
-    height: 100%;
-  }
+      #map {
+        height: 100%;
+      }
 
-  .topo {
-    top: 10px;
-    right: 10px;
-  }
+      .topo {
+        top: 10px;
+        right: 10px;
+      }
 
-}
+    }
+
+    .map-label {
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
   </style>
 </head>
 
 <body>
 
-<div class="topo">
-  <button onclick="irParaLogin()">💊 Farmácia</button>
-  <button onclick="logout()" class="btn logout">🚪 Sair</button>
-</div>
+  <div class="topo">
+    <button onclick="irParaLogin()">💊 Farmácia</button>
+    <button onclick="logout()" class="btn logout">🚪 Sair</button>
+  </div>
 
 
-<div class="painel">
-  <div class="titulo">Monitoramento de Saúde</div>
+  <div class="painel">
+    <div class="titulo">
+      🧠 SolusCRT Saúde<br>
+      <span style="font-size:12px; opacity:0.7">
+        Monitoramento Epidemiológico Inteligente - Brasil
+      </span>
+    </div>
 
-  <!-- 🔥 FILTRO -->
-  <select id="filtroDoenca" onchange="atualizarTudo()" style="width:100%; padding:6px; border-radius:6px;">
-    <option value="todas">Todas</option>
-    <option value="Dengue">Dengue</option>
-    <option value="COVID">COVID</option>
-    <option value="Chikungunya">Chikungunya</option>
-  </select>
-  
+    <!-- 🔥 FILTRO -->
+    <select id="filtroDoenca" onchange="atualizarTudo()" style="width:100%; padding:6px; border-radius:6px;">
+      <option value="todas">Todas</option>
+      <option value="Dengue">Dengue</option>
+      <option value="COVID">COVID</option>
+      <option value="Chikungunya">Chikungunya</option>
+    </select>
 
-  <br><br>
 
-  <!-- 🎤 IA -->
-  <div style="background:#111; padding:10px; border-radius:10px; width:250px;">
+    <br><br>
 
-  <b style="color:#fff;">🌎 Filtrar por Estado</b><br><br>
+    <!-- 🎤 IA -->
+    <div style="background:#111; padding:10px; border-radius:10px; width:250px;">
 
-  <select id="filtroEstado" style="width:100%; padding:6px;">
-    <option value="">Todos</option>
-  </select>
+      <b style="color:#fff;">🌎 Filtrar por Estado</b><br><br>
 
-  <br><br>
+      <select id="filtroEstado" style="width:100%; padding:6px;">
+        <option value="">Todos</option>
+      </select>
 
-  <button onclick="aplicarFiltroEstado()" style="width:100%;">
-    Aplicar Filtro
-  </button>
-  <br><br>
+      <br><br>
 
-<!-- 🔥 NOVO: CONTROLE DO MAPA -->
-<label style="color:#fff;">🗺️ Tipo de Visualização</label><br><br>
+      <button onclick="aplicarFiltroEstado()" style="width:100%;">
+        Aplicar Filtro
+      </button>
+      <br><br>
 
-<select onchange="mudarModo(this.value)" style="width:100%; padding:6px;">
-  <option value="municipios">Municípios</option>
-  <option value="surtos">Surtos</option>
-  <option value="heatmap">Heatmap</option>
-</select>
+      <!-- 🔥 NOVO: CONTROLE DO MAPA -->
+      <label style="color:#fff;">🗺️ Tipo de Visualização</label><br><br>
 
-</div>
-  <div id="resultadoIA" style="margin-top:10px;"></div>
+      <select onchange="mudarModo(this.value)" style="width:100%; padding:6px;">
+        <option value="surtos">🔥 Surtos Detalhados</option>
+        <option value="radar">🚀 Radar de Saúde (IA)</option>
+        <option value="risco">🧬 Mapa de Risco IA</option>
+      </select>
 
-  <hr>
+    </div>
+    <div id="resultadoIA" style="margin-top:10px;"></div>
 
-  <!-- 📊 DADOS -->
-  <div id="risco">Carregando...</div>
-  <canvas id="grafico"></canvas>
-  
-</div>
+    <hr>
 
-<div id="map"></div>
+    <!-- 📊 DADOS -->
+    <div id="status">Carregando...</div>
+    <div id="risco">Carregando...</div>
+    <canvas id="grafico"></canvas>
 
-<script>
-const empresaId = localStorage.getItem("empresa_id");
+  </div>
 
-// 🔐 se não estiver logado
-if (!empresaId) {
-  window.location.href = "/";
-}
+  <div id="map"></div>
 
-// 🔥 verifica pagamento
-fetch(`/api/status-pagamento?empresa_id=${empresaId}`)
-  .then(res => res.json())
-  .then(data => {
+  <script>
+    const token = localStorage.getItem("token");
+    const empresaId = "{{ empresa_id|escapejs }}" || localStorage.getItem("empresa_id");
 
-    console.log("STATUS:", data.status);
+    if (!empresaId) window.location.href = "/";
 
-    if (data.status !== "aprovado") {
-      window.location.href = "/pagamento/";
-    } else {
-      iniciarSistema(); // 🔥 só inicia mapa aqui
+    localStorage.setItem("empresa_id", empresaId);
+    document.cookie = `empresa_id=${empresaId}; path=/; SameSite=Lax`;
+
+    let previsaoRodando = false; // 🔥 ADICIONE AQUI
+
+    // 🔐 se não estiver logado
+    if (!empresaId) {
+      window.location.href = "/";
     }
 
-  });
+    // 🔥 verifica pagamento
+    let sistemaJaIniciado = false;
 
-// 🔐 logout
-function logout(){
-  localStorage.removeItem("token");
-  localStorage.removeItem("empresa_id");
-  window.location.href = "/";
-}
+    function iniciarSistemaSeguro() {
 
-// 💰 ir pagamento
-function irPagamento(){
-  window.location.href = "/pagamento/";
-}
+      if (sistemaJaIniciado) {
+        console.log("🚫 Já iniciou, ignorando...");
+        return;
+      }
 
-// 🏥 farmácia
-function irParaLogin() {
-  const token = localStorage.getItem("token");
+      sistemaJaIniciado = true;
 
-  if (token) {
-    window.location.href = "/dashboard-farmacia/";
-  } else {
-    window.location.href = "/";
-  }
-}
-</script>
-</body>
-</html>
+      iniciarSistema();
+      
+    }
+    fetch(`/api/status-pagamento?empresa_id=${empresaId}`)
+      .then(res => res.json())
+      .then(data => {
 
-<script>
+        console.log("STATUS:", data.status);
 
-// 🔥 MAPA ESTADOS
-const mapaEstados = {
-  "Acre": "AC","Alagoas": "AL","Amapá": "AP","Amazonas": "AM",
-  "Bahia": "BA","Ceará": "CE","Distrito Federal": "DF","Espírito Santo": "ES",
-  "Goiás": "GO","Maranhão": "MA","Mato Grosso": "MT","Mato Grosso do Sul": "MS",
-  "Minas Gerais": "MG","Pará": "PA","Paraíba": "PB","Paraná": "PR",
-  "Pernambuco": "PE","Piauí": "PI","Rio de Janeiro": "RJ","Rio Grande do Norte": "RN",
-  "Rio Grande do Sul": "RS","Rondônia": "RO","Roraima": "RR",
-  "Santa Catarina": "SC","São Paulo": "SP","Sergipe": "SE","Tocantins": "TO"
-};
+        iniciarSistemaSeguro(); // ✅ corrigido
 
-// 🔐 AUTH
-const token = localStorage.getItem("token");
+        if (data.status !== "aprovado") {
+          console.log("⚠️ acesso limitado");
+        }
 
-// 👇 NÃO bloqueia o mapa
-// só deixa funções protegidas depois
+      })
+      .catch(() => {
 
+        iniciarSistemaSeguro(); // ✅ corrigido
 
-// 🔥 VAR
-let map;
-let heat;
-let usuarioMarker;
-let camadaEstados;
-let surtosAtivos = [];
-let municipiosCirculos = [];
-let grafico;
-let niveisAnteriores = {};
+      });
 
-function verificarToken() {
-  const token = localStorage.getItem("token");
+    // 🔐 logout
+    function logout() {
+      localStorage.removeItem("token");
+      localStorage.removeItem("empresa_id");
+      document.cookie = "empresa_id=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";
+      window.location.href = "/";
+    }
 
-  if (!token) {
-    console.log("Sem token - mapa básico carregado");
-    return false;
-  }
+    // 💰 ir pagamento
+    function irPagamento() {
+      window.location.href = "/pagamento/";
+    }
 
-  return true;
-}
+    // 🏥 farmácia
+    function irParaLogin() {
 
-// 🚀 MAPA
-function iniciarMapa() {
-  map = L.map('map', {
-    zoomControl: false,
-    maxZoom: 18,
-    minZoom: 2
-  }).setView([-14.2, -51.9], 4);
-
-  L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-  L.tileLayer(
-    'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=pk.eyJ1Ijoid2ZnZ2FyY2lhIiwiYSI6ImNtbjgxNHV1NjA1eTUyd29jYjRhaXg1bGYifQ.N4JTgjeO7QIb_7m2LijOAQ',
-    { tileSize: 512, zoomOffset: -1 }
-  ).addTo(map);
-}
-
-// 📍 LOCALIZAÇÃO
-function pegarLocalizacao() {
-  navigator.geolocation.getCurrentPosition(pos => {
-
-    let lat = pos.coords.latitude;
-    let lng = pos.coords.longitude;
-
-    usuarioMarker = L.marker([lat, lng]).addTo(map)
-      .bindPopup("📍 Você está aqui")
-      .openPopup();
-
-    map.setView([lat, lng], 6);
-  });
-}
-
-async function iniciarSistema(){
-  iniciarMapa();
-  pegarLocalizacao();
-
-  // 🔥 só carrega dados se tiver token
-  atualizarTudo();
-
-  setInterval(atualizarTudo, 10000);
-  setInterval(verificarAlertas, 8000);
-}
-
-// 🎨 COR
-function corRisco(total){
-  if (total > 100) return "red";
-  if (total > 50) return "orange";
-  return "green";
-}
-
-// 🔥 NÍVEL DE ALERTA
-function piscarCirculo(circle){
-
-  if (circle._piscando) return; // evita duplicar
-
-  circle._piscando = true;
-
-  let piscando = true;
-
-  circle._intervalo = setInterval(() => {
-
-    circle.setStyle({
-      fillColor: piscando ? "orange" : circle.options.color,
-      fillOpacity: piscando ? 0.9 : 0.4
-    });
-
-    piscando = !piscando;
-
-  }, 400);
-}
-
-function getFiltro(){
-  return document.getElementById("filtroDoenca").value;
-}
-
-function tocarAlerta(){
-  let audio = new Audio("https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg");
-  audio.play();
-}
-
-// 📊 GRÁFICO (corrigido)
-function gerarGraficoEstados(estados){
-
-  const labels = Object.keys(estados);
-  const valores = Object.values(estados);
-
-  if (grafico) {
-    grafico.destroy();
-  }
-
-  grafico = new Chart(document.getElementById("grafico"), {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Casos por Estado',
-        data: valores
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false }
+      if (token) {
+        window.location.href = "/dashboard-farmacia/";
+      } else {
+        window.location.href = "/";
       }
     }
-  });
-}
 
-// 🔥 MUNICÍPIOS (REAL)
-async function carregarMunicipiosReais(){
 
-  municipiosCirculos.forEach(c => map.removeLayer(c));
-  municipiosCirculos = [];
 
-  const token = localStorage.getItem("token");
+    // 🔥 MAPA ESTADOS
+    const mapaEstados = {
+      "Acre": "AC", "Alagoas": "AL", "Amapá": "AP", "Amazonas": "AM",
+      "Bahia": "BA", "Ceará": "CE", "Distrito Federal": "DF", "Espírito Santo": "ES",
+      "Goiás": "GO", "Maranhão": "MA", "Mato Grosso": "MT", "Mato Grosso do Sul": "MS",
+      "Minas Gerais": "MG", "Pará": "PA", "Paraíba": "PB", "Paraná": "PR",
+      "Pernambuco": "PE", "Piauí": "PI", "Rio de Janeiro": "RJ", "Rio Grande do Norte": "RN",
+      "Rio Grande do Sul": "RS", "Rondônia": "RO", "Roraima": "RR",
+      "Santa Catarina": "SC", "São Paulo": "SP", "Sergipe": "SE", "Tocantins": "TO"
+    };
 
-let options = {};
+    // 🔐 AUTH
 
-if (token) {
-  options.headers = {
-    "Authorization": "Bearer " + token
-  };
-}
+    // 👇 NÃO bloqueia o mapa
+    // só deixa funções protegidas depois
 
-const res = await fetch("/api/surtos", options);
 
-  const dados = await res.json();
+    // 🔥 VAR
+    let inteligencia = {
+      surtos: [],
+      calor: [],
+      risco: {},
+      historico: {} // 🔥 NOVO
+    };
 
-  dados.forEach(c => {
+    let map;
+    let heat;
+    let modo = "radar";
+    let usuarioMarker;
+    let camadaEstados;
 
-    if (!c.latitude || !c.longitude) return;
+    let usuarioInteragindo = false;
 
-    let lat = c.latitude;
-    let lon = c.longitude;
+    let surtosAtivos = [];
+    let municipiosCirculos = [];
+    let layers = [];
+    let grafico;
+    let niveisAnteriores = {};
+    let atualizando = false;
 
-    if (!lat || !lon) return;
 
-    let chave = (c.cidade + "-" + c.estado).trim();
+    let estadoSelecionado = null;
 
-let totalAtual = c.total;
-let totalAnterior = niveisAnteriores[chave] || 0;
+    function verificarToken() {
 
-let acimaDe100 = totalAtual >= 100;
+      if (!token) {
+        console.log("Sem token - mapa básico carregado");
+        return false;
+      }
 
-let cruzouMultiplo =
-  Math.floor(totalAtual / 50) > Math.floor(totalAnterior / 50);
-
-// 🔥 UM ÚNICO CÍRCULO
-let circle = L.circle([lat, lon], {
-  radius: Math.min(totalAtual * 150, 3000),
-  color: corRisco(totalAtual),
-  fillOpacity: 0.4
-}).addTo(map);
-
-// 🔥 ALERTA
-if (acimaDe100 && cruzouMultiplo) {
-
-  console.log("🔥 SURTO:", c.cidade, totalAnterior, "→", totalAtual);
-
-  piscarCirculo(circle);
-}
-
-// 🔥 SALVA HISTÓRICO (ESSENCIAL)
-niveisAnteriores[chave] = totalAtual;
-
-// POPUP (mantém o seu)
-let recomendacao = "Estoque normal";
-
-if (c.grupo === "Respiratório") {
-  recomendacao = "💊 Antigripais / Vitamina C";
-}
-
-if (c.grupo === "Dengue") {
-  recomendacao = "💊 Paracetamol / Repelente";
-}
-
-circle.bindPopup(
-  "🏙️ " + c.cidade +
-  "<br>Estado: " + c.estado +
-  "<br>🦠 Tipo: " + (c.grupo || "Não definido") +
-  "<br>📊 Casos: " + c.total +
-  "<br>💊 Ação: " + recomendacao
-);
-
-// TOOLTIP (mantém o seu)
-circle.bindTooltip(
-  c.cidade + " (" + c.total + ")",
-  {
-    permanent: false,
-    direction: "top"
-  }
-);
-
-municipiosCirculos.push(circle);
-  });
-
-  gerarRanking(dados);
-}
-
-// 🔥 ESTADOS (CORRIGIDO)
-async function carregarEstados(){
-
-  const token = localStorage.getItem("token");
-
-let options = {};
-
-if (token) {
-  options.headers = {
-    "Authorization": "Bearer " + token
-  };
-}
-
-const res = await fetch("/api/surtos", options);
-
-  const dados = await res.json();
-
-  let estados = {};
-
-  dados.forEach(d => {
-
-    // 🔥 CORREÇÃO AQUI (ESSENCIAL)
-    let sigla = mapaEstados[d.estado] || d.estado;
-
-    if (!estados[sigla]) {
-      estados[sigla] = 0;
+      return true;
     }
 
-    estados[sigla] += d.total;
-  });
+    // 🚀 MAPA
+    function iniciarMapa() {
+      map = L.map('map', {
+        zoomControl: false,
+        maxZoom: 18,
+        minZoom: 2
+      }).setView([-14.2, -51.9], 4);
 
-  const geo = await fetch("https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson")
-    .then(r => r.json());
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-  if (camadaEstados) map.removeLayer(camadaEstados);
+      L.tileLayer(
+        'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={{ MAPBOX_ACCESS_TOKEN|escapejs }}',
+        { tileSize: 512, zoomOffset: -1 }
+      ).addTo(map);
+      map.on("click", () => {
+        usuarioInteragindo = true;
 
-  camadaEstados = L.geoJSON(geo, {
-
-    style: function(feature){
-
-      let nomeEstado = feature.properties.name;
-      let sigla = mapaEstados[nomeEstado];
-
-      let total = estados[sigla] || estados[nomeEstado] || 0;
-
-      return {
-        fillColor: corRisco(total),
-        weight: 1,
-        color: "#555",
-        fillOpacity: 0.3
-      };
-    },
-
-    onEachFeature: function(feature, layer){
-
-      let nomeEstado = feature.properties.name;
-      let sigla = mapaEstados[nomeEstado];
-
-      let total = estados[sigla] || estados[nomeEstado] || 0;
-
-      layer.bindPopup(`📍 ${nomeEstado}<br>Casos: ${total}`);
+        setTimeout(() => {
+          usuarioInteragindo = false;
+        }, 5000);
+      });
     }
 
-  }).addTo(map);
+    // 📍 LOCALIZAÇÃO
+    // 📍 LOCALIZAÇÃO COMPLETA (PROFISSIONAL)
+    function pegarLocalizacao() {
 
-  let totalCasos = Object.values(estados).reduce((a,b)=>a+b,0);
+      if (!navigator.geolocation) {
+        alert("Geolocalização não suportada");
+        return;
+      }
 
-  let status = "CONTROLADO";
-  if (totalCasos > 200) status = "ALERTA";
-  if (totalCasos > 400) status = "CRÍTICO";
+      navigator.geolocation.getCurrentPosition(
 
-  let topEstados = Object.entries(estados)
-  .sort((a,b) => b[1] - a[1]); // ❌ SEM slice
-let select = document.getElementById("filtroEstado");
+        (pos) => {
 
-select.innerHTML = '<option value="">Todos</option>';
+          let lat = pos.coords.latitude;
+          let lng = pos.coords.longitude;
 
-topEstados.forEach(e => {
-  select.innerHTML += `<option value="${e[0]}">${e[0]} (${e[1]})</option>`;
-});
+          console.log("LOCAL:", lat, lng);
+
+          // 🔥 mostra no mapa
+          usuarioMarker = L.marker([lat, lng]).addTo(map)
+            .bindPopup("📍 Você está aqui")
+            .openPopup();
+
+          map.setView([lat, lng], 10);
+
+          // 🔥 evita enviar várias vezes
+          if (!localStorage.getItem("gps_enviado")) {
+            enviarLocalizacao(lat, lng);
+            localStorage.setItem("gps_enviado", "1");
+          }
+
+        },
+
+        (erro) => {
+          console.log("Erro GPS:", erro);
+          alert("Permita acesso à localização para melhor experiência 📍");
+        }
+
+      );
+    }
 
 
-let lista = topEstados.map(e => 
-  `<div onclick="filtrarEstado('${e[0]}')" 
+    // 🔥 ENVIO PARA BACKEND
+    function enviarLocalizacao(lat, lng) {
+
+      if (!token) return;
+
+      fetch("/api/sintoma/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({
+          latitude: lat,
+          longitude: lng,
+          febre: true,
+          tosse: true
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          console.log("SALVO:", data);
+        })
+        .catch(err => {
+          console.log("Erro envio:", err);
+        });
+    }
+
+    // 🚀 INÍCIO DO SISTEMA
+    let sistemaIniciado = false;
+
+    async function iniciarSistema() {
+
+      if (sistemaIniciado) {
+        console.log("🚫 BLOQUEADO - já iniciado");
+        return;
+      }
+
+      sistemaIniciado = true;
+
+      console.log("🔥 SISTEMA INICIADO REAL");
+
+      iniciarMapa();
+      pegarLocalizacao();
+
+      await atualizarTudo();
+
+      // 🔥 MODO AUTOMÁTICO (CORRETO)
+      definirModoAutomatico();
+
+      iniciarPrevisao();
+
+      if (!window.loopAtualizacao) {
+        window.loopAtualizacao = setInterval(() => {
+
+          if (usuarioInteragindo) {
+            console.log("⛔ pausado interação");
+            return;
+          }
+          console.log("🔄 atualização automática");
+
+          atualizarTudo();
+
+        }, 3000);
+      }
+
+    }
+
+    // 🎨 COR
+    function corRisco(total) {
+      if (total > 100) return "red";
+      if (total > 50) return "orange";
+      return "green";
+    }
+
+    function gerarRiscoInteligente() {
+
+      let regioes = {};
+
+      // ============================
+      // 🔥 1. AGRUPAMENTO DOS DADOS
+      // ============================
+
+      inteligencia.surtos.forEach(d => {
+
+        if (!d.latitude || !d.longitude) return;
+
+        let chave =
+          Math.round(d.latitude * 20) + "_" +
+          Math.round(d.longitude * 20);
+
+        regioes[chave] = {
+          lat: d.latitude,
+          lng: d.longitude,
+          total: 0,
+          crescimento: 0,
+
+          // 🧠 sintomas
+          febre: 0,
+          tosse: 0,
+          falta_ar: 0,
+          dor_corpo: 0,
+          cansaco: 0
+        };
+
+        let r = regioes[chave];
+
+        // soma casos
+        r.total += d.total || 0;
+
+        r.febre += d.febre || 0;
+        r.tosse += d.tosse || 0;
+        r.falta_ar += d.falta_ar || 0;
+        r.dor_corpo += d.dor_corpo || 0;
+        r.cansaco += d.cansaco || 0;
+
+      });
+
+
+
+      // ============================
+      // 🔥 2. HISTÓRICO + CRESCIMENTO
+      // ============================
+
+      Object.keys(regioes).forEach(chave => {
+
+        let r = regioes[chave];
+
+        // 🔥 cria histórico se não existir
+        if (!inteligencia.historico[chave]) {
+          inteligencia.historico[chave] = [];
+        }
+
+        // 🔥 salva estado atual
+        inteligencia.historico[chave].push({
+          tempo: Date.now(),
+          total: r.total
+        });
+
+        // mantém só últimos 20 registros
+        if (inteligencia.historico[chave].length > 20) {
+          inteligencia.historico[chave].shift();
+        }
+
+        let hist = inteligencia.historico[chave];
+
+        // 🔥 calcula crescimento real
+        if (hist.length >= 2) {
+
+          let atual = hist[hist.length - 1].total;
+          let anterior = hist[hist.length - 2].total;
+
+          if (anterior > 0) {
+            r.crescimento = Math.round(((atual - anterior) / anterior) * 100);
+          } else {
+            r.crescimento = 0;
+          }
+
+        } else {
+          r.crescimento = 0;
+        }
+
+        // ============================
+        // 🔮 3. PREVISÃO INTELIGENTE
+        // ============================
+
+        if (r.crescimento > 50 && r.total > 100) {
+          r.previsao = "EXPLOSÃO IMINENTE";
+        }
+        else if (r.crescimento > 20) {
+          r.previsao = "ALTA PROBABILIDADE DE CRESCIMENTO";
+        }
+        else if (r.crescimento < -10) {
+          r.previsao = "QUEDA DE CASOS";
+        }
+        else {
+          r.previsao = "ESTÁVEL";
+        }
+
+      });
+
+      return regioes;
+    }
+
+    function classificarRisco(regiao) {
+
+      let score = 0;
+
+      if (regiao.total > 200) score += 3;
+      else if (regiao.total > 100) score += 2;
+      else if (regiao.total > 50) score += 1;
+
+      if (regiao.crescimento > 50) score += 3;
+      else if (regiao.crescimento > 20) score += 2;
+      else if (regiao.crescimento > 5) score += 1;
+
+      if (score >= 5) return "CRITICO";
+      if (score >= 3) return "ALTO";
+      if (score >= 2) return "MEDIO";
+
+      return "BAIXO";
+    }
+
+    // 🔥 NÍVEL DE ALERTA
+    function piscarCirculo(circle) {
+
+      if (circle._piscando) return;
+
+      circle._piscando = true;
+
+      let piscando = true;
+
+      circle._intervalo = setInterval(() => {
+
+        circle.setStyle({
+          fillColor: piscando ? "orange" : circle.options.color,
+          fillOpacity: piscando ? 0.9 : 0.4
+        });
+
+        piscando = !piscando;
+
+      }, 400);
+    }
+
+
+    // 🎯 FILTRO
+    function getFiltro() {
+      const el = document.getElementById("filtroDoenca");
+      return el ? el.value : "";
+    }
+
+    function preencherEstados() {
+
+      let select = document.getElementById("filtroEstado");
+
+      if (!select) return;
+
+      let estadosUnicos = new Set();
+
+      inteligencia.surtos.forEach(d => {
+        let estado = mapaEstados[d.estado] || d.estado;
+        if (estado) estadosUnicos.add(estado);
+      });
+
+      select.innerHTML = '<option value="">Todos</option>';
+
+      estadosUnicos.forEach(uf => {
+        select.innerHTML += `<option value="${uf}">${uf}</option>`;
+      });
+
+    }
+
+    // 🔊 ALERTA SONORO
+    function tocarAlerta() {
+      let audio = new Audio("https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg");
+      audio.play();
+    }
+
+
+    // 📊 GRÁFICO
+    function gerarGraficoEstados(estados) {
+
+      const labels = Object.keys(estados);
+      const valores = Object.values(estados);
+
+      if (grafico) {
+        grafico.destroy();
+      }
+
+      grafico = new Chart(document.getElementById("grafico"), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Casos por Estado',
+            data: valores
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+
+    // 🔥 MUNICÍPIOS (REAL)
+    async function carregarMunicipiosReais() {
+
+      limparMapa();
+
+      let dados = inteligencia.surtos; // 🔥 USA IA
+
+      if (!dados || dados.length === 0) return;
+
+      let grupos = {};
+
+      dados.forEach(d => {
+
+        if (!d.latitude || !d.longitude) return;
+
+        // 🔥 AGRUPAMENTO INTELIGENTE (GRID)
+        let chave =
+          Math.round(d.latitude * 30) + "_" +
+          Math.round(d.longitude * 30);
+
+        grupos[chave] = {
+          lat: d.latitude,
+          lng: d.longitude,
+          total: 0,
+          cidades: new Set(),
+          dados: []
+        };
+        let g = grupos[chave];
+
+        g.total += d.total || 0;
+        g.cidades.add(d.cidade || "Desconhecida");
+        g.dados.push(d);
+
+        // ============================
+        // 🔥 CONTADOR REAL DE BAIRROS
+        // ============================
+
+        if (!g.bairros) g.bairros = {};
+
+        let bairro = d.bairro || "Não identificado";
+
+        if (!g.bairros[bairro]) g.bairros[bairro] = 0;
+
+        // 🔥 soma correta
+        g.bairros[bairro] += d.total || 1;
+
+      });
+
+      Object.values(grupos).forEach(g => {
+
+        if (g.total < 5) return;
+
+        let cor = corRisco(g.total);
+
+        let circle = L.circle([g.lat, g.lng], {
+          radius: Math.min(g.total * 300, 8000),
+          color: cor,
+          fillColor: cor,
+          fillOpacity: 0.5
+        }).addTo(map);
+
+        circle.bindPopup(`
+      <b>📍 Região</b><br>
+      ${[...g.cidades].slice(0, 3).join(", ")}<br><br>
+      📊 Casos: ${g.total}
+    `);
+
+        layers.push(circle);
+      });
+
+    }
+
+    async function carregarMapaInicial() {
+      await carregarMapaRisco();
+    }
+
+    async function atualizarPainel() {
+
+      const empresaId = localStorage.getItem("empresa_id");
+
+      const res = await fetch(`/api/painel?empresa_id=${empresaId}`);
+      const data = await res.json();
+
+      console.log("PAINEL:", data);
+
+      // 🔥 ATUALIZA NA TELA
+      document.getElementById("status").innerHTML =
+        "📊 Total: " + data.total;
+
+      document.getElementById("risco").innerHTML =
+        "⚠️ Risco: " + data.risco +
+        "<br>📈 Crescimento: " + data.crescimento +
+        (data.alerta ? "<br>🚨 " + data.alerta : "");
+    }
+
+
+    async function carregarMapaRisco() {
+
+      const empresaId = localStorage.getItem("empresa_id");
+
+      try {
+
+        // 🔥 limpar antigos
+        if (window.circulos) {
+          window.circulos.forEach(c => map.removeLayer(c));
+        }
+        window.circulos = [];
+
+        const res = await fetch(`/api/regioes?empresa_id=${empresaId}`);
+        const data = await res.json();
+
+        console.log("MAPA OMS AGRUPADO:", data);
+
+        let grupos = {};
+
+        data.forEach(r => {
+
+          if (!r.lat || !r.lng) return;
+
+          // 🔥 AGRUPAMENTO POR REGIÃO (AJUSTE AQUI A PRECISÃO)
+          let chave =
+            Math.round(r.lat * 30) + "_" +
+            Math.round(r.lng * 30);
+
+          if (!grupos[chave]) {
+            grupos[chave] = {
+              lat: r.lat,
+              lng: r.lng,
+              total: 0,
+              risco: "baixo",
+
+              // 🔥 SOMA DE DADOS
+              febre: 0,
+              tosse: 0,
+              falta_ar: 0,
+              dor_corpo: 0,
+              cansaco: 0,
+
+              covid: 0,
+              influenza: 0,
+              srag: 0,
+              dengue: 0,
+              zika: 0,
+              chikungunya: 0,
+              gastro: 0
+            };
+          }
+
+          let g = grupos[chave];
+
+          g.total += r.total || 0;
+
+          // 🔥 prioridade de risco
+          if (r.risco === "alto") g.risco = "alto";
+          else if (r.risco === "medio" && g.risco !== "alto") g.risco = "medio";
+
+          // 🔥 soma sintomas
+          g.febre += r.febre || 0;
+          g.tosse += r.tosse || 0;
+          g.falta_ar += r.falta_ar || 0;
+          g.dor_corpo += r.dor_corpo || 0;
+          g.cansaco += r.cansaco || 0;
+
+          // 🔥 soma doenças
+          g.covid += r.covid || 0;
+          g.influenza += r.influenza || 0;
+          g.srag += r.srag || 0;
+          g.dengue += r.dengue || 0;
+          g.zika += r.zika || 0;
+          g.chikungunya += r.chikungunya || 0;
+          g.gastro += r.gastro || 0;
+
+        });
+
+        // 🔥 DESENHA APENAS 1 CÍRCULO POR GRUPO
+        Object.values(grupos).forEach(g => {
+
+          let cor = "green";
+          if (g.risco === "medio") cor = "orange";
+          if (g.risco === "alto") cor = "red";
+
+          let raio = Math.min(g.total * 250, 20000);
+
+          const circulo = L.circle([g.lat, g.lng], {
+            color: cor,
+            fillColor: cor,
+            fillOpacity: 0.25,
+            weight: 1,
+            radius: raio
+          })
+            .addTo(map)
+            .bindPopup(`
+
+        <div style="font-family:sans-serif; min-width:240px">
+
+          <div style="font-size:15px; font-weight:bold; margin-bottom:6px">
+            📍 Zona Epidemiológica
+          </div>
+
+          <div style="margin-bottom:6px">
+            📊 Casos: <b>${g.total}</b><br>
+            ⚠️ Risco: <b>${g.risco}</b>
+          </div>
+
+          <hr>
+
+          <div style="font-size:13px">
+            🤒 Febre: ${g.febre}<br>
+            🤧 Tosse: ${g.tosse}<br>
+            😮‍💨 Falta de ar: ${g.falta_ar}<br>
+            💪 Dor no corpo: ${g.dor_corpo}<br>
+            😴 Cansaço: ${g.cansaco}
+          </div>
+
+          <hr>
+
+          <div style="font-size:13px">
+            🦠 COVID-19: ${g.covid}<br>
+            🤧 Influenza: ${g.influenza}<br>
+            🫁 SRAG: ${g.srag}<br>
+            🦟 Dengue: ${g.dengue}<br>
+            🦟 Zika: ${g.zika}<br>
+            🦟 Chikungunya: ${g.chikungunya}<br>
+            💧 Gastroviral: ${g.gastro}
+          </div>
+
+        </div>
+
+      `);
+
+          window.circulos.push(circulo);
+
+        });
+
+        document.getElementById("status").innerText = "Mapa inteligente carregado ✅";
+
+      } catch (e) {
+        console.log("Erro mapa risco:", e);
+      }
+    }
+
+    // 🔥 ESTADOS (CORRIGIDO)
+    async function carregarEstados() {
+
+      let options = {};
+
+      if (token) {
+        options.headers = {
+          "Authorization": "Bearer " + token
+        };
+      }
+
+      const res = await fetch("/api/surtos", options);
+
+      const dados = await res.json();
+
+      let estados = {};
+
+      dados.forEach(d => {
+
+        // 🔥 CORREÇÃO AQUI (ESSENCIAL)
+        let sigla = mapaEstados[d.estado] || d.estado;
+
+        if (!estados[sigla]) {
+          estados[sigla] = 0;
+        }
+
+        estados[sigla] += d.total;
+      });
+
+      const geo = await fetch("https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson")
+        .then(r => r.json());
+
+      if (camadaEstados) map.removeLayer(camadaEstados);
+
+      camadaEstados = L.geoJSON(geo, {
+
+        style: function (feature) {
+
+          let nomeEstado = feature.properties.name;
+          let sigla = mapaEstados[nomeEstado];
+
+          let total = estados[sigla] || estados[nomeEstado] || 0;
+
+          return {
+            fillColor: corRisco(total),
+            weight: 1,
+            color: "#555",
+            fillOpacity: 0.3
+          };
+        },
+
+        onEachFeature: function (feature, layer) {
+
+          let nomeEstado = feature.properties.name;
+          let sigla = mapaEstados[nomeEstado];
+
+          let total = estados[sigla] || estados[nomeEstado] || 0;
+
+          layer.bindPopup(`📍 ${nomeEstado}<br>Casos: ${total}`);
+        }
+
+      }).addTo(map);
+
+      let totalCasos = Object.values(estados).reduce((a, b) => a + b, 0);
+
+      let status = "CONTROLADO";
+      if (totalCasos > 200) status = "ALERTA";
+      if (totalCasos > 400) status = "CRÍTICO";
+
+      let topEstados = Object.entries(estados)
+        .sort((a, b) => b[1] - a[1]); // ❌ SEM slice
+      let select = document.getElementById("filtroEstado");
+
+      select.innerHTML = '<option value="">Todos</option>';
+
+      topEstados.forEach(e => {
+        select.innerHTML += `<option value="${e[0]}">${e[0]} (${e[1]})</option>`;
+      });
+
+
+      let lista = topEstados.map(e =>
+        `<div onclick="filtrarEstado('${e[0]}')" 
         style="
           cursor:pointer;
           padding:6px;
@@ -538,325 +1015,1161 @@ let lista = topEstados.map(e =>
         ">
         ${e[0]}: ${e[1]}
    </div>`
-).join("");
+      ).join("");
 
-  document.getElementById("risco").innerHTML =
-  "<b>📊 Total de Casos:</b> " + totalCasos +
-  "<br><b>🚨 Status:</b> " + status;
+      document.getElementById("risco").innerHTML =
+        "<b>📊 Total de Casos:</b> " + totalCasos +
+        "<br><b>🚨 Status:</b> " + status;
 
-  gerarGraficoEstados(estados);
-}
-
-function aplicarFiltroEstado(){
-
-  let sigla = document.getElementById("filtroEstado").value;
-
-  municipiosCirculos.forEach(c => map.removeLayer(c));
-  municipiosCirculos = [];
-
-  fetch("/api/resumo-municipios", {
-    headers: { 
-  "Authorization": "Bearer " + localStorage.getItem("token") 
-}
-  })
-
-  
-  .then(res => res.json())
-  .then(dados => {
-
-    dados.forEach(c => {
-
-      let estado = mapaEstados[c.estado] || c.estado;
-
-      if (sigla && estado !== sigla) return;
-
-      if (!c.latitude || !c.longitude) return;
-
-      let circle = L.circle([c.latitude, c.longitude], {
-        radius: Math.min(c.total * 150, 3000),
-        color: corRisco(c.total),
-        fillOpacity: 0.5
-      }).addTo(map);
-
-      circle.bindPopup(
-        `🏙️ ${c.cidade}<br>${c.total} casos`
-      );
-
-      municipiosCirculos.push(circle);
-    });
-
-  });
-}
-
-function filtrarEstado(sigla){
-
-  municipiosCirculos.forEach(c => map.removeLayer(c));
-  municipiosCirculos = [];
-
-  fetch("/api/resumo-municipios", {
-    headers: { 
-  "Authorization": "Bearer " + localStorage.getItem("token") 
-}
-  })
-  .then(res => res.json())
-  .then(dados => {
-
-    dados.forEach(c => {
-
-      let estado = mapaEstados[c.estado] || c.estado;
-
-      if (estado !== sigla) return;
-
-      if (!c.latitude || !c.longitude) return;
-
-      let circle = L.circle([c.latitude, c.longitude], {
-        radius: Math.min(c.total * 150, 3000),
-        color: corRisco(c.total),
-        fillOpacity: 0.5
-      }).addTo(map);
-
-      circle.bindPopup(
-        `🏙️ ${c.cidade}<br>${c.total} casos`
-      );
-
-      municipiosCirculos.push(circle);
-    });
-
-  });
-}
-
-function limparFiltro(){
-  carregarMunicipiosReais();
-}
-
-
-function gerarRanking(municipios){
-
-  let top = municipios
-    .sort((a,b) => b.total - a.total)
-    .slice(0,5);
-
-  let html = "<b>🏆 Top Cidades:</b><br>";
-
-  top.forEach(c => {
-    html += c.cidade + " (" + c.estado + ") - " + c.total + "<br>";
-  });
-
-  document.getElementById("ranking").innerHTML = html;
-}
-
-// 🔥 HEATMAP (REAL)
-async function mostrarPrevisao(){
-
-  const res = await fetch("/api/previsao-surtos");
-  const dados = await res.json();
-
-  dados.forEach(d => {
-
-    if (d.risco === "CRITICO"){
-
-      let lat = d.latitude;
-      let lon = d.longitude;
-
-if (!lat || !lon) return;
-
-      L.circle([lat, lon], {
-        radius: 40000,
-        color: "purple",
-        fillOpacity: 0.2
-      }).addTo(map)
-      .bindPopup("🔮 PREVISÃO CRÍTICA<br>" + d.cidade);
+      gerarGraficoEstados(estados);
     }
 
-  });
-}
-setInterval(mostrarPrevisao, 15000);
+    function aplicarFiltroEstado() {
 
-async function carregarHeatmap(){
+      let sigla = document.getElementById("filtroEstado").value;
 
-  const token = localStorage.getItem("token");
+      console.log("SIGLA:", sigla);
 
-let options = {};
+      estadoSelecionado = sigla;
 
-if (token) {
-  options.headers = {
-    "Authorization": "Bearer " + token
-  };
-}
+      if (!sigla) {
+        atualizarTudo();
+        return;
+      }
 
-const res = await fetch("/api/surtos", options);
+      limparMapa();
 
-  const dados = await res.json();
+      let dadosFiltrados = inteligencia.surtos.filter(d => {
 
-  let pontos = [];
+        let estado = mapaEstados[d.estado] || d.estado;
 
-  dados.forEach(d => {
-    if (d.latitude && d.longitude) {
-      pontos.push([d.latitude, d.longitude, d.total / 10]);
+        return estado === sigla;
+
+      });
+
+      if (dadosFiltrados.length === 0) {
+        document.getElementById("status").innerText = "Nenhum dado encontrado";
+        return;
+      }
+
+      // 🔥 HEATMAP FILTRADO
+      let pontos = dadosFiltrados
+        .filter(d => d.latitude && d.longitude)
+        .map(d => [
+          d.latitude,
+          d.longitude,
+          d.total || 1
+        ]);
+
+      heat = L.heatLayer(pontos, {
+        radius: 40,
+        blur: 30
+      }).addTo(map);
+
+      // 🔥 HOTSPOTS
+      dadosFiltrados.forEach(d => {
+
+        if (!d.latitude || !d.longitude) return;
+
+        let cor = "green";
+        if (d.total > 100) cor = "orange";
+        if (d.total > 200) cor = "red";
+
+        let marker = L.circleMarker([d.latitude, d.longitude], {
+          radius: 8,
+          color: cor,
+          fillColor: cor,
+          fillOpacity: 1
+        }).addTo(map);
+
+
+marker.bindPopup(`
+  <b>📍 Região:</b><br>
+  ${[...g.cidades].join(", ")}<br><br>
+
+  <b>📊 Casos:</b> ${g.total}<br><br>
+
+  <b>📍 Bairros afetados:</b><br>
+  ${bairrosTexto || "Sem dados"}<br><br>
+
+  <b>🦠 Doença provável:</b><br>
+  ${principalDoenca}<br><br>
+
+  <b>📊 Probabilidade:</b><br>
+  ${probTexto || "Sem dados"}
+`);
+
+      });
+
+      document.getElementById("status").innerText =
+        "📍 Estado: " + sigla +
+        " | Registros: " + dadosFiltrados.length;
+
     }
-  });
 
-  if (heat) map.removeLayer(heat);
+    function limparMapa() {
 
-  heat = L.heatLayer(pontos, {
-    radius: 30,
-    blur: 20
-  }).addTo(map);
-}
+      // 🔥 remove tudo do mapa (menos o tile base)
+      map.eachLayer(layer => {
 
-function nivelAlerta(total){
-  return Math.floor(total / 50);
-}
+        // mantém apenas o mapa base
+        if (layer instanceof L.TileLayer) return;
 
-// 🚨 SURTOS (REAL)
-let ultimoAlerta = "";
+        map.removeLayer(layer);
 
-async function verificarAlertas(){
+      });
 
-  const res = await fetch("/api/surtos");
-  const dados = await res.json();
+      // 🔥 reset total
+      heat = null;
+      surtosAtivos = [];
+      municipiosCirculos = [];
+      window.circulos = [];
+    }
 
-  let critico = dados.find(d => d.nivel === "CRITICO");
+    function limparFiltro() {
+      // carregarMunicipiosReais();
+    }
+    // carregarMunicipiosReais();
+    // carregarSurtos();
 
-  if (critico && critico.cidade !== ultimoAlerta){
+    function gerarRanking(municipios) {
 
-    ultimoAlerta = critico.cidade;
+      let top = municipios
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
 
-    alert("🚨 SURTO CRÍTICO em " + critico.cidade + " - " + critico.estado);
-  }
-}
+      let html = "<b>🏆 Top Cidades:</b><br>";
+
+      top.forEach(c => {
+        html += c.cidade + " (" + c.estado + ") - " + c.total + "<br>";
+      });
+
+      document.getElementById("ranking").innerHTML = html;
+    }
+
+    // 🔥 HEATMAP (REAL)
+    async function mostrarPrevisao() {
+
+      // 🧹 LIMPA ANTIGOS
+      previsoesAtivas.forEach(c => map.removeLayer(c));
+      previsoesAtivas = [];
+
+      const res = await fetch("/api/previsao-surtos");
+      const dados = await res.json();
+
+      dados.forEach(d => {
+
+        if (d.risco !== "CRITICO") return;
+        if (!d.latitude || !d.longitude) return;
+
+        let circle = L.circle([d.latitude, d.longitude], {
+          radius: 40000,
+          color: "purple",
+          fillOpacity: 0.2
+        }).addTo(map)
+          .bindPopup("🔮 PREVISÃO CRÍTICA<br>" + d.cidade);
+
+        // 🔥 GUARDA PRA LIMPAR DEPOIS
+        previsoesAtivas.push(circle);
+      });
+
+    }
+
+    function iniciarPrevisao() {
+
+      if (window.loopPrevisao) {
+        console.log("🚫 Previsão já ativa");
+        return;
+      }
+
+      window.loopPrevisao = setInterval(() => {
+
+        // 🔥 SÓ roda no modo correto
+        if (modo !== "eventos") return;
+
+        mostrarPrevisao();
+
+      }, 15000);
+    }
+
+    async function carregarHeatmap() {
+
+      limparMapa();
+
+      const res = await fetch(`/api/regioes?empresa_id=${empresaId}`);
+      const dados = await res.json();
+
+      let pontos = [];
+
+      dados.forEach(d => {
+        if (d.lat && d.lng) {
+          pontos.push([d.lat, d.lng, d.total || 1]);
+        }
+      });
+
+      heat = L.heatLayer(pontos, {
+        radius: 25,
+        blur: 20
+      }).addTo(map);
+
+    }
+
+    async function carregarSurtos() {
+
+      const status = document.getElementById("status");
+      if (status) status.innerText = "Carregando surtos...";
+
+      try {
+
+        limparMapa();
+
+        let options = {};
+        if (token) {
+          options.headers = {
+            "Authorization": "Bearer " + token
+          };
+        }
+
+        const res = await fetch("/api/surtos", options);
+        const dados = await res.json();
+
+        if (!dados || dados.length === 0) {
+          if (status) status.innerText = "Sem surtos ativos 👍";
+          return;
+        }
+
+        // ============================
+        // 🔥 HEATMAP
+        // ============================
+
+        let pontos = [];
+
+        dados.forEach(d => {
+          if (!d.latitude || !d.longitude) return;
+          if (d.nivel === "NORMAL") return;
+
+          pontos.push([
+            d.latitude,
+            d.longitude,
+            Math.min((d.total || 1) / 50, 1)
+          ]);
+        });
+
+        heat = L.heatLayer(pontos, {
+          radius: 35,
+          blur: 25,
+          maxZoom: 12
+        }).addTo(map);
+
+        // ============================
+        // 🔥 AGRUPAMENTO (MELHORADO)
+        // ============================
+
+        let grupos = {};
+
+        dados.forEach(d => {
+
+          if (!d.latitude || !d.longitude) return;
+
+          let chave =
+            Math.round(d.latitude * 40) + "_" +
+            Math.round(d.longitude * 40);
+
+          if (!grupos[chave]) {
+            grupos[chave] = {
+              lat: d.latitude,
+              lng: d.longitude,
+              total: 0,
+              cidades: new Set(),
+              dados: []
+            };
+          }
+
+          let g = grupos[chave];
+
+          g.total += d.total || 0;
+          g.cidades.add(d.cidade || "Desconhecida");
+          g.dados.push(d);
+
+          // ============================
+          // 🔥 CONTADOR REAL DE BAIRROS
+          // ============================
+
+          if (!g.bairros) g.bairros = {};
+
+          let bairro = d.bairro || "Não identificado";
+
+          if (!g.bairros[bairro]) g.bairros[bairro] = 0;
+
+          // 🔥 soma correta
+          g.bairros[bairro] += d.total || 1;
+
+          // 🔥 mantém seu sistema dinâmico original
+          const sintomasValidos = [
+            "febre",
+            "tosse",
+            "falta_ar",
+            "dor_corpo",
+            "cansaco"
+          ];
+
+          const doencasValidas = [
+            "dengue",
+            "covid",
+            "influenza",
+            "zika",
+            "chikungunya",
+            "srag",
+            "gastro"
+          ];
+
+          Object.keys(d).forEach(k => {
+
+            let valor = d[k] || 0;
+
+            if (valor <= 0) return;
+
+            if ([
+              "latitude", "longitude", "total", "nivel",
+              "cidade", "estado", "mensagem", "grupo",
+              "previsao", "crescimento"
+            ].includes(k)) return;
+
+            // sintomas
+            if (sintomasValidos.includes(k)) {
+              if (!g.sintomas) g.sintomas = {};
+              if (!g.sintomas[k]) g.sintomas[k] = 0;
+              g.sintomas[k] += valor;
+            }
+
+            // doenças
+            if (doencasValidas.includes(k)) {
+              if (!g.doencas) g.doencas = {};
+              if (!g.doencas[k]) g.doencas[k] = 0;
+              g.doencas[k] += valor;
+            }
+
+          });
+        });
+
+        // ============================
+        // 🔥 HOTSPOTS PROFISSIONAIS
+        // ============================
+
+        Object.values(grupos).forEach(g => {
+
+          if (g.total < 50) return;
+
+          let cor = "green";
+          if (g.total > 100) cor = "orange";
+          if (g.total > 200) cor = "red";
+
+          let marker = L.circleMarker([g.lat, g.lng], {
+            radius: 10,
+            color: cor,
+            fillColor: cor,
+            fillOpacity: 1
+          }).addTo(map);
+
+          // ============================
+          // 🧠 SINTOMAS (SEU JEITO ORIGINAL MELHORADO)
+          // ============================
+
+          let sintomas = [];
+
+          Object.keys(g).forEach(k => {
+
+            if (["lat", "lng", "total", "cidades", "dados"].includes(k)) return;
+
+            if (
+              k.includes("febre") ||
+              k.includes("tosse") ||
+              k.includes("falta") ||
+              k.includes("dor") ||
+              k.includes("cansaco")
+            ) {
+              sintomas.push([k.replace("_", " "), g[k]]);
+            }
+
+          });
+
+          sintomas.sort((a, b) => b[1] - a[1]);
+
+          let principalSintoma =
+            sintomas.length && sintomas[0][1] > 0
+              ? sintomas[0][0]
+              : (g.total > 80 ? "Alta incidência viral" : "Monitoramento");
 
 
+          // ============================
+          // 🦠 DOENÇAS (100% DINÂMICO)
+          // ============================
 
-async function carregarSurtos(){
+          let doencas = [];
 
-  // 🔄 Limpa surtos anteriores
-  surtosAtivos.forEach(c => map.removeLayer(c));
-  surtosAtivos = [];
+          Object.keys(g).forEach(k => {
 
-  // 🌐 Requisição API
- const token = localStorage.getItem("token");
+            if (["lat", "lng", "total", "cidades", "dados"].includes(k)) return;
 
-let options = {};
+            if (
+              k.includes("febre") ||
+              k.includes("tosse") ||
+              k.includes("falta") ||
+              k.includes("dor") ||
+              k.includes("cansaco")
+            ) return;
 
-if (token) {
-  options.headers = {
-    "Authorization": "Bearer " + token
-  };
-}
+            if (g[k] > 0) {
+              doencas.push([
+                k.toUpperCase().replace("_", " "),
+                g[k]
+              ]);
+            }
 
-const res = await fetch("/api/surtos", options);
+          });
 
-  const dados = await res.json();
+          doencas.sort((a, b) => b[1] - a[1]);
 
-  // 🔁 Percorre dados
-  dados.forEach(d => {
+          let principalDoenca =
+            doencas.length > 0
+              ? doencas[0][0]
+              : (g.total > 100 ? "SURTO VIRAL" : "INDEFINIDO");
 
-    // 🚫 ignora casos sem relevância
-    if (d.nivel === "NORMAL") return;
-    if (!d.latitude || !d.longitude) return;
 
-    // 🎨 COR POR NÍVEL
-    let cor = "#00FF00"; // padrão (verde)
+          // ============================
+          // 💊 RECOMENDAÇÃO INTELIGENTE
+          // ============================
 
-    if (d.nivel === "ATENCAO") cor = "#FFFF00";
-    if (d.nivel === "MODERADO") cor = "#FFA500";
-    if (d.nivel === "ALTO") cor = "#FF0000";
+          let recomendacao = "📊 Monitoramento geral";
 
-    // 📏 TAMANHO DINÂMICO (substitui "tamanho")
-    let raio = Math.min((d.total || 1) * 200, 50000);
+          if (principalDoenca.includes("COVID") || principalDoenca.includes("INFLUENZA")) {
+            recomendacao = "💊 Antigripais + hidratação + vitamina C";
+          }
+          else if (principalDoenca.includes("DENGUE")) {
+            recomendacao = "💧 Hidratação intensa + evitar anti-inflamatórios";
+          }
+          else if (principalDoenca.includes("CHIKUNGUNYA")) {
+            recomendacao = "💊 Analgésicos + repouso";
+          }
+          else if (principalDoenca.includes("SRAG")) {
+            recomendacao = "🚨 Atendimento médico imediato";
+          }
+          else if (principalDoenca.includes("GASTRO")) {
+            recomendacao = "💧 Hidratação + sais minerais";
+          }
 
-    // 🗺️ DESENHA CÍRCULO
-    let circle = L.circle([d.latitude, d.longitude], {
-      radius: raio,
-      color: cor,
-      fillColor: cor,
-      fillOpacity: 0.5,
-    }).addTo(map);
+          // ============================
+          // 📊 POPUP PROFISSIONAL
+          // ============================
 
-    // 📊 POPUP COMPLETO
-    circle.bindPopup(`
-      <b>${d.cidade || "Cidade desconhecida"}</b><br>
-      Tipo: ${d.grupo || "Não definido"}<br>
-      Casos: ${d.total || 0}<br>
-      ⚠️ ${d.mensagem || "Monitorando situação"}
+          marker.bindPopup(`
+        <div style="font-family:sans-serif; min-width:260px">
+
+          <div style="font-size:16px; font-weight:bold; margin-bottom:6px">
+            🔥 Zona Epidemiológica
+          </div>
+
+          📍 Região:<br>
+          <b>${[...g.cidades].slice(0, 3).join(", ")}</b><br><br>
+
+          📊 Casos:<br>
+          <b>${g.total}</b><br><br>
+
+          🧠 Sintoma dominante:<br>
+          <b>${principalSintoma}</b><br><br>
+
+          🦠 Doença provável:<br>
+          <b>${principalDoenca}</b><br><br>
+
+          💊 Recomendação:<br>
+          ${recomendacao}
+
+        </div>
+      `);
+
+          surtosAtivos.push(marker);
+
+        });
+
+        if (status) status.innerText = "Mapa inteligente carregado 🔥";
+
+      } catch (e) {
+        console.log("Erro surtos:", e);
+        if (status) status.innerText = "Erro ao carregar surtos ❌";
+      }
+    }
+
+    async function atualizarTudo() {
+
+      if (atualizando) return;
+      atualizando = true;
+
+      if (usuarioInteragindo) {
+        console.log("⛔ Pausado (usuário interagindo)");
+        atualizando = false;
+        return;
+      }
+
+      try {
+
+        console.log("🧠 IA ATUALIZANDO...");
+
+        const res = await fetch("/api/surtos");
+        const dados = await res.json();
+
+        let filtro = getFiltro();
+
+        // 🔥 BASE
+        let dadosFiltrados = dados;
+
+        // 🔥 FILTRO POR DOENÇA
+        if (filtro !== "todas") {
+          dadosFiltrados = dadosFiltrados.filter(d => {
+            return Object.keys(d).some(k =>
+              k.toLowerCase().includes(filtro.toLowerCase()) && d[k] > 0
+            );
+          });
+        }
+
+        // 🔥 FILTRO POR ESTADO (ESSENCIAL)
+        if (estadoSelecionado) {
+          dadosFiltrados = dadosFiltrados.filter(d => {
+            let estado = mapaEstados[d.estado] || d.estado;
+            return estado === estadoSelecionado;
+          });
+        }
+
+        // 🔥 RESULTADO FINAL DA IA
+        inteligencia.surtos = dadosFiltrados;
+
+        preencherEstados(); // 👈 AQUI EXATO
+
+        // 🔥 CORRETO (USA FILTRO)
+        inteligencia.calor = inteligencia.surtos
+          .filter(d => d.latitude && d.longitude)
+          .map(d => [
+            d.latitude,
+            d.longitude,
+            d.total || 1
+          ]);
+
+        inteligencia.risco = gerarRiscoInteligente();
+
+        if (modo === "radar") {
+          renderRadar();
+        }
+
+        else if (modo === "risco") {
+          renderRiscoIA();
+        }
+
+        else if (modo === "surtos") {
+          renderSurtosIA();
+        }
+
+        await atualizarPainel();
+
+        document.getElementById("status").innerText =
+          "📡 Modo: " + modo.toUpperCase() +
+          " | 🦠 Filtro: " + filtro.toUpperCase() +
+          " | 📊 Registros: " + inteligencia.surtos.length;
+
+      } catch (e) {
+        console.log("Erro IA:", e);
+      }
+
+      atualizando = false;
+    }
+
+    function mudarModo(novoModo) {
+
+      modo = novoModo;
+
+      console.log("🧠 Modo IA:", modo);
+
+      limparMapa();
+
+      // 🚀 RADAR (substitui Waze/Heatmap)
+      if (modo === "radar") {
+        renderRadar(); // ou renderRadar se você renomeou
+      }
+
+      // 🧬 RISCO INTELIGENTE
+      else if (modo === "risco") {
+        renderRiscoIA();
+      }
+
+      // 🔥 SURTOS DETALHADOS
+      else if (modo === "surtos") {
+        renderSurtosIA();
+
+      }
+
+    }
+
+    function mostrarHotspots(dados) {
+
+      dados.forEach(d => {
+
+        if (!d.latitude || !d.longitude) return;
+
+        // 🔥 só casos relevantes
+        if (d.total < 50) return;
+
+        let cor = "green";
+        if (d.total > 100) cor = "orange";
+        if (d.total > 200) cor = "red";
+
+        let marker = L.circleMarker([d.latitude, d.longitude], {
+          radius: 8,
+          color: cor,
+          fillColor: cor,
+          fillOpacity: 0.9
+        }).addTo(map);
+
+marker.bindPopup(`
+  <b>📍 Região:</b><br>
+  ${[...g.cidades].join(", ")}<br><br>
+
+  <b>📊 Casos:</b> ${g.total}<br><br>
+
+  <b>📍 Bairros afetados:</b><br>
+  ${bairrosTexto || "Sem dados"}<br><br>
+
+  <b>🦠 Doença provável:</b><br>
+  ${principalDoenca}<br><br>
+
+  <b>📊 Probabilidade:</b><br>
+  ${probTexto || "Sem dados"}
+`);
+
+      });
+
+    }
+
+    function renderSurtosIA() {
+
+      limparMapa();
+
+      let dados = inteligencia.surtos;
+
+      if (!dados || dados.length === 0) return;
+
+      // ============================
+      // 🔥 HEATMAP DINÂMICO REAL
+      // ============================
+
+      // ============================
+      // 🔥 AGRUPAMENTO POR BAIRRO (REAL)
+      // ============================
+
+      let pontosPorBairro = {};
+
+      dados.forEach(d => {
+
+        if (!d.latitude || !d.longitude) return;
+
+        let chave = d.bairro || "outro";
+
+        if (!pontosPorBairro[chave]) {
+          pontosPorBairro[chave] = [];
+        }
+
+        pontosPorBairro[chave].push(d);
+
+      });
+
+
+      // ============================
+      // 🔥 HEATMAP POR BAIRRO
+      // ============================
+
+      let pontos = [];
+
+      Object.values(pontosPorBairro).forEach(lista => {
+
+        // 🔥 centro do bairro
+        let latMedia = 0;
+        let lngMedia = 0;
+
+        lista.forEach(d => {
+          latMedia += d.latitude;
+          lngMedia += d.longitude;
+        });
+
+        latMedia /= lista.length;
+        lngMedia /= lista.length;
+
+        // 🔥 peso baseado na densidade do bairro
+        let peso = lista.length / 10;
+
+        peso = Math.min(peso, 1);
+
+        // 🔥 cria vários pontos ao redor (efeito "preenchido")
+        for (let i = 0; i < lista.length; i++) {
+
+          pontos.push([
+            latMedia + (Math.random() - 0.5) * 0.01,
+            lngMedia + (Math.random() - 0.5) * 0.01,
+            peso
+          ]);
+
+        }
+
+      });
+
+      // remove heat antigo
+      if (heat) {
+        map.removeLayer(heat);
+      }
+
+      // cria heat novo (efeito pintura real)
+      heat = L.heatLayer(pontos, {
+        radius: 35,
+        blur: 25,
+        maxZoom: 12,
+        gradient: {
+          0.2: "green",
+          0.4: "yellow",
+          0.6: "orange",
+          1.0: "red"
+        }
+      }).addTo(map);
+
+      // ============================
+      // 🔥 AGRUPAMENTO INTELIGENTE (MANTIDO PRA IA)
+      // ============================
+
+      let grupos = {};
+
+      dados.forEach(d => {
+
+        if (!d.latitude || !d.longitude) return;
+
+        let chave =
+          Math.round(d.latitude * 40) + "_" +
+          Math.round(d.longitude * 40);
+
+        if (!grupos[chave]) {
+          grupos[chave] = {
+            lat: d.latitude,
+            lng: d.longitude,
+            total: 0,
+            cidades: new Set(),
+            dados: []
+          };
+        }
+
+        let g = grupos[chave];
+
+        g.total += d.total || 0;
+        g.cidades.add(d.cidade || "Desconhecida");
+        g.dados.push(d);
+
+        // ============================
+        // 🔥 CONTADOR REAL DE BAIRROS
+        // ============================
+
+        if (!g.bairros) g.bairros = {};
+
+        let bairro = d.bairro || "Não identificado";
+
+        if (!g.bairros[bairro]) g.bairros[bairro] = 0;
+
+        // 🔥 soma correta
+        g.bairros[bairro] += d.total || 1;
+
+      });
+
+      // ============================
+      // 🧠 IA + POPUPS (SEM MARCADOR VISUAL)
+      // ============================
+
+      Object.values(grupos).forEach(g => {
+
+        if (g.total < 50) return;
+
+        let sintomasMap = {};
+        let doencasMap = {};
+
+        g.dados.forEach(d => {
+
+          Object.keys(d).forEach(k => {
+
+            const ignorar = [
+              "latitude", "longitude", "total", "nivel",
+              "cidade", "estado", "previsao", "crescimento"
+            ];
+
+            if (ignorar.includes(k)) return;
+
+            let valor = d[k] || 0;
+            if (valor <= 0) return;
+
+            const sintomasValidos = [
+              "febre", "tosse", "falta_ar",
+              "dor_corpo", "cansaco"
+            ];
+
+            const doencasValidas = [
+              "dengue", "covid", "influenza",
+              "zika", "chikungunya", "srag", "gastro"
+            ];
+
+            if (sintomasValidos.includes(k)) {
+              if (!sintomasMap[k]) sintomasMap[k] = 0;
+              sintomasMap[k] += valor;
+            }
+
+            if (doencasValidas.includes(k)) {
+              if (!doencasMap[k]) doencasMap[k] = 0;
+              doencasMap[k] += valor;
+            }
+
+          });
+
+        });
+
+        // ============================
+        // 🧠 PROBABILIDADE IA
+        // ============================
+
+        let totalSintomas = Object.values(sintomasMap)
+          .reduce((a, b) => a + b, 0);
+
+        let probabilidade = {};
+
+        if (totalSintomas > 0) {
+
+          probabilidade = {
+
+            dengue:
+              (sintomasMap.febre || 0) +
+              (sintomasMap.dor_corpo || 0) +
+              (sintomasMap.cansaco || 0),
+
+            covid:
+              (sintomasMap.febre || 0) +
+              (sintomasMap.tosse || 0) +
+              (sintomasMap.falta_ar || 0),
+
+            influenza:
+              (sintomasMap.febre || 0) +
+              (sintomasMap.tosse || 0) +
+              (sintomasMap.dor_corpo || 0),
+          };
+
+          let soma = Object.values(probabilidade)
+            .reduce((a, b) => a + b, 0);
+
+          if (soma > 0) {
+            Object.keys(probabilidade).forEach(k => {
+              probabilidade[k] = Math.round((probabilidade[k] / soma) * 100);
+            });
+          }
+        }
+
+        let principalDoenca = "Indefinido";
+
+        if (Object.keys(probabilidade).length > 0) {
+          principalDoenca = Object.entries(probabilidade)
+            .sort((a, b) => b[1] - a[1])[0][0].toUpperCase();
+        }
+
+        let probTexto = Object.entries(probabilidade)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(p => `• ${p[0].toUpperCase()} (${p[1]}%)`)
+          .join("<br>");
+
+        // ============================
+        // 🔥 POPUP INVISÍVEL (INTERAÇÃO)
+        // ============================
+
+        let marker = L.circleMarker([g.lat, g.lng], {
+  radius: 10,
+  color: "white",
+  fillOpacity: 0
+}).addTo(map);
+
+        marker.bindPopup(`
+      <b>📍 Região:</b><br>
+      ${[...g.cidades].join(", ")}<br><br>
+
+      <b>📊 Casos:</b> ${g.total}<br><br>
+
+      <b>🦠 Doença provável:</b><br>
+      ${principalDoenca}<br><br>
+
+      <b>📊 Probabilidade:</b><br>
+      ${probTexto || "Sem dados"}
     `);
 
-    // 💾 guarda no array
-    surtosAtivos.push(circle);
-  });
-}
-// 🎤 IA
-async function carregarRanking(){
+        surtosAtivos.push(marker);
 
-  const res = await fetch("/api/resumo-municipios", {
-    headers: { Authorization: "Bearer " + localStorage.getItem("token") }
-  });
+      });
 
-  const dados = await res.json();
+    }
 
-  dados.sort((a,b)=>b.total - a.total);
+    function renderRadar() {
 
-  let top = dados.slice(0,5);
+      limparMapa();
 
-  let html = "<b>🔥 Top cidades:</b><br>";
+      if (!inteligencia.calor || inteligencia.calor.length === 0) return;
 
-  top.forEach((c,i)=>{
-    html += `${i+1}. ${c.cidade} (${c.total})<br>`;
-  });
+      // 🔥 Heatmap base (visão geral)
+      heat = L.heatLayer(inteligencia.calor, {
+        radius: 45,
+        blur: 35,
+        maxZoom: 12
+      }).addTo(map);
 
-  document.getElementById("ranking").innerHTML = html;
-}
 
-// 🔄 CENTRAL (CORRETO)
-async function atualizarTudo(){
+      // 🔥 Hotspots principais (clicáveis)
+      inteligencia.surtos.forEach(d => {
 
-  try {
+        if (!d.latitude || !d.longitude) return;
+        if (d.total < 80) return; // filtro inteligente
 
-    const token = localStorage.getItem("token");
+        let cor = "green";
+        if (d.total > 100) cor = "orange";
+        if (d.total > 200) cor = "red";
 
-    // 🔥 SEM TOKEN → ainda carrega mapa básico
-    if (!token) {
-  await carregarEstados();
-  await carregarMunicipiosReais();
-}
+        let marker = L.circleMarker([d.latitude, d.longitude], {
+          radius: Math.min(18, 6 + d.total / 20),
+          color: cor,
+          fillColor: cor,
+          fillOpacity: 1
+        }).addTo(map);
 
-    const res = await fetch("/api/painel", {
-      headers: { 
-        "Authorization": "Bearer " + token
+        let bairrosTexto = Object.entries(g.bairros || {})
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 5)
+  .map(b => `📍 ${b[0]} (${b[1]})`)
+  .join("<br>");
+
+marker.bindPopup(`
+  <b>📍 Região:</b><br>
+  ${[...g.cidades].join(", ")}<br><br>
+
+  <b>📊 Casos:</b> ${g.total}<br><br>
+
+  <b>📍 Bairros afetados:</b><br>
+  ${bairrosTexto || "Sem dados"}<br><br>
+
+  <b>🦠 Doença provável:</b><br>
+  ${principalDoenca}<br><br>
+
+  <b>📊 Probabilidade:</b><br>
+  ${probTexto || "Sem dados"}
+`);
+
+      });
+
+    }
+
+    function renderRiscoIA() {
+
+      limparMapa();
+
+      Object.values(inteligencia.risco).forEach(r => {
+
+        if (!r.lat || !r.lng) return;
+
+        let nivel = classificarRisco(r);
+
+        let cor = "green";
+        if (nivel === "MEDIO") cor = "yellow";
+        if (nivel === "ALTO") cor = "orange";
+        if (nivel === "CRITICO") cor = "red";
+
+        let circle = L.circle([r.lat, r.lng], {
+          radius: Math.min(r.total * 250, 80000),
+          color: cor,
+          fillColor: cor,
+          fillOpacity: 0.25,
+          weight: 2
+        }).addTo(map);
+
+        // ============================
+        // 🧠 ANÁLISE PROFUNDA (GOVERNO)
+        // ============================
+
+        let total = r.total || 1;
+
+        // ⚠️ se você ainda não tem esses campos no r,
+        // depois vamos corrigir backend
+        let febre = r.febre || 0;
+        let tosse = r.tosse || 0;
+        let falta_ar = r.falta_ar || 0;
+        let dor_corpo = r.dor_corpo || 0;
+        let cansaco = r.cansaco || 0;
+
+        // 🔥 porcentagens reais
+        let p_febre = Math.round((febre / total) * 100);
+        let p_tosse = Math.round((tosse / total) * 100);
+        let p_falta = Math.round((falta_ar / total) * 100);
+        let p_dor = Math.round((dor_corpo / total) * 100);
+        let p_cansaco = Math.round((cansaco / total) * 100);
+
+        // ============================
+        // 🧠 INTERPRETAÇÃO INTELIGENTE
+        // ============================
+
+        let interpretacao = "Perfil indefinido";
+
+        if (p_febre > 60 && p_dor > 50) {
+          interpretacao = "Forte indicação de arbovirose (dengue/chikungunya)";
+        }
+        else if (p_tosse > 50 && p_falta > 20) {
+          interpretacao = "Síndrome respiratória relevante (COVID/Influenza)";
+        }
+        else if (p_cansaco > 60) {
+          interpretacao = "Possível síndrome viral leve em expansão";
+        }
+
+        // ============================
+        // 🚨 AÇÃO GOVERNAMENTAL
+        // ============================
+
+        let acao = "Monitoramento";
+
+        if (nivel === "CRITICO") {
+          acao = "🚨 Abrir leitos e ativar protocolo de emergência";
+        }
+        else if (nivel === "ALTO") {
+          acao = "⚠️ Intensificar triagem e campanhas públicas";
+        }
+
+        // 🔥 POPUP PROFISSIONAL
+        circle.bindPopup(`
+  <div style="font-family:sans-serif; min-width:260px">
+
+    <div style="font-size:15px; font-weight:bold">
+      🧬 Inteligência Epidemiológica Avançada
+    </div>
+
+    <hr>
+
+    📊 Casos totais:
+    <b>${r.total}</b><br><br>
+
+    📈 Crescimento:
+    <b>${r.crescimento || 0}%</b><br><br>
+
+    🔮 Previsão:
+    <b>${r.previsao}</b><br><br>
+
+    🚨 Nível:
+    <b>${nivel}</b><br><br>
+
+    <hr>
+
+    🧠 Distribuição de sintomas:<br>
+    🌡 Febre: ${p_febre}%<br>
+    🤧 Tosse: ${p_tosse}%<br>
+    😮‍💨 Falta de ar: ${p_falta}%<br>
+    💪 Dor no corpo: ${p_dor}%<br>
+    😴 Cansaço: ${p_cansaco}%<br><br>
+
+    <hr>
+
+    🧠 Interpretação IA:<br>
+    ${interpretacao}<br><br>
+
+    🚨 Ação recomendada:<br>
+    ${acao}
+
+  </div>
+`);
+
+      });
+
+    }
+
+    function calcularCrescimento(regiao) {
+
+      let atual = regiao.total;
+      let anterior = regiao.anterior || atual;
+
+      if (anterior === 0) return 0;
+
+      let crescimento = ((atual - anterior) / anterior) * 100;
+
+      return Math.round(crescimento);
+    }
+
+    function gerarExplicacaoIA(g) {
+
+      let texto = "";
+
+      if (g.crescimento > 50) {
+        texto += "Crescimento acelerado detectado. ";
       }
-    });
 
-    if (!res.ok) {
-      console.log("Erro API:", res.status);
+      if (g.total > 200) {
+        texto += "Alta concentração de casos. ";
+      }
+
+      if (g.principalDoenca.includes("DENGUE")) {
+        texto += "Possível foco relacionado a água parada. ";
+      }
+
+      if (g.principalDoenca.includes("COVID")) {
+        texto += "Transmissão respiratória ativa. ";
+      }
+
+      return texto || "Situação sob monitoramento.";
     }
 
-    await carregarEstados();
+    function gerarRecomendacoes(g) {
 
-    if (modo === "municipios") {
-      await carregarMunicipiosReais();
+      return {
+        populacao: "Evitar aglomerações e manter higiene.",
+        governo: "Intensificar vigilância e campanhas.",
+        saude: "Reforçar triagem e testes.",
+        farmacia: "Aumentar estoque de medicamentos."
+      };
     }
 
-    if (modo === "surtos") {
-      await carregarSurtos();
+    function definirModoAutomatico() {
+
+      let largura = window.innerWidth;
+
+      let novoModo;
+
+      if (largura < 768) {
+        novoModo = "radar";
+      } else if (largura < 1200) {
+        novoModo = "risco";
+      } else {
+        novoModo = "surtos";
+      }
+
+      // 🚫 evita trocar sem necessidade
+      if (modo === novoModo) return;
+
+      console.log("🔄 Mudando modo automático:", novoModo);
+
+      modo = novoModo;
+
+      // 🔥 NÃO chama atualizarTudo aqui
+      // 🔥 chama apenas o render correto
+
+      if (modo === "radar") {
+        renderRadar();
+      }
+
+      else if (modo === "risco") {
+        renderRiscoIA();
+      }
+
+      else if (modo === "surtos") {
+        renderSurtosIA();
+      }
     }
+  </script>
 
-    if (modo === "heatmap") {
-      await carregarHeatmap();
-    }
+</body>
 
-  } catch(e){
-    console.log("Erro ao atualizar:", e);
-  }
-
-}
-
-let modo = "municipios";
-
-function mudarModo(novoModo){
-  modo = novoModo;
-  atualizarTudo();
-}
-
-
-</script>
+</html>

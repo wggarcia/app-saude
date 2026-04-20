@@ -1,7 +1,10 @@
 # Miscellaneous
 *.class
 *.log
+*.backup
 *.pyc
+__pycache__/
+**/__pycache__/
 *.swp
 .DS_Store
 .atom/
@@ -43,3 +46,27 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+staticfiles/
+app_saude/build/
+app_saude/android/app/google-services.json
+app_saude/ios/Runner/GoogleService-Info.plist
+
+# Local databases, secrets and generated diagnostics
+db.sqlite3
+*.sqlite3
+secrets/
+*.env
+.env
+key.properties
+*.jks
+*.keystore
+log.txt
+projeto.txt
+estrutura.txt
+corrigir.py
+corrigir_mapa.sh
+corrigir_mapa.shx
+simulacao_stress.py
+simular_brasil_completo.py
+simular_dados.py
+simular_pandemia.py

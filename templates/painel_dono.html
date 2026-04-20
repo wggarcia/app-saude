@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>SolusCRT Console Operacional</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:"Avenir Next","Segoe UI",sans-serif;background:#050f18;color:#eef8ff}
+    .shell{padding:24px;display:grid;gap:18px}
+    .hero,.card{border:1px solid rgba(255,255,255,.08);background:rgba(7,18,29,.84);border-radius:28px;box-shadow:0 24px 60px rgba(0,0,0,.36)}
+    .hero{padding:24px;background:linear-gradient(135deg,rgba(22,38,54,.98),rgba(7,18,29,.94))}
+    .eyebrow{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:#ffb454;font-weight:800}
+    h1{margin:10px 0 0;font-size:2.2rem}.muted{color:#9cc4db;line-height:1.6}
+    .grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+    .metric,.client,.package,.alert,.event,.portfolio{padding:16px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+    .metric span{display:block;font-size:.75rem;color:#9cc4db;text-transform:uppercase;letter-spacing:.08em}
+    .metric strong{display:block;margin-top:8px;font-size:1.15rem}
+    .split,.triple,.quad{display:grid;gap:18px}
+    .split{grid-template-columns:1fr 1fr}
+    .triple{grid-template-columns:1fr 1fr 1.1fr}
+    .quad{grid-template-columns:1.1fr 1.1fr .9fr .9fr}
+    .card{padding:18px}.card h2{margin:0 0 12px}
+    .list{display:grid;gap:12px}.row{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+    .badge{padding:6px 10px;border-radius:999px;font-size:.74rem;font-weight:800}
+    .active{background:#1dd1a1;color:#042018}.inactive{background:#ff8fa3;color:#2a0710}.warn{background:#ffd166;color:#2d1d02}.high{background:#ff9b54;color:#2a1303}
+    .controls{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:12px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    select,button{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);color:#eef8ff}
+    button{cursor:pointer;font-weight:800;background:linear-gradient(135deg,#ffb454,#ff8a3d);color:#221104}
+    .ghost{background:rgba(255,255,255,.06);color:#eef8ff}
+    .small{font-size:.84rem}
+    .chart-wrap{height:260px}
+    .mini-chart{height:220px}
+    .tabs{display:flex;gap:10px;flex-wrap:wrap}
+    .tab-btn{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);color:#eef8ff;cursor:pointer}
+    .tab-btn.active{background:linear-gradient(135deg,#ffb454,#ff8a3d);color:#221104}
+    @media(max-width:1300px){.grid,.split,.triple{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Gestão Central da SolusCRT</div>
+      <h1>{{ owner_nome }}</h1>
+      <div class="muted">Console operacional restrito para cobrança, renovação, carga, crescimento e separação entre carteira empresarial e governamental.</div>
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="/logout/" style="color:#eef8ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(140,29,64,.82);">Sair</a>
+        <button class="ghost" onclick="exportar('clientes')">Exportar clientes</button>
+        <button class="ghost" onclick="exportar('financeiro')">Exportar financeiro</button>
+        <button class="ghost" onclick="exportar('auditoria')">Exportar auditoria</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Resumo Executivo</h2>
+      <div id="summaryGrid" class="grid">Carregando...</div>
+    </section>
+
+    <section class="split">
+      <section class="card">
+        <h2>Cobrança e Renovação</h2>
+        <div id="billingSummary" class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));">Carregando...</div>
+      </section>
+      <section class="card">
+        <h2>Capacidade do Sistema</h2>
+        <div id="capacitySummary" class="list">Carregando...</div>
+      </section>
+    </section>
+
+    <section class="split">
+      <section class="card">
+        <h2>Histórico de Receita</h2>
+        <div class="chart-wrap"><canvas id="revenueChart"></canvas></div>
+      </section>
+      <section class="card">
+        <h2>Histórico de Uso</h2>
+        <div class="chart-wrap"><canvas id="usageChart"></canvas></div>
+      </section>
+    </section>
+
+    <section class="quad">
+      <section class="card">
+        <h2>Distribuição por Pacote</h2>
+        <div class="mini-chart"><canvas id="packageChart"></canvas></div>
+      </section>
+      <section class="card">
+        <h2>Comparativo de Uso</h2>
+        <div id="topUsageList" class="list">Carregando...</div>
+      </section>
+      <section class="card">
+        <h2>Comparativo de Receita</h2>
+        <div id="topRevenueList" class="list">Carregando...</div>
+      </section>
+      <section class="card">
+        <h2>Operação e Expansão</h2>
+        <div id="opsSummary" class="list">Carregando...</div>
+      </section>
+    </section>
+
+    <section class="triple">
+      <section class="card">
+        <h2>Carteiras</h2>
+        <div id="portfolioCards" class="list">Carregando...</div>
+      </section>
+      <section class="card">
+        <h2>Alertas de Capacidade</h2>
+        <div id="alertsList" class="list">Carregando...</div>
+      </section>
+      <section class="card">
+        <h2>Financeiro Recente</h2>
+        <div id="financialList" class="list">Carregando...</div>
+      </section>
+    </section>
+
+    <section class="card">
+      <h2>Auditoria Operacional</h2>
+      <div id="auditList" class="list">Carregando...</div>
+    </section>
+
+    <section class="card">
+      <div class="row" style="margin-bottom:12px;">
+        <h2 style="margin:0;">Clientes e Ajustes Rápidos</h2>
+        <div class="tabs">
+          <button class="tab-btn active" id="tabAll">Todos</button>
+          <button class="tab-btn" id="tabEmpresa">Empresas</button>
+          <button class="tab-btn" id="tabGoverno">Governos</button>
+        </div>
+      </div>
+      <div id="clientsList" class="list">Carregando...</div>
+    </section>
+  </main>
+
+  <script>
+    const pacoteOptions = {
+      starter_5: "Starter 5",
+      growth_10: "Growth 10",
+      scale_25: "Scale 25",
+      pro_50: "Pro 50",
+      enterprise_100: "Enterprise 100",
+      network_250: "Network 250",
+      grid_500: "Grid 500",
+      national_1000: "National 1000",
+    };
+
+    let currentFilter = "all";
+    let revenueChart = null;
+    let usageChart = null;
+    let packageChart = null;
+    let cachedData = null;
+
+    function money(value) {
+      return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    function pacoteSelect(current) {
+      return `<select data-role="pacote">${Object.entries(pacoteOptions).map(([value, label]) => `<option value="${value}" ${value === current ? "selected" : ""}>${label}</option>`).join("")}</select>`;
+    }
+
+    function setActiveTab(filter) {
+      currentFilter = filter;
+      document.getElementById("tabAll").classList.toggle("active", filter === "all");
+      document.getElementById("tabEmpresa").classList.toggle("active", filter === "empresa");
+      document.getElementById("tabGoverno").classList.toggle("active", filter === "governo");
+      if (cachedData) renderClients(cachedData.clientes || []);
+    }
+
+    async function atualizarCliente(empresaId, target) {
+      const root = target.closest(".client");
+      const pacote = root.querySelector('[data-role="pacote"]').value;
+      const plano = root.querySelector('[data-role="plano"]').value;
+      const ativo = root.querySelector('[data-role="ativo"]').value === "true";
+
+      await fetch("/api/operacao-central/cliente/atualizar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empresa_id: empresaId, pacote_codigo: pacote, plano, ativo }),
+      });
+
+      loadOwnerPanel();
+    }
+
+    async function executarFinanceiro(empresaId, acao) {
+      await fetch("/api/operacao-central/financeiro/acao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empresa_id: empresaId, acao }),
+      });
+      loadOwnerPanel();
+    }
+
+    function exportar(tipo) {
+      window.open(`/api/operacao-central/exportar?tipo=${tipo}&formato=csv`, "_blank");
+    }
+
+    function renderCharts(historico) {
+      const receita = historico.receita || [];
+      const uso = historico.uso || [];
+
+      const revenueCtx = document.getElementById("revenueChart");
+      const usageCtx = document.getElementById("usageChart");
+
+      if (revenueChart) revenueChart.destroy();
+      if (usageChart) usageChart.destroy();
+      if (packageChart) packageChart.destroy();
+
+      revenueChart = new Chart(revenueCtx, {
+        type: "bar",
+        data: {
+          labels: receita.map((item) => new Date(`${item.month}T00:00:00`).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" })),
+          datasets: [{ label: "Receita", data: receita.map((item) => item.valor), backgroundColor: "#ffb454", borderRadius: 12 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: "#eef8ff" } } }, scales: { x: { ticks: { color: "#9cc4db" }, grid: { color: "rgba(255,255,255,0.05)" } }, y: { ticks: { color: "#9cc4db" }, grid: { color: "rgba(255,255,255,0.06)" } } } }
+      });
+
+      usageChart = new Chart(usageCtx, {
+        type: "line",
+        data: {
+          labels: uso.map((item) => new Date(`${item.date}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })),
+          datasets: [{ label: "Registros", data: uso.map((item) => item.total), borderColor: "#6fb4ff", backgroundColor: "rgba(111,180,255,0.15)", fill: true, tension: 0.32 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: "#eef8ff" } } }, scales: { x: { ticks: { color: "#9cc4db" }, grid: { color: "rgba(255,255,255,0.05)" } }, y: { ticks: { color: "#9cc4db" }, grid: { color: "rgba(255,255,255,0.06)" } } } }
+      });
+
+      const pacotes = cachedData?.pacotes || [];
+      packageChart = new Chart(document.getElementById("packageChart"), {
+        type: "doughnut",
+        data: {
+          labels: pacotes.map((item) => item.label),
+          datasets: [{
+            data: pacotes.map((item) => item.clientes),
+            backgroundColor: ["#ffb454","#ff8a3d","#6fb4ff","#1dd1a1","#ffd166","#ee6c4d","#a78bfa","#4dd0e1"],
+            borderWidth: 0,
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: "#eef8ff" } } } }
+      });
+    }
+
+    function renderClients(clientes) {
+      const filtered = clientes.filter((cliente) => currentFilter === "all" ? true : cliente.segmento === currentFilter);
+      document.getElementById("clientsList").innerHTML = filtered.map((cliente) => `
+        <div class="client">
+          <div class="row">
+            <strong>${cliente.nome}</strong>
+            <span class="badge ${cliente.ativo ? "active" : "inactive"}">${cliente.status_contrato}</span>
+          </div>
+          <div class="muted">${cliente.email}</div>
+          <div class="muted small">${cliente.segmento} | ${cliente.pacote_label} | ${cliente.plano || "sem ciclo"}</div>
+          <div class="muted small">${cliente.usuarios_ativos}/${cliente.max_usuarios} usuários | ${cliente.dispositivos_ativos}/${cliente.max_dispositivos} dispositivos | ${cliente.registros_24h} registros em 24h</div>
+          <div class="muted small">Uso usuários ${cliente.uso_usuarios.toFixed(1)}% | Uso dispositivos ${cliente.uso_dispositivos.toFixed(1)}% | Suspeitos 24h ${cliente.suspeitos_24h}</div>
+          <div class="muted small">Faturamento estimado ${money(cliente.faturamento_estimado_cliente)} | expira ${cliente.data_expiracao ? new Date(cliente.data_expiracao).toLocaleDateString("pt-BR") : "não definido"}</div>
+          <div class="controls">
+            ${pacoteSelect(cliente.pacote_codigo)}
+            <select data-role="plano">
+              <option value="mensal" ${cliente.plano === "mensal" ? "selected" : ""}>Mensal</option>
+              <option value="anual" ${cliente.plano === "anual" ? "selected" : ""}>Anual</option>
+            </select>
+            <select data-role="ativo">
+              <option value="true" ${cliente.ativo ? "selected" : ""}>Ativo</option>
+              <option value="false" ${!cliente.ativo ? "selected" : ""}>Inativo</option>
+            </select>
+          </div>
+          <div style="margin-top:10px;">
+            <button onclick="atualizarCliente(${cliente.id}, this)">Salvar ajuste</button>
+          </div>
+          <div class="actions">
+            <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'marcar_cobranca')">Cobrança</button>
+            <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'marcar_inadimplente')">Inadimplência</button>
+            <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'renovar_30')">+30 dias</button>
+            <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'renovar_365')">+365 dias</button>
+            <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'reativar')">Reativar</button>
+          </div>
+        </div>
+      `).join("") || "Sem clientes para esse filtro.";
+    }
+
+    async function loadOwnerPanel() {
+      const response = await fetch("/api/operacao-central/resumo");
+      const data = await response.json();
+      cachedData = data;
+      const summary = data.summary || {};
+      const carteiras = data.carteiras || {};
+
+      document.getElementById("summaryGrid").innerHTML = [
+        ["Clientes totais", summary.clientes_total],
+        ["Clientes ativos", summary.clientes_ativos],
+        ["Usuários ativos", summary.usuarios_ativos],
+        ["Dispositivos ativos", summary.dispositivos_ativos],
+        ["Registros 24h", summary.registros_24h],
+        ["Suspeitos 24h", summary.suspeitos_24h],
+        ["Receita mensal", money(summary.faturamento_mensal_estimado)],
+        ["Receita anual eq.", money(summary.faturamento_anual_equivalente)],
+        ["Carga atual MB/dia", summary.carga_estimada_mb_dia],
+        ["Projeção MB/dia", summary.projecao_carga_mb_dia],
+        ["Pressão capacidade", summary.nivel_pressao_capacidade],
+        ["Confiança média", Number(summary.confianca_media || 0).toFixed(2)],
+      ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("");
+
+      document.getElementById("billingSummary").innerHTML = [
+        ["Vencendo em 7 dias", summary.vencendo_7_dias],
+        ["Vencendo em 30 dias", summary.vencendo_30_dias],
+        ["Inadimplentes", summary.inadimplentes],
+        ["Inativos", summary.inativos],
+        ["Cobrança ativa", summary.cobranca_ativa],
+      ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("");
+
+      document.getElementById("capacitySummary").innerHTML = `
+        <div class="portfolio"><strong>Capacidade atual</strong><div class="muted small" style="margin-top:8px;">Carga estimada: ${summary.carga_estimada_mb_dia} MB/dia</div></div>
+        <div class="portfolio"><strong>Projeção 7 dias</strong><div class="muted small" style="margin-top:8px;">${summary.projecao_carga_mb_dia} MB/dia com pressão ${summary.nivel_pressao_capacidade}</div></div>
+        <div class="portfolio"><strong>Leitura operacional</strong><div class="muted small" style="margin-top:8px;">${(data.operacoes || {}).recomendacao_infra || "Sem recomendação no momento."}</div></div>
+      `;
+
+      document.getElementById("portfolioCards").innerHTML = [
+        { label: "Carteira Empresa", data: carteiras.empresa || {} },
+        { label: "Carteira Governo", data: carteiras.governo || {} },
+      ].map((item) => `
+        <div class="portfolio">
+          <strong>${item.label}</strong>
+          <div class="muted small" style="margin-top:8px;">Clientes: ${item.data.clientes || 0}</div>
+          <div class="muted small">Ativos: ${item.data.ativos || 0}</div>
+          <div class="muted small">Receita mensal estimada: ${money(item.data.faturamento_mensal_estimado || 0)}</div>
+          <div class="muted small">Registros 24h: ${item.data.registros_24h || 0}</div>
+        </div>
+      `).join("");
+
+      document.getElementById("alertsList").innerHTML = (data.alertas_capacidade || []).map((alerta) => `
+        <div class="alert">
+          <div class="row">
+            <strong>${alerta.empresa}</strong>
+            <span class="badge ${alerta.segmento === "governo" ? "high" : "warn"}">${alerta.status_contrato}</span>
+          </div>
+          <div class="muted small">${alerta.mensagens.join(" | ")}</div>
+        </div>
+      `).join("") || "Sem alertas críticos.";
+
+      document.getElementById("financialList").innerHTML = (data.financeiro || []).map((evento) => `
+        <div class="event">
+          <div class="row">
+            <strong>${evento.empresa}</strong>
+            <span>${money(evento.valor)}</span>
+          </div>
+          <div class="muted small">${evento.tipo_evento} | ${evento.pacote_codigo || "sem pacote"} | ${evento.ciclo || "sem ciclo"}</div>
+          <div class="muted small">${evento.status} | ${new Date(evento.criado_em).toLocaleString("pt-BR")}</div>
+          <div class="muted small">${evento.observacao || ""}</div>
+        </div>
+      `).join("") || "Sem eventos financeiros.";
+
+      document.getElementById("topUsageList").innerHTML = ((data.comparativos || {}).top_uso || []).map((item) => `
+        <div class="alert">
+          <div class="row"><strong>${item.nome}</strong><span class="badge ${item.segmento === "governo" ? "high" : "warn"}">${item.uso_combinado.toFixed(1)}%</span></div>
+          <div class="muted small">${item.segmento} | ${item.registros_24h} registros 24h | ${item.suspeitos_24h} suspeitos</div>
+        </div>
+      `).join("") || "Sem dados comparativos.";
+
+      document.getElementById("topRevenueList").innerHTML = ((data.comparativos || {}).top_receita || []).map((item) => `
+        <div class="event">
+          <div class="row"><strong>${item.nome}</strong><span>${money(item.faturamento_estimado_cliente)}</span></div>
+          <div class="muted small">${item.segmento} | status ${item.status_contrato} | ${item.registros_24h} registros 24h</div>
+        </div>
+      `).join("") || "Sem dados comparativos.";
+
+      document.getElementById("opsSummary").innerHTML = `
+        <div class="portfolio"><strong>Pressão atual</strong><div class="muted small" style="margin-top:8px;">${summary.nivel_pressao_capacidade}</div></div>
+        <div class="portfolio"><strong>Carga projetada</strong><div class="muted small" style="margin-top:8px;">${summary.projecao_carga_mb_dia} MB/dia</div></div>
+        <div class="portfolio"><strong>Diretriz</strong><div class="muted small" style="margin-top:8px;">${(data.operacoes || {}).recomendacao_infra || ""}</div></div>
+      `;
+
+      document.getElementById("auditList").innerHTML = (data.auditoria || []).map((item) => `
+        <div class="event">
+          <div class="row"><strong>${item.acao}</strong><span>${new Date(item.criado_em).toLocaleString("pt-BR")}</span></div>
+          <div class="muted small">${item.empresa} | ${item.dono}</div>
+          <div class="muted small">${item.detalhes || ""}</div>
+        </div>
+      `).join("") || "Sem trilha de auditoria.";
+
+      renderCharts(data.historico || {});
+      renderClients(data.clientes || []);
+    }
+
+    document.getElementById("tabAll").addEventListener("click", () => setActiveTab("all"));
+    document.getElementById("tabEmpresa").addEventListener("click", () => setActiveTab("empresa"));
+    document.getElementById("tabGoverno").addEventListener("click", () => setActiveTab("governo"));
+
+    loadOwnerPanel();
+  </script>
+</body>
+</html>

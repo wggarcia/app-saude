@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT Operação</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{box-sizing:border-box;font-family:"Avenir Next","Segoe UI",sans-serif} body{margin:0;min-height:100vh;background:linear-gradient(135deg,#06101a,#111c2c,#06101a);display:grid;place-items:center;color:#eef8ff}
+.card{width:min(460px,92vw);padding:30px;border-radius:28px;border:1px solid rgba(255,255,255,.08);background:rgba(7,18,29,.84);box-shadow:0 24px 60px rgba(0,0,0,.38)}
+.eyebrow{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:#ffb454;font-weight:800}
+h1{margin:10px 0 0;font-size:2rem}.muted{color:#9cc4db;line-height:1.6;margin-top:10px}
+input{width:100%;padding:14px;margin-top:12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#eef8ff}
+.btn{margin-top:16px;width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#ffb454,#ff8a3d);color:#1d0d04;font-weight:800;cursor:pointer}
+</style>
+</head>
+<body>
+  <section class="card">
+    <div class="eyebrow">Console operacional</div>
+    <h1>Operação Central</h1>
+    <div class="muted">Acesso restrito da equipe autorizada para contratos, finanças, uso, pacotes e capacidade do sistema.</div>
+    <input id="email" placeholder="Email operacional">
+    <input id="senha" type="password" placeholder="Senha">
+    <button class="btn" onclick="login()">Entrar</button>
+    <div id="msg" class="muted"></div>
+  </section>
+  <script>
+    async function login() {
+      const response = await fetch("/api/operacao-central/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: document.getElementById("email").value,
+          senha: document.getElementById("senha").value,
+        }),
+      });
+      const data = await response.json();
+      document.getElementById("msg").textContent = data.mensagem || data.erro || "";
+      if (data.token) {
+        window.location.href = data.destination || "/console-operacional/";
+      }
+    }
+  </script>
+</body>
+</html>

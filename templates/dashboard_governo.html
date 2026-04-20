@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>SolusCRT Governo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #04111a;
+      --panel: rgba(5, 15, 24, 0.78);
+      --panel-strong: rgba(7, 19, 30, 0.9);
+      --panel-soft: rgba(8, 24, 38, 0.7);
+      --stroke: rgba(111, 196, 255, 0.16);
+      --text: #edf8ff;
+      --muted: #97bfd9;
+      --accent: #5af0d3;
+      --accent-2: #6fb4ff;
+      --danger: #ff5574;
+      --warn: #ff9b54;
+      --moderate: #ffd166;
+      --ok: #17d7a0;
+      --shadow: 0 22px 60px rgba(0, 0, 0, 0.42);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(90, 240, 211, 0.14), transparent 24%),
+        radial-gradient(circle at 100% 100%, rgba(255, 85, 116, 0.11), transparent 28%),
+        linear-gradient(rgba(111, 196, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(111, 196, 255, 0.05) 1px, transparent 1px);
+      background-size: auto, auto, 46px 46px, 46px 46px;
+      z-index: 1;
+    }
+
+    #map {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .topbar,
+    .dock,
+    .bottom-sheet,
+    .floating-button {
+      pointer-events: auto;
+    }
+
+    .topbar {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: grid;
+      grid-template-columns: minmax(280px, 1.15fr) minmax(320px, 1.5fr) auto;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .card,
+    .dock,
+    .bottom-sheet {
+      border: 1px solid var(--stroke);
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .card {
+      border-radius: 24px;
+      padding: 14px 16px;
+    }
+
+    .eyebrow {
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      color: var(--accent);
+    }
+
+    .brand-title {
+      margin-top: 8px;
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .brand-subtitle,
+    .mini {
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.45;
+    }
+
+    .metrics-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric-card {
+      border-radius: 18px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: linear-gradient(180deg, rgba(14, 31, 46, 0.92), rgba(7, 18, 28, 0.95));
+    }
+
+    .metric-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .metric-card strong {
+      display: block;
+      margin-top: 7px;
+      font-size: 1.15rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .btn,
+    select {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      padding: 10px 14px;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+      font: inherit;
+    }
+
+    .btn {
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .btn.primary {
+      color: #04111a;
+      background: linear-gradient(135deg, rgba(90, 240, 211, 0.95), rgba(111, 180, 255, 0.95));
+    }
+
+    .btn.warn {
+      background: linear-gradient(135deg, rgba(255, 85, 116, 0.92), rgba(147, 33, 63, 0.92));
+    }
+
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 800;
+    }
+
+    .dock {
+      position: absolute;
+      top: 104px;
+      bottom: 20px;
+      width: 330px;
+      border-radius: 28px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.28s ease, opacity 0.28s ease;
+    }
+
+    .dock-left { left: 14px; }
+    .dock-right { right: 14px; width: 360px; }
+    .dock.hidden-left { transform: translateX(-104%); opacity: 0; }
+    .dock.hidden-right { transform: translateX(104%); opacity: 0; }
+
+    .dock-header {
+      padding: 16px 18px 10px;
+      background: linear-gradient(180deg, rgba(9, 24, 36, 0.96), rgba(9, 24, 36, 0.84));
+      border-bottom: 1px solid var(--stroke);
+    }
+
+    .dock-title {
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .dock-scroll {
+      padding: 14px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .section {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 22px;
+      background: var(--panel-soft);
+      padding: 14px;
+    }
+
+    .section h2 {
+      margin: 0 0 10px;
+      font-size: 0.98rem;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .filters label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .stack,
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .alert-card,
+    .list-item,
+    .info-card {
+      border-radius: 18px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .list-item {
+      cursor: pointer;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    .critico { background: var(--danger); color: #fff; }
+    .alto { background: var(--warn); color: #101010; }
+    .moderado { background: var(--moderate); color: #101010; }
+    .baixo { background: var(--ok); color: #062018; }
+
+    .legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    .legend .critico::before { background: var(--danger); }
+    .legend .alto::before { background: var(--warn); }
+    .legend .moderado::before { background: var(--moderate); }
+    .legend .baixo::before { background: var(--ok); }
+
+    .bottom-sheet {
+      position: absolute;
+      left: 360px;
+      right: 390px;
+      bottom: 20px;
+      min-height: 240px;
+      max-height: 34vh;
+      border-radius: 28px;
+      overflow: hidden;
+      transition: transform 0.28s ease, opacity 0.28s ease;
+    }
+
+    .bottom-sheet.hidden {
+      transform: translateY(104%);
+      opacity: 0;
+    }
+
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 16px 18px 10px;
+      border-bottom: 1px solid var(--stroke);
+      background: linear-gradient(180deg, rgba(9, 24, 36, 0.96), rgba(9, 24, 36, 0.84));
+    }
+
+    .sheet-body {
+      padding: 14px;
+      overflow: auto;
+      display: grid;
+      grid-template-columns: minmax(260px, 0.95fr) minmax(260px, 1.05fr);
+      gap: 14px;
+      max-height: calc(34vh - 64px);
+    }
+
+    .chart-wrap {
+      height: 210px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .detail-box {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .detail-box ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .tag {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(90, 240, 211, 0.12);
+      border: 1px solid rgba(90, 240, 211, 0.22);
+      color: #bcfff1;
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .floating-button {
+      position: absolute;
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: rgba(6, 17, 26, 0.86);
+      color: var(--text);
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+
+    .toggle-left { left: 346px; top: 132px; }
+    .toggle-right { right: 376px; top: 132px; }
+    .toggle-bottom { left: 50%; transform: translateX(-50%); bottom: calc(34vh + 38px); }
+    .toggle-left.shifted { left: 14px; }
+    .toggle-right.shifted { right: 14px; }
+    .toggle-bottom.shifted { bottom: 22px; }
+
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+      background: rgba(4, 12, 20, 0.94);
+      color: var(--text);
+      border: 1px solid var(--stroke);
+    }
+
+    .leaflet-popup-content { min-width: 260px; line-height: 1.45; }
+
+    @media (max-width: 1180px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .dock,
+      .bottom-sheet {
+        position: relative;
+        inset: auto;
+        width: auto;
+        max-height: none;
+        transform: none !important;
+        opacity: 1 !important;
+      }
+
+      .hud {
+        position: relative;
+        padding: 14px;
+      }
+
+      body, html {
+        overflow: auto;
+      }
+
+      #map {
+        position: absolute;
+        height: 64vh;
+      }
+
+      .topbar {
+        padding-top: 64vh;
+      }
+
+      .sheet-body,
+      .detail-grid,
+      .filters,
+      .metrics-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .floating-button {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="hud">
+    <div class="topbar">
+      <section class="card">
+        <div class="eyebrow">SolusCRT Governo</div>
+        <div class="brand-title">Centro Executivo de Vigilancia Territorial</div>
+        <div class="brand-subtitle">
+          Painel governamental dedicado para secretaria, prefeitura e estado, com inteligencia territorial,
+          resposta tatico-operacional, limiar epidemico e leitura institucional transparente.
+        </div>
+        <div class="mini" id="generatedAt" style="margin-top:10px;">Atualizando inteligencia governamental...</div>
+      </section>
+
+      <section class="card">
+        <div class="metrics-strip">
+          <div class="metric-card"><span>Casos</span><strong id="metricCases">0</strong></div>
+          <div class="metric-card"><span>Focos</span><strong id="metricAreas">0</strong></div>
+          <div class="metric-card"><span>Crescimento</span><strong id="metricGrowth">0%</strong></div>
+          <div class="metric-card"><span>Limiar</span><strong id="metricThreshold">0</strong></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="actions">
+          <span class="risk-badge baixo" id="metricRiskBadge">BAIXO</span>
+          <button class="btn" id="toggleLeftDock">Filtros</button>
+          <button class="btn" id="toggleRightDock">Inteligencia</button>
+          <button class="btn" id="toggleBottomSheet">Situacao</button>
+          <button class="btn" id="usersBtn">Usuarios</button>
+          <button class="btn" id="securityBtn">Seguranca</button>
+          <button class="btn" id="licensesBtn">Licencas</button>
+          <button class="btn" id="exportJsonBtn">Briefing JSON</button>
+          <button class="btn" id="exportCsvBtn">Briefing CSV</button>
+          <button class="btn primary" id="refreshBtn">Atualizar</button>
+          <button class="btn warn" id="logoutBtn">Sair</button>
+        </div>
+        <div class="legend" style="margin-top: 12px;">
+          <span class="critico">Critico</span>
+          <span class="alto">Alto</span>
+          <span class="moderado">Moderado</span>
+          <span class="baixo">Baixo</span>
+        </div>
+      </section>
+    </div>
+
+    <button class="floating-button toggle-left shifted" id="leftHandle">›</button>
+    <button class="floating-button toggle-right shifted" id="rightHandle">‹</button>
+    <button class="floating-button toggle-bottom shifted" id="bottomHandle">▲</button>
+
+    <aside class="dock dock-left hidden-left" id="leftDock">
+      <div class="dock-header">
+        <div class="dock-title">Controle Territorial</div>
+        <div class="mini">Mapeie o pais por bairros, municipios e estados sem perder o mapa de vista.</div>
+      </div>
+      <div class="dock-scroll">
+        <section class="section">
+          <h2>Camadas</h2>
+          <div class="filters">
+            <label>
+              Modo do mapa
+              <select id="modeFilter">
+                <option value="surtos">Surto detalhado</option>
+                <option value="radar">Radar saude</option>
+                <option value="risco">Mapa de risco</option>
+              </select>
+            </label>
+            <label>
+              Granularidade
+              <select id="levelFilter">
+                <option value="bairros">Bairros</option>
+                <option value="municipios">Municipios</option>
+                <option value="estados">Estados</option>
+              </select>
+            </label>
+            <label>
+              Estado
+              <select id="stateFilter">
+                <option value="">Todos</option>
+              </select>
+            </label>
+            <label>
+              Cidade
+              <select id="cityFilter">
+                <option value="">Todas</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Briefing Governamental</h2>
+          <div class="stack" id="governmentBriefing">Carregando briefing...</div>
+        </section>
+
+        <section class="section">
+          <h2>Brasil Oficial</h2>
+          <div class="stack" id="officialBrazilStack">Carregando fontes oficiais...</div>
+        </section>
+
+        <section class="section">
+          <h2>Alertas para a Populacao</h2>
+          <p class="mini">Fluxo seguro: criar rascunho, revisar, aprovar e somente depois publicar no app da populacao.</p>
+          <div class="stack">
+            <label class="mini">Titulo
+              <input id="govAlertTitle" class="btn" style="width:100%;border-radius:16px;margin-top:6px;" placeholder="Ex: Atencao para aumento de sinais respiratorios">
+            </label>
+            <label class="mini">Mensagem
+              <textarea id="govAlertMessage" class="btn" style="width:100%;border-radius:16px;margin-top:6px;min-height:92px;resize:vertical;" placeholder="Escreva o comunicado oficial para aparecer no app da populacao"></textarea>
+            </label>
+            <label class="mini">Justificativa tecnica
+              <textarea id="govAlertJustification" class="btn" style="width:100%;border-radius:16px;margin-top:6px;min-height:70px;resize:vertical;" placeholder="Ex: aumento de 42% em 7 dias, concentrado em bairros especificos"></textarea>
+            </label>
+            <div class="filters">
+              <label>
+                Nivel
+                <select id="govAlertLevel">
+                  <option value="moderado">Moderado</option>
+                  <option value="alto">Alto</option>
+                  <option value="critico">Critico</option>
+                </select>
+              </label>
+              <label>
+                Estado
+                <input id="govAlertState" class="btn" style="width:100%;border-radius:16px;" placeholder="Opcional">
+              </label>
+              <label>
+                Cidade
+                <input id="govAlertCity" class="btn" style="width:100%;border-radius:16px;" placeholder="Opcional">
+              </label>
+              <label>
+                Bairro
+                <input id="govAlertDistrict" class="btn" style="width:100%;border-radius:16px;" placeholder="Opcional">
+              </label>
+            </div>
+            <button class="btn primary" id="publishGovAlertBtn">Enviar para Revisao</button>
+            <div class="list" id="govAlertsList">Carregando alertas ativos...</div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Cobertura Territorial</h2>
+          <div class="stack" id="coverageCards">Carregando cobertura...</div>
+        </section>
+      </div>
+    </aside>
+
+    <aside class="dock dock-right hidden-right" id="rightDock">
+      <div class="dock-header">
+        <div class="dock-title">Inteligencia Institucional</div>
+        <div class="mini">Limiar epidemico, qualidade do dado, perfis operacionais e prioridades de resposta.</div>
+      </div>
+      <div class="dock-scroll">
+        <section class="section">
+          <h2>Alerta Epidemico</h2>
+          <div id="thresholdCard" class="info-card">Carregando limiar...</div>
+        </section>
+
+        <section class="section">
+          <h2>Qualidade do Dado</h2>
+          <div id="qualityCard" class="info-card">Carregando qualidade...</div>
+        </section>
+
+        <section class="section">
+          <h2>Perfis Operacionais</h2>
+          <div class="stack" id="profilesStack">Carregando perfis...</div>
+        </section>
+
+        <section class="section">
+          <h2>Prioridades de Resposta</h2>
+          <div class="list" id="focusList">Carregando focos...</div>
+        </section>
+      </div>
+    </aside>
+
+    <section class="bottom-sheet hidden" id="bottomSheet">
+      <div class="sheet-header">
+        <div>
+          <div style="font-size:1rem;font-weight:800;">Sala de Situacao Governamental</div>
+          <div class="mini">Serie historica, doencas provaveis, resposta operacional e observacoes institucionais.</div>
+        </div>
+        <div class="mini">{{ empresa_nome }}</div>
+      </div>
+      <div class="sheet-body">
+        <div>
+          <div class="section">
+            <h2>Serie Historica e Vigilancia</h2>
+            <div class="chart-wrap"><canvas id="timelineChart"></canvas></div>
+          </div>
+          <div class="section" style="margin-top:14px;">
+            <h2>Doencas Provaveis por Foco Lider</h2>
+            <div class="chart-wrap"><canvas id="diseaseChart"></canvas></div>
+          </div>
+        </div>
+        <div class="section">
+          <h2>Detalhes da Localidade</h2>
+          <div id="detailsBody" class="mini">
+            Selecione um foco no mapa ou na lista para abrir risco, prioridade, serie recente, recomendacao governamental e doencas provaveis.
+          </div>
+          <div id="institutionalNote" class="mini" style="margin-top:14px;"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const empresaId = "{{ empresa_id|escapejs }}";
+    const modeFilter = document.getElementById("modeFilter");
+    const levelFilter = document.getElementById("levelFilter");
+    const stateFilter = document.getElementById("stateFilter");
+    const cityFilter = document.getElementById("cityFilter");
+    const govAlertTitle = document.getElementById("govAlertTitle");
+    const govAlertMessage = document.getElementById("govAlertMessage");
+    const govAlertLevel = document.getElementById("govAlertLevel");
+    const govAlertState = document.getElementById("govAlertState");
+    const govAlertCity = document.getElementById("govAlertCity");
+    const govAlertDistrict = document.getElementById("govAlertDistrict");
+    const govAlertJustification = document.getElementById("govAlertJustification");
+    const leftDock = document.getElementById("leftDock");
+    const rightDock = document.getElementById("rightDock");
+    const bottomSheet = document.getElementById("bottomSheet");
+    const leftHandle = document.getElementById("leftHandle");
+    const rightHandle = document.getElementById("rightHandle");
+    const bottomHandle = document.getElementById("bottomHandle");
+
+    localStorage.setItem("empresa_id", empresaId);
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("empresa_id");
+      window.location.href = "/logout/";
+    });
+
+    const map = L.map("map", { zoomControl: false, preferCanvas: true }).setView([-15.7, -47.9], 4);
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+
+    L.tileLayer(
+      "https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={{ MAPBOX_ACCESS_TOKEN|escapejs }}",
+      {
+        tileSize: 512,
+        zoomOffset: -1,
+        maxZoom: 18,
+        attribution: "&copy; Mapbox & OpenStreetMap",
+      }
+    ).addTo(map);
+
+    let panorama = null;
+    let selectedAreaId = null;
+    let diseaseChart = null;
+    let timelineChart = null;
+    let heatLayer = null;
+    let circlesLayer = L.layerGroup().addTo(map);
+    let markersLayer = L.layerGroup().addTo(map);
+    let leftVisible = false;
+    let rightVisible = false;
+    let bottomVisible = false;
+
+    function updatePanels() {
+      leftDock.classList.toggle("hidden-left", !leftVisible);
+      rightDock.classList.toggle("hidden-right", !rightVisible);
+      bottomSheet.classList.toggle("hidden", !bottomVisible);
+      leftHandle.classList.toggle("shifted", !leftVisible);
+      rightHandle.classList.toggle("shifted", !rightVisible);
+      bottomHandle.classList.toggle("shifted", !bottomVisible);
+      leftHandle.textContent = leftVisible ? "‹" : "›";
+      rightHandle.textContent = rightVisible ? "›" : "‹";
+      bottomHandle.textContent = bottomVisible ? "▼" : "▲";
+    }
+
+    function riskColor(level) {
+      if (level === "CRITICO") return "#ff5574";
+      if (level === "ALTO") return "#ff9b54";
+      if (level === "MODERADO") return "#ffd166";
+      return "#17d7a0";
+    }
+
+    function badgeClass(level) {
+      return level === "CRITICO" ? "critico" : level === "ALTO" ? "alto" : level === "MODERADO" ? "moderado" : "baixo";
+    }
+
+    function getAreas() {
+      if (!panorama) return [];
+      const areas = panorama.layers[levelFilter.value] || [];
+      return areas.filter((area) => {
+        if (stateFilter.value && area.estado !== stateFilter.value) return false;
+        if (cityFilter.value && area.cidade !== cityFilter.value) return false;
+        return true;
+      });
+    }
+
+    function populateFilters() {
+      const currentState = stateFilter.value;
+      const currentCity = cityFilter.value;
+      const states = panorama.filters.estados || [];
+      const cities = (panorama.layers.bairros || [])
+        .filter((area) => !currentState || area.estado === currentState)
+        .map((area) => area.cidade)
+        .filter(Boolean);
+      const uniqueCities = [...new Set(cities)].sort();
+
+      stateFilter.innerHTML = `<option value="">Todos</option>` + states.map((state) => `<option value="${state}">${state}</option>`).join("");
+      cityFilter.innerHTML = `<option value="">Todas</option>` + uniqueCities.map((city) => `<option value="${city}">${city}</option>`).join("");
+      stateFilter.value = states.includes(currentState) ? currentState : "";
+      cityFilter.value = uniqueCities.includes(currentCity) ? currentCity : "";
+    }
+
+    function updateMetrics(areas) {
+      const totalCases = areas.reduce((sum, area) => sum + area.total_cases, 0);
+      const avgGrowth = areas.length ? areas.reduce((sum, area) => sum + area.growth_percent, 0) / areas.length : 0;
+      const topRisk = areas.reduce((acc, area) => Math.max(acc, area.risk_score), 0);
+      const riskLevel = topRisk >= 75 ? "CRITICO" : topRisk >= 55 ? "ALTO" : topRisk >= 35 ? "MODERADO" : "BAIXO";
+      const riskBadge = document.getElementById("metricRiskBadge");
+
+      document.getElementById("metricCases").textContent = totalCases.toLocaleString("pt-BR");
+      document.getElementById("metricAreas").textContent = areas.length.toLocaleString("pt-BR");
+      document.getElementById("metricGrowth").textContent = `${avgGrowth.toFixed(1)}%`;
+      document.getElementById("metricThreshold").textContent = `${(panorama?.overview?.timeline?.epidemic_threshold || 0).toLocaleString("pt-BR")}`;
+      riskBadge.textContent = riskLevel;
+      riskBadge.className = `risk-badge ${badgeClass(riskLevel)}`;
+    }
+
+    function renderBriefing() {
+      const items = (panorama?.overview?.government_briefing || []).slice(0, 5);
+      const container = document.getElementById("governmentBriefing");
+
+      if (!items.length) {
+        container.innerHTML = "Sem briefing governamental no momento.";
+        return;
+      }
+
+      container.innerHTML = items.map((item) => `
+        <div class="alert-card">
+          <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
+            <strong>${item.title}</strong>
+            <span class="badge critico">P${item.priority}</span>
+          </div>
+          <div class="mini" style="margin-top:8px;">
+            Vigilancia <strong>${item.surveillance_index.toFixed(1)}</strong> |
+            Pressao <strong>${item.resource_pressure.toFixed(1)}</strong><br>
+            ${item.message}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderCoverage() {
+      const coverage = panorama?.overview?.territorial_coverage || {};
+      document.getElementById("coverageCards").innerHTML = `
+        <div class="info-card"><strong>${(coverage.states || 0).toLocaleString("pt-BR")}</strong><div class="mini">estados monitorados</div></div>
+        <div class="info-card"><strong>${(coverage.cities || 0).toLocaleString("pt-BR")}</strong><div class="mini">municipios ou cidades com sinal</div></div>
+        <div class="info-card"><strong>${(coverage.neighborhoods || 0).toLocaleString("pt-BR")}</strong><div class="mini">bairros acompanhados pelo radar</div></div>
+      `;
+    }
+
+    const officialBrazilDetails = [];
+
+    function registerOfficialDetail(title, payload) {
+      const index = officialBrazilDetails.push({ title, payload }) - 1;
+      return `<button class="btn" style="margin-top:10px;" onclick="showOfficialDetail(${index})">Ver detalhes</button>`;
+    }
+
+    function showOfficialDetail(index) {
+      const item = officialBrazilDetails[index];
+      if (!item) return;
+      alert(`${item.title}\n\n${JSON.stringify(item.payload, null, 2)}`);
+    }
+
+    async function loadOfficialBrazil() {
+      const container = document.getElementById("officialBrazilStack");
+      try {
+        officialBrazilDetails.length = 0;
+        const response = await fetch("/api/brasil/fontes-oficiais");
+        const data = await response.json();
+        const fontes = data.fontes || [];
+        const arboviroses = data.arboviroses_municipais || [];
+        const respiratorio = data.respiratorio_oficial || {};
+        const datasus = data.opendatasus_datasus || {};
+        const execucoes = data.execucoes_oficiais || {};
+        const indicadores = data.indicadores_brasil || {};
+        const pipelines = data.pipelines_automatizados || [];
+        const integradas = fontes.filter((fonte) => fonte.status === "integracao_api").length;
+
+        container.innerHTML = `
+          <div class="info-card">
+            <strong>${integradas}/${fontes.length}</strong>
+            <div class="mini">fontes oficiais com camada ativa ou catalogada</div>
+          </div>
+          <div class="info-card">
+            <strong>${indicadores.municipios_com_populacao || 0}</strong>
+            <div class="mini">municipios com denominador populacional IBGE/SIDRA</div>
+          </div>
+          <div class="info-card">
+            <strong>${arboviroses.length}</strong>
+            <div class="mini">municipios cruzados com InfoDengue a partir dos sinais do app</div>
+          </div>
+          <div class="mini">
+            Formula oficial aplicada: ${indicadores.formula || "casos / populacao * 100000"}.
+            Populacao: ${indicadores.fonte_populacao_prioritaria || "IBGE"}.
+          </div>
+          <div class="mini">${data.principio || ""}</div>
+          <div class="alert-card">
+            <strong>Respiratorio oficial - InfoGripe</strong>
+            <div class="mini">
+              Status: ${(respiratorio.status || "pendente").replaceAll("_", " ")}<br>
+              ${respiratorio.status === "ativo"
+                ? `Registros: ${respiratorio.registros || 0} | Ano: ${respiratorio.ano || "-"}<br>${(respiratorio.series_relevantes || []).map((serie) => `${serie.campo}: ${serie.ultimo_valor}`).join("<br>")}`
+                : (respiratorio.resumo || "Fonte respiratoria catalogada para integracao oficial.")}
+            </div>
+            ${registerOfficialDetail("InfoGripe respiratorio", respiratorio)}
+          </div>
+          <div class="alert-card">
+            <strong>OpenDataSUS / DATASUS</strong>
+            <div class="mini">
+              Status: ${(datasus.status || "catalogado").replaceAll("_", " ")}<br>
+              ${datasus.regra_operacional || "Microdados serao tratados por pipeline assíncrono e agregados auditaveis."}
+            </div>
+            ${registerOfficialDetail("OpenDataSUS / DATASUS", datasus)}
+          </div>
+          ${(datasus.fontes || []).slice(0, 5).map((fonte, index) => `
+            <div class="list-item">
+              <strong>P${index + 1} - ${fonte.nome}</strong>
+              <div class="mini">
+                Fonte: ${fonte.fonte}<br>
+                Status: ${fonte.status.replaceAll("_", " ")} | Risco: ${fonte.risco_operacional}<br>
+                ${fonte.finalidade}<br>
+                Estrategia: ${fonte.estrategia}
+              </div>
+              ${registerOfficialDetail(fonte.nome, fonte)}
+            </div>
+          `).join("")}
+          <div class="info-card">
+            <strong>${execucoes.agregados_disponiveis || 0}</strong>
+            <div class="mini">agregados oficiais prontos para dashboard</div>
+          </div>
+          ${(execucoes.ultimas_execucoes || []).slice(0, 4).map((item) => `
+            <div class="list-item">
+              <strong>${item.fonte_nome}</strong>
+              <div class="mini">
+                Status: ${item.status.replaceAll("_", " ")} | Modo: ${item.modo.replaceAll("_", " ")}<br>
+                ${item.uf ? `UF: ${item.uf}<br>` : ""}
+                ${item.mensagem || "Execucao registrada."}
+              </div>
+              ${registerOfficialDetail(item.fonte_nome, item)}
+            </div>
+          `).join("")}
+          ${pipelines.map((pipeline) => `
+            <div class="list-item">
+              <strong>${pipeline.nome}</strong>
+              <div class="mini">Status: ${pipeline.status} | ${pipeline.entrega}</div>
+              ${registerOfficialDetail(pipeline.nome, pipeline)}
+            </div>
+          `).join("")}
+          ${fontes.slice(0, 5).map((fonte) => `
+            <div class="list-item">
+              <strong>${fonte.nome}</strong>
+              <div class="mini">
+                ${fonte.tipo} | ${fonte.cobertura}<br>
+                Status: ${fonte.status.replaceAll("_", " ")}<br>
+                ${fonte.uso_no_saas}
+              </div>
+              ${registerOfficialDetail(fonte.nome, fonte)}
+            </div>
+          `).join("")}
+          ${arboviroses.slice(0, 3).map((item) => `
+            <div class="alert-card">
+              <strong>${item.cidade}/${item.estado}</strong>
+              <div class="mini">
+                Populacao: ${item.populacao ? Number(item.populacao).toLocaleString("pt-BR") : "nao disponivel"} (${item.populacao_fonte || "fonte pendente"})<br>
+                Sinais app 14d: ${item.sinais_app_14d}<br>
+                Sinais app 14d por 100 mil: ${item.sinais_app_14d_por_100k ?? "-"}<br>
+                ${(item.arboviroses || []).map((arb) => `${arb.doenca}: nivel ${arb.nivel_alerta ?? "-"} | inc. ${Number(arb.incidencia_100k || 0).toFixed(2)}/100k`).join("<br>") || "Sem retorno oficial recente para arboviroses."}
+              </div>
+              ${registerOfficialDetail(`${item.cidade}/${item.estado}`, item)}
+            </div>
+          `).join("")}
+        `;
+      } catch (error) {
+        container.innerHTML = `
+          <div class="info-card">
+            <strong>Fontes oficiais Brasil</strong>
+            <div class="mini">Nao foi possivel atualizar as fontes oficiais neste momento. A camada colaborativa segue ativa.</div>
+          </div>
+        `;
+      }
+    }
+
+    async function loadGovernmentAlerts() {
+      const response = await fetch("/api/governo/alertas");
+      const data = await response.json();
+      const items = data.alertas || [];
+      const statusLabel = {
+        rascunho: "RASCUNHO",
+        em_revisao: "EM REVISAO",
+        aprovado: "APROVADO",
+        publicado: "PUBLICADO",
+        revogado: "REVOGADO",
+      };
+      document.getElementById("govAlertsList").innerHTML = items.length
+        ? items.map((alerta) => `
+            <div class="alert-card">
+              <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
+                <strong>${alerta.titulo}</strong>
+                <span class="badge ${alerta.status === "publicado" ? "alto" : alerta.status === "aprovado" ? "moderado" : "baixo"}">${statusLabel[alerta.status] || alerta.status}</span>
+              </div>
+              <div class="mini" style="margin-top:8px;">
+                ${alerta.mensagem}<br>
+                Protocolo: ${alerta.protocolo || "-"}<br>
+                ${alerta.bairro || alerta.cidade || alerta.estado ? `Recorte: ${alerta.bairro || "-"} / ${alerta.cidade || "-"} / ${alerta.estado || "-"}` : "Abrangencia geral"}<br>
+                Justificativa: ${alerta.justificativa || "nao informada"}<br>
+                Criado por: ${alerta.criado_por || "-"} | Aprovado por: ${alerta.aprovado_por || "-"}<br>
+                Criado em: ${new Date(alerta.criado_em).toLocaleString("pt-BR")}
+              </div>
+              <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                ${alerta.status === "em_revisao" || alerta.status === "rascunho" ? `<button class="btn" onclick="governAlertFlow(${alerta.id}, 'aprovar')">Aprovar</button>` : ""}
+                ${alerta.status === "em_revisao" || alerta.status === "rascunho" ? `<button class="btn primary" onclick="approveAndPublishGovernmentAlert(${alerta.id})">Aprovar e publicar no App</button>` : ""}
+                ${alerta.status === "aprovado" ? `<button class="btn primary" onclick="governAlertFlow(${alerta.id}, 'publicar')">Publicar no App</button>` : ""}
+                ${alerta.status === "publicado" ? `<button class="btn" onclick="governAlertFlow(${alerta.id}, 'revogar')">Revogar</button>` : ""}
+              </div>
+            </div>
+          `).join("")
+        : "Nenhum alerta governamental criado.";
+    }
+
+    async function publishGovernmentAlert() {
+      const payload = {
+        titulo: govAlertTitle.value.trim(),
+        mensagem: govAlertMessage.value.trim(),
+        nivel: govAlertLevel.value,
+        estado: govAlertState.value.trim(),
+        cidade: govAlertCity.value.trim(),
+        bairro: govAlertDistrict.value.trim(),
+        justificativa: govAlertJustification.value.trim(),
+      };
+
+      const response = await fetch("/api/governo/alertas/criar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.erro || "Nao foi possivel criar o alerta.");
+        return;
+      }
+
+      govAlertTitle.value = "";
+      govAlertMessage.value = "";
+      govAlertState.value = "";
+      govAlertCity.value = "";
+      govAlertDistrict.value = "";
+      govAlertJustification.value = "";
+      await loadGovernmentAlerts();
+      alert("Alerta enviado para revisao. Publique somente apos aprovacao.");
+    }
+
+    async function governAlertFlow(alertaId, acao, options = {}) {
+      const justificativa = acao === "revogar" ? prompt("Informe a justificativa da revogacao:") || "" : "";
+      const response = await fetch("/api/governo/alertas/fluxo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alerta_id: alertaId, acao, justificativa }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.erro || "Nao foi possivel atualizar o alerta.");
+        return;
+      }
+      await loadGovernmentAlerts();
+      if (!options.silent) {
+        if (acao === "publicar") {
+          alert(`Alerta publicado no app. Push: ${data.push?.status || "sem retorno"} | enviados: ${data.push?.enviados || 0}`);
+        } else if (acao === "aprovar") {
+          alert("Alerta aprovado. Agora clique em Publicar no App para aparecer no telefone da populacao.");
+        }
+      }
+      return data;
+    }
+
+    async function approveAndPublishGovernmentAlert(alertaId) {
+      const approved = await governAlertFlow(alertaId, "aprovar", { silent: true });
+      if (!approved) return;
+      await governAlertFlow(alertaId, "publicar");
+    }
+
+    function renderThreshold() {
+      const timeline = panorama?.overview?.timeline || {};
+      const statusClass = timeline.above_threshold ? "critico" : "baixo";
+      document.getElementById("thresholdCard").innerHTML = `
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
+          <strong>Limiar epidemico operacional</strong>
+          <span class="badge ${statusClass}">${timeline.above_threshold ? "ACIMA" : "ESTAVEL"}</span>
+        </div>
+        <div class="mini" style="margin-top:8px;">
+          Hoje: <strong>${(timeline.today_total || 0).toLocaleString("pt-BR")}</strong><br>
+          Limiar: <strong>${(timeline.epidemic_threshold || 0).toLocaleString("pt-BR")}</strong><br>
+          Base historica: <strong>${(timeline.baseline_average || 0).toLocaleString("pt-BR")}</strong>
+        </div>
+      `;
+    }
+
+    function renderQuality() {
+      const quality = panorama?.overview?.data_quality || {};
+      document.getElementById("qualityCard").innerHTML = `
+        <strong>Confianca media ${Number(quality.avg_confidence || 0).toFixed(2)}</strong>
+        <div class="mini" style="margin-top:8px;">
+          Registros monitorados: <strong>${(quality.total_reports || 0).toLocaleString("pt-BR")}</strong><br>
+          Validados: <strong>${(quality.validated_reports || 0).toLocaleString("pt-BR")}</strong><br>
+          Suspeitos: <strong>${(quality.suspected_reports || 0).toLocaleString("pt-BR")}</strong> (${Number(quality.suspected_rate || 0).toFixed(1)}%)
+        </div>
+      `;
+    }
+
+    function renderProfiles() {
+      const profiles = panorama?.overview?.operational_profiles || {};
+      const groups = profiles.groups || [];
+      const classifications = profiles.classifications || [];
+      const diseases = profiles.confirmed_diseases || [];
+      const blocks = [];
+
+      if (groups.length) {
+        blocks.push(`<div class="info-card"><strong>Grupos operacionais</strong><div class="mini" style="margin-top:8px;">${groups.map((item) => `${item.label}: ${item.total.toLocaleString("pt-BR")}`).join("<br>")}</div></div>`);
+      }
+      if (classifications.length) {
+        blocks.push(`<div class="info-card"><strong>Classificacoes</strong><div class="mini" style="margin-top:8px;">${classifications.map((item) => `${item.label}: ${item.total.toLocaleString("pt-BR")}`).join("<br>")}</div></div>`);
+      }
+      if (diseases.length) {
+        blocks.push(`<div class="info-card"><strong>Doencas confirmadas</strong><div class="mini" style="margin-top:8px;">${diseases.map((item) => `${item.label}: ${item.total.toLocaleString("pt-BR")}`).join("<br>")}</div></div>`);
+      }
+
+      if (!blocks.length) {
+        blocks.push(`<div class="info-card"><div class="mini">Ainda nao ha perfis operacionais suficientes no banco para esse recorte.</div></div>`);
+      }
+
+      document.getElementById("profilesStack").innerHTML = blocks.join("");
+    }
+
+    function renderFocusList() {
+      const areas = getAreas()
+        .slice()
+        .sort((a, b) => a.response_priority - b.response_priority || b.surveillance_index - a.surveillance_index)
+        .slice(0, 10);
+
+      if (!areas.length) {
+        document.getElementById("focusList").innerHTML = "Sem focos para o filtro atual.";
+        return;
+      }
+
+      document.getElementById("focusList").innerHTML = areas.map((area) => `
+        <div class="list-item" data-area-id="${area.id}">
+          <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
+            <strong>${area.label}</strong>
+            <span class="badge ${badgeClass(area.risk_level)}">P${area.response_priority}</span>
+          </div>
+          <div class="mini" style="margin-top:8px;">
+            ${area.total_cases.toLocaleString("pt-BR")} casos |
+            crescimento ${area.growth_percent.toFixed(1)}%<br>
+            Vigilancia ${area.surveillance_index.toFixed(1)} |
+            Pressao ${area.resource_pressure.toFixed(1)}
+          </div>
+        </div>
+      `).join("");
+
+      document.querySelectorAll("[data-area-id]").forEach((item) => {
+        item.addEventListener("click", () => {
+          const area = getAreas().find((entry) => entry.id === item.dataset.areaId);
+          if (area) selectArea(area);
+        });
+      });
+    }
+
+    function renderDiseaseChart(areas) {
+      const focuses = areas.slice(0, 5);
+      const labels = focuses.map((area) => area.label);
+      const cases = focuses.map((area) => area.total_cases);
+      const pressure = focuses.map((area) => area.resource_pressure);
+      const ctx = document.getElementById("diseaseChart");
+
+      if (diseaseChart) diseaseChart.destroy();
+
+      diseaseChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            { label: "Casos", data: cases, backgroundColor: "#5af0d3", borderRadius: 12 },
+            { label: "Pressao", data: pressure, backgroundColor: "#ff9b54", borderRadius: 12 },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: "#edf8ff" } } },
+          scales: {
+            x: { ticks: { color: "#97bfd9" }, grid: { color: "rgba(255,255,255,0.05)" } },
+            y: { beginAtZero: true, ticks: { color: "#97bfd9" }, grid: { color: "rgba(255,255,255,0.06)" } },
+          },
+        },
+      });
+    }
+
+    function renderTimelineChart() {
+      const timeline = panorama?.overview?.timeline?.series || [];
+      const labels = timeline.map((entry) => new Date(`${entry.date}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }));
+      const totals = timeline.map((entry) => entry.total);
+      const threshold = timeline.map(() => panorama?.overview?.timeline?.epidemic_threshold || 0);
+      const ctx = document.getElementById("timelineChart");
+
+      if (timelineChart) timelineChart.destroy();
+
+      timelineChart = new Chart(ctx, {
+        data: {
+          labels,
+          datasets: [
+            {
+              type: "line",
+              label: "Serie historica",
+              data: totals,
+              borderColor: "#6fb4ff",
+              backgroundColor: "rgba(111, 180, 255, 0.16)",
+              tension: 0.32,
+              fill: true,
+            },
+            {
+              type: "line",
+              label: "Limiar epidemico",
+              data: threshold,
+              borderColor: "#ff5574",
+              borderDash: [6, 6],
+              pointRadius: 0,
+              tension: 0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: "#edf8ff" } } },
+          scales: {
+            x: { ticks: { color: "#97bfd9" }, grid: { color: "rgba(255,255,255,0.05)" } },
+            y: { beginAtZero: true, ticks: { color: "#97bfd9" }, grid: { color: "rgba(255,255,255,0.06)" } },
+          },
+        },
+      });
+    }
+
+    function areaPopup(area) {
+      return `
+        <strong>${area.label}</strong><br>
+        Casos: ${area.total_cases.toLocaleString("pt-BR")}<br>
+        Crescimento: ${area.growth_percent.toFixed(1)}%<br>
+        Prioridade: P${area.response_priority}<br>
+        Vigilancia: ${area.surveillance_index.toFixed(1)}<br>
+        Pressao: ${area.resource_pressure.toFixed(1)}<br><br>
+        <strong>Resposta governamental:</strong><br>
+        ${area.government_recommendation}
+      `;
+    }
+
+    function renderDetails(area) {
+      const symptoms = area.symptoms
+        .map((symptom) => `<li>${symptom.label}: ${symptom.count.toLocaleString("pt-BR")} (${symptom.percentage.toFixed(1)}%)</li>`)
+        .join("");
+      const diseases = area.probable_diseases
+        .map((disease) => `<li>${disease.name}: ${disease.probability.toFixed(1)}% | ativo ${Number(disease.active_probability || 0).toFixed(1)}%</li>`)
+        .join("");
+
+      document.getElementById("detailsBody").innerHTML = `
+        <div style="font-size:1rem;font-weight:800;">${area.label}</div>
+        <div class="mini" style="margin-top:8px;">${area.focus_message}</div>
+        <div class="tag-row">
+          ${[...(area.government_tags || []), ...(area.strategic_tags || [])]
+            .filter((tag, index, list) => list.indexOf(tag) === index)
+            .map((tag) => `<span class="tag">${tag}</span>`).join("")}
+        </div>
+        <div class="detail-grid" style="margin-top:14px;">
+          <div class="detail-box">
+            <strong>Indicadores principais</strong>
+            <ul>
+              <li>Casos acumulados: ${area.total_cases.toLocaleString("pt-BR")}</li>
+              <li>Ultimas 24h: ${area.recent_24h.toLocaleString("pt-BR")}</li>
+              <li>Janela anterior: ${area.previous_24h.toLocaleString("pt-BR")}</li>
+              <li>Crescimento: ${area.growth_percent.toFixed(1)}%</li>
+              <li>Atividade recente: ${area.activity_percent.toFixed(1)}%</li>
+              <li>Desaceleracao: ${area.decay_percent.toFixed(1)}%</li>
+              <li>Tendencia: ${area.trend_status}</li>
+              <li>Risco: ${area.risk_level}</li>
+              <li>Prioridade: P${area.response_priority}</li>
+            </ul>
+          </div>
+          <div class="detail-box">
+            <strong>Resposta e prontidao</strong>
+            <ul>
+              <li>Indice de vigilancia: ${area.surveillance_index.toFixed(1)}</li>
+              <li>Pressao de recursos: ${area.resource_pressure.toFixed(1)}</li>
+              <li>Fase operacional: ${area.alert_stage}</li>
+              <li>${area.government_recommendation}</li>
+            </ul>
+          </div>
+          <div class="detail-box">
+            <strong>Sintomas predominantes</strong>
+            <ul>${symptoms}</ul>
+          </div>
+          <div class="detail-box">
+            <strong>Doencas provaveis</strong>
+            <ul>${diseases}</ul>
+          </div>
+        </div>
+      `;
+    }
+
+    function clearMap() {
+      circlesLayer.clearLayers();
+      markersLayer.clearLayers();
+      if (heatLayer) {
+        map.removeLayer(heatLayer);
+        heatLayer = null;
+      }
+    }
+
+    function selectArea(area) {
+      selectedAreaId = area.id;
+      renderDetails(area);
+      bottomVisible = true;
+      updatePanels();
+      if (area.latitude && area.longitude) {
+        map.flyTo([area.latitude, area.longitude], levelFilter.value === "bairros" ? 11 : levelFilter.value === "municipios" ? 8 : 5, { duration: 0.8 });
+      }
+    }
+
+    function renderMap() {
+      clearMap();
+      const areas = getAreas();
+      if (!areas.length) return;
+
+      const maxCases = Math.max(...areas.map((area) => area.total_cases), 1);
+      const isBairroView = levelFilter.value === "bairros";
+      const heatPoints = areas
+        .filter((area) => area.latitude && area.longitude)
+        .map((area) => [area.latitude, area.longitude, Math.max(0.14, area.total_cases / maxCases)]);
+
+      heatLayer = L.heatLayer(heatPoints, {
+        radius: isBairroView ? 58 : 46,
+        blur: isBairroView ? 42 : 34,
+        gradient: { 0.2: "#17d7a0", 0.45: "#5af0d3", 0.7: "#ff9b54", 1.0: "#ff5574" },
+      }).addTo(map);
+
+      const bounds = [];
+
+      areas.forEach((area) => {
+        if (!area.latitude || !area.longitude) return;
+        bounds.push([area.latitude, area.longitude]);
+
+        const marker = L.circleMarker([area.latitude, area.longitude], {
+          radius: isBairroView ? 6 : 8,
+          color: "#ffffff",
+          weight: 1.2,
+          fillColor: riskColor(area.risk_level),
+          fillOpacity: 0.94,
+        });
+
+        marker.bindPopup(areaPopup(area));
+        marker.bindTooltip(`${area.label} | P${area.response_priority}`, { sticky: true });
+        marker.on("click", () => selectArea(area));
+        marker.addTo(markersLayer);
+
+        if (!isBairroView) {
+          L.circle([area.latitude, area.longitude], {
+            radius: area.radius,
+            color: riskColor(area.risk_level),
+            fillColor: riskColor(area.risk_level),
+            fillOpacity: 0.16,
+            weight: 2.1,
+          }).addTo(circlesLayer).bindPopup(areaPopup(area));
+        }
+      });
+
+      if (bounds.length) {
+        map.fitBounds(bounds, { padding: [60, 60], maxZoom: isBairroView ? 11 : levelFilter.value === "municipios" ? 8 : 5 });
+      }
+    }
+
+    async function loadPanorama() {
+      const response = await fetch("/api/epidemiologia");
+      panorama = await response.json();
+      document.getElementById("generatedAt").textContent = `Atualizado em ${new Date(panorama.generated_at).toLocaleString("pt-BR")}`;
+      document.getElementById("institutionalNote").textContent = panorama?.overview?.institutional_note || "";
+      populateFilters();
+      const areas = getAreas()
+        .slice()
+        .sort((a, b) => a.response_priority - b.response_priority || b.surveillance_index - a.surveillance_index);
+      updateMetrics(areas);
+      renderBriefing();
+      loadOfficialBrazil();
+      loadGovernmentAlerts();
+      renderCoverage();
+      renderThreshold();
+      renderQuality();
+      renderProfiles();
+      renderFocusList();
+      renderTimelineChart();
+      renderDiseaseChart(areas);
+      renderMap();
+      if (areas.length) {
+        const current = areas.find((area) => area.id === selectedAreaId) || areas[0];
+        selectArea(current);
+      }
+    }
+
+    [modeFilter, levelFilter, stateFilter, cityFilter].forEach((element) => {
+      element.addEventListener("change", () => loadPanorama());
+    });
+
+    document.getElementById("refreshBtn").addEventListener("click", loadPanorama);
+    document.getElementById("publishGovAlertBtn").addEventListener("click", publishGovernmentAlert);
+    document.getElementById("usersBtn").addEventListener("click", () => {
+      window.location.href = "/usuarios/";
+    });
+    document.getElementById("securityBtn").addEventListener("click", () => {
+      window.location.href = "/seguranca/";
+    });
+    document.getElementById("licensesBtn").addEventListener("click", () => {
+      window.location.href = "/licencas/";
+    });
+    document.getElementById("exportJsonBtn").addEventListener("click", () => {
+      window.location.href = "/api/epidemiologia/briefing?format=json";
+    });
+    document.getElementById("exportCsvBtn").addEventListener("click", () => {
+      window.location.href = "/api/epidemiologia/briefing?format=csv";
+    });
+    document.getElementById("toggleLeftDock").addEventListener("click", () => {
+      leftVisible = !leftVisible;
+      updatePanels();
+    });
+    document.getElementById("toggleRightDock").addEventListener("click", () => {
+      rightVisible = !rightVisible;
+      updatePanels();
+    });
+    document.getElementById("toggleBottomSheet").addEventListener("click", () => {
+      bottomVisible = !bottomVisible;
+      updatePanels();
+    });
+    leftHandle.addEventListener("click", () => {
+      leftVisible = !leftVisible;
+      updatePanels();
+    });
+    rightHandle.addEventListener("click", () => {
+      rightVisible = !rightVisible;
+      updatePanels();
+    });
+    bottomHandle.addEventListener("click", () => {
+      bottomVisible = !bottomVisible;
+      updatePanels();
+    });
+
+    updatePanels();
+    loadPanorama();
+    setInterval(loadPanorama, 15000);
+  </script>
+</body>
+</html>

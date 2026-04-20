@@ -2,98 +2,116 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Assinar Plano</title>
+  <title>SolusCRT Contratação</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <style>
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .container {
-      width: 380px;
-      background: rgba(255,255,255,0.06);
-      backdrop-filter: blur(14px);
-      border-radius: 18px;
-      padding: 30px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      color: white;
-      text-align: center;
-    }
-
-    .title {
-      font-size: 22px;
-      margin-bottom: 10px;
-    }
-
-    .price {
-      color: #00ffcc;
-      font-size: 20px;
-      margin-bottom: 20px;
-    }
-
-    button {
-      width: 100%;
-      padding: 16px;
-      border-radius: 12px;
-      border: none;
-      font-weight: bold;
-      font-size: 16px;
-      background: linear-gradient(135deg, #00c853, #00e676);
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    button:hover {
-      transform: scale(1.03);
-      box-shadow: 0 5px 20px rgba(0,255,150,0.5);
-    }
+    *{box-sizing:border-box;font-family:"Avenir Next","Segoe UI",sans-serif}
+    body{margin:0;min-height:100vh;background:linear-gradient(135deg,#07131d,#102433,#07131d);color:#eef8ff}
+    .shell{padding:24px;display:grid;grid-template-columns:1.05fr .95fr;gap:18px}
+    .hero,.card{border:1px solid rgba(255,255,255,.08);background:rgba(6,16,26,.78);border-radius:28px;box-shadow:0 24px 60px rgba(0,0,0,.34)}
+    .hero{padding:28px}
+    .eyebrow{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:#5af0d3;font-weight:800}
+    h1{margin:10px 0 0;font-size:2.2rem}.muted{color:#9cc4db;line-height:1.6}
+    .card{padding:22px}
+    label{display:grid;gap:8px;margin-top:14px;color:#9cc4db;font-size:.85rem;font-weight:700}
+    select{width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#eef8ff}
+    .price{margin-top:18px;padding:18px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+    .price strong{display:block;font-size:1.5rem}
+    .btn{margin-top:18px;width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,#5af0d3,#6fb4ff);color:#04111a;font-weight:800;cursor:pointer}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}
+    .metric{padding:16px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+    .metric span{display:block;color:#9cc4db;font-size:.76rem;text-transform:uppercase;letter-spacing:.08em}
+    .metric strong{display:block;margin-top:8px;font-size:1.1rem}
+    .pack-list{display:grid;gap:10px;margin-top:18px}
+    .pack{padding:14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+    @media(max-width:920px){.shell{grid-template-columns:1fr}}
   </style>
 </head>
-
 <body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Contratação SaaS</div>
+      <h1>Pacotes formais por capacidade de operação.</h1>
+      <div class="muted">Cada pacote define quantos usuários e quantas máquinas a empresa pode ativar. Isso vale para hospitais, farmácias, operação empresarial e expansão regional.</div>
+      <div class="grid">
+        <div class="metric"><span>Usuários</span><strong>5 a 1000</strong></div>
+        <div class="metric"><span>Máquinas</span><strong>5 a 1000</strong></div>
+        <div class="metric"><span>Modelos</span><strong>Mensal ou anual</strong></div>
+        <div class="metric"><span>Expansão</span><strong>Escala por contrato</strong></div>
+      </div>
+      <div class="pack-list">
+        {% for codigo, pacote in pacotes.items %}
+        <div class="pack">
+          <strong>{{ pacote.label }}</strong><br>
+          <span class="muted">{{ pacote.usuarios }} usuários | {{ pacote.dispositivos }} máquinas</span>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
 
-<div class="container">
+    <section class="card">
+      <h2 style="margin:0;">Escolha o pacote</h2>
+      <label>
+        Pacote contratado
+        <select id="pacote" onchange="atualizarPreco()">
+          {% for codigo, pacote in pacotes.items %}
+          <option value="{{ codigo }}" data-mensal="{{ pacote.mensal }}" data-anual="{{ pacote.anual }}" data-usuarios="{{ pacote.usuarios }}" data-dispositivos="{{ pacote.dispositivos }}">{{ pacote.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Ciclo de cobrança
+        <select id="plano" onchange="atualizarPreco()">
+          <option value="mensal">Mensal</option>
+          <option value="anual">Anual</option>
+        </select>
+      </label>
 
-  <div class="title">Plano Premium</div>
-  <div class="price">R$ 29,90 / mês</div>
+      <div class="price">
+        <strong id="preco">R$ 299,90 / mês</strong>
+        <div class="muted" id="resumoPacote">5 usuários | 5 máquinas</div>
+      </div>
 
-  <button onclick="pagar()">Ativar Assinatura 🚀</button>
+      <button class="btn" onclick="pagar()">Ativar Assinatura</button>
+    </section>
+  </main>
 
-</div>
-
-<script>
-async function pagar() {
-
- const empresaId = localStorage.getItem("empresa_id");
-
-  try {
-    const res = await fetch(`/api/assinatura/${empresaId}/`, {
-      method: "POST"
-    });
-
-    const data = await res.json();
-
-    console.log(data);
-
-    if (data.init_point) {
-      window.location.href = data.init_point;
-    } else {
-      alert("Erro ao gerar pagamento");
+  <script>
+    function moeda(valor) {
+      return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     }
 
-  } catch (e) {
-    console.error(e);
-    alert("Erro ao conectar com servidor");
-  }
-}
-</script>
+    function atualizarPreco() {
+      const pacote = document.getElementById("pacote");
+      const plano = document.getElementById("plano").value;
+      const selected = pacote.options[pacote.selectedIndex];
+      const valor = plano === "anual" ? Number(selected.dataset.anual) : Number(selected.dataset.mensal);
+      document.getElementById("preco").innerText = `${moeda(valor)} / ${plano === "anual" ? "ano" : "mês"}`;
+      document.getElementById("resumoPacote").innerText = `${selected.dataset.usuarios} usuários | ${selected.dataset.dispositivos} máquinas`;
+    }
 
+    async function pagar() {
+      const empresaId = localStorage.getItem("empresa_id");
+      const plano = document.getElementById("plano").value;
+      const pacote = document.getElementById("pacote").value;
+
+      try {
+        const res = await fetch(`/api/assinatura/${empresaId}/?plano=${plano}&pacote=${pacote}`, {
+          method: "POST"
+        });
+
+        const data = await res.json();
+        if (data.init_point) {
+          window.location.href = data.init_point;
+        } else {
+          alert(data.erro || "Erro ao gerar pagamento");
+        }
+      } catch (e) {
+        alert("Erro ao conectar com o servidor");
+      }
+    }
+
+    atualizarPreco();
+  </script>
 </body>
 </html>

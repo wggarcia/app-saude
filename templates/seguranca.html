@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>SolusCRT Segurança</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:"Avenir Next","Segoe UI",sans-serif;background:#05111a;color:#eef8ff}
+    .shell{padding:24px;display:grid;gap:18px}
+    .hero,.card{border:1px solid rgba(255,255,255,.08);background:rgba(7,18,29,.86);border-radius:28px;box-shadow:0 24px 60px rgba(0,0,0,.36)}
+    .hero{padding:24px;background:linear-gradient(135deg,rgba(22,38,54,.98),rgba(7,18,29,.94))}
+    .eyebrow{font-size:.76rem;letter-spacing:.13em;text-transform:uppercase;color:#6fb4ff;font-weight:800}
+    h1{margin:8px 0 0;font-size:2rem}.muted{color:#9cc4db;line-height:1.55}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    .metric,.item{padding:16px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+    .metric span{display:block;font-size:.74rem;color:#9cc4db;text-transform:uppercase;letter-spacing:.08em}
+    .metric strong{display:block;margin-top:8px;font-size:1.2rem}
+    .card{padding:18px}.card h2{margin:0 0 12px;font-size:1.02rem}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:18px}.stack{display:grid;gap:12px}
+    .badge{padding:6px 10px;border-radius:999px;font-size:.74rem;font-weight:800}
+    .high{background:#ff8fa3;color:#2a0710}.ok{background:#1dd1a1;color:#042018}
+    .table{display:grid;gap:10px}
+    .row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+    @media(max-width:980px){.grid,.split{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Segurança e Auditoria</div>
+      <h1>{{ empresa_nome }}</h1>
+      <div class="muted">Monitore confiança do dado, picos suspeitos, IPs e dispositivos com comportamento anômalo. Essa é a camada que ajuda a proteger o mapa contra flood e manipulação.</div>
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="/dashboard/" style="color:#eef7ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.08);">Mapa Geral</a>
+        <a href="/licencas/" style="color:#eef7ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.08);">Licenças</a>
+        <a href="/logout/" style="color:#eef7ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(140,29,64,.82);">Sair</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Resumo de Auditoria</h2>
+      <div class="grid">
+        <div class="metric"><span>Total Registros</span><strong id="totalRegistros">0</strong></div>
+        <div class="metric"><span>Últimas 24h</span><strong id="registros24h">0</strong></div>
+        <div class="metric"><span>Suspeitos</span><strong id="suspeitosTotal">0</strong></div>
+        <div class="metric"><span>Confiança Média</span><strong id="confiancaMedia">0</strong></div>
+      </div>
+    </section>
+
+    <section class="split">
+      <section class="card">
+        <h2>Top IPs Suspeitos</h2>
+        <div id="ipsList" class="stack">Carregando...</div>
+      </section>
+      <section class="card">
+        <h2>Top Devices Suspeitos</h2>
+        <div id="devicesList" class="stack">Carregando...</div>
+      </section>
+    </section>
+
+    <section class="card">
+      <h2>Registros Recentes</h2>
+      <div id="recentList" class="table">Carregando...</div>
+    </section>
+  </main>
+
+  <script>
+    function renderSimpleList(targetId, items, keyField) {
+      const container = document.getElementById(targetId);
+      if (!items.length) {
+        container.innerHTML = "Sem ocorrências relevantes.";
+        return;
+      }
+      container.innerHTML = items.map((item) => `
+        <div class="item">
+          <div class="row">
+            <strong>${item[keyField]}</strong>
+            <span class="badge high">${item.total}</span>
+          </div>
+          <div class="muted">Confiança média: ${Number(item.media_confianca || 0).toFixed(2)}</div>
+        </div>
+      `).join("");
+    }
+
+    async function loadAudit() {
+      const response = await fetch("/api/seguranca/auditoria");
+      const data = await response.json();
+      const summary = data.summary || {};
+
+      document.getElementById("totalRegistros").textContent = summary.total_registros || 0;
+      document.getElementById("registros24h").textContent = summary.registros_24h || 0;
+      document.getElementById("suspeitosTotal").textContent = summary.suspeitos_total || 0;
+      document.getElementById("confiancaMedia").textContent = Number(summary.confianca_media || 0).toFixed(2);
+
+      renderSimpleList("ipsList", data.top_ips || [], "ip");
+      renderSimpleList("devicesList", data.top_devices || [], "device_id");
+
+      const recentList = document.getElementById("recentList");
+      if (!(data.recentes || []).length) {
+        recentList.innerHTML = "Sem registros recentes.";
+        return;
+      }
+
+      recentList.innerHTML = data.recentes.map((item) => `
+        <div class="item">
+          <div class="row">
+            <strong>${item.bairro || "Sem bairro"} - ${item.cidade || "Sem cidade"}/${item.estado || "--"}</strong>
+            <span class="badge ${item.suspeito ? "high" : "ok"}">${item.suspeito ? "SUSPEITO" : "OK"}</span>
+          </div>
+          <div class="muted">${item.grupo || "Sem grupo"} | ${item.classificacao || "Sem classificação"}</div>
+          <div class="muted">Confiança ${Number(item.confianca || 0).toFixed(2)} | IP ${item.ip || "n/d"} | Device ${item.device_id || "n/d"}</div>
+          <div class="muted">${new Date(item.data_registro).toLocaleString("pt-BR")}</div>
+        </div>
+      `).join("");
+    }
+
+    loadAudit();
+  </script>
+</body>
+</html>

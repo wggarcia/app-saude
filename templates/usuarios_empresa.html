@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>SolusCRT Usuários</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:"Avenir Next","Segoe UI",sans-serif;background:#07131d;color:#eef8ff}
+    .shell{padding:24px;display:grid;gap:18px}
+    .hero,.card{border:1px solid rgba(255,255,255,.08);background:rgba(6,16,26,.82);border-radius:28px;box-shadow:0 24px 60px rgba(0,0,0,.34)}
+    .hero{padding:24px}.eyebrow{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:#6fb4ff;font-weight:800}
+    h1{margin:10px 0 0;font-size:2rem}.muted{color:#9cc4db;line-height:1.6}
+    .top{display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{padding:18px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .metric,.user{padding:16px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+    .metric span{display:block;font-size:.75rem;color:#9cc4db;text-transform:uppercase;letter-spacing:.08em}
+    .metric strong{display:block;margin-top:8px;font-size:1.15rem}
+    input{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#eef8ff}
+    .form{display:grid;gap:10px}
+    .btn{padding:12px 14px;border:none;border-radius:12px;background:linear-gradient(135deg,#6fb4ff,#5af0d3);color:#04111a;font-weight:800;cursor:pointer}
+    .btn.secondary{background:rgba(255,255,255,.08);color:#eef8ff}
+    .list{display:grid;gap:12px}
+    .row{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+    .badge{padding:6px 10px;border-radius:999px;font-size:.74rem;font-weight:800}
+    .active{background:#1dd1a1;color:#042018}.inactive{background:#ff8fa3;color:#2a0710}
+    @media(max-width:900px){.top,.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Usuários do Contrato</div>
+      <h1>{{ empresa_nome }}</h1>
+      <div class="muted">Cadastre operadores, equipes e responsáveis conforme o pacote contratado. O sistema bloqueia acima do limite formal do contrato.</div>
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="/dashboard/" style="color:#eef8ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.08);">Mapa Geral</a>
+        <a href="/licencas/" style="color:#eef8ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.08);">Licenças</a>
+        <a href="/seguranca/" style="color:#eef8ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.08);">Segurança</a>
+      </div>
+    </section>
+
+    <section class="top">
+      <section class="card">
+        <h2 style="margin-top:0;">Capacidade Contratada</h2>
+        <div class="grid">
+          <div class="metric"><span>Máximo de usuários</span><strong id="maxUsers">{{ max_usuarios }}</strong></div>
+          <div class="metric"><span>Usuários ativos</span><strong id="activeUsers">0</strong></div>
+          <div class="metric"><span>Pacote</span><strong>{{ pacote.label }}</strong></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 style="margin-top:0;">Cadastrar novo usuário</h2>
+        <div class="form">
+          <input id="nome" placeholder="Nome completo">
+          <input id="email" placeholder="Email do usuário">
+          <input id="cargo" placeholder="Cargo ou área">
+          <input id="senha" type="password" placeholder="Senha inicial">
+          <button class="btn" onclick="criarUsuario()">Criar usuário</button>
+          <div id="msg" class="muted"></div>
+        </div>
+      </section>
+    </section>
+
+    <section class="card">
+      <h2 style="margin-top:0;">Usuários da empresa</h2>
+      <div id="usersList" class="list">Carregando usuários...</div>
+    </section>
+  </main>
+
+  <script>
+    async function loadUsers() {
+      const response = await fetch("/api/usuarios");
+      const data = await response.json();
+      document.getElementById("maxUsers").textContent = data.max_usuarios;
+      document.getElementById("activeUsers").textContent = data.usuarios_ativos;
+      const list = document.getElementById("usersList");
+
+      if (!data.usuarios.length) {
+        list.innerHTML = "Nenhum usuário cadastrado.";
+        return;
+      }
+
+      list.innerHTML = data.usuarios.map((usuario) => `
+        <div class="user">
+          <div class="row">
+            <strong>${usuario.nome}</strong>
+            <span class="badge ${usuario.ativo ? "active" : "inactive"}">${usuario.ativo ? "ATIVO" : "INATIVO"}</span>
+          </div>
+          <div class="muted">${usuario.email}</div>
+          <div class="muted">${usuario.cargo || "Sem cargo"}</div>
+          <div class="row">
+            <span class="muted">Criado em ${new Date(usuario.criado_em).toLocaleString("pt-BR")}</span>
+            ${usuario.ativo ? `<button class="btn secondary" onclick="desativarUsuario(${usuario.id})">Desativar</button>` : ""}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    async function criarUsuario() {
+      const payload = {
+        nome: document.getElementById("nome").value,
+        email: document.getElementById("email").value,
+        cargo: document.getElementById("cargo").value,
+        senha: document.getElementById("senha").value,
+      };
+      const response = await fetch("/api/usuarios/criar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      document.getElementById("msg").textContent = data.erro || "Usuário criado com sucesso.";
+      if (response.ok) {
+        document.getElementById("nome").value = "";
+        document.getElementById("email").value = "";
+        document.getElementById("cargo").value = "";
+        document.getElementById("senha").value = "";
+        loadUsers();
+      }
+    }
+
+    async function desativarUsuario(usuarioId) {
+      await fetch("/api/usuarios/desativar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuario_id: usuarioId }),
+      });
+      loadUsers();
+    }
+
+    loadUsers();
+  </script>
+</body>
+</html>

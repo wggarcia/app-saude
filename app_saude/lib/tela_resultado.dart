@@ -5,6 +5,7 @@ class TelaResultado extends StatelessWidget {
   final String classificacao;
 
   const TelaResultado({
+    super.key,
     required this.grupo,
     required this.classificacao,
   });
@@ -12,8 +13,8 @@ class TelaResultado extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Resultado"),
+        appBar: AppBar(
+        title: const Text("Resultado"),
         backgroundColor: Colors.red,
       ),
       body: Padding(
@@ -22,54 +23,54 @@ class TelaResultado extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            Text(
+            const Text(
               "⚠️ Avaliação inicial",
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
 
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-            Text(
+            const Text(
               "🧠 Padrão identificado:",
               style: TextStyle(fontSize: 18),
             ),
 
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
 
             Text(
               grupo,
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red),
             ),
 
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-            Text(
+            const Text(
               "📄 Descrição:",
               style: TextStyle(fontSize: 18),
             ),
 
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
 
             Text(
               classificacao,
               style: TextStyle(fontSize: 16),
             ),
 
-            SizedBox(height: 30),
+            const SizedBox(height: 30),
 
             Container(
-              padding: EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.yellow[100],
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Text(
+              child: const Text(
                 "⚠️ Esta é uma avaliação automatizada e não substitui um diagnóstico médico.",
                 style: TextStyle(fontSize: 14),
               ),
             ),
 
-            Spacer(),
+            const Spacer(),
 
             SizedBox(
               width: double.infinity,
@@ -80,7 +81,7 @@ class TelaResultado extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                 ),
-                child: Text("Voltar"),
+                child: const Text("Voltar"),
               ),
             )
           ],

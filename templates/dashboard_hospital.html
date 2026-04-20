@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>SolusCRT Hospital Command</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #07131d;
+      --panel: rgba(6, 16, 26, 0.8);
+      --panel-strong: rgba(4, 11, 18, 0.92);
+      --panel-soft: rgba(12, 28, 41, 0.72);
+      --stroke: rgba(170, 214, 255, 0.14);
+      --text: #eaf6ff;
+      --muted: #9ec2dd;
+      --accent: #8bb9ff;
+      --accent-2: #ff8d5c;
+      --accent-3: #9c89ff;
+      --critico: #ff365f;
+      --alto: #ff7a18;
+      --moderado: #ffd166;
+      --baixo: #06d6a0;
+      --shadow: 0 22px 60px rgba(0, 0, 0, 0.42);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(116, 192, 252, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(116, 192, 252, 0.06) 1px, transparent 1px);
+      background-size: 46px 46px;
+      opacity: 0.22;
+      z-index: 1;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at top left, rgba(0, 209, 178, 0.16), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(255, 122, 24, 0.16), transparent 28%),
+        linear-gradient(180deg, rgba(4, 11, 18, 0.1), rgba(4, 11, 18, 0.38));
+      z-index: 1;
+    }
+
+    #map {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .topbar,
+    .dock,
+    .floating-button {
+      pointer-events: auto;
+    }
+
+    .topbar {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: grid;
+      grid-template-columns: minmax(280px, 1.15fr) minmax(280px, 1.45fr) auto;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .topbar-card,
+    .dock,
+    .detail-card,
+    .metric-card {
+      border: 1px solid var(--stroke);
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .topbar-card {
+      border-radius: 24px;
+      padding: 14px 16px;
+    }
+
+    .brand-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .brand-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-subtitle,
+    .mini {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .metrics-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric-card {
+      border-radius: 18px;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, rgba(17, 37, 53, 0.88), rgba(7, 19, 29, 0.92));
+    }
+
+    .metric-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .metric-card strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 1.2rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .btn,
+    select {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      padding: 10px 14px;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+      font: inherit;
+    }
+
+    .btn {
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, rgba(0, 209, 178, 0.88), rgba(17, 138, 178, 0.88));
+    }
+
+    .btn.secondary {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .btn.warn {
+      background: linear-gradient(135deg, rgba(174, 32, 65, 0.92), rgba(127, 29, 29, 0.92));
+    }
+
+    .dock {
+      position: absolute;
+      top: 104px;
+      bottom: 20px;
+      width: 350px;
+      border-radius: 28px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.28s ease, opacity 0.28s ease;
+    }
+
+    .dock-left {
+      left: 14px;
+    }
+
+    .dock-right {
+      right: 14px;
+      width: 390px;
+    }
+
+    .dock.hidden-left {
+      transform: translateX(-104%);
+      opacity: 0;
+    }
+
+    .dock.hidden-right {
+      transform: translateX(104%);
+      opacity: 0;
+    }
+
+    .dock-header {
+      padding: 16px 18px 10px;
+      background: linear-gradient(180deg, rgba(9, 24, 36, 0.96), rgba(9, 24, 36, 0.84));
+      border-bottom: 1px solid var(--stroke);
+    }
+
+    .dock-title {
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .dock-scroll {
+      padding: 14px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .section {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 22px;
+      background: var(--panel-soft);
+      padding: 14px;
+    }
+
+    .alert-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .alert-card {
+      border-radius: 18px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .tag {
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(0, 209, 178, 0.14);
+      border: 1px solid rgba(0, 209, 178, 0.22);
+      color: #bffbf1;
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .section h2 {
+      margin: 0 0 10px;
+      font-size: 0.98rem;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .filters label {
+      display: grid;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    select {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .list {
+      display: grid;
+      gap: 10px;
+      max-height: 42vh;
+      overflow: auto;
+    }
+
+    .list-item {
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .list-item:hover,
+    .list-item.active {
+      transform: translateY(-1px);
+      background: rgba(0, 209, 178, 0.1);
+      border-color: rgba(0, 209, 178, 0.44);
+    }
+
+    .list-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .risk-badge {
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .risk-CRITICO { background: var(--critico); }
+    .risk-ALTO { background: var(--alto); }
+    .risk-MODERADO { background: var(--moderado); color: #111; }
+    .risk-BAIXO { background: var(--baixo); color: #062b24; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: 6px;
+      border-radius: 999px;
+      vertical-align: middle;
+    }
+
+    .legend .critico::before { background: var(--critico); }
+    .legend .alto::before { background: var(--alto); }
+    .legend .moderado::before { background: var(--moderado); }
+    .legend .baixo::before { background: var(--baixo); }
+
+    .chart-wrap {
+      height: 270px;
+    }
+
+    .detail-card {
+      border-radius: 22px;
+      padding: 14px;
+      background: rgba(7, 19, 29, 0.76);
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .detail-box {
+      border-radius: 18px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .detail-box ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    .floating-button {
+      position: absolute;
+      top: 120px;
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      background: rgba(7, 19, 29, 0.88);
+      border: 1px solid var(--stroke);
+      color: var(--text);
+      font-size: 1.15rem;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+
+    .toggle-left {
+      left: 14px;
+      transform: translateX(0);
+    }
+
+    .toggle-right {
+      right: 14px;
+      transform: translateX(0);
+    }
+
+    .toggle-left.shifted {
+      left: 378px;
+    }
+
+    .toggle-right.shifted {
+      right: 418px;
+    }
+
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+      background: rgba(6, 16, 26, 0.94);
+      color: var(--text);
+      border: 1px solid var(--stroke);
+    }
+
+    .leaflet-popup-content {
+      min-width: 270px;
+      line-height: 1.45;
+    }
+
+    .leaflet-control-zoom a {
+      background: rgba(7, 19, 29, 0.9);
+      color: var(--text);
+      border-color: var(--stroke);
+    }
+
+    .pulse-marker {
+      box-shadow: 0 0 0 rgba(255, 122, 24, 0.4);
+      animation: pulse 1.8s infinite;
+    }
+
+    .bairro-hotspot {
+      min-width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0 18px rgba(255, 122, 24, 0.55);
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 122, 24, 0.5); }
+      70% { box-shadow: 0 0 0 16px rgba(255, 122, 24, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 122, 24, 0); }
+    }
+
+    @media (max-width: 1280px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .dock-right {
+        width: 360px;
+      }
+
+      .toggle-right.shifted {
+        right: 388px;
+      }
+    }
+
+    @media (max-width: 980px) {
+      html,
+      body {
+        overflow: auto;
+      }
+
+      #map {
+        position: absolute;
+        height: 62vh;
+      }
+
+      .hud {
+        position: relative;
+        min-height: 100vh;
+        padding-top: 62vh;
+      }
+
+      .topbar {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        right: 12px;
+      }
+
+      .dock,
+      .dock-left,
+      .dock-right {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        width: auto;
+        margin: 12px;
+        transform: none !important;
+        opacity: 1 !important;
+      }
+
+      .floating-button {
+        display: none;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .metrics-strip,
+      .filters,
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="hud">
+    <div class="topbar">
+      <section class="topbar-card">
+        <div class="brand-line">
+          <div>
+            <div class="brand-title">SolusCRT Hospital Command</div>
+            <div class="brand-subtitle">Painel de prontidao clinica para triagem, pressao assistencial, risco de superlotacao e preparacao de emergencia.</div>
+          </div>
+          <span class="risk-badge" id="metricRiskBadge">BAIXO</span>
+        </div>
+        <div class="mini" id="generatedAt">Atualizando leitura nacional...</div>
+      </section>
+
+      <section class="topbar-card">
+        <div class="metrics-strip">
+          <div class="metric-card">
+            <span>Casos</span>
+            <strong id="metricCases">0</strong>
+          </div>
+          <div class="metric-card">
+            <span>Focos</span>
+            <strong id="metricAreas">0</strong>
+          </div>
+          <div class="metric-card">
+            <span>Crescimento</span>
+            <strong id="metricGrowth">0%</strong>
+          </div>
+          <div class="metric-card">
+            <span>Empresa</span>
+            <strong style="font-size:0.95rem">{{ empresa_nome }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="topbar-card">
+        <div class="actions">
+          <button class="btn secondary" id="toggleLeftDock">Radar</button>
+          <button class="btn secondary" id="toggleRightDock">Capacidade</button>
+          <button class="btn primary" id="gotoMapa">Mapa Geral</button>
+          <button class="btn secondary" id="gotoFarmacia">Hub Farmacia</button>
+          <button class="btn secondary" id="gotoUsuarios">Usuarios</button>
+          <button class="btn secondary" id="gotoLicencas">Licencas</button>
+          <button class="btn secondary" id="gotoSeguranca">Seguranca</button>
+          <button class="btn warn" id="logoutBtn">Sair</button>
+        </div>
+        <div class="legend" style="margin-top:12px;">
+          <span class="critico">Critico</span>
+          <span class="alto">Alto</span>
+          <span class="moderado">Moderado</span>
+          <span class="baixo">Baixo</span>
+        </div>
+      </section>
+    </div>
+
+    <button class="floating-button toggle-left shifted" id="leftHandle">‹</button>
+    <button class="floating-button toggle-right shifted" id="rightHandle">›</button>
+
+    <aside class="dock dock-left" id="leftDock">
+      <div class="dock-header">
+        <div class="dock-title">Radar Clinico e Territorial</div>
+        <div class="mini">Cruze o mapa de focos com prioridades de triagem, prontidao de equipe e resposta assistencial.</div>
+      </div>
+      <div class="dock-scroll">
+        <section class="section">
+          <h2>Filtros e Modos</h2>
+          <div class="filters">
+            <label>
+              Modo do mapa
+              <select id="modeFilter">
+                <option value="surtos">Surto detalhado</option>
+                <option value="radar">Radar saude</option>
+                <option value="risco">Mapa de risco</option>
+              </select>
+            </label>
+            <label>
+              Granularidade
+              <select id="levelFilter">
+                <option value="bairros">Bairros</option>
+                <option value="municipios">Municipios</option>
+                <option value="estados">Estados</option>
+              </select>
+            </label>
+            <label>
+              Estado
+              <select id="stateFilter">
+                <option value="">Todos</option>
+              </select>
+            </label>
+            <label>
+              Cidade
+              <select id="cityFilter">
+                <option value="">Todas</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Leitura Assistencial</h2>
+          <div id="executiveSummary" class="mini">Carregando situacao epidemiologica...</div>
+        </section>
+
+        <section class="section">
+          <h2>Alertas de Prontidao</h2>
+          <div class="alert-stack" id="alertStack">Carregando alertas...</div>
+        </section>
+
+        <section class="section">
+          <h2>Prontidao Prioritaria</h2>
+          <div class="alert-stack" id="readinessSignals">Carregando capacidade...</div>
+        </section>
+
+        {% if dashboard_variant == "governo" %}
+        <section class="section">
+          <h2>Briefing Governamental</h2>
+          <div class="alert-stack" id="governmentBriefing">Carregando briefing...</div>
+        </section>
+        {% endif %}
+
+        <section class="section">
+          <h2>Territorios Criticos</h2>
+          <div class="list" id="focusList">Carregando...</div>
+        </section>
+      </div>
+    </aside>
+
+    <aside class="dock dock-right" id="rightDock">
+      <div class="dock-header">
+        <div class="dock-title">
+          Painel Tatico de Capacidade Hospitalar
+        </div>
+        <div class="mini">Sintomas, doencas provaveis, crescimento e foco detalhado equalizados.</div>
+      </div>
+      <div class="dock-scroll">
+        <section class="section">
+          <h2>Distribuicao de Doencas Provaveis</h2>
+          <div class="chart-wrap">
+            <canvas id="diseaseChart"></canvas>
+          </div>
+        </section>
+
+        <section class="detail-card">
+          <h2 style="margin:0 0 10px; font-size:0.98rem;">Detalhes da Localidade</h2>
+          <div id="detailsBody" class="mini">
+            Selecione um foco no mapa ou na lista para abrir a leitura detalhada por sintomas, doencas provaveis e crescimento.
+          </div>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const empresaId = "{{ empresa_id|escapejs }}";
+    const variant = "hospital";
+    const modeFilter = document.getElementById("modeFilter");
+    const levelFilter = document.getElementById("levelFilter");
+    const stateFilter = document.getElementById("stateFilter");
+    const cityFilter = document.getElementById("cityFilter");
+    const leftDock = document.getElementById("leftDock");
+    const rightDock = document.getElementById("rightDock");
+    const leftHandle = document.getElementById("leftHandle");
+    const rightHandle = document.getElementById("rightHandle");
+    const executiveSummary = document.getElementById("executiveSummary");
+
+    localStorage.setItem("empresa_id", empresaId);
+    document.cookie = `empresa_id=${empresaId}; path=/; SameSite=Lax`;
+
+    const variantProfile = {
+      populacao: {
+        summaryLabel: "Leitura publica e governamental do territorio",
+        actionLabel: "Acao empresa e farmacia",
+        actionField: "market_recommendation",
+        extraLabel: "Acao populacao e governo",
+        extraField: "public_recommendation",
+      },
+      farmacia: {
+        summaryLabel: "Inteligencia de demanda para abastecimento e estoque",
+        actionLabel: "Acao empresa e farmacia",
+        actionField: "market_recommendation",
+        extraLabel: "Leitura populacao e territorio",
+        extraField: "public_recommendation",
+      },
+      hospital: {
+        summaryLabel: "Prontidao clinica para triagem, leitos e atendimento de emergencia",
+        actionLabel: "Acao hospitalar",
+        actionField: "hospital_recommendation",
+        extraLabel: "Leitura populacao e governo",
+        extraField: "public_recommendation",
+      },
+      governo: {
+        summaryLabel: "Inteligencia premium de vigilancia governamental, prioridade territorial e pressao de recursos",
+        actionLabel: "Acao governamental",
+        actionField: "government_recommendation",
+        extraLabel: "Leitura hospitalar e rede local",
+        extraField: "hospital_recommendation",
+      },
+    }[variant];
+
+    document.getElementById("gotoMapa").addEventListener("click", () => {
+      window.location.href = "/dashboard/";
+    });
+
+    document.getElementById("gotoFarmacia").addEventListener("click", () => {
+      window.location.href = "/dashboard-farmacia/";
+    });
+    document.getElementById("gotoUsuarios").addEventListener("click", () => {
+      window.location.href = "/usuarios/";
+    });
+    document.getElementById("gotoLicencas").addEventListener("click", () => {
+      window.location.href = "/licencas/";
+    });
+    document.getElementById("gotoSeguranca").addEventListener("click", () => {
+      window.location.href = "/seguranca/";
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("empresa_id");
+      window.location.href = "/logout/";
+    });
+
+    let leftVisible = true;
+    let rightVisible = true;
+
+    function updateDockState() {
+      leftDock.classList.toggle("hidden-left", !leftVisible);
+      rightDock.classList.toggle("hidden-right", !rightVisible);
+      leftHandle.classList.toggle("shifted", leftVisible);
+      rightHandle.classList.toggle("shifted", rightVisible);
+      leftHandle.textContent = leftVisible ? "‹" : "›";
+      rightHandle.textContent = rightVisible ? "›" : "‹";
+    }
+
+    function toggleLeftDock() {
+      leftVisible = !leftVisible;
+      updateDockState();
+    }
+
+    function toggleRightDock() {
+      rightVisible = !rightVisible;
+      updateDockState();
+    }
+
+    leftHandle.addEventListener("click", toggleLeftDock);
+    rightHandle.addEventListener("click", toggleRightDock);
+    document.getElementById("toggleLeftDock").addEventListener("click", toggleLeftDock);
+    document.getElementById("toggleRightDock").addEventListener("click", toggleRightDock);
+
+    const map = L.map("map", { zoomControl: false, preferCanvas: true }).setView([-15.7, -47.9], 4);
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+
+    L.tileLayer(
+      "https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={{ MAPBOX_ACCESS_TOKEN|escapejs }}",
+      {
+        tileSize: 512,
+        zoomOffset: -1,
+        maxZoom: 18,
+        attribution: "&copy; Mapbox & OpenStreetMap",
+      }
+    ).addTo(map);
+
+    let panorama = null;
+    let selectedAreaId = null;
+    let heatLayer = null;
+    let circlesLayer = L.layerGroup().addTo(map);
+    let markersLayer = L.layerGroup().addTo(map);
+    let chart = null;
+    let pulseMarkers = [];
+
+    function riskColor(level) {
+      if (level === "CRITICO") return "#ff365f";
+      if (level === "ALTO") return "#ff7a18";
+      if (level === "MODERADO") return "#ffd166";
+      return "#06d6a0";
+    }
+
+    function riskTextColor(level) {
+      return level === "MODERADO" || level === "BAIXO" ? "#07131d" : "#ffffff";
+    }
+
+    function intensity(area, maxCases) {
+      if (!maxCases) return 0.2;
+      return Math.max(0.14, area.total_cases / maxCases);
+    }
+
+    function getFilteredAreas() {
+      if (!panorama) return [];
+
+      const areas = panorama.layers[levelFilter.value] || [];
+      return areas.filter((area) => {
+        if (stateFilter.value && area.estado !== stateFilter.value) return false;
+        if (cityFilter.value && area.cidade !== cityFilter.value) return false;
+        return true;
+      });
+    }
+
+    function aggregateSummary(areas) {
+      const totals = {
+        total_cases: 0,
+        growth_sum: 0,
+        symptoms: {},
+        diseases: {},
+        maxRisk: 0,
+      };
+
+      areas.forEach((area) => {
+        totals.total_cases += area.total_cases;
+        totals.growth_sum += area.growth_percent;
+        totals.maxRisk = Math.max(totals.maxRisk, area.risk_score);
+
+        area.symptoms.forEach((symptom) => {
+          totals.symptoms[symptom.label] = (totals.symptoms[symptom.label] || 0) + symptom.count;
+        });
+
+        area.probable_diseases.forEach((disease) => {
+          totals.diseases[disease.name] = (totals.diseases[disease.name] || 0) + disease.estimated_cases;
+        });
+      });
+
+      return {
+        totalCases: totals.total_cases,
+        activeAreas: areas.length,
+        averageGrowth: areas.length ? (totals.growth_sum / areas.length) : 0,
+        riskLevel: totals.maxRisk >= 75 ? "CRITICO" : totals.maxRisk >= 55 ? "ALTO" : totals.maxRisk >= 35 ? "MODERADO" : "BAIXO",
+        symptoms: Object.entries(totals.symptoms).sort((a, b) => b[1] - a[1]),
+        diseases: Object.entries(totals.diseases).sort((a, b) => b[1] - a[1]),
+      };
+    }
+
+    function updateMetrics(summary) {
+      document.getElementById("metricCases").textContent = summary.totalCases.toLocaleString("pt-BR");
+      document.getElementById("metricAreas").textContent = summary.activeAreas.toLocaleString("pt-BR");
+      document.getElementById("metricGrowth").textContent = `${summary.averageGrowth.toFixed(1)}%`;
+
+      const badge = document.getElementById("metricRiskBadge");
+      badge.textContent = summary.riskLevel;
+      badge.className = `risk-badge risk-${summary.riskLevel}`;
+      badge.style.color = riskTextColor(summary.riskLevel);
+
+      const topDisease = summary.diseases[0] ? `${summary.diseases[0][0]} (${summary.diseases[0][1].toLocaleString("pt-BR")})` : "Sem dados";
+      const topSymptom = summary.symptoms[0] ? `${summary.symptoms[0][0]} (${summary.symptoms[0][1].toLocaleString("pt-BR")})` : "Sem dados";
+
+      executiveSummary.innerHTML = `
+        <strong>${variantProfile.summaryLabel}</strong><br>
+        Foco dominante da leitura atual: <strong>${topSymptom}</strong>.<br>
+        Doenca provavel mais incidente: <strong>${topDisease}</strong>.<br>
+        Crescimento medio observado: <strong>${summary.averageGrowth.toFixed(1)}%</strong> com status <strong>${summary.riskLevel}</strong>.
+      `;
+
+      renderAlerts();
+    }
+
+    function renderAlerts() {
+      const container = document.getElementById("alertStack");
+      const alerts = (panorama?.overview?.operational_alerts || []).slice(0, 4);
+
+      if (!alerts.length) {
+        container.innerHTML = "Sem alertas operacionais no momento.";
+        return;
+      }
+
+      container.innerHTML = alerts.map((alert) => `
+        <div class="alert-card">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+            <strong>${alert.title}</strong>
+            <span class="risk-badge risk-${alert.risk_level}" style="color:${riskTextColor(alert.risk_level)}">${alert.risk_level}</span>
+          </div>
+          <div class="mini" style="margin-top:8px;">
+            <strong>${alert.stage}</strong><br>
+            ${alert.message}
+          </div>
+        </div>
+      `).join("");
+
+      renderGovernmentBriefing();
+    }
+
+    function renderGovernmentBriefing() {
+      const container = document.getElementById("governmentBriefing");
+      if (!container) return;
+
+      const items = (panorama?.overview?.government_briefing || []).slice(0, 4);
+
+      if (!items.length) {
+        container.innerHTML = "Sem briefing governamental no momento.";
+        return;
+      }
+
+      container.innerHTML = items.map((item) => `
+        <div class="alert-card">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+            <strong>${item.title}</strong>
+            <span class="risk-badge risk-CRITICO">P${item.priority}</span>
+          </div>
+          <div class="mini" style="margin-top:8px;">
+            Vigilancia: <strong>${item.surveillance_index.toFixed(1)}</strong> |
+            Pressao: <strong>${item.resource_pressure.toFixed(1)}</strong><br>
+            ${item.message}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderReadinessSignals() {
+      const container = document.getElementById("readinessSignals");
+      const items = (panorama?.overview?.hospital_overview?.priority_zones || []).slice(0, 4);
+
+      if (!items.length) {
+        container.innerHTML = "Sem sinais de sobrecarga no momento.";
+        return;
+      }
+
+      container.innerHTML = items.map((item) => `
+        <div class="alert-card">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+            <strong>${item.label}</strong>
+            <span class="risk-badge risk-CRITICO">${item.hospital_load_estimate.toFixed(1)}</span>
+          </div>
+          <div class="mini" style="margin-top:8px;">
+            ${item.triage_priority}<br>
+            <strong>${item.readiness_level}</strong>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function updateChart(summary) {
+      const diseaseLabels = summary.diseases.slice(0, 5).map((entry) => entry[0]);
+      const diseaseData = summary.diseases.slice(0, 5).map((entry) => entry[1]);
+      const chartColors = ["#00d1b2", "#74c0fc", "#ffd166", "#ff7a18", "#ff365f"];
+      const ctx = document.getElementById("diseaseChart");
+
+      if (chart) {
+        chart.destroy();
+      }
+
+      chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: diseaseLabels,
+          datasets: [
+            {
+              label: "Casos estimados por doenca provavel",
+              data: diseaseData,
+              backgroundColor: chartColors,
+              borderRadius: 14,
+              borderSkipped: false,
+            }
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: "#eaf6ff",
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: "#9ec2dd" },
+              grid: { color: "rgba(255,255,255,0.05)" },
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: "#9ec2dd" },
+              grid: { color: "rgba(255,255,255,0.06)" },
+            },
+          },
+        },
+      });
+    }
+
+    function areaPopup(area) {
+      const diseaseLines = area.probable_diseases
+        .slice(0, 4)
+        .map((disease) => `<li>${disease.name}: ${disease.probability.toFixed(1)}%</li>`)
+        .join("");
+      const symptomLines = area.symptoms
+        .slice(0, 4)
+        .map((symptom) => `<li>${symptom.label}: ${symptom.percentage.toFixed(1)}%</li>`)
+        .join("");
+
+      return `
+        <strong>${area.label}</strong><br>
+        Casos: ${area.total_cases.toLocaleString("pt-BR")}<br>
+        Crescimento: ${area.growth_percent.toFixed(1)}%<br>
+        Risco: ${area.risk_level}<br><br>
+        <strong>Foco predominante:</strong> ${area.dominant_symptom}<br>
+        <strong>Doenca provavel:</strong> ${area.dominant_disease}<br>
+        <strong>Resposta tatica:</strong> ${area.alert_stage}<br>
+        <strong>Prioridade:</strong> P${area.response_priority}<br>
+        <strong>Leitura do foco:</strong> ${area.focus_message}
+        <hr>
+        <strong>Sintomas:</strong>
+        <ul>${symptomLines}</ul>
+        <strong>Doencas provaveis:</strong>
+        <ul>${diseaseLines}</ul>
+      `;
+    }
+
+    function selectArea(area) {
+      selectedAreaId = area.id;
+      renderFocusList();
+      renderDetails(area);
+
+      if (area.latitude && area.longitude) {
+        map.flyTo([area.latitude, area.longitude], levelFilter.value === "bairros" ? 11 : levelFilter.value === "municipios" ? 8 : 5, {
+          duration: 0.8,
+        });
+      }
+    }
+
+    function renderDetails(area) {
+      const symptoms = area.symptoms
+        .map((symptom) => `<li>${symptom.label}: ${symptom.count.toLocaleString("pt-BR")} registros (${symptom.percentage.toFixed(1)}%)</li>`)
+        .join("");
+      const diseases = area.probable_diseases
+        .map((disease) => `<li>${disease.name}: ${disease.probability.toFixed(1)}% | ativo ${Number(disease.active_probability || 0).toFixed(1)}% (${disease.estimated_cases.toLocaleString("pt-BR")} casos estimados)</li>`)
+        .join("");
+
+      document.getElementById("detailsBody").innerHTML = `
+        <div style="font-size:1rem;font-weight:800;">${area.label}</div>
+        <div class="mini" style="margin-top:8px;">${area.focus_message}</div>
+        <div class="tag-row">
+          ${[...(area.strategic_tags || []), ...((variant === "governo" ? area.government_tags : []) || [])]
+            .filter((tag, index, list) => list.indexOf(tag) === index)
+            .map((tag) => `<span class="tag">${tag}</span>`).join("")}
+        </div>
+        <div class="detail-grid">
+          <div class="detail-box">
+            <strong>Radar do foco</strong>
+            <ul>
+              <li>Casos acumulados: ${area.total_cases.toLocaleString("pt-BR")}</li>
+              <li>Ultimas 24h: ${area.recent_24h.toLocaleString("pt-BR")}</li>
+              <li>Janela anterior: ${area.previous_24h.toLocaleString("pt-BR")}</li>
+              <li>Crescimento: ${area.growth_percent.toFixed(1)}%</li>
+              <li>Atividade recente: ${area.activity_percent.toFixed(1)}%</li>
+              <li>Desaceleracao: ${area.decay_percent.toFixed(1)}%</li>
+              <li>Tendencia: ${area.trend_status}</li>
+              <li>Nivel de risco: ${area.risk_level}</li>
+              <li>Fase operacional: ${area.alert_stage}</li>
+              <li>Prioridade de resposta: P${area.response_priority}</li>
+            </ul>
+          </div>
+          <div class="detail-box">
+            <strong>Sintomas predominantes</strong>
+            <ul>${symptoms}</ul>
+          </div>
+          <div class="detail-box">
+            <strong>Doencas provaveis</strong>
+            <ul>${diseases}</ul>
+          </div>
+          <div class="detail-box">
+            <strong>Indicacao operacional</strong>
+            <ul>
+              <li>Foco dominante: ${area.dominant_symptom}</li>
+              <li>Doenca predominante: ${area.dominant_disease}</li>
+              <li>Camada de leitura: ${area.level}</li>
+              <li>Prioridade: ${area.risk_level}</li>
+              <li>Indice de vigilancia: ${area.surveillance_index.toFixed(1)}</li>
+              <li>Pressao de recursos: ${area.resource_pressure.toFixed(1)}</li>
+            </ul>
+          </div>
+          <div class="detail-box">
+            <strong>${variantProfile.extraLabel}</strong>
+            <ul>
+              <li>${area[variantProfile.extraField]}</li>
+            </ul>
+          </div>
+          <div class="detail-box">
+            <strong>${variantProfile.actionLabel}</strong>
+            <ul>
+              <li>${area[variantProfile.actionField]}</li>
+              <li>Carga hospitalar estimada: ${area.hospital_load_estimate.toFixed(1)}</li>
+              <li>Triagem: ${area.triage_priority}</li>
+              <li>Nivel de prontidao: ${area.readiness_level}</li>
+            </ul>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFocusList() {
+      const container = document.getElementById("focusList");
+      const areas = getFilteredAreas()
+        .slice()
+        .sort((a, b) => b.risk_score - a.risk_score || b.total_cases - a.total_cases)
+        .slice(0, 12);
+
+      if (!areas.length) {
+        container.innerHTML = "Sem focos para o filtro atual.";
+        return;
+      }
+
+      container.innerHTML = areas.map((area) => `
+        <div class="list-item ${selectedAreaId === area.id ? "active" : ""}" data-area-id="${area.id}">
+          <div class="list-top">
+            <strong>${area.label}</strong>
+            <span class="risk-badge risk-${area.risk_level}" style="color:${riskTextColor(area.risk_level)}">${area.risk_level}</span>
+          </div>
+          <div class="mini">
+            ${area.total_cases.toLocaleString("pt-BR")} casos | crescimento ${area.growth_percent.toFixed(1)}%<br>
+            Sintoma dominante: ${area.dominant_symptom}<br>
+            Doenca provavel: ${area.dominant_disease}
+          </div>
+        </div>
+      `).join("");
+
+      container.querySelectorAll(".list-item").forEach((item) => {
+        item.addEventListener("click", () => {
+          const area = getFilteredAreas().find((entry) => entry.id === item.dataset.areaId);
+          if (area) selectArea(area);
+        });
+      });
+    }
+
+    function clearMapLayers() {
+      circlesLayer.clearLayers();
+      markersLayer.clearLayers();
+      pulseMarkers = [];
+
+      if (heatLayer) {
+        map.removeLayer(heatLayer);
+        heatLayer = null;
+      }
+    }
+
+    function addPulseMarker(area) {
+      const marker = L.circleMarker([area.latitude, area.longitude], {
+        radius: levelFilter.value === "bairros" ? 8 : 10,
+        color: "#ffffff",
+        weight: 1.5,
+        fillColor: riskColor(area.risk_level),
+        fillOpacity: 0.95,
+        className: "pulse-marker",
+      });
+
+      marker.bindPopup(areaPopup(area));
+      marker.bindTooltip(`${area.label} | ${area.dominant_symptom}`, { sticky: true });
+      marker.on("click", () => selectArea(area));
+      marker.addTo(markersLayer);
+      pulseMarkers.push(marker);
+    }
+
+    function renderMap() {
+      clearMapLayers();
+      const areas = getFilteredAreas();
+
+      if (!areas.length) return;
+
+      const maxCases = Math.max(...areas.map((area) => area.total_cases), 1);
+      const bounds = [];
+      const isBairroView = levelFilter.value === "bairros";
+
+      if (modeFilter.value === "radar" || isBairroView) {
+        const heatPoints = areas
+          .filter((area) => area.latitude && area.longitude)
+          .map((area) => [area.latitude, area.longitude, intensity(area, maxCases)]);
+
+        heatLayer = L.heatLayer(heatPoints, {
+          radius: isBairroView ? 55 : 42,
+          blur: isBairroView ? 42 : 34,
+          maxZoom: 10,
+          gradient: {
+            0.18: "#00d1b2",
+            0.42: "#74c0fc",
+            0.7: "#ff7a18",
+            1.0: "#ff365f",
+          },
+        }).addTo(map);
+      }
+
+      areas.forEach((area) => {
+        if (!area.latitude || !area.longitude) return;
+
+        const color = riskColor(area.risk_level);
+        bounds.push([area.latitude, area.longitude]);
+
+        if (isBairroView) {
+          const hotspot = L.marker([area.latitude, area.longitude], {
+            icon: L.divIcon({
+              className: "",
+              html: `<div class="bairro-hotspot" style="background:${color};"></div>`,
+              iconSize: [16, 16],
+              iconAnchor: [8, 8],
+            }),
+          });
+
+          hotspot.bindTooltip(`${area.label} | ${area.dominant_symptom}`, { sticky: true });
+          hotspot.bindPopup(areaPopup(area));
+          hotspot.on("click", () => selectArea(area));
+          hotspot.addTo(markersLayer);
+          return;
+        }
+
+        const opacityBase = modeFilter.value === "risco" ? 0.5 : 0.22 + intensity(area, maxCases) * 0.3;
+        const circle = L.circle([area.latitude, area.longitude], {
+          radius: area.radius,
+          color,
+          fillColor: color,
+          fillOpacity: opacityBase,
+          weight: modeFilter.value === "surtos" ? 3.2 : 2.2,
+        });
+
+        circle.bindTooltip(`${area.label} | ${area.dominant_symptom}`, { sticky: true });
+        circle.bindPopup(areaPopup(area));
+        circle.on("click", () => selectArea(area));
+        circle.addTo(circlesLayer);
+
+        if (modeFilter.value !== "risco" || area.risk_level === "CRITICO" || area.risk_level === "ALTO") {
+          addPulseMarker(area);
+        }
+      });
+
+      if (bounds.length) {
+        map.fitBounds(bounds, {
+          paddingTopLeft: leftVisible && window.innerWidth > 980 ? [390, 120] : [40, 120],
+          paddingBottomRight: rightVisible && window.innerWidth > 980 ? [430, 60] : [40, 60],
+          maxZoom: levelFilter.value === "bairros" ? 11 : levelFilter.value === "municipios" ? 8 : 5,
+        });
+      }
+    }
+
+    function populateFilters() {
+      const currentState = stateFilter.value;
+      const currentCity = cityFilter.value;
+      const states = panorama.filters.estados || [];
+      const cities = (panorama.layers.bairros || [])
+        .filter((area) => !currentState || area.estado === currentState)
+        .map((area) => area.cidade)
+        .filter(Boolean);
+      const uniqueCities = [...new Set(cities)].sort();
+
+      stateFilter.innerHTML = `<option value="">Todos</option>` + states.map((state) => `<option value="${state}">${state}</option>`).join("");
+      cityFilter.innerHTML = `<option value="">Todas</option>` + uniqueCities.map((city) => `<option value="${city}">${city}</option>`).join("");
+
+      stateFilter.value = states.includes(currentState) ? currentState : "";
+      cityFilter.value = uniqueCities.includes(currentCity) ? currentCity : "";
+    }
+
+    function renderDashboard() {
+      const areas = getFilteredAreas();
+      const summary = aggregateSummary(areas);
+      updateMetrics(summary);
+      updateChart(summary);
+      renderReadinessSignals();
+      renderFocusList();
+      renderMap();
+
+      if (!selectedAreaId && areas.length) {
+        selectArea(
+          areas
+            .slice()
+            .sort((a, b) => b.risk_score - a.risk_score || b.total_cases - a.total_cases)[0]
+        );
+      } else {
+        const selected = areas.find((area) => area.id === selectedAreaId);
+        if (selected) {
+          renderDetails(selected);
+        } else if (areas.length) {
+          selectArea(areas[0]);
+        }
+      }
+    }
+
+    async function loadPanorama() {
+      const response = await fetch("/api/epidemiologia");
+      panorama = await response.json();
+      document.getElementById("generatedAt").textContent = `Atualizado em ${new Date(panorama.generated_at).toLocaleString("pt-BR")}`;
+      populateFilters();
+      renderDashboard();
+    }
+
+    modeFilter.addEventListener("change", () => {
+      selectedAreaId = null;
+      renderDashboard();
+    });
+
+    levelFilter.addEventListener("change", () => {
+      if (levelFilter.value === "estados") {
+        cityFilter.value = "";
+      }
+      selectedAreaId = null;
+      renderDashboard();
+    });
+
+    stateFilter.addEventListener("change", () => {
+      selectedAreaId = null;
+      populateFilters();
+      renderDashboard();
+    });
+
+    cityFilter.addEventListener("change", () => {
+      selectedAreaId = null;
+      renderDashboard();
+    });
+
+    updateDockState();
+    loadPanorama();
+    setInterval(loadPanorama, 15000);
+  </script>
+</body>
+</html>

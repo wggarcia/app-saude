@@ -10,7 +10,7 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 
 	<key>CFBundleDisplayName</key>
-	<string>App Saude</string>
+	<string>SolusCRT Saude</string>
 
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
@@ -22,7 +22,7 @@
 	<string>6.0</string>
 
 	<key>CFBundleName</key>
-	<string>app_saude</string>
+	<string>SolusCRTSaude</string>
 
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
@@ -39,19 +39,42 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 
-	<!-- 🔥 INTERNET LIBERADA -->
+	<key>GoogleMapsApiKey</key>
+	<string>$(GOOGLE_MAPS_IOS_KEY)</string>
+
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
-		<true/>
+		<false/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+			<key>127.0.0.1</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
 	</dict>
 
 	<!-- 🔥 LOCALIZAÇÃO -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Precisamos da sua localização para mostrar os casos no mapa.</string>
+	<string>Precisamos da sua localizacao para identificar riscos e hotspots na sua regiao.</string>
 
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Usamos sua localização para monitoramento de saúde.</string>
+	<string>Usamos sua localizacao para alimentar o radar epidemiologico com seguranca.</string>
+
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<true/>
+
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 
 	<!-- 🔥 MICROFONE -->
 	<key>NSMicrophoneUsageDescription</key>

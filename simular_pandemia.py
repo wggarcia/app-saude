@@ -12,6 +12,11 @@ from api.models import RegistroSintoma, Empresa
 
 empresa = Empresa.objects.first()
 
+if not empresa:
+    empresa = Empresa.objects.create(
+        nome="Empresa Teste"
+    )
+
 cidades = [
     ("São Paulo", "SP", -23.55, -46.63),
     ("Rio de Janeiro", "RJ", -22.90, -43.20),

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>SolusCRT Licenças</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:"Avenir Next","Segoe UI",sans-serif;background:#06131c;color:#eef7ff}
+    .shell{padding:24px;display:grid;gap:18px}
+    .hero,.card{border:1px solid rgba(255,255,255,.08);background:rgba(7,18,29,.86);border-radius:28px;box-shadow:0 24px 60px rgba(0,0,0,.36)}
+    .hero{padding:24px;background:linear-gradient(135deg,rgba(14,36,48,.96),rgba(7,18,29,.94))}
+    .eyebrow{font-size:.76rem;letter-spacing:.13em;text-transform:uppercase;color:#7cf29a;font-weight:800}
+    h1{margin:8px 0 0;font-size:2rem}.muted{color:#9cc4db;line-height:1.55}
+    .top{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .metric{padding:16px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+    .metric span{display:block;font-size:.74rem;color:#9cc4db;text-transform:uppercase;letter-spacing:.08em}
+    .metric strong{display:block;margin-top:8px;font-size:1.2rem}
+    .card{padding:18px}
+    .card h2{margin:0 0 12px;font-size:1.02rem}
+    .device{padding:14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);display:grid;gap:8px}
+    .row{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+    .badge{padding:6px 10px;border-radius:999px;font-size:.74rem;font-weight:800}
+    .active{background:#1dd1a1;color:#042018}.inactive{background:#ff8fa3;color:#2a0710}
+    .btn{padding:10px 14px;border:none;border-radius:12px;background:linear-gradient(135deg,#7cf29a,#3bcf82);color:#052011;font-weight:800;cursor:pointer}
+    .btn.secondary{background:rgba(255,255,255,.08);color:#eef7ff}
+    .list{display:grid;gap:12px}
+    @media(max-width:900px){.top,.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Licenças e Dispositivos</div>
+      <h1>{{ empresa_nome }}</h1>
+      <div class="muted">Controle profissional de máquinas autorizadas por contrato. Revogue acessos antigos, acompanhe o limite contratado e impeça uso espalhado sem licença.</div>
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="/dashboard/" style="color:#eef7ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.08);">Mapa Geral</a>
+        <a href="/usuarios/" style="color:#eef7ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.08);">Usuários</a>
+        <a href="/seguranca/" style="color:#eef7ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.08);">Segurança</a>
+        <a href="/logout/" style="color:#eef7ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(140,29,64,.82);">Sair</a>
+      </div>
+    </section>
+
+    <section class="top">
+      <div class="card">
+        <h2>Resumo do Contrato</h2>
+        <div class="grid">
+          <div class="metric"><span>Tipo</span><strong>{{ tipo_conta }}</strong></div>
+          <div class="metric"><span>Licenças Contratadas</span><strong id="maxDevices">{{ max_dispositivos }}</strong></div>
+          <div class="metric"><span>Dispositivos em Uso</span><strong id="activeDevices">0</strong></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Política Recomendada</h2>
+        <div class="muted">Mantenha apenas equipamentos oficiais. Quando trocar de máquina, revogue a licença antiga antes de instalar a nova. Isso evita que o mesmo contrato se espalhe sem controle.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Dispositivos Autorizados</h2>
+      <div id="deviceList" class="list">Carregando dispositivos...</div>
+    </section>
+  </main>
+
+  <script>
+    async function loadDevices() {
+      const response = await fetch("/api/dispositivos");
+      const data = await response.json();
+      document.getElementById("maxDevices").textContent = data.max_dispositivos;
+      document.getElementById("activeDevices").textContent = data.ativos_em_uso;
+
+      const list = document.getElementById("deviceList");
+      if (!data.dispositivos.length) {
+        list.innerHTML = "Nenhum dispositivo registrado.";
+        return;
+      }
+
+      list.innerHTML = data.dispositivos.map((device) => `
+        <div class="device">
+          <div class="row">
+            <strong>${device.apelido}</strong>
+            <span class="badge ${device.ativo ? "active" : "inactive"}">${device.ativo ? "ATIVO" : "REVOGADO"}</span>
+          </div>
+          <div class="muted">ID: ${device.device_id}</div>
+          <div class="muted">IP: ${device.ip || "Não informado"}</div>
+          <div class="muted">Último acesso: ${new Date(device.ultimo_acesso).toLocaleString("pt-BR")}</div>
+          <div class="muted">Agente: ${device.user_agent || "Não informado"}</div>
+          <div class="row">
+            <span class="muted">Criado em ${new Date(device.criado_em).toLocaleString("pt-BR")}</span>
+            ${device.ativo ? `<button class="btn" onclick="revokeDevice('${device.device_id}')">Revogar</button>` : `<button class="btn secondary" disabled>Revogado</button>`}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    async function revokeDevice(deviceId) {
+      const confirmed = window.confirm("Revogar este dispositivo?");
+      if (!confirmed) return;
+      await fetch("/api/dispositivos/revogar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ device_id: deviceId }),
+      });
+      loadDevices();
+    }
+
+    loadDevices();
+  </script>
+</body>
+</html>
