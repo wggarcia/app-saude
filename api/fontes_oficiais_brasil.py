@@ -18,6 +18,16 @@ _CACHE = {"created_at": 0.0, "payload": None}
 _POP_CACHE = {}
 _CACHE_TTL_SECONDS = 15 * 60
 POPULATION_YEAR = datetime.now().year - 1
+MUNICIPIOS_OFICIAIS_SENTINELA = [
+    {"cidade": "Rio de Janeiro", "estado": "RJ", "total": 0},
+    {"cidade": "São Paulo", "estado": "SP", "total": 0},
+    {"cidade": "Belo Horizonte", "estado": "MG", "total": 0},
+    {"cidade": "Salvador", "estado": "BA", "total": 0},
+    {"cidade": "Recife", "estado": "PE", "total": 0},
+    {"cidade": "Fortaleza", "estado": "CE", "total": 0},
+    {"cidade": "Curitiba", "estado": "PR", "total": 0},
+    {"cidade": "Manaus", "estado": "AM", "total": 0},
+]
 
 UF_CODES = {
     11: "RO", 12: "AC", 13: "AM", 14: "RR", 15: "PA", 16: "AP", 17: "TO",
@@ -239,7 +249,24 @@ def _municipios_por_sinal(limit=8):
         .annotate(total=Count("id"))
         .order_by("-total")[:limit]
     )
-    return list(rows)
+    municipios = list(rows)
+    existentes = {
+        (
+            str(item.get("cidade") or "").strip().lower(),
+            _normalizar_estado(item.get("estado")),
+        )
+        for item in municipios
+    }
+
+    for item in MUNICIPIOS_OFICIAIS_SENTINELA:
+        key = (item["cidade"].strip().lower(), _normalizar_estado(item["estado"]))
+        if key not in existentes:
+            municipios.append(item)
+            existentes.add(key)
+        if len(municipios) >= limit:
+            break
+
+    return municipios[:limit]
 
 
 def _normalizar_estado(valor):
