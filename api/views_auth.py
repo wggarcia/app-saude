@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import hashlib
 import jwt
+import os
 from django.db import OperationalError
 from django.http import JsonResponse
 from django.contrib.auth.hashers import check_password, make_password
@@ -184,6 +185,22 @@ def _limpar_sessao_principal(principal):
     principal.save(update_fields=["sessao_ativa_chave", "sessao_ativa_device_id", "sessao_ativa_em"])
 
 
+def _provisionar_dono_por_ambiente(email, senha):
+    env_email = os.environ.get("SOLUSCRT_BOOTSTRAP_OWNER_EMAIL", "").strip().lower()
+    env_senha = os.environ.get("SOLUSCRT_BOOTSTRAP_OWNER_PASSWORD", "").strip()
+    env_nome = os.environ.get("SOLUSCRT_BOOTSTRAP_OWNER_NOME", "Operacao SolusCRT").strip()
+
+    if email.strip().lower() != env_email or senha != env_senha:
+        return None
+
+    return DonoSaaS.objects.create(
+        nome=env_nome or "Operacao SolusCRT",
+        email=env_email,
+        senha=make_password(env_senha),
+        ativo=True,
+    )
+
+
 
 def _login_conta(request, portal_tipo=None):
     if request.method != "POST":
@@ -348,6 +365,8 @@ def login_dono_saas(request):
     senha = dados.get("senha")
 
     dono = DonoSaaS.objects.filter(email=email, ativo=True).first()
+    if not dono:
+        dono = _provisionar_dono_por_ambiente(email or "", senha or "")
     if not dono:
         return JsonResponse({"status": "erro", "mensagem": "Credencial operacional não encontrada"}, status=404)
 
