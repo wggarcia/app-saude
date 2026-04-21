@@ -733,6 +733,7 @@
     let leftVisible = false;
     let rightVisible = false;
     let bottomVisible = false;
+    let officialDetailOpen = false;
 
     function updatePanels() {
       leftDock.classList.toggle("hidden-left", !leftVisible);
@@ -945,6 +946,7 @@
       if (!item) return;
       document.getElementById("detailsBody").innerHTML = officialDetailHtml(item.title, item.payload || {});
       document.getElementById("institutionalNote").textContent = "Brasil Oficial: detalhes normalizados para tomada de decisao. Dados oficiais podem ficar temporariamente indisponiveis; nesse caso, o painel preserva rastreabilidade e nao inventa confirmacao.";
+      officialDetailOpen = true;
       bottomVisible = true;
       rightVisible = true;
       updatePanels();
@@ -1404,6 +1406,7 @@
 
     function selectArea(area) {
       selectedAreaId = area.id;
+      officialDetailOpen = false;
       renderDetails(area);
       bottomVisible = true;
       updatePanels();
@@ -1485,7 +1488,7 @@
       renderTimelineChart();
       renderDiseaseChart(areas);
       renderMap();
-      if (areas.length) {
+      if (areas.length && !officialDetailOpen) {
         const current = areas.find((area) => area.id === selectedAreaId) || areas[0];
         selectArea(current);
       }

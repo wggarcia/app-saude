@@ -160,6 +160,31 @@ class PublicApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("hotspots", response.json())
 
+    def test_envios_publicos_de_dispositivos_distintos_na_mesma_rede_nao_bloqueiam_primeiro_volume(self):
+        payload = {
+            "febre": True,
+            "tosse": True,
+            "latitude": -22.9068,
+            "longitude": -43.1729,
+            "location_source": "public_reference",
+        }
+
+        primeiro = Client(HTTP_X_DEVICE_ID="public-device-a").post(
+            "/api/public/registrar",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        segundo = Client(HTTP_X_DEVICE_ID="public-device-b").post(
+            "/api/public/registrar",
+            data=json.dumps({**payload, "dor_corpo": True}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(primeiro.status_code, 200)
+        self.assertEqual(segundo.status_code, 200)
+        self.assertEqual(primeiro.json()["status"], "ok")
+        self.assertEqual(segundo.json()["status"], "ok")
+
     def test_alerta_governamental_so_aparece_quando_publicado(self):
         governo = Empresa.objects.create(
             nome="Governo Teste",

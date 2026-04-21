@@ -317,15 +317,15 @@ def _bloqueio_envio_publico(empresa, ip, device_id):
             ip=ip,
             data_registro__gte=janela_curta,
         ).count()
-        if envios_ip_6h >= 1:
-            return False, "Ja recebemos um envio recente desta rede. Tente novamente mais tarde."
+        if envios_ip_6h >= 12:
+            return False, "Volume recente alto nesta rede. Tente novamente mais tarde."
 
         envios_ip_24h = RegistroSintoma.objects.filter(
             empresa=empresa,
             ip=ip,
             data_registro__gte=janela_longa,
         ).count()
-        if envios_ip_24h >= 3:
+        if envios_ip_24h >= 35:
             return False, "Limite diario de envios desta rede atingido."
 
     if device_id:
