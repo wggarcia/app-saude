@@ -90,6 +90,14 @@ def _registrar_dispositivo_login(empresa, request, dados):
         return True, device_id, DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True).count(), None
 
     if dispositivos_ativos.count() >= empresa.max_dispositivos:
+        if dados and dados.get("force_login") is True:
+            antigo = dispositivos_ativos.order_by("ultimo_acesso").first()
+            if antigo:
+                antigo.ativo = False
+                antigo.save(update_fields=["ativo"])
+                dispositivos_ativos = DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True)
+        if dispositivos_ativos.count() < empresa.max_dispositivos:
+            return _registrar_dispositivo_login(empresa, request, {**(dados or {}), "force_login": False})
         return False, device_id, dispositivos_ativos.count(), (
             f"Limite de dispositivos atingido para este contrato. "
             f"Plano atual permite {empresa.max_dispositivos} dispositivo(s)."
