@@ -260,7 +260,15 @@ def _login_conta(request, portal_tipo=None):
 
     sessao_ok, erro_sessao = _validar_sessao_principal(principal, device_id)
     if not sessao_ok:
-        return JsonResponse({"status": "erro", "mensagem": erro_sessao}, status=403)
+        if dados.get("force_login") is True:
+            _limpar_sessao_principal(principal)
+        else:
+            return JsonResponse({
+                "status": "erro",
+                "codigo": "sessao_em_uso",
+                "mensagem": erro_sessao,
+                "acao": "force_login",
+            }, status=409)
 
     session_key = _ativar_sessao(principal, device_id)
     token = _criar_token(empresa, session_key, principal_kind, principal_id)

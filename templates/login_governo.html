@@ -74,7 +74,7 @@ function getDeviceId() {
   return deviceId;
 }
 
-async function login(){
+async function login(forceLogin = false){
   const email = document.getElementById("email").value;
   const senha = document.getElementById("senha").value;
   const erro = document.getElementById("erro");
@@ -87,6 +87,7 @@ async function login(){
       senha,
       device_id: getDeviceId(),
       device_name: navigator.platform || "Estacao",
+      force_login: forceLogin,
     })
   });
   const data = await res.json();
@@ -97,6 +98,12 @@ async function login(){
     if (data.device_id) localStorage.setItem("device_id", data.device_id);
     window.location.href = data.destination || "/dashboard-governo/";
   } else {
+    if (data.codigo === "sessao_em_uso" && !forceLogin) {
+      const confirmar = confirm(`${data.mensagem}\n\nDeseja encerrar a sessão anterior e entrar nesta estação?`);
+      if (confirmar) {
+        return login(true);
+      }
+    }
     erro.textContent = data.mensagem || data.erro || "Credenciais inválidas";
     erro.style.display = "block";
   }

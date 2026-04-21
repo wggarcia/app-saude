@@ -203,7 +203,16 @@ body{
 </div>
 
 <script>
-async function login(){
+function getDeviceId(){
+  let deviceId = localStorage.getItem("device_id");
+  if (!deviceId) {
+    deviceId = "web-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem("device_id", deviceId);
+  }
+  return deviceId;
+}
+
+async function login(forceLogin = false){
   const email = document.getElementById("email").value;
   const senha = document.getElementById("senha").value;
   const erro = document.getElementById("erro");
@@ -213,7 +222,13 @@ async function login(){
   const res = await fetch("/api/login", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ email, senha })
+    body:JSON.stringify({
+      email,
+      senha,
+      device_id: getDeviceId(),
+      device_name: navigator.platform || "Computador",
+      force_login: forceLogin,
+    })
   });
 
   const data = await res.json();
@@ -232,6 +247,13 @@ async function login(){
   window.location.href = data.destination || "/dashboard/";
 
 } else {
+  if (data.codigo === "sessao_em_uso" && !forceLogin) {
+    const confirmar = confirm(`${data.mensagem}\n\nDeseja encerrar a sessão anterior e entrar neste computador?`);
+    if (confirmar) {
+      return login(true);
+    }
+  }
+  erro.textContent = data.mensagem || data.erro || "Credenciais inválidas";
   erro.style.display = "block";
 }
 }
