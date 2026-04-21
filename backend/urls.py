@@ -25,7 +25,7 @@ from api.views import (
     registrar_sintoma_publico, app_resumo_publico, app_radar_local, app_mapa_publico, app_alertas_publicos, registrar_push_publico
 )
 
-from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, login_dono_saas
+from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas
 from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
@@ -52,6 +52,8 @@ urlpatterns = [
     path('api/login-governo', login_portal_governo),
     path('api/operacao-central/login', login_dono_saas),
     path('logout/', logout_empresa),
+    path('logout-governo/', logout_governo),
+    path('logout-operacao/', logout_operacao),
 
     # 🧠 DASHBOARD
     path('dashboard/', dashboard),

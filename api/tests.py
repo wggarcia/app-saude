@@ -116,6 +116,36 @@ class AuthDeviceTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_contrato_governo_abre_sem_cair_no_login_empresa(self):
+        response = self.client.get("/contrato-governo/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Contrato anual fechado para governo")
+
+    def test_logout_governo_retorna_para_login_governo(self):
+        governo = Empresa.objects.create(
+            nome="Governo Teste",
+            email="governo-logout@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+        )
+        login = self.client.post(
+            "/api/login-governo",
+            data=json.dumps({
+                "email": governo.email,
+                "senha": "123456",
+                "device_id": "gov-logout",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.get("/logout-governo/")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/login-governo/")
+
 
 class PublicApiTests(TestCase):
     def test_resumo_publico_responde_sem_autenticacao(self):

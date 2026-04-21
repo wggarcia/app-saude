@@ -707,7 +707,7 @@
     document.getElementById("logoutBtn").addEventListener("click", () => {
       localStorage.removeItem("token");
       localStorage.removeItem("empresa_id");
-      window.location.href = "/logout/";
+      window.location.href = "/logout-governo/";
     });
 
     const map = L.map("map", { zoomControl: false, preferCanvas: true }).setView([-15.7, -47.9], 4);

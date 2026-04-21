@@ -411,6 +411,18 @@ def login_dono_saas(request):
 
 
 def logout_empresa(request):
+    return _logout(request, redirect_to="/")
+
+
+def logout_governo(request):
+    return _logout(request, redirect_to="/login-governo/")
+
+
+def logout_operacao(request):
+    return _logout(request, redirect_to="/operacao-central/")
+
+
+def _logout(request, redirect_to="/"):
     token = request.COOKIES.get("auth_token")
     if token:
         try:
@@ -439,7 +451,7 @@ def logout_empresa(request):
         except Exception:
             pass
 
-    response = redirect("/")
+    response = redirect(redirect_to)
     response.delete_cookie("empresa_id")
     response.delete_cookie("auth_token")
     response.delete_cookie("tipo_conta")

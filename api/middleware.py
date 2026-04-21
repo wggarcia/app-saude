@@ -20,6 +20,7 @@ class EmpresaMiddleware:
             "/login-empresa/",
             "/login-governo/",
             "/operacao-central/",
+            "/contrato-governo/",
             "/pagamento/",
             "/sucesso/",
             "/erro/",
@@ -102,7 +103,8 @@ class EmpresaMiddleware:
             if principal.sessao_ativa_chave and data.get("session_key") != principal.sessao_ativa_chave:
                 if request.path.startswith("/api/"):
                     return JsonResponse({"erro": "sessão encerrada ou substituída"}, status=401)
-                return redirect("/login-empresa/")
+                login_target = "/login-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/login-empresa/"
+                return redirect(login_target)
             request.empresa = empresa
             request.principal = principal
 
@@ -110,6 +112,8 @@ class EmpresaMiddleware:
             logger.warning("Token invalido no middleware: %s", e)
             if request.path.startswith("/api/"):
                 return JsonResponse({"erro": "Token inválido"}, status=401)
+            if request.path.startswith("/dashboard-governo/") or request.path.startswith("/contrato-governo/"):
+                return redirect("/login-governo/")
             return redirect("/login-empresa/")
 
         # 💣 BLOQUEIO DE ACESSO SEM PAGAMENTO
