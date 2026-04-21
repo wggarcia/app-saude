@@ -6,7 +6,29 @@ from django.test import Client, TestCase
 from django.utils import timezone
 
 from .models import AlertaGovernamental, Empresa, RegistroSintoma
+from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_codigo_pacote, pacotes_por_setor
 from .views import _indice_temporal_publico
+
+
+class PlanosSaasTests(TestCase):
+    def test_catalogo_empresarial_chega_a_mil_maquinas(self):
+        pacotes_empresa = pacotes_por_setor(incluir_governo=False)
+
+        self.assertIn("empresa_nacional_1000", pacotes_empresa)
+        self.assertEqual(pacotes_empresa["empresa_nacional_1000"]["dispositivos"], 1000)
+        self.assertEqual(max(pacote["dispositivos"] for pacote in pacotes_empresa.values()), 1000)
+
+    def test_governo_continua_anual_e_separado(self):
+        pacote = PACOTES_SAAS["governo_estado"]
+
+        self.assertEqual(pacote["ciclos"], ["anual"])
+        self.assertEqual(pacote["dispositivos"], 1000)
+        self.assertNotIn("governo_estado", pacotes_por_setor(incluir_governo=False))
+
+    def test_codigos_legados_nao_viram_governo_por_engano(self):
+        self.assertEqual(normalizar_codigo_pacote("grid_500"), "empresa_nacional_500")
+        self.assertEqual(normalizar_codigo_pacote("national_1000"), "empresa_nacional_1000")
+        self.assertEqual(detalhes_pacote("national_1000")["dispositivos"], 1000)
 
 
 class AuthDeviceTests(TestCase):

@@ -11,6 +11,9 @@ O SolusCRT deve ser vendido como sala de controle epidemiologica com IA, app pop
 | Empresa Starter | pequenas equipes e saude ocupacional inicial | R$ 799 | R$ 7.990 |
 | Empresa Profissional | empresas medias e operacao regional | R$ 1.990 | R$ 19.900 |
 | Empresa Enterprise | grandes empresas e multiplas unidades | R$ 4.900 | R$ 49.000 |
+| Empresa Corporativo | cobertura corporativa com ate 250 usuarios/maquinas | R$ 9.900 | R$ 99.000 |
+| Empresa Nacional | grupos em varios estados com ate 500 usuarios/maquinas | R$ 19.900 | R$ 199.000 |
+| Empresa Nacional 1000 | operacao enterprise com ate 1000 usuarios/maquinas | R$ 35.000 | R$ 350.000 |
 
 ## Farmacias e redes
 

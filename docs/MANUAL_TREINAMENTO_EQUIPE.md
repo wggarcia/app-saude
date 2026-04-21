@@ -305,6 +305,8 @@ Sim, se nao houver sinais recentes. Isso e normal em banco novo ou regiao sem en
 
 Sim, conforme pacote contratado. O sistema controla usuarios e dispositivos.
 
+Pacotes empresariais podem chegar a 1000 usuarios/maquinas. Governo tambem possui camada ate 1000 usuarios/maquinas, mas sempre por contrato anual fechado.
+
 ## 12. Treinamento recomendado
 
 1. Estudar este manual.

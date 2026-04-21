@@ -22,7 +22,7 @@
     }
 
     .panel {
-      width: min(760px, 100%);
+      width: min(980px, 100%);
       padding: 32px;
       border-radius: 28px;
       background: rgba(4, 11, 18, 0.84);
@@ -71,6 +71,39 @@
       font-size: 1rem;
     }
 
+    .pricing {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .plan {
+      border-radius: 20px;
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(116, 192, 252, 0.12), rgba(255, 255, 255, 0.04));
+      border: 1px solid rgba(116, 192, 252, 0.18);
+    }
+
+    .plan b {
+      display: block;
+      min-height: 40px;
+    }
+
+    .price {
+      display: block;
+      margin: 12px 0 8px;
+      color: #7fffe1;
+      font-size: 1.18rem;
+      font-weight: 900;
+    }
+
+    .limit {
+      color: #d7ebff;
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
     .actions {
       display: flex;
       gap: 12px;
@@ -99,7 +132,7 @@
     }
 
     @media (max-width: 720px) {
-      .grid { grid-template-columns: 1fr; }
+      .grid, .pricing { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -128,6 +161,29 @@
       <div class="card">
         <strong>Capital, região e estado</strong>
         Capitais e regiões metropolitanas a partir de R$ 1,2 mi/ano; estados a partir de R$ 3,6 mi/ano.
+      </div>
+    </div>
+
+    <div class="pricing">
+      <div class="plan">
+        <b>Município Pequeno</b>
+        <span class="price">R$ 120.000/ano</span>
+        <div class="limit">Até 100 mil habitantes<br>100 usuários | 100 máquinas</div>
+      </div>
+      <div class="plan">
+        <b>Município Médio</b>
+        <span class="price">R$ 360.000/ano</span>
+        <div class="limit">100 mil a 800 mil habitantes<br>250 usuários | 250 máquinas</div>
+      </div>
+      <div class="plan">
+        <b>Capital / Região</b>
+        <span class="price">R$ 1.200.000/ano</span>
+        <div class="limit">Capital ou região metropolitana<br>500 usuários | 500 máquinas</div>
+      </div>
+      <div class="plan">
+        <b>Governo Estadual</b>
+        <span class="price">R$ 3.600.000/ano</span>
+        <div class="limit">Cobertura estadual<br>1000 usuários | 1000 máquinas</div>
       </div>
     </div>
 

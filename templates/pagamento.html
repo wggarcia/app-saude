@@ -24,6 +24,11 @@
     .metric strong{display:block;margin-top:8px;font-size:1.1rem}
     .pack-list{display:grid;gap:10px;margin-top:18px}
     .pack{padding:14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+    .pack-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+    .sector{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:#5af0d3;font-weight:800}
+    .price-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+    .price-chip{padding:8px 10px;border-radius:999px;background:rgba(90,240,211,.1);border:1px solid rgba(90,240,211,.2);font-weight:800;color:#eafffb;font-size:.86rem}
+    .limit-line{color:#d7eefc;font-weight:800}
     @media(max-width:920px){.shell{grid-template-columns:1fr}}
   </style>
 </head>
@@ -42,8 +47,16 @@
       <div class="pack-list">
         {% for codigo, pacote in pacotes.items %}
         <div class="pack">
-          <strong>{{ pacote.label }}</strong><br>
-          <span class="muted">{{ pacote.descricao }}<br>{{ pacote.usuarios }} usuários | {{ pacote.dispositivos }} máquinas</span>
+          <div class="pack-head">
+            <strong>{{ pacote.label }}</strong>
+            <span class="sector">{{ pacote.setor|title }}</span>
+          </div>
+          <div class="price-row">
+            <span class="price-chip">Mensal: R$ {{ pacote.mensal|floatformat:0 }}</span>
+            <span class="price-chip">Anual: R$ {{ pacote.anual|floatformat:0 }}</span>
+          </div>
+          <span class="muted">{{ pacote.descricao }}</span><br>
+          <span class="limit-line">{{ pacote.usuarios }} usuários | {{ pacote.dispositivos }} máquinas autorizadas</span>
         </div>
         {% endfor %}
       </div>

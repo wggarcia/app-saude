@@ -144,8 +144,14 @@
       return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     }
 
+    function pacoteLabel(value, pacote) {
+      const ciclo = pacote.ciclos?.length === 1 && pacote.ciclos[0] === "anual" ? "ano" : "mês";
+      const valor = ciclo === "ano" ? pacote.anual : pacote.mensal;
+      return `${pacote.label} (${pacote.setor}) - ${money(valor)}/${ciclo} - ${pacote.dispositivos} maq.`;
+    }
+
     function pacoteSelect(current) {
-      return `<select data-role="pacote">${Object.entries(pacoteOptions).map(([value, pacote]) => `<option value="${value}" ${value === current ? "selected" : ""}>${pacote.label} (${pacote.setor})</option>`).join("")}</select>`;
+      return `<select data-role="pacote">${Object.entries(pacoteOptions).map(([value, pacote]) => `<option value="${value}" ${value === current ? "selected" : ""}>${pacoteLabel(value, pacote)}</option>`).join("")}</select>`;
     }
 
     function planoSelect(cliente) {
@@ -244,7 +250,8 @@
           <div class="muted">${cliente.email}</div>
           <div class="muted small">${cliente.segmento} | ${cliente.pacote_label} | ${cliente.plano || "sem ciclo"}</div>
           ${cliente.segmento === "governo" ? '<div class="muted small">Contrato governamental anual fechado, sem cobrança mensal simples.</div>' : ''}
-          <div class="muted small">${cliente.usuarios_ativos}/${cliente.max_usuarios} usuários | ${cliente.dispositivos_ativos}/${cliente.max_dispositivos} dispositivos | ${cliente.registros_24h} registros em 24h</div>
+          <div class="muted small">Limite contratado: ${cliente.max_usuarios} usuários | ${cliente.max_dispositivos} máquinas autorizadas</div>
+          <div class="muted small">Em uso: ${cliente.usuarios_ativos}/${cliente.max_usuarios} usuários | ${cliente.dispositivos_ativos}/${cliente.max_dispositivos} dispositivos | ${cliente.registros_24h} registros em 24h</div>
           <div class="muted small">Uso usuários ${cliente.uso_usuarios.toFixed(1)}% | Uso dispositivos ${cliente.uso_dispositivos.toFixed(1)}% | Suspeitos 24h ${cliente.suspeitos_24h}</div>
           <div class="muted small">Faturamento estimado ${money(cliente.faturamento_estimado_cliente)} | expira ${cliente.data_expiracao ? new Date(cliente.data_expiracao).toLocaleDateString("pt-BR") : "não definido"}</div>
           <div class="controls">

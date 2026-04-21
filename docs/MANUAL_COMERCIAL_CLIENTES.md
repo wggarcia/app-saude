@@ -167,3 +167,5 @@ Porque governo exige escopo, SLA, seguranca, implantacao, governanca, treinament
 4. Implantacao assistida.
 5. Treinamento da equipe.
 6. Acompanhamento dos primeiros indicadores.
+
+Para empresas, os pacotes vao de 5 ate 1000 usuarios/maquinas autorizadas, com mensalidade ou contrato anual. Para governo, a contratacao e sempre anual fechada por escopo territorial e cobertura populacional.
