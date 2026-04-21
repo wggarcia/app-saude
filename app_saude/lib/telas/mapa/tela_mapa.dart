@@ -165,7 +165,7 @@ class _TelaMapaState extends State<TelaMapa> {
         .map(
           (item) => Marker(
             width: 120,
-            height: 70,
+            height: 86,
             point: LatLng(
               (item['latitude'] as num).toDouble(),
               (item['longitude'] as num).toDouble(),
@@ -447,6 +447,7 @@ class _HotspotMarker extends StatelessWidget {
         );
       },
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             padding: const EdgeInsets.all(8),
