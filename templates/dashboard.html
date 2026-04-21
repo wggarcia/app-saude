@@ -343,9 +343,14 @@
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
+      const mapboxToken = "{{ MAPBOX_ACCESS_TOKEN|escapejs }}";
       L.tileLayer(
-        'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={{ MAPBOX_ACCESS_TOKEN|escapejs }}',
-        { tileSize: 512, zoomOffset: -1 }
+        mapboxToken
+          ? `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`
+          : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        mapboxToken
+          ? { tileSize: 512, zoomOffset: -1, maxZoom: 18, attribution: "&copy; Mapbox & OpenStreetMap" }
+          : { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }
       ).addTo(map);
       map.on("click", () => {
         usuarioInteragindo = true;
