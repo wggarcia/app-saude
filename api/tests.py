@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from django.contrib.auth.hashers import make_password
 from django.test import Client, TestCase
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .models import AlertaGovernamental, Empresa, RegistroSintoma
@@ -29,6 +30,13 @@ class PlanosSaasTests(TestCase):
         self.assertEqual(normalizar_codigo_pacote("grid_500"), "empresa_nacional_500")
         self.assertEqual(normalizar_codigo_pacote("national_1000"), "empresa_nacional_1000")
         self.assertEqual(detalhes_pacote("national_1000")["dispositivos"], 1000)
+
+    def test_template_pagamento_entrega_valores_js_sem_virgula(self):
+        html = render_to_string("pagamento.html", {"pacotes": pacotes_por_setor(incluir_governo=False)})
+
+        self.assertIn('value="farmacia_rede_regional"', html)
+        self.assertIn('data-anual="60000.000000"', html)
+        self.assertNotIn('data-anual="60000,000000"', html)
 
 
 class AuthDeviceTests(TestCase):

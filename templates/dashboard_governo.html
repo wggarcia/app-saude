@@ -267,6 +267,27 @@
       cursor: pointer;
     }
 
+    .official-detail-grid,
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .official-detail-box,
+    .detail-box {
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .official-detail-box ul,
+    .detail-box ul {
+      margin: 8px 0 0;
+      padding-left: 18px;
+    }
+
     .badge {
       display: inline-block;
       padding: 5px 10px;
@@ -817,10 +838,116 @@
       return `<button class="btn" style="margin-top:10px;" onclick="showOfficialDetail(${index})">Ver detalhes</button>`;
     }
 
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function statusLabel(value) {
+      return escapeHtml(String(value || "pendente").replaceAll("_", " "));
+    }
+
+    function listItems(items) {
+      const values = (items || []).filter(Boolean);
+      return values.length ? values.map((item) => `<li>${escapeHtml(item)}</li>`).join("") : "<li>Nao informado pela fonte.</li>";
+    }
+
+    function officialDetailHtml(title, payload) {
+      const fonte = payload.fonte || payload.fonte_nome || payload.nome || title;
+      const status = payload.status || "catalogado";
+      const url = payload.url || payload.fonte_exata_inicial || "";
+      const indicadores = payload.indicadores || [];
+      const doencas = payload.doencas || [];
+      const arboviroses = payload.arboviroses || [];
+
+      if (arboviroses.length) {
+        return `
+          <div style="font-size:1rem;font-weight:800;">${escapeHtml(title)}</div>
+          <div class="mini" style="margin-top:8px;">Leitura oficial municipal cruzada com sinais recentes do app. Use esta tela para diferenciar sinal colaborativo de dado confirmado por fonte externa.</div>
+          <div class="official-detail-grid" style="margin-top:14px;">
+            <div class="official-detail-box">
+              <strong>Territorio e populacao</strong>
+              <ul>
+                <li>Municipio: ${escapeHtml(payload.cidade)}/${escapeHtml(payload.estado)}</li>
+                <li>Codigo IBGE: ${escapeHtml(payload.codigo_ibge)}</li>
+                <li>Populacao: ${payload.populacao ? Number(payload.populacao).toLocaleString("pt-BR") : "nao disponivel"}</li>
+                <li>Fonte populacional: ${escapeHtml(payload.populacao_fonte || "pendente")}</li>
+              </ul>
+            </div>
+            <div class="official-detail-box">
+              <strong>Sinal colaborativo SolusCRT</strong>
+              <ul>
+                <li>Sinais app 14 dias: ${Number(payload.sinais_app_14d || 0).toLocaleString("pt-BR")}</li>
+                <li>Sinais por 100 mil: ${payload.sinais_app_14d_por_100k ?? "sem denominador"}</li>
+                <li>Uso correto: alerta precoce, nao diagnostico clinico.</li>
+              </ul>
+            </div>
+            <div class="official-detail-box">
+              <strong>InfoDengue / Fiocruz</strong>
+              <ul>
+                ${arboviroses.map((arb) => `<li>${escapeHtml(arb.doenca)}: nivel ${escapeHtml(arb.nivel_alerta ?? "-")} | incidencia ${Number(arb.incidencia_100k || 0).toFixed(2)}/100k | casos ${escapeHtml(arb.casos_notificados ?? "-")}</li>`).join("")}
+              </ul>
+            </div>
+            <div class="official-detail-box">
+              <strong>Como interpretar</strong>
+              <ul>
+                <li>Se app sobe antes da fonte oficial, tratar como vigilancia antecipada.</li>
+                <li>Se fonte oficial confirma incidencia alta, priorizar resposta territorial.</li>
+                <li>Se fonte indisponivel, manter painel colaborativo separado e auditavel.</li>
+              </ul>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div style="font-size:1rem;font-weight:800;">${escapeHtml(title)}</div>
+        <div class="mini" style="margin-top:8px;">Camada oficial usada para validacao, contexto historico e auditoria. O painel nao deve misturar relato populacional com confirmacao oficial sem essa identificacao.</div>
+        <div class="official-detail-grid" style="margin-top:14px;">
+          <div class="official-detail-box">
+            <strong>Fonte e status</strong>
+            <ul>
+              <li>Fonte: ${escapeHtml(fonte)}</li>
+              <li>Status: ${statusLabel(status)}</li>
+              <li>Cobertura: ${escapeHtml(payload.cobertura || payload.uf || payload.modo || "Brasil")}</li>
+              <li>${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="color:var(--accent);">Abrir fonte oficial</a>` : "URL oficial: catalogada internamente"}</li>
+            </ul>
+          </div>
+          <div class="official-detail-box">
+            <strong>Indicadores acompanhados</strong>
+            <ul>${listItems(indicadores.length ? indicadores : doencas)}</ul>
+          </div>
+          <div class="official-detail-box">
+            <strong>Leitura operacional</strong>
+            <ul>
+              <li>${escapeHtml(payload.finalidade || payload.uso_no_saas || payload.entrega || payload.resumo || payload.mensagem || "Fonte usada como camada de contexto oficial.")}</li>
+              <li>${escapeHtml(payload.estrategia || payload.regra_operacional || "Atualizar por API ou pipeline assíncrono, expondo apenas agregados ao dashboard.")}</li>
+            </ul>
+          </div>
+          <div class="official-detail-box">
+            <strong>Cuidados e proximos passos</strong>
+            <ul>
+              <li>${escapeHtml(payload.motivo_cuidado || "Validar disponibilidade da fonte antes de usar em decisao publica.")}</li>
+              <li>Separar dado oficial confirmado, sinal colaborativo e estimativa IA.</li>
+              <li>Registrar data de coleta, fonte e status de atualizacao.</li>
+            </ul>
+          </div>
+        </div>
+      `;
+    }
+
     function showOfficialDetail(index) {
       const item = officialBrazilDetails[index];
       if (!item) return;
-      alert(`${item.title}\n\n${JSON.stringify(item.payload, null, 2)}`);
+      document.getElementById("detailsBody").innerHTML = officialDetailHtml(item.title, item.payload || {});
+      document.getElementById("institutionalNote").textContent = "Brasil Oficial: detalhes normalizados para tomada de decisao. Dados oficiais podem ficar temporariamente indisponiveis; nesse caso, o painel preserva rastreabilidade e nao inventa confirmacao.";
+      bottomVisible = true;
+      rightVisible = true;
+      updatePanels();
     }
 
     async function loadOfficialBrazil() {

@@ -68,7 +68,7 @@
         Pacote contratado
         <select id="pacote" onchange="atualizarPreco()">
           {% for codigo, pacote in pacotes.items %}
-          <option value="{{ codigo }}" data-mensal="{{ pacote.mensal }}" data-anual="{{ pacote.anual }}" data-usuarios="{{ pacote.usuarios }}" data-dispositivos="{{ pacote.dispositivos }}" data-setor="{{ pacote.setor }}" data-ciclos="{{ pacote.ciclos|join:',' }}">{{ pacote.label }} — {{ pacote.setor|title }}</option>
+          <option value="{{ codigo }}" data-mensal="{{ pacote.mensal|stringformat:'f' }}" data-anual="{{ pacote.anual|stringformat:'f' }}" data-usuarios="{{ pacote.usuarios }}" data-dispositivos="{{ pacote.dispositivos }}" data-setor="{{ pacote.setor }}" data-ciclos="{{ pacote.ciclos|join:',' }}">{{ pacote.label }} — {{ pacote.setor|title }}</option>
           {% endfor %}
         </select>
       </label>
@@ -92,7 +92,11 @@
 
   <script>
     function moeda(valor) {
-      return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    function numeroSeguro(valor) {
+      return Number(String(valor || "0").replace(",", "."));
     }
 
     function atualizarPreco() {
@@ -107,7 +111,7 @@
         document.getElementById("plano").value = ciclos[0];
       }
       const cicloAtual = document.getElementById("plano").value;
-      const valor = cicloAtual === "anual" ? Number(selected.dataset.anual) : Number(selected.dataset.mensal);
+      const valor = cicloAtual === "anual" ? numeroSeguro(selected.dataset.anual) : numeroSeguro(selected.dataset.mensal);
       document.getElementById("preco").innerText = `${moeda(valor)} / ${cicloAtual === "anual" ? "ano" : "mês"}`;
       document.getElementById("resumoPacote").innerText = `${selected.dataset.usuarios} usuários | ${selected.dataset.dispositivos} máquinas`;
     }
@@ -116,8 +120,17 @@
       const empresaId = localStorage.getItem("empresa_id");
       const plano = document.getElementById("plano").value;
       const pacote = document.getElementById("pacote").value;
+      const button = document.querySelector(".btn");
+
+      if (!empresaId || empresaId === "null" || empresaId === "undefined") {
+        alert("Entre com sua conta empresarial antes de ativar a assinatura.");
+        window.location.href = "/login-empresa/";
+        return;
+      }
 
       try {
+        button.disabled = true;
+        button.innerText = "Abrindo checkout seguro...";
         const res = await fetch(`/api/assinatura/${empresaId}/?plano=${plano}&pacote=${pacote}`, {
           method: "POST"
         });
@@ -125,11 +138,17 @@
         const data = await res.json();
         if (data.init_point) {
           window.location.href = data.init_point;
+        } else if (data.redirect) {
+          window.location.href = data.redirect;
         } else {
           alert(data.erro || "Erro ao gerar pagamento");
+          button.disabled = false;
+          button.innerText = "Ativar assinatura empresarial";
         }
       } catch (e) {
         alert("Erro ao conectar com o servidor");
+        button.disabled = false;
+        button.innerText = "Ativar assinatura empresarial";
       }
     }
 

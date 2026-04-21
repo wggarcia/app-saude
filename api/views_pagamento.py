@@ -10,6 +10,7 @@ from django.utils.timezone import now
 from datetime import timedelta
 from .planos import detalhes_pacote, preco_pacote, pacote_padrao, normalizar_ciclo, normalizar_codigo_pacote
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 
 
 def _sdk():
@@ -73,7 +74,11 @@ def criar_pagamento(request, empresa_id=None):
     if not empresa_id:
         return JsonResponse({"erro": "empresa não identificada"}, status=400)
 
-    empresa = Empresa.objects.get(id=empresa_id)
+    try:
+        empresa = Empresa.objects.get(id=empresa_id)
+    except ObjectDoesNotExist:
+        return JsonResponse({"erro": "Conta empresarial nao encontrada. Entre novamente pelo login empresarial."}, status=404)
+
     pacote_codigo = normalizar_codigo_pacote(request.GET.get("pacote", pacote_padrao()))
     plano = normalizar_ciclo(pacote_codigo, request.GET.get("plano", "mensal"))
     pacote = detalhes_pacote(pacote_codigo)
@@ -84,6 +89,9 @@ def criar_pagamento(request, empresa_id=None):
             "erro": "Contratos governamentais sao anuais e fechados por proposta institucional. Use o ambiente de contrato governamental.",
             "redirect": "/contrato-governo/",
         }, status=403)
+
+    if not valor or valor <= 0:
+        return JsonResponse({"erro": "Pacote sem valor de checkout configurado."}, status=400)
 
     empresa.plano = plano
     empresa.pacote_codigo = pacote_codigo
@@ -119,10 +127,18 @@ def criar_pagamento(request, empresa_id=None):
 
     try:
         response = _sdk().preference().create(preference_data)
+        preference = response.get("response", {})
+        init_point = preference.get("init_point") or preference.get("sandbox_init_point")
+
+        if not init_point:
+            return JsonResponse({
+                "erro": "Mercado Pago nao retornou link de checkout. Confira o token e a conta no painel de pagamento.",
+                "detalhes": preference.get("message") or response.get("status"),
+            }, status=502)
 
         return JsonResponse({
             "status": "ok",
-            "init_point": response["response"]["init_point"]
+            "init_point": init_point,
         })
 
     except Exception as e:
