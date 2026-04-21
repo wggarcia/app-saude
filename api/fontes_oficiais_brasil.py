@@ -18,6 +18,8 @@ _CACHE = {"created_at": 0.0, "payload": None}
 _POP_CACHE = {}
 _CACHE_TTL_SECONDS = 15 * 60
 POPULATION_YEAR = datetime.now().year - 1
+OFFICIAL_HTTP_TIMEOUT_SECONDS = 2.5
+OFFICIAL_PANEL_TIME_BUDGET_SECONDS = 10
 MUNICIPIOS_OFICIAIS_SENTINELA = [
     {"cidade": "Rio de Janeiro", "estado": "RJ", "total": 0},
     {"cidade": "São Paulo", "estado": "SP", "total": 0},
@@ -309,7 +311,7 @@ def _fetch_populacao_ibge(codigo_ibge):
         return _POP_CACHE[cache_key]
 
     url = f"https://apisidra.ibge.gov.br/values/t/6579/n6/{codigo_ibge}/v/9324/p/{POPULATION_YEAR}"
-    response = requests.get(url, timeout=10)
+    response = requests.get(url, timeout=OFFICIAL_HTTP_TIMEOUT_SECONDS)
     response.raise_for_status()
     data = response.json()
 
@@ -336,7 +338,7 @@ def _fetch_infodengue(codigo_ibge, disease, ano):
     response = requests.get(
         "https://info.dengue.mat.br/api/alertcity",
         params=params,
-        timeout=12,
+        timeout=OFFICIAL_HTTP_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
     data = response.json()
@@ -370,7 +372,7 @@ def _fetch_infogripe_brasil():
     ano = datetime.now().year
     url = f"https://info.gripe.fiocruz.br/data/detailed/1/2/{ano}/52/Brasil/weekly-incidence-curve"
     try:
-        response = requests.get(url, timeout=8)
+        response = requests.get(url, timeout=OFFICIAL_HTTP_TIMEOUT_SECONDS)
         response.raise_for_status()
     except Exception as exc:
         return {
@@ -435,8 +437,12 @@ def _fetch_infogripe_brasil():
 def _arboviroses_oficiais(municipios):
     ano = datetime.now().year
     resultado = []
+    started_at = time()
 
-    for row in municipios[:5]:
+    for row in municipios[:3]:
+        if time() - started_at > OFFICIAL_PANEL_TIME_BUDGET_SECONDS:
+            break
+
         municipio = _municipio_ibge(row.get("cidade"), row.get("estado"))
         if not municipio:
             continue
@@ -451,6 +457,8 @@ def _arboviroses_oficiais(municipios):
 
         doencas = []
         for disease in ["dengue", "chikungunya", "zika"]:
+            if time() - started_at > OFFICIAL_PANEL_TIME_BUDGET_SECONDS:
+                break
             try:
                 item = _fetch_infodengue(municipio["codigo_ibge"], disease, ano)
             except Exception:
