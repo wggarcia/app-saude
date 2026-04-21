@@ -8,7 +8,7 @@ from .models import Empresa, FinanceiroEventoSaaS
 from django.shortcuts import redirect, render
 from django.utils.timezone import now
 from datetime import timedelta
-from .planos import detalhes_pacote, preco_pacote, pacote_padrao
+from .planos import detalhes_pacote, preco_pacote, pacote_padrao, normalizar_ciclo, normalizar_codigo_pacote
 from django.conf import settings
 
 
@@ -73,12 +73,18 @@ def criar_pagamento(request, empresa_id=None):
     if not empresa_id:
         return JsonResponse({"erro": "empresa não identificada"}, status=400)
 
-    plano = request.GET.get("plano", "mensal")
-    pacote_codigo = request.GET.get("pacote", pacote_padrao())
+    empresa = Empresa.objects.get(id=empresa_id)
+    pacote_codigo = normalizar_codigo_pacote(request.GET.get("pacote", pacote_padrao()))
+    plano = normalizar_ciclo(pacote_codigo, request.GET.get("plano", "mensal"))
     pacote = detalhes_pacote(pacote_codigo)
     valor = preco_pacote(pacote_codigo, plano)
 
-    empresa = Empresa.objects.get(id=empresa_id)
+    if empresa.tipo_conta == Empresa.TIPO_GOVERNO or pacote["setor"] == "governo":
+        return JsonResponse({
+            "erro": "Contratos governamentais sao anuais e fechados por proposta institucional. Use o ambiente de contrato governamental.",
+            "redirect": "/contrato-governo/",
+        }, status=403)
+
     empresa.plano = plano
     empresa.pacote_codigo = pacote_codigo
     empresa.max_dispositivos = pacote["dispositivos"]

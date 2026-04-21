@@ -4,7 +4,7 @@ from django.contrib.auth.hashers import make_password
 from django.core.management.base import BaseCommand
 
 from api.models import DonoSaaS, Empresa
-from api.planos import detalhes_pacote, pacote_padrao
+from api.planos import detalhes_pacote, pacote_governo_padrao, pacote_padrao, normalizar_codigo_pacote
 
 
 def _env(name, default=""):
@@ -58,7 +58,9 @@ class Command(BaseCommand):
         email = _env(f"{env_prefix}_EMAIL").lower()
         senha = _env(f"{env_prefix}_PASSWORD")
         nome = _env(f"{env_prefix}_NOME", "SolusCRT")
-        pacote_codigo = _env(f"{env_prefix}_PACOTE", "national_1000" if acesso_governo else pacote_padrao())
+        pacote_codigo = normalizar_codigo_pacote(
+            _env(f"{env_prefix}_PACOTE", pacote_governo_padrao() if acesso_governo else pacote_padrao())
+        )
 
         if not email or not senha:
             ignorados.append(f"{env_prefix}: email/senha ausentes")
@@ -74,6 +76,7 @@ class Command(BaseCommand):
                 "tipo_conta": tipo_conta,
                 "acesso_governo": acesso_governo,
                 "pacote_codigo": pacote_codigo,
+                "plano": "anual" if acesso_governo else "mensal",
                 "max_dispositivos": pacote["dispositivos"],
                 "max_usuarios": pacote["usuarios"],
             },
@@ -86,6 +89,7 @@ class Command(BaseCommand):
             "tipo_conta": tipo_conta,
             "acesso_governo": acesso_governo,
             "pacote_codigo": pacote_codigo,
+            "plano": "anual" if acesso_governo else (empresa.plano or "mensal"),
             "max_dispositivos": pacote["dispositivos"],
             "max_usuarios": pacote["usuarios"],
             "sessao_ativa_chave": None,

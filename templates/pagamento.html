@@ -30,20 +30,20 @@
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">Contratação SaaS</div>
-      <h1>Pacotes formais por capacidade de operação.</h1>
-      <div class="muted">Cada pacote define quantos usuários e quantas máquinas a empresa pode ativar. Isso vale para hospitais, farmácias, operação empresarial e expansão regional.</div>
+      <div class="eyebrow">Contratação SaaS B2B</div>
+      <h1>Pacotes por setor e capacidade operacional.</h1>
+      <div class="muted">Cada pacote define o valor entregue por setor: saúde ocupacional, farmácias, hospitais e redes empresariais. Governo possui contratação separada por contrato anual fechado.</div>
       <div class="grid">
         <div class="metric"><span>Usuários</span><strong>5 a 1000</strong></div>
         <div class="metric"><span>Máquinas</span><strong>5 a 1000</strong></div>
-        <div class="metric"><span>Modelos</span><strong>Mensal ou anual</strong></div>
-        <div class="metric"><span>Expansão</span><strong>Escala por contrato</strong></div>
+        <div class="metric"><span>Modelos B2B</span><strong>Mensal ou anual</strong></div>
+        <div class="metric"><span>Governo</span><strong>Contrato anual</strong></div>
       </div>
       <div class="pack-list">
         {% for codigo, pacote in pacotes.items %}
         <div class="pack">
           <strong>{{ pacote.label }}</strong><br>
-          <span class="muted">{{ pacote.usuarios }} usuários | {{ pacote.dispositivos }} máquinas</span>
+          <span class="muted">{{ pacote.descricao }}<br>{{ pacote.usuarios }} usuários | {{ pacote.dispositivos }} máquinas</span>
         </div>
         {% endfor %}
       </div>
@@ -55,7 +55,7 @@
         Pacote contratado
         <select id="pacote" onchange="atualizarPreco()">
           {% for codigo, pacote in pacotes.items %}
-          <option value="{{ codigo }}" data-mensal="{{ pacote.mensal }}" data-anual="{{ pacote.anual }}" data-usuarios="{{ pacote.usuarios }}" data-dispositivos="{{ pacote.dispositivos }}">{{ pacote.label }}</option>
+          <option value="{{ codigo }}" data-mensal="{{ pacote.mensal }}" data-anual="{{ pacote.anual }}" data-usuarios="{{ pacote.usuarios }}" data-dispositivos="{{ pacote.dispositivos }}" data-setor="{{ pacote.setor }}" data-ciclos="{{ pacote.ciclos|join:',' }}">{{ pacote.label }} — {{ pacote.setor|title }}</option>
           {% endfor %}
         </select>
       </label>
@@ -68,11 +68,12 @@
       </label>
 
       <div class="price">
-        <strong id="preco">R$ 299,90 / mês</strong>
+        <strong id="preco">R$ 799,00 / mês</strong>
         <div class="muted" id="resumoPacote">5 usuários | 5 máquinas</div>
       </div>
 
-      <button class="btn" onclick="pagar()">Ativar Assinatura</button>
+      <button class="btn" onclick="pagar()">Ativar assinatura empresarial</button>
+      <div class="muted" style="margin-top:14px;">Contratações governamentais são feitas somente por proposta e contrato anual fechado.</div>
     </section>
   </main>
 
@@ -85,8 +86,16 @@
       const pacote = document.getElementById("pacote");
       const plano = document.getElementById("plano").value;
       const selected = pacote.options[pacote.selectedIndex];
-      const valor = plano === "anual" ? Number(selected.dataset.anual) : Number(selected.dataset.mensal);
-      document.getElementById("preco").innerText = `${moeda(valor)} / ${plano === "anual" ? "ano" : "mês"}`;
+      const ciclos = (selected.dataset.ciclos || "mensal,anual").split(",");
+      [...document.getElementById("plano").options].forEach((option) => {
+        option.disabled = !ciclos.includes(option.value);
+      });
+      if (!ciclos.includes(document.getElementById("plano").value)) {
+        document.getElementById("plano").value = ciclos[0];
+      }
+      const cicloAtual = document.getElementById("plano").value;
+      const valor = cicloAtual === "anual" ? Number(selected.dataset.anual) : Number(selected.dataset.mensal);
+      document.getElementById("preco").innerText = `${moeda(valor)} / ${cicloAtual === "anual" ? "ano" : "mês"}`;
       document.getElementById("resumoPacote").innerText = `${selected.dataset.usuarios} usuários | ${selected.dataset.dispositivos} máquinas`;
     }
 

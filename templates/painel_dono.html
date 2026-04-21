@@ -132,16 +132,7 @@
   </main>
 
   <script>
-    const pacoteOptions = {
-      starter_5: "Starter 5",
-      growth_10: "Growth 10",
-      scale_25: "Scale 25",
-      pro_50: "Pro 50",
-      enterprise_100: "Enterprise 100",
-      network_250: "Network 250",
-      grid_500: "Grid 500",
-      national_1000: "National 1000",
-    };
+    const pacoteOptions = {{ pacotes_json|safe }};
 
     let currentFilter = "all";
     let revenueChart = null;
@@ -154,7 +145,12 @@
     }
 
     function pacoteSelect(current) {
-      return `<select data-role="pacote">${Object.entries(pacoteOptions).map(([value, label]) => `<option value="${value}" ${value === current ? "selected" : ""}>${label}</option>`).join("")}</select>`;
+      return `<select data-role="pacote">${Object.entries(pacoteOptions).map(([value, pacote]) => `<option value="${value}" ${value === current ? "selected" : ""}>${pacote.label} (${pacote.setor})</option>`).join("")}</select>`;
+    }
+
+    function planoSelect(cliente) {
+      const ciclos = cliente.ciclos_permitidos || ["mensal", "anual"];
+      return `<select data-role="plano" ${cliente.segmento === "governo" ? "disabled" : ""}>${ciclos.map((ciclo) => `<option value="${ciclo}" ${cliente.plano === ciclo ? "selected" : ""}>${ciclo === "anual" ? "Anual" : "Mensal"}</option>`).join("")}</select>`;
     }
 
     function setActiveTab(filter) {
@@ -247,15 +243,13 @@
           </div>
           <div class="muted">${cliente.email}</div>
           <div class="muted small">${cliente.segmento} | ${cliente.pacote_label} | ${cliente.plano || "sem ciclo"}</div>
+          ${cliente.segmento === "governo" ? '<div class="muted small">Contrato governamental anual fechado, sem cobrança mensal simples.</div>' : ''}
           <div class="muted small">${cliente.usuarios_ativos}/${cliente.max_usuarios} usuários | ${cliente.dispositivos_ativos}/${cliente.max_dispositivos} dispositivos | ${cliente.registros_24h} registros em 24h</div>
           <div class="muted small">Uso usuários ${cliente.uso_usuarios.toFixed(1)}% | Uso dispositivos ${cliente.uso_dispositivos.toFixed(1)}% | Suspeitos 24h ${cliente.suspeitos_24h}</div>
           <div class="muted small">Faturamento estimado ${money(cliente.faturamento_estimado_cliente)} | expira ${cliente.data_expiracao ? new Date(cliente.data_expiracao).toLocaleDateString("pt-BR") : "não definido"}</div>
           <div class="controls">
             ${pacoteSelect(cliente.pacote_codigo)}
-            <select data-role="plano">
-              <option value="mensal" ${cliente.plano === "mensal" ? "selected" : ""}>Mensal</option>
-              <option value="anual" ${cliente.plano === "anual" ? "selected" : ""}>Anual</option>
-            </select>
+            ${planoSelect(cliente)}
             <select data-role="ativo">
               <option value="true" ${cliente.ativo ? "selected" : ""}>Ativo</option>
               <option value="false" ${!cliente.ativo ? "selected" : ""}>Inativo</option>
@@ -267,7 +261,7 @@
           <div class="actions">
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'marcar_cobranca')">Cobrança</button>
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'marcar_inadimplente')">Inadimplência</button>
-            <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'renovar_30')">+30 dias</button>
+            ${cliente.segmento === "governo" ? "" : `<button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'renovar_30')">+30 dias</button>`}
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'renovar_365')">+365 dias</button>
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'reativar')">Reativar</button>
           </div>

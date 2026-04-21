@@ -11,7 +11,7 @@ import json
 from .models import RegistroSintoma, DispositivoAutorizado, EmpresaUsuario, DonoSaaS, FinanceiroEventoSaaS, DonoAuditoriaAcao, AlertaGovernamental
 from .inteligencia import nivel_risco
 from .models import Empresa
-from .planos import PACOTES_SAAS, detalhes_pacote
+from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_ciclo, normalizar_codigo_pacote
 from .push_service import enviar_alerta_governamental, push_disponivel
 from .governanca import registrar_auditoria_institucional
 import csv
@@ -672,6 +672,7 @@ def console_operacional(request):
         return redirect("/operacao-central/")
     return render(request, "painel_dono.html", {
         "owner_nome": dono.nome,
+        "pacotes_json": json.dumps(PACOTES_SAAS),
     })
 
 
@@ -698,7 +699,11 @@ def api_dono_resumo(request):
     por_pacote = []
 
     for codigo, pacote in PACOTES_SAAS.items():
-        total = ativas.filter(pacote_codigo=codigo).count()
+        total = sum(
+            1
+            for empresa in ativas
+            if normalizar_codigo_pacote(empresa.pacote_codigo) == codigo
+        )
         por_pacote.append({
             "codigo": codigo,
             "label": pacote["label"],
@@ -706,7 +711,8 @@ def api_dono_resumo(request):
             "usuarios": pacote["usuarios"],
             "dispositivos": pacote["dispositivos"],
         })
-        faturamento_mensal += total * pacote["mensal"]
+        mensal_equivalente = (pacote["anual"] / 12) if pacote.get("ciclos") == ["anual"] else pacote["mensal"]
+        faturamento_mensal += total * mensal_equivalente
         faturamento_anual += total * pacote["anual"]
 
     carga_estimada_mb_dia = round((registros_24h.count() * 0.012) + (dispositivos_ativos.count() * 0.004), 2)
@@ -769,13 +775,16 @@ def api_dono_resumo(request):
             dias_para_expirar = max((empresa.data_expiracao - agora).days, 0)
         status_contrato = _status_contrato(empresa, agora)
         segmento = _segmento_empresa(empresa)
-        pacote = detalhes_pacote(empresa.pacote_codigo)
-        faturamento_estimado_cliente = pacote["anual"] if empresa.plano == "anual" else pacote["mensal"]
+        pacote_codigo_normalizado = normalizar_codigo_pacote(empresa.pacote_codigo)
+        pacote = detalhes_pacote(pacote_codigo_normalizado)
+        plano_normalizado = "anual" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else normalizar_ciclo(pacote_codigo_normalizado, empresa.plano)
+        faturamento_estimado_cliente = pacote["anual"] if plano_normalizado == "anual" else pacote["mensal"]
+        faturamento_mensal_equivalente = pacote["anual"] / 12 if plano_normalizado == "anual" else pacote["mensal"]
 
         carteira = carteira_governo if segmento == "governo" else carteira_empresa
         carteira["clientes"] += 1
         carteira["ativos"] += 1 if empresa.ativo else 0
-        carteira["faturamento_mensal_estimado"] += pacote["mensal"] if empresa.ativo else 0
+        carteira["faturamento_mensal_estimado"] += faturamento_mensal_equivalente if empresa.ativo else 0
         carteira["registros_24h"] += empresa_registros_24h
 
         mensagens = []
@@ -811,9 +820,11 @@ def api_dono_resumo(request):
             "tipo_conta": empresa.tipo_conta,
             "segmento": segmento,
             "ativo": empresa.ativo,
-            "pacote_codigo": empresa.pacote_codigo,
+            "pacote_codigo": pacote_codigo_normalizado,
             "pacote_label": pacote["label"],
-            "plano": empresa.plano,
+            "setor_pacote": pacote.get("setor"),
+            "ciclos_permitidos": pacote.get("ciclos", ["mensal", "anual"]),
+            "plano": plano_normalizado,
             "max_usuarios": empresa.max_usuarios,
             "max_dispositivos": empresa.max_dispositivos,
             "data_expiracao": empresa.data_expiracao.isoformat() if empresa.data_expiracao else None,
@@ -944,9 +955,9 @@ def api_dono_atualizar_cliente(request):
     if not empresa:
         return JsonResponse({"erro": "cliente não encontrado"}, status=404)
 
-    pacote_codigo = dados.get("pacote_codigo") or empresa.pacote_codigo
+    pacote_codigo = normalizar_codigo_pacote(dados.get("pacote_codigo") or empresa.pacote_codigo)
     pacote = detalhes_pacote(pacote_codigo)
-    plano = dados.get("plano") or empresa.plano or "mensal"
+    plano = "anual" if empresa.tipo_conta == Empresa.TIPO_GOVERNO or pacote.get("setor") == "governo" else normalizar_ciclo(pacote_codigo, dados.get("plano") or empresa.plano or "mensal")
     ativo_raw = dados.get("ativo", empresa.ativo)
     if isinstance(ativo_raw, str):
         ativo = ativo_raw.lower() == "true"
@@ -1001,7 +1012,8 @@ def api_dono_financeiro_acao(request):
         return JsonResponse({"erro": "ação obrigatória"}, status=400)
 
     pacote = detalhes_pacote(empresa.pacote_codigo)
-    valor = pacote["anual"] if empresa.plano == "anual" else pacote["mensal"]
+    plano_atual = "anual" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else normalizar_ciclo(empresa.pacote_codigo, empresa.plano)
+    valor = pacote["anual"] if plano_atual == "anual" else pacote["mensal"]
     observacao = ""
 
     if acao == "marcar_cobranca":
@@ -1009,7 +1021,7 @@ def api_dono_financeiro_acao(request):
             empresa=empresa,
             tipo_evento="cobranca_manual",
             pacote_codigo=empresa.pacote_codigo,
-            ciclo=empresa.plano,
+            ciclo=plano_atual,
             valor=valor,
             status="cobranca",
             observacao="Cobrança manual iniciada pelo console operacional",
@@ -1022,7 +1034,7 @@ def api_dono_financeiro_acao(request):
             empresa=empresa,
             tipo_evento="inadimplencia",
             pacote_codigo=empresa.pacote_codigo,
-            ciclo=empresa.plano,
+            ciclo=plano_atual,
             valor=valor,
             status="inadimplente",
             observacao="Cliente marcado como inadimplente pelo console operacional",
@@ -1031,20 +1043,22 @@ def api_dono_financeiro_acao(request):
     elif acao == "reativar":
         empresa.ativo = True
         if not empresa.data_expiracao or empresa.data_expiracao < timezone.now():
-            dias = 365 if empresa.plano == "anual" else 30
+            dias = 365 if plano_atual == "anual" else 30
             empresa.data_expiracao = timezone.now() + timedelta(days=dias)
         empresa.save(update_fields=["ativo", "data_expiracao"])
         FinanceiroEventoSaaS.objects.create(
             empresa=empresa,
             tipo_evento="reativacao_manual",
             pacote_codigo=empresa.pacote_codigo,
-            ciclo=empresa.plano,
+            ciclo=plano_atual,
             valor=valor,
             status="manual",
             observacao="Cliente reativado pelo console operacional",
         )
         observacao = "Cliente reativado"
     elif acao == "renovar_30":
+        if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
+            return JsonResponse({"erro": "governo possui somente contrato anual fechado"}, status=400)
         base = empresa.data_expiracao if empresa.data_expiracao and empresa.data_expiracao > timezone.now() else timezone.now()
         empresa.ativo = True
         empresa.data_expiracao = base + timedelta(days=30)

@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 import secrets
 from django.shortcuts import redirect
 from django.utils import timezone
-from .planos import pacote_padrao, detalhes_pacote
+from .planos import pacote_padrao, detalhes_pacote, normalizar_codigo_pacote
 
 
 COOKIE_MAX_AGE = 7 * 24 * 60 * 60
@@ -336,7 +336,7 @@ def registrar_empresa(request):
         nome=nome,
         email=email,
         senha=make_password(senha),
-        pacote_codigo=pacote_padrao(),
+        pacote_codigo=normalizar_codigo_pacote(pacote_padrao()),
         max_dispositivos=1,
         max_usuarios=1,
     )

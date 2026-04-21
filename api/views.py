@@ -295,11 +295,14 @@ def _empresa_app_publico():
             "senha": make_password("publico_app"),
             "ativo": True,
             "plano": "publico",
-            "pacote_codigo": "national_1000",
+            "pacote_codigo": "governo_estado",
             "max_usuarios": 1000,
             "max_dispositivos": 1000,
         },
     )
+    if empresa.pacote_codigo != "governo_estado":
+        empresa.pacote_codigo = "governo_estado"
+        empresa.save(update_fields=["pacote_codigo"])
     return empresa
 
 
@@ -841,9 +844,9 @@ def alertas(request):
 # ================= PAGAMENTO =================
 
 def tela_pagamento(request):
-    from .planos import PACOTES_SAAS
+    from .planos import pacotes_por_setor
     return render(request, "pagamento.html", {
-        "pacotes": PACOTES_SAAS,
+        "pacotes": pacotes_por_setor(incluir_governo=False),
     })
 
 
