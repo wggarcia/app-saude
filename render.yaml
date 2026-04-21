@@ -7,6 +7,8 @@ services:
     startCommand: "./start.sh"
     healthCheckPath: /api/public/resumo
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: DJANGO_ENV
         value: production
       - key: DJANGO_DEBUG
