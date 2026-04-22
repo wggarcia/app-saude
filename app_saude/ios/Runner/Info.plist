@@ -61,12 +61,8 @@
 		</dict>
 	</dict>
 
-	<!-- 🔥 LOCALIZAÇÃO -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Precisamos da sua localizacao para identificar riscos e hotspots na sua regiao.</string>
-
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Usamos sua localizacao para alimentar o radar epidemiologico com seguranca.</string>
+	<string>O SolusCRT Saude usa sua localizacao aproximada enquanto o app esta aberto para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial.</string>
 
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
@@ -76,11 +72,6 @@
 		<string>remote-notification</string>
 	</array>
 
-	<!-- 🔥 MICROFONE -->
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Este app usa o microfone para captura de áudio.</string>
-
-	<!-- 🔥 UI -->
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
