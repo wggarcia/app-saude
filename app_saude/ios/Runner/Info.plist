@@ -39,6 +39,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
 	<key>GoogleMapsApiKey</key>
 	<string>$(GOOGLE_MAPS_IOS_KEY)</string>
 
