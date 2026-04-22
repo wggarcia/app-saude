@@ -286,6 +286,12 @@ class _MapAlertBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final recorte = [
+      alerta['bairro']?.toString(),
+      alerta['cidade']?.toString(),
+      alerta['estado']?.toString(),
+    ].where((item) => item != null && item.isNotEmpty).join(' / ');
+
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: () {
@@ -319,6 +325,16 @@ class _MapAlertBanner extends StatelessWidget {
                     height: 1.45,
                   ),
                 ),
+                if (recorte.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Recorte: $recorte',
+                    style: const TextStyle(
+                      color: Color(0xFFFFD166),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -84,6 +84,7 @@ class PublicApiService {
     String? estado,
     String? bairro,
     bool incluirGerais = true,
+    bool usarFallbackEstado = true,
   }) async {
     final query = <String, dynamic>{};
     if (cidade != null && cidade.isNotEmpty) {
@@ -103,7 +104,20 @@ class PublicApiService {
       return <dynamic>[];
     }
     final data = _decodeObject(response.body);
-    return (data['alertas'] as List<dynamic>? ?? <dynamic>[]);
+    final alertas = (data['alertas'] as List<dynamic>? ?? <dynamic>[]);
+    if (alertas.isEmpty &&
+        usarFallbackEstado &&
+        estado != null &&
+        estado.isNotEmpty &&
+        ((cidade != null && cidade.isNotEmpty) ||
+            (bairro != null && bairro.isNotEmpty))) {
+      return fetchAlertas(
+        estado: estado,
+        incluirGerais: incluirGerais,
+        usarFallbackEstado: false,
+      );
+    }
+    return alertas;
   }
 
   static Future<Map<String, dynamic>> enviarSintomas({

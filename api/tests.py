@@ -264,6 +264,34 @@ class PublicApiTests(TestCase):
         self.assertEqual(len(response_padrao.json()["alertas"]), 1)
         self.assertEqual(response_restrita.json()["alertas"], [])
 
+    def test_alerta_publico_estadual_lista_alerta_municipal_do_estado(self):
+        governo = Empresa.objects.create(
+            nome="Governo RJ",
+            email="gov-alerta-niteroi@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            max_dispositivos=1,
+            max_usuarios=1,
+        )
+        AlertaGovernamental.objects.create(
+            empresa=governo,
+            titulo="Alerta Niteroi",
+            mensagem="Mensagem para Niteroi",
+            estado="RJ",
+            cidade="Niterói",
+            bairro="Icaraí",
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+            ativo=True,
+        )
+
+        response_estado = Client().get("/api/public/alertas?estado=RJ")
+        response_outra_cidade = Client().get("/api/public/alertas?estado=RJ&cidade=Rio%20de%20Janeiro")
+
+        self.assertEqual(len(response_estado.json()["alertas"]), 1)
+        self.assertEqual(response_outra_cidade.json()["alertas"], [])
+
 
 class GovernanceTests(TestCase):
     def setUp(self):

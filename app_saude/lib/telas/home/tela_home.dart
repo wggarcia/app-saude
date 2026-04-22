@@ -674,6 +674,11 @@ class _GovernmentAlertsCard extends StatelessWidget {
             const SizedBox(height: 12),
             ...alertas.take(3).map((item) {
               final alerta = item as Map<String, dynamic>;
+              final recorte = [
+                alerta['bairro']?.toString(),
+                alerta['cidade']?.toString(),
+                alerta['estado']?.toString(),
+              ].where((item) => item != null && item.isNotEmpty).join(' / ');
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: InkWell(
@@ -717,6 +722,16 @@ class _GovernmentAlertsCard extends StatelessWidget {
                               style: const TextStyle(
                                   color: Color(0xFF9CC4DB), height: 1.4),
                             ),
+                            if (recorte.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'Recorte: $recorte',
+                                style: const TextStyle(
+                                  color: Color(0xFFFFD166),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 8),
                             const Text(
                               'Toque para abrir o comunicado completo',
