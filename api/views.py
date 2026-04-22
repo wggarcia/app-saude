@@ -72,6 +72,7 @@ def _state_terms(value):
 
 JANELA_ESTABILIDADE_FOCO_DIAS = 10
 JANELA_DECAIMENTO_FOCO_DIAS = 30
+PESO_MINIMO_FOCO_PUBLICO = 0.01
 
 
 def _peso_temporal_publico(day, agora=None):
@@ -84,10 +85,11 @@ def _peso_temporal_publico(day, agora=None):
     if dias <= JANELA_ESTABILIDADE_FOCO_DIAS:
         return 1.0
     if dias >= JANELA_DECAIMENTO_FOCO_DIAS:
-        return 0.0
+        return PESO_MINIMO_FOCO_PUBLICO
     janela_queda = JANELA_DECAIMENTO_FOCO_DIAS - JANELA_ESTABILIDADE_FOCO_DIAS
     dias_em_queda = dias - JANELA_ESTABILIDADE_FOCO_DIAS
-    return round(max(0.0, 1 - (dias_em_queda / janela_queda)), 3)
+    queda = dias_em_queda / janela_queda
+    return round(max(PESO_MINIMO_FOCO_PUBLICO, 1 - (queda * (1 - PESO_MINIMO_FOCO_PUBLICO))), 3)
 
 
 def _indice_temporal_publico(queryset, agora=None):
@@ -1067,7 +1069,7 @@ def app_resumo_publico(request):
             "crescimento_7d": crescimento,
             "suspeitos_24h": ultimas_24h.filter(suspeito=True).count(),
             "nivel_nacional": nivel_nacional,
-            "decaimento_temporal": "indice ativo fica estavel por 10 dias sem novos envios e depois reduz gradualmente ate zerar em 30 dias, evitando falsa queda precoce",
+            "decaimento_temporal": "indice ativo fica estavel por 10 dias sem novos envios e depois reduz gradualmente ate 1% em 30 dias, evitando falsa queda precoce",
         },
         "semaforo": _semaforo_publico(nivel_nacional),
         "alerta_publico": _alerta_publico(nivel_nacional, crescimento, top_grupo),
@@ -1091,7 +1093,7 @@ def app_radar_local(request):
     bairro = request.GET.get("bairro")
 
     geo = {}
-    if latitude and longitude:
+    if latitude and longitude and not (cidade and estado and bairro):
         geo = obter_endereco(latitude, longitude)
         cidade = cidade or geo.get("cidade")
         estado = estado or geo.get("estado")
@@ -1164,7 +1166,7 @@ def app_radar_local(request):
             "bairro_registros_7d": atuais_bairro_7d.count(),
             "bairro_registros_30d": atuais_bairro.count(),
             "grupo_top": grupo_top,
-            "decaimento_temporal": "sem novos envios, o indice local permanece estavel por 10 dias e depois cai de forma gradual ate 30 dias para evitar conclusoes falsas",
+            "decaimento_temporal": "sem novos envios, o indice local permanece estavel por 10 dias e depois cai de forma gradual ate 1% em 30 dias para evitar conclusoes falsas",
         },
         "semaforo": _semaforo_publico(nivel),
         "alerta_publico": _alerta_publico(nivel, crescimento, grupo_top),

@@ -393,6 +393,6 @@ class TemporalDecayTests(TestCase):
         trinta_dias = _indice_temporal_publico(qs, agora + timedelta(days=30))
 
         self.assertEqual(atual, 4.75)
-        self.assertEqual(dez_dias, 3.25)
+        self.assertEqual(dez_dias, 3.27)
         self.assertGreater(dez_dias, vinte_dias)
-        self.assertEqual(trinta_dias, 0)
+        self.assertEqual(trinta_dias, 0.05)
