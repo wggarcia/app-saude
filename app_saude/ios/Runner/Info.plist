@@ -67,6 +67,9 @@
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>O SolusCRT Saude usa permissao de localizacao para identificar sua regiao epidemiologica, exibir riscos proximos e registrar sintomas com recorte territorial. O app nao faz rastreamento para publicidade.</string>
 
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>O SolusCRT Saude usa permissao de localizacao para identificar sua regiao epidemiologica, exibir riscos proximos e registrar sintomas com recorte territorial. O app nao faz rastreamento para publicidade.</string>
+
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
 
