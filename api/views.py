@@ -1264,17 +1264,27 @@ def app_alertas_publicos(request):
     cidade = request.GET.get("cidade")
     estado = request.GET.get("estado")
     bairro = request.GET.get("bairro")
+    incluir_gerais = request.GET.get("incluir_gerais", "1").lower() not in {"0", "false", "nao", "não"}
 
     alertas = AlertaGovernamental.objects.filter(
         ativo=True,
         status=AlertaGovernamental.STATUS_PUBLICADO,
     ).order_by("-criado_em")
     if estado:
-        alertas = alertas.filter(Q(estado__isnull=True) | Q(estado="") | Q(estado__in=_state_terms(estado)))
+        estado_filter = Q(estado__in=_state_terms(estado))
+        if incluir_gerais:
+            estado_filter |= Q(estado__isnull=True) | Q(estado="")
+        alertas = alertas.filter(estado_filter)
     if cidade:
-        alertas = alertas.filter(Q(cidade__isnull=True) | Q(cidade="") | Q(cidade=cidade))
+        cidade_filter = Q(cidade=cidade)
+        if incluir_gerais:
+            cidade_filter |= Q(cidade__isnull=True) | Q(cidade="")
+        alertas = alertas.filter(cidade_filter)
     if bairro:
-        alertas = alertas.filter(Q(bairro__isnull=True) | Q(bairro="") | Q(bairro=bairro))
+        bairro_filter = Q(bairro=bairro)
+        if incluir_gerais:
+            bairro_filter |= Q(bairro__isnull=True) | Q(bairro="")
+        alertas = alertas.filter(bairro_filter)
 
     return JsonResponse({
         "alertas": [

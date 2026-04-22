@@ -4,24 +4,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AlertaInboxService {
   static const _seenKey = 'soluscrt_seen_government_alerts_v1';
+  static List<int> _memorySeen = <int>[];
 
   static Future<List<int>> _loadSeen() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_seenKey);
       if (raw == null || raw.isEmpty) {
-        return <int>[];
+        return _memorySeen;
       }
       final list = (jsonDecode(raw) as List<dynamic>)
           .map((item) => item as int)
           .toList();
+      _memorySeen = list;
       return list;
     } catch (_) {
-      return <int>[];
+      return _memorySeen;
     }
   }
 
   static Future<void> _saveSeen(List<int> ids) async {
+    _memorySeen = ids;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_seenKey, jsonEncode(ids));
@@ -45,5 +48,10 @@ class AlertaInboxService {
     }
 
     return newAlerts;
+  }
+
+  static Future<void> forgetAlert(int id) async {
+    final seen = await _loadSeen();
+    await _saveSeen(seen.where((item) => item != id).toList());
   }
 }

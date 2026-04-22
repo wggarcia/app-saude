@@ -18,6 +18,7 @@ class _TelaMapaState extends State<TelaMapa> {
   Map<String, dynamic>? radarLocal;
   Map<String, dynamic>? radarAtual;
   Map<String, dynamic>? regiaoBase;
+  List<dynamic> alertasPublicos = const [];
   String modoMonitoramento = 'base';
   bool loading = true;
   String? notice;
@@ -83,6 +84,7 @@ class _TelaMapaState extends State<TelaMapa> {
       final localPreferido =
           radarPreferido['local'] as Map<String, dynamic>? ?? {};
       List<dynamic> mapa;
+      List<dynamic> alertas;
       try {
         mapa = await PublicApiService.fetchMapa(
           cidade: localPreferido['cidade']?.toString(),
@@ -94,6 +96,15 @@ class _TelaMapaState extends State<TelaMapa> {
       } catch (_) {
         mapa = const [];
       }
+      try {
+        alertas = await PublicApiService.fetchAlertas(
+          cidade: localPreferido['cidade']?.toString(),
+          estado: localPreferido['estado']?.toString(),
+          bairro: localPreferido['bairro']?.toString(),
+        );
+      } catch (_) {
+        alertas = const [];
+      }
 
       if (!mounted) {
         return;
@@ -103,6 +114,7 @@ class _TelaMapaState extends State<TelaMapa> {
         radarLocal = radarPreferido;
         this.radarAtual = radarAtual;
         regiaoBase = updatedBase;
+        alertasPublicos = alertas;
         modoMonitoramento = modo;
         loading = false;
         notice = mapa.isEmpty
@@ -119,6 +131,7 @@ class _TelaMapaState extends State<TelaMapa> {
         radarLocal = null;
         radarAtual = null;
         regiaoBase = null;
+        alertasPublicos = const [];
         notice =
             'Nao foi possivel atualizar o radar local agora. O mapa publico continua disponivel para consulta.';
         loading = false;
@@ -206,6 +219,15 @@ class _TelaMapaState extends State<TelaMapa> {
                       onChangedModo: _alterarModo,
                     ),
                   ),
+                if (alertasPublicos.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                    child: _MapAlertBanner(
+                      alerta: Map<String, dynamic>.from(
+                        alertasPublicos.first as Map,
+                      ),
+                    ),
+                  ),
                 Expanded(
                   child: FlutterMap(
                     options: MapOptions(
@@ -215,7 +237,8 @@ class _TelaMapaState extends State<TelaMapa> {
                     children: [
                       TileLayer(
                         urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                        subdomains: const ['a', 'b', 'c', 'd'],
                         userAgentPackageName: 'com.soluscrt.saude',
                       ),
                       MarkerLayer(markers: markers),
@@ -247,6 +270,79 @@ class _NoticeCard extends StatelessWidget {
               child: Text(
                 message,
                 style: const TextStyle(color: Color(0xFFBEE9FF), height: 1.35),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MapAlertBanner extends StatelessWidget {
+  const _MapAlertBanner({required this.alerta});
+
+  final Map<String, dynamic> alerta;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: () {
+        showModalBottomSheet<void>(
+          context: context,
+          backgroundColor: const Color(0xFF0B2333),
+          builder: (context) => Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Comunicado governamental',
+                  style: TextStyle(color: Color(0xFFFFD166), fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  alerta['titulo']?.toString() ?? 'Alerta publico',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  alerta['mensagem']?.toString() ?? '',
+                  style: const TextStyle(
+                    color: Color(0xFFBEE9FF),
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF3B2A12),
+          borderRadius: BorderRadius.circular(22),
+          border:
+              Border.all(color: const Color(0xFFFFD166).withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.campaign_outlined, color: Color(0xFFFFD166)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                alerta['titulo']?.toString() ?? 'Comunicado do governo',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
@@ -400,6 +496,7 @@ class _HotspotMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visual = _FocusVisual.fromItem(item);
     return GestureDetector(
       onTap: () {
         showModalBottomSheet<void>(
@@ -450,19 +547,48 @@ class _HotspotMarker extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFE85D5D),
-              borderRadius: BorderRadius.circular(999),
-              boxShadow: const [
+              gradient: LinearGradient(
+                colors: [
+                  visual.color,
+                  Color.lerp(visual.color, Colors.black, 0.22) ?? visual.color,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x55E85D5D),
+                  color: visual.color.withValues(alpha: 0.35),
                   blurRadius: 18,
-                  spreadRadius: 6,
+                  spreadRadius: 4,
                 ),
               ],
             ),
-            child: const Icon(Icons.warning_amber_rounded, color: Colors.white),
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                Positioned(
+                  bottom: -10,
+                  child: Transform.rotate(
+                    angle: 0.785,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: Color.lerp(visual.color, Colors.black, 0.18),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                ),
+                Icon(visual.icon, color: Colors.white, size: 28),
+              ],
+            ),
           ),
           const SizedBox(height: 4),
           Container(
@@ -472,7 +598,7 @@ class _HotspotMarker extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '${item['indice_ativo'] ?? item['total']}',
+              visual.label,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -481,6 +607,45 @@ class _HotspotMarker extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FocusVisual {
+  const _FocusVisual({
+    required this.icon,
+    required this.color,
+    required this.label,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+
+  static _FocusVisual fromItem(Map<String, dynamic> item) {
+    final grupo = (item['grupo_dominante'] ?? '').toString().toLowerCase();
+    final faixa = ((item['semaforo'] as Map<String, dynamic>?)?['faixa'] ?? '')
+        .toString()
+        .toLowerCase();
+    final indice = item['indice_ativo'] ?? item['total'] ?? 0;
+    final icon = switch (grupo) {
+      String value when value.contains('resp') => Icons.coronavirus,
+      String value when value.contains('arb') || value.contains('deng') =>
+        Icons.bug_report,
+      String value when value.contains('alert') => Icons.emergency,
+      String value when value.contains('leve') => Icons.healing,
+      _ => Icons.biotech,
+    };
+    final color = switch (faixa) {
+      String value when value.contains('vermel') => const Color(0xFFE94747),
+      String value when value.contains('laranja') => const Color(0xFFFF8A3D),
+      String value when value.contains('amarel') => const Color(0xFFFFC857),
+      _ => const Color(0xFF28C7B7),
+    };
+    return _FocusVisual(
+      icon: icon,
+      color: color,
+      label: '$indice',
     );
   }
 }

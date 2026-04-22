@@ -239,6 +239,31 @@ class PublicApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()["alertas"]), 1)
 
+    def test_alerta_publico_local_inclui_comunicado_geral_por_padrao(self):
+        governo = Empresa.objects.create(
+            nome="Governo Geral",
+            email="gov-alerta-geral@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            max_dispositivos=1,
+            max_usuarios=1,
+        )
+        AlertaGovernamental.objects.create(
+            empresa=governo,
+            titulo="Alerta Brasil",
+            mensagem="Mensagem geral para a população",
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+            ativo=True,
+        )
+
+        response_padrao = Client().get("/api/public/alertas?estado=RJ&cidade=Rio%20de%20Janeiro")
+        response_restrita = Client().get("/api/public/alertas?estado=RJ&cidade=Rio%20de%20Janeiro&incluir_gerais=0")
+
+        self.assertEqual(len(response_padrao.json()["alertas"]), 1)
+        self.assertEqual(response_restrita.json()["alertas"], [])
+
 
 class GovernanceTests(TestCase):
     def setUp(self):
@@ -317,7 +342,7 @@ class TemporalDecayTests(TestCase):
             senha=make_password("123456"),
             ativo=True,
         )
-        agora = timezone.now()
+        agora = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
         for dias in [0, 3, 7, 10, 15]:
             registro = RegistroSintoma.objects.create(
                 empresa=empresa,

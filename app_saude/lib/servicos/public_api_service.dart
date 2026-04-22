@@ -83,6 +83,7 @@ class PublicApiService {
     String? cidade,
     String? estado,
     String? bairro,
+    bool incluirGerais = true,
   }) async {
     final query = <String, dynamic>{};
     if (cidade != null && cidade.isNotEmpty) {
@@ -94,6 +95,7 @@ class PublicApiService {
     if (bairro != null && bairro.isNotEmpty) {
       query['bairro'] = bairro;
     }
+    query['incluir_gerais'] = incluirGerais;
 
     final response =
         await http.get(_uri('/api/public/alertas', query)).timeout(_timeout);

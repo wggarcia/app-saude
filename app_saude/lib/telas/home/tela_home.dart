@@ -181,11 +181,18 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao> {
 
   Future<void> _notificarNovosAlertas(List<dynamic> alertas) async {
     final novos = await AlertaInboxService.captureNewAlerts(alertas);
-    if (!mounted || novos.isEmpty) {
+    await _abrirAlertaSeExistir(novos, permitirLembrarDepois: true);
+  }
+
+  Future<void> _abrirAlertaSeExistir(
+    List<Map<String, dynamic>> alertas, {
+    required bool permitirLembrarDepois,
+  }) async {
+    if (!mounted || alertas.isEmpty) {
       return;
     }
 
-    final alerta = novos.first;
+    final alerta = alertas.first;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -204,6 +211,19 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao> {
               style: const TextStyle(color: Color(0xFFBEE9FF), height: 1.4),
             ),
             actions: [
+              if (permitirLembrarDepois)
+                TextButton(
+                  onPressed: () async {
+                    final id = (alerta['id'] as num?)?.toInt();
+                    if (id != null) {
+                      await AlertaInboxService.forgetAlert(id);
+                    }
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: const Text('Lembrar depois'),
+                ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Fechar'),
@@ -315,7 +335,13 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao> {
                 if (!loading) _PublicAlertCard(alerta: alertaPublico),
                 const SizedBox(height: 16),
                 if (!loading && alertasPublicos.isNotEmpty)
-                  _GovernmentAlertsCard(alertas: alertasPublicos),
+                  _GovernmentAlertsCard(
+                    alertas: alertasPublicos,
+                    onOpenAlert: (alerta) => _abrirAlertaSeExistir(
+                      [alerta],
+                      permitirLembrarDepois: false,
+                    ),
+                  ),
                 if (!loading && alertasPublicos.isNotEmpty)
                   const SizedBox(height: 16),
                 if (!loading) _GuidanceCard(orientacao: orientacao),
@@ -621,9 +647,13 @@ class _GuidanceCard extends StatelessWidget {
 }
 
 class _GovernmentAlertsCard extends StatelessWidget {
-  const _GovernmentAlertsCard({required this.alertas});
+  const _GovernmentAlertsCard({
+    required this.alertas,
+    required this.onOpenAlert,
+  });
 
   final List<dynamic> alertas;
+  final ValueChanged<Map<String, dynamic>> onOpenAlert;
 
   @override
   Widget build(BuildContext context) {
@@ -646,25 +676,57 @@ class _GovernmentAlertsCard extends StatelessWidget {
               final alerta = item as Map<String, dynamic>;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF132B3C),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () => onOpenAlert(alerta),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        alerta['titulo']?.toString() ?? 'Alerta publico',
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        alerta['mensagem']?.toString() ?? '',
-                        style: const TextStyle(
-                            color: Color(0xFF9CC4DB), height: 1.4),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF132B3C),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color:
+                                const Color(0xFF39D0C3).withValues(alpha: 0.24),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.campaign_outlined,
+                                    color: Color(0xFFFFD166)),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    alerta['titulo']?.toString() ??
+                                        'Alerta publico',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              alerta['mensagem']?.toString() ?? '',
+                              style: const TextStyle(
+                                  color: Color(0xFF9CC4DB), height: 1.4),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Toque para abrir o comunicado completo',
+                              style: TextStyle(
+                                color: Color(0xFF39D0C3),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
