@@ -16,12 +16,63 @@ class TelaHome extends StatefulWidget {
 
 class _TelaHomeState extends State<TelaHome> {
   int currentIndex = 0;
+  bool _locationPrimerShown = false;
 
   final List<Widget> _pages = const [
     TelaPainelCidadao(),
     TelaSintomas(),
     TelaMapa(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _prepararPermissaoLocalizacao();
+    });
+  }
+
+  Future<void> _prepararPermissaoLocalizacao() async {
+    if (!mounted || _locationPrimerShown) {
+      return;
+    }
+    _locationPrimerShown = true;
+
+    final autorizado = await LocationService.solicitarPermissaoInicial();
+    if (autorizado || !mounted) {
+      return;
+    }
+
+    final abrirAjustes = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Ativar localizacao do SolusCRT'),
+            content: const Text(
+              'O app precisa pedir permissao de localizacao ao iPhone para mostrar focos perto de voce e enviar sintomas no municipio correto. Toque em Permitir quando o iPhone solicitar.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Depois'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Ativar agora'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!abrirAjustes) {
+      return;
+    }
+
+    final permitido = await LocationService.solicitarPermissaoInicial();
+    if (!permitido) {
+      await LocationService.abrirAjustesLocalizacao();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +120,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao> {
   Map<String, dynamic>? radarAtual;
   Map<String, dynamic>? regiaoBase;
   List<dynamic> alertasPublicos = const [];
-  String modoMonitoramento = 'base';
+  String modoMonitoramento = 'atual';
   bool loading = true;
 
   @override

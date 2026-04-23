@@ -42,6 +42,30 @@ class LocationService {
     }
   }
 
+  static Future<bool> solicitarPermissaoInicial() async {
+    try {
+      final enabled = await Geolocator.isLocationServiceEnabled();
+      if (!enabled) {
+        return false;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return false;
+      }
+
+      await _requestPreciseLocationIfNeeded();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<Position?> getCurrentPositionOrNull() async {
     try {
       await _ensurePermission();
@@ -181,11 +205,11 @@ class LocationService {
 
   static Future<bool> abrirAjustesLocalizacao() async {
     try {
-      final abriuServico = await Geolocator.openLocationSettings();
-      if (abriuServico) {
-        return true;
+      final abriuApp = await Geolocator.openAppSettings();
+      if (abriuApp) {
+        return abriuApp;
       }
-      return Geolocator.openAppSettings();
+      return Geolocator.openLocationSettings();
     } catch (_) {
       return false;
     }
