@@ -240,6 +240,26 @@ class DispositivoPushPublico(models.Model):
         return f"{self.plataforma} - {self.device_id}"
 
 
+class AceiteLegalPublico(models.Model):
+    device_id = models.CharField(max_length=120)
+    versao = models.CharField(max_length=30)
+    plataforma = models.CharField(max_length=30, blank=True, default="")
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, default="")
+    metadados = models.JSONField(default=dict, blank=True)
+    aceito_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-aceito_em"]
+        indexes = [
+            models.Index(fields=["device_id", "versao"]),
+            models.Index(fields=["aceito_em"]),
+        ]
+
+    def __str__(self):
+        return f"{self.device_id} - {self.versao}"
+
+
 class FonteOficialExecucao(models.Model):
     STATUS_PENDENTE = "pendente"
     STATUS_EXECUTANDO = "executando"

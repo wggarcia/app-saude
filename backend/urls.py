@@ -85,6 +85,7 @@ urlpatterns = [
     path('api/public/radar-local', app_radar_local),
     path('api/public/mapa', app_mapa_publico),
     path('api/public/alertas', app_alertas_publicos),
+    path('api/public/legal-consent', views.registrar_aceite_legal_publico),
     path('api/public/push-token', registrar_push_publico),
 
     path('api/registrar_empresa', registrar_empresa),

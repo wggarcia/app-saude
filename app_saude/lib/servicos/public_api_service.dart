@@ -157,6 +157,31 @@ class PublicApiService {
     return data;
   }
 
+  static Future<void> registrarAceiteLegal({
+    required String versao,
+    required String aceitoEm,
+  }) async {
+    final deviceId = await DeviceService.getDeviceId();
+    await http
+        .post(
+          _uri('/api/public/legal-consent'),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Device-Id': deviceId,
+          },
+          body: jsonEncode({
+            'device_id': deviceId,
+            'versao': versao,
+            'plataforma': 'app',
+            'termos': true,
+            'privacidade': true,
+            'saude_localizacao': true,
+            'aceito_em': aceitoEm,
+          }),
+        )
+        .timeout(_timeout);
+  }
+
   static Map<String, dynamic> _decodeObject(String body) {
     try {
       final data = jsonDecode(body);

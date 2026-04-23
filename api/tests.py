@@ -6,7 +6,7 @@ from django.test import Client, TestCase
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from .models import AlertaGovernamental, Empresa, RegistroSintoma
+from .models import AceiteLegalPublico, AlertaGovernamental, Empresa, RegistroSintoma
 from .epidemiologia import DISEASE_WEIGHTS
 from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_codigo_pacote, pacotes_por_setor
 from .views import _indice_temporal_publico
@@ -215,6 +215,28 @@ class PublicApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("hotspots", response.json())
+
+    def test_aceite_legal_publico_registra_auditoria(self):
+        response = Client(
+            HTTP_X_DEVICE_ID="device-legal",
+            HTTP_USER_AGENT="SolusCRT-Test",
+            REMOTE_ADDR="127.0.0.1",
+        ).post(
+            "/api/public/legal-consent",
+            data=json.dumps({
+                "versao": "2026.04.23",
+                "plataforma": "app",
+                "termos": True,
+                "privacidade": True,
+                "saude_localizacao": True,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        aceite = AceiteLegalPublico.objects.get(device_id="device-legal")
+        self.assertEqual(aceite.versao, "2026.04.23")
+        self.assertTrue(aceite.metadados["termos"])
 
     def test_mapa_publico_entrega_doencas_provaveis_por_foco(self):
         empresa = Empresa.objects.create(

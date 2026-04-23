@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.db.models import Count
 from .utils import probabilidade_doenca
 
-from .models import RegistroSintoma, Empresa, AlertaGovernamental, DispositivoPushPublico
+from .models import RegistroSintoma, Empresa, AlertaGovernamental, DispositivoPushPublico, AceiteLegalPublico
 from .utils_cidades import buscar_coordenada
 from .utils import obter_localizacao
 from django.conf import settings
@@ -1437,6 +1437,37 @@ def app_alertas_publicos(request):
             for alerta in alertas[:12]
         ]
     })
+
+
+@csrf_exempt
+def registrar_aceite_legal_publico(request):
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    device_id = (request.headers.get("X-Device-Id") or dados.get("device_id") or "").strip()
+    versao = (dados.get("versao") or "").strip()
+    if not device_id or not versao:
+        return JsonResponse({"erro": "device_id e versao são obrigatórios"}, status=400)
+
+    aceite = AceiteLegalPublico.objects.create(
+        device_id=device_id[:120],
+        versao=versao[:30],
+        plataforma=(dados.get("plataforma") or "app")[:30],
+        ip=_client_ip(request),
+        user_agent=(request.META.get("HTTP_USER_AGENT") or "")[:2000],
+        metadados={
+            "termos": bool(dados.get("termos")),
+            "privacidade": bool(dados.get("privacidade")),
+            "saude_localizacao": bool(dados.get("saude_localizacao")),
+            "registrado_no_app_em": dados.get("aceito_em"),
+        },
+    )
+    return JsonResponse({"status": "ok", "aceite_id": aceite.id})
 
 
 @csrf_exempt

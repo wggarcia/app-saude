@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'servicos/push_service.dart';
 import 'telas/home/tela_home.dart';
+import 'telas/legal/tela_aceite_legal.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +45,7 @@ class SolusCrtAppSaude extends StatelessWidget {
           ),
         ),
       ),
-      home: const TelaHome(),
+      home: const LegalGate(child: TelaHome()),
     );
   }
 }
