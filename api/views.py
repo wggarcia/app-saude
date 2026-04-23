@@ -308,12 +308,29 @@ def _empresa_app_publico():
     return empresa
 
 
-def _bloqueio_envio_publico(empresa, ip, device_id):
+def _bloqueio_envio_publico(empresa, ip, device_id, dados=None, geo=None):
     agora = timezone.now()
     janela_curta = agora - timedelta(hours=6)
     janela_longa = agora - timedelta(hours=24)
+    dados = dados or {}
+    geo = geo or {}
 
     if ip:
+        duplicado_contextual = RegistroSintoma.objects.filter(
+            empresa=empresa,
+            ip=ip,
+            data_registro__gte=janela_curta,
+            cidade=geo.get("cidade"),
+            estado=geo.get("estado"),
+            febre=bool(dados.get("febre", False)),
+            tosse=bool(dados.get("tosse", False)),
+            dor_corpo=bool(dados.get("dor_corpo", False)),
+            cansaco=bool(dados.get("cansaco", False)),
+            falta_ar=bool(dados.get("falta_ar", False)),
+        ).exists()
+        if duplicado_contextual:
+            return False, "Sinal semelhante ja considerado recentemente nesta rede e territorio."
+
         envios_ip_6h = RegistroSintoma.objects.filter(
             empresa=empresa,
             ip=ip,
@@ -559,7 +576,13 @@ def registrar_sintoma_publico(request):
     if location_source == "public_reference":
         confianca = min(confianca, 0.55)
         motivos_suspeita.append("referencia_regional_inicial")
-    permitido, motivo_bloqueio = _bloqueio_envio_publico(empresa, ip, device_id)
+    permitido, motivo_bloqueio = _bloqueio_envio_publico(
+        empresa,
+        ip,
+        device_id,
+        dados=dados,
+        geo=geo,
+    )
 
     if not permitido:
         return JsonResponse({

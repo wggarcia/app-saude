@@ -174,11 +174,31 @@ class _TelaMapaState extends State<TelaMapa> {
       localAtual: localAtual,
     );
     final zoom = regiaoBase != null || hotspots.isNotEmpty ? 10.2 : 4.2;
+    final circles = hotspots
+        .whereType<Map>()
+        .map((raw) {
+          final item = Map<String, dynamic>.from(raw);
+          final visual = _FocusVisual.fromItem(item);
+          final total = (item['indice_ativo'] as num?)?.toDouble() ??
+              (item['total'] as num?)?.toDouble() ??
+              1;
+          return CircleMarker(
+            point: LatLng(
+              (item['latitude'] as num).toDouble(),
+              (item['longitude'] as num).toDouble(),
+            ),
+            radius: (42 + total.clamp(1, 80) * 1.8).clamp(46, 150).toDouble(),
+            color: visual.color.withValues(alpha: 0.18),
+            borderColor: visual.color.withValues(alpha: 0.42),
+            borderStrokeWidth: 2,
+          );
+        })
+        .toList();
     final markers = hotspots
         .map(
           (item) => Marker(
-            width: 120,
-            height: 86,
+            width: 132,
+            height: 108,
             point: LatLng(
               (item['latitude'] as num).toDouble(),
               (item['longitude'] as num).toDouble(),
@@ -190,7 +210,7 @@ class _TelaMapaState extends State<TelaMapa> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mapa publico da sua regiao'),
+        title: const Text('Mapa de risco'),
         actions: [
           IconButton(
             onPressed: _load,
@@ -198,18 +218,91 @@ class _TelaMapaState extends State<TelaMapa> {
           ),
         ],
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: FlutterMap(
+              options: MapOptions(
+                initialCenter: center,
+                initialZoom: zoom,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                ),
+              ),
               children: [
-                if (notice != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                    child: _NoticeCard(message: notice!),
+                TileLayer(
+                  urlTemplate:
+                      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                  subdomains: const ['a', 'b', 'c', 'd'],
+                  userAgentPackageName: 'com.soluscrt.saude',
+                ),
+                CircleLayer(circles: circles),
+                MarkerLayer(markers: markers),
+              ],
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      const Color(0xFF020B13).withValues(alpha: 0.78),
+                      Colors.transparent,
+                      const Color(0xFF020B13).withValues(alpha: 0.92),
+                    ],
+                    stops: const [0, 0.42, 1],
                   ),
-                if (radarLocal != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                ),
+              ),
+            ),
+          ),
+          if (loading)
+            const Center(
+              child: CircularProgressIndicator(color: Color(0xFF39D0C3)),
+            )
+          else ...[
+            Positioned(
+              top: 12,
+              left: 16,
+              right: 16,
+              child: _MapHeroPanel(
+                radarLocal: radarLocal,
+                hotspots: hotspots,
+                modoMonitoramento: modoMonitoramento,
+                onChangedModo: _alterarModo,
+              ),
+            ),
+            if (notice != null)
+              Positioned(
+                top: 138,
+                left: 16,
+                right: 16,
+                child: _NoticeCard(message: notice!),
+              ),
+            if (alertasPublicos.isNotEmpty)
+              Positioned(
+                top: notice == null ? 138 : 226,
+                left: 16,
+                right: 16,
+                child: _MapAlertBanner(
+                  alerta: Map<String, dynamic>.from(
+                    alertasPublicos.first as Map,
+                  ),
+                ),
+              ),
+            if (radarLocal != null)
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 12,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.42,
+                  ),
+                  child: SingleChildScrollView(
                     child: _RadarCard(
                       radarLocal: radarLocal!,
                       regiaoBase: regiaoBase,
@@ -219,34 +312,170 @@ class _TelaMapaState extends State<TelaMapa> {
                       onChangedModo: _alterarModo,
                     ),
                   ),
-                if (alertasPublicos.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: _MapAlertBanner(
-                      alerta: Map<String, dynamic>.from(
-                        alertasPublicos.first as Map,
-                      ),
-                    ),
-                  ),
-                Expanded(
-                  child: FlutterMap(
-                    options: MapOptions(
-                      initialCenter: center,
-                      initialZoom: zoom,
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-                        subdomains: const ['a', 'b', 'c', 'd'],
-                        userAgentPackageName: 'com.soluscrt.saude',
-                      ),
-                      MarkerLayer(markers: markers),
-                    ],
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MapHeroPanel extends StatelessWidget {
+  const _MapHeroPanel({
+    required this.radarLocal,
+    required this.hotspots,
+    required this.modoMonitoramento,
+    required this.onChangedModo,
+  });
+
+  final Map<String, dynamic>? radarLocal;
+  final List<dynamic> hotspots;
+  final String modoMonitoramento;
+  final ValueChanged<String> onChangedModo;
+
+  @override
+  Widget build(BuildContext context) {
+    final local = radarLocal?['local'] as Map<String, dynamic>? ?? {};
+    final radar = radarLocal?['radar'] as Map<String, dynamic>? ?? {};
+    final doencas = radarLocal?['doencas'] as List<dynamic>? ?? [];
+    final principal = doencas.isNotEmpty
+        ? (doencas.first as Map)['grupo']?.toString() ?? 'Monitoramento'
+        : 'Monitoramento';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xEE061A27),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: const Color(0x5539D0C3)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x66000000),
+            blurRadius: 24,
+            offset: Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF39D0C3), Color(0xFF0B6B8A)],
                   ),
                 ),
-              ],
+                child: const Icon(Icons.radar, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Radar epidemiologico vivo',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${local['cidade'] ?? 'Brasil'} / ${local['estado'] ?? 'BR'}',
+                      style: const TextStyle(color: Color(0xFF9CC4DB)),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${hotspots.length}',
+                style: const TextStyle(
+                  color: Color(0xFFFF8A3D),
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _HeroMetric(
+                label: 'Foco dominante',
+                value: principal,
+              ),
+              const SizedBox(width: 8),
+              _HeroMetric(
+                label: 'Nivel',
+                value: radar['nivel']?.toString() ?? 'baixo',
+              ),
+              const SizedBox(width: 8),
+              _HeroMetric(
+                label: '7 dias',
+                value: '${radar['registros_7d'] ?? 0}',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<String>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment<String>(value: 'base', label: Text('Minha base')),
+              ButtonSegment<String>(value: 'atual', label: Text('Onde estou')),
+            ],
+            selected: {modoMonitoramento},
+            onSelectionChanged: (values) => onChangedModo(values.first),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroMetric extends StatelessWidget {
+  const _HeroMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0C2838),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFF88AFC5), fontSize: 11),
             ),
+            const SizedBox(height: 3),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -563,8 +792,8 @@ class _HotspotMarker extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 62,
+            height: 62,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -574,13 +803,13 @@ class _HotspotMarker extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white, width: 2),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Colors.white, width: 2.5),
               boxShadow: [
                 BoxShadow(
-                  color: visual.color.withValues(alpha: 0.35),
-                  blurRadius: 18,
-                  spreadRadius: 4,
+                  color: visual.color.withValues(alpha: 0.48),
+                  blurRadius: 24,
+                  spreadRadius: 6,
                 ),
               ],
             ),
@@ -589,12 +818,12 @@ class _HotspotMarker extends StatelessWidget {
               alignment: Alignment.center,
               children: [
                 Positioned(
-                  bottom: -10,
+                  bottom: -12,
                   child: Transform.rotate(
                     angle: 0.785,
                     child: Container(
-                      width: 18,
-                      height: 18,
+                      width: 22,
+                      height: 22,
                       decoration: BoxDecoration(
                         color: Color.lerp(visual.color, Colors.black, 0.18),
                         borderRadius: BorderRadius.circular(4),
@@ -602,7 +831,22 @@ class _HotspotMarker extends StatelessWidget {
                     ),
                   ),
                 ),
-                Icon(visual.icon, color: Colors.white, size: 28),
+                Positioned(
+                  top: 7,
+                  child: Icon(visual.icon, color: Colors.white, size: 31),
+                ),
+                Positioned(
+                  bottom: 7,
+                  child: Text(
+                    visual.shortLabel,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -632,11 +876,13 @@ class _FocusVisual {
     required this.icon,
     required this.color,
     required this.label,
+    required this.shortLabel,
   });
 
   final IconData icon;
   final Color color;
   final String label;
+  final String shortLabel;
 
   static _FocusVisual fromItem(Map<String, dynamic> item) {
     final grupo = (item['grupo_dominante'] ?? '').toString().toLowerCase();
@@ -645,12 +891,28 @@ class _FocusVisual {
         .toLowerCase();
     final indice = item['indice_ativo'] ?? item['total'] ?? 0;
     final icon = switch (grupo) {
-      String value when value.contains('resp') => Icons.coronavirus,
-      String value when value.contains('arb') || value.contains('deng') =>
+      String value when value.contains('covid') => Icons.coronavirus,
+      String value when value.contains('resp') || value.contains('gripe') =>
+        Icons.air,
+      String value when value.contains('arb') ||
+          value.contains('deng') ||
+          value.contains('zika') ||
+          value.contains('chik') =>
         Icons.bug_report,
       String value when value.contains('alert') => Icons.emergency,
       String value when value.contains('leve') => Icons.healing,
       _ => Icons.biotech,
+    };
+    final shortLabel = switch (grupo) {
+      String value when value.contains('covid') => 'COVID',
+      String value when value.contains('gripe') => 'GRIPE',
+      String value when value.contains('resp') => 'RESP',
+      String value when value.contains('deng') => 'DENG',
+      String value when value.contains('zika') => 'ZIKA',
+      String value when value.contains('chik') => 'CHIK',
+      String value when value.contains('arb') => 'ARBO',
+      String value when value.contains('leve') => 'LEVE',
+      _ => 'FOCO',
     };
     final color = switch (faixa) {
       String value when value.contains('vermel') => const Color(0xFFE94747),
@@ -662,6 +924,7 @@ class _FocusVisual {
       icon: icon,
       color: color,
       label: '$indice',
+      shortLabel: shortLabel,
     );
   }
 }
