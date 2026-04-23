@@ -34,15 +34,18 @@ class _TelaSintomasState extends State<TelaSintomas> {
 
     setState(() => loading = true);
     try {
-      final base = await RegiaoBaseService.obterRegiaoBase();
-      final location = await LocationService.getBestEffortLocation(
-        fallbackRegion: base,
-      );
+      final location = await LocationService.getCurrentLocationForSubmission();
       final result = await PublicApiService.enviarSintomas(
         sintomas: sintomas,
         latitude: location.latitude,
         longitude: location.longitude,
         locationSource: location.source,
+      );
+      final local = result['local'] as Map<String, dynamic>? ?? {};
+      await RegiaoBaseService.registrarObservacao(
+        local: local,
+        latitude: location.latitude,
+        longitude: location.longitude,
       );
       if (!mounted) {
         return;

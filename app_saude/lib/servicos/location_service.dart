@@ -13,6 +13,8 @@ class LocationSnapshot {
 }
 
 class LocationService {
+  static const _maxLastKnownAge = Duration(minutes: 30);
+
   static const Map<String, dynamic> referenciaPublicaInicial = {
     'bairro': 'Centro',
     'cidade': 'Rio de Janeiro',
@@ -48,11 +50,50 @@ class LocationService {
     } catch (_) {
       try {
         await _ensurePermission();
-        return await Geolocator.getLastKnownPosition();
+        final lastKnown = await Geolocator.getLastKnownPosition();
+        if (_isFresh(lastKnown)) {
+          return lastKnown;
+        }
       } catch (_) {
         return null;
       }
     }
+    return null;
+  }
+
+  static Future<LocationSnapshot> getCurrentLocationForSubmission() async {
+    try {
+      await _ensurePermission();
+      final current = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 18),
+      );
+      return LocationSnapshot(
+        latitude: current.latitude,
+        longitude: current.longitude,
+        source: 'current',
+      );
+    } catch (_) {
+      final lastKnown = await Geolocator.getLastKnownPosition();
+      if (_isFresh(lastKnown)) {
+        return LocationSnapshot(
+          latitude: lastKnown!.latitude,
+          longitude: lastKnown.longitude,
+          source: 'last_known_fresh',
+        );
+      }
+      throw Exception(
+        'Nao foi possivel atualizar sua localizacao atual. Abra o app com GPS ativo e tente novamente para evitar registrar sintomas na regiao errada.',
+      );
+    }
+  }
+
+  static bool _isFresh(Position? position) {
+    final timestamp = position?.timestamp;
+    if (timestamp == null) {
+      return false;
+    }
+    return DateTime.now().difference(timestamp).abs() <= _maxLastKnownAge;
   }
 
   static Future<LocationSnapshot> getBestEffortLocation({
