@@ -153,6 +153,8 @@ class AuthDeviceTests(TestCase):
         self.assertContains(response, "Inteligencia epidemiologica em tempo real")
         self.assertNotContains(response, "empresa.soluscrt.com.br")
         self.assertNotContains(response, "governo.soluscrt.com.br")
+        self.assertContains(response, "/apresentacao/")
+        self.assertContains(response, "https://play.google.com/store/apps/details?id=com.soluscrt.saude")
 
     def test_subdominios_raiz_separam_ambientes(self):
         empresa = Client(HTTP_HOST="empresa.soluscrt.com.br").get("/")
@@ -176,6 +178,13 @@ class AuthDeviceTests(TestCase):
             response = Client(HTTP_HOST="soluscrt.com.br").get(rota)
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, texto)
+
+    def test_apresentacao_comercial_abre_sem_autenticacao(self):
+        response = Client(HTTP_HOST="soluscrt.com.br").get("/apresentacao/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Saude populacional precisa de radar")
+        self.assertContains(response, "Google Play")
 
 
 class PublicApiTests(TestCase):

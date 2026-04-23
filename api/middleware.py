@@ -27,6 +27,7 @@ class EmpresaMiddleware:
             "/pendente/",
             "/logout/",
             "/cadastro/",
+            "/apresentacao/",
             "/privacidade/",
             "/termos/",
             "/seguranca-lgpd/",

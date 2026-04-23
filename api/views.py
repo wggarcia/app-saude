@@ -35,6 +35,10 @@ def site_principal(request):
     return render(request, "site_principal.html")
 
 
+def apresentacao_comercial(request):
+    return render(request, "apresentacao.html")
+
+
 LEGAL_DOCUMENTS = {
     "privacidade": {
         "title": "Politica de Privacidade",
@@ -42,9 +46,13 @@ LEGAL_DOCUMENTS = {
         "sections": [
             ("Resumo executivo", "O SolusCRT Saude utiliza dados informados voluntariamente pela populacao, dados tecnicos do aparelho, localizacao necessaria para georreferenciar sinais de saude e informacoes de contas empresariais/governamentais. O objetivo e monitoramento epidemiologico, seguranca, operacao da plataforma e comunicacao publica."),
             ("Dados de saude e localizacao", "Sinais de sintomas e localizacao podem ser considerados dados sensiveis ou capazes de revelar informacoes sensiveis. Por isso, o produto deve operar com minimizacao, finalidade especifica, controle de acesso, anonimização ou agregacao sempre que possivel."),
+            ("Categorias tratadas", "Podem ser tratados sintomas selecionados, coordenadas de localizacao atual, identificador tecnico do aparelho, data e hora do envio, regiao aproximada, tokens de notificacao, dados de conta corporativa e registros de auditoria."),
+            ("Base e finalidade", "O tratamento ocorre para operacao do app, seguranca, prevencao a fraude, exibicao de radar local, emissao de alertas, inteligencia epidemiologica agregada, cumprimento contratual e atendimento a direitos dos titulares."),
             ("Uso dos dados", "Os dados colaborativos alimentam mapas de risco, indicadores agregados, alertas regionais e modelos de apoio a decisao. Eles nao substituem diagnostico medico, notificacao oficial ou avaliacao profissional."),
             ("Compartilhamento", "Empresas e governos visualizam informacoes conforme contrato, perfil de acesso e camada de permissao. A plataforma deve priorizar agregados territoriais e evitar exposicao de individuo identificavel."),
+            ("Retencao e descarte", "Dados sao mantidos pelo tempo necessario para as finalidades declaradas, cumprimento contratual, auditoria, seguranca, defesa de direitos e obrigacoes legais ou regulatorias aplicaveis."),
             ("Direitos do titular", "Titulares podem solicitar informacoes, correcao, exclusao quando aplicavel e esclarecimentos sobre tratamento de dados pelos canais oficiais da SolusCRT."),
+            ("Seguranca", "A plataforma utiliza segregacao de ambientes, controle de acesso, trilhas de auditoria, protecoes antifraude e boas praticas de seguranca para reduzir riscos de acesso indevido, manipulacao ou exposicao desnecessaria."),
         ],
     },
     "termos": {
@@ -54,8 +62,12 @@ LEGAL_DOCUMENTS = {
             ("Natureza informativa", "O SolusCRT Saude oferece monitoramento e inteligencia epidemiologica. O app nao realiza diagnostico, prescricao, triagem medica individual ou substituicao de atendimento profissional."),
             ("Envio responsavel", "Usuarios devem enviar sintomas reais, de boa-fe e apenas quando houver relacao com sua condicao atual. Envios repetidos, automatizados ou fraudulentos podem ser filtrados ou bloqueados."),
             ("Ambientes privados", "Acessos empresariais, governamentais e administrativos sao exclusivos para clientes e operadores autorizados. Tentativas de acesso indevido podem ser registradas e bloqueadas."),
+            ("Uso proibido", "E proibido tentar burlar controles de seguranca, automatizar envios indevidos, inserir informacoes falsas, acessar area contratual sem autorizacao, realizar engenharia reversa ou usar a plataforma para finalidade ilegal, discriminatoria ou abusiva."),
+            ("Contas e credenciais", "Credenciais sao pessoais ou institucionais conforme contrato. O usuario ou cliente e responsavel por preservar senhas, dispositivos autorizados e politicas internas de acesso."),
             ("Disponibilidade", "A plataforma depende de internet, servicos de nuvem, APIs, fontes oficiais e permissao de localizacao. Podem ocorrer indisponibilidades temporarias ou degradacao de dados externos."),
             ("Responsabilidade", "Decisoes operacionais e institucionais devem considerar contexto tecnico, validacao humana e protocolos aplicaveis de saude publica."),
+            ("Propriedade intelectual", "Marcas, interfaces, modelos, organizacao da plataforma, documentos, codigos, paineis e materiais do SolusCRT Saude pertencem aos seus titulares e sao licenciados nos limites contratados."),
+            ("Contratacao B2B e B2G", "Planos empresariais, governamentais, limites de usuarios, dispositivos, suporte, integracoes, SLA e valores podem ser definidos em proposta, contrato, termo de adesao ou instrumento especifico."),
         ],
     },
     "seguranca-lgpd": {
@@ -65,7 +77,10 @@ LEGAL_DOCUMENTS = {
             ("Principios", "A plataforma deve seguir finalidade, adequacao, necessidade, seguranca, prevencao, transparencia e responsabilizacao no tratamento de dados pessoais."),
             ("Segregacao de ambientes", "Empresa, governo e operacao administrativa sao separados por fluxo de login, permissao, sessao, auditoria e dominio/subdominio quando contratado."),
             ("Controles antifraude", "O app e o backend utilizam controles por aparelho, rede, repeticao, qualidade do sinal e localizacao atual para reduzir manipulacao de focos."),
+            ("Protecao de acesso", "A plataforma adota controle de sessao, autorizacao por perfil, limite de dispositivos contratados, bloqueios de uso simultaneo quando aplicavel e revogacao de acessos."),
+            ("Dados sensiveis", "Sinais de saude sao tratados com cautela, priorizando agregacao, minimizacao, separacao por finalidade e exibicao territorial adequada ao perfil autorizado."),
             ("Auditoria", "Acoes institucionais, alertas governamentais e operacoes administrativas devem ter rastreabilidade, usuario responsavel, data e contexto."),
+            ("Incidentes", "Eventos de seguranca podem acionar processos de investigacao, mitigacao, registro, comunicacao a clientes e titulares quando aplicavel, e melhoria de controles."),
             ("Compromisso continuo", "A governanca do SolusCRT Saude e mantida como um processo permanente, com melhoria de controles, revisao de acessos, atualizacao documental e alinhamento aos requisitos aplicaveis de protecao de dados, saude digital e contratos institucionais."),
         ],
     },
