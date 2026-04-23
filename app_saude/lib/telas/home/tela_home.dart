@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../servicos/alerta_inbox_service.dart';
 import '../../servicos/location_service.dart';
 import '../../servicos/public_api_service.dart';
+import '../../servicos/push_service.dart';
 import '../../servicos/regiao_base_service.dart';
 import '../alertas/tela_alertas.dart';
 import '../mapa/tela_mapa.dart';
@@ -202,6 +203,12 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao> {
         modoMonitoramento = modo;
         loading = false;
       });
+      final pushLocal = radarAgora['local'] as Map<String, dynamic>? ?? {};
+      await PushService.syncRegion(
+        estado: pushLocal['estado']?.toString(),
+        cidade: pushLocal['cidade']?.toString(),
+        bairro: pushLocal['bairro']?.toString(),
+      );
       await _notificarNovosAlertas(results[1] as List<dynamic>);
     } catch (_) {
       try {

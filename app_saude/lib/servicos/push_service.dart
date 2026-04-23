@@ -17,6 +17,7 @@ class PushService {
   static bool _initialized = false;
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+  static String? _lastRegisteredRegionKey;
 
   static Future<void> initialize() async {
     if (_initialized) {
@@ -29,6 +30,9 @@ class PushService {
       await _setupLocalNotifications();
       await _requestPermission();
       await _registerToken();
+      FirebaseMessaging.instance.onTokenRefresh.listen((_) async {
+        await _registerToken(force: true);
+      });
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
       FirebaseMessaging.onMessageOpenedApp.listen((_) {});
       _initialized = true;
@@ -55,7 +59,7 @@ class PushService {
     }
   }
 
-  static Future<void> _registerToken() async {
+  static Future<void> _registerToken({bool force = false}) async {
     final token = await FirebaseMessaging.instance.getToken();
     if (token == null || token.isEmpty) {
       return;
@@ -63,6 +67,11 @@ class PushService {
 
     final deviceId = await DeviceService.getDeviceId();
     final base = await RegiaoBaseService.obterRegiaoBase();
+    final regionKey =
+        '${base?['estado'] ?? ''}|${base?['cidade'] ?? ''}|${base?['bairro'] ?? ''}';
+    if (!force && _lastRegisteredRegionKey == regionKey) {
+      return;
+    }
     await PublicApiService.registrarPushToken(
       token: token,
       deviceId: deviceId,
@@ -75,6 +84,42 @@ class PushService {
       cidade: base?['cidade']?.toString(),
       bairro: base?['bairro']?.toString(),
     );
+    _lastRegisteredRegionKey = regionKey;
+  }
+
+  static Future<void> syncRegion({
+    required String? estado,
+    required String? cidade,
+    required String? bairro,
+  }) async {
+    final token = await FirebaseMessaging.instance.getToken();
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    final deviceId = await DeviceService.getDeviceId();
+    final normalizedEstado = estado?.trim();
+    final normalizedCidade = cidade?.trim();
+    final normalizedBairro = bairro?.trim();
+    final regionKey =
+        '${normalizedEstado ?? ''}|${normalizedCidade ?? ''}|${normalizedBairro ?? ''}';
+    if (_lastRegisteredRegionKey == regionKey) {
+      return;
+    }
+
+    await PublicApiService.registrarPushToken(
+      token: token,
+      deviceId: deviceId,
+      plataforma: kIsWeb
+          ? 'web'
+          : Platform.isIOS
+              ? 'ios'
+              : 'android',
+      estado: normalizedEstado,
+      cidade: normalizedCidade,
+      bairro: normalizedBairro,
+    );
+    _lastRegisteredRegionKey = regionKey;
   }
 
   static Future<void> _handleForegroundMessage(RemoteMessage message) async {
