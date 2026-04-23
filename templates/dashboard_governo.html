@@ -1155,7 +1155,21 @@
       await loadGovernmentAlerts();
       if (!options.silent) {
         if (acao === "publicar") {
-          alert(`Alerta publicado no app. Push: ${data.push?.status || "sem retorno"} | enviados: ${data.push?.enviados || 0} | destinatarios: ${data.push?.destinatarios ?? 0} | tokens ativos: ${data.push?.tokens_ativos ?? 0}`);
+          const parts = [
+            `Alerta publicado no app.`,
+            `Push: ${data.push?.status || "sem retorno"}`,
+            `enviados: ${data.push?.enviados || 0}`,
+            `falhas: ${data.push?.falhas ?? 0}`,
+            `destinatarios: ${data.push?.destinatarios ?? 0}`,
+            `tokens ativos: ${data.push?.tokens_ativos ?? 0}`,
+          ];
+          if (data.push?.estrategia) {
+            parts.push(`estrategia: ${data.push.estrategia}`);
+          }
+          if (data.push?.erro) {
+            parts.push(`erro: ${data.push.erro}`);
+          }
+          alert(parts.join(" | "));
         } else if (acao === "aprovar") {
           alert("Alerta aprovado. Agora clique em Publicar no App para aparecer no telefone da populacao.");
         }
