@@ -25,6 +25,7 @@ class _TelaMapaState extends State<TelaMapa> {
   String modoMonitoramento = 'atual';
   bool loading = true;
   bool locating = false;
+  bool radarExpanded = false;
   String? notice;
 
   @override
@@ -385,20 +386,18 @@ class _TelaMapaState extends State<TelaMapa> {
                 left: 12,
                 right: 12,
                 bottom: 12,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.28,
-                  ),
-                  child: SingleChildScrollView(
-                    child: _RadarCard(
-                      radarLocal: radarLocal!,
-                      regiaoBase: regiaoBase,
-                      localAtual: localAtual,
-                      modoMonitoramento: modoMonitoramento,
-                      estaForaDaBase: estaForaDaBase,
-                      onChangedModo: _alterarModo,
-                    ),
-                  ),
+                child: _CollapsibleRadarSheet(
+                  radarLocal: radarLocal!,
+                  regiaoBase: regiaoBase,
+                  localAtual: localAtual,
+                  modoMonitoramento: modoMonitoramento,
+                  estaForaDaBase: estaForaDaBase,
+                  expanded: radarExpanded,
+                  onToggle: () {
+                    setState(() => radarExpanded = !radarExpanded);
+                  },
+                  onChangedModo: _alterarModo,
+                  maxExpandedHeight: MediaQuery.of(context).size.height * 0.34,
                 ),
               ),
           ],
@@ -725,6 +724,7 @@ class _RadarCard extends StatelessWidget {
     required this.modoMonitoramento,
     required this.estaForaDaBase,
     required this.onChangedModo,
+    this.compactHeader = false,
   });
 
   final Map<String, dynamic> radarLocal;
@@ -733,6 +733,7 @@ class _RadarCard extends StatelessWidget {
   final String modoMonitoramento;
   final bool estaForaDaBase;
   final ValueChanged<String> onChangedModo;
+  final bool compactHeader;
 
   @override
   Widget build(BuildContext context) {
@@ -752,15 +753,17 @@ class _RadarCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${local['cidade'] ?? 'Cidade'} / ${local['estado'] ?? 'UF'}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+            if (!compactHeader) ...[
+              Text(
+                '${local['cidade'] ?? 'Cidade'} / ${local['estado'] ?? 'UF'}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
+              const SizedBox(height: 6),
+            ],
             if (regiaoBase != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -846,6 +849,129 @@ class _RadarCard extends StatelessWidget {
               orientacao['titulo']?.toString() ?? '',
               style: const TextStyle(
                   color: Color(0xFF39D0C3), fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CollapsibleRadarSheet extends StatelessWidget {
+  const _CollapsibleRadarSheet({
+    required this.radarLocal,
+    required this.regiaoBase,
+    required this.localAtual,
+    required this.modoMonitoramento,
+    required this.estaForaDaBase,
+    required this.expanded,
+    required this.onToggle,
+    required this.onChangedModo,
+    required this.maxExpandedHeight,
+  });
+
+  final Map<String, dynamic> radarLocal;
+  final Map<String, dynamic>? regiaoBase;
+  final Map<String, dynamic> localAtual;
+  final String modoMonitoramento;
+  final bool estaForaDaBase;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final ValueChanged<String> onChangedModo;
+  final double maxExpandedHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final local = radarLocal['local'] as Map<String, dynamic>? ?? {};
+    final radar = radarLocal['radar'] as Map<String, dynamic>? ?? {};
+    final semaforo = radarLocal['semaforo'] as Map<String, dynamic>? ?? {};
+    final cidade = local['cidade']?.toString() ?? 'Cidade';
+    final estado = local['estado']?.toString() ?? 'UF';
+    final faixa = semaforo['faixa']?.toString() ?? 'Verde';
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      child: Card(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            InkWell(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+                bottom: Radius.circular(28),
+              ),
+              onTap: onToggle,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$cidade / $estado',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Faixa $faixa | ${radar['registros_7d'] ?? 0} registros em 7 dias',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF9CC4DB),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16394F),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        expanded
+                            ? Icons.keyboard_arrow_down_rounded
+                            : Icons.keyboard_arrow_up_rounded,
+                        color: const Color(0xFF39D0C3),
+                        size: 30,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 240),
+              crossFadeState: expanded
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              firstChild: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxExpandedHeight),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: _RadarCard(
+                    radarLocal: radarLocal,
+                    regiaoBase: regiaoBase,
+                    localAtual: localAtual,
+                    modoMonitoramento: modoMonitoramento,
+                    estaForaDaBase: estaForaDaBase,
+                    onChangedModo: onChangedModo,
+                    compactHeader: true,
+                  ),
+                ),
+              ),
+              secondChild: const SizedBox.shrink(),
             ),
           ],
         ),
