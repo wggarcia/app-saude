@@ -96,6 +96,18 @@ LEGAL_DOCUMENTS = {
             ("Transparencia", "Paineis devem indicar quando um dado e colaborativo, oficial, inferido ou indisponivel, evitando conclusoes falsas ou comunicacao alarmista."),
         ],
     },
+    "suporte": {
+        "title": "Suporte e Atendimento",
+        "subtitle": "Canal institucional para suporte do app, privacidade, operacao e orientacoes gerais do SolusCRT Saude.",
+        "sections": [
+            ("Atendimento ao usuario", "Para suporte geral do app, dificuldades de uso, orientacoes sobre alertas, problemas de mapa, envio de sintomas ou funcionamento da experiencia publica, entre em contato por comercial@soluscrt.com.br com o assunto Suporte App SolusCRT."),
+            ("Privacidade e dados pessoais", "Para pedidos relacionados a privacidade, esclarecimentos sobre tratamento de dados, direitos do titular, exclusao quando aplicavel e temas de LGPD, utilize o canal comercial@soluscrt.com.br com o assunto Privacidade SolusCRT."),
+            ("Suporte institucional", "Empresas, hospitais, farmacias, laboratorios, municipios e governos que precisem de apoio operacional, contratual ou tecnico podem solicitar atendimento institucional pelo mesmo canal comercial@soluscrt.com.br."),
+            ("Escopo do atendimento", "O suporte do SolusCRT Saude atende questoes sobre plataforma, app, acesso, alertas, privacidade e funcionamento do servico. O atendimento nao substitui orientacao medica, emergencia, SAMU, hospital, UPA ou consulta clinica."),
+            ("Tempo de resposta", "Solicitacoes institucionais e de suporte geral sao recebidas por canal oficial e tratadas conforme criticidade, natureza do pedido, fila operacional e disponibilidade da equipe."),
+            ("Base publica de documentos", "Para revisao documental, consulte tambem a Politica de Privacidade, os Termos de Uso, a pagina de Seguranca e LGPD e a Metodologia Epidemiologica publicadas no site institucional."),
+        ],
+    },
 }
 
 

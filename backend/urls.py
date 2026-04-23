@@ -50,6 +50,7 @@ urlpatterns = [
     path('termos/', documento_publico, {"slug": "termos"}),
     path('seguranca-lgpd/', documento_publico, {"slug": "seguranca-lgpd"}),
     path('metodologia/', documento_publico, {"slug": "metodologia"}),
+    path('suporte/', documento_publico, {"slug": "suporte"}),
     path('login-empresa/', tela_login_empresa),
     path('login-governo/', tela_login_governo),
     path('operacao-central/', login_operacao),

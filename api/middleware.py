@@ -32,6 +32,7 @@ class EmpresaMiddleware:
             "/termos/",
             "/seguranca-lgpd/",
             "/metodologia/",
+            "/suporte/",
         }
         rotas_livres_prefixo = (
             "/api/login",

@@ -177,6 +177,7 @@ class AuthDeviceTests(TestCase):
             ("/termos/", "Termos de Uso"),
             ("/seguranca-lgpd/", "Seguranca, LGPD e Governanca"),
             ("/metodologia/", "Metodologia Epidemiologica"),
+            ("/suporte/", "Suporte e Atendimento"),
         ]:
             response = Client(HTTP_HOST="soluscrt.com.br").get(rota)
             self.assertEqual(response.status_code, 200)
