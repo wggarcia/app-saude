@@ -642,9 +642,21 @@ def registrar_sintoma_publico(request):
     location_source = (dados.get("location_source") or "current").strip()
     if latitude in [None, ""] or longitude in [None, ""]:
         return JsonResponse({"erro": "latitude/longitude obrigatórios"}, status=400)
+    try:
+        latitude = float(latitude)
+        longitude = float(longitude)
+    except (TypeError, ValueError):
+        return JsonResponse({"erro": "latitude/longitude inválidos"}, status=400)
+
+    simulacao_autorizada = settings.DEBUG and request.headers.get("X-Solus-Simulation") == "true"
+    if location_source != "current" and not simulacao_autorizada:
+        return JsonResponse({
+            "erro": "envio exige GPS atual confirmado pelo aparelho",
+            "codigo": "gps_atual_obrigatorio",
+        }, status=400)
 
     empresa = _empresa_app_publico()
-    if settings.DEBUG and request.headers.get("X-Solus-Simulation") == "true":
+    if simulacao_autorizada:
         geo = {
             "bairro": (dados.get("bairro") or "Centro").strip(),
             "cidade": (dados.get("cidade") or "Rio de Janeiro").strip(),
@@ -655,9 +667,6 @@ def registrar_sintoma_publico(request):
         geo = obter_endereco(latitude, longitude)
     grupo, classificacao = classificar_padrao(dados)
     confianca, motivos_suspeita, ip, device_id = _score_suspeita(empresa, request, dados)
-    if location_source == "public_reference":
-        confianca = min(confianca, 0.55)
-        motivos_suspeita.append("referencia_regional_inicial")
     permitido, motivo_bloqueio = _bloqueio_envio_publico(
         empresa,
         ip,
@@ -725,6 +734,11 @@ def registrar_sintoma_publico(request):
             "bairro": registro.bairro,
             "cidade": registro.cidade,
             "estado": registro.estado,
+        },
+        "coordenadas_recebidas": {
+            "latitude": registro.latitude,
+            "longitude": registro.longitude,
+            "fonte": location_source,
         },
     })
 

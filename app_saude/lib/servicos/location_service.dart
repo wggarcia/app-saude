@@ -14,6 +14,8 @@ class LocationSnapshot {
 
 class LocationService {
   static const _maxLastKnownAge = Duration(minutes: 30);
+  static const _maxSubmissionAge = Duration(seconds: 90);
+  static const _maxSubmissionAccuracyMeters = 250.0;
 
   static const Map<String, dynamic> referenciaPublicaInicial = {
     'bairro': 'Centro',
@@ -64,24 +66,16 @@ class LocationService {
   static Future<LocationSnapshot> getCurrentLocationForSubmission() async {
     try {
       await _ensurePermission();
+      await _requestPreciseLocationIfNeeded();
       final current = await _getCurrentPositionResilient();
+      _validateSubmissionPosition(current);
       return LocationSnapshot(
         latitude: current.latitude,
         longitude: current.longitude,
         source: 'current',
       );
-    } catch (_) {
-      final lastKnown = await Geolocator.getLastKnownPosition();
-      if (_isFresh(lastKnown)) {
-        return LocationSnapshot(
-          latitude: lastKnown!.latitude,
-          longitude: lastKnown.longitude,
-          source: 'last_known_fresh',
-        );
-      }
-      throw Exception(
-        'Nao foi possivel confirmar sua localizacao atual. Ative Localizacao Precisa para o SolusCRT Saude e tente novamente.',
-      );
+    } catch (error) {
+      throw Exception(_humanLocationError(error));
     }
   }
 
@@ -97,6 +91,55 @@ class LocationService {
         timeLimit: const Duration(seconds: 16),
       );
     }
+  }
+
+  static Future<void> _requestPreciseLocationIfNeeded() async {
+    try {
+      final status = await Geolocator.getLocationAccuracy();
+      if (status == LocationAccuracyStatus.reduced) {
+        await Geolocator.requestTemporaryFullAccuracy(
+          purposeKey: 'RegistrarSintomaAtual',
+        );
+      }
+    } catch (_) {
+      // Android and older iOS versions may not support the temporary prompt.
+    }
+  }
+
+  static void _validateSubmissionPosition(Position position) {
+    final timestamp = position.timestamp;
+    final age = DateTime.now().difference(timestamp).abs();
+    if (age > _maxSubmissionAge) {
+      throw Exception('gps_antigo_${age.inSeconds}s');
+    }
+
+    if (position.accuracy > _maxSubmissionAccuracyMeters) {
+      throw Exception('gps_impreciso_${position.accuracy.round()}m');
+    }
+  }
+
+  static String _humanLocationError(Object error) {
+    final raw = error.toString();
+
+    if (raw.contains('gps_antigo')) {
+      return 'O iPhone retornou uma localizacao antiga. Abra o app Mapas por alguns segundos, volte ao SolusCRT e toque em Enviar novamente.';
+    }
+    if (raw.contains('gps_impreciso')) {
+      final meters = RegExp(r'gps_impreciso_(\d+)m').firstMatch(raw)?.group(1);
+      return 'O GPS atual esta impreciso${meters == null ? '' : ' (${meters}m)'}. Ative Localizacao Precisa e tente em area aberta ou perto de uma janela.';
+    }
+    if (raw.contains('deniedForever')) {
+      return 'A permissao de localizacao esta bloqueada. Abra Ajustes > SolusCRT Saude > Localizacao e marque Durante o Uso com Localizacao Precisa.';
+    }
+    if (raw.contains('denied')) {
+      return 'Permissao de localizacao negada. Autorize o SolusCRT Saude a usar localizacao Durante o Uso.';
+    }
+    if (raw.contains('Location services are disabled') ||
+        raw.contains('Ative a localizacao')) {
+      return 'O servico de localizacao do iPhone esta desligado. Ative Localizacao nos Ajustes do aparelho.';
+    }
+
+    return 'Nao foi possivel confirmar seu GPS atual agora. O envio foi bloqueado para nao registrar seu sintoma na cidade errada.';
   }
 
   static bool _isFresh(Position? position) {

@@ -6,7 +6,7 @@ class RegiaoBaseService {
   static const _key = 'soluscrt_regiao_base_v1';
   static const _modoKey = 'soluscrt_monitoramento_modo_v1';
   static Map<String, dynamic>? _memoryBase;
-  static String _memoryMode = 'base';
+  static String _memoryMode = 'atual';
 
   static Future<void> registrarObservacao({
     required Map<String, dynamic> local,
@@ -70,7 +70,18 @@ class RegiaoBaseService {
       }
 
       await prefs.setString(_key, jsonEncode({'regions': regions}));
-      _memoryBase = regions.first;
+      _memoryBase = {
+        'key': regionKey,
+        'bairro': bairro,
+        'cidade': cidade,
+        'estado': estado,
+        'latitude': latitude,
+        'longitude': longitude,
+        'count': index >= 0
+            ? ((regions[index]['count'] as num?)?.toInt() ?? 1)
+            : 1,
+        'last_seen': now,
+      };
     } catch (_) {
       _memoryBase = {
         'key':

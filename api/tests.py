@@ -250,7 +250,7 @@ class PublicApiTests(TestCase):
             "tosse": True,
             "latitude": -22.9068,
             "longitude": -43.1729,
-            "location_source": "public_reference",
+            "location_source": "current",
         }
 
         primeiro = Client(HTTP_X_DEVICE_ID="public-device-a").post(
@@ -268,6 +268,23 @@ class PublicApiTests(TestCase):
         self.assertEqual(segundo.status_code, 200)
         self.assertEqual(primeiro.json()["status"], "ok")
         self.assertEqual(segundo.json()["status"], "ok")
+
+    def test_envio_publico_rejeita_localizacao_que_nao_e_atual(self):
+        payload = {
+            "febre": True,
+            "latitude": -22.9068,
+            "longitude": -43.1729,
+            "location_source": "base",
+        }
+
+        response = Client(HTTP_X_DEVICE_ID="public-device-gps-old").post(
+            "/api/public/registrar",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["codigo"], "gps_atual_obrigatorio")
 
     def test_alerta_governamental_so_aparece_quando_publicado(self):
         governo = Empresa.objects.create(
