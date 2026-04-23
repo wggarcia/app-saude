@@ -4,6 +4,7 @@ import '../../servicos/alerta_inbox_service.dart';
 import '../../servicos/location_service.dart';
 import '../../servicos/public_api_service.dart';
 import '../../servicos/regiao_base_service.dart';
+import '../alertas/tela_alertas.dart';
 import '../mapa/tela_mapa.dart';
 import '../sintomas/tela_sintomas.dart';
 
@@ -22,6 +23,7 @@ class _TelaHomeState extends State<TelaHome> {
     TelaPainelCidadao(),
     TelaSintomas(),
     TelaMapa(),
+    TelaAlertas(),
   ];
 
   @override
@@ -100,6 +102,11 @@ class _TelaHomeState extends State<TelaHome> {
             icon: Icon(Icons.public_outlined),
             selectedIcon: Icon(Icons.public),
             label: 'Mapa',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.notifications_none_outlined),
+            selectedIcon: Icon(Icons.notifications),
+            label: 'Alertas',
           ),
         ],
       ),
@@ -231,6 +238,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao> {
   }
 
   Future<void> _notificarNovosAlertas(List<dynamic> alertas) async {
+    await AlertaInboxService.syncAlerts(alertas);
     final novos = await AlertaInboxService.captureNewAlerts(alertas);
     await _abrirAlertaSeExistir(novos, permitirLembrarDepois: true);
   }

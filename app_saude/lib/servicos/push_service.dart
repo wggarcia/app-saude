@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import 'alerta_inbox_service.dart';
 import 'device_service.dart';
 import 'public_api_service.dart';
 import 'regiao_base_service.dart';
@@ -14,7 +15,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
 
 class PushService {
   static bool _initialized = false;
-  static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  static final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
     if (_initialized) {
@@ -47,7 +49,8 @@ class PushService {
     await messaging.requestPermission(alert: true, badge: true, sound: true);
     if (!kIsWeb && Platform.isAndroid) {
       await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
           ?.requestNotificationsPermission();
     }
   }
@@ -63,7 +66,11 @@ class PushService {
     await PublicApiService.registrarPushToken(
       token: token,
       deviceId: deviceId,
-      plataforma: kIsWeb ? 'web' : Platform.isIOS ? 'ios' : 'android',
+      plataforma: kIsWeb
+          ? 'web'
+          : Platform.isIOS
+              ? 'ios'
+              : 'android',
       estado: base?['estado']?.toString(),
       cidade: base?['cidade']?.toString(),
       bairro: base?['bairro']?.toString(),
@@ -75,6 +82,12 @@ class PushService {
     if (notification == null) {
       return;
     }
+
+    await AlertaInboxService.storeRemoteNotification(
+      title: notification.title ?? 'Comunicado oficial',
+      message: notification.body ?? '',
+      data: message.data,
+    );
 
     const android = AndroidNotificationDetails(
       'soluscrt_governo',
