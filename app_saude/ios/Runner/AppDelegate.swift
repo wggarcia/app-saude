@@ -20,6 +20,8 @@ import FirebaseCore
       GMSServices.provideAPIKey(mapsKey)
     }
 
+    GeneratedPluginRegistrant.register(with: self)
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }
