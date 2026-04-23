@@ -77,12 +77,13 @@ section{padding:78px 0}
 .compare{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{padding:30px;border-radius:36px;border:1px solid var(--line);background:rgba(255,255,255,.055)}.card.premium{background:linear-gradient(180deg,rgba(69,234,217,.12),rgba(255,255,255,.045));border-color:rgba(69,234,217,.34)}.card h3{margin-bottom:18px}.list{display:grid;gap:13px}.item{display:flex;gap:12px;color:#c9d4dc;line-height:1.58}.item:before{content:"";width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.2);margin-top:3px;flex:0 0 18px}.premium .item:before{background:linear-gradient(135deg,var(--cyan),var(--aqua))}
 .slides{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.slide{min-height:320px;padding:25px;border-radius:32px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.035));position:relative;overflow:hidden}.slide:after{content:"";position:absolute;right:-70px;bottom:-74px;width:190px;height:190px;border-radius:50%;background:rgba(217,184,111,.12)}.slide small{color:#d9b86f;text-transform:uppercase;letter-spacing:.14em;font-weight:800}.slide h3{font-size:1.75rem;margin:52px 0 12px}.slide p{color:#b9c5cf;line-height:1.68;font-size:.95rem}
 .matrix{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.tile{padding:24px;border-radius:30px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12)}.tile .label{font-size:.74rem;color:#d9b86f;text-transform:uppercase;letter-spacing:.14em;font-weight:800}.tile h3{font-size:1.65rem;margin:16px 0 10px}.tile p{color:#b7c3cd;line-height:1.65;font-size:.94rem}
+.values{display:grid;grid-template-columns:.9fr 1.1fr;gap:18px;align-items:stretch}.values-hero{padding:34px;border-radius:38px;background:linear-gradient(180deg,rgba(217,184,111,.14),rgba(255,255,255,.045));border:1px solid rgba(217,184,111,.24);box-shadow:var(--shadow)}.values-hero p{margin-top:18px;color:#c7d2dc;line-height:1.78}.values-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.value{padding:24px;border-radius:30px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12)}.value b{display:block;color:#fff;margin-bottom:9px;font-size:1.06rem}.value span{display:block;color:#b7c3cd;line-height:1.62;font-size:.94rem}
 .download{display:grid;grid-template-columns:1fr .82fr;gap:22px;align-items:center;padding:40px;border-radius:46px;background:linear-gradient(135deg,rgba(217,184,111,.14),rgba(69,234,217,.1));border:1px solid rgba(255,255,255,.16);box-shadow:var(--shadow)}
 .store-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}.store{padding:14px 18px;border-radius:18px;background:#f8edcd;color:#070b10;font-weight:900}.store.dark{background:#0f1820;color:#fff;border:1px solid rgba(255,255,255,.16)}
 .phone{height:432px;border-radius:50px;background:#03080c;border:12px solid #152530;padding:30px;box-shadow:0 28px 80px rgba(0,0,0,.38);position:relative}.phone:before{content:"";position:absolute;top:12px;left:50%;transform:translateX(-50%);width:118px;height:22px;border-radius:999px;background:#000}.screen{height:100%;border-radius:34px;background:linear-gradient(180deg,#081923,#0e2c38);padding:42px 20px 20px}.risk{padding:17px;border-radius:22px;background:rgba(255,255,255,.08);margin-bottom:13px}.risk b{display:block}.risk span{color:#a9bac5}
 .cta{padding:54px;border-radius:48px;text-align:center;border:1px solid rgba(255,255,255,.16);background:radial-gradient(circle at 20% 18%,rgba(217,184,111,.18),transparent 24rem),linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.04));box-shadow:var(--shadow)}.cta p{max-width:760px;margin:18px auto 28px;color:#bdc9d2;line-height:1.78}
 footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.12);padding-top:24px}.footer-links{display:flex;gap:16px;flex-wrap:wrap}.footer-links a{color:#d9c089}
-@media(max-width:980px){.nav{border-radius:28px}.nav-links,.nav-note{display:none}.hero,.section-head,.compare,.download{grid-template-columns:1fr}.proofs,.metrics,.slides,.matrix{grid-template-columns:1fr}h1{font-size:4rem}.command{min-height:auto}.slide{min-height:auto}}
+@media(max-width:980px){.nav{border-radius:28px}.nav-links,.nav-note{display:none}.hero,.section-head,.compare,.download,.values{grid-template-columns:1fr}.proofs,.metrics,.slides,.matrix,.values-grid{grid-template-columns:1fr}h1{font-size:4rem}.command{min-height:auto}.slide{min-height:auto}}
 </style>
 </head>
 <body>
@@ -92,6 +93,7 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
     <div class="nav-links">
       <a href="#diferencial">Diferencial</a>
       <a href="#ecossistema">Ecossistema</a>
+      <a href="#valores">Valores</a>
       <a href="#app">App</a>
       <a href="#contato">Contato</a>
     </div>
@@ -184,6 +186,24 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
         <div class="tile"><div class="label">Protecao</div><h3>Antifraude</h3><p>Controle por aparelho, rede, repeticao, localizacao confirmada e qualidade do sinal.</p></div>
         <div class="tile"><div class="label">Alerta</div><h3>Comunicacao publica</h3><p>Mensagens oficiais chegam ao app da populacao com governanca e rastreabilidade.</p></div>
         <div class="tile"><div class="label">Enterprise</div><h3>SaaS vendavel</h3><p>Pacotes por maquinas, usuarios, setores, administracao financeira e acesso separado.</p></div>
+      </div>
+    </section>
+
+    <section id="valores">
+      <div class="values">
+        <div class="values-hero">
+          <div class="eyebrow"><span class="pulse"></span> Valores SolusCRT</div>
+          <h2>Tecnologia para proteger pessoas, nao apenas vender software.</h2>
+          <p>A SolusCRT nasce com uma responsabilidade clara: transformar dados em cuidado, antecipar riscos sem gerar alarme vazio e ajudar empresas, governos e populacao a agir com mais consciencia, velocidade e humanidade.</p>
+        </div>
+        <div class="values-grid">
+          <div class="value"><b>Vida em primeiro lugar</b><span>Todo indicador, alerta e mapa existe para reduzir atraso, orientar cuidado e apoiar decisoes que preservem pessoas.</span></div>
+          <div class="value"><b>Verdade antes de impacto</b><span>Separar sinal precoce, dado oficial e inferencia de IA e um compromisso para evitar conclusoes falsas.</span></div>
+          <div class="value"><b>Privacidade como fundamento</b><span>Dados de saude exigem minimizacao, seguranca, transparencia e exibicao adequada ao perfil autorizado.</span></div>
+          <div class="value"><b>Cooperacao institucional</b><span>O sistema foi pensado para unir populacao, empresas, hospitais, farmacias, laboratorios e governo sem confundir responsabilidades.</span></div>
+          <div class="value"><b>Acesso social</b><span>O app da populacao deve ser gratuito, simples e util, porque vigilancia inteligente comeca quando todos podem contribuir.</span></div>
+          <div class="value"><b>Coragem operacional</b><span>A SolusCRT existe para antecipar problemas dificeis, mostrar territorios criticos e ajudar lideres a agir antes do pico.</span></div>
+        </div>
       </div>
     </section>
 
