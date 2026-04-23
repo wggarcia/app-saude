@@ -189,6 +189,8 @@ class AuthDeviceTests(TestCase):
         self.assertContains(response, "Saude populacional precisa de radar")
         self.assertContains(response, "Google Play")
         self.assertContains(response, "Valores que fazem a tecnologia merecer confianca")
+        self.assertNotContains(response, "Slide 01")
+        self.assertNotContains(response, "Slide 09")
 
 
 class PublicApiTests(TestCase):
