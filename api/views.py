@@ -66,7 +66,7 @@ LEGAL_DOCUMENTS = {
             ("Segregacao de ambientes", "Empresa, governo e operacao administrativa sao separados por fluxo de login, permissao, sessao, auditoria e dominio/subdominio quando contratado."),
             ("Controles antifraude", "O app e o backend utilizam controles por aparelho, rede, repeticao, qualidade do sinal e localizacao atual para reduzir manipulacao de focos."),
             ("Auditoria", "Acoes institucionais, alertas governamentais e operacoes administrativas devem ter rastreabilidade, usuario responsavel, data e contexto."),
-            ("Revisao juridica", "Este documento e uma base operacional. Antes de venda em escala, contratos e politicas devem ser revisados por assessoria juridica especializada em LGPD, saude e setor publico."),
+            ("Compromisso continuo", "A governanca do SolusCRT Saude e mantida como um processo permanente, com melhoria de controles, revisao de acessos, atualizacao documental e alinhamento aos requisitos aplicaveis de protecao de dados, saude digital e contratos institucionais."),
         ],
     },
     "metodologia": {
