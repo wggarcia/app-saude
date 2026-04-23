@@ -82,45 +82,33 @@ class _TelaSintomasState extends State<TelaSintomas> {
     try {
       return await LocationService.getCurrentLocationForSubmission();
     } catch (_) {
-      final base = await RegiaoBaseService.obterRegiaoBase();
-      final fallback = LocationService.approximateFromRegion(base);
       if (!mounted) {
         return null;
       }
-      final escolha = await showDialog<_LocationFallbackChoice>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Localizacao atual indisponivel'),
-          content: const Text(
-            'Nao consegui confirmar o GPS agora. Voce pode abrir os ajustes do aparelho ou enviar um sinal aproximado para revisao. O sinal aproximado recebe menor peso para proteger o mapa contra local errado.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.pop(context, _LocationFallbackChoice.cancelar),
-              child: const Text('Cancelar'),
+      final abrirAjustes = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('GPS atual necessario'),
+              content: const Text(
+                'Para nao registrar seu sintoma na cidade errada, o app so envia com localizacao atual confirmada pelo aparelho. Ative Localizacao e Localizacao Precisa para o SolusCRT Saude e tente novamente.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Abrir ajustes'),
+                ),
+              ],
             ),
-            TextButton(
-              onPressed: () =>
-                  Navigator.pop(context, _LocationFallbackChoice.ajustes),
-              child: const Text('Abrir ajustes'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.pop(context, _LocationFallbackChoice.aproximado),
-              child: const Text('Enviar aproximado'),
-            ),
-          ],
-        ),
-      );
-      if (escolha == _LocationFallbackChoice.ajustes) {
+          ) ??
+          false;
+      if (abrirAjustes) {
         await LocationService.abrirAjustesLocalizacao();
-        return null;
       }
-      if (escolha != _LocationFallbackChoice.aproximado) {
-        return null;
-      }
-      return fallback;
+      return null;
     }
   }
 
@@ -227,8 +215,6 @@ class _TelaSintomasState extends State<TelaSintomas> {
         .toList();
   }
 }
-
-enum _LocationFallbackChoice { cancelar, ajustes, aproximado }
 
 class _FeedbackCard extends StatelessWidget {
   const _FeedbackCard({required this.data});

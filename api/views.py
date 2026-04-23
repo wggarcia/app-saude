@@ -576,9 +576,6 @@ def registrar_sintoma_publico(request):
     if location_source == "public_reference":
         confianca = min(confianca, 0.55)
         motivos_suspeita.append("referencia_regional_inicial")
-    elif location_source == "approximate_user_confirmed":
-        confianca = min(confianca, 0.7)
-        motivos_suspeita.append("localizacao_aproximada_confirmada")
     permitido, motivo_bloqueio = _bloqueio_envio_publico(
         empresa,
         ip,

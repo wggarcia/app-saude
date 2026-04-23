@@ -80,7 +80,7 @@ class LocationService {
         );
       }
       throw Exception(
-        'Nao foi possivel confirmar sua localizacao atual. Ative o GPS e tente novamente, ou envie como sinal aproximado para revisao.',
+        'Nao foi possivel confirmar sua localizacao atual. Ative a localizacao precisa e tente novamente.',
       );
     }
   }
@@ -133,24 +133,6 @@ class LocationService {
       latitude: -22.9068,
       longitude: -43.1729,
       source: 'public_reference',
-    );
-  }
-
-  static LocationSnapshot approximateFromRegion(Map<String, dynamic>? region) {
-    final fallbackLat = (region?['latitude'] as num?)?.toDouble();
-    final fallbackLon = (region?['longitude'] as num?)?.toDouble();
-    if (fallbackLat != null && fallbackLon != null) {
-      return LocationSnapshot(
-        latitude: fallbackLat,
-        longitude: fallbackLon,
-        source: 'approximate_user_confirmed',
-      );
-    }
-
-    return const LocationSnapshot(
-      latitude: -22.9068,
-      longitude: -43.1729,
-      source: 'approximate_user_confirmed',
     );
   }
 
