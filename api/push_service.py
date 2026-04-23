@@ -168,13 +168,47 @@ def enviar_alerta_governamental(alerta):
 
     try:
         response = messaging.send_each_for_multicast(message, app=app)
+        failure_codes = []
+        invalid_tokens = []
+        for index, send_response in enumerate(response.responses):
+            if send_response.success:
+                continue
+            exc = send_response.exception
+            code = getattr(exc, "code", None) or exc.__class__.__name__
+            failure_codes.append(str(code))
+            if str(code) in {
+                "unregistered",
+                "registration-token-not-registered",
+                "invalid-argument",
+                "invalid-registration-token",
+                "sender-id-mismatch",
+                "UnregisteredError",
+                "SenderIdMismatchError",
+            }:
+                invalid_tokens.append(tokens[index])
+
+        if invalid_tokens:
+            DispositivoPushPublico.objects.filter(token__in=invalid_tokens).update(ativo=False)
+
+        erro_resumido = None
+        if failure_codes and response.success_count == 0:
+            resumo = {}
+            for code in failure_codes:
+                resumo[code] = resumo.get(code, 0) + 1
+            erro_resumido = ", ".join(
+                f"{code}: {count}" for code, count in sorted(resumo.items())
+            )
+
         return {
-            "status": "ok",
+            "status": "ok" if response.success_count > 0 else "falha_total",
             "enviados": response.success_count,
             "falhas": response.failure_count,
             "destinatarios": len(tokens),
             "tokens_ativos": tokens_ativos,
             "estrategia": estrategia,
+            "erro": erro_resumido,
+            "falha_codigos": failure_codes[:8],
+            "tokens_invalidados": len(invalid_tokens),
         }
     except Exception as exc:
         return {
