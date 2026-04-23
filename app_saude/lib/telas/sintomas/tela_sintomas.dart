@@ -85,29 +85,21 @@ class _TelaSintomasState extends State<TelaSintomas> {
       if (!mounted) {
         return null;
       }
-      final abrirAjustes = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('GPS atual necessario'),
-              content: const Text(
-                'Para nao registrar seu sintoma na cidade errada, o app so envia com localizacao atual confirmada pelo aparelho. Ative Localizacao e Localizacao Precisa para o SolusCRT Saude e tente novamente.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancelar'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Abrir ajustes'),
-                ),
-              ],
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('GPS atual necessario'),
+          content: const Text(
+            'Para nao registrar seu sintoma na cidade errada, o app so envia com localizacao atual confirmada pelo iPhone. Em Ajustes > SolusCRT Saude > Localizacao, deixe "Durante o Uso" e "Localizacao Precisa" ligados.',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Entendi'),
             ),
-          ) ??
-          false;
-      if (abrirAjustes) {
-        await LocationService.abrirAjustesLocalizacao();
-      }
+          ],
+        ),
+      );
       return null;
     }
   }

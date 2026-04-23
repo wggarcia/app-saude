@@ -80,7 +80,7 @@ class LocationService {
         );
       }
       throw Exception(
-        'Nao foi possivel confirmar sua localizacao atual. Ative a localizacao precisa e tente novamente.',
+        'Nao foi possivel confirmar sua localizacao atual. Ative Localizacao Precisa para o SolusCRT Saude e tente novamente.',
       );
     }
   }
@@ -136,10 +136,15 @@ class LocationService {
     );
   }
 
-  static Future<void> abrirAjustesLocalizacao() async {
-    final abriuServico = await Geolocator.openLocationSettings();
-    if (!abriuServico) {
-      await Geolocator.openAppSettings();
+  static Future<bool> abrirAjustesLocalizacao() async {
+    try {
+      final abriuServico = await Geolocator.openLocationSettings();
+      if (abriuServico) {
+        return true;
+      }
+      return Geolocator.openAppSettings();
+    } catch (_) {
+      return false;
     }
   }
 }

@@ -202,7 +202,17 @@ class _TelaMapaState extends State<TelaMapa> {
           ) ??
           false;
       if (abrir) {
-        await LocationService.abrirAjustesLocalizacao();
+        final abriu = await LocationService.abrirAjustesLocalizacao();
+        if (!abriu && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Abra Ajustes > SolusCRT Saude > Localizacao e ative Localizacao Precisa.',
+              ),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) {
