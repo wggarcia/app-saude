@@ -157,15 +157,15 @@ class _TelaMapaState extends State<TelaMapa> {
 
   @override
   Widget build(BuildContext context) {
-    final center = regiaoBase != null
+    final center = hotspots.isNotEmpty
         ? LatLng(
-            (regiaoBase!['latitude'] as num).toDouble(),
-            (regiaoBase!['longitude'] as num).toDouble(),
+            (hotspots.first['latitude'] as num).toDouble(),
+            (hotspots.first['longitude'] as num).toDouble(),
           )
-        : hotspots.isNotEmpty
+        : regiaoBase != null
             ? LatLng(
-                (hotspots.first['latitude'] as num).toDouble(),
-                (hotspots.first['longitude'] as num).toDouble(),
+                (regiaoBase!['latitude'] as num).toDouble(),
+                (regiaoBase!['longitude'] as num).toDouble(),
               )
             : const LatLng(-14.235, -51.9253);
     final localAtual = radarAtual?['local'] as Map<String, dynamic>? ?? {};
@@ -232,7 +232,7 @@ class _TelaMapaState extends State<TelaMapa> {
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
                   subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'com.soluscrt.saude',
                 ),
@@ -241,31 +241,13 @@ class _TelaMapaState extends State<TelaMapa> {
               ],
             ),
           ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      const Color(0xFF020B13).withValues(alpha: 0.78),
-                      Colors.transparent,
-                      const Color(0xFF020B13).withValues(alpha: 0.92),
-                    ],
-                    stops: const [0, 0.42, 1],
-                  ),
-                ),
-              ),
-            ),
-          ),
           if (loading)
             const Center(
               child: CircularProgressIndicator(color: Color(0xFF39D0C3)),
             )
           else ...[
             Positioned(
-              top: 12,
+              top: 10,
               left: 16,
               right: 16,
               child: _MapHeroPanel(
@@ -277,14 +259,14 @@ class _TelaMapaState extends State<TelaMapa> {
             ),
             if (notice != null)
               Positioned(
-                top: 138,
+                top: 114,
                 left: 16,
                 right: 16,
                 child: _NoticeCard(message: notice!),
               ),
             if (alertasPublicos.isNotEmpty)
               Positioned(
-                top: notice == null ? 138 : 226,
+                top: notice == null ? 114 : 196,
                 left: 16,
                 right: 16,
                 child: _MapAlertBanner(
@@ -300,7 +282,7 @@ class _TelaMapaState extends State<TelaMapa> {
                 bottom: 12,
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.42,
+                    maxHeight: MediaQuery.of(context).size.height * 0.28,
                   ),
                   child: SingleChildScrollView(
                     child: _RadarCard(
@@ -343,16 +325,16 @@ class _MapHeroPanel extends StatelessWidget {
         ? (doencas.first as Map)['grupo']?.toString() ?? 'Monitoramento'
         : 'Monitoramento';
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: const Color(0xEE061A27),
-        borderRadius: BorderRadius.circular(26),
+        color: const Color(0xF5FFFFFF),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0x5539D0C3)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x66000000),
-            blurRadius: 24,
-            offset: Offset(0, 14),
+            color: Color(0x33000000),
+            blurRadius: 20,
+            offset: Offset(0, 10),
           ),
         ],
       ),
@@ -363,10 +345,10 @@ class _MapHeroPanel extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 46,
-                height: 46,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   gradient: const LinearGradient(
                     colors: [Color(0xFF39D0C3), Color(0xFF0B6B8A)],
                   ),
@@ -381,15 +363,15 @@ class _MapHeroPanel extends StatelessWidget {
                     const Text(
                       'Radar epidemiologico vivo',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFF082033),
                         fontWeight: FontWeight.w900,
-                        fontSize: 17,
+                        fontSize: 16,
                       ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       '${local['cidade'] ?? 'Brasil'} / ${local['estado'] ?? 'BR'}',
-                      style: const TextStyle(color: Color(0xFF9CC4DB)),
+                      style: const TextStyle(color: Color(0xFF436170)),
                     ),
                   ],
                 ),
@@ -397,33 +379,14 @@ class _MapHeroPanel extends StatelessWidget {
               Text(
                 '${hotspots.length}',
                 style: const TextStyle(
-                  color: Color(0xFFFF8A3D),
-                  fontSize: 28,
+                  color: Color(0xFFE85F18),
+                  fontSize: 24,
                   fontWeight: FontWeight.w900,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _HeroMetric(
-                label: 'Foco dominante',
-                value: principal,
-              ),
-              const SizedBox(width: 8),
-              _HeroMetric(
-                label: 'Nivel',
-                value: radar['nivel']?.toString() ?? 'baixo',
-              ),
-              const SizedBox(width: 8),
-              _HeroMetric(
-                label: '7 dias',
-                value: '${radar['registros_7d'] ?? 0}',
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           SegmentedButton<String>(
             showSelectedIcon: false,
             segments: const [
@@ -433,48 +396,17 @@ class _MapHeroPanel extends StatelessWidget {
             selected: {modoMonitoramento},
             onSelectionChanged: (values) => onChangedModo(values.first),
           ),
+          const SizedBox(height: 8),
+          Text(
+            '$principal | nivel ${radar['nivel']?.toString() ?? 'baixo'} | ${radar['registros_7d'] ?? 0} sinais em 7 dias',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFF436170),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
-      ),
-    );
-  }
-}
-
-class _HeroMetric extends StatelessWidget {
-  const _HeroMetric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0C2838),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFF88AFC5), fontSize: 11),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

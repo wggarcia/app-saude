@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../servicos/location_service.dart';
 import '../../servicos/public_api_service.dart';
 import '../../servicos/regiao_base_service.dart';
-import '../../servicos/submission_guard_service.dart';
 
 class TelaSintomas extends StatefulWidget {
   const TelaSintomas({super.key});
@@ -35,14 +34,6 @@ class _TelaSintomasState extends State<TelaSintomas> {
 
     setState(() => loading = true);
     try {
-      final restante = await SubmissionGuardService.tempoRestante();
-      if (restante != null) {
-        final horas = restante.inHours;
-        final minutos = restante.inMinutes.remainder(60);
-        throw Exception(
-          'Seu ultimo sinal ja foi considerado no radar. Para proteger o mapa contra repeticoes, tente novamente em ${horas}h ${minutos}min.',
-        );
-      }
       final location = await LocationService.getCurrentLocationForSubmission();
       final result = await PublicApiService.enviarSintomas(
         sintomas: sintomas,
@@ -56,7 +47,6 @@ class _TelaSintomasState extends State<TelaSintomas> {
         latitude: location.latitude,
         longitude: location.longitude,
       );
-      await SubmissionGuardService.registrarEnvioConsiderado();
       if (!mounted) {
         return;
       }
