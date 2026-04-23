@@ -14,12 +14,13 @@ body{font-family:Geist,Arial,sans-serif;background:#05070a;color:#f7f2e9}
 a{color:inherit;text-decoration:none}
 .top{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:20;width:min(1120px,calc(100% - 34px));display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:rgba(5,7,10,.72);backdrop-filter:blur(24px)}
 .brand{font-weight:800}.actions{display:flex;gap:10px}.btn{padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.16);font-weight:800}.btn.gold{background:linear-gradient(135deg,#f6e7b7,#d9b86f);color:#080b10;border:0}
-.slide{min-height:100vh;scroll-snap-align:start;display:grid;place-items:center;padding:110px 22px 50px;background:radial-gradient(circle at 20% 12%,rgba(69,234,217,.12),transparent 28rem),radial-gradient(circle at 82% 16%,rgba(217,184,111,.15),transparent 30rem),linear-gradient(135deg,#05070a,#07131c)}
+.slide{min-height:100vh;scroll-snap-align:start;display:grid;place-items:center;padding:118px 22px 58px;background:radial-gradient(circle at 20% 12%,rgba(69,234,217,.12),transparent 28rem),radial-gradient(circle at 82% 16%,rgba(217,184,111,.15),transparent 30rem),linear-gradient(135deg,#05070a,#07131c)}
 .wrap{width:min(1120px,100%);display:grid;grid-template-columns:1fr .9fr;gap:44px;align-items:center}
 .full{grid-template-columns:1fr}
-.eyebrow{color:#d9b86f;text-transform:uppercase;letter-spacing:.16em;font-weight:900;font-size:.78rem}
-h1,h2{font-family:Newsreader,serif;letter-spacing:-.045em;line-height:.88}
-h1{font-size:clamp(4rem,8.8vw,9rem)}h2{font-size:clamp(3.3rem,6.5vw,6.8rem)}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;width:max-content;margin-bottom:24px;padding:10px 13px;border-radius:999px;background:rgba(217,184,111,.1);border:1px solid rgba(217,184,111,.26);color:#d9b86f;text-transform:uppercase;letter-spacing:.16em;font-weight:900;font-size:.78rem}
+.eyebrow:before{content:"";width:7px;height:7px;border-radius:50%;background:#45ead9;box-shadow:0 0 18px rgba(69,234,217,.9)}
+h1,h2{font-family:Newsreader,serif;letter-spacing:-.045em;line-height:.94;max-width:980px}
+h1{font-size:clamp(3.7rem,8.4vw,8.4rem)}h2{font-size:clamp(3.1rem,6.1vw,6.2rem)}
 p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780px}
 .panel{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);border-radius:38px;padding:30px;box-shadow:0 34px 110px rgba(0,0,0,.42)}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:28px}
@@ -27,11 +28,12 @@ p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780
 .card b{display:block;font-size:1.1rem;margin-bottom:8px}.card span{color:#aeb9c4;line-height:1.6}
 .map{height:440px;border-radius:34px;position:relative;overflow:hidden;background:#0b1822;border:1px solid rgba(255,255,255,.14)}
 .map:before{content:"";position:absolute;inset:0;background:linear-gradient(32deg,transparent 0 21%,rgba(255,255,255,.07) 21.4% 22.2%,transparent 23%),repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 44px),repeating-linear-gradient(90deg,rgba(255,255,255,.028) 0 1px,transparent 1px 44px)}
-.node{position:absolute;width:92px;height:92px;border-radius:50%;display:grid;place-items:center;background:#fbf8ef;color:#07131a;font-weight:900;border:5px solid #45ead9;box-shadow:0 0 0 24px rgba(69,234,217,.11),0 24px 52px rgba(0,0,0,.42)}
+.node{position:absolute;width:92px;height:92px;border-radius:50%;display:grid;place-items:center;background:#fbf8ef;color:#07131a;font-weight:900;border:5px solid #45ead9;box-shadow:0 0 0 24px rgba(69,234,217,.11),0 24px 52px rgba(0,0,0,.42);letter-spacing:.08em}
+.node:after{content:attr(data-label);position:absolute;top:calc(100% + 12px);left:50%;transform:translateX(-50%);padding:6px 10px;border-radius:999px;background:rgba(5,7,10,.78);border:1px solid rgba(255,255,255,.12);color:#dfeaf2;font-size:.7rem;letter-spacing:.12em;white-space:nowrap}
 .n1{left:13%;top:20%}.n2{right:16%;top:16%;border-color:#d9b86f;box-shadow:0 0 0 24px rgba(217,184,111,.12),0 24px 52px rgba(0,0,0,.42)}.n3{left:42%;bottom:14%;border-color:#ff6f8f;box-shadow:0 0 0 24px rgba(255,111,143,.12),0 24px 52px rgba(0,0,0,.42)}
 .quote{font-family:Newsreader,serif;font-size:clamp(2.2rem,4vw,4.6rem);line-height:1;color:#fff}
 .footer-note{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:#7f8b96;font-size:.85rem}
-@media(max-width:900px){.wrap{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.top{border-radius:24px}.actions{display:none}.map{height:330px}}
+@media(max-width:900px){html{scroll-snap-type:none}.slide{min-height:auto;padding:104px 18px 64px}.wrap{grid-template-columns:1fr;gap:30px}.grid{grid-template-columns:1fr}.top{border-radius:24px}.actions{display:none}.map{height:330px}h1,h2{line-height:1}.eyebrow{margin-bottom:18px}}
 </style>
 </head>
 <body>
@@ -50,7 +52,7 @@ p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780
       <h1>Saude populacional precisa de radar, nao apenas retrovisor.</h1>
       <p>O SolusCRT Saude antecipa sinais territoriais usando app populacional, IA, fontes oficiais e mapas vivos para apoiar resposta antes que o surto vire crise operacional.</p>
     </div>
-    <div class="map"><div class="node n1">RESP</div><div class="node n2">DENG</div><div class="node n3">COVID</div></div>
+    <div class="map"><div class="node n1" data-label="Respiratorio">RESP</div><div class="node n2" data-label="Arbovirose">DENG</div><div class="node n3" data-label="Viral">COVID</div></div>
   </div>
 </section>
 
