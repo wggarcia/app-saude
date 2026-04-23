@@ -34,6 +34,61 @@ def site_principal(request):
         return redirect("/operacao-central/")
     return render(request, "site_principal.html")
 
+
+LEGAL_DOCUMENTS = {
+    "privacidade": {
+        "title": "Politica de Privacidade",
+        "subtitle": "Como o SolusCRT Saude trata dados no app populacional e na plataforma SaaS.",
+        "sections": [
+            ("Resumo executivo", "O SolusCRT Saude utiliza dados informados voluntariamente pela populacao, dados tecnicos do aparelho, localizacao necessaria para georreferenciar sinais de saude e informacoes de contas empresariais/governamentais. O objetivo e monitoramento epidemiologico, seguranca, operacao da plataforma e comunicacao publica."),
+            ("Dados de saude e localizacao", "Sinais de sintomas e localizacao podem ser considerados dados sensiveis ou capazes de revelar informacoes sensiveis. Por isso, o produto deve operar com minimizacao, finalidade especifica, controle de acesso, anonimização ou agregacao sempre que possivel."),
+            ("Uso dos dados", "Os dados colaborativos alimentam mapas de risco, indicadores agregados, alertas regionais e modelos de apoio a decisao. Eles nao substituem diagnostico medico, notificacao oficial ou avaliacao profissional."),
+            ("Compartilhamento", "Empresas e governos visualizam informacoes conforme contrato, perfil de acesso e camada de permissao. A plataforma deve priorizar agregados territoriais e evitar exposicao de individuo identificavel."),
+            ("Direitos do titular", "Titulares podem solicitar informacoes, correcao, exclusao quando aplicavel e esclarecimentos sobre tratamento de dados pelos canais oficiais da SolusCRT."),
+        ],
+    },
+    "termos": {
+        "title": "Termos de Uso",
+        "subtitle": "Regras de uso do app, do site e dos ambientes privados.",
+        "sections": [
+            ("Natureza informativa", "O SolusCRT Saude oferece monitoramento e inteligencia epidemiologica. O app nao realiza diagnostico, prescricao, triagem medica individual ou substituicao de atendimento profissional."),
+            ("Envio responsavel", "Usuarios devem enviar sintomas reais, de boa-fe e apenas quando houver relacao com sua condicao atual. Envios repetidos, automatizados ou fraudulentos podem ser filtrados ou bloqueados."),
+            ("Ambientes privados", "Acessos empresariais, governamentais e administrativos sao exclusivos para clientes e operadores autorizados. Tentativas de acesso indevido podem ser registradas e bloqueadas."),
+            ("Disponibilidade", "A plataforma depende de internet, servicos de nuvem, APIs, fontes oficiais e permissao de localizacao. Podem ocorrer indisponibilidades temporarias ou degradacao de dados externos."),
+            ("Responsabilidade", "Decisoes operacionais e institucionais devem considerar contexto tecnico, validacao humana e protocolos aplicaveis de saude publica."),
+        ],
+    },
+    "seguranca-lgpd": {
+        "title": "Seguranca, LGPD e Governanca",
+        "subtitle": "Controles para proteger dados, acessos e confianca institucional.",
+        "sections": [
+            ("Principios", "A plataforma deve seguir finalidade, adequacao, necessidade, seguranca, prevencao, transparencia e responsabilizacao no tratamento de dados pessoais."),
+            ("Segregacao de ambientes", "Empresa, governo e operacao administrativa sao separados por fluxo de login, permissao, sessao, auditoria e dominio/subdominio quando contratado."),
+            ("Controles antifraude", "O app e o backend utilizam controles por aparelho, rede, repeticao, qualidade do sinal e localizacao atual para reduzir manipulacao de focos."),
+            ("Auditoria", "Acoes institucionais, alertas governamentais e operacoes administrativas devem ter rastreabilidade, usuario responsavel, data e contexto."),
+            ("Revisao juridica", "Este documento e uma base operacional. Antes de venda em escala, contratos e politicas devem ser revisados por assessoria juridica especializada em LGPD, saude e setor publico."),
+        ],
+    },
+    "metodologia": {
+        "title": "Metodologia Epidemiologica",
+        "subtitle": "Como o SolusCRT separa sinal precoce, fonte oficial e decisao operacional.",
+        "sections": [
+            ("Sinal colaborativo", "O app coleta sinais de sintomas em tempo real. Esses sinais indicam tendencia e risco territorial, mas nao equivalem a caso confirmado."),
+            ("Fonte oficial", "Dados oficiais e institucionais, como bases publicas e sistemas de saude, devem ser tratados separadamente, preferencialmente em agregados, com data de coleta, fonte, versao e regra de processamento."),
+            ("Indicadores", "A plataforma usa crescimento, incidencia por 100 mil habitantes, predominancia de sintomas, serie temporal e reducao gradual quando deixam de entrar novos sinais."),
+            ("IA como apoio", "Modelos de IA apoiam classificacao e priorizacao, mas nao substituem equipe tecnica, vigilancia epidemiologica ou decisao institucional."),
+            ("Transparencia", "Paineis devem indicar quando um dado e colaborativo, oficial, inferido ou indisponivel, evitando conclusoes falsas ou comunicacao alarmista."),
+        ],
+    },
+}
+
+
+def documento_publico(request, slug):
+    documento = LEGAL_DOCUMENTS.get(slug)
+    if not documento:
+        return redirect("/")
+    return render(request, "documento_publico.html", {"documento": documento})
+
 STATE_ALIASES = {
     "AC": "Acre",
     "AL": "Alagoas",

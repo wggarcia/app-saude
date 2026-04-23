@@ -27,6 +27,10 @@ class EmpresaMiddleware:
             "/pendente/",
             "/logout/",
             "/cadastro/",
+            "/privacidade/",
+            "/termos/",
+            "/seguranca-lgpd/",
+            "/metodologia/",
         }
         rotas_livres_prefixo = (
             "/api/login",

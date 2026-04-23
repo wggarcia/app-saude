@@ -150,7 +150,9 @@ class AuthDeviceTests(TestCase):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Sala de controle epidemiologica inteligente")
+        self.assertContains(response, "Inteligencia epidemiologica em tempo real")
+        self.assertNotContains(response, "empresa.soluscrt.com.br")
+        self.assertNotContains(response, "governo.soluscrt.com.br")
 
     def test_subdominios_raiz_separam_ambientes(self):
         empresa = Client(HTTP_HOST="empresa.soluscrt.com.br").get("/")
@@ -163,6 +165,17 @@ class AuthDeviceTests(TestCase):
         self.assertContains(governo, "Acesso governamental")
         self.assertEqual(admin.status_code, 302)
         self.assertEqual(admin["Location"], "/operacao-central/")
+
+    def test_documentos_publicos_abrem_sem_autenticacao(self):
+        for rota, texto in [
+            ("/privacidade/", "Politica de Privacidade"),
+            ("/termos/", "Termos de Uso"),
+            ("/seguranca-lgpd/", "Seguranca, LGPD e Governanca"),
+            ("/metodologia/", "Metodologia Epidemiologica"),
+        ]:
+            response = Client(HTTP_HOST="soluscrt.com.br").get(rota)
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, texto)
 
 
 class PublicApiTests(TestCase):

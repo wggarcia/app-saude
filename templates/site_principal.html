@@ -3,38 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SolusCRT Saude | Sala de controle epidemiologica inteligente</title>
-<meta name="description" content="SolusCRT Saude e uma plataforma SaaS de monitoramento epidemiologico em tempo quase real para empresas, hospitais, farmacias, laboratorios e governos.">
+<title>SolusCRT Saude | Inteligencia epidemiologica em tempo real</title>
+<meta name="description" content="SolusCRT Saude e uma plataforma SaaS de inteligencia epidemiologica, app populacional, mapas de risco e sala de controle para empresas e governos.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#061018;
-  --night:#071722;
-  --deep:#0a2434;
-  --panel:rgba(255,255,255,.082);
-  --line:rgba(255,255,255,.16);
-  --text:#eefbff;
-  --muted:#a7c7d8;
-  --cyan:#36ead8;
-  --green:#78f2a5;
-  --orange:#ff9d4d;
-  --blue:#6db7ff;
-  --red:#ff6678;
-  --shadow:0 30px 90px rgba(0,0,0,.38);
+  --bg:#070b10;
+  --ink:#f5f0e8;
+  --muted:#aeb8c2;
+  --soft:#d8e8ed;
+  --panel:rgba(255,255,255,.075);
+  --panel-strong:rgba(255,255,255,.12);
+  --line:rgba(255,255,255,.15);
+  --gold:#d7b46a;
+  --cyan:#52e4d5;
+  --blue:#8ebcff;
+  --green:#9ff0b6;
+  --danger:#ff6f87;
+  --shadow:0 34px 110px rgba(0,0,0,.42);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{
-  font-family:Manrope, sans-serif;
-  color:var(--text);
-  background:
-    radial-gradient(circle at 10% 8%, rgba(54,234,216,.18), transparent 28rem),
-    radial-gradient(circle at 92% 4%, rgba(255,157,77,.16), transparent 30rem),
-    radial-gradient(circle at 50% 45%, rgba(109,183,255,.12), transparent 34rem),
-    linear-gradient(145deg,#031017,#081927 48%,#02080d);
   min-height:100vh;
+  font-family:"IBM Plex Sans",Arial,sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 12% 8%,rgba(82,228,213,.13),transparent 27rem),
+    radial-gradient(circle at 82% 6%,rgba(215,180,106,.16),transparent 30rem),
+    radial-gradient(circle at 42% 52%,rgba(142,188,255,.11),transparent 34rem),
+    linear-gradient(135deg,#05070b,#0b141d 48%,#05070b);
   overflow-x:hidden;
 }
 body:before{
@@ -42,287 +42,217 @@ body:before{
   position:fixed;
   inset:0;
   pointer-events:none;
-  background-image:
-    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
-  background-size:54px 54px;
-  mask-image:linear-gradient(to bottom, rgba(0,0,0,.8), transparent 82%);
+  background:
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:72px 72px;
+  mask-image:linear-gradient(to bottom,#000,transparent 78%);
 }
 a{color:inherit;text-decoration:none}
-.shell{width:min(1180px,calc(100% - 34px));margin:0 auto;position:relative;z-index:2}
+.shell{width:min(1200px,calc(100% - 36px));margin:auto;position:relative;z-index:2}
 .nav{
-  position:sticky;
-  top:14px;
-  z-index:20;
-  margin-top:14px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:18px;
-  padding:13px 16px;
-  border:1px solid var(--line);
-  border-radius:999px;
-  background:rgba(3,14,22,.68);
-  backdrop-filter:blur(24px);
-  box-shadow:0 18px 55px rgba(0,0,0,.26);
+  position:sticky;top:16px;z-index:30;margin-top:16px;
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  padding:14px 18px;border:1px solid var(--line);border-radius:999px;
+  background:rgba(7,11,16,.74);backdrop-filter:blur(26px);box-shadow:0 18px 70px rgba(0,0,0,.28);
 }
-.brand{display:flex;align-items:center;gap:10px;font:700 1.05rem "Space Grotesk",sans-serif;letter-spacing:-.02em}
-.brand-mark{width:34px;height:34px;border-radius:13px;background:conic-gradient(from 120deg,var(--cyan),var(--green),var(--orange),var(--cyan));display:grid;place-items:center;box-shadow:0 0 35px rgba(54,234,216,.25)}
-.brand-mark:after{content:"CRT";font-size:.62rem;color:#061018;font-weight:900}
-.nav-links{display:flex;gap:18px;color:#c8e7f3;font-size:.9rem}
-.nav-actions{display:flex;gap:10px;align-items:center}
+.brand{display:flex;align-items:center;gap:12px;font-weight:700;letter-spacing:.02em}
+.mark{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--gold),#f1e5bd);color:#091016;font-weight:900;font-size:.72rem;box-shadow:0 0 34px rgba(215,180,106,.25)}
+.nav-links{display:flex;gap:22px;color:#c6d0da;font-size:.92rem}
+.private-note{font-size:.84rem;color:#9da9b4;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:9px 12px;background:rgba(255,255,255,.045)}
 .btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  min-height:44px;
-  padding:0 18px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.16);
-  background:rgba(255,255,255,.06);
-  color:#eaffff;
-  font-weight:800;
-  cursor:pointer;
-  transition:.24s ease;
+  display:inline-flex;align-items:center;justify-content:center;min-height:46px;
+  padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.06);color:#fff;font-weight:700;transition:.22s ease;
 }
-.btn:hover{transform:translateY(-2px);border-color:rgba(54,234,216,.55);box-shadow:0 15px 36px rgba(54,234,216,.16)}
-.btn.primary{background:linear-gradient(135deg,var(--cyan),var(--green));color:#061018;border:0}
-.btn.orange{background:linear-gradient(135deg,#ffb15e,#ff7c45);color:#160b03;border:0}
-.hero{padding:86px 0 54px;display:grid;grid-template-columns:1.02fr .98fr;gap:38px;align-items:center}
-.eyebrow{display:inline-flex;align-items:center;gap:9px;padding:8px 12px;border:1px solid rgba(54,234,216,.3);border-radius:999px;background:rgba(54,234,216,.08);color:#adfff4;font-weight:800;font-size:.78rem;text-transform:uppercase;letter-spacing:.12em}
-.pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 7px rgba(120,242,165,.13)}
-h1,h2,h3{font-family:"Space Grotesk",Manrope,sans-serif;letter-spacing:-.055em}
-h1{font-size:clamp(3.05rem,7.1vw,6.7rem);line-height:.9;margin:20px 0 22px;max-width:900px}
-.gradient-text{background:linear-gradient(110deg,#fff 0%,#b9fff6 28%,#78f2a5 55%,#ffb36a 88%);-webkit-background-clip:text;background-clip:text;color:transparent}
-.hero-copy{font-size:1.14rem;line-height:1.8;color:#bad7e4;max-width:720px}
-.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
-.hero-proof{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:30px}
-.proof{padding:16px;border:1px solid var(--line);border-radius:22px;background:rgba(255,255,255,.055)}
-.proof strong{display:block;font:800 1.55rem "Space Grotesk";color:white}
-.proof span{font-size:.82rem;color:#a9c5d3}
-.control-room{
-  min-height:620px;
-  border:1px solid rgba(255,255,255,.18);
-  border-radius:42px;
-  padding:18px;
-  background:
-    linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.035)),
-    radial-gradient(circle at 28% 25%,rgba(54,234,216,.19),transparent 18rem);
-  box-shadow:var(--shadow);
-  position:relative;
-  overflow:hidden;
+.btn:hover{transform:translateY(-2px);border-color:rgba(215,180,106,.55);box-shadow:0 18px 44px rgba(215,180,106,.12)}
+.btn.primary{background:linear-gradient(135deg,#f2dfaa,var(--gold));color:#0a0d12;border:0}
+.btn.ghost{background:transparent}
+.hero{padding:96px 0 62px;display:grid;grid-template-columns:1.02fr .98fr;gap:44px;align-items:center}
+.eyebrow{display:inline-flex;gap:10px;align-items:center;padding:8px 12px;border-radius:999px;border:1px solid rgba(215,180,106,.34);background:rgba(215,180,106,.08);color:#f2dfaa;text-transform:uppercase;letter-spacing:.14em;font-size:.74rem;font-weight:700}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 8px rgba(82,228,213,.12)}
+h1,h2,h3{font-family:"Instrument Serif",serif;font-weight:400;letter-spacing:-.04em}
+h1{font-size:clamp(3.7rem,8.4vw,8rem);line-height:.86;margin:20px 0 24px;max-width:920px}
+h2{font-size:clamp(2.7rem,5.4vw,5.8rem);line-height:.9}
+h3{font-size:2rem;line-height:1}
+.lead{font-size:1.12rem;line-height:1.85;color:#c4d0da;max-width:760px}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px}
+.proofline{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:34px}
+.proof{padding:18px;border:1px solid var(--line);border-radius:24px;background:rgba(255,255,255,.05)}
+.proof b{display:block;font-size:1.08rem;color:#fff;margin-bottom:6px}.proof span{color:#aeb8c2;font-size:.9rem;line-height:1.5}
+.stage{
+  min-height:660px;border-radius:46px;border:1px solid rgba(255,255,255,.16);
+  background:linear-gradient(180deg,rgba(255,255,255,.105),rgba(255,255,255,.035));
+  box-shadow:var(--shadow);padding:18px;position:relative;overflow:hidden;
 }
-.control-room:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,transparent 0 11rem,rgba(54,234,216,.06) 11.2rem 11.45rem,transparent 11.7rem),radial-gradient(circle at 50% 50%,transparent 0 17rem,rgba(255,157,77,.065) 17.2rem 17.5rem,transparent 17.8rem);animation:spin 24s linear infinite}
+.stage:before{content:"";position:absolute;inset:-35%;background:conic-gradient(from 180deg,transparent,rgba(82,228,213,.12),transparent,rgba(215,180,106,.13),transparent);animation:spin 22s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.room-top{position:relative;z-index:2;display:flex;justify-content:space-between;gap:14px;margin-bottom:16px}
-.badge{padding:9px 12px;border-radius:999px;background:rgba(5,18,27,.72);border:1px solid rgba(255,255,255,.13);color:#c7edf7;font-weight:800;font-size:.78rem}
-.map-card{position:relative;z-index:2;height:370px;border-radius:30px;overflow:hidden;border:1px solid rgba(255,255,255,.16);background:#0b2a3a}
-.map-card:before{content:"";position:absolute;inset:0;background:linear-gradient(25deg,transparent 0 23%,rgba(255,255,255,.07) 23.4% 24.5%,transparent 25%),linear-gradient(125deg,transparent 0 28%,rgba(54,234,216,.11) 28.4% 30%,transparent 31%),repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 34px),repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 1px,transparent 1px 34px)}
-.hotspot{position:absolute;width:92px;height:92px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.96);border:5px solid var(--cyan);box-shadow:0 0 0 18px rgba(54,234,216,.1),0 20px 40px rgba(0,0,0,.35);font-weight:900;color:#07313d}
-.hotspot.red{border-color:var(--red);box-shadow:0 0 0 20px rgba(255,102,120,.12),0 20px 40px rgba(0,0,0,.35)}
-.hotspot.orange{border-color:var(--orange);box-shadow:0 0 0 20px rgba(255,157,77,.13),0 20px 40px rgba(0,0,0,.35)}
-.hotspot.one{left:9%;top:21%}.hotspot.two{right:14%;top:16%}.hotspot.three{left:43%;bottom:14%}
-.room-grid{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
-.mini{padding:18px;border-radius:24px;background:rgba(5,18,27,.68);border:1px solid rgba(255,255,255,.12)}
-.mini b{display:block;font:800 1.6rem "Space Grotesk";color:white}.mini span{color:#a8c9d8;font-size:.86rem}
-section{padding:74px 0}
-.section-head{display:flex;justify-content:space-between;gap:26px;align-items:end;margin-bottom:28px}
-.section-head h2{font-size:clamp(2.2rem,4vw,4rem);line-height:1;max-width:760px}
-.section-head p{max-width:420px;color:#abc9d7;line-height:1.7}
-.slides{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.slide{
-  min-height:360px;
-  padding:26px;
-  border-radius:32px;
-  border:1px solid var(--line);
-  background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.04));
-  box-shadow:0 22px 60px rgba(0,0,0,.22);
-  position:relative;
-  overflow:hidden;
-}
-.slide:after{content:"";position:absolute;right:-60px;bottom:-70px;width:180px;height:180px;border-radius:50%;background:rgba(54,234,216,.12)}
-.slide.gov:after{background:rgba(255,157,77,.14)}.slide.pop:after{background:rgba(120,242,165,.14)}
-.num{font:900 4.4rem "Space Grotesk";color:rgba(255,255,255,.12);line-height:.8}
-.slide h3{font-size:1.8rem;margin:32px 0 12px}
-.slide p{color:#b2cfdd;line-height:1.7}
-.features{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-.feature{padding:22px;border-radius:28px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12)}
-.icon{width:42px;height:42px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(54,234,216,.28),rgba(120,242,165,.14));margin-bottom:18px}
-.feature h3{font-size:1.2rem;margin-bottom:8px;letter-spacing:-.03em}.feature p{color:#a7c7d8;line-height:1.6;font-size:.93rem}
-.matrix{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.panel{padding:28px;border-radius:34px;border:1px solid var(--line);background:rgba(255,255,255,.06)}
-.panel h3{font-size:1.8rem;margin-bottom:14px}
-.checks{display:grid;gap:12px;margin-top:18px}
-.check{display:flex;gap:12px;color:#c8e6f0;line-height:1.55}.check:before{content:"";flex:0 0 20px;height:20px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--green));margin-top:2px}
-.download{display:grid;grid-template-columns:1fr .9fr;gap:20px;align-items:center;padding:36px;border-radius:40px;background:linear-gradient(135deg,rgba(54,234,216,.16),rgba(255,157,77,.13));border:1px solid rgba(255,255,255,.18);box-shadow:var(--shadow)}
-.phone{height:460px;border-radius:48px;background:#020b10;border:12px solid #122839;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 35px 80px rgba(0,0,0,.35);padding:28px;position:relative}
-.phone:before{content:"";position:absolute;top:10px;left:50%;transform:translateX(-50%);width:120px;height:24px;border-radius:999px;background:#000}
-.phone-screen{height:100%;border-radius:34px;background:linear-gradient(180deg,#061927,#082c3d);padding:42px 20px 20px;overflow:hidden}
-.risk-card{padding:18px;border-radius:24px;background:rgba(255,255,255,.08);margin-bottom:14px}.risk-card strong{font:800 1.3rem "Space Grotesk"}.risk-card p{color:#a9cbd8;margin-top:5px}
-.store-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
-.store{padding:14px 18px;border-radius:18px;background:#f7fbff;color:#061018;font-weight:900;box-shadow:0 18px 42px rgba(255,255,255,.1)}
-.store.dark{background:#111b22;color:#fff;border:1px solid rgba(255,255,255,.18)}
-.pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.price{padding:26px;border-radius:30px;border:1px solid var(--line);background:rgba(255,255,255,.06)}
-.price.featured{background:linear-gradient(180deg,rgba(54,234,216,.16),rgba(255,255,255,.055));border-color:rgba(54,234,216,.45);transform:translateY(-10px)}
-.price small{color:#82eadd;text-transform:uppercase;font-weight:900;letter-spacing:.11em}.price h3{font-size:1.7rem;margin:12px 0}.price p{color:#aecdda;line-height:1.65}.price .value{font:900 2rem "Space Grotesk";margin:16px 0;color:#fff}
-.cta{padding:48px;border-radius:44px;text-align:center;background:radial-gradient(circle at 20% 20%,rgba(120,242,165,.2),transparent 22rem),linear-gradient(135deg,rgba(255,255,255,.13),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.17);box-shadow:var(--shadow)}
-.cta h2{font-size:clamp(2.4rem,5vw,5.2rem);line-height:.96}.cta p{max-width:740px;margin:18px auto 28px;color:#bad7e4;line-height:1.7}
-footer{padding:40px 0 60px;color:#89aebb;font-size:.9rem}.footer-grid{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.12);padding-top:24px}
-@media(max-width:980px){
-  .nav{border-radius:26px;align-items:flex-start}.nav-links{display:none}.hero,.download,.matrix{grid-template-columns:1fr}.hero{padding-top:50px}.control-room{min-height:auto}.slides,.features,.pricing{grid-template-columns:1fr}.section-head{display:block}.section-head p{margin-top:14px}.hero-proof{grid-template-columns:1fr}.room-grid{grid-template-columns:1fr}.price.featured{transform:none}
-}
+.stage-inner{position:relative;z-index:2;height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:16px}
+.status-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.chip{padding:9px 12px;border-radius:999px;background:rgba(5,9,14,.72);border:1px solid rgba(255,255,255,.13);color:#dce8ee;font-size:.78rem;font-weight:700}
+.screen{height:392px;border-radius:34px;overflow:hidden;border:1px solid rgba(255,255,255,.15);background:#0a1822;position:relative}
+.screen:before{content:"";position:absolute;inset:0;background:linear-gradient(30deg,transparent 0 21%,rgba(255,255,255,.07) 21.5% 22.4%,transparent 23%),linear-gradient(120deg,transparent 0 30%,rgba(82,228,213,.13) 30.4% 32%,transparent 33%),repeating-linear-gradient(0deg,rgba(255,255,255,.032) 0 1px,transparent 1px 42px),repeating-linear-gradient(90deg,rgba(255,255,255,.026) 0 1px,transparent 1px 42px)}
+.node{position:absolute;width:86px;height:86px;border-radius:50%;display:grid;place-items:center;background:#f7f6ef;color:#07131a;font-weight:900;border:5px solid var(--cyan);box-shadow:0 0 0 20px rgba(82,228,213,.1),0 22px 52px rgba(0,0,0,.42)}
+.node.red{border-color:var(--danger);box-shadow:0 0 0 22px rgba(255,111,135,.11),0 22px 52px rgba(0,0,0,.42)}.node.gold{border-color:var(--gold);box-shadow:0 0 0 22px rgba(215,180,106,.12),0 22px 52px rgba(0,0,0,.42)}
+.n1{left:10%;top:19%}.n2{right:13%;top:14%}.n3{left:43%;bottom:13%}
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.metric{padding:20px;border-radius:26px;background:rgba(5,9,14,.7);border:1px solid rgba(255,255,255,.12)}.metric b{display:block;font-size:1.7rem;color:#fff}.metric span{color:#aeb8c2;font-size:.86rem}
+section{padding:78px 0}
+.section-head{display:grid;grid-template-columns:1.2fr .8fr;gap:28px;align-items:end;margin-bottom:30px}.section-head p{color:#b7c4cf;line-height:1.75}
+.slides{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.slide{min-height:390px;padding:28px;border-radius:34px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.095),rgba(255,255,255,.035));position:relative;overflow:hidden}.slide:after{content:"";position:absolute;right:-70px;bottom:-75px;width:210px;height:210px;border-radius:50%;background:rgba(215,180,106,.12)}.slide:nth-child(2):after{background:rgba(82,228,213,.11)}.slide:nth-child(3):after{background:rgba(142,188,255,.11)}
+.slide small{color:#d7b46a;text-transform:uppercase;letter-spacing:.15em;font-weight:700}.slide h3{margin:74px 0 14px}.slide p{color:#bbc8d2;line-height:1.72}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px}.compare-card{padding:30px;border-radius:36px;border:1px solid var(--line);background:rgba(255,255,255,.055)}.compare-card.premium{background:linear-gradient(180deg,rgba(82,228,213,.13),rgba(255,255,255,.045));border-color:rgba(82,228,213,.36)}.compare-card h3{margin-bottom:18px}.list{display:grid;gap:13px}.item{display:flex;gap:12px;color:#c8d3dc;line-height:1.58}.item:before{content:"";width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.22);margin-top:3px;flex:0 0 18px}.premium .item:before{background:linear-gradient(135deg,var(--cyan),var(--green))}
+.features{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.feature{padding:24px;border-radius:30px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12)}.feature .label{color:#d7b46a;font-weight:700;font-size:.76rem;text-transform:uppercase;letter-spacing:.13em}.feature h3{font-size:1.55rem;margin:18px 0 10px}.feature p{color:#b4c2cd;line-height:1.65;font-size:.94rem}
+.download{display:grid;grid-template-columns:1fr .86fr;gap:22px;align-items:center;padding:38px;border-radius:44px;background:linear-gradient(135deg,rgba(215,180,106,.13),rgba(82,228,213,.1));border:1px solid rgba(255,255,255,.16);box-shadow:var(--shadow)}.store-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}.store{padding:14px 18px;border-radius:18px;background:#f8f2df;color:#070b10;font-weight:800}.store.dark{background:#101820;color:#fff;border:1px solid rgba(255,255,255,.16)}
+.phone{height:440px;border-radius:50px;background:#03080c;border:12px solid #152530;padding:30px;box-shadow:0 28px 80px rgba(0,0,0,.38);position:relative}.phone:before{content:"";position:absolute;top:12px;left:50%;transform:translateX(-50%);width:118px;height:22px;border-radius:999px;background:#000}.phone-screen{height:100%;border-radius:34px;background:linear-gradient(180deg,#081923,#0e2c38);padding:42px 20px 20px}.risk{padding:17px;border-radius:22px;background:rgba(255,255,255,.08);margin-bottom:13px}.risk b{display:block;font-size:1.08rem}.risk span{color:#a9bac5}
+.legal-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.legal{padding:20px;border-radius:26px;border:1px solid var(--line);background:rgba(255,255,255,.045)}.legal b{display:block;margin-bottom:8px}.legal a{color:#f1dba4;font-weight:700}
+.cta{padding:54px;border-radius:48px;text-align:center;border:1px solid rgba(255,255,255,.16);background:radial-gradient(circle at 20% 18%,rgba(215,180,106,.18),transparent 24rem),linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.04));box-shadow:var(--shadow)}.cta p{max-width:760px;margin:18px auto 28px;color:#bdc9d2;line-height:1.78}
+footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.12);padding-top:24px}.footer-links{display:flex;gap:16px;flex-wrap:wrap}.footer-links a{color:#d9c089}
+@media(max-width:980px){.nav{border-radius:28px;align-items:flex-start}.nav-links,.private-note{display:none}.hero,.section-head,.compare,.download{grid-template-columns:1fr}.slides,.features,.legal-strip{grid-template-columns:1fr}.proofline,.metrics{grid-template-columns:1fr}h1{font-size:4rem}.stage{min-height:auto}.slide{min-height:auto}.hero{padding-top:58px}}
 </style>
 </head>
 <body>
 <div class="shell">
   <nav class="nav">
-    <a class="brand" href="#"><span class="brand-mark"></span> SolusCRT Saude</a>
+    <a class="brand" href="#"><span class="mark">CRT</span> SolusCRT Saude</a>
     <div class="nav-links">
+      <a href="#diferencial">Diferencial</a>
       <a href="#plataforma">Plataforma</a>
-      <a href="#governo">Governo</a>
       <a href="#app">App</a>
-      <a href="#contratar">Contratar</a>
+      <a href="#legal">Confianca</a>
     </div>
-    <div class="nav-actions">
-      <a class="btn" href="https://empresa.soluscrt.com.br">Empresa</a>
-      <a class="btn primary" href="https://governo.soluscrt.com.br">Governo</a>
-    </div>
+    <div class="private-note">Ambientes privados somente sob contrato</div>
   </nav>
 
   <main>
     <section class="hero">
       <div>
-        <div class="eyebrow"><span class="pulse"></span> Sala de controle epidemiologica inteligente</div>
-        <h1>O radar de saude que transforma sinais da populacao em decisao territorial.</h1>
-        <p class="hero-copy">SolusCRT Saude conecta app populacional, mapas de risco, IA epidemiologica, fontes oficiais brasileiras, alertas publicos e paineis SaaS para empresas, hospitais, farmacias, laboratorios e governos.</p>
+        <div class="eyebrow"><span class="dot"></span> Intelligence layer for public health operations</div>
+        <h1>Uma sala de controle epidemiologica antes do atraso virar crise.</h1>
+        <p class="lead">O SolusCRT Saude une app populacional, mapa de risco, IA epidemiologica, fontes oficiais brasileiras, alertas publicos e paineis SaaS para transformar sinais territoriais em decisao operacional.</p>
         <div class="hero-actions">
-          <a class="btn primary" href="#contratar">Solicitar apresentacao</a>
-          <a class="btn orange" href="#app">Baixar app da populacao</a>
-          <a class="btn" href="https://empresa.soluscrt.com.br">Entrar como empresa</a>
+          <a class="btn primary" href="mailto:comercial@soluscrt.com.br?subject=Apresentacao%20SolusCRT%20Saude">Solicitar apresentacao executiva</a>
+          <a class="btn ghost" href="#diferencial">Ver diferencial</a>
         </div>
-        <div class="hero-proof">
-          <div class="proof"><strong>Tempo real</strong><span>Sinais anonimos enviados pelo celular fortalecendo o mapa de risco.</span></div>
-          <div class="proof"><strong>Brasil</strong><span>Camadas por bairro, municipio, estado e leitura nacional.</span></div>
-          <div class="proof"><strong>IA + SUS</strong><span>Sinais colaborativos cruzados com bases oficiais e metodologia auditavel.</span></div>
+        <div class="proofline">
+          <div class="proof"><b>Sinais em tempo real</b><span>A populacao informa sintomas pelo app, com protecao contra repeticao e localizacao atual.</span></div>
+          <div class="proof"><b>Camada oficial</b><span>Dados colaborativos sao separados de bases oficiais, historicos e indicadores por 100 mil habitantes.</span></div>
+          <div class="proof"><b>Resposta acionavel</b><span>Empresas, hospitais, farmacias e governo recebem leitura diferente para cada decisao.</span></div>
         </div>
       </div>
-      <div class="control-room" aria-label="Representacao visual do centro de controle SolusCRT">
-        <div class="room-top">
-          <span class="badge">Radar nacional ativo</span>
-          <span class="badge">Alerta populacional pronto</span>
+      <div class="stage">
+        <div class="stage-inner">
+          <div class="status-row">
+            <span class="chip">Radar Brasil</span>
+            <span class="chip">IA territorial</span>
+            <span class="chip">Alertas publicos</span>
+          </div>
+          <div class="screen">
+            <div class="node n1">RESP</div>
+            <div class="node gold n2">DENG</div>
+            <div class="node red n3">COVID</div>
+          </div>
+          <div class="metrics">
+            <div class="metric"><b>+42%</b><span>crescimento em recorte local</span></div>
+            <div class="metric"><b>10 dias</b><span>janela antes de reducao gradual sem novos sinais</span></div>
+            <div class="metric"><b>100 mil</b><span>taxas padronizadas por populacao</span></div>
+            <div class="metric"><b>LGPD</b><span>dados anonimizados e governanca</span></div>
+          </div>
         </div>
-        <div class="map-card">
-          <div class="hotspot one">RESP</div>
-          <div class="hotspot orange two">DENG</div>
-          <div class="hotspot red three">COVID</div>
+      </div>
+    </section>
+
+    <section id="diferencial">
+      <div class="section-head">
+        <h2>O diferencial nao e substituir a vigilancia oficial. E antecipar o sinal.</h2>
+        <p>Vigilancia tradicional depende de notificacoes, atendimento, confirmacoes, processamento e publicacoes periodicas. O SolusCRT adiciona uma camada colaborativa em tempo real, auditavel e separada dos dados oficiais.</p>
+      </div>
+      <div class="compare">
+        <div class="compare-card">
+          <h3>Como grande parte do monitoramento opera hoje</h3>
+          <div class="list">
+            <div class="item">Espera por dados formais, notificacoes, atendimento ou bases publicadas em ciclos.</div>
+            <div class="item">Painel geralmente mostra o que ja foi consolidado, com atraso natural entre evento e publicacao.</div>
+            <div class="item">A leitura territorial pode chegar tarde para estoque, equipes, comunicacao e resposta local.</div>
+          </div>
         </div>
-        <div class="room-grid">
-          <div class="mini"><b>+42%</b><span>crescimento local em 7 dias</span></div>
-          <div class="mini"><b>10 dias</b><span>janela antes de reducao gradual de foco</span></div>
-          <div class="mini"><b>100k</b><span>indicadores por habitantes</span></div>
-          <div class="mini"><b>LGPD</b><span>dados publicos anonimizados e governanca</span></div>
+        <div class="compare-card premium">
+          <h3>Como o SolusCRT acrescenta vantagem operacional</h3>
+          <div class="list">
+            <div class="item">App populacional envia sinais anonimos e georreferenciados para revelar tendencia antes da consolidacao oficial.</div>
+            <div class="item">IA classifica padroes, crescimento, provaveis grupos de doenca e foco territorial.</div>
+            <div class="item">Dados colaborativos, oficiais e institucionais ficam separados para nao confundir sinal precoce com confirmacao epidemiologica.</div>
+          </div>
         </div>
       </div>
     </section>
 
     <section id="plataforma">
       <div class="section-head">
-        <h2>Uma plataforma, quatro frentes de impacto.</h2>
-        <p>O SolusCRT foi desenhado para nao ser apenas dashboard. Ele e uma infraestrutura de inteligencia operacional para reduzir atraso entre sinal, analise e acao.</p>
+        <h2>Uma plataforma desenhada para decisores, nao apenas para graficos.</h2>
+        <p>O valor esta na orquestracao: coleta, qualidade do sinal, mapa, alerta, auditoria, contrato e tomada de decisao.</p>
       </div>
       <div class="slides">
-        <article class="slide pop"><div class="num">01</div><h3>Populacao</h3><p>App gratuito para registrar sintomas, receber alertas publicos e acompanhar o radar local sem expor dados sensiveis desnecessarios.</p></article>
-        <article class="slide"><div class="num">02</div><h3>Empresas</h3><p>Saude ocupacional, risco territorial, abastecimento preventivo, monitoramento por unidade e leitura de impacto operacional.</p></article>
-        <article class="slide gov"><div class="num">03</div><h3>Governo</h3><p>Camada institucional separada, com alertas oficiais, fontes brasileiras, auditoria, indicadores epidemiologicos e recorte territorial profundo.</p></article>
+        <article class="slide"><small>Slide 01</small><h3>Populacao como radar social</h3><p>App gratuito para sintomas, alertas oficiais e leitura da regiao. Sem prometer diagnostico e sem substituir atendimento medico.</p></article>
+        <article class="slide"><small>Slide 02</small><h3>Empresas e saude ocupacional</h3><p>Antecipacao de afastamentos, risco por unidade, impacto operacional, estoque preventivo e leitura territorial para decisoes B2B.</p></article>
+        <article class="slide"><small>Slide 03</small><h3>Governo com bonus profundo</h3><p>Sala de situacao separada, fontes oficiais, alertas publicos, matriz de decisao e auditoria institucional para contratos anuais.</p></article>
       </div>
     </section>
 
     <section>
-      <div class="section-head">
-        <h2>O que torna o SolusCRT desejavel para contratos grandes?</h2>
-        <p>Ele combina o que decisores pedem: velocidade, clareza territorial, confianca, seguranca e capacidade de acao.</p>
-      </div>
       <div class="features">
-        <div class="feature"><div class="icon">🗺</div><h3>Mapa de risco vivo</h3><p>Focos por bairro, municipio e estado, com leitura de crescimento, predominancia de sintomas e reducao temporal quando novos casos param.</p></div>
-        <div class="feature"><div class="icon">🧠</div><h3>IA epidemiologica</h3><p>Classificacao de padroes, provaveis grupos de doenca, probabilidade operacional e priorizacao de territorios criticos.</p></div>
-        <div class="feature"><div class="icon">🏥</div><h3>Hospitais e farmacias</h3><p>Antecipacao de demanda para atendimento, estoque, laboratorios, medicamentos e planejamento regional.</p></div>
-        <div class="feature"><div class="icon">🛡</div><h3>Antifraude</h3><p>Controle por aparelho, rede, repeticao, localizacao confirmada e qualidade do sinal para evitar inflar casos falsos.</p></div>
-        <div class="feature"><div class="icon">📊</div><h3>Indicadores oficiais</h3><p>Incidencia, prevalencia, crescimento, serie historica, letalidade, mortalidade e denominadores populacionais.</p></div>
-        <div class="feature"><div class="icon">📣</div><h3>Alertas publicos</h3><p>Governo cria, revisa, aprova e publica comunicados diretamente para o app da populacao.</p></div>
-        <div class="feature"><div class="icon">🔐</div><h3>Ambientes separados</h3><p>Empresa, governo e operacao administrativa em entradas independentes, reduzindo risco e aumentando confianca comercial.</p></div>
-        <div class="feature"><div class="icon">💼</div><h3>SaaS enterprise</h3><p>Pacotes por usuarios/maquinas, gestao financeira, painel operacional do dono e contratos B2B/B2G.</p></div>
-      </div>
-    </section>
-
-    <section id="governo">
-      <div class="matrix">
-        <div class="panel">
-          <div class="eyebrow">Camada institucional</div>
-          <h3>Bonus exclusivo para governo</h3>
-          <p class="hero-copy">Governos recebem um ambiente proprio para sala de situacao, com separacao de acesso, auditoria, alertas oficiais e leitura epidemiologica mais profunda.</p>
-          <div class="checks">
-            <div class="check">Brasil Oficial com InfoDengue, InfoGripe, IBGE/SIDRA, OpenDataSUS/DATASUS catalogados e estrategia segura de agregados.</div>
-            <div class="check">Matriz de decisao para orientar vigilancia, comunicacao publica, hospitais, insumos e resposta territorial.</div>
-            <div class="check">Contrato anual fechado, adequado a prefeituras, estados, consorcios e secretarias.</div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="eyebrow">Governanca e confianca</div>
-          <h3>Projetado para tomada de decisao responsavel</h3>
-          <div class="checks">
-            <div class="check">Sinais colaborativos separados de dados oficiais confirmados.</div>
-            <div class="check">Indicadores por 100 mil habitantes e metodologia rastreavel.</div>
-            <div class="check">Sem microdados oficiais brutos no dashboard; foco em agregados, cache e seguranca.</div>
-            <div class="check">Alertas com fluxo de rascunho, revisao, aprovacao e publicacao.</div>
-          </div>
-        </div>
+        <div class="feature"><div class="label">Radar</div><h3>Mapa vivo</h3><p>Focos por bairro, municipio e estado, com intensidade, crescimento e reducao temporal quando o envio de sinais diminui.</p></div>
+        <div class="feature"><div class="label">IA</div><h3>Predicao operacional</h3><p>Classificacao de padroes e provaveis grupos de doenca para orientar vigilancia e preparacao.</p></div>
+        <div class="feature"><div class="label">Saude</div><h3>Hospitais e farmacias</h3><p>Planejamento de atendimento, estoque, laboratorio, campanhas e resposta em regioes com aumento de sintomas.</p></div>
+        <div class="feature"><div class="label">Seguranca</div><h3>Antifraude</h3><p>Controles por aparelho, rede, repeticao, localizacao confirmada e qualidade de sinal para reduzir manipulacao.</p></div>
+        <div class="feature"><div class="label">Oficial</div><h3>Brasil Oficial</h3><p>Camadas com IBGE/SIDRA, InfoDengue, InfoGripe, OpenDataSUS/DATASUS catalogados e uso de agregados.</p></div>
+        <div class="feature"><div class="label">Alertas</div><h3>Comunicacao publica</h3><p>Fluxo de rascunho, revisao, aprovacao e publicacao de comunicados oficiais para o app.</p></div>
+        <div class="feature"><div class="label">SaaS</div><h3>Ambientes isolados</h3><p>Entradas privadas para empresa, governo e operacao administrativa, sem exposicao publica de links na pagina principal.</p></div>
+        <div class="feature"><div class="label">Contrato</div><h3>Enterprise ready</h3><p>Pacotes por usuarios e maquinas, gestao financeira, contrato anual B2G e proposta B2B por valor entregue.</p></div>
       </div>
     </section>
 
     <section id="app">
       <div class="download">
         <div>
-          <div class="eyebrow">App da populacao</div>
-          <h2>O sensor social que alimenta o radar com responsabilidade.</h2>
-          <p class="hero-copy">O app gratuito permite que a populacao envie sinais de saude, veja o radar da sua regiao e receba alertas oficiais. A localizacao atual e usada para evitar registrar sintomas na cidade errada.</p>
+          <div class="eyebrow"><span class="dot"></span> App da populacao</div>
+          <h2>O app gratuito que transforma cuidado local em inteligencia coletiva.</h2>
+          <p class="lead">A populacao envia sintomas, acompanha o radar da propria regiao e recebe alertas oficiais. A localizacao atual e obrigatoria para evitar registro em cidade errada.</p>
           <div class="store-row">
-            <a class="store" href="https://apps.apple.com/app/id6762992414">Baixar na App Store</a>
-            <a class="store dark" href="#contratar">Google Play em preparacao</a>
+            <a class="store" href="https://apps.apple.com/app/id6762992414">App Store</a>
+            <span class="store dark">Google Play em preparacao</span>
           </div>
         </div>
         <div class="phone">
           <div class="phone-screen">
-            <div class="risk-card"><strong>Radar local</strong><p>Rio / Sao Paulo / Brasil</p></div>
-            <div class="risk-card"><strong>Focos recentes</strong><p>Respiratorio 42% • Arbovirose 31%</p></div>
-            <div class="risk-card"><strong>Alerta publico</strong><p>Comunicados oficiais aparecem no celular.</p></div>
-            <div class="risk-card"><strong>Mapa vivo</strong><p>Icones por grupo de doenca e localizacao precisa.</p></div>
+            <div class="risk"><b>Radar local</b><span>Mapa por localizacao atual</span></div>
+            <div class="risk"><b>Sinais recentes</b><span>Respiratorio, arboviroses e sindromes predominantes</span></div>
+            <div class="risk"><b>Alerta publico</b><span>Mensagens oficiais no celular</span></div>
+            <div class="risk"><b>Protecao</b><span>Sem envio aproximado para cidade errada</span></div>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="contratar">
+    <section id="legal">
       <div class="section-head">
-        <h2>Modelos comerciais prontos para vender.</h2>
-        <p>Estrutura pensada para contratos de valor, com empresa pagando por escala e governo por cobertura anual.</p>
+        <h2>Confianca, documentos e governanca desde o primeiro contato.</h2>
+        <p>Para vender a empresas e governo, o produto precisa comunicar responsabilidade juridica, privacidade, seguranca e metodologia.</p>
       </div>
-      <div class="pricing">
-        <div class="price"><small>Empresas</small><h3>Clinicas, laboratorios e unidades locais</h3><p>Entrada por pacote de usuarios e maquinas, ideal para operacoes regionais.</p><div class="value">R$ 500+</div><p>Planos mensais ou anuais conforme setor e porte.</p></div>
-        <div class="price featured"><small>Enterprise</small><h3>Redes, hospitais e grandes operacoes</h3><p>Dashboards por unidade, foco territorial, alertas internos e analise preditiva.</p><div class="value">R$ 2k - 50k+</div><p>Contratos com alto valor por reducao de risco operacional.</p></div>
-        <div class="price"><small>Governo</small><h3>Prefeituras, estados e consorcios</h3><p>Sala de situacao, fontes oficiais, auditoria e alertas publicos.</p><div class="value">Anual</div><p>Contrato fechado por populacao coberta e profundidade operacional.</p></div>
+      <div class="legal-strip">
+        <div class="legal"><b>Privacidade</b><span>Dados pessoais e sinais de saude exigem transparencia.</span><br><br><a href="/privacidade/">Ler politica</a></div>
+        <div class="legal"><b>Termos de uso</b><span>Limites do app, uso informativo e regras da plataforma.</span><br><br><a href="/termos/">Ler termos</a></div>
+        <div class="legal"><b>Seguranca e LGPD</b><span>Controles, minimizacao, segregacao e auditoria.</span><br><br><a href="/seguranca-lgpd/">Ver governanca</a></div>
+        <div class="legal"><b>Metodologia</b><span>Separacao entre sinal precoce e dado oficial confirmado.</span><br><br><a href="/metodologia/">Ver metodo</a></div>
       </div>
     </section>
 
     <section>
       <div class="cta">
-        <h2>Pronto para transformar vigilancia em acao?</h2>
-        <p>O SolusCRT Saude foi criado para que empresas e governos enxerguem surtos antes que eles virem crise operacional. Se a decisao precisa ser rapida, territorial e confiavel, este e o centro de controle.</p>
+        <h2>O contrato nao vende tela. Vende tempo de resposta.</h2>
+        <p>O SolusCRT Saude posiciona empresas e governos antes do pico: onde abastecer, onde comunicar, onde reforcar equipe, onde investigar e quando um foco comeca a cair.</p>
         <div class="hero-actions" style="justify-content:center">
-          <a class="btn primary" href="mailto:comercial@soluscrt.com.br?subject=Quero%20uma%20apresentacao%20do%20SolusCRT%20Saude">Falar com comercial</a>
-          <a class="btn" href="https://empresa.soluscrt.com.br">Acessar empresa</a>
-          <a class="btn orange" href="https://governo.soluscrt.com.br">Acessar governo</a>
+          <a class="btn primary" href="mailto:comercial@soluscrt.com.br?subject=Quero%20uma%20apresentacao%20executiva%20do%20SolusCRT%20Saude">Solicitar apresentacao</a>
+          <a class="btn ghost" href="/metodologia/">Conhecer metodologia</a>
         </div>
       </div>
     </section>
@@ -330,8 +260,13 @@ footer{padding:40px 0 60px;color:#89aebb;font-size:.9rem}.footer-grid{display:fl
 
   <footer>
     <div class="footer-grid">
-      <div>SolusCRT Saude • Monitoramento epidemiologico inteligente</div>
-      <div>LGPD • IA • App populacional • SaaS B2B/B2G</div>
+      <div>SolusCRT Saude. Inteligencia epidemiologica, app populacional e SaaS enterprise.</div>
+      <div class="footer-links">
+        <a href="/privacidade/">Privacidade</a>
+        <a href="/termos/">Termos</a>
+        <a href="/seguranca-lgpd/">Seguranca</a>
+        <a href="/metodologia/">Metodologia</a>
+      </div>
     </div>
   </footer>
 </div>

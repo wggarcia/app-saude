@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ documento.title }} | SolusCRT Saude</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"IBM Plex Sans",Arial,sans-serif;background:linear-gradient(135deg,#05070b,#0b141d);color:#f5f0e8;min-height:100vh}
+a{color:#d7b46a;text-decoration:none}
+.shell{width:min(920px,calc(100% - 34px));margin:auto;padding:34px 0 70px}
+.top{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:48px}
+.brand{font-weight:800;letter-spacing:.02em}.back{padding:10px 14px;border:1px solid rgba(255,255,255,.16);border-radius:999px;color:#dbe5ec}
+.hero{padding:42px;border-radius:34px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);box-shadow:0 30px 90px rgba(0,0,0,.34)}
+h1{font-family:"Instrument Serif",serif;font-size:clamp(3rem,7vw,5.8rem);font-weight:400;line-height:.9;letter-spacing:-.04em}
+.subtitle{margin-top:18px;color:#b7c4cf;line-height:1.8;font-size:1.08rem}
+.doc{display:grid;gap:18px;margin-top:28px}
+.section{padding:26px;border-radius:26px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12)}
+.section h2{font-size:1.25rem;margin-bottom:10px;color:#f1dba4}.section p{color:#c5d1da;line-height:1.75}
+.notice{margin-top:24px;color:#96a6b3;line-height:1.7;font-size:.94rem}
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="top">
+    <a class="brand" href="/">SolusCRT Saude</a>
+    <a class="back" href="/">Voltar ao site</a>
+  </div>
+  <section class="hero">
+    <h1>{{ documento.title }}</h1>
+    <p class="subtitle">{{ documento.subtitle }}</p>
+  </section>
+  <section class="doc">
+    {% for titulo, texto in documento.sections %}
+    <article class="section">
+      <h2>{{ titulo }}</h2>
+      <p>{{ texto }}</p>
+    </article>
+    {% endfor %}
+  </section>
+  <p class="notice">Documento-base para apresentacao institucional. Antes de publicacao definitiva, contratos e politicas devem ser revisados por assessoria juridica especializada em LGPD, saude digital e setor publico.</p>
+</main>
+</body>
+</html>
