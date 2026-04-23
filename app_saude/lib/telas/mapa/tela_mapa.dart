@@ -15,13 +15,16 @@ class TelaMapa extends StatefulWidget {
 }
 
 class _TelaMapaState extends State<TelaMapa> {
+  final MapController _mapController = MapController();
   List<dynamic> hotspots = const [];
   Map<String, dynamic>? radarLocal;
   Map<String, dynamic>? radarAtual;
   Map<String, dynamic>? regiaoBase;
+  LocationSnapshot? localizacaoAtual;
   List<dynamic> alertasPublicos = const [];
   String modoMonitoramento = 'base';
   bool loading = true;
+  bool locating = false;
   String? notice;
 
   @override
@@ -115,6 +118,7 @@ class _TelaMapaState extends State<TelaMapa> {
         radarLocal = radarPreferido;
         this.radarAtual = radarAtual;
         regiaoBase = updatedBase;
+        localizacaoAtual = location.source == 'current' ? location : null;
         alertasPublicos = alertas;
         modoMonitoramento = modo;
         loading = false;
@@ -132,6 +136,7 @@ class _TelaMapaState extends State<TelaMapa> {
         radarLocal = null;
         radarAtual = null;
         regiaoBase = null;
+        localizacaoAtual = null;
         alertasPublicos = const [];
         notice =
             'Nao foi possivel atualizar o radar local agora. O mapa publico continua disponivel para consulta.';
@@ -156,6 +161,56 @@ class _TelaMapaState extends State<TelaMapa> {
     await _load();
   }
 
+  Future<void> _centralizarMinhaLocalizacao() async {
+    setState(() => locating = true);
+    try {
+      final location = await LocationService.getCurrentLocationForSubmission();
+      final point = LatLng(location.latitude, location.longitude);
+      if (!mounted) {
+        return;
+      }
+      setState(() => localizacaoAtual = location);
+      _mapController.move(point, 16.2);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Localizacao atual centralizada no mapa.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      final abrir = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('GPS indisponivel'),
+              content: const Text(
+                'Nao consegui acessar sua localizacao exata agora. No simulador do Xcode, configure uma localizacao em Debug > Simulate Location. No iPhone real, confira se a permissao de localizacao esta ativa.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Fechar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Abrir ajustes'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+      if (abrir) {
+        await LocationService.abrirAjustesLocalizacao();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => locating = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final center = hotspots.isNotEmpty
@@ -175,6 +230,9 @@ class _TelaMapaState extends State<TelaMapa> {
       localAtual: localAtual,
     );
     final zoom = regiaoBase != null || hotspots.isNotEmpty ? 10.2 : 4.2;
+    final userPoint = localizacaoAtual == null
+        ? null
+        : LatLng(localizacaoAtual!.latitude, localizacaoAtual!.longitude);
     final circles = hotspots.whereType<Map>().map((raw) {
       final item = Map<String, dynamic>.from(raw);
       final visual = _FocusVisual.fromItem(item);
@@ -205,6 +263,16 @@ class _TelaMapaState extends State<TelaMapa> {
           ),
         )
         .toList();
+    if (userPoint != null) {
+      markers.add(
+        Marker(
+          width: 92,
+          height: 92,
+          point: userPoint,
+          child: const _UserLocationMarker(),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -220,6 +288,7 @@ class _TelaMapaState extends State<TelaMapa> {
         children: [
           Positioned.fill(
             child: FlutterMap(
+              mapController: _mapController,
               options: MapOptions(
                 initialCenter: center,
                 initialZoom: zoom,
@@ -272,6 +341,14 @@ class _TelaMapaState extends State<TelaMapa> {
                   ),
                 ),
               ),
+            Positioned(
+              top: alertasPublicos.isNotEmpty || notice != null ? 198 : 116,
+              right: 16,
+              child: _LocateButton(
+                loading: locating,
+                onPressed: _centralizarMinhaLocalizacao,
+              ),
+            ),
             if (radarLocal != null)
               Positioned(
                 left: 12,
@@ -405,6 +482,89 @@ class _MapHeroPanel extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _LocateButton extends StatelessWidget {
+  const _LocateButton({required this.loading, required this.onPressed});
+
+  final bool loading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xF7FFFFFF),
+      shape: const CircleBorder(),
+      elevation: 8,
+      shadowColor: const Color(0x33000000),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: loading ? null : onPressed,
+        child: SizedBox(
+          width: 54,
+          height: 54,
+          child: Center(
+            child: loading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.4),
+                  )
+                : const Icon(
+                    Icons.my_location,
+                    color: Color(0xFF0B6B8A),
+                    size: 27,
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UserLocationMarker extends StatelessWidget {
+  const _UserLocationMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0xFF1A73E8).withValues(alpha: 0.16),
+          ),
+        ),
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0xFF1A73E8).withValues(alpha: 0.28),
+          ),
+        ),
+        Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0xFF1A73E8),
+            border: Border.all(color: Colors.white, width: 4),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x55000000),
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
