@@ -22,7 +22,7 @@ class _TelaMapaState extends State<TelaMapa> {
   Map<String, dynamic>? regiaoBase;
   LocationSnapshot? localizacaoAtual;
   List<dynamic> alertasPublicos = const [];
-  String modoMonitoramento = 'base';
+  String modoMonitoramento = 'atual';
   bool loading = true;
   bool locating = false;
   String? notice;
@@ -63,16 +63,21 @@ class _TelaMapaState extends State<TelaMapa> {
       notice = null;
     });
     try {
-      final modo = await RegiaoBaseService.obterModoMonitoramento();
+      final modoSalvo = await RegiaoBaseService.obterModoMonitoramento();
       final base = await RegiaoBaseService.obterRegiaoBase();
       final location = await LocationService.getBestEffortLocation(
         fallbackRegion: base,
       );
+      final temGpsAtual = location.source == 'current';
+      final modo = temGpsAtual ? 'atual' : modoSalvo;
+      if (temGpsAtual && modoSalvo != 'atual') {
+        await RegiaoBaseService.salvarModoMonitoramento('atual');
+      }
       final radarAtual = await PublicApiService.fetchRadarLocal(
         latitude: location.latitude,
         longitude: location.longitude,
       );
-      if (location.source == 'current') {
+      if (temGpsAtual) {
         await RegiaoBaseService.registrarObservacao(
           local: radarAtual['local'] as Map<String, dynamic>? ?? {},
           latitude: location.latitude,
@@ -87,14 +92,20 @@ class _TelaMapaState extends State<TelaMapa> {
       );
       final localPreferido =
           radarPreferido['local'] as Map<String, dynamic>? ?? {};
+      final cidadeMapa = localPreferido['cidade']?.toString();
+      final estadoMapa = localPreferido['estado']?.toString();
+      final temRecorteLocal = cidadeMapa != null &&
+          cidadeMapa.trim().isNotEmpty &&
+          estadoMapa != null &&
+          estadoMapa.trim().isNotEmpty;
       List<dynamic> mapa;
       List<dynamic> alertas;
       try {
         mapa = await PublicApiService.fetchMapa(
-          cidade: localPreferido['cidade']?.toString(),
-          estado: localPreferido['estado']?.toString(),
+          cidade: cidadeMapa,
+          estado: estadoMapa,
         );
-        if (mapa.isEmpty) {
+        if (mapa.isEmpty && !temRecorteLocal) {
           mapa = await PublicApiService.fetchMapa();
         }
       } catch (_) {
@@ -118,12 +129,12 @@ class _TelaMapaState extends State<TelaMapa> {
         radarLocal = radarPreferido;
         this.radarAtual = radarAtual;
         regiaoBase = updatedBase;
-        localizacaoAtual = location.source == 'current' ? location : null;
+        localizacaoAtual = temGpsAtual ? location : null;
         alertasPublicos = alertas;
         modoMonitoramento = modo;
         loading = false;
-        notice = mapa.isEmpty
-            ? 'Ainda nao ha focos publicos recentes para este recorte. O mapa continua acompanhando sua regiao.'
+        notice = mapa.isEmpty && temRecorteLocal
+            ? 'Ainda nao ha focos publicos recentes para sua regiao atual. O mapa nao mistura outros estados para evitar leitura errada.'
             : null;
       });
     } catch (err) {
@@ -170,6 +181,10 @@ class _TelaMapaState extends State<TelaMapa> {
         return;
       }
       setState(() => localizacaoAtual = location);
+      await RegiaoBaseService.salvarModoMonitoramento('atual');
+      if (!mounted) {
+        return;
+      }
       _mapController.move(point, 16.2);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -223,23 +238,29 @@ class _TelaMapaState extends State<TelaMapa> {
 
   @override
   Widget build(BuildContext context) {
-    final center = hotspots.isNotEmpty
-        ? LatLng(
-            (hotspots.first['latitude'] as num).toDouble(),
-            (hotspots.first['longitude'] as num).toDouble(),
-          )
-        : regiaoBase != null
+    final center = localizacaoAtual != null
+        ? LatLng(localizacaoAtual!.latitude, localizacaoAtual!.longitude)
+        : hotspots.isNotEmpty
             ? LatLng(
-                (regiaoBase!['latitude'] as num).toDouble(),
-                (regiaoBase!['longitude'] as num).toDouble(),
+                (hotspots.first['latitude'] as num).toDouble(),
+                (hotspots.first['longitude'] as num).toDouble(),
               )
-            : const LatLng(-14.235, -51.9253);
+            : regiaoBase != null
+                ? LatLng(
+                    (regiaoBase!['latitude'] as num).toDouble(),
+                    (regiaoBase!['longitude'] as num).toDouble(),
+                  )
+                : const LatLng(-14.235, -51.9253);
     final localAtual = radarAtual?['local'] as Map<String, dynamic>? ?? {};
     final estaForaDaBase = RegiaoBaseService.estaForaDaRegiaoBase(
       regiaoBase: regiaoBase,
       localAtual: localAtual,
     );
-    final zoom = regiaoBase != null || hotspots.isNotEmpty ? 10.2 : 4.2;
+    final zoom = localizacaoAtual != null
+        ? 12.2
+        : regiaoBase != null || hotspots.isNotEmpty
+            ? 10.2
+            : 4.2;
     final userPoint = localizacaoAtual == null
         ? null
         : LatLng(localizacaoAtual!.latitude, localizacaoAtual!.longitude);
@@ -991,10 +1012,9 @@ class _FocusVisual {
   final String shortLabel;
 
   static _FocusVisual fromItem(Map<String, dynamic> item) {
-    final grupo =
-        (item['doenca_dominante'] ?? item['grupo_dominante'] ?? '')
-            .toString()
-            .toLowerCase();
+    final grupo = (item['doenca_dominante'] ?? item['grupo_dominante'] ?? '')
+        .toString()
+        .toLowerCase();
     final faixa = ((item['semaforo'] as Map<String, dynamic>?)?['faixa'] ?? '')
         .toString()
         .toLowerCase();

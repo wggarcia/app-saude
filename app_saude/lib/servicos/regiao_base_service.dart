@@ -77,9 +77,8 @@ class RegiaoBaseService {
         'estado': estado,
         'latitude': latitude,
         'longitude': longitude,
-        'count': index >= 0
-            ? ((regions[index]['count'] as num?)?.toInt() ?? 1)
-            : 1,
+        'count':
+            index >= 0 ? ((regions[index]['count'] as num?)?.toInt() ?? 1) : 1,
         'last_seen': now,
       };
     } catch (_) {
@@ -116,13 +115,18 @@ class RegiaoBaseService {
           .map((item) => Map<String, dynamic>.from(item as Map))
           .toList();
       regions.sort((a, b) {
+        final lastSeenCompare = (b['last_seen']?.toString() ?? '')
+            .compareTo(a['last_seen']?.toString() ?? '');
+        if (lastSeenCompare != 0) {
+          return lastSeenCompare;
+        }
         final countCompare = ((b['count'] as num?)?.toInt() ?? 0)
             .compareTo((a['count'] as num?)?.toInt() ?? 0);
         if (countCompare != 0) {
           return countCompare;
         }
-        return (b['last_seen']?.toString() ?? '')
-            .compareTo(a['last_seen']?.toString() ?? '');
+        return (b['key']?.toString() ?? '')
+            .compareTo(a['key']?.toString() ?? '');
       });
       _memoryBase = regions.first;
       return regions.first;
