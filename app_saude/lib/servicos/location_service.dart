@@ -135,4 +135,29 @@ class LocationService {
       source: 'public_reference',
     );
   }
+
+  static LocationSnapshot approximateFromRegion(Map<String, dynamic>? region) {
+    final fallbackLat = (region?['latitude'] as num?)?.toDouble();
+    final fallbackLon = (region?['longitude'] as num?)?.toDouble();
+    if (fallbackLat != null && fallbackLon != null) {
+      return LocationSnapshot(
+        latitude: fallbackLat,
+        longitude: fallbackLon,
+        source: 'approximate_user_confirmed',
+      );
+    }
+
+    return const LocationSnapshot(
+      latitude: -22.9068,
+      longitude: -43.1729,
+      source: 'approximate_user_confirmed',
+    );
+  }
+
+  static Future<void> abrirAjustesLocalizacao() async {
+    final abriuServico = await Geolocator.openLocationSettings();
+    if (!abriuServico) {
+      await Geolocator.openAppSettings();
+    }
+  }
 }
