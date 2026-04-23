@@ -540,6 +540,86 @@ class GovernanceTests(TestCase):
         self.assertEqual(len(tokens), 1)
         self.assertEqual(estrategia, "recorte_direto")
 
+    def test_push_governamental_prioriza_token_mais_recente_por_device(self):
+        antigo = DispositivoPushPublico.objects.create(
+            device_id="iphone-principal",
+            token="token-antigo",
+            plataforma="ios",
+            estado="SP",
+            cidade="Guaruja",
+            bairro="Pitangueiras",
+            ativo=True,
+        )
+        novo = DispositivoPushPublico.objects.create(
+            device_id="iphone-principal",
+            token="token-novo",
+            plataforma="ios",
+            estado="SP",
+            cidade="Guaruja",
+            bairro="Pitangueiras",
+            ativo=True,
+        )
+        DispositivoPushPublico.objects.filter(id=antigo.id).update(
+            atualizado_em=timezone.now() - timedelta(days=1)
+        )
+        DispositivoPushPublico.objects.filter(id=novo.id).update(
+            atualizado_em=timezone.now()
+        )
+        alerta = AlertaGovernamental.objects.create(
+            empresa=self.governo,
+            titulo="Alerta Guaruja",
+            mensagem="Comunicado local",
+            estado="SP",
+            cidade="Guarujá",
+            bairro="Pitangueiras",
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+            ativo=True,
+        )
+
+        tokens, total, estrategia = _tokens_para_alerta(alerta)
+
+        self.assertEqual(total, 1)
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual(tokens[0].token, "token-novo")
+        self.assertEqual(estrategia, "recorte_direto")
+
+    def test_registrar_push_publico_desativa_tokens_antigos_do_mesmo_device(self):
+        DispositivoPushPublico.objects.create(
+            device_id="iphone-principal",
+            token="token-antigo",
+            plataforma="ios",
+            estado="SP",
+            cidade="Guaruja",
+            bairro="Pitangueiras",
+            ativo=True,
+        )
+
+        response = self.client.post(
+            "/api/public/push-token",
+            data=json.dumps(
+                {
+                    "device_id": "iphone-principal",
+                    "token": "token-novo",
+                    "plataforma": "ios",
+                    "estado": "SP",
+                    "cidade": "Guaruja",
+                    "bairro": "Pitangueiras",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            DispositivoPushPublico.objects.filter(
+                device_id="iphone-principal",
+                ativo=True,
+            ).count(),
+            1,
+        )
+        self.assertTrue(DispositivoPushPublico.objects.get(token="token-novo").ativo)
+        self.assertFalse(DispositivoPushPublico.objects.get(token="token-antigo").ativo)
+
 
 class TemporalDecayTests(TestCase):
     def test_indice_temporal_preserva_10_dias_e_cai_depois(self):

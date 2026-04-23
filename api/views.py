@@ -1497,6 +1497,8 @@ def registrar_push_publico(request):
     if not token or not device_id:
         return JsonResponse({"erro": "token e device_id são obrigatórios"}, status=400)
 
+    DispositivoPushPublico.objects.filter(device_id=device_id[:120]).exclude(token=token).update(ativo=False)
+
     registro, _ = DispositivoPushPublico.objects.update_or_create(
         token=token,
         defaults={

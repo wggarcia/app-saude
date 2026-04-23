@@ -75,7 +75,18 @@ def _matches_direct_scope(token, alerta):
 
 
 def _tokens_para_alerta(alerta):
-    tokens = list(DispositivoPushPublico.objects.filter(ativo=True))
+    registros = (
+        DispositivoPushPublico.objects.filter(ativo=True)
+        .order_by("-atualizado_em", "-id")
+    )
+    vistos = set()
+    tokens = []
+    for registro in registros:
+        chave = (registro.device_id or "").strip() or registro.token
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        tokens.append(registro)
     total = len(tokens)
     if not tokens:
         return [], total, "sem_tokens"
