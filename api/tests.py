@@ -151,7 +151,8 @@ class AuthDeviceTests(TestCase):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Inteligencia epidemiologica em tempo real")
+        self.assertContains(response, "IA epidemiologica para antecipar surtos")
+        self.assertNotContains(response, "sistema nervoso")
         self.assertNotContains(response, "empresa.soluscrt.com.br")
         self.assertNotContains(response, "governo.soluscrt.com.br")
         self.assertContains(response, "/apresentacao/")
