@@ -878,9 +878,16 @@ class _HotspotMarker extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Doenca dominante: ${item['grupo_dominante']}',
+                    'Doenca provavel: ${item['doenca_dominante'] ?? item['grupo_dominante']}',
                     style: const TextStyle(color: Color(0xFF9CC4DB)),
                   ),
+                  if (item['perfil_sindromico'] != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Perfil sindromico: ${item['perfil_sindromico']}',
+                      style: const TextStyle(color: Color(0xFF9CC4DB)),
+                    ),
+                  ],
                 ],
               ),
             );
@@ -984,13 +991,21 @@ class _FocusVisual {
   final String shortLabel;
 
   static _FocusVisual fromItem(Map<String, dynamic> item) {
-    final grupo = (item['grupo_dominante'] ?? '').toString().toLowerCase();
+    final grupo =
+        (item['doenca_dominante'] ?? item['grupo_dominante'] ?? '')
+            .toString()
+            .toLowerCase();
     final faixa = ((item['semaforo'] as Map<String, dynamic>?)?['faixa'] ?? '')
         .toString()
         .toLowerCase();
     final indice = item['indice_ativo'] ?? item['total'] ?? 0;
     final icon = switch (grupo) {
       String value when value.contains('covid') => Icons.coronavirus,
+      String value when value.contains('febre amarela') => Icons.vaccines,
+      String value when value.contains('leptos') => Icons.water_drop,
+      String value when value.contains('malaria') => Icons.bug_report,
+      String value when value.contains('sarampo') => Icons.masks,
+      String value when value.contains('mening') => Icons.emergency,
       String value when value.contains('resp') || value.contains('gripe') =>
         Icons.air,
       String value
@@ -1005,6 +1020,11 @@ class _FocusVisual {
     };
     final shortLabel = switch (grupo) {
       String value when value.contains('covid') => 'COVID',
+      String value when value.contains('febre amarela') => 'FAM',
+      String value when value.contains('leptos') => 'LEP',
+      String value when value.contains('malaria') => 'MAL',
+      String value when value.contains('sarampo') => 'SAR',
+      String value when value.contains('mening') => 'MEN',
       String value when value.contains('gripe') => 'GRIPE',
       String value when value.contains('resp') => 'RESP',
       String value when value.contains('deng') => 'DENG',

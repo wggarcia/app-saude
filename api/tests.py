@@ -7,6 +7,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .models import AlertaGovernamental, Empresa, RegistroSintoma
+from .epidemiologia import DISEASE_WEIGHTS
 from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_codigo_pacote, pacotes_por_setor
 from .views import _indice_temporal_publico
 
@@ -190,6 +191,16 @@ class AuthDeviceTests(TestCase):
 
 
 class PublicApiTests(TestCase):
+    def test_catalogo_epidemiologico_inclui_doencas_prioritarias(self):
+        for doenca in [
+            "Febre Amarela",
+            "Leptospirose",
+            "Malaria",
+            "Sarampo",
+            "Meningite",
+        ]:
+            self.assertIn(doenca, DISEASE_WEIGHTS)
+
     def test_resumo_publico_responde_sem_autenticacao(self):
         response = Client().get("/api/public/resumo")
 
@@ -201,6 +212,34 @@ class PublicApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("hotspots", response.json())
+
+    def test_mapa_publico_entrega_doencas_provaveis_por_foco(self):
+        empresa = Empresa.objects.create(
+            nome="Populacao Teste",
+            email="populacao-mapa@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        RegistroSintoma.objects.create(
+            empresa=empresa,
+            febre=True,
+            dor_corpo=True,
+            cansaco=True,
+            latitude=-23.5505,
+            longitude=-46.6333,
+            cidade="São Paulo",
+            estado="SP",
+            bairro="Centro",
+            grupo="Arbovirose",
+        )
+
+        response = Client().get("/api/public/mapa?cidade=São Paulo&estado=SP")
+        hotspot = response.json()["hotspots"][0]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("doenca_dominante", hotspot)
+        self.assertIn("doencas_provaveis", hotspot)
+        self.assertTrue(hotspot["doencas_provaveis"])
 
     def test_envios_publicos_de_dispositivos_distintos_na_mesma_rede_nao_bloqueiam_primeiro_volume(self):
         payload = {

@@ -430,7 +430,12 @@ def risco_por_doenca(doenca, total):
         "Gripe": (30, 80, 150),
         "Dengue": (20, 50, 100),
         "Chikungunya": (15, 40, 80),
-        "COVID": (10, 30, 70)
+        "COVID": (10, 30, 70),
+        "Febre Amarela": (5, 15, 35),
+        "Leptospirose": (8, 25, 55),
+        "Malaria": (8, 25, 55),
+        "Sarampo": (3, 10, 25),
+        "Meningite": (2, 6, 15),
     }
 
     if doenca not in limites:
@@ -476,6 +481,34 @@ def probabilidade_doenca(sintomas):
             "tosse": 0.8,
             "febre": 0.7,
             "cansaco": 0.5
+        },
+        "Febre Amarela": {
+            "febre": 0.85,
+            "dor_corpo": 0.65,
+            "cansaco": 0.75,
+            "tosse": -0.35
+        },
+        "Leptospirose": {
+            "febre": 0.8,
+            "dor_corpo": 0.8,
+            "cansaco": 0.65
+        },
+        "Malaria": {
+            "febre": 0.85,
+            "cansaco": 0.75,
+            "dor_corpo": 0.45,
+            "tosse": -0.25
+        },
+        "Sarampo": {
+            "febre": 0.7,
+            "tosse": 0.7,
+            "cansaco": 0.4
+        },
+        "Meningite": {
+            "febre": 0.82,
+            "dor_corpo": 0.5,
+            "cansaco": 0.6,
+            "falta_ar": 0.1
         }
     }
 

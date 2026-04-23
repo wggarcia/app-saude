@@ -52,6 +52,37 @@ DISEASE_WEIGHTS = {
         "cansaco": 0.48,
         "tosse": -0.18,
     },
+    "Febre Amarela": {
+        "febre": 0.95,
+        "dor_corpo": 0.7,
+        "cansaco": 0.82,
+        "tosse": -0.22,
+        "falta_ar": -0.12,
+    },
+    "Leptospirose": {
+        "febre": 0.86,
+        "dor_corpo": 0.82,
+        "cansaco": 0.7,
+        "tosse": -0.12,
+    },
+    "Malaria": {
+        "febre": 0.9,
+        "cansaco": 0.78,
+        "dor_corpo": 0.52,
+        "tosse": -0.18,
+    },
+    "Sarampo": {
+        "febre": 0.72,
+        "tosse": 0.72,
+        "cansaco": 0.42,
+        "falta_ar": -0.08,
+    },
+    "Meningite": {
+        "febre": 0.84,
+        "dor_corpo": 0.55,
+        "cansaco": 0.66,
+        "falta_ar": 0.12,
+    },
     "Bronquite": {
         "tosse": 0.98,
         "falta_ar": 0.88,
@@ -169,6 +200,11 @@ def _public_recommendation(dominant_disease, dominant_symptom, risk_level):
         "Gripe": "reforcar etiqueta respiratoria, hidratacao e avaliacao rapida de sintomaticos",
         "Dengue": "eliminar agua parada, acelerar vigilancia vetorial e orientar hidratacao",
         "Chikungunya": "orientar dor articular persistente, hidratar e rastrear aumento de vetores",
+        "Febre Amarela": "reforcar vigilancia de febre aguda, orientacao vacinal e comunicacao de risco em areas indicadas",
+        "Leptospirose": "orientar risco apos enchentes ou agua contaminada e encaminhamento de sinais de gravidade",
+        "Malaria": "priorizar investigacao em areas de transmissao e encaminhamento para testagem conforme protocolo local",
+        "Sarampo": "reforcar alerta para febre com tosse, isolamento orientado e verificacao de cobertura vacinal",
+        "Meningite": "orientar busca imediata de atendimento diante de febre intensa, rigidez ou piora rapida",
     }
     action = base.get(dominant_disease, f"priorizar monitoramento de {dominant_symptom.lower()} e orientacao local")
 
@@ -184,8 +220,12 @@ def _market_recommendation(dominant_disease, dominant_symptom):
         return "reforcar estoque de mascaras, antitermicos, testes e antigripais"
     if dominant_disease == "Gripe":
         return "reforcar antigripais, xaropes, vitamina C e analgesicos"
-    if dominant_disease in {"Dengue", "Chikungunya"}:
+    if dominant_disease in {"Dengue", "Chikungunya", "Zika", "Febre Amarela"}:
         return "reforcar analgesicos, hidratacao oral, repelentes e materiais de orientacao"
+    if dominant_disease in {"Leptospirose", "Malaria"}:
+        return "reforcar hidratacao, antitermicos seguros, orientacao de encaminhamento e materiais educativos"
+    if dominant_disease in {"Sarampo", "Meningite"}:
+        return "reforcar mascaras, antitermicos, orientacao de isolamento/encaminhamento e comunicacao de risco"
     if dominant_symptom == "Falta de Ar":
         return "priorizar itens respiratorios e protocolos de encaminhamento"
     return "acompanhar demanda de sintomaticos e ajustar estoque de suporte"
@@ -194,8 +234,12 @@ def _market_recommendation(dominant_disease, dominant_symptom):
 def _hospital_recommendation(dominant_disease, dominant_symptom, risk_level):
     if dominant_symptom == "Falta de Ar" or dominant_disease == "COVID":
         action = "preparar leitos respiratorios, triagem rapida, oxigenio e retaguarda de UTI"
-    elif dominant_disease in {"Dengue", "Chikungunya"}:
+    elif dominant_disease in {"Dengue", "Chikungunya", "Zika", "Febre Amarela", "Leptospirose", "Malaria"}:
         action = "preparar hidratacao venosa, analgesia, observacao e fluxo para sinais de alarme"
+    elif dominant_disease == "Meningite":
+        action = "preparar triagem de emergencia, isolamento quando indicado, coleta diagnostica e protocolo de notificação"
+    elif dominant_disease == "Sarampo":
+        action = "reforcar triagem respiratoria, isolamento orientado, vigilancia de contatos e verificacao vacinal"
     elif dominant_disease == "Gripe":
         action = "reforcar triagem sindromica, observacao e acolhimento de demanda espontanea"
     else:
@@ -209,8 +253,12 @@ def _hospital_recommendation(dominant_disease, dominant_symptom, risk_level):
 
 
 def _government_recommendation(dominant_disease, dominant_symptom, risk_level, growth_percent, total_cases):
-    if dominant_disease in {"Dengue", "Chikungunya"}:
+    if dominant_disease in {"Dengue", "Chikungunya", "Zika", "Febre Amarela"}:
         action = "intensificar vigilancia vetorial, bloqueio territorial, comunicacao comunitaria e mutirao de campo"
+    elif dominant_disease in {"Leptospirose", "Malaria"}:
+        action = "acionar vigilancia territorial, investigacao ambiental, comunicacao de risco e rede de testagem/encaminhamento"
+    elif dominant_disease in {"Sarampo", "Meningite"}:
+        action = "acionar notificacao imediata, investigacao de contatos, comunicacao de risco e articulacao da rede assistencial"
     elif dominant_symptom == "Falta de Ar" or dominant_disease == "COVID":
         action = "acionar vigilancia sindromica respiratoria, campanha de protecao e retaguarda regional"
     elif dominant_disease == "Gripe":
@@ -290,8 +338,12 @@ def _strategic_tags(dominant_disease, dominant_symptom, growth_percent, risk_lev
         tags.append("Prioridade Alta")
     if dominant_symptom == "Falta de Ar":
         tags.append("Respiratorio")
-    if dominant_disease in {"Dengue", "Chikungunya"}:
+    if dominant_disease in {"Dengue", "Chikungunya", "Zika", "Febre Amarela"}:
         tags.append("Vetorial")
+    if dominant_disease in {"Leptospirose", "Malaria"}:
+        tags.append("Territorial")
+    if dominant_disease in {"Sarampo", "Meningite"}:
+        tags.append("Notificacao Rapida")
 
     return tags[:4]
 
@@ -301,8 +353,12 @@ def _government_tags(dominant_disease, dominant_symptom, growth_percent, risk_le
 
     if dominant_symptom == "Falta de Ar":
         tags.append("Resposta Respiratoria")
-    if dominant_disease in {"Dengue", "Chikungunya"}:
+    if dominant_disease in {"Dengue", "Chikungunya", "Zika", "Febre Amarela"}:
         tags.append("Campo Vetorial")
+    if dominant_disease in {"Leptospirose", "Malaria"}:
+        tags.append("Investigacao Territorial")
+    if dominant_disease in {"Sarampo", "Meningite"}:
+        tags.append("Notificacao Imediata")
     if growth_percent >= 50:
         tags.append("Escalada")
     if risk_level == "CRITICO":
@@ -321,8 +377,12 @@ def _stock_pressure(total_cases, growth_percent, risk_level):
 
 
 def _market_signal(dominant_disease, dominant_symptom, stock_pressure):
-    if dominant_disease in {"Dengue", "Chikungunya"}:
+    if dominant_disease in {"Dengue", "Chikungunya", "Zika", "Febre Amarela"}:
         category = "hidratacao, analgesia e repelentes"
+    elif dominant_disease in {"Leptospirose", "Malaria"}:
+        category = "hidratacao, antitermicos seguros e orientacao de encaminhamento"
+    elif dominant_disease in {"Sarampo", "Meningite"}:
+        category = "mascaras, antitermicos e comunicacao de risco"
     elif dominant_disease in {"COVID", "Gripe"} or dominant_symptom == "Tosse":
         category = "antigripais, testes, mascaras e suporte respiratorio leve"
     elif dominant_symptom == "Falta de Ar":

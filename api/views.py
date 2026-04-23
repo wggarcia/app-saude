@@ -12,6 +12,7 @@ from api.utils_ia import classificar_padrao
 from api.utils_geo import obter_endereco
 from api.utils_auth import validar_token
 from api.models import Empresa, RegistroSintoma
+from api.epidemiologia import _build_disease_probabilities
 from django.db.models import Count, Avg, Q
 from django.db.models.functions import TruncDate
 from django.contrib.auth.hashers import make_password
@@ -1252,6 +1253,7 @@ def app_radar_local(request):
         "cansaco": atuais.filter(cansaco=True).count(),
         "falta_ar": atuais.filter(falta_ar=True).count(),
     }
+    doencas_provaveis = _build_disease_probabilities(sintomas, total_ativos)
 
     return JsonResponse({
         "local": {
@@ -1283,6 +1285,7 @@ def app_radar_local(request):
             }
             for item in doencas
         ],
+        "doencas_provaveis": doencas_provaveis,
         "sintomas": sintomas,
     })
 
@@ -1333,12 +1336,13 @@ def app_mapa_publico(request):
 
     resultado = []
     for item in hotspots:
+        area_queryset = base.filter(
+            cidade=item["cidade"],
+            estado=item["estado"],
+            bairro=item["bairro"],
+        )
         grupo_top = (
-            base.filter(
-                cidade=item["cidade"],
-                estado=item["estado"],
-                bairro=item["bairro"],
-            )
+            area_queryset
             .exclude(grupo__isnull=True)
             .exclude(grupo="")
             .values("grupo")
@@ -1346,6 +1350,15 @@ def app_mapa_publico(request):
             .order_by("-total")
             .first()
         )
+        sintomas_area = {
+            "febre": area_queryset.filter(febre=True).count(),
+            "tosse": area_queryset.filter(tosse=True).count(),
+            "dor_corpo": area_queryset.filter(dor_corpo=True).count(),
+            "cansaco": area_queryset.filter(cansaco=True).count(),
+            "falta_ar": area_queryset.filter(falta_ar=True).count(),
+        }
+        doencas_provaveis = _build_disease_probabilities(sintomas_area, item["total"])
+        doenca_top = doencas_provaveis[0]["name"] if doencas_provaveis else None
         indice_ativo = round(item["indice_ativo"], 2)
         nivel = "alto" if indice_ativo >= 45 else "moderado" if indice_ativo >= 20 else "atencao" if indice_ativo >= 8 else "baixo"
         peso_geo = max(item["peso_geo"], 1)
@@ -1358,7 +1371,10 @@ def app_mapa_publico(request):
             "percentual_ativo": round((indice_ativo / total_indice_mapa) * 100, 2),
             "latitude": round(item["latitude_soma"] / peso_geo, 6),
             "longitude": round(item["longitude_soma"] / peso_geo, 6),
-            "grupo_dominante": grupo_top["grupo"] if grupo_top else "Monitoramento geral",
+            "grupo_dominante": doenca_top or (grupo_top["grupo"] if grupo_top else "Monitoramento geral"),
+            "perfil_sindromico": grupo_top["grupo"] if grupo_top else "Monitoramento geral",
+            "doenca_dominante": doenca_top,
+            "doencas_provaveis": doencas_provaveis[:5],
             "semaforo": _semaforo_publico(nivel),
             "decaimento_temporal": "foco preservado por 10 dias sem novos envios; depois a intensidade reduz gradualmente ate 30 dias",
         })
