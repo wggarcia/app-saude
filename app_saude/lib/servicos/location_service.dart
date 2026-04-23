@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:geolocator/geolocator.dart';
 
 class LocationSnapshot {
@@ -14,8 +16,8 @@ class LocationSnapshot {
 
 class LocationService {
   static const _maxLastKnownAge = Duration(minutes: 30);
-  static const _maxSubmissionAge = Duration(seconds: 90);
-  static const _maxSubmissionAccuracyMeters = 250.0;
+  static const _maxSubmissionAge = Duration(minutes: 5);
+  static const _maxSubmissionAccuracyMeters = 500.0;
 
   static const Map<String, dynamic> referenciaPublicaInicial = {
     'bairro': 'Centro',
@@ -106,15 +108,38 @@ class LocationService {
   static Future<Position> _getCurrentPositionResilient() async {
     try {
       return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        desiredAccuracy: LocationAccuracy.best,
+        timeLimit: const Duration(seconds: 20),
       );
-    } catch (_) {
-      return Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 16),
-      );
+    } catch (firstError) {
+      try {
+        return await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 25),
+        );
+      } catch (secondError) {
+        try {
+          return await _getCurrentPositionFromStream();
+        } catch (streamError) {
+          throw Exception(
+            'gps_falhou current=$firstError retry=$secondError stream=$streamError',
+          );
+        }
+      }
     }
+  }
+
+  static Future<Position> _getCurrentPositionFromStream() async {
+    const settings = LocationSettings(
+      accuracy: LocationAccuracy.best,
+      distanceFilter: 0,
+      timeLimit: Duration(seconds: 35),
+    );
+
+    return Geolocator.getPositionStream(locationSettings: settings)
+        .where((position) => position.latitude != 0 || position.longitude != 0)
+        .first
+        .timeout(const Duration(seconds: 38));
   }
 
   static Future<void> _requestPreciseLocationIfNeeded() async {
@@ -162,8 +187,14 @@ class LocationService {
         raw.contains('Ative a localizacao')) {
       return 'O servico de localizacao do iPhone esta desligado. Ative Localizacao nos Ajustes do aparelho.';
     }
+    if (raw.contains('TimeoutException') || raw.contains('timeout')) {
+      return 'O iPhone nao entregou uma posicao GPS dentro do tempo limite. No simulador, escolha uma localizacao em Debug > Simulate Location. No iPhone real, abra o app Mapas por alguns segundos e tente novamente. Detalhe tecnico: $raw';
+    }
+    if (raw.contains('gps_falhou')) {
+      return 'O iPhone nao retornou localizacao atual pelo metodo direto nem pelo monitoramento em tempo real. No simulador, configure Debug > Simulate Location. No iPhone real, confirme Ajustes > Privacidade e Seguranca > Servicos de Localizacao ligado. Detalhe tecnico: $raw';
+    }
 
-    return 'Nao foi possivel confirmar seu GPS atual agora. O envio foi bloqueado para nao registrar seu sintoma na cidade errada.';
+    return 'Nao foi possivel confirmar seu GPS atual agora. O envio foi bloqueado para nao registrar seu sintoma na cidade errada. Detalhe tecnico: $raw';
   }
 
   static bool _isFresh(Position? position) {
