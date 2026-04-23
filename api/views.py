@@ -557,6 +557,57 @@ def _alerta_publico(nivel, crescimento, grupo_top=None):
     }
 
 
+def _alerta_governamental_publico(estado=None, cidade=None, bairro=None):
+    alertas = AlertaGovernamental.objects.filter(
+        ativo=True,
+        status=AlertaGovernamental.STATUS_PUBLICADO,
+    ).order_by("-publicado_em", "-criado_em")
+
+    if estado:
+        alertas = alertas.filter(
+            Q(estado__in=_state_terms(estado)) | Q(estado__isnull=True) | Q(estado="")
+        )
+    if cidade:
+        alertas = alertas.filter(Q(cidade=cidade) | Q(cidade__isnull=True) | Q(cidade=""))
+    if bairro:
+        alertas = alertas.filter(Q(bairro=bairro) | Q(bairro__isnull=True) | Q(bairro=""))
+
+    melhor = None
+    melhor_score = -1
+    for alerta in alertas[:20]:
+        score = 0
+        if alerta.estado:
+            score += 1
+        if alerta.cidade:
+            score += 2
+        if alerta.bairro:
+            score += 3
+        if score > melhor_score:
+            melhor = alerta
+            melhor_score = score
+
+    if not melhor:
+        return None
+
+    gravidade = {
+        "baixo": "leve",
+        "moderado": "moderada",
+        "alto": "alta",
+        "critico": "critica",
+    }.get((melhor.nivel or "").lower(), "alta")
+    return {
+        "titulo": melhor.titulo,
+        "mensagem": melhor.mensagem,
+        "gravidade": gravidade,
+        "nivel": melhor.nivel,
+        "estado": melhor.estado,
+        "cidade": melhor.cidade,
+        "bairro": melhor.bairro,
+        "origem": "governo",
+        "protocolo": melhor.protocolo,
+    }
+
+
 # ================= REGISTRO =================
 
 @csrf_exempt
@@ -1189,6 +1240,7 @@ def app_resumo_publico(request):
     )
     top_grupo = doencas[0]["grupo"] if doencas else "monitoramento geral"
     nivel_nacional = _nivel_por_indice_publico(indice_ativo_30d, crescimento)
+    alerta_governamental = _alerta_governamental_publico()
 
     return JsonResponse({
         "resumo": {
@@ -1203,7 +1255,7 @@ def app_resumo_publico(request):
             "decaimento_temporal": "indice ativo fica estavel por 10 dias sem novos envios e depois reduz gradualmente ate 1% em 30 dias, evitando falsa queda precoce",
         },
         "semaforo": _semaforo_publico(nivel_nacional),
-        "alerta_publico": _alerta_publico(nivel_nacional, crescimento, top_grupo),
+        "alerta_publico": alerta_governamental or _alerta_publico(nivel_nacional, crescimento, top_grupo),
         "orientacao_publica": _orientacao_publica(nivel_nacional, top_grupo),
         "doencas_top": [
             {
@@ -1280,6 +1332,11 @@ def app_radar_local(request):
         "falta_ar": atuais.filter(falta_ar=True).count(),
     }
     doencas_provaveis = _build_disease_probabilities(sintomas, total_ativos)
+    alerta_governamental = _alerta_governamental_publico(
+        estado=estado,
+        cidade=cidade,
+        bairro=bairro or geo.get("bairro"),
+    )
 
     return JsonResponse({
         "local": {
@@ -1301,7 +1358,7 @@ def app_radar_local(request):
             "decaimento_temporal": "sem novos envios, o indice local permanece estavel por 10 dias e depois cai de forma gradual ate 1% em 30 dias para evitar conclusoes falsas",
         },
         "semaforo": _semaforo_publico(nivel),
-        "alerta_publico": _alerta_publico(nivel, crescimento, grupo_top),
+        "alerta_publico": alerta_governamental or _alerta_publico(nivel, crescimento, grupo_top),
         "orientacao_publica": _orientacao_publica(nivel, grupo_top),
         "doencas": [
             {

@@ -540,6 +540,39 @@ class GovernanceTests(TestCase):
         self.assertEqual(len(tokens), 1)
         self.assertEqual(estrategia, "recorte_direto")
 
+    def test_radar_local_prioriza_alerta_governamental_publicado(self):
+        AlertaGovernamental.objects.create(
+            empresa=self.governo,
+            titulo="Alerta oficial Guaruja",
+            mensagem="Use mascara e acompanhe comunicados.",
+            estado="SP",
+            cidade="Guarujá",
+            bairro="Pitangueiras",
+            nivel="alto",
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+            ativo=True,
+        )
+        RegistroSintoma.objects.create(
+            empresa=self.governo,
+            febre=True,
+            cidade="Guarujá",
+            estado="SP",
+            bairro="Pitangueiras",
+            latitude=-23.99,
+            longitude=-46.26,
+            grupo="Respiratório",
+        )
+
+        response = self.client.get(
+            "/api/public/radar-local",
+            {"cidade": "Guarujá", "estado": "SP", "bairro": "Pitangueiras"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        alerta = response.json()["alerta_publico"]
+        self.assertEqual(alerta["titulo"], "Alerta oficial Guaruja")
+        self.assertEqual(alerta["origem"], "governo")
+
     def test_push_governamental_prioriza_token_mais_recente_por_device(self):
         antigo = DispositivoPushPublico.objects.create(
             device_id="iphone-principal",
