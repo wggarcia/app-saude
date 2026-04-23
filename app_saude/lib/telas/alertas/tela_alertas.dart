@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../servicos/alerta_inbox_service.dart';
+import '../../servicos/location_service.dart';
+import '../../servicos/public_api_service.dart';
+import '../../servicos/regiao_base_service.dart';
 
 class TelaAlertas extends StatefulWidget {
   const TelaAlertas({super.key});
@@ -20,6 +23,24 @@ class _TelaAlertasState extends State<TelaAlertas> {
   }
 
   Future<void> _load() async {
+    final base = await RegiaoBaseService.obterRegiaoBase();
+    try {
+      final location = await LocationService.getBestEffortLocation(
+        fallbackRegion: base,
+      );
+      final radar = await PublicApiService.fetchRadarLocal(
+        latitude: location.latitude,
+        longitude: location.longitude,
+      );
+      final local = radar['local'] as Map<String, dynamic>? ?? {};
+      final alertas = await PublicApiService.fetchAlertas(
+        cidade: local['cidade']?.toString(),
+        estado: local['estado']?.toString(),
+        bairro: local['bairro']?.toString(),
+      );
+      await AlertaInboxService.syncAlerts(alertas);
+    } catch (_) {}
+
     final inbox = await AlertaInboxService.loadInbox();
     if (!mounted) {
       return;

@@ -11,7 +11,20 @@ import 'public_api_service.dart';
 import 'regiao_base_service.dart';
 
 @pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  try {
+    await Firebase.initializeApp();
+    final notification = message.notification;
+    if (notification == null) {
+      return;
+    }
+    await AlertaInboxService.storeRemoteNotification(
+      title: notification.title ?? 'Comunicado oficial',
+      message: notification.body ?? '',
+      data: message.data,
+    );
+  } catch (_) {}
+}
 
 class PushService {
   static bool _initialized = false;
@@ -34,7 +47,12 @@ class PushService {
         await _registerToken(force: true);
       });
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-      FirebaseMessaging.onMessageOpenedApp.listen((_) {});
+      FirebaseMessaging.onMessageOpenedApp.listen(_captureRemoteMessage);
+      final initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        await _captureRemoteMessage(initialMessage);
+      }
       _initialized = true;
     } catch (_) {
       // Push permanece opcional ate que Firebase/APNs estejam configurados.
@@ -149,6 +167,18 @@ class PushService {
       notification.title,
       notification.body,
       details,
+    );
+  }
+
+  static Future<void> _captureRemoteMessage(RemoteMessage message) async {
+    final notification = message.notification;
+    if (notification == null) {
+      return;
+    }
+    await AlertaInboxService.storeRemoteNotification(
+      title: notification.title ?? 'Comunicado oficial',
+      message: notification.body ?? '',
+      data: message.data,
     );
   }
 }
