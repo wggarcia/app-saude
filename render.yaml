@@ -14,9 +14,9 @@ services:
       - key: DJANGO_DEBUG
         value: "false"
       - key: DJANGO_ALLOWED_HOSTS
-        value: app-saude-p9n8.onrender.com
+        value: app-saude-p9n8.onrender.com,empresa.soluscrt.com.br,governo.soluscrt.com.br,admin.soluscrt.com.br,app.soluscrt.com.br,.soluscrt.com.br
       - key: CSRF_TRUSTED_ORIGINS
-        value: https://app-saude-p9n8.onrender.com
+        value: https://app-saude-p9n8.onrender.com,https://empresa.soluscrt.com.br,https://governo.soluscrt.com.br,https://admin.soluscrt.com.br,https://app.soluscrt.com.br
       - key: PUBLIC_BASE_URL
         value: https://app-saude-p9n8.onrender.com
       - key: DJANGO_SECRET_KEY

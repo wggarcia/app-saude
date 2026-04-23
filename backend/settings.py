@@ -19,6 +19,15 @@ def env_list(name, default=None):
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def unique_list(*groups):
+    items = []
+    for group in groups:
+        for item in group or []:
+            if item and item not in items:
+                items.append(item)
+    return items
+
+
 DJANGO_ENV = os.environ.get("DJANGO_ENV", "development").lower()
 IS_PRODUCTION = DJANGO_ENV == "production"
 
@@ -29,9 +38,23 @@ SECRET_KEY = os.environ.get(
 JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
 
 DEBUG = env_bool("DJANGO_DEBUG", default=not IS_PRODUCTION)
-ALLOWED_HOSTS = env_list(
-    "DJANGO_ALLOWED_HOSTS",
-    ["127.0.0.1", "localhost", "testserver", "app-saude-p9n8.onrender.com"],
+SOLUSCRT_DEFAULT_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "testserver",
+    "app-saude-p9n8.onrender.com",
+    "empresa.soluscrt.com.br",
+    "governo.soluscrt.com.br",
+    "admin.soluscrt.com.br",
+    "app.soluscrt.com.br",
+    ".soluscrt.com.br",
+]
+ALLOWED_HOSTS = unique_list(
+    env_list(
+        "DJANGO_ALLOWED_HOSTS",
+        SOLUSCRT_DEFAULT_HOSTS,
+    ),
+    SOLUSCRT_DEFAULT_HOSTS,
 )
 
 if IS_PRODUCTION and (
@@ -77,9 +100,19 @@ if not DEBUG:
 
 CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", default=not IS_PRODUCTION)
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
-CSRF_TRUSTED_ORIGINS = env_list(
-    "CSRF_TRUSTED_ORIGINS",
-    ["https://app-saude-p9n8.onrender.com"] if IS_PRODUCTION else [],
+SOLUSCRT_DEFAULT_ORIGINS = [
+    "https://app-saude-p9n8.onrender.com",
+    "https://empresa.soluscrt.com.br",
+    "https://governo.soluscrt.com.br",
+    "https://admin.soluscrt.com.br",
+    "https://app.soluscrt.com.br",
+]
+CSRF_TRUSTED_ORIGINS = unique_list(
+    env_list(
+        "CSRF_TRUSTED_ORIGINS",
+        SOLUSCRT_DEFAULT_ORIGINS if IS_PRODUCTION else [],
+    ),
+    SOLUSCRT_DEFAULT_ORIGINS if IS_PRODUCTION else [],
 )
 
 ROOT_URLCONF = 'backend.urls'
