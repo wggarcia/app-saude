@@ -146,6 +146,24 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/login-governo/")
 
+    def test_home_publica_abre_site_principal_no_dominio_institucional(self):
+        response = Client(HTTP_HOST="soluscrt.com.br").get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sala de controle epidemiologica inteligente")
+
+    def test_subdominios_raiz_separam_ambientes(self):
+        empresa = Client(HTTP_HOST="empresa.soluscrt.com.br").get("/")
+        governo = Client(HTTP_HOST="governo.soluscrt.com.br").get("/")
+        admin = Client(HTTP_HOST="admin.soluscrt.com.br").get("/")
+
+        self.assertEqual(empresa.status_code, 200)
+        self.assertContains(empresa, "Acesso empresarial")
+        self.assertEqual(governo.status_code, 200)
+        self.assertContains(governo, "Acesso governamental")
+        self.assertEqual(admin.status_code, 302)
+        self.assertEqual(admin["Location"], "/operacao-central/")
+
 
 class PublicApiTests(TestCase):
     def test_resumo_publico_responde_sem_autenticacao(self):

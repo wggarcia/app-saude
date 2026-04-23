@@ -23,6 +23,17 @@ from collections import defaultdict
 
 historico = defaultdict(list)
 
+
+def site_principal(request):
+    host = request.get_host().split(":")[0].lower()
+    if host.startswith("empresa."):
+        return tela_login_empresa(request)
+    if host.startswith("governo."):
+        return tela_login_governo(request)
+    if host.startswith("admin."):
+        return redirect("/operacao-central/")
+    return render(request, "site_principal.html")
+
 STATE_ALIASES = {
     "AC": "Acre",
     "AL": "Alagoas",

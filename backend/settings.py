@@ -43,11 +43,14 @@ SOLUSCRT_DEFAULT_HOSTS = [
     "localhost",
     "testserver",
     "app-saude-p9n8.onrender.com",
+    "soluscrt.com.br",
+    "soluscrtsaude.com.br",
     "empresa.soluscrt.com.br",
     "governo.soluscrt.com.br",
     "admin.soluscrt.com.br",
     "app.soluscrt.com.br",
     ".soluscrt.com.br",
+    ".soluscrtsaude.com.br",
 ]
 ALLOWED_HOSTS = unique_list(
     env_list(
@@ -102,6 +105,8 @@ CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", default=not IS_PRODU
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
 SOLUSCRT_DEFAULT_ORIGINS = [
     "https://app-saude-p9n8.onrender.com",
+    "https://soluscrt.com.br",
+    "https://soluscrtsaude.com.br",
     "https://empresa.soluscrt.com.br",
     "https://governo.soluscrt.com.br",
     "https://admin.soluscrt.com.br",
