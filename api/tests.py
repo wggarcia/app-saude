@@ -6,9 +6,10 @@ from django.test import Client, TestCase
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from .models import AceiteLegalPublico, AlertaGovernamental, Empresa, RegistroSintoma
+from .models import AceiteLegalPublico, AlertaGovernamental, DispositivoPushPublico, Empresa, RegistroSintoma
 from .epidemiologia import DISEASE_WEIGHTS
 from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_codigo_pacote, pacotes_por_setor
+from .push_service import _tokens_para_alerta
 from .views import _indice_temporal_publico
 
 
@@ -484,6 +485,60 @@ class GovernanceTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("indicadores", response.json())
+
+    def test_push_governamental_aceita_fallback_estadual(self):
+        DispositivoPushPublico.objects.create(
+            device_id="ios-sp",
+            token="token-sp-1",
+            plataforma="ios",
+            estado="SP",
+            cidade="",
+            bairro="",
+            ativo=True,
+        )
+        alerta = AlertaGovernamental.objects.create(
+            empresa=self.governo,
+            titulo="Alerta Guaruja",
+            mensagem="Comunicado local",
+            estado="SP",
+            cidade="Guarujá",
+            bairro="Pitangueiras",
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+            ativo=True,
+        )
+
+        tokens, total, estrategia = _tokens_para_alerta(alerta)
+
+        self.assertEqual(total, 1)
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual(estrategia, "recorte_direto")
+
+    def test_push_governamental_normaliza_acentos(self):
+        DispositivoPushPublico.objects.create(
+            device_id="ios-guaruja",
+            token="token-sp-2",
+            plataforma="ios",
+            estado="SP",
+            cidade="Guaruja",
+            bairro="Pitangueiras",
+            ativo=True,
+        )
+        alerta = AlertaGovernamental.objects.create(
+            empresa=self.governo,
+            titulo="Alerta Guarujá",
+            mensagem="Comunicado local",
+            estado="São Paulo",
+            cidade="Guarujá",
+            bairro="Pitangueiras",
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+            ativo=True,
+        )
+
+        tokens, total, estrategia = _tokens_para_alerta(alerta)
+
+        self.assertEqual(total, 1)
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual(estrategia, "recorte_direto")
 
 
 class TemporalDecayTests(TestCase):

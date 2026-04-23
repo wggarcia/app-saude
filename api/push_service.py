@@ -1,7 +1,7 @@
 import json
 import os
+import unicodedata
 from django.conf import settings
-from django.db.models import Q
 
 try:
     import firebase_admin
@@ -45,6 +45,69 @@ def _state_terms(value):
     return list(terms)
 
 
+def _normalize_text(value):
+    raw = (value or "").strip().lower()
+    if not raw:
+        return ""
+    return unicodedata.normalize("NFKD", raw).encode("ascii", "ignore").decode("ascii")
+
+
+def _state_term_set(value):
+    return {_normalize_text(term) for term in _state_terms(value)}
+
+
+def _matches_direct_scope(token, alerta):
+    estado_alerta = _state_term_set(alerta.estado) if alerta.estado else set()
+    cidade_alerta = _normalize_text(alerta.cidade)
+    bairro_alerta = _normalize_text(alerta.bairro)
+
+    estado_token = _normalize_text(token.estado)
+    cidade_token = _normalize_text(token.cidade)
+    bairro_token = _normalize_text(token.bairro)
+
+    if estado_alerta and estado_token and estado_token not in estado_alerta:
+        return False
+    if cidade_alerta and cidade_token and cidade_token != cidade_alerta:
+        return False
+    if bairro_alerta and bairro_token and bairro_token != bairro_alerta:
+        return False
+    return True
+
+
+def _tokens_para_alerta(alerta):
+    tokens = list(DispositivoPushPublico.objects.filter(ativo=True))
+    total = len(tokens)
+    if not tokens:
+        return [], total, "sem_tokens"
+
+    diretos = [token for token in tokens if _matches_direct_scope(token, alerta)]
+    if diretos:
+        return diretos, total, "recorte_direto"
+
+    estado_alerta = _state_term_set(alerta.estado) if alerta.estado else set()
+    if estado_alerta:
+        estaduais = [
+            token
+            for token in tokens
+            if not _normalize_text(token.estado)
+            or _normalize_text(token.estado) in estado_alerta
+        ]
+        if estaduais:
+            return estaduais, total, "fallback_estado"
+
+    gerais = [
+        token
+        for token in tokens
+        if not _normalize_text(token.estado)
+        and not _normalize_text(token.cidade)
+        and not _normalize_text(token.bairro)
+    ]
+    if gerais:
+        return gerais, total, "fallback_geral"
+
+    return [], total, "sem_destinatarios"
+
+
 def _firebase_app():
     if firebase_admin is None or credentials is None:
         return None
@@ -76,18 +139,16 @@ def enviar_alerta_governamental(alerta):
     if app is None or messaging is None:
         return {"status": "push_indisponivel", "enviados": 0, "destinatarios": 0, "tokens_ativos": 0}
 
-    tokens_qs = DispositivoPushPublico.objects.filter(ativo=True)
-    tokens_ativos = tokens_qs.count()
-    if alerta.estado:
-        tokens_qs = tokens_qs.filter(Q(estado__in=_state_terms(alerta.estado)) | Q(estado__isnull=True) | Q(estado=""))
-    if alerta.cidade:
-        tokens_qs = tokens_qs.filter(cidade=alerta.cidade)
-    if alerta.bairro:
-        tokens_qs = tokens_qs.filter(bairro=alerta.bairro)
-
-    tokens = list(tokens_qs.values_list("token", flat=True)[:500])
+    tokens_filtrados, tokens_ativos, estrategia = _tokens_para_alerta(alerta)
+    tokens = [item.token for item in tokens_filtrados[:500]]
     if not tokens:
-        return {"status": "sem_destinatarios", "enviados": 0, "destinatarios": 0, "tokens_ativos": tokens_ativos}
+        return {
+            "status": "sem_destinatarios",
+            "enviados": 0,
+            "destinatarios": 0,
+            "tokens_ativos": tokens_ativos,
+            "estrategia": estrategia,
+        }
 
     message = messaging.MulticastMessage(
         notification=messaging.Notification(
@@ -113,6 +174,7 @@ def enviar_alerta_governamental(alerta):
             "falhas": response.failure_count,
             "destinatarios": len(tokens),
             "tokens_ativos": tokens_ativos,
+            "estrategia": estrategia,
         }
     except Exception as exc:
         return {
@@ -121,4 +183,5 @@ def enviar_alerta_governamental(alerta):
             "enviados": 0,
             "destinatarios": len(tokens),
             "tokens_ativos": tokens_ativos,
+            "estrategia": estrategia,
         }
