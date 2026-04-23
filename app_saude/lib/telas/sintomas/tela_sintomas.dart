@@ -34,7 +34,10 @@ class _TelaSintomasState extends State<TelaSintomas> {
 
     setState(() => loading = true);
     try {
-      final location = await LocationService.getCurrentLocationForSubmission();
+      final location = await _resolverLocalizacaoEnvio();
+      if (location == null) {
+        return;
+      }
       final result = await PublicApiService.enviarSintomas(
         sintomas: sintomas,
         latitude: location.latitude,
@@ -55,7 +58,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(jaConsiderado
-              ? 'Seu sinal ja foi considerado no radar. Para proteger o mapa, repeticoes recentes nao viram novos casos.'
+              ? 'Envio recebido. Para proteger o mapa, repeticoes recentes entram como revisao e nao viram novo foco.'
               : 'Sintomas enviados com seguranca. Obrigado por contribuir.'),
           duration: const Duration(seconds: 5),
         ),
@@ -72,6 +75,50 @@ class _TelaSintomasState extends State<TelaSintomas> {
       if (mounted) {
         setState(() => loading = false);
       }
+    }
+  }
+
+  Future<LocationSnapshot?> _resolverLocalizacaoEnvio() async {
+    try {
+      return await LocationService.getCurrentLocationForSubmission();
+    } catch (error) {
+      final base = await RegiaoBaseService.obterRegiaoBase();
+      final fallback = await LocationService.getBestEffortLocation(
+        fallbackRegion: base,
+      );
+      if (!mounted) {
+        return null;
+      }
+      final usarAproximado = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Localizacao atual indisponivel'),
+              content: const Text(
+                'Nao consegui confirmar o GPS agora. Voce pode tentar novamente com o GPS ativo ou enviar um sinal aproximado para revisao. Sinais aproximados ajudam o radar, mas recebem menor peso para evitar local errado.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Tentar depois'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Enviar aproximado'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+      if (!usarAproximado) {
+        rethrow;
+      }
+      return LocationSnapshot(
+        latitude: fallback.latitude,
+        longitude: fallback.longitude,
+        source: fallback.source == 'current'
+            ? 'current'
+            : 'approximate_user_confirmed',
+      );
     }
   }
 

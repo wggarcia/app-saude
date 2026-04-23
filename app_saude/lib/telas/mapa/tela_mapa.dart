@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../config.dart';
 import '../../servicos/location_service.dart';
 import '../../servicos/public_api_service.dart';
 import '../../servicos/regiao_base_service.dart';
@@ -174,31 +175,28 @@ class _TelaMapaState extends State<TelaMapa> {
       localAtual: localAtual,
     );
     final zoom = regiaoBase != null || hotspots.isNotEmpty ? 10.2 : 4.2;
-    final circles = hotspots
-        .whereType<Map>()
-        .map((raw) {
-          final item = Map<String, dynamic>.from(raw);
-          final visual = _FocusVisual.fromItem(item);
-          final total = (item['indice_ativo'] as num?)?.toDouble() ??
-              (item['total'] as num?)?.toDouble() ??
-              1;
-          return CircleMarker(
-            point: LatLng(
-              (item['latitude'] as num).toDouble(),
-              (item['longitude'] as num).toDouble(),
-            ),
-            radius: (42 + total.clamp(1, 80) * 1.8).clamp(46, 150).toDouble(),
-            color: visual.color.withValues(alpha: 0.18),
-            borderColor: visual.color.withValues(alpha: 0.42),
-            borderStrokeWidth: 2,
-          );
-        })
-        .toList();
+    final circles = hotspots.whereType<Map>().map((raw) {
+      final item = Map<String, dynamic>.from(raw);
+      final visual = _FocusVisual.fromItem(item);
+      final total = (item['indice_ativo'] as num?)?.toDouble() ??
+          (item['total'] as num?)?.toDouble() ??
+          1;
+      return CircleMarker(
+        point: LatLng(
+          (item['latitude'] as num).toDouble(),
+          (item['longitude'] as num).toDouble(),
+        ),
+        radius: (42 + total.clamp(1, 80) * 1.8).clamp(46, 150).toDouble(),
+        color: visual.color.withValues(alpha: 0.18),
+        borderColor: visual.color.withValues(alpha: 0.42),
+        borderStrokeWidth: 2,
+      );
+    }).toList();
     final markers = hotspots
         .map(
           (item) => Marker(
-            width: 132,
-            height: 108,
+            width: 104,
+            height: 104,
             point: LatLng(
               (item['latitude'] as num).toDouble(),
               (item['longitude'] as num).toDouble(),
@@ -232,8 +230,7 @@ class _TelaMapaState extends State<TelaMapa> {
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-                  subdomains: const ['a', 'b', 'c', 'd'],
+                      'https://api.mapbox.com/styles/v1/mapbox/navigation-day-v1/tiles/256/{z}/{x}/{y}@2x?access_token=${Config.mapboxPublicToken}',
                   userAgentPackageName: 'com.soluscrt.saude',
                 ),
                 CircleLayer(circles: circles),
@@ -724,24 +721,22 @@ class _HotspotMarker extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 62,
-            height: 62,
+            width: 66,
+            height: 66,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  visual.color,
-                  Color.lerp(visual.color, Colors.black, 0.22) ?? visual.color,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: Colors.white, width: 2.5),
+              shape: BoxShape.circle,
+              color: Colors.white,
+              border: Border.all(color: visual.color, width: 4),
               boxShadow: [
                 BoxShadow(
-                  color: visual.color.withValues(alpha: 0.48),
-                  blurRadius: 24,
-                  spreadRadius: 6,
+                  color: visual.color.withValues(alpha: 0.55),
+                  blurRadius: 28,
+                  spreadRadius: 5,
+                ),
+                const BoxShadow(
+                  color: Color(0x55000000),
+                  blurRadius: 16,
+                  offset: Offset(0, 8),
                 ),
               ],
             ),
@@ -754,25 +749,25 @@ class _HotspotMarker extends StatelessWidget {
                   child: Transform.rotate(
                     angle: 0.785,
                     child: Container(
-                      width: 22,
-                      height: 22,
+                      width: 20,
+                      height: 20,
                       decoration: BoxDecoration(
-                        color: Color.lerp(visual.color, Colors.black, 0.18),
+                        color: visual.color,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
                   ),
                 ),
                 Positioned(
-                  top: 7,
-                  child: Icon(visual.icon, color: Colors.white, size: 31),
+                  top: 9,
+                  child: Icon(visual.icon, color: visual.color, size: 31),
                 ),
                 Positioned(
-                  bottom: 7,
+                  bottom: 8,
                   child: Text(
                     visual.shortLabel,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Color.lerp(visual.color, Colors.black, 0.2),
                       fontSize: 10,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.4,
@@ -786,14 +781,16 @@ class _HotspotMarker extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xCC04131F),
+              color: const Color(0xEE04131F),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
             ),
             child: Text(
-              visual.label,
+              '${visual.label} casos',
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
+                fontSize: 11,
               ),
             ),
           ),
@@ -826,10 +823,11 @@ class _FocusVisual {
       String value when value.contains('covid') => Icons.coronavirus,
       String value when value.contains('resp') || value.contains('gripe') =>
         Icons.air,
-      String value when value.contains('arb') ||
-          value.contains('deng') ||
-          value.contains('zika') ||
-          value.contains('chik') =>
+      String value
+          when value.contains('arb') ||
+              value.contains('deng') ||
+              value.contains('zika') ||
+              value.contains('chik') =>
         Icons.bug_report,
       String value when value.contains('alert') => Icons.emergency,
       String value when value.contains('leve') => Icons.healing,

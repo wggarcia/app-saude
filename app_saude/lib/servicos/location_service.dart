@@ -64,10 +64,7 @@ class LocationService {
   static Future<LocationSnapshot> getCurrentLocationForSubmission() async {
     try {
       await _ensurePermission();
-      final current = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 18),
-      );
+      final current = await _getCurrentPositionResilient();
       return LocationSnapshot(
         latitude: current.latitude,
         longitude: current.longitude,
@@ -83,7 +80,21 @@ class LocationService {
         );
       }
       throw Exception(
-        'Nao foi possivel atualizar sua localizacao atual. Abra o app com GPS ativo e tente novamente para evitar registrar sintomas na regiao errada.',
+        'Nao foi possivel confirmar sua localizacao atual. Ative o GPS e tente novamente, ou envie como sinal aproximado para revisao.',
+      );
+    }
+  }
+
+  static Future<Position> _getCurrentPositionResilient() async {
+    try {
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+    } catch (_) {
+      return Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 16),
       );
     }
   }
