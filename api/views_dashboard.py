@@ -396,6 +396,25 @@ def api_fluxo_alerta_governo(request):
         alerta.status = AlertaGovernamental.STATUS_REVOGADO
         alerta.ativo = False
         alerta.revogado_em = agora
+    elif acao == "excluir":
+        if alerta.status != AlertaGovernamental.STATUS_REVOGADO:
+            return JsonResponse({"erro": "somente alertas revogados podem ser excluidos"}, status=400)
+        alerta_id = alerta.id
+        protocolo = alerta.protocolo
+        registrar_auditoria_institucional(
+            request,
+            "alerta_governo_excluir",
+            alerta,
+            {"status": alerta.status, "protocolo": protocolo},
+        )
+        alerta.delete()
+        return JsonResponse({
+            "status": "ok",
+            "alerta_id": alerta_id,
+            "alerta_status": "excluido",
+            "ativo": False,
+            "push": push_resultado,
+        })
     else:
         return JsonResponse({"erro": "ação inválida"}, status=400)
 

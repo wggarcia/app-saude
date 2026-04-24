@@ -6,7 +6,7 @@ from django.test import Client, TestCase
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from .models import AceiteLegalPublico, AlertaGovernamental, DispositivoPushPublico, Empresa, RegistroSintoma
+from .models import AceiteLegalPublico, AlertaGovernamental, DispositivoAutorizado, DispositivoPushPublico, Empresa, RegistroSintoma
 from .epidemiologia import DISEASE_WEIGHTS
 from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_codigo_pacote, pacotes_por_setor
 from .push_service import _tokens_para_alerta
@@ -147,6 +147,52 @@ class AuthDeviceTests(TestCase):
         response = self.client.get("/logout-governo/")
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/login-governo/")
+
+    def test_logout_libera_dispositivo_autorizado_da_empresa(self):
+        login = self._login("device-a")
+
+        self.assertEqual(login.status_code, 200)
+        self.assertTrue(
+            DispositivoAutorizado.objects.filter(
+                empresa=self.empresa,
+                device_id="device-a",
+                ativo=True,
+            ).exists()
+        )
+
+        response = self.client.get("/logout/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            DispositivoAutorizado.objects.filter(
+                empresa=self.empresa,
+                device_id="device-a",
+                ativo=True,
+            ).exists()
+        )
+
+    def test_login_recicla_dispositivo_ocioso_antes_de_bloquear(self):
+        login = self._login("device-a")
+
+        self.assertEqual(login.status_code, 200)
+        DispositivoAutorizado.objects.filter(
+            empresa=self.empresa,
+            device_id="device-a",
+        ).update(ultimo_acesso=timezone.now() - timedelta(days=1))
+        Empresa.objects.filter(id=self.empresa.id).update(
+            sessao_ativa_em=timezone.now() - timedelta(days=1)
+        )
+
+        novo_login = self._login("device-b")
+
+        self.assertEqual(novo_login.status_code, 200)
+        self.assertTrue(
+            DispositivoAutorizado.objects.filter(
+                empresa=self.empresa,
+                device_id="device-b",
+                ativo=True,
+            ).exists()
+        )
 
     def test_home_publica_abre_site_principal_no_dominio_institucional(self):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/")
@@ -479,6 +525,43 @@ class GovernanceTests(TestCase):
         self.assertEqual(publicar.status_code, 200)
         self.assertEqual(alerta.status, AlertaGovernamental.STATUS_PUBLICADO)
         self.assertTrue(alerta.ativo)
+
+    def test_fluxo_alerta_revogado_pode_ser_excluido(self):
+        alerta = AlertaGovernamental.objects.create(
+            empresa=self.governo,
+            titulo="Alerta revogado",
+            mensagem="Comunicado encerrado",
+            status=AlertaGovernamental.STATUS_REVOGADO,
+            ativo=False,
+        )
+
+        response = self.client.post(
+            "/api/governo/alertas/fluxo",
+            data=json.dumps({"alerta_id": alerta.id, "acao": "excluir"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["alerta_status"], "excluido")
+        self.assertFalse(AlertaGovernamental.objects.filter(id=alerta.id).exists())
+
+    def test_fluxo_alerta_publicado_nao_pode_ser_excluido(self):
+        alerta = AlertaGovernamental.objects.create(
+            empresa=self.governo,
+            titulo="Alerta ativo",
+            mensagem="Comunicado ainda em vigor",
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+            ativo=True,
+        )
+
+        response = self.client.post(
+            "/api/governo/alertas/fluxo",
+            data=json.dumps({"alerta_id": alerta.id, "acao": "excluir"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(AlertaGovernamental.objects.filter(id=alerta.id).exists())
 
     def test_matriz_decisao_responde_para_governo_autenticado(self):
         response = self.client.get("/api/governanca/matriz-decisao")

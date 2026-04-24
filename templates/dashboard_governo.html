@@ -1102,6 +1102,7 @@
                 ${alerta.status === "em_revisao" || alerta.status === "rascunho" ? `<button class="btn primary" onclick="approveAndPublishGovernmentAlert(${alerta.id})">Aprovar e publicar no App</button>` : ""}
                 ${alerta.status === "aprovado" ? `<button class="btn primary" onclick="governAlertFlow(${alerta.id}, 'publicar')">Publicar no App</button>` : ""}
                 ${alerta.status === "publicado" ? `<button class="btn" onclick="governAlertFlow(${alerta.id}, 'revogar')">Revogar</button>` : ""}
+                ${alerta.status === "revogado" ? `<button class="btn warn" onclick="governAlertFlow(${alerta.id}, 'excluir')">Excluir</button>` : ""}
               </div>
             </div>
           `).join("")
@@ -1142,6 +1143,9 @@
 
     async function governAlertFlow(alertaId, acao, options = {}) {
       const justificativa = acao === "revogar" ? prompt("Informe a justificativa da revogacao:") || "" : "";
+      if (acao === "excluir" && !confirm("Deseja excluir este alerta revogado da barra lateral?")) {
+        return null;
+      }
       const response = await fetch("/api/governo/alertas/fluxo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1172,6 +1176,8 @@
           alert(parts.join(" | "));
         } else if (acao === "aprovar") {
           alert("Alerta aprovado. Agora clique em Publicar no App para aparecer no telefone da populacao.");
+        } else if (acao === "excluir") {
+          alert("Alerta revogado removido da barra lateral.");
         }
       }
       return data;

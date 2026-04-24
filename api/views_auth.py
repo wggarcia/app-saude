@@ -19,6 +19,7 @@ from .planos import pacote_padrao, detalhes_pacote, normalizar_codigo_pacote
 
 COOKIE_MAX_AGE = 7 * 24 * 60 * 60
 SESSION_IDLE_TIMEOUT = timedelta(minutes=15) if settings.DEBUG else timedelta(hours=8)
+DEVICE_IDLE_TIMEOUT = SESSION_IDLE_TIMEOUT
 
 
 def _destino_conta(empresa):
@@ -72,8 +73,18 @@ def _resolver_device_id(request, dados):
     return "legacy-" + hashlib.sha256(base.encode("utf-8")).hexdigest()[:32]
 
 
+def _liberar_dispositivos_ociosos(empresa):
+    limite = timezone.now() - DEVICE_IDLE_TIMEOUT
+    DispositivoAutorizado.objects.filter(
+        empresa=empresa,
+        ativo=True,
+        ultimo_acesso__lt=limite,
+    ).update(ativo=False)
+
+
 def _registrar_dispositivo_login(empresa, request, dados):
     device_id = _resolver_device_id(request, dados)
+    _liberar_dispositivos_ociosos(empresa)
     dispositivos_ativos = DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True)
     existente = DispositivoAutorizado.objects.filter(empresa=empresa, device_id=device_id).first()
 
@@ -158,7 +169,7 @@ def _ativar_sessao(principal, device_id):
     return session_key
 
 
-def _criar_token(empresa, session_key, principal_kind, principal_id):
+def _criar_token(empresa, session_key, principal_kind, principal_id, device_id=None):
     return jwt.encode({
         "empresa_id": empresa.id,
         "acesso_governo": empresa.acesso_governo,
@@ -168,6 +179,7 @@ def _criar_token(empresa, session_key, principal_kind, principal_id):
         "pacote_codigo": empresa.pacote_codigo,
         "principal_kind": principal_kind,
         "principal_id": principal_id,
+        "device_id": device_id,
         "session_key": session_key,
         "exp": datetime.utcnow() + timedelta(days=7)
     }, settings.JWT_SECRET_KEY, algorithm="HS256")
@@ -279,7 +291,7 @@ def _login_conta(request, portal_tipo=None):
             }, status=409)
 
     session_key = _ativar_sessao(principal, device_id)
-    token = _criar_token(empresa, session_key, principal_kind, principal_id)
+    token = _criar_token(empresa, session_key, principal_kind, principal_id, device_id=device_id)
     response = JsonResponse(_payload_resposta(
         empresa,
         token,
@@ -352,7 +364,7 @@ def registrar_empresa(request):
 
     # 🔑 gera token AUTOMÁTICO
     session_key = _ativar_sessao(empresa, device_id)
-    token = _criar_token(empresa, session_key, "empresa_admin", empresa.id)
+    token = _criar_token(empresa, session_key, "empresa_admin", empresa.id, device_id=device_id)
 
     response = JsonResponse(_payload_resposta(
         empresa,
@@ -429,13 +441,21 @@ def _logout(request, redirect_to="/"):
             payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
             principal_kind = payload.get("principal_kind")
             principal_id = payload.get("principal_id")
+            empresa_id = payload.get("empresa_id")
+            device_id = payload.get("device_id")
             if principal_kind == "usuario_empresa":
                 principal = EmpresaUsuario.objects.filter(id=principal_id).first()
             else:
-                principal = Empresa.objects.filter(id=payload.get("empresa_id")).first()
+                principal = Empresa.objects.filter(id=empresa_id).first()
 
             if principal and payload.get("session_key") == principal.sessao_ativa_chave:
                 _limpar_sessao_principal(principal)
+            if empresa_id and device_id:
+                DispositivoAutorizado.objects.filter(
+                    empresa_id=empresa_id,
+                    device_id=device_id,
+                    ativo=True,
+                ).update(ativo=False)
         except Exception:
             pass
 
