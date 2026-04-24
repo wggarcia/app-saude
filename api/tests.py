@@ -1,12 +1,15 @@
 import json
 from datetime import timedelta
+from io import StringIO
 
 from django.contrib.auth.hashers import make_password
+from django.core.management import call_command
 from django.test import Client, TestCase
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from .models import AceiteLegalPublico, AlertaGovernamental, DispositivoAutorizado, DispositivoPushPublico, DonoSaaS, Empresa, RegistroSintoma
+from .maintenance import maintenance_report
+from .models import AceiteLegalPublico, AlertaGovernamental, DispositivoAutorizado, DispositivoPushPublico, DonoSaaS, Empresa, EmpresaUsuario, RegistroSintoma
 from .epidemiologia import DISEASE_WEIGHTS
 from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_codigo_pacote, pacotes_por_setor
 from .push_service import _tokens_para_alerta
@@ -334,6 +337,151 @@ class AuthDeviceTests(TestCase):
         self.assertContains(response, "Valores que fazem a tecnologia merecer confianca")
         self.assertNotContains(response, "Slide 01")
         self.assertNotContains(response, "Slide 09")
+
+
+class MaintenanceTests(TestCase):
+    def test_maintenance_report_detecta_sessoes_dispositivos_push_antigos(self):
+        agora = timezone.now()
+        empresa = Empresa.objects.create(
+            nome="Empresa Manutencao",
+            email="manutencao@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            sessao_ativa_chave="sessao-antiga",
+            sessao_ativa_device_id="device-old",
+            sessao_ativa_em=agora - timedelta(days=1),
+        )
+        EmpresaUsuario.objects.create(
+            empresa=empresa,
+            nome="Analista",
+            email="analista@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            sessao_ativa_chave="sessao-usuario",
+            sessao_ativa_device_id="device-user",
+            sessao_ativa_em=agora - timedelta(days=1),
+        )
+        DonoSaaS.objects.create(
+            nome="Operacao",
+            email="owner-maint@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            sessao_ativa_chave="sessao-owner",
+            sessao_ativa_em=agora - timedelta(days=1),
+        )
+        DispositivoAutorizado.objects.create(
+            empresa=empresa,
+            device_id="device-old",
+            ativo=True,
+        )
+        DispositivoAutorizado.objects.filter(
+            empresa=empresa,
+            device_id="device-old",
+        ).update(ultimo_acesso=agora - timedelta(days=1))
+        DispositivoPushPublico.objects.create(
+            device_id="push-old",
+            token="push-old-token",
+            plataforma="ios",
+            ativo=True,
+        )
+        DispositivoPushPublico.objects.filter(device_id="push-old").update(
+            atualizado_em=agora - timedelta(days=90)
+        )
+        AlertaGovernamental.objects.create(
+            empresa=empresa,
+            titulo="Alerta revogado antigo",
+            mensagem="Encerrado",
+            status=AlertaGovernamental.STATUS_REVOGADO,
+            ativo=False,
+            revogado_em=agora - timedelta(days=30),
+        )
+
+        report = maintenance_report(now=agora)
+
+        self.assertEqual(report["before"]["devices"]["stale_active"], 1)
+        self.assertEqual(report["before"]["sessions"]["empresa_stale"], 1)
+        self.assertEqual(report["before"]["sessions"]["usuario_stale"], 1)
+        self.assertEqual(report["before"]["sessions"]["owner_stale"], 1)
+        self.assertEqual(report["before"]["push"]["stale_active"], 1)
+        self.assertEqual(report["before"]["alerts"]["revoked_old"], 1)
+
+    def test_maintenance_report_apply_limpa_apenas_itens_seguros(self):
+        agora = timezone.now()
+        empresa = Empresa.objects.create(
+            nome="Empresa Limpeza",
+            email="limpeza@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            sessao_ativa_chave="sessao-antiga",
+            sessao_ativa_device_id="device-old",
+            sessao_ativa_em=agora - timedelta(days=1),
+        )
+        EmpresaUsuario.objects.create(
+            empresa=empresa,
+            nome="Analista",
+            email="analista-limpeza@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            sessao_ativa_chave="sessao-usuario",
+            sessao_ativa_device_id="device-user",
+            sessao_ativa_em=agora - timedelta(days=1),
+        )
+        DonoSaaS.objects.create(
+            nome="Operacao",
+            email="owner-limpeza@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            sessao_ativa_chave="sessao-owner",
+            sessao_ativa_em=agora - timedelta(days=1),
+        )
+        DispositivoAutorizado.objects.create(
+            empresa=empresa,
+            device_id="device-old",
+            ativo=True,
+        )
+        DispositivoAutorizado.objects.filter(
+            empresa=empresa,
+            device_id="device-old",
+        ).update(ultimo_acesso=agora - timedelta(days=1))
+        DispositivoPushPublico.objects.create(
+            device_id="push-old",
+            token="push-old-token-2",
+            plataforma="ios",
+            ativo=True,
+        )
+        DispositivoPushPublico.objects.filter(device_id="push-old").update(
+            atualizado_em=agora - timedelta(days=90)
+        )
+        alerta = AlertaGovernamental.objects.create(
+            empresa=empresa,
+            titulo="Alerta revogado antigo",
+            mensagem="Encerrado",
+            status=AlertaGovernamental.STATUS_REVOGADO,
+            ativo=False,
+            revogado_em=agora - timedelta(days=30),
+        )
+
+        report = maintenance_report(now=agora, apply=True, clear_cache=False)
+
+        self.assertEqual(report["cleanup"]["devices_deactivated"], 1)
+        self.assertEqual(report["cleanup"]["empresa_sessions_closed"], 1)
+        self.assertEqual(report["cleanup"]["user_sessions_closed"], 1)
+        self.assertEqual(report["cleanup"]["owner_sessions_closed"], 1)
+        self.assertEqual(report["cleanup"]["push_tokens_deactivated"], 1)
+        empresa.refresh_from_db()
+        self.assertIsNone(empresa.sessao_ativa_chave)
+        self.assertFalse(DispositivoAutorizado.objects.get(empresa=empresa, device_id="device-old").ativo)
+        self.assertFalse(DispositivoPushPublico.objects.get(device_id="push-old").ativo)
+        self.assertTrue(AlertaGovernamental.objects.filter(id=alerta.id).exists())
+
+    def test_management_command_manter_soluscrt_gera_relatorio(self):
+        buffer = StringIO()
+
+        call_command("manter_soluscrt", stdout=buffer)
+
+        output = buffer.getvalue()
+        self.assertIn("SolusCRT Maintenance Report", output)
+        self.assertIn("Nenhuma alteracao aplicada", output)
 
 
 class PublicApiTests(TestCase):
