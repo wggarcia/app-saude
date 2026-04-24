@@ -513,6 +513,39 @@ class GovernanceTests(TestCase):
         self.assertEqual(len(tokens), 1)
         self.assertEqual(estrategia, "recorte_direto")
 
+    def test_push_governamental_sem_recorte_vira_nacional(self):
+        DispositivoPushPublico.objects.create(
+            device_id="ios-sp-1",
+            token="token-sp-1",
+            plataforma="ios",
+            estado="SP",
+            cidade="Guaruja",
+            bairro="Pitangueiras",
+            ativo=True,
+        )
+        DispositivoPushPublico.objects.create(
+            device_id="ios-rj-1",
+            token="token-rj-1",
+            plataforma="ios",
+            estado="RJ",
+            cidade="Niteroi",
+            bairro="Icarai",
+            ativo=True,
+        )
+        alerta = AlertaGovernamental.objects.create(
+            empresa=self.governo,
+            titulo="Alerta nacional",
+            mensagem="Comunicado geral para todo o pais",
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+            ativo=True,
+        )
+
+        tokens, total, estrategia = _tokens_para_alerta(alerta)
+
+        self.assertEqual(total, 2)
+        self.assertEqual(len(tokens), 2)
+        self.assertEqual(estrategia, "nacional_total")
+
     def test_push_governamental_normaliza_acentos(self):
         DispositivoPushPublico.objects.create(
             device_id="ios-guaruja",

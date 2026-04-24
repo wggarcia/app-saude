@@ -74,6 +74,14 @@ def _matches_direct_scope(token, alerta):
     return True
 
 
+def _alerta_tem_recorte(alerta):
+    return bool(
+        (alerta.estado and alerta.estado.strip())
+        or (alerta.cidade and alerta.cidade.strip())
+        or (alerta.bairro and alerta.bairro.strip())
+    )
+
+
 def _tokens_para_alerta(alerta):
     registros = (
         DispositivoPushPublico.objects.filter(ativo=True)
@@ -90,6 +98,9 @@ def _tokens_para_alerta(alerta):
     total = len(tokens)
     if not tokens:
         return [], total, "sem_tokens"
+
+    if not _alerta_tem_recorte(alerta):
+        return tokens, total, "nacional_total"
 
     diretos = [token for token in tokens if _matches_direct_scope(token, alerta)]
     if diretos:
@@ -151,7 +162,8 @@ def enviar_alerta_governamental(alerta):
         return {"status": "push_indisponivel", "enviados": 0, "destinatarios": 0, "tokens_ativos": 0}
 
     tokens_filtrados, tokens_ativos, estrategia = _tokens_para_alerta(alerta)
-    tokens = [item.token for item in tokens_filtrados[:500]]
+    registros_destino = tokens_filtrados
+    tokens = [item.token for item in registros_destino]
     if not tokens:
         return {
             "status": "sem_destinatarios",
@@ -161,48 +173,58 @@ def enviar_alerta_governamental(alerta):
             "estrategia": estrategia,
         }
 
-    message = messaging.MulticastMessage(
-        notification=messaging.Notification(
-            title=alerta.titulo,
-            body=alerta.mensagem[:180],
-        ),
-        data={
-            "tipo": "alerta_governamental",
-            "alerta_id": str(alerta.id),
-            "nivel": alerta.nivel,
-            "estado": alerta.estado or "",
-            "cidade": alerta.cidade or "",
-            "bairro": alerta.bairro or "",
-        },
-        tokens=tokens,
-    )
-
     try:
-        response = messaging.send_each_for_multicast(message, app=app)
         failure_codes = []
         invalid_tokens = []
-        for index, send_response in enumerate(response.responses):
-            if send_response.success:
-                continue
-            exc = send_response.exception
-            code = getattr(exc, "code", None) or exc.__class__.__name__
-            failure_codes.append(str(code))
-            if str(code) in {
-                "unregistered",
-                "registration-token-not-registered",
-                "invalid-argument",
-                "invalid-registration-token",
-                "sender-id-mismatch",
-                "UnregisteredError",
-                "SenderIdMismatchError",
-            }:
-                invalid_tokens.append(tokens[index])
+        total_sucesso = 0
+        total_falha = 0
+        lotes = 0
+
+        for start in range(0, len(tokens), 500):
+            lote_tokens = tokens[start:start + 500]
+            lotes += 1
+            message = messaging.MulticastMessage(
+                notification=messaging.Notification(
+                    title=alerta.titulo,
+                    body=alerta.mensagem[:180],
+                ),
+                data={
+                    "tipo": "alerta_governamental",
+                    "alerta_id": str(alerta.id),
+                    "nivel": alerta.nivel,
+                    "estado": alerta.estado or "",
+                    "cidade": alerta.cidade or "",
+                    "bairro": alerta.bairro or "",
+                    "escopo": "nacional" if estrategia == "nacional_total" else "territorial",
+                },
+                tokens=lote_tokens,
+            )
+            response = messaging.send_each_for_multicast(message, app=app)
+            total_sucesso += response.success_count
+            total_falha += response.failure_count
+
+            for index, send_response in enumerate(response.responses):
+                if send_response.success:
+                    continue
+                exc = send_response.exception
+                code = getattr(exc, "code", None) or exc.__class__.__name__
+                failure_codes.append(str(code))
+                if str(code) in {
+                    "unregistered",
+                    "registration-token-not-registered",
+                    "invalid-argument",
+                    "invalid-registration-token",
+                    "sender-id-mismatch",
+                    "UnregisteredError",
+                    "SenderIdMismatchError",
+                }:
+                    invalid_tokens.append(lote_tokens[index])
 
         if invalid_tokens:
             DispositivoPushPublico.objects.filter(token__in=invalid_tokens).update(ativo=False)
 
         erro_resumido = None
-        if failure_codes and response.success_count == 0:
+        if failure_codes and total_sucesso == 0:
             resumo = {}
             for code in failure_codes:
                 resumo[code] = resumo.get(code, 0) + 1
@@ -211,12 +233,13 @@ def enviar_alerta_governamental(alerta):
             )
 
         return {
-            "status": "ok" if response.success_count > 0 else "falha_total",
-            "enviados": response.success_count,
-            "falhas": response.failure_count,
+            "status": "ok" if total_sucesso > 0 else "falha_total",
+            "enviados": total_sucesso,
+            "falhas": total_falha,
             "destinatarios": len(tokens),
             "tokens_ativos": tokens_ativos,
             "estrategia": estrategia,
+            "lotes": lotes,
             "erro": erro_resumido,
             "falha_codigos": failure_codes[:8],
             "tokens_invalidados": len(invalid_tokens),
