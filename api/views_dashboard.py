@@ -29,6 +29,10 @@ def dados_dashboard(request):
 
 
 def _empresa_autenticada(request):
+    empresa_request = getattr(request, "empresa", None)
+    if empresa_request:
+        return empresa_request
+
     token = request.COOKIES.get("auth_token")
 
     if not token:
@@ -56,8 +60,22 @@ def _empresa_autenticada(request):
 
 
 def _dono_autenticado(request):
+    dono_request = getattr(request, "dono_saas", None)
+    if dono_request:
+        return dono_request
+
     token = request.COOKIES.get("owner_token")
     if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
+        dono = DonoSaaS.objects.filter(id=payload["owner_id"], ativo=True).first()
+        if not dono:
+            return None
+        if dono.sessao_ativa_chave and payload.get("session_key") != dono.sessao_ativa_chave:
+            return None
+        return dono
+    except Exception:
         return None
 
 
@@ -69,16 +87,6 @@ def _principal_label(request):
     if empresa:
         return empresa.nome
     return "sistema"
-    try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
-        dono = DonoSaaS.objects.filter(id=payload["owner_id"], ativo=True).first()
-        if not dono:
-            return None
-        if dono.sessao_ativa_chave and payload.get("session_key") != dono.sessao_ativa_chave:
-            return None
-        return dono
-    except Exception:
-        return None
 
 
 def _status_contrato(empresa, agora):

@@ -1,11 +1,52 @@
 import jwt
 import logging
+from datetime import timedelta
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.conf import settings
-from .models import Empresa, EmpresaUsuario, DonoSaaS
+from django.utils import timezone
+from .models import Empresa, EmpresaUsuario, DonoSaaS, DispositivoAutorizado
 
 logger = logging.getLogger(__name__)
+SESSION_IDLE_TIMEOUT = timedelta(minutes=15) if settings.DEBUG else timedelta(hours=8)
+SESSION_TOUCH_INTERVAL = timedelta(minutes=1)
+
+
+def _sessao_expirada(principal):
+    if not principal.sessao_ativa_em:
+        return False
+    return timezone.now() - principal.sessao_ativa_em > SESSION_IDLE_TIMEOUT
+
+
+def _encerrar_sessao_principal(principal):
+    update_fields = ["sessao_ativa_chave", "sessao_ativa_em"]
+    principal.sessao_ativa_chave = None
+    principal.sessao_ativa_em = None
+    if hasattr(principal, "sessao_ativa_device_id"):
+        principal.sessao_ativa_device_id = None
+        update_fields.append("sessao_ativa_device_id")
+    principal.save(update_fields=update_fields)
+
+
+def _touch_sessao_principal(principal):
+    if not principal.sessao_ativa_em or timezone.now() - principal.sessao_ativa_em >= SESSION_TOUCH_INTERVAL:
+        principal.sessao_ativa_em = timezone.now()
+        principal.save(update_fields=["sessao_ativa_em"])
+
+
+def _touch_dispositivo_empresa(empresa, device_id):
+    if not device_id:
+        return True
+    dispositivo = DispositivoAutorizado.objects.filter(
+        empresa=empresa,
+        device_id=device_id,
+        ativo=True,
+    ).first()
+    if not dispositivo:
+        return False
+    if timezone.now() - dispositivo.ultimo_acesso >= SESSION_TOUCH_INTERVAL:
+        dispositivo.save(update_fields=["ultimo_acesso"])
+    return True
 
 
 class EmpresaMiddleware:
@@ -70,6 +111,12 @@ class EmpresaMiddleware:
                     if request.path.startswith("/api/"):
                         return JsonResponse({"erro": "sessão operacional encerrada"}, status=401)
                     return redirect("/operacao-central/")
+                if _sessao_expirada(dono):
+                    _encerrar_sessao_principal(dono)
+                    if request.path.startswith("/api/"):
+                        return JsonResponse({"erro": "sessão operacional encerrada"}, status=401)
+                    return redirect("/operacao-central/")
+                _touch_sessao_principal(dono)
                 request.dono_saas = dono
                 return self.get_response(request)
             except Exception:
@@ -111,6 +158,19 @@ class EmpresaMiddleware:
                     return JsonResponse({"erro": "sessão encerrada ou substituída"}, status=401)
                 login_target = "/login-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/login-empresa/"
                 return redirect(login_target)
+            if _sessao_expirada(principal):
+                _encerrar_sessao_principal(principal)
+                if request.path.startswith("/api/"):
+                    return JsonResponse({"erro": "sessão expirada"}, status=401)
+                login_target = "/login-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/login-empresa/"
+                return redirect(login_target)
+            if not _touch_dispositivo_empresa(empresa, data.get("device_id")):
+                _encerrar_sessao_principal(principal)
+                if request.path.startswith("/api/"):
+                    return JsonResponse({"erro": "dispositivo revogado ou inválido"}, status=401)
+                login_target = "/login-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/login-empresa/"
+                return redirect(login_target)
+            _touch_sessao_principal(principal)
             request.empresa = empresa
             request.principal = principal
 

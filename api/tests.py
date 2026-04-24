@@ -6,7 +6,7 @@ from django.test import Client, TestCase
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from .models import AceiteLegalPublico, AlertaGovernamental, DispositivoAutorizado, DispositivoPushPublico, Empresa, RegistroSintoma
+from .models import AceiteLegalPublico, AlertaGovernamental, DispositivoAutorizado, DispositivoPushPublico, DonoSaaS, Empresa, RegistroSintoma
 from .epidemiologia import DISEASE_WEIGHTS
 from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_codigo_pacote, pacotes_por_setor
 from .push_service import _tokens_para_alerta
@@ -148,6 +148,45 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/login-governo/")
 
+    def test_logout_governo_libera_dispositivo_autorizado(self):
+        governo = Empresa.objects.create(
+            nome="Governo Dispositivo",
+            email="governo-dispositivo@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+        )
+        login = self.client.post(
+            "/api/login-governo",
+            data=json.dumps({
+                "email": governo.email,
+                "senha": "123456",
+                "device_id": "gov-device-a",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertTrue(
+            DispositivoAutorizado.objects.filter(
+                empresa=governo,
+                device_id="gov-device-a",
+                ativo=True,
+            ).exists()
+        )
+
+        response = self.client.get("/logout-governo/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            DispositivoAutorizado.objects.filter(
+                empresa=governo,
+                device_id="gov-device-a",
+                ativo=True,
+            ).exists()
+        )
+
     def test_logout_libera_dispositivo_autorizado_da_empresa(self):
         login = self._login("device-a")
 
@@ -193,6 +232,62 @@ class AuthDeviceTests(TestCase):
                 ativo=True,
             ).exists()
         )
+
+    def test_dispositivo_revogado_bloqueia_reuso_do_cookie(self):
+        login = self._login("device-a")
+
+        self.assertEqual(login.status_code, 200)
+        DispositivoAutorizado.objects.filter(
+            empresa=self.empresa,
+            device_id="device-a",
+        ).update(ativo=False)
+
+        response = self.client.get("/api/dispositivos")
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_requisicao_autenticada_renova_atividade_de_sessao_e_dispositivo(self):
+        login = self._login("device-a")
+
+        self.assertEqual(login.status_code, 200)
+        momento_antigo = timezone.now() - timedelta(minutes=10)
+        Empresa.objects.filter(id=self.empresa.id).update(sessao_ativa_em=momento_antigo)
+        DispositivoAutorizado.objects.filter(
+            empresa=self.empresa,
+            device_id="device-a",
+        ).update(ultimo_acesso=momento_antigo)
+
+        response = self.client.get("/api/dispositivos")
+
+        self.assertEqual(response.status_code, 200)
+        self.empresa.refresh_from_db()
+        dispositivo = DispositivoAutorizado.objects.get(empresa=self.empresa, device_id="device-a")
+        self.assertGreater(self.empresa.sessao_ativa_em, momento_antigo)
+        self.assertGreater(dispositivo.ultimo_acesso, momento_antigo)
+
+    def test_login_operacao_permite_console_operacional(self):
+        DonoSaaS.objects.create(
+            nome="Operacao SolusCRT",
+            email="owner@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+
+        login = self.client.post(
+            "/api/operacao-central/login",
+            data=json.dumps({
+                "email": "owner@teste.com",
+                "senha": "123456",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+
+        response = self.client.get("/console-operacional/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Operacao SolusCRT")
 
     def test_home_publica_abre_site_principal_no_dominio_institucional(self):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/")
