@@ -14,7 +14,7 @@ class TelaMapa extends StatefulWidget {
   State<TelaMapa> createState() => _TelaMapaState();
 }
 
-class _TelaMapaState extends State<TelaMapa> {
+class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
   final MapController _mapController = MapController();
   List<dynamic> hotspots = const [];
   Map<String, dynamic>? radarLocal;
@@ -27,11 +27,38 @@ class _TelaMapaState extends State<TelaMapa> {
   bool locating = false;
   bool radarExpanded = false;
   String? notice;
+  bool _refreshingInBackground = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshOnResume();
+    }
+  }
+
+  Future<void> _refreshOnResume() async {
+    if (_refreshingInBackground || !mounted) {
+      return;
+    }
+    _refreshingInBackground = true;
+    try {
+      await _load();
+    } finally {
+      _refreshingInBackground = false;
+    }
   }
 
   Future<Map<String, dynamic>> _resolverRadarPreferido({

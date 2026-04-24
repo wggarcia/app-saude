@@ -12,14 +12,41 @@ class TelaAlertas extends StatefulWidget {
   State<TelaAlertas> createState() => _TelaAlertasState();
 }
 
-class _TelaAlertasState extends State<TelaAlertas> {
+class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
   List<Map<String, dynamic>> _alertas = const [];
   bool _loading = true;
+  bool _refreshingInBackground = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshOnResume();
+    }
+  }
+
+  Future<void> _refreshOnResume() async {
+    if (_refreshingInBackground || !mounted) {
+      return;
+    }
+    _refreshingInBackground = true;
+    try {
+      await _load();
+    } finally {
+      _refreshingInBackground = false;
+    }
   }
 
   Future<void> _load() async {

@@ -122,7 +122,8 @@ class TelaPainelCidadao extends StatefulWidget {
   State<TelaPainelCidadao> createState() => _TelaPainelCidadaoState();
 }
 
-class _TelaPainelCidadaoState extends State<TelaPainelCidadao> {
+class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
+    with WidgetsBindingObserver {
   Map<String, dynamic>? resumo;
   Map<String, dynamic>? radarSelecionado;
   Map<String, dynamic>? radarAtual;
@@ -130,11 +131,38 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao> {
   List<dynamic> alertasPublicos = const [];
   String modoMonitoramento = 'atual';
   bool loading = true;
+  bool _refreshingInBackground = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshOnResume();
+    }
+  }
+
+  Future<void> _refreshOnResume() async {
+    if (_refreshingInBackground || !mounted) {
+      return;
+    }
+    _refreshingInBackground = true;
+    try {
+      await _load();
+    } finally {
+      _refreshingInBackground = false;
+    }
   }
 
   Future<Map<String, dynamic>> _resolverRadarPreferido({
@@ -331,6 +359,11 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao> {
         radarSelecionado?['alerta_publico'] as Map<String, dynamic>? ??
             resumo?['alerta_publico'] as Map<String, dynamic>? ??
             {};
+    final alertaPublicoEfetivo = alertaPublico.isNotEmpty
+        ? alertaPublico
+        : alertasPublicos.isNotEmpty
+            ? Map<String, dynamic>.from(alertasPublicos.first as Map)
+            : const <String, dynamic>{};
     final orientacao =
         radarSelecionado?['orientacao_publica'] as Map<String, dynamic>? ??
             resumo?['orientacao_publica'] as Map<String, dynamic>? ??
@@ -398,7 +431,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao> {
                     semaforo: semaforo,
                   ),
                 const SizedBox(height: 16),
-                if (!loading) _PublicAlertCard(alerta: alertaPublico),
+                if (!loading) _PublicAlertCard(alerta: alertaPublicoEfetivo),
                 const SizedBox(height: 16),
                 if (!loading && alertasPublicos.isNotEmpty)
                   _GovernmentAlertsCard(
