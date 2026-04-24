@@ -145,6 +145,9 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
           estado: localPreferido['estado']?.toString(),
           bairro: localPreferido['bairro']?.toString(),
         );
+        if (alertas.isEmpty) {
+          alertas = await PublicApiService.fetchAlertas();
+        }
       } catch (_) {
         alertas = const [];
       }

@@ -65,7 +65,9 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
         estado: local['estado']?.toString(),
         bairro: local['bairro']?.toString(),
       );
-      await AlertaInboxService.syncAlerts(alertas);
+      final alertasEfetivos =
+          alertas.isEmpty ? await PublicApiService.fetchAlertas() : alertas;
+      await AlertaInboxService.syncAlerts(alertasEfetivos);
     } catch (_) {}
 
     final inbox = await AlertaInboxService.loadInbox();

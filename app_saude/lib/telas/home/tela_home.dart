@@ -208,26 +208,27 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
         radarAgora: radarAgora,
         base: updatedBase,
       );
-      final results = await Future.wait([
-        PublicApiService.fetchResumo(),
-        PublicApiService.fetchAlertas(
-          cidade: (radarPreferido['local'] as Map<String, dynamic>?)?['cidade']
-              ?.toString(),
-          estado: (radarPreferido['local'] as Map<String, dynamic>?)?['estado']
-              ?.toString(),
-          bairro: (radarPreferido['local'] as Map<String, dynamic>?)?['bairro']
-              ?.toString(),
-        ),
-      ]);
+      final resumoData = await PublicApiService.fetchResumo();
+      var alertas = await PublicApiService.fetchAlertas(
+        cidade: (radarPreferido['local'] as Map<String, dynamic>?)?['cidade']
+            ?.toString(),
+        estado: (radarPreferido['local'] as Map<String, dynamic>?)?['estado']
+            ?.toString(),
+        bairro: (radarPreferido['local'] as Map<String, dynamic>?)?['bairro']
+            ?.toString(),
+      );
+      if (alertas.isEmpty) {
+        alertas = await PublicApiService.fetchAlertas();
+      }
       if (!mounted) {
         return;
       }
       setState(() {
-        resumo = results[0] as Map<String, dynamic>;
+        resumo = resumoData;
         radarSelecionado = radarPreferido;
         radarAtual = radarAgora;
         regiaoBase = updatedBase;
-        alertasPublicos = results[1] as List<dynamic>;
+        alertasPublicos = alertas;
         modoMonitoramento = modo;
         loading = false;
       });
@@ -237,7 +238,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
         cidade: pushLocal['cidade']?.toString(),
         bairro: pushLocal['bairro']?.toString(),
       );
-      await _notificarNovosAlertas(results[1] as List<dynamic>);
+      await _notificarNovosAlertas(alertas);
     } catch (_) {
       try {
         final modo = await RegiaoBaseService.obterModoMonitoramento();
