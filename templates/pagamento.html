@@ -14,7 +14,8 @@
     h1{margin:10px 0 0;font-size:2.2rem}.muted{color:#9cc4db;line-height:1.6}
     .card{padding:22px}
     label{display:grid;gap:8px;margin-top:14px;color:#9cc4db;font-size:.85rem;font-weight:700}
-    select{width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#eef8ff}
+    select,input{width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#eef8ff}
+    input::placeholder{color:#9bb8cc}
     .price{margin-top:18px;padding:18px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
     .price strong{display:block;font-size:1.5rem}
     .btn{margin-top:18px;width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,#5af0d3,#6fb4ff);color:#04111a;font-weight:800;cursor:pointer}
@@ -79,6 +80,10 @@
           <option value="anual">Anual</option>
         </select>
       </label>
+      <label>
+        CPF/CNPJ do responsável financeiro (Asaas)
+        <input id="cpf_cnpj" placeholder="Somente numeros: CPF (11) ou CNPJ (14)">
+      </label>
 
       <div class="price">
         <strong id="preco">R$ 799,00 / mês</strong>
@@ -120,6 +125,7 @@
       const empresaId = localStorage.getItem("empresa_id");
       const plano = document.getElementById("plano").value;
       const pacote = document.getElementById("pacote").value;
+      const cpfCnpj = (document.getElementById("cpf_cnpj").value || "").replace(/\D/g, "");
       const button = document.querySelector(".btn");
 
       if (!empresaId || empresaId === "null" || empresaId === "undefined") {
@@ -131,8 +137,14 @@
       try {
         button.disabled = true;
         button.innerText = "Abrindo checkout seguro...";
-        const res = await fetch(`/api/assinatura/${empresaId}/?plano=${plano}&pacote=${pacote}`, {
-          method: "POST"
+        const res = await fetch(`/api/assinatura/${empresaId}/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            package_id: pacote,
+            cycle: plano,
+            cpf_cnpj: cpfCnpj
+          })
         });
 
         const data = await res.json();

@@ -50,6 +50,14 @@ STATUS_APROVADOS_ASAAS = {
 }
 
 
+def _somente_digitos(valor):
+    return "".join(ch for ch in str(valor or "") if ch.isdigit())
+
+
+def _cpf_cnpj_valido(valor):
+    return len(_somente_digitos(valor)) in {11, 14}
+
+
 def _provider():
     return (getattr(settings, "PAYMENT_PROVIDER", "mercado_pago") or "mercado_pago").strip().lower()
 
@@ -129,10 +137,13 @@ def _payload_pagamento(request):
 
     package_id = request.GET.get("package_id") or request.GET.get("pacote")
     cycle = request.GET.get("cycle") or request.GET.get("plano")
+    cpf_cnpj = request.GET.get("cpf_cnpj") or request.GET.get("cpfCnpj")
     if package_id and not payload.get("package_id"):
         payload["package_id"] = package_id
     if cycle and not payload.get("cycle"):
         payload["cycle"] = cycle
+    if cpf_cnpj and not payload.get("cpf_cnpj"):
+        payload["cpf_cnpj"] = cpf_cnpj
 
     return payload
 
@@ -197,12 +208,30 @@ def _asaas_request(method, path, payload=None, query=None):
         raise RuntimeError(f"Asaas indisponivel: {exc}") from exc
 
 
-def _asaas_cliente_id(empresa):
+def _asaas_cliente_id(empresa, cpf_cnpj):
     referencia = f"empresa-{empresa.id}"
+    cpf_cnpj = _somente_digitos(cpf_cnpj)
     consulta = _asaas_request("GET", "/customers", query={"externalReference": referencia})
     clientes = consulta.get("data") or []
     if clientes:
-        return clientes[0].get("id")
+        cliente = clientes[0]
+        customer_id = cliente.get("id")
+        documento_atual = _somente_digitos(cliente.get("cpfCnpj"))
+        if customer_id and cpf_cnpj and documento_atual != cpf_cnpj:
+            payload_update = {
+                "name": empresa.nome,
+                "email": empresa.email,
+                "cpfCnpj": cpf_cnpj,
+                "externalReference": referencia,
+            }
+            try:
+                _asaas_request("POST", f"/customers/{customer_id}", payload=payload_update)
+            except RuntimeError:
+                try:
+                    _asaas_request("PUT", f"/customers/{customer_id}", payload=payload_update)
+                except RuntimeError:
+                    pass
+        return customer_id
 
     criado = _asaas_request(
         "POST",
@@ -212,6 +241,7 @@ def _asaas_cliente_id(empresa):
             "email": empresa.email,
             "externalReference": referencia,
             "notificationDisabled": False,
+            "cpfCnpj": cpf_cnpj,
         },
     )
     return criado.get("id")
@@ -229,8 +259,8 @@ def _asaas_pagamento_por_id(payment_id):
     return _asaas_request("GET", f"/payments/{payment_id}")
 
 
-def _asaas_criar_pagamento(request, empresa, valor, descricao):
-    customer_id = _asaas_cliente_id(empresa)
+def _asaas_criar_pagamento(request, empresa, valor, descricao, cpf_cnpj):
+    customer_id = _asaas_cliente_id(empresa, cpf_cnpj)
     if not customer_id:
         raise RuntimeError("Nao foi possivel criar cliente no Asaas.")
 
@@ -321,12 +351,21 @@ def criar_pagamento(request, empresa_id=None):
     provider = _provider()
 
     if provider == "asaas":
+        cpf_cnpj = payload.get("cpf_cnpj") or payload.get("cpfCnpj")
+        if not _cpf_cnpj_valido(cpf_cnpj):
+            return JsonResponse(
+                {
+                    "erro": "Para pagamento via Asaas, informe CPF ou CNPJ valido do responsavel financeiro (11 ou 14 digitos).",
+                },
+                status=400,
+            )
         try:
             payment_id, checkout_url = _asaas_criar_pagamento(
                 request,
                 empresa,
                 valor,
                 f"{pacote['label']} - {plano.upper()} SaaS Saude",
+                cpf_cnpj,
             )
             return JsonResponse(
                 {
