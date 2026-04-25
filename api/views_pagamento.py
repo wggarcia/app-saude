@@ -121,6 +121,17 @@ PACKAGE_ID_ALIAS = {
     "farmacia_regional": "rede_farmaceutica_regional",
     "hospital_plus": "hospital_medio",
     "rede_nacional": "empresa_nacional",
+    # aliases legados da tela de pagamento antiga
+    "empresa_starter_5": "empresa_starter",
+    "empresa_profissional_25": "empresa_profissional",
+    "empresa_enterprise_100": "empresa_enterprise",
+    "empresa_corporativo_250": "empresa_corporativo",
+    "empresa_nacional_500": "empresa_nacional",
+    "empresa_nacional_1000": "empresa_nacional_1000",
+    "farmacia_local_5": "farmacia_local",
+    "rede_farmaceutica_regional_50": "rede_farmaceutica_regional",
+    "hospital_medio_50": "hospital_medio",
+    "rede_hospitalar_250": "rede_hospitalar",
 }
 STATUS_APROVADOS_ASAAS = {
     "RECEIVED",
@@ -193,6 +204,36 @@ def _extrair_pacote_e_ciclo(payload):
         raise ValueError("Ciclo inválido para o pacote")
 
     return package_id, cycle, pacote, float(valor)
+
+
+def _payload_pagamento(request):
+    payload = {}
+
+    # 1) JSON body (fluxo novo)
+    try:
+        payload = json.loads(request.body or "{}")
+        if not isinstance(payload, dict):
+            payload = {}
+    except json.JSONDecodeError:
+        payload = {}
+
+    # 2) fallback para form-data legado
+    if not payload:
+        payload = {
+            "package_id": request.POST.get("package_id") or request.POST.get("pacote"),
+            "cycle": request.POST.get("cycle") or request.POST.get("plano"),
+        }
+
+    # 3) fallback para query-string legado
+    qs_package = request.GET.get("package_id") or request.GET.get("pacote")
+    qs_cycle = request.GET.get("cycle") or request.GET.get("plano")
+
+    if qs_package and not payload.get("package_id"):
+        payload["package_id"] = qs_package
+    if qs_cycle and not payload.get("cycle"):
+        payload["cycle"] = qs_cycle
+
+    return payload
 
 
 def _build_external_reference(empresa_id, package_id, cycle):
@@ -349,10 +390,7 @@ def criar_pagamento(request, empresa_id=None):
     if not empresa:
         return JsonResponse({"erro": "empresa não encontrada"}, status=404)
 
-    try:
-        payload = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
-        return JsonResponse({"erro": "JSON inválido"}, status=400)
+    payload = _payload_pagamento(request)
 
     try:
         package_id, cycle, pacote, valor = _extrair_pacote_e_ciclo(payload)
