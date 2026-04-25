@@ -159,6 +159,35 @@
       box-shadow: 0 5px 20px rgba(0,255,150,0.5);
     }
 
+    .tax-id {
+      margin: 14px 0 14px;
+    }
+
+    .tax-id label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #d7ebf2;
+      font-weight: 600;
+    }
+
+    .tax-id input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.2);
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .tax-id input:focus {
+      border-color: #00e676;
+      box-shadow: 0 0 0 1px #00e676 inset;
+    }
+
     .error {
       min-height: 18px;
       margin-top: 10px;
@@ -179,6 +208,10 @@
   </div>
 
   <div id="cards" class="cards"></div>
+  <div class="tax-id">
+    <label for="cpfCnpj">CPF ou CNPJ do responsável financeiro</label>
+    <input id="cpfCnpj" type="text" inputmode="numeric" placeholder="Somente números" maxlength="18" autocomplete="off">
+  </div>
   <button class="cta" onclick="pagar()">Ativar assinatura</button>
   <div id="erro" class="error"></div>
 </div>
@@ -196,6 +229,10 @@ function getCookie(name){
 
 function getEmpresaId(){
   return localStorage.getItem("empresa_id") || getCookie("empresa_id");
+}
+
+function normalizarCpfCnpj(valor){
+  return String(valor || "").replace(/\D/g, "");
 }
 
 function formatarBRL(valor){
@@ -272,13 +309,22 @@ async function pagar() {
    return;
  }
 
+ const cpfCnpjInput = document.getElementById("cpfCnpj");
+ const cpfCnpj = normalizarCpfCnpj(cpfCnpjInput.value);
+ if (!(cpfCnpj.length === 11 || cpfCnpj.length === 14)){
+   erro.textContent = "Informe CPF (11 dígitos) ou CNPJ (14 dígitos) válido.";
+   cpfCnpjInput.focus();
+   return;
+ }
+
   try {
     const res = await fetch(`/api/assinatura/${empresaId}/`, {
       method: "POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({
         package_id: pacoteSelecionado.id,
-        cycle: cicloSelecionado
+        cycle: cicloSelecionado,
+        cpf_cnpj: cpfCnpj
       })
     });
 

@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -144,7 +145,7 @@ STATUS_APROVADOS_ASAAS = {
 
 
 def _provider():
-    return (getattr(settings, "PAYMENT_PROVIDER", "mercado_pago") or "mercado_pago").strip().lower()
+    return (getattr(settings, "PAYMENT_PROVIDER", "asaas") or "asaas").strip().lower()
 
 
 def _mercado_pago_sdk():
@@ -257,6 +258,36 @@ def _plano_codigo(package_id, cycle):
     return ((pacote.get("plano_codigo") or {}).get(cycle) or "premium")[:20]
 
 
+def _normalizar_cpf_cnpj(valor):
+    digitos = re.sub(r"\D", "", str(valor or ""))
+    if len(digitos) in {11, 14}:
+        return digitos
+    return ""
+
+
+def _resolver_documento_fiscal(empresa, payload):
+    enviado = (
+        (payload or {}).get("cpf_cnpj")
+        or (payload or {}).get("cpfCnpj")
+        or (payload or {}).get("documento_fiscal")
+    )
+
+    documento = _normalizar_cpf_cnpj(enviado) if enviado else ""
+    if not documento:
+        documento = _normalizar_cpf_cnpj(getattr(empresa, "documento_fiscal", ""))
+
+    if not documento:
+        raise ValueError(
+            "CPF ou CNPJ do responsável financeiro é obrigatório para gerar cobrança."
+        )
+
+    if getattr(empresa, "documento_fiscal", "") != documento:
+        empresa.documento_fiscal = documento
+        empresa.save(update_fields=["documento_fiscal"])
+
+    return documento
+
+
 def _ativar_empresa(empresa, package_id=None, cycle=None):
     empresa.plano = _plano_codigo(package_id, cycle)
     empresa.ativo = True
@@ -264,13 +295,39 @@ def _ativar_empresa(empresa, package_id=None, cycle=None):
     empresa.save(update_fields=["plano", "ativo", "data_pagamento"])
 
 
-def _asaas_request(method, path, payload=None, query=None):
-    api_key = (getattr(settings, "ASAAS_API_KEY", "") or "").strip()
-    if not api_key:
-        raise RuntimeError("ASAAS_API_KEY não configurada")
+def _extrair_asaas_api_key(raw):
+    valor = str(raw or "").strip()
+    if not valor:
+        return ""
 
-    base_url = (getattr(settings, "ASAAS_BASE_URL", "https://api.asaas.com/v3") or "").strip().rstrip("/")
-    if " " in base_url:
+    match = re.search(r"(\$aact_(?:prod|hmlg)_[^\s\"']+)", valor)
+    if match:
+        return match.group(1).strip()
+
+    return valor if valor.startswith("$aact_") else ""
+
+
+def _extrair_asaas_base_url(raw):
+    valor = str(raw or "").strip()
+    if not valor:
+        return "https://api.asaas.com/v3"
+
+    match = re.search(r"(https?://[^\s\"')]+)", valor)
+    if match:
+        valor = match.group(1)
+
+    return valor.rstrip("/")
+
+
+def _asaas_request(method, path, payload=None, query=None):
+    api_key = _extrair_asaas_api_key(getattr(settings, "ASAAS_API_KEY", ""))
+    if not api_key:
+        raise RuntimeError(
+            "ASAAS_API_KEY inválida. Use a chave real do Asaas (ex: $aact_prod_... ou $aact_hmlg_...)."
+        )
+
+    base_url = _extrair_asaas_base_url(getattr(settings, "ASAAS_BASE_URL", "https://api.asaas.com/v3"))
+    if not base_url.startswith("http"):
         raise RuntimeError("ASAAS_BASE_URL inválida. Use apenas a URL, ex: https://api.asaas.com/v3")
 
     user_agent = (getattr(settings, "ASAAS_USER_AGENT", "") or "").strip() or "SolusCRT-Saude/1.0"
@@ -301,12 +358,26 @@ def _asaas_request(method, path, payload=None, query=None):
         raise RuntimeError(f"Asaas indisponível: {exc}") from exc
 
 
-def _asaas_cliente_id(empresa):
+def _asaas_cliente_id(empresa, documento_fiscal):
     referencia = f"empresa-{empresa.id}"
     consulta = _asaas_request("GET", "/customers", query={"externalReference": referencia})
     clientes = consulta.get("data") or []
     if clientes:
-        return clientes[0].get("id")
+        cliente = clientes[0]
+        cliente_id = cliente.get("id")
+        doc_atual = _normalizar_cpf_cnpj(cliente.get("cpfCnpj"))
+
+        if cliente_id and documento_fiscal and doc_atual != documento_fiscal:
+            _asaas_request(
+                "PUT",
+                f"/customers/{cliente_id}",
+                payload={
+                    "name": empresa.nome,
+                    "email": empresa.email,
+                    "cpfCnpj": documento_fiscal,
+                },
+            )
+        return cliente_id
 
     criado = _asaas_request(
         "POST",
@@ -314,6 +385,7 @@ def _asaas_cliente_id(empresa):
         payload={
             "name": empresa.nome,
             "email": empresa.email,
+            "cpfCnpj": documento_fiscal,
             "externalReference": referencia,
             "notificationDisabled": False,
         },
@@ -321,8 +393,8 @@ def _asaas_cliente_id(empresa):
     return criado.get("id")
 
 
-def _asaas_criar_pagamento(empresa, request, package_id, cycle, valor):
-    customer_id = _asaas_cliente_id(empresa)
+def _asaas_criar_pagamento(empresa, request, package_id, cycle, valor, documento_fiscal):
+    customer_id = _asaas_cliente_id(empresa, documento_fiscal)
     if not customer_id:
         raise RuntimeError("Não foi possível criar cliente no Asaas")
 
@@ -401,7 +473,10 @@ def criar_pagamento(request, empresa_id=None):
 
     if provider == "asaas":
         try:
-            cobranca = _asaas_criar_pagamento(empresa, request, package_id, cycle, valor)
+            documento_fiscal = _resolver_documento_fiscal(empresa, payload)
+            cobranca = _asaas_criar_pagamento(
+                empresa, request, package_id, cycle, valor, documento_fiscal
+            )
             return JsonResponse(
                 {
                     "status": "ok",
@@ -413,6 +488,8 @@ def criar_pagamento(request, empresa_id=None):
                     "init_point": cobranca["url"],
                 }
             )
+        except ValueError as exc:
+            return JsonResponse({"erro": str(exc)}, status=400)
         except Exception as exc:
             return JsonResponse({"erro": f"Asaas: {exc}"}, status=500)
 

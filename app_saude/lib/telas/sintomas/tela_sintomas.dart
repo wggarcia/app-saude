@@ -22,24 +22,23 @@ class _TelaSintomasState extends State<TelaSintomas> {
   Future<void> enviarDados() async {
     setState(() => carregando = true);
 
-    final pos = await obterLocalizacao();
-
-    if (pos == null) {
-      setState(() => carregando = false);
-      return;
-    }
-
-    double lat = pos["lat"]!;
-    double lon = pos["lon"]!;
-
-    print("LAT: $lat");
-    print("LON: $lon");
-
     try {
-      List<Placemark> placemarks =
-          await placemarkFromCoordinates(lat, lon);
+      final pos = await obterLocalizacao();
+      if (!mounted) return;
 
-      String cidade = placemarks.first.locality ?? "Desconhecido";
+      if (pos == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Não foi possível obter localização")),
+        );
+        return;
+      }
+
+      final lat = pos["lat"]!;
+      final lon = pos["lon"]!;
+
+      final placemarks = await placemarkFromCoordinates(lat, lon);
+      if (!mounted) return;
+      final cidade = placemarks.first.locality ?? "Desconhecido";
 
       final response = await http.post(
         Uri.parse("https://app-saude-p9n8.onrender.com/api/registrar-app"),
@@ -55,26 +54,31 @@ class _TelaSintomasState extends State<TelaSintomas> {
           "cidade": cidade,
         }),
       );
+      if (!mounted) return;
 
-      print("STATUS ENVIO: ${response.statusCode}");
-      print("BODY ENVIO: ${response.body}");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Enviado com sucesso")),
-      );
-
-      Navigator.pop(context);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Enviado com sucesso")),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro ao enviar")),
+        );
+      }
     } catch (e) {
-      print("ERRO ENVIO: $e");
+      debugPrint("Erro no envio de sintomas: $e");
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro ao enviar")),
-      );
-
-      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro ao enviar")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => carregando = false);
+      }
     }
-
-    setState(() => carregando = false);
   }
 
   Widget item(String texto, bool valor, Function(bool?) onChanged) {
@@ -132,7 +136,7 @@ Future<Map<String, double>?> obterLocalizacao() async {
       };
     }
   } catch (e) {
-    print("Erro localização: $e");
+    debugPrint("Erro localização: $e");
   }
 
   return null;

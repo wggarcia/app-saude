@@ -35,11 +35,14 @@ def login_empresa(request):
                 "empresa_id": empresa.id
             }, settings.JWT_SECRET_KEY, algorithm="HS256")
 
-            return JsonResponse({
+            response = JsonResponse({
                 "status": "ok",
                 "token": token,
                 "empresa_id": empresa.id  # 🔥 AQUI
             })
+
+            response.set_cookie("empresa_id", str(empresa.id), samesite="Lax")
+            return response
 
         return JsonResponse({"status": "erro", "mensagem": "Senha incorreta"}, status=401)
 
@@ -82,7 +85,11 @@ def registrar_empresa(request):
         "empresa_id": empresa.id
     }, settings.JWT_SECRET_KEY, algorithm="HS256")
 
-    return JsonResponse({
+    response = JsonResponse({
         "status": "ok",
-        "token": token
+        "token": token,
+        "empresa_id": empresa.id
     })
+
+    response.set_cookie("empresa_id", str(empresa.id), samesite="Lax")
+    return response

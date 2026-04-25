@@ -1,9 +1,8 @@
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .models import RegistroSintoma
 from .inteligencia import nivel_risco
 from .models import Empresa
-from django.shortcuts import render, redirect
 
 
 
@@ -18,11 +17,10 @@ def dados_dashboard(request):
 
 # HTML (dashboard)
 def dashboard(request):
-
-    empresa_id = request.GET.get("empresa_id")
+    empresa_id = request.GET.get("empresa_id") or request.COOKIES.get("empresa_id")
 
     if not empresa_id:
-      return render(request, "dashboard.html")
+        return redirect("/")
 
     empresa = Empresa.objects.filter(id=empresa_id).first()
 
@@ -33,7 +31,11 @@ def dashboard(request):
     if not empresa.ativo:
         return redirect("/pagamento/")
 
-    return render(request, "dashboard.html")
+    response = render(request, "dashboard.html", {
+        "empresa_id": str(empresa.id)
+    })
+    response.set_cookie("empresa_id", str(empresa.id), samesite="Lax")
+    return response
 
 from django.db.models import Count
 

@@ -6,6 +6,7 @@ class Empresa(models.Model):
     nome = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     senha = models.CharField(max_length=255)
+    documento_fiscal = models.CharField(max_length=14, blank=True, default="")
 
     plano = models.CharField(max_length=20, default="free")
     ativo = models.BooleanField(default=False)

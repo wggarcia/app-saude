@@ -57,6 +57,10 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Este app usa o microfone para captura de áudio.</string>
 
+	<!-- 🔥 GOOGLE MAPS (opcional; configure via Build Settings/xcconfig) -->
+	<key>GMSApiKey</key>
+	<string>$(GMS_API_KEY)</string>
+
 	<!-- 🔥 UI -->
 	<key>UIApplicationSceneManifest</key>
 	<dict>

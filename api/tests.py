@@ -1,7 +1,9 @@
 from django.test import TestCase
 from django.test import override_settings
+from unittest.mock import patch
 
 from .models import Empresa
+from .views_pagamento import _extrair_asaas_api_key
 
 
 class PagamentoRedirectTests(TestCase):
@@ -90,3 +92,42 @@ class PacotesPagamentoTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("erro", response.json())
+
+    @override_settings(PAYMENT_PROVIDER="asaas")
+    def test_criar_pagamento_asaas_exige_documento_fiscal(self):
+        response = self.client.post(
+            f"/api/assinatura/{self.empresa.id}/",
+            data='{"package_id":"empresa_starter","cycle":"MONTHLY"}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("CPF ou CNPJ", response.json().get("erro", ""))
+
+    @override_settings(PAYMENT_PROVIDER="asaas")
+    @patch("api.views_pagamento._asaas_criar_pagamento")
+    def test_criar_pagamento_asaas_com_documento_fiscal(self, mock_criar):
+        mock_criar.return_value = {"id": "pay_123", "url": "https://checkout.exemplo"}
+        response = self.client.post(
+            f"/api/assinatura/{self.empresa.id}/",
+            data='{"package_id":"empresa_starter","cycle":"MONTHLY","cpf_cnpj":"12.345.678/0001-99"}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body.get("provider"), "asaas")
+        self.assertTrue(body.get("init_point"))
+        self.empresa.refresh_from_db()
+        self.assertEqual(self.empresa.documento_fiscal, "12345678000199")
+
+
+class AsaasParsingTests(TestCase):
+    def test_extrai_chave_asaas_de_texto_colado(self):
+        texto = (
+            "Get your API keys ... "
+            "$aact_prod_ABC123::token-extra ..."
+            " restante"
+        )
+        self.assertEqual(
+            _extrair_asaas_api_key(texto),
+            "$aact_prod_ABC123::token-extra",
+        )

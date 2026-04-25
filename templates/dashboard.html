@@ -160,12 +160,15 @@
 <div id="map"></div>
 
 <script>
-const empresaId = localStorage.getItem("empresa_id");
+const empresaId = "{{ empresa_id|escapejs }}" || localStorage.getItem("empresa_id");
 
 // 🔐 se não estiver logado
 if (!empresaId) {
   window.location.href = "/";
 }
+
+localStorage.setItem("empresa_id", empresaId);
+document.cookie = `empresa_id=${empresaId}; path=/; SameSite=Lax`;
 
 // 🔥 verifica pagamento
 fetch(`/api/status-pagamento?empresa_id=${empresaId}`)
@@ -186,6 +189,7 @@ fetch(`/api/status-pagamento?empresa_id=${empresaId}`)
 function logout(){
   localStorage.removeItem("token");
   localStorage.removeItem("empresa_id");
+  document.cookie = "empresa_id=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";
   window.location.href = "/";
 }
 
