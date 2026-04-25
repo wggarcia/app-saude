@@ -5,7 +5,7 @@ PACOTES_SAAS = {
         "descricao": "Saude ocupacional e radar territorial para pequenas equipes.",
         "usuarios": 5,
         "dispositivos": 5,
-        "mensal": 10.00,
+        "mensal": 799.00,
         "anual": 7990.00,
         "ciclos": ["mensal", "anual"],
     },
