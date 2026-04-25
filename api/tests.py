@@ -4,7 +4,7 @@ from io import StringIO
 
 from django.contrib.auth.hashers import make_password
 from django.core.management import call_command
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.template.loader import render_to_string
 from django.utils import timezone
 
@@ -1014,3 +1014,34 @@ class TemporalDecayTests(TestCase):
         self.assertEqual(dez_dias, 3.27)
         self.assertGreater(dez_dias, vinte_dias)
         self.assertEqual(trinta_dias, 0.05)
+
+
+class WebhookMiddlewareTests(TestCase):
+    @override_settings(ASAAS_WEBHOOK_TOKEN="token-teste")
+    def test_webhook_asaas_nao_exige_jwt_empresa(self):
+        empresa = Empresa.objects.create(
+            nome="Empresa Webhook",
+            email="empresa-webhook@teste.com",
+            senha=make_password("123456"),
+            ativo=False,
+        )
+        payload = {
+            "event": "PAYMENT_RECEIVED",
+            "payment": {
+                "status": "RECEIVED",
+                "externalReference": str(empresa.id),
+            },
+        }
+
+        response = self.client.post(
+            "/api/webhook",
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_ASAAS_ACCESS_TOKEN="token-teste",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json().get("status"), "ok_asaas")
+
+        empresa.refresh_from_db()
+        self.assertTrue(empresa.ativo)

@@ -81,6 +81,9 @@ class EmpresaMiddleware:
             "/api/registrar_empresa",
             "/api/public/",
             "/api/assinatura/",
+            "/api/planos-publicos",
+            "/api/status-pagamento",
+            "/api/webhook",
             "/static/",
             "/media/",
         )
