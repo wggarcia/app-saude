@@ -33,7 +33,7 @@ from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
 from api.governanca import api_auditoria_institucional, api_matriz_decisao, api_metodologia_epidemiologica
 
 # 🔥 IMPORT CORRETO (APENAS UM)
-from api.views_pagamento import criar_pagamento, webhook, sucesso, erro, pendente, status_pagamento
+from api.views_pagamento import criar_pagamento, webhook, sucesso, erro, pendente, status_pagamento, planos_publicos
 
 
 def service_worker(request):
@@ -142,6 +142,7 @@ urlpatterns = [
 
     # 💳 PAGAMENTO (FUNCIONAL)
     path('api/assinatura/<int:empresa_id>/', criar_pagamento),
+    path('api/planos-publicos', planos_publicos),
     path('api/webhook', webhook),
     
 

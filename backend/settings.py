@@ -191,8 +191,13 @@ PUBLIC_BASE_URL = os.environ.get(
     "https://app-saude-p9n8.onrender.com" if IS_PRODUCTION else "http://127.0.0.1:8000",
 ).rstrip("/")
 
+PAYMENT_PROVIDER = (os.environ.get("PAYMENT_PROVIDER", "mercado_pago") or "mercado_pago").strip().lower()
 MERCADO_PAGO_ACCESS_TOKEN = os.environ.get("MERCADO_PAGO_ACCESS_TOKEN", "")
 MERCADO_PAGO_WEBHOOK_SECRET = os.environ.get("MERCADO_PAGO_WEBHOOK_SECRET", "")
+ASAAS_API_KEY = os.environ.get("ASAAS_API_KEY", "")
+ASAAS_BASE_URL = (os.environ.get("ASAAS_BASE_URL", "https://api.asaas.com/v3") or "").strip().rstrip("/")
+ASAAS_WEBHOOK_TOKEN = os.environ.get("ASAAS_WEBHOOK_TOKEN", "")
+ASAAS_USER_AGENT = os.environ.get("ASAAS_USER_AGENT", "SolusCRT-Saude/1.0")
 FIREBASE_SERVICE_ACCOUNT_PATH = os.environ.get(
     "FIREBASE_SERVICE_ACCOUNT_PATH",
     str(BASE_DIR / "secrets" / "firebase-service-account.json"),
