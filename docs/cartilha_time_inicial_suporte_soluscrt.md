@@ -86,6 +86,12 @@ Regra pratica:
 - Todo erro recorrente vira tarefa de melhoria permanente.
 - Sem runbook = nao escala comercial para aquele modulo.
 
+## 6.1 Regra de plantao 24x7 (obrigatoria)
+- Sempre manter escala de sobreaviso publicada para P1/P2.
+- Tempo maximo para acknowledge de alerta critico: 10 minutos.
+- Tempo maximo para engenheiro assumir incidente P1: 15 minutos.
+- Escalonamento automatico para segundo responsavel quando nao houver resposta.
+
 ## 7. Indicadores minimos que o time deve bater
 - 1o retorno no prazo de SLA: >= 95%
 - resolucao P1 no prazo: >= 90%
@@ -97,6 +103,13 @@ Regra pratica:
 - alertas e logs centralizados
 - base de conhecimento interna
 - canal oficial de status para clientes
+
+## 8.1 Painel minimo de monitoramento 24x7
+- Uptime dos dominios `empresa`, `governo`, `admin` e APIs publicas.
+- Latencia e erro dos endpoints criticos (`/api/login`, `/api/assinatura`, `/api/webhook`).
+- Falhas de push (FCM/APNs) e taxa de entrega.
+- Falhas do webhook Asaas por codigo (401/400/500).
+- Saude de banco (conexoes, CPU, disco, crescimento).
 
 ## 9. Quando contratar mais gente
 - fila media acima de 24h por 5 dias uteis

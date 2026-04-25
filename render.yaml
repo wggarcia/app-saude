@@ -19,6 +19,8 @@ services:
         value: https://app-saude-p9n8.onrender.com,https://soluscrt.com.br,https://soluscrtsaude.com.br,https://empresa.soluscrt.com.br,https://governo.soluscrt.com.br,https://admin.soluscrt.com.br,https://app.soluscrt.com.br
       - key: PUBLIC_BASE_URL
         value: https://app-saude-p9n8.onrender.com
+      - key: PAYMENT_PROVIDER
+        value: asaas
       - key: DJANGO_SECRET_KEY
         sync: false
       - key: JWT_SECRET_KEY
@@ -27,10 +29,14 @@ services:
         fromDatabase:
           name: soluscrt-saude-db
           property: connectionString
-      - key: MERCADO_PAGO_ACCESS_TOKEN
+      - key: ASAAS_API_KEY
         sync: false
-      - key: MERCADO_PAGO_WEBHOOK_SECRET
+      - key: ASAAS_BASE_URL
+        value: https://api.asaas.com/v3
+      - key: ASAAS_WEBHOOK_TOKEN
         sync: false
+      - key: ASAAS_USER_AGENT
+        value: SolusCRT-Saude/1.0
       - key: FIREBASE_SERVICE_ACCOUNT_JSON
         sync: false
       - key: MAPBOX_ACCESS_TOKEN

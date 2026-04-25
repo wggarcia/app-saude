@@ -191,7 +191,9 @@ PUBLIC_BASE_URL = os.environ.get(
     "https://app-saude-p9n8.onrender.com" if IS_PRODUCTION else "http://127.0.0.1:8000",
 ).rstrip("/")
 
-PAYMENT_PROVIDER = (os.environ.get("PAYMENT_PROVIDER", "mercado_pago") or "mercado_pago").strip().lower()
+PAYMENT_PROVIDER = (os.environ.get("PAYMENT_PROVIDER", "asaas") or "asaas").strip().lower()
+# Variaveis Mercado Pago mantidas apenas por compatibilidade historica.
+# Operacao oficial atual: Asaas.
 MERCADO_PAGO_ACCESS_TOKEN = os.environ.get("MERCADO_PAGO_ACCESS_TOKEN", "")
 MERCADO_PAGO_WEBHOOK_SECRET = os.environ.get("MERCADO_PAGO_WEBHOOK_SECRET", "")
 ASAAS_API_KEY = os.environ.get("ASAAS_API_KEY", "")

@@ -3,6 +3,8 @@
 ## 1. Objetivo
 Padronizar como o time de apoio atua em incidentes, chamados, comunicacao com clientes e escalonamento tecnico, mantendo previsibilidade e qualidade na operacao da SaaS.
 
+**Diretriz obrigatoria:** a operacao interna de monitoramento e resposta a incidentes criticos e **24x7**, independentemente do plano comercial do cliente.
+
 ## 2. Escopo
 - Painel Empresa
 - Painel Governo
@@ -139,3 +141,53 @@ Padronizar como o time de apoio atua em incidentes, chamados, comunicacao com cl
   - impacto
   - correcoes aplicadas
   - prevencao futura
+
+## 12. Operacao 24x7 (NOC-lite) - padrao minimo
+### 12.1 Time minimo para sustentar 24x7 no inicio comercial
+- 1 Lider de Operacao (voce/fundador), responsavel por decisao final e comunicacao executiva.
+- 2 Engenheiros (backend/integracoes + app/plataforma), em escala de sobreaviso.
+- 2 Analistas de Suporte N1/N2, cobrindo triagem e atendimento inicial.
+- 1 Analista de Implantacao/CS, para onboarding e continuidade com cliente.
+
+### 12.2 Escala recomendada
+- Janela comercial (08:00-20:00): suporte ativo + engenharia de plantao.
+- Madrugada (20:00-08:00): sobreaviso P1/P2 com acionamento em ate 15 minutos.
+- Fim de semana/feriado: sobreaviso integral com rota de escalonamento definida.
+
+### 12.3 Regra de acionamento
+- Alerta automatico P1: abre incidente e notifica canal de plantao imediatamente.
+- Sem acknowledge em 10 min: escalar para segundo responsavel.
+- Sem mitigacao em 30 min: escalar para lider de operacao.
+
+## 13. Monitoramento ativo 24x7 - checklist obrigatorio
+### 13.1 Sinais tecnicos monitorados
+- Uptime HTTP (empresa, governo, admin e endpoints publicos).
+- Latencia P95/P99 das rotas criticas (`/api/login`, `/api/assinatura`, `/api/webhook`, `/api/governo/alertas/fluxo`).
+- Taxa de erro 5xx/4xx por endpoint.
+- Filas e falhas de push (FCM/APNs).
+- Falhas de webhook Asaas por codigo de erro.
+- CPU/RAM/disco da aplicacao e banco.
+- Jobs oficiais (execucao, atraso e falha).
+
+### 13.2 Alertas minimos
+- P1: indisponibilidade total, erro em pagamento, falha webhook em producao, login indisponivel.
+- P2: degradacao persistente de latencia, falha parcial de push, alta reincidencia de erro funcional.
+- P3: anomalias de desempenho sem impacto massivo.
+
+### 13.3 Rotina diaria de operacao
+1. Revisar painel de disponibilidade ultimas 24h.
+2. Revisar erros P1/P2 e reincidencias.
+3. Revisar webhook/pagamento/push.
+4. Revisar incidentes abertos e risco de SLA.
+5. Registrar plano de acao do dia.
+
+## 14. Cadencia de governanca operacional
+- Daily operacional: 15 minutos, todos os dias.
+- Reuniao semanal de incidentes: 60 minutos.
+- Revisao mensal de SLA (diretoria): disponibilidade, MTTR, reincidencia, riscos comerciais.
+
+## 15. Meta operacional para go comercial
+- Cobertura de monitoramento 24x7 ativa.
+- Escala de plantao publicada e testada.
+- 100% dos P1 com post-mortem em ate 48h.
+- Indicador de primeira resposta dentro do SLA >= 95%.
