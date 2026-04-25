@@ -73,6 +73,21 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Pagamentos
+PAYMENT_PROVIDER = os.getenv("PAYMENT_PROVIDER", "mercado_pago").strip().lower()
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://app-saude-p9n8.onrender.com").rstrip("/")
+
+MERCADO_PAGO_ACCESS_TOKEN = os.getenv(
+    "MERCADO_PAGO_ACCESS_TOKEN",
+    "APP_USR-6311717538175038-040823-5a46ef16617f80bcc8641773b8313c57-57115072",
+)
+MERCADO_PAGO_WEBHOOK_SECRET = os.getenv("MERCADO_PAGO_WEBHOOK_SECRET", "")
+
+ASAAS_API_KEY = os.getenv("ASAAS_API_KEY", "")
+ASAAS_BASE_URL = os.getenv("ASAAS_BASE_URL", "https://api.asaas.com/v3").rstrip("/")
+ASAAS_WEBHOOK_TOKEN = os.getenv("ASAAS_WEBHOOK_TOKEN", "")
+ASAAS_USER_AGENT = os.getenv("ASAAS_USER_AGENT", "SolusCRT-Saude/1.0")
+
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',

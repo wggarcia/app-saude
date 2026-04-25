@@ -23,7 +23,7 @@ from api.views_auth import registrar_empresa, login_empresa
 from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia
 
 # 🔥 IMPORT CORRETO (APENAS UM)
-from api.views_pagamento import criar_pagamento, webhook, sucesso, erro, pendente, status_pagamento
+from api.views_pagamento import criar_pagamento, webhook, sucesso, erro, pendente, status_pagamento, planos_publicos
 
 
 def service_worker(request):
@@ -84,6 +84,7 @@ urlpatterns = [
 
     # 💳 PAGAMENTO (FUNCIONAL)
     path('api/assinatura/<int:empresa_id>/', criar_pagamento),
+    path('api/planos-publicos', planos_publicos),
     path('api/webhook', webhook),
     
 

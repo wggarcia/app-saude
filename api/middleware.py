@@ -16,6 +16,7 @@ class EmpresaMiddleware:
             "/",
             "/api/login",
             "/api/assinatura/",
+            "/api/planos-publicos",
             "/pagamento/",
             "/sucesso/",
             "/erro/",

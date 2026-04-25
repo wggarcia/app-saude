@@ -2,47 +2,151 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Assinar Plano</title>
+  <title>Escolher Pacote</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      min-height: 100vh;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      padding: 24px;
     }
 
     .container {
-      width: 380px;
+      width: min(980px, 100%);
       background: rgba(255,255,255,0.06);
       backdrop-filter: blur(14px);
       border-radius: 18px;
-      padding: 30px;
+      padding: 28px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      color: white;
-      text-align: center;
     }
 
-    .title {
-      font-size: 22px;
-      margin-bottom: 10px;
+    h1 {
+      margin: 0 0 8px;
+      font-size: 26px;
     }
 
-    .price {
-      color: #00ffcc;
-      font-size: 20px;
+    .subtitle {
+      margin: 0 0 22px;
+      color: #c3d5df;
+      font-size: 14px;
+    }
+
+    .cycle {
+      display: inline-flex;
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 999px;
+      padding: 4px;
+      margin-bottom: 20px;
+      gap: 4px;
+    }
+
+    .cycle button {
+      border: none;
+      color: #d8ebf3;
+      background: transparent;
+      border-radius: 999px;
+      font-weight: 700;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+
+    .cycle button.active {
+      background: linear-gradient(135deg, #00c853, #00e676);
+      color: #032816;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
       margin-bottom: 20px;
     }
 
-    button {
+    .card {
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 16px;
+      padding: 16px;
+      background: rgba(255,255,255,0.04);
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+    }
+
+    .card.active {
+      border-color: #00e676;
+      box-shadow: 0 0 0 1px #00e676 inset;
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .segment {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .price {
+      margin: 0 0 6px;
+      font-weight: 800;
+      font-size: 24px;
+      color: #7fffd1;
+    }
+
+    .limits {
+      margin: 0;
+      color: #d6e8ef;
+      font-size: 13px;
+    }
+
+    .desc {
+      margin: 8px 0 8px;
+      color: #cde2ea;
+      font-size: 12px;
+      line-height: 1.35;
+      min-height: 34px;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 8px;
+    }
+
+    .chip {
+      display: inline-block;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: #d7edf5;
+    }
+
+    .negociacao {
+      margin: 8px 0 0;
+      color: #ffcfa5;
+      font-size: 11px;
+    }
+
+    .cta {
       width: 100%;
       padding: 16px;
-      border-radius: 12px;
       border: none;
+      border-radius: 12px;
       font-weight: bold;
       font-size: 16px;
       background: linear-gradient(135deg, #00c853, #00e676);
@@ -50,49 +154,148 @@
       transition: 0.2s;
     }
 
-    button:hover {
+    .cta:hover {
       transform: scale(1.03);
       box-shadow: 0 5px 20px rgba(0,255,150,0.5);
+    }
+
+    .error {
+      min-height: 18px;
+      margin-top: 10px;
+      color: #ff8b8b;
+      font-size: 13px;
     }
   </style>
 </head>
 
 <body>
-
 <div class="container">
+  <h1>Escolha o pacote ideal</h1>
+  <p class="subtitle">A cobrança será criada no Asaas com o valor do pacote selecionado.</p>
 
-  <div class="title">Plano Premium</div>
-  <div class="price">R$ 29,90 / mês</div>
+  <div class="cycle">
+    <button id="btn-monthly" class="active" onclick="selecionarCiclo('MONTHLY')">Mensal</button>
+    <button id="btn-yearly" onclick="selecionarCiclo('YEARLY')">Anual</button>
+  </div>
 
-  <button onclick="pagar()">Ativar Assinatura 🚀</button>
-
+  <div id="cards" class="cards"></div>
+  <button class="cta" onclick="pagar()">Ativar assinatura</button>
+  <div id="erro" class="error"></div>
 </div>
 
 <script>
-async function pagar() {
+let cicloSelecionado = "MONTHLY";
+let pacoteSelecionado = null;
+let pacotes = [];
 
- const empresaId = localStorage.getItem("empresa_id");
+function getCookie(name){
+  const prefix = `${name}=`;
+  const encontrado = document.cookie.split(";").map(p => p.trim()).find(p => p.startsWith(prefix));
+  return encontrado ? decodeURIComponent(encontrado.slice(prefix.length)) : "";
+}
+
+function getEmpresaId(){
+  return localStorage.getItem("empresa_id") || getCookie("empresa_id");
+}
+
+function formatarBRL(valor){
+  return new Intl.NumberFormat("pt-BR", { style:"currency", currency:"BRL" }).format(Number(valor || 0));
+}
+
+function desenharPacotes(){
+  const cards = document.getElementById("cards");
+  cards.innerHTML = "";
+
+  for (const pacote of pacotes){
+    const card = document.createElement("div");
+    const ativo = pacoteSelecionado && pacoteSelecionado.id === pacote.id;
+    card.className = `card ${ativo ? "active" : ""}`;
+    card.onclick = () => {
+      pacoteSelecionado = pacote;
+      desenharPacotes();
+    };
+
+    const valor = pacote.precos?.[cicloSelecionado] || 0;
+    const sufixo = cicloSelecionado === "YEARLY" ? "/ano" : "/mês";
+    card.innerHTML = `
+      <h3>${pacote.nome}</h3>
+      <div class="segment">${pacote.segmento}</div>
+      <div class="meta">
+        <span class="chip">SLA ${pacote.sla || "Essencial"}</span>
+      </div>
+      <p class="price">${formatarBRL(valor)} ${sufixo}</p>
+      <p class="desc">${pacote.descricao || ""}</p>
+      <p class="limits">${pacote.usuarios} usuários | ${pacote.maquinas} máquinas</p>
+      ${pacote.faixa_negociacao ? `<p class="negociacao">Faixa comercial: ${pacote.faixa_negociacao}</p>` : ""}
+    `;
+    cards.appendChild(card);
+  }
+}
+
+function selecionarCiclo(ciclo){
+  cicloSelecionado = ciclo;
+  document.getElementById("btn-monthly").classList.toggle("active", ciclo === "MONTHLY");
+  document.getElementById("btn-yearly").classList.toggle("active", ciclo === "YEARLY");
+  desenharPacotes();
+}
+
+async function carregarPacotes(){
+  const erro = document.getElementById("erro");
+  erro.textContent = "";
+  try {
+    const res = await fetch("/api/planos-publicos");
+    const data = await res.json();
+    pacotes = Array.isArray(data.packages) ? data.packages : [];
+    if (!pacotes.length){
+      erro.textContent = "Nenhum pacote disponível agora.";
+      return;
+    }
+    pacoteSelecionado = pacotes[0];
+    desenharPacotes();
+  } catch {
+    erro.textContent = "Não foi possível carregar os pacotes.";
+  }
+}
+
+async function pagar() {
+ const erro = document.getElementById("erro");
+ erro.textContent = "";
+
+ const empresaId = getEmpresaId();
+ if (!empresaId){
+   erro.textContent = "Empresa não identificada. Faça login novamente.";
+   return;
+ }
+
+ if (!pacoteSelecionado){
+   erro.textContent = "Selecione um pacote para continuar.";
+   return;
+ }
 
   try {
     const res = await fetch(`/api/assinatura/${empresaId}/`, {
-      method: "POST"
+      method: "POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        package_id: pacoteSelecionado.id,
+        cycle: cicloSelecionado
+      })
     });
 
     const data = await res.json();
 
-    console.log(data);
-
     if (data.init_point) {
       window.location.href = data.init_point;
     } else {
-      alert("Erro ao gerar pagamento");
+      erro.textContent = data.erro || "Erro ao gerar pagamento.";
     }
 
-  } catch (e) {
-    console.error(e);
-    alert("Erro ao conectar com servidor");
+  } catch {
+    erro.textContent = "Erro ao conectar com servidor.";
   }
 }
+
+carregarPacotes();
 </script>
 
 </body>
