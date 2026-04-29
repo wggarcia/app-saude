@@ -196,10 +196,17 @@ PAYMENT_PROVIDER = (os.environ.get("PAYMENT_PROVIDER", "asaas") or "asaas").stri
 # Operacao oficial atual: Asaas.
 MERCADO_PAGO_ACCESS_TOKEN = os.environ.get("MERCADO_PAGO_ACCESS_TOKEN", "")
 MERCADO_PAGO_WEBHOOK_SECRET = os.environ.get("MERCADO_PAGO_WEBHOOK_SECRET", "")
+<<<<<<< Updated upstream
 ASAAS_API_KEY = os.environ.get("ASAAS_API_KEY", "")
 ASAAS_BASE_URL = (os.environ.get("ASAAS_BASE_URL", "https://api.asaas.com/v3") or "").strip().rstrip("/")
 ASAAS_WEBHOOK_TOKEN = os.environ.get("ASAAS_WEBHOOK_TOKEN", "")
 ASAAS_USER_AGENT = os.environ.get("ASAAS_USER_AGENT", "SolusCRT-Saude/1.0")
+=======
+PAYMENT_PROVIDER = os.environ.get("PAYMENT_PROVIDER", "mercado_pago").strip().lower()
+ASAAS_API_KEY = os.environ.get("ASAAS_API_KEY", "").strip()
+ASAAS_BASE_URL = os.environ.get("ASAAS_BASE_URL", "https://api.asaas.com/v3").rstrip("/")
+ASAAS_WEBHOOK_TOKEN = os.environ.get("ASAAS_WEBHOOK_TOKEN", "").strip()
+>>>>>>> Stashed changes
 FIREBASE_SERVICE_ACCOUNT_PATH = os.environ.get(
     "FIREBASE_SERVICE_ACCOUNT_PATH",
     str(BASE_DIR / "secrets" / "firebase-service-account.json"),

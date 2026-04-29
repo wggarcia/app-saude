@@ -120,20 +120,16 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
       );
       final localPreferido =
           radarPreferido['local'] as Map<String, dynamic>? ?? {};
-      final cidadeMapa = localPreferido['cidade']?.toString();
       final estadoMapa = localPreferido['estado']?.toString();
-      final temRecorteLocal = cidadeMapa != null &&
-          cidadeMapa.trim().isNotEmpty &&
-          estadoMapa != null &&
-          estadoMapa.trim().isNotEmpty;
+      final temRecorteEstado =
+          estadoMapa != null && estadoMapa.trim().isNotEmpty;
       List<dynamic> mapa;
       List<dynamic> alertas;
       try {
         mapa = await PublicApiService.fetchMapa(
-          cidade: cidadeMapa,
           estado: estadoMapa,
         );
-        if (mapa.isEmpty && !temRecorteLocal) {
+        if (mapa.isEmpty && !temRecorteEstado) {
           mapa = await PublicApiService.fetchMapa();
         }
       } catch (_) {
@@ -164,8 +160,8 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
         alertasPublicos = alertas;
         modoMonitoramento = modo;
         loading = false;
-        notice = mapa.isEmpty && temRecorteLocal
-            ? 'Ainda nao ha focos publicos recentes para sua regiao atual. O mapa nao mistura outros estados para evitar leitura errada.'
+        notice = mapa.isEmpty && temRecorteEstado
+            ? 'Ainda nao ha focos publicos recentes para o seu estado no momento. O mapa nao mistura outros estados para evitar leitura errada.'
             : null;
       });
     } catch (err) {
