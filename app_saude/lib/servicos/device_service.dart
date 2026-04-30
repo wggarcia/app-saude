@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -16,13 +13,6 @@ class DeviceService {
     const uuid = Uuid();
     try {
       final prefs = await SharedPreferences.getInstance();
-      final nativeId = await _nativeDeviceId();
-      if (nativeId != null && nativeId.isNotEmpty) {
-        await prefs.setString(_deviceKey, nativeId);
-        _memoryDeviceId = nativeId;
-        return nativeId;
-      }
-
       final current = prefs.getString(_deviceKey);
       if (current != null && current.isNotEmpty) {
         _memoryDeviceId = current;
@@ -41,24 +31,5 @@ class DeviceService {
     final created = uuid.v4();
     _memoryDeviceId = created;
     return created;
-  }
-
-  static Future<String?> _nativeDeviceId() async {
-    try {
-      final deviceInfo = DeviceInfoPlugin();
-      if (Platform.isIOS) {
-        final info = await deviceInfo.iosInfo;
-        return info.identifierForVendor;
-      }
-      if (Platform.isAndroid) {
-        final info = await deviceInfo.androidInfo;
-        return info.id;
-      }
-      if (Platform.isMacOS) {
-        final info = await deviceInfo.macOsInfo;
-        return info.systemGUID;
-      }
-    } catch (_) {}
-    return null;
   }
 }

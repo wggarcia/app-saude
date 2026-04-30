@@ -97,7 +97,7 @@ Marcar que o app coleta:
 
 - Saude e fitness: sintomas informados voluntariamente.
 - Localizacao: localizacao aproximada para leitura regional.
-- Identificadores: identificador tecnico do dispositivo para limitar repeticoes e abuso.
+- Identificadores: identificador tecnico aleatorio gerado pelo app para limitar repeticoes e abuso.
 - Dados de uso/diagnostico: somente se logs tecnicos forem ativados em producao.
 
 Finalidades:
@@ -115,7 +115,7 @@ Dados sensiveis:
 Vinculo ao usuario:
 
 - Nao ha cadastro pessoal no app publico.
-- O envio e tratado de forma anonima, mas existe identificador tecnico do dispositivo para protecao antifraude. Se o formulario perguntar sobre associacao a dispositivo/identificador, responder com cautela e marcar identificador tecnico.
+- O envio e tratado de forma anonima, mas existe identificador tecnico aleatorio gerado pelo app para protecao antifraude. Se o formulario perguntar sobre associacao a dispositivo/identificador, responder com cautela e marcar identificador tecnico.
 
 ## Rejeicoes comuns e como evitar
 
