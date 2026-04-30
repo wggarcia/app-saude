@@ -2,6 +2,7 @@ import jwt
 from django.conf import settings
 from api.models import Empresa
 
+
 def validar_token(request):
     token = request.headers.get("Authorization")
 
@@ -10,7 +11,7 @@ def validar_token(request):
 
     try:
         token = token.replace("Bearer ", "")
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
 
         empresa = Empresa.objects.get(id=payload["empresa_id"])
 

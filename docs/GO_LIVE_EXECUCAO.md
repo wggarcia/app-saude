@@ -33,6 +33,8 @@ Health Check Path: /api/public/resumo
 ```text
 DJANGO_SECRET_KEY
 JWT_SECRET_KEY
+JWT_EXP_HOURS
+CORS_ALLOW_ALL_ORIGINS
 ASAAS_API_KEY
 ASAAS_WEBHOOK_TOKEN
 FIREBASE_SERVICE_ACCOUNT_JSON
@@ -74,9 +76,11 @@ DJANGO_ENV=production \
 DJANGO_DEBUG=false \
 DJANGO_SECRET_KEY='troque-por-chave-forte-com-64-caracteres-ou-mais' \
 JWT_SECRET_KEY='troque-por-outra-chave-forte-com-64-caracteres-ou-mais' \
+JWT_EXP_HOURS=12 \
+CORS_ALLOW_ALL_ORIGINS=false \
 DJANGO_ALLOWED_HOSTS='app-saude-p9n8.onrender.com' \
 CSRF_TRUSTED_ORIGINS='https://app-saude-p9n8.onrender.com' \
-DATABASE_URL='sqlite:///tmp/soluscrt-prod-check.sqlite3' \
+DATABASE_URL='postgresql://check:check@localhost:5432/soluscrt_check' \
 python3 manage.py check --deploy
 ```
 
@@ -173,4 +177,3 @@ flutter test
 - Render: `docs/DEPLOY_RENDER.md`
 - Producao: `docs/PRODUCTION_READINESS.md`
 - App Store: `app_saude/docs/APP_STORE_CONNECT_SUBMISSION.md`
-

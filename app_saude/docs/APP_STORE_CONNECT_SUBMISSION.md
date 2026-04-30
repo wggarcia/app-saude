@@ -54,9 +54,16 @@ https://app-saude-p9n8.onrender.com/
 
 ### URL da politica de privacidade
 
-Publicar uma pagina propria antes de enviar para revisao. Sugestao de caminho:
-
 https://app-saude-p9n8.onrender.com/privacidade/
+
+Antes do envio, confirme que a pagina publica informa:
+
+- app nao fornece diagnostico medico, prescricao ou atendimento de emergencia;
+- sintomas e localizacao podem ser dados sensiveis;
+- localizacao e usada para georreferenciamento epidemiologico, radar local, alertas proximos e antifraude;
+- dados publicos devem ser agregados ou territoriais, sem exposicao individual identificavel;
+- canal de privacidade e direitos do titular;
+- ausencia de tracking para publicidade de terceiros.
 
 ## App Review
 
@@ -71,6 +78,10 @@ O SolusCRT Saude e um app informativo e colaborativo de monitoramento epidemiolo
 O app coleta sintomas informados voluntariamente e localizacao aproximada enquanto o app esta em uso para exibir radar regional, mapa publico e alertas. O app nao fornece diagnostico medico, nao substitui atendimento profissional e nao e destinado a emergencias.
 
 O envio de sintomas e anonimo e possui controles contra repeticao e abuso para proteger a confiabilidade dos dados.
+
+Politica de privacidade publica: https://app-saude-p9n8.onrender.com/privacidade/
+
+O app nao usa os dados para publicidade de terceiros, nao vende dados pessoais e nao rastreia usuarios entre apps ou sites de terceiros.
 
 ## Privacidade do App
 
@@ -94,15 +105,25 @@ Finalidades:
 - Funcionalidade do app.
 - Prevencao de fraude ou seguranca.
 - Analise agregada do servico, se aplicavel.
+- Comunicacao de alertas publicos, quando disponiveis.
 
 Dados sensiveis:
 
 - Sintomas podem ser considerados dados de saude. Informar com transparencia.
+- Localizacao associada a sinais de saude deve ser declarada com cautela e alinhada com a politica publica.
 
 Vinculo ao usuario:
 
 - Nao ha cadastro pessoal no app publico.
 - O envio e tratado de forma anonima, mas existe identificador tecnico do dispositivo para protecao antifraude. Se o formulario perguntar sobre associacao a dispositivo/identificador, responder com cautela e marcar identificador tecnico.
+
+## Rejeicoes comuns e como evitar
+
+- Politica de privacidade vaga: use a URL publica e garanta que ela fale explicitamente de sintomas, localizacao, finalidade, retencao, compartilhamento e direitos.
+- Permissao de localizacao sem contexto: a tela de permissao e as notas de revisao devem dizer que a localizacao serve para georreferenciamento epidemiologico, radar local, alertas proximos e antifraude.
+- App parecer diagnostico medico: mantenha claro no app, na descricao e nas notas que nao ha diagnostico, prescricao, triagem clinica ou emergencia.
+- App Privacy inconsistente: as categorias marcadas no App Store Connect precisam bater com a politica e com o texto exibido no app.
+- Dados sensiveis sem governanca: informe minimizacao, agregacao territorial, controle de acesso e canal de privacidade.
 
 ## Classificacao Etaria
 

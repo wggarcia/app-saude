@@ -14,6 +14,10 @@ services:
         value: production
       - key: DJANGO_DEBUG
         value: "false"
+      - key: JWT_EXP_HOURS
+        value: "12"
+      - key: CORS_ALLOW_ALL_ORIGINS
+        value: "false"
       - key: DJANGO_ALLOWED_HOSTS
         value: app-saude-p9n8.onrender.com,soluscrt.com.br,soluscrtsaude.com.br,empresa.soluscrt.com.br,governo.soluscrt.com.br,admin.soluscrt.com.br,app.soluscrt.com.br,.soluscrt.com.br,.soluscrtsaude.com.br
       - key: CSRF_TRUSTED_ORIGINS

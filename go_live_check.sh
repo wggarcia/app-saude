@@ -61,10 +61,12 @@ run_check "Check deploy (config de produção)" env \
   DJANGO_DEBUG=false \
   DJANGO_SECRET_KEY='S0lusCRT_Prod_Secret_Key_2026_Change_Me_At_Deploy_!@#12345' \
   JWT_SECRET_KEY='JWT_S0lusCRT_Prod_Secret_Key_2026_Change_Me_At_Deploy_!@#67890' \
+  JWT_EXP_HOURS=12 \
+  CORS_ALLOW_ALL_ORIGINS=false \
   DJANGO_ALLOWED_HOSTS='app-saude-p9n8.onrender.com' \
   CSRF_TRUSTED_ORIGINS='https://app-saude-p9n8.onrender.com' \
   SECURE_SSL_REDIRECT=true \
-  DATABASE_URL='sqlite:///tmp/prod.sqlite3' \
+  DATABASE_URL='postgresql://check:check@localhost:5432/soluscrt_check' \
   "$PYTHON_BIN" manage.py check --deploy
 
 # Verifica presença dos segredos críticos no ambiente atual (sem exibir valores).
@@ -73,9 +75,11 @@ required_envs=(
   DJANGO_DEBUG
   DJANGO_SECRET_KEY
   JWT_SECRET_KEY
+  JWT_EXP_HOURS
   DATABASE_URL
   PUBLIC_BASE_URL
   PAYMENT_PROVIDER
+  CORS_ALLOW_ALL_ORIGINS
   ASAAS_API_KEY
   ASAAS_BASE_URL
   ASAAS_WEBHOOK_TOKEN

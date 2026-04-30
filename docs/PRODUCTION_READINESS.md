@@ -16,6 +16,8 @@ Configure na plataforma de hospedagem, nunca no Git:
 - `DJANGO_DEBUG=false`
 - `DJANGO_SECRET_KEY`
 - `JWT_SECRET_KEY`
+- `JWT_EXP_HOURS=12`
+- `CORS_ALLOW_ALL_ORIGINS=false`
 - `PAYMENT_PROVIDER=asaas`
 - `DATABASE_URL`
 - `PUBLIC_BASE_URL`

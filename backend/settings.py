@@ -19,6 +19,19 @@ def env_list(name, default=None):
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def env_int(name, default, minimum=None, maximum=None):
+    value = os.environ.get(name)
+    try:
+        parsed = int(value) if value is not None else int(default)
+    except (TypeError, ValueError):
+        raise RuntimeError(f"Configure {name} como numero inteiro.")
+    if minimum is not None and parsed < minimum:
+        raise RuntimeError(f"Configure {name} com valor >= {minimum}.")
+    if maximum is not None and parsed > maximum:
+        raise RuntimeError(f"Configure {name} com valor <= {maximum}.")
+    return parsed
+
+
 def unique_list(*groups):
     items = []
     for group in groups:
@@ -36,6 +49,7 @@ SECRET_KEY = os.environ.get(
     "dev-only-soluscrt-change-me-with-DJANGO_SECRET_KEY-before-production",
 )
 JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
+JWT_EXP_HOURS = env_int("JWT_EXP_HOURS", 12, minimum=1, maximum=168)
 
 DEBUG = env_bool("DJANGO_DEBUG", default=not IS_PRODUCTION)
 SOLUSCRT_DEFAULT_HOSTS = [
@@ -102,7 +116,6 @@ if not DEBUG:
     )
 
 CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", default=not IS_PRODUCTION)
-CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
 SOLUSCRT_DEFAULT_ORIGINS = [
     "https://app-saude-p9n8.onrender.com",
     "https://soluscrt.com.br",
@@ -112,6 +125,16 @@ SOLUSCRT_DEFAULT_ORIGINS = [
     "https://admin.soluscrt.com.br",
     "https://app.soluscrt.com.br",
 ]
+CORS_ALLOWED_ORIGINS = unique_list(
+    env_list(
+        "CORS_ALLOWED_ORIGINS",
+        SOLUSCRT_DEFAULT_ORIGINS if IS_PRODUCTION else [],
+    ),
+    SOLUSCRT_DEFAULT_ORIGINS if IS_PRODUCTION else [],
+)
+if IS_PRODUCTION and CORS_ALLOW_ALL_ORIGINS:
+    raise RuntimeError("CORS_ALLOW_ALL_ORIGINS deve ser false em producao.")
+
 CSRF_TRUSTED_ORIGINS = unique_list(
     env_list(
         "CSRF_TRUSTED_ORIGINS",
@@ -145,14 +168,19 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL:
     import dj_database_url
 
+    default_database = dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+        ssl_require=IS_PRODUCTION,
+    )
+    if IS_PRODUCTION and default_database.get("ENGINE") == "django.db.backends.sqlite3":
+        raise RuntimeError("DATABASE_URL de producao deve apontar para PostgreSQL gerenciado, nao SQLite.")
     DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=IS_PRODUCTION,
-        )
+        "default": default_database
     }
 else:
+    if IS_PRODUCTION:
+        raise RuntimeError("Configure DATABASE_URL com PostgreSQL gerenciado antes de subir em producao.")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -213,10 +241,15 @@ SESSION_COOKIE_SECURE = IS_PRODUCTION
 CSRF_COOKIE_SECURE = IS_PRODUCTION
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", default=IS_PRODUCTION)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "31536000" if IS_PRODUCTION else "0"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = IS_PRODUCTION
 SECURE_HSTS_PRELOAD = env_bool("SECURE_HSTS_PRELOAD", default=IS_PRODUCTION)
 SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"

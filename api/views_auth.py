@@ -169,7 +169,14 @@ def _ativar_sessao(principal, device_id):
     return session_key
 
 
+def _jwt_claim_times():
+    issued_at = datetime.utcnow()
+    expires_at = issued_at + timedelta(hours=settings.JWT_EXP_HOURS)
+    return issued_at, expires_at
+
+
 def _criar_token(empresa, session_key, principal_kind, principal_id, device_id=None):
+    issued_at, expires_at = _jwt_claim_times()
     return jwt.encode({
         "empresa_id": empresa.id,
         "acesso_governo": empresa.acesso_governo,
@@ -181,7 +188,8 @@ def _criar_token(empresa, session_key, principal_kind, principal_id, device_id=N
         "principal_id": principal_id,
         "device_id": device_id,
         "session_key": session_key,
-        "exp": datetime.utcnow() + timedelta(days=7)
+        "iat": issued_at,
+        "exp": expires_at,
     }, settings.JWT_SECRET_KEY, algorithm="HS256")
 
 
@@ -406,10 +414,12 @@ def login_dono_saas(request):
     dono.sessao_ativa_em = timezone.now()
     dono.save(update_fields=["sessao_ativa_chave", "sessao_ativa_em"])
 
+    issued_at, expires_at = _jwt_claim_times()
     token = jwt.encode({
         "owner_id": dono.id,
         "session_key": session_key,
-        "exp": datetime.utcnow() + timedelta(days=7)
+        "iat": issued_at,
+        "exp": expires_at,
     }, settings.JWT_SECRET_KEY, algorithm="HS256")
 
     response = JsonResponse({

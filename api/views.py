@@ -15,8 +15,9 @@ from api.models import Empresa, RegistroSintoma
 from api.epidemiologia import _build_disease_probabilities
 from django.db.models import Count, Avg, Q
 from django.db.models.functions import TruncDate
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import check_password, make_password
 from collections import defaultdict
+from datetime import datetime, timedelta
 
 # ============================
 # 🧠 IA GLOBAL (MOVER PRA CIMA)
@@ -45,15 +46,21 @@ LEGAL_DOCUMENTS = {
         "title": "Politica de Privacidade",
         "subtitle": "Como o SolusCRT Saude trata dados no app populacional e na plataforma SaaS.",
         "sections": [
-            ("Resumo executivo", "O SolusCRT Saude utiliza dados informados voluntariamente pela populacao, dados tecnicos do aparelho, localizacao necessaria para georreferenciar sinais de saude e informacoes de contas empresariais/governamentais. O objetivo e monitoramento epidemiologico, seguranca, operacao da plataforma e comunicacao publica."),
-            ("Dados de saude e localizacao", "Sinais de sintomas e localizacao podem ser considerados dados sensiveis ou capazes de revelar informacoes sensiveis. Por isso, o produto deve operar com minimizacao, finalidade especifica, controle de acesso, anonimização ou agregacao sempre que possivel."),
-            ("Categorias tratadas", "Podem ser tratados sintomas selecionados, coordenadas de localizacao atual, identificador tecnico do aparelho, data e hora do envio, regiao aproximada, tokens de notificacao, dados de conta corporativa e registros de auditoria."),
-            ("Base e finalidade", "O tratamento ocorre para operacao do app, seguranca, prevencao a fraude, exibicao de radar local, emissao de alertas, inteligencia epidemiologica agregada, cumprimento contratual e atendimento a direitos dos titulares."),
-            ("Uso dos dados", "Os dados colaborativos alimentam mapas de risco, indicadores agregados, alertas regionais e modelos de apoio a decisao. Eles nao substituem diagnostico medico, notificacao oficial ou avaliacao profissional."),
-            ("Compartilhamento", "Empresas e governos visualizam informacoes conforme contrato, perfil de acesso e camada de permissao. A plataforma deve priorizar agregados territoriais e evitar exposicao de individuo identificavel."),
-            ("Retencao e descarte", "Dados sao mantidos pelo tempo necessario para as finalidades declaradas, cumprimento contratual, auditoria, seguranca, defesa de direitos e obrigacoes legais ou regulatorias aplicaveis."),
-            ("Direitos do titular", "Titulares podem solicitar informacoes, correcao, exclusao quando aplicavel e esclarecimentos sobre tratamento de dados pelos canais oficiais da SolusCRT."),
-            ("Seguranca", "A plataforma utiliza segregacao de ambientes, controle de acesso, trilhas de auditoria, protecoes antifraude e boas praticas de seguranca para reduzir riscos de acesso indevido, manipulacao ou exposicao desnecessaria."),
+            ("Quem somos e escopo", "O SolusCRT Saude e uma plataforma de monitoramento epidemiologico populacional. Esta politica explica o tratamento de dados no app publico, no site e nos ambientes empresariais, governamentais e operacionais vinculados ao servico."),
+            ("Resumo para usuarios do app", "No app publico, voce pode consultar radar, mapa e alertas e, se desejar, enviar sintomas de forma voluntaria. O app nao oferece diagnostico medico, prescricao, triagem individual, atendimento de emergencia ou substituicao de consulta profissional."),
+            ("Dados que podemos tratar", "Podemos tratar sintomas selecionados, coordenadas de localizacao enquanto o app esta em uso, cidade, estado, bairro ou regiao aproximada, data e hora do envio, identificador tecnico do aparelho, IP, tokens de notificacao, aceite de termos, dados de conta corporativa ou governamental e registros de auditoria."),
+            ("Dados sensiveis", "Sintomas e localizacao podem ser dados sensiveis ou revelar informacoes sensiveis. Por isso, a plataforma deve operar com minimizacao, finalidade especifica, controles de acesso, seguranca, registros de auditoria e exibicao agregada ou territorial sempre que possivel."),
+            ("Por que usamos localizacao", "A localizacao e usada para georreferenciar sinais de saude, mostrar risco territorial, reduzir fraude, evitar envios falsos e exibir alertas proximos. O usuario pode controlar permissoes no sistema operacional; sem localizacao atual, algumas funcoes podem ser limitadas para preservar a confiabilidade epidemiologica."),
+            ("Finalidades", "Usamos os dados para operar o app, exibir radar local, formar indicadores agregados, publicar alertas, prevenir abuso, proteger a seguranca da plataforma, atender contratos, cumprir obrigacoes legais, responder titulares e apoiar governanca epidemiologica responsavel."),
+            ("Base legal LGPD", "Conforme o contexto, o tratamento pode se apoiar em consentimento, execucao de contrato, cumprimento de obrigacao legal ou regulatoria, protecao da vida ou da incolumidade fisica, tutela da saude, legitimo interesse com salvaguardas e exercicio regular de direitos."),
+            ("Compartilhamento", "Empresas, hospitais, farmacias, laboratorios, municipios, governos e operadores autorizados acessam informacoes conforme contrato, perfil de permissao e finalidade. A plataforma deve priorizar dados agregados, estatisticos e territoriais, evitando exposicao de pessoa identificavel."),
+            ("O que nao fazemos", "Nao vendemos dados pessoais para publicidade, nao usamos dados do app para rastrear usuarios entre apps e sites de terceiros, nao entregamos diagnostico medico e nao exibimos publicamente relato individual identificavel."),
+            ("Retencao e descarte", "Mantemos dados pelo tempo necessario para operacao, seguranca, auditoria, cumprimento contratual, defesa de direitos e obrigacoes legais. Quando aplicavel, dados podem ser anonimizados, agregados, descartados ou retidos em logs de seguranca por periodo proporcional ao risco."),
+            ("Direitos do titular", "Titulares podem solicitar informacoes, acesso, correcao, exclusao quando aplicavel, esclarecimentos sobre compartilhamento, revisao de consentimento e orientacoes sobre tratamento de dados pelo canal oficial de privacidade."),
+            ("Menores de idade", "O app e informativo e nao deve ser usado por criancas sem orientacao dos responsaveis. Quando houver uso por menores, recomendamos acompanhamento de responsavel legal e cuidado adicional com informacoes de saude e localizacao."),
+            ("Seguranca", "Usamos HTTPS, variaveis de ambiente para segredos, banco gerenciado em producao, cookies seguros, restricao de CORS/CSRF, controle de sessao, limite de dispositivos, trilhas de auditoria, segregacao de perfis e boas praticas para reduzir acesso indevido, manipulacao e exposicao desnecessaria."),
+            ("Contato de privacidade", "Pedidos de privacidade, direitos do titular, duvidas sobre LGPD e solicitacoes relacionadas ao tratamento de dados podem ser enviados para comercial@soluscrt.com.br com o assunto Privacidade SolusCRT."),
+            ("Atualizacoes", "Esta politica pode ser atualizada para refletir melhorias da plataforma, novas exigencias legais, ajustes de App Store, contratos institucionais e mudancas nos controles de seguranca."),
         ],
     },
     "termos": {
@@ -1891,9 +1898,17 @@ def login(request):
     if not empresa:
         return JsonResponse({"erro": "Empresa não encontrada"}, status=401)
 
-    # 🔥 IGNORA SENHA TEMPORARIAMENTE
+    if not check_password(senha, empresa.senha):
+        return JsonResponse({"erro": "Senha incorreta"}, status=401)
+
+    issued_at = datetime.utcnow()
+    expires_at = issued_at + timedelta(hours=settings.JWT_EXP_HOURS)
     token = jwt.encode(
-        {"empresa_id": empresa.id},
+        {
+            "empresa_id": empresa.id,
+            "iat": issued_at,
+            "exp": expires_at,
+        },
         settings.JWT_SECRET_KEY,
         algorithm="HS256"
     )

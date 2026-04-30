@@ -75,7 +75,9 @@ DJANGO_ENV
 DJANGO_DEBUG
 DJANGO_SECRET_KEY
 JWT_SECRET_KEY
+JWT_EXP_HOURS
 PAYMENT_PROVIDER
+CORS_ALLOW_ALL_ORIGINS
 DJANGO_ALLOWED_HOSTS
 CSRF_TRUSTED_ORIGINS
 CORS_ALLOWED_ORIGINS
@@ -161,4 +163,3 @@ Se houver falha critica:
 2. No Render, use Rollback para o ultimo deploy verde.
 3. Rode os endpoints publicos novamente.
 4. Abra um hotfix pequeno e validado.
-
