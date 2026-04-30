@@ -24,6 +24,8 @@ services:
         value: https://app-saude-p9n8.onrender.com
       - key: PAYMENT_PROVIDER
         value: asaas
+      - key: SKIP_BUILD_MIGRATIONS
+        value: "true"
       - key: DJANGO_SECRET_KEY
         sync: false
       - key: JWT_SECRET_KEY
