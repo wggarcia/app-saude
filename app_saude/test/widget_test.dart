@@ -1,23 +1,17 @@
 import 'package:app_saude/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('renderiza o shell principal do app', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+
     await tester.pumpWidget(const SolusCrtAppSaude());
-<<<<<<< Updated upstream
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
 
     expect(find.byType(MaterialApp), findsOneWidget);
     expect(find.byType(Scaffold), findsAtLeastNWidgets(1));
-=======
-    await tester.pump(const Duration(milliseconds: 250));
-
-    final hasLoading = find.byType(CircularProgressIndicator).evaluate().isNotEmpty;
-    final hasLegalGate = find.text('Antes de continuar').evaluate().isNotEmpty;
-
-    expect(find.byType(MaterialApp), findsOneWidget);
-    expect(hasLoading || hasLegalGate, isTrue);
->>>>>>> Stashed changes
+    expect(find.text('Antes de continuar'), findsOneWidget);
   });
 }

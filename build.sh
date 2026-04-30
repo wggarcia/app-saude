@@ -1,6 +1,7 @@
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-pip install -r requirements.txt
-python manage.py collectstatic --noinput
-python manage.py migrate --noinput
-python manage.py bootstrap_acessos
+PYTHON_BIN="${PYTHON_BIN:-python}"
+
+"$PYTHON_BIN" -m pip install -r requirements.txt
+"$PYTHON_BIN" manage.py collectstatic --noinput
