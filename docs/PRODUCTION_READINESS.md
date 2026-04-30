@@ -2,6 +2,12 @@
 
 Este checklist separa o que o codigo ja exige do que precisa ser configurado fora do repositorio antes de vender o SaaS.
 
+Execucao passo a passo:
+
+- Go-live controlado: `docs/GO_LIVE_EXECUCAO.md`
+- Deploy no Render: `docs/DEPLOY_RENDER.md`
+- Variaveis de producao: `.env.production.example`
+
 ## 1. Secrets obrigatorios
 
 Configure na plataforma de hospedagem, nunca no Git:
