@@ -27,14 +27,14 @@ Acompanhe sinais de sintomas na sua regiao, visualize focos no mapa e receba ale
 
 O SolusCRT Saude e um aplicativo de monitoramento epidemiologico colaborativo para a populacao.
 
-Com ele, voce pode acompanhar o radar de sintomas da sua regiao, visualizar focos no mapa publico e enviar sinais anonimos de sintomas para apoiar a leitura territorial de riscos em saude.
+Com ele, voce pode acompanhar o radar de sintomas da sua regiao, visualizar focos no mapa publico e enviar sinais sem cadastro nominal para apoiar a leitura territorial de riscos em saude.
 
 O app foi criado para fortalecer a prevencao, a comunicacao publica e a percepcao regional de surtos, ajudando a populacao a acompanhar mudancas no territorio de forma simples e responsavel.
 
 Recursos principais:
 - Radar local com leitura da sua regiao.
 - Mapa publico de focos e sintomas recentes.
-- Envio anonimo de sintomas.
+- Envio de sintomas sem cadastro nominal.
 - Alertas publicos quando publicados por gestao autorizada.
 - Orientacoes preventivas sem substituir atendimento medico.
 
@@ -75,15 +75,22 @@ Preencher com dados reais do responsavel pelo app.
 
 O SolusCRT Saude e um app informativo e colaborativo de monitoramento epidemiologico territorial.
 
-O app coleta sintomas informados voluntariamente e localizacao aproximada enquanto o app esta em uso para exibir radar regional, mapa publico e alertas. O app nao fornece diagnostico medico, nao substitui atendimento profissional e nao e destinado a emergencias.
+O app coleta sintomas informados voluntariamente e localizacao enquanto o app esta em uso para exibir radar regional, mapa publico e alertas. O app nao fornece diagnostico medico, nao substitui atendimento profissional e nao e destinado a emergencias.
 
-O envio de sintomas e anonimo e possui controles contra repeticao e abuso para proteger a confiabilidade dos dados.
+O envio de sintomas nao exige cadastro nominal e possui controles contra repeticao e abuso para proteger a confiabilidade dos dados.
 
 Politica de privacidade publica: https://app-saude-p9n8.onrender.com/privacidade/
 
 O app nao usa os dados para publicidade de terceiros, nao vende dados pessoais e nao rastreia usuarios entre apps ou sites de terceiros.
 
 ## Privacidade do App
+
+### Privacy Manifest
+
+- `app_saude/ios/Runner/PrivacyInfo.xcprivacy` incluido no target iOS.
+- Tracking declarado como `false`.
+- Dados coletados declarados de forma conservadora: saude/sintomas, localizacao precisa e identificador tecnico do app.
+- UserDefaults declarado com motivo oficial `CA92.1`, usado para preferencias locais do app, aceite legal, regiao-base e identificador aleatorio app-scoped.
 
 ### Tracking
 
@@ -96,7 +103,7 @@ O app nao usa os dados para publicidade de terceiros, nao vende dados pessoais e
 Marcar que o app coleta:
 
 - Saude e fitness: sintomas informados voluntariamente.
-- Localizacao: localizacao aproximada para leitura regional.
+- Localizacao: localizacao atual para leitura regional e registro territorial do sintoma.
 - Identificadores: identificador tecnico aleatorio gerado pelo app para limitar repeticoes e abuso.
 - Dados de uso/diagnostico: somente se logs tecnicos forem ativados em producao.
 
@@ -115,7 +122,7 @@ Dados sensiveis:
 Vinculo ao usuario:
 
 - Nao ha cadastro pessoal no app publico.
-- O envio e tratado de forma anonima, mas existe identificador tecnico aleatorio gerado pelo app para protecao antifraude. Se o formulario perguntar sobre associacao a dispositivo/identificador, responder com cautela e marcar identificador tecnico.
+- O envio nao exige cadastro nominal, mas existe identificador tecnico aleatorio gerado pelo app para protecao antifraude. Se o formulario perguntar sobre associacao a dispositivo/identificador, responder com cautela e marcar identificador tecnico.
 
 ## Rejeicoes comuns e como evitar
 
@@ -124,6 +131,7 @@ Vinculo ao usuario:
 - App parecer diagnostico medico: mantenha claro no app, na descricao e nas notas que nao ha diagnostico, prescricao, triagem clinica ou emergencia.
 - App Privacy inconsistente: as categorias marcadas no App Store Connect precisam bater com a politica e com o texto exibido no app.
 - Dados sensiveis sem governanca: informe minimizacao, agregacao territorial, controle de acesso e canal de privacidade.
+- Missing API declaration: confirmar que o arquivo `PrivacyInfo.xcprivacy` esta no target Runner antes do archive.
 
 ## Classificacao Etaria
 

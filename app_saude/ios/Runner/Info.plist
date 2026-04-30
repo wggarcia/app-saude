@@ -65,7 +65,7 @@
 	</dict>
 
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>O SolusCRT Saude usa sua localizacao aproximada enquanto o app esta aberto para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial.</string>
+		<string>O SolusCRT Saude usa sua localizacao enquanto o app esta aberto para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial.</string>
 
 	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
 	<dict>

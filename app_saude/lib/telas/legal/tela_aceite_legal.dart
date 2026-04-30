@@ -121,7 +121,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                       icon: Icons.verified_user_outlined,
                       title: 'Termos de Uso',
                       summary:
-                          'O SolusCRT Saude e uma plataforma de monitoramento epidemiologico populacional. O app permite envio voluntario e anonimo de sinais de saude para apoiar leitura territorial de risco.',
+                          'O SolusCRT Saude e uma plataforma de monitoramento epidemiologico populacional. O app permite envio voluntario sem cadastro nominal de sinais de saude para apoiar leitura territorial de risco.',
                       items: [
                         'Use o app de boa-fe, com informacoes verdadeiras e sem tentar manipular focos, volumes ou localidades.',
                         'O app nao substitui consulta medica, diagnostico, prescricao, emergencia, SAMU, pronto atendimento ou orientacao de profissional de saude.',
@@ -135,7 +135,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                       summary:
                           'Tratamos dados com finalidade de vigilancia epidemiologica, seguranca, prevencao a fraude, melhoria do radar e comunicacao de alertas publicos.',
                       items: [
-                        'O app pode tratar sintomas informados, localizacao aproximada ou precisa, cidade, bairro, estado, data, identificadores tecnicos do aparelho e dados de seguranca.',
+                        'O app pode tratar sintomas informados, localizacao aproximada ou precisa, cidade, bairro, estado, data, identificador tecnico aleatorio do app e dados de seguranca.',
                         'Sinais de saude sao usados preferencialmente de forma agregada, estatistica e territorial, reduzindo exposicao individual.',
                         'A localizacao e usada para registrar sinais no municipio correto, mostrar focos proximos e reduzir risco de informacao falsa.',
                         'Voce pode revogar permissoes no iPhone a qualquer momento. Sem localizacao atual, algumas funcoes podem ser limitadas para proteger a confiabilidade do mapa.',

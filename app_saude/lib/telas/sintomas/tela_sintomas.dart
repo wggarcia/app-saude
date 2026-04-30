@@ -141,7 +141,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
                 ),
                 SizedBox(height: 10),
                 Text(
-                  'Seu envio e anonimo e ajuda a acompanhar sinais de saude na sua regiao. Para proteger o mapa publico, envios repetidos nao sao contados como novos casos.',
+                  'Seu envio nao exige cadastro nominal e ajuda a acompanhar sinais de saude na sua regiao. Para proteger o mapa publico, envios repetidos nao sao contados como novos casos.',
                   style: TextStyle(
                     color: Color(0xFF9CC4DB),
                     height: 1.45,

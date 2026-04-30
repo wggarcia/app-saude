@@ -456,7 +456,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                 const _ValueCard(
                   title: 'Privacidade e confianca do dado',
                   body:
-                      'Os envios sao anonimos e passam por protecoes contra repeticao e abuso para manter a leitura epidemiologica mais confiavel.',
+                      'Os envios nao exigem cadastro nominal e passam por protecoes contra repeticao e abuso para manter a leitura epidemiologica mais confiavel.',
                   icon: Icons.verified_user,
                 ),
                 const SizedBox(height: 16),
@@ -986,7 +986,7 @@ class _HeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           const Text(
-            'Acompanhe sua regiao, envie sintomas anonimos e veja sinais de alerta do seu territorio.',
+            'Acompanhe sua regiao, envie sintomas sem cadastro nominal e veja sinais de alerta do seu territorio.',
             style: TextStyle(
               fontSize: 28,
               height: 1.15,
@@ -996,7 +996,7 @@ class _HeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Veja sinais da sua regiao, acompanhe comunicados oficiais e contribua de forma anonima para o monitoramento de saude publica.',
+            'Veja sinais da sua regiao, acompanhe comunicados oficiais e contribua sem cadastro nominal para o monitoramento de saude publica.',
             style: TextStyle(
               color: Color(0xFF9FC5D9),
               fontSize: 15,

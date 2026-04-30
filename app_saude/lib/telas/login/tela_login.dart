@@ -28,7 +28,7 @@ class TelaLogin extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Seu envio de sintomas e anonimo e ajuda a alimentar o radar epidemiologico do SolusCRT.',
+                'Seu envio de sintomas nao exige cadastro nominal e ajuda a alimentar o radar epidemiologico do SolusCRT.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Color(0xFF9CC4DB), height: 1.4),
               ),
