@@ -6,7 +6,7 @@ Use este arquivo como fonte unica para preencher App Store Connect e responder a
 
 - Bundle ID: `com.soluscrt.saude`
 - Versao: `1.0.0`
-- Build atual no `pubspec.yaml`: `15`
+- Build atual no `pubspec.yaml`: `16`
 - Privacy Policy URL: `https://app-saude-p9n8.onrender.com/privacidade/`
 - Support URL: `https://app-saude-p9n8.onrender.com/suporte/`
 - Marketing URL: `https://app-saude-p9n8.onrender.com/`
