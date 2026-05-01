@@ -27,9 +27,9 @@ historico = defaultdict(list)
 
 
 SITE_LANGUAGE_META = {
-    "pt": {"label": "PT", "name": "Portugues", "html": "pt-BR"},
-    "en": {"label": "EN", "name": "English", "html": "en"},
-    "es": {"label": "ES", "name": "Espanol", "html": "es"},
+    "pt": {"label": "PT", "flag": "🇧🇷", "name": "Portugues", "html": "pt-BR"},
+    "en": {"label": "EN", "flag": "🇺🇸", "name": "English", "html": "en"},
+    "es": {"label": "ES", "flag": "🇪🇸", "name": "Espanol", "html": "es"},
 }
 
 
@@ -645,6 +645,7 @@ def _site_language_options(request, active_language):
         {
             "code": code,
             "label": meta["label"],
+            "flag": meta["flag"],
             "name": meta["name"],
             "html": meta["html"],
             "active": code == active_language,
@@ -697,88 +698,277 @@ def apresentacao_comercial(request):
     return response
 
 
+LEGAL_COMMON = {
+    "pt": {
+        "brand": "SolusCRT Saude",
+        "back": "Voltar ao site",
+        "language_aria": "Selecionar idioma",
+        "notice": "O SolusCRT Saude mantem compromisso continuo com transparencia, seguranca, minimizacao de dados e governanca responsavel. A documentacao institucional e mantida atualizada para refletir melhorias da plataforma, requisitos regulatorios e necessidades contratuais.",
+    },
+    "en": {
+        "brand": "SolusCRT Health",
+        "back": "Back to website",
+        "language_aria": "Select language",
+        "notice": "SolusCRT Health maintains an ongoing commitment to transparency, security, data minimization and responsible governance. Institutional documentation is kept current to reflect platform improvements, regulatory requirements and contractual needs.",
+    },
+    "es": {
+        "brand": "SolusCRT Salud",
+        "back": "Volver al sitio",
+        "language_aria": "Seleccionar idioma",
+        "notice": "SolusCRT Salud mantiene un compromiso continuo con la transparencia, la seguridad, la minimizacion de datos y la gobernanza responsable. La documentacion institucional se mantiene actualizada para reflejar mejoras de la plataforma, requisitos regulatorios y necesidades contractuales.",
+    },
+}
+
+
 LEGAL_DOCUMENTS = {
-    "privacidade": {
-        "title": "Politica de Privacidade",
-        "subtitle": "Como o SolusCRT Saude trata dados no app populacional e na plataforma SaaS.",
-        "sections": [
-            ("Quem somos e escopo", "O SolusCRT Saude e uma plataforma de monitoramento epidemiologico populacional. Esta politica explica o tratamento de dados no app publico, no site e nos ambientes empresariais, governamentais e operacionais vinculados ao servico."),
-            ("Resumo para usuarios do app", "No app publico, voce pode consultar radar, mapa e alertas e, se desejar, enviar sintomas de forma voluntaria. O app nao oferece diagnostico medico, prescricao, triagem individual, atendimento de emergencia ou substituicao de consulta profissional."),
-            ("Dados que podemos tratar", "Podemos tratar sintomas selecionados, coordenadas de localizacao enquanto o app esta em uso, cidade, estado, bairro ou regiao aproximada, data e hora do envio, identificador tecnico aleatorio gerado pelo app, IP, tokens de notificacao, aceite de termos, dados de conta corporativa ou governamental e registros de auditoria."),
-            ("Dados sensiveis", "Sintomas e localizacao podem ser dados sensiveis ou revelar informacoes sensiveis. Por isso, a plataforma deve operar com minimizacao, finalidade especifica, controles de acesso, seguranca, registros de auditoria e exibicao agregada ou territorial sempre que possivel."),
-            ("Por que usamos localizacao", "A localizacao e usada para georreferenciar sinais de saude, mostrar risco territorial, reduzir fraude, evitar envios falsos e exibir alertas proximos. O usuario pode controlar permissoes no sistema operacional; sem localizacao atual, algumas funcoes podem ser limitadas para preservar a confiabilidade epidemiologica."),
-            ("Finalidades", "Usamos os dados para operar o app, exibir radar local, formar indicadores agregados, publicar alertas, prevenir abuso, proteger a seguranca da plataforma, atender contratos, cumprir obrigacoes legais, responder titulares e apoiar governanca epidemiologica responsavel."),
-            ("Base legal LGPD", "Conforme o contexto, o tratamento pode se apoiar em consentimento, execucao de contrato, cumprimento de obrigacao legal ou regulatoria, protecao da vida ou da incolumidade fisica, tutela da saude, legitimo interesse com salvaguardas e exercicio regular de direitos."),
-            ("Compartilhamento", "Empresas, hospitais, farmacias, laboratorios, municipios, governos e operadores autorizados acessam informacoes conforme contrato, perfil de permissao e finalidade. A plataforma deve priorizar dados agregados, estatisticos e territoriais, evitando exposicao de pessoa identificavel."),
-            ("O que nao fazemos", "Nao vendemos dados pessoais para publicidade, nao usamos dados do app para rastrear usuarios entre apps e sites de terceiros, nao entregamos diagnostico medico e nao exibimos publicamente relato individual identificavel."),
-            ("Retencao e descarte", "Mantemos dados pelo tempo necessario para operacao, seguranca, auditoria, cumprimento contratual, defesa de direitos e obrigacoes legais. Quando aplicavel, dados podem ser anonimizados, agregados, descartados ou retidos em logs de seguranca por periodo proporcional ao risco."),
-            ("Direitos do titular", "Titulares podem solicitar informacoes, acesso, correcao, exclusao quando aplicavel, esclarecimentos sobre compartilhamento, revisao de consentimento e orientacoes sobre tratamento de dados pelo canal oficial de privacidade."),
-            ("Menores de idade", "O app e informativo e nao deve ser usado por criancas sem orientacao dos responsaveis. Quando houver uso por menores, recomendamos acompanhamento de responsavel legal e cuidado adicional com informacoes de saude e localizacao."),
-            ("Seguranca", "Usamos HTTPS, variaveis de ambiente para segredos, banco gerenciado em producao, cookies seguros, restricao de CORS/CSRF, controle de sessao, limite de dispositivos, trilhas de auditoria, segregacao de perfis e boas praticas para reduzir acesso indevido, manipulacao e exposicao desnecessaria."),
-            ("Contato de privacidade", "Pedidos de privacidade, direitos do titular, duvidas sobre LGPD e solicitacoes relacionadas ao tratamento de dados podem ser enviados para comercial@soluscrt.com.br com o assunto Privacidade SolusCRT."),
-            ("Atualizacoes", "Esta politica pode ser atualizada para refletir melhorias da plataforma, novas exigencias legais, ajustes de App Store, contratos institucionais e mudancas nos controles de seguranca."),
-        ],
+    "pt": {
+        "privacidade": {
+            "title": "Politica de Privacidade",
+            "subtitle": "Como o SolusCRT Saude trata dados no app populacional e na plataforma SaaS.",
+            "sections": [
+                ("Quem somos e escopo", "O SolusCRT Saude e uma plataforma de monitoramento epidemiologico populacional. Esta politica explica o tratamento de dados no app publico, no site e nos ambientes empresariais, governamentais e operacionais vinculados ao servico."),
+                ("Resumo para usuarios do app", "No app publico, voce pode consultar radar, mapa e alertas e, se desejar, enviar sintomas de forma voluntaria. O app nao oferece diagnostico medico, prescricao, triagem individual, atendimento de emergencia ou substituicao de consulta profissional."),
+                ("Dados que podemos tratar", "Podemos tratar sintomas selecionados, coordenadas de localizacao enquanto o app esta em uso, cidade, estado, bairro ou regiao aproximada, data e hora do envio, identificador tecnico aleatorio gerado pelo app, IP, tokens de notificacao, aceite de termos, dados de conta corporativa ou governamental e registros de auditoria."),
+                ("Dados sensiveis", "Sintomas e localizacao podem ser dados sensiveis ou revelar informacoes sensiveis. Por isso, a plataforma deve operar com minimizacao, finalidade especifica, controles de acesso, seguranca, registros de auditoria e exibicao agregada ou territorial sempre que possivel."),
+                ("Por que usamos localizacao", "A localizacao e usada para georreferenciar sinais de saude, mostrar risco territorial, reduzir fraude, evitar envios falsos e exibir alertas proximos. O usuario pode controlar permissoes no sistema operacional; sem localizacao atual, algumas funcoes podem ser limitadas para preservar a confiabilidade epidemiologica."),
+                ("Finalidades", "Usamos os dados para operar o app, exibir radar local, formar indicadores agregados, publicar alertas, prevenir abuso, proteger a seguranca da plataforma, atender contratos, cumprir obrigacoes legais, responder titulares e apoiar governanca epidemiologica responsavel."),
+                ("Base legal LGPD", "Conforme o contexto, o tratamento pode se apoiar em consentimento, execucao de contrato, cumprimento de obrigacao legal ou regulatoria, protecao da vida ou da incolumidade fisica, tutela da saude, legitimo interesse com salvaguardas e exercicio regular de direitos."),
+                ("Compartilhamento", "Empresas, hospitais, farmacias, laboratorios, municipios, governos e operadores autorizados acessam informacoes conforme contrato, perfil de permissao e finalidade. A plataforma deve priorizar dados agregados, estatisticos e territoriais, evitando exposicao de pessoa identificavel."),
+                ("O que nao fazemos", "Nao vendemos dados pessoais para publicidade, nao usamos dados do app para rastrear usuarios entre apps e sites de terceiros, nao entregamos diagnostico medico e nao exibimos publicamente relato individual identificavel."),
+                ("Retencao e descarte", "Mantemos dados pelo tempo necessario para operacao, seguranca, auditoria, cumprimento contratual, defesa de direitos e obrigacoes legais. Quando aplicavel, dados podem ser anonimizados, agregados, descartados ou retidos em logs de seguranca por periodo proporcional ao risco."),
+                ("Direitos do titular", "Titulares podem solicitar informacoes, acesso, correcao, exclusao quando aplicavel, esclarecimentos sobre compartilhamento, revisao de consentimento e orientacoes sobre tratamento de dados pelo canal oficial de privacidade."),
+                ("Menores de idade", "O app e informativo e nao deve ser usado por criancas sem orientacao dos responsaveis. Quando houver uso por menores, recomendamos acompanhamento de responsavel legal e cuidado adicional com informacoes de saude e localizacao."),
+                ("Seguranca", "Usamos HTTPS, variaveis de ambiente para segredos, banco gerenciado em producao, cookies seguros, restricao de CORS/CSRF, controle de sessao, limite de dispositivos, trilhas de auditoria, segregacao de perfis e boas praticas para reduzir acesso indevido, manipulacao e exposicao desnecessaria."),
+                ("Contato de privacidade", "Pedidos de privacidade, direitos do titular, duvidas sobre LGPD e solicitacoes relacionadas ao tratamento de dados podem ser enviados para comercial@soluscrt.com.br com o assunto Privacidade SolusCRT."),
+                ("Atualizacoes", "Esta politica pode ser atualizada para refletir melhorias da plataforma, novas exigencias legais, ajustes de App Store, contratos institucionais e mudancas nos controles de seguranca."),
+            ],
+        },
+        "termos": {
+            "title": "Termos de Uso",
+            "subtitle": "Regras de uso do app, do site e dos ambientes privados.",
+            "sections": [
+                ("Natureza informativa", "O SolusCRT Saude oferece monitoramento e inteligencia epidemiologica. O app nao realiza diagnostico, prescricao, triagem medica individual ou substituicao de atendimento profissional."),
+                ("Envio responsavel", "Usuarios devem enviar sintomas reais, de boa-fe e apenas quando houver relacao com sua condicao atual. Envios repetidos, automatizados ou fraudulentos podem ser filtrados ou bloqueados."),
+                ("Ambientes privados", "Acessos empresariais, governamentais e administrativos sao exclusivos para clientes e operadores autorizados. Tentativas de acesso indevido podem ser registradas e bloqueadas."),
+                ("Uso proibido", "E proibido tentar burlar controles de seguranca, automatizar envios indevidos, inserir informacoes falsas, acessar area contratual sem autorizacao, realizar engenharia reversa ou usar a plataforma para finalidade ilegal, discriminatoria ou abusiva."),
+                ("Contas e credenciais", "Credenciais sao pessoais ou institucionais conforme contrato. O usuario ou cliente e responsavel por preservar senhas, dispositivos autorizados e politicas internas de acesso."),
+                ("Disponibilidade", "A plataforma depende de internet, servicos de nuvem, APIs, fontes oficiais e permissao de localizacao. Podem ocorrer indisponibilidades temporarias ou degradacao de dados externos."),
+                ("Responsabilidade", "Decisoes operacionais e institucionais devem considerar contexto tecnico, validacao humana e protocolos aplicaveis de saude publica."),
+                ("Propriedade intelectual", "Marcas, interfaces, modelos, organizacao da plataforma, documentos, codigos, paineis e materiais do SolusCRT Saude pertencem aos seus titulares e sao licenciados nos limites contratados."),
+                ("Contratacao B2B e B2G", "Planos empresariais, governamentais, limites de usuarios, dispositivos, suporte, integracoes, SLA e valores podem ser definidos em proposta, contrato, termo de adesao ou instrumento especifico."),
+            ],
+        },
+        "seguranca-lgpd": {
+            "title": "Seguranca, LGPD e Governanca",
+            "subtitle": "Controles para proteger dados, acessos e confianca institucional.",
+            "sections": [
+                ("Principios", "A plataforma deve seguir finalidade, adequacao, necessidade, seguranca, prevencao, transparencia e responsabilizacao no tratamento de dados pessoais."),
+                ("Segregacao de ambientes", "Empresa, governo e operacao administrativa sao separados por fluxo de login, permissao, sessao, auditoria e dominio/subdominio quando contratado."),
+                ("Controles antifraude", "O app e o backend utilizam controles por aparelho, rede, repeticao, qualidade do sinal e localizacao atual para reduzir manipulacao de focos."),
+                ("Protecao de acesso", "A plataforma adota controle de sessao, autorizacao por perfil, limite de dispositivos contratados, bloqueios de uso simultaneo quando aplicavel e revogacao de acessos."),
+                ("Dados sensiveis", "Sinais de saude sao tratados com cautela, priorizando agregacao, minimizacao, separacao por finalidade e exibicao territorial adequada ao perfil autorizado."),
+                ("Auditoria", "Acoes institucionais, alertas governamentais e operacoes administrativas devem ter rastreabilidade, usuario responsavel, data e contexto."),
+                ("Incidentes", "Eventos de seguranca podem acionar processos de investigacao, mitigacao, registro, comunicacao a clientes e titulares quando aplicavel, e melhoria de controles."),
+                ("Compromisso continuo", "A governanca do SolusCRT Saude e mantida como um processo permanente, com melhoria de controles, revisao de acessos, atualizacao documental e alinhamento aos requisitos aplicaveis de protecao de dados, saude digital e contratos institucionais."),
+            ],
+        },
+        "metodologia": {
+            "title": "Metodologia Epidemiologica",
+            "subtitle": "Como o SolusCRT separa sinal precoce, fonte oficial e decisao operacional.",
+            "sections": [
+                ("Sinal colaborativo", "O app coleta sinais de sintomas em tempo real. Esses sinais indicam tendencia e risco territorial, mas nao equivalem a caso confirmado."),
+                ("Fonte oficial", "Dados oficiais e institucionais, como bases publicas e sistemas de saude, devem ser tratados separadamente, preferencialmente em agregados, com data de coleta, fonte, versao e regra de processamento."),
+                ("Indicadores", "A plataforma usa crescimento, incidencia por 100 mil habitantes, predominancia de sintomas, serie temporal e reducao gradual quando deixam de entrar novos sinais."),
+                ("IA como apoio", "Modelos de IA apoiam classificacao e priorizacao, mas nao substituem equipe tecnica, vigilancia epidemiologica ou decisao institucional."),
+                ("Transparencia", "Paineis devem indicar quando um dado e colaborativo, oficial, inferido ou indisponivel, evitando conclusoes falsas ou comunicacao alarmista."),
+            ],
+        },
+        "suporte": {
+            "title": "Suporte e Atendimento",
+            "subtitle": "Canal institucional para suporte do app, privacidade, operacao e orientacoes gerais do SolusCRT Saude.",
+            "sections": [
+                ("Atendimento ao usuario", "Para suporte geral do app, dificuldades de uso, orientacoes sobre alertas, problemas de mapa, envio de sintomas ou funcionamento da experiencia publica, entre em contato por comercial@soluscrt.com.br com o assunto Suporte App SolusCRT."),
+                ("Privacidade e dados pessoais", "Para pedidos relacionados a privacidade, esclarecimentos sobre tratamento de dados, direitos do titular, exclusao quando aplicavel e temas de LGPD, utilize o canal comercial@soluscrt.com.br com o assunto Privacidade SolusCRT."),
+                ("Suporte institucional", "Empresas, hospitais, farmacias, laboratorios, municipios e governos que precisem de apoio operacional, contratual ou tecnico podem solicitar atendimento institucional pelo mesmo canal comercial@soluscrt.com.br."),
+                ("Escopo do atendimento", "O suporte do SolusCRT Saude atende questoes sobre plataforma, app, acesso, alertas, privacidade e funcionamento do servico. O atendimento nao substitui orientacao medica, emergencia, SAMU, hospital, UPA ou consulta clinica."),
+                ("Tempo de resposta", "Solicitacoes institucionais e de suporte geral sao recebidas por canal oficial e tratadas conforme criticidade, natureza do pedido, fila operacional e disponibilidade da equipe."),
+                ("Base publica de documentos", "Para revisao documental, consulte tambem a Politica de Privacidade, os Termos de Uso, a pagina de Seguranca e LGPD e a Metodologia Epidemiologica publicadas no site institucional."),
+            ],
+        },
     },
-    "termos": {
-        "title": "Termos de Uso",
-        "subtitle": "Regras de uso do app, do site e dos ambientes privados.",
-        "sections": [
-            ("Natureza informativa", "O SolusCRT Saude oferece monitoramento e inteligencia epidemiologica. O app nao realiza diagnostico, prescricao, triagem medica individual ou substituicao de atendimento profissional."),
-            ("Envio responsavel", "Usuarios devem enviar sintomas reais, de boa-fe e apenas quando houver relacao com sua condicao atual. Envios repetidos, automatizados ou fraudulentos podem ser filtrados ou bloqueados."),
-            ("Ambientes privados", "Acessos empresariais, governamentais e administrativos sao exclusivos para clientes e operadores autorizados. Tentativas de acesso indevido podem ser registradas e bloqueadas."),
-            ("Uso proibido", "E proibido tentar burlar controles de seguranca, automatizar envios indevidos, inserir informacoes falsas, acessar area contratual sem autorizacao, realizar engenharia reversa ou usar a plataforma para finalidade ilegal, discriminatoria ou abusiva."),
-            ("Contas e credenciais", "Credenciais sao pessoais ou institucionais conforme contrato. O usuario ou cliente e responsavel por preservar senhas, dispositivos autorizados e politicas internas de acesso."),
-            ("Disponibilidade", "A plataforma depende de internet, servicos de nuvem, APIs, fontes oficiais e permissao de localizacao. Podem ocorrer indisponibilidades temporarias ou degradacao de dados externos."),
-            ("Responsabilidade", "Decisoes operacionais e institucionais devem considerar contexto tecnico, validacao humana e protocolos aplicaveis de saude publica."),
-            ("Propriedade intelectual", "Marcas, interfaces, modelos, organizacao da plataforma, documentos, codigos, paineis e materiais do SolusCRT Saude pertencem aos seus titulares e sao licenciados nos limites contratados."),
-            ("Contratacao B2B e B2G", "Planos empresariais, governamentais, limites de usuarios, dispositivos, suporte, integracoes, SLA e valores podem ser definidos em proposta, contrato, termo de adesao ou instrumento especifico."),
-        ],
+    "en": {
+        "privacidade": {
+            "title": "Privacy Policy",
+            "subtitle": "How SolusCRT Health handles data in the population app and SaaS platform.",
+            "sections": [
+                ("Who we are and scope", "SolusCRT Health is a population epidemiological monitoring platform. This policy explains how data is handled in the public app, website and business, government and operational environments connected to the service."),
+                ("Summary for app users", "In the public app, you can view the radar, map and alerts and, if you choose, voluntarily submit symptoms. The app does not provide medical diagnosis, prescription, individual triage, emergency care or a replacement for professional consultation."),
+                ("Data we may process", "We may process selected symptoms, location coordinates while the app is in use, city, state, neighborhood or approximate region, submission date and time, a random technical identifier generated by the app, IP address, notification tokens, acceptance of terms, corporate or government account data and audit records."),
+                ("Sensitive data", "Symptoms and location may be sensitive data or reveal sensitive information. For this reason, the platform should operate with data minimization, specific purpose, access controls, security, audit records and aggregated or territorial display whenever possible."),
+                ("Why we use location", "Location is used to georeference health signals, show territorial risk, reduce fraud, prevent false submissions and display nearby alerts. Users can control permissions in the operating system; without current location, some functions may be limited to preserve epidemiological reliability."),
+                ("Purposes", "We use data to operate the app, display local radar, create aggregated indicators, publish alerts, prevent abuse, protect platform security, fulfill contracts, comply with legal obligations, respond to data subjects and support responsible epidemiological governance."),
+                ("Legal basis", "Depending on context, processing may rely on consent, contract performance, compliance with legal or regulatory obligations, protection of life or physical safety, health protection, legitimate interest with safeguards and regular exercise of rights."),
+                ("Sharing", "Companies, hospitals, pharmacies, laboratories, municipalities, governments and authorized operators access information according to contract, permission profile and purpose. The platform should prioritize aggregated, statistical and territorial data, avoiding exposure of identifiable individuals."),
+                ("What we do not do", "We do not sell personal data for advertising, do not use app data to track users across third-party apps and websites, do not deliver medical diagnosis and do not publicly display individually identifiable reports."),
+                ("Retention and disposal", "We keep data for the time necessary for operation, security, audit, contract compliance, defense of rights and legal obligations. When applicable, data may be anonymized, aggregated, discarded or retained in security logs for a period proportional to risk."),
+                ("Data subject rights", "Data subjects may request information, access, correction, deletion when applicable, clarification about sharing, consent review and guidance about data processing through the official privacy channel."),
+                ("Minors", "The app is informational and should not be used by children without guidance from guardians. When minors use it, we recommend supervision by a legal guardian and additional care with health and location information."),
+                ("Security", "We use HTTPS, environment variables for secrets, managed production database, secure cookies, CORS/CSRF restriction, session control, device limits, audit trails, profile segregation and good practices to reduce unauthorized access, manipulation and unnecessary exposure."),
+                ("Privacy contact", "Privacy requests, data subject rights, LGPD or privacy questions and requests related to data processing may be sent to comercial@soluscrt.com.br with the subject Privacy SolusCRT."),
+                ("Updates", "This policy may be updated to reflect platform improvements, new legal requirements, App Store adjustments, institutional contracts and changes to security controls."),
+            ],
+        },
+        "termos": {
+            "title": "Terms of Use",
+            "subtitle": "Rules for using the app, website and private environments.",
+            "sections": [
+                ("Informational nature", "SolusCRT Health provides monitoring and epidemiological intelligence. The app does not perform diagnosis, prescription, individual medical triage or replacement of professional care."),
+                ("Responsible submission", "Users should submit real symptoms, in good faith and only when related to their current condition. Repeated, automated or fraudulent submissions may be filtered or blocked."),
+                ("Private environments", "Business, government and administrative access is exclusive to clients and authorized operators. Unauthorized access attempts may be recorded and blocked."),
+                ("Prohibited use", "It is forbidden to bypass security controls, automate improper submissions, insert false information, access contractual areas without authorization, reverse engineer the platform or use it for illegal, discriminatory or abusive purposes."),
+                ("Accounts and credentials", "Credentials are personal or institutional according to contract. The user or client is responsible for protecting passwords, authorized devices and internal access policies."),
+                ("Availability", "The platform depends on internet access, cloud services, APIs, official sources and location permission. Temporary unavailability or degradation of external data may occur."),
+                ("Responsibility", "Operational and institutional decisions must consider technical context, human validation and applicable public health protocols."),
+                ("Intellectual property", "Brands, interfaces, models, platform organization, documents, code, dashboards and SolusCRT Health materials belong to their owners and are licensed only within contracted limits."),
+                ("B2B and B2G contracting", "Business and government plans, user limits, devices, support, integrations, SLA and pricing may be defined in proposal, contract, order form or specific instrument."),
+            ],
+        },
+        "seguranca-lgpd": {
+            "title": "Security, LGPD and Governance",
+            "subtitle": "Controls to protect data, access and institutional trust.",
+            "sections": [
+                ("Principles", "The platform should follow purpose limitation, adequacy, necessity, security, prevention, transparency and accountability in the processing of personal data."),
+                ("Environment segregation", "Company, government and administrative operation are separated by login flow, permission, session, audit trail and domain or subdomain when contracted."),
+                ("Anti-fraud controls", "The app and backend use device, network, repetition, signal quality and current location controls to reduce manipulation of hotspots."),
+                ("Access protection", "The platform adopts session control, role-based authorization, contracted device limits, simultaneous-use blocking when applicable and access revocation."),
+                ("Sensitive data", "Health signals are handled carefully, prioritizing aggregation, minimization, purpose separation and territorial display appropriate to each authorized profile."),
+                ("Audit", "Institutional actions, government alerts and administrative operations should have traceability, responsible user, date and context."),
+                ("Incidents", "Security events may trigger investigation, mitigation, recordkeeping, communication to clients and data subjects when applicable, and improvement of controls."),
+                ("Continuous commitment", "SolusCRT Health governance is maintained as an ongoing process, with control improvement, access review, documentation updates and alignment with applicable data protection, digital health and institutional contract requirements."),
+            ],
+        },
+        "metodologia": {
+            "title": "Epidemiological Methodology",
+            "subtitle": "How SolusCRT separates early signal, official source and operational decision.",
+            "sections": [
+                ("Collaborative signal", "The app collects symptom signals in real time. These signals indicate trend and territorial risk, but they are not confirmed cases."),
+                ("Official source", "Official and institutional data, such as public databases and health systems, should be handled separately, preferably in aggregated form, with collection date, source, version and processing rule."),
+                ("Indicators", "The platform uses growth, incidence per 100,000 inhabitants, symptom predominance, time series and gradual decline when no new signals are received."),
+                ("AI as support", "AI models support classification and prioritization, but do not replace technical teams, epidemiological surveillance or institutional decision-making."),
+                ("Transparency", "Dashboards should indicate when data is collaborative, official, inferred or unavailable, avoiding false conclusions or alarmist communication."),
+            ],
+        },
+        "suporte": {
+            "title": "Support and Service",
+            "subtitle": "Institutional channel for app support, privacy, operation and general SolusCRT Health guidance.",
+            "sections": [
+                ("User support", "For general app support, difficulty using the app, guidance about alerts, map issues, symptom submission or operation of the public experience, contact comercial@soluscrt.com.br with the subject SolusCRT App Support."),
+                ("Privacy and personal data", "For privacy requests, clarification about data processing, data subject rights, deletion when applicable and LGPD matters, use comercial@soluscrt.com.br with the subject Privacy SolusCRT."),
+                ("Institutional support", "Companies, hospitals, pharmacies, laboratories, municipalities and governments that need operational, contractual or technical assistance may request institutional service through the same channel comercial@soluscrt.com.br."),
+                ("Scope of support", "SolusCRT Health support covers questions about the platform, app, access, alerts, privacy and service operation. Support does not replace medical guidance, emergency care, ambulance services, hospital, urgent care unit or clinical consultation."),
+                ("Response time", "Institutional and general support requests are received through the official channel and handled according to criticality, request type, operational queue and team availability."),
+                ("Public document base", "For document review, also consult the Privacy Policy, Terms of Use, Security and LGPD page and Epidemiological Methodology published on the institutional website."),
+            ],
+        },
     },
-    "seguranca-lgpd": {
-        "title": "Seguranca, LGPD e Governanca",
-        "subtitle": "Controles para proteger dados, acessos e confianca institucional.",
-        "sections": [
-            ("Principios", "A plataforma deve seguir finalidade, adequacao, necessidade, seguranca, prevencao, transparencia e responsabilizacao no tratamento de dados pessoais."),
-            ("Segregacao de ambientes", "Empresa, governo e operacao administrativa sao separados por fluxo de login, permissao, sessao, auditoria e dominio/subdominio quando contratado."),
-            ("Controles antifraude", "O app e o backend utilizam controles por aparelho, rede, repeticao, qualidade do sinal e localizacao atual para reduzir manipulacao de focos."),
-            ("Protecao de acesso", "A plataforma adota controle de sessao, autorizacao por perfil, limite de dispositivos contratados, bloqueios de uso simultaneo quando aplicavel e revogacao de acessos."),
-            ("Dados sensiveis", "Sinais de saude sao tratados com cautela, priorizando agregacao, minimizacao, separacao por finalidade e exibicao territorial adequada ao perfil autorizado."),
-            ("Auditoria", "Acoes institucionais, alertas governamentais e operacoes administrativas devem ter rastreabilidade, usuario responsavel, data e contexto."),
-            ("Incidentes", "Eventos de seguranca podem acionar processos de investigacao, mitigacao, registro, comunicacao a clientes e titulares quando aplicavel, e melhoria de controles."),
-            ("Compromisso continuo", "A governanca do SolusCRT Saude e mantida como um processo permanente, com melhoria de controles, revisao de acessos, atualizacao documental e alinhamento aos requisitos aplicaveis de protecao de dados, saude digital e contratos institucionais."),
-        ],
-    },
-    "metodologia": {
-        "title": "Metodologia Epidemiologica",
-        "subtitle": "Como o SolusCRT separa sinal precoce, fonte oficial e decisao operacional.",
-        "sections": [
-            ("Sinal colaborativo", "O app coleta sinais de sintomas em tempo real. Esses sinais indicam tendencia e risco territorial, mas nao equivalem a caso confirmado."),
-            ("Fonte oficial", "Dados oficiais e institucionais, como bases publicas e sistemas de saude, devem ser tratados separadamente, preferencialmente em agregados, com data de coleta, fonte, versao e regra de processamento."),
-            ("Indicadores", "A plataforma usa crescimento, incidencia por 100 mil habitantes, predominancia de sintomas, serie temporal e reducao gradual quando deixam de entrar novos sinais."),
-            ("IA como apoio", "Modelos de IA apoiam classificacao e priorizacao, mas nao substituem equipe tecnica, vigilancia epidemiologica ou decisao institucional."),
-            ("Transparencia", "Paineis devem indicar quando um dado e colaborativo, oficial, inferido ou indisponivel, evitando conclusoes falsas ou comunicacao alarmista."),
-        ],
-    },
-    "suporte": {
-        "title": "Suporte e Atendimento",
-        "subtitle": "Canal institucional para suporte do app, privacidade, operacao e orientacoes gerais do SolusCRT Saude.",
-        "sections": [
-            ("Atendimento ao usuario", "Para suporte geral do app, dificuldades de uso, orientacoes sobre alertas, problemas de mapa, envio de sintomas ou funcionamento da experiencia publica, entre em contato por comercial@soluscrt.com.br com o assunto Suporte App SolusCRT."),
-            ("Privacidade e dados pessoais", "Para pedidos relacionados a privacidade, esclarecimentos sobre tratamento de dados, direitos do titular, exclusao quando aplicavel e temas de LGPD, utilize o canal comercial@soluscrt.com.br com o assunto Privacidade SolusCRT."),
-            ("Suporte institucional", "Empresas, hospitais, farmacias, laboratorios, municipios e governos que precisem de apoio operacional, contratual ou tecnico podem solicitar atendimento institucional pelo mesmo canal comercial@soluscrt.com.br."),
-            ("Escopo do atendimento", "O suporte do SolusCRT Saude atende questoes sobre plataforma, app, acesso, alertas, privacidade e funcionamento do servico. O atendimento nao substitui orientacao medica, emergencia, SAMU, hospital, UPA ou consulta clinica."),
-            ("Tempo de resposta", "Solicitacoes institucionais e de suporte geral sao recebidas por canal oficial e tratadas conforme criticidade, natureza do pedido, fila operacional e disponibilidade da equipe."),
-            ("Base publica de documentos", "Para revisao documental, consulte tambem a Politica de Privacidade, os Termos de Uso, a pagina de Seguranca e LGPD e a Metodologia Epidemiologica publicadas no site institucional."),
-        ],
+    "es": {
+        "privacidade": {
+            "title": "Politica de Privacidad",
+            "subtitle": "Como SolusCRT Salud trata datos en la app poblacional y en la plataforma SaaS.",
+            "sections": [
+                ("Quienes somos y alcance", "SolusCRT Salud es una plataforma de monitoreo epidemiologico poblacional. Esta politica explica el tratamiento de datos en la app publica, el sitio web y los ambientes empresariales, gubernamentales y operativos vinculados al servicio."),
+                ("Resumen para usuarios de la app", "En la app publica, puedes consultar radar, mapa y alertas y, si lo deseas, enviar sintomas de forma voluntaria. La app no ofrece diagnostico medico, prescripcion, triaje individual, atencion de emergencia ni sustitucion de una consulta profesional."),
+                ("Datos que podemos tratar", "Podemos tratar sintomas seleccionados, coordenadas de ubicacion mientras la app esta en uso, ciudad, estado, barrio o region aproximada, fecha y hora del envio, identificador tecnico aleatorio generado por la app, IP, tokens de notificacion, aceptacion de terminos, datos de cuenta corporativa o gubernamental y registros de auditoria."),
+                ("Datos sensibles", "Sintomas y ubicacion pueden ser datos sensibles o revelar informacion sensible. Por eso, la plataforma debe operar con minimizacion, finalidad especifica, controles de acceso, seguridad, registros de auditoria y visualizacion agregada o territorial siempre que sea posible."),
+                ("Por que usamos ubicacion", "La ubicacion se usa para georreferenciar senales de salud, mostrar riesgo territorial, reducir fraude, evitar envios falsos y mostrar alertas cercanas. El usuario puede controlar permisos en el sistema operativo; sin ubicacion actual, algunas funciones pueden limitarse para preservar la confiabilidad epidemiologica."),
+                ("Finalidades", "Usamos los datos para operar la app, mostrar radar local, formar indicadores agregados, publicar alertas, prevenir abuso, proteger la seguridad de la plataforma, cumplir contratos, atender obligaciones legales, responder a titulares y apoyar una gobernanza epidemiologica responsable."),
+                ("Base legal", "Segun el contexto, el tratamiento puede apoyarse en consentimiento, ejecucion de contrato, cumplimiento de obligacion legal o regulatoria, proteccion de la vida o integridad fisica, tutela de la salud, interes legitimo con salvaguardas y ejercicio regular de derechos."),
+                ("Compartir informacion", "Empresas, hospitales, farmacias, laboratorios, municipios, gobiernos y operadores autorizados acceden a informacion segun contrato, perfil de permiso y finalidad. La plataforma debe priorizar datos agregados, estadisticos y territoriales, evitando exponer personas identificables."),
+                ("Lo que no hacemos", "No vendemos datos personales para publicidad, no usamos datos de la app para rastrear usuarios entre apps y sitios de terceros, no entregamos diagnostico medico y no mostramos publicamente relatos individuales identificables."),
+                ("Retencion y descarte", "Mantenemos datos durante el tiempo necesario para operacion, seguridad, auditoria, cumplimiento contractual, defensa de derechos y obligaciones legales. Cuando corresponda, los datos pueden anonimizarse, agregarse, descartarse o conservarse en logs de seguridad por un periodo proporcional al riesgo."),
+                ("Derechos del titular", "Los titulares pueden solicitar informacion, acceso, correccion, eliminacion cuando corresponda, aclaraciones sobre intercambio, revision de consentimiento y orientacion sobre tratamiento de datos por el canal oficial de privacidad."),
+                ("Menores de edad", "La app es informativa y no debe ser usada por ninos sin orientacion de responsables. Cuando haya uso por menores, recomendamos supervision de un responsable legal y cuidado adicional con informacion de salud y ubicacion."),
+                ("Seguridad", "Usamos HTTPS, variables de entorno para secretos, base de datos gestionada en produccion, cookies seguras, restriccion CORS/CSRF, control de sesion, limites de dispositivos, trazas de auditoria, segregacion de perfiles y buenas practicas para reducir acceso indebido, manipulacion y exposicion innecesaria."),
+                ("Contacto de privacidad", "Pedidos de privacidad, derechos del titular, dudas sobre LGPD o privacidad y solicitudes relacionadas con tratamiento de datos pueden enviarse a comercial@soluscrt.com.br con el asunto Privacidad SolusCRT."),
+                ("Actualizaciones", "Esta politica puede actualizarse para reflejar mejoras de la plataforma, nuevas exigencias legales, ajustes de App Store, contratos institucionales y cambios en controles de seguridad."),
+            ],
+        },
+        "termos": {
+            "title": "Terminos de Uso",
+            "subtitle": "Reglas de uso de la app, del sitio y de los ambientes privados.",
+            "sections": [
+                ("Naturaleza informativa", "SolusCRT Salud ofrece monitoreo e inteligencia epidemiologica. La app no realiza diagnostico, prescripcion, triaje medico individual ni sustitucion de atencion profesional."),
+                ("Envio responsable", "Los usuarios deben enviar sintomas reales, de buena fe y solo cuando tengan relacion con su condicion actual. Envios repetidos, automatizados o fraudulentos pueden ser filtrados o bloqueados."),
+                ("Ambientes privados", "Los accesos empresariales, gubernamentales y administrativos son exclusivos para clientes y operadores autorizados. Intentos de acceso indebido pueden registrarse y bloquearse."),
+                ("Uso prohibido", "Esta prohibido burlar controles de seguridad, automatizar envios indebidos, insertar informacion falsa, acceder a areas contractuales sin autorizacion, hacer ingenieria inversa o usar la plataforma con finalidad ilegal, discriminatoria o abusiva."),
+                ("Cuentas y credenciales", "Las credenciales son personales o institucionales segun contrato. El usuario o cliente es responsable de preservar contrasenas, dispositivos autorizados y politicas internas de acceso."),
+                ("Disponibilidad", "La plataforma depende de internet, servicios de nube, APIs, fuentes oficiales y permiso de ubicacion. Pueden ocurrir indisponibilidades temporales o degradacion de datos externos."),
+                ("Responsabilidad", "Las decisiones operativas e institucionales deben considerar contexto tecnico, validacion humana y protocolos aplicables de salud publica."),
+                ("Propiedad intelectual", "Marcas, interfaces, modelos, organizacion de la plataforma, documentos, codigos, paneles y materiales de SolusCRT Salud pertenecen a sus titulares y se licencian dentro de los limites contratados."),
+                ("Contratacion B2B y B2G", "Planes empresariales y gubernamentales, limites de usuarios, dispositivos, soporte, integraciones, SLA y valores pueden definirse en propuesta, contrato, termino de adhesion o instrumento especifico."),
+            ],
+        },
+        "seguranca-lgpd": {
+            "title": "Seguridad, LGPD y Gobernanza",
+            "subtitle": "Controles para proteger datos, accesos y confianza institucional.",
+            "sections": [
+                ("Principios", "La plataforma debe seguir finalidad, adecuacion, necesidad, seguridad, prevencion, transparencia y responsabilizacion en el tratamiento de datos personales."),
+                ("Segregacion de ambientes", "Empresa, gobierno y operacion administrativa se separan por flujo de login, permiso, sesion, auditoria y dominio o subdominio cuando sea contratado."),
+                ("Controles antifraude", "La app y el backend utilizan controles por dispositivo, red, repeticion, calidad de la senal y ubicacion actual para reducir manipulacion de focos."),
+                ("Proteccion de acceso", "La plataforma adopta control de sesion, autorizacion por perfil, limite de dispositivos contratados, bloqueos de uso simultaneo cuando corresponda y revocacion de accesos."),
+                ("Datos sensibles", "Las senales de salud se tratan con cautela, priorizando agregacion, minimizacion, separacion por finalidad y visualizacion territorial adecuada al perfil autorizado."),
+                ("Auditoria", "Acciones institucionales, alertas gubernamentales y operaciones administrativas deben tener trazabilidad, usuario responsable, fecha y contexto."),
+                ("Incidentes", "Eventos de seguridad pueden activar investigacion, mitigacion, registro, comunicacion a clientes y titulares cuando corresponda, y mejora de controles."),
+                ("Compromiso continuo", "La gobernanza de SolusCRT Salud se mantiene como un proceso permanente, con mejora de controles, revision de accesos, actualizacion documental y alineacion con requisitos aplicables de proteccion de datos, salud digital y contratos institucionales."),
+            ],
+        },
+        "metodologia": {
+            "title": "Metodologia Epidemiologica",
+            "subtitle": "Como SolusCRT separa senal temprana, fuente oficial y decision operativa.",
+            "sections": [
+                ("Senal colaborativa", "La app recopila senales de sintomas en tiempo real. Estas senales indican tendencia y riesgo territorial, pero no equivalen a caso confirmado."),
+                ("Fuente oficial", "Datos oficiales e institucionales, como bases publicas y sistemas de salud, deben tratarse por separado, preferentemente en agregados, con fecha de recoleccion, fuente, version y regla de procesamiento."),
+                ("Indicadores", "La plataforma usa crecimiento, incidencia por 100 mil habitantes, predominancia de sintomas, serie temporal y reduccion gradual cuando dejan de entrar nuevas senales."),
+                ("IA como apoyo", "Modelos de IA apoyan clasificacion y priorizacion, pero no sustituyen al equipo tecnico, la vigilancia epidemiologica ni la decision institucional."),
+                ("Transparencia", "Los paneles deben indicar cuando un dato es colaborativo, oficial, inferido o no disponible, evitando conclusiones falsas o comunicacion alarmista."),
+            ],
+        },
+        "suporte": {
+            "title": "Soporte y Atencion",
+            "subtitle": "Canal institucional para soporte de la app, privacidad, operacion y orientaciones generales de SolusCRT Salud.",
+            "sections": [
+                ("Atencion al usuario", "Para soporte general de la app, dificultades de uso, orientaciones sobre alertas, problemas de mapa, envio de sintomas o funcionamiento de la experiencia publica, contacta comercial@soluscrt.com.br con el asunto Soporte App SolusCRT."),
+                ("Privacidad y datos personales", "Para pedidos relacionados con privacidad, aclaraciones sobre tratamiento de datos, derechos del titular, eliminacion cuando corresponda y temas de LGPD, usa comercial@soluscrt.com.br con el asunto Privacidad SolusCRT."),
+                ("Soporte institucional", "Empresas, hospitales, farmacias, laboratorios, municipios y gobiernos que necesiten apoyo operativo, contractual o tecnico pueden solicitar atencion institucional por el mismo canal comercial@soluscrt.com.br."),
+                ("Alcance de atencion", "El soporte de SolusCRT Salud atiende cuestiones sobre plataforma, app, acceso, alertas, privacidad y funcionamiento del servicio. La atencion no sustituye orientacion medica, emergencia, ambulancia, hospital, unidad de urgencia o consulta clinica."),
+                ("Tiempo de respuesta", "Solicitudes institucionales y de soporte general se reciben por canal oficial y se tratan segun criticidad, naturaleza del pedido, fila operacional y disponibilidad del equipo."),
+                ("Base publica de documentos", "Para revision documental, consulta tambien la Politica de Privacidad, los Terminos de Uso, la pagina de Seguridad y LGPD y la Metodologia Epidemiologica publicadas en el sitio institucional."),
+            ],
+        },
     },
 }
 
 
 def documento_publico(request, slug):
-    documento = LEGAL_DOCUMENTS.get(slug)
+    language = _resolve_site_language(request)
+    documento = LEGAL_DOCUMENTS[language].get(slug)
     if not documento:
         return redirect("/")
-    return render(request, "documento_publico.html", {"documento": documento})
+    response = render(
+        request,
+        "documento_publico.html",
+        {
+            "documento": documento,
+            "legal": LEGAL_COMMON[language],
+            "site_lang": language,
+            "html_lang": SITE_LANGUAGE_META[language]["html"],
+            "language_options": _site_language_options(request, language),
+            "home_url": f"/?lang={language}",
+        },
+    )
+    if request.GET.get("lang"):
+        response.set_cookie("site_lang", language, max_age=31536000, samesite="Lax")
+    return response
 
 STATE_ALIASES = {
     "AC": "Acre",

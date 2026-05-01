@@ -18,7 +18,8 @@ a{color:inherit;text-decoration:none}
 	.top{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:20;width:min(1120px,calc(100% - 34px));display:grid;grid-template-columns:max-content 1fr max-content;align-items:center;gap:18px;padding:12px 14px;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:rgba(5,7,10,.76);backdrop-filter:blur(24px);box-shadow:0 18px 70px rgba(0,0,0,.28)}
 	.brand{font-weight:800;white-space:nowrap}.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.top-actions{justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.16);font-weight:800;white-space:nowrap}.btn.gold{background:linear-gradient(135deg,#f6e7b7,#d9b86f);color:#080b10;border:0}
 	.language-switch{justify-self:center;display:flex;align-items:center;gap:4px;padding:4px;border:1px solid rgba(255,255,255,.13);border-radius:999px;background:rgba(255,255,255,.045)}
-	.language-link{min-width:38px;height:32px;display:grid;place-items:center;border-radius:999px;color:#aeb9c4;font-size:.78rem;font-weight:900}
+		.language-link{min-width:58px;height:32px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:999px;color:#aeb9c4;font-size:.78rem;font-weight:900}
+		.language-link .flag{font-size:.95rem;line-height:1}
 	.language-link.active{background:linear-gradient(135deg,#f6e7b7,#d9b86f);color:#080b10}
 .slide{min-height:100vh;scroll-snap-align:start;display:grid;place-items:center;padding:118px 22px 58px;background:radial-gradient(circle at 20% 12%,rgba(69,234,217,.12),transparent 28rem),radial-gradient(circle at 82% 16%,rgba(217,184,111,.15),transparent 30rem),linear-gradient(135deg,#05070a,#07131c)}
 .wrap{width:min(1120px,100%);display:grid;grid-template-columns:minmax(0,1fr) minmax(460px,.9fr);gap:56px;align-items:center}
@@ -40,7 +41,7 @@ p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780
 .quote{font-family:Newsreader,serif;font-size:clamp(2.2rem,4vw,4.6rem);line-height:1;color:#fff}
 .footer-note{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:#7f8b96;font-size:.85rem}
 	@media(max-width:900px){html{scroll-snap-type:none}.slide{min-height:auto;padding:104px 18px 64px}.wrap{grid-template-columns:1fr;gap:30px}.grid{grid-template-columns:1fr}.top{grid-template-columns:1fr auto;border-radius:24px}.top-actions{display:none}.language-switch{justify-self:end}.map{height:330px}h1{font-size:4rem;line-height:1}h2{font-size:3.35rem;line-height:1}.eyebrow{margin-bottom:18px}}
-	@media(max-width:520px){.top{width:calc(100% - 24px);padding:10px 12px}.brand{font-size:.92rem}.language-link{min-width:34px}.slide{padding-top:94px}h1{font-size:3.2rem}h2{font-size:2.7rem}}
+		@media(max-width:520px){.top{width:calc(100% - 24px);padding:10px 12px}.brand{font-size:.92rem}.language-link{min-width:54px;padding:0 7px}.slide{padding-top:94px}h1{font-size:3.2rem}h2{font-size:2.7rem}}
 </style>
 </head>
 <body>
@@ -48,7 +49,7 @@ p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780
   <a class="brand" href="{{ home_url }}">{{ deck.brand }}</a>
   <div class="language-switch" aria-label="{{ deck.language_aria }}">
     {% for option in language_options %}
-      <a class="language-link{% if option.active %} active{% endif %}" href="{{ option.url }}" hreflang="{{ option.html }}" lang="{{ option.html }}" title="{{ option.name }}" aria-current="{% if option.active %}true{% else %}false{% endif %}">{{ option.label }}</a>
+      <a class="language-link{% if option.active %} active{% endif %}" href="{{ option.url }}" hreflang="{{ option.html }}" lang="{{ option.html }}" title="{{ option.name }}" aria-current="{% if option.active %}true{% else %}false{% endif %}"><span class="flag" aria-hidden="true">{{ option.flag }}</span><span>{{ option.label }}</span></a>
     {% endfor %}
   </div>
   <div class="actions top-actions">
