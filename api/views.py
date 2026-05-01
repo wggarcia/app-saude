@@ -26,6 +26,369 @@ from datetime import datetime, timedelta
 historico = defaultdict(list)
 
 
+SITE_LANGUAGE_META = {
+    "pt": {"label": "PT", "name": "Portugues", "html": "pt-BR"},
+    "en": {"label": "EN", "name": "English", "html": "en"},
+    "es": {"label": "ES", "name": "Espanol", "html": "es"},
+}
+
+
+SITE_TRANSLATIONS = {
+    "pt": {
+        "title": "SolusCRT Saude | Radar epidemiologico inteligente",
+        "description": "SolusCRT Saude e uma sala de controle epidemiologica com app populacional, IA, mapas de risco e paineis SaaS para empresas e governos.",
+        "brand": "SolusCRT Saude",
+        "nav": {
+            "diferencial": "Diferencial",
+            "ecossistema": "Ecossistema",
+            "valores": "Valores",
+            "app": "App",
+            "contato": "Contato",
+        },
+        "nav_note": "Ambientes privados somente sob contrato",
+        "language_aria": "Selecionar idioma",
+        "hero_eyebrow": "Inteligencia epidemiologica em tempo real",
+        "hero_title": "IA epidemiologica para antecipar surtos antes que virem crise.",
+        "hero_lead": "SolusCRT Saude e uma plataforma SaaS com inteligencia artificial operacional, app da populacao, mapas vivos, dados oficiais, alertas e paineis de decisao para enxergar risco, priorizar territorios e agir com velocidade.",
+        "actions": {
+            "presentation": "Ver apresentacao completa",
+            "app": "Baixar app da populacao",
+            "sales": "Falar com comercial",
+            "open_presentation": "Abrir apresentacao completa",
+            "meeting": "Solicitar reuniao",
+        },
+        "proofs": [
+            {"title": "Antes do dado consolidado", "text": "Sinais da populacao ajudam a enxergar tendencia enquanto notificacoes oficiais ainda estao amadurecendo."},
+            {"title": "Sem confundir evidencias", "text": "Sinal colaborativo, fonte oficial e inferencia de IA aparecem como camadas distintas."},
+            {"title": "Decisao por territorio", "text": "Bairro, municipio, estado, hospitais, farmacias, empresas e governo com leituras proprias."},
+        ],
+        "chips": ["App populacional", "IA epidemiologica", "Predicao territorial", "Sala de situacao"],
+        "metrics": [
+            {"value": "IA", "text": "cruza sintomas, crescimento, territorio e fontes oficiais"},
+            {"value": "10 dias", "text": "sem novos sinais inicia reducao gradual"},
+            {"value": "100 mil", "text": "indicadores padronizados por populacao"},
+            {"value": "LGPD", "text": "governanca, minimo necessario e segregacao"},
+        ],
+        "differential": {
+            "title": "A IA do SolusCRT transforma sinais dispersos em decisao antes do pico.",
+            "lead": "Ela nao tenta substituir vigilancia oficial nem diagnostico medico. A forca esta em ler milhares de sinais fracos, cruzar territorio, crescimento, sintomas, fontes brasileiras e comportamento temporal para apontar onde agir primeiro.",
+            "traditional_title": "Vigilancia tradicional",
+            "traditional_items": [
+                "Depende de ciclos de notificacao, atendimento, consolidacao e publicacao.",
+                "Excelente para confirmacao, historico e politica publica, mas naturalmente sujeita a atraso.",
+                "Pode chegar tarde para estoque, escala de equipe, comunicacao e resposta local.",
+            ],
+            "solus_title": "Camada SolusCRT com IA",
+            "solus_items": [
+                "Recebe sinais sem cadastro nominal da populacao pelo celular, com localizacao atual e controle antifraude.",
+                "Identifica crescimento, predominancia de sintomas e risco territorial antes da confirmacao oficial.",
+                "Usa IA para priorizar bairros, municipios, doencas provaveis, estoque, atendimento e alertas publicos.",
+            ],
+        },
+        "ecosystem_title": "Uma arquitetura para todos que precisam agir.",
+        "ecosystem_lead": "O mesmo radar alimenta visoes diferentes, sem misturar acesso publico com ambientes privados.",
+        "slides": [
+            {"small": "Populacao", "title": "App gratuito", "text": "Envio de sintomas, radar local, mapa e alertas oficiais com linguagem simples."},
+            {"small": "Empresas", "title": "Saude ocupacional", "text": "Risco por territorio, impacto operacional, unidades, equipes e afastamentos."},
+            {"small": "Farmacias e hospitais", "title": "Demanda futura", "text": "Preparacao de estoque, atendimento, exames, leitos e campanhas preventivas."},
+            {"small": "Governo", "title": "Sala de situacao", "text": "Alertas oficiais, fontes brasileiras, matriz de decisao, auditoria e contratos anuais."},
+        ],
+        "matrix": [
+            {"label": "Radar vivo", "title": "Mapa de risco", "text": "Focos por bairro, municipio e estado, com icones por grupos de sintomas e intensidade temporal."},
+            {"label": "IA preditiva", "title": "Motor epidemiologico", "text": "Classifica sinais, estima doencas provaveis, mede crescimento, reduz intensidade sem novos casos e prioriza territorios criticos."},
+            {"label": "Oficial", "title": "Brasil Oficial", "text": "IBGE/SIDRA, InfoDengue, InfoGripe, OpenDataSUS/DATASUS em camadas separadas."},
+            {"label": "Protecao", "title": "Antifraude", "text": "Controle por aparelho, rede, repeticao, localizacao confirmada e qualidade do sinal."},
+            {"label": "Alerta", "title": "Comunicacao publica", "text": "Mensagens oficiais chegam ao app da populacao com governanca e rastreabilidade."},
+            {"label": "Enterprise", "title": "SaaS vendavel", "text": "Pacotes por maquinas, usuarios, setores, administracao financeira e acesso separado."},
+        ],
+        "values": {
+            "eyebrow": "Valores SolusCRT",
+            "title": "Tecnologia para proteger pessoas, nao apenas vender software.",
+            "lead": "A SolusCRT nasce com uma responsabilidade clara: transformar dados em cuidado, antecipar riscos sem gerar alarme vazio e ajudar empresas, governos e populacao a agir com mais consciencia, velocidade e humanidade.",
+            "items": [
+                {"title": "Vida em primeiro lugar", "text": "Todo indicador, alerta e mapa existe para reduzir atraso, orientar cuidado e apoiar decisoes que preservem pessoas."},
+                {"title": "Verdade antes de impacto", "text": "Separar sinal precoce, dado oficial e inferencia de IA e um compromisso para evitar conclusoes falsas."},
+                {"title": "Privacidade como fundamento", "text": "Dados de saude exigem minimizacao, seguranca, transparencia e exibicao adequada ao perfil autorizado."},
+                {"title": "Cooperacao institucional", "text": "O sistema foi pensado para unir populacao, empresas, hospitais, farmacias, laboratorios e governo sem confundir responsabilidades."},
+                {"title": "Acesso social", "text": "O app da populacao deve ser gratuito, simples e util, porque vigilancia inteligente comeca quando todos podem contribuir."},
+                {"title": "Coragem operacional", "text": "A SolusCRT existe para antecipar problemas dificeis, mostrar territorios criticos e ajudar lideres a agir antes do pico."},
+            ],
+        },
+        "app": {
+            "eyebrow": "App da populacao",
+            "title": "O sensor social que transforma cuidado individual em inteligencia coletiva.",
+            "lead": "O app coleta sintomas sem cadastro nominal, exige localizacao atual para evitar erro territorial, mostra o radar local e recebe alertas oficiais. A experiencia foi pensada para ser simples para a populacao e valiosa para a sala de controle.",
+            "app_store": "Baixar na App Store",
+            "google_play": "Ver no Google Play",
+            "risks": [
+                {"title": "Radar local", "text": "Leitura por localizacao atual."},
+                {"title": "Mapa vivo", "text": "Focos e sintomas por regiao."},
+                {"title": "Alertas oficiais", "text": "Comunicacao de governo no celular."},
+                {"title": "Protecao", "text": "Sem envio aproximado para cidade errada."},
+            ],
+        },
+        "cta": {
+            "title": "Veja a apresentacao completa antes de falar com vendas.",
+            "lead": "A apresentacao mostra a proposta para populacao, empresas, hospitais, farmacias, laboratorios e governo, com o diferencial frente aos modelos tradicionais de monitoramento.",
+        },
+        "footer": "SolusCRT Saude. Inteligencia epidemiologica, app populacional e SaaS enterprise.",
+        "footer_links": {
+            "privacy": "Privacidade",
+            "terms": "Termos",
+            "security": "Seguranca",
+            "methodology": "Metodologia",
+            "support": "Suporte",
+        },
+    },
+    "en": {
+        "title": "SolusCRT Health | Intelligent epidemiological radar",
+        "description": "SolusCRT Health is an epidemiological command center with a population app, AI, risk maps and SaaS dashboards for companies and governments.",
+        "brand": "SolusCRT Health",
+        "nav": {
+            "diferencial": "Differentiator",
+            "ecossistema": "Ecosystem",
+            "valores": "Values",
+            "app": "App",
+            "contato": "Contact",
+        },
+        "nav_note": "Private environments available only by contract",
+        "language_aria": "Select language",
+        "hero_eyebrow": "Real-time epidemiological intelligence",
+        "hero_title": "Epidemiological AI to anticipate outbreaks before they become a crisis.",
+        "hero_lead": "SolusCRT Health is a SaaS platform with operational artificial intelligence, a population app, live maps, official data, alerts and decision dashboards to see risk, prioritize territories and act quickly.",
+        "actions": {
+            "presentation": "View full presentation",
+            "app": "Download population app",
+            "sales": "Talk to sales",
+            "open_presentation": "Open full presentation",
+            "meeting": "Request a meeting",
+        },
+        "proofs": [
+            {"title": "Before consolidated data", "text": "Population signals help reveal trends while official notifications are still maturing."},
+            {"title": "Evidence stays separated", "text": "Collaborative signals, official sources and AI inference appear as distinct layers."},
+            {"title": "Territory-based decisions", "text": "Neighborhoods, cities, states, hospitals, pharmacies, companies and governments get their own readings."},
+        ],
+        "chips": ["Population app", "Epidemiological AI", "Territorial prediction", "Situation room"],
+        "metrics": [
+            {"value": "AI", "text": "crosses symptoms, growth, territory and official sources"},
+            {"value": "10 days", "text": "without new signals, gradual reduction begins"},
+            {"value": "100k", "text": "population-standardized indicators"},
+            {"value": "LGPD", "text": "governance, minimum necessary data and segregation"},
+        ],
+        "differential": {
+            "title": "SolusCRT AI turns scattered signals into decisions before the peak.",
+            "lead": "It does not try to replace official surveillance or medical diagnosis. Its strength is reading thousands of weak signals, crossing territory, growth, symptoms, Brazilian sources and time behavior to show where to act first.",
+            "traditional_title": "Traditional surveillance",
+            "traditional_items": [
+                "Depends on notification, care, consolidation and publication cycles.",
+                "Excellent for confirmation, history and public policy, but naturally subject to delay.",
+                "May arrive late for stock planning, staffing, communication and local response.",
+            ],
+            "solus_title": "SolusCRT AI layer",
+            "solus_items": [
+                "Receives population signals without nominal registration through the phone, with current location and anti-fraud controls.",
+                "Identifies growth, symptom predominance and territorial risk before official confirmation.",
+                "Uses AI to prioritize neighborhoods, cities, likely diseases, stock, care capacity and public alerts.",
+            ],
+        },
+        "ecosystem_title": "An architecture for everyone who needs to act.",
+        "ecosystem_lead": "The same radar powers different views without mixing public access with private environments.",
+        "slides": [
+            {"small": "Population", "title": "Free app", "text": "Symptom reporting, local radar, map and official alerts in simple language."},
+            {"small": "Companies", "title": "Occupational health", "text": "Risk by territory, operational impact, units, teams and absences."},
+            {"small": "Pharmacies and hospitals", "title": "Future demand", "text": "Preparation for stock, care, tests, beds and preventive campaigns."},
+            {"small": "Government", "title": "Situation room", "text": "Official alerts, Brazilian sources, decision matrix, audit trail and annual contracts."},
+        ],
+        "matrix": [
+            {"label": "Live radar", "title": "Risk map", "text": "Hotspots by neighborhood, city and state, with icons by symptom groups and time intensity."},
+            {"label": "Predictive AI", "title": "Epidemiological engine", "text": "Classifies signals, estimates likely diseases, measures growth, reduces intensity without new cases and prioritizes critical territories."},
+            {"label": "Official", "title": "Official Brazil", "text": "IBGE/SIDRA, InfoDengue, InfoGripe and OpenDataSUS/DATASUS in separate layers."},
+            {"label": "Protection", "title": "Anti-fraud", "text": "Controls by device, network, repetition, confirmed location and signal quality."},
+            {"label": "Alert", "title": "Public communication", "text": "Official messages reach the population app with governance and traceability."},
+            {"label": "Enterprise", "title": "Sellable SaaS", "text": "Packages by devices, users, sectors, financial administration and separated access."},
+        ],
+        "values": {
+            "eyebrow": "SolusCRT Values",
+            "title": "Technology to protect people, not just sell software.",
+            "lead": "SolusCRT was born with a clear responsibility: turn data into care, anticipate risks without empty alarm and help companies, governments and people act with more awareness, speed and humanity.",
+            "items": [
+                {"title": "Life first", "text": "Every indicator, alert and map exists to reduce delay, guide care and support decisions that preserve people."},
+                {"title": "Truth before impact", "text": "Separating early signal, official data and AI inference is a commitment to avoid false conclusions."},
+                {"title": "Privacy as foundation", "text": "Health data requires minimization, security, transparency and display appropriate to each authorized profile."},
+                {"title": "Institutional cooperation", "text": "The system was designed to connect people, companies, hospitals, pharmacies, laboratories and government without blurring responsibilities."},
+                {"title": "Social access", "text": "The population app should be free, simple and useful, because intelligent surveillance begins when everyone can contribute."},
+                {"title": "Operational courage", "text": "SolusCRT exists to anticipate hard problems, reveal critical territories and help leaders act before the peak."},
+            ],
+        },
+        "app": {
+            "eyebrow": "Population app",
+            "title": "The social sensor that turns individual care into collective intelligence.",
+            "lead": "The app collects symptoms without nominal registration, requires current location to avoid territorial mistakes, shows the local radar and receives official alerts. The experience is simple for the population and valuable for the command center.",
+            "app_store": "Download on the App Store",
+            "google_play": "View on Google Play",
+            "risks": [
+                {"title": "Local radar", "text": "Reading based on current location."},
+                {"title": "Live map", "text": "Hotspots and symptoms by region."},
+                {"title": "Official alerts", "text": "Government communication on the phone."},
+                {"title": "Protection", "text": "No approximate submission to the wrong city."},
+            ],
+        },
+        "cta": {
+            "title": "See the full presentation before talking to sales.",
+            "lead": "The presentation explains the proposal for population, companies, hospitals, pharmacies, laboratories and government, with the differentiator compared with traditional monitoring models.",
+        },
+        "footer": "SolusCRT Health. Epidemiological intelligence, population app and enterprise SaaS.",
+        "footer_links": {
+            "privacy": "Privacy",
+            "terms": "Terms",
+            "security": "Security",
+            "methodology": "Methodology",
+            "support": "Support",
+        },
+    },
+    "es": {
+        "title": "SolusCRT Salud | Radar epidemiologico inteligente",
+        "description": "SolusCRT Salud es una sala de control epidemiologica con app poblacional, IA, mapas de riesgo y paneles SaaS para empresas y gobiernos.",
+        "brand": "SolusCRT Salud",
+        "nav": {
+            "diferencial": "Diferencial",
+            "ecossistema": "Ecosistema",
+            "valores": "Valores",
+            "app": "App",
+            "contato": "Contacto",
+        },
+        "nav_note": "Ambientes privados solo bajo contrato",
+        "language_aria": "Seleccionar idioma",
+        "hero_eyebrow": "Inteligencia epidemiologica en tiempo real",
+        "hero_title": "IA epidemiologica para anticipar brotes antes de que se conviertan en crisis.",
+        "hero_lead": "SolusCRT Salud es una plataforma SaaS con inteligencia artificial operacional, app para la poblacion, mapas vivos, datos oficiales, alertas y paneles de decision para ver riesgo, priorizar territorios y actuar con velocidad.",
+        "actions": {
+            "presentation": "Ver presentacion completa",
+            "app": "Descargar app poblacional",
+            "sales": "Hablar con ventas",
+            "open_presentation": "Abrir presentacion completa",
+            "meeting": "Solicitar reunion",
+        },
+        "proofs": [
+            {"title": "Antes del dato consolidado", "text": "Las senales de la poblacion ayudan a ver tendencias mientras las notificaciones oficiales aun estan madurando."},
+            {"title": "Sin mezclar evidencias", "text": "La senal colaborativa, la fuente oficial y la inferencia de IA aparecen como capas distintas."},
+            {"title": "Decision por territorio", "text": "Barrio, municipio, estado, hospitales, farmacias, empresas y gobierno con lecturas propias."},
+        ],
+        "chips": ["App poblacional", "IA epidemiologica", "Prediccion territorial", "Sala de situacion"],
+        "metrics": [
+            {"value": "IA", "text": "cruza sintomas, crecimiento, territorio y fuentes oficiales"},
+            {"value": "10 dias", "text": "sin nuevas senales inicia reduccion gradual"},
+            {"value": "100 mil", "text": "indicadores estandarizados por poblacion"},
+            {"value": "LGPD", "text": "gobernanza, minimo necesario y segregacion"},
+        ],
+        "differential": {
+            "title": "La IA de SolusCRT transforma senales dispersas en decision antes del pico.",
+            "lead": "No intenta sustituir vigilancia oficial ni diagnostico medico. Su fuerza esta en leer miles de senales debiles, cruzar territorio, crecimiento, sintomas, fuentes brasilenas y comportamiento temporal para mostrar donde actuar primero.",
+            "traditional_title": "Vigilancia tradicional",
+            "traditional_items": [
+                "Depende de ciclos de notificacion, atencion, consolidacion y publicacion.",
+                "Excelente para confirmacion, historico y politica publica, pero naturalmente sujeta a retraso.",
+                "Puede llegar tarde para stock, escala de equipo, comunicacion y respuesta local.",
+            ],
+            "solus_title": "Capa SolusCRT con IA",
+            "solus_items": [
+                "Recibe senales sin registro nominal de la poblacion por celular, con ubicacion actual y control antifraude.",
+                "Identifica crecimiento, predominancia de sintomas y riesgo territorial antes de la confirmacion oficial.",
+                "Usa IA para priorizar barrios, municipios, enfermedades probables, stock, atencion y alertas publicas.",
+            ],
+        },
+        "ecosystem_title": "Una arquitectura para todos los que necesitan actuar.",
+        "ecosystem_lead": "El mismo radar alimenta vistas diferentes, sin mezclar acceso publico con ambientes privados.",
+        "slides": [
+            {"small": "Poblacion", "title": "App gratuita", "text": "Envio de sintomas, radar local, mapa y alertas oficiales con lenguaje simple."},
+            {"small": "Empresas", "title": "Salud ocupacional", "text": "Riesgo por territorio, impacto operacional, unidades, equipos y ausencias."},
+            {"small": "Farmacias y hospitales", "title": "Demanda futura", "text": "Preparacion de stock, atencion, examenes, camas y campanas preventivas."},
+            {"small": "Gobierno", "title": "Sala de situacion", "text": "Alertas oficiales, fuentes brasilenas, matriz de decision, auditoria y contratos anuales."},
+        ],
+        "matrix": [
+            {"label": "Radar vivo", "title": "Mapa de riesgo", "text": "Focos por barrio, municipio y estado, con iconos por grupos de sintomas e intensidad temporal."},
+            {"label": "IA predictiva", "title": "Motor epidemiologico", "text": "Clasifica senales, estima enfermedades probables, mide crecimiento, reduce intensidad sin nuevos casos y prioriza territorios criticos."},
+            {"label": "Oficial", "title": "Brasil Oficial", "text": "IBGE/SIDRA, InfoDengue, InfoGripe y OpenDataSUS/DATASUS en capas separadas."},
+            {"label": "Proteccion", "title": "Antifraude", "text": "Control por aparato, red, repeticion, ubicacion confirmada y calidad de la senal."},
+            {"label": "Alerta", "title": "Comunicacion publica", "text": "Mensajes oficiales llegan a la app poblacional con gobernanza y trazabilidad."},
+            {"label": "Enterprise", "title": "SaaS vendible", "text": "Paquetes por dispositivos, usuarios, sectores, administracion financiera y acceso separado."},
+        ],
+        "values": {
+            "eyebrow": "Valores SolusCRT",
+            "title": "Tecnologia para proteger personas, no solo vender software.",
+            "lead": "SolusCRT nace con una responsabilidad clara: transformar datos en cuidado, anticipar riesgos sin alarma vacia y ayudar a empresas, gobiernos y poblacion a actuar con mas conciencia, velocidad y humanidad.",
+            "items": [
+                {"title": "Vida en primer lugar", "text": "Todo indicador, alerta y mapa existe para reducir retraso, orientar cuidado y apoyar decisiones que preserven personas."},
+                {"title": "Verdad antes que impacto", "text": "Separar senal temprana, dato oficial e inferencia de IA es un compromiso para evitar conclusiones falsas."},
+                {"title": "Privacidad como fundamento", "text": "Los datos de salud exigen minimizacion, seguridad, transparencia y exhibicion adecuada al perfil autorizado."},
+                {"title": "Cooperacion institucional", "text": "El sistema fue pensado para unir poblacion, empresas, hospitales, farmacias, laboratorios y gobierno sin confundir responsabilidades."},
+                {"title": "Acceso social", "text": "La app poblacional debe ser gratuita, simple y util, porque la vigilancia inteligente comienza cuando todos pueden contribuir."},
+                {"title": "Coraje operacional", "text": "SolusCRT existe para anticipar problemas dificiles, mostrar territorios criticos y ayudar a lideres a actuar antes del pico."},
+            ],
+        },
+        "app": {
+            "eyebrow": "App poblacional",
+            "title": "El sensor social que transforma cuidado individual en inteligencia colectiva.",
+            "lead": "La app recoge sintomas sin registro nominal, exige ubicacion actual para evitar error territorial, muestra el radar local y recibe alertas oficiales. La experiencia fue pensada para ser simple para la poblacion y valiosa para la sala de control.",
+            "app_store": "Descargar en App Store",
+            "google_play": "Ver en Google Play",
+            "risks": [
+                {"title": "Radar local", "text": "Lectura por ubicacion actual."},
+                {"title": "Mapa vivo", "text": "Focos y sintomas por region."},
+                {"title": "Alertas oficiales", "text": "Comunicacion de gobierno en el celular."},
+                {"title": "Proteccion", "text": "Sin envio aproximado a la ciudad equivocada."},
+            ],
+        },
+        "cta": {
+            "title": "Vea la presentacion completa antes de hablar con ventas.",
+            "lead": "La presentacion muestra la propuesta para poblacion, empresas, hospitales, farmacias, laboratorios y gobierno, con el diferencial frente a los modelos tradicionales de monitoreo.",
+        },
+        "footer": "SolusCRT Salud. Inteligencia epidemiologica, app poblacional y SaaS enterprise.",
+        "footer_links": {
+            "privacy": "Privacidad",
+            "terms": "Terminos",
+            "security": "Seguridad",
+            "methodology": "Metodologia",
+            "support": "Soporte",
+        },
+    },
+}
+
+
+def _normalize_site_language(value):
+    if not value:
+        return None
+    for part in str(value).split(","):
+        code = part.split(";")[0].strip().lower().replace("_", "-").split("-")[0]
+        if code in SITE_TRANSLATIONS:
+            return code
+    return None
+
+
+def _resolve_site_language(request):
+    return (
+        _normalize_site_language(request.GET.get("lang"))
+        or _normalize_site_language(request.COOKIES.get("site_lang"))
+        or _normalize_site_language(request.headers.get("Accept-Language"))
+        or "pt"
+    )
+
+
+def _site_language_options(request, active_language):
+    path = request.path or "/"
+    return [
+        {
+            "code": code,
+            "label": meta["label"],
+            "name": meta["name"],
+            "html": meta["html"],
+            "active": code == active_language,
+            "url": f"{path}?lang={code}",
+        }
+        for code, meta in SITE_LANGUAGE_META.items()
+    ]
+
+
 def site_principal(request):
     host = request.get_host().split(":")[0].lower()
     if host.startswith("empresa."):
@@ -34,7 +397,20 @@ def site_principal(request):
         return tela_login_governo(request)
     if host.startswith("admin."):
         return redirect("/operacao-central/")
-    return render(request, "site_principal.html")
+    language = _resolve_site_language(request)
+    response = render(
+        request,
+        "site_principal.html",
+        {
+            "site": SITE_TRANSLATIONS[language],
+            "site_lang": language,
+            "html_lang": SITE_LANGUAGE_META[language]["html"],
+            "language_options": _site_language_options(request, language),
+        },
+    )
+    if request.GET.get("lang"):
+        response.set_cookie("site_lang", language, max_age=31536000, samesite="Lax")
+    return response
 
 
 def apresentacao_comercial(request):

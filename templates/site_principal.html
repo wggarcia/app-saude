@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="{{ html_lang }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SolusCRT Saude | Radar epidemiologico inteligente</title>
-<meta name="description" content="SolusCRT Saude e uma sala de controle epidemiologica com app populacional, IA, mapas de risco e paineis SaaS para empresas e governos.">
+<title>{{ site.title }}</title>
+<meta name="description" content="{{ site.description }}">
+{% for option in language_options %}
+<link rel="alternate" hreflang="{{ option.html }}" href="{{ option.url }}">
+{% endfor %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,700&display=swap" rel="stylesheet">
@@ -42,7 +45,11 @@ a{color:inherit;text-decoration:none}
 .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:-.02em}
 .mark{width:38px;height:38px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,var(--gold),#f6e9bd);color:#090d12;font-size:.72rem;font-weight:900;box-shadow:0 0 38px rgba(217,184,111,.24)}
 .nav-links{display:flex;gap:22px;color:#c3ccd6;font-size:.92rem}
+.nav-right{display:flex;align-items:center;gap:10px}
 .nav-note{padding:9px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.13);color:#aeb9c4;background:rgba(255,255,255,.045);font-size:.84rem}
+.language-switch{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid rgba(255,255,255,.13);border-radius:999px;background:rgba(255,255,255,.045)}
+.language-link{min-width:38px;height:32px;display:grid;place-items:center;border-radius:999px;color:#aeb9c4;font-size:.78rem;font-weight:900}
+.language-link.active{background:linear-gradient(135deg,#f6e7b7,var(--gold));color:#070a0e}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);font-weight:800;transition:.22s ease}
 .btn:hover{transform:translateY(-2px);box-shadow:0 18px 50px rgba(69,234,217,.12);border-color:rgba(69,234,217,.45)}
 .btn.primary{background:linear-gradient(135deg,#f6e7b7,var(--gold));color:#070a0e;border:0}
@@ -89,41 +96,47 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
 <body>
 <div class="shell">
   <nav class="nav">
-    <a class="brand" href="#"><span class="mark">CRT</span> SolusCRT Saude</a>
+    <a class="brand" href="/?lang={{ site_lang }}"><span class="mark">CRT</span> {{ site.brand }}</a>
     <div class="nav-links">
-      <a href="#diferencial">Diferencial</a>
-      <a href="#ecossistema">Ecossistema</a>
-      <a href="#valores">Valores</a>
-      <a href="#app">App</a>
-      <a href="#contato">Contato</a>
+      <a href="#diferencial">{{ site.nav.diferencial }}</a>
+      <a href="#ecossistema">{{ site.nav.ecossistema }}</a>
+      <a href="#valores">{{ site.nav.valores }}</a>
+      <a href="#app">{{ site.nav.app }}</a>
+      <a href="#contato">{{ site.nav.contato }}</a>
     </div>
-    <div class="nav-note">Ambientes privados somente sob contrato</div>
+    <div class="nav-right">
+      <div class="nav-note">{{ site.nav_note }}</div>
+      <div class="language-switch" aria-label="{{ site.language_aria }}">
+        {% for option in language_options %}
+          <a class="language-link{% if option.active %} active{% endif %}" href="{{ option.url }}" hreflang="{{ option.html }}" lang="{{ option.html }}" title="{{ option.name }}" aria-current="{% if option.active %}true{% else %}false{% endif %}">{{ option.label }}</a>
+        {% endfor %}
+      </div>
+    </div>
   </nav>
 
   <main>
     <section class="hero">
       <div>
-        <div class="eyebrow"><span class="pulse"></span> Inteligencia epidemiologica em tempo real</div>
-        <h1>IA epidemiologica para antecipar surtos antes que virem crise.</h1>
-        <p class="lead">SolusCRT Saude e uma plataforma SaaS com inteligencia artificial operacional, app da populacao, mapas vivos, dados oficiais, alertas e paineis de decisao para enxergar risco, priorizar territorios e agir com velocidade.</p>
+        <div class="eyebrow"><span class="pulse"></span> {{ site.hero_eyebrow }}</div>
+        <h1>{{ site.hero_title }}</h1>
+        <p class="lead">{{ site.hero_lead }}</p>
         <div class="actions">
-          <a class="btn primary" href="/apresentacao/">Ver apresentacao completa</a>
-          <a class="btn cyan" href="#app">Baixar app da populacao</a>
-          <a class="btn" href="mailto:comercial@soluscrt.com.br?subject=Apresentacao%20SolusCRT%20Saude">Falar com comercial</a>
+          <a class="btn primary" href="/apresentacao/">{{ site.actions.presentation }}</a>
+          <a class="btn cyan" href="#app">{{ site.actions.app }}</a>
+          <a class="btn" href="mailto:comercial@soluscrt.com.br?subject=Apresentacao%20SolusCRT%20Saude">{{ site.actions.sales }}</a>
         </div>
         <div class="proofs">
-          <div class="proof"><strong>Antes do dado consolidado</strong><span>Sinais da populacao ajudam a enxergar tendencia enquanto notificacoes oficiais ainda estao amadurecendo.</span></div>
-          <div class="proof"><strong>Sem confundir evidencias</strong><span>Sinal colaborativo, fonte oficial e inferencia de IA aparecem como camadas distintas.</span></div>
-          <div class="proof"><strong>Decisao por territorio</strong><span>Bairro, municipio, estado, hospitais, farmacias, empresas e governo com leituras proprias.</span></div>
+          {% for proof in site.proofs %}
+          <div class="proof"><strong>{{ proof.title }}</strong><span>{{ proof.text }}</span></div>
+          {% endfor %}
         </div>
       </div>
       <div class="command">
         <div class="command-inner">
           <div class="status">
-            <span class="chip">App populacional</span>
-            <span class="chip">IA epidemiologica</span>
-            <span class="chip">Predicao territorial</span>
-            <span class="chip">Sala de situacao</span>
+            {% for chip in site.chips %}
+            <span class="chip">{{ chip }}</span>
+            {% endfor %}
           </div>
           <div class="radar">
             <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
@@ -132,10 +145,9 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
             <div class="node rose n3">COVID</div>
           </div>
           <div class="metrics">
-            <div class="metric"><b>IA</b><span>cruza sintomas, crescimento, territorio e fontes oficiais</span></div>
-            <div class="metric"><b>10 dias</b><span>sem novos sinais inicia reducao gradual</span></div>
-            <div class="metric"><b>100 mil</b><span>indicadores padronizados por populacao</span></div>
-            <div class="metric"><b>LGPD</b><span>governanca, minimo necessario e segregacao</span></div>
+            {% for metric in site.metrics %}
+            <div class="metric"><b>{{ metric.value }}</b><span>{{ metric.text }}</span></div>
+            {% endfor %}
           </div>
         </div>
       </div>
@@ -143,24 +155,24 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
 
     <section id="diferencial">
       <div class="section-head">
-        <h2>A IA do SolusCRT transforma sinais dispersos em decisao antes do pico.</h2>
-        <p>Ela nao tenta substituir vigilancia oficial nem diagnostico medico. A forca esta em ler milhares de sinais fracos, cruzar territorio, crescimento, sintomas, fontes brasileiras e comportamento temporal para apontar onde agir primeiro.</p>
+        <h2>{{ site.differential.title }}</h2>
+        <p>{{ site.differential.lead }}</p>
       </div>
       <div class="compare">
         <div class="card">
-          <h3>Vigilancia tradicional</h3>
+          <h3>{{ site.differential.traditional_title }}</h3>
           <div class="list">
-            <div class="item">Depende de ciclos de notificacao, atendimento, consolidacao e publicacao.</div>
-            <div class="item">Excelente para confirmacao, historico e politica publica, mas naturalmente sujeita a atraso.</div>
-            <div class="item">Pode chegar tarde para estoque, escala de equipe, comunicacao e resposta local.</div>
+            {% for item in site.differential.traditional_items %}
+            <div class="item">{{ item }}</div>
+            {% endfor %}
           </div>
         </div>
         <div class="card premium">
-          <h3>Camada SolusCRT com IA</h3>
+          <h3>{{ site.differential.solus_title }}</h3>
           <div class="list">
-            <div class="item">Recebe sinais anonimos da populacao pelo celular, com localizacao atual e controle antifraude.</div>
-            <div class="item">Identifica crescimento, predominancia de sintomas e risco territorial antes da confirmacao oficial.</div>
-            <div class="item">Usa IA para priorizar bairros, municipios, doencas provaveis, estoque, atendimento e alertas publicos.</div>
+            {% for item in site.differential.solus_items %}
+            <div class="item">{{ item }}</div>
+            {% endfor %}
           </div>
         </div>
       </div>
@@ -168,42 +180,35 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
 
     <section id="ecossistema">
       <div class="section-head">
-        <h2>Uma arquitetura para todos que precisam agir.</h2>
-        <p>O mesmo radar alimenta visoes diferentes, sem misturar acesso publico com ambientes privados.</p>
+        <h2>{{ site.ecosystem_title }}</h2>
+        <p>{{ site.ecosystem_lead }}</p>
       </div>
       <div class="slides">
-        <article class="slide"><small>Populacao</small><h3>App gratuito</h3><p>Envio de sintomas, radar local, mapa e alertas oficiais com linguagem simples.</p></article>
-        <article class="slide"><small>Empresas</small><h3>Saude ocupacional</h3><p>Risco por territorio, impacto operacional, unidades, equipes e afastamentos.</p></article>
-        <article class="slide"><small>Farmacias e hospitais</small><h3>Demanda futura</h3><p>Preparacao de estoque, atendimento, exames, leitos e campanhas preventivas.</p></article>
-        <article class="slide"><small>Governo</small><h3>Sala de situacao</h3><p>Alertas oficiais, fontes brasileiras, matriz de decisao, auditoria e contratos anuais.</p></article>
+        {% for slide in site.slides %}
+        <article class="slide"><small>{{ slide.small }}</small><h3>{{ slide.title }}</h3><p>{{ slide.text }}</p></article>
+        {% endfor %}
       </div>
     </section>
 
     <section>
       <div class="matrix">
-        <div class="tile"><div class="label">Radar vivo</div><h3>Mapa de risco</h3><p>Focos por bairro, municipio e estado, com icones por grupos de sintomas e intensidade temporal.</p></div>
-        <div class="tile"><div class="label">IA preditiva</div><h3>Motor epidemiologico</h3><p>Classifica sinais, estima doencas provaveis, mede crescimento, reduz intensidade sem novos casos e prioriza territorios criticos.</p></div>
-        <div class="tile"><div class="label">Oficial</div><h3>Brasil Oficial</h3><p>IBGE/SIDRA, InfoDengue, InfoGripe, OpenDataSUS/DATASUS em camadas separadas.</p></div>
-        <div class="tile"><div class="label">Protecao</div><h3>Antifraude</h3><p>Controle por aparelho, rede, repeticao, localizacao confirmada e qualidade do sinal.</p></div>
-        <div class="tile"><div class="label">Alerta</div><h3>Comunicacao publica</h3><p>Mensagens oficiais chegam ao app da populacao com governanca e rastreabilidade.</p></div>
-        <div class="tile"><div class="label">Enterprise</div><h3>SaaS vendavel</h3><p>Pacotes por maquinas, usuarios, setores, administracao financeira e acesso separado.</p></div>
+        {% for tile in site.matrix %}
+        <div class="tile"><div class="label">{{ tile.label }}</div><h3>{{ tile.title }}</h3><p>{{ tile.text }}</p></div>
+        {% endfor %}
       </div>
     </section>
 
     <section id="valores">
       <div class="values">
         <div class="values-hero">
-          <div class="eyebrow"><span class="pulse"></span> Valores SolusCRT</div>
-          <h2>Tecnologia para proteger pessoas, nao apenas vender software.</h2>
-          <p>A SolusCRT nasce com uma responsabilidade clara: transformar dados em cuidado, antecipar riscos sem gerar alarme vazio e ajudar empresas, governos e populacao a agir com mais consciencia, velocidade e humanidade.</p>
+          <div class="eyebrow"><span class="pulse"></span> {{ site.values.eyebrow }}</div>
+          <h2>{{ site.values.title }}</h2>
+          <p>{{ site.values.lead }}</p>
         </div>
         <div class="values-grid">
-          <div class="value"><b>Vida em primeiro lugar</b><span>Todo indicador, alerta e mapa existe para reduzir atraso, orientar cuidado e apoiar decisoes que preservem pessoas.</span></div>
-          <div class="value"><b>Verdade antes de impacto</b><span>Separar sinal precoce, dado oficial e inferencia de IA e um compromisso para evitar conclusoes falsas.</span></div>
-          <div class="value"><b>Privacidade como fundamento</b><span>Dados de saude exigem minimizacao, seguranca, transparencia e exibicao adequada ao perfil autorizado.</span></div>
-          <div class="value"><b>Cooperacao institucional</b><span>O sistema foi pensado para unir populacao, empresas, hospitais, farmacias, laboratorios e governo sem confundir responsabilidades.</span></div>
-          <div class="value"><b>Acesso social</b><span>O app da populacao deve ser gratuito, simples e util, porque vigilancia inteligente comeca quando todos podem contribuir.</span></div>
-          <div class="value"><b>Coragem operacional</b><span>A SolusCRT existe para antecipar problemas dificeis, mostrar territorios criticos e ajudar lideres a agir antes do pico.</span></div>
+          {% for value in site.values.items %}
+          <div class="value"><b>{{ value.title }}</b><span>{{ value.text }}</span></div>
+          {% endfor %}
         </div>
       </div>
     </section>
@@ -211,20 +216,19 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
     <section id="app">
       <div class="download">
         <div>
-          <div class="eyebrow"><span class="pulse"></span> App da populacao</div>
-          <h2>O sensor social que transforma cuidado individual em inteligencia coletiva.</h2>
-          <p class="lead">O app coleta sintomas anonimos, exige localizacao atual para evitar erro territorial, mostra o radar local e recebe alertas oficiais. A experiencia foi pensada para ser simples para a populacao e valiosa para a sala de controle.</p>
+          <div class="eyebrow"><span class="pulse"></span> {{ site.app.eyebrow }}</div>
+          <h2>{{ site.app.title }}</h2>
+          <p class="lead">{{ site.app.lead }}</p>
           <div class="store-row">
-            <a class="store" href="https://apps.apple.com/app/id6762992414">Baixar na App Store</a>
-            <a class="store dark" href="https://play.google.com/store/apps/details?id=com.soluscrt.saude">Ver no Google Play</a>
+            <a class="store" href="https://apps.apple.com/app/id6762992414">{{ site.app.app_store }}</a>
+            <a class="store dark" href="https://play.google.com/store/apps/details?id=com.soluscrt.saude">{{ site.app.google_play }}</a>
           </div>
         </div>
         <div class="phone">
           <div class="screen">
-            <div class="risk"><b>Radar local</b><span>Leitura por localizacao atual.</span></div>
-            <div class="risk"><b>Mapa vivo</b><span>Focos e sintomas por regiao.</span></div>
-            <div class="risk"><b>Alertas oficiais</b><span>Comunicacao de governo no celular.</span></div>
-            <div class="risk"><b>Protecao</b><span>Sem envio aproximado para cidade errada.</span></div>
+            {% for risk in site.app.risks %}
+            <div class="risk"><b>{{ risk.title }}</b><span>{{ risk.text }}</span></div>
+            {% endfor %}
           </div>
         </div>
       </div>
@@ -232,11 +236,11 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
 
     <section id="contato">
       <div class="cta">
-        <h2>Veja a apresentacao completa antes de falar com vendas.</h2>
-        <p>A apresentacao mostra a proposta para populacao, empresas, hospitais, farmacias, laboratorios e governo, com o diferencial frente aos modelos tradicionais de monitoramento.</p>
+        <h2>{{ site.cta.title }}</h2>
+        <p>{{ site.cta.lead }}</p>
         <div class="actions" style="justify-content:center">
-          <a class="btn primary" href="/apresentacao/">Abrir apresentacao completa</a>
-          <a class="btn" href="mailto:comercial@soluscrt.com.br?subject=Quero%20negociar%20o%20SolusCRT%20Saude">Solicitar reuniao</a>
+          <a class="btn primary" href="/apresentacao/">{{ site.actions.open_presentation }}</a>
+          <a class="btn" href="mailto:comercial@soluscrt.com.br?subject=Quero%20negociar%20o%20SolusCRT%20Saude">{{ site.actions.meeting }}</a>
         </div>
       </div>
     </section>
@@ -244,13 +248,13 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
 
   <footer>
     <div class="footer-grid">
-      <div>SolusCRT Saude. Inteligencia epidemiologica, app populacional e SaaS enterprise.</div>
+      <div>{{ site.footer }}</div>
       <div class="footer-links">
-        <a href="/privacidade/">Privacidade</a>
-        <a href="/termos/">Termos</a>
-        <a href="/seguranca-lgpd/">Seguranca</a>
-        <a href="/metodologia/">Metodologia</a>
-        <a href="/suporte/">Suporte</a>
+        <a href="/privacidade/">{{ site.footer_links.privacy }}</a>
+        <a href="/termos/">{{ site.footer_links.terms }}</a>
+        <a href="/seguranca-lgpd/">{{ site.footer_links.security }}</a>
+        <a href="/metodologia/">{{ site.footer_links.methodology }}</a>
+        <a href="/suporte/">{{ site.footer_links.support }}</a>
       </div>
     </div>
   </footer>
