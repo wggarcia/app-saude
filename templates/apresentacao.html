@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="{{ html_lang }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Apresentacao SolusCRT Saude</title>
+<title>{{ deck.title }}</title>
+{% for option in language_options %}
+<link rel="alternate" hreflang="{{ option.html }}" href="{{ option.url }}">
+{% endfor %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,700&display=swap" rel="stylesheet">
@@ -12,15 +15,18 @@
 html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
 body{font-family:Geist,Arial,sans-serif;background:#05070a;color:#f7f2e9}
 a{color:inherit;text-decoration:none}
-.top{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:20;width:min(1120px,calc(100% - 34px));display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:rgba(5,7,10,.72);backdrop-filter:blur(24px)}
-.brand{font-weight:800}.actions{display:flex;gap:10px}.btn{padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.16);font-weight:800}.btn.gold{background:linear-gradient(135deg,#f6e7b7,#d9b86f);color:#080b10;border:0}
+	.top{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:20;width:min(1120px,calc(100% - 34px));display:grid;grid-template-columns:max-content 1fr max-content;align-items:center;gap:18px;padding:12px 14px;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:rgba(5,7,10,.76);backdrop-filter:blur(24px);box-shadow:0 18px 70px rgba(0,0,0,.28)}
+	.brand{font-weight:800;white-space:nowrap}.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.top-actions{justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.16);font-weight:800;white-space:nowrap}.btn.gold{background:linear-gradient(135deg,#f6e7b7,#d9b86f);color:#080b10;border:0}
+	.language-switch{justify-self:center;display:flex;align-items:center;gap:4px;padding:4px;border:1px solid rgba(255,255,255,.13);border-radius:999px;background:rgba(255,255,255,.045)}
+	.language-link{min-width:38px;height:32px;display:grid;place-items:center;border-radius:999px;color:#aeb9c4;font-size:.78rem;font-weight:900}
+	.language-link.active{background:linear-gradient(135deg,#f6e7b7,#d9b86f);color:#080b10}
 .slide{min-height:100vh;scroll-snap-align:start;display:grid;place-items:center;padding:118px 22px 58px;background:radial-gradient(circle at 20% 12%,rgba(69,234,217,.12),transparent 28rem),radial-gradient(circle at 82% 16%,rgba(217,184,111,.15),transparent 30rem),linear-gradient(135deg,#05070a,#07131c)}
 .wrap{width:min(1120px,100%);display:grid;grid-template-columns:1fr .9fr;gap:44px;align-items:center}
 .full{grid-template-columns:1fr}
 .eyebrow{display:inline-flex;align-items:center;gap:10px;width:max-content;margin-bottom:24px;padding:10px 13px;border-radius:999px;background:rgba(217,184,111,.1);border:1px solid rgba(217,184,111,.26);color:#d9b86f;text-transform:uppercase;letter-spacing:.16em;font-weight:900;font-size:.78rem}
 .eyebrow:before{content:"";width:7px;height:7px;border-radius:50%;background:#45ead9;box-shadow:0 0 18px rgba(69,234,217,.9)}
-h1,h2{font-family:Newsreader,serif;letter-spacing:-.045em;line-height:.94;max-width:980px}
-h1{font-size:clamp(3.7rem,8.4vw,8.4rem)}h2{font-size:clamp(3.1rem,6.1vw,6.2rem)}
+	h1,h2{font-family:Newsreader,serif;letter-spacing:0;line-height:.96;max-width:980px;text-wrap:balance}
+	h1{font-size:6.8rem}h2{font-size:5rem}
 p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780px}
 .panel{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);border-radius:38px;padding:30px;box-shadow:0 34px 110px rgba(0,0,0,.42)}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:28px}
@@ -33,39 +39,44 @@ p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780
 .n1{left:13%;top:20%}.n2{right:16%;top:16%;border-color:#d9b86f;box-shadow:0 0 0 24px rgba(217,184,111,.12),0 24px 52px rgba(0,0,0,.42)}.n3{left:42%;bottom:14%;border-color:#ff6f8f;box-shadow:0 0 0 24px rgba(255,111,143,.12),0 24px 52px rgba(0,0,0,.42)}
 .quote{font-family:Newsreader,serif;font-size:clamp(2.2rem,4vw,4.6rem);line-height:1;color:#fff}
 .footer-note{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:#7f8b96;font-size:.85rem}
-@media(max-width:900px){html{scroll-snap-type:none}.slide{min-height:auto;padding:104px 18px 64px}.wrap{grid-template-columns:1fr;gap:30px}.grid{grid-template-columns:1fr}.top{border-radius:24px}.actions{display:none}.map{height:330px}h1,h2{line-height:1}.eyebrow{margin-bottom:18px}}
+	@media(max-width:900px){html{scroll-snap-type:none}.slide{min-height:auto;padding:104px 18px 64px}.wrap{grid-template-columns:1fr;gap:30px}.grid{grid-template-columns:1fr}.top{grid-template-columns:1fr auto;border-radius:24px}.top-actions{display:none}.language-switch{justify-self:end}.map{height:330px}h1{font-size:4rem;line-height:1}h2{font-size:3.35rem;line-height:1}.eyebrow{margin-bottom:18px}}
+	@media(max-width:520px){.top{width:calc(100% - 24px);padding:10px 12px}.brand{font-size:.92rem}.language-link{min-width:34px}.slide{padding-top:94px}h1{font-size:3.2rem}h2{font-size:2.7rem}}
 </style>
 </head>
 <body>
 <nav class="top">
-  <a class="brand" href="/">SolusCRT Saude</a>
-  <div class="actions">
-    <a class="btn" href="/">Site</a>
-    <a class="btn gold" href="mailto:comercial@soluscrt.com.br?subject=Apresentacao%20SolusCRT%20Saude">Contato</a>
+  <a class="brand" href="{{ home_url }}">{{ deck.brand }}</a>
+  <div class="language-switch" aria-label="{{ deck.language_aria }}">
+    {% for option in language_options %}
+      <a class="language-link{% if option.active %} active{% endif %}" href="{{ option.url }}" hreflang="{{ option.html }}" lang="{{ option.html }}" title="{{ option.name }}" aria-current="{% if option.active %}true{% else %}false{% endif %}">{{ option.label }}</a>
+    {% endfor %}
+  </div>
+  <div class="actions top-actions">
+    <a class="btn" href="{{ home_url }}">{{ deck.site }}</a>
+    <a class="btn gold" href="mailto:comercial@soluscrt.com.br?subject=Apresentacao%20SolusCRT%20Saude">{{ deck.contact }}</a>
   </div>
 </nav>
 
 <section class="slide">
   <div class="wrap">
     <div>
-      <div class="eyebrow">Visao</div>
-      <h1>Saude populacional precisa de radar, nao apenas retrovisor.</h1>
-      <p>O SolusCRT Saude antecipa sinais territoriais usando app populacional, IA, fontes oficiais e mapas vivos para apoiar resposta antes que o surto vire crise operacional.</p>
+      <div class="eyebrow">{{ deck.vision.eyebrow }}</div>
+      <h1>{{ deck.vision.title }}</h1>
+      <p>{{ deck.vision.body }}</p>
     </div>
-    <div class="map"><div class="node n1" data-label="Respiratorio">RESP</div><div class="node n2" data-label="Arbovirose">DENG</div><div class="node n3" data-label="Viral">COVID</div></div>
+    <div class="map"><div class="node n1" data-label="{{ deck.vision.labels.resp }}">RESP</div><div class="node n2" data-label="{{ deck.vision.labels.deng }}">DENG</div><div class="node n3" data-label="{{ deck.vision.labels.covid }}">COVID</div></div>
   </div>
 </section>
 
 <section class="slide">
   <div class="wrap full">
     <div>
-      <div class="eyebrow">Problema</div>
-      <h2>O atraso custa estoque, equipe, comunicacao e vidas.</h2>
+      <div class="eyebrow">{{ deck.problem.eyebrow }}</div>
+      <h2>{{ deck.problem.title }}</h2>
       <div class="grid">
-        <div class="card"><b>Dados oficiais chegam depois</b><span>Necessarios para confirmacao e historico, mas sujeitos a fluxo de notificacao e consolidacao.</span></div>
-        <div class="card"><b>Empresas reagem tarde</b><span>Quando o foco aparece, afastamentos, demanda e insumos ja podem estar pressionados.</span></div>
-        <div class="card"><b>Governo precisa priorizar</b><span>Territorios diferentes exigem comunicacao e resposta diferentes.</span></div>
-        <div class="card"><b>Populacao quer clareza</b><span>O cidadao precisa saber o que ocorre na propria regiao sem excesso de complexidade.</span></div>
+        {% for card in deck.problem.cards %}
+        <div class="card"><b>{{ card.title }}</b><span>{{ card.text }}</span></div>
+        {% endfor %}
       </div>
     </div>
   </div>
@@ -74,45 +85,16 @@ p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780
 <section class="slide">
   <div class="wrap">
     <div>
-      <div class="eyebrow">Solucao</div>
-      <h2>Uma camada precoce conectada a decisao.</h2>
-      <p>Sinais colaborativos nao substituem casos oficiais. Eles funcionam como radar antecipado. O SolusCRT separa sinal precoce, fonte oficial e inferencia de IA para decisao responsavel.</p>
+      <div class="eyebrow">{{ deck.solution.eyebrow }}</div>
+      <h2>{{ deck.solution.title }}</h2>
+      <p>{{ deck.solution.body }}</p>
     </div>
     <div class="panel">
       <div class="grid">
-        <div class="card"><b>App</b><span>Sintomas e alertas.</span></div>
-        <div class="card"><b>IA</b><span>Classificacao e risco.</span></div>
-        <div class="card"><b>Mapa</b><span>Focos territoriais.</span></div>
-        <div class="card"><b>Oficial</b><span>IBGE, InfoDengue, InfoGripe e DATASUS.</span></div>
+        {% for card in deck.solution.cards %}
+        <div class="card"><b>{{ card.title }}</b><span>{{ card.text }}</span></div>
+        {% endfor %}
       </div>
-    </div>
-  </div>
-</section>
-
-<section class="slide">
-  <div class="wrap full">
-    <div>
-      <div class="eyebrow">Ecossistema</div>
-      <h2>Uma plataforma, quatro frentes de cooperacao em saude.</h2>
-      <div class="grid">
-        <div class="card"><b>Empresas</b><span>Saude ocupacional, risco por unidade, afastamentos e continuidade operacional.</span></div>
-        <div class="card"><b>Farmacias e laboratorios</b><span>Abastecimento, exames, medicacao e demanda regional.</span></div>
-        <div class="card"><b>Hospitais</b><span>Preparacao de equipes, leitos, triagem e pressao assistencial.</span></div>
-        <div class="card"><b>Governo</b><span>Sala de situacao, alertas oficiais, auditoria e contratos anuais.</span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="slide">
-  <div class="wrap">
-    <div>
-      <div class="eyebrow">Diferencial</div>
-      <h2>O diferencial e tempo de resposta.</h2>
-      <p>Enquanto muitos paineis dependem de bases ja publicadas, o SolusCRT cria uma camada viva de sinais da populacao, protegida contra repeticoes e cruzada com bases oficiais.</p>
-    </div>
-    <div class="panel">
-      <div class="quote">Sinal precoce para agir. Dado oficial para confirmar. IA para priorizar.</div>
     </div>
   </div>
 </section>
@@ -120,13 +102,12 @@ p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780
 <section class="slide">
   <div class="wrap full">
     <div>
-      <div class="eyebrow">Governanca</div>
-      <h2>Seguranca e confianca como produto.</h2>
+      <div class="eyebrow">{{ deck.ecosystem.eyebrow }}</div>
+      <h2>{{ deck.ecosystem.title }}</h2>
       <div class="grid">
-        <div class="card"><b>Ambientes privados</b><span>Empresa, governo e operacao administrativa separados.</span></div>
-        <div class="card"><b>LGPD</b><span>Minimizacao, finalidade, controle de acesso e transparencia.</span></div>
-        <div class="card"><b>Antifraude</b><span>Dispositivo, rede, repeticao, localizacao atual e qualidade do sinal.</span></div>
-        <div class="card"><b>Auditoria</b><span>Acoes institucionais e alertas com rastreabilidade.</span></div>
+        {% for card in deck.ecosystem.cards %}
+        <div class="card"><b>{{ card.title }}</b><span>{{ card.text }}</span></div>
+        {% endfor %}
       </div>
     </div>
   </div>
@@ -135,16 +116,42 @@ p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780
 <section class="slide">
   <div class="wrap">
     <div>
-      <div class="eyebrow">Valores</div>
-      <h2>Valores que fazem a tecnologia merecer confianca.</h2>
-      <p>O SolusCRT foi pensado para cooperar com pessoas e instituicoes: proteger vidas, antecipar riscos, respeitar privacidade, comunicar com responsabilidade e ajudar lideres a agir sem distorcer a verdade.</p>
+      <div class="eyebrow">{{ deck.differential.eyebrow }}</div>
+      <h2>{{ deck.differential.title }}</h2>
+      <p>{{ deck.differential.body }}</p>
+    </div>
+    <div class="panel">
+      <div class="quote">{{ deck.differential.quote }}</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="wrap full">
+    <div>
+      <div class="eyebrow">{{ deck.governance.eyebrow }}</div>
+      <h2>{{ deck.governance.title }}</h2>
+      <div class="grid">
+        {% for card in deck.governance.cards %}
+        <div class="card"><b>{{ card.title }}</b><span>{{ card.text }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">{{ deck.values.eyebrow }}</div>
+      <h2>{{ deck.values.title }}</h2>
+      <p>{{ deck.values.body }}</p>
     </div>
     <div class="panel">
       <div class="grid">
-        <div class="card"><b>Vida primeiro</b><span>Indicadores existem para orientar cuidado.</span></div>
-        <div class="card"><b>Verdade antes de impacto</b><span>Sinal, dado oficial e IA sempre separados.</span></div>
-        <div class="card"><b>Acesso social</b><span>App gratuito para a populacao contribuir.</span></div>
-        <div class="card"><b>Cooperacao</b><span>Empresas, governo e saude atuando juntos.</span></div>
+        {% for card in deck.values.cards %}
+        <div class="card"><b>{{ card.title }}</b><span>{{ card.text }}</span></div>
+        {% endfor %}
       </div>
     </div>
   </div>
@@ -153,16 +160,16 @@ p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780
 <section class="slide">
   <div class="wrap">
     <div>
-      <div class="eyebrow">App da populacao</div>
-      <h2>O app gratuito alimenta o radar nacional.</h2>
-      <p>A populacao envia sintomas, acompanha focos na propria regiao e recebe comunicados oficiais. A localizacao atual reduz risco de registrar sinais na cidade errada.</p>
+      <div class="eyebrow">{{ deck.app.eyebrow }}</div>
+      <h2>{{ deck.app.title }}</h2>
+      <p>{{ deck.app.body }}</p>
       <div class="actions">
         <a class="btn gold" href="https://apps.apple.com/app/id6762992414">App Store</a>
         <a class="btn" href="https://play.google.com/store/apps/details?id=com.soluscrt.saude">Google Play</a>
       </div>
     </div>
     <div class="panel">
-      <div class="quote">Gratis para a populacao. Valioso para a resposta coletiva.</div>
+      <div class="quote">{{ deck.app.quote }}</div>
     </div>
   </div>
 </section>
@@ -170,16 +177,16 @@ p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780
 <section class="slide">
   <div class="wrap full">
     <div>
-      <div class="eyebrow">Fechamento</div>
-      <h2>O SolusCRT nao vende uma tela. Vende capacidade de antecipacao.</h2>
-      <p>Para empresas, reduz surpresa operacional. Para hospitais e farmacias, antecipa demanda. Para governos, cria uma sala de situacao viva. Para a populacao, entrega orientacao territorial simples.</p>
+      <div class="eyebrow">{{ deck.closing.eyebrow }}</div>
+      <h2>{{ deck.closing.title }}</h2>
+      <p>{{ deck.closing.body }}</p>
       <div class="actions">
-        <a class="btn gold" href="mailto:comercial@soluscrt.com.br?subject=Quero%20negociar%20o%20SolusCRT%20Saude">Solicitar conversa comercial</a>
-        <a class="btn" href="/">Voltar ao site principal</a>
+        <a class="btn gold" href="mailto:comercial@soluscrt.com.br?subject=Quero%20negociar%20o%20SolusCRT%20Saude">{{ deck.closing.meeting }}</a>
+        <a class="btn" href="{{ home_url }}">{{ deck.closing.back }}</a>
       </div>
     </div>
   </div>
-  <div class="footer-note">Use o scroll para avancar pelos slides.</div>
+  <div class="footer-note">{{ deck.footer_note }}</div>
 </section>
 </body>
 </html>
