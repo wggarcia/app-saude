@@ -43,7 +43,8 @@ class DashboardSectorAccessTests(TestCase):
 
         response = client.get("/dashboard-farmacia/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "SolusCRT Farmacia Intelligence")
+        self.assertContains(response, "SolusCRT Farmácia Intelligence")
+        self.assertContains(response, "Ambiente Farmácia")
         self.assertNotContains(response, "Hub Hospitalar")
 
     def test_hospital_so_acessa_ambiente_hospital(self):
@@ -57,7 +58,8 @@ class DashboardSectorAccessTests(TestCase):
 
         response = client.get("/dashboard-hospital/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "SolusCRT Hospital Command")
+        self.assertContains(response, "SolusCRT Hospital Intelligence")
+        self.assertContains(response, "Ambiente Hospital")
         self.assertNotContains(response, "Hub Farmacia")
 
     def test_empresa_comum_nao_acessa_ambientes_setoriais(self):
@@ -71,5 +73,6 @@ class DashboardSectorAccessTests(TestCase):
 
         response = client.get("/dashboard/")
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ambiente Empresa")
         self.assertNotContains(response, "id=\"gotoFarmacia\"")
         self.assertNotContains(response, "id=\"gotoHospital\"")

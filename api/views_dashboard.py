@@ -126,6 +126,15 @@ def _dashboard_url_por_setor(setor):
     return "/dashboard/"
 
 
+def _setor_label(setor):
+    return {
+        "governo": "Governo",
+        "farmacia": "Farmácia",
+        "hospital": "Hospital",
+        "empresa": "Empresa",
+    }.get(setor, "Empresa")
+
+
 def _registrar_auditoria_dono(dono, acao, empresa=None, detalhes=""):
     DonoAuditoriaAcao.objects.create(
         dono=dono,
@@ -182,6 +191,7 @@ def _render_dashboard(request, variant):
         "empresa_nome": empresa.nome,
         "dashboard_variant": variant,
         "setor_conta": setor_conta,
+        "setor_label": _setor_label(setor_conta),
         "acesso_governo": empresa.acesso_governo,
         "tipo_conta": empresa.tipo_conta,
     })
@@ -239,6 +249,7 @@ def command_ai(request):
         return redirect("/pagamento/")
     return render(request, "command_ai.html", {
         "empresa_nome": empresa.nome,
+        "setor_label": _setor_label(_setor_conta(empresa)),
         "return_url": _dashboard_return_url(empresa),
         "logout_url": "/logout-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/logout/",
     })

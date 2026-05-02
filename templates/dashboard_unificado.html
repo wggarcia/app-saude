@@ -124,6 +124,21 @@
       letter-spacing: 0.02em;
     }
 
+    .environment-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 209, 178, 0.38);
+      background: rgba(0, 209, 178, 0.13);
+      color: #d8fffa;
+      font-size: 0.74rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
     .brand-subtitle,
     .mini {
       color: var(--muted);
@@ -133,7 +148,7 @@
 
     .metrics-strip {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
     }
 
@@ -545,6 +560,7 @@
         <div class="brand-line">
           <div>
             <div class="brand-title">SolusCRT Saude Monitoramento</div>
+            <div class="environment-badge">Ambiente {{ setor_label }}</div>
             <div class="brand-subtitle">
               {% if dashboard_variant == "farmacia" %}
                 Radar epidemiologico para empresas, farmacias e decisao de estoque em tempo real.
@@ -575,6 +591,10 @@
           <div class="metric-card">
             <span>Crescimento</span>
             <strong id="metricGrowth">0%</strong>
+          </div>
+          <div class="metric-card">
+            <span>Ambiente</span>
+            <strong style="font-size:0.95rem">{{ setor_label }}</strong>
           </div>
           <div class="metric-card">
             <span>Empresa</span>

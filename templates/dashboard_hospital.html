@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>SolusCRT Hospital Command</title>
+  <title>SolusCRT Hospital Intelligence</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -124,6 +124,21 @@
       letter-spacing: 0.02em;
     }
 
+    .environment-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(139, 185, 255, 0.42);
+      background: rgba(139, 185, 255, 0.14);
+      color: #dceaff;
+      font-size: 0.74rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
     .brand-subtitle,
     .mini {
       color: var(--muted);
@@ -133,7 +148,7 @@
 
     .metrics-strip {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
     }
 
@@ -544,8 +559,9 @@
       <section class="topbar-card">
         <div class="brand-line">
           <div>
-            <div class="brand-title">SolusCRT Hospital Command</div>
-            <div class="brand-subtitle">Painel de prontidao clinica para triagem, pressao assistencial, risco de superlotacao e preparacao de emergencia.</div>
+            <div class="brand-title">SolusCRT Hospital Intelligence</div>
+            <div class="environment-badge">Ambiente Hospital</div>
+            <div class="brand-subtitle">Painel de prontidão clínica para triagem, pressão assistencial, risco de superlotação e preparação de emergência.</div>
           </div>
           <span class="risk-badge" id="metricRiskBadge">BAIXO</span>
         </div>
@@ -565,6 +581,10 @@
           <div class="metric-card">
             <span>Crescimento</span>
             <strong id="metricGrowth">0%</strong>
+          </div>
+          <div class="metric-card">
+            <span>Ambiente</span>
+            <strong style="font-size:0.95rem">Hospital</strong>
           </div>
           <div class="metric-card">
             <span>Empresa</span>

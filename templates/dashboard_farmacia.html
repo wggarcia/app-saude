@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>SolusCRT Farmacia Intelligence</title>
+  <title>SolusCRT Farmácia Intelligence</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -124,6 +124,21 @@
       letter-spacing: 0.02em;
     }
 
+    .environment-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(124, 242, 154, 0.38);
+      background: rgba(124, 242, 154, 0.13);
+      color: #d8ffe2;
+      font-size: 0.74rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
     .brand-subtitle,
     .mini {
       color: var(--muted);
@@ -133,7 +148,7 @@
 
     .metrics-strip {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
     }
 
@@ -544,8 +559,9 @@
       <section class="topbar-card">
         <div class="brand-line">
           <div>
-            <div class="brand-title">SolusCRT Farmacia Intelligence</div>
-            <div class="brand-subtitle">Central de abastecimento orientada por foco epidemiologico, risco local e pressao de demanda por bairro, municipio e estado.</div>
+            <div class="brand-title">SolusCRT Farmácia Intelligence</div>
+            <div class="environment-badge">Ambiente Farmácia</div>
+            <div class="brand-subtitle">Central de abastecimento orientada por foco epidemiológico, risco local e pressão de demanda por bairro, município e estado.</div>
           </div>
           <span class="risk-badge" id="metricRiskBadge">BAIXO</span>
         </div>
@@ -565,6 +581,10 @@
           <div class="metric-card">
             <span>Crescimento</span>
             <strong id="metricGrowth">0%</strong>
+          </div>
+          <div class="metric-card">
+            <span>Ambiente</span>
+            <strong style="font-size:0.95rem">Farmácia</strong>
           </div>
           <div class="metric-card">
             <span>Empresa</span>

@@ -153,4 +153,5 @@ class CommandAITests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "SolusCRT Sala de Decisão IA")
+        self.assertContains(response, "Ambiente Hospital")
         self.assertContains(response, 'href="/logout/"')
