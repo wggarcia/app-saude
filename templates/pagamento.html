@@ -122,7 +122,7 @@
     }
 
     async function pagar() {
-      const empresaId = localStorage.getItem("empresa_id");
+      const empresaId = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id");
       const plano = document.getElementById("plano").value;
       const pacote = document.getElementById("pacote").value;
       const cpfCnpj = (document.getElementById("cpf_cnpj").value || "").replace(/\D/g, "");

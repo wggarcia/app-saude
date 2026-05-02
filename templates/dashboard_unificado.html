@@ -739,8 +739,33 @@
     const rightHandle = document.getElementById("rightHandle");
     const executiveSummary = document.getElementById("executiveSummary");
 
+    function getScopedValue(key) {
+      return sessionStorage.getItem(key) || localStorage.getItem(key) || "";
+    }
+
+    function syncScopedAuth() {
+      const token = getScopedValue("auth_token") || getScopedValue("token");
+      const scopedEmpresaId = getScopedValue("empresa_id") || empresaId;
+      const tipoConta = getScopedValue("tipo_conta") || "empresa";
+      if (token) {
+        document.cookie = `auth_token=${token}; path=/; SameSite=Lax`;
+      }
+      if (scopedEmpresaId) {
+        sessionStorage.setItem("empresa_id", scopedEmpresaId);
+        document.cookie = `empresa_id=${scopedEmpresaId}; path=/; SameSite=Lax`;
+      }
+      if (tipoConta) {
+        document.cookie = `tipo_conta=${tipoConta}; path=/; SameSite=Lax`;
+      }
+    }
+
+    sessionStorage.setItem("empresa_id", empresaId);
     localStorage.setItem("empresa_id", empresaId);
-    document.cookie = `empresa_id=${empresaId}; path=/; SameSite=Lax`;
+    syncScopedAuth();
+    window.addEventListener("focus", syncScopedAuth);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) syncScopedAuth();
+    });
 
     const variantProfile = {
       populacao: {
@@ -774,10 +799,12 @@
     }[variant];
 
     document.getElementById("gotoMapa").addEventListener("click", () => {
+      syncScopedAuth();
       window.location.href = "/dashboard/";
     });
 
     document.getElementById("gotoCommandAI").addEventListener("click", () => {
+      syncScopedAuth();
       window.location.href = "/sala-decisao-ia/";
     });
 
@@ -794,13 +821,18 @@
     const governoButton = document.getElementById("gotoGoverno");
     if (governoButton) {
       governoButton.addEventListener("click", () => {
+        syncScopedAuth();
         window.location.href = "/dashboard-governo/";
       });
     }
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
+      sessionStorage.removeItem("auth_token");
+      sessionStorage.removeItem("empresa_id");
+      sessionStorage.removeItem("tipo_conta");
       localStorage.removeItem("token");
       localStorage.removeItem("empresa_id");
+      localStorage.removeItem("tipo_conta");
       window.location.href = "/logout/";
     });
 

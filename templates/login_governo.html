@@ -74,6 +74,16 @@ function getDeviceId() {
   return deviceId;
 }
 
+function persistScopedSession(data) {
+  sessionStorage.setItem("auth_token", data.token);
+  sessionStorage.setItem("empresa_id", String(data.empresa_id || ""));
+  sessionStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("empresa_id", data.empresa_id);
+  localStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
+  if (data.device_id) localStorage.setItem("device_id", data.device_id);
+}
+
 async function login(forceLogin = false){
   const email = document.getElementById("email").value;
   const senha = document.getElementById("senha").value;
@@ -92,10 +102,7 @@ async function login(forceLogin = false){
   });
   const data = await res.json();
   if(data.token){
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("empresa_id", data.empresa_id);
-    localStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
-    if (data.device_id) localStorage.setItem("device_id", data.device_id);
+    persistScopedSession(data);
     window.location.href = data.destination || "/dashboard-governo/";
   } else {
     if (data.codigo === "sessao_em_uso" && !forceLogin) {

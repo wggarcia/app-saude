@@ -199,7 +199,12 @@ async function cadastrar(){
     loading.style.display = "none";
 
     if(data.token){
+      sessionStorage.setItem("auth_token", data.token);
+      sessionStorage.setItem("empresa_id", String(data.empresa_id || ""));
+      sessionStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
       localStorage.setItem("token", data.token);
+      localStorage.setItem("empresa_id", data.empresa_id);
+      localStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
 
       // 🔥 FLUXO PROFISSIONAL
       window.location.href = "/pagamento/";

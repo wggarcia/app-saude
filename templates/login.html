@@ -212,6 +212,15 @@ function getDeviceId(){
   return deviceId;
 }
 
+function persistScopedSession(data) {
+  sessionStorage.setItem("auth_token", data.token);
+  sessionStorage.setItem("empresa_id", String(data.empresa_id || ""));
+  sessionStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("empresa_id", data.empresa_id);
+  localStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
+}
+
 async function login(forceLogin = false){
   const email = document.getElementById("email").value;
   const senha = document.getElementById("senha").value;
@@ -234,13 +243,7 @@ async function login(forceLogin = false){
   const data = await res.json();
 
   if(data.token){
-
-  // 🔐 salva token
-  localStorage.setItem("token", data.token);
-
-  // 🏢 salva empresa_id (ESSENCIAL)
-  localStorage.setItem("empresa_id", data.empresa_id);
-  localStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
+  persistScopedSession(data);
 
   console.log("EMPRESA ID SALVO:", data.empresa_id);
 

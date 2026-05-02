@@ -30,11 +30,11 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
 <body>
 <main class="shell">
   <nav class="nav">
-    <a class="brand" href="{{ return_url }}"><span class="mark">IA</span><span>SolusCRT Sala de Decisão IA</span></a>
+    <a class="brand" id="returnBrand" href="{{ return_url }}"><span class="mark">IA</span><span>SolusCRT Sala de Decisão IA</span></a>
     <div class="nav-actions">
       <button class="btn" id="refreshBtn">Atualizar sala</button>
       <button class="btn gold" id="printBtn">Gerar relatório</button>
-      <a class="btn primary" href="{{ return_url }}">Voltar ao painel</a>
+      <a class="btn primary" id="returnPanelBtn" href="{{ return_url }}">Voltar ao painel</a>
       <a class="btn warn" href="{{ logout_url }}">Sair</a>
     </div>
   </nav>
@@ -85,6 +85,35 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
 <script>
   const recommendationsEl = document.getElementById("recommendations");
   const toast = document.getElementById("toast");
+  const returnTargets = [document.getElementById("returnBrand"), document.getElementById("returnPanelBtn")].filter(Boolean);
+
+  function getScopedValue(key) {
+    return sessionStorage.getItem(key) || localStorage.getItem(key) || "";
+  }
+
+  function syncScopedAuth() {
+    const token = getScopedValue("auth_token") || getScopedValue("token");
+    const empresaId = getScopedValue("empresa_id");
+    const tipoConta = getScopedValue("tipo_conta") || "empresa";
+    if (token) {
+      document.cookie = `auth_token=${token}; path=/; SameSite=Lax`;
+    }
+    if (empresaId) {
+      document.cookie = `empresa_id=${empresaId}; path=/; SameSite=Lax`;
+    }
+    if (tipoConta) {
+      document.cookie = `tipo_conta=${tipoConta}; path=/; SameSite=Lax`;
+    }
+  }
+
+  syncScopedAuth();
+  window.addEventListener("focus", syncScopedAuth);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) syncScopedAuth();
+  });
+  returnTargets.forEach((link) => {
+    link.addEventListener("click", syncScopedAuth);
+  });
 
   function levelClass(value) {
     const level = String(value || "baixo").toLowerCase();
@@ -184,6 +213,7 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
   }
 
   async function sendFeedback(insightId, feedback) {
+    syncScopedAuth();
     const response = await fetch("/api/command-ai/feedback", {
       method: "POST",
       headers: {"Content-Type": "application/json", "X-CSRFToken": decodeURIComponent(getCookie("csrftoken"))},
@@ -194,6 +224,7 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
   }
 
   async function loadCommandAI() {
+    syncScopedAuth();
     recommendationsEl.innerHTML = '<div class="loading">Carregando recomendações da IA...</div>';
     const response = await fetch("/api/command-ai");
     if (!response.ok) {
