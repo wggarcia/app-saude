@@ -2,7 +2,7 @@ import jwt
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.db.models import Count, Avg, Sum
 from django.db.models.functions import TruncDate, TruncMonth
 from django.utils import timezone
@@ -14,6 +14,7 @@ from .models import Empresa
 from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_ciclo, normalizar_codigo_pacote
 from .push_service import enviar_alerta_governamental, push_disponivel
 from .governanca import registrar_auditoria_institucional
+from .command_ai import build_command_ai_payload
 import csv
 
 
@@ -197,6 +198,74 @@ def dashboard_hospital(request):
 
 def dashboard_governo(request):
     return _render_dashboard(request, "governo")
+
+
+def _dashboard_return_url(empresa):
+    if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
+        return "/dashboard-governo/"
+    pacote = detalhes_pacote(empresa.pacote_codigo)
+    setor = pacote.get("setor")
+    if setor == "farmacia":
+        return "/dashboard-farmacia/"
+    if setor == "hospital":
+        return "/dashboard-hospital/"
+    return "/dashboard/"
+
+
+@ensure_csrf_cookie
+def command_ai(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/")
+    if not empresa.ativo:
+        if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
+            return redirect("/contrato-governo/")
+        return redirect("/pagamento/")
+    return render(request, "command_ai.html", {
+        "empresa_nome": empresa.nome,
+        "return_url": _dashboard_return_url(empresa),
+        "logout_url": "/logout-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/logout/",
+    })
+
+
+def api_command_ai(request):
+    if request.method != "GET":
+        return JsonResponse({"erro": "metodo nao permitido"}, status=405)
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+    if not empresa.ativo:
+        return JsonResponse({"erro": "assinatura ou contrato inativo"}, status=403)
+    return JsonResponse(build_command_ai_payload(empresa))
+
+
+def api_command_ai_feedback(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "metodo nao permitido"}, status=405)
+    try:
+        dados = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "json invalido"}, status=400)
+    feedback = (dados.get("feedback") or "").strip().lower()
+    if feedback not in {"util", "ajustar", "nao_aplica"}:
+        return JsonResponse({"erro": "feedback invalido"}, status=400)
+    request.empresa = empresa
+    if not getattr(request, "principal", None):
+        request.principal = empresa
+    registrar_auditoria_institucional(
+        request,
+        "command_ai_feedback",
+        detalhes={
+            "insight_id": str(dados.get("insight_id") or "")[:120],
+            "feedback": feedback,
+            "observacao": str(dados.get("observacao") or "")[:500],
+            "origem": "command_ai",
+        },
+    )
+    return JsonResponse({"ok": True, "feedback": feedback})
 
 
 def contrato_governo(request):

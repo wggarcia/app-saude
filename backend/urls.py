@@ -27,7 +27,7 @@ from api.views import (
 )
 
 from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas
-from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo
+from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
 from api.governanca import api_auditoria_institucional, api_matriz_decisao, api_metodologia_epidemiologica
@@ -67,6 +67,7 @@ urlpatterns = [
     path('dashboard-farmacia/', dashboard_farmacia),
     path('dashboard-hospital/', dashboard_hospital),
     path('dashboard-governo/', dashboard_governo),
+    path('command-ai/', command_ai),
     path('contrato-governo/', contrato_governo),
     path('licencas/', licencas),
     path('seguranca/', seguranca),
@@ -108,6 +109,8 @@ urlpatterns = [
     path('api/governanca/metodologia', api_metodologia_epidemiologica),
     path('api/governanca/matriz-decisao', api_matriz_decisao),
     path('api/governanca/auditoria', api_auditoria_institucional),
+    path('api/command-ai', api_command_ai),
+    path('api/command-ai/feedback', api_command_ai_feedback),
 
     path("api/analisar-tosse", analisar_tosse),
 
