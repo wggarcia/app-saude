@@ -109,6 +109,23 @@ def _segmento_empresa(empresa):
     return "governo" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "empresa"
 
 
+def _setor_conta(empresa):
+    if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
+        return "governo"
+    pacote = detalhes_pacote(empresa.pacote_codigo)
+    return pacote.get("setor") or "empresa"
+
+
+def _dashboard_url_por_setor(setor):
+    if setor == "governo":
+        return "/dashboard-governo/"
+    if setor == "farmacia":
+        return "/dashboard-farmacia/"
+    if setor == "hospital":
+        return "/dashboard-hospital/"
+    return "/dashboard/"
+
+
 def _registrar_auditoria_dono(dono, acao, empresa=None, detalhes=""):
     DonoAuditoriaAcao.objects.create(
         dono=dono,
@@ -147,6 +164,12 @@ def _render_dashboard(request, variant):
     if variant == "governo" and not empresa.acesso_governo:
         return redirect("/contrato-governo/")
 
+    setor_conta = _setor_conta(empresa)
+    if setor_conta != "governo":
+        variant_permitida = "populacao" if setor_conta == "empresa" else setor_conta
+        if variant != variant_permitida:
+            return redirect(_dashboard_url_por_setor(setor_conta))
+
     template_by_variant = {
         "governo": "dashboard_governo.html",
         "farmacia": "dashboard_farmacia.html",
@@ -158,6 +181,7 @@ def _render_dashboard(request, variant):
         "empresa_id": str(empresa.id),
         "empresa_nome": empresa.nome,
         "dashboard_variant": variant,
+        "setor_conta": setor_conta,
         "acesso_governo": empresa.acesso_governo,
         "tipo_conta": empresa.tipo_conta,
     })
@@ -201,15 +225,7 @@ def dashboard_governo(request):
 
 
 def _dashboard_return_url(empresa):
-    if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
-        return "/dashboard-governo/"
-    pacote = detalhes_pacote(empresa.pacote_codigo)
-    setor = pacote.get("setor")
-    if setor == "farmacia":
-        return "/dashboard-farmacia/"
-    if setor == "hospital":
-        return "/dashboard-hospital/"
-    return "/dashboard/"
+    return _dashboard_url_por_setor(_setor_conta(empresa))
 
 
 @ensure_csrf_cookie
