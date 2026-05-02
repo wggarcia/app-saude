@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from django.db.models import Avg, Count
 from django.utils import timezone
 
+from .corporativo_ai import build_empresa_corporativo_payload
 from .epidemiologia import build_panorama_payload
 from .models import AuditoriaInstitucional, Empresa
 from .planos import detalhes_pacote, normalizar_codigo_pacote
@@ -612,11 +614,205 @@ def _executive_cards(setor, overview, data_quality, recommendations):
     return cards
 
 
+def _company_urgency(label):
+    normalized = str(label or "baixo").lower()
+    if normalized == "critico":
+        return {"label": "Agora", "level": "critico", "window": "0-24h"}
+    if normalized == "alto":
+        return {"label": "Prioritario", "level": "alto", "window": "24-72h"}
+    if normalized == "moderado":
+        return {"label": "Planejar", "level": "moderado", "window": "7 dias"}
+    return {"label": "Estruturar", "level": "baixo", "window": "14 dias"}
+
+
+def _company_priority_items(action_title):
+    title = str(action_title or "").lower()
+    if "psicossocial" in title:
+        return ["escuta de líderes", "segurança psicológica", "carga emocional", "apoio do gestor"]
+    if "fisic" in title:
+        return ["ergonomia", "fadiga operacional", "dor corporal", "pausas curtas"]
+    if "apoio" in title:
+        return ["fila de apoio", "acolhimento", "rota RH/SESMT", "retorno assistido"]
+    return ["adesão aos check-ins", "saúde ocupacional", "continuidade operacional", "bem-estar"]
+
+
+def _company_playbook(action_title, action_summary, company_payload):
+    top_signal = company_payload["summary"]["top_signal"]
+    return [
+        {
+            "title": "Liderança imediata",
+            "items": [
+                "Fazer uma leitura curta de carga, energia e ritmo com a equipe da frente mais exposta.",
+                "Reforçar pausas, cobertura entre pares e orientação simples de autocuidado no turno.",
+                f"Usar o sinal dominante '{top_signal}' para orientar a conversa sem expor respostas individuais.",
+            ],
+        },
+        {
+            "title": "RH e SESMT",
+            "items": [
+                f"Converter o alerta '{action_title}' em plano semanal com owner claro e prazo curto.",
+                "Acionar fluxo de acolhimento, apoio emocional ou ergonomia conforme a natureza do risco.",
+                "Registrar se houve necessidade de retorno assistido, cobertura de equipe ou ajuste de escala.",
+            ],
+        },
+        {
+            "title": "Continuidade operacional",
+            "items": [
+                action_summary,
+                "Priorizar áreas com energia baixa, fadiga em alta ou pedidos de apoio em crescimento.",
+                "Evitar qualquer uso disciplinar dos check-ins ou inferência individual.",
+            ],
+        },
+    ]
+
+
+def _company_sector_metrics(company_payload, unit, action, support_count):
+    risk_score = unit["risk_score"] if unit else {"baixo": 28, "moderado": 48, "alto": 72, "critico": 90}.get(action["urgency"], 28)
+    respondents = unit["respondents"] if unit else company_payload["summary"]["respondents"]
+    weekly_respondents = company_payload["summary"]["weekly_respondents"]
+    return [
+        {
+            "label": "Risco agregado",
+            "value": f"{risk_score}/100",
+            "detail": "intensidade combinada de fadiga, pressão emocional, burnout e sinais físicos",
+        },
+        {
+            "label": "Base válida",
+            "value": str(respondents),
+            "detail": f"respondentes do grupo com leitura anônima válida; semanal {weekly_respondents}",
+        },
+        {
+            "label": "Pedidos de apoio",
+            "value": str(support_count),
+            "detail": "fila de acolhimento aberta para RH, SESMT ou saúde ocupacional",
+        },
+    ]
+
+
+def _build_company_command_ai_payload(empresa, pacote_codigo, pacote, limit=6):
+    company_payload = build_empresa_corporativo_payload(empresa)
+    respondents = company_payload["summary"]["respondents"]
+    support_count = int(next((card["value"] for card in company_payload["executive_cards"] if card["label"] == "Pedidos de apoio"), "0"))
+    top_signal = company_payload["summary"]["top_signal"]
+    actions = company_payload.get("recommendations") or []
+    units = company_payload.get("top_units") or []
+
+    if not actions:
+        actions = [{
+            "title": "Adesão corporativa insuficiente",
+            "urgency": "baixo",
+            "summary": "Ainda não há respostas suficientes para leitura confiável de saúde ocupacional.",
+            "action": "Abrir campanha de adesão aos check-ins e orientar líderes sobre privacidade e confiança.",
+        }]
+
+    recommendations = []
+    for index, action in enumerate(actions[:limit]):
+        unit = units[index] if index < len(units) else (units[0] if units else None)
+        urgency = _company_urgency(action["urgency"])
+        risk_score = unit["risk_score"] if unit else {"baixo": 28, "moderado": 48, "alto": 72, "critico": 90}.get(action["urgency"], 28)
+        projected_7 = max(1, round(respondents * (risk_score / 100) * 0.22)) if respondents else 0
+        projected_14 = max(projected_7, round(projected_7 * 1.2)) if projected_7 else 0
+        projected_30 = max(projected_14, round(projected_14 * 1.3)) if projected_14 else 0
+        recommendations.append({
+            "id": f"empresa:{index}",
+            "title": action["title"] if not unit else f"{action['title']} em {unit['name']}",
+            "territory": unit["name"] if unit else "Leitura corporativa geral",
+            "level": "unidade_corporativa" if unit else "empresa",
+            "city": "",
+            "state": "",
+            "risk_level": (unit["risk_band"].upper() if unit else action["urgency"].upper()),
+            "trend_status": "monitorado",
+            "dominant_symptom": top_signal,
+            "dominant_disease": "Saúde ocupacional",
+            "impact_label": "pressão sobre equipes",
+            "impact_score": risk_score,
+            "decision_score": risk_score,
+            "urgency": urgency,
+            "projection": {
+                "tendency": "pressao_interna",
+                "horizons": [
+                    {"label": "7 dias", "estimated_signals": projected_7},
+                    {"label": "14 dias", "estimated_signals": projected_14},
+                    {"label": "30 dias", "estimated_signals": projected_30},
+                ],
+            },
+            "impact": action["summary"],
+            "recommended_action": action["action"],
+            "action_steps": [
+                "Acionar líder direto e RH com leitura curta e objetiva do risco.",
+                "Priorizar as equipes com queda de energia, estresse alto ou pedidos de apoio em aberto.",
+                "Registrar a resposta e revisar impacto da ação na próxima semana.",
+            ],
+            "priority_items": _company_priority_items(action["title"]),
+            "sector_metrics": _company_sector_metrics(company_payload, unit, action, support_count),
+            "sector_playbook": _company_playbook(action["title"], action["summary"], company_payload),
+            "confidence": 82 if company_payload["privacy"]["ready"] else 61,
+            "evidence": [
+                f"Sinal dominante atual: {top_signal}.",
+                f"Risco psicossocial e físico lidos a partir de {respondents} check-ins válidos.",
+                f"Pedidos de apoio em aberto: {support_count}.",
+            ],
+            "safeguard": "Apoio à decisão de saúde ocupacional. Não usa dado individual e não substitui validação humana, RH, SESMT ou cuidado profissional.",
+        })
+
+    return {
+        "generated_at": timezone.now().isoformat(),
+        "mode": "occupational_health_decision_layer",
+        "feature_status": "corporate_command_center",
+        "package": {
+            "code": pacote_codigo,
+            "label": pacote.get("label"),
+            "setor": pacote.get("setor"),
+        },
+        "summary": {
+            "title": "Sala de Decisão Saúde Corporativa",
+            "subtitle": "absenteísmo provável, risco psicossocial, pedidos de apoio e continuidade do trabalho",
+            "company": empresa.nome,
+            "setor": "empresa",
+            "product_name": PRODUCT_NAME,
+            "audience": "RH, SESMT, liderança e saúde ocupacional",
+            "eyebrow": "Centro de decisão para saúde ocupacional",
+            "panel_title": "Plano corporativo de cuidado e continuidade",
+            "risk_level": next((card["value"] for card in company_payload["executive_cards"] if card["label"] == "Risco psicossocial"), "BAIXO"),
+            "total_cases": respondents,
+            "active_areas": len(units),
+            "growth_percent": support_count,
+            "top_decision": company_payload["summary"]["headline"],
+        },
+        "recommendations": recommendations,
+        "executive_cards": [
+            {"label": card["label"], "value": card["value"], "detail": card["detail"]}
+            for card in company_payload["executive_cards"]
+        ],
+        "learning": {
+            "mode": "corporate_feedback_loop",
+            "feedback_30d": AuditoriaInstitucional.objects.filter(
+                empresa=empresa,
+                acao="command_ai_feedback",
+                criado_em__gte=timezone.now() - timedelta(days=30),
+            ).count(),
+            "message": "A IA corporativa usa check-ins anônimos, fila de apoio e validação institucional para calibrar prioridades de saúde ocupacional.",
+        },
+        "safeguards": [
+            "Não usa dado individual do colaborador no painel institucional.",
+            "Não reutiliza bairros, surtos ou mapas do panorama epidemiológico para a conta empresa.",
+            "Usa check-ins diários, semanais, pedidos de apoio e grupos mínimos para orientar ação corporativa.",
+            "A leitura serve para prevenção, apoio e continuidade, não para disciplina ou vigilância individual.",
+        ],
+        "source": {
+            "engine": "SolusCRT corporativo",
+            "generated_from": "check-ins diários, check-ins semanais, pedidos de apoio, unidades, setores e sinais de saúde ocupacional",
+        },
+    }
+
+
 def build_command_ai_payload(empresa, limit=6):
     setor = _company_sector(empresa)
     config = SECTOR_CONFIG.get(setor, SECTOR_CONFIG["empresa"])
     pacote_codigo = normalizar_codigo_pacote(empresa.pacote_codigo)
     pacote = detalhes_pacote(pacote_codigo)
+    if setor == "empresa":
+        return _build_company_command_ai_payload(empresa, pacote_codigo, pacote, limit=limit)
     panorama = build_panorama_payload()
     overview = panorama.get("overview", {})
     layers = panorama.get("layers", {})

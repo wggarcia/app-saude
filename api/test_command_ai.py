@@ -9,7 +9,18 @@ from django.utils import timezone
 
 from . import epidemiologia
 from .command_ai import build_command_ai_payload
-from .models import AuditoriaInstitucional, Empresa, RegistroSintoma
+from .models import (
+    AuditoriaInstitucional,
+    CheckinDiarioCorporativo,
+    CheckinSemanalCorporativo,
+    ColaboradorAliasCorporativo,
+    Empresa,
+    EmpresaSetor,
+    EmpresaTurno,
+    EmpresaUnidade,
+    PedidoApoioCorporativo,
+    RegistroSintoma,
+)
 
 
 class CommandAITests(TestCase):
@@ -181,3 +192,75 @@ class CommandAITests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Sala de Decisão Saúde Corporativa")
         self.assertContains(response, "Voltar ao centro corporativo")
+
+    def test_empresa_command_ai_usa_motor_corporativo_em_vez_do_panorama(self):
+        empresa = Empresa.objects.create(
+            nome="Empresa RH",
+            email="empresa-rh@example.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="empresa_profissional_25",
+            sessao_ativa_chave="sessao-command-ai-rh",
+        )
+        unidade = EmpresaUnidade.objects.create(empresa=empresa, nome="Matriz")
+        setor = EmpresaSetor.objects.create(empresa=empresa, unidade=unidade, nome="Operacao")
+        turno = EmpresaTurno.objects.create(empresa=empresa, nome="Manha")
+
+        for idx in range(8):
+            alias = ColaboradorAliasCorporativo.objects.create(
+                empresa=empresa,
+                alias_publico=f"anon-rh-{idx}",
+                unidade=unidade,
+                setor=setor,
+                turno=turno,
+                permite_contato=idx == 0,
+            )
+            CheckinDiarioCorporativo.objects.create(
+                empresa=empresa,
+                alias=alias,
+                unidade=unidade,
+                setor=setor,
+                turno=turno,
+                data_referencia=timezone.localdate(),
+                humor=2,
+                energia=2,
+                estresse=5,
+                sono=2,
+                dor_fisica=3,
+                fadiga=4,
+                ansiedade=4,
+                apoio_solicitado=idx < 2,
+            )
+            CheckinSemanalCorporativo.objects.create(
+                empresa=empresa,
+                alias=alias,
+                unidade=unidade,
+                setor=setor,
+                turno=turno,
+                semana_referencia=timezone.localdate(),
+                carga_emocional=5,
+                seguranca_psicologica=2,
+                apoio_percebido=2,
+                pressao_trabalho=5,
+                bem_estar_geral=2,
+                risco_burnout=5,
+            )
+            if idx < 2:
+                PedidoApoioCorporativo.objects.create(
+                    empresa=empresa,
+                    alias=alias,
+                    unidade=unidade,
+                    setor=setor,
+                    turno=turno,
+                    deseja_contato=True,
+                    status=PedidoApoioCorporativo.STATUS_NOVO,
+                )
+
+        payload = build_command_ai_payload(empresa)
+
+        self.assertEqual(payload["summary"]["setor"], "empresa")
+        self.assertEqual(payload["source"]["engine"], "SolusCRT corporativo")
+        self.assertIn("check-ins", payload["source"]["generated_from"])
+        self.assertEqual(payload["recommendations"][0]["territory"], "Matriz")
+        self.assertEqual(payload["recommendations"][0]["dominant_disease"], "Saúde ocupacional")
+        self.assertIn("Não reutiliza bairros", " ".join(payload["safeguards"]))
