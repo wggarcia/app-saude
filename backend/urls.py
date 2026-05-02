@@ -67,6 +67,7 @@ urlpatterns = [
     path('dashboard-farmacia/', dashboard_farmacia),
     path('dashboard-hospital/', dashboard_hospital),
     path('dashboard-governo/', dashboard_governo),
+    path('sala-decisao-ia/', command_ai),
     path('command-ai/', command_ai),
     path('contrato-governo/', contrato_governo),
     path('licencas/', licencas),

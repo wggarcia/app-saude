@@ -78,12 +78,37 @@ class CommandAITests(TestCase):
 
     def test_motor_read_only_gera_recomendacao_setorial(self):
         payload = build_command_ai_payload(self.empresa)
+        recomendacao = payload["recommendations"][0]
 
         self.assertEqual(payload["mode"], "read_only_decision_layer")
         self.assertEqual(payload["summary"]["setor"], "hospital")
+        self.assertIn("Sala de Decisão IA", payload["summary"]["title"])
         self.assertGreaterEqual(len(payload["recommendations"]), 1)
-        self.assertIn("recommended_action", payload["recommendations"][0])
-        self.assertIn("Nao altera mapa", " ".join(payload["safeguards"]))
+        self.assertIn("recommended_action", recomendacao)
+        self.assertIn("Triagem", " ".join(bloco["title"] for bloco in recomendacao["sector_playbook"]))
+        self.assertIn("Não altera mapa", " ".join(payload["safeguards"]))
+
+    def test_farmacia_recebe_direcao_de_abastecimento_e_laboratorio(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Premium",
+            email="farmacia@example.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+        )
+
+        payload = build_command_ai_payload(farmacia)
+        recomendacao = payload["recommendations"][0]
+        metricas = " ".join(item["label"] for item in recomendacao["sector_metrics"])
+        playbook = " ".join(bloco["title"] for bloco in recomendacao["sector_playbook"])
+
+        self.assertEqual(payload["summary"]["setor"], "farmacia")
+        self.assertIn("Farmácias e Laboratórios", payload["summary"]["title"])
+        self.assertIn("Pressão de estoque", metricas)
+        self.assertIn("Janela de reposição", metricas)
+        self.assertIn("Abastecimento", playbook)
+        self.assertIn("Laboratórios", playbook)
+        self.assertGreaterEqual(len(recomendacao["priority_items"]), 1)
 
     def test_api_command_ai_exige_autenticacao(self):
         response = self.client.get("/api/command-ai")
@@ -124,8 +149,8 @@ class CommandAITests(TestCase):
     def test_tela_command_ai_renderiza_com_logout_do_portal(self):
         self._autenticar()
 
-        response = self.client.get("/command-ai/")
+        response = self.client.get("/sala-decisao-ia/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "SolusCRT Command AI")
+        self.assertContains(response, "SolusCRT Sala de Decisão IA")
         self.assertContains(response, 'href="/logout/"')
