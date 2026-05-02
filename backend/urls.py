@@ -28,6 +28,15 @@ from api.views import (
 
 from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba
 from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo
+from api.views_corporativo import (
+    dashboard_empresa_corporativo,
+    api_empresa_corporativo_resumo,
+    api_empresa_corporativo_catalogo,
+    app_colaborador_corporativo,
+    api_colaborador_corporativo_config,
+    api_corporativo_checkin_diario,
+    api_corporativo_checkin_semanal,
+)
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
 from api.governanca import api_auditoria_institucional, api_matriz_decisao, api_metodologia_epidemiologica
@@ -65,6 +74,7 @@ urlpatterns = [
 
     # 🧠 DASHBOARD
     path('dashboard/', dashboard),
+    path('dashboard-empresa/', dashboard_empresa_corporativo),
     path('dashboard-farmacia/', dashboard_farmacia),
     path('dashboard-hospital/', dashboard_hospital),
     path('dashboard-governo/', dashboard_governo),
@@ -78,12 +88,18 @@ urlpatterns = [
 
     # 💰 PAGAMENTO
     path('pagamento/', tela_pagamento),
+    path('colaborador/c/<str:codigo>/', app_colaborador_corporativo),
 
     # 📊 API PRINCIPAL
     path('api/registrar', registrar_sintoma),
     path('api/public/registrar', registrar_sintoma_publico),
     path('api/sintomas', listar_sintomas),
     path('api/dashboard', dados_dashboard),
+    path('api/empresa/resumo', api_empresa_corporativo_resumo),
+    path('api/empresa/catalogo', api_empresa_corporativo_catalogo),
+    path('api/corporativo/<str:codigo>/config', api_colaborador_corporativo_config),
+    path('api/corporativo/<str:codigo>/checkin-diario', api_corporativo_checkin_diario),
+    path('api/corporativo/<str:codigo>/checkin-semanal', api_corporativo_checkin_semanal),
     path('api/alertas', alertas),
     path('api/public/resumo', app_resumo_publico),
     path('api/public/radar-local', app_radar_local),

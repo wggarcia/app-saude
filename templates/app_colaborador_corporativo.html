@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Check-in do colaborador | {{ empresa_nome }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f6f1e7;
+      --ink:#11202a;
+      --muted:#5a6873;
+      --line:rgba(17,32,42,.12);
+      --panel:rgba(255,255,255,.84);
+      --teal:#0f766e;
+      --teal-soft:rgba(15,118,110,.08);
+      --gold:#c69b4b;
+      --shadow:0 18px 54px rgba(17,32,42,.10);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      color:var(--ink);
+      font-family:Geist,system-ui,sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(15,118,110,.10), transparent 24rem),
+        radial-gradient(circle at bottom right, rgba(198,155,75,.10), transparent 24rem),
+        linear-gradient(180deg,#fbf7f0,#f5efe2 42%,#f0e6d5);
+    }
+    .shell{width:min(980px,calc(100% - 28px));margin:0 auto;padding:20px 0 40px}
+    .panel,.card,.metric{border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(12px)}
+    .hero{padding:26px;border-radius:30px}
+    .eyebrow{display:inline-flex;gap:10px;align-items:center;padding:8px 12px;border-radius:999px;background:var(--teal-soft);color:var(--teal);font-weight:900;text-transform:uppercase;letter-spacing:.12em;font-size:.74rem}
+    h1{margin:16px 0 10px;font-family:Newsreader,serif;font-size:clamp(2.6rem,5vw,4.4rem);line-height:.95}
+    .hero p{margin:0;color:var(--muted);line-height:1.72;font-size:1rem}
+    .privacy{margin-top:14px;padding:16px;border-radius:20px;background:rgba(255,255,255,.62);border:1px solid var(--line)}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-top:18px}
+    .card{border-radius:28px;padding:22px}
+    .card h2{margin:0 0 12px;font-size:1.08rem}
+    .card p{color:var(--muted);line-height:1.65}
+    .stack{display:grid;gap:12px}
+    label{display:block;font-size:.86rem;font-weight:700;margin-bottom:6px}
+    input,textarea,select{
+      width:100%;
+      border:1px solid rgba(17,32,42,.12);
+      border-radius:14px;
+      background:#fff;
+      padding:12px 13px;
+      font:inherit;
+      color:var(--ink);
+    }
+    textarea{min-height:94px;resize:vertical}
+    .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .metric{border-radius:18px;padding:14px}
+    .metric span{display:block;color:var(--muted);font-size:.76rem;text-transform:uppercase;font-weight:800;letter-spacing:.08em}
+    .metric strong{display:block;margin-top:7px;font-size:1rem}
+    .checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .check{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:16px;background:rgba(17,32,42,.04)}
+    .check input{width:auto;margin-top:2px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 15px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.68);font-weight:800;cursor:pointer}
+    .btn.primary{background:linear-gradient(135deg,var(--teal),#16958b);color:#fff;border:0}
+    .toast{margin-top:12px;padding:12px 14px;border-radius:16px;display:none}
+    .toast.ok{display:block;background:rgba(15,118,110,.10);color:var(--teal)}
+    .toast.err{display:block;background:rgba(185,28,28,.10);color:#991b1b}
+    .mini-list{margin:0;padding-left:18px;color:var(--muted);line-height:1.6}
+    @media(max-width:940px){
+      .grid,.row,.metric-grid,.checks{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero panel">
+      <span class="eyebrow">App do colaborador</span>
+      <h1>Check-ins seguros para {{ empresa_nome }}</h1>
+      <p>Este fluxo foi desenhado para saude ocupacional e bem-estar. A empresa recebe apenas tendencias agregadas por grupo, sem visualizar respostas individuais no painel institucional.</p>
+      <div class="privacy">
+        <strong>Privacidade:</strong>
+        <p>O painel institucional so exibe grupos com pelo menos {{ min_group_size }} respostas. Pedidos de apoio podem sair do anonimato apenas se voce permitir contato.</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Check-in diario</h2>
+        <p>Leva menos de um minuto. Ele ajuda a empresa a entender tendencia de sono, energia, estresse, dor e fadiga sem expor individuos.</p>
+        <form id="dailyForm" class="stack">
+          <div class="row">
+            <div>
+              <label>Unidade</label>
+              <input name="unit_name" placeholder="Ex.: Matriz, CD Sul, Loja Centro">
+            </div>
+            <div>
+              <label>Setor</label>
+              <input name="sector_name" placeholder="Ex.: Operacao, RH, Atendimento">
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Turno</label>
+              <input name="shift_name" placeholder="Ex.: Manha, Tarde, Noite">
+            </div>
+            <div>
+              <label>Alias anonimo</label>
+              <input name="alias_code" id="aliasCode" placeholder="Codigo interno anonimo">
+            </div>
+          </div>
+          <div class="metric-grid">
+            <div><label>Humor (1-5)</label><input name="mood" type="number" min="1" max="5" value="3"></div>
+            <div><label>Energia (1-5)</label><input name="energy" type="number" min="1" max="5" value="3"></div>
+            <div><label>Estresse (1-5)</label><input name="stress" type="number" min="1" max="5" value="3"></div>
+            <div><label>Sono (1-5)</label><input name="sleep_quality" type="number" min="1" max="5" value="3"></div>
+            <div><label>Dor fisica (1-5)</label><input name="physical_pain" type="number" min="1" max="5" value="1"></div>
+            <div><label>Fadiga (1-5)</label><input name="fatigue" type="number" min="1" max="5" value="1"></div>
+            <div><label>Ansiedade (1-5)</label><input name="anxiety" type="number" min="1" max="5" value="1"></div>
+            <div><label>Irritabilidade (1-5)</label><input name="irritability" type="number" min="1" max="5" value="1"></div>
+          </div>
+          <div class="checks">
+            <label class="check"><input name="respiratory_symptoms" type="checkbox"><span>Sinais respiratorios hoje</span></label>
+            <label class="check"><input name="body_pain" type="checkbox"><span>Dor corporal recorrente</span></label>
+            <label class="check"><input name="headache" type="checkbox"><span>Dor de cabeca</span></label>
+            <label class="check"><input name="fever" type="checkbox"><span>Febre ou mal-estar forte</span></label>
+            <label class="check"><input name="request_support" type="checkbox" id="requestSupport"><span>Quero pedir apoio</span></label>
+            <label class="check"><input name="allow_contact" type="checkbox" id="allowContact"><span>Autorizo contato institucional</span></label>
+          </div>
+          <div>
+            <label>Observacao opcional</label>
+            <textarea name="note" placeholder="Se quiser, descreva em poucas palavras o que mais impactou seu dia."></textarea>
+          </div>
+          <div>
+            <label>Canal preferido para apoio (opcional)</label>
+            <input name="contact_channel" placeholder="Ex.: e-mail, RH interno, ambulatório">
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn primary">Enviar check-in diario</button>
+          </div>
+          <div class="toast" id="dailyToast"></div>
+        </form>
+      </article>
+
+      <article class="card">
+        <h2>Check-in semanal</h2>
+        <p>Usado para capturar carga emocional, seguranca psicologica e risco de esgotamento da semana.</p>
+        <form id="weeklyForm" class="stack">
+          <div class="metric-grid">
+            <div><label>Carga emocional (1-5)</label><input name="emotional_load" type="number" min="1" max="5" value="3"></div>
+            <div><label>Seguranca psicologica (1-5)</label><input name="psychological_safety" type="number" min="1" max="5" value="3"></div>
+            <div><label>Apoio percebido (1-5)</label><input name="support_perception" type="number" min="1" max="5" value="3"></div>
+            <div><label>Pressao de trabalho (1-5)</label><input name="work_pressure" type="number" min="1" max="5" value="3"></div>
+            <div><label>Bem-estar geral (1-5)</label><input name="overall_wellbeing" type="number" min="1" max="5" value="3"></div>
+            <div><label>Risco de burnout (1-5)</label><input name="burnout_risk" type="number" min="1" max="5" value="1"></div>
+          </div>
+          <div>
+            <label>Resumo da semana</label>
+            <textarea name="note" placeholder="Opcional: como voce resumiria sua semana de trabalho e bem-estar?"></textarea>
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn">Enviar check-in semanal</button>
+          </div>
+          <div class="toast" id="weeklyToast"></div>
+        </form>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Como a empresa deve usar isso</h2>
+        <ul class="mini-list">
+          <li>Observar tendencias por unidade, setor e turno.</li>
+          <li>Planejar acoes de bem-estar, ergonomia, pausas e acolhimento.</li>
+          <li>Nao usar o sistema para vigilancia individual.</li>
+          <li>Acionar apoio humano quando o fluxo de ajuda indicar necessidade.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h2>O que este MVP ja entrega</h2>
+        <div class="metric-grid">
+          <article class="metric"><span>Camada institucional</span><strong>Dashboard corporativo</strong></article>
+          <article class="metric"><span>Camada colaborador</span><strong>Check-ins anonimos</strong></article>
+          <article class="metric"><span>Privacidade</span><strong>Grupo minimo {{ min_group_size }}</strong></article>
+          <article class="metric"><span>Acao</span><strong>Pedidos de apoio</strong></article>
+        </div>
+      </article>
+    </section>
+  </main>
+  <script>
+    const accessCode = "{{ codigo_acesso|escapejs }}";
+
+    function ensureAlias() {
+      let alias = localStorage.getItem(`corporativo_alias_${accessCode}`);
+      if (!alias) {
+        alias = `anon-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+        localStorage.setItem(`corporativo_alias_${accessCode}`, alias);
+      }
+      document.getElementById("aliasCode").value = alias;
+      return alias;
+    }
+
+    function formToPayload(form) {
+      const payload = {};
+      const data = new FormData(form);
+      data.forEach((value, key) => {
+        payload[key] = value;
+      });
+      form.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+        payload[checkbox.name] = checkbox.checked;
+      });
+      payload.alias_code = ensureAlias();
+      return payload;
+    }
+
+    function showToast(target, ok, message) {
+      target.className = `toast ${ok ? "ok" : "err"}`;
+      target.textContent = message;
+    }
+
+    ensureAlias();
+
+    document.getElementById("dailyForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const toast = document.getElementById("dailyToast");
+      const response = await fetch(`/api/corporativo/${accessCode}/checkin-diario`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(formToPayload(event.currentTarget)),
+      });
+      const payload = await response.json();
+      showToast(toast, response.ok, response.ok ? "Check-in diario enviado com sucesso." : (payload.erro || "Nao foi possivel enviar o check-in diario."));
+    });
+
+    document.getElementById("weeklyForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const toast = document.getElementById("weeklyToast");
+      const payload = formToPayload(event.currentTarget);
+      ["unit_name", "sector_name", "shift_name", "allow_contact", "contact_channel"].forEach((key) => {
+        if (!(key in payload)) {
+          payload[key] = document.querySelector(`#dailyForm [name="${key}"]`)?.value || "";
+        }
+      });
+      const response = await fetch(`/api/corporativo/${accessCode}/checkin-semanal`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      showToast(toast, response.ok, response.ok ? "Check-in semanal enviado com sucesso." : (result.erro || "Nao foi possivel enviar o check-in semanal."));
+    });
+  </script>
+</body>
+</html>

@@ -79,11 +79,13 @@ class EmpresaMiddleware:
             "/api/login",
             "/api/operacao-central/login",
             "/api/registrar_empresa",
+            "/api/corporativo/",
             "/api/public/",
             "/api/assinatura/",
             "/api/planos-publicos",
             "/api/status-pagamento",
             "/api/webhook",
+            "/colaborador/c/",
             "/static/",
             "/media/",
         )

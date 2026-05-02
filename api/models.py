@@ -2,6 +2,10 @@ from django.db import models
 import uuid
 
 
+def _codigo_acesso():
+    return uuid.uuid4().hex
+
+
 class Empresa(models.Model):
     TIPO_EMPRESA = "empresa"
     TIPO_GOVERNO = "governo"
@@ -26,6 +30,7 @@ class Empresa(models.Model):
     sessao_ativa_em = models.DateTimeField(null=True, blank=True)
     data_pagamento = models.DateField(null=True, blank=True)
     data_expiracao = models.DateTimeField(null=True, blank=True)
+    codigo_acesso_corporativo = models.CharField(max_length=32, unique=True, default=_codigo_acesso)
 
     def __str__(self):
         return self.nome
@@ -116,6 +121,167 @@ class EmpresaUsuario(models.Model):
 
     def __str__(self):
         return f"{self.empresa.nome} - {self.email}"
+
+
+class EmpresaUnidade(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="unidades_corporativas")
+    nome = models.CharField(max_length=120)
+    codigo = models.CharField(max_length=40, blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "nome")
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - {self.nome}"
+
+
+class EmpresaSetor(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="setores_corporativos")
+    unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="setores")
+    nome = models.CharField(max_length=120)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "unidade", "nome")
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - {self.nome}"
+
+
+class EmpresaTurno(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="turnos_corporativos")
+    nome = models.CharField(max_length=80)
+    janela = models.CharField(max_length=80, blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "nome")
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - {self.nome}"
+
+
+class ColaboradorAliasCorporativo(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="aliases_corporativos")
+    alias_publico = models.CharField(max_length=80, default=_codigo_acesso)
+    unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="aliases")
+    setor = models.ForeignKey(EmpresaSetor, on_delete=models.SET_NULL, null=True, blank=True, related_name="aliases")
+    turno = models.ForeignKey(EmpresaTurno, on_delete=models.SET_NULL, null=True, blank=True, related_name="aliases")
+    ativo = models.BooleanField(default=True)
+    permite_contato = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("empresa", "alias_publico")
+        ordering = ["-atualizado_em"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - {self.alias_publico}"
+
+
+class CheckinDiarioCorporativo(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="checkins_diarios_corporativos")
+    alias = models.ForeignKey(ColaboradorAliasCorporativo, on_delete=models.CASCADE, related_name="checkins_diarios")
+    unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="checkins_diarios")
+    setor = models.ForeignKey(EmpresaSetor, on_delete=models.SET_NULL, null=True, blank=True, related_name="checkins_diarios")
+    turno = models.ForeignKey(EmpresaTurno, on_delete=models.SET_NULL, null=True, blank=True, related_name="checkins_diarios")
+    data_referencia = models.DateField()
+    humor = models.PositiveSmallIntegerField(default=3)
+    energia = models.PositiveSmallIntegerField(default=3)
+    estresse = models.PositiveSmallIntegerField(default=3)
+    sono = models.PositiveSmallIntegerField(default=3)
+    dor_fisica = models.PositiveSmallIntegerField(default=1)
+    fadiga = models.PositiveSmallIntegerField(default=1)
+    ansiedade = models.PositiveSmallIntegerField(default=1)
+    tristeza = models.PositiveSmallIntegerField(default=1)
+    irritabilidade = models.PositiveSmallIntegerField(default=1)
+    sintomas_respiratorios = models.BooleanField(default=False)
+    dor_corporal = models.BooleanField(default=False)
+    dor_cabeca = models.BooleanField(default=False)
+    febre = models.BooleanField(default=False)
+    apoio_solicitado = models.BooleanField(default=False)
+    observacao = models.CharField(max_length=280, blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "alias", "data_referencia")
+        ordering = ["-data_referencia", "-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "data_referencia"]),
+            models.Index(fields=["empresa", "unidade", "data_referencia"]),
+            models.Index(fields=["empresa", "setor", "data_referencia"]),
+        ]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - diario - {self.data_referencia}"
+
+
+class CheckinSemanalCorporativo(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="checkins_semanais_corporativos")
+    alias = models.ForeignKey(ColaboradorAliasCorporativo, on_delete=models.CASCADE, related_name="checkins_semanais")
+    unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="checkins_semanais")
+    setor = models.ForeignKey(EmpresaSetor, on_delete=models.SET_NULL, null=True, blank=True, related_name="checkins_semanais")
+    turno = models.ForeignKey(EmpresaTurno, on_delete=models.SET_NULL, null=True, blank=True, related_name="checkins_semanais")
+    semana_referencia = models.DateField()
+    carga_emocional = models.PositiveSmallIntegerField(default=3)
+    seguranca_psicologica = models.PositiveSmallIntegerField(default=3)
+    apoio_percebido = models.PositiveSmallIntegerField(default=3)
+    pressao_trabalho = models.PositiveSmallIntegerField(default=3)
+    bem_estar_geral = models.PositiveSmallIntegerField(default=3)
+    risco_burnout = models.PositiveSmallIntegerField(default=1)
+    observacao = models.CharField(max_length=280, blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "alias", "semana_referencia")
+        ordering = ["-semana_referencia", "-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "semana_referencia"]),
+            models.Index(fields=["empresa", "unidade", "semana_referencia"]),
+            models.Index(fields=["empresa", "setor", "semana_referencia"]),
+        ]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - semanal - {self.semana_referencia}"
+
+
+class PedidoApoioCorporativo(models.Model):
+    STATUS_NOVO = "novo"
+    STATUS_EM_ANALISE = "em_analise"
+    STATUS_ENCAMINHADO = "encaminhado"
+    STATUS_CONCLUIDO = "concluido"
+    STATUS_CHOICES = [
+        (STATUS_NOVO, "Novo"),
+        (STATUS_EM_ANALISE, "Em analise"),
+        (STATUS_ENCAMINHADO, "Encaminhado"),
+        (STATUS_CONCLUIDO, "Concluido"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="pedidos_apoio_corporativos")
+    alias = models.ForeignKey(ColaboradorAliasCorporativo, on_delete=models.CASCADE, related_name="pedidos_apoio")
+    unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="pedidos_apoio")
+    setor = models.ForeignKey(EmpresaSetor, on_delete=models.SET_NULL, null=True, blank=True, related_name="pedidos_apoio")
+    turno = models.ForeignKey(EmpresaTurno, on_delete=models.SET_NULL, null=True, blank=True, related_name="pedidos_apoio")
+    deseja_contato = models.BooleanField(default=False)
+    canal_preferido = models.CharField(max_length=80, blank=True, default="")
+    relato = models.CharField(max_length=280, blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_NOVO)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - apoio - {self.status}"
 
 
 class DonoSaaS(models.Model):

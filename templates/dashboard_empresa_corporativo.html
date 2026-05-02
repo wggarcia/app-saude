@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>SolusCRT Corporativo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Newsreader:opsz,wght@6..72,600;6..72,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f5f1e8;
+      --ink:#13212d;
+      --muted:#566572;
+      --line:rgba(19,33,45,.12);
+      --panel:rgba(255,255,255,.78);
+      --panel-strong:rgba(255,255,255,.92);
+      --teal:#0f766e;
+      --sage:#7aa06d;
+      --sand:#d4ba7d;
+      --coral:#c96f5b;
+      --shadow:0 20px 60px rgba(19,33,45,.10);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      color:var(--ink);
+      font-family:Geist,system-ui,sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(15,118,110,.10), transparent 26rem),
+        radial-gradient(circle at bottom right, rgba(201,111,91,.10), transparent 24rem),
+        linear-gradient(180deg,#f8f4ec,#f1eadc 42%,#efe6d4);
+    }
+    .shell{width:min(1220px,calc(100% - 36px));margin:0 auto;padding:20px 0 54px}
+    .nav,.hero,.panel,.metric,.pillar,.phase,.note{border:1px solid var(--line);background:var(--panel);backdrop-filter:blur(16px);box-shadow:var(--shadow)}
+    .nav{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 16px;border-radius:28px}
+    .brand{display:flex;gap:12px;align-items:center}
+    .mark{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,var(--teal),#16958b);color:#fff;font-weight:900}
+    .brand h1{margin:0;font-size:1.05rem}
+    .brand p{margin:3px 0 0;color:var(--muted);font-size:.88rem}
+    .actions{display:flex;flex-wrap:wrap;gap:10px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 15px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.65);color:var(--ink);text-decoration:none;font-weight:800}
+    .btn.primary{background:linear-gradient(135deg,var(--teal),#16958b);color:#fff;border:0}
+    .hero{margin-top:18px;border-radius:34px;padding:30px;display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
+    .eyebrow{display:inline-flex;gap:10px;align-items:center;padding:8px 12px;border-radius:999px;background:rgba(15,118,110,.08);color:var(--teal);font-weight:900;text-transform:uppercase;letter-spacing:.12em;font-size:.74rem}
+    .hero h2{margin:18px 0 14px;font-family:Newsreader,serif;font-size:clamp(3rem,5vw,5rem);line-height:.94}
+    .hero p{margin:0;color:var(--muted);line-height:1.72;font-size:1.02rem}
+    .hero-copy{display:grid;gap:14px}
+    .hero-note{padding:16px;border-radius:22px;background:rgba(255,255,255,.58);border:1px solid var(--line)}
+    .hero-note strong{display:block;margin-bottom:6px}
+    .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-content:start}
+    .metric{border-radius:24px;padding:18px;background:var(--panel-strong)}
+    .metric span{display:block;color:var(--muted);font-size:.78rem;text-transform:uppercase;font-weight:800;letter-spacing:.08em}
+    .metric b{display:block;margin-top:9px;font-size:1.45rem}
+    .metric p{margin:8px 0 0;color:var(--muted);font-size:.92rem;line-height:1.55}
+    .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;margin-top:18px}
+    .panel{border-radius:30px;padding:24px}
+    .panel h3{margin:0 0 14px;font-size:1.08rem}
+    .section-copy{color:var(--muted);line-height:1.65;margin:0 0 18px}
+    .pillars{display:grid;gap:12px}
+    .pillar{border-radius:24px;padding:18px;background:var(--panel-strong)}
+    .pillar-header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+    .pillar h4{margin:0;font-size:1.15rem}
+    .pillar p{margin:8px 0 0;color:var(--muted);line-height:1.62}
+    .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    .tag{padding:7px 10px;border-radius:999px;background:rgba(19,33,45,.06);font-size:.78rem;font-weight:800;color:#314150}
+    .phases{display:grid;gap:12px}
+    .phase{border-radius:24px;padding:18px;background:var(--panel-strong)}
+    .phase strong{display:block;font-size:1rem}
+    .phase ul,.note ul{margin:12px 0 0;padding-left:18px;color:var(--muted);line-height:1.58}
+    .note{margin-top:18px;border-radius:28px;padding:22px;background:rgba(19,33,45,.93);color:#eff7f5}
+    .note h3{margin:0 0 10px}
+    .note p,.note li{color:rgba(239,247,245,.82)}
+    @media(max-width:980px){
+      .hero,.grid{grid-template-columns:1fr}
+      .metrics{grid-template-columns:1fr}
+      .nav{flex-direction:column;align-items:flex-start}
+      .actions{width:100%}
+      .btn{width:100%}
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="nav">
+      <div class="brand">
+        <div class="mark">SC</div>
+        <div>
+          <h1>{{ payload.product.name }}</h1>
+          <p>{{ payload.product.subtitle }} · {{ empresa_nome }}</p>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/dashboard/">Ambiente atual</a>
+        <a class="btn" href="/usuarios/">Usuarios</a>
+        <a class="btn" href="/licencas/">Licencas</a>
+        <a class="btn" href="/colaborador/c/{{ payload.access_code }}/">Abrir app colaborador</a>
+        <a class="btn primary" href="/sala-decisao-ia/">Sala de Decisao IA</a>
+      </div>
+    </section>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">Novo modulo empresa</span>
+        <h2>{{ payload.hero.title }}</h2>
+        <p>{{ payload.hero.summary }}</p>
+        <div class="hero-note">
+          <strong>{{ payload.product.company }}</strong>
+          <span>{{ payload.summary.headline }}</span>
+        </div>
+      </div>
+      <div class="metrics">
+        {% for card in payload.executive_cards %}
+        <article class="metric">
+          <span>{{ card.label }}</span>
+          <b>{{ card.value }}</b>
+          <p>{{ card.detail }}</p>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h3>Pilares do produto</h3>
+        <p class="section-copy">Este ambiente substitui a leitura epidemiologica generica da empresa por um produto de saude ocupacional e bem-estar, com visao institucional agregada e acao orientada por IA. {% if not payload.privacy.ready %}Ainda nao ha massa critica suficiente para leituras detalhadas; o grupo minimo de exibicao e {{ payload.privacy.group_minimum }} respostas.{% endif %}</p>
+        <div class="pillars">
+          {% for pillar in payload.pillars %}
+          <article class="pillar">
+            <div class="pillar-header">
+              <h4>{{ pillar.title }}</h4>
+            </div>
+            <p>{{ pillar.description }}</p>
+            <div class="tags">
+              {% for metric in pillar.metrics %}
+              <span class="tag">{{ metric }}</span>
+              {% endfor %}
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </article>
+
+      <article class="panel">
+        <h3>Alertas e prioridades</h3>
+        <p class="section-copy">A IA corporativa transforma sinais internos em prioridades operacionais de saude, bem-estar e apoio institucional.</p>
+        <div class="phases">
+          {% for item in payload.recommendations %}
+          <article class="phase">
+            <strong>{{ item.title }}</strong>
+            <p class="section-copy" style="margin-top:10px">{{ item.summary }}</p>
+            <ul>
+              <li><strong>Urgencia:</strong> {{ item.urgency }}</li>
+              <li><strong>Acao sugerida:</strong> {{ item.action }}</li>
+            </ul>
+          </article>
+          {% endfor %}
+        </div>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h3>Unidades em observacao</h3>
+        <p class="section-copy">As unidades so aparecem quando atingem o grupo minimo de exibicao para proteger anonimato e evitar reidentificacao.</p>
+        <div class="phases">
+          {% if payload.top_units %}
+            {% for unit in payload.top_units %}
+            <article class="phase">
+              <strong>{{ unit.name }}</strong>
+              <ul>
+                <li><strong>Respondentes:</strong> {{ unit.respondents }}</li>
+                <li><strong>Risco:</strong> {{ unit.risk_band }} ({{ unit.risk_score }}/100)</li>
+              </ul>
+            </article>
+            {% endfor %}
+          {% else %}
+            <article class="phase">
+              <strong>Nenhuma unidade elegivel ainda</strong>
+              <ul>
+                <li>O sistema aguarda mais respostas anonimas para liberar leitura por unidade.</li>
+              </ul>
+            </article>
+          {% endif %}
+        </div>
+      </article>
+
+      <article class="panel">
+        <h3>Roadmap inicial</h3>
+        <p class="section-copy">A implementacao permanece incremental para preservar governo, hospital e farmacia. O modulo corporativo nasce isolado e so depois substitui o ambiente empresa atual.</p>
+        <div class="phases">
+          {% for phase in payload.roadmap %}
+          <article class="phase">
+            <strong>{{ phase.phase }}</strong>
+            <ul>
+              {% for item in phase.deliverables %}
+              <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </article>
+          {% endfor %}
+        </div>
+      </article>
+    </section>
+
+    <section class="note">
+      <h3>Privacidade e experiencia do colaborador</h3>
+      <p>O modulo corporativo deve existir com app proprio do colaborador, leitura anonima e governanca forte. A empresa recebe tendencias por grupo; nao recebe o dado bruto individual.</p>
+      <ul>
+        <li>Grupo minimo para exibicao: {{ payload.privacy.group_minimum }} respostas.</li>
+        {% for principle in payload.privacy.principles %}
+        <li>{{ principle }}</li>
+        {% endfor %}
+      </ul>
+      <p><strong>App do colaborador:</strong> {{ payload.app_employee.screens|join:", " }}.</p>
+    </section>
+  </main>
+</body>
+</html>
