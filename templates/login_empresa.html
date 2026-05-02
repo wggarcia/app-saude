@@ -2,68 +2,246 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>SolusCRT Empresa</title>
+<title>SolusCRT Ecossistema Institucional</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
-body{min-height:100vh;background:#04121c;color:#eef8ff;overflow:hidden;}
-.bg{position:fixed;inset:0;background:
-radial-gradient(circle at 20% 30%, rgba(124,242,154,0.16), transparent 38%),
-radial-gradient(circle at 80% 70%, rgba(102,199,255,0.16), transparent 40%),
-#04121c;}
-.grid{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:42px 42px;}
-.container{position:relative;z-index:2;display:flex;min-height:100vh;}
-.left{flex:1;display:flex;flex-direction:column;justify-content:center;padding:84px;}
-.logo{font-size:42px;font-weight:700;letter-spacing:-1px;}
-.logo span{color:#7cf29a;}
-.desc{margin-top:18px;font-size:18px;color:#9cc8d8;max-width:560px;line-height:1.7;}
-.pill-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;}
-.pill{padding:9px 12px;border-radius:999px;background:rgba(255,255,255,0.05);font-size:.84rem;color:#ddf8eb;border:1px solid rgba(255,255,255,0.08);}
-.right{width:470px;display:flex;align-items:center;justify-content:center;padding:24px;}
-.card{width:100%;padding:42px;border-radius:26px;background:rgba(255,255,255,0.05);backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 0 60px rgba(124,242,154,0.08), inset 0 0 24px rgba(255,255,255,0.03);}
-.eyebrow{font-size:.74rem;text-transform:uppercase;letter-spacing:.12em;color:#7cf29a;font-weight:800;}
-.card h2{font-size:24px;margin-top:10px;}
-.card p{font-size:13px;color:#94a3b8;margin:10px 0 24px;line-height:1.6;}
-.input{width:100%;padding:14px;margin-bottom:15px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:white;outline:none;transition:.3s;}
-.input:focus{border-color:#7cf29a;box-shadow:0 0 10px rgba(124,242,154,.25);}
-.btn{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#7cf29a,#3ccf82);font-weight:700;color:#052011;cursor:pointer;transition:.3s;}
-.btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(124,242,154,0.25);}
-.erro{margin-top:10px;color:#f87171;display:none;}
-.footer{margin-top:15px;text-align:center;font-size:13px;color:#94a3b8;line-height:1.7;}
-.footer a{color:#7cf29a;text-decoration:none;font-weight:600;}
-@media(max-width:900px){.left{display:none;}.right{width:100%;}}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:'Sora',system-ui,sans-serif;
+  color:#f4f7fb;
+  background:
+    radial-gradient(circle at top left, rgba(58,180,167,.22), transparent 24rem),
+    radial-gradient(circle at 82% 18%, rgba(242,165,89,.18), transparent 18rem),
+    radial-gradient(circle at bottom right, rgba(77,116,255,.18), transparent 24rem),
+    linear-gradient(160deg,#04111d 0%,#061827 34%,#0c2236 68%,#102942 100%);
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size:48px 48px;
+  mask-image:linear-gradient(180deg, rgba(0,0,0,.9), rgba(0,0,0,.22));
+  pointer-events:none;
+}
+.shell{position:relative;z-index:1;width:min(1380px,calc(100% - 32px));margin:0 auto;padding:24px 0 34px}
+.topbar,.hero,.card,.module,.signal,.trust{border:1px solid rgba(255,255,255,.08);box-shadow:0 26px 90px rgba(3,10,18,.32);backdrop-filter:blur(16px)}
+.topbar{
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
+  border-radius:28px;padding:16px 18px;background:rgba(5,18,31,.58)
+}
+.brand{display:flex;gap:14px;align-items:center}
+.mark{
+  width:48px;height:48px;border-radius:16px;display:grid;place-items:center;
+  background:linear-gradient(135deg,#4bd2c4,#2d7ef7);font-weight:800;color:#04111d
+}
+.brand h1{margin:0;font-size:1rem}
+.brand p{margin:4px 0 0;color:rgba(226,234,245,.7);font-size:.88rem}
+.top-actions{display:flex;flex-wrap:wrap;gap:10px}
+.chip{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;
+  background:rgba(255,255,255,.05);color:#d9e4f2;font-size:.8rem;font-weight:700
+}
+.hero{
+  margin-top:18px;
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:18px;
+  padding:22px;
+  border-radius:36px;
+  background:linear-gradient(145deg,rgba(8,22,36,.84),rgba(10,27,43,.62));
+}
+.story{
+  min-height:620px;
+  border-radius:30px;
+  padding:28px;
+  display:grid;
+  align-content:space-between;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)),
+    radial-gradient(circle at top right, rgba(75,210,196,.14), transparent 18rem),
+    rgba(255,255,255,.03);
+}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;
+  background:rgba(75,210,196,.12);color:#82efe3;font-size:.74rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:.14em
+}
+.story h2{
+  margin:18px 0 16px;
+  font-family:'Instrument Serif',serif;
+  font-size:clamp(3.2rem,6vw,5.8rem);
+  line-height:.92;
+  letter-spacing:-.04em;
+}
+.story p{margin:0;color:rgba(229,236,245,.78);line-height:1.72;font-size:1rem;max-width:760px}
+.story-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:22px}
+.module{
+  padding:18px;border-radius:24px;background:rgba(255,255,255,.04)
+}
+.module span{
+  display:inline-block;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.07);
+  color:#8fd5ff;font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em
+}
+.module h3{margin:14px 0 8px;font-size:1.1rem}
+.module p{font-size:.92rem}
+.signals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.signal{
+  border-radius:22px;padding:18px;background:rgba(255,255,255,.04)
+}
+.signal strong{display:block;font-size:1.45rem}
+.signal span{display:block;margin-top:5px;color:rgba(232,238,247,.68);font-size:.82rem;line-height:1.5}
+.card{
+  border-radius:30px;
+  padding:24px;
+  background:linear-gradient(180deg,rgba(248,251,255,.96),rgba(234,241,249,.92));
+  color:#102235;
+}
+.card h3{margin:10px 0 8px;font-size:1.7rem}
+.card p{margin:0;color:#516171;line-height:1.68}
+.card .eyebrow{background:rgba(16,34,53,.08);color:#0f766e}
+.field{margin-top:14px}
+.label{display:block;margin-bottom:8px;font-size:.82rem;font-weight:800;color:#375067;text-transform:uppercase;letter-spacing:.12em}
+.input{
+  width:100%;padding:15px 16px;border-radius:18px;border:1px solid rgba(16,34,53,.12);
+  background:rgba(255,255,255,.82);font:inherit;color:#102235;outline:none;
+  transition:border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.input:focus{border-color:#2d7ef7;transform:translateY(-1px);box-shadow:0 12px 30px rgba(45,126,247,.12)}
+.cta{
+  margin-top:18px;width:100%;min-height:56px;border:0;border-radius:20px;cursor:pointer;
+  background:linear-gradient(135deg,#0f766e,#2d7ef7 58%,#68d7ca);color:#fff;
+  font:inherit;font-weight:800;letter-spacing:.01em;box-shadow:0 22px 44px rgba(18,93,155,.25)
+}
+.cta:hover{transform:translateY(-1px)}
+.helper{margin-top:14px;font-size:.88rem;color:#617487;line-height:1.7}
+.helper a{color:#0f766e;text-decoration:none;font-weight:700}
+.trust{
+  margin-top:18px;padding:18px;border-radius:24px;background:rgba(10,29,45,.88);color:#dce7f1
+}
+.trust h4{margin:0 0 10px;font-size:.98rem}
+.trust ul{margin:0;padding-left:18px;color:rgba(220,231,241,.8);line-height:1.7}
+.erro{margin-top:12px;padding:12px 14px;border-radius:16px;background:rgba(185,28,28,.10);color:#991b1b;display:none}
+@media(max-width:1100px){
+  .hero{grid-template-columns:1fr}
+  .story{min-height:unset}
+}
+@media(max-width:760px){
+  .shell{width:min(100% - 18px,1380px)}
+  .story-grid,.signals{grid-template-columns:1fr}
+  .topbar{flex-direction:column;align-items:flex-start}
+  .top-actions{width:100%}
+}
 </style>
 </head>
 <body>
-<div class="bg"></div>
-<div class="grid"></div>
-<div class="container">
-  <div class="left">
-    <div class="logo">SolusCRT <span>Empresa</span></div>
-    <div class="desc">Acesso exclusivo para empresas contratantes, farmácias, laboratórios e hospitais. Este ambiente não compartilha entrada com módulos governamentais ou administrativos.</div>
-    <div class="pill-row">
-      <span class="pill">SaaS empresarial</span>
-      <span class="pill">Farmácia</span>
-      <span class="pill">Hospital</span>
-      <span class="pill">Operação territorial</span>
-    </div>
-  </div>
-  <div class="right">
-    <div class="card">
-      <div class="eyebrow">Acesso empresarial</div>
-      <h2>Entrar na operação</h2>
-      <p>Use sua credencial empresarial. Contas inativas seguem para contratação e pagamento; contas ativas entram na camada operacional correspondente.</p>
-      <input id="email" class="input" placeholder="Email">
-      <input id="senha" type="password" class="input" placeholder="Senha">
-      <button class="btn" onclick="login()">Entrar</button>
-      <div class="footer">
-        <div><a href="/cadastro/">Criar conta empresarial</a></div>
+<main class="shell">
+  <section class="topbar">
+    <div class="brand">
+      <div class="mark">SC</div>
+      <div>
+        <h1>SolusCRT Ecossistema Institucional</h1>
+        <p>Entrada premium para ambientes empresariais, assistenciais e territoriais.</p>
       </div>
-      <div id="erro" class="erro">Credenciais inválidas</div>
     </div>
-  </div>
-</div>
+    <div class="top-actions">
+      <span class="chip">SaaS empresarial</span>
+      <span class="chip">Farmacia</span>
+      <span class="chip">Hospital</span>
+      <span class="chip">Operacao territorial</span>
+    </div>
+  </section>
+
+  <section class="hero">
+    <article class="story">
+      <div>
+        <span class="eyebrow">Camada de acesso institucional</span>
+        <h2>Um ecossistema. Entradas distintas. Ambientes certos apos o login.</h2>
+        <p>SolusCRT Empresa agora funciona como a entrada institucional do ecossistema. Empresas contratantes, farmacias, laboratorios e hospitais usam a mesma camada de autenticacao, mas cada contrato entra automaticamente no ambiente operacional correspondente sem compartilhar modulo governamental ou administrativo.</p>
+
+        <div class="story-grid">
+          <article class="module">
+            <span>Saude corporativa</span>
+            <h3>Empresa</h3>
+            <p>Saude ocupacional, risco psicossocial, bem-estar do colaborador e planos de acao para RH, SESMT e lideranca.</p>
+          </article>
+          <article class="module">
+            <span>Assistencia</span>
+            <h3>Hospital</h3>
+            <p>Pressao assistencial, demanda territorial, vigilancia interna e leitura clinico-operacional em ambiente proprio.</p>
+          </article>
+          <article class="module">
+            <span>Dispensacao</span>
+            <h3>Farmacia</h3>
+            <p>Consumo, pressao regional, abastecimento, surtos por territorio e decisao de estoque em camadas dedicadas.</p>
+          </article>
+          <article class="module">
+            <span>Territorio</span>
+            <h3>Operacao territorial</h3>
+            <p>Inteligencia epidemiologica, resposta regional e protecao populacional em operacoes publicas e institucionais.</p>
+          </article>
+        </div>
+      </div>
+
+      <div>
+        <div class="signals">
+          <article class="signal">
+            <strong>1 login</strong>
+            <span>camada institucional unica para reconhecer contrato, setor e destino.</span>
+          </article>
+          <article class="signal">
+            <strong>4 frentes</strong>
+            <span>empresa, farmacia, hospital e operacao territorial com identidade propria.</span>
+          </article>
+          <article class="signal">
+            <strong>0 mistura</strong>
+            <span>sem cruzar entrada com modulo governamental ou area administrativa central.</span>
+          </article>
+        </div>
+      </div>
+    </article>
+
+    <aside class="card">
+      <span class="eyebrow">Acesso empresarial institucional</span>
+      <h3>Entrar no ecossistema</h3>
+      <p>Use sua credencial institucional. O sistema identifica o contrato e direciona automaticamente para o ambiente correto: corporativo, farmacia, hospital ou operacao territorial.</p>
+
+      <div class="field">
+        <label class="label" for="email">Email institucional</label>
+        <input id="email" class="input" placeholder="voce@instituicao.com">
+      </div>
+      <div class="field">
+        <label class="label" for="senha">Senha</label>
+        <input id="senha" type="password" class="input" placeholder="Digite sua senha">
+      </div>
+
+      <button class="cta" onclick="login()">Entrar na operacao correta</button>
+
+      <div class="helper">
+        Precisa contratar ou criar sua entrada institucional?
+        <a href="/cadastro/">Abrir cadastro empresarial</a>
+      </div>
+
+      <div class="trust">
+        <h4>O que este acesso faz</h4>
+        <ul>
+          <li>Reconhece setor e pacote ativo antes de abrir o ambiente.</li>
+          <li>Preserva separacao entre empresa, farmacia, hospital e governo.</li>
+          <li>Mantem trilha segura de sessao por dispositivo.</li>
+        </ul>
+      </div>
+
+      <div id="erro" class="erro">Credenciais invalidas</div>
+    </aside>
+  </section>
+</main>
 <script>
 function getDeviceId() {
   let deviceId = localStorage.getItem("device_id");
@@ -84,15 +262,16 @@ function persistScopedSession(data) {
   if (data.device_id) localStorage.setItem("device_id", data.device_id);
 }
 
-async function login(forceLogin = false){
+async function login(forceLogin = false) {
   const email = document.getElementById("email").value;
   const senha = document.getElementById("senha").value;
   const erro = document.getElementById("erro");
   erro.style.display = "none";
+
   const res = await fetch("/api/login-empresa", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
       email,
       senha,
       device_id: getDeviceId(),
@@ -100,18 +279,19 @@ async function login(forceLogin = false){
       force_login: forceLogin,
     })
   });
+
   const data = await res.json();
-  if(data.token){
+  if (data.token) {
     persistScopedSession(data);
-    window.location.href = data.destination || "/dashboard/";
+    window.location.href = data.destination || "/dashboard-empresa/";
   } else {
     if (data.codigo === "sessao_em_uso" && !forceLogin) {
-      const confirmar = confirm(`${data.mensagem}\n\nDeseja encerrar a sessão anterior e entrar neste computador?`);
+      const confirmar = confirm(`${data.mensagem}\n\nDeseja encerrar a sessao anterior e entrar neste computador?`);
       if (confirmar) {
         return login(true);
       }
     }
-    erro.textContent = data.mensagem || data.erro || "Credenciais inválidas";
+    erro.textContent = data.mensagem || data.erro || "Credenciais invalidas";
     erro.style.display = "block";
   }
 }

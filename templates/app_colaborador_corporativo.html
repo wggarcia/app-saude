@@ -2,92 +2,179 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Check-in do colaborador | {{ empresa_nome }}</title>
+  <title>App do colaborador | {{ empresa_nome }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <style>
     :root{
-      --bg:#f6f1e7;
-      --ink:#11202a;
-      --muted:#5a6873;
-      --line:rgba(17,32,42,.12);
-      --panel:rgba(255,255,255,.84);
+      --ink:#11212f;
+      --muted:#667684;
+      --line:rgba(17,33,47,.1);
+      --paper:rgba(255,255,255,.84);
+      --paper-strong:rgba(255,255,255,.94);
       --teal:#0f766e;
-      --teal-soft:rgba(15,118,110,.08);
-      --gold:#c69b4b;
-      --shadow:0 18px 54px rgba(17,32,42,.10);
+      --teal-soft:rgba(15,118,110,.1);
+      --amber:#d8a848;
+      --amber-soft:rgba(216,168,72,.12);
+      --blue:#3f78f4;
+      --blue-soft:rgba(63,120,244,.12);
+      --coral:#c96f5b;
+      --shadow:0 24px 70px rgba(10,23,36,.12);
     }
     *{box-sizing:border-box}
     body{
       margin:0;
       color:var(--ink);
-      font-family:Geist,system-ui,sans-serif;
+      font-family:'Sora',system-ui,sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(15,118,110,.10), transparent 24rem),
-        radial-gradient(circle at bottom right, rgba(198,155,75,.10), transparent 24rem),
-        linear-gradient(180deg,#fbf7f0,#f5efe2 42%,#f0e6d5);
+        radial-gradient(circle at top left, rgba(15,118,110,.12), transparent 22rem),
+        radial-gradient(circle at top right, rgba(63,120,244,.12), transparent 22rem),
+        radial-gradient(circle at bottom right, rgba(216,168,72,.12), transparent 26rem),
+        linear-gradient(180deg,#f8f2ea 0%,#f2eadb 46%,#eadfca 100%);
     }
-    .shell{width:min(980px,calc(100% - 28px));margin:0 auto;padding:20px 0 40px}
-    .panel,.card,.metric{border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(12px)}
-    .hero{padding:26px;border-radius:30px}
-    .eyebrow{display:inline-flex;gap:10px;align-items:center;padding:8px 12px;border-radius:999px;background:var(--teal-soft);color:var(--teal);font-weight:900;text-transform:uppercase;letter-spacing:.12em;font-size:.74rem}
-    h1{margin:16px 0 10px;font-family:Newsreader,serif;font-size:clamp(2.6rem,5vw,4.4rem);line-height:.95}
-    .hero p{margin:0;color:var(--muted);line-height:1.72;font-size:1rem}
-    .privacy{margin-top:14px;padding:16px;border-radius:20px;background:rgba(255,255,255,.62);border:1px solid var(--line)}
-    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-top:18px}
-    .card{border-radius:28px;padding:22px}
-    .card h2{margin:0 0 12px;font-size:1.08rem}
-    .card p{color:var(--muted);line-height:1.65}
+    .shell{width:min(1260px,calc(100% - 24px));margin:0 auto;padding:20px 0 48px}
+    .hero,.panel,.form-card,.signal,.care,.toast,.privacy-card{border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(14px)}
+    .hero{
+      border-radius:36px;padding:22px;background:linear-gradient(145deg,rgba(255,255,255,.8),rgba(255,255,255,.6));
+      display:grid;grid-template-columns:1.08fr .92fr;gap:18px
+    }
+    .hero-story{
+      border-radius:30px;padding:28px;background:
+        radial-gradient(circle at top right, rgba(15,118,110,.14), transparent 20rem),
+        linear-gradient(180deg,rgba(9,28,46,.98),rgba(14,37,58,.94));
+      color:#f7fbff;display:grid;align-content:space-between;min-height:460px
+    }
+    .eyebrow{
+      display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;
+      background:rgba(75,210,196,.14);color:#8af1e7;font-size:.74rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.14em
+    }
+    h1{
+      margin:18px 0 14px;font-family:'Instrument Serif',serif;font-size:clamp(3rem,5vw,5rem);
+      line-height:.92;letter-spacing:-.04em
+    }
+    .hero-story p{margin:0;color:rgba(233,240,247,.78);line-height:1.72}
+    .signal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+    .signal{
+      border-radius:22px;padding:16px;background:rgba(255,255,255,.06)
+    }
+    .signal strong{display:block;font-size:1.2rem}
+    .signal span{display:block;margin-top:6px;color:rgba(233,240,247,.72);font-size:.84rem;line-height:1.55}
+    .privacy{
+      display:grid;gap:12px
+    }
+    .privacy-card{
+      border-radius:26px;padding:18px;background:var(--paper-strong)
+    }
+    .privacy-card h3{margin:0 0 10px;font-size:1rem}
+    .privacy-card p,.privacy-card li{color:var(--muted);line-height:1.68}
+    .privacy-card ul{margin:0;padding-left:18px}
+    .grid{display:grid;grid-template-columns:1.08fr .92fr;gap:18px;margin-top:18px}
+    .form-card,.panel{
+      border-radius:32px;padding:22px;background:var(--paper)
+    }
+    .form-card h2,.panel h2{margin:0 0 10px;font-size:1.12rem}
+    .copy{margin:0 0 18px;color:var(--muted);line-height:1.7}
     .stack{display:grid;gap:12px}
-    label{display:block;font-size:.86rem;font-weight:700;margin-bottom:6px}
-    input,textarea,select{
-      width:100%;
-      border:1px solid rgba(17,32,42,.12);
-      border-radius:14px;
-      background:#fff;
-      padding:12px 13px;
-      font:inherit;
-      color:var(--ink);
-    }
-    textarea{min-height:94px;resize:vertical}
     .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    .metric{border-radius:18px;padding:14px}
-    .metric span{display:block;color:var(--muted);font-size:.76rem;text-transform:uppercase;font-weight:800;letter-spacing:.08em}
-    .metric strong{display:block;margin-top:7px;font-size:1rem}
+    label{display:block;margin-bottom:7px;font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.11em;color:#3c5164}
+    input,textarea,select{
+      width:100%;border-radius:16px;border:1px solid rgba(17,33,47,.12);background:#fff;padding:13px 14px;
+      font:inherit;color:var(--ink);outline:none;transition:border-color .2s ease, box-shadow .2s ease
+    }
+    input:focus,textarea:focus,select:focus{border-color:var(--blue);box-shadow:0 12px 28px rgba(63,120,244,.12)}
+    textarea{min-height:100px;resize:vertical}
     .checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    .check{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:16px;background:rgba(17,32,42,.04)}
+    .check{
+      display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:18px;background:rgba(17,33,47,.04)
+    }
     .check input{width:auto;margin-top:2px}
-    .actions{display:flex;gap:10px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 15px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.68);font-weight:800;cursor:pointer}
-    .btn.primary{background:linear-gradient(135deg,var(--teal),#16958b);color:#fff;border:0}
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 16px;border-radius:18px;
+      border:1px solid var(--line);background:rgba(255,255,255,.76);font:inherit;font-weight:800;cursor:pointer
+    }
+    .btn.primary{border:0;background:linear-gradient(135deg,var(--teal),var(--blue));color:#fff}
     .toast{margin-top:12px;padding:12px 14px;border-radius:16px;display:none}
-    .toast.ok{display:block;background:rgba(15,118,110,.10);color:var(--teal)}
-    .toast.err{display:block;background:rgba(185,28,28,.10);color:#991b1b}
-    .mini-list{margin:0;padding-left:18px;color:var(--muted);line-height:1.6}
-    @media(max-width:940px){
-      .grid,.row,.metric-grid,.checks{grid-template-columns:1fr}
+    .toast.ok{display:block;background:rgba(15,118,110,.1);color:var(--teal)}
+    .toast.err{display:block;background:rgba(185,28,28,.1);color:#991b1b}
+    .care-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .care{
+      border-radius:24px;padding:16px;background:var(--paper-strong)
+    }
+    .care span{
+      display:inline-block;padding:7px 10px;border-radius:999px;background:rgba(17,33,47,.06);font-size:.74rem;font-weight:800;color:#395065
+    }
+    .care strong{display:block;margin-top:12px}
+    .care p{margin:8px 0 0;color:var(--muted);line-height:1.62}
+    .mini{margin:0;padding-left:18px;color:var(--muted);line-height:1.68}
+    .tag-row{display:flex;flex-wrap:wrap;gap:8px}
+    .tag{padding:8px 10px;border-radius:999px;background:rgba(17,33,47,.06);font-size:.76rem;font-weight:800;color:#395065}
+    @media(max-width:1080px){
+      .hero,.grid{grid-template-columns:1fr}
+      .hero-story{min-height:unset}
+    }
+    @media(max-width:820px){
+      .signal-grid,.row,.metric-grid,.checks,.care-grid{grid-template-columns:1fr}
     }
   </style>
 </head>
 <body>
   <main class="shell">
-    <section class="hero panel">
-      <span class="eyebrow">App do colaborador</span>
-      <h1>Check-ins seguros para {{ empresa_nome }}</h1>
-      <p>Este fluxo foi desenhado para saude ocupacional e bem-estar. A empresa recebe apenas tendencias agregadas por grupo, sem visualizar respostas individuais no painel institucional.</p>
-      <div class="privacy">
-        <strong>Privacidade:</strong>
-        <p>O painel institucional so exibe grupos com pelo menos {{ min_group_size }} respostas. Pedidos de apoio podem sair do anonimato apenas se voce permitir contato.</p>
-      </div>
+    <section class="hero">
+      <article class="hero-story">
+        <div>
+          <span class="eyebrow">App do colaborador</span>
+          <h1>Check-ins seguros para {{ empresa_nome }}</h1>
+          <p>Este app foi desenhado para saude ocupacional e bem-estar do colaborador. A empresa recebe apenas leituras agregadas por grupo minimo; ela nao visualiza respostas individuais no painel institucional.</p>
+
+          <div class="signal-grid">
+            <article class="signal">
+              <strong>Anonimo</strong>
+              <span>Voce participa por alias interno, sem expor identidade no painel da empresa.</span>
+            </article>
+            <article class="signal">
+              <strong>Rapido</strong>
+              <span>Check-in diario em menos de um minuto com foco em energia, estresse, sono e fadiga.</span>
+            </article>
+            <article class="signal">
+              <strong>Acionavel</strong>
+              <span>O sistema ajuda a orientar apoio, pausas, ergonomia e acolhimento quando necessario.</span>
+            </article>
+          </div>
+        </div>
+
+        <div class="tag-row">
+          <span class="tag">Saude mental</span>
+          <span class="tag">Saude fisica</span>
+          <span class="tag">Bem-estar</span>
+          <span class="tag">Pedido de apoio</span>
+        </div>
+      </article>
+
+      <aside class="privacy">
+        <article class="privacy-card">
+          <h3>Privacidade primeiro</h3>
+          <p>O painel institucional so exibe grupos com pelo menos {{ min_group_size }} respostas. Isso reduz o risco de reidentificacao e separa o cuidado institucional do dado individual.</p>
+        </article>
+        <article class="privacy-card">
+          <h3>Quando o apoio deixa de ser anonimo</h3>
+          <ul>
+            <li>Somente se voce marcar pedido de apoio e autorizar contato.</li>
+            <li>O canal preferido pode ser RH, ambulatario ou outro fluxo interno.</li>
+            <li>O objetivo e acolhimento, nao vigilancia.</li>
+          </ul>
+        </article>
+      </aside>
     </section>
 
     <section class="grid">
-      <article class="card">
+      <article class="form-card">
         <h2>Check-in diario</h2>
-        <p>Leva menos de um minuto. Ele ajuda a empresa a entender tendencia de sono, energia, estresse, dor e fadiga sem expor individuos.</p>
+        <p class="copy">Use este check-in para indicar como voce chegou hoje em termos de energia, estresse, sono, fadiga e sinais fisicos. O painel da empresa transforma isso em leitura agregada por unidade, setor e turno.</p>
         <form id="dailyForm" class="stack">
           <div class="row">
             <div>
@@ -106,9 +193,10 @@
             </div>
             <div>
               <label>Alias anonimo</label>
-              <input name="alias_code" id="aliasCode" placeholder="Codigo interno anonimo">
+              <input name="alias_code" id="aliasCode" placeholder="Codigo anonimo interno">
             </div>
           </div>
+
           <div class="metric-grid">
             <div><label>Humor (1-5)</label><input name="mood" type="number" min="1" max="5" value="3"></div>
             <div><label>Energia (1-5)</label><input name="energy" type="number" min="1" max="5" value="3"></div>
@@ -119,32 +207,35 @@
             <div><label>Ansiedade (1-5)</label><input name="anxiety" type="number" min="1" max="5" value="1"></div>
             <div><label>Irritabilidade (1-5)</label><input name="irritability" type="number" min="1" max="5" value="1"></div>
           </div>
+
           <div class="checks">
-            <label class="check"><input name="respiratory_symptoms" type="checkbox"><span>Sinais respiratorios hoje</span></label>
-            <label class="check"><input name="body_pain" type="checkbox"><span>Dor corporal recorrente</span></label>
-            <label class="check"><input name="headache" type="checkbox"><span>Dor de cabeca</span></label>
-            <label class="check"><input name="fever" type="checkbox"><span>Febre ou mal-estar forte</span></label>
-            <label class="check"><input name="request_support" type="checkbox" id="requestSupport"><span>Quero pedir apoio</span></label>
-            <label class="check"><input name="allow_contact" type="checkbox" id="allowContact"><span>Autorizo contato institucional</span></label>
+            <label class="check"><input name="respiratory_symptoms" type="checkbox"><span>Sinto sinais respiratorios hoje</span></label>
+            <label class="check"><input name="body_pain" type="checkbox"><span>Estou com dor corporal recorrente</span></label>
+            <label class="check"><input name="headache" type="checkbox"><span>Estou com dor de cabeca</span></label>
+            <label class="check"><input name="fever" type="checkbox"><span>Tive febre ou mal-estar forte</span></label>
+            <label class="check"><input name="request_support" type="checkbox" id="requestSupport"><span>Quero pedir apoio institucional</span></label>
+            <label class="check"><input name="allow_contact" type="checkbox" id="allowContact"><span>Autorizo contato para acolhimento</span></label>
           </div>
+
           <div>
             <label>Observacao opcional</label>
             <textarea name="note" placeholder="Se quiser, descreva em poucas palavras o que mais impactou seu dia."></textarea>
           </div>
           <div>
-            <label>Canal preferido para apoio (opcional)</label>
-            <input name="contact_channel" placeholder="Ex.: e-mail, RH interno, ambulatório">
+            <label>Canal preferido para apoio</label>
+            <input name="contact_channel" placeholder="Ex.: e-mail, RH interno, ambulatario">
           </div>
-          <div class="actions">
+
+          <div class="btn-row">
             <button type="submit" class="btn primary">Enviar check-in diario</button>
           </div>
           <div class="toast" id="dailyToast"></div>
         </form>
       </article>
 
-      <article class="card">
+      <article class="panel">
         <h2>Check-in semanal</h2>
-        <p>Usado para capturar carga emocional, seguranca psicologica e risco de esgotamento da semana.</p>
+        <p class="copy">Este formulario mede carga emocional, seguranca psicologica, apoio percebido, pressao do trabalho e risco de burnout na semana.</p>
         <form id="weeklyForm" class="stack">
           <div class="metric-grid">
             <div><label>Carga emocional (1-5)</label><input name="emotional_load" type="number" min="1" max="5" value="3"></div>
@@ -158,31 +249,67 @@
             <label>Resumo da semana</label>
             <textarea name="note" placeholder="Opcional: como voce resumiria sua semana de trabalho e bem-estar?"></textarea>
           </div>
-          <div class="actions">
+          <div class="btn-row">
             <button type="submit" class="btn">Enviar check-in semanal</button>
           </div>
           <div class="toast" id="weeklyToast"></div>
         </form>
+
+        <div class="care-grid" style="margin-top:18px">
+          <article class="care">
+            <span>Meu cuidado</span>
+            <strong>Respiracao curta de recuperacao</strong>
+            <p>Pare por dois minutos, respire profundo em ciclos lentos e solte tensao corporal de ombros e mandibula.</p>
+          </article>
+          <article class="care">
+            <span>Energia</span>
+            <strong>Micro-pausa operacional</strong>
+            <p>Se o turno estiver pesado, marque uma pausa breve, hidrate-se e ajuste o ritmo antes de acumular fadiga.</p>
+          </article>
+          <article class="care">
+            <span>Sono</span>
+            <strong>Higiene de descanso</strong>
+            <p>Evite telas logo antes de dormir e preserve um intervalo minimo de desaceleracao apos o expediente.</p>
+          </article>
+          <article class="care">
+            <span>Apoio</span>
+            <strong>Pedido seguro de ajuda</strong>
+            <p>Se a carga estiver alta demais, marque pedido de apoio e indique o canal de acolhimento mais confortavel.</p>
+          </article>
+        </div>
       </article>
     </section>
 
     <section class="grid">
-      <article class="card">
-        <h2>Como a empresa deve usar isso</h2>
-        <ul class="mini-list">
-          <li>Observar tendencias por unidade, setor e turno.</li>
-          <li>Planejar acoes de bem-estar, ergonomia, pausas e acolhimento.</li>
-          <li>Nao usar o sistema para vigilancia individual.</li>
+      <article class="panel">
+        <h2>Como a empresa deve usar o produto</h2>
+        <ul class="mini">
+          <li>Observar tendencias por unidade, setor e turno em grupos anonimos.</li>
+          <li>Planejar acoes de bem-estar, ergonomia, pausas, escala e acolhimento.</li>
+          <li>Nao transformar check-in em vigilancia ou ferramenta disciplinar.</li>
           <li>Acionar apoio humano quando o fluxo de ajuda indicar necessidade.</li>
         </ul>
       </article>
-      <article class="card">
-        <h2>O que este MVP ja entrega</h2>
-        <div class="metric-grid">
-          <article class="metric"><span>Camada institucional</span><strong>Dashboard corporativo</strong></article>
-          <article class="metric"><span>Camada colaborador</span><strong>Check-ins anonimos</strong></article>
-          <article class="metric"><span>Privacidade</span><strong>Grupo minimo {{ min_group_size }}</strong></article>
-          <article class="metric"><span>Acao</span><strong>Pedidos de apoio</strong></article>
+
+      <article class="panel">
+        <h2>O que este app entrega</h2>
+        <div class="care-grid">
+          <article class="care">
+            <span>Camada diaria</span>
+            <strong>Humor, energia, estresse, sono e sinais fisicos</strong>
+          </article>
+          <article class="care">
+            <span>Camada semanal</span>
+            <strong>Carga emocional, seguranca psicologica e burnout</strong>
+          </article>
+          <article class="care">
+            <span>Privacidade</span>
+            <strong>Grupo minimo {{ min_group_size }} e apoio com consentimento</strong>
+          </article>
+          <article class="care">
+            <span>Resposta</span>
+            <strong>App dedicado para saude ocupacional e bem-estar</strong>
+          </article>
         </div>
       </article>
     </section>

@@ -136,6 +136,17 @@ def _build_recommendations(company, mood_score, stress_score, physical_score, su
     }
 
 
+def _risk_summary(score):
+    band = _risk_band(score)
+    if band == "critico":
+        return "exige resposta executiva imediata"
+    if band == "alto":
+        return "precisa de intervencao coordenada"
+    if band == "moderado":
+        return "pede acompanhamento proximo"
+    return "permite consolidar prevencao"
+
+
 def build_empresa_corporativo_payload(empresa):
     pacote = detalhes_pacote(empresa.pacote_codigo)
     company_label = empresa.nome or "Empresa"
@@ -190,48 +201,83 @@ def build_empresa_corporativo_payload(empresa):
     return {
         "product": {
             "name": "SolusCRT Corporativo",
-            "subtitle": "Saude ocupacional, bem-estar e prevencao institucional",
+            "subtitle": "Saude ocupacional, bem-estar e inteligencia institucional",
             "company": company_label,
             "package_label": pacote["label"],
+        },
+        "ecosystem": {
+            "name": "Ecossistema Institucional SolusCRT",
+            "segments": ["SaaS empresarial", "Farmacia", "Hospital", "Operacao territorial"],
+            "promise": (
+                "Uma unica camada institucional para autenticar operacoes setoriais e abrir "
+                "o ambiente adequado apos o login."
+            ),
         },
         "access_code": empresa.codigo_acesso_corporativo,
         "hero": {
             "title": "Centro de Saude Corporativa",
             "summary": (
-                f"{company_label} opera um modulo proprio para sinais anonimos de saude mental, "
-                "saude fisica e acoes preventivas para RH, SESMT e lideranca."
+                f"{company_label} opera um ambiente proprio para saude ocupacional, risco psicossocial, "
+                "bem-estar e prevencao institucional com leitura anonima da forca de trabalho."
             ),
             "positioning": (
-                "Este ambiente organiza a leitura interna da forca de trabalho e conecta risco organizacional "
-                "com acao pratica, sem copiar hospital ou farmacia."
+                "Este produto nao replica o dashboard epidemiologico. Ele funciona como um command center "
+                "executivo para RH, SESMT, lideranca e seguranca do trabalho."
             ),
+            "value_points": [
+                "antecipar absenteismo e fadiga antes de virar afastamento",
+                "detectar pressao psicossocial, burnout e queda de seguranca psicologica",
+                "cruzar sinais fisicos e emocionais com resposta institucional acionavel",
+            ],
         },
         "executive_cards": [
             {
                 "label": "Bem-estar geral",
                 "value": f"{mood_score}/100",
-                "detail": "Score composto por humor, energia, sono e pressao emocional.",
+                "detail": f"Score lider para confiabilidade operacional; {_risk_summary(mood_score)}.",
             },
             {
                 "label": "Risco psicossocial",
                 "value": _risk_band(stress_score).upper(),
-                "detail": f"Indice {stress_score}/100 a partir de estresse, ansiedade, carga emocional e burnout.",
+                "detail": f"Indice {stress_score}/100 com foco em estresse, ansiedade, carga emocional e burnout.",
             },
             {
                 "label": "Risco fisico",
                 "value": _risk_band(physical_score).upper(),
-                "detail": f"Indice {physical_score}/100 com fadiga, dor, sono ruim e sinais fisicos recorrentes.",
+                "detail": f"Indice {physical_score}/100 para fadiga, dor, sono ruim e carga fisica recorrente.",
             },
             {
                 "label": "Pedidos de apoio",
                 "value": str(support_count),
-                "detail": "Solicitacoes de apoio abertas no fluxo corporativo.",
+                "detail": "Fila de acolhimento institucional e cuidado ativo.",
+            },
+        ],
+        "priority_needs": [
+            {
+                "title": "Burnout e absenteismo",
+                "detail": "Empresas precisam enxergar sinais precoces de exaustao, afastamento e perda de energia antes do impacto operacional.",
+                "evidence": "Gallup relaciona burnout a mais ausencia, turnover e queda de desempenho.",
+            },
+            {
+                "title": "Risco psicossocial e seguranca",
+                "detail": "Pressao, baixa autonomia, falta de apoio do gestor e medo de falar elevam risco ocupacional e mental.",
+                "evidence": "WHO destaca riscos psicossociais, assedio, longas jornadas e baixo suporte como foco central.",
+            },
+            {
+                "title": "Retorno ao trabalho e apoio humano",
+                "detail": "Fluxos de apoio e retorno gradual reduzem agravamento e ajudam a manter vinculo com o trabalho.",
+                "evidence": "WHO recomenda retorno assistido, acomodacoes razoaveis e apoio continuo.",
+            },
+            {
+                "title": "Formacao gerencial",
+                "detail": "A lideranca imediata precisa de sinais simples para agir com pausa, acolhimento, escala e carga de trabalho.",
+                "evidence": "Gallup aponta o gestor como agente-chave na prevencao do burnout.",
             },
         ],
         "pillars": [
             {
                 "title": "Saude mental",
-                "description": "Estresse, fadiga emocional, burnout, sobrecarga e seguranca psicologica.",
+                "description": "Estresse, fadiga emocional, burnout, sobrecarga e seguranca psicologica com leitura agregada.",
                 "metrics": [
                     f"estresse medio {_safe_avg(diario, 'avg_estresse')}/5",
                     f"ansiedade media {_safe_avg(diario, 'avg_ansiedade')}/5",
@@ -241,7 +287,7 @@ def build_empresa_corporativo_payload(empresa):
             },
             {
                 "title": "Saude fisica e ocupacional",
-                "description": "Dor, fadiga fisica, sono ruim, sinais respiratorios e desconfortos ergonomicos.",
+                "description": "Dor, fadiga fisica, sono ruim, sinais respiratorios e carga ergonomica por contexto operacional.",
                 "metrics": [
                     f"fadiga media {_safe_avg(diario, 'avg_fadiga')}/5",
                     f"dor fisica {_safe_avg(diario, 'avg_dor_fisica')}/5",
@@ -251,7 +297,7 @@ def build_empresa_corporativo_payload(empresa):
             },
             {
                 "title": "Unidades e equipes",
-                "description": "Leitura agregada por unidade, setor, turno e tendencia operacional.",
+                "description": "Leitura agregada por unidade, setor, turno e tendencia operacional sem expor individuos.",
                 "metrics": [
                     f"respondentes diarios {respondents}",
                     f"respondentes semanais {weekly_respondents}",
@@ -261,13 +307,35 @@ def build_empresa_corporativo_payload(empresa):
             },
             {
                 "title": "IA corporativa",
-                "description": "Recomendacoes de campanha, apoio, escala e prevencao com explicacao.",
+                "description": "Recomendacoes de campanha, apoio, escala e prevencao com explicacao para RH e lideranca.",
                 "metrics": [
                     recommendations["actions"][0]["title"],
                     recommendations["actions"][0]["urgency"],
                     f"acoes {len(recommendations['actions'])}",
                     "plano semanal",
                 ],
+            },
+        ],
+        "command_center": [
+            {
+                "title": "Radar de absenteismo",
+                "summary": "Conecta humor, energia, sono e burnout para antecipar perda de presenca e confiabilidade operacional.",
+                "focus": "lideranca, RH e operacao",
+            },
+            {
+                "title": "Risco psicossocial",
+                "summary": "Monitora estresse, ansiedade, seguranca psicologica e pressao do trabalho por grupos anonimos.",
+                "focus": "SESMT, RH e compliance",
+            },
+            {
+                "title": "Carga fisica e ergonomia",
+                "summary": "Ajuda a detectar onde a rotina esta produzindo fadiga, dor corporal, sono ruim e sobrecarga fisica.",
+                "focus": "medicina do trabalho e operacao",
+            },
+            {
+                "title": "Apoio e retorno ao trabalho",
+                "summary": "Organiza fila de apoio, acolhimento e plano gradual de retorno sem transformar o sistema em prontuario.",
+                "focus": "saude ocupacional e people",
             },
         ],
         "summary": {
@@ -279,6 +347,35 @@ def build_empresa_corporativo_payload(empresa):
         },
         "recommendations": recommendations["actions"],
         "top_units": top_units,
+        "programs": [
+            {
+                "title": "Programa de recuperacao de fadiga",
+                "owner": "operacao + lideranca",
+                "items": [
+                    "revisao de pausas e micro-recuperacao",
+                    "monitor de energia e sono por unidade",
+                    "intervencao em turnos com piora consecutiva",
+                ],
+            },
+            {
+                "title": "Programa de risco psicossocial",
+                "owner": "RH + SESMT",
+                "items": [
+                    "escuta estruturada em areas com stress alto",
+                    "ritual gerencial semanal de carga e apoio",
+                    "monitor de seguranca psicologica por grupo minimo",
+                ],
+            },
+            {
+                "title": "Programa de ergonomia e sintoma fisico",
+                "owner": "saude ocupacional",
+                "items": [
+                    "mapa de dor corporal por frente operacional",
+                    "campanhas de postura e recuperacao",
+                    "acionamento rapido para clusters fisicos",
+                ],
+            },
+        ],
         "privacy": {
             "group_minimum": MIN_GROUP_SIZE,
             "ready": privacy_ready,
@@ -291,6 +388,7 @@ def build_empresa_corporativo_payload(empresa):
         },
         "app_employee": {
             "title": "App do colaborador",
+            "subtitle": "Jornada dedicada para check-ins, autocuidado e pedido seguro de apoio.",
             "screens": [
                 "onboarding e privacidade",
                 "check-in diario",
@@ -299,6 +397,12 @@ def build_empresa_corporativo_payload(empresa):
                 "meu cuidado",
                 "pedir apoio",
                 "historico pessoal",
+            ],
+            "journey": [
+                "check-in rapido sem exposicao ao gestor",
+                "registro de sinais fisicos e emocionais",
+                "trilhas curtas de autocuidado",
+                "pedido opcional de ajuda com consentimento",
             ],
         },
     }
