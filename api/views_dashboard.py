@@ -253,6 +253,7 @@ def command_ai(request):
         "empresa_id": str(empresa.id),
         "empresa_nome": empresa.nome,
         "setor_label": _setor_label(_setor_conta(empresa)),
+        "setor_conta": _setor_conta(empresa),
         "return_url": _dashboard_return_url(empresa),
         "logout_url": "/logout-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/logout/",
     })

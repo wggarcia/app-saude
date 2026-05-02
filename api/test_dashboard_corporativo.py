@@ -42,6 +42,8 @@ class DashboardCorporativoTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "SolusCRT Corporativo")
         self.assertContains(response, "Centro de Saude Corporativa")
+        self.assertContains(response, "Sala de Decisao Corporativa")
+        self.assertContains(response, 'href="/logout/"')
 
     def test_hospital_nao_acessa_dashboard_corporativo(self):
         hospital = self._empresa("Hospital Cliente", "hospital-corp@example.com", "hospital_medio")

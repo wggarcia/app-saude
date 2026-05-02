@@ -62,19 +62,19 @@ SECTOR_CONFIG = {
         ],
     },
     "empresa": {
-        "title": "Sala de Decisão IA - Empresas",
-        "subtitle": "risco territorial, absenteísmo provável, comunicação interna e continuidade operacional",
+        "title": "Sala de Decisão IA - Saúde Corporativa",
+        "subtitle": "absenteísmo provável, risco psicossocial, pressão sobre equipes e continuidade operacional",
         "audience": "empresas, operações distribuídas e saúde ocupacional",
-        "eyebrow": "Inteligência corporativa",
-        "panel_title": "Plano corporativo de prevenção",
+        "eyebrow": "Sala de decisão corporativa",
+        "panel_title": "Plano corporativo de cuidado e continuidade",
         "recommendation_field": "public_recommendation",
         "impact_field": "resource_pressure",
-        "impact_label": "pressão operacional",
+        "impact_label": "pressão sobre equipes",
         "primary_metric": "resource_pressure",
         "action_steps": [
-            "Comunicar colaboradores em regiões de maior risco com linguagem preventiva.",
-            "Reforçar medidas internas de cuidado, higiene, ventilação e acompanhamento.",
-            "Monitorar absenteísmo e ajustar escala onde houver maior exposição territorial.",
+            "Acionar líderes e RH com comunicação curta, objetiva e preventiva para as equipes mais expostas.",
+            "Reforçar pausas, ventilação, higiene, acolhimento e orientação de autocuidado nas áreas priorizadas.",
+            "Monitorar absenteísmo, pedidos de apoio e ajuste de escala antes de surgirem afastamentos em cascata.",
         ],
     },
 }
@@ -185,7 +185,7 @@ def _impact_phrase(area, setor):
         return f"Possível alta de procura por itens, testes, orientação farmacêutica e suporte laboratorial ligados a {symptom.lower()} e {disease}."
     if setor == "hospital":
         return f"Possível aumento de triagem, observação, insumos críticos e pressão assistencial associada a {symptom.lower()}."
-    return f"Possível aumento de absenteísmo e necessidade de comunicação preventiva por {disease}."
+    return f"Possível aumento de fadiga, absenteísmo e pressão sobre líderes e equipes por {disease}."
 
 
 def _pharmacy_items(area):
@@ -245,10 +245,10 @@ def _priority_items(area, setor):
             "auditoria do alerta",
         ]
     return [
-        "comunicação interna",
-        "monitoramento de absenteísmo",
+        "risco psicossocial",
+        "absenteísmo provável",
         "continuidade operacional",
-        "orientação preventiva",
+        "apoio às lideranças",
     ]
 
 
@@ -309,19 +309,19 @@ def _sector_metrics(area, setor):
         ]
     return [
         {
-            "label": "Pressão operacional",
+            "label": "Pressão sobre equipes",
             "value": _score_label(area.get("resource_pressure")),
-            "detail": "risco de impacto em equipe, escala e operação",
+            "detail": "impacto potencial em energia, escala, continuidade e presença",
         },
         {
-            "label": "Crescimento local",
-            "value": _percent_label(area.get("growth_percent")),
-            "detail": "variação recente dos sinais agregados na região",
+            "label": "Absenteísmo provável",
+            "value": _percent_label(max(_safe_number(area.get("growth_percent")) * 0.38, 4)),
+            "detail": "estimativa de pressão sobre faltas e revezamento se o avanço persistir",
         },
         {
-            "label": "Foco territorial",
+            "label": "Área prioritária",
             "value": area.get("label") or "sem foco definido",
-            "detail": "região para comunicação preventiva e acompanhamento",
+            "detail": "região para cuidado, comunicação gerencial e acompanhamento de times",
         },
     ]
 
@@ -414,19 +414,27 @@ def _sector_playbook(area, setor):
         ]
     return [
         {
-            "title": "Operação e pessoas",
+            "title": "Pessoas e liderança",
             "items": [
-                f"Comunicar equipes em {territory} com orientação preventiva objetiva.",
-                "Monitorar absenteísmo e sintomas reportados sem expor dado individual.",
-                "Preparar ajuste de escala se o crescimento permanecer alto.",
+                f"Orientar líderes com mensagem curta para equipes expostas em {territory}.",
+                "Reforçar acolhimento, pausas e checagem de carga sem expor dado individual.",
+                "Priorizar áreas onde sinais podem virar ausência e queda de energia operacional.",
             ],
         },
         {
-            "title": "Continuidade",
+            "title": "Saúde ocupacional",
             "items": [
-                "Reforçar higiene, ventilação e canal de orientação interno.",
-                "Evitar decisões disciplinares ou comerciais baseadas em dado sensível.",
-                "Registrar feedback da gestão para calibrar a leitura da IA.",
+                f"Preparar comunicação preventiva ligada a {disease} e {symptom}.",
+                "Monitorar pedidos de apoio, fadiga e necessidade de ajuste de escala na semana.",
+                "Ativar RH ou SESMT antes de transformar o avanço territorial em afastamento recorrente.",
+            ],
+        },
+        {
+            "title": "Continuidade do trabalho",
+            "items": [
+                "Reforçar ventilação, higiene, flexibilidade operacional e cobertura entre equipes.",
+                "Evitar decisões disciplinares baseadas em dado sensível ou inferência individual.",
+                "Registrar feedback da gestão para calibrar a leitura corporativa da IA.",
             ],
         },
     ]
@@ -489,7 +497,7 @@ def _build_summary(empresa, setor, config, overview, recommendations):
             )
         else:
             narrative = (
-                f"A IA está lendo {top['territory']} como prioridade para prevenção corporativa e continuidade operacional. "
+                f"A IA está lendo {top['territory']} como prioridade para saúde ocupacional, prevenção e continuidade do trabalho. "
                 f"Direção sugerida: {top['recommended_action']}"
             )
     else:
@@ -591,14 +599,14 @@ def _executive_cards(setor, overview, data_quality, recommendations):
     else:
         cards.extend([
             {
-                "label": "Áreas ativas",
+                "label": "Áreas expostas",
                 "value": str(overview.get("active_areas", 0)),
-                "detail": "territórios para prevenção e comunicação interna",
+                "detail": "frentes territoriais que podem impactar equipes e rotina",
             },
             {
-                "label": "Crescimento",
-                "value": _percent_label(overview.get("growth_percent")),
-                "detail": "velocidade recente dos sinais agregados",
+                "label": "Risco de ausência",
+                "value": _percent_label(max(_safe_number(overview.get("growth_percent")) * 0.34, 4)),
+                "detail": "estimativa de pressão sobre presença e cobertura operacional",
             },
         ])
     return cards

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sala de Decisão IA | SolusCRT</title>
+<title>{% if setor_conta == "empresa" %}Sala de Decisão Saúde Corporativa | SolusCRT{% else %}Sala de Decisão IA | SolusCRT{% endif %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Newsreader:opsz,wght@6..72,600;6..72,700&display=swap" rel="stylesheet">
@@ -27,14 +27,14 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
 @media(max-width:940px){.hero,.grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.metric.full{grid-column:auto}.impact,.sector-metrics,.playbook{grid-template-columns:1fr}.nav{border-radius:24px;align-items:flex-start}.nav,.nav-actions{flex-direction:column}.nav-actions{width:100%}.btn{width:100%}h1{font-size:3rem}}
 </style>
 </head>
-<body>
+<body data-setor="{{ setor_conta|default:'empresa' }}">
 <main class="shell">
   <nav class="nav">
-    <a class="brand" id="returnBrand" href="{{ return_url }}"><span class="mark">IA</span><span>SolusCRT Sala de Decisão IA</span></a>
+    <a class="brand" id="returnBrand" href="{{ return_url }}"><span class="mark">IA</span><span>{% if setor_conta == "empresa" %}SolusCRT Sala de Decisão Saúde Corporativa{% else %}SolusCRT Sala de Decisão IA{% endif %}</span></a>
     <div class="nav-actions">
-      <button class="btn" id="refreshBtn">Atualizar sala</button>
+      <button class="btn" id="refreshBtn">{% if setor_conta == "empresa" %}Atualizar leitura corporativa{% else %}Atualizar sala{% endif %}</button>
       <button class="btn gold" id="printBtn">Gerar relatório</button>
-      <a class="btn primary" id="returnPanelBtn" href="{{ return_url }}">Voltar ao painel</a>
+      <a class="btn primary" id="returnPanelBtn" href="{{ return_url }}">{% if setor_conta == "empresa" %}Voltar ao centro corporativo{% else %}Voltar ao painel{% endif %}</a>
       <a class="btn warn" href="{{ logout_url }}">Sair</a>
     </div>
   </nav>
@@ -42,21 +42,21 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
   <section class="hero">
     <div class="card">
       <div>
-        <span class="eyebrow" id="pageEyebrow">Camada premium de decisão</span>
+        <span class="eyebrow" id="pageEyebrow">{% if setor_conta == "empresa" %}Leitura de saúde ocupacional{% else %}Camada premium de decisão{% endif %}</span>
         <span class="environment-pill" id="environmentPill">Ambiente {{ setor_label }}</span>
       </div>
-      <h1 id="pageTitle">Sala de Decisão IA</h1>
-      <p class="lead" id="pageSubtitle">A IA cruza sinais agregados, crescimento territorial, sintomas dominantes e pressão operacional para recomendar decisões específicas do seu setor.</p>
+      <h1 id="pageTitle">{% if setor_conta == "empresa" %}Sala de Decisão Saúde Corporativa{% else %}Sala de Decisão IA{% endif %}</h1>
+      <p class="lead" id="pageSubtitle">{% if setor_conta == "empresa" %}A IA cruza sinais territoriais, pressão sobre equipes, risco de ausência e continuidade operacional para orientar saúde ocupacional, RH e lideranças.{% else %}A IA cruza sinais agregados, crescimento territorial, sintomas dominantes e pressão operacional para recomendar decisões específicas do seu setor.{% endif %}</p>
       <div class="summary" id="summaryBox"><strong>{{ empresa_nome }}</strong><span>Carregando decisão operacional...</span></div>
     </div>
     <div class="card">
       <div class="metrics">
-        <div class="metric"><span>Risco geral</span><b id="riskMetric">-</b></div>
+        <div class="metric"><span>{% if setor_conta == "empresa" %}Risco corporativo{% else %}Risco geral{% endif %}</span><b id="riskMetric">-</b></div>
         <div class="metric"><span>Crescimento</span><b id="growthMetric">-</b></div>
-        <div class="metric"><span>Focos ativos</span><b id="areasMetric">-</b></div>
+        <div class="metric"><span>{% if setor_conta == "empresa" %}Áreas expostas{% else %}Focos ativos{% endif %}</span><b id="areasMetric">-</b></div>
         <div class="metric"><span>Ambiente</span><b id="environmentMetric" style="font-size:1.35rem">{{ setor_label }}</b></div>
-        <div class="metric"><span>Sinais agregados</span><b id="casesMetric">-</b></div>
-        <div class="metric full"><span>Modo</span><b id="modeMetric" style="font-size:1.35rem">Decisão assistida</b></div>
+        <div class="metric"><span>{% if setor_conta == "empresa" %}Sinais em leitura{% else %}Sinais agregados{% endif %}</span><b id="casesMetric">-</b></div>
+        <div class="metric full"><span>{% if setor_conta == "empresa" %}Camada{% else %}Modo{% endif %}</span><b id="modeMetric" style="font-size:1.35rem">{% if setor_conta == "empresa" %}Saúde ocupacional assistida{% else %}Decisão assistida{% endif %}</b></div>
       </div>
     </div>
   </section>
@@ -67,15 +67,15 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
     </div>
     <aside class="side">
       <div class="side-card">
-        <h2>Aprendizado supervisionado</h2>
+        <h2>{% if setor_conta == "empresa" %}Aprendizado corporativo{% else %}Aprendizado supervisionado{% endif %}</h2>
         <p id="learningText">Aguardando leitura do motor.</p>
       </div>
       <div class="side-card">
-        <h2>Cartões executivos</h2>
+        <h2>{% if setor_conta == "empresa" %}Sinais executivos{% else %}Cartões executivos{% endif %}</h2>
         <div id="executiveCards" class="recommendations"></div>
       </div>
       <div class="side-card">
-        <h2>Proteções</h2>
+        <h2>{% if setor_conta == "empresa" %}Guardrails de confiança{% else %}Proteções{% endif %}</h2>
         <ul id="safeguards"></ul>
       </div>
     </aside>
@@ -85,6 +85,7 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
 <script>
   const recommendationsEl = document.getElementById("recommendations");
   const toast = document.getElementById("toast");
+  const currentSector = document.body.dataset.setor || "empresa";
   const returnTargets = [document.getElementById("returnBrand"), document.getElementById("returnPanelBtn")].filter(Boolean);
   const pageEmpresaId = "{{ empresa_id|escapejs }}";
 
@@ -267,6 +268,9 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
     document.getElementById("areasMetric").textContent = formatNumber(summary.active_areas);
     document.getElementById("casesMetric").textContent = formatNumber(summary.total_cases);
     document.getElementById("modeMetric").textContent = payload.feature_status === "premium_preview" ? "Decisão setorial" : payload.mode;
+    if (currentSector === "empresa") {
+      document.getElementById("modeMetric").textContent = "Saúde ocupacional assistida";
+    }
     document.getElementById("learningText").textContent = payload.learning?.message || "";
     const cards = payload.executive_cards || [];
     document.getElementById("executiveCards").innerHTML = cards.map((card) => `

@@ -155,3 +155,29 @@ class CommandAITests(TestCase):
         self.assertContains(response, "SolusCRT Sala de Decisão IA")
         self.assertContains(response, "Ambiente Hospital")
         self.assertContains(response, 'href="/logout/"')
+
+    def test_tela_command_ai_empresa_ganha_contexto_corporativo(self):
+        empresa = Empresa.objects.create(
+            nome="Empresa Premium",
+            email="empresa-command@example.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="empresa_profissional_25",
+            sessao_ativa_chave="sessao-command-ai-empresa",
+        )
+
+        payload = {
+            "empresa_id": empresa.id,
+            "principal_kind": "empresa",
+            "principal_id": empresa.id,
+            "session_key": "sessao-command-ai-empresa",
+            "exp": timezone.now() + timedelta(hours=1),
+        }
+        token = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
+        self.client.cookies["auth_token"] = token
+
+        response = self.client.get("/sala-decisao-ia/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sala de Decisão Saúde Corporativa")
+        self.assertContains(response, "Voltar ao centro corporativo")
