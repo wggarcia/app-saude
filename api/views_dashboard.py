@@ -123,7 +123,7 @@ def _dashboard_url_por_setor(setor):
         return "/dashboard-farmacia/"
     if setor == "hospital":
         return "/dashboard-hospital/"
-    return "/dashboard/"
+    return "/dashboard-empresa/"
 
 
 def _setor_label(setor):
@@ -168,14 +168,16 @@ def _render_dashboard(request, variant):
         return redirect("/dashboard-governo/")
 
     if empresa.tipo_conta != Empresa.TIPO_GOVERNO and variant == "governo":
-        return redirect("/dashboard/")
+        return redirect(_dashboard_url_por_setor(_setor_conta(empresa)))
 
     if variant == "governo" and not empresa.acesso_governo:
         return redirect("/contrato-governo/")
 
     setor_conta = _setor_conta(empresa)
+    if setor_conta == "empresa":
+        return redirect("/dashboard-empresa/")
     if setor_conta != "governo":
-        variant_permitida = "populacao" if setor_conta == "empresa" else setor_conta
+        variant_permitida = setor_conta
         if variant != variant_permitida:
             return redirect(_dashboard_url_por_setor(setor_conta))
 
@@ -300,7 +302,7 @@ def contrato_governo(request):
     empresa = _empresa_autenticada(request)
 
     if empresa and empresa.tipo_conta != Empresa.TIPO_GOVERNO:
-        return redirect("/dashboard/")
+        return redirect(_dashboard_return_url(empresa))
 
     return render(request, "contrato_governo.html", {
         "empresa_nome": empresa.nome if empresa else "Orgao Governamental",
