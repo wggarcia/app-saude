@@ -248,6 +248,7 @@ def command_ai(request):
             return redirect("/contrato-governo/")
         return redirect("/pagamento/")
     return render(request, "command_ai.html", {
+        "empresa_id": str(empresa.id),
         "empresa_nome": empresa.nome,
         "setor_label": _setor_label(_setor_conta(empresa)),
         "return_url": _dashboard_return_url(empresa),

@@ -29,6 +29,11 @@ def _destino_conta(empresa):
         return "/contrato-governo/"
 
     if empresa.ativo:
+        setor = detalhes_pacote(empresa.pacote_codigo).get("setor")
+        if setor == "farmacia":
+            return "/dashboard-farmacia/"
+        if setor == "hospital":
+            return "/dashboard-hospital/"
         return "/dashboard/"
     return "/pagamento/"
 
@@ -430,6 +435,31 @@ def login_dono_saas(request):
     })
     response.set_cookie("owner_token", token, httponly=True, samesite="Lax", max_age=COOKIE_MAX_AGE)
     return response
+
+
+@csrf_exempt
+def ativar_sessao_aba(request):
+    if request.method != "POST":
+        return JsonResponse({"erro": "Use POST"}, status=405)
+
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return JsonResponse({"erro": "token ausente"}, status=401)
+
+    token = auth.split(" ", 1)[1].strip()
+    empresa = getattr(request, "empresa", None)
+    principal = getattr(request, "principal", None) or empresa
+
+    if not empresa or not principal:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+
+    response = JsonResponse({
+        "status": "ok",
+        "empresa_id": empresa.id,
+        "tipo_conta": empresa.tipo_conta,
+        "destination": _destino_conta(empresa),
+    })
+    return _aplicar_cookies_autenticacao(response, empresa, token)
 
 
 def logout_empresa(request):

@@ -86,33 +86,58 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
   const recommendationsEl = document.getElementById("recommendations");
   const toast = document.getElementById("toast");
   const returnTargets = [document.getElementById("returnBrand"), document.getElementById("returnPanelBtn")].filter(Boolean);
+  const pageEmpresaId = "{{ empresa_id|escapejs }}";
 
   function getScopedValue(key) {
     return sessionStorage.getItem(key) || localStorage.getItem(key) || "";
   }
 
-  function syncScopedAuth() {
+  async function syncScopedAuth() {
     const token = getScopedValue("auth_token") || getScopedValue("token");
-    const empresaId = getScopedValue("empresa_id");
-    const tipoConta = getScopedValue("tipo_conta") || "empresa";
-    if (token) {
-      document.cookie = `auth_token=${token}; path=/; SameSite=Lax`;
+    if (!token) {
+      return null;
     }
-    if (empresaId) {
-      document.cookie = `empresa_id=${empresaId}; path=/; SameSite=Lax`;
-    }
-    if (tipoConta) {
-      document.cookie = `tipo_conta=${tipoConta}; path=/; SameSite=Lax`;
-    }
+    const response = await fetch("/api/sessao/aba", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "same-origin",
+    });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    sessionStorage.setItem("empresa_id", String(payload.empresa_id || ""));
+    sessionStorage.setItem("tipo_conta", payload.tipo_conta || "empresa");
+    return payload;
   }
 
-  syncScopedAuth();
-  window.addEventListener("focus", syncScopedAuth);
+  function maybeReloadWithScopedSession(payload) {
+    if (!payload) return;
+    const currentUrl = new URL(window.location.href);
+    if (String(payload.empresa_id || "") !== String(pageEmpresaId || "")) {
+      const reloadKey = "command_ai_tab_sync_reload";
+      if (sessionStorage.getItem(reloadKey) === "1") {
+        sessionStorage.removeItem(reloadKey);
+        return;
+      }
+      sessionStorage.setItem(reloadKey, "1");
+      window.location.replace(currentUrl.pathname);
+      return;
+    }
+    sessionStorage.removeItem("command_ai_tab_sync_reload");
+  }
+
+  syncScopedAuth().then(maybeReloadWithScopedSession);
+  window.addEventListener("focus", () => {
+    syncScopedAuth().then(maybeReloadWithScopedSession);
+  });
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) syncScopedAuth();
+    if (!document.hidden) syncScopedAuth().then(maybeReloadWithScopedSession);
   });
   returnTargets.forEach((link) => {
-    link.addEventListener("click", syncScopedAuth);
+    link.addEventListener("click", async (event) => {
+      event.preventDefault();
+      await syncScopedAuth();
+      window.location.href = link.href;
+    });
   });
 
   function levelClass(value) {
@@ -224,7 +249,7 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
   }
 
   async function loadCommandAI() {
-    syncScopedAuth();
+    await syncScopedAuth();
     recommendationsEl.innerHTML = '<div class="loading">Carregando recomendações da IA...</div>';
     const response = await fetch("/api/command-ai");
     if (!response.ok) {

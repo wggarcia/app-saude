@@ -236,6 +236,83 @@ class AuthDeviceTests(TestCase):
             ).exists()
         )
 
+    def test_login_setorial_retorna_destino_especifico(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Teste",
+            email="farmacia@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        response = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["destination"], "/dashboard-farmacia/")
+
+    def test_ativar_sessao_aba_redefine_cookie_http_only(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Teste",
+            email="farmacia-sync@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        hospital = Empresa.objects.create(
+            nome="Hospital Teste",
+            email="hospital-sync@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login_farmacia = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-sync-device",
+            }),
+            content_type="application/json",
+        )
+        token_farmacia = login_farmacia.json()["token"]
+
+        login_hospital = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-sync-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login_hospital.status_code, 200)
+        self.assertEqual(self.client.get("/dashboard/")["Location"], "/dashboard-hospital/")
+
+        switch = self.client.post(
+            "/api/sessao/aba",
+            HTTP_AUTHORIZATION=f"Bearer {token_farmacia}",
+        )
+
+        self.assertEqual(switch.status_code, 200)
+        self.assertEqual(switch.json()["destination"], "/dashboard-farmacia/")
+        self.assertEqual(self.client.get("/dashboard/")["Location"], "/dashboard-farmacia/")
+
     def test_dispositivo_revogado_bloqueia_reuso_do_cookie(self):
         login = self._login("device-a")
 

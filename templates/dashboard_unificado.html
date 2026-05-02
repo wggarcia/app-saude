@@ -743,28 +743,48 @@
       return sessionStorage.getItem(key) || localStorage.getItem(key) || "";
     }
 
-    function syncScopedAuth() {
+    async function syncScopedAuth() {
       const token = getScopedValue("auth_token") || getScopedValue("token");
-      const scopedEmpresaId = getScopedValue("empresa_id") || empresaId;
-      const tipoConta = getScopedValue("tipo_conta") || "empresa";
-      if (token) {
-        document.cookie = `auth_token=${token}; path=/; SameSite=Lax`;
-      }
-      if (scopedEmpresaId) {
-        sessionStorage.setItem("empresa_id", scopedEmpresaId);
-        document.cookie = `empresa_id=${scopedEmpresaId}; path=/; SameSite=Lax`;
-      }
-      if (tipoConta) {
-        document.cookie = `tipo_conta=${tipoConta}; path=/; SameSite=Lax`;
-      }
+      if (!token) return null;
+      const response = await fetch("/api/sessao/aba", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "same-origin",
+      });
+      if (!response.ok) return null;
+      const payload = await response.json();
+      sessionStorage.setItem("empresa_id", String(payload.empresa_id || ""));
+      sessionStorage.setItem("tipo_conta", payload.tipo_conta || "empresa");
+      return payload;
     }
 
     sessionStorage.setItem("empresa_id", empresaId);
     localStorage.setItem("empresa_id", empresaId);
-    syncScopedAuth();
-    window.addEventListener("focus", syncScopedAuth);
+    function reconcileScopedSession(payload) {
+      if (!payload) return;
+      if (payload.destination && payload.destination !== window.location.pathname) {
+        window.location.replace(payload.destination);
+        return;
+      }
+      if (String(payload.empresa_id || "") !== String(empresaId || "")) {
+        const reloadKey = "empresa_tab_sync_reload";
+        if (sessionStorage.getItem(reloadKey) === "1") {
+          sessionStorage.removeItem(reloadKey);
+          return;
+        }
+        sessionStorage.setItem(reloadKey, "1");
+        window.location.reload();
+        return;
+      }
+      sessionStorage.removeItem("empresa_tab_sync_reload");
+    }
+
+    syncScopedAuth().then(reconcileScopedSession);
+    window.addEventListener("focus", () => {
+      syncScopedAuth().then(reconcileScopedSession);
+    });
     document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) syncScopedAuth();
+      if (!document.hidden) syncScopedAuth().then(reconcileScopedSession);
     });
 
     const variantProfile = {
@@ -798,13 +818,13 @@
       },
     }[variant];
 
-    document.getElementById("gotoMapa").addEventListener("click", () => {
-      syncScopedAuth();
+    document.getElementById("gotoMapa").addEventListener("click", async () => {
+      await syncScopedAuth();
       window.location.href = "/dashboard/";
     });
 
-    document.getElementById("gotoCommandAI").addEventListener("click", () => {
-      syncScopedAuth();
+    document.getElementById("gotoCommandAI").addEventListener("click", async () => {
+      await syncScopedAuth();
       window.location.href = "/sala-decisao-ia/";
     });
 
@@ -820,8 +840,8 @@
 
     const governoButton = document.getElementById("gotoGoverno");
     if (governoButton) {
-      governoButton.addEventListener("click", () => {
-        syncScopedAuth();
+      governoButton.addEventListener("click", async () => {
+        await syncScopedAuth();
         window.location.href = "/dashboard-governo/";
       });
     }
