@@ -2,142 +2,144 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>SolusCRT Ecossistema Institucional</title>
+<title>SolusCRT Empresa</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box}
 body{
   margin:0;
   min-height:100vh;
-  font-family:'Sora',system-ui,sans-serif;
-  color:#f4f7fb;
+  font-family:'Manrope',system-ui,sans-serif;
+  color:#eef5ff;
   background:
-    radial-gradient(circle at top left, rgba(58,180,167,.22), transparent 24rem),
-    radial-gradient(circle at 82% 18%, rgba(242,165,89,.18), transparent 18rem),
-    radial-gradient(circle at bottom right, rgba(77,116,255,.18), transparent 24rem),
-    linear-gradient(160deg,#04111d 0%,#061827 34%,#0c2236 68%,#102942 100%);
+    radial-gradient(circle at 12% 18%, rgba(71,214,198,.22), transparent 22rem),
+    radial-gradient(circle at 82% 15%, rgba(255,185,98,.16), transparent 18rem),
+    radial-gradient(circle at 84% 82%, rgba(91,126,255,.18), transparent 26rem),
+    linear-gradient(145deg,#03111d 0%,#081a2b 34%,#0e2840 72%,#0f3153 100%);
 }
 body::before{
   content:"";
   position:fixed;
   inset:0;
   background-image:
-    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
   background-size:48px 48px;
   mask-image:linear-gradient(180deg, rgba(0,0,0,.9), rgba(0,0,0,.22));
   pointer-events:none;
 }
-.shell{position:relative;z-index:1;width:min(1380px,calc(100% - 32px));margin:0 auto;padding:24px 0 34px}
-.topbar,.hero,.card,.module,.signal,.trust{border:1px solid rgba(255,255,255,.08);box-shadow:0 26px 90px rgba(3,10,18,.32);backdrop-filter:blur(16px)}
+.shell{position:relative;z-index:1;width:min(1420px,calc(100% - 32px));margin:0 auto;padding:24px 0 36px}
+.topbar,.hero,.card,.module,.proof,.trust{border:1px solid rgba(255,255,255,.08);box-shadow:0 28px 90px rgba(3,10,18,.34);backdrop-filter:blur(18px)}
 .topbar{
   display:flex;justify-content:space-between;align-items:center;gap:16px;
-  border-radius:28px;padding:16px 18px;background:rgba(5,18,31,.58)
+  padding:16px 18px;border-radius:28px;background:rgba(4,18,31,.56)
 }
 .brand{display:flex;gap:14px;align-items:center}
 .mark{
   width:48px;height:48px;border-radius:16px;display:grid;place-items:center;
-  background:linear-gradient(135deg,#4bd2c4,#2d7ef7);font-weight:800;color:#04111d
+  background:linear-gradient(135deg,#50e0d0,#4d78ff);font-weight:800;color:#04131f
 }
-.brand h1{margin:0;font-size:1rem}
-.brand p{margin:4px 0 0;color:rgba(226,234,245,.7);font-size:.88rem}
-.top-actions{display:flex;flex-wrap:wrap;gap:10px}
+.brand h1{margin:0;font-size:1.02rem}
+.brand p{margin:4px 0 0;color:rgba(228,236,247,.72);font-size:.88rem}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
 .chip{
-  display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;
-  background:rgba(255,255,255,.05);color:#d9e4f2;font-size:.8rem;font-weight:700
+  display:inline-flex;align-items:center;padding:10px 14px;border-radius:999px;
+  background:rgba(255,255,255,.05);color:#deebf6;font-size:.8rem;font-weight:700
 }
 .hero{
   margin-top:18px;
   display:grid;
-  grid-template-columns:1.2fr .8fr;
+  grid-template-columns:1.16fr .84fr;
   gap:18px;
   padding:22px;
-  border-radius:36px;
-  background:linear-gradient(145deg,rgba(8,22,36,.84),rgba(10,27,43,.62));
+  border-radius:38px;
+  background:linear-gradient(145deg,rgba(7,20,33,.82),rgba(10,26,43,.62));
 }
 .story{
-  min-height:620px;
-  border-radius:30px;
-  padding:28px;
+  min-height:650px;
+  border-radius:32px;
+  padding:30px;
   display:grid;
   align-content:space-between;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)),
-    radial-gradient(circle at top right, rgba(75,210,196,.14), transparent 18rem),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)),
+    radial-gradient(circle at top right, rgba(80,224,208,.12), transparent 18rem),
     rgba(255,255,255,.03);
 }
 .eyebrow{
   display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;
-  background:rgba(75,210,196,.12);color:#82efe3;font-size:.74rem;font-weight:800;
+  background:rgba(80,224,208,.12);color:#95fff2;font-size:.74rem;font-weight:800;
   text-transform:uppercase;letter-spacing:.14em
 }
 .story h2{
   margin:18px 0 16px;
-  font-family:'Instrument Serif',serif;
-  font-size:clamp(3.2rem,6vw,5.8rem);
-  line-height:.92;
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(3.6rem,6vw,6.2rem);
+  line-height:.88;
   letter-spacing:-.04em;
 }
-.story p{margin:0;color:rgba(229,236,245,.78);line-height:1.72;font-size:1rem;max-width:760px}
-.story-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:22px}
+.story p{margin:0;color:rgba(232,239,248,.8);line-height:1.78;font-size:1rem;max-width:760px}
+.modules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:24px}
 .module{
-  padding:18px;border-radius:24px;background:rgba(255,255,255,.04)
+  padding:18px;border-radius:24px;background:rgba(255,255,255,.045)
 }
 .module span{
-  display:inline-block;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.07);
-  color:#8fd5ff;font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em
+  display:inline-block;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.08);
+  color:#93d6ff;font-size:.73rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em
 }
-.module h3{margin:14px 0 8px;font-size:1.1rem}
-.module p{font-size:.92rem}
-.signals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
-.signal{
-  border-radius:22px;padding:18px;background:rgba(255,255,255,.04)
+.module h3{margin:14px 0 8px;font-size:1.08rem}
+.module p{font-size:.92rem;line-height:1.65}
+.proofs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.proof{
+  border-radius:22px;padding:18px;background:rgba(255,255,255,.045)
 }
-.signal strong{display:block;font-size:1.45rem}
-.signal span{display:block;margin-top:5px;color:rgba(232,238,247,.68);font-size:.82rem;line-height:1.5}
+.proof strong{display:block;font-size:1.55rem}
+.proof span{display:block;margin-top:6px;color:rgba(232,239,248,.72);font-size:.82rem;line-height:1.55}
 .card{
-  border-radius:30px;
-  padding:24px;
-  background:linear-gradient(180deg,rgba(248,251,255,.96),rgba(234,241,249,.92));
-  color:#102235;
+  border-radius:30px;padding:26px;
+  background:linear-gradient(180deg,rgba(248,251,255,.97),rgba(234,241,249,.93));
+  color:#102235
 }
-.card h3{margin:10px 0 8px;font-size:1.7rem}
-.card p{margin:0;color:#516171;line-height:1.68}
-.card .eyebrow{background:rgba(16,34,53,.08);color:#0f766e}
+.card .eyebrow{background:rgba(16,34,53,.08);color:#0e756f}
+.card h3{margin:12px 0 10px;font-size:1.8rem}
+.card p{margin:0;color:#536374;line-height:1.72}
 .field{margin-top:14px}
-.label{display:block;margin-bottom:8px;font-size:.82rem;font-weight:800;color:#375067;text-transform:uppercase;letter-spacing:.12em}
+.label{
+  display:block;margin-bottom:8px;font-size:.8rem;font-weight:800;color:#3d5468;
+  text-transform:uppercase;letter-spacing:.12em
+}
 .input{
   width:100%;padding:15px 16px;border-radius:18px;border:1px solid rgba(16,34,53,.12);
-  background:rgba(255,255,255,.82);font:inherit;color:#102235;outline:none;
-  transition:border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+  background:rgba(255,255,255,.86);font:inherit;color:#102235;outline:none;
+  transition:border-color .2s ease, box-shadow .2s ease, transform .2s ease
 }
-.input:focus{border-color:#2d7ef7;transform:translateY(-1px);box-shadow:0 12px 30px rgba(45,126,247,.12)}
+.input:focus{border-color:#4d78ff;box-shadow:0 14px 32px rgba(77,120,255,.14);transform:translateY(-1px)}
 .cta{
-  margin-top:18px;width:100%;min-height:56px;border:0;border-radius:20px;cursor:pointer;
-  background:linear-gradient(135deg,#0f766e,#2d7ef7 58%,#68d7ca);color:#fff;
-  font:inherit;font-weight:800;letter-spacing:.01em;box-shadow:0 22px 44px rgba(18,93,155,.25)
+  margin-top:18px;width:100%;min-height:58px;border:0;border-radius:20px;cursor:pointer;
+  background:linear-gradient(135deg,#0f766e,#4d78ff 58%,#74e3d7);color:#fff;
+  font:inherit;font-weight:800;letter-spacing:.01em;box-shadow:0 24px 44px rgba(24,90,153,.25)
 }
 .cta:hover{transform:translateY(-1px)}
-.helper{margin-top:14px;font-size:.88rem;color:#617487;line-height:1.7}
-.helper a{color:#0f766e;text-decoration:none;font-weight:700}
+.helper{margin-top:14px;font-size:.9rem;color:#617487;line-height:1.72}
+.helper a{color:#0f766e;text-decoration:none;font-weight:800}
 .trust{
-  margin-top:18px;padding:18px;border-radius:24px;background:rgba(10,29,45,.88);color:#dce7f1
+  margin-top:18px;padding:18px;border-radius:24px;background:rgba(9,29,45,.9);color:#deebf6
 }
-.trust h4{margin:0 0 10px;font-size:.98rem}
-.trust ul{margin:0;padding-left:18px;color:rgba(220,231,241,.8);line-height:1.7}
-.erro{margin-top:12px;padding:12px 14px;border-radius:16px;background:rgba(185,28,28,.10);color:#991b1b;display:none}
-@media(max-width:1100px){
+.trust h4{margin:0 0 10px;font-size:1rem}
+.trust ul{margin:0;padding-left:18px;color:rgba(222,235,246,.82);line-height:1.68}
+.erro{margin-top:12px;padding:12px 14px;border-radius:16px;background:rgba(185,28,28,.1);color:#991b1b;display:none}
+.anchor{position:absolute;left:-9999px}
+@media(max-width:1120px){
   .hero{grid-template-columns:1fr}
   .story{min-height:unset}
 }
 @media(max-width:760px){
-  .shell{width:min(100% - 18px,1380px)}
-  .story-grid,.signals{grid-template-columns:1fr}
+  .shell{width:min(100% - 18px,1420px)}
+  .modules,.proofs{grid-template-columns:1fr}
   .topbar{flex-direction:column;align-items:flex-start}
-  .top-actions{width:100%}
 }
 </style>
 </head>
@@ -147,11 +149,11 @@ body::before{
     <div class="brand">
       <div class="mark">SC</div>
       <div>
-        <h1>SolusCRT Ecossistema Institucional</h1>
-        <p>Entrada premium para ambientes empresariais, assistenciais e territoriais.</p>
+        <h1>SolusCRT Empresa</h1>
+        <p>Ecossistema privado para saude corporativa, farmacia, hospital e operacao territorial.</p>
       </div>
     </div>
-    <div class="top-actions">
+    <div class="chips">
       <span class="chip">SaaS empresarial</span>
       <span class="chip">Farmacia</span>
       <span class="chip">Hospital</span>
@@ -162,56 +164,55 @@ body::before{
   <section class="hero">
     <article class="story">
       <div>
-        <span class="eyebrow">Camada de acesso institucional</span>
-        <h2>Um ecossistema. Entradas distintas. Ambientes certos apos o login.</h2>
-        <p>SolusCRT Empresa agora funciona como a entrada institucional do ecossistema. Empresas contratantes, farmacias, laboratorios e hospitais usam a mesma camada de autenticacao, mas cada contrato entra automaticamente no ambiente operacional correspondente sem compartilhar modulo governamental ou administrativo.</p>
+        <span class="eyebrow">Acesso empresarial premium</span>
+        <span class="anchor">Acesso empresarial</span>
+        <h2>Entre no ambiente certo para proteger pessoas, operacoes e decisoes.</h2>
+        <p>O SolusCRT Empresa concentra os acessos privados do ecossistema. Depois do login, cada contrato entra diretamente no seu ambiente proprio, com identidade, dados e fluxo separados para empresa, farmacia, hospital ou operacao territorial.</p>
 
-        <div class="story-grid">
+        <div class="modules">
           <article class="module">
-            <span>Saude corporativa</span>
-            <h3>Empresa</h3>
-            <p>Saude ocupacional, risco psicossocial, bem-estar do colaborador e planos de acao para RH, SESMT e lideranca.</p>
+            <span>Empresa</span>
+            <h3>Saude ocupacional que ajuda lideres a agir</h3>
+            <p>Reduza absenteismo, identifique fadiga e risco psicossocial, acompanhe a forca de trabalho com leitura anonima e transforme sinal em plano de acao para RH e SESMT.</p>
           </article>
           <article class="module">
-            <span>Assistencia</span>
-            <h3>Hospital</h3>
-            <p>Pressao assistencial, demanda territorial, vigilancia interna e leitura clinico-operacional em ambiente proprio.</p>
+            <span>Farmacia</span>
+            <h3>Demanda, estoque e pressao territorial</h3>
+            <p>Antecipe oscilacoes de consumo e surtos locais para ajustar abastecimento, orientacao ao cliente e capacidade operacional.</p>
           </article>
           <article class="module">
-            <span>Dispensacao</span>
-            <h3>Farmacia</h3>
-            <p>Consumo, pressao regional, abastecimento, surtos por territorio e decisao de estoque em camadas dedicadas.</p>
+            <span>Hospital</span>
+            <h3>Pressao assistencial antes do pico</h3>
+            <p>Visualize sinais de demanda, risco regional e tensao operacional para preparar equipes, insumos e atendimento com antecedencia.</p>
           </article>
           <article class="module">
             <span>Territorio</span>
-            <h3>Operacao territorial</h3>
-            <p>Inteligencia epidemiologica, resposta regional e protecao populacional em operacoes publicas e institucionais.</p>
+            <h3>Inteligencia epidemiologica para resposta rapida</h3>
+            <p>Conecte alerta, vigilancia e decisao territorial sem misturar esse fluxo com modulos governamentais ou administrativos centrais.</p>
           </article>
         </div>
       </div>
 
-      <div>
-        <div class="signals">
-          <article class="signal">
-            <strong>1 login</strong>
-            <span>camada institucional unica para reconhecer contrato, setor e destino.</span>
-          </article>
-          <article class="signal">
-            <strong>4 frentes</strong>
-            <span>empresa, farmacia, hospital e operacao territorial com identidade propria.</span>
-          </article>
-          <article class="signal">
-            <strong>0 mistura</strong>
-            <span>sem cruzar entrada com modulo governamental ou area administrativa central.</span>
-          </article>
-        </div>
+      <div class="proofs">
+        <article class="proof">
+          <strong>1</strong>
+          <span>camada privada de acesso institucional para reconhecer contrato e destino.</span>
+        </article>
+        <article class="proof">
+          <strong>4</strong>
+          <span>ambientes especializados, cada um com narrativa, dados e decisao proprios.</span>
+        </article>
+        <article class="proof">
+          <strong>0</strong>
+          <span>mistura entre login privado, modulo governamental e operacao administrativa.</span>
+        </article>
       </div>
     </article>
 
     <aside class="card">
-      <span class="eyebrow">Acesso empresarial institucional</span>
-      <h3>Entrar no ecossistema</h3>
-      <p>Use sua credencial institucional. O sistema identifica o contrato e direciona automaticamente para o ambiente correto: corporativo, farmacia, hospital ou operacao territorial.</p>
+      <span class="eyebrow">Acesso institucional</span>
+      <h3>Entrar no seu ambiente privado</h3>
+      <p>Use sua credencial institucional. O sistema identifica o pacote contratado e abre automaticamente o ambiente correto para sua operacao.</p>
 
       <div class="field">
         <label class="label" for="email">Email institucional</label>
@@ -222,19 +223,19 @@ body::before{
         <input id="senha" type="password" class="input" placeholder="Digite sua senha">
       </div>
 
-      <button class="cta" onclick="login()">Entrar na operacao correta</button>
+      <button class="cta" onclick="login()">Acessar meu ambiente</button>
 
       <div class="helper">
-        Precisa contratar ou criar sua entrada institucional?
-        <a href="/cadastro/">Abrir cadastro empresarial</a>
+        Ainda nao faz parte do ecossistema?
+        <a href="/cadastro/">Solicitar acesso comercial</a>
       </div>
 
       <div class="trust">
-        <h4>O que este acesso faz</h4>
+        <h4>O que voce encontra depois do login</h4>
         <ul>
-          <li>Reconhece setor e pacote ativo antes de abrir o ambiente.</li>
-          <li>Preserva separacao entre empresa, farmacia, hospital e governo.</li>
-          <li>Mantem trilha segura de sessao por dispositivo.</li>
+          <li>Empresa: saude ocupacional, bem-estar e prevencao institucional.</li>
+          <li>Farmacia: pressao regional, demanda e decisao de abastecimento.</li>
+          <li>Hospital: risco assistencial, tendencia e resposta operacional.</li>
         </ul>
       </div>
 
