@@ -334,8 +334,111 @@ class PedidoApoioCorporativo(models.Model):
     class Meta:
         ordering = ["-criado_em"]
 
+    atendente = models.CharField(max_length=160, blank=True, default="")
+    resolucao = models.TextField(blank=True, default="")
+    concluido_em = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
         return f"{self.empresa.nome} - apoio - {self.status}"
+
+
+class ProgramaCorporativo(models.Model):
+    TIPO_FADIGA = "fadiga"
+    TIPO_PSICOSSOCIAL = "psicossocial"
+    TIPO_ERGONOMIA = "ergonomia"
+    TIPO_COMPETENCIA = "competencia"
+    TIPO_CULTURA = "cultura"
+    TIPO_LIVRE = "livre"
+    TIPOS = [
+        (TIPO_FADIGA, "Fadiga e recuperacao"),
+        (TIPO_PSICOSSOCIAL, "Risco psicossocial"),
+        (TIPO_ERGONOMIA, "Ergonomia e saude fisica"),
+        (TIPO_COMPETENCIA, "Competencia tecnica"),
+        (TIPO_CULTURA, "Cultura e comunicacao"),
+        (TIPO_LIVRE, "Programa livre"),
+    ]
+
+    STATUS_RASCUNHO = "rascunho"
+    STATUS_ATIVO = "ativo"
+    STATUS_PAUSADO = "pausado"
+    STATUS_ENCERRADO = "encerrado"
+    STATUS_CHOICES = [
+        (STATUS_RASCUNHO, "Rascunho"),
+        (STATUS_ATIVO, "Ativo"),
+        (STATUS_PAUSADO, "Pausado"),
+        (STATUS_ENCERRADO, "Encerrado"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="programas_corporativos")
+    titulo = models.CharField(max_length=160)
+    tipo = models.CharField(max_length=20, choices=TIPOS, default=TIPO_LIVRE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_RASCUNHO)
+    owner = models.CharField(max_length=160)
+    objetivo = models.TextField(blank=True, default="")
+    unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="programas")
+    setor = models.ForeignKey(EmpresaSetor, on_delete=models.SET_NULL, null=True, blank=True, related_name="programas")
+    prazo = models.DateField(null=True, blank=True)
+    resultado = models.TextField(blank=True, default="")
+    encerrado_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["empresa", "status"])]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - programa - {self.titulo}"
+
+
+class AcaoCorporativa(models.Model):
+    STATUS_ABERTA = "aberta"
+    STATUS_EM_ANDAMENTO = "em_andamento"
+    STATUS_CONCLUIDA = "concluida"
+    STATUS_CANCELADA = "cancelada"
+    STATUS_CHOICES = [
+        (STATUS_ABERTA, "Aberta"),
+        (STATUS_EM_ANDAMENTO, "Em andamento"),
+        (STATUS_CONCLUIDA, "Concluida"),
+        (STATUS_CANCELADA, "Cancelada"),
+    ]
+
+    ORIGEM_MANUAL = "manual"
+    ORIGEM_RISCO = "risco"
+    ORIGEM_APOIO = "apoio"
+    ORIGEM_PROGRAMA = "programa"
+    ORIGENS = [
+        (ORIGEM_MANUAL, "Criada manualmente"),
+        (ORIGEM_RISCO, "Gerada por risco"),
+        (ORIGEM_APOIO, "Gerada por pedido de apoio"),
+        (ORIGEM_PROGRAMA, "Vinculada a programa"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="acoes_corporativas")
+    titulo = models.CharField(max_length=160)
+    descricao = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ABERTA)
+    origem = models.CharField(max_length=20, choices=ORIGENS, default=ORIGEM_MANUAL)
+    owner = models.CharField(max_length=160)
+    unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="acoes")
+    setor = models.ForeignKey(EmpresaSetor, on_delete=models.SET_NULL, null=True, blank=True, related_name="acoes")
+    prazo = models.DateField(null=True, blank=True)
+    evidencia = models.TextField(blank=True, default="")
+    programa = models.ForeignKey(ProgramaCorporativo, on_delete=models.SET_NULL, null=True, blank=True, related_name="acoes")
+    pedido_apoio = models.ForeignKey(PedidoApoioCorporativo, on_delete=models.SET_NULL, null=True, blank=True, related_name="acoes")
+    concluido_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "origem"]),
+        ]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - acao - {self.titulo}"
 
 
 class TrilhaCompetenciaCorporativa(models.Model):

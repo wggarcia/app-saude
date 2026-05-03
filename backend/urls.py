@@ -37,6 +37,16 @@ from api.views_corporativo import (
     api_corporativo_checkin_diario,
     api_corporativo_checkin_semanal,
 )
+from api.views_gestao import (
+    gestao_corporativa,
+    api_apoio_fila,
+    api_apoio_atualizar,
+    api_programas,
+    api_programa_status,
+    api_acoes,
+    api_acao_status,
+    api_gestao_resumo,
+)
 from api.views_competencia import (
     competencia_corporativa,
     api_cargos,
@@ -104,6 +114,14 @@ urlpatterns = [
     path('mobile/c/<str:codigo>/', app_colaborador_corporativo),
     path('colaborador-mobile/c/<str:codigo>/', app_colaborador_corporativo),
     path('competencia/', competencia_corporativa),
+    path('gestao/', gestao_corporativa),
+    path('api/gestao/resumo', api_gestao_resumo),
+    path('api/gestao/apoio', api_apoio_fila),
+    path('api/gestao/apoio/<int:pedido_id>', api_apoio_atualizar),
+    path('api/gestao/programas', api_programas),
+    path('api/gestao/programas/<int:programa_id>/status', api_programa_status),
+    path('api/gestao/acoes', api_acoes),
+    path('api/gestao/acoes/<int:acao_id>/status', api_acao_status),
 
     # 📊 API PRINCIPAL
     path('api/registrar', registrar_sintoma),

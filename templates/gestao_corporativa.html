@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Centro de Gestão | {{ empresa_nome }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#041018;--panel:rgba(11,24,34,.9);--panel-2:rgba(10,24,35,.6);
+      --line:rgba(154,193,220,.14);--soft:rgba(255,255,255,.08);
+      --text:#ebf7ff;--muted:#9ab9ce;--accent:#7ee1c3;--accent-2:#7db6ff;
+      --gold:#f0bf6b;--danger:#ff7a91;--shadow:0 24px 70px rgba(0,0,0,.42);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      min-height:100vh;font-family:"Manrope","Segoe UI",sans-serif;color:var(--text);
+      background:
+        radial-gradient(circle at top left,rgba(126,225,195,.12),transparent 20rem),
+        radial-gradient(circle at top right,rgba(125,182,255,.14),transparent 24rem),
+        linear-gradient(180deg,#041018 0%,#08141d 40%,#061119 100%);
+    }
+    body::before{
+      content:"";position:fixed;inset:0;pointer-events:none;
+      background:linear-gradient(rgba(125,182,255,.04) 1px,transparent 1px),
+                 linear-gradient(90deg,rgba(125,182,255,.04) 1px,transparent 1px);
+      background-size:44px 44px;opacity:.16;
+    }
+    .glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px);box-shadow:var(--shadow)}
+
+    /* TOPBAR */
+    .topbar{
+      position:sticky;top:0;z-index:100;
+      display:flex;align-items:center;gap:12px;
+      padding:10px 20px;border-bottom:1px solid var(--line);
+    }
+    .brand{font-weight:800;font-size:1rem}
+    .brand-sep{color:var(--line)}
+    .brand-sub{color:var(--gold);font-weight:700;font-size:.9rem}
+    .company-tag{
+      padding:4px 10px;border-radius:999px;
+      background:rgba(240,191,107,.1);border:1px solid rgba(240,191,107,.22);
+      color:#fff3c8;font-size:.72rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;
+    }
+    .topbar-nav{display:flex;gap:4px;flex:1;overflow-x:auto;scrollbar-width:none}
+    .topbar-nav::-webkit-scrollbar{display:none}
+    .tab-btn{
+      flex-shrink:0;padding:7px 14px;border-radius:999px;border:none;cursor:pointer;
+      background:transparent;color:var(--muted);font:inherit;font-size:.8rem;font-weight:700;
+      white-space:nowrap;transition:all .18s;
+    }
+    .tab-btn:hover{background:rgba(255,255,255,.06);color:var(--text)}
+    .tab-btn.active{background:rgba(240,191,107,.14);color:#fff3c8;border:1px solid rgba(240,191,107,.24)}
+    .badge{
+      display:inline-flex;align-items:center;justify-content:center;
+      min-width:18px;height:18px;border-radius:999px;
+      background:rgba(255,122,145,.22);color:#ffb5c0;
+      font-size:.68rem;font-weight:900;padding:0 5px;margin-left:5px;
+    }
+    .badge:empty{display:none}
+    .topbar-actions{display:flex;gap:8px;flex-shrink:0}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      min-height:36px;padding:0 14px;border-radius:999px;
+      border:1px solid var(--soft);background:rgba(255,255,255,.06);
+      color:var(--text);font:inherit;font-size:.8rem;font-weight:800;
+      cursor:pointer;text-decoration:none;transition:all .18s;
+    }
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn.primary{border:0;background:linear-gradient(135deg,#0db794,#1f6ff2)}
+    .btn.gold{border:0;background:linear-gradient(135deg,#c97d0a,#8a5800)}
+    .btn.warn{border:0;background:linear-gradient(135deg,#8b2239,#5e1b1b)}
+    .btn.sm{min-height:30px;padding:0 10px;font-size:.74rem}
+    .btn.xs{min-height:26px;padding:0 8px;font-size:.7rem}
+    .btn.start{background:rgba(126,225,195,.14);color:#b0ffe6;border-color:rgba(126,225,195,.2)}
+    .btn.pause{background:rgba(240,191,107,.14);color:#ffe4ad;border-color:rgba(240,191,107,.2)}
+    .btn.close-btn{background:rgba(125,182,255,.14);color:#c3deff;border-color:rgba(125,182,255,.2)}
+    .btn.done{background:rgba(126,225,195,.18);color:#aef0db}
+    .btn.cancel{background:rgba(239,68,68,.14);color:#fca5a5}
+
+    /* SHELL */
+    .shell{width:min(1440px,calc(100% - 24px));margin:0 auto;padding:18px 0 40px;display:grid;gap:16px}
+
+    /* PANELS */
+    .panel{display:none}
+    .panel.active{display:grid;gap:16px}
+
+    /* SUMMARY STRIP */
+    .strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .strip-card{
+      border-radius:20px;padding:14px 16px;
+      background:linear-gradient(180deg,rgba(17,35,50,.9),rgba(8,18,28,.92));
+      border:1px solid var(--soft);
+    }
+    .strip-card span{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
+    .strip-card strong{display:block;margin-top:8px;font-size:1.4rem;font-weight:800}
+    .strip-card.alert strong{color:var(--danger)}
+    .strip-card.active strong{color:var(--accent)}
+    .strip-card.gold strong{color:var(--gold)}
+
+    /* CARD */
+    .card{border-radius:28px;padding:20px}
+    .section-title{font-size:1rem;font-weight:800;margin-bottom:4px}
+    .section-sub{color:var(--muted);font-size:.86rem;margin-bottom:14px}
+    .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+
+    /* TWO COL */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .full{display:grid;gap:16px}
+
+    /* FILTER */
+    .filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .filter-pill{
+      padding:6px 12px;border-radius:999px;border:1px solid var(--soft);
+      background:rgba(255,255,255,.04);color:var(--muted);
+      font-size:.76rem;font-weight:800;cursor:pointer;
+    }
+    .filter-pill.active{background:rgba(240,191,107,.14);color:#fff3c8;border-color:rgba(240,191,107,.24)}
+
+    /* ITEM ROWS */
+    .item-list{display:grid;gap:10px}
+    .item-row{
+      border-radius:18px;padding:14px 16px;
+      background:rgba(255,255,255,.04);border:1px solid var(--soft);
+      display:grid;gap:8px;
+    }
+    .item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+    .item-name{font-size:.95rem;font-weight:700}
+    .item-meta{color:var(--muted);font-size:.8rem;margin-top:3px;line-height:1.5}
+    .item-actions{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+    .empty{
+      text-align:center;padding:28px;color:var(--muted);font-size:.88rem;
+      border-radius:16px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1);
+    }
+
+    /* STATUS BADGES */
+    .sbadge{
+      display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;
+      font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0;
+    }
+    /* apoio */
+    .s-novo{background:rgba(255,122,145,.14);color:#ffbfcb}
+    .s-em_analise{background:rgba(240,191,107,.14);color:#ffe4ad}
+    .s-encaminhado{background:rgba(125,182,255,.14);color:#c3deff}
+    .s-concluido{background:rgba(126,225,195,.14);color:#b0ffe6}
+    /* acao */
+    .s-aberta{background:rgba(255,122,145,.14);color:#ffbfcb}
+    .s-em_andamento{background:rgba(240,191,107,.14);color:#ffe4ad}
+    .s-concluida{background:rgba(126,225,195,.14);color:#b0ffe6}
+    .s-cancelada{background:rgba(255,255,255,.07);color:var(--muted)}
+    /* programa */
+    .s-rascunho{background:rgba(255,255,255,.07);color:var(--muted)}
+    .s-ativo{background:rgba(126,225,195,.14);color:#b0ffe6}
+    .s-pausado{background:rgba(240,191,107,.14);color:#ffe4ad}
+    .s-encerrado{background:rgba(125,182,255,.14);color:#c3deff}
+    /* tipo */
+    .tipo-badge{
+      display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:999px;
+      font-size:.65rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;
+      background:rgba(125,182,255,.1);color:#c3deff;
+    }
+    /* origem */
+    .origem-badge{
+      display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:999px;
+      font-size:.65rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;
+      background:rgba(255,255,255,.07);color:var(--muted);
+    }
+
+    /* INLINE FORMS */
+    .inline-form{
+      display:none;margin-top:8px;padding:12px;border-radius:14px;
+      background:rgba(255,255,255,.04);border:1px solid var(--soft);
+      grid-gap:8px;
+    }
+    .inline-form.open{display:grid}
+    .form-grid{display:grid;gap:10px}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .field{display:flex;flex-direction:column;gap:5px}
+    label{color:#bfd3e2;font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em}
+    input,select,textarea{
+      border-radius:12px;border:1px solid var(--soft);
+      background:rgba(255,255,255,.06);color:var(--text);
+      padding:9px 12px;font:inherit;font-size:.86rem;outline:none;width:100%;
+    }
+    input:focus,select:focus,textarea:focus{border-color:rgba(125,182,255,.4);box-shadow:0 0 0 3px rgba(125,182,255,.1)}
+    select option{background:#0b1822}
+    textarea{min-height:64px;resize:vertical}
+    .form-actions{display:flex;gap:8px}
+    .toast{padding:9px 12px;border-radius:12px;font-size:.82rem;margin-top:6px;display:none}
+    .toast.ok{display:block;background:rgba(15,178,142,.12);color:#aef0db}
+    .toast.err{display:block;background:rgba(255,130,152,.12);color:#ffc6d2}
+
+    /* RESOLUCAO EXPAND */
+    .resolucao-form{
+      display:none;margin-top:8px;padding:12px;border-radius:14px;
+      background:rgba(255,255,255,.04);border:1px solid var(--soft);
+    }
+    .resolucao-form.open{display:grid;gap:8px}
+
+    /* PRAZO INDICATOR */
+    .prazo-ok{color:var(--accent);font-weight:700}
+    .prazo-warn{color:var(--gold);font-weight:700}
+    .prazo-late{color:var(--danger);font-weight:700}
+
+    @media(max-width:1100px){
+      .strip{grid-template-columns:repeat(2,1fr)}
+      .two-col{grid-template-columns:1fr}
+      .form-row,.form-row-3{grid-template-columns:1fr}
+    }
+    @media(max-width:680px){
+      .strip{grid-template-columns:1fr 1fr}
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar glass">
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <span class="brand">SolusCRT</span>
+    <span class="brand-sep">·</span>
+    <span class="brand-sub">Centro de Gestão</span>
+    <span class="company-tag">{{ empresa_nome }}</span>
+  </div>
+  <nav class="topbar-nav">
+    <button class="tab-btn active" data-tab="acoes">Ações<span class="badge" id="badgeAcoes"></span></button>
+    <button class="tab-btn" data-tab="apoio">Fila de Apoio<span class="badge" id="badgeApoio"></span></button>
+    <button class="tab-btn" data-tab="programas">Programas</button>
+  </nav>
+  <div class="topbar-actions">
+    <a class="btn sm" href="/competencia/">Competência</a>
+    <a class="btn sm" href="/dashboard-empresa/">← Painel</a>
+    <a class="btn sm warn" href="/logout/">Sair</a>
+  </div>
+</header>
+
+<main class="shell">
+
+  <!-- ══ AÇÕES ══════════════════════════════════════════════════════════════ -->
+  <section id="panel-acoes" class="panel active">
+    <div class="strip" id="resumoStrip">
+      <div class="strip-card alert"><span>Apoio aguardando</span><strong id="rApoio">—</strong></div>
+      <div class="strip-card alert"><span>Ações abertas</span><strong id="rAcoes">—</strong></div>
+      <div class="strip-card gold"><span>Programas ativos</span><strong id="rProgramas">—</strong></div>
+      <div class="strip-card active"><span>Total com atenção</span><strong id="rTotal">—</strong></div>
+    </div>
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Fila de ações</div>
+            <div class="section-sub">Abertas e em andamento — clique para avançar o status</div>
+          </div>
+          <button class="btn sm" onclick="loadAcoes(filtroAcao)">Atualizar</button>
+        </div>
+        <div class="filter-row">
+          <span class="filter-pill active" data-status="">Abertas</span>
+          <span class="filter-pill" data-status="concluida">Concluídas</span>
+          <span class="filter-pill" data-status="cancelada">Canceladas</span>
+        </div>
+        <div class="item-list" id="listaAcoes"><div class="empty">Carregando...</div></div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:4px">Nova ação</div>
+        <div class="section-sub">Abra uma ação para qualquer problema que exige owner e acompanhamento</div>
+        <form id="formAcao" class="form-grid">
+          <div class="field"><label>Título *</label><input name="titulo" placeholder="Reduzir estresse na Unidade Norte, Revisar escala do turno B..."></div>
+          <div class="form-row">
+            <div class="field"><label>Owner (responsável) *</label><input name="owner" placeholder="Nome ou cargo do responsável"></div>
+            <div class="field"><label>Prazo</label><input name="prazo" type="date"></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Origem</label>
+              <select name="origem">
+                <option value="manual">Manual</option>
+                <option value="risco">Risco identificado</option>
+                <option value="apoio">Pedido de apoio</option>
+                <option value="programa">Vinculada a programa</option>
+              </select>
+            </div>
+            <div class="field"><label>Programa (opcional)</label>
+              <select name="programa_id" id="acaoProgramaSel"><option value="">Sem programa</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Unidade</label><select name="unidade_id" id="acaoUnidadeSel"><option value="">Sem unidade</option></select></div>
+            <div class="field"><label>Setor</label><select name="setor_id" id="acaoSetorSel"><option value="">Sem setor</option></select></div>
+          </div>
+          <div class="field"><label>Descrição</label><textarea name="descricao" placeholder="Descreva o que precisa acontecer e por que..."></textarea></div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Abrir ação</button>
+          </div>
+          <div class="toast" id="toastAcao"></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ APOIO ══════════════════════════════════════════════════════════════ -->
+  <section id="panel-apoio" class="panel">
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Pedidos de apoio</div>
+            <div class="section-sub">Solicitações anônimas dos colaboradores aguardando encaminhamento</div>
+          </div>
+          <button class="btn sm" onclick="loadApoio(filtroApoio)">Atualizar</button>
+        </div>
+        <div class="filter-row">
+          <span class="filter-pill active" data-status-apoio="">Abertos</span>
+          <span class="filter-pill" data-status-apoio="encaminhado">Encaminhados</span>
+          <span class="filter-pill" data-status-apoio="concluido">Concluídos</span>
+        </div>
+        <div class="item-list" id="listaApoio"><div class="empty">Carregando...</div></div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:8px">Como usar a fila</div>
+        <div class="item-list">
+          <div class="item-row">
+            <div class="item-name" style="font-size:.88rem">1. Novo → Em análise</div>
+            <div class="item-meta">Atribua um atendente e comece a avaliar o pedido. O colaborador mantém o anonimato.</div>
+          </div>
+          <div class="item-row">
+            <div class="item-name" style="font-size:.88rem">2. Em análise → Encaminhado</div>
+            <div class="item-meta">Registre para onde foi encaminhado: RH, ambulatório, saúde ocupacional ou outro canal.</div>
+          </div>
+          <div class="item-row">
+            <div class="item-name" style="font-size:.88rem">3. Encaminhado → Concluído</div>
+            <div class="item-meta">Registre o desfecho. Isso alimenta o histórico de cuidado institucional e auditoria.</div>
+          </div>
+          <div class="item-row">
+            <div class="item-name" style="font-size:.88rem">Pedidos com contato autorizado</div>
+            <div class="item-meta">Apenas esses permitem abordagem nominal. Sempre dentro do canal preferido pelo colaborador.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ PROGRAMAS ══════════════════════════════════════════════════════════ -->
+  <section id="panel-programas" class="panel">
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Programas corporativos</div>
+            <div class="section-sub">Campanhas com owner, alvo e ciclo de vida rastreável</div>
+          </div>
+          <button class="btn sm" onclick="loadProgramas(filtroProg)">Atualizar</button>
+        </div>
+        <div class="filter-row">
+          <span class="filter-pill active" data-status-prog="">Todos</span>
+          <span class="filter-pill" data-status-prog="rascunho">Rascunho</span>
+          <span class="filter-pill" data-status-prog="ativo">Ativos</span>
+          <span class="filter-pill" data-status-prog="encerrado">Encerrados</span>
+        </div>
+        <div class="item-list" id="listaProgramas"><div class="empty">Carregando...</div></div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:4px">Novo programa</div>
+        <div class="section-sub">Crie em rascunho e ative quando estiver pronto para execução</div>
+        <form id="formPrograma" class="form-grid">
+          <div class="field"><label>Título *</label><input name="titulo" placeholder="Programa de recuperação de fadiga, Campanha psicossocial Q3..."></div>
+          <div class="form-row">
+            <div class="field"><label>Tipo</label>
+              <select name="tipo">
+                <option value="fadiga">Fadiga e recuperação</option>
+                <option value="psicossocial">Risco psicossocial</option>
+                <option value="ergonomia">Ergonomia e saúde física</option>
+                <option value="competencia">Competência técnica</option>
+                <option value="cultura">Cultura e comunicação</option>
+                <option value="livre">Programa livre</option>
+              </select>
+            </div>
+            <div class="field"><label>Owner *</label><input name="owner" placeholder="RH, SESMT, Operações..."></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Unidade-alvo</label><select name="unidade_id" id="progUnidadeSel"><option value="">Toda a empresa</option></select></div>
+            <div class="field"><label>Setor-alvo</label><select name="setor_id" id="progSetorSel"><option value="">Todos os setores</option></select></div>
+          </div>
+          <div class="field"><label>Prazo</label><input name="prazo" type="date"></div>
+          <div class="field"><label>Objetivo</label><textarea name="objetivo" placeholder="O que este programa precisa alcançar e como será medido..."></textarea></div>
+          <div class="form-actions">
+            <button type="submit" class="btn gold">Criar programa</button>
+          </div>
+          <div class="toast" id="toastPrograma"></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  const today = new Date().toISOString().split("T")[0];
+  let filtroAcao = "", filtroApoio = "", filtroProg = "";
+  const cat = {unidades: [], setores: [], programas: []};
+
+  function esc(s) {
+    return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function toast(id, ok, msg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = "toast " + (ok ? "ok" : "err");
+    el.textContent = msg;
+    setTimeout(() => el.className = "toast", 4500);
+  }
+
+  async function api(method, url, body) {
+    const opts = {method, headers: {"Content-Type":"application/json"}};
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
+    return [r.ok, await r.json()];
+  }
+
+  function prazoClass(prazoStr) {
+    if (!prazoStr) return "";
+    const diff = (new Date(prazoStr) - new Date(today)) / 86400000;
+    if (diff < 0) return "prazo-late";
+    if (diff <= 3) return "prazo-warn";
+    return "prazo-ok";
+  }
+
+  // ── TABS ──────────────────────────────────────────────────────────────────
+
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      const tab = btn.dataset.tab;
+      document.getElementById("panel-" + tab).classList.add("active");
+      if (tab === "acoes") { loadResumo(); loadAcoes(filtroAcao); }
+      if (tab === "apoio") loadApoio(filtroApoio);
+      if (tab === "programas") loadProgramas(filtroProg);
+    });
+  });
+
+  // ── FILTROS ───────────────────────────────────────────────────────────────
+
+  document.querySelectorAll(".filter-pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+      const group = pill.hasAttribute("data-status") ? "data-status" :
+                    pill.hasAttribute("data-status-apoio") ? "data-status-apoio" : "data-status-prog";
+      document.querySelectorAll(`[${group}]`).forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      const val = pill.getAttribute(group);
+      if (group === "data-status") { filtroAcao = val; loadAcoes(val); }
+      if (group === "data-status-apoio") { filtroApoio = val; loadApoio(val); }
+      if (group === "data-status-prog") { filtroProg = val; loadProgramas(val); }
+    });
+  });
+
+  // ── CATÁLOGO ──────────────────────────────────────────────────────────────
+
+  async function loadCatalogo() {
+    const [ok, data] = await api("GET", "/api/empresa/catalogo");
+    if (!ok) return;
+    cat.unidades = data.units || [];
+    cat.setores = data.sectors || [];
+    populateSelects();
+  }
+
+  async function loadProgramasSel() {
+    const [ok, data] = await api("GET", "/api/gestao/programas?status=ativo");
+    if (ok) {
+      cat.programas = data.programas || [];
+      const el = document.getElementById("acaoProgramaSel");
+      if (el) el.innerHTML = `<option value="">Sem programa</option>` +
+        cat.programas.map(p => `<option value="${p.id}">${esc(p.titulo)}</option>`).join("");
+    }
+  }
+
+  function populateSelects() {
+    const uOpts = `<option value="">Sem unidade</option>` + cat.unidades.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join("");
+    const sOpts = `<option value="">Sem setor</option>` + cat.setores.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join("");
+    ["acaoUnidadeSel","progUnidadeSel"].forEach(id => { const el=document.getElementById(id); if(el) el.innerHTML=uOpts.replace("Sem unidade", id.startsWith("prog") ? "Toda a empresa" : "Sem unidade"); });
+    ["acaoSetorSel","progSetorSel"].forEach(id => { const el=document.getElementById(id); if(el) el.innerHTML=sOpts.replace("Sem setor", id.startsWith("prog") ? "Todos os setores" : "Sem setor"); });
+  }
+
+  // ── RESUMO ─────────────────────────────────────────────────────────────────
+
+  async function loadResumo() {
+    const [ok, data] = await api("GET", "/api/gestao/resumo");
+    if (!ok) return;
+    document.getElementById("rApoio").textContent = data.apoio_aberto;
+    document.getElementById("rAcoes").textContent = data.acoes_abertas;
+    document.getElementById("rProgramas").textContent = data.programas_ativos;
+    document.getElementById("rTotal").textContent = data.total_atencao;
+    document.getElementById("badgeAcoes").textContent = data.acoes_abertas > 0 ? data.acoes_abertas : "";
+    document.getElementById("badgeApoio").textContent = data.apoio_aberto > 0 ? data.apoio_aberto : "";
+  }
+
+  // ── AÇÕES ─────────────────────────────────────────────────────────────────
+
+  async function loadAcoes(status) {
+    const url = "/api/gestao/acoes" + (status ? `?status=${status}` : "");
+    const [ok, data] = await api("GET", url);
+    if (!ok) return;
+    renderAcoes(data.acoes);
+  }
+
+  function renderAcoes(acoes) {
+    const el = document.getElementById("listaAcoes");
+    if (!acoes.length) { el.innerHTML = `<div class="empty">Nenhuma ação neste filtro.</div>`; return; }
+    el.innerHTML = acoes.map(a => {
+      const pc = prazoClass(a.prazo);
+      return `<div class="item-row">
+        <div class="item-top">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span class="item-name">${esc(a.titulo)}</span>
+              <span class="sbadge s-${a.status}">${statusLabel(a.status)}</span>
+              <span class="origem-badge">${origemLabel(a.origem)}</span>
+            </div>
+            <div class="item-meta">
+              owner: <strong style="color:var(--text)">${esc(a.owner)}</strong>
+              ${a.unidade_nome ? ` · unidade: ${esc(a.unidade_nome)}` : ""}
+              ${a.setor_nome ? ` · setor: ${esc(a.setor_nome)}` : ""}
+              ${a.prazo ? ` · prazo: <span class="${pc}">${a.prazo}</span>` : ""}
+              ${a.programa_titulo ? ` · prog: ${esc(a.programa_titulo)}` : ""}
+            </div>
+            ${a.descricao ? `<div style="margin-top:5px;color:var(--muted);font-size:.8rem">${esc(a.descricao)}</div>` : ""}
+          </div>
+        </div>
+        <div class="item-actions">
+          ${a.status === "aberta" ? `<button class="btn xs start" onclick="avancarAcao(${a.id},'em_andamento')">→ Em andamento</button>` : ""}
+          ${a.status === "em_andamento" ? `<button class="btn xs done" onclick="toggleResolucaoAcao('ra-${a.id}')">→ Concluir</button>` : ""}
+          ${["aberta","em_andamento"].includes(a.status) ? `<button class="btn xs cancel" onclick="avancarAcao(${a.id},'cancelada')">Cancelar</button>` : ""}
+        </div>
+        <div class="resolucao-form" id="ra-${a.id}">
+          <div class="field"><label>Evidência do que foi feito</label>
+            <textarea id="ev-${a.id}" placeholder="Descreva o que foi executado para fechar esta ação..."></textarea>
+          </div>
+          <div class="form-actions">
+            <button class="btn xs primary" onclick="concluirAcao(${a.id})">Confirmar conclusão</button>
+          </div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  function toggleResolucaoAcao(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("open");
+  }
+
+  async function avancarAcao(id, status) {
+    const [ok] = await api("POST", `/api/gestao/acoes/${id}/status`, {status});
+    if (ok) { loadAcoes(filtroAcao); loadResumo(); }
+  }
+
+  async function concluirAcao(id) {
+    const evidencia = document.getElementById(`ev-${id}`)?.value || "";
+    const [ok] = await api("POST", `/api/gestao/acoes/${id}/status`, {status:"concluida", evidencia});
+    if (ok) { loadAcoes(filtroAcao); loadResumo(); loadProgramasSel(); }
+  }
+
+  document.getElementById("formAcao").addEventListener("submit", async e => {
+    e.preventDefault();
+    const body = Object.fromEntries(new FormData(e.target));
+    const [ok, data] = await api("POST", "/api/gestao/acoes", body);
+    if (ok) {
+      toast("toastAcao", true, `Ação "${data.titulo}" aberta.`);
+      e.target.reset(); loadAcoes(filtroAcao); loadResumo();
+    } else {
+      toast("toastAcao", false, data.erro || "Erro ao criar ação.");
+    }
+  });
+
+  // ── APOIO ─────────────────────────────────────────────────────────────────
+
+  async function loadApoio(status) {
+    let url = "/api/gestao/apoio";
+    if (status === "") url += "?status=novo&status=em_analise";
+    else if (status) url += `?status=${status}`;
+    const [ok, data] = await api("GET", url);
+    if (!ok) return;
+    renderApoio(data.pedidos);
+  }
+
+  function renderApoio(pedidos) {
+    const el = document.getElementById("listaApoio");
+    if (!pedidos.length) { el.innerHTML = `<div class="empty">Nenhum pedido neste filtro.</div>`; return; }
+    el.innerHTML = pedidos.map(p => `
+      <div class="item-row">
+        <div class="item-top">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span class="item-name">Alias: ${esc(p.alias)}</span>
+              <span class="sbadge s-${p.status}">${apoioStatusLabel(p.status)}</span>
+              ${p.deseja_contato ? `<span class="tipo-badge">contato autorizado</span>` : ""}
+            </div>
+            <div class="item-meta">
+              ${p.unidade_nome ? `unidade: ${esc(p.unidade_nome)} · ` : ""}
+              ${p.setor_nome ? `setor: ${esc(p.setor_nome)} · ` : ""}
+              ${p.turno_nome ? `turno: ${esc(p.turno_nome)} · ` : ""}
+              ${p.canal_preferido ? `canal: ${esc(p.canal_preferido)} · ` : ""}
+              ${new Date(p.criado_em).toLocaleDateString("pt-BR")}
+            </div>
+            ${p.relato ? `<div style="margin-top:5px;color:var(--muted);font-size:.8rem;font-style:italic">"${esc(p.relato)}"</div>` : ""}
+            ${p.atendente ? `<div style="margin-top:4px;font-size:.8rem">Atendente: <strong style="color:var(--text)">${esc(p.atendente)}</strong></div>` : ""}
+            ${p.resolucao ? `<div style="margin-top:2px;color:var(--muted);font-size:.8rem">Resolução: ${esc(p.resolucao)}</div>` : ""}
+          </div>
+        </div>
+        <div class="item-actions">
+          ${p.status === "novo" ? `<button class="btn xs start" onclick="toggleApoioForm('af-${p.id}')">→ Assumir</button>` : ""}
+          ${p.status === "em_analise" ? `<button class="btn xs close-btn" onclick="toggleApoioForm('af-${p.id}')">→ Encaminhar</button>` : ""}
+          ${p.status === "encaminhado" ? `<button class="btn xs done" onclick="toggleApoioForm('af-${p.id}')">→ Concluir</button>` : ""}
+        </div>
+        <div class="resolucao-form" id="af-${p.id}">
+          <div class="form-row">
+            <div class="field"><label>Atendente</label><input id="at-${p.id}" value="${esc(p.atendente)}" placeholder="Nome de quem está atendendo"></div>
+            <div class="field"><label>Próximo status</label>
+              <select id="ns-${p.id}">
+                ${p.status === "novo" ? `<option value="em_analise">Em análise</option>` : ""}
+                ${p.status === "em_analise" ? `<option value="encaminhado">Encaminhado</option>` : ""}
+                ${p.status === "encaminhado" ? `<option value="concluido">Concluído</option>` : ""}
+              </select>
+            </div>
+          </div>
+          <div class="field"><label>Registro / resolução</label>
+            <textarea id="res-${p.id}" placeholder="Descreva o encaminhamento ou desfecho...">${esc(p.resolucao)}</textarea>
+          </div>
+          <div class="form-actions">
+            <button class="btn xs primary" onclick="atualizarApoio(${p.id})">Salvar</button>
+          </div>
+        </div>
+      </div>`).join("");
+  }
+
+  function toggleApoioForm(id) {
+    document.getElementById(id)?.classList.toggle("open");
+  }
+
+  async function atualizarApoio(id) {
+    const status = document.getElementById(`ns-${id}`)?.value;
+    const atendente = document.getElementById(`at-${id}`)?.value;
+    const resolucao = document.getElementById(`res-${id}`)?.value;
+    const [ok] = await api("POST", `/api/gestao/apoio/${id}`, {status, atendente, resolucao});
+    if (ok) { loadApoio(filtroApoio); loadResumo(); }
+  }
+
+  // ── PROGRAMAS ─────────────────────────────────────────────────────────────
+
+  async function loadProgramas(status) {
+    const url = "/api/gestao/programas" + (status ? `?status=${status}` : "");
+    const [ok, data] = await api("GET", url);
+    if (!ok) return;
+    renderProgramas(data.programas);
+  }
+
+  const tipoLabel = {fadiga:"Fadiga",psicossocial:"Psicossocial",ergonomia:"Ergonomia",competencia:"Competência",cultura:"Cultura",livre:"Livre"};
+
+  function renderProgramas(programas) {
+    const el = document.getElementById("listaProgramas");
+    if (!programas.length) { el.innerHTML = `<div class="empty">Nenhum programa neste filtro.</div>`; return; }
+    el.innerHTML = programas.map(p => `
+      <div class="item-row">
+        <div class="item-top">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span class="item-name">${esc(p.titulo)}</span>
+              <span class="sbadge s-${p.status}">${progStatusLabel(p.status)}</span>
+              <span class="tipo-badge">${tipoLabel[p.tipo] || p.tipo}</span>
+            </div>
+            <div class="item-meta">
+              owner: <strong style="color:var(--text)">${esc(p.owner)}</strong>
+              ${p.unidade_nome ? ` · unidade: ${esc(p.unidade_nome)}` : ""}
+              ${p.setor_nome ? ` · setor: ${esc(p.setor_nome)}` : ""}
+              ${p.prazo ? ` · prazo: <span class="${prazoClass(p.prazo)}">${p.prazo}</span>` : ""}
+              ${p.total_acoes > 0 ? ` · <span style="color:var(--accent)">${p.total_acoes} ação(ões) abertas</span>` : ""}
+            </div>
+            ${p.objetivo ? `<div style="margin-top:5px;color:var(--muted);font-size:.8rem">${esc(p.objetivo)}</div>` : ""}
+            ${p.resultado ? `<div style="margin-top:4px;font-size:.8rem;color:var(--accent)">Resultado: ${esc(p.resultado)}</div>` : ""}
+          </div>
+        </div>
+        <div class="item-actions">
+          ${p.status === "rascunho" ? `<button class="btn xs start" onclick="avancarPrograma(${p.id},'ativo')">→ Ativar</button>` : ""}
+          ${p.status === "ativo" ? `<button class="btn xs pause" onclick="avancarPrograma(${p.id},'pausado')">Pausar</button>` : ""}
+          ${p.status === "pausado" ? `<button class="btn xs start" onclick="avancarPrograma(${p.id},'ativo')">Retomar</button>` : ""}
+          ${["ativo","pausado"].includes(p.status) ? `<button class="btn xs close-btn" onclick="toggleEncerrar('pe-${p.id}')">Encerrar</button>` : ""}
+        </div>
+        <div class="resolucao-form" id="pe-${p.id}">
+          <div class="field"><label>Resultado do programa</label>
+            <textarea id="pr-${p.id}" placeholder="Descreva o que foi alcançado, métricas de adesão e impacto..."></textarea>
+          </div>
+          <div class="form-actions">
+            <button class="btn xs primary" onclick="encerrarPrograma(${p.id})">Confirmar encerramento</button>
+          </div>
+        </div>
+      </div>`).join("");
+  }
+
+  function toggleEncerrar(id) {
+    document.getElementById(id)?.classList.toggle("open");
+  }
+
+  async function avancarPrograma(id, status) {
+    const [ok] = await api("POST", `/api/gestao/programas/${id}/status`, {status});
+    if (ok) { loadProgramas(filtroProg); loadResumo(); loadProgramasSel(); }
+  }
+
+  async function encerrarPrograma(id) {
+    const resultado = document.getElementById(`pr-${id}`)?.value || "";
+    const [ok] = await api("POST", `/api/gestao/programas/${id}/status`, {status:"encerrado", resultado});
+    if (ok) { loadProgramas(filtroProg); loadResumo(); loadProgramasSel(); }
+  }
+
+  document.getElementById("formPrograma").addEventListener("submit", async e => {
+    e.preventDefault();
+    const body = Object.fromEntries(new FormData(e.target));
+    const [ok, data] = await api("POST", "/api/gestao/programas", body);
+    if (ok) {
+      toast("toastPrograma", true, `Programa "${data.titulo}" criado em rascunho.`);
+      e.target.reset(); loadProgramas(filtroProg); loadProgramasSel();
+    } else {
+      toast("toastPrograma", false, data.erro || "Erro ao criar programa.");
+    }
+  });
+
+  // ── LABELS ────────────────────────────────────────────────────────────────
+
+  function statusLabel(s) {
+    return {aberta:"Aberta",em_andamento:"Em andamento",concluida:"Concluída",cancelada:"Cancelada"}[s] || s;
+  }
+  function apoioStatusLabel(s) {
+    return {novo:"Novo",em_analise:"Em análise",encaminhado:"Encaminhado",concluido:"Concluído"}[s] || s;
+  }
+  function progStatusLabel(s) {
+    return {rascunho:"Rascunho",ativo:"Ativo",pausado:"Pausado",encerrado:"Encerrado"}[s] || s;
+  }
+  function origemLabel(s) {
+    return {manual:"Manual",risco:"Risco",apoio:"Apoio",programa:"Programa"}[s] || s;
+  }
+
+  // ── INIT ──────────────────────────────────────────────────────────────────
+
+  async function init() {
+    await loadCatalogo();
+    await loadProgramasSel();
+    loadResumo();
+    loadAcoes("");
+    loadApoio("");
+  }
+
+  init();
+</script>
+</body>
+</html>
