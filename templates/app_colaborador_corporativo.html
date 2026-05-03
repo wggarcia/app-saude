@@ -508,17 +508,18 @@
         </div>
 
         <div class="tab-row">
-          <div class="tab active">Hoje</div>
-          <div class="tab">Semana</div>
-          <div class="tab">Apoio</div>
+          <div class="tab active" onclick="mudarTab(0,this)">Hoje</div>
+          <div class="tab" onclick="mudarTab(1,this)">Semana</div>
+          <div class="tab" onclick="mudarTab(2,this)">Apoio</div>
+          <div class="tab" onclick="mudarTab(3,this)">Trilhas</div>
         </div>
 
-        <article class="panel">
+        <article class="panel" data-tab="0">
           <h3>Check-ins seguros</h3>
           <p>O uso e pensado para celular. O colaborador entra no app, registra como esta hoje e ajuda a empresa a agir cedo, sem expor sua identidade no painel institucional.</p>
         </article>
 
-        <article class="panel">
+        <article class="panel" data-tab="0">
           <h3>Check-in diario</h3>
           <form id="dailyForm" class="field-grid">
             <div class="field-row">
@@ -580,7 +581,7 @@
           </form>
         </article>
 
-        <article class="panel">
+        <article class="panel" data-tab="1">
           <h3>Check-in semanal</h3>
           <form id="weeklyForm" class="field-grid">
             <div class="score-grid">
@@ -604,7 +605,7 @@
           </form>
         </article>
 
-        <article class="panel">
+        <article class="panel" data-tab="2">
           <h3>Meu cuidado</h3>
           <div class="help-grid">
             <article class="help">
@@ -628,6 +629,13 @@
               <p>Este app tambem vai acompanhar evidencias praticas, validacoes e crescimento por cargo, setor e equipamento critico.</p>
             </article>
           </div>
+        </article>
+
+        <article class="panel" data-tab="3" id="trilhasPanel" style="display:none">
+          <h3>Minhas trilhas</h3>
+          <p style="color:var(--muted);font-size:.85rem;margin-top:0">Acompanhe seu progresso por competencia, funcao e equipamento critico.</p>
+          <div id="trilhasLista" style="margin-top:12px"></div>
+          <div id="trilhasMsg" style="font-size:.82rem;margin-top:8px"></div>
         </article>
       </div>
     </section>
@@ -695,6 +703,74 @@
       const result = await response.json();
       showToast(toast, response.ok, response.ok ? "Check-in semanal enviado com sucesso." : (result.erro || "Nao foi possivel enviar o check-in semanal."));
     });
+
+    let activeTab = 0;
+    function mudarTab(idx, el) {
+      activeTab = idx;
+      document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i === idx));
+      document.querySelectorAll('[data-tab]').forEach(p => {
+        p.style.display = (parseInt(p.dataset.tab) === idx) ? '' : 'none';
+      });
+      if (idx === 3) carregarTrilhas();
+    }
+    // Apply initial visibility
+    document.querySelectorAll('[data-tab]').forEach(p => {
+      if (parseInt(p.dataset.tab) !== 0) p.style.display = 'none';
+    });
+
+    let trilhasCarregadas = false;
+    async function carregarTrilhas() {
+      if (trilhasCarregadas) return;
+      const alias = ensureAlias();
+      const msg = document.getElementById('trilhasMsg');
+      const lista = document.getElementById('trilhasLista');
+      msg.textContent = 'Carregando trilhas…';
+      try {
+        const r = await fetch(`${mobileApiBase}/trilhas?alias_code=${encodeURIComponent(alias)}`);
+        const d = await r.json();
+        if (!r.ok) { msg.textContent = d.erro || 'Erro ao carregar trilhas.'; return; }
+        msg.textContent = '';
+        if (!d.trilhas.length) { lista.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Nenhuma trilha cadastrada pela empresa ainda.</p>'; return; }
+        lista.innerHTML = d.trilhas.map(t => `
+          <div style="margin-bottom:18px;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <strong style="font-size:.95rem">${t.titulo}</strong>
+              <span style="font-size:.75rem;color:var(--muted)">${t.concluidos}/${t.total} concluidos</span>
+            </div>
+            ${t.cargo ? `<div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">Cargo: ${t.cargo}</div>` : ''}
+            ${t.itens.map(item => `
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.05)">
+                <span style="font-size:1rem">${item.evidencia_status === 'validada' ? '✅' : item.evidencia_status === 'enviada' ? '⏳' : item.evidencia_status === 'revisar' ? '🔁' : '⬜'}</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:.85rem">${item.titulo}</div>
+                  <div style="font-size:.72rem;color:var(--muted)">${item.tipo}${item.obrigatorio ? ' · obrigatorio' : ''}</div>
+                </div>
+                ${item.evidencia_status !== 'validada' && item.evidencia_status !== 'enviada' ? `
+                  <button onclick="enviarEvidencia(${item.id},this)" style="font-size:.72rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:var(--text);cursor:pointer">
+                    Enviar
+                  </button>` : ''}
+              </div>`).join('')}
+          </div>`).join('');
+        trilhasCarregadas = true;
+      } catch(e) { msg.textContent = 'Erro de conexao.'; }
+    }
+
+    async function enviarEvidencia(itemId, btn) {
+      const alias = ensureAlias();
+      const descricao = prompt('Descreva brevemente sua evidencia pratica (o que voce fez ou sabe fazer):');
+      if (!descricao) return;
+      btn.disabled = true;
+      btn.textContent = '…';
+      try {
+        const r = await fetch(`/api/corporativo/${accessCode}/evidencia`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({alias_code: alias, item_id: itemId, descricao, pontuacao_autodeclarada: 3})
+        });
+        if (r.ok) { trilhasCarregadas = false; carregarTrilhas(); }
+        else { btn.disabled = false; btn.textContent = 'Enviar'; alert('Erro ao enviar evidencia.'); }
+      } catch(e) { btn.disabled = false; btn.textContent = 'Enviar'; }
+    }
   </script>
 </body>
 </html>

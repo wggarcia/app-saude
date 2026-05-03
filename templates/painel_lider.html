@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel do Líder · SolusCRT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#041018;--panel:rgba(10,24,35,.82);--line:rgba(154,193,220,.14);
+      --soft:rgba(255,255,255,.08);--text:#ebf7ff;--muted:#9ab9ce;
+      --accent:#7ee1c3;--accent2:#7db6ff;--gold:#f0bf6b;--danger:#ff7a91;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:"Manrope",sans-serif;color:var(--text);
+      background:radial-gradient(circle at top left,rgba(126,225,195,.13),transparent 20rem),
+        radial-gradient(circle at bottom right,rgba(125,182,255,.14),transparent 22rem),
+        linear-gradient(180deg,#041018,#06111a);}
+    .shell{width:min(1200px,calc(100% - 28px));margin:0 auto;padding:20px 0 40px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+    h1{margin:0;font-size:1.2rem;font-weight:800}
+    .nav{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:0 16px;min-height:40px;
+      border-radius:999px;border:1px solid var(--soft);text-decoration:none;color:var(--text);
+      font-weight:700;background:rgba(255,255,255,.06);font-family:inherit;font-size:.88rem;cursor:pointer}
+    .btn.primary{background:linear-gradient(135deg,#0db794,#1f6ff2);border:0}
+    .btn.warn{background:linear-gradient(135deg,#8b2239,#5e1b1b);border:0}
+    .glass{background:var(--panel);border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(16px)}
+    .selector{display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+    .selector select{background:rgba(255,255,255,.06);border:1px solid var(--soft);border-radius:12px;
+      color:var(--text);font-family:inherit;font-size:.92rem;padding:10px 14px;min-width:220px}
+    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+    .metric-card{background:rgba(255,255,255,.05);border:1px solid var(--soft);border-radius:14px;padding:14px}
+    .metric-card .label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+    .metric-card .val{font-size:1.4rem;font-weight:800;margin:6px 0 2px}
+    .metric-card .delta{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:8px;display:inline-block}
+    .delta.up{color:var(--accent);background:rgba(126,225,195,.12)}
+    .delta.down{color:var(--danger);background:rgba(255,122,145,.12)}
+    .delta.neutral{color:var(--muted);background:rgba(154,193,220,.08)}
+    .row-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:640px){.row-grid{grid-template-columns:1fr}}
+    .card{padding:18px}
+    .card h2{margin:0 0 12px;font-size:.95rem;font-weight:800}
+    .alert-strip{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    .alert-pill{background:rgba(255,255,255,.06);border:1px solid var(--soft);border-radius:12px;
+      padding:10px 16px;display:flex;flex-direction:column;gap:2px;min-width:130px}
+    .alert-pill strong{font-size:1.3rem;font-weight:800}
+    .alert-pill span{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+    .alert-pill.warn strong{color:var(--gold)}
+    .setor-row{display:flex;align-items:center;gap:10px;padding:8px 10px;
+      border-radius:10px;background:rgba(255,255,255,.04);margin-bottom:6px;font-size:.85rem}
+    .setor-row .bar{height:6px;border-radius:3px;background:var(--accent);flex:1;max-width:100px}
+    #dadosView{display:none}
+    #privacyMsg{color:var(--muted);font-size:.85rem;padding:16px 0}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div>
+        <h1>Painel do Líder</h1>
+        <div style="color:var(--muted);font-size:.83rem;margin-top:2px">{{ empresa_nome }} · visao por unidade, sem dado individual</div>
+      </div>
+      <div class="nav">
+        <a class="btn" href="/dashboard-empresa/">← Dashboard</a>
+        <a class="btn" href="/gestao/">Centro de Gestao</a>
+        <a class="btn" href="/escalas/">Escalas</a>
+        <a class="btn warn" href="/logout/">Sair</a>
+      </div>
+    </div>
+
+    <div class="selector">
+      <label style="color:var(--muted);font-size:.85rem">Selecionar unidade:</label>
+      <select id="unidadeSelect" onchange="carregarUnidade()">
+        <option value="">— escolha a unidade —</option>
+        {% for u in unidades %}
+        <option value="{{ u.id }}">{{ u.nome }}</option>
+        {% endfor %}
+      </select>
+      <span id="loadingMsg" style="color:var(--muted);font-size:.83rem"></span>
+    </div>
+
+    <div id="privacyMsg"></div>
+    <div id="dadosView">
+      <div class="alert-strip">
+        <div class="alert-pill" id="pillRespondents"><strong id="valRespondents">—</strong><span>Respondentes</span></div>
+        <div class="alert-pill warn" id="pillApoio"><strong id="valApoio">—</strong><span>Apoios abertos</span></div>
+        <div class="alert-pill warn" id="pillAcoes"><strong id="valAcoes">—</strong><span>Acoes abertas</span></div>
+      </div>
+
+      <div class="metrics-grid" id="metricasGrid"></div>
+
+      <div class="row-grid">
+        <div class="glass card">
+          <h2>Setores com mais pressao</h2>
+          <div id="setoresLista"><p style="color:var(--muted);font-size:.85rem">Sem dados suficientes por setor.</p></div>
+        </div>
+        <div class="glass card">
+          <h2>Sinais de atencao</h2>
+          <div id="sinaisLista"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LABELS = {
+      humor: {label:'Humor',inverted:false},
+      energia: {label:'Energia',inverted:false},
+      estresse: {label:'Estresse',inverted:true},
+      sono: {label:'Sono',inverted:false},
+      fadiga: {label:'Fadiga',inverted:true},
+      ansiedade: {label:'Ansiedade',inverted:true},
+      risco_burnout: {label:'Burnout',inverted:true},
+      carga_emocional: {label:'Carga emocional',inverted:true},
+      seguranca_psicologica: {label:'Seg. psicologica',inverted:false},
+    };
+
+    function deltaClass(delta, inverted) {
+      if (delta === 0) return 'neutral';
+      const positive = delta > 0;
+      return (positive !== inverted) ? 'up' : 'down';
+    }
+
+    function deltaLabel(delta) {
+      if (delta === 0) return '— estavel';
+      return (delta > 0 ? '▲ +' : '▼ ') + delta;
+    }
+
+    async function carregarUnidade() {
+      const id = document.getElementById('unidadeSelect').value;
+      const view = document.getElementById('dadosView');
+      const msg = document.getElementById('privacyMsg');
+      const loading = document.getElementById('loadingMsg');
+      view.style.display = 'none';
+      msg.textContent = '';
+      if (!id) return;
+      loading.textContent = 'Carregando…';
+      try {
+        const r = await fetch(`/api/lider/unidade/${id}/dados`);
+        const d = await r.json();
+        loading.textContent = '';
+        if (!r.ok) { msg.textContent = d.erro || 'Erro ao carregar dados.'; return; }
+        if (!d.privacy_ok) {
+          msg.textContent = `Grupo menor que ${d.respondents} respondentes — dados protegidos por privacidade. Aguarde mais check-ins.`;
+          return;
+        }
+        document.getElementById('valRespondents').textContent = d.respondents;
+        document.getElementById('valApoio').textContent = d.apoio_aberto;
+        document.getElementById('valAcoes').textContent = d.acoes_abertas;
+
+        const grid = document.getElementById('metricasGrid');
+        grid.innerHTML = Object.entries(d.metricas).map(([key, m]) => {
+          const cfg = LABELS[key] || {label:key, inverted:false};
+          const cls = deltaClass(m.delta, cfg.inverted);
+          return `<div class="metric-card">
+            <div class="label">${cfg.label}</div>
+            <div class="val">${m.atual}/5</div>
+            <div class="delta ${cls}">${deltaLabel(m.delta)}</div>
+          </div>`;
+        }).join('');
+
+        const setores = document.getElementById('setoresLista');
+        if (d.setores.length) {
+          const maxE = Math.max(...d.setores.map(s=>s.estresse), 1);
+          setores.innerHTML = d.setores.map(s=>`
+            <div class="setor-row">
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.nome}</span>
+              <div class="bar" style="width:${Math.round((s.estresse/maxE)*100)}px"></div>
+              <span style="font-size:.75rem;color:var(--muted)">${s.respondents} resp · estresse ${s.estresse}</span>
+            </div>`).join('');
+        } else {
+          setores.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Sem dados suficientes por setor.</p>';
+        }
+
+        const sinais = document.getElementById('sinaisLista');
+        const alerts = [];
+        const m = d.metricas;
+        if (m.estresse.atual >= 3.5) alerts.push({icon:'⚠️', txt:`Estresse medio alto: ${m.estresse.atual}/5`});
+        if (m.fadiga.atual >= 3.5) alerts.push({icon:'😮‍💨', txt:`Fadiga elevada: ${m.fadiga.atual}/5`});
+        if (m.risco_burnout.atual >= 3) alerts.push({icon:'🔥', txt:`Risco de burnout: ${m.risco_burnout.atual}/5`});
+        if (m.sono.atual <= 2.5) alerts.push({icon:'💤', txt:`Sono ruim: ${m.sono.atual}/5`});
+        if (m.seguranca_psicologica.atual <= 2.5) alerts.push({icon:'🛡️', txt:`Baixa seguranca psicologica: ${m.seguranca_psicologica.atual}/5`});
+        if (d.apoio_aberto > 0) alerts.push({icon:'🆘', txt:`${d.apoio_aberto} pedido(s) de apoio aguardando`});
+        sinais.innerHTML = alerts.length
+          ? alerts.map(a=>`<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.85rem"><span>${a.icon}</span><span>${a.txt}</span></div>`).join('')
+          : '<p style="color:var(--accent);font-size:.85rem">Sem alertas criticos no momento.</p>';
+
+        view.style.display = '';
+      } catch(e) { loading.textContent=''; msg.textContent='Erro de conexao.'; }
+    }
+  </script>
+</body>
+</html>

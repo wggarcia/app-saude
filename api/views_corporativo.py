@@ -11,11 +11,14 @@ from .models import (
     CheckinDiarioCorporativo,
     CheckinSemanalCorporativo,
     ColaboradorAliasCorporativo,
+    CompetenciaItemCorporativo,
     Empresa,
     EmpresaSetor,
     EmpresaTurno,
     EmpresaUnidade,
+    EvidenciaCompetenciaCorporativa,
     PedidoApoioCorporativo,
+    TrilhaCompetenciaCorporativa,
 )
 from .views_dashboard import _empresa_autenticada, _setor_conta
 
@@ -308,3 +311,49 @@ def api_corporativo_checkin_semanal(request, codigo):
         "company": empresa.nome,
         "week_reference": checkin.semana_referencia.isoformat(),
     })
+
+
+def api_colaborador_trilhas(request, codigo):
+    try:
+        empresa = _resolver_empresa_por_codigo(codigo)
+    except ValueError:
+        return JsonResponse({"erro": "codigo invalido"}, status=404)
+
+    alias_code = request.GET.get("alias_code", "").strip()
+    alias = None
+    if alias_code:
+        alias = ColaboradorAliasCorporativo.objects.filter(empresa=empresa, alias_publico=alias_code).first()
+
+    trilhas = TrilhaCompetenciaCorporativa.objects.filter(empresa=empresa, ativo=True).prefetch_related("itens")
+
+    evidencias_por_item = {}
+    if alias:
+        for ev in EvidenciaCompetenciaCorporativa.objects.filter(empresa=empresa, alias=alias).select_related("item"):
+            evidencias_por_item[ev.item_id] = ev
+
+    result = []
+    for t in trilhas:
+        itens = []
+        for item in t.itens.filter(ativo=True):
+            ev = evidencias_por_item.get(item.id)
+            itens.append({
+                "id": item.id,
+                "titulo": item.titulo,
+                "tipo": item.tipo,
+                "descricao": item.descricao,
+                "obrigatorio": item.obrigatorio,
+                "evidencia_status": ev.status if ev else None,
+                "evidencia_id": ev.id if ev else None,
+            })
+        result.append({
+            "id": t.id,
+            "titulo": t.titulo,
+            "descricao": t.descricao,
+            "nivel_alvo": t.nivel_alvo,
+            "cargo": t.cargo.nome if t.cargo else None,
+            "itens": itens,
+            "total": len(itens),
+            "concluidos": sum(1 for i in itens if i["evidencia_status"] == EvidenciaCompetenciaCorporativa.STATUS_VALIDADA),
+        })
+
+    return JsonResponse({"trilhas": result})

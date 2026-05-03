@@ -185,21 +185,8 @@ def _competence_snapshot(empresa):
     }
 
 
-def build_empresa_corporativo_payload(empresa):
-    pacote = detalhes_pacote(empresa.pacote_codigo)
-    company_label = empresa.nome or "Empresa"
-    now = timezone.now()
-    daily_cutoff = now.date() - timedelta(days=30)
-    weekly_cutoff = now.date() - timedelta(days=84)
-
-    base_diario = CheckinDiarioCorporativo.objects.filter(empresa=empresa, data_referencia__gte=daily_cutoff)
-    base_semanal = CheckinSemanalCorporativo.objects.filter(empresa=empresa, semana_referencia__gte=weekly_cutoff)
-    support_count = PedidoApoioCorporativo.objects.filter(
-        empresa=empresa,
-        status__in=[PedidoApoioCorporativo.STATUS_NOVO, PedidoApoioCorporativo.STATUS_EM_ANALISE],
-    ).count()
-
-    diario = base_diario.aggregate(
+def _aggregate_diario(qs):
+    return qs.aggregate(
         respondents=Count("id"),
         avg_humor=Avg("humor"),
         avg_energia=Avg("energia"),
@@ -215,7 +202,10 @@ def build_empresa_corporativo_payload(empresa):
         cefaleia_total=Count("id", filter=Q(dor_cabeca=True)),
         pedidos_apoio=Count("id", filter=Q(apoio_solicitado=True)),
     )
-    semanal = base_semanal.aggregate(
+
+
+def _aggregate_semanal(qs):
+    return qs.aggregate(
         weekly_respondents=Count("id"),
         avg_carga_emocional=Avg("carga_emocional"),
         avg_seguranca_psicologica=Avg("seguranca_psicologica"),
@@ -225,6 +215,45 @@ def build_empresa_corporativo_payload(empresa):
         avg_risco_burnout=Avg("risco_burnout"),
     )
 
+
+def _delta_sign(current, previous):
+    diff = current - previous
+    if abs(diff) < 2:
+        return 0
+    return diff
+
+
+def build_empresa_corporativo_payload(empresa):
+    pacote = detalhes_pacote(empresa.pacote_codigo)
+    company_label = empresa.nome or "Empresa"
+    now = timezone.now()
+    daily_cutoff = now.date() - timedelta(days=30)
+    prev_daily_cutoff = now.date() - timedelta(days=60)
+    weekly_cutoff = now.date() - timedelta(days=84)
+    prev_weekly_cutoff = now.date() - timedelta(days=168)
+
+    base_diario = CheckinDiarioCorporativo.objects.filter(empresa=empresa, data_referencia__gte=daily_cutoff)
+    base_semanal = CheckinSemanalCorporativo.objects.filter(empresa=empresa, semana_referencia__gte=weekly_cutoff)
+    prev_diario = CheckinDiarioCorporativo.objects.filter(
+        empresa=empresa,
+        data_referencia__gte=prev_daily_cutoff,
+        data_referencia__lt=daily_cutoff,
+    )
+    prev_semanal = CheckinSemanalCorporativo.objects.filter(
+        empresa=empresa,
+        semana_referencia__gte=prev_weekly_cutoff,
+        semana_referencia__lt=weekly_cutoff,
+    )
+    support_count = PedidoApoioCorporativo.objects.filter(
+        empresa=empresa,
+        status__in=[PedidoApoioCorporativo.STATUS_NOVO, PedidoApoioCorporativo.STATUS_EM_ANALISE],
+    ).count()
+
+    diario = _aggregate_diario(base_diario)
+    semanal = _aggregate_semanal(base_semanal)
+    prev_diario_agg = _aggregate_diario(prev_diario)
+    prev_semanal_agg = _aggregate_semanal(prev_semanal)
+
     mood_score = _mood_score(diario)
     stress_score = _stress_score(diario, semanal)
     physical_score = _physical_score(diario)
@@ -233,9 +262,14 @@ def build_empresa_corporativo_payload(empresa):
     recommendations = _build_recommendations(company_label, mood_score, stress_score, physical_score, support_count, top_signal)
     competence = _competence_snapshot(empresa)
 
+    prev_mood = _mood_score(prev_diario_agg)
+    prev_stress = _stress_score(prev_diario_agg, prev_semanal_agg)
+    prev_physical = _physical_score(prev_diario_agg)
+
     respondents = diario.get("respondents", 0)
     weekly_respondents = semanal.get("weekly_respondents", 0)
     privacy_ready = respondents >= MIN_GROUP_SIZE or weekly_respondents >= MIN_GROUP_SIZE
+    has_prev = (prev_diario_agg.get("respondents") or 0) >= MIN_GROUP_SIZE
 
     return {
         "product": {
@@ -275,26 +309,38 @@ def build_empresa_corporativo_payload(empresa):
                 "label": "Bem-estar geral",
                 "value": f"{mood_score}/100",
                 "detail": f"Score institucional de energia e confiabilidade; {_risk_summary(mood_score)}.",
+                "delta": _delta_sign(mood_score, prev_mood) if has_prev else None,
+                "delta_label": "vs. periodo anterior",
             },
             {
                 "label": "Risco psicossocial",
                 "value": _risk_band(stress_score).upper(),
                 "detail": f"Indice {stress_score}/100 com foco em estresse, ansiedade, carga emocional e burnout.",
+                "delta": _delta_sign(stress_score, prev_stress) if has_prev else None,
+                "delta_inverted": True,
+                "delta_label": "vs. periodo anterior",
             },
             {
                 "label": "Risco ocupacional",
                 "value": _risk_band(physical_score).upper(),
                 "detail": f"Indice {physical_score}/100 para fadiga, dor, sono ruim e carga fisica recorrente.",
+                "delta": _delta_sign(physical_score, prev_physical) if has_prev else None,
+                "delta_inverted": True,
+                "delta_label": "vs. periodo anterior",
             },
             {
                 "label": "Pedidos de apoio",
                 "value": str(support_count),
                 "detail": "Fila de acolhimento institucional e cuidado ativo.",
+                "delta": None,
+                "delta_label": None,
             },
             {
                 "label": "Readiness tecnica",
                 "value": f"{competence['readiness_score']}/100",
                 "detail": "Sinal inicial de prontidao de competencia, evidencias e validacoes da operacao.",
+                "delta": None,
+                "delta_label": None,
             },
         ],
         "summary": {

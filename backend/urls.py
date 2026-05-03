@@ -36,6 +36,7 @@ from api.views_corporativo import (
     api_colaborador_corporativo_config,
     api_corporativo_checkin_diario,
     api_corporativo_checkin_semanal,
+    api_colaborador_trilhas,
 )
 from api.views_gestao import (
     gestao_corporativa,
@@ -59,6 +60,15 @@ from api.views_competencia import (
     api_validar,
     api_prontidao,
 )
+from api.views_escalas import (
+    escalas_corporativa,
+    api_escalas,
+    api_escala_detalhe,
+    api_escala_ciclo,
+    api_escala_atribuicoes,
+    api_escalas_resumo,
+)
+from api.views_lider import painel_lider, api_unidade_dados
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
 from api.governanca import api_auditoria_institucional, api_matriz_decisao, api_metodologia_epidemiologica
@@ -122,6 +132,14 @@ urlpatterns = [
     path('api/gestao/programas/<int:programa_id>/status', api_programa_status),
     path('api/gestao/acoes', api_acoes),
     path('api/gestao/acoes/<int:acao_id>/status', api_acao_status),
+    path('escalas/', escalas_corporativa),
+    path('api/escalas', api_escalas),
+    path('api/escalas/resumo', api_escalas_resumo),
+    path('api/escalas/<int:escala_id>', api_escala_detalhe),
+    path('api/escalas/<int:escala_id>/ciclo', api_escala_ciclo),
+    path('api/escalas/<int:escala_id>/atribuicoes', api_escala_atribuicoes),
+    path('painel-lider/', painel_lider),
+    path('api/lider/unidade/<int:unidade_id>/dados', api_unidade_dados),
 
     # 📊 API PRINCIPAL
     path('api/registrar', registrar_sintoma),
@@ -148,6 +166,7 @@ urlpatterns = [
     path('api/colaborador-mobile/<str:codigo>/config', api_colaborador_corporativo_config),
     path('api/colaborador-mobile/<str:codigo>/checkin-diario', api_corporativo_checkin_diario),
     path('api/colaborador-mobile/<str:codigo>/checkin-semanal', api_corporativo_checkin_semanal),
+    path('api/colaborador-mobile/<str:codigo>/trilhas', api_colaborador_trilhas),
     path('api/alertas', alertas),
     path('api/public/resumo', app_resumo_publico),
     path('api/public/radar-local', app_radar_local),

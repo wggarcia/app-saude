@@ -49,7 +49,9 @@ def api_apoio_fila(request):
     qs = PedidoApoioCorporativo.objects.filter(empresa=empresa).select_related(
         "alias", "unidade", "setor", "turno"
     )
-    if status_filter:
+    if not status_filter:
+        qs = qs.filter(status__in=[PedidoApoioCorporativo.STATUS_NOVO, PedidoApoioCorporativo.STATUS_EM_ANALISE])
+    elif status_filter != "todos":
         qs = qs.filter(status=status_filter)
     qs = qs.order_by("-criado_em")[:100]
 

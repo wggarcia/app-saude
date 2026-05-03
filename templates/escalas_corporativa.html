@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Escalas Corporativas · SolusCRT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#041018;--panel:rgba(10,24,35,.82);--line:rgba(154,193,220,.14);
+      --soft:rgba(255,255,255,.08);--text:#ebf7ff;--muted:#9ab9ce;
+      --accent:#7ee1c3;--accent2:#7db6ff;--gold:#f0bf6b;--danger:#ff7a91;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:"Manrope",sans-serif;color:var(--text);
+      background:radial-gradient(circle at top left,rgba(126,225,195,.13),transparent 20rem),
+        radial-gradient(circle at bottom right,rgba(125,182,255,.14),transparent 22rem),
+        linear-gradient(180deg,#041018,#06111a);}
+    .shell{width:min(1200px,calc(100% - 28px));margin:0 auto;padding:20px 0 40px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+    h1{margin:0;font-size:1.2rem;font-weight:800}
+    .nav{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:0 16px;min-height:40px;border-radius:999px;
+      border:1px solid var(--soft);text-decoration:none;color:var(--text);font-weight:700;background:rgba(255,255,255,.06);
+      font-family:inherit;font-size:.88rem;cursor:pointer}
+    .btn.primary{background:linear-gradient(135deg,#0db794,#1f6ff2);border:0}
+    .btn.accent{background:linear-gradient(135deg,#f0bf6b,#e08a20);color:#0b0f14;border:0}
+    .btn.warn{background:linear-gradient(135deg,#8b2239,#5e1b1b);border:0}
+    .btn.sm{min-height:32px;font-size:.78rem;padding:0 12px}
+    .glass{background:var(--panel);border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(16px)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media(max-width:700px){.grid{grid-template-columns:1fr}}
+    .card{padding:20px 18px}
+    .card h2{margin:0 0 14px;font-size:1rem;font-weight:800}
+    .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+    .field label{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+    .field input,.field select,.field textarea{
+      background:rgba(255,255,255,.06);border:1px solid var(--soft);border-radius:10px;
+      color:var(--text);font-family:inherit;font-size:.9rem;padding:9px 12px}
+    .field textarea{min-height:60px;resize:vertical}
+    .row{display:flex;gap:10px}
+    .row .field{flex:1}
+    .msg{font-size:.82rem;margin-top:8px;min-height:16px}
+    .escala-card{
+      background:rgba(255,255,255,.04);border:1px solid var(--soft);border-radius:14px;
+      padding:14px 16px;margin-bottom:10px;display:flex;flex-direction:column;gap:6px}
+    .escala-header{display:flex;justify-content:space-between;align-items:center}
+    .badge{font-size:.72rem;padding:3px 10px;border-radius:8px;font-weight:700;background:rgba(126,225,195,.15);color:var(--accent)}
+    .badge.folga{background:rgba(125,182,255,.15);color:var(--accent2)}
+    .badge.warn{background:rgba(255,122,145,.15);color:var(--danger)}
+    .ciclo-wrap{margin-top:12px}
+    .fase-section{margin-bottom:14px}
+    .fase-section h3{font-size:.85rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+    .alias-row{display:flex;gap:8px;align-items:center;font-size:.85rem;
+      padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.04);margin-bottom:4px}
+    .alias-row small{color:var(--muted);font-size:.75rem}
+    .tab-nav{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+    .tab-btn{padding:6px 16px;border-radius:999px;border:1px solid var(--soft);
+      background:transparent;color:var(--muted);font-family:inherit;font-size:.85rem;cursor:pointer;font-weight:600}
+    .tab-btn.active{background:rgba(126,225,195,.15);color:var(--accent);border-color:rgba(126,225,195,.3)}
+    .summary-strip{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    .summary-pill{background:rgba(255,255,255,.06);border:1px solid var(--soft);border-radius:12px;
+      padding:10px 16px;font-size:.85rem;display:flex;flex-direction:column;gap:2px;min-width:120px}
+    .summary-pill strong{font-size:1.2rem;font-weight:800}
+    .summary-pill span{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+    #cicloView{display:none}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div>
+        <h1>Escalas Corporativas</h1>
+        <div style="color:var(--muted);font-size:.83rem;margin-top:2px">{{ empresa_nome }} · gestao de ciclos 14x14, 28x28 e personalizados</div>
+      </div>
+      <div class="nav">
+        <a class="btn" href="/dashboard-empresa/">← Dashboard</a>
+        <a class="btn" href="/gestao/">Centro de Gestao</a>
+        <a class="btn warn" href="/logout/">Sair</a>
+      </div>
+    </div>
+
+    <div class="summary-strip" id="resumoStrip">
+      <div class="summary-pill"><strong id="resEscalas">—</strong><span>Escalas ativas</span></div>
+      <div class="summary-pill"><strong id="resEmbarcados">—</strong><span>Embarcados hoje</span></div>
+      <div class="summary-pill"><strong id="resFolga">—</strong><span>Em folga hoje</span></div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="mostrarTab('escalas',this)">Escalas</button>
+      <button class="tab-btn" onclick="mostrarTab('nova',this)">Nova escala</button>
+      <button class="tab-btn" id="btnCicloTab" onclick="mostrarTab('ciclo',this)" style="display:none">Ciclo atual</button>
+    </div>
+
+    <!-- TAB: Lista de escalas -->
+    <div id="tabEscalas">
+      <div id="listaEscalas" style="margin-bottom:16px"></div>
+      <div id="msgEscalas" class="msg"></div>
+    </div>
+
+    <!-- TAB: Nova escala -->
+    <div id="tabNova" style="display:none">
+      <div class="glass card" style="max-width:520px">
+        <h2>Criar escala</h2>
+        <div class="field">
+          <label>Nome da escala</label>
+          <input id="novaName" placeholder="Ex: Turno Offshore Norte">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Tipo</label>
+            <select id="novaTipo">
+              <option value="14x14">14x14</option>
+              <option value="28x28">28x28</option>
+              <option value="7x7">7x7</option>
+              <option value="personalizado">Personalizado</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Dias embarcado</label>
+            <input id="novaDiasE" type="number" min="1" value="14">
+          </div>
+          <div class="field">
+            <label>Dias folga</label>
+            <input id="novaDiasF" type="number" min="1" value="14">
+          </div>
+        </div>
+        <div class="field">
+          <label>Descricao</label>
+          <textarea id="novaDesc" placeholder="Contexto operacional, unidade, turno…"></textarea>
+        </div>
+        <button class="btn primary" onclick="criarEscala()">Criar escala</button>
+        <div class="msg" id="msgNova"></div>
+      </div>
+    </div>
+
+    <!-- TAB: Ciclo atual de uma escala -->
+    <div id="tabCiclo" style="display:none">
+      <div id="cicloInfo"></div>
+      <div class="glass card" style="max-width:460px;margin-bottom:16px">
+        <h2>Atribuir colaborador</h2>
+        <div class="field">
+          <label>Alias anonimo do colaborador</label>
+          <input id="atrAlias" placeholder="alias do colaborador">
+        </div>
+        <div class="field">
+          <label>Inicio do ciclo atual</label>
+          <input id="atrInicio" type="date">
+        </div>
+        <button class="btn accent" onclick="atribuirColaborador()">Atribuir</button>
+        <div class="msg" id="msgAtr"></div>
+      </div>
+      <div id="cicloWrap"></div>
+    </div>
+  </div>
+
+  <script>
+    let escalaSelecionadaId = null;
+
+    function mostrarTab(tab, btn) {
+      ['tabEscalas','tabNova','tabCiclo'].forEach(id => {
+        document.getElementById(id).style.display = 'none';
+      });
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = '';
+      btn.classList.add('active');
+    }
+
+    async function carregarResumo() {
+      const r = await fetch('/api/escalas/resumo');
+      if (!r.ok) return;
+      const d = await r.json();
+      document.getElementById('resEscalas').textContent = d.total_escalas;
+      document.getElementById('resEmbarcados').textContent = d.total_embarcados;
+      document.getElementById('resFolga').textContent = d.total_folga;
+    }
+
+    async function carregarEscalas() {
+      const lista = document.getElementById('listaEscalas');
+      const msg = document.getElementById('msgEscalas');
+      const r = await fetch('/api/escalas');
+      if (!r.ok) { msg.textContent = 'Erro ao carregar escalas.'; return; }
+      const d = await r.json();
+      if (!d.escalas.length) {
+        lista.innerHTML = '<p style="color:var(--muted)">Nenhuma escala cadastrada ainda.</p>';
+        return;
+      }
+      lista.innerHTML = d.escalas.map(e => `
+        <div class="escala-card">
+          <div class="escala-header">
+            <strong>${e.nome}</strong>
+            <span class="badge">${e.tipo}</span>
+          </div>
+          <div style="font-size:.82rem;color:var(--muted)">${e.dias_embarcado}d embarcado · ${e.dias_folga}d folga · ${e.total_colaboradores} colaboradores</div>
+          ${e.unidade_nome ? `<div style="font-size:.78rem;color:var(--muted)">Unidade: ${e.unidade_nome}</div>` : ''}
+          ${e.descricao ? `<div style="font-size:.82rem">${e.descricao}</div>` : ''}
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button class="btn sm accent" onclick="verCiclo(${e.id},'${e.nome.replace(/'/g,"\\'")}')">Ver ciclo</button>
+            <button class="btn sm warn" onclick="removerEscala(${e.id})">Remover</button>
+          </div>
+        </div>`).join('');
+    }
+
+    async function criarEscala() {
+      const nome = document.getElementById('novaName').value.trim();
+      const tipo = document.getElementById('novaTipo').value;
+      const diasE = parseInt(document.getElementById('novaDiasE').value) || 14;
+      const diasF = parseInt(document.getElementById('novaDiasF').value) || 14;
+      const descricao = document.getElementById('novaDesc').value.trim();
+      const msg = document.getElementById('msgNova');
+      if (!nome) { msg.style.color='var(--danger)'; msg.textContent='Informe o nome.'; return; }
+      msg.style.color='var(--muted)'; msg.textContent='Criando…';
+      const r = await fetch('/api/escalas', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({nome,tipo,dias_embarcado:diasE,dias_folga:diasF,descricao})
+      });
+      const d = await r.json();
+      if (r.ok) {
+        msg.style.color='var(--accent)'; msg.textContent='Escala criada.';
+        carregarEscalas(); carregarResumo();
+        setTimeout(()=>{ mostrarTab('escalas', document.querySelector('.tab-btn')); },800);
+      } else {
+        msg.style.color='var(--danger)'; msg.textContent=d.erro||'Erro ao criar.';
+      }
+    }
+
+    async function removerEscala(id) {
+      if (!confirm('Remover esta escala?')) return;
+      await fetch(`/api/escalas/${id}`, {method:'DELETE'});
+      carregarEscalas(); carregarResumo();
+    }
+
+    async function verCiclo(id, nome) {
+      escalaSelecionadaId = id;
+      document.getElementById('btnCicloTab').style.display = '';
+      document.getElementById('btnCicloTab').textContent = `Ciclo: ${nome}`;
+      mostrarTab('ciclo', document.getElementById('btnCicloTab'));
+      document.getElementById('atrInicio').value = new Date().toISOString().slice(0,10);
+      await carregarCiclo();
+    }
+
+    async function carregarCiclo() {
+      if (!escalaSelecionadaId) return;
+      const r = await fetch(`/api/escalas/${escalaSelecionadaId}/ciclo`);
+      if (!r.ok) return;
+      const d = await r.json();
+      document.getElementById('cicloInfo').innerHTML = `
+        <div class="summary-strip" style="margin-bottom:12px">
+          <div class="summary-pill"><strong>${d.total_embarcados}</strong><span>Embarcados</span></div>
+          <div class="summary-pill"><strong>${d.total_folga}</strong><span>Em folga</span></div>
+          <div class="summary-pill"><strong style="font-size:.9rem">${d.hoje}</strong><span>Hoje</span></div>
+        </div>`;
+      const wrap = document.getElementById('cicloWrap');
+      wrap.innerHTML = '';
+      if (d.embarcados.length) {
+        wrap.innerHTML += `<div class="fase-section glass card" style="margin-bottom:12px">
+          <h3>Embarcados (${d.embarcados.length})</h3>
+          ${d.embarcados.map(a=>`<div class="alias-row"><span class="badge">${a.fase}</span><span>${a.alias}</span><small>${a.unidade||''} ${a.setor?'· '+a.setor:''}</small></div>`).join('')}
+        </div>`;
+      }
+      if (d.em_folga.length) {
+        wrap.innerHTML += `<div class="fase-section glass card">
+          <h3>Em folga (${d.em_folga.length})</h3>
+          ${d.em_folga.map(a=>`<div class="alias-row"><span class="badge folga">${a.fase}</span><span>${a.alias}</span><small>${a.unidade||''} ${a.setor?'· '+a.setor:''}</small></div>`).join('')}
+        </div>`;
+      }
+      if (!d.embarcados.length && !d.em_folga.length) {
+        wrap.innerHTML = '<p style="color:var(--muted)">Nenhum colaborador atribuido ainda.</p>';
+      }
+    }
+
+    async function atribuirColaborador() {
+      if (!escalaSelecionadaId) return;
+      const alias_code = document.getElementById('atrAlias').value.trim();
+      const inicio_ciclo = document.getElementById('atrInicio').value;
+      const msg = document.getElementById('msgAtr');
+      if (!alias_code) { msg.style.color='var(--danger)'; msg.textContent='Informe o alias.'; return; }
+      msg.style.color='var(--muted)'; msg.textContent='Atribuindo…';
+      const r = await fetch(`/api/escalas/${escalaSelecionadaId}/atribuicoes`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({alias_code, inicio_ciclo})
+      });
+      const d = await r.json();
+      if (r.ok) {
+        msg.style.color='var(--accent)'; msg.textContent='Colaborador atribuido.';
+        document.getElementById('atrAlias').value='';
+        carregarCiclo(); carregarResumo();
+      } else {
+        msg.style.color='var(--danger)'; msg.textContent=d.erro||'Erro.';
+      }
+    }
+
+    carregarResumo();
+    carregarEscalas();
+  </script>
+</body>
+</html>

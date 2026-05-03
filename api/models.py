@@ -755,3 +755,65 @@ class FonteOficialAgregado(models.Model):
     def __str__(self):
         local = self.cidade or self.estado or self.pais
         return f"{self.fonte_id} - {self.indicador} - {local} - {self.periodo}"
+
+
+# ── ESCALAS CORPORATIVAS ───────────────────────────────────────────────────────
+
+class EscalaCorporativa(models.Model):
+    TIPO_14x14 = "14x14"
+    TIPO_28x28 = "28x28"
+    TIPO_7x7 = "7x7"
+    TIPO_PERSONALIZADO = "personalizado"
+    TIPOS = [
+        (TIPO_14x14, "14x14"),
+        (TIPO_28x28, "28x28"),
+        (TIPO_7x7, "7x7"),
+        (TIPO_PERSONALIZADO, "Personalizado"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="escalas_corporativas")
+    unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="escalas")
+    nome = models.CharField(max_length=120)
+    tipo = models.CharField(max_length=20, choices=TIPOS, default=TIPO_14x14)
+    dias_embarcado = models.PositiveSmallIntegerField(default=14)
+    dias_folga = models.PositiveSmallIntegerField(default=14)
+    descricao = models.TextField(blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["nome"]
+        indexes = [models.Index(fields=["empresa", "ativo"])]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - escala - {self.nome}"
+
+
+class ColaboradorEscalaCorporativa(models.Model):
+    FASE_EMBARCADO = "embarcado"
+    FASE_FOLGA = "folga"
+    FASES = [
+        (FASE_EMBARCADO, "Embarcado"),
+        (FASE_FOLGA, "Folga"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="colaboradores_escala")
+    alias = models.ForeignKey(ColaboradorAliasCorporativo, on_delete=models.CASCADE, related_name="escalas")
+    escala = models.ForeignKey(EscalaCorporativa, on_delete=models.CASCADE, related_name="colaboradores")
+    inicio_ciclo = models.DateField()
+    fase_atual = models.CharField(max_length=20, choices=FASES, default=FASE_EMBARCADO)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("alias", "escala")
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "escala"]),
+            models.Index(fields=["empresa", "fase_atual"]),
+        ]
+
+    def __str__(self):
+        return f"{self.alias.alias_publico} - {self.escala.nome} - {self.fase_atual}"

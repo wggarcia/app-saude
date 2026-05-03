@@ -143,6 +143,32 @@
       font-size:1.18rem;
     }
 
+    .metric-delta{
+      display:inline-flex;
+      align-items:center;
+      gap:3px;
+      font-size:.7rem;
+      font-weight:600;
+      margin-top:4px;
+      padding:2px 6px;
+      border-radius:8px;
+    }
+
+    .metric-delta.up{
+      color:#7ee1c3;
+      background:rgba(126,225,195,.12);
+    }
+
+    .metric-delta.down{
+      color:#ff7a91;
+      background:rgba(255,122,145,.12);
+    }
+
+    .metric-delta.neutral{
+      color:var(--muted);
+      background:rgba(154,193,220,.08);
+    }
+
     .actions{
       display:flex;
       flex-wrap:wrap;
@@ -177,6 +203,85 @@
     .btn.warn{
       background:linear-gradient(135deg,#8b2239,#5e1b1b);
       border:0;
+    }
+
+    .btn.accent{
+      background:linear-gradient(135deg,#f0bf6b,#e08a20);
+      color:#0b0f14;
+      border:0;
+      cursor:pointer;
+      font-family:inherit;
+      font-size:inherit;
+    }
+
+    /* ── Modal Agir ── */
+    #modal-agir{
+      display:none;
+      position:fixed;
+      inset:0;
+      z-index:9000;
+      background:rgba(4,16,24,.82);
+      backdrop-filter:blur(6px);
+      align-items:center;
+      justify-content:center;
+    }
+
+    #modal-agir.open{display:flex}
+
+    .modal-box{
+      background:var(--panel-3);
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:28px 24px 24px;
+      width:min(420px,calc(100vw - 32px));
+      box-shadow:0 32px 80px rgba(0,0,0,.6);
+    }
+
+    .modal-box h3{
+      margin:0 0 18px;
+      font-size:1.1rem;
+      font-weight:800;
+    }
+
+    .modal-field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-bottom:14px;
+    }
+
+    .modal-field label{
+      font-size:.76rem;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.07em;
+    }
+
+    .modal-field input,
+    .modal-field textarea,
+    .modal-field select{
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--soft-line);
+      border-radius:10px;
+      color:var(--text);
+      font-family:inherit;
+      font-size:.9rem;
+      padding:10px 12px;
+    }
+
+    .modal-field textarea{resize:vertical;min-height:72px}
+
+    .modal-actions{
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      margin-top:18px;
+    }
+
+    #msg-agir{
+      font-size:.82rem;
+      margin-top:10px;
+      min-height:18px;
     }
 
     .layout{
@@ -509,6 +614,25 @@
           <div class="metric">
             <span>{{ card.label }}</span>
             <strong>{{ card.value }}</strong>
+            {% if card.delta is not None %}
+              {% if card.delta_inverted %}
+                {% if card.delta > 0 %}
+                  <div class="metric-delta down">▲ +{{ card.delta }}</div>
+                {% elif card.delta < 0 %}
+                  <div class="metric-delta up">▼ {{ card.delta }}</div>
+                {% else %}
+                  <div class="metric-delta neutral">— estável</div>
+                {% endif %}
+              {% else %}
+                {% if card.delta > 0 %}
+                  <div class="metric-delta up">▲ +{{ card.delta }}</div>
+                {% elif card.delta < 0 %}
+                  <div class="metric-delta down">▼ {{ card.delta }}</div>
+                {% else %}
+                  <div class="metric-delta neutral">— estável</div>
+                {% endif %}
+              {% endif %}
+            {% endif %}
           </div>
           {% endfor %}
         </div>
@@ -519,6 +643,9 @@
           <a class="btn secondary" href="/colaborador-mobile/c/{{ payload.access_code }}/">Abrir produto mobile</a>
           <a class="btn secondary" href="/competencia/">Competência Técnica</a>
           <a class="btn secondary" href="/gestao/">Centro de Gestão</a>
+          <a class="btn secondary" href="/escalas/">Escalas</a>
+          <a class="btn secondary" href="/painel-lider/">Painel do Líder</a>
+          <button class="btn accent" onclick="abrirAgir()">+ Agir agora</button>
           <a class="btn primary" href="/sala-decisao-ia/">Sala de Decisao Corporativa</a>
           <a class="btn warn" href="/logout/">Sair</a>
         </div>
@@ -756,5 +883,77 @@
       </aside>
     </section>
   </main>
+
+  <!-- Modal Agir rápido -->
+  <div id="modal-agir" onclick="if(event.target===this)fecharAgir()">
+    <div class="modal-box">
+      <h3>Criar ação rápida</h3>
+      <div class="modal-field">
+        <label>Título da ação *</label>
+        <input id="agir-titulo" type="text" placeholder="Ex: Reduzir horas extras na unidade norte">
+      </div>
+      <div class="modal-field">
+        <label>Responsável (owner) *</label>
+        <input id="agir-owner" type="text" placeholder="Ex: RH / Supervisão / SESMT">
+      </div>
+      <div class="modal-field">
+        <label>Descrição</label>
+        <textarea id="agir-descricao" placeholder="Contexto, objetivo ou sinal que motivou a ação…"></textarea>
+      </div>
+      <div class="modal-field">
+        <label>Prazo</label>
+        <input id="agir-prazo" type="date">
+      </div>
+      <div id="msg-agir" style="color:var(--accent)"></div>
+      <div class="modal-actions">
+        <button class="btn secondary" onclick="fecharAgir()">Cancelar</button>
+        <button class="btn accent" onclick="submeterAgir()">Criar ação</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function abrirAgir(){
+      document.getElementById('modal-agir').classList.add('open');
+      document.getElementById('agir-titulo').focus();
+    }
+    function fecharAgir(){
+      document.getElementById('modal-agir').classList.remove('open');
+      document.getElementById('msg-agir').textContent='';
+    }
+    async function submeterAgir(){
+      const titulo=(document.getElementById('agir-titulo').value||'').trim();
+      const owner=(document.getElementById('agir-owner').value||'').trim();
+      const descricao=(document.getElementById('agir-descricao').value||'').trim();
+      const prazo=document.getElementById('agir-prazo').value||null;
+      const msg=document.getElementById('msg-agir');
+      if(!titulo){msg.style.color='var(--danger)';msg.textContent='Informe o título da ação.';return;}
+      if(!owner){msg.style.color='var(--danger)';msg.textContent='Informe o responsável.';return;}
+      msg.style.color='var(--muted)';msg.textContent='Salvando…';
+      try{
+        const r=await fetch('/api/gestao/acoes',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({titulo,owner,descricao,prazo,origem:'risco'})
+        });
+        const d=await r.json();
+        if(r.ok){
+          msg.style.color='var(--accent)';
+          msg.textContent='Ação criada. Acesse o Centro de Gestão para acompanhar.';
+          document.getElementById('agir-titulo').value='';
+          document.getElementById('agir-owner').value='';
+          document.getElementById('agir-descricao').value='';
+          document.getElementById('agir-prazo').value='';
+          setTimeout(fecharAgir,2000);
+        } else {
+          msg.style.color='var(--danger)';
+          msg.textContent=d.erro||'Erro ao criar ação.';
+        }
+      }catch(e){
+        msg.style.color='var(--danger)';msg.textContent='Erro de conexão.';
+      }
+    }
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharAgir();});
+  </script>
 </body>
 </html>
