@@ -367,22 +367,39 @@ def api_evidencia_colaborador(request, codigo):
         return JsonResponse({"erro": "item nao encontrado"}, status=404)
 
     try:
-        pontuacao = max(1, min(5, int(dados.get("pontuacao") or 3)))
+        pontuacao = max(1, min(5, int(dados.get("pontuacao_autodeclarada") or dados.get("pontuacao") or 3)))
     except (TypeError, ValueError):
         pontuacao = 3
 
-    evidencia = EvidenciaCompetenciaCorporativa.objects.create(
+    # Não duplica: se já existe evidência pendente/enviada para este item+alias, atualiza
+    evidencia_existente = EvidenciaCompetenciaCorporativa.objects.filter(
         empresa=empresa, alias=alias, item=item,
-        unidade=alias.unidade, setor=alias.setor,
-        titulo=(dados.get("titulo") or "").strip()[:160],
-        descricao=(dados.get("descricao") or "").strip(),
-        status=EvidenciaCompetenciaCorporativa.STATUS_ENVIADA,
-        pontuacao_autodeclarada=pontuacao,
-    )
-    ValidacaoCompetenciaCorporativa.objects.create(
-        empresa=empresa, evidencia=evidencia,
-        resultado=ValidacaoCompetenciaCorporativa.RESULTADO_PENDENTE,
-    )
+    ).exclude(status=EvidenciaCompetenciaCorporativa.STATUS_VALIDADA).first()
+
+    if evidencia_existente:
+        evidencia_existente.descricao = (dados.get("descricao") or "").strip()
+        evidencia_existente.titulo = (dados.get("titulo") or "").strip()[:160]
+        evidencia_existente.pontuacao_autodeclarada = pontuacao
+        evidencia_existente.status = EvidenciaCompetenciaCorporativa.STATUS_ENVIADA
+        evidencia_existente.save(update_fields=["descricao", "titulo", "pontuacao_autodeclarada", "status", "atualizado_em"])
+        evidencia = evidencia_existente
+        ValidacaoCompetenciaCorporativa.objects.filter(evidencia=evidencia).update(
+            resultado=ValidacaoCompetenciaCorporativa.RESULTADO_PENDENTE
+        )
+    else:
+        evidencia = EvidenciaCompetenciaCorporativa.objects.create(
+            empresa=empresa, alias=alias, item=item,
+            unidade=alias.unidade, setor=alias.setor,
+            titulo=(dados.get("titulo") or "").strip()[:160],
+            descricao=(dados.get("descricao") or "").strip(),
+            status=EvidenciaCompetenciaCorporativa.STATUS_ENVIADA,
+            pontuacao_autodeclarada=pontuacao,
+        )
+        ValidacaoCompetenciaCorporativa.objects.create(
+            empresa=empresa, evidencia=evidencia,
+            resultado=ValidacaoCompetenciaCorporativa.RESULTADO_PENDENTE,
+        )
+
     return JsonResponse({"id": evidencia.id, "status": evidencia.status})
 
 

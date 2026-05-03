@@ -7,5 +7,4 @@ whitenoise
 dj-database-url
 psycopg[binary]
 PyJWT
-mercadopago
 firebase-admin

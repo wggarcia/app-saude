@@ -1,6 +1,8 @@
 import jwt
 import logging
+import time
 from datetime import timedelta
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.conf import settings
@@ -10,6 +12,10 @@ from .models import Empresa, EmpresaUsuario, DonoSaaS, DispositivoAutorizado
 logger = logging.getLogger(__name__)
 SESSION_IDLE_TIMEOUT = timedelta(minutes=15) if settings.DEBUG else timedelta(hours=8)
 SESSION_TOUCH_INTERVAL = timedelta(minutes=1)
+
+# Rate limiting: max tentativas de login por IP
+_LOGIN_MAX_ATTEMPTS = 10
+_LOGIN_WINDOW_SECONDS = 300  # 5 minutos
 
 
 def _sessao_expirada(principal):
@@ -38,15 +44,44 @@ def _touch_dispositivo_empresa(empresa, device_id):
     if not device_id:
         return True
     dispositivo = DispositivoAutorizado.objects.filter(
-        empresa=empresa,
-        device_id=device_id,
-        ativo=True,
+        empresa=empresa, device_id=device_id, ativo=True,
     ).first()
     if not dispositivo:
         return False
     if timezone.now() - dispositivo.ultimo_acesso >= SESSION_TOUCH_INTERVAL:
         dispositivo.save(update_fields=["ultimo_acesso"])
     return True
+
+
+def _client_ip(request):
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "unknown")
+
+
+def _rate_limit_login(request):
+    """Retorna True se o IP estiver bloqueado, False se ainda pode tentar."""
+    ip = _client_ip(request)
+    cache_key = f"login_attempts:{ip}"
+    attempts = cache.get(cache_key, [])
+    now_ts = time.time()
+    # Limpa tentativas fora da janela
+    attempts = [t for t in attempts if now_ts - t < _LOGIN_WINDOW_SECONDS]
+    if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
+        return True
+    attempts.append(now_ts)
+    cache.set(cache_key, attempts, _LOGIN_WINDOW_SECONDS)
+    return False
+
+
+def _plano_expirado(empresa):
+    if empresa.data_expiracao and empresa.data_expiracao < timezone.now():
+        if empresa.ativo:
+            empresa.ativo = False
+            empresa.save(update_fields=["ativo"])
+        return True
+    return False
 
 
 class EmpresaMiddleware:
@@ -67,6 +102,8 @@ class EmpresaMiddleware:
             "/erro/",
             "/pendente/",
             "/logout/",
+            "/logout-governo/",
+            "/logout-operacao/",
             "/cadastro/",
             "/apresentacao/",
             "/privacidade/",
@@ -93,6 +130,20 @@ class EmpresaMiddleware:
             "/static/",
             "/media/",
         )
+
+        # Rate limiting apenas nas rotas de login
+        rotas_login = (
+            "/api/login",
+            "/api/login-empresa",
+            "/api/login-governo",
+        )
+        if any(request.path.startswith(r) for r in rotas_login):
+            if _rate_limit_login(request):
+                return JsonResponse({
+                    "status": "erro",
+                    "mensagem": "Muitas tentativas de acesso. Aguarde alguns minutos.",
+                    "codigo": "rate_limit",
+                }, status=429)
 
         if request.path in rotas_livres_exatas:
             return self.get_response(request)
@@ -133,7 +184,7 @@ class EmpresaMiddleware:
                     return JsonResponse({"erro": "Token operacional inválido"}, status=401)
                 return redirect("/operacao-central/")
 
-        # 🔐 AUTENTICAÇÃO JWT DO CLIENTE
+        # 🔐 AUTENTICAÇÃO JWT
         auth = request.headers.get("Authorization")
         token = None
 
@@ -148,11 +199,7 @@ class EmpresaMiddleware:
             return redirect("/")
 
         try:
-            data = jwt.decode(
-                token,
-                settings.JWT_SECRET_KEY,
-                algorithms=["HS256"]
-            )
+            data = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
 
             empresa = Empresa.objects.get(id=data["empresa_id"])
             principal_kind = data.get("principal_kind")
@@ -167,18 +214,21 @@ class EmpresaMiddleware:
                     return JsonResponse({"erro": "sessão encerrada ou substituída"}, status=401)
                 login_target = "/login-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/login-empresa/"
                 return redirect(login_target)
+
             if _sessao_expirada(principal):
                 _encerrar_sessao_principal(principal)
                 if request.path.startswith("/api/"):
                     return JsonResponse({"erro": "sessão expirada"}, status=401)
                 login_target = "/login-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/login-empresa/"
                 return redirect(login_target)
+
             if not _touch_dispositivo_empresa(empresa, data.get("device_id")):
                 _encerrar_sessao_principal(principal)
                 if request.path.startswith("/api/"):
                     return JsonResponse({"erro": "dispositivo revogado ou inválido"}, status=401)
                 login_target = "/login-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/login-empresa/"
                 return redirect(login_target)
+
             _touch_sessao_principal(principal)
             request.empresa = empresa
             request.principal = principal
@@ -191,14 +241,11 @@ class EmpresaMiddleware:
                 return redirect("/login-governo/")
             return redirect("/login-empresa/")
 
-        # 💣 BLOQUEIO DE ACESSO SEM PAGAMENTO
-        if not empresa.ativo:
+        # 💣 BLOQUEIO: plano vencido
+        if _plano_expirado(empresa) or not empresa.ativo:
             if request.path.startswith("/api/"):
                 redirect_target = "/contrato-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/pagamento/"
-                return JsonResponse({
-                    "erro": "plano não ativo",
-                    "redirect": redirect_target
-                }, status=403)
+                return JsonResponse({"erro": "plano não ativo", "redirect": redirect_target}, status=403)
             if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
                 return redirect("/contrato-governo/")
             return redirect("/pagamento/")
