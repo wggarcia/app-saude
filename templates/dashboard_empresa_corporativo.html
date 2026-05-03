@@ -6,32 +6,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
   <style>
     :root{
-      --bg:#07131d;
-      --panel:rgba(6,16,26,.8);
-      --panel-strong:rgba(4,11,18,.92);
-      --panel-soft:rgba(12,28,41,.72);
-      --stroke:rgba(170,214,255,.14);
-      --text:#eaf6ff;
-      --muted:#9ec2dd;
-      --accent:#7cf29a;
-      --accent-2:#7ab8ff;
-      --accent-3:#ffd166;
-      --danger:#ff5d7a;
-      --warn:#ff8f4c;
-      --shadow:0 22px 60px rgba(0,0,0,.42);
+      --bg:#041018;
+      --panel:#0b1822;
+      --panel-2:rgba(10,24,35,.78);
+      --panel-3:rgba(15,31,45,.92);
+      --line:rgba(154,193,220,.14);
+      --soft-line:rgba(255,255,255,.08);
+      --text:#ebf7ff;
+      --muted:#9ab9ce;
+      --accent:#7ee1c3;
+      --accent-2:#7db6ff;
+      --gold:#f0bf6b;
+      --danger:#ff7a91;
+      --shadow:0 24px 70px rgba(0,0,0,.42);
     }
 
     *{box-sizing:border-box}
-    html,body{
+    body{
       margin:0;
-      min-height:100%;
+      min-height:100vh;
       font-family:"Manrope","Segoe UI",sans-serif;
-      background:var(--bg);
       color:var(--text);
-      overflow:hidden;
+      background:
+        radial-gradient(circle at top left, rgba(126,225,195,.14), transparent 20rem),
+        radial-gradient(circle at top right, rgba(125,182,255,.16), transparent 24rem),
+        radial-gradient(circle at bottom left, rgba(240,191,107,.12), transparent 22rem),
+        linear-gradient(180deg,#041018 0%,#08141d 32%,#061119 100%);
     }
 
     body::before{
@@ -40,124 +43,216 @@
       inset:0;
       pointer-events:none;
       background:
-        linear-gradient(rgba(116,192,252,.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(116,192,252,.06) 1px, transparent 1px);
-      background-size:46px 46px;
-      opacity:.22;
-      z-index:1;
+        linear-gradient(rgba(125,182,255,.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(125,182,255,.05) 1px, transparent 1px);
+      background-size:44px 44px;
+      opacity:.18;
     }
 
-    body::after{
-      content:"";
-      position:fixed;
-      inset:0;
-      pointer-events:none;
-      background:
-        radial-gradient(circle at top left, rgba(0,209,178,.18), transparent 26%),
-        radial-gradient(circle at bottom right, rgba(255,122,24,.14), transparent 28%),
-        linear-gradient(180deg, rgba(4,11,18,.08), rgba(4,11,18,.38));
-      z-index:1;
+    .shell{
+      width:min(1500px,calc(100% - 28px));
+      margin:0 auto;
+      padding:16px 0 24px;
     }
 
-    .backdrop{
-      position:fixed;
-      inset:0;
-      z-index:0;
-      background:
-        radial-gradient(circle at 24% 30%, rgba(124,242,154,.14), transparent 22rem),
-        radial-gradient(circle at 78% 18%, rgba(122,184,255,.14), transparent 24rem),
-        radial-gradient(circle at 72% 78%, rgba(255,209,102,.12), transparent 22rem);
-    }
-
-    .hud{
-      position:fixed;
-      inset:0;
-      z-index:2;
-      pointer-events:none;
-    }
-
-    .topbar,
-    .dock,
-    .floating-button,
-    .center-stage{
-      pointer-events:auto;
+    .glass{
+      background:var(--panel-2);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(18px);
     }
 
     .topbar{
-      position:absolute;
-      top:14px;
-      left:14px;
-      right:14px;
       display:grid;
-      grid-template-columns:minmax(320px,1.12fr) minmax(280px,1.55fr) auto;
-      gap:12px;
+      grid-template-columns:minmax(320px,1.2fr) minmax(420px,1.6fr) auto;
+      gap:14px;
       align-items:stretch;
     }
 
-    .topbar-card,
-    .dock,
-    .stage-card,
-    .metric-card,
-    .action-card{
-      border:1px solid var(--stroke);
-      background:var(--panel);
-      backdrop-filter:blur(18px);
-      box-shadow:var(--shadow);
-    }
-
-    .topbar-card{
-      border-radius:24px;
-      padding:14px 16px;
+    .top-card{
+      border-radius:28px;
+      padding:16px 18px;
     }
 
     .brand-line{
       display:flex;
       justify-content:space-between;
       gap:12px;
-      align-items:center;
+      align-items:flex-start;
     }
 
-    .brand-title{
+    .brand{
       font-size:1.1rem;
       font-weight:800;
-      letter-spacing:.02em;
+      letter-spacing:.03em;
     }
 
-    .brand-subtitle,
-    .mini{
-      color:var(--muted);
-      font-size:.82rem;
-      line-height:1.36;
+    .company{
+      color:#d9ffef;
+      font-size:.94rem;
+      font-weight:800;
+      text-align:right;
     }
 
-    .environment-badge{
+    .eyebrow{
       display:inline-flex;
       align-items:center;
-      margin-top:8px;
-      padding:7px 10px;
+      gap:8px;
+      margin-top:12px;
+      padding:8px 12px;
       border-radius:999px;
-      border:1px solid rgba(124,242,154,.38);
-      background:rgba(124,242,154,.13);
-      color:#d8ffe2;
-      font-size:.74rem;
+      border:1px solid rgba(126,225,195,.28);
+      background:rgba(126,225,195,.12);
+      color:#dbfff3;
+      font-size:.72rem;
       font-weight:900;
-      letter-spacing:.08em;
+      letter-spacing:.12em;
       text-transform:uppercase;
     }
 
-    .metrics-strip{
+    .muted{
+      color:var(--muted);
+      line-height:1.6;
+      font-size:.9rem;
+    }
+
+    .metrics{
       display:grid;
       grid-template-columns:repeat(5,minmax(0,1fr));
       gap:10px;
     }
 
-    .metric-card{
-      border-radius:18px;
-      padding:10px 12px;
-      background:linear-gradient(180deg, rgba(17,37,53,.88), rgba(7,19,29,.92));
+    .metric{
+      border-radius:20px;
+      padding:12px;
+      background:linear-gradient(180deg, rgba(17,35,50,.9), rgba(8,18,28,.92));
+      border:1px solid var(--soft-line);
     }
 
-    .metric-card span{
+    .metric span{
+      display:block;
+      color:var(--muted);
+      font-size:.73rem;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .metric strong{
+      display:block;
+      margin-top:8px;
+      font-size:1.18rem;
+    }
+
+    .actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:flex-start;
+      justify-content:flex-end;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:46px;
+      padding:0 16px;
+      border-radius:999px;
+      border:1px solid var(--soft-line);
+      text-decoration:none;
+      color:var(--text);
+      font-weight:800;
+      background:rgba(255,255,255,.07);
+    }
+
+    .btn.primary{
+      border:0;
+      background:linear-gradient(135deg,#0db794,#1f6ff2);
+    }
+
+    .btn.secondary{
+      background:rgba(255,255,255,.04);
+    }
+
+    .btn.warn{
+      background:linear-gradient(135deg,#8b2239,#5e1b1b);
+      border:0;
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns:320px minmax(0,1fr) 360px;
+      gap:16px;
+      margin-top:16px;
+      align-items:start;
+    }
+
+    .rail,
+    .main,
+    .aside{
+      display:grid;
+      gap:16px;
+    }
+
+    .card{
+      border-radius:30px;
+      padding:20px;
+    }
+
+    .section-title{
+      margin:0 0 10px;
+      font-size:1.02rem;
+      font-weight:800;
+    }
+
+    .hero{
+      overflow:hidden;
+      display:grid;
+      grid-template-columns:1.25fr .75fr;
+      gap:16px;
+      background:
+        radial-gradient(circle at top right, rgba(126,225,195,.16), transparent 18rem),
+        radial-gradient(circle at left center, rgba(125,182,255,.14), transparent 20rem),
+        linear-gradient(180deg, rgba(12,25,36,.95), rgba(7,16,24,.92));
+    }
+
+    .hero h1{
+      margin:14px 0 14px;
+      font-family:"Fraunces",serif;
+      font-size:clamp(2.9rem,4.2vw,5rem);
+      line-height:.94;
+      letter-spacing:-.03em;
+      text-wrap:balance;
+    }
+
+    .hero-copy{
+      display:grid;
+      gap:14px;
+    }
+
+    .hero-note{
+      border-radius:22px;
+      padding:16px;
+      border:1px solid rgba(126,225,195,.18);
+      background:rgba(126,225,195,.08);
+      color:#dcfff4;
+      line-height:1.62;
+    }
+
+    .hero-side{
+      display:grid;
+      gap:12px;
+      align-content:start;
+    }
+
+    .signal{
+      border-radius:22px;
+      padding:16px;
+      background:rgba(255,255,255,.05);
+      border:1px solid var(--soft-line);
+    }
+
+    .signal span{
       display:block;
       color:var(--muted);
       font-size:.74rem;
@@ -165,102 +260,22 @@
       letter-spacing:.08em;
     }
 
-    .metric-card strong{
+    .signal strong{
       display:block;
-      margin-top:6px;
-      font-size:1.2rem;
+      margin-top:8px;
+      font-size:1.08rem;
+      line-height:1.35;
     }
 
-    .actions{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:flex-end;
-      flex-wrap:wrap;
-    }
-
-    .btn{
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:999px;
-      padding:10px 14px;
-      color:var(--text);
-      background:rgba(255,255,255,.08);
-      font:inherit;
-      cursor:pointer;
-      font-weight:700;
-      text-decoration:none;
-    }
-
-    .btn.primary{
-      background:linear-gradient(135deg, rgba(0,209,178,.88), rgba(17,138,178,.88));
-    }
-
-    .btn.secondary{
-      background:rgba(255,255,255,.08);
-    }
-
-    .btn.warn{
-      background:linear-gradient(135deg, rgba(174,32,65,.92), rgba(127,29,29,.92));
-    }
-
-    .dock{
-      position:absolute;
-      top:104px;
-      bottom:20px;
-      width:350px;
-      border-radius:28px;
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
-      transition:transform .28s ease, opacity .28s ease;
-    }
-
-    .dock-left{left:14px}
-    .dock-right{right:14px;width:390px}
-    .dock.hidden-left{transform:translateX(-104%);opacity:0}
-    .dock.hidden-right{transform:translateX(104%);opacity:0}
-
-    .dock-header{
-      padding:16px 18px 10px;
-      background:linear-gradient(180deg, rgba(9,24,36,.96), rgba(9,24,36,.84));
-      border-bottom:1px solid var(--stroke);
-    }
-
-    .dock-title{
-      font-size:1rem;
-      font-weight:800;
-    }
-
-    .dock-scroll{
-      padding:14px;
-      overflow:auto;
-      display:flex;
-      flex-direction:column;
-      gap:14px;
-    }
-
-    .section{
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:22px;
-      background:var(--panel-soft);
-      padding:14px;
-    }
-
-    .section h2{
-      margin:0 0 10px;
-      font-size:.98rem;
-    }
-
-    .section p{
-      margin:0;
-      color:var(--muted);
-      line-height:1.55;
-      font-size:.9rem;
+    .grid{
+      display:grid;
+      grid-template-columns:1.08fr .92fr;
+      gap:16px;
     }
 
     .stack{
       display:grid;
-      gap:10px;
+      gap:16px;
     }
 
     .list{
@@ -268,230 +283,68 @@
       gap:10px;
     }
 
-    .card-row{
-      border-radius:18px;
-      background:rgba(5,12,20,.56);
-      border:1px solid rgba(255,255,255,.08);
-      padding:12px 13px;
+    .row-card{
+      border-radius:20px;
+      padding:14px;
+      border:1px solid var(--soft-line);
+      background:rgba(255,255,255,.04);
     }
 
-    .card-row strong{
+    .row-card strong{
       display:block;
-      font-size:.92rem;
+      font-size:.95rem;
     }
 
-    .card-row small{
+    .row-card small{
       display:block;
       margin-top:6px;
       color:var(--muted);
-      line-height:1.45;
+      line-height:1.55;
+      font-size:.86rem;
     }
 
-    .metric-stack{
-      display:grid;
-      gap:10px;
-    }
-
-    .metric-stack .card-row b{
-      display:block;
-      margin-top:6px;
-      font-size:1.15rem;
-    }
-
-    .tag-row{
+    .chips{
       display:flex;
       flex-wrap:wrap;
       gap:8px;
       margin-top:10px;
     }
 
-    .tag{
+    .chip{
       display:inline-flex;
       align-items:center;
-      padding:7px 10px;
+      min-height:30px;
+      padding:0 10px;
       border-radius:999px;
-      background:rgba(255,255,255,.08);
-      color:#d3e6f4;
+      background:rgba(255,255,255,.07);
+      color:#d8e9f5;
       font-size:.75rem;
       font-weight:800;
     }
 
-    .center-stage{
-      position:absolute;
-      top:104px;
-      left:378px;
-      right:418px;
-      bottom:20px;
+    .module-grid{
       display:grid;
-      grid-template-rows:auto 1fr auto;
+      grid-template-columns:repeat(2,minmax(0,1fr));
       gap:14px;
     }
 
-    .stage-card{
-      border-radius:30px;
-      padding:20px;
-      background:linear-gradient(180deg, rgba(8,19,30,.94), rgba(6,16,26,.88));
+    .module{
+      border-radius:24px;
+      padding:18px;
+      border:1px solid var(--soft-line);
+      background:linear-gradient(180deg, rgba(13,28,40,.92), rgba(8,18,28,.9));
     }
 
-    .hero-card{
-      min-height:240px;
-      display:grid;
-      grid-template-columns:1.15fr .85fr;
-      gap:18px;
-      align-items:stretch;
-      background:
-        radial-gradient(circle at top right, rgba(124,242,154,.14), transparent 18rem),
-        linear-gradient(180deg, rgba(11,26,40,.96), rgba(6,16,26,.9));
-    }
-
-    .eyebrow{
-      display:inline-flex;
-      align-items:center;
+    .module-head{
+      display:flex;
+      justify-content:space-between;
       gap:10px;
-      padding:8px 12px;
-      border:1px solid rgba(124,242,154,.28);
-      border-radius:999px;
-      color:#d8ffe2;
-      background:rgba(124,242,154,.08);
-      font-size:.74rem;
-      text-transform:uppercase;
-      font-weight:900;
-      letter-spacing:.12em;
+      align-items:flex-start;
     }
 
-    .hero-card h1{
-      font-family:"Cormorant Garamond",serif;
-      font-size:clamp(3rem,4.6vw,4.9rem);
-      line-height:.92;
-      letter-spacing:0;
-      margin:18px 0 14px;
-      text-wrap:balance;
-    }
-
-    .hero-card p{
-      color:var(--muted);
-      line-height:1.74;
+    .module h3{
       margin:0;
       font-size:1rem;
-    }
-
-    .hero-summary{
-      margin-top:18px;
-      padding:16px;
-      border-radius:22px;
-      background:rgba(124,242,154,.08);
-      border:1px solid rgba(124,242,154,.18);
-      color:#defbe8;
-    }
-
-    .hero-summary strong{
-      display:block;
-      color:#fff;
-      margin-bottom:8px;
-    }
-
-    .hero-aside{
-      display:grid;
-      gap:12px;
-      align-content:start;
-    }
-
-    .hero-signal{
-      border-radius:22px;
-      background:rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.1);
-      padding:16px;
-    }
-
-    .hero-signal span{
-      display:block;
-      color:var(--muted);
-      font-size:.74rem;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
-
-    .hero-signal strong{
-      display:block;
-      margin-top:8px;
-      font-size:1.26rem;
-    }
-
-    .hero-signal p{
-      margin-top:8px;
-      font-size:.88rem;
-      line-height:1.55;
-    }
-
-    .canvas{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:14px;
-      min-height:0;
-    }
-
-    .canvas-col{
-      display:grid;
-      gap:14px;
-      min-height:0;
-    }
-
-    .action-card{
-      border-radius:26px;
-      padding:18px;
-      background:linear-gradient(180deg, rgba(12,28,41,.88), rgba(7,19,29,.92));
-    }
-
-    .action-card h3{
-      margin:0 0 10px;
-      font-size:1.05rem;
-    }
-
-    .action-card p{
-      margin:0;
-      color:var(--muted);
-      line-height:1.58;
-      font-size:.92rem;
-    }
-
-    .action-card ul{
-      margin:12px 0 0;
-      padding-left:18px;
-      color:#d7e8f4;
-      line-height:1.6;
-    }
-
-    .heat{
-      display:grid;
-      gap:10px;
-      margin-top:14px;
-    }
-
-    .heat-row{
-      display:grid;
-      grid-template-columns:150px 1fr auto;
-      gap:12px;
-      align-items:center;
-    }
-
-    .heat-row span{
-      color:#d9e9f4;
-      font-size:.88rem;
-      font-weight:700;
-    }
-
-    .bar{
-      height:10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.08);
-      overflow:hidden;
-      border:1px solid rgba(255,255,255,.06);
-    }
-
-    .fill{
-      height:100%;
-      border-radius:999px;
-      background:linear-gradient(135deg, rgba(124,242,154,.95), rgba(102,199,255,.95));
     }
 
     .band{
@@ -501,365 +354,405 @@
       min-height:28px;
       padding:0 10px;
       border-radius:999px;
-      font-size:.75rem;
+      font-size:.72rem;
       font-weight:900;
       text-transform:uppercase;
+      letter-spacing:.08em;
     }
 
-    .band.critico{background:rgba(255,93,122,.16);color:#ffb0bd}
-    .band.alto{background:rgba(255,143,76,.16);color:#ffc39f}
-    .band.moderado{background:rgba(255,209,102,.16);color:#ffe6aa}
-    .band.baixo{background:rgba(124,242,154,.16);color:#c9ffd8}
+    .band.critico{background:rgba(255,122,145,.16);color:#ffbfcb}
+    .band.alto{background:rgba(240,137,73,.16);color:#ffd0ae}
+    .band.moderado{background:rgba(240,191,107,.16);color:#ffe4ad}
+    .band.baixo{background:rgba(126,225,195,.16);color:#d6fff2}
 
-    .footer-card{
+    .module p{
+      margin:10px 0 0;
+      color:var(--muted);
+      line-height:1.62;
+      font-size:.9rem;
+    }
+
+    .module ul{
+      margin:12px 0 0;
+      padding-left:18px;
+      color:#d7e8f4;
+      line-height:1.6;
+      font-size:.88rem;
+    }
+
+    .surface-grid{
       display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:14px;
+      gap:10px;
     }
 
-    .floating-button{
-      position:absolute;
-      bottom:34px;
-      z-index:6;
-      display:inline-flex;
-      align-items:center;
+    .surface{
+      border-radius:20px;
+      padding:14px;
+      border:1px solid var(--soft-line);
+      background:rgba(255,255,255,.04);
+    }
+
+    .surface strong{
+      display:block;
+      font-size:.92rem;
+    }
+
+    .surface small{
+      display:block;
+      margin-top:6px;
+      color:var(--muted);
+      line-height:1.55;
+    }
+
+    .module-nav{
+      display:flex;
+      flex-wrap:wrap;
       gap:8px;
-      padding:11px 16px;
+      margin-top:6px;
+    }
+
+    .module-pill{
+      padding:9px 12px;
       border-radius:999px;
-      border:1px solid var(--stroke);
-      background:rgba(6,16,26,.85);
-      color:var(--text);
+      background:rgba(255,255,255,.05);
+      border:1px solid var(--soft-line);
+      color:#dbeaf7;
+      font-size:.76rem;
       font-weight:800;
-      box-shadow:var(--shadow);
-      cursor:pointer;
     }
 
-    .floating-left{left:378px}
-    .floating-right{right:418px}
-
-    @media(max-width:1280px){
-      html,body{overflow:auto}
-      .topbar,
-      .dock,
-      .center-stage,
-      .floating-button{
-        position:relative;
-        inset:auto;
-        left:auto;
-        right:auto;
-        top:auto;
-        bottom:auto;
-        width:auto;
-      }
-      .hud{
-        position:relative;
-        display:grid;
-        gap:14px;
-        padding:14px;
-      }
-      .topbar,
-      .center-stage,
-      .canvas,
-      .footer-card,
-      .hero-card{
-        grid-template-columns:1fr;
-      }
-      .dock{
-        max-height:none;
-      }
-      .floating-button{
-        display:none;
-      }
-      html,body{
-        overflow:auto;
-      }
+    .program{
+      border-radius:24px;
+      padding:16px;
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--soft-line);
     }
 
-    @media(max-width:820px){
+    .program strong{
+      display:block;
+      font-size:.98rem;
+    }
+
+    .program em{
+      display:block;
+      margin-top:6px;
+      color:#d2ecff;
+      font-style:normal;
+      font-size:.82rem;
+      font-weight:700;
+    }
+
+    .program ul{
+      margin:10px 0 0;
+      padding-left:18px;
+      color:#d9e8f2;
+      line-height:1.6;
+      font-size:.88rem;
+    }
+
+    .unit{
+      display:grid;
+      gap:8px;
+    }
+
+    .unit-top{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+    }
+
+    .unit-bar{
+      height:10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      overflow:hidden;
+    }
+
+    .unit-fill{
+      height:100%;
+      border-radius:999px;
+      background:linear-gradient(135deg,#7ee1c3,#7db6ff);
+    }
+
+    @media(max-width:1340px){
       .topbar{grid-template-columns:1fr}
-      .metrics-strip{grid-template-columns:1fr 1fr}
+      .layout{grid-template-columns:1fr}
+      .grid,.hero{grid-template-columns:1fr}
+    }
+
+    @media(max-width:920px){
+      .metrics,.module-grid{grid-template-columns:1fr 1fr}
+    }
+
+    @media(max-width:720px){
+      .metrics,.module-grid{grid-template-columns:1fr}
       .actions{justify-content:flex-start}
-      .canvas,
-      .footer-card{
-        grid-template-columns:1fr;
-      }
-      .heat-row{
-        grid-template-columns:1fr;
-      }
     }
   </style>
 </head>
 <body>
-  <div class="backdrop"></div>
-
-  <main class="hud">
+  <main class="shell">
     <section class="topbar">
-      <div class="topbar-card">
+      <article class="top-card glass">
         <div class="brand-line">
-          <div class="brand-title">SolusCRT Corporativo</div>
-          <div class="brand-title" style="font-size:.95rem;color:#d9ffe3">{{ empresa_nome }}</div>
+          <div class="brand">SolusCRT Corporativo</div>
+          <div class="company">{{ empresa_nome }}</div>
         </div>
-        <div class="environment-badge">Ambiente Empresa · Centro de Saude Corporativa</div>
-        <p class="brand-subtitle" style="margin-top:10px">Saude ocupacional, risco psicossocial, absenteismo, apoio institucional e continuidade operacional em um control room proprio para empresas.</p>
-      </div>
+        <div class="eyebrow">{{ payload.hero.eyebrow }}</div>
+        <p class="muted" style="margin:12px 0 0">{{ payload.product.subtitle }}</p>
+      </article>
 
-      <div class="topbar-card">
-        <div class="metrics-strip">
+      <article class="top-card glass">
+        <div class="metrics">
           {% for card in payload.executive_cards %}
-          <article class="metric-card">
+          <div class="metric">
             <span>{{ card.label }}</span>
             <strong>{{ card.value }}</strong>
-          </article>
-          {% endfor %}
-          <article class="metric-card">
-            <span>Respondentes</span>
-            <strong>{{ payload.summary.respondents }}</strong>
-          </article>
-        </div>
-      </div>
-
-      <div class="topbar-card">
-        <div class="actions">
-          <a class="btn secondary" href="/colaborador/c/{{ payload.access_code }}/">App do colaborador</a>
-          <a class="btn primary" href="/sala-decisao-ia/">Sala de Decisao Corporativa</a>
-          <a class="btn warn" href="/logout/">Sair</a>
-        </div>
-      </div>
-    </section>
-
-    <aside class="dock dock-left" id="dockLeft">
-      <div class="dock-header">
-        <div class="dock-title">Mesa Executiva</div>
-        <div class="mini" style="margin-top:6px">O que a diretoria, RH e SESMT precisam enxergar primeiro.</div>
-      </div>
-      <div class="dock-scroll">
-        <section class="section">
-          <h2>Leitura principal</h2>
-          <p>{{ payload.summary.headline }}</p>
-        </section>
-
-        <section class="section">
-          <h2>Prioridades do cliente</h2>
-          <div class="list">
-            {% for item in payload.priority_needs %}
-            <article class="card-row">
-              <strong>{{ item.title }}</strong>
-              <small>{{ item.detail }}</small>
-            </article>
-            {% endfor %}
           </div>
-        </section>
-
-        <section class="section">
-          <h2>Confiança e privacidade</h2>
-          <div class="metric-stack">
-            <article class="card-row">
-              <strong>Grupo mínimo</strong>
-              <b>{{ payload.privacy.group_minimum }} respostas</b>
-              <small>O sistema só libera leitura institucional quando há massa crítica suficiente.</small>
-            </article>
-            <article class="card-row">
-              <strong>Leitura liberada</strong>
-              <b>{% if payload.privacy.ready %}Sim{% else %}Aguardando massa crítica{% endif %}</b>
-              <small>Sem exposição individual no painel da empresa.</small>
-            </article>
-          </div>
-        </section>
-      </div>
-    </aside>
-
-    <section class="center-stage">
-      <article class="stage-card hero-card">
-        <div>
-          <span class="eyebrow">Centro de Saude Corporativa</span>
-          <h1>Uma sala propria para cuidar da saude da sua operacao.</h1>
-          <p>{{ payload.hero.summary }}</p>
-
-          <div class="hero-summary">
-            <strong>{{ payload.hero.positioning }}</strong>
-            <span>Este painel foi desenhado para que a empresa veja cedo onde a energia esta caindo, onde o risco psicossocial esta subindo e quais programas devem entrar antes que o problema vire afastamento, ruptura de equipe ou queda de continuidade.</span>
-          </div>
-        </div>
-
-        <div class="hero-aside">
-          {% for item in payload.hero.value_points %}
-          <article class="hero-signal">
-            <span>Resultado esperado</span>
-            <strong>{{ item }}</strong>
-          </article>
           {% endfor %}
         </div>
       </article>
 
-      <section class="canvas">
-        <div class="canvas-col">
-          <article class="action-card">
-            <h3>Radar de frentes críticas</h3>
-            <p>As frentes abaixo organizam o trabalho de RH, liderança, saúde ocupacional e operação. A meta não é monitorar pessoas; é antecipar desgaste e responder cedo.</p>
-            <div class="heat">
-              {% for lane in payload.command_center %}
-              <div class="heat-row">
-                <span>{{ lane.title }}</span>
-                <div class="bar"><div class="fill" style="width:{% cycle '88' '74' '82' '69' %}%"></div></div>
-                <div class="band {% cycle 'alto' 'moderado' 'alto' 'moderado' %}">{% cycle 'ativo' 'acompanhar' 'priorizar' 'estruturar' %}</div>
-              </div>
-              {% endfor %}
-            </div>
-          </article>
-
-          <article class="action-card">
-            <h3>Planos que a empresa pode disparar agora</h3>
-            <p>A diferença premium aqui está em transformar dado em programa acionável, e não só em leitura bonita.</p>
-            <div class="list">
-              {% for program in payload.programs %}
-              <article class="card-row">
-                <strong>{{ program.title }}</strong>
-                <small>Owner sugerido: {{ program.owner }}</small>
-                <ul>
-                  {% for item in program.items %}
-                  <li>{{ item }}</li>
-                  {% endfor %}
-                </ul>
-              </article>
-              {% endfor %}
-            </div>
-          </article>
+      <article class="top-card glass">
+        <div class="actions">
+          <a class="btn secondary" href="/colaborador-mobile/c/{{ payload.access_code }}/">Abrir produto mobile</a>
+          <a class="btn primary" href="/sala-decisao-ia/">Sala de Decisao Corporativa</a>
+          <a class="btn warn" href="/logout/">Sair</a>
         </div>
+      </article>
+    </section>
 
-        <div class="canvas-col">
-          <article class="action-card">
-            <h3>Alertas da semana</h3>
-            <p>A IA corporativa deve entregar o que pede ação imediata, não jargão técnico.</p>
-            <div class="list">
-              {% for item in payload.recommendations %}
-              <article class="card-row">
-                <strong>{{ item.title }}</strong>
-                <div class="tag-row">
-                  <span class="tag">Urgência {{ item.urgency }}</span>
-                  <span class="tag">{{ item.action }}</span>
-                </div>
-                <small>{{ item.summary }}</small>
-              </article>
-              {% endfor %}
-            </div>
-          </article>
-
-          <article class="action-card">
-            <h3>App do colaborador</h3>
-            <p>Esta camada existe para o colaborador participar com confiança e para a empresa agir sem violar essa confiança.</p>
-            <div class="list">
-              {% for item in payload.app_employee.journey %}
-              <article class="card-row">
-                <strong>{{ item }}</strong>
-              </article>
-              {% endfor %}
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section class="footer-card">
-        <article class="action-card">
-          <h3>Unidades em observação</h3>
-          <p>Quando a massa crítica permite, a leitura por unidade mostra onde a pressão realmente começa a se concentrar.</p>
-          <div class="list">
-            {% if payload.top_units %}
-              {% for unit in payload.top_units %}
-              <article class="card-row">
-                <strong>{{ unit.name }}</strong>
-                <div class="tag-row">
-                  <span class="tag">{{ unit.risk_score }}/100</span>
-                  <span class="tag">{{ unit.respondents }} respondentes</span>
-                  <span class="tag">{{ unit.risk_band }}</span>
-                </div>
-              </article>
-              {% endfor %}
-            {% else %}
-              <article class="card-row">
-                <strong>Aguardando leitura local válida</strong>
-                <small>Assim que cada grupo atingir {{ payload.privacy.group_minimum }} respostas, as unidades passam a aparecer aqui.</small>
-              </article>
-            {% endif %}
-          </div>
-        </article>
-
-        <article class="action-card">
-          <h3>Pilares do produto</h3>
-          <p>Os pilares abaixo ajudam a posicionar o ambiente como produto de saúde ocupacional, não como derivação do epidemiológico.</p>
-          <div class="list">
-            {% for pillar in payload.pillars %}
-            <article class="card-row">
-              <strong>{{ pillar.title }}</strong>
-              <small>{{ pillar.description }}</small>
-              <div class="tag-row">
-                {% for metric in pillar.metrics %}
-                <span class="tag">{{ metric }}</span>
-                {% endfor %}
-              </div>
+    <section class="layout">
+      <aside class="rail">
+        <article class="card glass">
+          <h2 class="section-title">Arquitetura do produto</h2>
+          <p class="muted" style="margin-top:0">Este ambiente institucional coordena as tres superficies do ecossistema corporativo sem misturar o painel executivo com a experiencia do funcionario.</p>
+          <div class="surface-grid">
+            {% for surface in payload.surfaces %}
+            <article class="surface">
+              <strong>{{ surface.title }}</strong>
+              <small>{{ surface.summary }}</small>
             </article>
             {% endfor %}
           </div>
         </article>
-      </section>
-    </section>
 
-    <aside class="dock dock-right" id="dockRight">
-      <div class="dock-header">
-        <div class="dock-title">Console de Ação</div>
-        <div class="mini" style="margin-top:6px">Os próximos movimentos que este ambiente precisa orientar para o cliente.</div>
-      </div>
-      <div class="dock-scroll">
-        <section class="section">
-          <h2>Hoje o ambiente precisa responder</h2>
+        <article class="card glass">
+          <h2 class="section-title">Perguntas executivas</h2>
           <div class="list">
-            <article class="card-row">
-              <strong>Onde pode surgir absenteísmo?</strong>
-              <small>Usar energia, risco psicossocial e sinais físicos para antecipar pressão sobre presença e cobertura.</small>
+            {% for question in payload.questions %}
+            <article class="row-card">
+              <strong>{{ question }}</strong>
             </article>
-            <article class="card-row">
-              <strong>Quais líderes precisam agir primeiro?</strong>
-              <small>As áreas mais expostas recebem comunicação curta, apoio e ajuste de ritmo antes do agravamento.</small>
-            </article>
-            <article class="card-row">
-              <strong>Que programa deve entrar nesta semana?</strong>
-              <small>Fadiga, apoio psicossocial, ergonomia ou retorno assistido entram conforme a leitura dominante.</small>
-            </article>
+            {% endfor %}
           </div>
-        </section>
+        </article>
 
-        <section class="section">
-          <h2>Princípios de confiança</h2>
-          <div class="list">
+        <article class="card glass">
+          <h2 class="section-title">Confianca e governanca</h2>
+          <div class="chips">
+            <span class="chip">grupo minimo {{ payload.privacy.group_minimum }}</span>
+            <span class="chip">{% if payload.privacy.ready %}leitura institucional liberada{% else %}aguardando massa critica{% endif %}</span>
+          </div>
+          <div class="list" style="margin-top:12px">
             {% for principle in payload.privacy.principles %}
-            <article class="card-row">
+            <article class="row-card">
               <strong>{{ principle }}</strong>
             </article>
             {% endfor %}
           </div>
-        </section>
+        </article>
+      </aside>
 
-        <section class="section">
-          <h2>Atalhos do ambiente</h2>
-          <div class="list">
-            <article class="card-row">
-              <strong>Sala de Decisão Corporativa</strong>
-              <small>Abre a camada de leitura da IA focada em saúde ocupacional, absenteísmo, equipes e continuidade.</small>
+      <section class="main">
+        <article class="card glass hero">
+          <div class="hero-copy">
+            <span class="eyebrow">{{ payload.product.company }}</span>
+            <h1>{{ payload.hero.title }}</h1>
+            <p class="muted" style="margin:0">{{ payload.hero.summary }}</p>
+            <div class="hero-note">{{ payload.hero.positioning }}</div>
+            <div class="module-nav">
+              {% for item in payload.module_nav %}
+              <span class="module-pill">{{ item }}</span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="hero-side">
+            {% for item in payload.hero.value_points %}
+            <article class="signal">
+              <span>Resultado esperado</span>
+              <strong>{{ item }}</strong>
             </article>
-            <article class="card-row">
-              <strong>App do colaborador</strong>
-              <small>Entrada dedicada para check-ins, autocuidado e pedido seguro de apoio.</small>
+            {% endfor %}
+          </div>
+        </article>
+
+        <section class="grid">
+          <div class="stack">
+            <article class="card glass">
+              <h2 class="section-title">Modulos do ambiente institucional</h2>
+              <p class="muted" style="margin-top:0">O ambiente empresa agora e organizado por capacidades reais de saude ocupacional, escala, cultura, mentoria e continuidade, em vez de derivar do epidemiologico.</p>
+              <div class="module-grid">
+                {% for module in payload.modules %}
+                <article class="module">
+                  <div class="module-head">
+                    <h3>{{ module.title }}</h3>
+                    <span class="band {{ module.band }}">{{ module.band }}</span>
+                  </div>
+                  <p>{{ module.summary }}</p>
+                  <div class="chips">
+                    <span class="chip">{{ module.audience }}</span>
+                    {% for metric in module.metrics %}
+                    <span class="chip">{{ metric }}</span>
+                    {% endfor %}
+                  </div>
+                  <ul>
+                    {% for action in module.actions %}
+                    <li>{{ action }}</li>
+                    {% endfor %}
+                  </ul>
+                </article>
+                {% endfor %}
+              </div>
             </article>
-            <article class="card-row">
-              <strong>Logout</strong>
-              <small>Saída clara do ambiente principal, sem esconder a ação do cliente.</small>
+
+            <article class="card glass">
+              <h2 class="section-title">Programas acionaveis da semana</h2>
+              <p class="muted" style="margin-top:0">O valor premium deste ambiente esta em transformar leitura institucional em programa operacional, owner claro e execucao.</p>
+              <div class="list">
+                {% for program in payload.programs %}
+                <article class="program">
+                  <strong>{{ program.title }}</strong>
+                  <em>Owner sugerido: {{ program.owner }}</em>
+                  <ul>
+                    {% for item in program.items %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                  </ul>
+                </article>
+                {% endfor %}
+              </div>
+            </article>
+          </div>
+
+          <div class="stack">
+            <article class="card glass">
+              <h2 class="section-title">Leitura principal</h2>
+              <p class="muted" style="margin-top:0">{{ payload.summary.headline }}</p>
+              <div class="list">
+                {% for item in payload.recommendations %}
+                <article class="row-card">
+                  <strong>{{ item.title }}</strong>
+                  <div class="chips">
+                    <span class="chip">urgencia {{ item.urgency }}</span>
+                    <span class="chip">{{ item.action }}</span>
+                  </div>
+                  <small>{{ item.summary }}</small>
+                </article>
+                {% endfor %}
+              </div>
+            </article>
+
+            <article class="card glass">
+              <h2 class="section-title">Produto mobile do colaborador</h2>
+              <p class="muted" style="margin-top:0">{{ payload.mobile_product.summary }}</p>
+              <article class="row-card">
+                <strong>{{ payload.mobile_product.note }}</strong>
+                <div class="chips">
+                  <span class="chip">canal separado da SaaS</span>
+                  <span class="chip">uso diario no celular</span>
+                  <span class="chip">acesso pelo codigo corporativo</span>
+                </div>
+              </article>
+              <div class="list" style="margin-top:12px">
+                {% for capability in payload.mobile_product.capabilities %}
+                <article class="row-card">
+                  <strong>{{ capability }}</strong>
+                </article>
+                {% endfor %}
+              </div>
+            </article>
+
+            <article class="card glass">
+              <h2 class="section-title">Unidades em observacao</h2>
+              <p class="muted" style="margin-top:0">Quando a massa critica permite, a leitura local mostra onde a pressao comeca a se concentrar.</p>
+              <div class="list">
+                {% if payload.top_units %}
+                  {% for unit in payload.top_units %}
+                  <article class="row-card unit">
+                    <div class="unit-top">
+                      <strong>{{ unit.name }}</strong>
+                      <span class="band {{ unit.risk_band }}">{{ unit.risk_band }}</span>
+                    </div>
+                    <div class="chips">
+                      <span class="chip">{{ unit.risk_score }}/100</span>
+                      <span class="chip">{{ unit.respondents }} respondentes</span>
+                    </div>
+                    <div class="unit-bar"><div class="unit-fill" style="width:{{ unit.risk_score }}%"></div></div>
+                  </article>
+                  {% endfor %}
+                {% else %}
+                  <article class="row-card">
+                    <strong>Aguardando leitura local valida</strong>
+                    <small>Assim que cada grupo atingir {{ payload.privacy.group_minimum }} respostas, as unidades passam a aparecer aqui.</small>
+                  </article>
+                {% endif %}
+              </div>
             </article>
           </div>
         </section>
-      </div>
-    </aside>
+      </section>
 
-    <button class="floating-button floating-left" onclick="document.getElementById('dockLeft').classList.toggle('hidden-left')">Alternar mesa executiva</button>
-    <button class="floating-button floating-right" onclick="document.getElementById('dockRight').classList.toggle('hidden-right')">Alternar console de ação</button>
+      <aside class="aside">
+        <article class="card glass">
+          <h2 class="section-title">Mesa executiva</h2>
+          <div class="list">
+            <article class="row-card">
+              <strong>Top signal</strong>
+              <small>{{ payload.summary.top_signal }}</small>
+            </article>
+            <article class="row-card">
+              <strong>Base anonima</strong>
+              <small>{{ payload.summary.respondents }} respondentes diarios e {{ payload.summary.weekly_respondents }} semanais.</small>
+            </article>
+            <article class="row-card">
+              <strong>Escopo do ambiente</strong>
+              <small>Saude ocupacional, escalas, cultura, lideranca, apoio e continuidade operacional.</small>
+            </article>
+          </div>
+        </article>
+
+        <article class="card glass">
+          <h2 class="section-title">Ecossistema institucional</h2>
+          <p class="muted" style="margin-top:0">{{ payload.ecosystem.promise }}</p>
+          <div class="chips">
+            {% for segment in payload.ecosystem.segments %}
+            <span class="chip">{{ segment }}</span>
+            {% endfor %}
+          </div>
+        </article>
+
+        <article class="card glass">
+          <h2 class="section-title">Rotas de decisao</h2>
+          <div class="list">
+            <article class="row-card">
+              <strong>Sala de Decisao Corporativa</strong>
+              <small>Abre a camada de IA para priorizar unidades, programas, liderancas e risco institucional.</small>
+            </article>
+            <article class="row-card">
+              <strong>Produto mobile do colaborador</strong>
+              <small>Canal dedicado para celular com check-ins, apoio, microlearning e mentoria.</small>
+            </article>
+            <article class="row-card">
+              <strong>Logout claro</strong>
+              <small>Saida visivel do ambiente principal para nao esconder o fluxo do cliente.</small>
+            </article>
+          </div>
+        </article>
+      </aside>
+    </section>
   </main>
 </body>
 </html>

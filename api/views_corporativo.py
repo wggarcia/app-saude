@@ -135,6 +135,7 @@ def app_colaborador_corporativo(request, codigo):
         "empresa_nome": empresa.nome,
         "codigo_acesso": codigo,
         "min_group_size": MIN_GROUP_SIZE,
+        "mobile_api_base": f"/api/colaborador-mobile/{codigo}",
     })
 
 

@@ -1,10 +1,10 @@
 # SolusCRT Corporativo
 
-Blueprint do novo ambiente `empresa` como produto proprio de saude ocupacional e bem-estar corporativo, preservando os ambientes epidemiologicos existentes (`governo`, `hospital`, `farmacia`).
+Blueprint do produto `empresa` como um ambiente proprio de saude ocupacional, desenvolvimento humano e continuidade operacional, preservando os ambientes epidemiologicos existentes (`governo`, `hospital`, `farmacia`).
 
 ## 1. Decisao de produto
 
-O ambiente `empresa` deixa de ser uma variacao do dashboard epidemiologico setorial e passa a ser um produto proprio dentro do mesmo ecossistema SaaS.
+O ambiente `empresa` deixa de ser uma variacao do dashboard epidemiologico setorial e passa a ser um segundo produto forte dentro do ecossistema SolusCRT.
 
 ### Permanecem como estao
 
@@ -14,361 +14,548 @@ O ambiente `empresa` deixa de ser uma variacao do dashboard epidemiologico setor
 
 ### Passa a existir como produto proprio
 
-- `empresa`: saude ocupacional, saude mental, bem-estar, fadiga, absenteismo e acoes preventivas para RH, SESMT e lideranca.
+- `empresa`: saude ocupacional, saude mental, fadiga, desenvolvimento em escala, apoio institucional, inteligencia cultural e continuidade do trabalho.
 
-## 2. Tese do produto
+## 2. Tese central
 
-Empresas nao precisam de um espelho do ambiente hospitalar ou farmaceutico. Precisam de um ambiente que responda:
+Empresas nao precisam de uma copia do ambiente hospitalar ou farmaceutico. Precisam de uma plataforma que responda:
 
-- Onde estao surgindo sinais de sofrimento emocional e fisico?
-- Em quais unidades, turnos ou setores o risco esta aumentando?
-- O problema parece interno, externo ou misto?
-- O que a empresa deve fazer nesta semana para reduzir afastamentos e piora do quadro?
+- onde a operacao esta perdendo energia antes do afastamento aparecer?
+- quais unidades, escalas ou liderancas estao entrando em risco?
+- como agir sem expor individuos?
+- quais programas de apoio, desenvolvimento e comunicacao precisam entrar nesta semana?
 
-O produto deve operar como uma ponte entre:
+O produto deve funcionar como a combinacao de tres camadas:
 
 - sinais internos anonimizados dos colaboradores
-- contexto externo do SolusCRT epidemiologico
-- plano de acao institucional com recomendacoes praticas
+- contexto operacional e organizacional da empresa
+- decisao assistida por IA para RH, SESMT, lideranca e operacoes
 
-## 3. Publicos
+## 3. Estrutura correta do produto
+
+O modulo corporativo nao deve ser um painel unico tentando fazer tudo. Ele precisa ser dividido em tres superficies claras.
+
+### 3.1 SaaS institucional da empresa
+
+Uso por:
+
+- RH
+- People
+- SESMT
+- lideranca operacional
+- saude ocupacional
+- diretoria
+
+Responsabilidade:
+
+- visao agregada e anonima
+- indicadores institucionais
+- planos de acao
+- programas e campanhas
+- leitura por unidade, setor, escala e lideranca
+
+### 3.2 App mobile do colaborador
+
+Uso por:
+
+- funcionarios
+- equipes embarcadas
+- trabalhadores de campo
+- times multiunidade e multinacionais
+
+Responsabilidade:
+
+- check-ins diarios e semanais
+- pedido opcional de apoio
+- trilhas curtas de bem-estar
+- jornada de desenvolvimento pessoal
+- microlearning e recursos offline
+
+Regra de produto:
+
+- este app e um produto mobile dedicado
+- ele nao deve ser tratado como "um app dentro da SaaS"
+- a SaaS da empresa o apresenta como parte do ecossistema, mas a experiencia do colaborador e separada
+
+### 3.3 Motor corporativo de IA e analytics
+
+Responsabilidade:
+
+- agregacao anonima
+- score de risco institucional
+- leitura de fadiga, absenteismo e risco psicossocial
+- matching, recomendacoes e priorizacao
+- cruzamento com sinais de contexto quando fizer sentido
+
+## 4. Publicos
 
 ### Comprador
 
 - RH
 - People
-- Saude ocupacional
+- saude ocupacional
 - SESMT
-- Lideranca executiva
-- Operacoes de campo e multiunidade
+- operacoes
+- diretorias de unidades intensivas ou distribuidas
 
-### Usuario institucional
+### Usuarios institucionais
 
 - gestor de RH
 - medico do trabalho
 - tecnico de seguranca
-- lider de unidade
+- lider de operacao
+- gerente de unidade
 - diretor de operacoes
 
-### Usuario final do app
+### Usuario final do app mobile
 
 - colaborador
 
-## 4. Estrutura do produto
+## 5. Problemas reais que o produto precisa resolver
 
-O modulo corporativo sera composto por tres pecas:
+### 5.1 Saude ocupacional
 
-1. Painel institucional web para empresa
-2. App do colaborador
-3. Motor analitico e de recomendacao corporativa
+- afastamentos recorrentes
+- fadiga fisica
+- ergonomia ruim
+- sinais precoces de desgaste
+- retorno ao trabalho sem acompanhamento
 
-### 4.1 Painel institucional
+### 5.2 Saude mental e psicossocial
 
-Foco em leitura agregada e anonima.
+- estresse cronico
+- burnout silencioso
+- baixa seguranca psicologica
+- medo de pedir ajuda
+- liderancas despreparadas para acolhimento
 
-### 4.2 App do colaborador
+### 5.3 Operacoes em escala e ambiente confinado
 
-Foco em check-ins simples, sinais fisicos/emocionais e orientacao de autocuidado.
+- ciclos 14x14 e 28x28
+- isolamento
+- queda de energia cognitiva
+- passagem de turno fraca
+- dificuldade de aprendizado continuo
 
-### 4.3 Motor corporativo
+### 5.4 Operacoes multiculturais
 
-Foco em:
+- falhas de comunicacao entre nacionalidades
+- risco por idioma tecnico
+- desalinhamento cultural na lideranca
+- conflitos de feedback, seguranca e colaboracao
+
+## 6. Mapa dos modulos do produto
+
+Os modulos abaixo definem o coracao do SolusCRT Corporativo.
+
+### 6.1 Saude Ocupacional
+
+Objetivo:
+
+- monitorar risco fisico, sinais ocupacionais, dor, fadiga, sono e retorno ao trabalho
+
+Ferramentas principais:
+
+- radar de carga fisica
+- mapa de sinais por unidade/setor/turno
+- fila de retorno assistido
+- campanhas de ergonomia e recuperacao
+- leitura de risco por funcao operacional
+
+### 6.2 Fadiga e Burnout
+
+Objetivo:
+
+- antecipar queda de energia, exaustao e impacto sobre escala, seguranca e continuidade
+
+Ferramentas principais:
+
+- score de fadiga por unidade e ciclo
+- previsao de pressao sobre absenteismo
+- sinal de burnout por grupos anonimos
+- leitura de energia e sono
+- recomendacoes de ajuste de pausa, cobertura e ritmo
+
+### 6.3 Inteligencia Cultural e Comunicacao Multilingue
+
+Objetivo:
+
+- reduzir falhas de entendimento em equipes com diferentes nacionalidades, idiomas e estilos de trabalho
+
+Ferramentas principais:
+
+- trilhas de CQ (quociente cultural)
+- glossario tecnico multilingue
+- traducao assistida em contexto operacional
+- microlearning de idioma tecnico
+- kits de comunicacao para lideranca multicultural
+
+### 6.4 Gestao de Escalas e Desenvolvimento On/Off
+
+Objetivo:
+
+- permitir desenvolvimento profissional sem colidir com a realidade das escalas longas
+
+Ferramentas principais:
+
+- trilhas assincronas com modo offline
+- PDI on/off por ciclo
+- metas separadas para embarque e folga
+- agenda de retomada de aprendizado
+- mapa de aderencia por unidade e turno
+
+### 6.5 Mentoria e Suporte a Distancia
+
+Objetivo:
+
+- manter crescimento tecnico e apoio humano mesmo em ambientes remotos, dispersos ou confinados
+
+Ferramentas principais:
+
+- matching de mentoria entre unidades e paises
+- registro de sessoes de mentoria
+- feedback de fim de ciclo
+- rituais de lideranca remota
+- fila de acompanhamento de talentos em risco
+
+### 6.6 Comunidades de Pratica e Transferencia de Conhecimento
+
+Objetivo:
+
+- evitar perda de conhecimento e fortalecer pertencimento entre equipes separadas por escala ou geografia
+
+Ferramentas principais:
+
+- comunidades por especialidade
+- passagem de turno educativa
+- biblioteca de videos curtos de handoff
+- curadoria de boas praticas
+- perguntas e respostas tecnicas por frente operacional
+
+## 7. O que fica em cada superficie
+
+## 7.1 SaaS institucional da empresa
+
+Deve conter:
+
+- home executiva
+- saude ocupacional
+- fadiga e burnout
+- unidades, escalas e continuidade
+- cultura e comunicacao
+- mentoria e desenvolvimento
+- campanhas e programas
+- governanca e privacidade
+- sala de decisao corporativa
+
+Nao deve conter:
+
+- experiencia principal do colaborador
+- trilhas pessoais como fluxo central
+- formularios longos pensados para uso diario do funcionario
+
+## 7.2 App mobile do colaborador
+
+Deve conter:
+
+- onboarding e privacidade
+- check-in diario
+- check-in semanal
+- pedido de apoio
+- meu cuidado
+- trilhas curtas
+- microlearning de idioma e cultura
+- desenvolvimento on/off
+- mentoria e comunidades
+
+Nao deve depender de:
+
+- navegação da SaaS institucional
+- contexto de dashboard executivo
+- linguagem de produto voltada para RH
+
+## 7.3 Motor de IA e analytics
+
+Deve conter:
 
 - agregacao anonima
-- score de risco
-- tendencias
-- planos de acao da IA
-- cruzamento com contexto externo epidemiologico
+- correlacao entre sinais
+- recomendacao de programas
+- priorizacao por unidade e escala
+- matching de mentoria
+- explicacao executiva acionavel
 
-## 5. Mapa de telas do Painel Empresa
+## 8. Mapa de telas do SaaS institucional
 
-### 5.1 Home Executiva
+### 8.1 Home Executiva
 
-Objetivo: leitura de 30 segundos para decisores.
+Objetivo:
+
+- leitura de 30 segundos para diretoria, RH e SESMT
 
 Blocos:
 
-- indice geral de bem-estar
+- bem-estar geral
 - risco psicossocial
-- risco fisico ocupacional
-- tendencia de absenteismo
-- unidades em atencao
-- plano de acao da semana da IA
+- risco ocupacional
+- fadiga e absenteismo provavel
+- unidades em observacao
+- planos recomendados da semana
 
-Widgets:
-
-- `Indice Geral`: score 0-100 com variacao 7d e 30d
-- `Risco Mental`: baixo, moderado, alto, critico
-- `Risco Fisico`: baixo, moderado, alto, critico
-- `Unidades Criticas`: top 5 unidades
-- `Sinais Dominantes`: fadiga, sono ruim, estresse, dor
-- `Leitura da IA`: texto curto com explicacao e acoes
-
-### 5.2 Saude Mental
-
-Objetivo: identificar sobrecarga, exaustao e piora emocional.
+### 8.2 Saude Ocupacional
 
 Blocos:
 
-- humor medio agregado
-- nivel de estresse
-- fadiga emocional
-- risco de burnout
-- sensacao de apoio
-- tendencia por unidade/setor/turno
+- sinais fisicos dominantes
+- risco ergonomico
+- retorno ao trabalho
+- clusters de fadiga fisica
+- mapa por unidade e funcao
 
-Visualizacoes:
-
-- serie temporal 7, 30 e 90 dias
-- heatmap por unidade
-- comparativo por turno
-- distribuicao por intensidade
-
-### 5.3 Saude Fisica e Ocupacional
-
-Objetivo: monitorar sinais fisicos recorrentes e desgaste ocupacional.
+### 8.3 Fadiga, Burnout e Saude Mental
 
 Blocos:
 
-- dores recorrentes
-- fadiga fisica
+- estresse agregado
+- energia media
 - qualidade do sono
-- desconforto ergonomico
-- sinais respiratorios
-- sinais por unidade e turno
+- fadiga emocional
+- seguranca psicologica
+- burnout provavel por grupos anonimos
 
-Visualizacoes:
-
-- radar de sintomas
-- mapa organizacional por area
-- tendencia de queixas fisicas
-
-### 5.4 Unidades e Equipes
-
-Objetivo: localizar rapidamente os pontos de maior risco.
+### 8.4 Escalas e Continuidade
 
 Blocos:
 
-- ranking de unidades em atencao
-- comparacao entre setores
-- comparacao entre turnos
-- equipes com piora recente
-- estabilidade vs volatilidade
+- leitura por ciclo 14x14 / 28x28
+- pressao por turno
+- aderencia a pausas
+- risco de quebra de cobertura
+- desenvolvimento on/off
 
-Visualizacoes:
-
-- heatmap por unidade
-- cards por setor
-- tabela de prioridade operacional
-
-### 5.5 Alertas e IA
-
-Objetivo: traduzir sinais em decisao.
+### 8.5 Cultura e Comunicacao
 
 Blocos:
 
-- alerta
-- explicacao da causa
-- impacto estimado
-- urgencia
-- janela recomendada de acao
-- plano sugerido
+- equipes multiculturais em atencao
+- gaps de idioma tecnico
+- trilhas de CQ ativas
+- glossarios mais acessados
+- necessidade de traducao operacional
 
-Exemplos de saida:
-
-- "Unidade Norte com crescimento de fadiga e sono ruim em 14 dias."
-- "Turno da noite com combinacao de estresse alto e queda de energia."
-- "Contexto respiratorio regional elevando risco de absenteismo."
-
-### 5.6 Campanhas e Acoes
-
-Objetivo: sair de observacao para intervencao.
-
-Tipos de campanha:
-
-- pausa e recuperacao
-- sono e rotina
-- ergonomia
-- hidratacao
-- respiratorio sazonal
-- apoio emocional
-
-Medidas:
-
-- adesao
-- engajamento
-- impacto antes/depois
-- acoes abertas
-
-### 5.7 Contexto Externo
-
-Objetivo: cruzar ambiente interno com risco territorial.
+### 8.6 Mentoria e Lideranca
 
 Blocos:
 
-- indice epidemiologico regional
-- sintomas predominantes no territorio
-- cidades com piora
-- impacto esperado na forca de trabalho
+- mentores ativos
+- talentos sem cobertura
+- qualidade do feedback por ciclo
+- liderancas sob maior pressao
+- recomendacoes de apoio ao gestor
 
-Exemplo de leitura:
+### 8.7 Comunidades e Conhecimento
 
-- aumento de sinais respiratorios na regiao + fadiga interna em unidades locais
-- pressao emocional interna sem correlacao epidemiologica externa
+Blocos:
 
-### 5.8 Governanca
+- comunidades ativas
+- handoffs publicados
+- aderencia a compartilhamento
+- especialidades sem curadoria
+- topicos tecnicos mais recorrentes
 
-Objetivo: dar seguranca juridica e operacional ao modulo.
+### 8.8 Governanca
 
 Blocos:
 
 - politica de anonimato
-- grupos minimos para exibicao
+- grupos minimos
 - perfis de acesso
-- auditoria de uso
-- consentimento e finalidade
+- auditoria
+- consentimento
+- uso de IA e explicabilidade
 
-## 6. Mapa de telas do App do Colaborador
+## 9. Mapa de telas do app mobile do colaborador
 
-### 6.1 Onboarding e Privacidade
+### 9.1 Onboarding e Privacidade
 
 Mensagens obrigatorias:
 
 - o que e anonimo
-- o que a empresa pode ver
-- o que a empresa nao pode ver
-- quando um pedido pode sair do anonimato por consentimento
+- o que a empresa ve
+- o que a empresa nao ve
+- quando um pedido de apoio pode ser identificado por consentimento
 
-### 6.2 Check-in Diario
+### 9.2 Check-in Diario
 
-Campos sugeridos:
+Campos:
 
-- humor hoje
+- humor
 - energia
 - estresse
-- qualidade do sono
+- sono
 - dor fisica
 - cansaco
-- sintomas fisicos
+- foco/concentracao
 - vontade de pedir apoio
 
-Tempo ideal: 30 a 60 segundos
+Tempo ideal:
 
-### 6.3 Check-in Semanal
+- 30 a 60 segundos
 
-Campos sugeridos:
+### 9.3 Check-in Semanal
+
+Campos:
 
 - carga emocional
 - sensacao de apoio
 - percepcao de pressao
-- concentracao
-- satisfacao geral
 - seguranca psicologica
+- relacao com o gestor
+- equilibrio entre trabalho e descanso
 
-### 6.4 Registrar Sinais
-
-Tipos:
-
-- dor corporal
-- dor de cabeca
-- exaustao
-- ansiedade
-- irritabilidade
-- tristeza persistente
-- falta de ar
-- tosse
-- disturbio de sono
-
-### 6.5 Meu Cuidado
+### 9.4 Meu Cuidado
 
 Conteudos:
 
 - pausa guiada
 - respiracao
 - higiene do sono
-- organizacao de rotina
-- orientacao preventiva
+- regulacao emocional
+- rotina para desembarque/retorno
 
-### 6.6 Pedir Apoio
+### 9.5 Idioma e Cultura
+
+Conteudos:
+
+- microlearning de idioma tecnico
+- situacoes reais de feedback
+- comportamento intercultural
+- glossarios por funcao
+- uso offline
+
+### 9.6 Carreira On/Off
+
+Conteudos:
+
+- metas do ciclo embarcado
+- metas do ciclo de folga
+- retomada de trilhas
+- progresso de PDI
+- lembretes de estudo assincrono
+
+### 9.7 Mentoria e Comunidades
+
+Conteudos:
+
+- mentor indicado
+- agenda de contato
+- comunidade por especialidade
+- handoff em video
+- perguntas e respostas tecnicas
+
+### 9.8 Pedir Apoio
 
 Fluxos:
 
 - pedido anonimo orientado
 - pedido com contato opcional
-- orientacao para canal interno
-- orientacao para ajuda profissional
+- canal humano
+- orientacao para apoio profissional
 
-### 6.7 Meu Historico
+## 10. Ferramentas por modulo
 
-Uso individual:
+## 10.1 Inteligencia Cultural e Comunicacao Multilingue
 
-- tendencia pessoal de bem-estar
-- dias melhores/piores
-- continuidade dos check-ins
+Ferramentas MVP:
 
-## 7. Modelo de dados MVP
+- catalogo de glossarios tecnicos
+- biblioteca de microlearning por idioma
+- playbooks curtos de CQ para liderancas
 
-## 7.1 Entidades institucionais
+Ferramentas fase 2:
+
+- traducao assistida contextual
+- recomendador de trilhas por equipe
+- integracao com fornecedores de CQ
+
+## 10.2 Gestao de Ciclos de Escala
+
+Ferramentas MVP:
+
+- cadastro de ciclo por unidade
+- leitura de check-ins por escala
+- PDI on/off basico
+
+Ferramentas fase 2:
+
+- offline sync
+- trilhas baixaveis
+- lembretes inteligentes por janela de folga
+
+## 10.3 Mentoria e Suporte a Distancia
+
+Ferramentas MVP:
+
+- matching simples mentor-mentorado
+- registro de encontros
+- feedback de fim de ciclo
+
+Ferramentas fase 2:
+
+- matching inteligente por idioma, senioridade e especialidade
+- alertas de mentorados sem acompanhamento
+
+## 10.4 Saude Mental em Ambiente Confinado
+
+Ferramentas MVP:
+
+- score de fadiga e estresse
+- leitura de sono e energia
+- fila de pedidos de apoio
+- campanhas de acolhimento
+
+Ferramentas fase 2:
+
+- trilhas de regulacao emocional
+- programas por unidade
+- comunidades de pratica moderadas
+
+## 11. Modelo de dados recomendado
+
+## 11.1 Entidades institucionais
 
 - `EmpresaUnidade`
 - `EmpresaSetor`
 - `EmpresaTurno`
-- `EmpresaPerfilAcessoCorporativo`
+- `EmpresaEscalaOperacional`
+- `ProgramaCorporativo`
+- `MentoriaCorporativa`
+- `ComunidadePratica`
 
-## 7.2 Entidades do colaborador
+## 11.2 Entidades do colaborador
 
-- `ColaboradorVinculo`
-- `ColaboradorConsentimento`
 - `ColaboradorAliasAnonimo`
-
-## 7.3 Entidades de saude corporativa
-
+- `ColaboradorConsentimento`
 - `CheckinDiarioCorporativo`
 - `CheckinSemanalCorporativo`
-- `SinalSaudeCorporativo`
 - `PedidoApoioCorporativo`
-- `CampanhaCorporativa`
-- `CampanhaAdesao`
-- `AcaoIACorporativa`
+- `PlanoDesenvolvimentoOnOff`
+- `TrilhaMicrolearning`
+
+## 11.3 Entidades de analytics
+
 - `ResumoAgregadoCorporativo`
+- `AcaoIACorporativa`
+- `RiscoPsicossocialSnapshot`
+- `RiscoOcupacionalSnapshot`
+- `MentoriaMatching`
+- `HandoffConhecimento`
 
-## 7.4 Campos minimos de check-in diario
+## 12. Regras de anonimato e seguranca
 
-- empresa
-- unidade
-- setor
-- turno
-- colaborador_alias
-- data
-- humor
-- energia
-- estresse
-- sono
-- dor
-- fadiga
-- sintomas_fisicos
-- sintomas_emocionais
-- apoio_solicitado
+Essas regras precisam nascer no MVP, nao depois.
 
-## 7.5 Campos minimos de check-in semanal
-
-- empresa
-- unidade
-- setor
-- turno
-- colaborador_alias
-- semana_referencia
-- carga_emocional
-- sensacao_de_apoio
-- pressao_de_trabalho
-- seguranca_psicologica
-- bem_estar_geral
-
-## 8. Regras de anonimato e seguranca
-
-Essas regras devem nascer no MVP, nao depois.
-
-### Regras obrigatorias
+### Obrigatorias
 
 - o painel institucional nao mostra dado individual bruto
 - grupos com menos de 8 respostas nao aparecem
@@ -377,146 +564,87 @@ Essas regras devem nascer no MVP, nao depois.
 - pedido de apoio nominal so ocorre com consentimento explicito
 - auditoria institucional registra acesso a dados agregados e exportacoes
 
-### Regras recomendadas
+### Recomendadas
 
 - limitar recortes por combinacao de filtros
 - atrasar levemente exibicao de pequenos grupos
 - mascarar extremos quando a amostra for baixa
-- separar identificador tecnico do colaborador da camada analitica
+- separar identificador tecnico da camada analitica
+- diferenciar dado de bem-estar de dado disciplinar
 
-## 9. Integracao com o ecossistema atual
+## 13. IA corporativa
 
-## 9.1 O que reaproveitar
-
-- `Empresa` como tenant principal
-- autenticacao institucional
-- licencas, pacotes e billing
-- usuarios da empresa (`EmpresaUsuario`)
-- auditoria institucional
-- padrao atual de dashboards e APIs
-- infraestrutura de deploy e operacao
-
-## 9.2 O que nao misturar
-
-- `RegistroSintoma` epidemiologico nao deve virar deposito do corporativo
-- dashboards hospital/farmacia/governo nao devem ser derivados do corporativo
-- motor de risco epidemiologico nao deve ser reaproveitado sem camada propria de interpretacao corporativa
-
-## 9.3 Separacao recomendada de dominio
-
-Criar um dominio proprio para o modulo corporativo, por exemplo:
-
-- `api/corporativo_models.py`
-- `api/views_corporativo.py`
-- `api/corporativo_ai.py`
-- `templates/corporativo/...`
-
-Alternativa melhor ainda:
-
-- novo app Django `corporativo/`
-
-Essa opcao reduz acoplamento com o modulo epidemiologico.
-
-## 10. Rotas previstas
-
-### Web
-
-- `/dashboard-empresa/`
-- `/empresa/saude-mental/`
-- `/empresa/saude-fisica/`
-- `/empresa/unidades/`
-- `/empresa/alertas-ia/`
-- `/empresa/campanhas/`
-- `/empresa/contexto-externo/`
-- `/empresa/governanca/`
-
-### API institucional
-
-- `/api/empresa/resumo`
-- `/api/empresa/saude-mental`
-- `/api/empresa/saude-fisica`
-- `/api/empresa/unidades`
-- `/api/empresa/alertas-ia`
-- `/api/empresa/campanhas`
-- `/api/empresa/contexto-externo`
-
-### API do app do colaborador
-
-- `/api/corporativo/checkin-diario`
-- `/api/corporativo/checkin-semanal`
-- `/api/corporativo/sinais`
-- `/api/corporativo/pedir-apoio`
-- `/api/corporativo/meu-historico`
-
-## 11. IA corporativa
-
-O modulo corporativo deve gerar recomendacoes com explicacao, nao apenas score.
+O modulo corporativo deve produzir recomendacoes com explicacao, nao apenas score.
 
 ### Perguntas que a IA precisa responder
 
 - onde a piora esta surgindo?
-- o padrao e fisico, emocional ou misto?
-- qual unidade precisa de acao nesta semana?
-- isso parece vir do ambiente interno ou do contexto externo?
-- qual acao simples gera mais efeito agora?
+- o problema e fisico, emocional, cultural ou operacional?
+- qual unidade, escala ou lideranca precisa agir primeiro?
+- qual programa deve entrar nesta semana?
+- onde a empresa esta perdendo aprendizagem, pertencimento ou cobertura?
+- o risco vem da rotina interna, do desenho da escala ou do contexto externo?
 
 ### Tipos de saida
 
 - resumo executivo
-- alertas priorizados
-- recomendacao por unidade
+- ranking de unidades em risco
 - campanha sugerida
-- risco de absenteismo
-- leitura explicavel do por que
+- recomendacao para RH e SESMT
+- plano de apoio a lideranca
+- alerta de fadiga, burnout ou quebra de continuidade
 
-## 12. MVP recomendado
+## 14. MVP recomendado
 
 ### Fase 1
 
-- dashboard-empresa novo
+- novo dashboard institucional premium
 - check-in diario
 - check-in semanal
-- saude mental e fisica agregadas
-- unidades e setores
-- alertas IA basicos
+- fila de pedidos de apoio
+- saude ocupacional e saude mental agregadas
+- leitura por unidade, setor e escala
+- cultura e idioma em versao inicial
 - anonimato e governanca
 
 ### Fase 2
 
-- campanhas de bem-estar
-- pedido de apoio
-- cruzamento com contexto epidemiologico externo
-- historico individual no app
+- app mobile dedicado com offline
+- carreira on/off
+- matching de mentoria
+- comunidades de pratica
+- handoff educativo
+- campanhas acionaveis por modulo
 
 ### Fase 3
 
+- traducao assistida contextual
+- integracao com plataformas externas de CQ
 - predicao de absenteismo
-- benchmark interno entre unidades
-- automacoes de campanha
-- exportacao executiva
+- score de risco de lideranca
+- benchmark entre unidades
 
-## 13. Riscos de produto
+## 15. Riscos de produto
 
 ### Se fizer do jeito errado
 
-- o modulo empresa vira copia ruim de hospital/farmacia
-- excesso de coleta sensivel afasta adesao
+- o modulo empresa vira copia fraca de hospital/farmacia
+- o app do colaborador vira formulario sem valor percebido
+- excesso de coleta sensivel reduz adesao
 - anonimato mal implementado gera risco juridico e reputacional
-- mistura de dominio epidemiologico com dominio corporativo gera confusao tecnica
 
 ### Se fizer do jeito certo
 
-- o ecossistema ganha um segundo produto forte
-- o modulo empresa passa a resolver problema real de RH e saude ocupacional
-- o SolusCRT amplia valor sem quebrar o que ja existe
+- o ecossistema ganha um segundo produto premium de verdade
+- a empresa passa a ter ferramentas reais de saude ocupacional e desenvolvimento
+- os colaboradores ganham um produto proprio, util e discreto
+- o SolusCRT amplia valor sem quebrar o epidemiologico
 
-## 14. Decisao final
+## 16. Decisao final
 
 O caminho correto e:
 
 - manter o epidemiologico intacto
-- criar um produto corporativo novo dentro do mesmo ecossistema
-- usar backend compartilhado apenas onde faz sentido
-- separar dominio, dados, dashboards e IA do modulo empresa
-
-Esse desenho reduz risco de regressao e cria uma linha de produto clara para empresas.
+- separar a SaaS institucional do app mobile do colaborador
+- criar um motor corporativo proprio de IA e analytics
+- posicionar `empresa` como saude ocupacional, desenvolvimento e continuidade operacional

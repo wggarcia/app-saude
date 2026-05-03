@@ -76,4 +76,4 @@ class DashboardSectorAccessTests(TestCase):
         response = client.get("/dashboard-empresa/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "SolusCRT Corporativo")
-        self.assertContains(response, "Centro de Saude Corporativa")
+        self.assertContains(response, "Operating System de Saude, Escala e Desenvolvimento")

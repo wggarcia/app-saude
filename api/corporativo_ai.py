@@ -201,7 +201,7 @@ def build_empresa_corporativo_payload(empresa):
     return {
         "product": {
             "name": "SolusCRT Corporativo",
-            "subtitle": "Saude ocupacional, bem-estar e inteligencia institucional",
+            "subtitle": "Saude ocupacional, escalas, cultura, lideranca e continuidade operacional",
             "company": company_label,
             "package_label": pacote["label"],
         },
@@ -215,26 +215,27 @@ def build_empresa_corporativo_payload(empresa):
         },
         "access_code": empresa.codigo_acesso_corporativo,
         "hero": {
-            "title": "Centro de Saude Corporativa",
+            "title": "Operating System de Saude, Escala e Desenvolvimento",
+            "eyebrow": "Ambiente empresa · Control room premium",
             "summary": (
                 f"{company_label} opera um ambiente proprio para saude ocupacional, risco psicossocial, "
-                "bem-estar e prevencao institucional com leitura anonima da forca de trabalho."
+                "fadiga, desenvolvimento em escala, comunicacao multicultural e continuidade da operacao."
             ),
             "positioning": (
-                "Este produto nao replica o dashboard epidemiologico. Ele funciona como um command center "
-                "executivo para RH, SESMT, lideranca e seguranca do trabalho."
+                "Este ambiente nao replica o epidemiologico. Ele funciona como um sistema institucional "
+                "para RH, SESMT, operacoes e liderancas coordenarem cuidado, desempenho e confiabilidade."
             ),
             "value_points": [
-                "antecipar absenteismo e fadiga antes de virar afastamento",
-                "detectar pressao psicossocial, burnout e queda de seguranca psicologica",
-                "cruzar sinais fisicos e emocionais com resposta institucional acionavel",
+                "antecipar absenteismo, fadiga e risco psicossocial antes da ruptura operacional",
+                "organizar cultura, idioma, mentoria e desenvolvimento em operacoes multiunidade",
+                "transformar sinais anonimos em programas acionaveis para lideranca e RH",
             ],
         },
         "executive_cards": [
             {
                 "label": "Bem-estar geral",
                 "value": f"{mood_score}/100",
-                "detail": f"Score lider para confiabilidade operacional; {_risk_summary(mood_score)}.",
+                "detail": f"Score institucional de energia e confiabilidade; {_risk_summary(mood_score)}.",
             },
             {
                 "label": "Risco psicossocial",
@@ -242,7 +243,7 @@ def build_empresa_corporativo_payload(empresa):
                 "detail": f"Indice {stress_score}/100 com foco em estresse, ansiedade, carga emocional e burnout.",
             },
             {
-                "label": "Risco fisico",
+                "label": "Risco ocupacional",
                 "value": _risk_band(physical_score).upper(),
                 "detail": f"Indice {physical_score}/100 para fadiga, dor, sono ruim e carga fisica recorrente.",
             },
@@ -251,91 +252,10 @@ def build_empresa_corporativo_payload(empresa):
                 "value": str(support_count),
                 "detail": "Fila de acolhimento institucional e cuidado ativo.",
             },
-        ],
-        "priority_needs": [
             {
-                "title": "Burnout e absenteismo",
-                "detail": "Empresas precisam enxergar sinais precoces de exaustao, afastamento e perda de energia antes do impacto operacional.",
-                "evidence": "Gallup relaciona burnout a mais ausencia, turnover e queda de desempenho.",
-            },
-            {
-                "title": "Risco psicossocial e seguranca",
-                "detail": "Pressao, baixa autonomia, falta de apoio do gestor e medo de falar elevam risco ocupacional e mental.",
-                "evidence": "WHO destaca riscos psicossociais, assedio, longas jornadas e baixo suporte como foco central.",
-            },
-            {
-                "title": "Retorno ao trabalho e apoio humano",
-                "detail": "Fluxos de apoio e retorno gradual reduzem agravamento e ajudam a manter vinculo com o trabalho.",
-                "evidence": "WHO recomenda retorno assistido, acomodacoes razoaveis e apoio continuo.",
-            },
-            {
-                "title": "Formacao gerencial",
-                "detail": "A lideranca imediata precisa de sinais simples para agir com pausa, acolhimento, escala e carga de trabalho.",
-                "evidence": "Gallup aponta o gestor como agente-chave na prevencao do burnout.",
-            },
-        ],
-        "pillars": [
-            {
-                "title": "Saude mental",
-                "description": "Estresse, fadiga emocional, burnout, sobrecarga e seguranca psicologica com leitura agregada.",
-                "metrics": [
-                    f"estresse medio {_safe_avg(diario, 'avg_estresse')}/5",
-                    f"ansiedade media {_safe_avg(diario, 'avg_ansiedade')}/5",
-                    f"carga emocional {_safe_avg(semanal, 'avg_carga_emocional')}/5",
-                    f"burnout {_safe_avg(semanal, 'avg_risco_burnout')}/5",
-                ],
-            },
-            {
-                "title": "Saude fisica e ocupacional",
-                "description": "Dor, fadiga fisica, sono ruim, sinais respiratorios e carga ergonomica por contexto operacional.",
-                "metrics": [
-                    f"fadiga media {_safe_avg(diario, 'avg_fadiga')}/5",
-                    f"dor fisica {_safe_avg(diario, 'avg_dor_fisica')}/5",
-                    f"sono {_safe_avg(diario, 'avg_sono')}/5",
-                    f"sinais respiratorios {diario.get('respiratorios', 0)}",
-                ],
-            },
-            {
-                "title": "Unidades e equipes",
-                "description": "Leitura agregada por unidade, setor, turno e tendencia operacional sem expor individuos.",
-                "metrics": [
-                    f"respondentes diarios {respondents}",
-                    f"respondentes semanais {weekly_respondents}",
-                    f"top signal {top_signal}",
-                    f"unidades com leitura {len(top_units)}",
-                ],
-            },
-            {
-                "title": "IA corporativa",
-                "description": "Recomendacoes de campanha, apoio, escala e prevencao com explicacao para RH e lideranca.",
-                "metrics": [
-                    recommendations["actions"][0]["title"],
-                    recommendations["actions"][0]["urgency"],
-                    f"acoes {len(recommendations['actions'])}",
-                    "plano semanal",
-                ],
-            },
-        ],
-        "command_center": [
-            {
-                "title": "Radar de absenteismo",
-                "summary": "Conecta humor, energia, sono e burnout para antecipar perda de presenca e confiabilidade operacional.",
-                "focus": "lideranca, RH e operacao",
-            },
-            {
-                "title": "Risco psicossocial",
-                "summary": "Monitora estresse, ansiedade, seguranca psicologica e pressao do trabalho por grupos anonimos.",
-                "focus": "SESMT, RH e compliance",
-            },
-            {
-                "title": "Carga fisica e ergonomia",
-                "summary": "Ajuda a detectar onde a rotina esta produzindo fadiga, dor corporal, sono ruim e sobrecarga fisica.",
-                "focus": "medicina do trabalho e operacao",
-            },
-            {
-                "title": "Apoio e retorno ao trabalho",
-                "summary": "Organiza fila de apoio, acolhimento e plano gradual de retorno sem transformar o sistema em prontuario.",
-                "focus": "saude ocupacional e people",
+                "label": "Respondentes",
+                "value": str(respondents),
+                "detail": "Base anonima disponivel para leitura executiva.",
             },
         ],
         "summary": {
@@ -345,6 +265,129 @@ def build_empresa_corporativo_payload(empresa):
             "top_signal": top_signal,
             "headline": recommendations["headline"],
         },
+        "surfaces": [
+            {
+                "title": "SaaS institucional",
+                "summary": "Painel premium para RH, SESMT, diretoria e liderancas acompanharem risco, programas e continuidade.",
+                "owner": "empresa",
+            },
+            {
+                "title": "App mobile do colaborador",
+                "summary": "Produto dedicado para celular com check-ins, apoio, microlearning, mentoria e jornada on/off.",
+                "owner": "colaborador",
+            },
+            {
+                "title": "Camada de IA corporativa",
+                "summary": "Motor que prioriza unidades, programas, liderancas e riscos a partir de sinais anonimos e contexto operacional.",
+                "owner": "analytics",
+            },
+        ],
+        "module_nav": [
+            "Saude Ocupacional",
+            "Fadiga e Burnout",
+            "Escalas 14x14 / 28x28",
+            "Cultura e Comunicacao",
+            "Mentoria e Lideranca",
+            "Governanca e Privacidade",
+        ],
+        "modules": [
+            {
+                "title": "Saude Ocupacional",
+                "band": _risk_band(physical_score),
+                "audience": "SESMT, medicina do trabalho e operacao",
+                "summary": "Organiza leitura de dor, fadiga, sono, carga fisica e retorno assistido sem transformar o produto em prontuario.",
+                "metrics": [
+                    f"risco ocupacional {physical_score}/100",
+                    f"fadiga media {_safe_avg(diario, 'avg_fadiga')}/5",
+                    f"dor fisica {_safe_avg(diario, 'avg_dor_fisica')}/5",
+                ],
+                "actions": [
+                    "mapear frentes com sono ruim, dor e fadiga recorrente",
+                    "ligar ergonomia, pausa e retorno assistido ao plano semanal",
+                ],
+            },
+            {
+                "title": "Fadiga e Burnout",
+                "band": _risk_band(stress_score),
+                "audience": "RH, lideranca e saude ocupacional",
+                "summary": "Antecipar queda de energia, sobrecarga e perda de presenca antes que o problema vire afastamento ou erro operacional.",
+                "metrics": [
+                    f"risco psicossocial {stress_score}/100",
+                    f"energia media {_safe_avg(diario, 'avg_energia')}/5",
+                    f"burnout {_safe_avg(semanal, 'avg_risco_burnout')}/5",
+                ],
+                "actions": [
+                    "priorizar grupos com estresse alto e energia em queda",
+                    "acionar campanha de recuperacao emocional e ajuste de ritmo",
+                ],
+            },
+            {
+                "title": "Escalas 14x14 / 28x28",
+                "band": "moderado" if respondents else "baixo",
+                "audience": "operacoes, RH e desenvolvimento",
+                "summary": "Gerenciar aprendizado, energia e continuidade em equipes embarcadas ou de longa permanencia sem sobrecarregar o colaborador.",
+                "metrics": [
+                    f"respondentes diarios {respondents}",
+                    f"respondentes semanais {weekly_respondents}",
+                    "PDI on/off planejado por ciclo",
+                ],
+                "actions": [
+                    "separar metas de performance embarcada e folga",
+                    "medir risco por turno, cobertura e janela de descanso",
+                ],
+            },
+            {
+                "title": "Cultura e Comunicacao",
+                "band": "baixo",
+                "audience": "liderancas multiculturais e operacao global",
+                "summary": "Reduzir falha de entendimento em equipes com diferentes idiomas, estilos de feedback e rotinas tecnicas.",
+                "metrics": [
+                    "microlearning tecnico offline",
+                    "glossario operacional multilingue",
+                    "playbooks de CQ por lideranca",
+                ],
+                "actions": [
+                    "estruturar trilhas de idioma tecnico por frente operacional",
+                    "preparar kits de comunicacao curta para liderancas multiculturais",
+                ],
+            },
+            {
+                "title": "Mentoria e Lideranca",
+                "band": "moderado" if support_count else "baixo",
+                "audience": "desenvolvimento humano e gestores de unidade",
+                "summary": "Criar suporte humano continuo para quem opera longe, em escala ou em ambiente confinado, com mentoria, feedback e rituais simples.",
+                "metrics": [
+                    f"pedidos de apoio {support_count}",
+                    "matching remoto entre unidades",
+                    "feedback de fim de ciclo",
+                ],
+                "actions": [
+                    "criar matching por senioridade, idioma e especialidade",
+                    "medir quais liderancas estao sem suporte ou com pressao crescente",
+                ],
+            },
+            {
+                "title": "Governanca e Privacidade",
+                "band": "baixo" if privacy_ready else "moderado",
+                "audience": "juridico, compliance, RH e diretoria",
+                "summary": "Separar cuidado institucional de vigilancia, com leitura anonima, grupos minimos e trilha de auditoria para o uso de IA.",
+                "metrics": [
+                    f"grupo minimo {MIN_GROUP_SIZE}",
+                    "sem dado individual no painel",
+                    "auditoria institucional ativa",
+                ],
+                "actions": [
+                    "proteger recortes pequenos e exportacoes sensiveis",
+                    "manter consentimento explicito para qualquer apoio nominal",
+                ],
+            },
+        ],
+        "questions": [
+            "Onde a operacao esta perdendo energia antes do afastamento aparecer?",
+            "Quais escalas, unidades ou liderancas precisam de suporte nesta semana?",
+            "Qual programa entra primeiro: fadiga, ergonomia, apoio psicossocial ou desenvolvimento?",
+            "O que fica no painel executivo e o que precisa migrar para o app mobile do colaborador?",
+        ],
         "recommendations": recommendations["actions"],
         "top_units": top_units,
         "programs": [
@@ -367,12 +410,12 @@ def build_empresa_corporativo_payload(empresa):
                 ],
             },
             {
-                "title": "Programa de ergonomia e sintoma fisico",
-                "owner": "saude ocupacional",
+                "title": "Programa de cultura, idioma e escala",
+                "owner": "people + operacao",
                 "items": [
-                    "mapa de dor corporal por frente operacional",
-                    "campanhas de postura e recuperacao",
-                    "acionamento rapido para clusters fisicos",
+                    "microlearning tecnico multilingue por operacao",
+                    "PDI on/off para ciclos 14x14 e 28x28",
+                    "ritual de handoff e mentoria remota entre unidades",
                 ],
             },
         ],
@@ -383,26 +426,18 @@ def build_empresa_corporativo_payload(empresa):
                 "sem exibicao de dado individual no painel da empresa",
                 "grupos pequenos ficam ocultos",
                 "pedido de apoio nominal so com consentimento",
-                "auditoria institucional em acessos e exportacoes",
+                "auditoria institucional em acessos, IA e exportacoes",
             ],
         },
-        "app_employee": {
-            "title": "App do colaborador",
-            "subtitle": "Jornada dedicada para check-ins, autocuidado e pedido seguro de apoio.",
-            "screens": [
-                "onboarding e privacidade",
-                "check-in diario",
-                "check-in semanal",
-                "registrar sinais",
-                "meu cuidado",
-                "pedir apoio",
-                "historico pessoal",
-            ],
-            "journey": [
-                "check-in rapido sem exposicao ao gestor",
-                "registro de sinais fisicos e emocionais",
-                "trilhas curtas de autocuidado",
-                "pedido opcional de ajuda com consentimento",
+        "mobile_product": {
+            "title": "Produto mobile do colaborador",
+            "summary": "O colaborador nao usa a SaaS institucional. Ele participa por um app mobile proprio, com experiencia discreta e orientada a uso cotidiano.",
+            "note": "A empresa coordena programas pelo painel; o funcionario usa o mobile para check-ins, apoio, microlearning, mentoria e trilhas on/off.",
+            "capabilities": [
+                "check-in diario e semanal sem exposicao ao gestor",
+                "pedido opcional de apoio com consentimento",
+                "microlearning tecnico, idioma e cultura",
+                "mentoria, comunidades e handoff educativo",
             ],
         },
     }

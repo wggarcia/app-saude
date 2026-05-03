@@ -89,6 +89,8 @@ urlpatterns = [
     # 💰 PAGAMENTO
     path('pagamento/', tela_pagamento),
     path('colaborador/c/<str:codigo>/', app_colaborador_corporativo),
+    path('mobile/c/<str:codigo>/', app_colaborador_corporativo),
+    path('colaborador-mobile/c/<str:codigo>/', app_colaborador_corporativo),
 
     # 📊 API PRINCIPAL
     path('api/registrar', registrar_sintoma),
@@ -100,6 +102,12 @@ urlpatterns = [
     path('api/corporativo/<str:codigo>/config', api_colaborador_corporativo_config),
     path('api/corporativo/<str:codigo>/checkin-diario', api_corporativo_checkin_diario),
     path('api/corporativo/<str:codigo>/checkin-semanal', api_corporativo_checkin_semanal),
+    path('api/corporativo/mobile/<str:codigo>/config', api_colaborador_corporativo_config),
+    path('api/corporativo/mobile/<str:codigo>/checkin-diario', api_corporativo_checkin_diario),
+    path('api/corporativo/mobile/<str:codigo>/checkin-semanal', api_corporativo_checkin_semanal),
+    path('api/colaborador-mobile/<str:codigo>/config', api_colaborador_corporativo_config),
+    path('api/colaborador-mobile/<str:codigo>/checkin-diario', api_corporativo_checkin_diario),
+    path('api/colaborador-mobile/<str:codigo>/checkin-semanal', api_corporativo_checkin_semanal),
     path('api/alertas', alertas),
     path('api/public/resumo', app_resumo_publico),
     path('api/public/radar-local', app_radar_local),

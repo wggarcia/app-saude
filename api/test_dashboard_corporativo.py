@@ -41,7 +41,7 @@ class DashboardCorporativoTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "SolusCRT Corporativo")
-        self.assertContains(response, "Centro de Saude Corporativa")
+        self.assertContains(response, "Operating System de Saude, Escala e Desenvolvimento")
         self.assertContains(response, "Sala de Decisao Corporativa")
         self.assertContains(response, 'href="/logout/"')
 
@@ -66,10 +66,11 @@ class DashboardCorporativoTests(TestCase):
     def test_colaborador_app_publico_abre_para_empresa(self):
         empresa = self._empresa("Empresa Corporativa", "empresa-colab@example.com", "empresa_profissional_25")
 
-        response = self.client.get(f"/colaborador/c/{empresa.codigo_acesso_corporativo}/")
+        response = self.client.get(f"/colaborador-mobile/c/{empresa.codigo_acesso_corporativo}/")
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Check-ins seguros")
+        self.assertContains(response, "SolusCRT Colaborador")
 
     def test_checkin_diario_alimenta_resumo_corporativo(self):
         empresa = self._empresa("Empresa Corporativa", "empresa-checkin@example.com", "empresa_profissional_25")
