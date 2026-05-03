@@ -37,6 +37,18 @@ from api.views_corporativo import (
     api_corporativo_checkin_diario,
     api_corporativo_checkin_semanal,
 )
+from api.views_competencia import (
+    competencia_corporativa,
+    api_cargos,
+    api_funcoes_criticas,
+    api_equipamentos,
+    api_trilhas,
+    api_itens,
+    api_evidencias,
+    api_evidencia_colaborador,
+    api_validar,
+    api_prontidao,
+)
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
 from api.governanca import api_auditoria_institucional, api_matriz_decisao, api_metodologia_epidemiologica
@@ -91,6 +103,7 @@ urlpatterns = [
     path('colaborador/c/<str:codigo>/', app_colaborador_corporativo),
     path('mobile/c/<str:codigo>/', app_colaborador_corporativo),
     path('colaborador-mobile/c/<str:codigo>/', app_colaborador_corporativo),
+    path('competencia/', competencia_corporativa),
 
     # 📊 API PRINCIPAL
     path('api/registrar', registrar_sintoma),
@@ -102,6 +115,15 @@ urlpatterns = [
     path('api/corporativo/<str:codigo>/config', api_colaborador_corporativo_config),
     path('api/corporativo/<str:codigo>/checkin-diario', api_corporativo_checkin_diario),
     path('api/corporativo/<str:codigo>/checkin-semanal', api_corporativo_checkin_semanal),
+    path('api/corporativo/<str:codigo>/evidencia', api_evidencia_colaborador),
+    path('api/corporativo/cargos', api_cargos),
+    path('api/corporativo/funcoes-criticas', api_funcoes_criticas),
+    path('api/corporativo/equipamentos', api_equipamentos),
+    path('api/corporativo/trilhas', api_trilhas),
+    path('api/corporativo/trilhas/<int:trilha_id>/itens', api_itens),
+    path('api/corporativo/evidencias', api_evidencias),
+    path('api/corporativo/evidencias/<int:evidencia_id>/validar', api_validar),
+    path('api/corporativo/prontidao', api_prontidao),
     path('api/corporativo/mobile/<str:codigo>/config', api_colaborador_corporativo_config),
     path('api/corporativo/mobile/<str:codigo>/checkin-diario', api_corporativo_checkin_diario),
     path('api/corporativo/mobile/<str:codigo>/checkin-semanal', api_corporativo_checkin_semanal),

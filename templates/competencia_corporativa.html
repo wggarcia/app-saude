@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Competência Técnica | {{ empresa_nome }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#041018;--panel:rgba(11,24,34,.88);--panel-2:rgba(10,24,35,.6);
+      --line:rgba(154,193,220,.14);--soft:rgba(255,255,255,.08);
+      --text:#ebf7ff;--muted:#9ab9ce;--accent:#7ee1c3;--accent-2:#7db6ff;
+      --gold:#f0bf6b;--danger:#ff7a91;--shadow:0 24px 70px rgba(0,0,0,.42);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      min-height:100vh;font-family:"Manrope","Segoe UI",sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left,rgba(126,225,195,.12),transparent 20rem),
+        radial-gradient(circle at top right,rgba(125,182,255,.14),transparent 24rem),
+        linear-gradient(180deg,#041018 0%,#08141d 40%,#061119 100%);
+    }
+    body::before{
+      content:"";position:fixed;inset:0;pointer-events:none;
+      background:linear-gradient(rgba(125,182,255,.04) 1px,transparent 1px),
+                 linear-gradient(90deg,rgba(125,182,255,.04) 1px,transparent 1px);
+      background-size:44px 44px;opacity:.16;
+    }
+    .glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px);box-shadow:var(--shadow)}
+
+    /* ── TOPBAR ── */
+    .topbar{
+      position:sticky;top:0;z-index:100;
+      display:flex;align-items:center;gap:14px;
+      padding:10px 20px;border-bottom:1px solid var(--line);
+    }
+    .brand{font-weight:800;font-size:1rem;white-space:nowrap}
+    .brand-sep{color:var(--line);margin:0 2px}
+    .brand-sub{color:var(--accent);font-weight:700;font-size:.9rem}
+    .company-tag{
+      margin-left:4px;padding:4px 10px;border-radius:999px;
+      background:rgba(126,225,195,.1);border:1px solid rgba(126,225,195,.2);
+      color:#dbfff3;font-size:.72rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;
+    }
+    .topbar-nav{display:flex;gap:4px;flex:1;overflow-x:auto;scrollbar-width:none}
+    .topbar-nav::-webkit-scrollbar{display:none}
+    .tab-btn{
+      flex-shrink:0;padding:7px 14px;border-radius:999px;border:none;cursor:pointer;
+      background:transparent;color:var(--muted);font:inherit;font-size:.8rem;font-weight:700;
+      transition:all .18s;white-space:nowrap;
+    }
+    .tab-btn:hover{background:rgba(255,255,255,.06);color:var(--text)}
+    .tab-btn.active{background:rgba(126,225,195,.14);color:#ddfff4;border:1px solid rgba(126,225,195,.24)}
+    .badge{
+      display:inline-flex;align-items:center;justify-content:center;
+      min-width:18px;height:18px;border-radius:999px;
+      background:rgba(255,122,145,.22);color:#ffb5c0;font-size:.68rem;font-weight:900;
+      padding:0 5px;margin-left:5px;
+    }
+    .badge:empty{display:none}
+    .topbar-actions{display:flex;gap:8px;flex-shrink:0}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      min-height:36px;padding:0 14px;border-radius:999px;
+      border:1px solid var(--soft);background:rgba(255,255,255,.06);
+      color:var(--text);font:inherit;font-size:.8rem;font-weight:800;
+      cursor:pointer;text-decoration:none;transition:all .18s;
+    }
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn.primary{border:0;background:linear-gradient(135deg,#0db794,#1f6ff2)}
+    .btn.primary:hover{opacity:.9}
+    .btn.warn{border:0;background:linear-gradient(135deg,#8b2239,#5e1b1b)}
+    .btn.sm{min-height:30px;padding:0 10px;font-size:.74rem}
+    .btn.approve{border:0;background:rgba(14,185,129,.18);color:#a7f3d0}
+    .btn.reject{border:0;background:rgba(239,68,68,.16);color:#fca5a5}
+
+    /* ── SHELL ── */
+    .shell{
+      width:min(1400px,calc(100% - 24px));
+      margin:0 auto;padding:18px 0 32px;
+      display:grid;gap:16px;
+    }
+
+    /* ── PANELS ── */
+    .panel{display:none}
+    .panel.active{display:grid;gap:16px}
+
+    /* ── CARDS / SECTIONS ── */
+    .card{border-radius:28px;padding:20px}
+    .section-head{
+      display:flex;justify-content:space-between;align-items:center;
+      margin-bottom:14px;gap:12px;
+    }
+    .section-title{font-size:1rem;font-weight:800}
+    .section-sub{color:var(--muted);font-size:.86rem;margin-top:2px}
+
+    /* ── SUMMARY CARDS ── */
+    .summary-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+    .sum-card{
+      border-radius:20px;padding:14px;
+      background:linear-gradient(180deg,rgba(17,35,50,.9),rgba(8,18,28,.92));
+      border:1px solid var(--soft);
+    }
+    .sum-card span{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
+    .sum-card strong{display:block;margin-top:8px;font-size:1.3rem;font-weight:800}
+    .sum-card.hi strong{color:var(--accent)}
+    .sum-card.warn strong{color:var(--gold)}
+    .sum-card.crit strong{color:var(--danger)}
+
+    /* ── READINESS TABLE ── */
+    .table-wrap{overflow-x:auto;border-radius:20px;border:1px solid var(--soft)}
+    table{width:100%;border-collapse:collapse;font-size:.86rem}
+    th{padding:10px 14px;text-align:left;color:var(--muted);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--soft)}
+    td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04)}
+    tr:last-child td{border-bottom:none}
+    .progress-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;min-width:80px}
+    .progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#7ee1c3,#7db6ff)}
+
+    /* ── LIST ── */
+    .item-list{display:grid;gap:8px}
+    .item-row{
+      display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+      border-radius:16px;padding:12px 14px;
+      background:rgba(255,255,255,.04);border:1px solid var(--soft);
+    }
+    .item-row-info{flex:1}
+    .item-row-name{font-size:.92rem;font-weight:700}
+    .item-row-meta{margin-top:4px;color:var(--muted);font-size:.8rem}
+    .item-row-actions{display:flex;gap:6px;flex-shrink:0;align-items:flex-start;flex-wrap:wrap}
+    .crit-badge{
+      display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;
+      font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;
+    }
+    .crit-1,.crit-2{background:rgba(126,225,195,.14);color:#b0ffe6}
+    .crit-3{background:rgba(240,191,107,.14);color:#ffe4ad}
+    .crit-4,.crit-5{background:rgba(255,122,145,.14);color:#ffbfcb}
+    .type-badge{
+      display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;
+      font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;
+      background:rgba(125,182,255,.14);color:#c3deff;
+    }
+    .status-badge{
+      display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;
+      font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;
+    }
+    .status-enviada{background:rgba(240,191,107,.14);color:#ffe4ad}
+    .status-validada{background:rgba(126,225,195,.14);color:#b0ffe6}
+    .status-revisar{background:rgba(255,122,145,.14);color:#ffbfcb}
+    .status-rascunho{background:rgba(255,255,255,.08);color:var(--muted)}
+    .empty{
+      text-align:center;padding:28px;color:var(--muted);
+      font-size:.88rem;border-radius:16px;background:rgba(255,255,255,.03);
+      border:1px dashed rgba(255,255,255,.1);
+    }
+
+    /* ── FORMS ── */
+    .form-grid{display:grid;gap:10px;margin-top:14px}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .field{display:flex;flex-direction:column;gap:5px}
+    label{color:#bfd3e2;font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em}
+    input,select,textarea{
+      border-radius:12px;border:1px solid var(--soft);
+      background:rgba(255,255,255,.06);color:var(--text);
+      padding:10px 12px;font:inherit;font-size:.86rem;outline:none;width:100%;
+    }
+    input:focus,select:focus,textarea:focus{
+      border-color:rgba(125,182,255,.4);box-shadow:0 0 0 3px rgba(125,182,255,.1);
+    }
+    select option{background:#0b1822;color:var(--text)}
+    textarea{min-height:70px;resize:vertical}
+    .form-actions{display:flex;gap:8px;margin-top:4px}
+    .toast{
+      padding:10px 14px;border-radius:12px;font-size:.84rem;margin-top:8px;display:none;
+    }
+    .toast.ok{display:block;background:rgba(15,178,142,.12);color:#aef0db}
+    .toast.err{display:block;background:rgba(255,130,152,.12);color:#ffc6d2}
+
+    /* ── ITENS SUB-PANEL ── */
+    .sub-panel{
+      border-radius:22px;padding:16px;
+      background:rgba(125,182,255,.05);border:1px solid rgba(125,182,255,.14);
+      display:none;margin-top:8px;
+    }
+    .sub-panel.open{display:block}
+    .sub-panel-head{
+      display:flex;justify-content:space-between;align-items:center;
+      margin-bottom:12px;gap:10px;
+    }
+    .sub-title{font-size:.92rem;font-weight:800;color:#c3deff}
+
+    /* ── VALIDAÇÃO INLINE ── */
+    .val-form{
+      display:none;margin-top:10px;padding:12px;border-radius:14px;
+      background:rgba(255,255,255,.04);border:1px solid var(--soft);
+    }
+    .val-form.open{display:grid;gap:8px}
+
+    /* ── FILTER PILLS ── */
+    .filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .filter-pill{
+      padding:6px 12px;border-radius:999px;border:1px solid var(--soft);
+      background:rgba(255,255,255,.04);color:var(--muted);
+      font-size:.76rem;font-weight:800;cursor:pointer;
+    }
+    .filter-pill.active{background:rgba(126,225,195,.14);color:#ddfff4;border-color:rgba(126,225,195,.24)}
+
+    /* ── TWO-COL LAYOUT ── */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .full-col{display:grid;gap:16px}
+
+    @media(max-width:1100px){
+      .summary-grid{grid-template-columns:repeat(3,1fr)}
+      .two-col{grid-template-columns:1fr}
+      .form-row,.form-row-3{grid-template-columns:1fr}
+    }
+    @media(max-width:760px){
+      .summary-grid{grid-template-columns:repeat(2,1fr)}
+      .topbar{flex-wrap:wrap}
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar glass">
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <span class="brand">SolusCRT</span>
+    <span class="brand-sep">·</span>
+    <span class="brand-sub">Competência Técnica</span>
+    <span class="company-tag">{{ empresa_nome }}</span>
+  </div>
+  <nav class="topbar-nav">
+    <button class="tab-btn active" data-tab="prontidao">Prontidão</button>
+    <button class="tab-btn" data-tab="cargos">Cargos</button>
+    <button class="tab-btn" data-tab="funcoes">Funções Críticas</button>
+    <button class="tab-btn" data-tab="equipamentos">Equipamentos</button>
+    <button class="tab-btn" data-tab="trilhas">Trilhas</button>
+    <button class="tab-btn" data-tab="evidencias">Evidências</button>
+    <button class="tab-btn" data-tab="validacoes">Validações<span class="badge" id="pendenteBadge"></span></button>
+  </nav>
+  <div class="topbar-actions">
+    <a class="btn sm" href="/dashboard-empresa/">← Painel</a>
+    <a class="btn sm warn" href="/logout/">Sair</a>
+  </div>
+</header>
+
+<main class="shell">
+
+  <!-- ══ PRONTIDÃO ══════════════════════════════════════════════════════════ -->
+  <section id="panel-prontidao" class="panel active">
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Prontidão Técnica</div>
+          <div class="section-sub">Visão consolidada de trilhas, evidências e readiness por cargo e unidade</div>
+        </div>
+        <button class="btn sm" onclick="loadProntidao()">Atualizar</button>
+      </div>
+      <div class="summary-grid" id="prontidaoCards">
+        <div class="sum-card"><span>Trilhas ativas</span><strong>—</strong></div>
+        <div class="sum-card"><span>Itens cadastrados</span><strong>—</strong></div>
+        <div class="sum-card"><span>Evidências enviadas</span><strong>—</strong></div>
+        <div class="sum-card hi"><span>Aprovadas</span><strong>—</strong></div>
+        <div class="sum-card warn"><span>Aguardando validação</span><strong>—</strong></div>
+        <div class="sum-card hi"><span>Readiness global</span><strong>—</strong></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:12px">Prontidão por cargo</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Cargo</th><th>Enviadas</th><th>Aprovadas</th><th>Readiness</th></tr></thead>
+            <tbody id="tbCargo"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:12px">Prontidão por unidade</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Unidade</th><th>Enviadas</th><th>Aprovadas</th><th>Readiness</th></tr></thead>
+            <tbody id="tbUnidade"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CARGOS ════════════════════════════════════════════════════════════ -->
+  <section id="panel-cargos" class="panel">
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-head">
+          <div><div class="section-title">Cargos cadastrados</div></div>
+        </div>
+        <div class="item-list" id="listaCargoItems">
+          <div class="empty">Nenhum cargo cadastrado.</div>
+        </div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:4px">Novo cargo</div>
+        <div class="section-sub">Cargos organizam trilhas e funções críticas por papel operacional</div>
+        <form id="formCargo" class="form-grid">
+          <div class="form-row">
+            <div class="field"><label>Nome do cargo *</label><input name="nome" placeholder="Operador de equipamentos, Supervisor técnico..."></div>
+            <div class="field"><label>Código interno</label><input name="codigo" placeholder="OP-01, SUP-02..."></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Nível inicial</label>
+              <select name="nivel_inicial">
+                <option value="junior">Júnior</option>
+                <option value="pleno">Pleno</option>
+                <option value="senior">Sênior</option>
+                <option value="lider">Líder</option>
+              </select>
+            </div>
+            <div class="field"><label>Setor (opcional)</label><select name="setor_id" id="cargoSetorSel"><option value="">Sem setor específico</option></select></div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Criar cargo</button>
+          </div>
+          <div class="toast" id="toastCargo"></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ FUNÇÕES CRÍTICAS ═══════════════════════════════════════════════════ -->
+  <section id="panel-funcoes" class="panel">
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-head">
+          <div><div class="section-title">Funções críticas</div></div>
+        </div>
+        <div class="item-list" id="listaFuncaoItems">
+          <div class="empty">Nenhuma função crítica cadastrada.</div>
+        </div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:4px">Nova função crítica</div>
+        <div class="section-sub">Funções críticas definem onde a prontidão é obrigatória para autonomia operacional</div>
+        <form id="formFuncao" class="form-grid">
+          <div class="field"><label>Nome da função *</label><input name="nome" placeholder="Operação de caldeira, Manuseio de EPI classe A..."></div>
+          <div class="form-row">
+            <div class="field"><label>Cargo vinculado</label><select name="cargo_id" id="funcaoCargoSel"><option value="">Qualquer cargo</option></select></div>
+            <div class="field"><label>Setor</label><select name="setor_id" id="funcaoSetorSel"><option value="">Sem setor</option></select></div>
+          </div>
+          <div class="field"><label>Criticidade (1 = baixa, 5 = crítica)</label>
+            <select name="criticidade">
+              <option value="1">1 — Baixa</option>
+              <option value="2">2 — Moderada</option>
+              <option value="3" selected>3 — Média</option>
+              <option value="4">4 — Alta</option>
+              <option value="5">5 — Crítica</option>
+            </select>
+          </div>
+          <div class="field"><label>Descrição</label><textarea name="descricao" placeholder="Descreva o que esta função exige e por que é crítica..."></textarea></div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Criar função</button>
+          </div>
+          <div class="toast" id="toastFuncao"></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ EQUIPAMENTOS ════════════════════════════════════════════════════════ -->
+  <section id="panel-equipamentos" class="panel">
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-head">
+          <div><div class="section-title">Equipamentos</div></div>
+        </div>
+        <div class="item-list" id="listaEquipItems">
+          <div class="empty">Nenhum equipamento cadastrado.</div>
+        </div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:4px">Novo equipamento</div>
+        <div class="section-sub">Equipamentos são vinculados a itens de competência para rastrear domínio técnico específico</div>
+        <form id="formEquip" class="form-grid">
+          <div class="form-row">
+            <div class="field"><label>Nome *</label><input name="nome" placeholder="Caldeira de vapor, Guindaste XR-200..."></div>
+            <div class="field"><label>Código</label><input name="codigo" placeholder="EQ-001, CAL-03..."></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Categoria</label><input name="categoria" placeholder="Pressurizado, Elétrico, Linha de vida..."></div>
+            <div class="field"><label>Setor</label><select name="setor_id" id="equipSetorSel"><option value="">Sem setor</option></select></div>
+          </div>
+          <div class="field"><label>Criticidade (1 = baixa, 5 = crítica)</label>
+            <select name="criticidade">
+              <option value="1">1 — Baixa</option>
+              <option value="2">2 — Moderada</option>
+              <option value="3" selected>3 — Média</option>
+              <option value="4">4 — Alta</option>
+              <option value="5">5 — Crítica</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Criar equipamento</button>
+          </div>
+          <div class="toast" id="toastEquip"></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ TRILHAS ════════════════════════════════════════════════════════════ -->
+  <section id="panel-trilhas" class="panel">
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-head">
+          <div><div class="section-title">Trilhas de competência</div></div>
+        </div>
+        <div class="item-list" id="listaTrilhaItems">
+          <div class="empty">Nenhuma trilha cadastrada.</div>
+        </div>
+      </div>
+
+      <div class="full-col">
+        <div class="card glass">
+          <div class="section-title" style="margin-bottom:4px">Nova trilha</div>
+          <div class="section-sub">Trilhas agrupam itens de competência por cargo ou função crítica</div>
+          <form id="formTrilha" class="form-grid">
+            <div class="field"><label>Título *</label><input name="titulo" placeholder="Operação básica de caldeira, Certificação de linha de vida..."></div>
+            <div class="form-row">
+              <div class="field"><label>Cargo</label><select name="cargo_id" id="trilhaCargoSel"><option value="">Qualquer cargo</option></select></div>
+              <div class="field"><label>Função crítica</label><select name="funcao_critica_id" id="trilhaFuncaoSel"><option value="">Sem função específica</option></select></div>
+            </div>
+            <div class="form-row">
+              <div class="field"><label>Nível alvo</label><input name="nivel_alvo" placeholder="Pleno, Sênior, Autônomo..."></div>
+              <div class="field"><label>Ordem</label><input name="ordem" type="number" value="1" min="1"></div>
+            </div>
+            <div class="field"><label>Descrição</label><textarea name="descricao" placeholder="Descreva o objetivo desta trilha..."></textarea></div>
+            <div class="form-actions">
+              <button type="submit" class="btn primary">Criar trilha</button>
+            </div>
+            <div class="toast" id="toastTrilha"></div>
+          </form>
+        </div>
+
+        <div class="card glass" id="itensPanel" style="display:none">
+          <div class="sub-panel-head">
+            <div class="sub-title" id="itensTrilhaNome">Itens da trilha</div>
+            <button class="btn sm" onclick="fecharItens()">Fechar</button>
+          </div>
+          <div class="item-list" id="listaItens" style="margin-bottom:14px">
+            <div class="empty">Nenhum item.</div>
+          </div>
+          <form id="formItem" class="form-grid">
+            <div class="field"><label>Título do item *</label><input name="titulo" placeholder="Conhecer procedimento de partida, Operar válvula de segurança..."></div>
+            <div class="form-row">
+              <div class="field"><label>Tipo</label>
+                <select name="tipo">
+                  <option value="conhecimento">Conhecimento</option>
+                  <option value="pratica">Prática</option>
+                  <option value="seguranca">Segurança</option>
+                  <option value="equipamento">Equipamento</option>
+                </select>
+              </div>
+              <div class="field"><label>Equipamento</label><select name="equipamento_id" id="itemEquipSel"><option value="">Sem equipamento</option></select></div>
+            </div>
+            <div class="form-row">
+              <div class="field"><label>Peso (1–5)</label><input name="peso" type="number" value="1" min="1" max="5"></div>
+              <div class="field"><label>Ordem</label><input name="ordem" type="number" value="1" min="1"></div>
+            </div>
+            <div class="field"><label>Obrigatório</label>
+              <select name="obrigatorio">
+                <option value="true">Sim</option>
+                <option value="false">Não</option>
+              </select>
+            </div>
+            <div class="field"><label>Descrição</label><textarea name="descricao" placeholder="Descreva o que o colaborador precisa demonstrar..."></textarea></div>
+            <div class="form-actions">
+              <button type="submit" class="btn primary sm">Adicionar item</button>
+            </div>
+            <div class="toast" id="toastItem"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ EVIDÊNCIAS ══════════════════════════════════════════════════════════ -->
+  <section id="panel-evidencias" class="panel">
+    <div class="card glass">
+      <div class="section-head">
+        <div><div class="section-title">Evidências enviadas</div></div>
+        <button class="btn sm" onclick="loadEvidencias(estadoEv)">Atualizar</button>
+      </div>
+      <div class="filter-row">
+        <span class="filter-pill active" data-status="">Todas</span>
+        <span class="filter-pill" data-status="enviada">Aguardando validação</span>
+        <span class="filter-pill" data-status="validada">Aprovadas</span>
+        <span class="filter-pill" data-status="revisar">Para revisar</span>
+      </div>
+      <div class="item-list" id="listaEvidencias">
+        <div class="empty">Carregando...</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ VALIDAÇÕES ══════════════════════════════════════════════════════════ -->
+  <section id="panel-validacoes" class="panel">
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Fila de validação</div>
+          <div class="section-sub">Evidências enviadas aguardando aprovação ou reprovação pelo supervisor</div>
+        </div>
+        <button class="btn sm" onclick="loadValidacoes()">Atualizar</button>
+      </div>
+      <div class="item-list" id="listaValidacoes">
+        <div class="empty">Carregando...</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  const state = {
+    cargos: [], funcoes: [], equipamentos: [], trilhas: [],
+    evidencias: [], setores: [],
+    trilhaAtiva: null,
+  };
+  let estadoEv = "";
+
+  function esc(s) {
+    return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  function toast(id, ok, msg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = "toast " + (ok ? "ok" : "err");
+    el.textContent = msg;
+    setTimeout(() => { el.className = "toast"; }, 4000);
+  }
+
+  async function api(method, url, body) {
+    const opts = { method, headers: {"Content-Type":"application/json"} };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
+    return [r.ok, await r.json()];
+  }
+
+  // ── TABS ──────────────────────────────────────────────────────────────────
+
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      const tab = btn.dataset.tab;
+      document.getElementById("panel-" + tab).classList.add("active");
+      if (tab === "prontidao") loadProntidao();
+      if (tab === "cargos") renderCargos();
+      if (tab === "funcoes") renderFuncoes();
+      if (tab === "equipamentos") renderEquipamentos();
+      if (tab === "trilhas") renderTrilhas();
+      if (tab === "evidencias") loadEvidencias(estadoEv);
+      if (tab === "validacoes") loadValidacoes();
+    });
+  });
+
+  // ── PRONTIDÃO ─────────────────────────────────────────────────────────────
+
+  async function loadProntidao() {
+    const [ok, data] = await api("GET", "/api/corporativo/prontidao");
+    if (!ok) return;
+    const s = data.summary;
+    const cards = document.getElementById("prontidaoCards");
+    const vals = [s.trilhas, s.itens, s.evidencias, s.aprovadas, s.pendentes_validacao, s.readiness + "%"];
+    cards.querySelectorAll("strong").forEach((el, i) => el.textContent = vals[i]);
+
+    const badge = document.getElementById("pendenteBadge");
+    badge.textContent = s.pendentes_validacao > 0 ? s.pendentes_validacao : "";
+
+    function renderTable(tbodyId, rows, keyFn) {
+      const tb = document.getElementById(tbodyId);
+      if (!rows.length) {
+        tb.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">Sem dados ainda</td></tr>`;
+        return;
+      }
+      tb.innerHTML = rows.map(r => {
+        const pct = r.readiness;
+        return `<tr>
+          <td style="font-weight:700">${esc(keyFn(r))}</td>
+          <td>${r.total}</td>
+          <td>${r.aprovadas}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+              <span style="font-size:.82rem;font-weight:800;color:var(--accent)">${pct}%</span>
+            </div>
+          </td>
+        </tr>`;
+      }).join("");
+    }
+
+    renderTable("tbCargo", data.por_cargo, r => r.cargo);
+    renderTable("tbUnidade", data.por_unidade, r => r.unidade);
+  }
+
+  // ── CATÁLOGO (setores para selects) ─────────────────────────────────────
+
+  async function loadCatalogo() {
+    const [ok, data] = await api("GET", "/api/empresa/catalogo");
+    if (ok) state.setores = data.sectors || [];
+    populateSetorSelects();
+  }
+
+  function populateSetorSelects() {
+    const opts = `<option value="">Sem setor</option>` + state.setores.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join("");
+    ["cargoSetorSel","funcaoSetorSel","equipSetorSel"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = opts.replace("Sem setor", id === "cargoSetorSel" ? "Sem setor específico" : "Sem setor");
+    });
+  }
+
+  function populateCargos() {
+    const opts = `<option value="">Qualquer cargo</option>` + state.cargos.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join("");
+    ["funcaoCargoSel","trilhaCargoSel"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = opts;
+    });
+  }
+
+  function populateFuncoes() {
+    const el = document.getElementById("trilhaFuncaoSel");
+    if (!el) return;
+    el.innerHTML = `<option value="">Sem função específica</option>` + state.funcoes.map(f => `<option value="${f.id}">${esc(f.nome)}</option>`).join("");
+  }
+
+  function populateEquipamentos() {
+    const el = document.getElementById("itemEquipSel");
+    if (!el) return;
+    el.innerHTML = `<option value="">Sem equipamento</option>` + state.equipamentos.map(e => `<option value="${e.id}">${esc(e.nome)}</option>`).join("");
+  }
+
+  // ── CARGOS ────────────────────────────────────────────────────────────────
+
+  async function loadCargos() {
+    const [ok, data] = await api("GET", "/api/corporativo/cargos");
+    if (ok) { state.cargos = data.cargos; populateCargos(); renderCargos(); }
+  }
+
+  function renderCargos() {
+    const el = document.getElementById("listaCargoItems");
+    if (!state.cargos.length) { el.innerHTML = `<div class="empty">Nenhum cargo cadastrado.</div>`; return; }
+    el.innerHTML = state.cargos.map(c => `
+      <div class="item-row">
+        <div class="item-row-info">
+          <div class="item-row-name">${esc(c.nome)}</div>
+          <div class="item-row-meta">${[c.codigo && `código: ${c.codigo}`, c.nivel_inicial && `nível: ${c.nivel_inicial}`, c.setor_nome && `setor: ${c.setor_nome}`].filter(Boolean).join(" · ")}</div>
+        </div>
+        <div class="item-row-actions">
+          <button class="btn sm reject" onclick="deletar('cargo',${c.id})">Remover</button>
+        </div>
+      </div>`).join("");
+  }
+
+  document.getElementById("formCargo").addEventListener("submit", async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd);
+    const [ok, data] = await api("POST", "/api/corporativo/cargos", body);
+    if (ok) {
+      toast("toastCargo", true, `Cargo "${data.nome}" ${data.created ? "criado" : "reativado"}.`);
+      e.target.reset(); await loadCargos();
+    } else {
+      toast("toastCargo", false, data.erro || "Erro ao criar cargo.");
+    }
+  });
+
+  async function deletar(tipo, id) {
+    const urls = {cargo:"/api/corporativo/cargos", funcao:"/api/corporativo/funcoes-criticas",
+                  equip:"/api/corporativo/equipamentos", trilha:"/api/corporativo/trilhas"};
+    const [ok] = await api("DELETE", `${urls[tipo]}?id=${id}`);
+    if (ok) {
+      if (tipo === "cargo") await loadCargos();
+      if (tipo === "funcao") await loadFuncoes();
+      if (tipo === "equip") await loadEquipamentos();
+      if (tipo === "trilha") await loadTrilhas();
+    }
+  }
+
+  // ── FUNÇÕES CRÍTICAS ──────────────────────────────────────────────────────
+
+  async function loadFuncoes() {
+    const [ok, data] = await api("GET", "/api/corporativo/funcoes-criticas");
+    if (ok) { state.funcoes = data.funcoes; populateFuncoes(); renderFuncoes(); }
+  }
+
+  function renderFuncoes() {
+    const el = document.getElementById("listaFuncaoItems");
+    if (!state.funcoes.length) { el.innerHTML = `<div class="empty">Nenhuma função crítica cadastrada.</div>`; return; }
+    el.innerHTML = state.funcoes.map(f => `
+      <div class="item-row">
+        <div class="item-row-info">
+          <div class="item-row-name">${esc(f.nome)}</div>
+          <div class="item-row-meta">
+            ${f.cargo_nome ? `cargo: ${esc(f.cargo_nome)} · ` : ""}
+            ${f.setor_nome ? `setor: ${esc(f.setor_nome)} · ` : ""}
+            <span class="crit-badge crit-${f.criticidade}">criticidade ${f.criticidade}</span>
+          </div>
+          ${f.descricao ? `<div style="margin-top:5px;color:var(--muted);font-size:.8rem">${esc(f.descricao)}</div>` : ""}
+        </div>
+        <div class="item-row-actions">
+          <button class="btn sm reject" onclick="deletar('funcao',${f.id})">Remover</button>
+        </div>
+      </div>`).join("");
+  }
+
+  document.getElementById("formFuncao").addEventListener("submit", async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd);
+    const [ok, data] = await api("POST", "/api/corporativo/funcoes-criticas", body);
+    if (ok) {
+      toast("toastFuncao", true, `Função "${data.nome}" ${data.created ? "criada" : "reativada"}.`);
+      e.target.reset(); await loadFuncoes();
+    } else {
+      toast("toastFuncao", false, data.erro || "Erro ao criar função.");
+    }
+  });
+
+  // ── EQUIPAMENTOS ──────────────────────────────────────────────────────────
+
+  async function loadEquipamentos() {
+    const [ok, data] = await api("GET", "/api/corporativo/equipamentos");
+    if (ok) { state.equipamentos = data.equipamentos; populateEquipamentos(); renderEquipamentos(); }
+  }
+
+  function renderEquipamentos() {
+    const el = document.getElementById("listaEquipItems");
+    if (!state.equipamentos.length) { el.innerHTML = `<div class="empty">Nenhum equipamento cadastrado.</div>`; return; }
+    el.innerHTML = state.equipamentos.map(eq => `
+      <div class="item-row">
+        <div class="item-row-info">
+          <div class="item-row-name">${esc(eq.nome)}</div>
+          <div class="item-row-meta">
+            ${[eq.codigo && `código: ${eq.codigo}`, eq.categoria && esc(eq.categoria), eq.setor_nome && `setor: ${esc(eq.setor_nome)}`].filter(Boolean).join(" · ")}
+            <span class="crit-badge crit-${eq.criticidade}" style="margin-left:4px">crit ${eq.criticidade}</span>
+          </div>
+        </div>
+        <div class="item-row-actions">
+          <button class="btn sm reject" onclick="deletar('equip',${eq.id})">Remover</button>
+        </div>
+      </div>`).join("");
+  }
+
+  document.getElementById("formEquip").addEventListener("submit", async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd);
+    const [ok, data] = await api("POST", "/api/corporativo/equipamentos", body);
+    if (ok) {
+      toast("toastEquip", true, `Equipamento "${data.nome}" ${data.created ? "criado" : "reativado"}.`);
+      e.target.reset(); await loadEquipamentos();
+    } else {
+      toast("toastEquip", false, data.erro || "Erro ao criar equipamento.");
+    }
+  });
+
+  // ── TRILHAS ───────────────────────────────────────────────────────────────
+
+  async function loadTrilhas() {
+    const [ok, data] = await api("GET", "/api/corporativo/trilhas");
+    if (ok) { state.trilhas = data.trilhas; renderTrilhas(); }
+  }
+
+  function renderTrilhas() {
+    const el = document.getElementById("listaTrilhaItems");
+    if (!state.trilhas.length) { el.innerHTML = `<div class="empty">Nenhuma trilha cadastrada.</div>`; return; }
+    el.innerHTML = state.trilhas.map(t => `
+      <div class="item-row" style="flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;width:100%">
+          <div class="item-row-info">
+            <div class="item-row-name">${esc(t.titulo)}</div>
+            <div class="item-row-meta">
+              ${t.cargo_nome ? `cargo: ${esc(t.cargo_nome)} · ` : ""}
+              ${t.funcao_critica_nome ? `função: ${esc(t.funcao_critica_nome)} · ` : ""}
+              ${t.nivel_alvo ? `nível: ${esc(t.nivel_alvo)} · ` : ""}
+              ${t.total_itens} ${t.total_itens === 1 ? "item" : "itens"}
+            </div>
+          </div>
+          <div class="item-row-actions">
+            <button class="btn sm approve" onclick="abrirItens(${t.id}, '${esc(t.titulo)}')">Ver itens</button>
+            <button class="btn sm reject" onclick="deletar('trilha',${t.id})">Remover</button>
+          </div>
+        </div>
+        ${t.descricao ? `<div style="color:var(--muted);font-size:.82rem">${esc(t.descricao)}</div>` : ""}
+      </div>`).join("");
+  }
+
+  document.getElementById("formTrilha").addEventListener("submit", async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd);
+    const [ok, data] = await api("POST", "/api/corporativo/trilhas", body);
+    if (ok) {
+      toast("toastTrilha", true, `Trilha "${data.titulo}" ${data.created ? "criada" : "reativada"}.`);
+      e.target.reset(); await loadTrilhas();
+    } else {
+      toast("toastTrilha", false, data.erro || "Erro ao criar trilha.");
+    }
+  });
+
+  // ── ITENS ─────────────────────────────────────────────────────────────────
+
+  async function abrirItens(trilhaId, titulo) {
+    state.trilhaAtiva = trilhaId;
+    document.getElementById("itensTrilhaNome").textContent = "Itens · " + titulo;
+    document.getElementById("itensPanel").style.display = "block";
+    await loadItens();
+  }
+
+  function fecharItens() {
+    state.trilhaAtiva = null;
+    document.getElementById("itensPanel").style.display = "none";
+  }
+
+  async function loadItens() {
+    if (!state.trilhaAtiva) return;
+    const [ok, data] = await api("GET", `/api/corporativo/trilhas/${state.trilhaAtiva}/itens`);
+    if (ok) renderItens(data.itens);
+  }
+
+  function renderItens(itens) {
+    const el = document.getElementById("listaItens");
+    if (!itens.length) { el.innerHTML = `<div class="empty">Nenhum item nesta trilha ainda.</div>`; return; }
+    const tipoLabels = {conhecimento:"Conhecimento", pratica:"Prática", seguranca:"Segurança", equipamento:"Equipamento"};
+    el.innerHTML = itens.map(i => `
+      <div class="item-row">
+        <div class="item-row-info">
+          <div class="item-row-name">${esc(i.titulo)}</div>
+          <div class="item-row-meta">
+            <span class="type-badge">${tipoLabels[i.tipo] || i.tipo}</span>
+            ${i.equipamento_nome ? ` · equip: ${esc(i.equipamento_nome)}` : ""}
+            ${` · peso ${i.peso}`}
+            ${!i.obrigatorio ? ` · opcional` : ""}
+          </div>
+        </div>
+        <div class="item-row-actions">
+          <button class="btn sm reject" onclick="deletarItem(${i.id})">Remover</button>
+        </div>
+      </div>`).join("");
+  }
+
+  async function deletarItem(id) {
+    const [ok] = await api("DELETE", `/api/corporativo/trilhas/${state.trilhaAtiva}/itens?id=${id}`);
+    if (ok) await loadItens();
+  }
+
+  document.getElementById("formItem").addEventListener("submit", async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd);
+    body.obrigatorio = body.obrigatorio === "true";
+    const [ok, data] = await api("POST", `/api/corporativo/trilhas/${state.trilhaAtiva}/itens`, body);
+    if (ok) {
+      toast("toastItem", true, `Item "${data.titulo}" adicionado.`);
+      e.target.reset(); await loadItens(); await loadTrilhas();
+    } else {
+      toast("toastItem", false, data.erro || "Erro ao adicionar item.");
+    }
+  });
+
+  // ── EVIDÊNCIAS ────────────────────────────────────────────────────────────
+
+  document.querySelectorAll(".filter-pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+      document.querySelectorAll(".filter-pill").forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      estadoEv = pill.dataset.status;
+      loadEvidencias(estadoEv);
+    });
+  });
+
+  async function loadEvidencias(status) {
+    const url = "/api/corporativo/evidencias" + (status ? `?status=${status}` : "");
+    const [ok, data] = await api("GET", url);
+    if (ok) { state.evidencias = data.evidencias; renderEvidencias("listaEvidencias"); }
+  }
+
+  async function loadValidacoes() {
+    const [ok, data] = await api("GET", "/api/corporativo/evidencias?status=enviada");
+    if (ok) { renderEvidenciasValidacao(data.evidencias); }
+  }
+
+  function statusLabel(s) {
+    const m = {enviada:"Aguardando", validada:"Aprovada", revisar:"Revisar", rascunho:"Rascunho"};
+    return m[s] || s;
+  }
+
+  function renderEvidencias(listId) {
+    const el = document.getElementById(listId);
+    if (!state.evidencias.length) { el.innerHTML = `<div class="empty">Nenhuma evidência encontrada.</div>`; return; }
+    el.innerHTML = state.evidencias.map(ev => `
+      <div class="item-row" style="flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;width:100%">
+          <div class="item-row-info">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span class="item-row-name">${esc(ev.item_titulo)}</span>
+              <span class="status-badge status-${ev.status}">${statusLabel(ev.status)}</span>
+            </div>
+            <div class="item-row-meta">
+              trilha: ${esc(ev.trilha_titulo)}
+              ${ev.cargo_nome ? ` · cargo: ${esc(ev.cargo_nome)}` : ""}
+              ${ev.unidade_nome ? ` · unidade: ${esc(ev.unidade_nome)}` : ""}
+              ${ev.setor_nome ? ` · setor: ${esc(ev.setor_nome)}` : ""}
+              · alias: ${esc(ev.alias)}
+              · pontuação: ${ev.pontuacao_autodeclarada}/5
+            </div>
+            ${ev.titulo ? `<div style="margin-top:4px;font-size:.82rem;color:var(--text)">${esc(ev.titulo)}</div>` : ""}
+            ${ev.descricao ? `<div style="margin-top:2px;color:var(--muted);font-size:.8rem">${esc(ev.descricao)}</div>` : ""}
+            ${ev.validacao && ev.validacao.comentario ? `<div style="margin-top:4px;font-size:.8rem;color:var(--muted)">Comentário supervisor: ${esc(ev.validacao.comentario)}</div>` : ""}
+          </div>
+        </div>
+        ${ev.status === "enviada" ? `
+          <div>
+            <div style="display:flex;gap:6px">
+              <button class="btn sm approve" onclick="toggleValForm('vf-${ev.id}','aprovada')">Aprovar</button>
+              <button class="btn sm reject" onclick="toggleValForm('vf-${ev.id}','reprovada')">Reprovar</button>
+            </div>
+            <div class="val-form" id="vf-${ev.id}">
+              <div class="form-row">
+                <div class="field"><label>Pontuação validador (0–5)</label><input type="number" id="vp-${ev.id}" min="0" max="5" value="3"></div>
+                <div class="field"><label>Comentário</label><input id="vc-${ev.id}" placeholder="Observações da validação..."></div>
+              </div>
+              <div class="form-actions">
+                <button class="btn sm primary" id="vbtn-${ev.id}" onclick="confirmarValidacao(${ev.id})">Confirmar</button>
+              </div>
+            </div>
+          </div>` : ""}
+      </div>`).join("");
+  }
+
+  function renderEvidenciasValidacao(evs) {
+    const el = document.getElementById("listaValidacoes");
+    if (!evs.length) {
+      el.innerHTML = `<div class="empty">Nenhuma evidência aguardando validação.</div>`;
+      document.getElementById("pendenteBadge").textContent = "";
+      return;
+    }
+    document.getElementById("pendenteBadge").textContent = evs.length;
+    const old = state.evidencias;
+    state.evidencias = evs;
+    renderEvidencias("listaValidacoes");
+    state.evidencias = old;
+  }
+
+  const valPendentes = {};
+
+  function toggleValForm(formId, acao) {
+    const el = document.getElementById(formId);
+    if (!el) return;
+    const isOpen = el.classList.contains("open");
+    if (isOpen && el.dataset.acao === acao) {
+      el.classList.remove("open");
+    } else {
+      el.classList.add("open");
+      el.dataset.acao = acao;
+      const evId = formId.replace("vf-", "");
+      valPendentes[evId] = acao;
+    }
+  }
+
+  async function confirmarValidacao(evId) {
+    const acao = valPendentes[evId] || document.getElementById(`vf-${evId}`)?.dataset.acao;
+    const pontuacao = document.getElementById(`vp-${evId}`)?.value;
+    const comentario = document.getElementById(`vc-${evId}`)?.value;
+    const [ok, data] = await api("POST", `/api/corporativo/evidencias/${evId}/validar`, {
+      resultado: acao, pontuacao, comentario
+    });
+    if (ok) {
+      await loadEvidencias(estadoEv);
+      await loadValidacoes();
+      await loadProntidao();
+    } else {
+      alert(data.erro || "Erro ao validar.");
+    }
+  }
+
+  // ── INIT ──────────────────────────────────────────────────────────────────
+
+  async function init() {
+    await Promise.all([loadCatalogo(), loadCargos(), loadFuncoes(), loadEquipamentos(), loadTrilhas()]);
+    await loadProntidao();
+    await loadValidacoes();
+  }
+
+  init();
+</script>
+</body>
+</html>
