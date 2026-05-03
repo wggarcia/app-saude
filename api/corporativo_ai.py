@@ -3,7 +3,16 @@ from datetime import timedelta
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
 
-from .models import CheckinDiarioCorporativo, CheckinSemanalCorporativo, PedidoApoioCorporativo
+from .models import (
+    CheckinDiarioCorporativo,
+    CheckinSemanalCorporativo,
+    EmpresaCargoCorporativo,
+    EvidenciaCompetenciaCorporativa,
+    FuncaoCriticaCorporativa,
+    PedidoApoioCorporativo,
+    TrilhaCompetenciaCorporativa,
+    ValidacaoCompetenciaCorporativa,
+)
 from .planos import detalhes_pacote
 
 
@@ -147,6 +156,35 @@ def _risk_summary(score):
     return "permite consolidar prevencao"
 
 
+def _competence_snapshot(empresa):
+    trilhas = TrilhaCompetenciaCorporativa.objects.filter(empresa=empresa, ativo=True)
+    evidencias = EvidenciaCompetenciaCorporativa.objects.filter(empresa=empresa)
+    funcoes = FuncaoCriticaCorporativa.objects.filter(empresa=empresa, ativo=True)
+    cargos = EmpresaCargoCorporativo.objects.filter(empresa=empresa, ativo=True)
+    validacoes = ValidacaoCompetenciaCorporativa.objects.filter(empresa=empresa)
+
+    trilhas_count = trilhas.count()
+    cargos_count = cargos.count()
+    funcoes_count = funcoes.count()
+    evidencias_count = evidencias.count()
+    pendentes = validacoes.filter(resultado=ValidacaoCompetenciaCorporativa.RESULTADO_PENDENTE).count()
+    aprovadas = validacoes.filter(resultado=ValidacaoCompetenciaCorporativa.RESULTADO_APROVADA).count()
+
+    readiness = 0
+    if evidencias_count:
+        readiness = round((aprovadas / max(1, evidencias_count)) * 100)
+
+    return {
+        "tracks_count": trilhas_count,
+        "roles_count": cargos_count,
+        "critical_functions_count": funcoes_count,
+        "evidence_count": evidencias_count,
+        "pending_validations": pendentes,
+        "approved_validations": aprovadas,
+        "readiness_score": readiness,
+    }
+
+
 def build_empresa_corporativo_payload(empresa):
     pacote = detalhes_pacote(empresa.pacote_codigo)
     company_label = empresa.nome or "Empresa"
@@ -193,6 +231,7 @@ def build_empresa_corporativo_payload(empresa):
     top_signal = _top_signal(diario)
     top_units = _top_units(base_diario)
     recommendations = _build_recommendations(company_label, mood_score, stress_score, physical_score, support_count, top_signal)
+    competence = _competence_snapshot(empresa)
 
     respondents = diario.get("respondents", 0)
     weekly_respondents = semanal.get("weekly_respondents", 0)
@@ -253,9 +292,9 @@ def build_empresa_corporativo_payload(empresa):
                 "detail": "Fila de acolhimento institucional e cuidado ativo.",
             },
             {
-                "label": "Respondentes",
-                "value": str(respondents),
-                "detail": "Base anonima disponivel para leitura executiva.",
+                "label": "Readiness tecnica",
+                "value": f"{competence['readiness_score']}/100",
+                "detail": "Sinal inicial de prontidao de competencia, evidencias e validacoes da operacao.",
             },
         ],
         "summary": {
@@ -285,6 +324,7 @@ def build_empresa_corporativo_payload(empresa):
         "module_nav": [
             "Saude Ocupacional",
             "Fadiga e Burnout",
+            "Competencia Tecnica",
             "Escalas 14x14 / 28x28",
             "Cultura e Comunicacao",
             "Mentoria e Lideranca",
@@ -319,6 +359,21 @@ def build_empresa_corporativo_payload(empresa):
                 "actions": [
                     "priorizar grupos com estresse alto e energia em queda",
                     "acionar campanha de recuperacao emocional e ajuste de ritmo",
+                ],
+            },
+            {
+                "title": "Competencia Tecnica",
+                "band": "moderado" if competence["pending_validations"] else "baixo",
+                "audience": "operacao, supervisao tecnica e treinamento",
+                "summary": "Liga trilhas por cargo, funcoes criticas, evidencias de campo e validacao por supervisor para medir prontidao real.",
+                "metrics": [
+                    f"trilhas {competence['tracks_count']}",
+                    f"funcoes criticas {competence['critical_functions_count']}",
+                    f"evidencias {competence['evidence_count']}",
+                ],
+                "actions": [
+                    "mapear lacunas por cargo, setor e equipamento critico",
+                    "priorizar validacoes pendentes antes de liberar autonomia operacional",
                 ],
             },
             {
@@ -386,8 +441,10 @@ def build_empresa_corporativo_payload(empresa):
             "Onde a operacao esta perdendo energia antes do afastamento aparecer?",
             "Quais escalas, unidades ou liderancas precisam de suporte nesta semana?",
             "Qual programa entra primeiro: fadiga, ergonomia, apoio psicossocial ou desenvolvimento?",
+            "Quais competencias criticas ainda nao estao comprovadas em campo?",
             "O que fica no painel executivo e o que precisa migrar para o app mobile do colaborador?",
         ],
+        "competence": competence,
         "recommendations": recommendations["actions"],
         "top_units": top_units,
         "programs": [
@@ -418,6 +475,15 @@ def build_empresa_corporativo_payload(empresa):
                     "ritual de handoff e mentoria remota entre unidades",
                 ],
             },
+            {
+                "title": "Programa de competencia critica",
+                "owner": "supervisao tecnica + treinamento",
+                "items": [
+                    "trilhas por cargo, setor e equipamento critico",
+                    "evidencia pratica validada por supervisor",
+                    "readiness tecnico para assumir autonomia operacional",
+                ],
+            },
         ],
         "privacy": {
             "group_minimum": MIN_GROUP_SIZE,
@@ -436,6 +502,7 @@ def build_empresa_corporativo_payload(empresa):
             "capabilities": [
                 "check-in diario e semanal sem exposicao ao gestor",
                 "pedido opcional de apoio com consentimento",
+                "trilhas de competencia por funcao e equipamento",
                 "microlearning tecnico, idioma e cultura",
                 "mentoria, comunidades e handoff educativo",
             ],

@@ -168,12 +168,66 @@ class EmpresaTurno(models.Model):
         return f"{self.empresa.nome} - {self.nome}"
 
 
+class EmpresaCargoCorporativo(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="cargos_corporativos")
+    setor = models.ForeignKey("EmpresaSetor", on_delete=models.SET_NULL, null=True, blank=True, related_name="cargos")
+    nome = models.CharField(max_length=120)
+    codigo = models.CharField(max_length=40, blank=True, default="")
+    nivel_inicial = models.CharField(max_length=40, blank=True, default="junior")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "setor", "nome")
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - cargo - {self.nome}"
+
+
+class FuncaoCriticaCorporativa(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="funcoes_criticas_corporativas")
+    cargo = models.ForeignKey(EmpresaCargoCorporativo, on_delete=models.SET_NULL, null=True, blank=True, related_name="funcoes_criticas")
+    setor = models.ForeignKey("EmpresaSetor", on_delete=models.SET_NULL, null=True, blank=True, related_name="funcoes_criticas")
+    nome = models.CharField(max_length=140)
+    descricao = models.TextField(blank=True, default="")
+    criticidade = models.PositiveSmallIntegerField(default=3)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "cargo", "nome")
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - funcao critica - {self.nome}"
+
+
+class EquipamentoCorporativo(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="equipamentos_corporativos")
+    setor = models.ForeignKey("EmpresaSetor", on_delete=models.SET_NULL, null=True, blank=True, related_name="equipamentos")
+    nome = models.CharField(max_length=140)
+    codigo = models.CharField(max_length=60, blank=True, default="")
+    categoria = models.CharField(max_length=80, blank=True, default="")
+    criticidade = models.PositiveSmallIntegerField(default=3)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "setor", "nome")
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - equipamento - {self.nome}"
+
+
 class ColaboradorAliasCorporativo(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="aliases_corporativos")
     alias_publico = models.CharField(max_length=80, default=_codigo_acesso)
     unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="aliases")
     setor = models.ForeignKey(EmpresaSetor, on_delete=models.SET_NULL, null=True, blank=True, related_name="aliases")
     turno = models.ForeignKey(EmpresaTurno, on_delete=models.SET_NULL, null=True, blank=True, related_name="aliases")
+    cargo = models.ForeignKey(EmpresaCargoCorporativo, on_delete=models.SET_NULL, null=True, blank=True, related_name="colaboradores")
     ativo = models.BooleanField(default=True)
     permite_contato = models.BooleanField(default=False)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -282,6 +336,123 @@ class PedidoApoioCorporativo(models.Model):
 
     def __str__(self):
         return f"{self.empresa.nome} - apoio - {self.status}"
+
+
+class TrilhaCompetenciaCorporativa(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="trilhas_competencia_corporativas")
+    cargo = models.ForeignKey(EmpresaCargoCorporativo, on_delete=models.SET_NULL, null=True, blank=True, related_name="trilhas_competencia")
+    funcao_critica = models.ForeignKey(FuncaoCriticaCorporativa, on_delete=models.SET_NULL, null=True, blank=True, related_name="trilhas_competencia")
+    titulo = models.CharField(max_length=160)
+    descricao = models.TextField(blank=True, default="")
+    nivel_alvo = models.CharField(max_length=40, blank=True, default="")
+    ordem = models.PositiveIntegerField(default=1)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "cargo", "titulo")
+        ordering = ["ordem", "titulo"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - trilha - {self.titulo}"
+
+
+class CompetenciaItemCorporativo(models.Model):
+    TIPO_CONHECIMENTO = "conhecimento"
+    TIPO_PRATICA = "pratica"
+    TIPO_SEGURANCA = "seguranca"
+    TIPO_EQUIPAMENTO = "equipamento"
+    TIPOS_ITEM = [
+        (TIPO_CONHECIMENTO, "Conhecimento"),
+        (TIPO_PRATICA, "Pratica"),
+        (TIPO_SEGURANCA, "Seguranca"),
+        (TIPO_EQUIPAMENTO, "Equipamento"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="itens_competencia_corporativos")
+    trilha = models.ForeignKey(TrilhaCompetenciaCorporativa, on_delete=models.CASCADE, related_name="itens")
+    equipamento = models.ForeignKey(EquipamentoCorporativo, on_delete=models.SET_NULL, null=True, blank=True, related_name="itens_competencia")
+    titulo = models.CharField(max_length=160)
+    tipo = models.CharField(max_length=20, choices=TIPOS_ITEM, default=TIPO_CONHECIMENTO)
+    descricao = models.TextField(blank=True, default="")
+    ordem = models.PositiveIntegerField(default=1)
+    peso = models.PositiveSmallIntegerField(default=1)
+    obrigatorio = models.BooleanField(default=True)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("trilha", "titulo")
+        ordering = ["ordem", "titulo"]
+
+    def __str__(self):
+        return f"{self.trilha.titulo} - {self.titulo}"
+
+
+class EvidenciaCompetenciaCorporativa(models.Model):
+    STATUS_RASCUNHO = "rascunho"
+    STATUS_ENVIADA = "enviada"
+    STATUS_VALIDADA = "validada"
+    STATUS_REVISAR = "revisar"
+    STATUS_CHOICES = [
+        (STATUS_RASCUNHO, "Rascunho"),
+        (STATUS_ENVIADA, "Enviada"),
+        (STATUS_VALIDADA, "Validada"),
+        (STATUS_REVISAR, "Revisar"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="evidencias_competencia_corporativas")
+    alias = models.ForeignKey(ColaboradorAliasCorporativo, on_delete=models.CASCADE, related_name="evidencias_competencia")
+    item = models.ForeignKey(CompetenciaItemCorporativo, on_delete=models.CASCADE, related_name="evidencias")
+    unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="evidencias_competencia")
+    setor = models.ForeignKey(EmpresaSetor, on_delete=models.SET_NULL, null=True, blank=True, related_name="evidencias_competencia")
+    equipamento = models.ForeignKey(EquipamentoCorporativo, on_delete=models.SET_NULL, null=True, blank=True, related_name="evidencias_competencia")
+    titulo = models.CharField(max_length=160, blank=True, default="")
+    descricao = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ENVIADA)
+    pontuacao_autodeclarada = models.PositiveSmallIntegerField(default=1)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "alias"]),
+        ]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - evidencia - {self.item.titulo}"
+
+
+class ValidacaoCompetenciaCorporativa(models.Model):
+    RESULTADO_PENDENTE = "pendente"
+    RESULTADO_APROVADA = "aprovada"
+    RESULTADO_REPROVADA = "reprovada"
+    RESULTADO_CHOICES = [
+        (RESULTADO_PENDENTE, "Pendente"),
+        (RESULTADO_APROVADA, "Aprovada"),
+        (RESULTADO_REPROVADA, "Reprovada"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="validacoes_competencia_corporativas")
+    evidencia = models.OneToOneField(EvidenciaCompetenciaCorporativa, on_delete=models.CASCADE, related_name="validacao")
+    validado_por = models.ForeignKey(EmpresaUsuario, on_delete=models.SET_NULL, null=True, blank=True, related_name="validacoes_competencia")
+    resultado = models.CharField(max_length=20, choices=RESULTADO_CHOICES, default=RESULTADO_PENDENTE)
+    pontuacao_validador = models.PositiveSmallIntegerField(default=0)
+    comentario = models.TextField(blank=True, default="")
+    validado_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-atualizado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "resultado"]),
+        ]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - validacao - {self.resultado}"
 
 
 class DonoSaaS(models.Model):

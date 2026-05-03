@@ -8,6 +8,13 @@ from django.test import Client, TestCase
 from django.utils import timezone
 
 from .models import Empresa
+from .models import (
+    CompetenciaItemCorporativo,
+    EmpresaCargoCorporativo,
+    EmpresaSetor,
+    EmpresaUnidade,
+    TrilhaCompetenciaCorporativa,
+)
 
 
 class DashboardCorporativoTests(TestCase):
@@ -62,6 +69,33 @@ class DashboardCorporativoTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["product"]["name"], "SolusCRT Corporativo")
+
+    def test_api_empresa_corporativo_resumo_expone_snapshot_de_competencia(self):
+        empresa = self._empresa("Empresa Competencia", "empresa-competencia@example.com", "empresa_profissional_25")
+        unidade = EmpresaUnidade.objects.create(empresa=empresa, nome="Base Offshore")
+        setor = EmpresaSetor.objects.create(empresa=empresa, unidade=unidade, nome="Eletrica")
+        cargo = EmpresaCargoCorporativo.objects.create(empresa=empresa, setor=setor, nome="Eletricista de Sonda")
+        trilha = TrilhaCompetenciaCorporativa.objects.create(
+            empresa=empresa,
+            cargo=cargo,
+            titulo="Trilha Eletrica de Campo",
+            nivel_alvo="pleno",
+        )
+        CompetenciaItemCorporativo.objects.create(
+            empresa=empresa,
+            trilha=trilha,
+            titulo="Manutencao preventiva em painel de potencia",
+            tipo=CompetenciaItemCorporativo.TIPO_PRATICA,
+        )
+        client = self._client_for(empresa)
+
+        response = client.get("/api/empresa/resumo")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["competence"]["tracks_count"], 1)
+        self.assertEqual(data["competence"]["roles_count"], 1)
+        self.assertEqual(data["competence"]["critical_functions_count"], 0)
 
     def test_colaborador_app_publico_abre_para_empresa(self):
         empresa = self._empresa("Empresa Corporativa", "empresa-colab@example.com", "empresa_profissional_25")
