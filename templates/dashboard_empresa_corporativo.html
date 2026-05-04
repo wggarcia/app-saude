@@ -1,959 +1,846 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>SolusCRT Corporativo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --bg:#041018;
-      --panel:#0b1822;
-      --panel-2:rgba(10,24,35,.78);
-      --panel-3:rgba(15,31,45,.92);
-      --line:rgba(154,193,220,.14);
-      --soft-line:rgba(255,255,255,.08);
-      --text:#ebf7ff;
-      --muted:#9ab9ce;
-      --accent:#7ee1c3;
-      --accent-2:#7db6ff;
-      --gold:#f0bf6b;
-      --danger:#ff7a91;
-      --shadow:0 24px 70px rgba(0,0,0,.42);
-    }
-
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      min-height:100vh;
-      font-family:"Manrope","Segoe UI",sans-serif;
-      color:var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(126,225,195,.14), transparent 20rem),
-        radial-gradient(circle at top right, rgba(125,182,255,.16), transparent 24rem),
-        radial-gradient(circle at bottom left, rgba(240,191,107,.12), transparent 22rem),
-        linear-gradient(180deg,#041018 0%,#08141d 32%,#061119 100%);
-    }
-
-    body::before{
-      content:"";
-      position:fixed;
-      inset:0;
-      pointer-events:none;
-      background:
-        linear-gradient(rgba(125,182,255,.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(125,182,255,.05) 1px, transparent 1px);
-      background-size:44px 44px;
-      opacity:.18;
-    }
-
-    .shell{
-      width:min(1500px,calc(100% - 28px));
-      margin:0 auto;
-      padding:16px 0 24px;
-    }
-
-    .glass{
-      background:var(--panel-2);
-      border:1px solid var(--line);
-      box-shadow:var(--shadow);
-      backdrop-filter:blur(18px);
-    }
-
-    .topbar{
-      display:grid;
-      grid-template-columns:minmax(320px,1.2fr) minmax(420px,1.6fr) auto;
-      gap:14px;
-      align-items:stretch;
-    }
-
-    .top-card{
-      border-radius:28px;
-      padding:16px 18px;
-    }
-
-    .brand-line{
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      align-items:flex-start;
-    }
-
-    .brand{
-      font-size:1.1rem;
-      font-weight:800;
-      letter-spacing:.03em;
-    }
-
-    .company{
-      color:#d9ffef;
-      font-size:.94rem;
-      font-weight:800;
-      text-align:right;
-    }
-
-    .eyebrow{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      margin-top:12px;
-      padding:8px 12px;
-      border-radius:999px;
-      border:1px solid rgba(126,225,195,.28);
-      background:rgba(126,225,195,.12);
-      color:#dbfff3;
-      font-size:.72rem;
-      font-weight:900;
-      letter-spacing:.12em;
-      text-transform:uppercase;
-    }
-
-    .muted{
-      color:var(--muted);
-      line-height:1.6;
-      font-size:.9rem;
-    }
-
-    .metrics{
-      display:grid;
-      grid-template-columns:repeat(5,minmax(0,1fr));
-      gap:10px;
-    }
-
-    .metric{
-      border-radius:20px;
-      padding:12px;
-      background:linear-gradient(180deg, rgba(17,35,50,.9), rgba(8,18,28,.92));
-      border:1px solid var(--soft-line);
-    }
-
-    .metric span{
-      display:block;
-      color:var(--muted);
-      font-size:.73rem;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
-
-    .metric strong{
-      display:block;
-      margin-top:8px;
-      font-size:1.18rem;
-    }
-
-    .metric-delta{
-      display:inline-flex;
-      align-items:center;
-      gap:3px;
-      font-size:.7rem;
-      font-weight:600;
-      margin-top:4px;
-      padding:2px 6px;
-      border-radius:8px;
-    }
-
-    .metric-delta.up{
-      color:#7ee1c3;
-      background:rgba(126,225,195,.12);
-    }
-
-    .metric-delta.down{
-      color:#ff7a91;
-      background:rgba(255,122,145,.12);
-    }
-
-    .metric-delta.neutral{
-      color:var(--muted);
-      background:rgba(154,193,220,.08);
-    }
-
-    .actions{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      align-items:flex-start;
-      justify-content:flex-end;
-    }
-
-    .btn{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-height:46px;
-      padding:0 16px;
-      border-radius:999px;
-      border:1px solid var(--soft-line);
-      text-decoration:none;
-      color:var(--text);
-      font-weight:800;
-      background:rgba(255,255,255,.07);
-    }
-
-    .btn.primary{
-      border:0;
-      background:linear-gradient(135deg,#0db794,#1f6ff2);
-    }
-
-    .btn.secondary{
-      background:rgba(255,255,255,.04);
-    }
-
-    .btn.warn{
-      background:linear-gradient(135deg,#8b2239,#5e1b1b);
-      border:0;
-    }
-
-    .btn.accent{
-      background:linear-gradient(135deg,#f0bf6b,#e08a20);
-      color:#0b0f14;
-      border:0;
-      cursor:pointer;
-      font-family:inherit;
-      font-size:inherit;
-    }
-
-    /* ── Modal Agir ── */
-    #modal-agir{
-      display:none;
-      position:fixed;
-      inset:0;
-      z-index:9000;
-      background:rgba(4,16,24,.82);
-      backdrop-filter:blur(6px);
-      align-items:center;
-      justify-content:center;
-    }
-
-    #modal-agir.open{display:flex}
-
-    .modal-box{
-      background:var(--panel-3);
-      border:1px solid var(--line);
-      border-radius:24px;
-      padding:28px 24px 24px;
-      width:min(420px,calc(100vw - 32px));
-      box-shadow:0 32px 80px rgba(0,0,0,.6);
-    }
-
-    .modal-box h3{
-      margin:0 0 18px;
-      font-size:1.1rem;
-      font-weight:800;
-    }
-
-    .modal-field{
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      margin-bottom:14px;
-    }
-
-    .modal-field label{
-      font-size:.76rem;
-      color:var(--muted);
-      text-transform:uppercase;
-      letter-spacing:.07em;
-    }
-
-    .modal-field input,
-    .modal-field textarea,
-    .modal-field select{
-      background:rgba(255,255,255,.06);
-      border:1px solid var(--soft-line);
-      border-radius:10px;
-      color:var(--text);
-      font-family:inherit;
-      font-size:.9rem;
-      padding:10px 12px;
-    }
-
-    .modal-field textarea{resize:vertical;min-height:72px}
-
-    .modal-actions{
-      display:flex;
-      gap:10px;
-      justify-content:flex-end;
-      margin-top:18px;
-    }
-
-    #msg-agir{
-      font-size:.82rem;
-      margin-top:10px;
-      min-height:18px;
-    }
-
-    .layout{
-      display:grid;
-      grid-template-columns:320px minmax(0,1fr) 360px;
-      gap:16px;
-      margin-top:16px;
-      align-items:start;
-    }
-
-    .rail,
-    .main,
-    .aside{
-      display:grid;
-      gap:16px;
-    }
-
-    .card{
-      border-radius:30px;
-      padding:20px;
-    }
-
-    .section-title{
-      margin:0 0 10px;
-      font-size:1.02rem;
-      font-weight:800;
-    }
-
-    .hero{
-      overflow:hidden;
-      display:grid;
-      grid-template-columns:1.25fr .75fr;
-      gap:16px;
-      background:
-        radial-gradient(circle at top right, rgba(126,225,195,.16), transparent 18rem),
-        radial-gradient(circle at left center, rgba(125,182,255,.14), transparent 20rem),
-        linear-gradient(180deg, rgba(12,25,36,.95), rgba(7,16,24,.92));
-    }
-
-    .hero h1{
-      margin:14px 0 14px;
-      font-family:"Fraunces",serif;
-      font-size:clamp(2.9rem,4.2vw,5rem);
-      line-height:.94;
-      letter-spacing:-.03em;
-      text-wrap:balance;
-    }
-
-    .hero-copy{
-      display:grid;
-      gap:14px;
-    }
-
-    .hero-note{
-      border-radius:22px;
-      padding:16px;
-      border:1px solid rgba(126,225,195,.18);
-      background:rgba(126,225,195,.08);
-      color:#dcfff4;
-      line-height:1.62;
-    }
-
-    .hero-side{
-      display:grid;
-      gap:12px;
-      align-content:start;
-    }
-
-    .signal{
-      border-radius:22px;
-      padding:16px;
-      background:rgba(255,255,255,.05);
-      border:1px solid var(--soft-line);
-    }
-
-    .signal span{
-      display:block;
-      color:var(--muted);
-      font-size:.74rem;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
-
-    .signal strong{
-      display:block;
-      margin-top:8px;
-      font-size:1.08rem;
-      line-height:1.35;
-    }
-
-    .grid{
-      display:grid;
-      grid-template-columns:1.08fr .92fr;
-      gap:16px;
-    }
-
-    .stack{
-      display:grid;
-      gap:16px;
-    }
-
-    .list{
-      display:grid;
-      gap:10px;
-    }
-
-    .row-card{
-      border-radius:20px;
-      padding:14px;
-      border:1px solid var(--soft-line);
-      background:rgba(255,255,255,.04);
-    }
-
-    .row-card strong{
-      display:block;
-      font-size:.95rem;
-    }
-
-    .row-card small{
-      display:block;
-      margin-top:6px;
-      color:var(--muted);
-      line-height:1.55;
-      font-size:.86rem;
-    }
-
-    .chips{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      margin-top:10px;
-    }
-
-    .chip{
-      display:inline-flex;
-      align-items:center;
-      min-height:30px;
-      padding:0 10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.07);
-      color:#d8e9f5;
-      font-size:.75rem;
-      font-weight:800;
-    }
-
-    .module-grid{
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:14px;
-    }
-
-    .module{
-      border-radius:24px;
-      padding:18px;
-      border:1px solid var(--soft-line);
-      background:linear-gradient(180deg, rgba(13,28,40,.92), rgba(8,18,28,.9));
-    }
-
-    .module-head{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      align-items:flex-start;
-    }
-
-    .module h3{
-      margin:0;
-      font-size:1rem;
-    }
-
-    .band{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-height:28px;
-      padding:0 10px;
-      border-radius:999px;
-      font-size:.72rem;
-      font-weight:900;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
-
-    .band.critico{background:rgba(255,122,145,.16);color:#ffbfcb}
-    .band.alto{background:rgba(240,137,73,.16);color:#ffd0ae}
-    .band.moderado{background:rgba(240,191,107,.16);color:#ffe4ad}
-    .band.baixo{background:rgba(126,225,195,.16);color:#d6fff2}
-
-    .module p{
-      margin:10px 0 0;
-      color:var(--muted);
-      line-height:1.62;
-      font-size:.9rem;
-    }
-
-    .module ul{
-      margin:12px 0 0;
-      padding-left:18px;
-      color:#d7e8f4;
-      line-height:1.6;
-      font-size:.88rem;
-    }
-
-    .surface-grid{
-      display:grid;
-      gap:10px;
-    }
-
-    .surface{
-      border-radius:20px;
-      padding:14px;
-      border:1px solid var(--soft-line);
-      background:rgba(255,255,255,.04);
-    }
-
-    .surface strong{
-      display:block;
-      font-size:.92rem;
-    }
-
-    .surface small{
-      display:block;
-      margin-top:6px;
-      color:var(--muted);
-      line-height:1.55;
-    }
-
-    .module-nav{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      margin-top:6px;
-    }
-
-    .module-pill{
-      padding:9px 12px;
-      border-radius:999px;
-      background:rgba(255,255,255,.05);
-      border:1px solid var(--soft-line);
-      color:#dbeaf7;
-      font-size:.76rem;
-      font-weight:800;
-    }
-
-    .program{
-      border-radius:24px;
-      padding:16px;
-      background:rgba(255,255,255,.04);
-      border:1px solid var(--soft-line);
-    }
-
-    .program strong{
-      display:block;
-      font-size:.98rem;
-    }
-
-    .program em{
-      display:block;
-      margin-top:6px;
-      color:#d2ecff;
-      font-style:normal;
-      font-size:.82rem;
-      font-weight:700;
-    }
-
-    .program ul{
-      margin:10px 0 0;
-      padding-left:18px;
-      color:#d9e8f2;
-      line-height:1.6;
-      font-size:.88rem;
-    }
-
-    .unit{
-      display:grid;
-      gap:8px;
-    }
-
-    .unit-top{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      align-items:center;
-    }
-
-    .unit-bar{
-      height:10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.08);
-      overflow:hidden;
-    }
-
-    .unit-fill{
-      height:100%;
-      border-radius:999px;
-      background:linear-gradient(135deg,#7ee1c3,#7db6ff);
-    }
-
-    @media(max-width:1340px){
-      .topbar{grid-template-columns:1fr}
-      .layout{grid-template-columns:1fr}
-      .grid,.hero{grid-template-columns:1fr}
-    }
-
-    @media(max-width:920px){
-      .metrics,.module-grid{grid-template-columns:1fr 1fr}
-    }
-
-    @media(max-width:720px){
-      .metrics,.module-grid{grid-template-columns:1fr}
-      .actions{justify-content:flex-start}
-    }
-  </style>
+<meta charset="UTF-8">
+<title>SolusCRT · Saúde Ocupacional</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0f18;
+  --surface:#111827;
+  --surface2:#1a2233;
+  --surface3:#1f2b3e;
+  --line:rgba(255,255,255,.07);
+  --line2:rgba(255,255,255,.12);
+  --text:#e8f0fe;
+  --muted:#8899b4;
+  --teal:#00d4aa;
+  --teal2:#00b899;
+  --amber:#f59e0b;
+  --red:#ef4444;
+  --blue:#3b82f6;
+  --green:#22c55e;
+  --glow-teal:rgba(0,212,170,.15);
+  --glow-amber:rgba(245,158,11,.12);
+}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+
+/* TOPBAR */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  height:56px;
+  display:flex;align-items:center;gap:0;
+  background:rgba(11,15,24,.92);
+  border-bottom:1px solid var(--line);
+  backdrop-filter:blur(12px);
+}
+.tb-brand{
+  display:flex;align-items:center;gap:10px;
+  padding:0 20px;min-width:220px;
+  border-right:1px solid var(--line);height:100%;
+}
+.tb-logo{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--teal),#0099ff);
+  display:grid;place-items:center;
+  font-weight:900;font-size:.85rem;color:#0b0f18;
+  flex-shrink:0;
+}
+.tb-company{font-size:.82rem;font-weight:700;line-height:1.2;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-sub{font-size:.65rem;color:var(--muted);margin-top:1px}
+
+.tb-nav{display:flex;align-items:center;gap:2px;padding:0 16px;flex:1}
+.tb-nav a{
+  padding:6px 12px;border-radius:6px;font-size:.78rem;font-weight:500;
+  color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap;
+}
+.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tb-nav a.active{color:var(--teal);background:rgba(0,212,170,.08)}
+
+.tb-right{display:flex;align-items:center;gap:8px;padding:0 16px}
+.health-pill{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:999px;
+  background:rgba(0,212,170,.08);
+  border:1px solid rgba(0,212,170,.2);
+  font-size:.76rem;font-weight:700;color:var(--teal);
+}
+.health-pill .score{font-size:.9rem;font-weight:900}
+.btn-action{
+  padding:7px 14px;border-radius:8px;border:none;
+  background:linear-gradient(135deg,var(--teal),#0099ff);
+  color:#0b0f18;font-size:.78rem;font-weight:800;cursor:pointer;
+  letter-spacing:.02em;font-family:inherit;
+  box-shadow:0 0 20px rgba(0,212,170,.25);
+  transition:opacity .2s;white-space:nowrap;
+}
+.btn-action:hover{opacity:.88}
+
+/* LAYOUT */
+.app{display:flex;height:100vh;padding-top:56px}
+.sidebar{
+  width:220px;flex-shrink:0;
+  background:rgba(17,24,39,.6);
+  border-right:1px solid var(--line);
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+  padding:12px 0;
+}
+.sidebar-section{padding:0 12px;margin-bottom:4px}
+.sidebar-label{font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 8px 4px}
+.sidebar-link{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 10px;border-radius:8px;
+  font-size:.8rem;font-weight:500;color:var(--muted);
+  text-decoration:none;transition:all .15s;cursor:pointer;
+}
+.sidebar-link:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.sidebar-link.active{color:var(--teal);background:rgba(0,212,170,.08);font-weight:600}
+.sidebar-icon{font-size:1rem;flex-shrink:0}
+
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+
+/* KPI STRIP */
+.kpi-strip{
+  display:flex;gap:12px;
+  padding:16px 20px;
+  border-bottom:1px solid var(--line);
+  background:rgba(17,24,39,.4);
+  flex-shrink:0;overflow-x:auto;
+}
+.kpi-card{
+  flex:1;min-width:140px;
+  padding:14px 16px;border-radius:12px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  position:relative;overflow:hidden;
+}
+.kpi-card::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--kpi-accent,var(--teal));
+  opacity:.6;
+}
+.kpi-label{font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.kpi-val{font-size:1.7rem;font-weight:900;line-height:1;color:var(--text)}
+.kpi-val span{font-size:.85rem;font-weight:500;color:var(--muted)}
+.kpi-delta{
+  display:inline-flex;align-items:center;gap:3px;
+  margin-top:6px;padding:2px 7px;border-radius:999px;
+  font-size:.68rem;font-weight:700;
+}
+.kpi-delta.up{background:rgba(34,197,94,.12);color:#4ade80}
+.kpi-delta.down{background:rgba(239,68,68,.12);color:#f87171}
+.kpi-delta.flat{background:rgba(255,255,255,.06);color:var(--muted)}
+.kpi-detail{font-size:.7rem;color:var(--muted);margin-top:4px;line-height:1.4}
+
+/* BODY */
+.body{display:flex;flex:1;gap:0;min-height:0}
+
+/* LEFT PANEL */
+.left-panel{
+  width:280px;flex-shrink:0;
+  border-right:1px solid var(--line);
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+  padding:16px;gap:16px;
+}
+
+.panel-block{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:14px;
+}
+.panel-block-title{
+  font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:12px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.panel-block-title span{font-size:.7rem;font-weight:500;color:var(--teal);letter-spacing:0;text-transform:none}
+
+.unit-row{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 0;border-bottom:1px solid var(--line);
+}
+.unit-row:last-child{border-bottom:none}
+.unit-name{font-size:.8rem;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.unit-count{font-size:.72rem;color:var(--muted);flex-shrink:0}
+.band-badge{
+  font-size:.6rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 7px;border-radius:4px;flex-shrink:0;
+}
+.band-CRITICO{background:rgba(239,68,68,.18);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+.band-ALTO{background:rgba(245,158,11,.14);color:#fbbf24;border:1px solid rgba(245,158,11,.25)}
+.band-MODERADO{background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.22)}
+.band-BAIXO{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+
+.rec-item{
+  padding:10px 12px;border-radius:8px;margin-bottom:8px;
+  background:var(--surface2);border:1px solid var(--line);
+}
+.rec-item:last-child{margin-bottom:0}
+.rec-urgency{
+  font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  margin-bottom:5px;
+}
+.rec-urgency.critica{color:#f87171}
+.rec-urgency.alta{color:#fbbf24}
+.rec-urgency.media{color:#60a5fa}
+.rec-urgency.baixa{color:#4ade80}
+.rec-title{font-size:.8rem;font-weight:600;color:var(--text);line-height:1.35}
+.rec-desc{font-size:.7rem;color:var(--muted);margin-top:3px;line-height:1.45}
+
+/* CENTER PANEL */
+.center-panel{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+  padding:16px 20px;gap:16px;
+}
+
+.gauge-block{
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  padding:24px;display:flex;align-items:center;gap:32px;
+}
+.gauge-wrap{position:relative;flex-shrink:0}
+.gauge-wrap svg{display:block}
+.gauge-label{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-44%);
+  text-align:center;
+}
+.gauge-score{font-size:2.2rem;font-weight:900;color:var(--text);line-height:1}
+.gauge-unit{font-size:.72rem;color:var(--muted);margin-top:4px}
+
+.gauge-info{flex:1}
+.gauge-info h2{font-size:1.1rem;font-weight:800;margin-bottom:6px}
+.gauge-info p{font-size:.82rem;color:var(--muted);line-height:1.65;max-width:360px}
+.gauge-bands{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.gauge-band{font-size:.68rem;font-weight:600;padding:4px 10px;border-radius:6px}
+.gauge-band.b-critico{background:rgba(239,68,68,.14);color:#f87171}
+.gauge-band.b-alto{background:rgba(245,158,11,.12);color:#fbbf24}
+.gauge-band.b-moderado{background:rgba(59,130,246,.1);color:#60a5fa}
+.gauge-band.b-baixo{background:rgba(34,197,94,.08);color:#4ade80}
+
+/* Chart */
+.chart-block{
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;
+}
+.chart-block-title{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.bar-chart{display:flex;align-items:flex-end;gap:4px;height:72px}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.bar{border-radius:3px 3px 0 0;background:var(--teal);width:100%;min-height:4px;transition:height .3s}
+.bar.today{background:linear-gradient(180deg,var(--teal),var(--teal2))}
+.bar-day{font-size:.55rem;color:var(--muted);text-align:center}
+
+/* Modules */
+.modules-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.module-card{
+  padding:14px;border-radius:12px;
+  background:var(--surface2);border:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;
+  text-decoration:none;color:inherit;transition:all .15s;cursor:pointer;
+}
+.module-card:hover{border-color:var(--line2);background:var(--surface3)}
+.module-icon{font-size:1.4rem;flex-shrink:0}
+.module-name{font-size:.82rem;font-weight:700;color:var(--text)}
+.module-desc{font-size:.7rem;color:var(--muted);margin-top:2px;line-height:1.35}
+.module-badge{
+  margin-left:auto;font-size:.6rem;font-weight:800;letter-spacing:.06em;
+  padding:2px 7px;border-radius:4px;flex-shrink:0;align-self:flex-start;
+}
+.mb-ok{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.mb-atencao{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+.mb-alerta{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+
+/* RIGHT PANEL */
+.right-panel{
+  width:260px;flex-shrink:0;
+  border-left:1px solid var(--line);
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+  padding:16px;gap:14px;
+}
+
+.prog-item{margin-bottom:10px}
+.prog-item:last-child{margin-bottom:0}
+.prog-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.prog-name{font-size:.78rem;font-weight:600;color:var(--text)}
+.prog-pct{font-size:.76rem;font-weight:700;color:var(--teal)}
+.prog-track{height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--teal),#0099ff);transition:width .6s}
+.prog-sub{font-size:.67rem;color:var(--muted);margin-top:4px}
+
+.competence-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.comp-stat{
+  background:var(--surface2);border:1px solid var(--line);border-radius:8px;
+  padding:10px;text-align:center;
+}
+.comp-stat .cv{font-size:1.3rem;font-weight:900;color:var(--teal)}
+.comp-stat .cl{font-size:.62rem;color:var(--muted);margin-top:2px;line-height:1.3}
+
+.privacy-banner{
+  background:rgba(0,212,170,.04);border:1px solid rgba(0,212,170,.15);
+  border-radius:10px;padding:12px;
+  font-size:.7rem;color:rgba(0,212,170,.65);line-height:1.65;
+}
+.privacy-banner strong{color:rgba(0,212,170,.85);display:block;margin-bottom:3px}
+
+/* Summary */
+.summary-bar{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;border-radius:10px;
+  background:var(--surface2);border:1px solid var(--line);
+  font-size:.75rem;color:var(--muted);line-height:1.5;
+}
+.summary-bar .si{font-size:1rem;flex-shrink:0}
+
+/* Skeleton loader */
+.skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);background-size:200% 100%;animation:shimmer 1.8s infinite;border-radius:6px;height:14px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Modal */
+.modal-bg{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+}
+.modal-bg.open{display:flex}
+.modal{
+  background:var(--surface);border:1px solid var(--line2);border-radius:16px;
+  padding:28px;width:440px;max-width:95vw;
+}
+.modal h3{font-size:1.1rem;font-weight:800;margin-bottom:6px}
+.modal p{font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:18px}
+.modal-field{margin-bottom:12px}
+.modal-field label{display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(232,240,254,.4);margin-bottom:6px}
+.modal-field input,.modal-field textarea,.modal-field select{
+  width:100%;padding:10px 12px;border-radius:8px;
+  border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);
+  color:var(--text);font-size:.88rem;outline:none;font-family:inherit;
+  transition:border .2s;
+}
+.modal-field input:focus,.modal-field textarea:focus,.modal-field select:focus{border-color:var(--teal)}
+.modal-field textarea{resize:vertical;min-height:80px}
+.modal-field select option{background:var(--surface);color:var(--text)}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.btn-modal-cancel{
+  flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.12);
+  background:none;color:var(--muted);font-size:.85rem;cursor:pointer;font-family:inherit;transition:all .15s;
+}
+.btn-modal-cancel:hover{border-color:var(--line2);color:var(--text)}
+.btn-modal-submit{
+  flex:2;padding:10px;border-radius:8px;border:none;
+  background:linear-gradient(135deg,var(--teal),#0099ff);
+  color:#0b0f18;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit;
+  transition:opacity .2s;
+}
+.btn-modal-submit:hover{opacity:.88}
+
+.badge-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--teal);
+  animation:blink 2.5s ease-in-out infinite;flex-shrink:0;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+</style>
 </head>
 <body>
-  <main class="shell">
-    <section class="topbar">
-      <article class="top-card glass">
-        <div class="brand-line">
-          <div class="brand">SolusCRT Corporativo</div>
-          <div class="company">{{ empresa_nome }}</div>
-        </div>
-        <div class="eyebrow">{{ payload.hero.eyebrow }}</div>
-        <p class="muted" style="margin:12px 0 0">{{ payload.product.subtitle }}</p>
-      </article>
 
-      <article class="top-card glass">
-        <div class="metrics">
-          {% for card in payload.executive_cards %}
-          <div class="metric">
-            <span>{{ card.label }}</span>
-            <strong>{{ card.value }}</strong>
-            {% if card.delta is not None %}
-              {% if card.delta_inverted %}
-                {% if card.delta > 0 %}
-                  <div class="metric-delta down">▲ +{{ card.delta }}</div>
-                {% elif card.delta < 0 %}
-                  <div class="metric-delta up">▼ {{ card.delta }}</div>
-                {% else %}
-                  <div class="metric-delta neutral">— estável</div>
-                {% endif %}
-              {% else %}
-                {% if card.delta > 0 %}
-                  <div class="metric-delta up">▲ +{{ card.delta }}</div>
-                {% elif card.delta < 0 %}
-                  <div class="metric-delta down">▼ {{ card.delta }}</div>
-                {% else %}
-                  <div class="metric-delta neutral">— estável</div>
-                {% endif %}
-              {% endif %}
-            {% endif %}
-          </div>
-          {% endfor %}
-        </div>
-      </article>
-
-      <article class="top-card glass">
-        <div class="actions">
-          <a class="btn secondary" href="/colaborador-mobile/c/{{ payload.access_code }}/">Abrir produto mobile</a>
-          <a class="btn secondary" href="/competencia/">Competência Técnica</a>
-          <a class="btn secondary" href="/gestao/">Centro de Gestão</a>
-          <a class="btn secondary" href="/escalas/">Escalas</a>
-          <a class="btn secondary" href="/painel-lider/">Painel do Líder</a>
-          <button class="btn accent" onclick="abrirAgir()">+ Agir agora</button>
-          <a class="btn primary" href="/sala-decisao-ia/">Sala de Decisao Corporativa</a>
-          <a class="btn warn" href="/logout/">Sair</a>
-        </div>
-      </article>
-    </section>
-
-    <section class="layout">
-      <aside class="rail">
-        <article class="card glass">
-          <h2 class="section-title">Arquitetura do produto</h2>
-          <p class="muted" style="margin-top:0">Este ambiente institucional coordena as tres superficies do ecossistema corporativo sem misturar o painel executivo com a experiencia do funcionario.</p>
-          <div class="surface-grid">
-            {% for surface in payload.surfaces %}
-            <article class="surface">
-              <strong>{{ surface.title }}</strong>
-              <small>{{ surface.summary }}</small>
-            </article>
-            {% endfor %}
-          </div>
-        </article>
-
-        <article class="card glass">
-          <h2 class="section-title">Perguntas executivas</h2>
-          <div class="list">
-            {% for question in payload.questions %}
-            <article class="row-card">
-              <strong>{{ question }}</strong>
-            </article>
-            {% endfor %}
-          </div>
-        </article>
-
-        <article class="card glass">
-          <h2 class="section-title">Confianca e governanca</h2>
-          <div class="chips">
-            <span class="chip">grupo minimo {{ payload.privacy.group_minimum }}</span>
-            <span class="chip">{% if payload.privacy.ready %}leitura institucional liberada{% else %}aguardando massa critica{% endif %}</span>
-          </div>
-          <div class="list" style="margin-top:12px">
-            {% for principle in payload.privacy.principles %}
-            <article class="row-card">
-              <strong>{{ principle }}</strong>
-            </article>
-            {% endfor %}
-          </div>
-        </article>
-      </aside>
-
-      <section class="main">
-        <article class="card glass hero">
-          <div class="hero-copy">
-            <span class="eyebrow">{{ payload.product.company }}</span>
-            <h1>{{ payload.hero.title }}</h1>
-            <p class="muted" style="margin:0">{{ payload.hero.summary }}</p>
-            <div class="hero-note">{{ payload.hero.positioning }}</div>
-            <div class="module-nav">
-              {% for item in payload.module_nav %}
-              <span class="module-pill">{{ item }}</span>
-              {% endfor %}
-            </div>
-          </div>
-
-          <div class="hero-side">
-            {% for item in payload.hero.value_points %}
-            <article class="signal">
-              <span>Resultado esperado</span>
-              <strong>{{ item }}</strong>
-            </article>
-            {% endfor %}
-          </div>
-        </article>
-
-        <section class="grid">
-          <div class="stack">
-            <article class="card glass">
-              <h2 class="section-title">Modulos do ambiente institucional</h2>
-              <p class="muted" style="margin-top:0">O ambiente empresa agora e organizado por capacidades reais de saude ocupacional, escala, cultura, mentoria e continuidade, em vez de derivar do epidemiologico.</p>
-              <div class="module-grid">
-                {% for module in payload.modules %}
-                <article class="module">
-                  <div class="module-head">
-                    <h3>{{ module.title }}</h3>
-                    <span class="band {{ module.band }}">{{ module.band }}</span>
-                  </div>
-                  <p>{{ module.summary }}</p>
-                  <div class="chips">
-                    <span class="chip">{{ module.audience }}</span>
-                    {% for metric in module.metrics %}
-                    <span class="chip">{{ metric }}</span>
-                    {% endfor %}
-                  </div>
-                  <ul>
-                    {% for action in module.actions %}
-                    <li>{{ action }}</li>
-                    {% endfor %}
-                  </ul>
-                </article>
-                {% endfor %}
-              </div>
-            </article>
-
-            <article class="card glass">
-              <h2 class="section-title">Programas acionaveis da semana</h2>
-              <p class="muted" style="margin-top:0">O valor premium deste ambiente esta em transformar leitura institucional em programa operacional, owner claro e execucao.</p>
-              <div class="list">
-                {% for program in payload.programs %}
-                <article class="program">
-                  <strong>{{ program.title }}</strong>
-                  <em>Owner sugerido: {{ program.owner }}</em>
-                  <ul>
-                    {% for item in program.items %}
-                    <li>{{ item }}</li>
-                    {% endfor %}
-                  </ul>
-                </article>
-                {% endfor %}
-              </div>
-            </article>
-          </div>
-
-          <div class="stack">
-            <article class="card glass">
-              <h2 class="section-title">Leitura principal</h2>
-              <p class="muted" style="margin-top:0">{{ payload.summary.headline }}</p>
-              <div class="list">
-                {% for item in payload.recommendations %}
-                <article class="row-card">
-                  <strong>{{ item.title }}</strong>
-                  <div class="chips">
-                    <span class="chip">urgencia {{ item.urgency }}</span>
-                    <span class="chip">{{ item.action }}</span>
-                  </div>
-                  <small>{{ item.summary }}</small>
-                </article>
-                {% endfor %}
-              </div>
-            </article>
-
-            <article class="card glass">
-              <h2 class="section-title">Produto mobile do colaborador</h2>
-              <p class="muted" style="margin-top:0">{{ payload.mobile_product.summary }}</p>
-              <article class="row-card">
-                <strong>{{ payload.mobile_product.note }}</strong>
-                <div class="chips">
-                  <span class="chip">canal separado da SaaS</span>
-                  <span class="chip">uso diario no celular</span>
-                  <span class="chip">acesso pelo codigo corporativo</span>
-                </div>
-              </article>
-              <div class="list" style="margin-top:12px">
-                {% for capability in payload.mobile_product.capabilities %}
-                <article class="row-card">
-                  <strong>{{ capability }}</strong>
-                </article>
-                {% endfor %}
-              </div>
-            </article>
-
-            <article class="card glass">
-              <h2 class="section-title">Unidades em observacao</h2>
-              <p class="muted" style="margin-top:0">Quando a massa critica permite, a leitura local mostra onde a pressao comeca a se concentrar.</p>
-              <div class="list">
-                {% if payload.top_units %}
-                  {% for unit in payload.top_units %}
-                  <article class="row-card unit">
-                    <div class="unit-top">
-                      <strong>{{ unit.name }}</strong>
-                      <span class="band {{ unit.risk_band }}">{{ unit.risk_band }}</span>
-                    </div>
-                    <div class="chips">
-                      <span class="chip">{{ unit.risk_score }}/100</span>
-                      <span class="chip">{{ unit.respondents }} respondentes</span>
-                    </div>
-                    <div class="unit-bar"><div class="unit-fill" style="width:{{ unit.risk_score }}%"></div></div>
-                  </article>
-                  {% endfor %}
-                {% else %}
-                  <article class="row-card">
-                    <strong>Aguardando leitura local valida</strong>
-                    <small>Assim que cada grupo atingir {{ payload.privacy.group_minimum }} respostas, as unidades passam a aparecer aqui.</small>
-                  </article>
-                {% endif %}
-              </div>
-            </article>
-          </div>
-        </section>
-      </section>
-
-      <aside class="aside">
-        <article class="card glass">
-          <h2 class="section-title">Mesa executiva</h2>
-          <div class="list">
-            <article class="row-card">
-              <strong>Top signal</strong>
-              <small>{{ payload.summary.top_signal }}</small>
-            </article>
-            <article class="row-card">
-              <strong>Base anonima</strong>
-              <small>{{ payload.summary.respondents }} respondentes diarios e {{ payload.summary.weekly_respondents }} semanais.</small>
-            </article>
-            <article class="row-card">
-              <strong>Escopo do ambiente</strong>
-              <small>Saude ocupacional, escalas, cultura, lideranca, apoio e continuidade operacional.</small>
-            </article>
-          </div>
-        </article>
-
-        <article class="card glass">
-          <h2 class="section-title">Ecossistema institucional</h2>
-          <p class="muted" style="margin-top:0">{{ payload.ecosystem.promise }}</p>
-          <div class="chips">
-            {% for segment in payload.ecosystem.segments %}
-            <span class="chip">{{ segment }}</span>
-            {% endfor %}
-          </div>
-        </article>
-
-        <article class="card glass">
-          <h2 class="section-title">Rotas de decisao</h2>
-          <div class="list">
-            <article class="row-card">
-              <strong>Sala de Decisao Corporativa</strong>
-              <small>Abre a camada de IA para priorizar unidades, programas, liderancas e risco institucional.</small>
-            </article>
-            <article class="row-card">
-              <strong>Produto mobile do colaborador</strong>
-              <small>Canal dedicado para celular com check-ins, apoio, microlearning e mentoria.</small>
-            </article>
-            <article class="row-card">
-              <strong>Logout claro</strong>
-              <small>Saida visivel do ambiente principal para nao esconder o fluxo do cliente.</small>
-            </article>
-          </div>
-        </article>
-      </aside>
-    </section>
-  </main>
-
-  <!-- Modal Agir rápido -->
-  <div id="modal-agir" onclick="if(event.target===this)fecharAgir()">
-    <div class="modal-box">
-      <h3>Criar ação rápida</h3>
-      <div class="modal-field">
-        <label>Título da ação *</label>
-        <input id="agir-titulo" type="text" placeholder="Ex: Reduzir horas extras na unidade norte">
-      </div>
-      <div class="modal-field">
-        <label>Responsável (owner) *</label>
-        <input id="agir-owner" type="text" placeholder="Ex: RH / Supervisão / SESMT">
-      </div>
-      <div class="modal-field">
-        <label>Descrição</label>
-        <textarea id="agir-descricao" placeholder="Contexto, objetivo ou sinal que motivou a ação…"></textarea>
-      </div>
-      <div class="modal-field">
-        <label>Prazo</label>
-        <input id="agir-prazo" type="date">
-      </div>
-      <div id="msg-agir" style="color:var(--accent)"></div>
-      <div class="modal-actions">
-        <button class="btn secondary" onclick="fecharAgir()">Cancelar</button>
-        <button class="btn accent" onclick="submeterAgir()">Criar ação</button>
-      </div>
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="tb-brand">
+    <div class="tb-logo">S</div>
+    <div>
+      <div class="tb-company" id="tb-company-name">Carregando...</div>
+      <div class="tb-sub">Saúde Ocupacional</div>
     </div>
   </div>
+  <nav class="tb-nav">
+    <a href="/dashboard-empresa/" class="active">Visão Geral</a>
+    <a href="/gestao/">Gestão de Afastamentos</a>
+    <a href="/competencia/">Competência de Saúde</a>
+    <a href="/sala-decisao-ia/">Sala de Decisão IA</a>
+    <a href="/painel-lider/">Painel do Líder</a>
+    <a href="/usuarios/">Usuários</a>
+    <a href="/seguranca/">Segurança</a>
+  </nav>
+  <div class="tb-right">
+    <div class="health-pill">
+      <div class="badge-dot"></div>
+      Índice de Saúde <span class="score" id="tb-score">—</span>
+    </div>
+    <button class="btn-action" onclick="openModal()">+ Nova Ação de Saúde</button>
+  </div>
+</header>
 
-  <script>
-    function abrirAgir(){
-      document.getElementById('modal-agir').classList.add('open');
-      document.getElementById('agir-titulo').focus();
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Painel Principal</div>
+      <a class="sidebar-link active" href="/dashboard-empresa/">
+        <span class="sidebar-icon">📊</span> Resumo Executivo
+      </a>
+      <a class="sidebar-link" href="/gestao/">
+        <span class="sidebar-icon">📋</span> Afastamentos
+      </a>
+      <a class="sidebar-link" href="/escalas/">
+        <span class="sidebar-icon">📅</span> Escalas e Turnos
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Inteligência</div>
+      <a class="sidebar-link" href="/sala-decisao-ia/">
+        <span class="sidebar-icon">🧠</span> IA Decisória
+      </a>
+      <a class="sidebar-link" href="/competencia/">
+        <span class="sidebar-icon">🎯</span> Competência
+      </a>
+      <a class="sidebar-link" href="/painel-lider/">
+        <span class="sidebar-icon">👤</span> Visão do Líder
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Administração</div>
+      <a class="sidebar-link" href="/usuarios/">
+        <span class="sidebar-icon">👥</span> Usuários
+      </a>
+      <a class="sidebar-link" href="/seguranca/">
+        <span class="sidebar-icon">🔒</span> Segurança
+      </a>
+      <a class="sidebar-link" href="/perfil/">
+        <span class="sidebar-icon">⚙️</span> Configurações
+      </a>
+    </div>
+    <div class="sidebar-section" style="margin-top:auto">
+      <a class="sidebar-link" href="/logout/" style="color:var(--red,#ef4444)">
+        <span class="sidebar-icon">↩</span> Sair
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- KPI STRIP -->
+    <div class="kpi-strip" id="kpi-strip">
+      <div class="kpi-card" style="--kpi-accent:var(--teal)">
+        <div class="kpi-label">Índice de Saúde</div>
+        <div class="kpi-val"><span id="k-score">—</span></div>
+        <div class="kpi-delta flat" id="k-score-d">—</div>
+        <div class="kpi-detail">pontuação geral da força de trabalho</div>
+      </div>
+      <div class="kpi-card" style="--kpi-accent:var(--amber)">
+        <div class="kpi-label">Absenteísmo</div>
+        <div class="kpi-val"><span id="k-abs">—</span><span>%</span></div>
+        <div class="kpi-delta flat" id="k-abs-d">—</div>
+        <div class="kpi-detail" id="k-abs-detail">afastamentos ativos</div>
+      </div>
+      <div class="kpi-card" style="--kpi-accent:var(--blue)">
+        <div class="kpi-label">Risco Epidemiológico</div>
+        <div class="kpi-val"><span id="k-risk">—</span></div>
+        <div class="kpi-delta flat" id="k-risk-d">—</div>
+        <div class="kpi-detail" id="k-risk-detail">exposição da força de trabalho</div>
+      </div>
+      <div class="kpi-card" style="--kpi-accent:var(--green)">
+        <div class="kpi-label">Programas Ativos</div>
+        <div class="kpi-val"><span id="k-progs">—</span></div>
+        <div class="kpi-delta flat" id="k-progs-d">—</div>
+        <div class="kpi-detail" id="k-progs-detail">iniciativas em andamento</div>
+      </div>
+      <div class="kpi-card" style="--kpi-accent:var(--red)">
+        <div class="kpi-label">Unidades em Alerta</div>
+        <div class="kpi-val"><span id="k-units">—</span></div>
+        <div class="kpi-delta flat" id="k-units-d">—</div>
+        <div class="kpi-detail">requerem atenção imediata</div>
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="body">
+
+      <!-- LEFT PANEL -->
+      <div class="left-panel">
+
+        <!-- Unit Health Matrix -->
+        <div class="panel-block">
+          <div class="panel-block-title">Matriz de Saúde por Unidade <span id="unit-timestamp">—</span></div>
+          <div id="unit-list"><div class="skel" style="height:12px;margin-bottom:8px"></div><div class="skel" style="height:12px;margin-bottom:8px"></div><div class="skel" style="height:12px"></div></div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="panel-block">
+          <div class="panel-block-title">Recomendações Ativas</div>
+          <div id="rec-list"><div class="skel" style="height:48px;margin-bottom:8px"></div><div class="skel" style="height:48px"></div></div>
+        </div>
+
+      </div>
+
+      <!-- CENTER PANEL -->
+      <div class="center-panel">
+
+        <!-- Health Gauge -->
+        <div class="gauge-block">
+          <div class="gauge-wrap">
+            <svg width="140" height="140" viewBox="0 0 140 140">
+              <circle cx="70" cy="70" r="54" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="10"/>
+              <circle id="gauge-ring" cx="70" cy="70" r="54" fill="none"
+                stroke="url(#gauge-grad)" stroke-width="10" stroke-linecap="round"
+                stroke-dasharray="339.3" stroke-dashoffset="339.3"
+                transform="rotate(-90 70 70)" style="transition:stroke-dashoffset .8s ease"/>
+              <defs>
+                <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#00d4aa"/>
+                  <stop offset="100%" stop-color="#0099ff"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="gauge-label">
+              <div class="gauge-score" id="gauge-score">—</div>
+              <div class="gauge-unit">/ 100</div>
+            </div>
+          </div>
+          <div class="gauge-info">
+            <h2>Índice de Saúde Ocupacional</h2>
+            <p id="gauge-summary">Calculando inteligência epidemiológica da sua força de trabalho...</p>
+            <div class="gauge-bands" id="gauge-bands">
+              <div class="gauge-band b-critico">Crítico &lt;40</div>
+              <div class="gauge-band b-alto">Alto 40–59</div>
+              <div class="gauge-band b-moderado">Moderado 60–79</div>
+              <div class="gauge-band b-baixo">Baixo ≥80</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Check-in chart -->
+        <div class="chart-block">
+          <div class="chart-block-title">Check-ins de Saúde · Últimos 14 dias</div>
+          <div class="bar-chart" id="checkin-chart">
+            <div style="display:flex;align-items:center;color:var(--muted);font-size:.78rem">Aguardando dados...</div>
+          </div>
+        </div>
+
+        <!-- Modules grid -->
+        <div class="panel-block" style="border:none;padding:0;background:transparent">
+          <div class="panel-block-title" style="padding:0 2px">Módulos de Saúde Ocupacional</div>
+          <div class="modules-grid" id="modules-grid">
+            <a class="module-card" href="/gestao/">
+              <div class="module-icon">📋</div>
+              <div><div class="module-name">Gestão de Afastamentos</div><div class="module-desc">CID, duração, retorno ao trabalho</div></div>
+            </a>
+            <a class="module-card" href="/competencia/">
+              <div class="module-icon">🎯</div>
+              <div><div class="module-name">Competência de Saúde</div><div class="module-desc">Capacitação, treinamentos, protocolos</div></div>
+            </a>
+            <a class="module-card" href="/escalas/">
+              <div class="module-icon">📅</div>
+              <div><div class="module-name">Escalas e Turnos</div><div class="module-desc">Alocação e saúde do turno</div></div>
+            </a>
+            <a class="module-card" href="/sala-decisao-ia/">
+              <div class="module-icon">🧠</div>
+              <div><div class="module-name">IA Decisória</div><div class="module-desc">Briefings, previsões e alertas</div></div>
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div class="right-panel">
+
+        <!-- Programs -->
+        <div class="panel-block">
+          <div class="panel-block-title">Programas de Saúde</div>
+          <div id="programs-list">
+            <div class="skel" style="height:10px;margin-bottom:6px"></div>
+            <div class="skel" style="height:10px;margin-bottom:12px"></div>
+            <div class="skel" style="height:10px;margin-bottom:6px"></div>
+            <div class="skel" style="height:10px"></div>
+          </div>
+        </div>
+
+        <!-- Competence -->
+        <div class="panel-block">
+          <div class="panel-block-title">Competência Ocupacional</div>
+          <div class="competence-grid" id="comp-grid">
+            <div class="comp-stat"><div class="cv skel" style="height:24px;width:40px;margin:0 auto"></div><div class="cl">—</div></div>
+            <div class="comp-stat"><div class="cv skel" style="height:24px;width:40px;margin:0 auto"></div><div class="cl">—</div></div>
+            <div class="comp-stat"><div class="cv skel" style="height:24px;width:40px;margin:0 auto"></div><div class="cl">—</div></div>
+            <div class="comp-stat"><div class="cv skel" style="height:24px;width:40px;margin:0 auto"></div><div class="cl">—</div></div>
+          </div>
+        </div>
+
+        <!-- AI Summary -->
+        <div class="summary-bar" id="ai-summary">
+          <span class="si">🤖</span>
+          <span>Gerando análise inteligente...</span>
+        </div>
+
+        <!-- Privacy -->
+        <div class="privacy-banner" id="privacy-banner">
+          <strong>🔒 Privacidade por design</strong>
+          Dados individuais protegidos. Análises agrupadas com mínimo de 8 colaboradores.
+        </div>
+
+      </div>
+
+    </div><!-- /body -->
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>Nova Ação de Saúde</h3>
+    <p>Registre uma iniciativa, campanha ou intervenção para a sua força de trabalho.</p>
+    <div class="modal-field">
+      <label>Tipo de ação</label>
+      <select id="m-tipo">
+        <option value="campanha">Campanha de Prevenção</option>
+        <option value="treinamento">Treinamento / Capacitação</option>
+        <option value="vacinacao">Vacinação</option>
+        <option value="ergonomia">Ergonomia e Ambiente</option>
+        <option value="mental">Saúde Mental</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Título</label>
+      <input id="m-titulo" type="text" placeholder="Ex: Campanha de Vacinação Influenza 2025">
+    </div>
+    <div class="modal-field">
+      <label>Descrição</label>
+      <textarea id="m-desc" placeholder="Descreva o objetivo e público-alvo desta ação..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-modal-submit" onclick="submitAcao()">Registrar Ação</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _data = null;
+let _refreshTimer = null;
+
+function openModal(){document.getElementById("modal").classList.add("open")}
+function closeModal(){document.getElementById("modal").classList.remove("open")}
+document.getElementById("modal").addEventListener("click",e=>{if(e.target===document.getElementById("modal"))closeModal()});
+
+async function submitAcao(){
+  const tipo=document.getElementById("m-tipo").value;
+  const titulo=document.getElementById("m-titulo").value.trim();
+  const desc=document.getElementById("m-desc").value.trim();
+  if(!titulo){alert("Informe o título da ação");return;}
+  const btn=document.querySelector(".btn-modal-submit");
+  btn.textContent="Registrando...";btn.disabled=true;
+  try{
+    const r=await fetch("/api/gestao/acoes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tipo,titulo,descricao:desc})});
+    if(r.ok){closeModal();document.getElementById("m-titulo").value="";document.getElementById("m-desc").value="";alert("Ação registrada com sucesso!");}
+    else{const d=await r.json();alert(d.erro||"Erro ao registrar");}
+  }catch(e){alert("Erro de conexão");}
+  btn.textContent="Registrar Ação";btn.disabled=false;
+}
+
+function setDelta(elId, value, inverse=false){
+  const el=document.getElementById(elId);
+  if(!el)return;
+  if(typeof value==="number"){
+    const up=inverse?(value<0):(value>0);
+    const symbol=value>0?"↑":"↓";
+    const cls=up?"up":"down";
+    el.className=`kpi-delta ${cls}`;
+    el.textContent=`${symbol} ${Math.abs(value).toFixed(1)}%`;
+  } else {
+    el.className="kpi-delta flat";
+    el.textContent=value||"—";
+  }
+}
+
+function renderGauge(score){
+  const r=54;
+  const circ=2*Math.PI*r;
+  const pct=Math.min(Math.max(score||0,0),100)/100;
+  const offset=circ-(pct*circ);
+  document.getElementById("gauge-ring").style.strokeDashoffset=offset;
+  document.getElementById("gauge-score").textContent=score||"—";
+  document.getElementById("tb-score").textContent=score||"—";
+  document.getElementById("k-score").textContent=score||"—";
+}
+
+function renderUnits(units){
+  const el=document.getElementById("unit-list");
+  if(!units||!units.length){el.innerHTML='<div style="font-size:.75rem;color:var(--muted)">Sem dados de unidades.</div>';return;}
+  el.innerHTML=units.map(u=>`
+    <div class="unit-row">
+      <div class="unit-name" title="${u.nome||u.name||''}">${u.nome||u.name||"Unidade"}</div>
+      <div class="unit-count">${u.colaboradores||u.total||0}p</div>
+      <div class="band-badge band-${(u.risco_band||u.band||"BAIXO").toUpperCase()}">${u.risco_band||u.band||"BAIXO"}</div>
+    </div>
+  `).join("");
+  const ts=document.getElementById("unit-timestamp");
+  if(ts){const now=new Date();ts.textContent=`${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;}
+}
+
+function renderRecs(recs){
+  const el=document.getElementById("rec-list");
+  if(!recs||!recs.length){el.innerHTML='<div style="font-size:.75rem;color:var(--muted)">Nenhuma recomendação ativa.</div>';return;}
+  el.innerHTML=recs.slice(0,4).map(r=>`
+    <div class="rec-item">
+      <div class="rec-urgency ${(r.urgency||r.urgencia||"media").toLowerCase()}">${(r.urgency||r.urgencia||"MEDIA").toUpperCase()}</div>
+      <div class="rec-title">${r.title||r.titulo||""}</div>
+      <div class="rec-desc">${r.description||r.descricao||""}</div>
+    </div>
+  `).join("");
+}
+
+function renderPrograms(progs){
+  const el=document.getElementById("programs-list");
+  if(!progs||!progs.length){el.innerHTML='<div style="font-size:.75rem;color:var(--muted)">Nenhum programa ativo.</div>';return;}
+  el.innerHTML=progs.map(p=>{
+    const pct=Math.min(Math.max(p.completion||p.adesao_pct||0,0),100);
+    return `
+      <div class="prog-item">
+        <div class="prog-header">
+          <div class="prog-name">${p.name||p.nome||""}</div>
+          <div class="prog-pct">${pct}%</div>
+        </div>
+        <div class="prog-track"><div class="prog-fill" style="width:${pct}%"></div></div>
+        <div class="prog-sub">${p.participants||p.participantes||"—"} participantes · ${p.status||"Ativo"}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderCompetence(comp){
+  const el=document.getElementById("comp-grid");
+  if(!comp){el.innerHTML='<div style="font-size:.72rem;color:var(--muted);grid-column:span 2">Sem dados de competência.</div>';return;}
+  const stats=[
+    {v:comp.treinamentos_concluidos||comp.trainings_done||"—",l:"Treinamentos concluídos"},
+    {v:comp.certificados_ativos||comp.active_certs||"—",l:"Certificados ativos"},
+    {v:comp.horas_capacitacao||comp.hours||"—",l:"Horas capacitação"},
+    {v:`${comp.cobertura_pct||comp.coverage||0}%`,l:"Cobertura de equipes"},
+  ];
+  el.innerHTML=stats.map(s=>`<div class="comp-stat"><div class="cv">${s.v}</div><div class="cl">${s.l}</div></div>`).join("");
+}
+
+function renderCheckinChart(series){
+  const el=document.getElementById("checkin-chart");
+  if(!series||!series.length){el.innerHTML='<div style="font-size:.75rem;color:var(--muted)">Sem dados de check-in.</div>';return;}
+  const last14=series.slice(-14);
+  const maxVal=Math.max(...last14.map(s=>s.total||s.value||s.count||0),1);
+  const days=["D","S","T","Q","Q","S","S"];
+  el.innerHTML=last14.map((s,i)=>{
+    const v=s.total||s.value||s.count||0;
+    const h=Math.max(Math.round((v/maxVal)*68),4);
+    const isToday=(i===last14.length-1);
+    const date=new Date(s.date||s.data||"");
+    const dayLabel=isNaN(date.getTime())?days[i%7]:days[date.getDay()];
+    return `<div class="bar-wrap"><div class="bar${isToday?" today":""}" style="height:${h}px" title="${v} check-ins"></div><div class="bar-day">${dayLabel}</div></div>`;
+  }).join("");
+}
+
+function renderModules(modules){
+  const el=document.getElementById("modules-grid");
+  if(!modules||!modules.length)return;
+  el.innerHTML=modules.map(m=>{
+    let badgeCls="mb-ok",badgeTxt="OK";
+    if(m.status==="atencao"||m.status==="warning"){badgeCls="mb-atencao";badgeTxt="Atenção";}
+    else if(m.status==="alerta"||m.status==="alert"){badgeCls="mb-alerta";badgeTxt="Alerta";}
+    return `
+      <a class="module-card" href="${m.url||"#"}">
+        <div class="module-icon">${m.icon||"📦"}</div>
+        <div><div class="module-name">${m.name||m.nome||""}</div><div class="module-desc">${m.description||m.descricao||""}</div></div>
+        <div class="module-badge ${badgeCls}">${badgeTxt}</div>
+      </a>
+    `;
+  }).join("");
+}
+
+async function loadDashboard(){
+  try{
+    const r=await fetch("/api/empresa/resumo");
+    if(!r.ok)return;
+    const d=await r.json();
+    _data=d;
+
+    // Company name
+    if(d.empresa_nome||d.company_name){
+      document.getElementById("tb-company-name").textContent=d.empresa_nome||d.company_name;
     }
-    function fecharAgir(){
-      document.getElementById('modal-agir').classList.remove('open');
-      document.getElementById('msg-agir').textContent='';
+
+    // Executive cards
+    const ec=d.executive_cards||{};
+    const score=ec.health_score||d.health_score||0;
+    renderGauge(score);
+
+    const absPct=ec.absenteeism_pct||ec.absenteismo_pct||0;
+    document.getElementById("k-abs").textContent=absPct.toFixed(1);
+    setDelta("k-abs-d",ec.absenteeism_delta||ec.delta_absenteismo,true);
+    if(ec.afastamentos_ativos!==undefined)document.getElementById("k-abs-detail").textContent=`${ec.afastamentos_ativos} afastamentos ativos`;
+
+    const riskLabel=ec.risk_level||ec.nivel_risco||"—";
+    document.getElementById("k-risk").textContent=riskLabel;
+    setDelta("k-risk-d",ec.risk_delta||ec.delta_risco,true);
+    if(ec.risk_detail||ec.risco_detalhe)document.getElementById("k-risk-detail").textContent=ec.risk_detail||ec.risco_detalhe;
+
+    const progsCount=ec.active_programs||ec.programas_ativos||0;
+    document.getElementById("k-progs").textContent=progsCount;
+    setDelta("k-progs-d",ec.programs_delta||ec.delta_programas);
+    if(ec.programs_detail)document.getElementById("k-progs-detail").textContent=ec.programs_detail;
+
+    const alertUnits=ec.alert_units||ec.unidades_alerta||0;
+    document.getElementById("k-units").textContent=alertUnits;
+    setDelta("k-units-d",ec.units_delta,true);
+
+    setDelta("k-score-d",ec.score_delta||ec.delta_score);
+
+    // Units
+    renderUnits(d.top_units||d.unidades_top||[]);
+
+    // Recommendations
+    renderRecs(d.recommendations||d.recomendacoes||[]);
+
+    // Programs
+    renderPrograms(d.programs||d.programas||[]);
+
+    // Competence
+    renderCompetence(d.competence||d.competencia||null);
+
+    // Summary
+    const sumEl=document.getElementById("ai-summary");
+    const sumText=d.summary||d.resumo_ia||null;
+    if(sumText)sumEl.innerHTML=`<span class="si">🤖</span><span>${sumText}</span>`;
+
+    // Gauge summary
+    if(d.summary||d.resumo){
+      document.getElementById("gauge-summary").textContent=d.summary||d.resumo;
     }
-    async function submeterAgir(){
-      const titulo=(document.getElementById('agir-titulo').value||'').trim();
-      const owner=(document.getElementById('agir-owner').value||'').trim();
-      const descricao=(document.getElementById('agir-descricao').value||'').trim();
-      const prazo=document.getElementById('agir-prazo').value||null;
-      const msg=document.getElementById('msg-agir');
-      if(!titulo){msg.style.color='var(--danger)';msg.textContent='Informe o título da ação.';return;}
-      if(!owner){msg.style.color='var(--danger)';msg.textContent='Informe o responsável.';return;}
-      msg.style.color='var(--muted)';msg.textContent='Salvando…';
-      try{
-        const r=await fetch('/api/gestao/acoes',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({titulo,owner,descricao,prazo,origem:'risco'})
-        });
-        const d=await r.json();
-        if(r.ok){
-          msg.style.color='var(--accent)';
-          msg.textContent='Ação criada. Acesse o Centro de Gestão para acompanhar.';
-          document.getElementById('agir-titulo').value='';
-          document.getElementById('agir-owner').value='';
-          document.getElementById('agir-descricao').value='';
-          document.getElementById('agir-prazo').value='';
-          setTimeout(fecharAgir,2000);
-        } else {
-          msg.style.color='var(--danger)';
-          msg.textContent=d.erro||'Erro ao criar ação.';
-        }
-      }catch(e){
-        msg.style.color='var(--danger)';msg.textContent='Erro de conexão.';
-      }
+
+    // Check-in series
+    const series=d.checkin_series||d.check_in_series||(d.timeline&&d.timeline.series)||[];
+    renderCheckinChart(series);
+
+    // Modules
+    if(d.modules||d.modulos)renderModules(d.modules||d.modulos);
+
+    // Privacy
+    const privEl=document.getElementById("privacy-banner");
+    const priv=d.privacy||d.privacidade;
+    if(priv&&(priv.message||priv.mensagem)){
+      privEl.innerHTML=`<strong>🔒 Privacidade por design</strong>${priv.message||priv.mensagem}`;
     }
-    document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharAgir();});
-  </script>
+
+  }catch(e){console.error("Dashboard load error",e);}
+}
+
+loadDashboard();
+_refreshTimer=setInterval(loadDashboard,60000);
+</script>
 </body>
 </html>

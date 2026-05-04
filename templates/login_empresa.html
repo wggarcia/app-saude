@@ -4,222 +4,185 @@
 <meta charset="UTF-8">
 <title>SolusCRT · Acesso Institucional</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#030e09;
-  --bg2:rgba(4,18,10,.9);
-  --green:#00e87a;
-  --green2:#00c466;
-  --green-dim:rgba(0,232,122,.1);
-  --green-glow:rgba(0,232,122,.18);
-  --text:#e4f5eb;
-  --muted:#6fa882;
-  --stroke:rgba(0,232,122,.13);
-  --card:rgba(5,16,10,.88);
+  --bg:#06040f;
+  --v1:#7c3aed;--v2:#6d28d9;--v3:#4f46e5;
+  --c1:#06b6d4;--c2:#0891b2;
+  --text:#f8f4ff;--muted:#9d8ec4;
+  --stroke:rgba(124,58,237,.18);
+  --card:rgba(10,6,22,.9);
+  --glow:rgba(124,58,237,.22);
 }
 html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
 
-/* animated bg orbs */
-body::before,body::after{
-  content:"";position:fixed;border-radius:50%;pointer-events:none;filter:blur(80px);opacity:.55;
-  animation:drift 14s ease-in-out infinite alternate;
-}
-body::before{
-  width:600px;height:600px;top:-120px;left:-120px;
-  background:radial-gradient(circle,rgba(0,232,122,.22),transparent 70%);
-}
-body::after{
-  width:500px;height:500px;bottom:-80px;right:-80px;
-  background:radial-gradient(circle,rgba(0,180,95,.18),transparent 70%);
-  animation-delay:-7s;animation-duration:18s;
-}
-@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(40px,30px) scale(1.08)}}
+.orb{position:fixed;border-radius:50%;pointer-events:none;filter:blur(100px);animation:float 20s ease-in-out infinite alternate}
+.orb1{width:700px;height:700px;top:-200px;left:-150px;background:radial-gradient(circle,rgba(124,58,237,.28),transparent 70%);animation-duration:22s}
+.orb2{width:600px;height:600px;bottom:-150px;right:-100px;background:radial-gradient(circle,rgba(6,182,212,.2),transparent 70%);animation-delay:-11s;animation-duration:18s}
+.orb3{width:400px;height:400px;top:30%;left:42%;background:radial-gradient(circle,rgba(79,70,229,.15),transparent 70%);animation-delay:-6s;animation-duration:25s}
+@keyframes float{from{transform:translate(0,0) scale(1)}to{transform:translate(50px,40px) scale(1.1)}}
 
-.grid-lines{
-  position:fixed;inset:0;pointer-events:none;
-  background-image:linear-gradient(var(--stroke) 1px,transparent 1px),linear-gradient(90deg,var(--stroke) 1px,transparent 1px);
-  background-size:52px 52px;
-  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,rgba(0,0,0,.6),transparent);
-}
+.grid{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(124,58,237,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,.07) 1px,transparent 1px);background-size:56px 56px;mask-image:radial-gradient(ellipse 90% 90% at 50% 50%,rgba(0,0,0,.7),transparent)}
 
-.shell{
-  position:relative;z-index:2;
-  display:grid;grid-template-columns:1.1fr .9fr;
-  height:100vh;
-  gap:0;
-}
+.shell{position:relative;z-index:2;display:grid;grid-template-columns:1.15fr .85fr;height:100vh}
 
-/* LEFT STORY */
-.story{
-  display:flex;flex-direction:column;justify-content:center;
-  padding:60px 56px;
-  border-right:1px solid var(--stroke);
-}
-.logo{display:flex;align-items:center;gap:12px;margin-bottom:52px}
-.logo-mark{
-  width:44px;height:44px;border-radius:13px;
-  background:linear-gradient(135deg,var(--green),#00b45a);
+/* LEFT */
+.story{display:flex;flex-direction:column;justify-content:center;padding:64px 60px;border-right:1px solid var(--stroke)}
+
+.logo{display:flex;align-items:center;gap:14px;margin-bottom:56px}
+.logo-ring{
+  width:48px;height:48px;border-radius:14px;
+  background:linear-gradient(135deg,var(--v1),var(--c1));
   display:grid;place-items:center;
-  font-weight:900;font-size:1.05rem;color:#030e09;
-  box-shadow:0 0 24px var(--green-glow);
+  font-weight:900;font-size:1.1rem;color:#06040f;
+  box-shadow:0 0 32px var(--glow);
 }
-.logo-name{font-size:1.12rem;font-weight:700;letter-spacing:-.01em}
-.logo-tag{font-size:.76rem;color:var(--muted);margin-top:2px}
+.logo-text .name{font-size:1.1rem;font-weight:700;letter-spacing:-.01em}
+.logo-text .tag{font-size:.74rem;color:var(--muted);margin-top:2px}
 
-.headline{
-  font-size:clamp(2.4rem,3.8vw,3.6rem);
-  font-weight:900;
-  line-height:1.06;
-  letter-spacing:-.03em;
-  color:var(--text);
-  max-width:560px;
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;margin-bottom:20px;
+  padding:5px 13px;border-radius:999px;
+  background:rgba(124,58,237,.14);border:1px solid rgba(124,58,237,.28);
+  font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--v1);
 }
-.headline em{font-style:normal;color:var(--green)}
+.dot-pulse{width:6px;height:6px;border-radius:50%;background:var(--v1);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.85)}}
 
-.lead{
-  margin-top:20px;
-  font-size:1rem;color:var(--muted);
-  line-height:1.7;max-width:480px;
-  font-weight:400;
-}
+.headline{font-size:clamp(2.6rem,4vw,4rem);font-weight:900;line-height:1.04;letter-spacing:-.035em;max-width:520px}
+.headline .grad{background:linear-gradient(135deg,var(--v1) 0%,var(--c1) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
-.env-chips{
-  display:flex;flex-wrap:wrap;gap:10px;
-  margin-top:36px;
-}
-.chip{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:9px 16px;border-radius:999px;
-  border:1px solid var(--stroke);
-  background:var(--green-dim);
-  font-size:.82rem;font-weight:600;color:var(--text);
-}
-.chip-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green-glow)}
+.lead{margin-top:22px;font-size:1rem;color:var(--muted);line-height:1.75;max-width:460px;font-weight:400}
 
-.stats{
-  display:flex;gap:36px;
-  margin-top:52px;
-  padding-top:36px;
-  border-top:1px solid var(--stroke);
+.env-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:36px}
+.env-card{
+  padding:14px 16px;border-radius:14px;
+  border:1px solid rgba(124,58,237,.16);
+  background:rgba(124,58,237,.06);
+  transition:border-color .2s;
 }
-.stat strong{display:block;font-size:1.7rem;font-weight:800;color:var(--green);letter-spacing:-.02em}
-.stat span{font-size:.78rem;color:var(--muted);margin-top:3px;display:block}
+.env-card:hover{border-color:rgba(124,58,237,.35)}
+.env-card .env-icon{font-size:1.3rem;margin-bottom:6px}
+.env-card .env-name{font-size:.8rem;font-weight:700;color:var(--text)}
+.env-card .env-desc{font-size:.72rem;color:var(--muted);margin-top:3px;line-height:1.4}
 
-/* RIGHT CARD */
-.card-wrap{
-  display:flex;align-items:center;justify-content:center;
-  padding:48px 52px;
-}
-.card{
-  width:100%;max-width:420px;
-}
-.card-title{font-size:1.6rem;font-weight:800;letter-spacing:-.02em}
-.card-sub{margin-top:8px;font-size:.9rem;color:var(--muted);line-height:1.6}
+.proof{display:flex;gap:32px;margin-top:48px;padding-top:32px;border-top:1px solid var(--stroke)}
+.proof-item strong{display:block;font-size:1.55rem;font-weight:900;background:linear-gradient(135deg,var(--v1),var(--c1));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.proof-item span{font-size:.74rem;color:var(--muted);margin-top:2px;display:block}
+
+/* RIGHT */
+.form-wrap{display:flex;align-items:center;justify-content:center;padding:52px 56px}
+.card{width:100%;max-width:400px}
+
+.card-title{font-size:1.7rem;font-weight:800;letter-spacing:-.025em}
+.card-sub{margin-top:8px;font-size:.88rem;color:var(--muted);line-height:1.65}
 
 .fields{margin-top:28px;display:flex;flex-direction:column;gap:16px}
-.field{display:flex;flex-direction:column;gap:6px}
-.field label{font-size:.78rem;font-weight:600;color:rgba(228,245,235,.6);letter-spacing:.03em;text-transform:uppercase}
+.field label{display:block;font-size:.73rem;font-weight:600;color:rgba(248,244,255,.5);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px}
 .field input{
-  padding:13px 16px;
-  border-radius:11px;
-  border:1px solid rgba(0,232,122,.15);
-  background:rgba(0,232,122,.04);
-  color:var(--text);font-size:.97rem;
-  outline:none;transition:border .2s,box-shadow .2s;
-  font-family:inherit;
+  width:100%;padding:13px 16px;border-radius:11px;
+  border:1px solid rgba(124,58,237,.2);
+  background:rgba(124,58,237,.05);
+  color:var(--text);font-size:.96rem;outline:none;
+  transition:border .2s,box-shadow .2s;font-family:inherit;
 }
-.field input:focus{
-  border-color:var(--green);
-  box-shadow:0 0 0 3px rgba(0,232,122,.12);
-}
-.field input::placeholder{color:rgba(100,180,130,.35)}
+.field input:focus{border-color:var(--v1);box-shadow:0 0 0 3px rgba(124,58,237,.14)}
+.field input::placeholder{color:rgba(157,142,196,.3)}
 
-.btn-login{
-  margin-top:22px;width:100%;padding:14px;
-  border:none;border-radius:12px;
-  background:linear-gradient(135deg,var(--green) 0%,var(--green2) 100%);
-  color:#030e09;font-size:.98rem;font-weight:800;
-  cursor:pointer;letter-spacing:.01em;
+.btn-main{
+  width:100%;margin-top:22px;padding:14px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,var(--v1) 0%,var(--c1) 100%);
+  color:#fff;font-size:.97rem;font-weight:700;cursor:pointer;
+  letter-spacing:.01em;font-family:inherit;
+  box-shadow:0 4px 28px rgba(124,58,237,.3);
   transition:opacity .2s,box-shadow .2s;
-  font-family:inherit;
-  box-shadow:0 4px 24px rgba(0,232,122,.25);
 }
-.btn-login:hover{opacity:.92;box-shadow:0 6px 32px rgba(0,232,122,.35)}
-.btn-login:active{transform:scale(.99)}
+.btn-main:hover{opacity:.92;box-shadow:0 6px 36px rgba(124,58,237,.42)}
 
-.links{margin-top:18px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.links{margin-top:16px;text-align:center}
 .links a{font-size:.82rem;color:var(--muted);text-decoration:none;transition:color .2s}
-.links a:hover{color:var(--green)}
+.links a:hover{color:var(--v1)}
 
-.divider{
-  margin:20px 0;
-  display:flex;align-items:center;gap:12px;
-  color:rgba(100,180,130,.3);font-size:.78rem;
-}
-.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--stroke)}
+.sep{display:flex;align-items:center;gap:10px;margin:18px 0;color:rgba(157,142,196,.28);font-size:.76rem}
+.sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--stroke)}
 
-.register-link{
+.btn-sec{
   display:flex;align-items:center;justify-content:center;gap:8px;
-  padding:12px;border-radius:11px;
+  width:100%;padding:12px;border-radius:11px;
   border:1px solid var(--stroke);
-  color:var(--muted);font-size:.85rem;
-  text-decoration:none;transition:border-color .2s,color .2s;
+  color:var(--muted);font-size:.84rem;text-decoration:none;
+  transition:border-color .2s,color .2s;font-family:inherit;background:none;cursor:pointer;
 }
-.register-link:hover{border-color:rgba(0,232,122,.35);color:var(--green)}
+.btn-sec:hover{border-color:rgba(124,58,237,.4);color:var(--text)}
 
-.err{
-  display:none;margin-top:14px;padding:11px 14px;
-  border-radius:10px;
-  background:rgba(255,85,116,.1);border:1px solid rgba(255,85,116,.22);
-  color:#ff8099;font-size:.84rem;
-}
+.err{display:none;margin-top:14px;padding:11px 14px;border-radius:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;font-size:.83rem}
 
-/* responsive */
-@media(max-width:940px){
+@media(max-width:960px){
   .shell{grid-template-columns:1fr;overflow:auto}
-  .story{padding:40px 28px;border-right:none;border-bottom:1px solid var(--stroke)}
-  .card-wrap{padding:36px 24px}
-  body,html{overflow:auto}
-  body::before,body::after{display:none}
+  .story{padding:36px 24px;border-right:none;border-bottom:1px solid var(--stroke)}
+  .form-wrap{padding:36px 24px}
+  html,body{overflow:auto}
+  .orb{display:none}
 }
 </style>
 </head>
 <body>
-<div class="grid-lines"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+<div class="grid"></div>
 <div class="shell">
 
   <section class="story">
     <div class="logo">
-      <div class="logo-mark">S</div>
-      <div>
-        <div class="logo-name">SolusCRT Saúde</div>
-        <div class="logo-tag">Plataforma de inteligência epidemiológica</div>
+      <div class="logo-ring">S</div>
+      <div class="logo-text">
+        <div class="name">SolusCRT Saúde</div>
+        <div class="tag">Inteligência epidemiológica institucional</div>
       </div>
     </div>
 
-    <h1 class="headline">Saúde em tempo real.<br><em>Decisão antes</em><br>do surto.</h1>
-    <p class="lead">Monitoramento colaborativo por bairro, município e estado. Cada ambiente responde ao seu setor com dados, alertas e ação — sem misturar contextos.</p>
+    <div class="eyebrow"><span class="dot-pulse"></span>Plataforma ativa</div>
 
-    <div class="env-chips">
-      <div class="chip"><span class="chip-dot"></span>Empresa — saúde ocupacional</div>
-      <div class="chip"><span class="chip-dot"></span>Farmácia — estoque e demanda</div>
-      <div class="chip"><span class="chip-dot"></span>Hospital — triagem e prontidão</div>
-      <div class="chip"><span class="chip-dot"></span>Governo — briefing e território</div>
+    <h1 class="headline">Saúde em tempo real.<br><span class="grad">Decisão antes do surto.</span></h1>
+    <p class="lead">Dados epidemiológicos em tempo real por bairro, município e unidade. Cada ambiente responde ao seu setor com precisão clínica e inteligência operacional.</p>
+
+    <div class="env-grid">
+      <div class="env-card">
+        <div class="env-icon">🏢</div>
+        <div class="env-name">Empresa</div>
+        <div class="env-desc">Saúde ocupacional, absenteísmo e risco da força de trabalho</div>
+      </div>
+      <div class="env-card">
+        <div class="env-icon">💊</div>
+        <div class="env-name">Farmácia</div>
+        <div class="env-desc">Pressão de estoque, demanda e janela de reabastecimento</div>
+      </div>
+      <div class="env-card">
+        <div class="env-icon">🏥</div>
+        <div class="env-name">Hospital</div>
+        <div class="env-desc">Carga assistencial, triagem e prontidão de capacidade</div>
+      </div>
+      <div class="env-card">
+        <div class="env-icon">🧠</div>
+        <div class="env-name">IA Decisória</div>
+        <div class="env-desc">Briefings executivos, previsões e apoio à decisão estratégica</div>
+      </div>
     </div>
 
-    <div class="stats">
-      <div class="stat"><strong>4</strong><span>ambientes especializados</span></div>
-      <div class="stat"><strong>100%</strong><span>dados privados isolados</span></div>
-      <div class="stat"><strong>RT</strong><span>sinais em tempo real</span></div>
+    <div class="proof">
+      <div class="proof-item"><strong>RT</strong><span>sinais em tempo real</span></div>
+      <div class="proof-item"><strong>100%</strong><span>dados isolados por tenant</span></div>
+      <div class="proof-item"><strong>LGPD</strong><span>privacidade por design</span></div>
     </div>
   </section>
 
-  <div class="card-wrap">
+  <div class="form-wrap">
     <div class="card">
       <div class="card-title">Entrar na plataforma</div>
-      <div class="card-sub">Use sua credencial institucional. O sistema identifica o ambiente e abre automaticamente.</div>
+      <div class="card-sub">Use sua credencial institucional. O sistema identifica seu ambiente automaticamente.</div>
 
       <div class="fields">
         <div class="field">
@@ -232,15 +195,14 @@ body::after{
         </div>
       </div>
 
-      <button class="btn-login" onclick="login()">Acessar meu ambiente →</button>
+      <button class="btn-main" onclick="login()">Acessar meu ambiente →</button>
 
       <div class="links">
         <a href="/solicitar-reset-senha/">Esqueceu sua senha?</a>
       </div>
 
-      <div class="divider">ou</div>
-
-      <a href="/cadastro/" class="register-link">Ainda não tem conta? Solicitar acesso comercial</a>
+      <div class="sep">ou</div>
+      <a href="/cadastro/" class="btn-sec">Solicitar acesso à plataforma</a>
 
       <div id="erro" class="err"></div>
     </div>
@@ -248,58 +210,34 @@ body::after{
 
 </div>
 <script>
-function getDeviceId() {
-  let deviceId = localStorage.getItem("device_id");
-  if (!deviceId) {
-    deviceId = "dev-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-    localStorage.setItem("device_id", deviceId);
-  }
-  return deviceId;
+function getDeviceId(){
+  let d=localStorage.getItem("device_id");
+  if(!d){d="dev-"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("device_id",d);}
+  return d;
 }
-
-function persistScopedSession(data) {
-  sessionStorage.setItem("auth_token", data.token);
-  sessionStorage.setItem("empresa_id", String(data.empresa_id || ""));
-  sessionStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
-  localStorage.setItem("token", data.token);
-  localStorage.setItem("empresa_id", data.empresa_id);
-  localStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
-  if (data.device_id) localStorage.setItem("device_id", data.device_id);
+function persistScopedSession(data){
+  sessionStorage.setItem("auth_token",data.token);
+  sessionStorage.setItem("empresa_id",String(data.empresa_id||""));
+  sessionStorage.setItem("tipo_conta",data.tipo_conta||"empresa");
+  localStorage.setItem("token",data.token);
+  localStorage.setItem("empresa_id",data.empresa_id);
+  localStorage.setItem("tipo_conta",data.tipo_conta||"empresa");
+  if(data.device_id)localStorage.setItem("device_id",data.device_id);
 }
-
-async function login(forceLogin = false) {
-  const email = document.getElementById("email").value;
-  const senha = document.getElementById("senha").value;
-  const erro = document.getElementById("erro");
-  erro.style.display = "none";
-
-  const res = await fetch("/api/login-empresa", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      email,
-      senha,
-      device_id: getDeviceId(),
-      device_name: navigator.platform || "Computador",
-      force_login: forceLogin,
-    })
-  });
-
-  const data = await res.json();
-  if (data.token) {
-    persistScopedSession(data);
-    window.location.href = data.destination || "/dashboard-empresa/";
-  } else {
-    if (data.codigo === "sessao_em_uso" && !forceLogin) {
-      const confirmar = confirm(`${data.mensagem}\n\nDeseja encerrar a sessao anterior e entrar neste computador?`);
-      if (confirmar) return login(true);
-    }
-    erro.textContent = data.mensagem || data.erro || "Credenciais invalidas";
-    erro.style.display = "block";
+async function login(force=false){
+  const email=document.getElementById("email").value;
+  const senha=document.getElementById("senha").value;
+  const err=document.getElementById("erro");
+  err.style.display="none";
+  const res=await fetch("/api/login-empresa",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,senha,device_id:getDeviceId(),device_name:navigator.platform||"Computador",force_login:force})});
+  const data=await res.json();
+  if(data.token){persistScopedSession(data);window.location.href=data.destination||"/dashboard-empresa/";}
+  else{
+    if(data.codigo==="sessao_em_uso"&&!force){if(confirm(`${data.mensagem}\n\nEncerrar sessão anterior?`))return login(true);return;}
+    err.textContent=data.mensagem||data.erro||"Credenciais inválidas";err.style.display="block";
   }
 }
-
-document.addEventListener("keydown", e => { if (e.key === "Enter") login(); });
+document.addEventListener("keydown",e=>{if(e.key==="Enter")login();});
 </script>
 </body>
 </html>

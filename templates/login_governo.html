@@ -2,218 +2,205 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>SolusCRT · Acesso Governamental</title>
+<title>SolusCRT · Portal Governamental</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#030e09;
-  --green:#00e87a;
-  --green2:#00c466;
-  --green-dim:rgba(0,232,122,.1);
-  --green-glow:rgba(0,232,122,.18);
-  --text:#e4f5eb;
-  --muted:#6fa882;
-  --stroke:rgba(0,232,122,.13);
+  --bg:#06050a;
+  --gold:#d97706;--gold2:#b45309;--gold3:#fbbf24;
+  --text:#fef9ee;--muted:#a8896a;
+  --stroke:rgba(217,119,6,.14);
+  --glow:rgba(217,119,6,.18);
 }
 html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
 
-body::before,body::after{
-  content:"";position:fixed;border-radius:50%;pointer-events:none;filter:blur(90px);opacity:.5;
-  animation:drift 16s ease-in-out infinite alternate;
-}
-body::before{
-  width:700px;height:700px;top:-180px;left:-100px;
-  background:radial-gradient(circle,rgba(0,232,122,.2),transparent 70%);
-}
-body::after{
-  width:500px;height:500px;bottom:-100px;right:-60px;
-  background:radial-gradient(circle,rgba(0,180,95,.16),transparent 70%);
-  animation-delay:-8s;animation-duration:20s;
-}
-@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(36px,28px) scale(1.07)}}
+.noise{position:fixed;inset:0;pointer-events:none;opacity:.028;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:220px}
 
-.grid-lines{
-  position:fixed;inset:0;pointer-events:none;
-  background-image:linear-gradient(var(--stroke) 1px,transparent 1px),linear-gradient(90deg,var(--stroke) 1px,transparent 1px);
-  background-size:52px 52px;
-  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,rgba(0,0,0,.55),transparent);
-}
+.glow-top{position:fixed;top:-180px;left:50%;transform:translateX(-50%);width:800px;height:400px;border-radius:50%;background:radial-gradient(ellipse,rgba(217,119,6,.12) 0%,transparent 68%);pointer-events:none;animation:breathe 8s ease-in-out infinite alternate}
+@keyframes breathe{from{opacity:.7;transform:translateX(-50%) scaleY(1)}to{opacity:1;transform:translateX(-50%) scaleY(1.12)}}
 
-.shell{
-  position:relative;z-index:2;
-  display:grid;grid-template-columns:1.1fr .9fr;
-  height:100vh;
-}
+.shell{position:relative;z-index:2;display:grid;grid-template-columns:1.2fr .8fr;height:100vh}
 
 /* LEFT */
 .story{
-  display:flex;flex-direction:column;justify-content:center;
-  padding:60px 56px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  padding:52px 60px;
   border-right:1px solid var(--stroke);
+  background:linear-gradient(160deg,rgba(15,10,4,.6),rgba(6,5,10,.98));
 }
-.logo{display:flex;align-items:center;gap:12px;margin-bottom:52px}
-.logo-mark{
-  width:44px;height:44px;border-radius:13px;
-  background:linear-gradient(135deg,var(--green),#00b45a);
+
+.story-top{}
+.logo{display:flex;align-items:center;gap:14px;margin-bottom:64px}
+.seal{
+  width:52px;height:52px;border-radius:50%;
+  border:2px solid var(--gold);
+  background:radial-gradient(circle at center,rgba(217,119,6,.15),transparent 70%);
   display:grid;place-items:center;
-  font-weight:900;font-size:1.05rem;color:#030e09;
-  box-shadow:0 0 24px var(--green-glow);
+  font-weight:900;font-size:1.1rem;color:var(--gold);
+  box-shadow:0 0 24px rgba(217,119,6,.25),inset 0 0 16px rgba(217,119,6,.06);
 }
-.logo-name{font-size:1.12rem;font-weight:700}
-.logo-tag{font-size:.76rem;color:var(--muted);margin-top:2px}
+.logo-text .name{font-size:1rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text)}
+.logo-text .tag{font-size:.7rem;color:var(--muted);margin-top:3px;letter-spacing:.06em;text-transform:uppercase}
 
-.badge{
-  display:inline-flex;align-items:center;gap:7px;
-  padding:6px 14px;border-radius:999px;
-  background:var(--green-dim);border:1px solid var(--stroke);
-  font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--green);
-  margin-bottom:22px;
-}
-.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-
-.headline{
-  font-size:clamp(2.2rem,3.5vw,3.4rem);
-  font-weight:900;line-height:1.07;
-  letter-spacing:-.03em;max-width:540px;
-}
-.headline em{font-style:normal;color:var(--green)}
-
-.lead{
-  margin-top:18px;font-size:.97rem;
-  color:var(--muted);line-height:1.75;max-width:480px;
+.classification{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:4px;margin-bottom:24px;
+  background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.3);
+  border-left:3px solid var(--gold);
+  font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);
 }
 
-.gov-cards{
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:12px;margin-top:36px;
+h1{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(2.4rem,3.8vw,3.6rem);
+  font-weight:700;line-height:1.1;letter-spacing:-.01em;
+  color:var(--text);max-width:500px;
 }
-.gov-card{
-  padding:16px 18px;border-radius:16px;
+h1 em{font-style:italic;color:var(--gold)}
+
+.lead{margin-top:22px;font-size:.93rem;color:var(--muted);line-height:1.8;max-width:460px}
+
+.pillars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:36px}
+.pillar{
+  padding:14px 16px;border-radius:10px;
   border:1px solid var(--stroke);
-  background:var(--green-dim);
+  background:rgba(217,119,6,.04);
 }
-.gov-card span{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
-.gov-card strong{font-size:.97rem;font-weight:700}
+.pillar-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px}
+.pillar-value{font-size:.88rem;font-weight:600;color:var(--text)}
 
-.separador{
-  margin-top:44px;padding-top:32px;
-  border-top:1px solid var(--stroke);
-  font-size:.8rem;color:var(--muted);line-height:1.7;
+.story-bottom{
+  padding-top:36px;border-top:1px solid var(--stroke);
+  font-size:.76rem;color:rgba(168,137,106,.5);line-height:1.8;
 }
+.story-bottom strong{color:rgba(168,137,106,.8);display:block;margin-bottom:4px}
 
 /* RIGHT */
 .card-wrap{
   display:flex;align-items:center;justify-content:center;
-  padding:48px 52px;
+  padding:52px 48px;
+  background:rgba(6,5,10,.7);
 }
-.card{width:100%;max-width:400px}
+.card{width:100%;max-width:380px}
 
-.card-title{font-size:1.55rem;font-weight:800;letter-spacing:-.02em}
-.card-sub{margin-top:8px;font-size:.88rem;color:var(--muted);line-height:1.6}
+.card-eyebrow{
+  font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.card-eyebrow::before{content:"";display:block;width:20px;height:1px;background:var(--gold)}
 
-.fields{margin-top:26px;display:flex;flex-direction:column;gap:15px}
-.field{display:flex;flex-direction:column;gap:6px}
-.field label{font-size:.76rem;font-weight:600;color:rgba(228,245,235,.55);letter-spacing:.04em;text-transform:uppercase}
+.card-title{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:700;line-height:1.15}
+.card-sub{margin-top:10px;font-size:.85rem;color:var(--muted);line-height:1.65}
+
+.fields{margin-top:28px;display:flex;flex-direction:column;gap:16px}
+.field label{display:block;font-size:.69rem;font-weight:700;color:rgba(254,249,238,.4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px}
 .field input{
-  padding:13px 16px;border-radius:11px;
-  border:1px solid rgba(0,232,122,.15);
-  background:rgba(0,232,122,.04);
-  color:var(--text);font-size:.96rem;
-  outline:none;transition:border .2s,box-shadow .2s;
-  font-family:inherit;
+  width:100%;padding:13px 16px;border-radius:8px;
+  border:1px solid rgba(217,119,6,.2);
+  background:rgba(217,119,6,.04);
+  color:var(--text);font-size:.95rem;outline:none;
+  transition:border .2s,box-shadow .2s;font-family:inherit;
+  letter-spacing:.01em;
 }
-.field input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(0,232,122,.12)}
-.field input::placeholder{color:rgba(100,180,130,.3)}
+.field input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(217,119,6,.12)}
+.field input::placeholder{color:rgba(168,137,106,.28)}
 
-.btn-login{
-  margin-top:20px;width:100%;padding:14px;
-  border:none;border-radius:12px;
-  background:linear-gradient(135deg,var(--green),var(--green2));
-  color:#030e09;font-size:.97rem;font-weight:800;
-  cursor:pointer;letter-spacing:.01em;
+.btn-main{
+  width:100%;margin-top:22px;padding:14px;
+  border:none;border-radius:8px;
+  background:linear-gradient(135deg,var(--gold) 0%,var(--gold2) 100%);
+  color:#06050a;font-size:.95rem;font-weight:800;cursor:pointer;
+  letter-spacing:.02em;text-transform:uppercase;font-family:inherit;
+  box-shadow:0 4px 24px rgba(217,119,6,.3);
   transition:opacity .2s,box-shadow .2s;
-  font-family:inherit;
-  box-shadow:0 4px 24px rgba(0,232,122,.22);
 }
-.btn-login:hover{opacity:.9;box-shadow:0 6px 32px rgba(0,232,122,.32)}
+.btn-main:hover{opacity:.9;box-shadow:0 6px 32px rgba(217,119,6,.42)}
 
-.footer-links{
-  margin-top:18px;display:flex;flex-direction:column;gap:8px;align-items:center;
-}
-.footer-links a{font-size:.82rem;color:var(--muted);text-decoration:none;transition:color .2s}
-.footer-links a:hover{color:var(--green)}
+.footer-links{margin-top:18px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.footer-links a{font-size:.79rem;color:rgba(168,137,106,.55);text-decoration:none;transition:color .2s}
+.footer-links a:hover{color:var(--gold)}
 
-.err{
-  display:none;margin-top:14px;padding:11px 14px;
-  border-radius:10px;
-  background:rgba(255,85,116,.1);border:1px solid rgba(255,85,116,.2);
-  color:#ff8099;font-size:.83rem;
+.security-note{
+  margin-top:28px;padding:12px 14px;border-radius:8px;
+  border-left:2px solid rgba(217,119,6,.4);
+  background:rgba(217,119,6,.05);
+  font-size:.73rem;color:rgba(168,137,106,.7);line-height:1.6;
 }
 
-@media(max-width:940px){
+.err{display:none;margin-top:14px;padding:11px 14px;border-radius:8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.18);color:#fca5a5;font-size:.82rem}
+
+@media(max-width:960px){
   .shell{grid-template-columns:1fr;overflow:auto}
   .story{padding:36px 24px;border-right:none;border-bottom:1px solid var(--stroke)}
-  .card-wrap{padding:32px 22px}
+  .card-wrap{padding:36px 22px}
   html,body{overflow:auto}
-  body::before,body::after{display:none}
 }
 </style>
 </head>
 <body>
-<div class="grid-lines"></div>
+<div class="noise"></div>
+<div class="glow-top"></div>
 <div class="shell">
 
   <section class="story">
-    <div class="logo">
-      <div class="logo-mark">S</div>
-      <div>
-        <div class="logo-name">SolusCRT Saúde</div>
-        <div class="logo-tag">Módulo governamental exclusivo</div>
+    <div class="story-top">
+      <div class="logo">
+        <div class="seal">G</div>
+        <div class="logo-text">
+          <div class="name">SolusCRT · Módulo Governamental</div>
+          <div class="tag">Acesso restrito · Uso institucional</div>
+        </div>
+      </div>
+
+      <div class="classification">● Ambiente dedicado · Isolamento total</div>
+
+      <h1>Vigilância territorial<br>e <em>resposta de estado</em><br>em um trilho exclusivo.</h1>
+
+      <p class="lead">Este portal é reservado a secretarias, prefeituras, órgãos estaduais e autarquias com contrato governamental ativo. O acesso, os dados e a operação são completamente separados de qualquer outro módulo da plataforma.</p>
+
+      <div class="pillars">
+        <div class="pillar"><div class="pillar-label">Monitoramento</div><div class="pillar-value">Bairro · Município · Estado</div></div>
+        <div class="pillar"><div class="pillar-label">Briefing executivo</div><div class="pillar-value">Situação, alertas e histórico</div></div>
+        <div class="pillar"><div class="pillar-label">Fontes oficiais</div><div class="pillar-value">InfoDengue · InfoGripe · IBGE</div></div>
+        <div class="pillar"><div class="pillar-label">Isolamento</div><div class="pillar-value">Segredo de dados garantido</div></div>
       </div>
     </div>
 
-    <div class="badge"><span class="badge-dot"></span>Acesso governamental dedicado</div>
-
-    <h1 class="headline">Vigilância<br>territorial.<br><em>Resposta antes</em><br>da crise.</h1>
-
-    <p class="lead">Ambiente reservado para estado, prefeitura, secretaria e órgãos com contrato governamental. Trilho de dados, acesso e decisão separados do módulo empresarial.</p>
-
-    <div class="gov-cards">
-      <div class="gov-card"><span>Monitoramento</span><strong>Bairro, município e estado</strong></div>
-      <div class="gov-card"><span>Briefing executivo</span><strong>Situação, exportação e histórico</strong></div>
-      <div class="gov-card"><span>Fontes oficiais</span><strong>InfoDengue · InfoGripe · DATASUS</strong></div>
-      <div class="gov-card"><span>Segurança</span><strong>Trilho isolado do módulo empresa</strong></div>
-    </div>
-
-    <div class="separador">
-      Contas governamentais inativas são redirecionadas para contratação dedicada.<br>
-      <a href="/contrato-governo/" style="color:var(--green);text-decoration:none;font-weight:600;">Ver modalidades de contratação governamental →</a>
+    <div class="story-bottom">
+      <strong>Contratação governamental</strong>
+      Contas inativas são redirecionadas ao processo de contratação dedicado.<br>
+      <a href="/contrato-governo/" style="color:var(--gold);text-decoration:none;">Iniciar processo de contratação →</a>
     </div>
   </section>
 
   <div class="card-wrap">
     <div class="card">
-      <div class="card-title">Entrar como governo</div>
-      <div class="card-sub">Use a credencial institucional contratada para o módulo governamental.</div>
+      <div class="card-eyebrow">Portal governamental</div>
+      <div class="card-title">Acesso ao centro de vigilância</div>
+      <div class="card-sub">Use a credencial institucional emitida para o seu órgão. Acesso registrado e auditável.</div>
 
       <div class="fields">
         <div class="field">
           <label for="email">E-mail institucional</label>
-          <input id="email" type="email" placeholder="voce@secretaria.gov.br" autocomplete="email">
+          <input id="email" type="email" placeholder="gestor@secretaria.gov.br" autocomplete="email">
         </div>
         <div class="field">
-          <label for="senha">Senha</label>
+          <label for="senha">Senha de acesso</label>
           <input id="senha" type="password" placeholder="••••••••" autocomplete="current-password">
         </div>
       </div>
 
-      <button class="btn-login" onclick="login()">Acessar centro governamental →</button>
+      <button class="btn-main" onclick="login()">Acessar portal governamental</button>
 
       <div class="footer-links">
-        <a href="/solicitar-reset-senha/">Esqueceu sua senha?</a>
+        <a href="/solicitar-reset-senha/">Redefinir credencial de acesso</a>
+      </div>
+
+      <div class="security-note">
+        Toda sessão é registrada com IP, dispositivo e timestamp. Acessos não autorizados são rastreados e reportados ao administrador do contrato.
       </div>
 
       <div id="erro" class="err"></div>
@@ -222,56 +209,34 @@ body::after{
 
 </div>
 <script>
-function getDeviceId() {
-  let deviceId = localStorage.getItem("device_id");
-  if (!deviceId) {
-    deviceId = "gov-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-    localStorage.setItem("device_id", deviceId);
-  }
-  return deviceId;
+function getDeviceId(){
+  let d=localStorage.getItem("device_id");
+  if(!d){d="gov-"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("device_id",d);}
+  return d;
 }
-
-function persistScopedSession(data) {
-  sessionStorage.setItem("auth_token", data.token);
-  sessionStorage.setItem("empresa_id", String(data.empresa_id || ""));
-  sessionStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
-  localStorage.setItem("token", data.token);
-  localStorage.setItem("empresa_id", data.empresa_id);
-  localStorage.setItem("tipo_conta", data.tipo_conta || "empresa");
-  if (data.device_id) localStorage.setItem("device_id", data.device_id);
+function persistScopedSession(data){
+  sessionStorage.setItem("auth_token",data.token);
+  sessionStorage.setItem("empresa_id",String(data.empresa_id||""));
+  sessionStorage.setItem("tipo_conta",data.tipo_conta||"empresa");
+  localStorage.setItem("token",data.token);
+  localStorage.setItem("empresa_id",data.empresa_id);
+  localStorage.setItem("tipo_conta",data.tipo_conta||"empresa");
+  if(data.device_id)localStorage.setItem("device_id",data.device_id);
 }
-
-async function login(forceLogin = false) {
-  const email = document.getElementById("email").value;
-  const senha = document.getElementById("senha").value;
-  const erro = document.getElementById("erro");
-  erro.style.display = "none";
-  const res = await fetch("/api/login-governo", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      email,
-      senha,
-      device_id: getDeviceId(),
-      device_name: navigator.platform || "Estacao",
-      force_login: forceLogin,
-    })
-  });
-  const data = await res.json();
-  if (data.token) {
-    persistScopedSession(data);
-    window.location.href = data.destination || "/dashboard-governo/";
-  } else {
-    if (data.codigo === "sessao_em_uso" && !forceLogin) {
-      const confirmar = confirm(`${data.mensagem}\n\nDeseja encerrar a sessão anterior e entrar nesta estação?`);
-      if (confirmar) return login(true);
-    }
-    erro.textContent = data.mensagem || data.erro || "Credenciais inválidas";
-    erro.style.display = "block";
+async function login(force=false){
+  const email=document.getElementById("email").value;
+  const senha=document.getElementById("senha").value;
+  const err=document.getElementById("erro");
+  err.style.display="none";
+  const res=await fetch("/api/login-governo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,senha,device_id:getDeviceId(),device_name:navigator.platform||"Estacao",force_login:force})});
+  const data=await res.json();
+  if(data.token){persistScopedSession(data);window.location.href=data.destination||"/dashboard-governo/";}
+  else{
+    if(data.codigo==="sessao_em_uso"&&!force){if(confirm(`${data.mensagem}\n\nEncerrar sessão anterior?`))return login(true);return;}
+    err.textContent=data.mensagem||data.erro||"Credenciais inválidas";err.style.display="block";
   }
 }
-
-document.addEventListener("keydown", e => { if (e.key === "Enter") login(); });
+document.addEventListener("keydown",e=>{if(e.key==="Enter")login();});
 </script>
 </body>
 </html>
