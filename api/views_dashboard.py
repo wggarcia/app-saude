@@ -170,8 +170,7 @@ def _render_dashboard(request, variant):
     if empresa.tipo_conta != Empresa.TIPO_GOVERNO and variant == "governo":
         return redirect(_dashboard_url_por_setor(_setor_conta(empresa)))
 
-    if variant == "governo" and not empresa.acesso_governo:
-        return redirect("/contrato-governo/")
+    # acesso_governo gate removed — any tipo_conta == governo account has full access
 
     setor_conta = _setor_conta(empresa)
     if setor_conta == "empresa":

@@ -687,14 +687,33 @@
 
     <aside class="dock dock-right" id="rightDock">
       <div class="dock-header">
-        <div class="dock-title">
-          Painel Tatico de Mercado, Demanda e Estoque
-        </div>
-        <div class="mini">Sintomas, doencas provaveis, crescimento e foco detalhado equalizados.</div>
+        <div class="dock-title">Painel Farmacêutico</div>
+        <div class="mini">Demanda, estoque, abastecimento e inteligência de mercado em tempo real.</div>
       </div>
       <div class="dock-scroll">
+
+        <section class="section" id="secEstoque">
+          <h2>Pressão de Estoque e Abastecimento</h2>
+          <div id="farmPainelEstoque" class="mini">Carregando...</div>
+        </section>
+
+        <section class="section" id="secMedicamentos">
+          <h2>Medicamentos em Alta Demanda</h2>
+          <div id="farmMedicamentos" class="mini">Carregando...</div>
+        </section>
+
+        <section class="section" id="secPrevisao">
+          <h2>Previsão de Demanda — 7 Dias</h2>
+          <canvas id="farmPrevisaoChart" style="max-height:140px;"></canvas>
+        </section>
+
+        <section class="section" id="secZonas">
+          <h2>Zonas Críticas de Reabastecimento</h2>
+          <div id="farmZonas" class="mini">Carregando...</div>
+        </section>
+
         <section class="section">
-          <h2>Distribuicao de Doencas Provaveis</h2>
+          <h2>Distribuição de Doenças Prováveis</h2>
           <div class="chart-wrap">
             <canvas id="diseaseChart"></canvas>
           </div>
@@ -703,7 +722,7 @@
         <section class="detail-card">
           <h2 style="margin:0 0 10px; font-size:0.98rem;">Detalhes da Localidade</h2>
           <div id="detailsBody" class="mini">
-            Selecione um foco no mapa ou na lista para abrir a leitura detalhada por sintomas, doencas provaveis e crescimento.
+            Selecione um foco no mapa ou na lista para abrir a leitura detalhada.
           </div>
         </section>
       </div>
@@ -1411,9 +1430,87 @@
       renderDashboard();
     });
 
+    let farmPrevisaoChart = null;
+
+    async function loadFarmaciaPainel() {
+      try {
+        const res = await fetch("/api/farmacia/painel", { credentials: "same-origin" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const p = data.painel || {};
+
+        const pressaoEl = document.getElementById("farmPainelEstoque");
+        if (pressaoEl) {
+          const pct = (p.pressao_estoque_global || 0).toFixed(1);
+          const cor = pct >= 80 ? "var(--danger)" : pct >= 55 ? "var(--warn)" : "var(--ok)";
+          pressaoEl.innerHTML = `
+            <div style="font-size:1.6rem;font-weight:700;color:${cor}">${pct}%</div>
+            <div style="margin:4px 0 8px;">${p.sinal_mercado || "—"}</div>
+            <div>Janela de reabastecimento: <strong>${p.janela_reabastecimento || "—"}</strong></div>
+          `;
+        }
+
+        const medEl = document.getElementById("farmMedicamentos");
+        if (medEl) {
+          const lista = (p.medicamentos_alta || []).map(m => `<li>${m}</li>`).join("");
+          medEl.innerHTML = lista ? `<ul style="margin:0;padding-left:18px;">${lista}</ul>` : "Sem dados.";
+        }
+
+        const zonasEl = document.getElementById("farmZonas");
+        if (zonasEl) {
+          const zonas = p.zonas_criticas || [];
+          if (!zonas.length) { zonasEl.textContent = "Sem zonas críticas identificadas."; }
+          else {
+            zonasEl.innerHTML = zonas.map(z => {
+              const cor = z.pressao >= 80 ? "var(--danger)" : z.pressao >= 55 ? "var(--warn)" : "var(--ok)";
+              return `<div style="margin-bottom:8px;border-left:3px solid ${cor};padding-left:8px;">
+                <strong>${z.zona}</strong><br>
+                <span style="font-size:0.82rem;">Pressão: ${z.pressao.toFixed(1)}% · Janela: ${z.janela}</span><br>
+                <span style="font-size:0.8rem;color:var(--muted);">${z.sinal}</span>
+              </div>`;
+            }).join("");
+          }
+        }
+
+        const prev = p.previsao_demanda_7d || [];
+        if (prev.length) {
+          const ctx = document.getElementById("farmPrevisaoChart");
+          if (ctx) {
+            if (farmPrevisaoChart) farmPrevisaoChart.destroy();
+            farmPrevisaoChart = new Chart(ctx, {
+              type: "bar",
+              data: {
+                labels: prev.map(d => d.dia),
+                datasets: [{
+                  label: "Casos estimados",
+                  data: prev.map(d => d.estimado),
+                  backgroundColor: "rgba(124,242,154,0.35)",
+                  borderColor: "#7cf29a",
+                  borderWidth: 1,
+                  borderRadius: 4,
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                  x: { ticks: { color: "#97bfd9", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.05)" } },
+                  y: { ticks: { color: "#97bfd9", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.05)" } },
+                }
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("Erro ao carregar painel farmácia:", e);
+      }
+    }
+
     updateDockState();
     loadPanorama();
+    loadFarmaciaPainel();
     setInterval(loadPanorama, 15000);
+    setInterval(loadFarmaciaPainel, 30000);
   </script>
 </body>
 </html>

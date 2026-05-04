@@ -69,6 +69,8 @@ from api.views_escalas import (
     api_escalas_resumo,
 )
 from api.views_lider import painel_lider, api_unidade_dados
+from api.views_farmacia import api_farmacia_painel
+from api.views_hospital import api_hospital_painel
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
 from api.governanca import api_auditoria_institucional, api_matriz_decisao, api_metodologia_epidemiologica
@@ -187,6 +189,8 @@ urlpatterns = [
     path('api/operacao-central/cliente/atualizar', api_dono_atualizar_cliente),
     path('api/operacao-central/financeiro/acao', api_dono_financeiro_acao),
     path('api/operacao-central/exportar', api_dono_exportar),
+    path('api/farmacia/painel', api_farmacia_painel),
+    path('api/hospital/painel', api_hospital_painel),
     path('api/governo/alertas', api_alertas_governo),
     path('api/governo/alertas/criar', api_criar_alerta_governo),
     path('api/governo/alertas/toggle', api_toggle_alerta_governo),
