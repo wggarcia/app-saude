@@ -22,6 +22,22 @@ from .models import (
 from .views_dashboard import _empresa_autenticada
 
 
+def _buscar_funcionario(empresa, data):
+    """Resolve funcionário por ID ou por nome parcial (case-insensitive)."""
+    fid = data.get("funcionario_id")
+    if fid:
+        return FuncionarioSST.objects.filter(id=fid, empresa=empresa, ativo=True).first()
+    nome = (data.get("funcionario_nome") or "").strip()
+    if not nome:
+        return None
+    return (
+        FuncionarioSST.objects
+        .filter(empresa=empresa, ativo=True, nome__icontains=nome)
+        .order_by("nome")
+        .first()
+    )
+
+
 def _empresa_sst_autenticada(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -259,10 +275,9 @@ def api_asos(request):
             data = json.loads(request.body)
         except Exception:
             return JsonResponse({"erro": "JSON inválido"}, status=400)
-        try:
-            func = FuncionarioSST.objects.get(id=data.get("funcionario_id"), empresa=empresa)
-        except FuncionarioSST.DoesNotExist:
-            return JsonResponse({"erro": "funcionário não encontrado"}, status=404)
+        func = _buscar_funcionario(empresa, data)
+        if not func:
+            return JsonResponse({"erro": "Funcionário não encontrado. Cadastre-o primeiro em Funcionários."}, status=404)
         from datetime import datetime
         def parse_date(s):
             if not s:
@@ -317,10 +332,9 @@ def api_cats(request):
             data = json.loads(request.body)
         except Exception:
             return JsonResponse({"erro": "JSON inválido"}, status=400)
-        try:
-            func = FuncionarioSST.objects.get(id=data.get("funcionario_id"), empresa=empresa)
-        except FuncionarioSST.DoesNotExist:
-            return JsonResponse({"erro": "funcionário não encontrado"}, status=404)
+        func = _buscar_funcionario(empresa, data)
+        if not func:
+            return JsonResponse({"erro": "Funcionário não encontrado. Cadastre-o primeiro em Funcionários."}, status=404)
         from datetime import datetime
         def parse_date(s):
             if not s:
