@@ -2,251 +2,251 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>SolusCRT Empresa</title>
+<title>SolusCRT · Acesso Institucional</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box}
-body{
-  margin:0;
-  min-height:100vh;
-  font-family:'Manrope',system-ui,sans-serif;
-  color:#eef5ff;
-  background:
-    radial-gradient(circle at 12% 18%, rgba(71,214,198,.22), transparent 22rem),
-    radial-gradient(circle at 82% 15%, rgba(255,185,98,.16), transparent 18rem),
-    radial-gradient(circle at 84% 82%, rgba(91,126,255,.18), transparent 26rem),
-    linear-gradient(145deg,#03111d 0%,#081a2b 34%,#0e2840 72%,#0f3153 100%);
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#030e09;
+  --bg2:rgba(4,18,10,.9);
+  --green:#00e87a;
+  --green2:#00c466;
+  --green-dim:rgba(0,232,122,.1);
+  --green-glow:rgba(0,232,122,.18);
+  --text:#e4f5eb;
+  --muted:#6fa882;
+  --stroke:rgba(0,232,122,.13);
+  --card:rgba(5,16,10,.88);
+}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+
+/* animated bg orbs */
+body::before,body::after{
+  content:"";position:fixed;border-radius:50%;pointer-events:none;filter:blur(80px);opacity:.55;
+  animation:drift 14s ease-in-out infinite alternate;
 }
 body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  background-image:
-    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
-  background-size:48px 48px;
-  mask-image:linear-gradient(180deg, rgba(0,0,0,.9), rgba(0,0,0,.22));
-  pointer-events:none;
+  width:600px;height:600px;top:-120px;left:-120px;
+  background:radial-gradient(circle,rgba(0,232,122,.22),transparent 70%);
 }
-.shell{position:relative;z-index:1;width:min(1420px,calc(100% - 32px));margin:0 auto;padding:24px 0 36px}
-.topbar,.hero,.card,.module,.proof,.trust{border:1px solid rgba(255,255,255,.08);box-shadow:0 28px 90px rgba(3,10,18,.34);backdrop-filter:blur(18px)}
-.topbar{
-  display:flex;justify-content:space-between;align-items:center;gap:16px;
-  padding:16px 18px;border-radius:28px;background:rgba(4,18,31,.56)
+body::after{
+  width:500px;height:500px;bottom:-80px;right:-80px;
+  background:radial-gradient(circle,rgba(0,180,95,.18),transparent 70%);
+  animation-delay:-7s;animation-duration:18s;
 }
-.brand{display:flex;gap:14px;align-items:center}
-.mark{
-  width:48px;height:48px;border-radius:16px;display:grid;place-items:center;
-  background:linear-gradient(135deg,#50e0d0,#4d78ff);font-weight:800;color:#04131f
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(40px,30px) scale(1.08)}}
+
+.grid-lines{
+  position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(var(--stroke) 1px,transparent 1px),linear-gradient(90deg,var(--stroke) 1px,transparent 1px);
+  background-size:52px 52px;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,rgba(0,0,0,.6),transparent);
 }
-.brand h1{margin:0;font-size:1.02rem}
-.brand p{margin:4px 0 0;color:rgba(228,236,247,.72);font-size:.88rem}
-.chips{display:flex;flex-wrap:wrap;gap:10px}
-.chip{
-  display:inline-flex;align-items:center;padding:10px 14px;border-radius:999px;
-  background:rgba(255,255,255,.05);color:#deebf6;font-size:.8rem;font-weight:700
+
+.shell{
+  position:relative;z-index:2;
+  display:grid;grid-template-columns:1.1fr .9fr;
+  height:100vh;
+  gap:0;
 }
-.hero{
-  margin-top:18px;
-  display:grid;
-  grid-template-columns:1.16fr .84fr;
-  gap:18px;
-  padding:22px;
-  border-radius:38px;
-  background:linear-gradient(145deg,rgba(7,20,33,.82),rgba(10,26,43,.62));
-}
+
+/* LEFT STORY */
 .story{
-  min-height:650px;
-  border-radius:32px;
-  padding:30px;
-  display:grid;
-  align-content:space-between;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)),
-    radial-gradient(circle at top right, rgba(80,224,208,.12), transparent 18rem),
-    rgba(255,255,255,.03);
+  display:flex;flex-direction:column;justify-content:center;
+  padding:60px 56px;
+  border-right:1px solid var(--stroke);
 }
-.eyebrow{
-  display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;
-  background:rgba(80,224,208,.12);color:#95fff2;font-size:.74rem;font-weight:800;
-  text-transform:uppercase;letter-spacing:.14em
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:52px}
+.logo-mark{
+  width:44px;height:44px;border-radius:13px;
+  background:linear-gradient(135deg,var(--green),#00b45a);
+  display:grid;place-items:center;
+  font-weight:900;font-size:1.05rem;color:#030e09;
+  box-shadow:0 0 24px var(--green-glow);
 }
-.story h2{
-  margin:18px 0 16px;
-  font-family:'Cormorant Garamond',serif;
-  font-size:clamp(3.6rem,6vw,6.2rem);
-  line-height:.88;
-  letter-spacing:-.04em;
+.logo-name{font-size:1.12rem;font-weight:700;letter-spacing:-.01em}
+.logo-tag{font-size:.76rem;color:var(--muted);margin-top:2px}
+
+.headline{
+  font-size:clamp(2.4rem,3.8vw,3.6rem);
+  font-weight:900;
+  line-height:1.06;
+  letter-spacing:-.03em;
+  color:var(--text);
+  max-width:560px;
 }
-.story p{margin:0;color:rgba(232,239,248,.8);line-height:1.78;font-size:1rem;max-width:760px}
-.modules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:24px}
-.module{
-  padding:18px;border-radius:24px;background:rgba(255,255,255,.045)
+.headline em{font-style:normal;color:var(--green)}
+
+.lead{
+  margin-top:20px;
+  font-size:1rem;color:var(--muted);
+  line-height:1.7;max-width:480px;
+  font-weight:400;
 }
-.module span{
-  display:inline-block;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.08);
-  color:#93d6ff;font-size:.73rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em
+
+.env-chips{
+  display:flex;flex-wrap:wrap;gap:10px;
+  margin-top:36px;
 }
-.module h3{margin:14px 0 8px;font-size:1.08rem}
-.module p{font-size:.92rem;line-height:1.65}
-.proofs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
-.proof{
-  border-radius:22px;padding:18px;background:rgba(255,255,255,.045)
+.chip{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:9px 16px;border-radius:999px;
+  border:1px solid var(--stroke);
+  background:var(--green-dim);
+  font-size:.82rem;font-weight:600;color:var(--text);
 }
-.proof strong{display:block;font-size:1.55rem}
-.proof span{display:block;margin-top:6px;color:rgba(232,239,248,.72);font-size:.82rem;line-height:1.55}
+.chip-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green-glow)}
+
+.stats{
+  display:flex;gap:36px;
+  margin-top:52px;
+  padding-top:36px;
+  border-top:1px solid var(--stroke);
+}
+.stat strong{display:block;font-size:1.7rem;font-weight:800;color:var(--green);letter-spacing:-.02em}
+.stat span{font-size:.78rem;color:var(--muted);margin-top:3px;display:block}
+
+/* RIGHT CARD */
+.card-wrap{
+  display:flex;align-items:center;justify-content:center;
+  padding:48px 52px;
+}
 .card{
-  border-radius:30px;padding:26px;
-  background:linear-gradient(180deg,rgba(248,251,255,.97),rgba(234,241,249,.93));
-  color:#102235
+  width:100%;max-width:420px;
 }
-.card .eyebrow{background:rgba(16,34,53,.08);color:#0e756f}
-.card h3{margin:12px 0 10px;font-size:1.8rem}
-.card p{margin:0;color:#536374;line-height:1.72}
-.field{margin-top:14px}
-.label{
-  display:block;margin-bottom:8px;font-size:.8rem;font-weight:800;color:#3d5468;
-  text-transform:uppercase;letter-spacing:.12em
+.card-title{font-size:1.6rem;font-weight:800;letter-spacing:-.02em}
+.card-sub{margin-top:8px;font-size:.9rem;color:var(--muted);line-height:1.6}
+
+.fields{margin-top:28px;display:flex;flex-direction:column;gap:16px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:.78rem;font-weight:600;color:rgba(228,245,235,.6);letter-spacing:.03em;text-transform:uppercase}
+.field input{
+  padding:13px 16px;
+  border-radius:11px;
+  border:1px solid rgba(0,232,122,.15);
+  background:rgba(0,232,122,.04);
+  color:var(--text);font-size:.97rem;
+  outline:none;transition:border .2s,box-shadow .2s;
+  font-family:inherit;
 }
-.input{
-  width:100%;padding:15px 16px;border-radius:18px;border:1px solid rgba(16,34,53,.12);
-  background:rgba(255,255,255,.86);font:inherit;color:#102235;outline:none;
-  transition:border-color .2s ease, box-shadow .2s ease, transform .2s ease
+.field input:focus{
+  border-color:var(--green);
+  box-shadow:0 0 0 3px rgba(0,232,122,.12);
 }
-.input:focus{border-color:#4d78ff;box-shadow:0 14px 32px rgba(77,120,255,.14);transform:translateY(-1px)}
-.cta{
-  margin-top:18px;width:100%;min-height:58px;border:0;border-radius:20px;cursor:pointer;
-  background:linear-gradient(135deg,#0f766e,#4d78ff 58%,#74e3d7);color:#fff;
-  font:inherit;font-weight:800;letter-spacing:.01em;box-shadow:0 24px 44px rgba(24,90,153,.25)
+.field input::placeholder{color:rgba(100,180,130,.35)}
+
+.btn-login{
+  margin-top:22px;width:100%;padding:14px;
+  border:none;border-radius:12px;
+  background:linear-gradient(135deg,var(--green) 0%,var(--green2) 100%);
+  color:#030e09;font-size:.98rem;font-weight:800;
+  cursor:pointer;letter-spacing:.01em;
+  transition:opacity .2s,box-shadow .2s;
+  font-family:inherit;
+  box-shadow:0 4px 24px rgba(0,232,122,.25);
 }
-.cta:hover{transform:translateY(-1px)}
-.helper{margin-top:14px;font-size:.9rem;color:#617487;line-height:1.72}
-.helper a{color:#0f766e;text-decoration:none;font-weight:800}
-.trust{
-  margin-top:18px;padding:18px;border-radius:24px;background:rgba(9,29,45,.9);color:#deebf6
+.btn-login:hover{opacity:.92;box-shadow:0 6px 32px rgba(0,232,122,.35)}
+.btn-login:active{transform:scale(.99)}
+
+.links{margin-top:18px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.links a{font-size:.82rem;color:var(--muted);text-decoration:none;transition:color .2s}
+.links a:hover{color:var(--green)}
+
+.divider{
+  margin:20px 0;
+  display:flex;align-items:center;gap:12px;
+  color:rgba(100,180,130,.3);font-size:.78rem;
 }
-.trust h4{margin:0 0 10px;font-size:1rem}
-.trust ul{margin:0;padding-left:18px;color:rgba(222,235,246,.82);line-height:1.68}
-.erro{margin-top:12px;padding:12px 14px;border-radius:16px;background:rgba(185,28,28,.1);color:#991b1b;display:none}
-.anchor{position:absolute;left:-9999px}
-@media(max-width:1120px){
-  .hero{grid-template-columns:1fr}
-  .story{min-height:unset}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--stroke)}
+
+.register-link{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px;border-radius:11px;
+  border:1px solid var(--stroke);
+  color:var(--muted);font-size:.85rem;
+  text-decoration:none;transition:border-color .2s,color .2s;
 }
-@media(max-width:760px){
-  .shell{width:min(100% - 18px,1420px)}
-  .modules,.proofs{grid-template-columns:1fr}
-  .topbar{flex-direction:column;align-items:flex-start}
+.register-link:hover{border-color:rgba(0,232,122,.35);color:var(--green)}
+
+.err{
+  display:none;margin-top:14px;padding:11px 14px;
+  border-radius:10px;
+  background:rgba(255,85,116,.1);border:1px solid rgba(255,85,116,.22);
+  color:#ff8099;font-size:.84rem;
+}
+
+/* responsive */
+@media(max-width:940px){
+  .shell{grid-template-columns:1fr;overflow:auto}
+  .story{padding:40px 28px;border-right:none;border-bottom:1px solid var(--stroke)}
+  .card-wrap{padding:36px 24px}
+  body,html{overflow:auto}
+  body::before,body::after{display:none}
 }
 </style>
 </head>
 <body>
-<main class="shell">
-  <section class="topbar">
-    <div class="brand">
-      <div class="mark">SC</div>
+<div class="grid-lines"></div>
+<div class="shell">
+
+  <section class="story">
+    <div class="logo">
+      <div class="logo-mark">S</div>
       <div>
-        <h1>SolusCRT Empresa</h1>
-        <p>Ecossistema privado para saude corporativa, farmacia, hospital e operacao territorial.</p>
+        <div class="logo-name">SolusCRT Saúde</div>
+        <div class="logo-tag">Plataforma de inteligência epidemiológica</div>
       </div>
     </div>
-    <div class="chips">
-      <span class="chip">SaaS empresarial</span>
-      <span class="chip">Farmacia</span>
-      <span class="chip">Hospital</span>
-      <span class="chip">Operacao territorial</span>
+
+    <h1 class="headline">Saúde em tempo real.<br><em>Decisão antes</em><br>do surto.</h1>
+    <p class="lead">Monitoramento colaborativo por bairro, município e estado. Cada ambiente responde ao seu setor com dados, alertas e ação — sem misturar contextos.</p>
+
+    <div class="env-chips">
+      <div class="chip"><span class="chip-dot"></span>Empresa — saúde ocupacional</div>
+      <div class="chip"><span class="chip-dot"></span>Farmácia — estoque e demanda</div>
+      <div class="chip"><span class="chip-dot"></span>Hospital — triagem e prontidão</div>
+      <div class="chip"><span class="chip-dot"></span>Governo — briefing e território</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><strong>4</strong><span>ambientes especializados</span></div>
+      <div class="stat"><strong>100%</strong><span>dados privados isolados</span></div>
+      <div class="stat"><strong>RT</strong><span>sinais em tempo real</span></div>
     </div>
   </section>
 
-  <section class="hero">
-    <article class="story">
-      <div>
-        <span class="eyebrow">Acesso empresarial premium</span>
-        <span class="anchor">Acesso empresarial</span>
-        <h2>Entre no ambiente certo para proteger pessoas, operacoes e decisoes.</h2>
-        <p>O SolusCRT Empresa concentra os acessos privados do ecossistema. Depois do login, cada contrato entra diretamente no seu ambiente proprio, com identidade, dados e fluxo separados para empresa, farmacia, hospital ou operacao territorial.</p>
+  <div class="card-wrap">
+    <div class="card">
+      <div class="card-title">Entrar na plataforma</div>
+      <div class="card-sub">Use sua credencial institucional. O sistema identifica o ambiente e abre automaticamente.</div>
 
-        <div class="modules">
-          <article class="module">
-            <span>Empresa</span>
-            <h3>Saude ocupacional que ajuda lideres a agir</h3>
-            <p>Reduza absenteismo, identifique fadiga e risco psicossocial, acompanhe a forca de trabalho com leitura anonima e transforme sinal em plano de acao para RH e SESMT.</p>
-          </article>
-          <article class="module">
-            <span>Farmacia</span>
-            <h3>Demanda, estoque e pressao territorial</h3>
-            <p>Antecipe oscilacoes de consumo e surtos locais para ajustar abastecimento, orientacao ao cliente e capacidade operacional.</p>
-          </article>
-          <article class="module">
-            <span>Hospital</span>
-            <h3>Pressao assistencial antes do pico</h3>
-            <p>Visualize sinais de demanda, risco regional e tensao operacional para preparar equipes, insumos e atendimento com antecedencia.</p>
-          </article>
-          <article class="module">
-            <span>Territorio</span>
-            <h3>Inteligencia epidemiologica para resposta rapida</h3>
-            <p>Conecte alerta, vigilancia e decisao territorial sem misturar esse fluxo com modulos governamentais ou administrativos centrais.</p>
-          </article>
+      <div class="fields">
+        <div class="field">
+          <label for="email">E-mail institucional</label>
+          <input id="email" type="email" placeholder="voce@instituicao.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="senha">Senha</label>
+          <input id="senha" type="password" placeholder="••••••••" autocomplete="current-password">
         </div>
       </div>
 
-      <div class="proofs">
-        <article class="proof">
-          <strong>1</strong>
-          <span>camada privada de acesso institucional para reconhecer contrato e destino.</span>
-        </article>
-        <article class="proof">
-          <strong>4</strong>
-          <span>ambientes especializados, cada um com narrativa, dados e decisao proprios.</span>
-        </article>
-        <article class="proof">
-          <strong>0</strong>
-          <span>mistura entre login privado, modulo governamental e operacao administrativa.</span>
-        </article>
-      </div>
-    </article>
+      <button class="btn-login" onclick="login()">Acessar meu ambiente →</button>
 
-    <aside class="card">
-      <span class="eyebrow">Acesso institucional</span>
-      <h3>Entrar no seu ambiente privado</h3>
-      <p>Use sua credencial institucional. O sistema identifica o pacote contratado e abre automaticamente o ambiente correto para sua operacao.</p>
-
-      <div class="field">
-        <label class="label" for="email">Email institucional</label>
-        <input id="email" class="input" placeholder="voce@instituicao.com">
-      </div>
-      <div class="field">
-        <label class="label" for="senha">Senha</label>
-        <input id="senha" type="password" class="input" placeholder="Digite sua senha">
+      <div class="links">
+        <a href="/solicitar-reset-senha/">Esqueceu sua senha?</a>
       </div>
 
-      <button class="cta" onclick="login()">Acessar meu ambiente</button>
+      <div class="divider">ou</div>
 
-      <div class="helper">
-        <a href="/solicitar-reset-senha/" style="color:rgba(228,236,247,.45);font-size:.82rem;">Esqueceu sua senha?</a>
-      </div>
+      <a href="/cadastro/" class="register-link">Ainda não tem conta? Solicitar acesso comercial</a>
 
-      <div class="helper">
-        Ainda nao faz parte do ecossistema?
-        <a href="/cadastro/">Solicitar acesso comercial</a>
-      </div>
+      <div id="erro" class="err"></div>
+    </div>
+  </div>
 
-      <div class="trust">
-        <h4>O que voce encontra depois do login</h4>
-        <ul>
-          <li>Empresa: saude ocupacional, bem-estar e prevencao institucional.</li>
-          <li>Farmacia: pressao regional, demanda e decisao de abastecimento.</li>
-          <li>Hospital: risco assistencial, tendencia e resposta operacional.</li>
-        </ul>
-      </div>
-
-      <div id="erro" class="erro">Credenciais invalidas</div>
-    </aside>
-  </section>
-</main>
+</div>
 <script>
 function getDeviceId() {
   let deviceId = localStorage.getItem("device_id");
@@ -292,14 +292,14 @@ async function login(forceLogin = false) {
   } else {
     if (data.codigo === "sessao_em_uso" && !forceLogin) {
       const confirmar = confirm(`${data.mensagem}\n\nDeseja encerrar a sessao anterior e entrar neste computador?`);
-      if (confirmar) {
-        return login(true);
-      }
+      if (confirmar) return login(true);
     }
     erro.textContent = data.mensagem || data.erro || "Credenciais invalidas";
     erro.style.display = "block";
   }
 }
+
+document.addEventListener("keydown", e => { if (e.key === "Enter") login(); });
 </script>
 </body>
 </html>

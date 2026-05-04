@@ -956,36 +956,39 @@
         `;
       }
 
+      const statusColor = status === "ativo" ? "var(--ok)" : status === "parcial" ? "var(--warn)" : "var(--muted)";
       return `
-        <div style="font-size:1rem;font-weight:800;">${escapeHtml(title)}</div>
-        <div class="mini" style="margin-top:8px;">Camada oficial usada para validacao, contexto historico e auditoria. O painel nao deve misturar relato populacional com confirmacao oficial sem essa identificacao.</div>
-        <div class="official-detail-grid" style="margin-top:14px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="font-size:1rem;font-weight:800;">${escapeHtml(title)}</div>
+          <span style="font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.07);color:${statusColor};">● ${statusLabel(status)}</span>
+        </div>
+        <div class="official-detail-grid" style="margin-top:10px;">
           <div class="official-detail-box">
-            <strong>Fonte e status</strong>
+            <strong>Fonte oficial</strong>
             <ul>
-              <li>Fonte: ${escapeHtml(fonte)}</li>
-              <li>Status: ${statusLabel(status)}</li>
+              <li>Origem: ${escapeHtml(fonte)}</li>
               <li>Cobertura: ${escapeHtml(payload.cobertura || payload.uf || payload.modo || "Brasil")}</li>
-              <li>${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="color:var(--accent);">Abrir fonte oficial</a>` : "URL oficial: catalogada internamente"}</li>
+              <li>Periodicidade: ${escapeHtml(payload.periodicidade_recomendada || payload.frequencia || "conforme publicação oficial")}</li>
+              <li>${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="color:var(--accent);">Acessar fonte →</a>` : "Integração via pipeline seguro"}</li>
             </ul>
           </div>
           <div class="official-detail-box">
-            <strong>Indicadores acompanhados</strong>
-            <ul>${listItems(indicadores.length ? indicadores : doencas)}</ul>
+            <strong>Indicadores rastreados</strong>
+            <ul>${listItems(indicadores.length ? indicadores : doencas.length ? doencas : ["Dados disponíveis após ingestão do pipeline"])}</ul>
           </div>
           <div class="official-detail-box">
-            <strong>Leitura operacional</strong>
+            <strong>Uso no painel</strong>
             <ul>
-              <li>${escapeHtml(payload.finalidade || payload.uso_no_saas || payload.entrega || payload.resumo || payload.mensagem || "Fonte usada como camada de contexto oficial.")}</li>
-              <li>${escapeHtml(payload.estrategia || payload.regra_operacional || "Atualizar por API ou pipeline assíncrono, expondo apenas agregados ao dashboard.")}</li>
+              <li>${escapeHtml(payload.finalidade || payload.uso_no_saas || payload.entrega || payload.resumo || "Contexto oficial para validação de sinais colaborativos.")}</li>
+              <li>${escapeHtml(payload.estrategia || payload.regra_operacional || "Agregados expostos no dashboard com rastreabilidade de fonte e data.")}</li>
             </ul>
           </div>
           <div class="official-detail-box">
-            <strong>Cuidados e proximos passos</strong>
+            <strong>Integridade dos dados</strong>
             <ul>
-              <li>${escapeHtml(payload.motivo_cuidado || "Validar disponibilidade da fonte antes de usar em decisao publica.")}</li>
-              <li>Separar dado oficial confirmado, sinal colaborativo e estimativa IA.</li>
-              <li>Registrar data de coleta, fonte e status de atualizacao.</li>
+              <li>Sinal colaborativo: antecipação e vigilância precoce.</li>
+              <li>Dado oficial: confirmação, incidência e contexto histórico.</li>
+              <li>${escapeHtml(payload.motivo_cuidado || "Não misturar relato populacional com confirmação oficial sem identificação de origem.")}</li>
             </ul>
           </div>
         </div>

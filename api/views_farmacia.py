@@ -63,13 +63,13 @@ def api_farmacia_painel(request):
         for z in priority_zones[:5]
     ]
 
+    from datetime import date, timedelta
+    today = date.today()
+    series = (overview.get("timeline") or {}).get("series", [])
     previsao_7d = []
-    timeline = overview.get("timeline", [])
-    if timeline:
-        base = timeline[-1].get("count", 0) if timeline else 0
+    if series:
+        base = series[-1].get("total", 0)
         taxa = max(growth_percent / 100, 0)
-        from datetime import date, timedelta
-        today = date.today()
         for i in range(1, 8):
             dia = today + timedelta(days=i)
             est = int(base * (1 + taxa * i * 0.15))
