@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Senha redefinida — SolusCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;
+  font-family:'Manrope',system-ui,sans-serif;
+  color:#eef5ff;
+  display:grid;place-items:center;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(71,214,198,.22), transparent 22rem),
+    radial-gradient(circle at 84% 82%, rgba(91,126,255,.18), transparent 26rem),
+    linear-gradient(145deg,#03111d 0%,#081a2b 34%,#0e2840 72%,#0f3153 100%);
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.9),rgba(0,0,0,.22));
+}
+.card{
+  position:relative;z-index:1;
+  width:min(400px,calc(100% - 32px));
+  padding:40px 32px;
+  border-radius:28px;
+  background:rgba(7,20,33,.82);
+  border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 28px 90px rgba(3,10,18,.5);
+  text-align:center;
+}
+.icon{font-size:3.2rem;margin-bottom:16px;line-height:1}
+h1{margin:0 0 10px;font-size:1.25rem;font-weight:700}
+.msg{font-size:.9rem;color:rgba(228,236,247,.65);line-height:1.6;margin:0 0 28px}
+.btn{
+  display:inline-block;padding:13px 32px;border-radius:12px;
+  background:linear-gradient(135deg,#50e0d0,#4d78ff);color:#04131f;
+  font-size:.97rem;font-weight:700;text-decoration:none;transition:opacity .2s;
+}
+.btn:hover{opacity:.88}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">✅</div>
+  <h1>Senha redefinida com sucesso!</h1>
+  <p class="msg">Sua nova senha foi salva. Você já pode entrar na plataforma normalmente.</p>
+  <a href="/login-empresa/" class="btn">Ir para o login</a>
+</div>
+</body>
+</html>

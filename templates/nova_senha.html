@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Nova senha — SolusCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;
+  font-family:'Manrope',system-ui,sans-serif;
+  color:#eef5ff;
+  display:grid;place-items:center;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(71,214,198,.22), transparent 22rem),
+    radial-gradient(circle at 84% 82%, rgba(91,126,255,.18), transparent 26rem),
+    linear-gradient(145deg,#03111d 0%,#081a2b 34%,#0e2840 72%,#0f3153 100%);
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.9),rgba(0,0,0,.22));
+}
+.card{
+  position:relative;z-index:1;
+  width:min(420px,calc(100% - 32px));
+  padding:36px 32px;
+  border-radius:28px;
+  background:rgba(7,20,33,.82);
+  border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 28px 90px rgba(3,10,18,.5);
+}
+.brand{text-align:center;margin-bottom:28px}
+.mark{
+  display:inline-grid;place-items:center;width:52px;height:52px;border-radius:16px;
+  background:linear-gradient(135deg,#50e0d0,#4d78ff);font-weight:800;color:#04131f;font-size:1.1rem;
+  margin-bottom:12px;
+}
+h1{margin:0 0 6px;font-size:1.3rem;font-weight:700}
+.sub{margin:0;font-size:.88rem;color:rgba(228,236,247,.6);line-height:1.5}
+label{display:block;font-size:.82rem;font-weight:600;color:rgba(228,236,247,.7);margin-bottom:6px;margin-top:20px}
+.field-wrap{position:relative}
+input[type=password],input[type=text]{
+  width:100%;padding:12px 42px 12px 14px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);color:#eef5ff;font-size:.97rem;
+  outline:none;transition:border .2s;
+}
+input:focus{border-color:#50e0d0}
+.toggle{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;color:rgba(228,236,247,.45);font-size:.9rem;padding:0;
+}
+.toggle:hover{color:#50e0d0}
+.forca{display:flex;gap:4px;margin-top:6px}
+.forca-bar{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.1);transition:background .3s}
+.hint{font-size:.76rem;color:rgba(228,236,247,.4);margin-top:4px}
+.btn{
+  width:100%;margin-top:22px;padding:14px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,#50e0d0,#4d78ff);color:#04131f;
+  font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s;
+}
+.btn:hover{opacity:.88}
+.erro{
+  margin-top:14px;padding:12px 14px;border-radius:10px;
+  background:rgba(255,85,116,.12);border:1px solid rgba(255,85,116,.25);
+  color:#ff8099;font-size:.85rem;
+}
+.link-inativo{text-align:center;padding:24px 0}
+.link-inativo p{color:rgba(228,236,247,.55);font-size:.9rem;margin:0 0 14px}
+.btn-outline{
+  display:inline-block;padding:11px 24px;border-radius:10px;
+  border:1px solid rgba(80,224,208,.35);color:#50e0d0;text-decoration:none;
+  font-size:.9rem;font-weight:600;transition:background .2s;
+}
+.btn-outline:hover{background:rgba(80,224,208,.08)}
+</style>
+</head>
+<body>
+<div class="card">
+
+  {% if erro and not token %}
+  <div class="link-inativo">
+    <p>{{ erro }}</p>
+    <a href="/solicitar-reset-senha/" class="btn-outline">Solicitar novo link</a>
+  </div>
+  {% else %}
+
+  <div class="brand">
+    <div class="mark">S</div>
+    <h1>Criar nova senha</h1>
+    <p class="sub">Escolha uma senha segura para a sua conta SolusCRT.</p>
+  </div>
+
+  {% if erro %}
+  <div class="erro">{{ erro }}</div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <label for="senha">Nova senha</label>
+    <div class="field-wrap">
+      <input type="password" id="senha" name="senha" placeholder="Mínimo 8 caracteres" required autofocus oninput="avaliarForca(this.value)">
+      <button type="button" class="toggle" onclick="toggleVer('senha',this)">👁</button>
+    </div>
+    <div class="forca" id="forcaBars">
+      <div class="forca-bar" id="b1"></div>
+      <div class="forca-bar" id="b2"></div>
+      <div class="forca-bar" id="b3"></div>
+      <div class="forca-bar" id="b4"></div>
+    </div>
+    <div class="hint" id="forcaHint">Digite uma senha</div>
+
+    <label for="senha_confirm">Confirmar nova senha</label>
+    <div class="field-wrap">
+      <input type="password" id="senha_confirm" name="senha_confirm" placeholder="Repita a senha" required>
+      <button type="button" class="toggle" onclick="toggleVer('senha_confirm',this)">👁</button>
+    </div>
+
+    <button class="btn" type="submit">Salvar nova senha</button>
+  </form>
+
+  {% endif %}
+</div>
+<script>
+function toggleVer(id, btn) {
+  const el = document.getElementById(id);
+  el.type = el.type === "password" ? "text" : "password";
+  btn.textContent = el.type === "password" ? "👁" : "🙈";
+}
+
+function avaliarForca(v) {
+  const bars = [document.getElementById("b1"), document.getElementById("b2"), document.getElementById("b3"), document.getElementById("b4")];
+  const hint = document.getElementById("forcaHint");
+  let score = 0;
+  if (v.length >= 8) score++;
+  if (/[A-Z]/.test(v)) score++;
+  if (/[0-9]/.test(v)) score++;
+  if (/[^A-Za-z0-9]/.test(v)) score++;
+  const cores = ["#ff5574", "#ff9b54", "#ffd166", "#17d7a0"];
+  const labels = ["Fraca", "Razoável", "Boa", "Forte"];
+  bars.forEach((b, i) => b.style.background = i < score ? cores[score - 1] : "rgba(255,255,255,.1)");
+  hint.textContent = v.length === 0 ? "Digite uma senha" : labels[score - 1] || "Muito fraca";
+}
+</script>
+</body>
+</html>

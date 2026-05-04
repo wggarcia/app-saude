@@ -597,6 +597,19 @@ class DonoAuditoriaAcao(models.Model):
         return f"{self.dono.email} - {self.acao} - {alvo}"
 
 
+class PasswordResetToken(models.Model):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True)
+    usuario = models.ForeignKey(EmpresaUsuario, on_delete=models.CASCADE, null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    expira_em = models.DateTimeField()
+    usado = models.BooleanField(default=False)
+
+    def __str__(self):
+        alvo = self.usuario.email if self.usuario else (self.empresa.email if self.empresa else "—")
+        return f"reset:{alvo}"
+
+
 class AlertaGovernamental(models.Model):
     STATUS_RASCUNHO = "rascunho"
     STATUS_EM_REVISAO = "em_revisao"

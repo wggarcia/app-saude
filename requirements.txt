@@ -8,3 +8,4 @@ dj-database-url
 psycopg[binary]
 PyJWT
 firebase-admin
+django-redis

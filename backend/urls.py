@@ -69,6 +69,7 @@ from api.views_escalas import (
     api_escalas_resumo,
 )
 from api.views_lider import painel_lider, api_unidade_dados
+from api.views_reset_senha import solicitar_reset_senha, redefinir_senha, reset_senha_sucesso
 from api.views_farmacia import api_farmacia_painel
 from api.views_hospital import api_hospital_painel
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
@@ -105,6 +106,9 @@ urlpatterns = [
     path('logout/', logout_empresa),
     path('logout-governo/', logout_governo),
     path('logout-operacao/', logout_operacao),
+    path('solicitar-reset-senha/', solicitar_reset_senha),
+    path('redefinir-senha/<str:token_str>/', redefinir_senha),
+    path('reset-senha-sucesso/', reset_senha_sucesso),
 
     # 🧠 DASHBOARD
     path('dashboard/', dashboard),

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Recuperar senha — SolusCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;
+  font-family:'Manrope',system-ui,sans-serif;
+  color:#eef5ff;
+  display:grid;place-items:center;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(71,214,198,.22), transparent 22rem),
+    radial-gradient(circle at 84% 82%, rgba(91,126,255,.18), transparent 26rem),
+    linear-gradient(145deg,#03111d 0%,#081a2b 34%,#0e2840 72%,#0f3153 100%);
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.9),rgba(0,0,0,.22));
+}
+.card{
+  position:relative;z-index:1;
+  width:min(420px,calc(100% - 32px));
+  padding:36px 32px;
+  border-radius:28px;
+  background:rgba(7,20,33,.82);
+  border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 28px 90px rgba(3,10,18,.5);
+}
+.brand{text-align:center;margin-bottom:28px}
+.mark{
+  display:inline-grid;place-items:center;width:52px;height:52px;border-radius:16px;
+  background:linear-gradient(135deg,#50e0d0,#4d78ff);font-weight:800;color:#04131f;font-size:1.1rem;
+  margin-bottom:12px;
+}
+h1{margin:0 0 6px;font-size:1.3rem;font-weight:700}
+.sub{margin:0;font-size:.88rem;color:rgba(228,236,247,.6);line-height:1.5}
+label{display:block;font-size:.82rem;font-weight:600;color:rgba(228,236,247,.7);margin-bottom:6px;margin-top:20px}
+input{
+  width:100%;padding:12px 14px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);color:#eef5ff;font-size:.97rem;
+  outline:none;transition:border .2s;
+}
+input:focus{border-color:#50e0d0}
+.btn{
+  width:100%;margin-top:22px;padding:14px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,#50e0d0,#4d78ff);color:#04131f;
+  font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s;
+}
+.btn:hover{opacity:.88}
+.erro{
+  margin-top:14px;padding:12px 14px;border-radius:10px;
+  background:rgba(255,85,116,.12);border:1px solid rgba(255,85,116,.25);
+  color:#ff8099;font-size:.85rem;
+}
+.voltar{display:block;text-align:center;margin-top:18px;font-size:.84rem;color:rgba(228,236,247,.5);text-decoration:none}
+.voltar:hover{color:#50e0d0}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">
+    <div class="mark">S</div>
+    <h1>Recuperar senha</h1>
+    <p class="sub">Informe o e-mail da sua conta. Enviaremos um link para criar uma nova senha.</p>
+  </div>
+
+  {% if erro %}
+  <div class="erro">{{ erro }}</div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <label for="email">E-mail da conta</label>
+    <input type="email" id="email" name="email" placeholder="seu@email.com" required autofocus>
+    <button class="btn" type="submit">Enviar link de recuperação</button>
+  </form>
+
+  <a href="/login-empresa/" class="voltar">← Voltar para o login</a>
+</div>
+</body>
+</html>

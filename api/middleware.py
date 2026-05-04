@@ -111,8 +111,11 @@ class EmpresaMiddleware:
             "/seguranca-lgpd/",
             "/metodologia/",
             "/suporte/",
+            "/solicitar-reset-senha/",
+            "/reset-senha-sucesso/",
         }
         rotas_livres_prefixo = (
+            "/redefinir-senha/",
             "/api/login",
             "/api/operacao-central/login",
             "/api/registrar_empresa",
