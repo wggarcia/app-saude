@@ -38,6 +38,14 @@ from api.views_corporativo import (
     api_corporativo_checkin_semanal,
     api_colaborador_trilhas,
 )
+from api.views_sst import (
+    api_sst_dashboard,
+    api_funcionarios,
+    api_asos,
+    api_cats,
+    api_documentos_sst,
+    api_afastamentos_sst,
+)
 from api.views_gestao import (
     gestao_corporativa,
     api_apoio_fila,
@@ -146,6 +154,14 @@ urlpatterns = [
     path('api/escalas/<int:escala_id>/atribuicoes', api_escala_atribuicoes),
     path('painel-lider/', painel_lider),
     path('api/lider/unidade/<int:unidade_id>/dados', api_unidade_dados),
+
+    # 🏥 SST / Saúde Ocupacional
+    path('api/sst/dashboard', api_sst_dashboard),
+    path('api/sst/funcionarios', api_funcionarios),
+    path('api/sst/asos', api_asos),
+    path('api/sst/cats', api_cats),
+    path('api/sst/documentos', api_documentos_sst),
+    path('api/sst/afastamentos', api_afastamentos_sst),
 
     # 📊 API PRINCIPAL
     path('api/registrar', registrar_sintoma),

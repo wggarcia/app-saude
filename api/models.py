@@ -830,3 +830,255 @@ class ColaboradorEscalaCorporativa(models.Model):
 
     def __str__(self):
         return f"{self.alias.alias_publico} - {self.escala.nome} - {self.fase_atual}"
+
+
+# ─── SST / Saúde Ocupacional ────────────────────────────────────────────────
+
+class FuncionarioSST(models.Model):
+    CLASSE_RISCO = [("I", "Grau I"), ("II", "Grau II"), ("III", "Grau III"), ("IV", "Grau IV")]
+    SEXO = [("M", "Masculino"), ("F", "Feminino"), ("O", "Outro")]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="funcionarios_sst")
+    unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="funcionarios_sst")
+    nome = models.CharField(max_length=200)
+    cpf = models.CharField(max_length=14, blank=True)
+    matricula = models.CharField(max_length=40, blank=True)
+    cargo = models.CharField(max_length=120)
+    setor = models.CharField(max_length=120, blank=True)
+    sexo = models.CharField(max_length=1, choices=SEXO, blank=True)
+    data_nascimento = models.DateField(null=True, blank=True)
+    data_admissao = models.DateField(null=True, blank=True)
+    data_demissao = models.DateField(null=True, blank=True)
+    classe_risco = models.CharField(max_length=4, choices=CLASSE_RISCO, default="II")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["nome"]
+        indexes = [
+            models.Index(fields=["empresa", "ativo"]),
+            models.Index(fields=["empresa", "unidade"]),
+        ]
+
+    def __str__(self):
+        return f"{self.nome} — {self.cargo} ({self.empresa.nome})"
+
+
+class ASOOcupacional(models.Model):
+    TIPO = [
+        ("admissional", "Admissional"),
+        ("periodico", "Periódico"),
+        ("retorno_trabalho", "Retorno ao Trabalho"),
+        ("mudanca_risco", "Mudança de Risco"),
+        ("demissional", "Demissional"),
+    ]
+    RESULTADO = [("apto", "Apto"), ("inapto", "Inapto"), ("apto_restricao", "Apto com Restrição")]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="asos")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="asos")
+    tipo = models.CharField(max_length=30, choices=TIPO)
+    data_emissao = models.DateField()
+    data_validade = models.DateField(null=True, blank=True)
+    medico_responsavel = models.CharField(max_length=200, blank=True)
+    crm = models.CharField(max_length=30, blank=True)
+    resultado = models.CharField(max_length=20, choices=RESULTADO, default="apto")
+    restricoes = models.TextField(blank=True)
+    observacoes = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_emissao"]
+        indexes = [
+            models.Index(fields=["empresa", "data_validade"]),
+            models.Index(fields=["empresa", "resultado"]),
+        ]
+
+    def __str__(self):
+        return f"ASO {self.tipo} — {self.funcionario.nome} ({self.data_emissao})"
+
+
+class ExameOcupacional(models.Model):
+    TIPO_EXAME = [
+        ("audiometria", "Audiometria"),
+        ("acuidade_visual", "Acuidade Visual"),
+        ("espirometria", "Espirometria"),
+        ("laboratorial", "Laboratorial"),
+        ("eletrocardiograma", "Eletrocardiograma"),
+        ("raio_x", "Raio-X"),
+        ("psicologico", "Avaliação Psicológica"),
+        ("outro", "Outro"),
+    ]
+    STATUS = [("pendente", "Pendente"), ("realizado", "Realizado"), ("vencido", "Vencido")]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="exames_ocupacionais")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="exames")
+    aso = models.ForeignKey(ASOOcupacional, on_delete=models.SET_NULL, null=True, blank=True, related_name="exames")
+    tipo_exame = models.CharField(max_length=30, choices=TIPO_EXAME)
+    data_realizacao = models.DateField(null=True, blank=True)
+    data_validade = models.DateField(null=True, blank=True)
+    resultado = models.CharField(max_length=200, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="pendente")
+    observacoes = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["data_validade"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "data_validade"]),
+        ]
+
+    def __str__(self):
+        return f"{self.tipo_exame} — {self.funcionario.nome}"
+
+
+class CATOcupacional(models.Model):
+    TIPO = [("tipico", "Típico"), ("trajeto", "De Trajeto"), ("doenca", "Doença Ocupacional")]
+    STATUS_ESOCIAL = [
+        ("nao_enviado", "Não Enviado"),
+        ("pendente", "Pendente"),
+        ("transmitido", "Transmitido"),
+        ("erro", "Erro na Transmissão"),
+        ("retificado", "Retificado"),
+    ]
+    GRAVIDADE = [("leve", "Leve"), ("moderado", "Moderado"), ("grave", "Grave"), ("fatal", "Fatal")]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="cats")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="cats")
+    tipo = models.CharField(max_length=20, choices=TIPO, default="tipico")
+    gravidade = models.CharField(max_length=20, choices=GRAVIDADE, default="leve")
+    data_acidente = models.DateField()
+    hora_acidente = models.TimeField(null=True, blank=True)
+    local_acidente = models.CharField(max_length=200, blank=True)
+    descricao = models.TextField()
+    parte_corpo = models.CharField(max_length=100, blank=True)
+    cid = models.CharField(max_length=10, blank=True)
+    numero_cat = models.CharField(max_length=30, blank=True)
+    houve_afastamento = models.BooleanField(default=False)
+    dias_afastamento = models.IntegerField(default=0)
+    status_esocial = models.CharField(max_length=20, choices=STATUS_ESOCIAL, default="nao_enviado")
+    protocolo_esocial = models.CharField(max_length=60, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_acidente"]
+        indexes = [
+            models.Index(fields=["empresa", "status_esocial"]),
+            models.Index(fields=["empresa", "data_acidente"]),
+        ]
+
+    def __str__(self):
+        return f"CAT {self.tipo} — {self.funcionario.nome} ({self.data_acidente})"
+
+
+class eSocialEventoSST(models.Model):
+    TIPO_EVENTO = [
+        ("S-2210", "S-2210 — Comunicação de Acidente do Trabalho"),
+        ("S-2220", "S-2220 — Monitoramento da Saúde do Trabalhador"),
+        ("S-2240", "S-2240 — Condições Ambientais do Trabalho"),
+    ]
+    STATUS = [
+        ("pendente", "Pendente"),
+        ("enviado", "Enviado"),
+        ("transmitido", "Transmitido com Sucesso"),
+        ("erro", "Erro"),
+        ("retificacao", "Em Retificação"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="esocial_eventos")
+    tipo_evento = models.CharField(max_length=10, choices=TIPO_EVENTO)
+    status = models.CharField(max_length=20, choices=STATUS, default="pendente")
+    referencia = models.CharField(max_length=200, blank=True)
+    protocolo = models.CharField(max_length=60, blank=True)
+    mensagem_erro = models.TextField(blank=True)
+    data_envio = models.DateTimeField(null=True, blank=True)
+    data_retorno = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "tipo_evento"]),
+        ]
+
+    def __str__(self):
+        return f"{self.tipo_evento} — {self.status} ({self.empresa.nome})"
+
+
+class DocumentoSST(models.Model):
+    TIPO = [
+        ("PGR", "Programa de Gerenciamento de Riscos"),
+        ("PCMSO", "Programa de Controle Médico de Saúde Ocupacional"),
+        ("LTCAT", "Laudo Técnico das Condições Ambientais"),
+        ("laudo_insalubridade", "Laudo de Insalubridade"),
+        ("laudo_periculosidade", "Laudo de Periculosidade"),
+        ("PPP", "Perfil Profissiográfico Previdenciário"),
+        ("CIPA", "Comissão Interna de Prevenção de Acidentes"),
+        ("outro", "Outro Documento SST"),
+    ]
+    STATUS = [
+        ("vigente", "Vigente"),
+        ("vencido", "Vencido"),
+        ("em_revisao", "Em Revisão"),
+        ("nao_cadastrado", "Não Cadastrado"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="documentos_sst")
+    tipo = models.CharField(max_length=30, choices=TIPO)
+    titulo = models.CharField(max_length=200)
+    status = models.CharField(max_length=20, choices=STATUS, default="vigente")
+    responsavel_tecnico = models.CharField(max_length=200, blank=True)
+    registro_profissional = models.CharField(max_length=60, blank=True)
+    data_emissao = models.DateField(null=True, blank=True)
+    data_validade = models.DateField(null=True, blank=True)
+    observacoes = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_emissao"]
+        indexes = [
+            models.Index(fields=["empresa", "tipo"]),
+            models.Index(fields=["empresa", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.tipo} — {self.empresa.nome} ({self.status})"
+
+
+class AfastamentoSST(models.Model):
+    MOTIVO = [
+        ("acidente_trabalho", "Acidente de Trabalho"),
+        ("doenca_ocupacional", "Doença Ocupacional"),
+        ("doenca_comum", "Doença Comum"),
+        ("licenca_maternidade", "Licença Maternidade"),
+        ("licenca_paternidade", "Licença Paternidade"),
+        ("outro", "Outro"),
+    ]
+    STATUS = [("ativo", "Ativo"), ("encerrado", "Encerrado"), ("retorno_programado", "Retorno Programado")]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="afastamentos_sst")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="afastamentos")
+    cat = models.ForeignKey(CATOcupacional, on_delete=models.SET_NULL, null=True, blank=True, related_name="afastamentos")
+    motivo = models.CharField(max_length=30, choices=MOTIVO)
+    cid = models.CharField(max_length=10, blank=True)
+    data_inicio = models.DateField()
+    data_prevista_retorno = models.DateField(null=True, blank=True)
+    data_retorno_real = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=30, choices=STATUS, default="ativo")
+    observacoes = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_inicio"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "motivo"]),
+        ]
+
+    def __str__(self):
+        return f"Afastamento — {self.funcionario.nome} ({self.data_inicio})"

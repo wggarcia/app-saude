@@ -1,0 +1,425 @@
+"""
+Views SST — Saúde e Segurança do Trabalho
+Endpoints para o painel de saúde ocupacional da empresa.
+"""
+import json
+from datetime import date, timedelta
+
+from django.http import JsonResponse
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+
+from .models import (
+    AfastamentoSST,
+    ASOOcupacional,
+    CATOcupacional,
+    DocumentoSST,
+    Empresa,
+    ExameOcupacional,
+    FuncionarioSST,
+    eSocialEventoSST,
+)
+from .views_dashboard import _empresa_autenticada
+
+
+def _empresa_sst_autenticada(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return None
+    tipo = empresa.tipo_conta or ""
+    if tipo not in ("empresa",):
+        return None
+    return empresa
+
+
+def _sst_nao_autorizado():
+    return JsonResponse({"erro": "nao autenticado ou sem acesso SST"}, status=401)
+
+
+# ── Dashboard principal ──────────────────────────────────────────────────────
+
+def api_sst_dashboard(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    hoje = date.today()
+    em_30d = hoje + timedelta(days=30)
+    em_60d = hoje + timedelta(days=60)
+    inicio_ano = hoje.replace(month=1, day=1)
+
+    func_qs = FuncionarioSST.objects.filter(empresa=empresa)
+    func_ativos = func_qs.filter(ativo=True).count()
+
+    # ASOs
+    aso_qs = ASOOcupacional.objects.filter(empresa=empresa)
+    asos_vencendo = list(
+        aso_qs.filter(data_validade__gte=hoje, data_validade__lte=em_30d)
+        .select_related("funcionario")
+        .order_by("data_validade")[:10]
+    )
+    asos_vencidos = aso_qs.filter(data_validade__lt=hoje).count()
+    asos_a_vencer_60d = aso_qs.filter(data_validade__gte=hoje, data_validade__lte=em_60d).count()
+
+    # Exames
+    exam_qs = ExameOcupacional.objects.filter(empresa=empresa)
+    exames_atrasados = exam_qs.filter(status="vencido").count()
+    exames_vencendo_30d = exam_qs.filter(
+        status="pendente", data_validade__gte=hoje, data_validade__lte=em_30d
+    ).count()
+
+    # CATs
+    cat_qs = CATOcupacional.objects.filter(empresa=empresa)
+    cats_abertas = cat_qs.filter(status_esocial__in=("nao_enviado", "pendente")).count()
+    cats_recentes = list(
+        cat_qs.order_by("-data_acidente")[:5].select_related("funcionario")
+    )
+
+    # eSocial
+    esocial_qs = eSocialEventoSST.objects.filter(empresa=empresa)
+    esocial_pendentes = esocial_qs.filter(status__in=("pendente", "enviado")).count()
+    esocial_erros = esocial_qs.filter(status="erro").count()
+    esocial_transmitidos_mes = esocial_qs.filter(
+        status="transmitido", data_envio__date__gte=hoje.replace(day=1)
+    ).count()
+    esocial_por_tipo = {}
+    for tp in ("S-2210", "S-2220", "S-2240"):
+        ultimo = esocial_qs.filter(tipo_evento=tp).order_by("-criado_em").first()
+        esocial_por_tipo[tp] = {
+            "label": dict(eSocialEventoSST.TIPO_EVENTO).get(tp, tp),
+            "status": ultimo.status if ultimo else "nao_enviado",
+            "data": ultimo.data_envio.strftime("%d/%m/%Y") if ultimo and ultimo.data_envio else None,
+        }
+
+    # Afastamentos
+    afas_qs = AfastamentoSST.objects.filter(empresa=empresa)
+    afastamentos_ativos = afas_qs.filter(status="ativo").count()
+    afastamentos_ano = afas_qs.filter(data_inicio__gte=inicio_ano).count()
+
+    # Absenteísmo
+    absenteismo_pct = round((afastamentos_ativos / max(func_ativos, 1)) * 100, 1) if func_ativos else 0.0
+
+    # Documentos SST
+    docs_qs = DocumentoSST.objects.filter(empresa=empresa)
+    docs_status = {}
+    for tp in ("PGR", "PCMSO", "LTCAT", "laudo_insalubridade", "PPP", "CIPA"):
+        doc = docs_qs.filter(tipo=tp).order_by("-data_emissao").first()
+        if doc:
+            vencido = doc.data_validade and doc.data_validade < hoje
+            docs_status[tp] = {
+                "status": "vencido" if vencido else doc.status,
+                "validade": doc.data_validade.strftime("%d/%m/%Y") if doc.data_validade else None,
+                "responsavel": doc.responsavel_tecnico,
+            }
+        else:
+            docs_status[tp] = {"status": "nao_cadastrado", "validade": None, "responsavel": ""}
+
+    # Alertas críticos
+    alertas = []
+    if asos_vencidos:
+        alertas.append({"nivel": "critico", "mensagem": f"{asos_vencidos} ASO(s) vencido(s)"})
+    if asos_vencendo:
+        alertas.append({"nivel": "alto", "mensagem": f"{len(asos_vencendo)} ASO(s) vencem em 30 dias"})
+    if exames_atrasados:
+        alertas.append({"nivel": "critico", "mensagem": f"{exames_atrasados} exame(s) em atraso"})
+    if esocial_erros:
+        alertas.append({"nivel": "critico", "mensagem": f"{esocial_erros} evento(s) eSocial com erro"})
+    if esocial_pendentes:
+        alertas.append({"nivel": "alto", "mensagem": f"{esocial_pendentes} evento(s) eSocial pendentes"})
+    if docs_status.get("PGR", {}).get("status") in ("vencido", "nao_cadastrado"):
+        alertas.append({"nivel": "alto", "mensagem": "PGR não cadastrado ou vencido"})
+    if docs_status.get("PCMSO", {}).get("status") in ("vencido", "nao_cadastrado"):
+        alertas.append({"nivel": "alto", "mensagem": "PCMSO não cadastrado ou vencido"})
+
+    return JsonResponse({
+        "empresa_nome": empresa.nome,
+        "funcionarios_ativos": func_ativos,
+        "asos": {
+            "vencendo_30d": [
+                {
+                    "funcionario": a.funcionario.nome,
+                    "cargo": a.funcionario.cargo,
+                    "tipo": dict(ASOOcupacional.TIPO).get(a.tipo, a.tipo),
+                    "validade": a.data_validade.strftime("%d/%m/%Y") if a.data_validade else None,
+                    "dias_restantes": (a.data_validade - hoje).days if a.data_validade else None,
+                    "resultado": a.resultado,
+                }
+                for a in asos_vencendo
+            ],
+            "vencidos": asos_vencidos,
+            "a_vencer_60d": asos_a_vencer_60d,
+        },
+        "exames": {
+            "atrasados": exames_atrasados,
+            "vencendo_30d": exames_vencendo_30d,
+        },
+        "cats": {
+            "abertas": cats_abertas,
+            "recentes": [
+                {
+                    "funcionario": c.funcionario.nome,
+                    "tipo": dict(CATOcupacional.TIPO).get(c.tipo, c.tipo),
+                    "gravidade": c.gravidade,
+                    "data": c.data_acidente.strftime("%d/%m/%Y"),
+                    "status_esocial": c.status_esocial,
+                }
+                for c in cats_recentes
+            ],
+        },
+        "esocial": {
+            "pendentes": esocial_pendentes,
+            "erros": esocial_erros,
+            "transmitidos_mes": esocial_transmitidos_mes,
+            "por_tipo": esocial_por_tipo,
+        },
+        "afastamentos": {
+            "ativos": afastamentos_ativos,
+            "no_ano": afastamentos_ano,
+            "absenteismo_pct": absenteismo_pct,
+        },
+        "documentos": docs_status,
+        "alertas": alertas,
+    })
+
+
+# ── Funcionários ─────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_funcionarios(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    if request.method == "GET":
+        qs = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).select_related("unidade")
+        return JsonResponse({
+            "funcionarios": [
+                {
+                    "id": f.id,
+                    "nome": f.nome,
+                    "cargo": f.cargo,
+                    "unidade": f.unidade.nome if f.unidade else None,
+                    "data_admissao": f.data_admissao.strftime("%d/%m/%Y") if f.data_admissao else None,
+                    "classe_risco": f.classe_risco,
+                }
+                for f in qs
+            ]
+        })
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        nome = (data.get("nome") or "").strip()
+        cargo = (data.get("cargo") or "").strip()
+        if not nome or not cargo:
+            return JsonResponse({"erro": "nome e cargo são obrigatórios"}, status=400)
+        f = FuncionarioSST.objects.create(
+            empresa=empresa,
+            nome=nome,
+            cpf=data.get("cpf", ""),
+            matricula=data.get("matricula", ""),
+            cargo=cargo,
+            setor=data.get("setor", ""),
+            classe_risco=data.get("classe_risco", "II"),
+        )
+        return JsonResponse({"id": f.id, "nome": f.nome}, status=201)
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+# ── ASO ───────────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_asos(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    if request.method == "GET":
+        qs = ASOOcupacional.objects.filter(empresa=empresa).select_related("funcionario")
+        return JsonResponse({
+            "asos": [
+                {
+                    "id": a.id,
+                    "funcionario": a.funcionario.nome,
+                    "tipo": a.get_tipo_display(),
+                    "data_emissao": a.data_emissao.strftime("%d/%m/%Y"),
+                    "data_validade": a.data_validade.strftime("%d/%m/%Y") if a.data_validade else None,
+                    "resultado": a.get_resultado_display(),
+                    "medico": a.medico_responsavel,
+                }
+                for a in qs[:50]
+            ]
+        })
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        try:
+            func = FuncionarioSST.objects.get(id=data.get("funcionario_id"), empresa=empresa)
+        except FuncionarioSST.DoesNotExist:
+            return JsonResponse({"erro": "funcionário não encontrado"}, status=404)
+        from datetime import datetime
+        def parse_date(s):
+            if not s:
+                return None
+            try:
+                return datetime.strptime(s, "%Y-%m-%d").date()
+            except Exception:
+                return None
+        aso = ASOOcupacional.objects.create(
+            empresa=empresa,
+            funcionario=func,
+            tipo=data.get("tipo", "periodico"),
+            data_emissao=parse_date(data.get("data_emissao")) or date.today(),
+            data_validade=parse_date(data.get("data_validade")),
+            medico_responsavel=data.get("medico", ""),
+            crm=data.get("crm", ""),
+            resultado=data.get("resultado", "apto"),
+            observacoes=data.get("observacoes", ""),
+        )
+        return JsonResponse({"id": aso.id, "ok": True}, status=201)
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+# ── CAT ───────────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_cats(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    if request.method == "GET":
+        qs = CATOcupacional.objects.filter(empresa=empresa).select_related("funcionario")
+        return JsonResponse({
+            "cats": [
+                {
+                    "id": c.id,
+                    "funcionario": c.funcionario.nome,
+                    "tipo": c.get_tipo_display(),
+                    "gravidade": c.gravidade,
+                    "data_acidente": c.data_acidente.strftime("%d/%m/%Y"),
+                    "status_esocial": c.status_esocial,
+                    "numero_cat": c.numero_cat,
+                }
+                for c in qs[:50]
+            ]
+        })
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        try:
+            func = FuncionarioSST.objects.get(id=data.get("funcionario_id"), empresa=empresa)
+        except FuncionarioSST.DoesNotExist:
+            return JsonResponse({"erro": "funcionário não encontrado"}, status=404)
+        from datetime import datetime
+        def parse_date(s):
+            if not s:
+                return None
+            try:
+                return datetime.strptime(s, "%Y-%m-%d").date()
+            except Exception:
+                return None
+        cat = CATOcupacional.objects.create(
+            empresa=empresa,
+            funcionario=func,
+            tipo=data.get("tipo", "tipico"),
+            gravidade=data.get("gravidade", "leve"),
+            data_acidente=parse_date(data.get("data_acidente")) or date.today(),
+            descricao=data.get("descricao", ""),
+            cid=data.get("cid", ""),
+            houve_afastamento=bool(data.get("houve_afastamento")),
+        )
+        return JsonResponse({"id": cat.id, "ok": True}, status=201)
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+# ── Documentos SST ────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_documentos_sst(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    if request.method == "GET":
+        qs = DocumentoSST.objects.filter(empresa=empresa)
+        return JsonResponse({
+            "documentos": [
+                {
+                    "id": d.id,
+                    "tipo": d.tipo,
+                    "titulo": d.titulo,
+                    "status": d.status,
+                    "validade": d.data_validade.strftime("%d/%m/%Y") if d.data_validade else None,
+                    "responsavel": d.responsavel_tecnico,
+                }
+                for d in qs
+            ]
+        })
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        from datetime import datetime
+        def parse_date(s):
+            if not s:
+                return None
+            try:
+                return datetime.strptime(s, "%Y-%m-%d").date()
+            except Exception:
+                return None
+        doc = DocumentoSST.objects.create(
+            empresa=empresa,
+            tipo=data.get("tipo", "outro"),
+            titulo=data.get("titulo", ""),
+            status=data.get("status", "vigente"),
+            responsavel_tecnico=data.get("responsavel", ""),
+            registro_profissional=data.get("registro", ""),
+            data_emissao=parse_date(data.get("data_emissao")),
+            data_validade=parse_date(data.get("data_validade")),
+            observacoes=data.get("observacoes", ""),
+        )
+        return JsonResponse({"id": doc.id, "ok": True}, status=201)
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+# ── Afastamentos ──────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_afastamentos_sst(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    if request.method == "GET":
+        qs = AfastamentoSST.objects.filter(empresa=empresa).select_related("funcionario")
+        return JsonResponse({
+            "afastamentos": [
+                {
+                    "id": a.id,
+                    "funcionario": a.funcionario.nome,
+                    "motivo": a.get_motivo_display(),
+                    "cid": a.cid,
+                    "data_inicio": a.data_inicio.strftime("%d/%m/%Y"),
+                    "data_retorno": a.data_prevista_retorno.strftime("%d/%m/%Y") if a.data_prevista_retorno else None,
+                    "status": a.status,
+                }
+                for a in qs[:50]
+            ]
+        })
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
