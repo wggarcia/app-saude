@@ -430,34 +430,34 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
     <!-- KPI STRIP -->
     <div class="kpi-strip" id="kpi-strip">
       <div class="kpi-card" style="--kpi-accent:var(--teal)">
-        <div class="kpi-label">Índice de Saúde</div>
-        <div class="kpi-val"><span id="k-score">—</span></div>
+        <div class="kpi-label">Bem-estar Geral</div>
+        <div class="kpi-val"><span id="k-score">—</span><span style="font-size:.8rem;color:var(--muted)">/100</span></div>
         <div class="kpi-delta flat" id="k-score-d">—</div>
-        <div class="kpi-detail">pontuação geral da força de trabalho</div>
+        <div class="kpi-detail">índice institucional de energia e confiabilidade</div>
       </div>
       <div class="kpi-card" style="--kpi-accent:var(--amber)">
-        <div class="kpi-label">Absenteísmo</div>
-        <div class="kpi-val"><span id="k-abs">—</span><span>%</span></div>
+        <div class="kpi-label">Risco Psicossocial</div>
+        <div class="kpi-val"><span id="k-abs">—</span></div>
         <div class="kpi-delta flat" id="k-abs-d">—</div>
-        <div class="kpi-detail" id="k-abs-detail">afastamentos ativos</div>
+        <div class="kpi-detail" id="k-abs-detail">estresse, ansiedade e burnout</div>
       </div>
       <div class="kpi-card" style="--kpi-accent:var(--blue)">
-        <div class="kpi-label">Risco Epidemiológico</div>
+        <div class="kpi-label">Risco Ocupacional</div>
         <div class="kpi-val"><span id="k-risk">—</span></div>
         <div class="kpi-delta flat" id="k-risk-d">—</div>
-        <div class="kpi-detail" id="k-risk-detail">exposição da força de trabalho</div>
+        <div class="kpi-detail" id="k-risk-detail">fadiga, dor e carga física</div>
       </div>
       <div class="kpi-card" style="--kpi-accent:var(--green)">
-        <div class="kpi-label">Programas Ativos</div>
+        <div class="kpi-label">Pedidos de Apoio</div>
         <div class="kpi-val"><span id="k-progs">—</span></div>
         <div class="kpi-delta flat" id="k-progs-d">—</div>
-        <div class="kpi-detail" id="k-progs-detail">iniciativas em andamento</div>
+        <div class="kpi-detail" id="k-progs-detail">fila de acolhimento ativa</div>
       </div>
       <div class="kpi-card" style="--kpi-accent:var(--red)">
-        <div class="kpi-label">Unidades em Alerta</div>
+        <div class="kpi-label">Readiness Técnica</div>
         <div class="kpi-val"><span id="k-units">—</span></div>
         <div class="kpi-delta flat" id="k-units-d">—</div>
-        <div class="kpi-detail">requerem atenção imediata</div>
+        <div class="kpi-detail">prontidão de competência operacional</div>
       </div>
     </div>
 
@@ -647,27 +647,32 @@ async function submitAcao(){
   btn.textContent="Registrar Ação";btn.disabled=false;
 }
 
-function setDelta(elId, value, inverse=false){
-  const el=document.getElementById(elId);
+/* Parse "87/100" or "87" → number */
+function parseScore(v){
+  if(typeof v==="number")return v;
+  if(typeof v==="string"){const m=v.match(/(\d+)/);if(m)return parseInt(m[1]);}
+  return 0;
+}
+
+function deltaClass(v,inverted){
+  if(v===null||v===undefined)return"flat";
+  if(typeof v==="number"){return(inverted?(v<0):(v>0))?"up":"down";}
+  return"flat";
+}
+
+function renderDeltaBadge(el,delta,inverted){
   if(!el)return;
-  if(typeof value==="number"){
-    const up=inverse?(value<0):(value>0);
-    const symbol=value>0?"↑":"↓";
-    const cls=up?"up":"down";
-    el.className=`kpi-delta ${cls}`;
-    el.textContent=`${symbol} ${Math.abs(value).toFixed(1)}%`;
-  } else {
-    el.className="kpi-delta flat";
-    el.textContent=value||"—";
-  }
+  if(delta===null||delta===undefined){el.className="kpi-delta flat";el.textContent="—";return;}
+  if(typeof delta==="string"&&delta!==""){el.className="kpi-delta flat";el.textContent=delta;return;}
+  const cls=deltaClass(delta,inverted);
+  el.className=`kpi-delta ${cls}`;
+  el.textContent=`${delta>0?"↑":"↓"} ${Math.abs(delta).toFixed(1)}`;
 }
 
 function renderGauge(score){
-  const r=54;
-  const circ=2*Math.PI*r;
+  const circ=2*Math.PI*54;
   const pct=Math.min(Math.max(score||0,0),100)/100;
-  const offset=circ-(pct*circ);
-  document.getElementById("gauge-ring").style.strokeDashoffset=offset;
+  document.getElementById("gauge-ring").style.strokeDashoffset=circ-(pct*circ);
   document.getElementById("gauge-score").textContent=score||"—";
   document.getElementById("tb-score").textContent=score||"—";
   document.getElementById("k-score").textContent=score||"—";
@@ -675,90 +680,115 @@ function renderGauge(score){
 
 function renderUnits(units){
   const el=document.getElementById("unit-list");
-  if(!units||!units.length){el.innerHTML='<div style="font-size:.75rem;color:var(--muted)">Sem dados de unidades.</div>';return;}
-  el.innerHTML=units.map(u=>`
+  if(!units||!units.length){el.innerHTML='<div style="font-size:.75rem;color:var(--muted)">Grupo mínimo não atingido.</div>';return;}
+  el.innerHTML=units.map(u=>{
+    const band=(u.risk_band||u.risco_band||"baixo").toUpperCase();
+    return `
     <div class="unit-row">
-      <div class="unit-name" title="${u.nome||u.name||''}">${u.nome||u.name||"Unidade"}</div>
-      <div class="unit-count">${u.colaboradores||u.total||0}p</div>
-      <div class="band-badge band-${(u.risco_band||u.band||"BAIXO").toUpperCase()}">${u.risco_band||u.band||"BAIXO"}</div>
-    </div>
-  `).join("");
+      <div class="unit-name" title="${u.name||u.nome||''}">${u.name||u.nome||"Unidade"}</div>
+      <div class="unit-count">${u.respondents||u.colaboradores||0}r</div>
+      <div class="band-badge band-${band}">${band}</div>
+    </div>`;
+  }).join("");
   const ts=document.getElementById("unit-timestamp");
-  if(ts){const now=new Date();ts.textContent=`${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;}
+  if(ts){const n=new Date();ts.textContent=`${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}`;}
 }
 
 function renderRecs(recs){
   const el=document.getElementById("rec-list");
   if(!recs||!recs.length){el.innerHTML='<div style="font-size:.75rem;color:var(--muted)">Nenhuma recomendação ativa.</div>';return;}
-  el.innerHTML=recs.slice(0,4).map(r=>`
+  el.innerHTML=recs.slice(0,4).map(r=>{
+    const urg=(r.urgency||r.urgencia||"media").toLowerCase();
+    return `
     <div class="rec-item">
-      <div class="rec-urgency ${(r.urgency||r.urgencia||"media").toLowerCase()}">${(r.urgency||r.urgencia||"MEDIA").toUpperCase()}</div>
+      <div class="rec-urgency ${urg}">${urg.toUpperCase()}</div>
       <div class="rec-title">${r.title||r.titulo||""}</div>
-      <div class="rec-desc">${r.description||r.descricao||""}</div>
-    </div>
-  `).join("");
+      <div class="rec-desc">${r.summary||r.description||r.descricao||r.action||""}</div>
+    </div>`;
+  }).join("");
 }
 
 function renderPrograms(progs){
   const el=document.getElementById("programs-list");
-  if(!progs||!progs.length){el.innerHTML='<div style="font-size:.75rem;color:var(--muted)">Nenhum programa ativo.</div>';return;}
-  el.innerHTML=progs.map(p=>{
-    const pct=Math.min(Math.max(p.completion||p.adesao_pct||0,0),100);
+  if(!progs||!progs.length){el.innerHTML='<div style="font-size:.75rem;color:var(--muted)">Nenhum programa configurado.</div>';return;}
+  el.innerHTML=progs.slice(0,4).map(p=>{
+    /* programs from API have {title, owner, items[]} — no completion % */
+    const name=p.title||p.name||p.nome||"Programa";
+    const owner=p.owner||"—";
+    const itemCount=Array.isArray(p.items)?p.items.length:0;
+    const firstItem=Array.isArray(p.items)&&p.items[0]?p.items[0]:"";
+    /* visual fill based on item count (max 4 items = 100%) */
+    const pct=Math.min(Math.round((itemCount/4)*100),100);
     return `
-      <div class="prog-item">
-        <div class="prog-header">
-          <div class="prog-name">${p.name||p.nome||""}</div>
-          <div class="prog-pct">${pct}%</div>
-        </div>
-        <div class="prog-track"><div class="prog-fill" style="width:${pct}%"></div></div>
-        <div class="prog-sub">${p.participants||p.participantes||"—"} participantes · ${p.status||"Ativo"}</div>
+    <div class="prog-item">
+      <div class="prog-header">
+        <div class="prog-name">${name}</div>
+        <div class="prog-pct">${itemCount} ações</div>
       </div>
-    `;
+      <div class="prog-track"><div class="prog-fill" style="width:${pct}%"></div></div>
+      <div class="prog-sub">${firstItem||owner}</div>
+    </div>`;
   }).join("");
 }
 
 function renderCompetence(comp){
   const el=document.getElementById("comp-grid");
-  if(!comp){el.innerHTML='<div style="font-size:.72rem;color:var(--muted);grid-column:span 2">Sem dados de competência.</div>';return;}
+  if(!comp){el.innerHTML='<div style="font-size:.72rem;color:var(--muted);grid-column:span 2">Sem dados.</div>';return;}
   const stats=[
-    {v:comp.treinamentos_concluidos||comp.trainings_done||"—",l:"Treinamentos concluídos"},
-    {v:comp.certificados_ativos||comp.active_certs||"—",l:"Certificados ativos"},
-    {v:comp.horas_capacitacao||comp.hours||"—",l:"Horas capacitação"},
-    {v:`${comp.cobertura_pct||comp.coverage||0}%`,l:"Cobertura de equipes"},
+    {v:comp.tracks_count??comp.trilhas_count??"—",l:"Trilhas ativas"},
+    {v:comp.critical_functions_count??comp.funcoes_criticas??"—",l:"Funções críticas"},
+    {v:comp.evidence_count??comp.evidencias??"—",l:"Evidências"},
+    {v:`${comp.readiness_score??0}/100`,l:"Readiness"},
   ];
   el.innerHTML=stats.map(s=>`<div class="comp-stat"><div class="cv">${s.v}</div><div class="cl">${s.l}</div></div>`).join("");
 }
 
-function renderCheckinChart(series){
+function renderCheckinChart(respondents,period){
   const el=document.getElementById("checkin-chart");
-  if(!series||!series.length){el.innerHTML='<div style="font-size:.75rem;color:var(--muted)">Sem dados de check-in.</div>';return;}
-  const last14=series.slice(-14);
-  const maxVal=Math.max(...last14.map(s=>s.total||s.value||s.count||0),1);
+  if(!respondents){el.innerHTML='<div style="font-size:.75rem;color:var(--muted)">Dados insuficientes.</div>';return;}
+  /* Build a 14-bar synthetic chart from daily respondent counts */
+  const daily=period||[];
+  if(!daily.length){
+    /* no series — show single summary bar */
+    el.innerHTML=`<div class="bar-wrap"><div class="bar today" style="height:60px" title="${respondents} respondentes"></div><div class="bar-day">Hoje</div></div>`;
+    return;
+  }
+  const maxV=Math.max(...daily.map(s=>s.count||s.total||s.respondents||0),1);
   const days=["D","S","T","Q","Q","S","S"];
-  el.innerHTML=last14.map((s,i)=>{
-    const v=s.total||s.value||s.count||0;
-    const h=Math.max(Math.round((v/maxVal)*68),4);
-    const isToday=(i===last14.length-1);
-    const date=new Date(s.date||s.data||"");
-    const dayLabel=isNaN(date.getTime())?days[i%7]:days[date.getDay()];
-    return `<div class="bar-wrap"><div class="bar${isToday?" today":""}" style="height:${h}px" title="${v} check-ins"></div><div class="bar-day">${dayLabel}</div></div>`;
+  el.innerHTML=daily.slice(-14).map((s,i,arr)=>{
+    const v=s.count||s.total||s.respondents||0;
+    const h=Math.max(Math.round((v/maxV)*68),4);
+    const isToday=(i===arr.length-1);
+    return `<div class="bar-wrap"><div class="bar${isToday?" today":""}" style="height:${h}px" title="${v}"></div><div class="bar-day">${days[i%7]}</div></div>`;
   }).join("");
 }
 
-function renderModules(modules){
+function renderModulesFromAPI(modules){
+  const ICONS={
+    "Saude Ocupacional":"🩺","Fadiga e Burnout":"🔋","Competencia Tecnica":"🎯",
+    "Escalas 14x14 / 28x28":"📅","Cultura e Comunicacao":"🌐","Mentoria e Lideranca":"👥",
+    "Governanca e Privacidade":"🔒",
+  };
+  const URLS={
+    "Saude Ocupacional":"/gestao/","Fadiga e Burnout":"/gestao/","Competencia Tecnica":"/competencia/",
+    "Escalas 14x14 / 28x28":"/escalas/","Cultura e Comunicacao":"/sala-decisao-ia/",
+    "Mentoria e Lideranca":"/painel-lider/","Governanca e Privacidade":"/seguranca/",
+  };
   const el=document.getElementById("modules-grid");
   if(!modules||!modules.length)return;
-  el.innerHTML=modules.map(m=>{
+  const top=modules.slice(0,4);
+  el.innerHTML=top.map(m=>{
+    const title=m.title||m.name||m.nome||"Módulo";
+    const band=(m.band||"baixo").toLowerCase();
     let badgeCls="mb-ok",badgeTxt="OK";
-    if(m.status==="atencao"||m.status==="warning"){badgeCls="mb-atencao";badgeTxt="Atenção";}
-    else if(m.status==="alerta"||m.status==="alert"){badgeCls="mb-alerta";badgeTxt="Alerta";}
+    if(band==="alto"){badgeCls="mb-atencao";badgeTxt="Atenção";}
+    else if(band==="critico"){badgeCls="mb-alerta";badgeTxt="Alerta";}
     return `
-      <a class="module-card" href="${m.url||"#"}">
-        <div class="module-icon">${m.icon||"📦"}</div>
-        <div><div class="module-name">${m.name||m.nome||""}</div><div class="module-desc">${m.description||m.descricao||""}</div></div>
-        <div class="module-badge ${badgeCls}">${badgeTxt}</div>
-      </a>
-    `;
+    <a class="module-card" href="${URLS[title]||"#"}">
+      <div class="module-icon">${ICONS[title]||"📦"}</div>
+      <div><div class="module-name">${title}</div><div class="module-desc">${m.audience||m.summary?.slice(0,60)||""}</div></div>
+      <div class="module-badge ${badgeCls}">${badgeTxt}</div>
+    </a>`;
   }).join("");
 }
 
@@ -769,71 +799,77 @@ async function loadDashboard(){
     const d=await r.json();
     _data=d;
 
-    // Company name
-    if(d.empresa_nome||d.company_name){
-      document.getElementById("tb-company-name").textContent=d.empresa_nome||d.company_name;
+    /* Company name — lives in product.company */
+    const companyName=d.product?.company||d.empresa_nome||"";
+    if(companyName)document.getElementById("tb-company-name").textContent=companyName;
+
+    /* executive_cards is a LIST: [{label,value,detail,delta,delta_inverted},...] */
+    const cards=Array.isArray(d.executive_cards)?d.executive_cards:[];
+
+    /* Card 0: Bem-estar geral  → health score for gauge */
+    const c0=cards[0]||{};
+    const healthScore=parseScore(c0.value);
+    renderGauge(healthScore);
+    renderDeltaBadge(document.getElementById("k-score-d"),c0.delta,false);
+
+    /* Card 1: Risco psicossocial */
+    const c1=cards[1]||{};
+    document.getElementById("k-abs").textContent=c1.value||"—";
+    document.getElementById("k-abs-detail").textContent=c1.detail||"Risco psicossocial";
+    renderDeltaBadge(document.getElementById("k-abs-d"),c1.delta,true);
+
+    /* Card 2: Risco ocupacional */
+    const c2=cards[2]||{};
+    document.getElementById("k-risk").textContent=c2.value||"—";
+    document.getElementById("k-risk-detail").textContent=c2.detail?.slice(0,50)||"Risco ocupacional";
+    renderDeltaBadge(document.getElementById("k-risk-d"),c2.delta,true);
+
+    /* Card 3: Pedidos de apoio */
+    const c3=cards[3]||{};
+    document.getElementById("k-progs").textContent=c3.value||"—";
+    document.getElementById("k-progs-detail").textContent=c3.detail||"Pedidos de apoio";
+    renderDeltaBadge(document.getElementById("k-progs-d"),c3.delta,true);
+
+    /* Card 4: Readiness técnica */
+    const c4=cards[4]||{};
+    document.getElementById("k-units").textContent=c4.value||"—";
+    renderDeltaBadge(document.getElementById("k-units-d"),c4.delta,false);
+
+    /* Gauge summary — from hero */
+    const heroSum=d.hero?.summary||d.summary?.headline||"";
+    if(heroSum)document.getElementById("gauge-summary").textContent=heroSum;
+
+    /* top_units → {name, respondents, risk_score, risk_band} */
+    renderUnits(d.top_units||[]);
+
+    /* recommendations → [{title, urgency, summary, action}] */
+    renderRecs(d.recommendations||[]);
+
+    /* programs → [{title, owner, items[]}] */
+    renderPrograms(d.programs||[]);
+
+    /* competence → {readiness_score, tracks_count, critical_functions_count, evidence_count} */
+    renderCompetence(d.competence||null);
+
+    /* Check-in chart — use summary respondents */
+    const resp=d.summary?.respondents||0;
+    renderCheckinChart(resp,d.checkin_series||[]);
+
+    /* Modules */
+    renderModulesFromAPI(d.modules||[]);
+
+    /* AI summary */
+    const headline=d.summary?.headline||d.hero?.summary||"";
+    if(headline){
+      document.getElementById("ai-summary").innerHTML=`<span class="si">🤖</span><span>${headline}</span>`;
     }
 
-    // Executive cards
-    const ec=d.executive_cards||{};
-    const score=ec.health_score||d.health_score||0;
-    renderGauge(score);
-
-    const absPct=ec.absenteeism_pct||ec.absenteismo_pct||0;
-    document.getElementById("k-abs").textContent=absPct.toFixed(1);
-    setDelta("k-abs-d",ec.absenteeism_delta||ec.delta_absenteismo,true);
-    if(ec.afastamentos_ativos!==undefined)document.getElementById("k-abs-detail").textContent=`${ec.afastamentos_ativos} afastamentos ativos`;
-
-    const riskLabel=ec.risk_level||ec.nivel_risco||"—";
-    document.getElementById("k-risk").textContent=riskLabel;
-    setDelta("k-risk-d",ec.risk_delta||ec.delta_risco,true);
-    if(ec.risk_detail||ec.risco_detalhe)document.getElementById("k-risk-detail").textContent=ec.risk_detail||ec.risco_detalhe;
-
-    const progsCount=ec.active_programs||ec.programas_ativos||0;
-    document.getElementById("k-progs").textContent=progsCount;
-    setDelta("k-progs-d",ec.programs_delta||ec.delta_programas);
-    if(ec.programs_detail)document.getElementById("k-progs-detail").textContent=ec.programs_detail;
-
-    const alertUnits=ec.alert_units||ec.unidades_alerta||0;
-    document.getElementById("k-units").textContent=alertUnits;
-    setDelta("k-units-d",ec.units_delta,true);
-
-    setDelta("k-score-d",ec.score_delta||ec.delta_score);
-
-    // Units
-    renderUnits(d.top_units||d.unidades_top||[]);
-
-    // Recommendations
-    renderRecs(d.recommendations||d.recomendacoes||[]);
-
-    // Programs
-    renderPrograms(d.programs||d.programas||[]);
-
-    // Competence
-    renderCompetence(d.competence||d.competencia||null);
-
-    // Summary
-    const sumEl=document.getElementById("ai-summary");
-    const sumText=d.summary||d.resumo_ia||null;
-    if(sumText)sumEl.innerHTML=`<span class="si">🤖</span><span>${sumText}</span>`;
-
-    // Gauge summary
-    if(d.summary||d.resumo){
-      document.getElementById("gauge-summary").textContent=d.summary||d.resumo;
-    }
-
-    // Check-in series
-    const series=d.checkin_series||d.check_in_series||(d.timeline&&d.timeline.series)||[];
-    renderCheckinChart(series);
-
-    // Modules
-    if(d.modules||d.modulos)renderModules(d.modules||d.modulos);
-
-    // Privacy
-    const privEl=document.getElementById("privacy-banner");
-    const priv=d.privacy||d.privacidade;
-    if(priv&&(priv.message||priv.mensagem)){
-      privEl.innerHTML=`<strong>🔒 Privacidade por design</strong>${priv.message||priv.mensagem}`;
+    /* Privacy */
+    const privReady=d.summary?.privacy_ready;
+    const minGroup=d.summary?.min_group||8;
+    if(privReady!==undefined){
+      document.getElementById("privacy-banner").innerHTML=
+        `<strong>🔒 Privacidade por design</strong>Dados agrupados — mínimo de ${minGroup} colaboradores. ${privReady?"Grupo suficiente.":"Grupo ainda pequeno para alguns recortes."}`;
     }
 
   }catch(e){console.error("Dashboard load error",e);}
