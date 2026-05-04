@@ -762,6 +762,9 @@
     });
 
     const map = L.map("map", { zoomControl: false, preferCanvas: true }).setView([-15.7, -47.9], 4);
+    let mapUserMoved = false;
+    let _mapFitting = false;
+    map.on("zoomstart dragstart", () => { if (!_mapFitting) mapUserMoved = true; });
     L.control.zoom({ position: "bottomright" }).addTo(map);
 
     const mapboxToken = "{{ MAPBOX_ACCESS_TOKEN|escapejs }}";
@@ -1536,8 +1539,10 @@
         }
       });
 
-      if (bounds.length) {
+      if (bounds.length && !mapUserMoved) {
+        _mapFitting = true;
         map.fitBounds(bounds, { padding: [60, 60], maxZoom: isBairroView ? 11 : levelFilter.value === "municipios" ? 8 : 5 });
+        map.once("zoomend moveend", () => { _mapFitting = false; });
       }
     }
 
@@ -1569,7 +1574,7 @@
     }
 
     [modeFilter, levelFilter, stateFilter, cityFilter].forEach((element) => {
-      element.addEventListener("change", () => loadPanorama());
+      element.addEventListener("change", () => { mapUserMoved = false; loadPanorama(); });
     });
 
     document.getElementById("refreshBtn").addEventListener("click", loadPanorama);

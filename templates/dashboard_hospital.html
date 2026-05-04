@@ -881,6 +881,10 @@
     const map = L.map("map", { zoomControl: false, preferCanvas: true }).setView([-15.7, -47.9], 4);
     L.control.zoom({ position: "bottomright" }).addTo(map);
 
+    let mapUserMoved = false;
+    let _mapFitting = false;
+    map.on("zoomstart dragstart", () => { if (!_mapFitting) mapUserMoved = true; });
+
     const mapboxToken = "{{ MAPBOX_ACCESS_TOKEN|escapejs }}";
     L.tileLayer(
       mapboxToken
@@ -1347,12 +1351,14 @@
         }
       });
 
-      if (bounds.length) {
+      if (bounds.length && !mapUserMoved) {
+        _mapFitting = true;
         map.fitBounds(bounds, {
           paddingTopLeft: leftVisible && window.innerWidth > 980 ? [390, 120] : [40, 120],
           paddingBottomRight: rightVisible && window.innerWidth > 980 ? [430, 60] : [40, 60],
           maxZoom: levelFilter.value === "bairros" ? 11 : levelFilter.value === "municipios" ? 8 : 5,
         });
+        map.once("zoomend moveend", () => { _mapFitting = false; });
       }
     }
 
@@ -1408,25 +1414,27 @@
 
     modeFilter.addEventListener("change", () => {
       selectedAreaId = null;
+      mapUserMoved = false;
       renderDashboard();
     });
 
     levelFilter.addEventListener("change", () => {
-      if (levelFilter.value === "estados") {
-        cityFilter.value = "";
-      }
+      if (levelFilter.value === "estados") cityFilter.value = "";
       selectedAreaId = null;
+      mapUserMoved = false;
       renderDashboard();
     });
 
     stateFilter.addEventListener("change", () => {
       selectedAreaId = null;
+      mapUserMoved = false;
       populateFilters();
       renderDashboard();
     });
 
     cityFilter.addEventListener("change", () => {
       selectedAreaId = null;
+      mapUserMoved = false;
       renderDashboard();
     });
 
