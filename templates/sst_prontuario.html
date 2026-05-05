@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · Prontuário — {{ funcionario_nome }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#041018;
+  --surface:#071c28;
+  --surface2:#0c2738;
+  --surface3:#112f42;
+  --line:rgba(255,255,255,.07);
+  --line2:rgba(255,255,255,.13);
+  --text:#ddeeff;
+  --accent:#7ee1c3;
+  --accent2:#7db6ff;
+  --gold:#f0bf6b;
+  --danger:#ff7a91;
+  --muted:#9ab9ce;
+  --green:#5ce89b;
+  --amber:#f0bf6b;
+  --red:#ff7a91;
+}
+html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+
+/* ─── TOPBAR ─── */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:54px;display:flex;align-items:center;background:rgba(4,16,24,.97);border-bottom:1px solid var(--line);backdrop-filter:blur(16px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:210px;border-right:1px solid var(--line);height:100%}
+.tb-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#041018;flex-shrink:0}
+.tb-nome{font-size:.8rem;font-weight:800}
+.tb-sub{font-size:.6rem;color:var(--muted);margin-top:1px}
+.tb-nav{display:flex;align-items:center;gap:1px;padding:0 14px;flex:1;overflow-x:auto}
+.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{padding:5px 11px;border-radius:6px;font-size:.75rem;font-weight:600;color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap}
+.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tb-nav a.active{color:var(--accent);background:rgba(126,225,195,.08)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.btn-main{padding:6px 13px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#041018;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;box-shadow:0 0 16px rgba(126,225,195,.18);transition:opacity .2s}
+.btn-main:hover{opacity:.85}
+.btn-warn{padding:6px 13px;border-radius:7px;border:1px solid rgba(255,122,145,.25);background:rgba(255,122,145,.08);color:var(--danger);font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;transition:all .15s}
+.btn-warn:hover{background:rgba(255,122,145,.14);border-color:rgba(255,122,145,.4)}
+
+/* ─── BREADCRUMB ─── */
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)}
+.breadcrumb a{color:var(--accent);text-decoration:none;font-weight:600}
+.breadcrumb a:hover{text-decoration:underline}
+.breadcrumb span{color:var(--muted)}
+
+/* ─── LAYOUT ─── */
+.app{display:flex;min-height:100vh;padding-top:54px}
+.sidebar{width:200px;flex-shrink:0;background:rgba(7,28,40,.6);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:54px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.77rem;font-weight:600;color:var(--muted);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--accent);background:rgba(126,225,195,.06);border-left-color:var(--accent)}
+.sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
+.main{flex:1;margin-left:200px;padding:22px;display:flex;flex-direction:column;gap:18px}
+
+/* ─── CARD IDENTIFICAÇÃO ─── */
+.id-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;position:relative;overflow:hidden}
+.id-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.8}
+.id-info{display:flex;flex-direction:column;gap:4px;flex:1;min-width:260px}
+.id-nome{font-size:1.25rem;font-weight:900;color:var(--text);line-height:1.2}
+.id-cargo{font-size:.85rem;color:var(--muted);font-weight:500;margin-top:2px}
+.id-meta{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px}
+.id-meta-item{display:flex;flex-direction:column;gap:2px}
+.id-meta-label{font-size:.58rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.id-meta-val{font-size:.82rem;font-weight:600;color:var(--text)}
+.id-badges{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0}
+.id-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.btn-action{padding:7px 14px;border-radius:8px;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--text);font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap}
+.btn-action:hover{border-color:var(--accent);color:var(--accent);background:rgba(126,225,195,.06)}
+.btn-action.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#041018;border-color:transparent;box-shadow:0 0 14px rgba(126,225,195,.15)}
+.btn-action.primary:hover{opacity:.85;color:#041018}
+
+/* ─── KPI STRIP ─── */
+.kpi-strip{display:flex;gap:10px;flex-wrap:wrap}
+.kpi-card{flex:1;min-width:130px;padding:14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
+.kpi-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--accent));opacity:.7}
+.kpi-label{font-size:.6rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi-val{font-size:1.65rem;font-weight:900;line-height:1}
+.kpi-sub{font-size:.65rem;color:var(--muted);margin-top:5px;line-height:1.4}
+
+/* ─── TABS ─── */
+.tab-bar{display:flex;gap:4px;border-bottom:1px solid var(--line);padding-bottom:0}
+.tab-btn{padding:9px 16px;border-radius:8px 8px 0 0;font-size:.78rem;font-weight:700;cursor:pointer;color:var(--muted);border:1px solid transparent;border-bottom:none;background:none;font-family:inherit;transition:all .15s;white-space:nowrap;margin-bottom:-1px;position:relative}
+.tab-btn:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.tab-btn.active{color:var(--accent);background:var(--surface);border-color:var(--line);border-bottom-color:var(--surface)}
+.tab-count{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:9px;font-size:.6rem;font-weight:900;background:rgba(255,255,255,.08);color:var(--muted);margin-left:5px}
+.tab-btn.active .tab-count{background:rgba(126,225,195,.15);color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ─── SECTION CARD ─── */
+.section-card{background:var(--surface);border:1px solid var(--line);border-radius:0 12px 12px 12px;overflow:hidden}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--line)}
+.section-header h3{font-size:.8rem;font-weight:800;color:var(--text)}
+.section-header span{font-size:.72rem;color:var(--muted)}
+
+/* ─── TABLE ─── */
+.tbl{width:100%;border-collapse:collapse;overflow-x:auto;display:block}
+.tbl thead th{padding:9px 14px;text-align:left;font-size:.63rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+.tbl tbody tr{border-bottom:1px solid var(--line);transition:background .1s}
+.tbl tbody tr:last-child{border-bottom:none}
+.tbl tbody tr:hover{background:rgba(255,255,255,.025)}
+.tbl td{padding:11px 14px;font-size:.8rem;color:var(--text);vertical-align:middle;white-space:nowrap}
+.tbl tbody tr.row-highlight{border-left:3px solid var(--accent);background:rgba(126,225,195,.04)}
+
+/* ─── BADGES ─── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:.63rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.b-verde{background:rgba(92,232,155,.1);color:#5ce89b;border:1px solid rgba(92,232,155,.2)}
+.b-vermelho{background:rgba(255,122,145,.1);color:#ff7a91;border:1px solid rgba(255,122,145,.2)}
+.b-amarelo{background:rgba(240,191,107,.1);color:#f0bf6b;border:1px solid rgba(240,191,107,.2)}
+.b-azul{background:rgba(125,182,255,.1);color:#7db6ff;border:1px solid rgba(125,182,255,.2)}
+.b-cinza{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line)}
+.b-roxo{background:rgba(167,139,250,.1);color:#a78bfa;border:1px solid rgba(167,139,250,.2)}
+.b-laranja{background:rgba(251,146,60,.1);color:#fb923c;border:1px solid rgba(251,146,60,.2)}
+
+/* Dias restantes badges */
+.dias-badge{padding:3px 9px;border-radius:5px;font-size:.68rem;font-weight:800}
+.dias-ok{background:rgba(92,232,155,.08);color:#5ce89b}
+.dias-atencao{background:rgba(240,191,107,.12);color:#f0bf6b}
+.dias-urgente{background:rgba(255,122,145,.12);color:#ff7a91}
+.dias-vencido{background:rgba(255,122,145,.18);color:#ff7a91;text-decoration:line-through}
+
+/* Gravidade dot */
+.grav-dot{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-leve{background:#5ce89b}
+.dot-moderado{background:#f0bf6b}
+.dot-grave{background:#fb923c}
+.dot-gravissimo{background:#ff7a91}
+
+/* ─── EMPTY STATE ─── */
+.empty-state{padding:48px 20px;text-align:center;color:var(--muted)}
+.empty-state .ei{font-size:2.2rem;margin-bottom:12px}
+.empty-state h3{font-size:.9rem;font-weight:800;color:var(--text);margin-bottom:6px}
+.empty-state p{font-size:.78rem;line-height:1.6;margin-bottom:14px}
+.btn-empty{display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:8px;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--text);font-size:.76rem;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;transition:all .15s}
+.btn-empty:hover{border-color:var(--accent);color:var(--accent);background:rgba(126,225,195,.06)}
+
+/* ─── SKELETON ─── */
+.skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.07) 50%,rgba(255,255,255,.04) 75%);background-size:200%;animation:shimmer 1.8s infinite;border-radius:5px}
+@keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+
+/* ─── SCROLLBARS ─── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ─── TOPBAR ─── -->
+<header class="topbar">
+  <div class="tb-logo">
+    <div class="tb-icon">S</div>
+    <div><div class="tb-nome">SST</div><div class="tb-sub">Saúde Ocupacional</div></div>
+  </div>
+  <nav class="tb-nav">
+    <div class="breadcrumb">
+      <a href="/sst/funcionarios/">&#8592; Funcionários</a>
+      <span>/</span>
+      <span id="bc-nome">{{ funcionario_nome }}</span>
+    </div>
+  </nav>
+  <div class="tb-actions">
+    <a href="/sst/asos/?busca={{ funcionario_nome }}" class="btn-action" style="font-size:.74rem;padding:6px 12px">Ver ASOs</a>
+    <a href="/logout/" class="btn-warn">Sair</a>
+  </div>
+</header>
+
+<!-- ─── SIDEBAR ─── -->
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-label">Conformidade</div>
+    <a class="sb-link" href="/dashboard-empresa/"><span class="sb-icon">&#128202;</span><span>Painel SST</span></a>
+    <a class="sb-link" href="/sst/asos/"><span class="sb-icon">&#128203;</span><span>ASO</span></a>
+    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">&#128300;</span><span>Exames</span></a>
+    <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">&#127973;</span><span>Afastamentos</span></a>
+    <a class="sb-link" href="/sst/cats/"><span class="sb-icon">&#9888;&#65039;</span><span>CAT</span></a>
+    <div class="sb-label">Documentação</div>
+    <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">&#128193;</span><span>PGR · PCMSO</span></a>
+    <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">&#128279;</span><span>eSocial</span></a>
+    <div class="sb-label">Gestão</div>
+    <a class="sb-link active" href="/sst/funcionarios/"><span class="sb-icon">&#128101;</span><span>Funcionários</span></a>
+    <a class="sb-link" href="/logout/" style="color:#ff7a91"><span class="sb-icon">&#8617;</span><span>Sair</span></a>
+  </aside>
+
+  <!-- ─── MAIN ─── -->
+  <main class="main">
+
+    <!-- CARD IDENTIFICAÇÃO -->
+    <div class="id-card" id="id-card">
+      <div class="id-info">
+        <div class="id-nome" id="id-nome">
+          <div class="skel" style="height:28px;width:280px"></div>
+        </div>
+        <div class="id-cargo" id="id-cargo"></div>
+        <div class="id-meta" id="id-meta">
+          <div class="id-meta-item">
+            <div class="id-meta-label">Matrícula</div>
+            <div class="id-meta-val" id="id-matricula"><div class="skel" style="height:16px;width:70px"></div></div>
+          </div>
+          <div class="id-meta-item">
+            <div class="id-meta-label">CPF</div>
+            <div class="id-meta-val" id="id-cpf"><div class="skel" style="height:16px;width:100px"></div></div>
+          </div>
+          <div class="id-meta-item">
+            <div class="id-meta-label">Setor</div>
+            <div class="id-meta-val" id="id-setor"><div class="skel" style="height:16px;width:110px"></div></div>
+          </div>
+          <div class="id-meta-item">
+            <div class="id-meta-label">Admissão</div>
+            <div class="id-meta-val" id="id-admissao"><div class="skel" style="height:16px;width:80px"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="id-badges">
+        <div id="id-risco-badge"></div>
+        <div id="id-status-badge"></div>
+        <div class="id-actions">
+          <a id="btn-emitir-aso" href="#" class="btn-action primary">+ Emitir ASO</a>
+          <a href="/sst/exames/agendar/" class="btn-action">Agendar Exame</a>
+          <a href="/sst/cats/" class="btn-action">Registrar CAT</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="kpi-strip">
+      <div class="kpi-card" style="--kc:var(--accent)">
+        <div class="kpi-label">Total ASOs</div>
+        <div class="kpi-val" id="k-asos">—</div>
+        <div class="kpi-sub">atestados emitidos</div>
+      </div>
+      <div class="kpi-card" id="k-aso-vence-card" style="--kc:var(--accent2)">
+        <div class="kpi-label">ASO vence em</div>
+        <div class="kpi-val" id="k-aso-vence">—</div>
+        <div class="kpi-sub" id="k-aso-vence-sub">dias corridos</div>
+      </div>
+      <div class="kpi-card" style="--kc:var(--gold)">
+        <div class="kpi-label">Exames Pendentes</div>
+        <div class="kpi-val" id="k-pend">—</div>
+        <div class="kpi-sub" id="k-venc-sub">exames a realizar</div>
+      </div>
+      <div class="kpi-card" style="--kc:var(--danger)">
+        <div class="kpi-label">CATs Registradas</div>
+        <div class="kpi-val" id="k-cats">—</div>
+        <div class="kpi-sub">comunicações de acidente</div>
+      </div>
+      <div class="kpi-card" style="--kc:var(--muted)">
+        <div class="kpi-label">Afastamentos</div>
+        <div class="kpi-val" id="k-afas">—</div>
+        <div class="kpi-sub">períodos registrados</div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="setTab('asos',this)">Histórico de ASOs<span class="tab-count" id="cnt-asos">0</span></button>
+        <button class="tab-btn" onclick="setTab('exames',this)">Exames<span class="tab-count" id="cnt-exames">0</span></button>
+        <button class="tab-btn" onclick="setTab('cats',this)">CATs<span class="tab-count" id="cnt-cats">0</span></button>
+        <button class="tab-btn" onclick="setTab('afastamentos',this)">Afastamentos<span class="tab-count" id="cnt-afas">0</span></button>
+      </div>
+
+      <!-- TAB: ASOs -->
+      <div class="tab-panel active" id="tab-asos">
+        <div class="section-card">
+          <div class="section-header">
+            <h3>Atestados de Saúde Ocupacional</h3>
+            <span id="hd-asos">carregando...</span>
+          </div>
+          <table class="tbl">
+            <thead><tr>
+              <th>Tipo</th>
+              <th>Data Emissão</th>
+              <th>Validade</th>
+              <th>Médico</th>
+              <th>Resultado</th>
+              <th>Dias Restantes</th>
+            </tr></thead>
+            <tbody id="tbody-asos">
+              <tr><td colspan="6"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+              <tr><td colspan="6"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: Exames -->
+      <div class="tab-panel" id="tab-exames">
+        <div class="section-card">
+          <div class="section-header">
+            <h3>Exames Ocupacionais</h3>
+            <span id="hd-exames">carregando...</span>
+          </div>
+          <table class="tbl">
+            <thead><tr>
+              <th>Tipo</th>
+              <th>Realização</th>
+              <th>Validade</th>
+              <th>Status</th>
+              <th>Resultado</th>
+              <th>Dias Restantes</th>
+            </tr></thead>
+            <tbody id="tbody-exames">
+              <tr><td colspan="6"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+              <tr><td colspan="6"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: CATs -->
+      <div class="tab-panel" id="tab-cats">
+        <div class="section-card">
+          <div class="section-header">
+            <h3>Comunicações de Acidente de Trabalho</h3>
+            <span id="hd-cats">carregando...</span>
+          </div>
+          <table class="tbl">
+            <thead><tr>
+              <th>Data</th>
+              <th>Tipo</th>
+              <th>Gravidade</th>
+              <th>CID</th>
+              <th>N&#186; CAT</th>
+              <th>eSocial</th>
+              <th>Afastamento</th>
+            </tr></thead>
+            <tbody id="tbody-cats">
+              <tr><td colspan="7"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+              <tr><td colspan="7"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: Afastamentos -->
+      <div class="tab-panel" id="tab-afastamentos">
+        <div class="section-card">
+          <div class="section-header">
+            <h3>Afastamentos</h3>
+            <span id="hd-afas">carregando...</span>
+          </div>
+          <table class="tbl">
+            <thead><tr>
+              <th>Motivo</th>
+              <th>CID</th>
+              <th>In&#237;cio</th>
+              <th>Retorno</th>
+              <th>Dias</th>
+              <th>Status</th>
+            </tr></thead>
+            <tbody id="tbody-afas">
+              <tr><td colspan="6"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+              <tr><td colspan="6"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /tabs -->
+  </main>
+</div>
+
+<script>
+const FUNC_ID = {{ funcionario_id }};
+const FUNC_NOME_INICIAL = {{ funcionario_nome|safe|default:"''" }};
+
+// ─── HELPERS ───
+function diasBadge(dias) {
+  if (dias === null || dias === undefined) return '<span class="badge b-cinza">Sem validade</span>';
+  if (dias < 0) return '<span class="dias-badge dias-vencido">Vencido há ' + Math.abs(dias) + 'd</span>';
+  if (dias <= 7) return '<span class="dias-badge dias-urgente">' + dias + 'd restantes</span>';
+  if (dias <= 30) return '<span class="dias-badge dias-atencao">' + dias + 'd restantes</span>';
+  return '<span class="dias-badge dias-ok">' + dias + 'd</span>';
+}
+
+function diasBadgeKpi(dias) {
+  if (dias === null || dias === undefined) return { cls: '--kc:var(--muted)', txt: '—', sub: 'sem data' };
+  if (dias < 0) return { cls: '--kc:var(--danger)', txt: Math.abs(dias) + 'd', sub: 'ASO vencido!' };
+  if (dias <= 7) return { cls: '--kc:var(--danger)', txt: dias + 'd', sub: 'renovar urgente' };
+  if (dias <= 30) return { cls: '--kc:var(--gold)', txt: dias + 'd', sub: 'renovar em breve' };
+  return { cls: '--kc:var(--accent)', txt: dias + 'd', sub: 'dentro do prazo' };
+}
+
+const riscoCls = { I: 'b-verde', II: 'b-verde', III: 'b-laranja', IV: 'b-vermelho' };
+const esocialCls = { enviado: 'b-verde', pendente: 'b-amarelo', erro: 'b-vermelho', nao_enviado: 'b-cinza' };
+const exameStatusCls = { ok: 'b-verde', vencido: 'b-vermelho', pendente: 'b-amarelo', agendado: 'b-azul' };
+const afaStatusCls = { ativo: 'b-vermelho', encerrado: 'b-cinza', retornou: 'b-verde', pendente: 'b-amarelo' };
+const resultadoCls = { apto: 'b-verde', inapto: 'b-vermelho', apto_restricao: 'b-amarelo' };
+const gravDot = { leve: 'dot-leve', moderado: 'dot-moderado', grave: 'dot-grave', gravissimo: 'dot-gravissimo' };
+
+function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : '—'; }
+
+// ─── TABS ───
+function setTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ─── RENDER FUNCIONÁRIO ───
+function renderFuncionario(f) {
+  document.title = 'SolusCRT · Prontuário — ' + f.nome;
+  document.getElementById('bc-nome').textContent = f.nome;
+  document.getElementById('id-nome').textContent = f.nome;
+  document.getElementById('id-cargo').textContent = f.cargo + (f.setor ? ' · ' + f.setor : '');
+  document.getElementById('id-matricula').textContent = f.matricula || '—';
+  document.getElementById('id-cpf').textContent = f.cpf || '—';
+  document.getElementById('id-setor').textContent = f.setor || '—';
+  document.getElementById('id-admissao').textContent = f.data_admissao || '—';
+
+  const gr = f.classe_risco || '';
+  const grLabel = f.classe_risco_label || ('Grau ' + gr);
+  document.getElementById('id-risco-badge').innerHTML = '<span class="badge ' + (riscoCls[gr] || 'b-cinza') + '">' + grLabel + '</span>';
+  document.getElementById('id-status-badge').innerHTML = f.ativo
+    ? '<span class="badge b-verde">Ativo</span>'
+    : '<span class="badge b-vermelho">Inativo</span>';
+
+  const nomeEnc = encodeURIComponent(f.nome);
+  document.getElementById('btn-emitir-aso').href = '/sst/asos/?novo=' + nomeEnc;
+}
+
+// ─── RENDER KPIs ───
+function renderResumo(r) {
+  document.getElementById('k-asos').textContent = r.total_asos ?? '—';
+  document.getElementById('k-pend').textContent = (r.exames_pendentes ?? 0) + (r.exames_vencidos ?? 0);
+  document.getElementById('k-cats').textContent = r.total_cats ?? '—';
+  document.getElementById('k-afas').textContent = r.total_afastamentos ?? '—';
+
+  const vInfo = diasBadgeKpi(r.dias_ate_vencimento_aso);
+  const vCard = document.getElementById('k-aso-vence-card');
+  vCard.style.cssText = vCard.style.cssText.replace(/--kc:[^;]+/, '') + ';' + vInfo.cls;
+  document.getElementById('k-aso-vence').textContent = vInfo.txt;
+  document.getElementById('k-aso-vence-sub').textContent = vInfo.sub;
+
+  if ((r.exames_vencidos || 0) > 0) {
+    document.getElementById('k-venc-sub').textContent = (r.exames_vencidos) + ' vencido(s), ' + (r.exames_pendentes || 0) + ' pendente(s)';
+  }
+}
+
+// ─── RENDER ASOs ───
+function renderAsos(asos) {
+  document.getElementById('cnt-asos').textContent = asos.length;
+  document.getElementById('hd-asos').textContent = asos.length + ' registro(s)';
+  const tbody = document.getElementById('tbody-asos');
+  if (!asos.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="ei">&#128203;</div><h3>Nenhum ASO emitido</h3><p>Emita o primeiro Atestado de Saúde Ocupacional para este colaborador.</p><a id="es-aso-btn" href="#" class="btn-empty">+ Emitir ASO</a></div></td></tr>';
+    const btn = document.getElementById('es-aso-btn');
+    if (btn) btn.href = document.getElementById('btn-emitir-aso').href;
+    return;
+  }
+  tbody.innerHTML = asos.map((a, i) => {
+    const resCls = resultadoCls[a.resultado] || 'b-cinza';
+    const resLabel = a.resultado_label || capitalize(a.resultado);
+    return '<tr class="' + (i === 0 ? 'row-highlight' : '') + '">'
+      + '<td><span class="badge b-azul">' + (a.tipo_label || a.tipo || '—') + '</span></td>'
+      + '<td style="color:var(--muted)">' + (a.data_emissao || '—') + '</td>'
+      + '<td style="color:var(--muted)">' + (a.data_validade || '—') + '</td>'
+      + '<td style="color:var(--muted);font-size:.75rem">' + (a.medico || '—') + '</td>'
+      + '<td><span class="badge ' + resCls + '">' + resLabel + '</span></td>'
+      + '<td>' + diasBadge(a.dias_restantes) + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+// ─── RENDER EXAMES ───
+function renderExames(exames) {
+  document.getElementById('cnt-exames').textContent = exames.length;
+  document.getElementById('hd-exames').textContent = exames.length + ' registro(s)';
+  const tbody = document.getElementById('tbody-exames');
+  if (!exames.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="ei">&#128300;</div><h3>Nenhum exame registrado</h3><p>Agende o primeiro exame ocupacional para este colaborador.</p><a href="/sst/exames/agendar/" class="btn-empty">Agendar Exame</a></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = exames.map(e => {
+    const stCls = exameStatusCls[e.status] || 'b-cinza';
+    const stLabel = capitalize(e.status || 'pendente');
+    return '<tr>'
+      + '<td><strong>' + (e.tipo_label || '—') + '</strong></td>'
+      + '<td style="color:var(--muted)">' + (e.data_realizacao || '—') + '</td>'
+      + '<td style="color:var(--muted)">' + (e.data_validade || '—') + '</td>'
+      + '<td><span class="badge ' + stCls + '">' + stLabel + '</span></td>'
+      + '<td style="color:var(--muted);font-size:.76rem">' + (e.resultado || '—') + '</td>'
+      + '<td>' + diasBadge(e.dias_restantes) + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+// ─── RENDER CATs ───
+function renderCats(cats) {
+  document.getElementById('cnt-cats').textContent = cats.length;
+  document.getElementById('hd-cats').textContent = cats.length + ' registro(s)';
+  const tbody = document.getElementById('tbody-cats');
+  if (!cats.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="ei">&#9888;&#65039;</div><h3>Nenhuma CAT registrada</h3><p>Registre uma Comunicação de Acidente de Trabalho quando necessário.</p><a href="/sst/cats/" class="btn-empty">Registrar CAT</a></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = cats.map(c => {
+    const dotCls = gravDot[(c.gravidade || '').toLowerCase()] || 'dot-leve';
+    const esCls = esocialCls[c.status_esocial] || 'b-cinza';
+    const esLabel = capitalize(c.status_esocial || 'nao_enviado').replace('_', ' ');
+    return '<tr>'
+      + '<td style="color:var(--muted)">' + (c.data_acidente || '—') + '</td>'
+      + '<td><span class="badge b-azul">' + (c.tipo_label || '—') + '</span></td>'
+      + '<td><span class="grav-dot"><span class="dot ' + dotCls + '"></span>' + (c.gravidade_label || capitalize(c.gravidade) || '—') + '</span></td>'
+      + '<td><code style="font-size:.76rem;color:var(--accent2)">' + (c.cid || '—') + '</code></td>'
+      + '<td style="color:var(--muted);font-size:.76rem">' + (c.numero_cat || '—') + '</td>'
+      + '<td><span class="badge ' + esCls + '">' + esLabel + '</span></td>'
+      + '<td>' + (c.houve_afastamento ? '<span class="badge b-amarelo">Sim</span>' : '<span class="badge b-cinza">Não</span>') + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+// ─── RENDER AFASTAMENTOS ───
+function renderAfastamentos(afas) {
+  document.getElementById('cnt-afas').textContent = afas.length;
+  document.getElementById('hd-afas').textContent = afas.length + ' registro(s)';
+  const tbody = document.getElementById('tbody-afas');
+  if (!afas.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="ei">&#127973;</div><h3>Nenhum afastamento registrado</h3><p>Não há períodos de afastamento para este colaborador.</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = afas.map(a => {
+    const stCls = afaStatusCls[(a.status || '').toLowerCase()] || 'b-cinza';
+    const stLabel = a.status_label || capitalize(a.status);
+    return '<tr>'
+      + '<td><strong>' + (a.motivo_label || '—') + '</strong></td>'
+      + '<td><code style="font-size:.76rem;color:var(--accent2)">' + (a.cid || '—') + '</code></td>'
+      + '<td style="color:var(--muted)">' + (a.data_inicio || '—') + '</td>'
+      + '<td style="color:var(--muted)">' + (a.data_retorno_fmt || 'Em aberto') + '</td>'
+      + '<td><span style="font-weight:700">' + (a.dias != null ? a.dias + 'd' : '—') + '</span></td>'
+      + '<td><span class="badge ' + stCls + '">' + stLabel + '</span></td>'
+      + '</tr>';
+  }).join('');
+}
+
+// ─── INIT ───
+async function init() {
+  try {
+    const res = await fetch('/api/sst/funcionarios/' + FUNC_ID + '/prontuario');
+    if (!res.ok) throw new Error('Erro ' + res.status);
+    const data = await res.json();
+
+    renderFuncionario(data.funcionario || {});
+    renderResumo(data.resumo || {});
+    renderAsos(data.asos || []);
+    renderExames(data.exames || []);
+    renderCats(data.cats || []);
+    renderAfastamentos(data.afastamentos || []);
+  } catch (err) {
+    console.error('Erro ao carregar prontuário:', err);
+    document.getElementById('id-nome').textContent = '{{ funcionario_nome }}';
+    document.getElementById('id-cargo').textContent = 'Erro ao carregar dados do servidor.';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

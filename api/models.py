@@ -1082,3 +1082,51 @@ class AfastamentoSST(models.Model):
 
     def __str__(self):
         return f"Afastamento — {self.funcionario.nome} ({self.data_inicio})"
+
+class TreinamentoNR(models.Model):
+    """Treinamentos obrigatórios por NR — registro por funcionário."""
+    NR_CHOICES = [
+        ("NR-5",  "NR-5 · CIPA"),
+        ("NR-6",  "NR-6 · EPI"),
+        ("NR-10", "NR-10 · Segurança em Eletricidade"),
+        ("NR-11", "NR-11 · Transporte de Cargas"),
+        ("NR-12", "NR-12 · Segurança em Máquinas"),
+        ("NR-18", "NR-18 · Construção Civil"),
+        ("NR-20", "NR-20 · Inflamáveis e Combustíveis"),
+        ("NR-23", "NR-23 · Proteção Contra Incêndios"),
+        ("NR-33", "NR-33 · Espaços Confinados"),
+        ("NR-34", "NR-34 · Construção Naval"),
+        ("NR-35", "NR-35 · Trabalho em Altura"),
+        ("outro", "Outro"),
+    ]
+    STATUS = [
+        ("valido",    "Válido"),
+        ("vencido",   "Vencido"),
+        ("pendente",  "Pendente"),
+        ("agendado",  "Agendado"),
+    ]
+
+    empresa     = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="treinamentos_nr")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="treinamentos")
+    nr          = models.CharField(max_length=10, choices=NR_CHOICES)
+    titulo      = models.CharField(max_length=200, blank=True, default="")
+    instrutor   = models.CharField(max_length=120, blank=True, default="")
+    carga_horaria = models.PositiveSmallIntegerField(default=0, help_text="em horas")
+    data_realizacao  = models.DateField(null=True, blank=True)
+    data_validade    = models.DateField(null=True, blank=True)
+    status      = models.CharField(max_length=20, choices=STATUS, default="pendente")
+    certificado = models.CharField(max_length=200, blank=True, default="")
+    observacoes = models.TextField(blank=True, default="")
+    criado_em   = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_realizacao"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "funcionario"]),
+            models.Index(fields=["empresa", "data_validade"]),
+        ]
+
+    def __str__(self):
+        return f"{self.nr} — {self.funcionario.nome} ({self.status})"

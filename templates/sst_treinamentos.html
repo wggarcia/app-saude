@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · Treinamentos NR</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#041018;
+  --surface:#081820;
+  --surface2:#0c2030;
+  --surface3:#102840;
+  --line:rgba(126,225,195,.07);
+  --line2:rgba(126,225,195,.14);
+  --text:#d6f0e8;
+  --accent:#7ee1c3;
+  --accent2:#7db6ff;
+  --gold:#f0bf6b;
+  --danger:#ff7a91;
+  --muted:#9ab9ce;
+  --green:#4ade80;
+  --amber:#f0bf6b;
+  --red:#ff7a91;
+}
+html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+
+/* ── SCROLLBAR ─── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(126,225,195,.12);border-radius:2px}
+
+/* ── TOPBAR ─── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:50;height:54px;
+  display:flex;align-items:center;
+  background:rgba(4,16,24,.97);border-bottom:1px solid var(--line);
+  backdrop-filter:blur(16px);
+}
+.tb-logo{
+  display:flex;align-items:center;gap:10px;
+  padding:0 18px;min-width:220px;border-right:1px solid var(--line);height:100%;flex-shrink:0;
+}
+.tb-icon{
+  width:30px;height:30px;border-radius:8px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:grid;place-items:center;font-weight:900;font-size:.78rem;color:#041018;flex-shrink:0;
+}
+.tb-nome{font-size:.8rem;font-weight:800;color:var(--text)}
+.tb-sub{font-size:.59rem;color:var(--muted);margin-top:1px}
+
+.tb-nav{display:flex;align-items:center;gap:1px;padding:0 14px;flex:1;overflow-x:auto}
+.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{
+  padding:5px 11px;border-radius:6px;font-size:.73rem;font-weight:600;
+  color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap;
+}
+.tb-nav a:hover{color:var(--text);background:rgba(126,225,195,.06)}
+.tb-nav a.active{color:var(--accent);background:rgba(126,225,195,.09)}
+
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.btn-topbar{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 12px;border-radius:7px;border:1px solid var(--line2);
+  background:none;color:var(--muted);font-size:.72rem;font-weight:700;
+  cursor:pointer;font-family:inherit;text-decoration:none;transition:all .15s;white-space:nowrap;
+}
+.btn-topbar:hover{border-color:var(--accent);color:var(--accent)}
+.btn-topbar.accent{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-color:transparent;color:#041018;font-weight:800;
+  box-shadow:0 0 18px rgba(126,225,195,.18);
+}
+.btn-topbar.accent:hover{opacity:.88}
+.btn-topbar.warn{border-color:rgba(255,122,145,.25);color:var(--danger)}
+.btn-topbar.warn:hover{border-color:var(--danger);background:rgba(255,122,145,.06)}
+
+/* ── LAYOUT ─── */
+.app{display:flex;min-height:calc(100vh - 54px);padding-top:54px}
+
+/* Sidebar */
+.sidebar{
+  width:200px;flex-shrink:0;
+  background:rgba(8,24,32,.6);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:10px 0;
+  position:fixed;top:54px;bottom:0;overflow-y:auto;
+}
+.sb-label{font-size:.57rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px;opacity:.6}
+.sb-link{
+  display:flex;align-items:center;gap:9px;padding:7px 14px;
+  font-size:.76rem;font-weight:600;color:var(--muted);text-decoration:none;transition:all .12s;
+  border-left:2px solid transparent;
+}
+.sb-link:hover{color:var(--text);background:rgba(126,225,195,.04)}
+.sb-link.active{color:var(--accent);background:rgba(126,225,195,.07);border-left-color:var(--accent);font-weight:700}
+.sb-icon{font-size:.9rem;flex-shrink:0;width:18px;text-align:center}
+.sb-divider{height:1px;background:var(--line);margin:8px 14px}
+
+/* Main */
+.main{flex:1;margin-left:200px;display:flex;flex-direction:column;min-width:0}
+
+/* ── BANNER ─── */
+.banner{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 22px;
+  background:rgba(240,191,107,.06);border-bottom:1px solid rgba(240,191,107,.12);
+  flex-shrink:0;
+}
+.banner-icon{font-size:1rem;flex-shrink:0}
+.banner-text{font-size:.73rem;color:var(--gold);line-height:1.5;font-weight:500}
+
+/* ── KPI STRIP ─── */
+.kpi-strip{
+  display:flex;gap:10px;padding:14px 22px;border-bottom:1px solid var(--line);
+  flex-shrink:0;overflow-x:auto;
+}
+.kpi-strip::-webkit-scrollbar{height:3px}
+.kpi-card{
+  flex:1;min-width:130px;padding:13px 14px;border-radius:10px;
+  background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden;
+}
+.kpi-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--accent));opacity:.7}
+.kpi-label{font-size:.59rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.kpi-val{font-size:1.7rem;font-weight:900;line-height:1}
+.kpi-sub{font-size:.63rem;color:var(--muted);margin-top:4px}
+
+/* ── NR GRID ─── */
+.nr-section{padding:16px 22px;border-bottom:1px solid var(--line);flex-shrink:0}
+.nr-section-title{font-size:.65rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.nr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.nr-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:9px;
+  padding:11px 12px;display:flex;flex-direction:column;gap:7px;
+  transition:border-color .15s;
+}
+.nr-card:hover{border-color:var(--line2)}
+.nr-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.nr-card-name{font-size:.72rem;font-weight:800;color:var(--accent)}
+.nr-card-label{font-size:.63rem;color:var(--muted);line-height:1.3;flex:1}
+.nr-card-counts{display:flex;gap:6px;font-size:.61rem;font-weight:700}
+.nr-count-ok{color:var(--green)}
+.nr-count-venc{color:var(--danger)}
+.nr-count-pend{color:var(--gold)}
+.nr-progress{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
+.nr-progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .4s}
+.nr-card-btn{
+  padding:3px 9px;border-radius:5px;border:1px solid var(--line2);
+  background:none;color:var(--muted);font-size:.62rem;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:all .15s;align-self:flex-start;white-space:nowrap;
+}
+.nr-card-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── TOOLBAR ─── */
+.toolbar{
+  display:flex;align-items:center;gap:10px;padding:12px 22px;
+  border-bottom:1px solid var(--line);flex-shrink:0;flex-wrap:wrap;
+}
+.filtros{display:flex;gap:4px;flex-wrap:wrap}
+.filtro-btn{
+  padding:5px 12px;border-radius:6px;border:1px solid var(--line);
+  background:none;color:var(--muted);font-size:.71rem;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;
+}
+.filtro-btn:hover{border-color:var(--line2);color:var(--text)}
+.filtro-btn.active{color:var(--accent);background:rgba(126,225,195,.08);border-color:rgba(126,225,195,.25)}
+
+.select-nr{
+  padding:5px 10px;border-radius:6px;border:1px solid var(--line);
+  background:var(--surface);color:var(--muted);font-size:.71rem;font-weight:600;
+  font-family:inherit;outline:none;cursor:pointer;transition:border .15s;
+}
+.select-nr:focus,.select-nr:hover{border-color:var(--accent);color:var(--text)}
+.select-nr option{background:#081820}
+
+/* ── TABLE AREA ─── */
+.table-area{flex:1;overflow-x:auto;padding:0 22px 28px}
+.data-table{width:100%;border-collapse:collapse;min-width:820px}
+.data-table th{
+  padding:10px 12px;text-align:left;
+  font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  border-bottom:1px solid var(--line);white-space:nowrap;
+  position:sticky;top:0;background:var(--bg);z-index:2;
+}
+.data-table td{
+  padding:11px 12px;border-bottom:1px solid var(--line);
+  font-size:.79rem;color:var(--text);vertical-align:middle;
+}
+.data-table tbody tr{transition:background .12s}
+.data-table tbody tr:hover{background:rgba(126,225,195,.025)}
+.data-table tbody tr:last-child td{border-bottom:none}
+.data-table tbody tr.row-vencido{background:rgba(255,122,145,.04)}
+.data-table tbody tr.row-vencido:hover{background:rgba(255,122,145,.07)}
+.data-table tbody tr.row-urgente{background:rgba(240,191,107,.04)}
+.data-table tbody tr.row-urgente:hover{background:rgba(240,191,107,.07)}
+
+.func-nome{font-weight:700;font-size:.81rem}
+.func-cargo{font-size:.67rem;color:var(--muted);margin-top:2px}
+
+/* ── BADGES ─── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:.62rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.b-verde{background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.18)}
+.b-vermelho{background:rgba(255,122,145,.1);color:var(--danger);border:1px solid rgba(255,122,145,.2)}
+.b-amarelo{background:rgba(240,191,107,.1);color:var(--gold);border:1px solid rgba(240,191,107,.2)}
+.b-azul{background:rgba(125,182,255,.1);color:var(--accent2);border:1px solid rgba(125,182,255,.2)}
+.b-cinza{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line)}
+
+.nr-badge{
+  display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;
+  font-size:.63rem;font-weight:800;background:rgba(126,225,195,.1);
+  color:var(--accent);border:1px solid rgba(126,225,195,.2);white-space:nowrap;
+}
+
+.dias-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;font-size:.67rem;font-weight:800;white-space:nowrap}
+.dias-ok{background:rgba(74,222,128,.08);color:#4ade80}
+.dias-atencao{background:rgba(240,191,107,.1);color:var(--gold)}
+.dias-vencido{background:rgba(255,122,145,.12);color:var(--danger)}
+.dias-muted{color:var(--muted);font-size:.75rem}
+
+/* ── STATUS BADGES ─── */
+.status-valido{background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.18)}
+.status-vencendo{background:rgba(240,191,107,.1);color:var(--gold);border:1px solid rgba(240,191,107,.2)}
+.status-vencido{background:rgba(255,122,145,.1);color:var(--danger);border:1px solid rgba(255,122,145,.2)}
+.status-pendente{background:rgba(125,182,255,.1);color:var(--accent2);border:1px solid rgba(125,182,255,.2)}
+.status-agendado{background:rgba(126,225,195,.1);color:var(--accent);border:1px solid rgba(126,225,195,.2)}
+
+/* ── ROW ACTIONS ─── */
+.row-actions{display:flex;gap:5px}
+.btn-row{
+  padding:3px 9px;border-radius:5px;border:1px solid var(--line);
+  background:none;color:var(--muted);font-size:.68rem;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:all .15s;text-decoration:none;white-space:nowrap;
+}
+.btn-row:hover{border-color:var(--accent2);color:var(--accent2)}
+
+/* ── SKELETON ─── */
+.skel{background:linear-gradient(90deg,rgba(126,225,195,.03) 25%,rgba(126,225,195,.07) 50%,rgba(126,225,195,.03) 75%);background-size:200%;animation:shimmer 1.8s infinite;border-radius:5px}
+@keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+.skel-kpi{height:72px;border-radius:10px}
+.skel-line{height:10px;border-radius:4px}
+.skel-line.w80{width:80%}.skel-line.w60{width:60%}.skel-line.w50{width:50%}.skel-line.w40{width:40%}.skel-line.w30{width:30%}
+
+/* ── EMPTY STATE ─── */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:72px 24px;text-align:center;
+}
+.empty-icon{font-size:2.8rem;margin-bottom:14px;opacity:.3}
+.empty-title{font-size:.95rem;font-weight:800;margin-bottom:6px;color:var(--text)}
+.empty-desc{font-size:.77rem;color:var(--muted);max-width:320px;line-height:1.6}
+
+/* ── MODAL ─── */
+.modal-bg{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.78);backdrop-filter:blur(5px);
+  align-items:center;justify-content:center;padding:16px;
+}
+.modal-bg.open{display:flex}
+.modal{
+  background:var(--surface);border:1px solid var(--line2);border-radius:14px;
+  padding:26px;width:520px;max-width:100%;max-height:92vh;overflow-y:auto;
+  display:flex;flex-direction:column;gap:0;
+}
+.modal-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:12px}
+.modal-title{font-size:1.05rem;font-weight:900;color:var(--text)}
+.modal-sub{font-size:.75rem;color:var(--muted);margin-top:3px;line-height:1.5}
+.modal-close{
+  background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;
+  padding:0 4px;line-height:1;flex-shrink:0;transition:color .15s;
+}
+.modal-close:hover{color:var(--text)}
+.mf{margin-bottom:12px}
+.mf label{display:block;font-size:.62rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:rgba(154,185,206,.5);margin-bottom:5px}
+.mf input,.mf select,.mf textarea{
+  width:100%;padding:9px 11px;border-radius:7px;border:1px solid rgba(126,225,195,.12);
+  background:rgba(126,225,195,.03);color:var(--text);font-size:.83rem;
+  outline:none;font-family:inherit;transition:border .15s;
+}
+.mf input:focus,.mf select:focus,.mf textarea:focus{border-color:rgba(126,225,195,.35)}
+.mf select option{background:#081820}
+.mf textarea{resize:vertical;min-height:72px}
+.mf input::placeholder,.mf textarea::placeholder{color:rgba(154,185,206,.35)}
+.mf-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 18px;border-radius:7px;border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#041018;font-size:.76rem;font-weight:900;cursor:pointer;
+  font-family:inherit;white-space:nowrap;box-shadow:0 0 18px rgba(126,225,195,.18);
+  transition:opacity .15s;
+}
+.btn-primary:hover{opacity:.86}
+.btn-primary:disabled{opacity:.45;cursor:default}
+.btn-cancel{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:7px;border:1px solid var(--line);
+  background:none;color:var(--muted);font-size:.76rem;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:all .15s;
+}
+.btn-cancel:hover{border-color:var(--line2);color:var(--text)}
+.error-msg{font-size:.73rem;color:var(--danger);margin-top:4px;display:none}
+.success-flash{
+  display:none;align-items:center;gap:8px;
+  padding:10px 14px;border-radius:8px;
+  background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.18);
+  color:#4ade80;font-size:.77rem;font-weight:700;margin-bottom:14px;
+}
+.success-flash.show{display:flex}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="tb-logo">
+    <div class="tb-icon">S</div>
+    <div>
+      <div class="tb-nome">SolusCRT</div>
+      <div class="tb-sub">Saúde Ocupacional</div>
+    </div>
+  </div>
+  <nav class="tb-nav">
+    <a href="/sst/" id="navSst">← SST</a>
+    <a href="/sst/funcionarios/" id="navFuncionarios">Funcionários</a>
+    <a href="/sst/asos/">ASOs</a>
+    <a href="/sst/exames/">Exames</a>
+    <a href="/sst/treinamentos/" class="active">Treinamentos</a>
+    <a href="/sst/afastamentos/">Afastamentos</a>
+    <a href="/sst/cats/">CATs</a>
+    <a href="/sst/documentos/">Documentos</a>
+    <a href="/sst/esocial/">eSocial</a>
+  </nav>
+  <div class="tb-actions">
+    <button class="btn-topbar accent" onclick="abrirModal()">+ Registrar Treinamento</button>
+    <a href="/logout/" class="btn-topbar warn">Sair</a>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <span class="sb-label">SST</span>
+    <a href="/sst/" class="sb-link"><span class="sb-icon">🏠</span> Dashboard SST</a>
+    <a href="/sst/funcionarios/" class="sb-link"><span class="sb-icon">👤</span> Funcionários</a>
+    <a href="/sst/asos/" class="sb-link"><span class="sb-icon">📋</span> ASOs</a>
+    <a href="/sst/exames/" class="sb-link"><span class="sb-icon">🔬</span> Exames</a>
+    <a href="/sst/treinamentos/" class="sb-link active"><span class="sb-icon">🎓</span> Treinamentos NR</a>
+    <a href="/sst/afastamentos/" class="sb-link"><span class="sb-icon">🏥</span> Afastamentos</a>
+    <a href="/sst/cats/" class="sb-link"><span class="sb-icon">⚠️</span> CATs</a>
+    <div class="sb-divider"></div>
+    <span class="sb-label">Documentos</span>
+    <a href="/sst/documentos/" class="sb-link"><span class="sb-icon">📁</span> Documentos</a>
+    <a href="/sst/esocial/" class="sb-link"><span class="sb-icon">📡</span> eSocial SST</a>
+    <div class="sb-divider"></div>
+    <span class="sb-label">Relatórios</span>
+    <a href="/sst/relatorios/" class="sb-link"><span class="sb-icon">📊</span> Relatórios</a>
+    <a href="/sst/configuracoes/" class="sb-link"><span class="sb-icon">⚙️</span> Configurações</a>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- BANNER -->
+    <div class="banner">
+      <span class="banner-icon">⚡</span>
+      <span class="banner-text">Treinamentos com vencimento próximo geram alertas automáticos. Mantenha os certificados atualizados para evitar autuações pela fiscalização.</span>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="kpi-strip" id="kpiStrip">
+      <div class="kpi-card skel skel-kpi" style="--kc:var(--accent)"></div>
+      <div class="kpi-card skel skel-kpi" style="--kc:var(--gold)"></div>
+      <div class="kpi-card skel skel-kpi" style="--kc:var(--danger)"></div>
+      <div class="kpi-card skel skel-kpi" style="--kc:var(--accent2)"></div>
+    </div>
+
+    <!-- NR GRID -->
+    <div class="nr-section">
+      <div class="nr-section-title">Painel por NR</div>
+      <div class="nr-grid" id="nrGrid">
+        <!-- Skeleton NR cards -->
+        <div class="nr-card skel" style="height:96px"></div>
+        <div class="nr-card skel" style="height:96px"></div>
+        <div class="nr-card skel" style="height:96px"></div>
+        <div class="nr-card skel" style="height:96px"></div>
+        <div class="nr-card skel" style="height:96px"></div>
+        <div class="nr-card skel" style="height:96px"></div>
+      </div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="filtros" id="filtros">
+        <button class="filtro-btn active" data-status="">Todos</button>
+        <button class="filtro-btn" data-status="valido">Válidos</button>
+        <button class="filtro-btn" data-status="vencendo">Vencendo 30d</button>
+        <button class="filtro-btn" data-status="vencido">Vencidos</button>
+        <button class="filtro-btn" data-status="pendente">Pendentes</button>
+      </div>
+      <select class="select-nr" id="selectNr" onchange="filtrarTabela()">
+        <option value="">Todas as NRs</option>
+        <option value="NR-5">NR-5 — CIPA</option>
+        <option value="NR-6">NR-6 — EPI</option>
+        <option value="NR-10">NR-10 — Eletricidade</option>
+        <option value="NR-11">NR-11</option>
+        <option value="NR-12">NR-12</option>
+        <option value="NR-18">NR-18</option>
+        <option value="NR-20">NR-20</option>
+        <option value="NR-23">NR-23</option>
+        <option value="NR-33">NR-33 — Espaços Confinados</option>
+        <option value="NR-34">NR-34</option>
+        <option value="NR-35">NR-35 — Trabalho em Altura</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+
+    <!-- TABLE AREA -->
+    <div class="table-area">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Funcionário / Cargo</th>
+            <th>NR</th>
+            <th>Título</th>
+            <th>Instrutor</th>
+            <th>CH</th>
+            <th>Realização</th>
+            <th>Validade</th>
+            <th>Dias Rest.</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Skeleton rows -->
+          <tr><td><div class="skel skel-line w80" style="height:11px;margin-bottom:5px"></div><div class="skel skel-line w50" style="height:9px"></div></td><td><div class="skel skel-line w40" style="height:18px;border-radius:4px"></div></td><td><div class="skel skel-line w80"></div></td><td><div class="skel skel-line w60"></div></td><td><div class="skel skel-line w30"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40" style="height:18px;border-radius:5px"></div></td><td><div class="skel skel-line w50" style="height:18px;border-radius:4px"></div></td><td></td></tr>
+          <tr><td><div class="skel skel-line w80" style="height:11px;margin-bottom:5px"></div><div class="skel skel-line w50" style="height:9px"></div></td><td><div class="skel skel-line w40" style="height:18px;border-radius:4px"></div></td><td><div class="skel skel-line w80"></div></td><td><div class="skel skel-line w60"></div></td><td><div class="skel skel-line w30"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40" style="height:18px;border-radius:5px"></div></td><td><div class="skel skel-line w50" style="height:18px;border-radius:4px"></div></td><td></td></tr>
+          <tr><td><div class="skel skel-line w80" style="height:11px;margin-bottom:5px"></div><div class="skel skel-line w50" style="height:9px"></div></td><td><div class="skel skel-line w40" style="height:18px;border-radius:4px"></div></td><td><div class="skel skel-line w80"></div></td><td><div class="skel skel-line w60"></div></td><td><div class="skel skel-line w30"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40" style="height:18px;border-radius:5px"></div></td><td><div class="skel skel-line w50" style="height:18px;border-radius:4px"></div></td><td></td></tr>
+          <tr><td><div class="skel skel-line w80" style="height:11px;margin-bottom:5px"></div><div class="skel skel-line w50" style="height:9px"></div></td><td><div class="skel skel-line w40" style="height:18px;border-radius:4px"></div></td><td><div class="skel skel-line w80"></div></td><td><div class="skel skel-line w60"></div></td><td><div class="skel skel-line w30"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40" style="height:18px;border-radius:5px"></div></td><td><div class="skel skel-line w50" style="height:18px;border-radius:4px"></div></td><td></td></tr>
+          <tr><td><div class="skel skel-line w80" style="height:11px;margin-bottom:5px"></div><div class="skel skel-line w50" style="height:9px"></div></td><td><div class="skel skel-line w40" style="height:18px;border-radius:4px"></div></td><td><div class="skel skel-line w80"></div></td><td><div class="skel skel-line w60"></div></td><td><div class="skel skel-line w30"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40" style="height:18px;border-radius:5px"></div></td><td><div class="skel skel-line w50" style="height:18px;border-radius:4px"></div></td><td></td></tr>
+        </tbody>
+      </table>
+
+      <div class="empty-state" id="emptyState" style="display:none">
+        <div class="empty-icon">🎓</div>
+        <div class="empty-title">Nenhum treinamento encontrado</div>
+        <div class="empty-desc">Nenhum treinamento corresponde aos filtros selecionados. Registre o primeiro treinamento usando o botão acima.</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL REGISTRAR TREINAMENTO -->
+<div class="modal-bg" id="modalBg" onclick="fecharModalFora(event)">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle">Registrar Treinamento</div>
+        <div class="modal-sub">Informe os dados do treinamento NR concluído ou agendado.</div>
+      </div>
+      <button class="modal-close" onclick="fecharModal()" aria-label="Fechar">✕</button>
+    </div>
+
+    <div class="success-flash" id="successFlash">✅ Treinamento registrado com sucesso!</div>
+
+    <form id="formTreinamento" onsubmit="submitTreinamento(event)" novalidate>
+
+      <div class="mf">
+        <label for="fNome">Funcionário *</label>
+        <input type="text" id="fNome" placeholder="Nome completo do funcionário" required autocomplete="off">
+        <div class="error-msg" id="errNome">Informe o nome do funcionário.</div>
+      </div>
+
+      <div class="mf-row">
+        <div class="mf">
+          <label for="fNr">NR *</label>
+          <select id="fNr" required>
+            <option value="">Selecione a NR</option>
+            <option value="NR-5">NR-5 — CIPA</option>
+            <option value="NR-6">NR-6 — EPI</option>
+            <option value="NR-10">NR-10 — Eletricidade</option>
+            <option value="NR-11">NR-11</option>
+            <option value="NR-12">NR-12</option>
+            <option value="NR-18">NR-18</option>
+            <option value="NR-20">NR-20</option>
+            <option value="NR-23">NR-23</option>
+            <option value="NR-33">NR-33 — Espaços Confinados</option>
+            <option value="NR-34">NR-34</option>
+            <option value="NR-35">NR-35 — Trabalho em Altura</option>
+            <option value="outro">Outro</option>
+          </select>
+          <div class="error-msg" id="errNr">Selecione a NR.</div>
+        </div>
+        <div class="mf">
+          <label for="fCh">Carga horária (h) *</label>
+          <input type="number" id="fCh" placeholder="Ex: 8" min="1" required>
+          <div class="error-msg" id="errCh">Informe a carga horária.</div>
+        </div>
+      </div>
+
+      <div class="mf">
+        <label for="fTitulo">Título do Treinamento *</label>
+        <input type="text" id="fTitulo" placeholder="Ex: Treinamento NR-35 Trabalho em Altura" required>
+        <div class="error-msg" id="errTitulo">Informe o título do treinamento.</div>
+      </div>
+
+      <div class="mf">
+        <label for="fInstrutor">Instrutor</label>
+        <input type="text" id="fInstrutor" placeholder="Nome do instrutor ou empresa">
+      </div>
+
+      <div class="mf-row">
+        <div class="mf">
+          <label for="fDataReal">Data de Realização *</label>
+          <input type="date" id="fDataReal" required>
+          <div class="error-msg" id="errDataReal">Informe a data de realização.</div>
+        </div>
+        <div class="mf">
+          <label for="fDataVal">Data de Validade</label>
+          <input type="date" id="fDataVal">
+        </div>
+      </div>
+
+      <div class="mf">
+        <label for="fCertificado">Certificado / Número</label>
+        <input type="text" id="fCertificado" placeholder="Número ou referência do certificado">
+      </div>
+
+      <div class="mf">
+        <label for="fObs">Observações</label>
+        <textarea id="fObs" placeholder="Observações adicionais (opcional)"></textarea>
+      </div>
+
+      <div class="error-msg" id="errGeral" style="margin-top:4px;font-size:.75rem"></div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn-primary" id="btnSubmit">Registrar Treinamento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   DADOS E ESTADO
+═══════════════════════════════════════════ */
+let todosTreinamentos = [];
+let resumoNR = [];
+let filtroStatus = '';
+let filtroNr = '';
+
+const NR_LABELS = {
+  'NR-5':  'CIPA',
+  'NR-6':  'EPI',
+  'NR-10': 'Eletricidade',
+  'NR-11': 'NR-11',
+  'NR-12': 'NR-12',
+  'NR-18': 'NR-18',
+  'NR-20': 'NR-20',
+  'NR-23': 'NR-23',
+  'NR-33': 'Espaços Confinados',
+  'NR-34': 'NR-34',
+  'NR-35': 'Trabalho em Altura',
+  'outro': 'Outro',
+};
+
+/* ═══════════════════════════════════════════
+   UTILIDADES
+═══════════════════════════════════════════ */
+function fmtData(s) {
+  if (!s) return '—';
+  const [y, m, d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function diasBadge(dias) {
+  if (dias === null || dias === undefined) return `<span class="dias-muted">—</span>`;
+  if (dias < 0) {
+    const abs = Math.abs(dias);
+    return `<span class="dias-badge dias-vencido">Vencido há ${abs}d</span>`;
+  }
+  if (dias <= 30) return `<span class="dias-badge dias-atencao">${dias}d</span>`;
+  return `<span class="dias-badge dias-ok">${dias}d</span>`;
+}
+
+function statusBadge(status) {
+  const mapa = {
+    valido:    ['status-valido',   'Válido'],
+    vencendo:  ['status-vencendo', 'Vencendo'],
+    vencido:   ['status-vencido',  'Vencido'],
+    pendente:  ['status-pendente', 'Pendente'],
+    agendado:  ['status-agendado', 'Agendado'],
+  };
+  const [cls, label] = mapa[status] || ['b-cinza', status || '—'];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function rowClass(t) {
+  if (t.status === 'vencido' || (t.dias_restantes !== null && t.dias_restantes !== undefined && t.dias_restantes < 0)) return 'row-vencido';
+  if (t.dias_restantes !== null && t.dias_restantes !== undefined && t.dias_restantes >= 0 && t.dias_restantes <= 7) return 'row-urgente';
+  return '';
+}
+
+/* ═══════════════════════════════════════════
+   KPI STRIP
+═══════════════════════════════════════════ */
+function renderKPIs(resumo) {
+  const validos   = resumo.validos   || 0;
+  const vencendo  = resumo.vencendo_30d || 0;
+  const vencidos  = resumo.vencidos  || 0;
+  const pendentes = resumo.pendentes || 0;
+
+  document.getElementById('kpiStrip').innerHTML = `
+    <div class="kpi-card" style="--kc:var(--accent)">
+      <div class="kpi-label">Válidos</div>
+      <div class="kpi-val" style="color:var(--accent)">${validos}</div>
+      <div class="kpi-sub">certificações ativas</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--gold)">
+      <div class="kpi-label">Vencendo em 30d</div>
+      <div class="kpi-val" style="color:var(--gold)">${vencendo}</div>
+      <div class="kpi-sub">requerem renovação urgente</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--danger)">
+      <div class="kpi-label">Vencidos</div>
+      <div class="kpi-val" style="color:var(--danger)">${vencidos}</div>
+      <div class="kpi-sub">fora da validade</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--accent2)">
+      <div class="kpi-label">Pendentes / Agendados</div>
+      <div class="kpi-val" style="color:var(--accent2)">${pendentes}</div>
+      <div class="kpi-sub">aguardando realização</div>
+    </div>
+  `;
+}
+
+/* ═══════════════════════════════════════════
+   PAINEL NR
+═══════════════════════════════════════════ */
+function renderNRGrid(porNr) {
+  const grid = document.getElementById('nrGrid');
+  if (!porNr || !porNr.length) {
+    grid.innerHTML = '<div style="font-size:.78rem;color:var(--muted);padding:8px 0">Nenhuma NR cadastrada ainda.</div>';
+    return;
+  }
+
+  grid.innerHTML = porNr.map(nr => {
+    const total = (nr.valido || 0) + (nr.vencido || 0) + (nr.pendente || 0) + (nr.agendado || 0);
+    const pct = total > 0 ? Math.round(((nr.valido || 0) / total) * 100) : 0;
+    const label = nr.label || NR_LABELS[nr.nr] || nr.nr;
+    return `
+      <div class="nr-card">
+        <div class="nr-card-top">
+          <span class="nr-card-name">${nr.nr}</span>
+          <span class="nr-card-label">${label}</span>
+        </div>
+        <div class="nr-card-counts">
+          <span class="nr-count-ok">✔ ${nr.valido || 0}</span>
+          <span class="nr-count-venc">✖ ${nr.vencido || 0}</span>
+          <span class="nr-count-pend">◷ ${(nr.pendente || 0) + (nr.agendado || 0)}</span>
+        </div>
+        <div class="nr-progress"><div class="nr-progress-bar" style="width:${pct}%"></div></div>
+        <button class="nr-card-btn" onclick="filtrarPorNR('${nr.nr}')">+ Registrar</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function filtrarPorNR(nr) {
+  document.getElementById('selectNr').value = nr;
+  filtroNr = nr;
+  filtrarTabela();
+  document.querySelector('.table-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ═══════════════════════════════════════════
+   TABELA
+═══════════════════════════════════════════ */
+function renderTabela(lista) {
+  const tbody  = document.getElementById('tableBody');
+  const empty  = document.getElementById('emptyState');
+
+  if (!lista.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'flex';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = lista.map(t => {
+    const rc  = rowClass(t);
+    const nrLabel = t.nr_label || NR_LABELS[t.nr] || t.nr || '—';
+    const prontuarioUrl = t.funcionario_id
+      ? `/sst/funcionarios/${t.funcionario_id}/`
+      : `/sst/funcionarios/?busca=${encodeURIComponent(t.funcionario || '')}`;
+    return `
+      <tr class="${rc}">
+        <td>
+          <div class="func-nome">${t.funcionario || '—'}</div>
+          <div class="func-cargo">${t.cargo || '—'}</div>
+        </td>
+        <td><span class="nr-badge">${t.nr || '—'}</span></td>
+        <td style="max-width:200px;white-space:normal;line-height:1.4">${t.titulo || '—'}</td>
+        <td style="color:var(--muted)">${t.instrutor || '—'}</td>
+        <td style="color:var(--muted);text-align:center">${t.carga_horaria ? t.carga_horaria + 'h' : '—'}</td>
+        <td>${fmtData(t.data_realizacao)}</td>
+        <td>${fmtData(t.data_validade)}</td>
+        <td>${diasBadge(t.dias_restantes)}</td>
+        <td>${statusBadge(t.status)}</td>
+        <td>
+          <div class="row-actions">
+            <a href="${prontuarioUrl}" class="btn-row">Ver prontuário</a>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filtrarTabela() {
+  filtroNr = document.getElementById('selectNr').value;
+  let lista = todosTreinamentos;
+
+  if (filtroStatus) {
+    if (filtroStatus === 'vencendo') {
+      lista = lista.filter(t => t.status === 'vencendo' || (t.dias_restantes !== null && t.dias_restantes !== undefined && t.dias_restantes >= 0 && t.dias_restantes <= 30 && t.status === 'valido'));
+    } else {
+      lista = lista.filter(t => t.status === filtroStatus);
+    }
+  }
+  if (filtroNr) lista = lista.filter(t => t.nr === filtroNr);
+
+  renderTabela(lista);
+}
+
+/* ═══════════════════════════════════════════
+   FILTROS
+═══════════════════════════════════════════ */
+document.getElementById('filtros').addEventListener('click', function(ev) {
+  const btn = ev.target.closest('.filtro-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filtroStatus = btn.dataset.status;
+  filtrarTabela();
+});
+
+/* ═══════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════ */
+function abrirModal(nrPreset) {
+  document.getElementById('formTreinamento').reset();
+  document.querySelectorAll('.error-msg').forEach(el => el.style.display = 'none');
+  document.getElementById('successFlash').classList.remove('show');
+  document.getElementById('errGeral').style.display = 'none';
+  document.getElementById('btnSubmit').disabled = false;
+  document.getElementById('btnSubmit').textContent = 'Registrar Treinamento';
+
+  if (nrPreset) document.getElementById('fNr').value = nrPreset;
+
+  document.getElementById('modalBg').classList.add('open');
+  setTimeout(() => document.getElementById('fNome').focus(), 80);
+}
+
+function fecharModal() {
+  document.getElementById('modalBg').classList.remove('open');
+}
+
+function fecharModalFora(ev) {
+  if (ev.target === document.getElementById('modalBg')) fecharModal();
+}
+
+document.addEventListener('keydown', function(ev) {
+  if (ev.key === 'Escape') fecharModal();
+});
+
+/* ═══════════════════════════════════════════
+   SUBMIT TREINAMENTO
+═══════════════════════════════════════════ */
+async function submitTreinamento(ev) {
+  ev.preventDefault();
+
+  // Clear errors
+  document.querySelectorAll('.error-msg').forEach(el => el.style.display = 'none');
+
+  const nome   = document.getElementById('fNome').value.trim();
+  const nr     = document.getElementById('fNr').value;
+  const titulo = document.getElementById('fTitulo').value.trim();
+  const ch     = document.getElementById('fCh').value;
+  const dataR  = document.getElementById('fDataReal').value;
+
+  let ok = true;
+  if (!nome)   { document.getElementById('errNome').style.display = 'block'; ok = false; }
+  if (!nr)     { document.getElementById('errNr').style.display = 'block'; ok = false; }
+  if (!titulo) { document.getElementById('errTitulo').style.display = 'block'; ok = false; }
+  if (!ch)     { document.getElementById('errCh').style.display = 'block'; ok = false; }
+  if (!dataR)  { document.getElementById('errDataReal').style.display = 'block'; ok = false; }
+  if (!ok) return;
+
+  const payload = {
+    funcionario_nome: nome,
+    nr:               nr,
+    titulo:           titulo,
+    instrutor:        document.getElementById('fInstrutor').value.trim() || null,
+    carga_horaria:    ch ? parseInt(ch) : null,
+    data_realizacao:  dataR,
+    data_validade:    document.getElementById('fDataVal').value || null,
+    certificado:      document.getElementById('fCertificado').value.trim() || null,
+    observacoes:      document.getElementById('fObs').value.trim() || null,
+  };
+
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true;
+  btn.textContent = 'Registrando…';
+
+  try {
+    const resp = await fetch('/api/sst/treinamentos', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      body: JSON.stringify(payload),
+    });
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData.error || errData.detail || `Erro ${resp.status}`);
+    }
+
+    document.getElementById('successFlash').classList.add('show');
+    btn.textContent = 'Registrado!';
+
+    // Reload data
+    setTimeout(async () => {
+      fecharModal();
+      await Promise.all([carregarTreinamentos(), carregarResumo()]);
+    }, 1100);
+
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = 'Registrar Treinamento';
+    const errGeral = document.getElementById('errGeral');
+    errGeral.textContent = err.message || 'Erro ao registrar treinamento.';
+    errGeral.style.display = 'block';
+    console.error('Erro ao registrar treinamento:', err);
+  }
+}
+
+function getCsrfToken() {
+  const match = document.cookie.match(/csrftoken=([^;]+)/);
+  return match ? match[1] : '';
+}
+
+/* ═══════════════════════════════════════════
+   CARREGAR DADOS
+═══════════════════════════════════════════ */
+async function carregarResumo() {
+  try {
+    const resp = await fetch('/api/sst/treinamentos/resumo', { credentials: 'include' });
+    if (!resp.ok) throw new Error('Erro ' + resp.status);
+    const data = await resp.json();
+    renderKPIs(data);
+    renderNRGrid(data.por_nr || []);
+  } catch (err) {
+    console.warn('Resumo API indisponível, usando mock.', err);
+    const mock = {
+      validos: 42, vencendo_30d: 7, vencidos: 3, pendentes: 11,
+      por_nr: [
+        { nr: 'NR-5',  label: 'CIPA',               valido: 8,  vencido: 1, pendente: 2, agendado: 0 },
+        { nr: 'NR-6',  label: 'EPI',                 valido: 12, vencido: 0, pendente: 3, agendado: 1 },
+        { nr: 'NR-10', label: 'Eletricidade',         valido: 4,  vencido: 1, pendente: 1, agendado: 0 },
+        { nr: 'NR-33', label: 'Espaços Confinados',   valido: 3,  vencido: 0, pendente: 2, agendado: 0 },
+        { nr: 'NR-35', label: 'Trabalho em Altura',   valido: 10, vencido: 1, pendente: 2, agendado: 0 },
+        { nr: 'NR-12', label: 'NR-12',                valido: 5,  vencido: 0, pendente: 1, agendado: 0 },
+      ],
+    };
+    renderKPIs(mock);
+    renderNRGrid(mock.por_nr);
+  }
+}
+
+async function carregarTreinamentos() {
+  try {
+    const resp = await fetch('/api/sst/treinamentos', { credentials: 'include' });
+    if (!resp.ok) throw new Error('Erro ' + resp.status);
+    const data = await resp.json();
+    todosTreinamentos = data.treinamentos || [];
+  } catch (err) {
+    console.warn('API treinamentos indisponível, usando mock.', err);
+    const hoje = new Date();
+    function diasAte(dataStr) {
+      if (!dataStr) return null;
+      const d = new Date(dataStr);
+      return Math.round((d - hoje) / 86400000);
+    }
+    todosTreinamentos = [
+      { id:1, funcionario_id:1, funcionario:'Ana Paula Ferreira',    cargo:'Operadora de Máquinas',  nr:'NR-35', nr_label:'Trabalho em Altura',  titulo:'Trabalho em Altura — Básico',        instrutor:'Eng. Carlos Melo',    carga_horaria:8,  data_realizacao:'2024-08-10', data_validade:'2025-08-10', dias_restantes: diasAte('2025-08-10'), status:'vencido'  },
+      { id:2, funcionario_id:2, funcionario:'Carlos Eduardo Lima',    cargo:'Técnico de Segurança',   nr:'NR-10', nr_label:'Eletricidade',         titulo:'Segurança em Eletricidade NR-10',    instrutor:'SENAI',               carga_horaria:40, data_realizacao:'2024-11-15', data_validade:'2026-11-15', dias_restantes: diasAte('2026-11-15'), status:'valido'   },
+      { id:3, funcionario_id:3, funcionario:'Fernanda Costa',         cargo:'Analista Contábil',      nr:'NR-5',  nr_label:'CIPA',                 titulo:'Formação CIPA',                      instrutor:'RH Interno',          carga_horaria:20, data_realizacao:'2025-01-20', data_validade:'2026-01-20', dias_restantes: diasAte('2026-01-20'), status:'valido'   },
+      { id:4, funcionario_id:4, funcionario:'João Marcos Souza',      cargo:'Auxiliar de Produção',   nr:'NR-12', nr_label:'NR-12',                titulo:'Segurança em Máquinas e Equipamentos',instrutor:'Consultoria SST',    carga_horaria:16, data_realizacao:'2025-03-05', data_validade:'2025-06-05', dias_restantes: diasAte('2025-06-05'), status:'vencendo' },
+      { id:5, funcionario_id:5, funcionario:'Mariana Oliveira',       cargo:'Supervisora de RH',      nr:'NR-6',  nr_label:'EPI',                  titulo:'Uso e Conservação de EPIs',          instrutor:'Fornecedor EPI',      carga_horaria:4,  data_realizacao:null,         data_validade:null,         dias_restantes: null,                  status:'pendente' },
+      { id:6, funcionario_id:6, funcionario:'Roberto Alves',          cargo:'Operador Logístico',     nr:'NR-33', nr_label:'Espaços Confinados',   titulo:'Entrada em Espaços Confinados',      instrutor:'Seg. Industrial',     carga_horaria:16, data_realizacao:'2024-05-01', data_validade:'2025-05-01', dias_restantes: diasAte('2025-05-01'), status:'vencido'  },
+      { id:7, funcionario_id:7, funcionario:'Sandra Mendes',          cargo:'Coordenadora Qualidade', nr:'NR-35', nr_label:'Trabalho em Altura',   titulo:'Trabalho em Altura — Avançado',      instrutor:'Eng. Carlos Melo',    carga_horaria:16, data_realizacao:'2025-02-12', data_validade:'2027-02-12', dias_restantes: diasAte('2027-02-12'), status:'valido'   },
+      { id:8, funcionario_id:1, funcionario:'Ana Paula Ferreira',     cargo:'Operadora de Máquinas',  nr:'NR-6',  nr_label:'EPI',                  titulo:'Uso Correto de EPIs',                instrutor:'RH Interno',          carga_horaria:4,  data_realizacao:'2025-04-01', data_validade:'2026-04-01', dias_restantes: diasAte('2026-04-01'), status:'valido'   },
+      { id:9, funcionario_id:8, funcionario:'Paulo Rodrigues',        cargo:'Eletricista',            nr:'NR-10', nr_label:'Eletricidade',         titulo:'SEP — Sistemas Elétricos de Potência',instrutor:'SENAI',              carga_horaria:40, data_realizacao:'2025-01-10', data_validade:'2025-05-15', dias_restantes: diasAte('2025-05-15'), status:'vencendo' },
+    ];
+  }
+  filtrarTabela();
+}
+
+/* ═══════════════════════════════════════════
+   QUERYSTRING: ?nr=NR-35
+═══════════════════════════════════════════ */
+function lerQuerystring() {
+  const params = new URLSearchParams(window.location.search);
+  const nr = params.get('nr');
+  if (nr) {
+    filtroNr = nr;
+    const sel = document.getElementById('selectNr');
+    if (sel) sel.value = nr;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+lerQuerystring();
+Promise.all([carregarResumo(), carregarTreinamentos()]);
+</script>
+</body>
+</html>

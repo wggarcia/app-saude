@@ -770,3 +770,265 @@ def _exportar_csv_relatorio(serie, empresa_nome):
     resp = HttpResponse(buf.getvalue(), content_type="text/csv; charset=utf-8-sig")
     resp["Content-Disposition"] = f'attachment; filename="sst_relatorio_{date.today()}.csv"'
     return resp
+
+
+# ── Prontuário do Funcionário ─────────────────────────────────────────────────
+
+def sst_prontuario_page(request, funcionario_id):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    func = FuncionarioSST.objects.filter(id=funcionario_id, empresa=empresa).first()
+    if not func:
+        return redirect("/sst/funcionarios/")
+    return render(request, "sst_prontuario.html", {
+        "empresa_nome": empresa.nome,
+        "funcionario_id": funcionario_id,
+        "funcionario_nome": func.nome,
+    })
+
+
+def api_prontuario_funcionario(request, funcionario_id):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    func = FuncionarioSST.objects.filter(id=funcionario_id, empresa=empresa).first()
+    if not func:
+        return JsonResponse({"erro": "Funcionário não encontrado"}, status=404)
+
+    hoje = date.today()
+
+    # ASOs
+    asos = ASOOcupacional.objects.filter(empresa=empresa, funcionario=func).order_by("-data_emissao")
+    asos_out = [
+        {
+            "id": a.id,
+            "tipo": a.tipo,
+            "tipo_label": a.get_tipo_display(),
+            "data_emissao": a.data_emissao.strftime("%d/%m/%Y") if a.data_emissao else None,
+            "data_validade": a.data_validade.strftime("%d/%m/%Y") if a.data_validade else None,
+            "dias_restantes": (a.data_validade - hoje).days if a.data_validade else None,
+            "medico": a.medico_responsavel,
+            "resultado": a.resultado,
+            "resultado_label": a.get_resultado_display(),
+        }
+        for a in asos
+    ]
+
+    # Exames
+    exames = ExameOcupacional.objects.filter(empresa=empresa, funcionario=func).order_by("-data_realizacao")
+    exames_out = [
+        {
+            "id": e.id,
+            "tipo_exame": e.tipo_exame,
+            "tipo_label": e.get_tipo_exame_display(),
+            "data_realizacao": e.data_realizacao.strftime("%d/%m/%Y") if e.data_realizacao else None,
+            "data_validade": e.data_validade.strftime("%d/%m/%Y") if e.data_validade else None,
+            "dias_restantes": (e.data_validade - hoje).days if e.data_validade else None,
+            "status": e.status,
+            "resultado": e.resultado,
+        }
+        for e in exames
+    ]
+
+    # CATs
+    cats = CATOcupacional.objects.filter(empresa=empresa, funcionario=func).order_by("-data_acidente")
+    cats_out = [
+        {
+            "id": c.id,
+            "tipo": c.tipo,
+            "tipo_label": c.get_tipo_display(),
+            "gravidade": c.gravidade,
+            "gravidade_label": c.get_gravidade_display(),
+            "data_acidente": c.data_acidente.strftime("%d/%m/%Y") if c.data_acidente else None,
+            "cid": c.cid,
+            "numero_cat": c.numero_cat,
+            "status_esocial": c.status_esocial,
+            "houve_afastamento": c.houve_afastamento,
+        }
+        for c in cats
+    ]
+
+    # Afastamentos
+    afas = AfastamentoSST.objects.filter(empresa=empresa, funcionario=func).order_by("-data_inicio")
+    afas_out = [
+        {
+            "id": a.id,
+            "motivo": a.motivo,
+            "motivo_label": a.get_motivo_display(),
+            "cid": a.cid,
+            "data_inicio": a.data_inicio.strftime("%d/%m/%Y") if a.data_inicio else None,
+            "data_retorno": (a.data_retorno_real or a.data_prevista_retorno),
+            "data_retorno_fmt": (a.data_retorno_real or a.data_prevista_retorno).strftime("%d/%m/%Y") if (a.data_retorno_real or a.data_prevista_retorno) else None,
+            "dias": (a.data_retorno_real or a.data_prevista_retorno or hoje) and ((a.data_retorno_real or a.data_prevista_retorno or hoje) - a.data_inicio).days if a.data_inicio else None,
+            "status": a.status,
+            "status_label": a.get_status_display(),
+        }
+        for a in afas
+    ]
+
+    # Último ASO
+    ultimo_aso = asos_out[0] if asos_out else None
+    proximo_vencimento = None
+    if ultimo_aso and ultimo_aso["dias_restantes"] is not None:
+        proximo_vencimento = ultimo_aso["dias_restantes"]
+
+    return JsonResponse({
+        "funcionario": {
+            "id": func.id,
+            "nome": func.nome,
+            "cpf": func.cpf,
+            "matricula": func.matricula,
+            "cargo": func.cargo,
+            "setor": func.setor,
+            "classe_risco": func.classe_risco,
+            "classe_risco_label": func.get_classe_risco_display(),
+            "data_admissao": func.data_admissao.strftime("%d/%m/%Y") if func.data_admissao else None,
+            "ativo": func.ativo,
+        },
+        "resumo": {
+            "total_asos": len(asos_out),
+            "total_exames": len(exames_out),
+            "total_cats": len(cats_out),
+            "total_afastamentos": len(afas_out),
+            "dias_ate_vencimento_aso": proximo_vencimento,
+            "exames_vencidos": sum(1 for e in exames_out if e["status"] == "vencido"),
+            "exames_pendentes": sum(1 for e in exames_out if e["status"] == "pendente"),
+        },
+        "asos": asos_out,
+        "exames": exames_out,
+        "cats": cats_out,
+        "afastamentos": afas_out,
+    })
+
+
+# ── Treinamentos NR ───────────────────────────────────────────────────────────
+
+from .models import TreinamentoNR
+
+
+def sst_treinamentos_page(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_treinamentos.html", {"empresa_nome": empresa.nome})
+
+
+@csrf_exempt
+def api_treinamentos(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    if request.method == "GET":
+        status_filtro = request.GET.get("status", "")
+        nr_filtro = request.GET.get("nr", "")
+        qs = TreinamentoNR.objects.filter(empresa=empresa).select_related("funcionario").order_by("data_validade")
+        if status_filtro:
+            qs = qs.filter(status=status_filtro)
+        if nr_filtro:
+            qs = qs.filter(nr=nr_filtro)
+        hoje = date.today()
+        return JsonResponse({
+            "treinamentos": [
+                {
+                    "id": t.id,
+                    "funcionario_id": t.funcionario_id,
+                    "funcionario": t.funcionario.nome,
+                    "cargo": t.funcionario.cargo,
+                    "nr": t.nr,
+                    "nr_label": t.get_nr_display(),
+                    "titulo": t.titulo,
+                    "instrutor": t.instrutor,
+                    "carga_horaria": t.carga_horaria,
+                    "data_realizacao": t.data_realizacao.strftime("%d/%m/%Y") if t.data_realizacao else None,
+                    "data_validade": t.data_validade.strftime("%d/%m/%Y") if t.data_validade else None,
+                    "dias_restantes": (t.data_validade - hoje).days if t.data_validade else None,
+                    "status": t.status,
+                    "certificado": t.certificado,
+                }
+                for t in qs[:200]
+            ]
+        })
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        func = _buscar_funcionario(empresa, data)
+        if not func:
+            return JsonResponse({"erro": "Funcionário não encontrado"}, status=404)
+        nr = data.get("nr", "outro")
+        try:
+            dr = date.fromisoformat(data.get("data_realizacao") or "") if data.get("data_realizacao") else None
+        except ValueError:
+            dr = None
+        try:
+            dv = date.fromisoformat(data.get("data_validade") or "") if data.get("data_validade") else None
+        except ValueError:
+            dv = None
+        # Status automático
+        hoje = date.today()
+        if dv and dv < hoje:
+            status_auto = "vencido"
+        elif dr and dr <= hoje:
+            status_auto = "valido"
+        elif dr and dr > hoje:
+            status_auto = "agendado"
+        else:
+            status_auto = "pendente"
+        t = TreinamentoNR.objects.create(
+            empresa=empresa,
+            funcionario=func,
+            nr=nr,
+            titulo=data.get("titulo", ""),
+            instrutor=data.get("instrutor", ""),
+            carga_horaria=int(data.get("carga_horaria") or 0),
+            data_realizacao=dr,
+            data_validade=dv,
+            status=data.get("status") or status_auto,
+            certificado=data.get("certificado", ""),
+            observacoes=data.get("observacoes", ""),
+        )
+        return JsonResponse({"id": t.id, "ok": True}, status=201)
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+def api_treinamentos_resumo(request):
+    """Resumo de treinamentos por NR e status — para dashboard."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+    from django.db.models import Count
+    hoje = date.today()
+    vencendo_30 = TreinamentoNR.objects.filter(
+        empresa=empresa, status="valido",
+        data_validade__gte=hoje, data_validade__lte=hoje + timedelta(days=30),
+    ).count()
+    vencidos = TreinamentoNR.objects.filter(empresa=empresa, status="vencido").count()
+    validos = TreinamentoNR.objects.filter(empresa=empresa, status="valido").count()
+    pendentes = TreinamentoNR.objects.filter(empresa=empresa, status__in=["pendente","agendado"]).count()
+
+    por_nr = (
+        TreinamentoNR.objects.filter(empresa=empresa)
+        .values("nr", "status")
+        .annotate(total=Count("id"))
+    )
+    nr_map = {}
+    nr_labels = dict(TreinamentoNR.NR_CHOICES)
+    for row in por_nr:
+        k = row["nr"]
+        if k not in nr_map:
+            nr_map[k] = {"nr": k, "label": nr_labels.get(k, k), "valido": 0, "vencido": 0, "pendente": 0, "agendado": 0}
+        nr_map[k][row["status"]] = row["total"]
+
+    return JsonResponse({
+        "vencendo_30d": vencendo_30,
+        "vencidos": vencidos,
+        "validos": validos,
+        "pendentes": pendentes,
+        "por_nr": sorted(nr_map.values(), key=lambda x: x["nr"]),
+    })

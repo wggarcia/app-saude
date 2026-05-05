@@ -48,6 +48,9 @@ from api.views_sst import (
     api_exames,
     api_esocial_eventos,
     api_relatorios_sst,
+    api_prontuario_funcionario,
+    api_treinamentos,
+    api_treinamentos_resumo,
     sst_home_redirect,
     sst_configuracoes_redirect,
     sst_funcionarios_page,
@@ -61,6 +64,8 @@ from api.views_sst import (
     sst_agendamento_page,
     sst_funcionarios_novo_redirect,
     sst_documentos_novo_redirect,
+    sst_prontuario_page,
+    sst_treinamentos_page,
 )
 from api.views_gestao import (
     gestao_corporativa,
@@ -184,6 +189,8 @@ urlpatterns = [
     path('sst/documentos/novo/', sst_documentos_novo_redirect),
     path('sst/esocial/', sst_esocial_page),
     path('sst/relatorios/', sst_relatorios_page),
+    path('sst/treinamentos/', sst_treinamentos_page),
+    path('sst/funcionarios/<int:funcionario_id>/', sst_prontuario_page),
     path('sst/configuracoes/', sst_configuracoes_redirect),
     # 🏥 SST / Saúde Ocupacional — API
     path('api/sst/dashboard', api_sst_dashboard),
@@ -195,6 +202,9 @@ urlpatterns = [
     path('api/sst/exames', api_exames),
     path('api/sst/esocial', api_esocial_eventos),
     path('api/sst/relatorios', api_relatorios_sst),
+    path('api/sst/funcionarios/<int:funcionario_id>/prontuario', api_prontuario_funcionario),
+    path('api/sst/treinamentos', api_treinamentos),
+    path('api/sst/treinamentos/resumo', api_treinamentos_resumo),
 
     # 📊 API PRINCIPAL
     path('api/registrar', registrar_sintoma),
