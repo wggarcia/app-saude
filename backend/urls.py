@@ -100,6 +100,13 @@ from api.views_escalas import (
 )
 from api.views_lider import painel_lider, api_unidade_dados
 from api.views_reset_senha import solicitar_reset_senha, redefinir_senha, reset_senha_sucesso
+from api.views_comunicacao import (
+    painel_comunicacao, sala_video_empresa,
+    api_listar_salas, api_criar_sala, api_mensagens, api_enviar_mensagem,
+    api_criar_video, api_encerrar_video,
+    colaborador_chat, colaborador_video,
+    api_colab_mensagens, api_colab_enviar, api_colab_video_ativa,
+)
 from api.views_farmacia import api_farmacia_painel
 from api.views_hospital import api_hospital_painel
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
@@ -153,6 +160,22 @@ urlpatterns = [
     path('seguranca/', seguranca),
     path('usuarios/', usuarios_empresa),
     path('console-operacional/', console_operacional),
+
+    # 💬 COMUNICAÇÃO — Teams-like
+    path('sst/comunicacao/', painel_comunicacao),
+    path('sst/video/<int:sessao_id>/', sala_video_empresa),
+    path('api/comunicacao/salas/', api_listar_salas),
+    path('api/comunicacao/salas/criar/', api_criar_sala),
+    path('api/comunicacao/sala/<int:sala_id>/mensagens/', api_mensagens),
+    path('api/comunicacao/sala/<int:sala_id>/enviar/', api_enviar_mensagem),
+    path('api/comunicacao/video/criar/', api_criar_video),
+    path('api/comunicacao/video/<int:sessao_id>/encerrar/', api_encerrar_video),
+    # colaborador side
+    path('colaborador/c/<str:codigo>/chat/', colaborador_chat),
+    path('colaborador/c/<str:codigo>/video/<str:sala>/', colaborador_video),
+    path('api/corporativo/<str:codigo>/chat/mensagens/', api_colab_mensagens),
+    path('api/corporativo/<str:codigo>/chat/enviar/', api_colab_enviar),
+    path('api/corporativo/<str:codigo>/video/ativa/', api_colab_video_ativa),
 
     # 💰 PAGAMENTO
     path('pagamento/', tela_pagamento),

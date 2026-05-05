@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Chat · SolusCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#041018;--panel:#071c28;--border:rgba(126,225,195,.12);
+  --text:#e8f4f1;--muted:#7a9fa0;--teal:#00c9a7;--red:#f87171;--amber:#f0bf6b;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;overflow:hidden}
+.shell{display:flex;flex-direction:column;height:100vh}
+/* HEADER */
+.header{background:var(--panel);border-bottom:1px solid var(--border);padding:0 16px;height:52px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:800;font-size:.82rem;color:#041018;flex-shrink:0}
+.header-info{flex:1;min-width:0}
+.header-name{font-size:.88rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.header-sub{font-size:.68rem;color:var(--muted)}
+.btn-back{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;display:flex;align-items:center;gap:4px}
+/* VIDEO BANNER */
+.video-banner{display:none;align-items:center;gap:10px;padding:10px 16px;background:rgba(0,201,167,.1);border-bottom:1px solid rgba(0,201,167,.2);flex-shrink:0}
+.video-banner.show{display:flex}
+.vb-text{font-size:.82rem;font-weight:600;flex:1}
+.vb-btn{padding:7px 14px;border-radius:8px;background:var(--teal);border:none;color:#041018;font-size:.78rem;font-weight:800;cursor:pointer;font-family:inherit;text-decoration:none;white-space:nowrap}
+/* MESSAGES */
+.msgs{flex:1;overflow-y:auto;padding:14px 14px 0;display:flex;flex-direction:column;gap:10px}
+.msgs::-webkit-scrollbar{width:3px}
+.msgs::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.msg-group{display:flex;flex-direction:column;gap:4px}
+.msg-row{display:flex;align-items:flex-end;gap:8px}
+.msg-row.empresa{justify-content:flex-start}
+.msg-row.colaborador{justify-content:flex-end}
+.msg-avatar{width:28px;height:28px;border-radius:50%;background:var(--panel);border:1px solid var(--border);display:grid;place-items:center;font-size:.65rem;font-weight:700;flex-shrink:0;align-self:flex-end}
+.bubble{max-width:78%;padding:9px 12px;border-radius:14px;font-size:.83rem;line-height:1.5;word-break:break-word}
+.bubble.empresa{background:var(--panel);border:1px solid var(--border);border-bottom-left-radius:4px}
+.bubble.colaborador{background:linear-gradient(135deg,rgba(0,201,167,.25),rgba(0,119,255,.2));border:1px solid rgba(0,201,167,.2);border-bottom-right-radius:4px;text-align:left}
+.bubble a{color:var(--teal)}
+.msg-time{font-size:.6rem;color:var(--muted);text-align:right;margin-top:3px;padding:0 4px}
+.date-sep{text-align:center;font-size:.68rem;color:var(--muted);padding:8px 0;display:flex;align-items:center;gap:8px}
+.date-sep::before,.date-sep::after{content:"";flex:1;height:1px;background:var(--border)}
+.empty-msgs{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);text-align:center;padding:30px}
+.empty-msgs .ei{font-size:2.2rem}
+.empty-msgs p{font-size:.8rem;line-height:1.6}
+/* INPUT */
+.input-area{padding:10px 12px;border-top:1px solid var(--border);background:var(--panel);display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
+.msg-input{flex:1;padding:9px 13px;border-radius:22px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-family:inherit;font-size:.85rem;outline:none;resize:none;max-height:120px;overflow-y:auto;transition:border .15s;line-height:1.4}
+.msg-input:focus{border-color:rgba(0,201,167,.35)}
+.msg-input::placeholder{color:var(--muted)}
+.send-btn{width:40px;height:40px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#041018;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s;align-self:flex-end}
+.send-btn:disabled{opacity:.4;cursor:default}
+/* system message */
+.bubble.system{background:rgba(240,191,107,.08);border-color:rgba(240,191,107,.2);color:var(--amber);font-size:.78rem}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- HEADER -->
+  <header class="header">
+    <div class="avatar" id="hdr-avatar">?</div>
+    <div class="header-info">
+      <div class="header-name" id="hdr-name">{{ empresa_nome }}</div>
+      <div class="header-sub" id="hdr-sub">Mensagens</div>
+    </div>
+    <a class="btn-back" href="/colaborador/c/{{ codigo }}/">← Voltar</a>
+  </header>
+
+  <!-- VIDEO CALL BANNER -->
+  <div class="video-banner" id="video-banner">
+    <span style="font-size:1.1rem">📹</span>
+    <div class="vb-text">Chamada de vídeo disponível — <span id="vb-titulo">Reunião</span></div>
+    <a class="vb-btn" id="vb-link" href="#" target="_blank">Entrar</a>
+  </div>
+
+  <!-- MESSAGES -->
+  <div class="msgs" id="msgs">
+    <div class="empty-msgs" id="empty-state">
+      <div class="ei">💬</div>
+      <p>Ainda não há mensagens.<br>Envie uma mensagem para sua empresa!</p>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-area">
+    <textarea class="msg-input" id="input" placeholder="Escreva uma mensagem…" rows="1" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+    <button class="send-btn" id="send-btn" onclick="enviar()" title="Enviar">➤</button>
+  </div>
+</div>
+
+<script>
+const CODIGO = "{{ codigo }}";
+const SALA_ID = {{ sala_id }};
+const EMPRESA_NOME = "{{ empresa_nome }}";
+let ultimaMensagem = null;
+let todasMensagens = [];
+let enviando = false;
+
+// ── Init ──────────────────────────────────────────────────────
+const initials = EMPRESA_NOME.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+document.getElementById("hdr-avatar").textContent = initials;
+
+// ── Message rendering ─────────────────────────────────────────
+function formatTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
+}
+function formatDate(iso) {
+  const d = new Date(iso);
+  const hoje = new Date();
+  const ontem = new Date(hoje); ontem.setDate(hoje.getDate()-1);
+  if (d.toDateString() === hoje.toDateString()) return "Hoje";
+  if (d.toDateString() === ontem.toDateString()) return "Ontem";
+  return d.toLocaleDateString("pt-BR", {day:"2-digit", month:"long"});
+}
+
+function addMensagens(novas) {
+  if (!novas.length) return;
+  const container = document.getElementById("msgs");
+  const empty = document.getElementById("empty-state");
+  if (empty) empty.remove();
+
+  let lastDate = todasMensagens.length
+    ? new Date(todasMensagens[todasMensagens.length-1].criado_em).toDateString()
+    : null;
+
+  novas.forEach(msg => {
+    const msgDate = new Date(msg.criado_em).toDateString();
+    if (msgDate !== lastDate) {
+      const sep = document.createElement("div");
+      sep.className = "date-sep";
+      sep.textContent = formatDate(msg.criado_em);
+      container.appendChild(sep);
+      lastDate = msgDate;
+    }
+
+    const isEmpresa = msg.origem === "empresa";
+    const isSystem = msg.texto.startsWith("📹");
+
+    const row = document.createElement("div");
+    row.className = `msg-row ${isEmpresa ? "empresa" : "colaborador"}`;
+
+    if (isEmpresa) {
+      const av = document.createElement("div");
+      av.className = "msg-avatar";
+      av.textContent = initials.slice(0,1);
+      row.appendChild(av);
+    }
+
+    const col = document.createElement("div");
+    col.style.display="flex";col.style.flexDirection="column";
+    col.style.alignItems = isEmpresa ? "flex-start" : "flex-end";
+
+    const bubble = document.createElement("div");
+    bubble.className = `bubble ${isEmpresa ? "empresa" : "colaborador"}${isSystem ? " system" : ""}`;
+
+    // render links in system messages
+    if (isSystem) {
+      bubble.innerHTML = msg.texto.replace(/(\/colaborador\/c\/[^\s]+)/g,
+        '<a href="$1">Clique aqui para entrar</a>');
+    } else {
+      bubble.textContent = msg.texto;
+    }
+
+    const time = document.createElement("div");
+    time.className = "msg-time";
+    time.textContent = formatTime(msg.criado_em);
+
+    col.appendChild(bubble);
+    col.appendChild(time);
+    row.appendChild(col);
+    container.appendChild(row);
+    todasMensagens.push(msg);
+  });
+
+  ultimaMensagem = novas[novas.length-1].criado_em;
+  container.scrollTop = container.scrollHeight;
+}
+
+// ── Load all messages on start ────────────────────────────────
+async function carregarInicial() {
+  try {
+    const r = await fetch(`/api/corporativo/${CODIGO}/chat/mensagens/`);
+    if (!r.ok) return;
+    const d = await r.json();
+    addMensagens(d.mensagens || []);
+  } catch(e) {}
+}
+
+// ── Poll for new messages every 3s ───────────────────────────
+async function poll() {
+  if (!ultimaMensagem) return;
+  try {
+    const r = await fetch(`/api/corporativo/${CODIGO}/chat/mensagens/?desde=${encodeURIComponent(ultimaMensagem)}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.mensagens && d.mensagens.length) addMensagens(d.mensagens);
+  } catch(e) {}
+}
+
+// ── Poll for active video session ────────────────────────────
+async function pollVideo() {
+  try {
+    const r = await fetch(`/api/corporativo/${CODIGO}/video/ativa/`);
+    if (!r.ok) return;
+    const d = await r.json();
+    const banner = document.getElementById("video-banner");
+    if (d.video) {
+      document.getElementById("vb-titulo").textContent = d.video.titulo;
+      document.getElementById("vb-link").href = d.video.link;
+      banner.classList.add("show");
+    } else {
+      banner.classList.remove("show");
+    }
+  } catch(e) {}
+}
+
+// ── Send message ──────────────────────────────────────────────
+async function enviar() {
+  const input = document.getElementById("input");
+  const texto = input.value.trim();
+  if (!texto || enviando) return;
+  enviando = true;
+  document.getElementById("send-btn").disabled = true;
+  try {
+    const r = await fetch(`/api/corporativo/${CODIGO}/chat/enviar/`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({texto}),
+    });
+    if (r.ok) {
+      const d = await r.json();
+      addMensagens([d.mensagem]);
+      input.value = "";
+      input.style.height = "auto";
+    }
+  } catch(e) {}
+  enviando = false;
+  document.getElementById("send-btn").disabled = false;
+  input.focus();
+}
+
+function handleKey(e) {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); }
+}
+
+function autoResize(el) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, 120) + "px";
+}
+
+// ── Start ─────────────────────────────────────────────────────
+carregarInicial();
+pollVideo();
+setInterval(poll, 3000);
+setInterval(pollVideo, 10000);
+</script>
+</body>
+</html>

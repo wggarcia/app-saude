@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · {{ sessao_titulo }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#041018;--panel:#071c28;--border:rgba(126,225,195,.12);--text:#e8f4f1;--muted:#7a9fa0;--teal:#00c9a7;--blue:#1f6ff2;--amber:#f0bf6b;--red:#f87171}
+html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;display:flex;flex-direction:column}
+/* ── Header ── */
+.topbar{position:sticky;top:0;z-index:50;height:56px;display:flex;align-items:center;gap:14px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0}
+.tb-logo{display:flex;align-items:center;gap:10px;padding-right:18px;border-right:1px solid var(--border);height:100%}
+.tb-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;font-size:.85rem;color:#041018;flex-shrink:0}
+.tb-nome{font-size:.8rem;font-weight:800}.tb-sub{font-size:.6rem;color:var(--muted);margin-top:1px}
+.rec-dot{width:9px;height:9px;border-radius:50%;background:var(--red);animation:pulse 1.4s ease-in-out infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
+.tb-title{font-size:.92rem;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-empresa{font-size:.72rem;color:var(--muted);white-space:nowrap}
+.btn-encerrar{padding:7px 16px;border-radius:8px;border:1px solid rgba(248,113,113,.35);background:rgba(248,113,113,.1);color:var(--red);font-size:.78rem;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.btn-encerrar:hover{background:rgba(248,113,113,.2);border-color:rgba(248,113,113,.55)}
+/* ── Body ── */
+.body{display:flex;flex:1;min-height:0}
+/* ── Jitsi ── */
+#jitsi-container{flex:1;min-width:0;min-height:0;background:#000;position:relative}
+#jitsi-container iframe{width:100%;height:100%;border:none;display:block}
+.jitsi-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--muted);font-size:.85rem}
+.spinner{width:36px;height:36px;border:3px solid rgba(0,201,167,.15);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ── Side panel ── */
+.side-panel{width:280px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;gap:0}
+.sp-section{padding:18px;border-bottom:1px solid var(--border)}
+.sp-label{font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+/* meeting info */
+.meet-title{font-size:.9rem;font-weight:800;color:var(--text);margin-bottom:4px;line-height:1.3}
+.meet-host{font-size:.72rem;color:var(--muted)}
+.meet-host strong{color:var(--teal);font-weight:700}
+/* timer */
+.timer-wrap{display:flex;align-items:center;gap:8px;margin-top:10px}
+.timer-val{font-size:1.4rem;font-weight:900;color:var(--text);letter-spacing:.05em;font-variant-numeric:tabular-nums}
+.timer-sub{font-size:.64rem;color:var(--muted)}
+/* link card */
+.link-card{background:rgba(0,201,167,.04);border:1px solid rgba(0,201,167,.15);border-radius:10px;padding:12px}
+.link-url{font-size:.68rem;color:var(--teal);word-break:break-all;line-height:1.5;margin-bottom:10px;font-family:monospace}
+.btn-copy{width:100%;padding:8px 0;border-radius:7px;border:1px solid rgba(0,201,167,.28);background:rgba(0,201,167,.07);color:var(--teal);font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-copy:hover{background:rgba(0,201,167,.14);border-color:rgba(0,201,167,.45)}
+.btn-copy.copied{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.35);color:#4ade80}
+/* tips */
+.tip-list{display:flex;flex-direction:column;gap:8px}
+.tip{display:flex;align-items:flex-start;gap:8px;font-size:.73rem;color:var(--muted);line-height:1.45}
+.tip-icon{flex-shrink:0;font-size:.85rem;margin-top:1px}
+/* status badge */
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:.68rem;font-weight:700;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.2);color:var(--teal)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 1.4s ease-in-out infinite}
+/* confirm overlay */
+.confirm-bg{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);align-items:center;justify-content:center}
+.confirm-bg.open{display:flex}
+.confirm-box{background:var(--panel);border:1px solid rgba(248,113,113,.25);border-radius:14px;padding:28px 24px;width:380px;max-width:92vw;text-align:center}
+.confirm-box h3{font-size:1.05rem;font-weight:800;margin-bottom:8px}
+.confirm-box p{font-size:.8rem;color:var(--muted);line-height:1.6;margin-bottom:20px}
+.confirm-acts{display:flex;gap:10px}
+.btn-cancel{flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-family:'Manrope',sans-serif;cursor:pointer;font-size:.83rem;transition:all .15s}
+.btn-cancel:hover{color:var(--text);border-color:rgba(126,225,195,.3)}
+.btn-end{flex:1;padding:10px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--red),#dc2626);color:#fff;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;font-size:.83rem;transition:opacity .15s}
+.btn-end:hover{opacity:.88}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,201,167,.15);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="topbar">
+  <div class="tb-logo">
+    <div class="tb-icon">S</div>
+    <div><div class="tb-nome">SolusCRT</div><div class="tb-sub">Saúde Ocupacional</div></div>
+  </div>
+  <div class="rec-dot"></div>
+  <div class="tb-title">{{ sessao_titulo }}</div>
+  <div class="tb-empresa">{{ empresa_nome }}</div>
+  <button class="btn-encerrar" onclick="confirmarEncerrar()">
+    <span>⏹</span> Encerrar Reunião
+  </button>
+</header>
+
+<!-- ── Body ── -->
+<div class="body">
+
+  <!-- Jitsi embed -->
+  <div id="jitsi-container">
+    <div class="jitsi-loading" id="jitsi-loading">
+      <div class="spinner"></div>
+      <span>Conectando à sala de vídeo…</span>
+    </div>
+  </div>
+
+  <!-- Side panel -->
+  <div class="side-panel">
+
+    <!-- meeting info -->
+    <div class="sp-section">
+      <div class="sp-label">Reunião em andamento</div>
+      <div class="meet-title">{{ sessao_titulo }}</div>
+      <div class="meet-host">Anfitriã: <strong>{{ empresa_nome }}</strong></div>
+      <div class="timer-wrap">
+        <div>
+          <div class="timer-val" id="timer">00:00</div>
+          <div class="timer-sub">duração</div>
+        </div>
+        <div class="status-badge"><div class="status-dot"></div>Ao vivo</div>
+      </div>
+    </div>
+
+    <!-- collaborator link -->
+    <div class="sp-section">
+      <div class="sp-label">Link para o colaborador</div>
+      <div class="link-card">
+        <div class="link-url" id="link-display">{{ link_colaborador }}</div>
+        <button class="btn-copy" id="btn-copy" onclick="copiarLink()">
+          <span>📋</span> Copiar link
+        </button>
+      </div>
+    </div>
+
+    <!-- tips -->
+    <div class="sp-section" style="flex:1;overflow-y:auto">
+      <div class="sp-label">Dicas da sessão</div>
+      <div class="tip-list">
+        <div class="tip"><div class="tip-icon">🔗</div><div>Compartilhe o link ao lado com o colaborador para que ele entre na reunião sem precisar de conta.</div></div>
+        <div class="tip"><div class="tip-icon">🎙️</div><div>Use o botão de microfone no painel Jitsi para silenciar/ligar o áudio a qualquer momento.</div></div>
+        <div class="tip"><div class="tip-icon">💬</div><div>O chat integrado Jitsi está disponível — mensagens enviadas aqui não são salvas na plataforma.</div></div>
+        <div class="tip"><div class="tip-icon">⏹</div><div>Ao encerrar, a sessão é marcada como concluída e o colaborador é desconectado automaticamente.</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Confirm modal ── -->
+<div class="confirm-bg" id="confirm-bg">
+  <div class="confirm-box">
+    <h3>Encerrar reunião?</h3>
+    <p>Todos os participantes serão desconectados e a sessão será marcada como concluída no sistema.</p>
+    <div class="confirm-acts">
+      <button class="btn-cancel" onclick="fecharConfirm()">Cancelar</button>
+      <button class="btn-end" onclick="encerrarReuniao()">Encerrar agora</button>
+    </div>
+  </div>
+</div>
+
+<!-- Jitsi SDK -->
+<script src="https://meet.jit.si/external_api.js"></script>
+<script>
+/* ── helpers ── */
+function getCookie(n){let v=null;document.cookie.split(';').forEach(c=>{c=c.trim();if(c.startsWith(n+'=')){v=decodeURIComponent(c.slice(n.length+1))}});return v}
+
+/* ── Jitsi init ── */
+let api;
+
+function initJitsi(){
+  try{
+    api=new JitsiMeetExternalAPI("meet.jit.si",{
+      roomName:"soluscrt-{{ sala_jitsi }}",
+      parentNode:document.getElementById("jitsi-container"),
+      configOverwrite:{
+        startWithAudioMuted:false,
+        startWithVideoMuted:false,
+        prejoinPageEnabled:false,
+        disableDeepLinking:true,
+        enableWelcomePage:false,
+      },
+      interfaceConfigOverwrite:{
+        TOOLBAR_BUTTONS:['microphone','camera','chat','tileview','hangup'],
+        SHOW_JITSI_WATERMARK:false,
+        SHOW_BRAND_WATERMARK:false,
+        SHOW_POWERED_BY:false,
+        MOBILE_APP_PROMO:false,
+      },
+      userInfo:{
+        displayName:"{{ empresa_nome }}"
+      }
+    });
+
+    api.addEventListener('videoConferenceJoined',()=>{
+      document.getElementById('jitsi-loading').style.display='none';
+      startTimer();
+    });
+
+    api.addEventListener('videoConferenceLeft',()=>{
+      fetch('/api/comunicacao/video/{{ sessao_id }}/encerrar/',{
+        method:'POST',
+        headers:{'X-CSRFToken':getCookie('csrftoken'),'Content-Type':'application/json'}
+      }).finally(()=>window.close());
+    });
+
+    api.addEventListener('readyToClose',()=>{
+      fetch('/api/comunicacao/video/{{ sessao_id }}/encerrar/',{
+        method:'POST',
+        headers:{'X-CSRFToken':getCookie('csrftoken'),'Content-Type':'application/json'}
+      }).finally(()=>window.close());
+    });
+
+  }catch(err){
+    document.getElementById('jitsi-loading').innerHTML=`
+      <span style="font-size:2rem">⚠️</span>
+      <span style="color:var(--red);font-size:.85rem">Não foi possível carregar o Jitsi.<br>Verifique sua conexão e recarregue.</span>
+      <button onclick="location.reload()" style="padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--teal);font-family:'Manrope',sans-serif;cursor:pointer;font-size:.8rem">Tentar novamente</button>`;
+  }
+}
+
+/* ── Timer ── */
+let _startTime=null;
+let _timerInterval=null;
+
+function startTimer(){
+  _startTime=Date.now();
+  _timerInterval=setInterval(updateTimer,1000);
+}
+
+function updateTimer(){
+  if(!_startTime)return;
+  const secs=Math.floor((Date.now()-_startTime)/1000);
+  const m=String(Math.floor(secs/60)).padStart(2,'0');
+  const s=String(secs%60).padStart(2,'0');
+  document.getElementById('timer').textContent=`${m}:${s}`;
+}
+
+/* ── Encerrar ── */
+function confirmarEncerrar(){
+  document.getElementById('confirm-bg').classList.add('open');
+}
+
+function fecharConfirm(){
+  document.getElementById('confirm-bg').classList.remove('open');
+}
+
+document.getElementById('confirm-bg').addEventListener('click',e=>{
+  if(e.target===document.getElementById('confirm-bg'))fecharConfirm();
+});
+
+async function encerrarReuniao(){
+  fecharConfirm();
+  clearInterval(_timerInterval);
+  try{
+    await fetch('/api/comunicacao/video/{{ sessao_id }}/encerrar/',{
+      method:'POST',
+      headers:{'X-CSRFToken':getCookie('csrftoken'),'Content-Type':'application/json'}
+    });
+  }catch(e){}
+  if(api){
+    try{api.executeCommand('hangup');}catch(e){}
+  }
+  setTimeout(()=>window.close(),1200);
+}
+
+/* ── Copy link ── */
+function copiarLink(){
+  const url='{{ link_colaborador }}';
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn=document.getElementById('btn-copy');
+    btn.classList.add('copied');
+    btn.innerHTML='<span>✓</span> Link copiado!';
+    setTimeout(()=>{
+      btn.classList.remove('copied');
+      btn.innerHTML='<span>📋</span> Copiar link';
+    },2200);
+  }).catch(()=>{
+    // fallback
+    const ta=document.createElement('textarea');
+    ta.value=url;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn=document.getElementById('btn-copy');
+    btn.classList.add('copied');
+    btn.innerHTML='<span>✓</span> Link copiado!';
+    setTimeout(()=>{btn.classList.remove('copied');btn.innerHTML='<span>📋</span> Copiar link';},2200);
+  });
+}
+
+/* ── init ── */
+// Wait for Jitsi SDK to be ready
+if(window.JitsiMeetExternalAPI){
+  initJitsi();
+}else{
+  document.querySelector('script[src*="external_api"]').addEventListener('load',initJitsi);
+}
+</script>
+</body>
+</html>

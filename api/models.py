@@ -1130,3 +1130,79 @@ class TreinamentoNR(models.Model):
 
     def __str__(self):
         return f"{self.nr} — {self.funcionario.nome} ({self.status})"
+
+
+# ─────────────────────────────────────────────────────────────
+#  COMUNICAÇÃO — Chat + Vídeo (Teams-like)
+# ─────────────────────────────────────────────────────────────
+
+class SalaChat(models.Model):
+    TIPO_DIRETO = "direto"
+    TIPO_GRUPO  = "grupo"
+    TIPOS = [(TIPO_DIRETO, "Direto"), (TIPO_GRUPO, "Grupo")]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="salas_chat")
+    tipo    = models.CharField(max_length=10, choices=TIPOS, default=TIPO_DIRETO)
+    nome    = models.CharField(max_length=120, blank=True, default="")
+    alias   = models.ForeignKey(
+        ColaboradorAliasCorporativo, on_delete=models.CASCADE,
+        null=True, blank=True, related_name="salas_diretas"
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    ativo     = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = [("empresa", "alias")]
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        if self.tipo == self.TIPO_DIRETO and self.alias:
+            return f"Direto: {self.alias.alias_publico} ({self.empresa.nome})"
+        return f"Grupo: {self.nome} ({self.empresa.nome})"
+
+
+class MensagemChat(models.Model):
+    ORIGEM_EMPRESA     = "empresa"
+    ORIGEM_COLABORADOR = "colaborador"
+    ORIGENS = [(ORIGEM_EMPRESA, "Empresa"), (ORIGEM_COLABORADOR, "Colaborador")]
+
+    sala    = models.ForeignKey(SalaChat, on_delete=models.CASCADE, related_name="mensagens")
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE)
+    origem  = models.CharField(max_length=12, choices=ORIGENS)
+    texto   = models.TextField(max_length=2000)
+    lida    = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["criado_em"]
+        indexes = [
+            models.Index(fields=["sala", "criado_em"]),
+            models.Index(fields=["empresa", "lida"]),
+        ]
+
+    def __str__(self):
+        return f"[{self.origem}] {self.texto[:60]}"
+
+
+class SessaoVideo(models.Model):
+    STATUS_ATIVA     = "ativa"
+    STATUS_ENCERRADA = "encerrada"
+    STATUS = [(STATUS_ATIVA, "Ativa"), (STATUS_ENCERRADA, "Encerrada")]
+
+    empresa       = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="sessoes_video")
+    alias         = models.ForeignKey(
+        ColaboradorAliasCorporativo, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="sessoes_video"
+    )
+    sala_jitsi    = models.CharField(max_length=80, unique=True, default=_codigo_acesso)
+    titulo        = models.CharField(max_length=120, blank=True, default="Reunião")
+    status        = models.CharField(max_length=12, choices=STATUS, default=STATUS_ATIVA)
+    criado_em     = models.DateTimeField(auto_now_add=True)
+    encerrado_em  = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["empresa", "status"])]
+
+    def __str__(self):
+        return f"{self.titulo} ({self.empresa.nome}) — {self.status}"
