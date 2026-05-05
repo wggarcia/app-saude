@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · Documentação SST</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2233;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.13);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7;--blue:#3b82f6;--amber:#f59e0b;--red:#ef4444;--green:#22c55e;--purple:#8b5cf6}
+html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:52px;display:flex;align-items:center;background:rgba(10,14,26,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(14px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:210px;border-right:1px solid var(--line);height:100%}
+.tb-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#0a0e1a;flex-shrink:0}
+.tb-nome{font-size:.8rem;font-weight:700}.tb-sub{font-size:.6rem;color:var(--muted);margin-top:1px}
+.tb-nav{display:flex;align-items:center;gap:1px;padding:0 14px;flex:1;overflow-x:auto}.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{padding:5px 11px;border-radius:6px;font-size:.75rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap}
+.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tb-nav a.active{color:var(--teal);background:rgba(0,201,167,.08)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.btn-main{padding:6px 13px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;box-shadow:0 0 16px rgba(0,201,167,.2);transition:opacity .2s}
+.btn-main:hover{opacity:.88}
+.app{display:flex;min-height:100vh;padding-top:52px}
+.sidebar{width:200px;flex-shrink:0;background:rgba(17,24,39,.55);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:52px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.77rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.06);border-left-color:var(--teal);font-weight:600}
+.sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
+.main{flex:1;margin-left:200px;padding:20px;display:flex;flex-direction:column;gap:16px}
+/* Docs grid */
+.docs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.doc-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px;transition:border-color .15s;position:relative;overflow:hidden}
+.doc-card::before{content:"";position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--dc,var(--muted))}
+.doc-card:hover{border-color:var(--line2)}
+.doc-card.vigente{--dc:var(--green)}
+.doc-card.vencido{--dc:var(--red);background:rgba(239,68,68,.02)}
+.doc-card.em_revisao{--dc:var(--amber)}
+.doc-card.nao_cadastrado{--dc:var(--muted);border-style:dashed}
+.doc-tipo{font-size:.65rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;font-family:monospace;padding:3px 8px;border-radius:4px;background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.18);align-self:flex-start}
+.doc-titulo{font-size:.92rem;font-weight:700;color:var(--text)}
+.doc-nr{font-size:.7rem;color:var(--muted);margin-top:2px}
+.doc-meta{display:flex;flex-direction:column;gap:5px}
+.doc-meta-row{display:flex;justify-content:space-between;font-size:.72rem}
+.doc-meta-row .k{color:var(--muted)}.doc-meta-row .v{font-weight:600;color:var(--text)}
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;font-size:.68rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.sb-vigente{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.18)}
+.sb-vencido{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.18)}
+.sb-em_revisao{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.18)}
+.sb-nao_cadastrado{background:rgba(255,255,255,.04);color:var(--muted);border:1px solid var(--line)}
+.doc-actions{display:flex;gap:8px;margin-top:4px}
+.btn-doc{flex:1;padding:7px;border-radius:7px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.72rem;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:600}
+.btn-doc:hover{border-color:var(--teal);color:var(--teal)}
+.btn-doc.primary{background:rgba(0,201,167,.08);border-color:rgba(0,201,167,.2);color:var(--teal)}
+.btn-doc.primary:hover{background:rgba(0,201,167,.14)}
+/* Kpi */
+.kpi-strip{display:flex;gap:10px}
+.kpi-card{flex:1;padding:13px;border-radius:10px;background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
+.kpi-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--teal));opacity:.7}
+.kpi-label{font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.kpi-val{font-size:1.5rem;font-weight:900;line-height:1}.kpi-sub{font-size:.65rem;color:var(--muted);margin-top:4px}
+.skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.07) 50%,rgba(255,255,255,.04) 75%);background-size:200%;animation:shimmer 1.8s infinite;border-radius:8px;height:180px}
+@keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:1rem;font-weight:800;margin-bottom:4px}
+.modal-sub{font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.mf{margin-bottom:10px}
+.mf label{display:block;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(226,238,255,.35);margin-bottom:5px}
+.mf input,.mf select,.mf textarea{width:100%;padding:9px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:.85rem;outline:none;font-family:inherit;transition:border .15s}
+.mf input:focus,.mf select:focus{border-color:var(--teal)}
+.mf select option{background:var(--surface)}
+.mf-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modal-acts{display:flex;gap:8px;margin-top:16px}
+.btn-cancel{flex:1;padding:9px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:none;color:var(--muted);font-family:inherit;cursor:pointer}
+.btn-submit{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-weight:800;font-family:inherit;cursor:pointer}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="tb-logo"><div class="tb-icon">S</div><div><div class="tb-nome">SST</div><div class="tb-sub">Saúde Ocupacional</div></div></div>
+  <nav class="tb-nav">
+    <a href="/dashboard-empresa/">Painel</a>
+    <a href="/sst/funcionarios/">Funcionários</a>
+    <a href="/sst/asos/">ASO</a>
+    <a href="/sst/exames/">Exames</a>
+    <a href="/sst/afastamentos/">Afastamentos</a>
+    <a href="/sst/cats/">CAT</a>
+    <a href="/sst/documentos/" class="active">Documentos</a>
+    <a href="/sst/esocial/">eSocial</a>
+  </nav>
+  <div class="tb-actions"><button class="btn-main" onclick="openModal()">+ Cadastrar Documento</button></div>
+</header>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-label">Conformidade</div>
+    <a class="sb-link" href="/dashboard-empresa/"><span class="sb-icon">📊</span><span>Painel SST</span></a>
+    <a class="sb-link" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span></a>
+    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🔬</span><span>Exames</span></a>
+    <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
+    <a class="sb-link" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
+    <div class="sb-label">Documentação</div>
+    <a class="sb-link active" href="/sst/documentos/"><span class="sb-icon">📁</span><span>PGR · PCMSO</span></a>
+    <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial</span></a>
+    <div class="sb-label">Gestão</div>
+    <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
+    <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
+  </aside>
+  <main class="main">
+    <div class="kpi-strip">
+      <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Vigentes</div><div class="kpi-val" id="k-vig">—</div><div class="kpi-sub">documentos dentro do prazo</div></div>
+      <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">Vencidos</div><div class="kpi-val" id="k-venc">—</div><div class="kpi-sub">requerem renovação urgente</div></div>
+      <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Em Revisão</div><div class="kpi-val" id="k-rev">—</div><div class="kpi-sub">em atualização</div></div>
+      <div class="kpi-card" style="--kc:var(--muted)"><div class="kpi-label">Não Cadastrados</div><div class="kpi-val" id="k-nc">—</div><div class="kpi-sub">pendentes de cadastro</div></div>
+    </div>
+    <div id="docs-grid" class="docs-grid">
+      <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+      <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>Cadastrar Documento SST</h3>
+    <div class="modal-sub">Registre PGR, PCMSO, LTCAT, laudos e outros documentos obrigatórios.</div>
+    <div class="mf"><label>Tipo de Documento</label>
+      <select id="d-tipo">
+        <option value="PGR">PGR — Programa de Gerenciamento de Riscos</option>
+        <option value="PCMSO">PCMSO — Controle Médico de Saúde Ocupacional</option>
+        <option value="LTCAT">LTCAT — Laudo Técnico das Condições Ambientais</option>
+        <option value="laudo_insalubridade">Laudo de Insalubridade (NR-15)</option>
+        <option value="laudo_periculosidade">Laudo de Periculosidade (NR-16)</option>
+        <option value="PPP">PPP — Perfil Profissiográfico Previdenciário</option>
+        <option value="CIPA">CIPA — NR-5</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="mf"><label>Título / Identificação</label><input id="d-titulo" type="text" placeholder="Ex: PGR 2025 — Unidade Industrial SP"></div>
+    <div class="mf-row">
+      <div class="mf"><label>Status</label>
+        <select id="d-status"><option value="vigente">Vigente</option><option value="em_revisao">Em Revisão</option><option value="vencido">Vencido</option></select>
+      </div>
+      <div class="mf"><label>Responsável Técnico</label><input id="d-resp" type="text" placeholder="Ex: Eng. João Silva — CREA 000000"></div>
+    </div>
+    <div class="mf-row">
+      <div class="mf"><label>Data de Emissão</label><input id="d-emissao" type="date"></div>
+      <div class="mf"><label>Data de Validade</label><input id="d-validade" type="date"></div>
+    </div>
+    <div class="mf"><label>Observações</label><input id="d-obs" type="text" placeholder="Revisão anual obrigatória, escopo, etc."></div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-submit" onclick="salvar()">Cadastrar Documento</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DOCS_DEFN=[
+  {tipo:"PGR",titulo:"Programa de Gerenciamento de Riscos",nr:"NR-1 (obrigatório)"},
+  {tipo:"PCMSO",titulo:"Programa de Controle Médico de Saúde Ocupacional",nr:"NR-7 (obrigatório)"},
+  {tipo:"LTCAT",titulo:"Laudo Técnico das Condições Ambientais do Trabalho",nr:"Lei 8.213/91 (obrigatório para aposentadoria especial)"},
+  {tipo:"laudo_insalubridade",titulo:"Laudo de Insalubridade",nr:"NR-15 (quando aplicável)"},
+  {tipo:"laudo_periculosidade",titulo:"Laudo de Periculosidade",nr:"NR-16 (quando aplicável)"},
+  {tipo:"PPP",titulo:"Perfil Profissiográfico Previdenciário",nr:"IN INSS 77/2015 (obrigatório)"},
+  {tipo:"CIPA",titulo:"CIPA — Comissão Interna de Prevenção de Acidentes",nr:"NR-5 (quando aplicável)"},
+];
+const statusLabel={vigente:"Vigente",vencido:"Vencido",em_revisao:"Em Revisão",nao_cadastrado:"Não Cadastrado"};
+const statusCls={vigente:"sb-vigente",vencido:"sb-vencido",em_revisao:"sb-em_revisao",nao_cadastrado:"sb-nao_cadastrado"};
+
+function openModal(tipo){
+  document.getElementById("modal").classList.add("open");
+  if(tipo)document.getElementById("d-tipo").value=tipo;
+}
+function closeModal(){document.getElementById("modal").classList.remove("open")}
+document.getElementById("modal").addEventListener("click",e=>{if(e.target===document.getElementById("modal"))closeModal()});
+
+function diasParaVencer(s){if(!s)return null;const d=new Date(s);const hoje=new Date();return Math.round((d-hoje)/86400000);}
+
+function renderDocs(docs){
+  const map={};
+  (docs||[]).forEach(d=>map[d.tipo]=d);
+
+  let vig=0,venc=0,rev=0,nc=0;
+  const grid=document.getElementById("docs-grid");
+
+  grid.innerHTML=DOCS_DEFN.map(def=>{
+    const d=map[def.tipo];
+    const st=d?d.status:"nao_cadastrado";
+    if(st==="vigente")vig++;else if(st==="vencido")venc++;else if(st==="em_revisao")rev++;else nc++;
+    const dias=d?diasParaVencer(d.validade?.split("/").reverse().join("-")):null;
+    const diasTxt=dias===null?"Sem validade definida":dias<0?`Vencido há ${Math.abs(dias)} dias`:dias<=30?`Vence em ${dias} dias`:`Válido por ${dias} dias`;
+    const diasColor=dias===null?"var(--muted)":dias<0?"var(--red)":dias<=30?"var(--amber)":"var(--green)";
+    return`<div class="doc-card ${st}">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="doc-tipo">${def.tipo==="laudo_insalubridade"?"NR-15":def.tipo==="laudo_periculosidade"?"NR-16":def.tipo}</div>
+        <div class="status-badge ${statusCls[st]}">${statusLabel[st]}</div>
+      </div>
+      <div>
+        <div class="doc-titulo">${def.titulo}</div>
+        <div class="doc-nr">${def.nr}</div>
+      </div>
+      <div class="doc-meta">
+        <div class="doc-meta-row"><span class="k">Responsável</span><span class="v">${d?.responsavel||"Não informado"}</span></div>
+        <div class="doc-meta-row"><span class="k">Validade</span><span class="v" style="color:${diasColor}">${d?.validade||"—"} ${d?.validade?`(${diasTxt})`:""}</span></div>
+      </div>
+      <div class="doc-actions">
+        <button class="btn-doc primary" onclick="openModal('${def.tipo}')">${st==="nao_cadastrado"?"+ Cadastrar":"Atualizar"}</button>
+        ${st!=="nao_cadastrado"?`<button class="btn-doc" onclick="marcarRevisao(${d?.id})">Revisão</button>`:""}
+      </div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("k-vig").textContent=vig;
+  document.getElementById("k-venc").textContent=venc;
+  document.getElementById("k-rev").textContent=rev;
+  document.getElementById("k-nc").textContent=nc;
+}
+
+async function carregar(){
+  const r=await fetch("/api/sst/documentos");
+  if(!r.ok)return;
+  const d=await r.json();
+  renderDocs(d.documentos||[]);
+}
+
+async function salvar(){
+  const btn=document.querySelector(".btn-submit");btn.textContent="Salvando...";btn.disabled=true;
+  const r=await fetch("/api/sst/documentos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+    tipo:document.getElementById("d-tipo").value,
+    titulo:document.getElementById("d-titulo").value.trim(),
+    status:document.getElementById("d-status").value,
+    responsavel:document.getElementById("d-resp").value.trim(),
+    data_emissao:document.getElementById("d-emissao").value,
+    data_validade:document.getElementById("d-validade").value,
+    observacoes:document.getElementById("d-obs").value.trim(),
+  })});
+  const d=await r.json();
+  if(r.ok){closeModal();carregar();}else alert(d.erro||"Erro ao cadastrar");
+  btn.textContent="Cadastrar Documento";btn.disabled=false;
+}
+
+function marcarRevisao(id){alert("Funcionalidade de atualização de status em desenvolvimento.");}
+
+carregar();
+</script>
+</body>
+</html>

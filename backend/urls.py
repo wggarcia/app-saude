@@ -45,6 +45,15 @@ from api.views_sst import (
     api_cats,
     api_documentos_sst,
     api_afastamentos_sst,
+    api_exames,
+    api_esocial_eventos,
+    sst_funcionarios_page,
+    sst_asos_page,
+    sst_exames_page,
+    sst_afastamentos_page,
+    sst_cats_page,
+    sst_documentos_page,
+    sst_esocial_page,
 )
 from api.views_gestao import (
     gestao_corporativa,
@@ -155,13 +164,23 @@ urlpatterns = [
     path('painel-lider/', painel_lider),
     path('api/lider/unidade/<int:unidade_id>/dados', api_unidade_dados),
 
-    # 🏥 SST / Saúde Ocupacional
+    # 🏥 SST / Saúde Ocupacional — páginas
+    path('sst/funcionarios/', sst_funcionarios_page),
+    path('sst/asos/', sst_asos_page),
+    path('sst/exames/', sst_exames_page),
+    path('sst/afastamentos/', sst_afastamentos_page),
+    path('sst/cats/', sst_cats_page),
+    path('sst/documentos/', sst_documentos_page),
+    path('sst/esocial/', sst_esocial_page),
+    # 🏥 SST / Saúde Ocupacional — API
     path('api/sst/dashboard', api_sst_dashboard),
     path('api/sst/funcionarios', api_funcionarios),
     path('api/sst/asos', api_asos),
     path('api/sst/cats', api_cats),
     path('api/sst/documentos', api_documentos_sst),
     path('api/sst/afastamentos', api_afastamentos_sst),
+    path('api/sst/exames', api_exames),
+    path('api/sst/esocial', api_esocial_eventos),
 
     # 📊 API PRINCIPAL
     path('api/registrar', registrar_sintoma),

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · CAT / Acidentes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2233;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.13);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7;--blue:#3b82f6;--amber:#f59e0b;--red:#ef4444;--green:#22c55e;--purple:#8b5cf6}
+html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:52px;display:flex;align-items:center;background:rgba(10,14,26,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(14px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:210px;border-right:1px solid var(--line);height:100%}
+.tb-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#0a0e1a;flex-shrink:0}
+.tb-nome{font-size:.8rem;font-weight:700}.tb-sub{font-size:.6rem;color:var(--muted);margin-top:1px}
+.tb-nav{display:flex;align-items:center;gap:1px;padding:0 14px;flex:1;overflow-x:auto}.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{padding:5px 11px;border-radius:6px;font-size:.75rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap}
+.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tb-nav a.active{color:var(--teal);background:rgba(0,201,167,.08)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.btn-main{padding:6px 13px;border-radius:7px;border:none;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;box-shadow:0 0 16px rgba(239,68,68,.2);transition:opacity .2s}
+.btn-main:hover{opacity:.88}
+.app{display:flex;min-height:100vh;padding-top:52px}
+.sidebar{width:200px;flex-shrink:0;background:rgba(17,24,39,.55);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:52px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.77rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.06);border-left-color:var(--teal);font-weight:600}
+.sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
+.main{flex:1;margin-left:200px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.kpi-strip{display:flex;gap:10px}
+.kpi-card{flex:1;padding:14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
+.kpi-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--red));opacity:.7}
+.kpi-label{font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi-val{font-size:1.7rem;font-weight:900;line-height:1}.kpi-sub{font-size:.67rem;color:var(--muted);margin-top:5px}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search-box{flex:1;min-width:220px;position:relative}
+.search-box input{width:100%;padding:8px 12px 8px 36px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:.84rem;outline:none;font-family:inherit}
+.search-box input:focus{border-color:var(--teal)}
+.search-box::before{content:"🔍";position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:.8rem;pointer-events:none}
+.filter-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.ftab{padding:6px 13px;border-radius:7px;font-size:.74rem;font-weight:600;cursor:pointer;color:var(--muted);border:1px solid var(--line);background:none;font-family:inherit;transition:all .15s}
+.ftab.active{color:var(--teal);background:rgba(0,201,167,.08);border-color:rgba(0,201,167,.2)}
+.table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.table-header h3{font-size:.8rem;font-weight:700}.table-header span{font-size:.72rem;color:var(--muted)}
+.tbl{width:100%;border-collapse:collapse;overflow-x:auto;display:block}
+.tbl thead th{padding:10px 14px;text-align:left;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+.tbl tbody tr{border-bottom:1px solid var(--line);transition:background .1s}
+.tbl tbody tr:last-child{border-bottom:none}
+.tbl tbody tr:hover{background:rgba(255,255,255,.025)}
+.tbl td{padding:11px 14px;font-size:.8rem;color:var(--text);vertical-align:middle;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:.63rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.b-verde{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.18)}
+.b-vermelho{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.18)}
+.b-amarelo{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.18)}
+.b-azul{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.18)}
+.b-cinza{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line)}
+.b-roxo{background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.18)}
+.grav-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;flex-shrink:0}
+.g-leve{background:#4ade80}.g-moderado{background:#fbbf24}.g-grave{background:#f87171}.g-fatal{background:#dc2626}
+.row-actions{display:flex;gap:6px}
+.btn-row{padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.7rem;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-row:hover{border-color:var(--teal);color:var(--teal)}
+.empty-state{padding:48px 20px;text-align:center;color:var(--muted)}
+.empty-state .ei{font-size:2.5rem;margin-bottom:12px}
+.empty-state h3{font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:6px}
+.empty-state p{font-size:.78rem;line-height:1.6}
+.skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.07) 50%,rgba(255,255,255,.04) 75%);background-size:200%;animation:shimmer 1.8s infinite;border-radius:5px}
+@keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+.aviso{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:10px;font-size:.78rem;color:var(--muted);line-height:1.6}
+.aviso strong{color:var(--amber);display:block;margin-bottom:2px}
+.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:1rem;font-weight:800;margin-bottom:4px}
+.modal-sub{font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.mf{margin-bottom:10px}
+.mf label{display:block;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(226,238,255,.35);margin-bottom:5px}
+.mf input,.mf select,.mf textarea{width:100%;padding:9px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:.85rem;outline:none;font-family:inherit;transition:border .15s}
+.mf input:focus,.mf select:focus,.mf textarea:focus{border-color:var(--teal)}
+.mf select option{background:var(--surface)}
+.mf textarea{resize:vertical;min-height:80px}
+.mf-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modal-acts{display:flex;gap:8px;margin-top:16px}
+.btn-cancel{flex:1;padding:9px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:none;color:var(--muted);font-family:inherit;cursor:pointer}
+.btn-submit{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-weight:800;font-family:inherit;cursor:pointer}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="tb-logo"><div class="tb-icon">S</div><div><div class="tb-nome">SST</div><div class="tb-sub">Saúde Ocupacional</div></div></div>
+  <nav class="tb-nav">
+    <a href="/dashboard-empresa/">Painel</a>
+    <a href="/sst/funcionarios/">Funcionários</a>
+    <a href="/sst/asos/">ASO</a>
+    <a href="/sst/exames/">Exames</a>
+    <a href="/sst/afastamentos/">Afastamentos</a>
+    <a href="/sst/cats/" class="active">CAT</a>
+    <a href="/sst/documentos/">Documentos</a>
+    <a href="/sst/esocial/">eSocial</a>
+  </nav>
+  <div class="tb-actions"><button class="btn-main" onclick="openModal()">+ Registrar CAT</button></div>
+</header>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-label">Conformidade</div>
+    <a class="sb-link" href="/dashboard-empresa/"><span class="sb-icon">📊</span><span>Painel SST</span></a>
+    <a class="sb-link" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span></a>
+    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🔬</span><span>Exames</span></a>
+    <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
+    <a class="sb-link active" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
+    <div class="sb-label">Documentação</div>
+    <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">📁</span><span>PGR · PCMSO</span></a>
+    <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial</span></a>
+    <div class="sb-label">Gestão</div>
+    <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
+    <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
+  </aside>
+  <main class="main">
+    <div class="aviso"><div>⚠️</div><div><strong>Prazo legal:</strong> A CAT deve ser registrada até o primeiro dia útil após o acidente. Em caso de óbito, o registro é imediato. Após o registro, transmita pelo eSocial (evento S-2210).</div></div>
+    <div class="kpi-strip">
+      <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">Total de CATs</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub">acidentes registrados</div></div>
+      <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Pendentes eSocial</div><div class="kpi-val" id="k-pendentes">—</div><div class="kpi-sub">aguardando transmissão</div></div>
+      <div class="kpi-card" style="--kc:var(--blue)"><div class="kpi-label">Com Afastamento</div><div class="kpi-val" id="k-afas">—</div><div class="kpi-sub">geraram afastamento</div></div>
+      <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Transmitidas</div><div class="kpi-val" id="k-trans">—</div><div class="kpi-sub">eSocial confirmado</div></div>
+    </div>
+    <div class="toolbar">
+      <div class="search-box"><input id="busca" type="text" placeholder="Buscar por funcionário ou CID..." oninput="renderTabela()"></div>
+      <div class="filter-tabs">
+        <button class="ftab active" onclick="setFiltro('todos',this)">Todos</button>
+        <button class="ftab" onclick="setFiltro('nao_enviado',this)">Pendentes</button>
+        <button class="ftab" onclick="setFiltro('transmitido',this)">Transmitidas</button>
+        <button class="ftab" onclick="setFiltro('erro',this)">Com Erro</button>
+        <button class="ftab" onclick="setFiltro('tipico',this)">Típico</button>
+        <button class="ftab" onclick="setFiltro('trajeto',this)">Trajeto</button>
+        <button class="ftab" onclick="setFiltro('doenca',this)">Doença Ocup.</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header"><h3>Comunicações de Acidente do Trabalho</h3><span id="contagem">carregando...</span></div>
+      <table class="tbl">
+        <thead><tr><th>Gravidade</th><th>Funcionário</th><th>Tipo</th><th>Data do Acidente</th><th>CID</th><th>Afastamento</th><th>eSocial</th><th>Ações</th></tr></thead>
+        <tbody id="tbody">
+          <tr><td colspan="8"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+          <tr><td colspan="8"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>Registrar Comunicação de Acidente do Trabalho</h3>
+    <div class="modal-sub">Preencha os dados do acidente. A CAT deve ser registrada até o 1º dia útil após o ocorrido.</div>
+    <div class="mf"><label>Funcionário Acidentado</label><input id="c-func" type="text" placeholder="Ex: Maria Santos"></div>
+    <div class="mf-row">
+      <div class="mf"><label>Tipo de Acidente</label><select id="c-tipo"><option value="tipico">Típico</option><option value="trajeto">De Trajeto</option><option value="doenca">Doença Ocupacional</option></select></div>
+      <div class="mf"><label>Gravidade</label><select id="c-grav"><option value="leve">Leve</option><option value="moderado">Moderado</option><option value="grave">Grave</option><option value="fatal">Fatal</option></select></div>
+    </div>
+    <div class="mf-row">
+      <div class="mf"><label>Data do Acidente</label><input id="c-data" type="date"></div>
+      <div class="mf"><label>Houve Afastamento?</label><select id="c-afas"><option value="">Não</option><option value="1">Sim</option></select></div>
+    </div>
+    <div class="mf-row">
+      <div class="mf"><label>CID (se houver)</label><input id="c-cid" type="text" placeholder="Ex: S60.0"></div>
+      <div class="mf"><label>Parte do Corpo</label><input id="c-parte" type="text" placeholder="Ex: Mão direita"></div>
+    </div>
+    <div class="mf"><label>Local do Acidente</label><input id="c-local" type="text" placeholder="Ex: Linha de produção 3"></div>
+    <div class="mf"><label>Descrição do Acidente</label><textarea id="c-desc" placeholder="Descreva como, quando e em quais circunstâncias ocorreu o acidente..."></textarea></div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-submit" onclick="salvar()">Registrar CAT</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _todos=[];let _filtro='todos';
+const esocialLabel={nao_enviado:'Não enviado',pendente:'Pendente',transmitido:'Transmitido',erro:'Erro',retificado:'Retificado'};
+const esocialCls={nao_enviado:'b-cinza',pendente:'b-amarelo',transmitido:'b-verde',erro:'b-vermelho',retificado:'b-azul'};
+const tipoLabel={tipico:'Típico',trajeto:'Trajeto',doenca:'Doença Ocup.'};
+const gravLabel={leve:'Leve',moderado:'Moderado',grave:'Grave',fatal:'Fatal'};
+const gravCls={leve:'g-leve',moderado:'g-moderado',grave:'g-grave',fatal:'g-fatal'};
+
+function openModal(){document.getElementById("modal").classList.add("open");document.getElementById("c-data").value=new Date().toISOString().split("T")[0];}
+function closeModal(){document.getElementById("modal").classList.remove("open")}
+document.getElementById("modal").addEventListener("click",e=>{if(e.target===document.getElementById("modal"))closeModal()});
+function setFiltro(f,btn){_filtro=f;document.querySelectorAll(".ftab").forEach(b=>b.classList.remove("active"));btn.classList.add("active");renderTabela();}
+
+function renderTabela(){
+  const q=(document.getElementById("busca").value||"").toLowerCase();
+  const lista=_todos.filter(c=>{
+    if(_filtro==="nao_enviado"&&!["nao_enviado","pendente"].includes(c.status_esocial))return false;
+    if(_filtro==="transmitido"&&c.status_esocial!=="transmitido")return false;
+    if(_filtro==="erro"&&c.status_esocial!=="erro")return false;
+    if(["tipico","trajeto","doenca"].includes(_filtro)&&c.tipo_raw!==_filtro)return false;
+    if(q&&!c.funcionario.toLowerCase().includes(q)&&!(c.cid||"").toLowerCase().includes(q))return false;
+    return true;
+  });
+  document.getElementById("k-total").textContent=_todos.length;
+  document.getElementById("k-pendentes").textContent=_todos.filter(c=>["nao_enviado","pendente"].includes(c.status_esocial)).length;
+  document.getElementById("k-afas").textContent=_todos.filter(c=>c.houve_afastamento).length;
+  document.getElementById("k-trans").textContent=_todos.filter(c=>c.status_esocial==="transmitido").length;
+  document.getElementById("contagem").textContent=`${lista.length} CAT(s)`;
+  const tbody=document.getElementById("tbody");
+  if(!lista.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="ei">⚠️</div><h3>Nenhuma CAT registrada</h3><p>Registre comunicações de acidente do trabalho para manter a conformidade legal.</p></div></td></tr>`;return;}
+  tbody.innerHTML=lista.map(c=>`
+    <tr>
+      <td><span class="grav-dot ${gravCls[c.gravidade]||'g-leve'}"></span>${gravLabel[c.gravidade]||c.gravidade}</td>
+      <td><strong>${c.funcionario}</strong></td>
+      <td><span class="badge b-azul">${tipoLabel[c.tipo_raw]||c.tipo}</span></td>
+      <td style="color:var(--muted)">${c.data_acidente}</td>
+      <td style="color:var(--muted);font-family:monospace">${c.cid||'—'}</td>
+      <td>${c.houve_afastamento?'<span class="badge b-amarelo">Sim</span>':'<span class="badge b-cinza">Não</span>'}</td>
+      <td><span class="badge ${esocialCls[c.status_esocial]||'b-cinza'}">${esocialLabel[c.status_esocial]||c.status_esocial}</span></td>
+      <td><div class="row-actions">
+        ${c.status_esocial==="nao_enviado"?`<button class="btn-row" onclick="irEsocial()">Transmitir eSocial</button>`:''}
+      </div></td>
+    </tr>`).join("");
+}
+function irEsocial(){window.location.href='/sst/esocial/';}
+
+async function carregar(){
+  const r=await fetch("/api/sst/cats");
+  if(!r.ok)return;
+  const d=await r.json();
+  const tipoMap={'Típico':'tipico','De Trajeto':'trajeto','Doença Ocupacional':'doenca'};
+  _todos=(d.cats||[]).map(c=>({...c,tipo_raw:tipoMap[c.tipo]||c.tipo,houve_afastamento:false}));
+  renderTabela();
+}
+
+async function salvar(){
+  const btn=document.querySelector(".btn-submit");btn.textContent="Salvando...";btn.disabled=true;
+  const r=await fetch("/api/sst/cats",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+    funcionario_nome:document.getElementById("c-func").value.trim(),
+    tipo:document.getElementById("c-tipo").value,
+    gravidade:document.getElementById("c-grav").value,
+    data_acidente:document.getElementById("c-data").value,
+    houve_afastamento:!!document.getElementById("c-afas").value,
+    cid:document.getElementById("c-cid").value.trim(),
+    parte_corpo:document.getElementById("c-parte").value.trim(),
+    local_acidente:document.getElementById("c-local").value.trim(),
+    descricao:document.getElementById("c-desc").value.trim(),
+  })});
+  const d=await r.json();
+  if(r.ok){closeModal();alert("CAT registrada! Transmita pelo eSocial (S-2210).");carregar();}
+  else alert(d.erro||"Erro ao registrar CAT");
+  btn.textContent="Registrar CAT";btn.disabled=false;
+}
+carregar();
+</script>
+</body>
+</html>

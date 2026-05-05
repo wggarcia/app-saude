@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · Afastamentos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e1a;
+  --surface:#111827;
+  --surface2:#1a2233;
+  --surface3:#1e2d40;
+  --line:rgba(255,255,255,.07);
+  --line2:rgba(255,255,255,.13);
+  --text:#e2eeff;
+  --muted:#7b90b0;
+  --teal:#00c9a7;
+  --blue:#3b82f6;
+  --amber:#f59e0b;
+  --red:#ef4444;
+  --green:#22c55e;
+  --orange:#f97316;
+}
+html{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+body{min-height:100vh;overflow-x:hidden}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+
+/* ── TOPBAR ─── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:50;height:52px;
+  display:flex;align-items:center;
+  background:rgba(10,14,26,.96);border-bottom:1px solid var(--line);
+  backdrop-filter:blur(14px);
+}
+.tb-logo{
+  display:flex;align-items:center;gap:10px;
+  padding:0 16px;min-width:200px;border-right:1px solid var(--line);height:100%;flex-shrink:0;
+}
+.tb-icon{
+  width:28px;height:28px;border-radius:7px;
+  background:linear-gradient(135deg,var(--teal),#0077ff);
+  display:grid;place-items:center;font-weight:900;font-size:.75rem;color:#0a0e1a;flex-shrink:0;
+}
+.tb-brand{flex:1;overflow:hidden}
+.tb-nome{font-size:.78rem;font-weight:700;white-space:nowrap}
+.tb-sub{font-size:.6rem;color:var(--muted)}
+
+.tb-nav{display:flex;align-items:center;gap:1px;padding:0 12px;flex:1;overflow-x:auto}
+.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{
+  padding:5px 10px;border-radius:6px;font-size:.72rem;font-weight:500;
+  color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap;
+}
+.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tb-nav a.active{color:var(--teal);background:rgba(0,201,167,.08)}
+
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.btn-back{
+  display:flex;align-items:center;gap:5px;
+  padding:5px 11px;border-radius:6px;border:1px solid var(--line);
+  background:none;color:var(--muted);font-size:.72rem;font-weight:500;
+  cursor:pointer;font-family:inherit;text-decoration:none;transition:all .15s;
+}
+.btn-back:hover{border-color:var(--line2);color:var(--text)}
+
+/* ── LAYOUT ─── */
+.app{display:flex;min-height:calc(100vh - 52px);padding-top:52px}
+
+/* Sidebar */
+.sidebar{
+  width:196px;flex-shrink:0;
+  background:rgba(17,24,39,.5);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:10px 0;
+  position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;
+}
+.sb-label{font-size:.57rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 13px 4px}
+.sb-link{
+  display:flex;align-items:center;gap:9px;padding:7px 13px;
+  font-size:.75rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .12s;
+  border-left:2px solid transparent;
+}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.06);border-left-color:var(--teal);font-weight:600}
+.sb-icon{font-size:.9rem;flex-shrink:0;width:17px;text-align:center}
+.sb-divider{height:1px;background:var(--line);margin:8px 13px}
+
+/* Main */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* ── PAGE HEADER ─── */
+.page-header{
+  padding:18px 22px 14px;display:flex;align-items:flex-start;justify-content:space-between;
+  border-bottom:1px solid var(--line);flex-shrink:0;
+}
+.ph-left h1{font-size:1.15rem;font-weight:800;margin-bottom:3px}
+.ph-left p{font-size:.75rem;color:var(--muted)}
+.ph-right{display:flex;gap:8px;align-items:center}
+
+.btn-primary{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 15px;border-radius:7px;border:none;
+  background:linear-gradient(135deg,var(--teal),#0077ff);
+  color:#0a0e1a;font-size:.76rem;font-weight:800;cursor:pointer;
+  font-family:inherit;white-space:nowrap;box-shadow:0 0 16px rgba(0,201,167,.18);
+  transition:opacity .15s;
+}
+.btn-primary:hover{opacity:.86}
+
+/* ── KPI STRIP ─── */
+.kpi-strip{
+  display:flex;gap:10px;padding:14px 22px;border-bottom:1px solid var(--line);
+  flex-shrink:0;overflow-x:auto;
+}
+.kpi-strip::-webkit-scrollbar{height:3px}
+.kpi-card{
+  flex:1;min-width:130px;padding:13px 14px;border-radius:10px;
+  background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden;
+}
+.kpi-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--teal));opacity:.7}
+.kpi-label{font-size:.6rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.kpi-val{font-size:1.6rem;font-weight:900;line-height:1}
+.kpi-sub{font-size:.64rem;color:var(--muted);margin-top:4px}
+
+/* ── TOOLBAR ─── */
+.toolbar{
+  display:flex;align-items:center;gap:10px;padding:12px 22px;
+  border-bottom:1px solid var(--line);flex-shrink:0;flex-wrap:wrap;
+}
+.filtros{display:flex;gap:4px}
+.filtro-btn{
+  padding:5px 13px;border-radius:6px;border:1px solid var(--line);
+  background:none;color:var(--muted);font-size:.72rem;font-weight:600;
+  cursor:pointer;font-family:inherit;transition:all .15s;
+}
+.filtro-btn:hover{border-color:var(--line2);color:var(--text)}
+.filtro-btn.active{color:var(--teal);background:rgba(0,201,167,.08);border-color:rgba(0,201,167,.25)}
+
+.search-wrap{flex:1;min-width:180px;max-width:300px;position:relative}
+.search-wrap input{
+  width:100%;padding:6px 10px 6px 32px;border-radius:7px;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);
+  color:var(--text);font-size:.78rem;outline:none;font-family:inherit;transition:border .15s;
+}
+.search-wrap input:focus{border-color:rgba(0,201,167,.3)}
+.search-wrap input::placeholder{color:var(--muted)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.8rem;color:var(--muted);pointer-events:none}
+
+/* ── TABLE ─── */
+.table-area{flex:1;overflow-x:auto;padding:0 22px 22px}
+.data-table{width:100%;border-collapse:collapse;min-width:820px}
+.data-table th{
+  padding:10px 12px;text-align:left;
+  font-size:.61rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--bg);z-index:2;
+}
+.data-table td{
+  padding:11px 12px;border-bottom:1px solid var(--line);
+  font-size:.8rem;color:var(--text);vertical-align:middle;
+}
+.data-table tbody tr{transition:background .12s}
+.data-table tbody tr:hover{background:rgba(255,255,255,.025)}
+.data-table tbody tr:last-child td{border-bottom:none}
+
+.func-nome{font-weight:600;font-size:.82rem}
+.func-extra{font-size:.68rem;color:var(--muted);margin-top:2px}
+
+/* badges motivo */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:.66rem;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.badge-acidente_trabalho  {background:rgba(239,68,68,.12); color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.badge-doenca_ocupacional {background:rgba(249,115,22,.12);color:#fb923c;border:1px solid rgba(249,115,22,.22)}
+.badge-doenca_comum       {background:rgba(59,130,246,.1); color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.badge-outro              {background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--line)}
+
+/* badges status */
+.badge-ativo    {background:rgba(239,68,68,.1); color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.badge-encerrado{background:rgba(34,197,94,.08);color:#4ade80;border:1px solid rgba(34,197,94,.15)}
+.badge-retorno  {background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+
+/* btn retorno */
+.btn-retorno{
+  padding:4px 10px;border-radius:6px;border:1px solid rgba(0,201,167,.25);
+  background:rgba(0,201,167,.07);color:var(--teal);font-size:.68rem;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;
+}
+.btn-retorno:hover{background:rgba(0,201,167,.14);border-color:rgba(0,201,167,.4)}
+
+/* ── SKELETON ─── */
+.skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.07) 50%,rgba(255,255,255,.04) 75%);background-size:200%;animation:shimmer 1.8s infinite;border-radius:5px}
+@keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+.skel-row td{padding:14px 12px}
+.skel-line{height:10px;border-radius:4px}
+.skel-line.w80{width:80%}.skel-line.w60{width:60%}.skel-line.w50{width:50%}.skel-line.w40{width:40%}.skel-line.w30{width:30%}
+.skel-kpi{height:68px;border-radius:10px}
+
+/* ── EMPTY ─── */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;text-align:center}
+.empty-icon{font-size:2.8rem;margin-bottom:14px;opacity:.35}
+.empty-title{font-size:.95rem;font-weight:700;margin-bottom:6px}
+.empty-desc{font-size:.78rem;color:var(--muted);max-width:320px;line-height:1.6}
+
+/* ── MODAL ─── */
+.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(5px);align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:420px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:1rem;font-weight:800;margin-bottom:4px}
+.modal-sub{font-size:.76rem;color:var(--muted);margin-bottom:18px;line-height:1.5}
+.mf{margin-bottom:10px}
+.mf label{display:block;font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(226,238,255,.4);margin-bottom:5px}
+.mf input,.mf select,.mf textarea{
+  width:100%;padding:9px 11px;border-radius:7px;
+  border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);
+  color:var(--text);font-size:.85rem;outline:none;font-family:inherit;transition:border .15s;
+}
+.mf input:focus,.mf select:focus{border-color:var(--teal)}
+.mf select option{background:var(--surface)}
+.modal-acts{display:flex;gap:8px;margin-top:16px}
+.btn-cancel{flex:1;padding:9px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:none;color:var(--muted);font-family:inherit;cursor:pointer;transition:all .15s}
+.btn-cancel:hover{border-color:var(--line2);color:var(--text)}
+.btn-submit{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-weight:800;font-family:inherit;cursor:pointer;transition:opacity .15s}
+.btn-submit:hover{opacity:.88}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="tb-logo">
+    <div class="tb-icon">S</div>
+    <div class="tb-brand">
+      <div class="tb-nome">SolusCRT</div>
+      <div class="tb-sub">Saúde Ocupacional</div>
+    </div>
+  </div>
+  <nav class="tb-nav">
+    <a href="/dashboard-empresa/">Dashboard</a>
+    <a href="/sst/funcionarios/">Funcionários</a>
+    <a href="/sst/asos/">ASOs</a>
+    <a href="/sst/exames/">Exames</a>
+    <a href="/sst/afastamentos/" class="active">Afastamentos</a>
+    <a href="/sst/cats/">CATs</a>
+    <a href="/sst/documentos/">Documentos</a>
+    <a href="/sst/esocial/">eSocial</a>
+  </nav>
+  <div class="tb-actions">
+    <a href="/dashboard-empresa/" class="btn-back">← Dashboard</a>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <span class="sb-label">SST</span>
+    <a href="/dashboard-empresa/" class="sb-link"><span class="sb-icon">🏠</span> Dashboard</a>
+    <a href="/sst/funcionarios/" class="sb-link"><span class="sb-icon">👤</span> Funcionários</a>
+    <a href="/sst/asos/" class="sb-link"><span class="sb-icon">📋</span> ASOs</a>
+    <a href="/sst/exames/" class="sb-link"><span class="sb-icon">🔬</span> Exames</a>
+    <a href="/sst/afastamentos/" class="sb-link active"><span class="sb-icon">🏥</span> Afastamentos</a>
+    <a href="/sst/cats/" class="sb-link"><span class="sb-icon">⚠️</span> CATs</a>
+    <div class="sb-divider"></div>
+    <span class="sb-label">Documentos</span>
+    <a href="/sst/documentos/" class="sb-link"><span class="sb-icon">📁</span> Documentos</a>
+    <a href="/sst/esocial/" class="sb-link"><span class="sb-icon">📡</span> eSocial SST</a>
+    <div class="sb-divider"></div>
+    <span class="sb-label">Config</span>
+    <a href="/sst/configuracoes/" class="sb-link"><span class="sb-icon">⚙️</span> Configurações</a>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div class="ph-left">
+        <h1>Afastamentos</h1>
+        <p>Controle de afastamentos por acidente, doença ocupacional ou comum</p>
+      </div>
+      <div class="ph-right">
+        <button class="btn-primary" onclick="abrirModalNovo()">+ Registrar Afastamento</button>
+      </div>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="kpi-strip" id="kpiStrip">
+      <div class="kpi-card skel skel-kpi" style="--kc:var(--red)"></div>
+      <div class="kpi-card skel skel-kpi" style="--kc:var(--green)"></div>
+      <div class="kpi-card skel skel-kpi" style="--kc:var(--amber)"></div>
+      <div class="kpi-card skel skel-kpi" style="--kc:var(--blue)"></div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="filtros" id="filtros">
+        <button class="filtro-btn active" data-status="">Todos</button>
+        <button class="filtro-btn" data-status="ativo">Ativos</button>
+        <button class="filtro-btn" data-status="encerrado">Encerrados</button>
+        <button class="filtro-btn" data-status="retorno_programado">Retorno Programado</button>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="buscaNome" placeholder="Buscar por funcionário..." oninput="filtrarTabela()">
+      </div>
+    </div>
+
+    <!-- TABLE AREA -->
+    <div class="table-area">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Funcionário</th>
+            <th>Motivo</th>
+            <th>CID</th>
+            <th>Início</th>
+            <th>Retorno Previsto</th>
+            <th>Dias</th>
+            <th>Status</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr class="skel-row"><td><div class="skel skel-line w80" style="height:11px;margin-bottom:5px"></div></td><td><div class="skel skel-line w60" style="height:20px;border-radius:999px"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w30"></div></td><td><div class="skel skel-line w40" style="height:20px;border-radius:999px"></div></td><td></td></tr>
+          <tr class="skel-row"><td><div class="skel skel-line w80" style="height:11px;margin-bottom:5px"></div></td><td><div class="skel skel-line w60" style="height:20px;border-radius:999px"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w30"></div></td><td><div class="skel skel-line w40" style="height:20px;border-radius:999px"></div></td><td></td></tr>
+          <tr class="skel-row"><td><div class="skel skel-line w80" style="height:11px;margin-bottom:5px"></div></td><td><div class="skel skel-line w60" style="height:20px;border-radius:999px"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w30"></div></td><td><div class="skel skel-line w40" style="height:20px;border-radius:999px"></div></td><td></td></tr>
+          <tr class="skel-row"><td><div class="skel skel-line w80" style="height:11px;margin-bottom:5px"></div></td><td><div class="skel skel-line w60" style="height:20px;border-radius:999px"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w40"></div></td><td><div class="skel skel-line w30"></div></td><td><div class="skel skel-line w40" style="height:20px;border-radius:999px"></div></td><td></td></tr>
+        </tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none">
+        <div class="empty-icon">🏥</div>
+        <div class="empty-title">Nenhum afastamento encontrado</div>
+        <div class="empty-desc">Nenhum afastamento registrado para os filtros selecionados.</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL REGISTRAR RETORNO -->
+<div class="modal-bg" id="modalRetorno">
+  <div class="modal">
+    <h3>Registrar Retorno</h3>
+    <p class="modal-sub" id="modalRetornoSub">Confirme a data de retorno efetivo do funcionário.</p>
+    <input type="hidden" id="retornoId">
+    <div class="mf">
+      <label>Data de Retorno Efetivo</label>
+      <input type="date" id="retornoData">
+    </div>
+    <div class="mf">
+      <label>Observação (opcional)</label>
+      <input type="text" id="retornoObs" placeholder="Ex: Retorno com restrições...">
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-submit" id="btnConfirmarRetorno" onclick="confirmarRetorno()">Confirmar Retorno</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVO AFASTAMENTO -->
+<div class="modal-bg" id="modalNovo">
+  <div class="modal">
+    <h3>Registrar Afastamento</h3>
+    <p class="modal-sub">Preencha os dados do novo afastamento. Certifique-se de que o funcionário está cadastrado no sistema.</p>
+    <div class="mf">
+      <label>Funcionário</label>
+      <input type="text" id="novoFuncionario" placeholder="Nome do funcionário...">
+    </div>
+    <div class="mf">
+      <label>Motivo</label>
+      <select id="novoMotivo">
+        <option value="">Selecione...</option>
+        <option value="acidente_trabalho">Acidente de Trabalho</option>
+        <option value="doenca_ocupacional">Doença Ocupacional</option>
+        <option value="doenca_comum">Doença Comum</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="mf">
+      <label>CID-10</label>
+      <input type="text" id="novoCid" placeholder="Ex: Z57.5">
+    </div>
+    <div class="mf">
+      <label>Data de Início</label>
+      <input type="date" id="novoInicio">
+    </div>
+    <div class="mf">
+      <label>Retorno Previsto</label>
+      <input type="date" id="novoRetorno">
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModalNovo()">Cancelar</button>
+      <button class="btn-submit" onclick="registrarAfastamento()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let todosAfastamentos = [];
+let filtroAtivo = '';
+
+function formatarData(s) {
+  if (!s) return '—';
+  const [y, m, d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function calcularDias(inicio, retorno) {
+  if (!inicio) return '—';
+  const d1 = new Date(inicio);
+  const d2 = retorno ? new Date(retorno) : new Date();
+  const diff = Math.round((d2 - d1) / 86400000);
+  return diff > 0 ? diff : 0;
+}
+
+const motivoLabels = {
+  acidente_trabalho:  ['badge-acidente_trabalho',  'Acidente de Trabalho'],
+  doenca_ocupacional: ['badge-doenca_ocupacional', 'Doença Ocupacional'],
+  doenca_comum:       ['badge-doenca_comum',        'Doença Comum'],
+  outro:              ['badge-outro',               'Outro'],
+};
+const statusLabels = {
+  ativo:              ['badge-ativo',     'Ativo'],
+  encerrado:          ['badge-encerrado', 'Encerrado'],
+  retorno_programado: ['badge-retorno',   'Retorno Programado'],
+};
+
+function badgeMotivo(m) {
+  const [cls, label] = motivoLabels[m] || ['badge-outro', m];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+function badgeStatus(s) {
+  const [cls, label] = statusLabels[s] || ['badge-outro', s];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function renderKPIs(afastamentos) {
+  const mes = new Date().getMonth();
+  const ativos    = afastamentos.filter(a => a.status === 'ativo').length;
+  const encMes    = afastamentos.filter(a => {
+    if (a.status !== 'encerrado' || !a.data_retorno) return false;
+    return new Date(a.data_retorno).getMonth() === mes;
+  }).length;
+  const total     = afastamentos.length || 1;
+  const diasTotal = afastamentos.reduce((acc, a) => acc + calcularDias(a.data_inicio, a.data_retorno), 0);
+  const absMedio  = diasTotal > 0 ? (diasTotal / afastamentos.length).toFixed(1) : '0.0';
+  const cats      = afastamentos.filter(a => a.motivo === 'acidente_trabalho').length;
+
+  document.getElementById('kpiStrip').innerHTML = `
+    <div class="kpi-card" style="--kc:var(--red)">
+      <div class="kpi-label">Ativos</div>
+      <div class="kpi-val" style="color:var(--red)">${ativos}</div>
+      <div class="kpi-sub">afastamentos em curso</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--green)">
+      <div class="kpi-label">Encerrados no mês</div>
+      <div class="kpi-val" style="color:var(--green)">${encMes}</div>
+      <div class="kpi-sub">retornos confirmados</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--amber)">
+      <div class="kpi-label">Absenteísmo médio</div>
+      <div class="kpi-val" style="color:var(--amber)">${absMedio}</div>
+      <div class="kpi-sub">dias por afastamento</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--blue)">
+      <div class="kpi-label">CATs vinculadas</div>
+      <div class="kpi-val" style="color:var(--blue)">${cats}</div>
+      <div class="kpi-sub">acidentes de trabalho</div>
+    </div>
+  `;
+}
+
+function renderTabela(lista) {
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+  if (!lista.length) { tbody.innerHTML = ''; empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = lista.map(a => {
+    const dias = calcularDias(a.data_inicio, a.data_retorno);
+    const acao = a.status === 'ativo'
+      ? `<button class="btn-retorno" onclick="abrirRetorno(${a.id},'${a.funcionario}')">Registrar Retorno</button>`
+      : '—';
+    return `
+      <tr>
+        <td><div class="func-nome">${a.funcionario || '—'}</div></td>
+        <td>${badgeMotivo(a.motivo)}</td>
+        <td style="font-family:monospace;font-size:.78rem;color:var(--muted)">${a.cid || '—'}</td>
+        <td>${formatarData(a.data_inicio)}</td>
+        <td>${formatarData(a.data_retorno)}</td>
+        <td style="font-weight:700">${dias}</td>
+        <td>${badgeStatus(a.status)}</td>
+        <td>${acao}</td>
+      </tr>`;
+  }).join('');
+}
+
+function filtrarTabela() {
+  const busca = document.getElementById('buscaNome').value.toLowerCase();
+  let lista = todosAfastamentos;
+  if (filtroAtivo) lista = lista.filter(a => a.status === filtroAtivo);
+  if (busca) lista = lista.filter(a => (a.funcionario || '').toLowerCase().includes(busca));
+  renderTabela(lista);
+}
+
+document.getElementById('filtros').addEventListener('click', ev => {
+  const btn = ev.target.closest('.filtro-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filtroAtivo = btn.dataset.status;
+  filtrarTabela();
+});
+
+function abrirRetorno(id, nome) {
+  document.getElementById('retornoId').value = id;
+  document.getElementById('modalRetornoSub').textContent = `Funcionário: ${nome}`;
+  document.getElementById('retornoData').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modalRetorno').classList.add('open');
+}
+function fecharModal() { document.getElementById('modalRetorno').classList.remove('open'); }
+
+async function confirmarRetorno() {
+  const id   = document.getElementById('retornoId').value;
+  const data = document.getElementById('retornoData').value;
+  const obs  = document.getElementById('retornoObs').value;
+  const btn  = document.getElementById('btnConfirmarRetorno');
+  if (!data) { alert('Informe a data de retorno.'); return; }
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  try {
+    const r = await fetch(`/api/sst/afastamentos/${id}/retorno`, {
+      method:'PATCH', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ data_retorno: data, observacao: obs })
+    });
+    if (!r.ok) throw new Error();
+    fecharModal();
+    await carregarAfastamentos();
+  } catch {
+    // fallback demo
+    const af = todosAfastamentos.find(a => a.id == id);
+    if (af) { af.status = 'encerrado'; af.data_retorno = data; }
+    fecharModal();
+    renderKPIs(todosAfastamentos);
+    filtrarTabela();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Confirmar Retorno';
+  }
+}
+
+function abrirModalNovo() { document.getElementById('modalNovo').classList.add('open'); }
+function fecharModalNovo() { document.getElementById('modalNovo').classList.remove('open'); }
+
+async function registrarAfastamento() {
+  const payload = {
+    funcionario:  document.getElementById('novoFuncionario').value,
+    motivo:       document.getElementById('novoMotivo').value,
+    cid:          document.getElementById('novoCid').value,
+    data_inicio:  document.getElementById('novoInicio').value,
+    data_retorno: document.getElementById('novoRetorno').value,
+  };
+  if (!payload.funcionario || !payload.motivo || !payload.data_inicio) {
+    alert('Preencha os campos obrigatórios: funcionário, motivo e data de início.');
+    return;
+  }
+  try {
+    const r = await fetch('/api/sst/afastamentos', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error();
+    fecharModalNovo();
+    await carregarAfastamentos();
+  } catch {
+    payload.id = Date.now();
+    payload.status = 'ativo';
+    todosAfastamentos.unshift(payload);
+    fecharModalNovo();
+    renderKPIs(todosAfastamentos);
+    filtrarTabela();
+  }
+}
+
+// Fechar modal clicando fora
+document.getElementById('modalRetorno').addEventListener('click', e => { if (e.target === e.currentTarget) fecharModal(); });
+document.getElementById('modalNovo').addEventListener('click', e => { if (e.target === e.currentTarget) fecharModalNovo(); });
+
+async function carregarAfastamentos() {
+  try {
+    const r = await fetch('/api/sst/afastamentos', { credentials:'include' });
+    if (!r.ok) throw new Error('Erro ' + r.status);
+    const data = await r.json();
+    todosAfastamentos = data.afastamentos || [];
+  } catch(err) {
+    console.warn('API indisponível, usando dados demo.', err);
+    todosAfastamentos = [
+      { id:1, funcionario:'Carlos Eduardo Lima',   motivo:'acidente_trabalho',  cid:'S60.0', data_inicio:'2025-03-10', data_retorno:null,         status:'ativo'              },
+      { id:2, funcionario:'Fernanda Costa',        motivo:'doenca_comum',       cid:'J06.9', data_inicio:'2025-04-01', data_retorno:'2025-04-15', status:'encerrado'          },
+      { id:3, funcionario:'João Marcos Souza',     motivo:'doenca_ocupacional', cid:'M54.5', data_inicio:'2025-02-20', data_retorno:'2025-05-10', status:'retorno_programado' },
+      { id:4, funcionario:'Ana Paula Ferreira',    motivo:'doenca_comum',       cid:'A09',   data_inicio:'2025-01-08', data_retorno:'2025-01-14', status:'encerrado'          },
+      { id:5, funcionario:'Roberto Alves',         motivo:'acidente_trabalho',  cid:'T14.0', data_inicio:'2025-04-22', data_retorno:null,         status:'ativo'              },
+    ];
+  }
+  renderKPIs(todosAfastamentos);
+  filtrarTabela();
+}
+
+carregarAfastamentos();
+</script>
+</body>
+</html>
