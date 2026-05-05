@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Agendamento de Exames · SolusCRT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#041018;--panel:rgba(10,24,35,.82);--line:rgba(154,193,220,.14);
+      --soft:rgba(255,255,255,.08);--text:#ebf7ff;--muted:#9ab9ce;
+      --accent:#7ee1c3;--accent2:#7db6ff;--gold:#f0bf6b;--danger:#ff7a91;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100%;overflow-x:hidden}
+    body{font-family:"Manrope",sans-serif;color:var(--text);
+      background:radial-gradient(circle at top left,rgba(126,225,195,.13),transparent 20rem),
+        radial-gradient(circle at bottom right,rgba(125,182,255,.14),transparent 22rem),
+        linear-gradient(180deg,#041018,#06111a);}
+    .shell{width:min(1280px,calc(100% - 28px));margin:0 auto;padding:20px 0 60px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+    .topbar h1{font-size:1.2rem;font-weight:800}
+    .topbar .sub{color:var(--muted);font-size:.82rem;margin-top:2px}
+    .nav{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:0 16px;min-height:38px;
+      border-radius:999px;border:1px solid var(--soft);text-decoration:none;color:var(--text);
+      font-weight:700;background:rgba(255,255,255,.06);font-family:inherit;font-size:.85rem;cursor:pointer;transition:.15s}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn.primary{background:linear-gradient(135deg,#0db794,#1f6ff2);border:0}
+    .btn.warn{background:linear-gradient(135deg,#8b2239,#5e1b1b);border:0}
+    .btn.sm{min-height:30px;font-size:.78rem;padding:0 12px}
+    .btn.ghost{background:transparent;border:1px solid rgba(126,225,195,.25);color:var(--accent)}
+    /* KPI */
+    .kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+    @media(max-width:700px){.kpi-strip{grid-template-columns:1fr 1fr}}
+    .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+      padding:12px 14px;backdrop-filter:blur(14px)}
+    .kpi .k-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .kpi .k-val{font-size:1.5rem;font-weight:800;margin:4px 0 1px}
+    .kpi .k-detail{font-size:.72rem;color:var(--muted)}
+    .kpi.ok .k-val{color:var(--accent)}
+    .kpi.alerta .k-val{color:var(--gold)}
+    .kpi.critico .k-val{color:var(--danger)}
+    /* layout */
+    .main-grid{display:grid;grid-template-columns:1fr 360px;gap:14px}
+    @media(max-width:900px){.main-grid{grid-template-columns:1fr}}
+    .glass{background:var(--panel);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(14px)}
+    .card-pad{padding:18px 20px}
+    .card-pad h2{font-size:.95rem;font-weight:800;margin-bottom:14px}
+    /* calendário */
+    .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .cal-title{font-size:1rem;font-weight:800}
+    .cal-nav{display:flex;gap:6px}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+    .cal-dow{font-size:.68rem;color:var(--muted);text-align:center;padding:4px 0;text-transform:uppercase}
+    .cal-day{min-height:56px;border-radius:8px;padding:4px;position:relative;
+      background:rgba(255,255,255,.03);border:1px solid transparent;cursor:pointer;transition:.1s}
+    .cal-day:hover{background:rgba(255,255,255,.07);border-color:var(--soft)}
+    .cal-day.hoje{border-color:rgba(126,225,195,.4)!important}
+    .cal-day.outro-mes{opacity:.3}
+    .cal-day.selecionado{background:rgba(126,225,195,.12);border-color:rgba(126,225,195,.4)}
+    .cal-day .d-num{font-size:.75rem;font-weight:700;color:var(--muted)}
+    .cal-day.hoje .d-num{color:var(--accent)}
+    .cal-day .d-exames{display:flex;flex-direction:column;gap:2px;margin-top:2px}
+    .d-exame-pill{font-size:.58rem;padding:1px 5px;border-radius:4px;white-space:nowrap;overflow:hidden;
+      text-overflow:ellipsis;font-weight:600}
+    /* filtros de tipo */
+    .tipo-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+    .tipo-btn{padding:5px 12px;border-radius:999px;border:1px solid var(--soft);
+      background:transparent;color:var(--muted);font-family:inherit;font-size:.78rem;cursor:pointer;font-weight:600}
+    .tipo-btn.active{border-color:rgba(126,225,195,.4);background:rgba(126,225,195,.12);color:var(--accent)}
+    /* lista de agendamentos */
+    .agenda-item{display:flex;align-items:center;gap:12px;padding:10px 12px;
+      border-radius:12px;background:rgba(255,255,255,.04);border:1px solid var(--soft);margin-bottom:8px}
+    .agenda-item .a-date{min-width:64px;text-align:center}
+    .agenda-item .a-date .a-day{font-size:1.4rem;font-weight:800;line-height:1}
+    .agenda-item .a-date .a-mon{font-size:.68rem;color:var(--muted);text-transform:uppercase}
+    .agenda-item .a-info{flex:1;min-width:0}
+    .agenda-item .a-func{font-size:.88rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .agenda-item .a-tipo{font-size:.75rem;color:var(--muted)}
+    .agenda-item .a-status{font-size:.7rem;padding:3px 8px;border-radius:7px;font-weight:700;white-space:nowrap}
+    .a-status.pendente{background:rgba(125,182,255,.15);color:var(--accent2)}
+    .a-status.realizado{background:rgba(126,225,195,.15);color:var(--accent)}
+    .a-status.vencido{background:rgba(255,122,145,.15);color:var(--danger)}
+    /* form */
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media(max-width:500px){.form-grid{grid-template-columns:1fr}}
+    .field{display:flex;flex-direction:column;gap:5px}
+    .field.full{grid-column:1/-1}
+    .field label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+    .field input,.field select,.field textarea{
+      background:rgba(255,255,255,.06);border:1px solid var(--soft);border-radius:10px;
+      color:var(--text);font-family:inherit;font-size:.88rem;padding:8px 12px;outline:none;transition:.15s}
+    .field input:focus,.field select:focus{border-color:rgba(126,225,195,.4)}
+    .field select option{background:#0d2030}
+    .msg{font-size:.82rem;margin-top:8px;min-height:16px}
+    /* modal */
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;
+      align-items:center;justify-content:center;z-index:999;padding:20px;overflow-y:auto}
+    .modal-bg.open{display:flex}
+    .modal{background:#0a1c2b;border:1px solid var(--line);border-radius:22px;
+      padding:26px 22px;width:100%;max-width:480px;position:relative;max-height:90vh;overflow-y:auto}
+    .modal h3{font-size:1rem;font-weight:800;margin-bottom:16px}
+    .modal-close{position:absolute;top:14px;right:16px;background:none;border:none;
+      color:var(--muted);cursor:pointer;font-size:1.2rem;line-height:1}
+    /* tab */
+    .tab-bar{display:flex;gap:6px;margin-bottom:14px}
+    .tab-btn{padding:6px 16px;border-radius:999px;border:1px solid var(--soft);
+      background:transparent;color:var(--muted);font-family:inherit;font-size:.85rem;cursor:pointer;font-weight:600}
+    .tab-btn.active{background:rgba(126,225,195,.15);color:var(--accent);border-color:rgba(126,225,195,.3)}
+    /* empty */
+    .empty{padding:24px;text-align:center;color:var(--muted);font-size:.85rem}
+    /* info banner */
+    .info-banner{display:flex;align-items:flex-start;gap:10px;background:rgba(125,182,255,.08);
+      border:1px solid rgba(125,182,255,.2);border-radius:12px;padding:12px 14px;
+      font-size:.82rem;margin-bottom:14px;line-height:1.5}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div>
+      <h1>Agendamento de Exames</h1>
+      <div class="sub">{{ empresa_nome }} · audiometria, espirometria, laboratorial e outros</div>
+    </div>
+    <div class="nav">
+      <a class="btn" href="/sst/exames/">← Todos os exames</a>
+      <a class="btn" href="/sst/asos/">ASOs</a>
+      <a class="btn primary" onclick="abrirModal()">+ Agendar exame</a>
+      <a class="btn warn" href="/logout/">Sair</a>
+    </div>
+  </div>
+
+  <!-- INFO -->
+  <div class="info-banner">
+    <span style="font-size:1.1rem">📋</span>
+    <span>
+      Agende exames periódicos obrigatórios (NR-7): <strong>audiometria</strong> (risco de ruído),
+      <strong>espirometria</strong> (poeiras e gases), <strong>eletrocardiograma</strong> (esforço físico),
+      entre outros. Exames vencendo geram alertas automáticos no dashboard SST.
+    </span>
+  </div>
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi ok">
+      <div class="k-label">Agendados</div>
+      <div class="k-val" id="kpiAgend">—</div>
+      <div class="k-detail">status: pendente</div>
+    </div>
+    <div class="kpi" id="kpiSemCard">
+      <div class="k-label">Esta semana</div>
+      <div class="k-val" id="kpiSem">—</div>
+      <div class="k-detail">próximos 7 dias</div>
+    </div>
+    <div class="kpi">
+      <div class="k-label">Realizados</div>
+      <div class="k-val" id="kpiReal">—</div>
+      <div class="k-detail">exames concluídos</div>
+    </div>
+    <div class="kpi" id="kpiVencCard">
+      <div class="k-label">Vencidos</div>
+      <div class="k-val" id="kpiVenc">—</div>
+      <div class="k-detail">necessitam reagendamento</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- CALENDÁRIO -->
+    <div>
+      <div class="glass card-pad">
+        <div class="cal-header">
+          <div class="cal-title" id="calTitulo">—</div>
+          <div class="cal-nav">
+            <button class="btn sm ghost" onclick="navegarMes(-1)">‹</button>
+            <button class="btn sm ghost" onclick="irHoje()">Hoje</button>
+            <button class="btn sm ghost" onclick="navegarMes(1)">›</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+
+      <!-- Legenda tipos -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:.72rem;color:var(--muted)">
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:#7ee1c3;display:inline-block"></span>Audiometria</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:#7db6ff;display:inline-block"></span>Espirometria</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:#f0bf6b;display:inline-block"></span>Laboratorial</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:#a78bfa;display:inline-block"></span>Eletrocardiograma</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:#fb923c;display:inline-block"></span>Raio-X</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:#f472b6;display:inline-block"></span>Psicológico</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:#9ab9ce;display:inline-block"></span>Outros</span>
+      </div>
+    </div>
+
+    <!-- PAINEL LATERAL -->
+    <div>
+      <!-- Filtros -->
+      <div class="glass card-pad" style="margin-bottom:14px">
+        <h2>Filtrar por tipo</h2>
+        <div class="tipo-filters" id="tipoFilters">
+          <button class="tipo-btn active" data-tipo="" onclick="filtrarTipo('',this)">Todos</button>
+          <button class="tipo-btn" data-tipo="audiometria" onclick="filtrarTipo('audiometria',this)">Audiometria</button>
+          <button class="tipo-btn" data-tipo="espirometria" onclick="filtrarTipo('espirometria',this)">Espirometria</button>
+          <button class="tipo-btn" data-tipo="laboratorial" onclick="filtrarTipo('laboratorial',this)">Laboratorial</button>
+          <button class="tipo-btn" data-tipo="eletrocardiograma" onclick="filtrarTipo('eletrocardiograma',this)">ECG</button>
+          <button class="tipo-btn" data-tipo="acuidade_visual" onclick="filtrarTipo('acuidade_visual',this)">Acuidade Visual</button>
+          <button class="tipo-btn" data-tipo="raio_x" onclick="filtrarTipo('raio_x',this)">Raio-X</button>
+          <button class="tipo-btn" data-tipo="psicologico" onclick="filtrarTipo('psicologico',this)">Psicológico</button>
+        </div>
+      </div>
+
+      <!-- Tabs: agenda / dia selecionado -->
+      <div class="glass card-pad">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="mostrarTab('agenda',this)">Próximos exames</button>
+          <button class="tab-btn" onclick="mostrarTab('dia',this)" id="btnTabDia" style="display:none">Dia selecionado</button>
+        </div>
+
+        <div id="tabAgenda">
+          <div id="agendaLista"></div>
+        </div>
+        <div id="tabDia" style="display:none">
+          <div id="diaLista"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL: Agendar exame -->
+<div class="modal-bg" id="modalAgendar">
+  <div class="modal">
+    <button class="modal-close" onclick="fecharModal()">✕</button>
+    <h3>Agendar Exame</h3>
+    <div class="form-grid">
+      <div class="field full">
+        <label>Funcionário *</label>
+        <input id="agFunc" placeholder="Nome do funcionário">
+      </div>
+      <div class="field">
+        <label>Tipo de exame *</label>
+        <select id="agTipo">
+          <option value="audiometria">Audiometria</option>
+          <option value="acuidade_visual">Acuidade Visual</option>
+          <option value="espirometria">Espirometria</option>
+          <option value="laboratorial">Laboratorial</option>
+          <option value="eletrocardiograma">Eletrocardiograma</option>
+          <option value="raio_x">Raio-X</option>
+          <option value="psicologico">Psicológico</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Data agendada *</label>
+        <input id="agData" type="date">
+      </div>
+      <div class="field full">
+        <label>Observação</label>
+        <input id="agObs" placeholder="Clínica, instrução de preparo…">
+      </div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn primary" onclick="agendarExame()">Confirmar agendamento</button>
+      <button class="btn ghost" onclick="fecharModal()">Cancelar</button>
+    </div>
+    <div class="msg" id="msgModal"></div>
+  </div>
+</div>
+
+<script>
+// ── Estado ───────────────────────────────────────────────────────────────────────
+let todosExames = [];
+let tipoFiltro = '';
+let mesAtual = new Date();
+mesAtual.setDate(1);
+let diaSelecionado = null;
+
+// Cores por tipo
+const TIPO_COR = {
+  audiometria:'#7ee1c3', espirometria:'#7db6ff', laboratorial:'#f0bf6b',
+  eletrocardiograma:'#a78bfa', raio_x:'#fb923c', psicologico:'#f472b6',
+  acuidade_visual:'#38bdf8', outro:'#9ab9ce'
+};
+const TIPO_LABEL = {
+  audiometria:'Audiometria', acuidade_visual:'Acuidade Visual', espirometria:'Espirometria',
+  laboratorial:'Laboratorial', eletrocardiograma:'ECG', raio_x:'Raio-X',
+  psicologico:'Psicológico', outro:'Outro'
+};
+
+// ── Utilitários ──────────────────────────────────────────────────────────────────
+const hoje = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
+function formatarData(isoStr) {
+  if (!isoStr) return '—';
+  const [y,m,d] = isoStr.split('-');
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return { dia:d, mes:meses[+m-1], ano:y, iso:isoStr };
+}
+
+function diasAte(isoStr) {
+  const hoje_ = new Date(hoje());
+  const alvo = new Date(isoStr);
+  return Math.round((alvo - hoje_) / 86400000);
+}
+
+// ── Carregar exames ──────────────────────────────────────────────────────────────
+async function carregarExames() {
+  try {
+    const r = await fetch('/api/sst/exames');
+    if (!r.ok) return;
+    const d = await r.json();
+    todosExames = d.exames || [];
+    atualizarKPIs();
+    renderCalendario();
+    renderAgenda();
+  } catch(e) { console.error(e); }
+}
+
+function examesFiltrados() {
+  return tipoFiltro
+    ? todosExames.filter(e => e.tipo_exame === tipoFiltro)
+    : todosExames;
+}
+
+function atualizarKPIs() {
+  const agend = todosExames.filter(e => e.status === 'pendente').length;
+  const real = todosExames.filter(e => e.status === 'realizado').length;
+  const venc = todosExames.filter(e => e.status === 'vencido').length;
+  const h = hoje();
+  const em7 = todosExames.filter(e => {
+    if (!e.data_realizacao || e.status !== 'pendente') return false;
+    const d = diasAte(e.data_realizacao);
+    return d >= 0 && d <= 7;
+  }).length;
+
+  document.getElementById('kpiAgend').textContent = agend;
+  document.getElementById('kpiReal').textContent = real;
+  document.getElementById('kpiVenc').textContent = venc;
+  document.getElementById('kpiSem').textContent = em7;
+  document.getElementById('kpiVencCard').className = 'kpi ' + (venc===0?'ok':venc<=3?'alerta':'critico');
+  document.getElementById('kpiSemCard').className = 'kpi ' + (em7===0?'ok':'alerta');
+}
+
+// ── Calendário ───────────────────────────────────────────────────────────────────
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+function renderCalendario() {
+  const ano = mesAtual.getFullYear();
+  const mes = mesAtual.getMonth();
+  document.getElementById('calTitulo').textContent = `${MESES[mes]} ${ano}`;
+
+  const primeiroDia = new Date(ano, mes, 1).getDay();
+  const diasNoMes = new Date(ano, mes+1, 0).getDate();
+  const hj = hoje();
+
+  // Indexa exames por data
+  const examesPorDia = {};
+  for (const e of examesFiltrados()) {
+    if (!e.data_realizacao) continue;
+    const [ey,em,ed] = e.data_realizacao.split('-').map(Number);
+    if (ey === ano && em-1 === mes) {
+      const k = String(ed).padStart(2,'0');
+      if (!examesPorDia[k]) examesPorDia[k] = [];
+      examesPorDia[k].push(e);
+    }
+  }
+
+  const grid = document.getElementById('calGrid');
+  let html = DIAS_SEMANA.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+
+  // células vazias antes do 1º dia
+  for (let i=0;i<primeiroDia;i++) {
+    const prevD = new Date(ano, mes, -primeiroDia+i+1);
+    html += `<div class="cal-day outro-mes"><div class="d-num">${prevD.getDate()}</div></div>`;
+  }
+
+  for (let d=1; d<=diasNoMes; d++) {
+    const iso = `${ano}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isHoje = iso === hj;
+    const isSel = iso === diaSelecionado;
+    const key = String(d).padStart(2,'0');
+    const exs = examesPorDia[key] || [];
+
+    const pills = exs.slice(0,3).map(e =>
+      `<div class="d-exame-pill" style="background:${TIPO_COR[e.tipo_exame]||'#9ab9ce'}22;color:${TIPO_COR[e.tipo_exame]||'#9ab9ce'}">${e.funcionario.split(' ')[0]}</div>`
+    ).join('');
+    const mais = exs.length > 3 ? `<div class="d-exame-pill" style="background:rgba(255,255,255,.08);color:var(--muted)">+${exs.length-3}</div>` : '';
+
+    html += `<div class="cal-day${isHoje?' hoje':''}${isSel?' selecionado':''}" onclick="selecionarDia('${iso}')">
+      <div class="d-num">${d}</div>
+      <div class="d-exames">${pills}${mais}</div>
+    </div>`;
+  }
+
+  // completar linha final
+  const total = primeiroDia + diasNoMes;
+  const resto = (7 - (total % 7)) % 7;
+  for (let i=1; i<=resto; i++) {
+    html += `<div class="cal-day outro-mes"><div class="d-num">${i}</div></div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+function selecionarDia(iso) {
+  diaSelecionado = iso;
+  renderCalendario(); // atualiza seleção visual
+  const exsDia = examesFiltrados().filter(e => e.data_realizacao === iso);
+  const btn = document.getElementById('btnTabDia');
+  const [y,m,d] = iso.split('-');
+  btn.textContent = `${d}/${m}`;
+  btn.style.display = '';
+  mostrarTab('dia', btn);
+  renderDia(exsDia, iso);
+}
+
+function renderDia(exs, iso) {
+  const [y,m,d] = iso.split('-');
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const lista = document.getElementById('diaLista');
+  if (!exs.length) {
+    lista.innerHTML = `<div class="empty">Nenhum exame em ${d}/${m}/${y}.</div>
+      <button class="btn primary" style="width:100%;justify-content:center;margin-top:8px"
+        onclick="abrirModal('${iso}')">+ Agendar neste dia</button>`;
+    return;
+  }
+  lista.innerHTML = exs.map(e => renderAgendaItem(e)).join('') +
+    `<button class="btn ghost sm" style="width:100%;justify-content:center;margin-top:8px"
+      onclick="abrirModal('${iso}')">+ Adicionar neste dia</button>`;
+}
+
+function renderAgendaItem(e) {
+  const d = formatarData(e.data_realizacao);
+  const cor = TIPO_COR[e.tipo_exame] || '#9ab9ce';
+  const label = TIPO_LABEL[e.tipo_exame] || e.tipo_exame;
+  const dias = e.data_realizacao ? diasAte(e.data_realizacao) : null;
+  let prazoTxt = '';
+  if (dias !== null && e.status === 'pendente') {
+    prazoTxt = dias < 0 ? ` · atrasado ${Math.abs(dias)}d` : dias === 0 ? ' · hoje' : ` · em ${dias}d`;
+  }
+  return `<div class="agenda-item">
+    <div class="a-date" style="color:${cor}">
+      <div class="a-day">${d.dia}</div>
+      <div class="a-mon">${d.mes}</div>
+    </div>
+    <div class="a-info">
+      <div class="a-func">${e.funcionario}</div>
+      <div class="a-tipo">${label}${prazoTxt}</div>
+    </div>
+    <div class="a-status ${e.status}">${e.status}</div>
+  </div>`;
+}
+
+function renderAgenda() {
+  const lista = document.getElementById('agendaLista');
+  const hj = hoje();
+  const proximos = examesFiltrados()
+    .filter(e => e.data_realizacao && e.data_realizacao >= hj && e.status === 'pendente')
+    .slice(0, 30);
+
+  if (!proximos.length) {
+    lista.innerHTML = `<div class="empty">Nenhum exame agendado${tipoFiltro ? ' deste tipo' : ''}.<br>
+      <button class="btn primary sm" style="margin-top:10px" onclick="abrirModal()">+ Agendar primeiro exame</button></div>`;
+    return;
+  }
+  lista.innerHTML = proximos.map(e => renderAgendaItem(e)).join('');
+}
+
+// ── Navegação ────────────────────────────────────────────────────────────────────
+function navegarMes(delta) {
+  mesAtual.setMonth(mesAtual.getMonth() + delta);
+  diaSelecionado = null;
+  document.getElementById('btnTabDia').style.display = 'none';
+  mostrarTab('agenda', document.querySelector('.tab-btn'));
+  renderCalendario();
+}
+
+function irHoje() {
+  mesAtual = new Date();
+  mesAtual.setDate(1);
+  diaSelecionado = null;
+  document.getElementById('btnTabDia').style.display = 'none';
+  mostrarTab('agenda', document.querySelector('.tab-btn'));
+  renderCalendario();
+  renderAgenda();
+}
+
+function filtrarTipo(tipo, btn) {
+  tipoFiltro = tipo;
+  document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCalendario();
+  renderAgenda();
+  if (diaSelecionado) selecionarDia(diaSelecionado);
+}
+
+function mostrarTab(tab, btn) {
+  document.getElementById('tabAgenda').style.display = tab === 'agenda' ? '' : 'none';
+  document.getElementById('tabDia').style.display = tab === 'dia' ? '' : 'none';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+// ── Modal ────────────────────────────────────────────────────────────────────────
+function abrirModal(dataPreset) {
+  const dataInput = document.getElementById('agData');
+  dataInput.value = dataPreset || hoje();
+  document.getElementById('msgModal').textContent = '';
+  document.getElementById('agFunc').value = '';
+  document.getElementById('modalAgendar').classList.add('open');
+}
+
+function fecharModal() {
+  document.getElementById('modalAgendar').classList.remove('open');
+}
+document.getElementById('modalAgendar').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalAgendar')) fecharModal();
+});
+
+async function agendarExame() {
+  const func = document.getElementById('agFunc').value.trim();
+  const tipo = document.getElementById('agTipo').value;
+  const data = document.getElementById('agData').value;
+  const obs = document.getElementById('agObs').value.trim();
+  const msg = document.getElementById('msgModal');
+
+  if (!func) { msg.style.color='var(--danger)'; msg.textContent='Informe o nome do funcionário.'; return; }
+  if (!data) { msg.style.color='var(--danger)'; msg.textContent='Informe a data do exame.'; return; }
+
+  msg.style.color='var(--muted)'; msg.textContent='Agendando…';
+  try {
+    const r = await fetch('/api/sst/exames', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        funcionario_nome: func,
+        tipo_exame: tipo,
+        data_realizacao: data,
+        observacoes: obs,
+        status: 'pendente'
+      })
+    });
+    const d = await r.json();
+    if (r.ok) {
+      msg.style.color='var(--accent)'; msg.textContent='Exame agendado!';
+      await carregarExames();
+      setTimeout(() => {
+        fecharModal();
+        // navega ao mês do exame agendado
+        const [y,m] = data.split('-').map(Number);
+        mesAtual = new Date(y, m-1, 1);
+        renderCalendario();
+        selecionarDia(data);
+      }, 700);
+    } else {
+      msg.style.color='var(--danger)'; msg.textContent = d.erro || 'Erro ao agendar.';
+    }
+  } catch(e) {
+    msg.style.color='var(--danger)'; msg.textContent='Erro de conexão.';
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────────
+document.getElementById('agData').value = hoje();
+carregarExames();
+</script>
+</body>
+</html>

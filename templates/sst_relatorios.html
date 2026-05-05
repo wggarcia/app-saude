@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatórios SST · SolusCRT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#041018;--panel:rgba(10,24,35,.82);--line:rgba(154,193,220,.14);
+      --soft:rgba(255,255,255,.08);--text:#ebf7ff;--muted:#9ab9ce;
+      --accent:#7ee1c3;--accent2:#7db6ff;--gold:#f0bf6b;--danger:#ff7a91;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100%;overflow-x:hidden}
+    body{font-family:"Manrope",sans-serif;color:var(--text);
+      background:radial-gradient(circle at top left,rgba(126,225,195,.13),transparent 20rem),
+        radial-gradient(circle at bottom right,rgba(125,182,255,.14),transparent 22rem),
+        linear-gradient(180deg,#041018,#06111a);}
+    .shell{width:min(1280px,calc(100% - 28px));margin:0 auto;padding:20px 0 60px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+    .topbar h1{font-size:1.2rem;font-weight:800}
+    .topbar .sub{color:var(--muted);font-size:.82rem;margin-top:2px}
+    .nav{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:0 16px;min-height:38px;
+      border-radius:999px;border:1px solid var(--soft);text-decoration:none;color:var(--text);
+      font-weight:700;background:rgba(255,255,255,.06);font-family:inherit;font-size:.85rem;cursor:pointer;transition:.15s}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn.primary{background:linear-gradient(135deg,#0db794,#1f6ff2);border:0}
+    .btn.accent{background:linear-gradient(135deg,#f0bf6b,#e08a20);color:#0b0f14;border:0}
+    .btn.warn{background:linear-gradient(135deg,#8b2239,#5e1b1b);border:0}
+    .btn.sm{min-height:30px;font-size:.78rem;padding:0 12px}
+    .btn.ghost{background:transparent;border:1px solid rgba(126,225,195,.25);color:var(--accent)}
+    /* KPI strip */
+    .kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+    @media(max-width:900px){.kpi-strip{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:580px){.kpi-strip{grid-template-columns:1fr 1fr}}
+    .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+      padding:12px 14px;backdrop-filter:blur(14px)}
+    .kpi .k-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .kpi .k-val{font-size:1.5rem;font-weight:800;margin:4px 0 1px}
+    .kpi .k-detail{font-size:.72rem;color:var(--muted)}
+    .kpi.ok .k-val{color:var(--accent)}
+    .kpi.alerta .k-val{color:var(--gold)}
+    .kpi.critico .k-val{color:var(--danger)}
+    /* layout */
+    .main-grid{display:grid;grid-template-columns:1fr 320px;gap:14px}
+    @media(max-width:900px){.main-grid{grid-template-columns:1fr}}
+    .left-col{display:flex;flex-direction:column;gap:14px}
+    .right-col{display:flex;flex-direction:column;gap:14px}
+    .glass{background:var(--panel);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(14px)}
+    .card-pad{padding:18px 20px}
+    .card-pad h2{font-size:.95rem;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+    /* gráfico de barras manual */
+    .chart-wrap{overflow-x:auto;padding-bottom:4px}
+    .chart{display:flex;align-items:flex-end;gap:4px;min-width:580px;height:140px;padding:0 4px}
+    .bar-group{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:36px}
+    .bar-group .bars{display:flex;gap:2px;align-items:flex-end;height:120px}
+    .bar-group .b{border-radius:3px 3px 0 0;min-width:10px;transition:height .4s}
+    .bar-group .lbl{font-size:.62rem;color:var(--muted);text-align:center;white-space:nowrap}
+    /* exames grid */
+    .exames-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+    .exame-card{background:rgba(255,255,255,.04);border:1px solid var(--soft);border-radius:12px;padding:12px 14px}
+    .exame-card .e-label{font-size:.82rem;font-weight:700;margin-bottom:6px}
+    .exame-stacks{display:flex;gap:4px;height:8px;border-radius:4px;overflow:hidden;margin-bottom:6px}
+    .exame-stacks .seg{height:100%;transition:width .4s}
+    .exame-legend{display:flex;gap:8px;font-size:.68rem;color:var(--muted)}
+    .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block;margin-right:3px}
+    /* tabela */
+    .tbl{width:100%;border-collapse:collapse;font-size:.84rem}
+    .tbl th{text-align:left;font-size:.7rem;color:var(--muted);text-transform:uppercase;
+      letter-spacing:.07em;padding:6px 8px;border-bottom:1px solid var(--soft)}
+    .tbl td{padding:8px 8px;border-bottom:1px solid rgba(255,255,255,.04)}
+    .tbl tr:last-child td{border-bottom:0}
+    .tbl tr:hover td{background:rgba(255,255,255,.03)}
+    /* badge */
+    .badge{font-size:.7rem;padding:2px 8px;border-radius:7px;font-weight:700;white-space:nowrap}
+    .badge.ok{background:rgba(126,225,195,.15);color:var(--accent)}
+    .badge.warn{background:rgba(240,191,107,.15);color:var(--gold)}
+    .badge.err{background:rgba(255,122,145,.15);color:var(--danger)}
+    /* FAP card */
+    .fap-card{background:rgba(255,255,255,.04);border:1px solid var(--soft);border-radius:14px;padding:14px 16px}
+    .fap-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;
+      border-bottom:1px solid rgba(255,255,255,.05);font-size:.84rem}
+    .fap-row:last-child{border-bottom:0}
+    .fap-row .f-label{color:var(--muted)}
+    .fap-row .f-val{font-weight:800}
+    /* export bar */
+    .export-bar{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+    .period-select{background:rgba(255,255,255,.06);border:1px solid var(--soft);border-radius:10px;
+      color:var(--text);font-family:inherit;font-size:.85rem;padding:7px 12px}
+    .period-select option{background:#0d2030}
+    /* legenda */
+    .legend-strip{display:flex;gap:14px;font-size:.75rem;color:var(--muted);margin-bottom:10px;flex-wrap:wrap}
+    .legend-item{display:flex;align-items:center;gap:5px}
+    /* compliance radial */
+    .compliance-ring{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 0}
+    .ring-svg{width:100px;height:100px}
+    .ring-score{font-size:1.4rem;font-weight:800;color:var(--accent)}
+    .compliance-items{display:flex;flex-direction:column;gap:6px;font-size:.82rem}
+    .comp-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+    .comp-item:last-child{border-bottom:0}
+    .comp-icon{font-size:.9rem;flex-shrink:0}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div>
+      <h1>Relatórios · Saúde Ocupacional</h1>
+      <div class="sub">{{ empresa_nome }} · análise histórica e indicadores de segurança</div>
+    </div>
+    <div class="nav">
+      <a class="btn" href="/sst/">← SST</a>
+      <a class="btn" href="/sst/funcionarios/">Funcionários</a>
+      <a class="btn" href="/sst/asos/">ASOs</a>
+      <a class="btn" href="/sst/cats/">CATs</a>
+      <a class="btn warn" href="/logout/">Sair</a>
+    </div>
+  </div>
+
+  <!-- EXPORT BAR -->
+  <div class="export-bar">
+    <button class="btn accent sm" onclick="exportarCSV()">⬇ Exportar CSV</button>
+    <span style="color:var(--muted);font-size:.8rem" id="geradoEm"></span>
+  </div>
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="k-label">ASOs (12 meses)</div>
+      <div class="k-val" id="kpiAsos">—</div>
+      <div class="k-detail">atestados emitidos</div>
+    </div>
+    <div class="kpi" id="kpiCatsCard">
+      <div class="k-label">CATs (12 meses)</div>
+      <div class="k-val" id="kpiCats">—</div>
+      <div class="k-detail">acidentes registrados</div>
+    </div>
+    <div class="kpi" id="kpiAfasCard">
+      <div class="k-label">Afastamentos (12 m)</div>
+      <div class="k-val" id="kpiAfas">—</div>
+      <div class="k-detail">por acidente/doença ocup.</div>
+    </div>
+    <div class="kpi" id="kpiFuncCard">
+      <div class="k-label">Funcionários ativos</div>
+      <div class="k-val" id="kpiFunc">—</div>
+      <div class="k-detail">cadastrados no SST</div>
+    </div>
+    <div class="kpi" id="kpiFreqCard">
+      <div class="k-label">Freq. de acidente</div>
+      <div class="k-val" id="kpiFreq">—</div>
+      <div class="k-detail">por mil trabalhadores/ano</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="left-col">
+
+      <!-- GRÁFICO: série mensal -->
+      <div class="glass card-pad">
+        <h2>
+          <span>Série histórica · últimos 12 meses</span>
+          <div class="legend-strip" style="margin:0">
+            <div class="legend-item"><span class="dot" style="background:#7ee1c3"></span>ASOs</div>
+            <div class="legend-item"><span class="dot" style="background:#ff7a91"></span>CATs</div>
+            <div class="legend-item"><span class="dot" style="background:#f0bf6b"></span>Afastamentos</div>
+          </div>
+        </h2>
+        <div class="chart-wrap">
+          <div class="chart" id="chartSerie"></div>
+        </div>
+      </div>
+
+      <!-- TABELA: série detalhada -->
+      <div class="glass card-pad">
+        <h2>Detalhamento mensal</h2>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Mês</th>
+                <th>ASOs</th>
+                <th>CATs</th>
+                <th>Afastamentos</th>
+                <th>Dias afastados</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaMensal"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- EXAMES POR TIPO -->
+      <div class="glass card-pad">
+        <h2>Exames por tipo e status</h2>
+        <div class="exames-grid" id="examesGrid"></div>
+      </div>
+
+    </div>
+    <div class="right-col">
+
+      <!-- FAP / RAT -->
+      <div class="glass card-pad">
+        <h2>Indicadores FAP / RAT</h2>
+        <div style="font-size:.76rem;color:var(--muted);margin-bottom:12px;line-height:1.5">
+          O <strong>FAP</strong> (Fator Acidentário de Prevenção) é calculado anualmente pelo INSS com base nos dados de CAT e benefícios. Abaixo os insumos da sua empresa.
+        </div>
+        <div class="fap-card" id="fapCard"></div>
+        <div style="margin-top:12px;font-size:.75rem;color:var(--muted)">
+          * Frequência = (CATs / funcionários) × 1.000 · Fonte: dados SST registrados na plataforma
+        </div>
+      </div>
+
+      <!-- COMPLIANCE DOCS -->
+      <div class="glass card-pad">
+        <h2>Compliance Documental</h2>
+        <div id="complianceDocs"></div>
+      </div>
+
+      <!-- LINKS RÁPIDOS -->
+      <div class="glass card-pad">
+        <h2>Ações rápidas</h2>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <a class="btn ghost" href="/sst/asos/" style="justify-content:center">Ver ASOs pendentes</a>
+          <a class="btn ghost" href="/sst/cats/" style="justify-content:center">Registrar CAT</a>
+          <a class="btn ghost" href="/sst/documentos/" style="justify-content:center">Documentos PGR/PCMSO</a>
+          <a class="btn ghost" href="/sst/exames/agendar/" style="justify-content:center">Agendar exames</a>
+          <button class="btn accent sm" onclick="exportarCSV()" style="justify-content:center">Exportar relatório CSV</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+let dadosGlobais = null;
+
+async function carregarRelatorio() {
+  try {
+    const r = await fetch('/api/sst/relatorios');
+    if (!r.ok) return;
+    const d = await r.json();
+    dadosGlobais = d;
+    renderTudo(d);
+  } catch(e) { console.error(e); }
+}
+
+function renderTudo(d) {
+  // gerado em
+  document.getElementById('geradoEm').textContent = `Gerado em ${d.gerado_em}`;
+
+  const serie = d.serie_mensal || [];
+
+  // KPIs
+  const totalAsos = serie.reduce((s,m)=>s+m.asos,0);
+  const totalCats = serie.reduce((s,m)=>s+m.cats,0);
+  const totalAfas = serie.reduce((s,m)=>s+m.afastamentos,0);
+
+  document.getElementById('kpiAsos').textContent = totalAsos;
+  document.getElementById('kpiCats').textContent = totalCats;
+  const kC = document.getElementById('kpiCatsCard');
+  kC.className = 'kpi ' + (totalCats===0?'ok':totalCats<=3?'alerta':'critico');
+
+  document.getElementById('kpiAfas').textContent = totalAfas;
+  const kA = document.getElementById('kpiAfasCard');
+  kA.className = 'kpi ' + (totalAfas===0?'ok':totalAfas<=2?'alerta':'critico');
+
+  const fap = d.fap_inputs || {};
+  document.getElementById('kpiFunc').textContent = fap.total_funcionarios || '—';
+  document.getElementById('kpiFreq').textContent = fap.frequencia_acidente != null ? fap.frequencia_acidente : '—';
+  const kF = document.getElementById('kpiFreqCard');
+  kF.className = 'kpi ' + ((fap.frequencia_acidente||0)<=5?'ok':(fap.frequencia_acidente||0)<=15?'alerta':'critico');
+
+  // Gráfico série
+  renderChart(serie);
+
+  // Tabela
+  renderTabela(serie);
+
+  // Exames
+  renderExames(d.exames_por_tipo || []);
+
+  // FAP card
+  renderFap(fap);
+
+  // Compliance docs
+  renderComplianceDocs(d.documentos || []);
+}
+
+// ── Gráfico de barras ────────────────────────────────────────────────────────────
+function renderChart(serie) {
+  const wrap = document.getElementById('chartSerie');
+  if (!serie.length) { wrap.innerHTML='<p style="color:var(--muted);font-size:.85rem">Sem dados históricos.</p>'; return; }
+
+  const maxVal = Math.max(...serie.flatMap(m=>[m.asos,m.cats,m.afastamentos]), 1);
+  const H = 110; // altura máxima px
+
+  wrap.innerHTML = serie.map(m => {
+    const h1 = Math.max(2, Math.round((m.asos/maxVal)*H));
+    const h2 = Math.max(m.cats>0?2:0, Math.round((m.cats/maxVal)*H));
+    const h3 = Math.max(m.afastamentos>0?2:0, Math.round((m.afastamentos/maxVal)*H));
+    return `<div class="bar-group">
+      <div class="bars">
+        <div class="b" style="height:${h1}px;width:12px;background:#7ee1c3" title="ASOs: ${m.asos}"></div>
+        <div class="b" style="height:${h2}px;width:12px;background:#ff7a91" title="CATs: ${m.cats}"></div>
+        <div class="b" style="height:${h3}px;width:12px;background:#f0bf6b" title="Afastamentos: ${m.afastamentos}"></div>
+      </div>
+      <div class="lbl">${m.label}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Tabela mensal ────────────────────────────────────────────────────────────────
+function renderTabela(serie) {
+  const tbody = document.getElementById('tabelaMensal');
+  if (!serie.length) { tbody.innerHTML='<tr><td colspan="5" style="color:var(--muted)">Sem dados.</td></tr>'; return; }
+  const rev = [...serie].reverse();
+  tbody.innerHTML = rev.map(m => {
+    const catCor = m.cats>0 ? 'color:var(--danger);font-weight:700' : '';
+    const diasCor = m.dias_afastados>30 ? 'color:var(--gold);font-weight:700' : '';
+    return `<tr>
+      <td>${m.label}</td>
+      <td>${m.asos}</td>
+      <td style="${catCor}">${m.cats}</td>
+      <td>${m.afastamentos}</td>
+      <td style="${diasCor}">${m.dias_afastados}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Exames por tipo ──────────────────────────────────────────────────────────────
+function renderExames(exames) {
+  const grid = document.getElementById('examesGrid');
+  if (!exames.length) {
+    grid.innerHTML='<p style="color:var(--muted);font-size:.85rem">Nenhum exame cadastrado.</p>'; return;
+  }
+  grid.innerHTML = exames.map(e => {
+    const total = e.total || 1;
+    const pPend = Math.round((e.pendente/total)*100);
+    const pReal = Math.round((e.realizado/total)*100);
+    const pVenc = Math.round((e.vencido/total)*100);
+    return `<div class="exame-card">
+      <div class="e-label">${e.label}</div>
+      <div class="exame-stacks">
+        <div class="seg" style="width:${pReal}%;background:#7ee1c3" title="Realizados: ${e.realizado}"></div>
+        <div class="seg" style="width:${pPend}%;background:#7db6ff" title="Pendentes: ${e.pendente}"></div>
+        <div class="seg" style="width:${pVenc}%;background:#ff7a91" title="Vencidos: ${e.vencido}"></div>
+        <div class="seg" style="flex:1;background:rgba(255,255,255,.06)"></div>
+      </div>
+      <div class="exame-legend">
+        <span><span class="dot" style="background:#7ee1c3"></span>${e.realizado} realiz.</span>
+        <span><span class="dot" style="background:#7db6ff"></span>${e.pendente} pend.</span>
+        ${e.vencido>0?`<span><span class="dot" style="background:#ff7a91"></span>${e.vencido} venc.</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── FAP card ─────────────────────────────────────────────────────────────────────
+function renderFap(fap) {
+  const card = document.getElementById('fapCard');
+  const rows = [
+    ['Referência', fap.referencia || '—'],
+    ['Funcionários ativos', fap.total_funcionarios ?? '—'],
+    ['CATs no ano', fap.cats_ano ?? '—'],
+    ['Afastamentos acidentários', fap.afastamentos_acidente_ano ?? '—'],
+    ['Frequência de acidente', `${fap.frequencia_acidente ?? '—'} ‰`],
+  ];
+  card.innerHTML = rows.map(([l,v]) => `
+    <div class="fap-row">
+      <span class="f-label">${l}</span>
+      <span class="f-val">${v}</span>
+    </div>`).join('');
+}
+
+// ── Compliance docs ──────────────────────────────────────────────────────────────
+function renderComplianceDocs(docs) {
+  const wrap = document.getElementById('complianceDocs');
+  if (!docs.length) {
+    wrap.innerHTML='<p style="color:var(--muted);font-size:.84rem">Nenhum documento cadastrado.</p>'; return;
+  }
+  const tipoLabel = {
+    PGR:'PGR',PCMSO:'PCMSO',LTCAT:'LTCAT',
+    laudo_insalubridade:'Laudo Insalub.',laudo_periculosidade:'Laudo Periculosidade',
+    PPP:'PPP',CIPA:'CIPA',outro:'Outros'
+  };
+  const statusCor = {vigente:'var(--accent)',vencido:'var(--danger)',em_revisao:'var(--gold)',nao_cadastrado:'var(--muted)'};
+  const statusIcon = {vigente:'✅',vencido:'❌',em_revisao:'🔄',nao_cadastrado:'⬜'};
+
+  // agrupa por tipo
+  const byTipo = {};
+  for (const d of docs) {
+    if (!byTipo[d.tipo]) byTipo[d.tipo] = {};
+    byTipo[d.tipo][d.status] = d.total;
+  }
+
+  wrap.innerHTML = Object.entries(byTipo).map(([tipo, statuses]) => {
+    const label = tipoLabel[tipo] || tipo;
+    const statusKey = Object.keys(statuses)[0];
+    const cor = statusCor[statusKey] || 'var(--muted)';
+    const icon = statusIcon[statusKey] || '⬜';
+    return `<div class="comp-item">
+      <span class="comp-icon">${icon}</span>
+      <span style="flex:1">${label}</span>
+      <span style="color:${cor};font-size:.78rem;font-weight:700">${statusKey.replace('_',' ')}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Export CSV ───────────────────────────────────────────────────────────────────
+function exportarCSV() {
+  window.location.href = '/api/sst/relatorios?formato=csv';
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────────
+carregarRelatorio();
+</script>
+</body>
+</html>

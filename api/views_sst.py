@@ -2,12 +2,15 @@
 Views SST — Saúde e Segurança do Trabalho
 Endpoints para o painel de saúde ocupacional da empresa.
 """
+import csv
+import io
 import json
+from collections import defaultdict
 from datetime import date, timedelta
 
-from django.http import JsonResponse
+from django.db.models import Count
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
-from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import (
@@ -446,6 +449,18 @@ def _sst_redirect(request):
     return redirect("/login-empresa/")
 
 
+def sst_home_redirect(request):
+    if not _empresa_autenticada(request):
+        return _sst_redirect(request)
+    return redirect("/dashboard-empresa/")
+
+
+def sst_configuracoes_redirect(request):
+    if not _empresa_autenticada(request):
+        return _sst_redirect(request)
+    return redirect("/dashboard-empresa/#sst")
+
+
 def sst_funcionarios_page(request):
     if not _empresa_autenticada(request):
         return _sst_redirect(request)
@@ -505,17 +520,58 @@ def api_exames(request):
             "exames": [
                 {
                     "id": e.id,
+                    "funcionario_id": e.funcionario_id,
                     "funcionario": e.funcionario.nome,
                     "cargo": e.funcionario.cargo,
-                    "tipo_exame": e.get_tipo_exame_display(),
-                    "data_realizacao": e.data_realizacao.strftime("%d/%m/%Y") if e.data_realizacao else None,
-                    "data_validade": e.data_validade.strftime("%d/%m/%Y") if e.data_validade else None,
+                    "tipo_exame": e.tipo_exame,
+                    "tipo_exame_label": e.get_tipo_exame_display(),
+                    "data_realizacao": e.data_realizacao.strftime("%Y-%m-%d") if e.data_realizacao else None,
+                    "data_validade": e.data_validade.strftime("%Y-%m-%d") if e.data_validade else None,
                     "status": e.status,
                     "resultado": e.resultado,
                 }
-                for e in qs[:100]
+                for e in qs.order_by("data_realizacao")[:200]
             ]
         })
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        func = _buscar_funcionario(empresa, data)
+        if not func:
+            return JsonResponse({"erro": "Funcionário não encontrado"}, status=404)
+        tipos_validos = {tipo for tipo, _label in ExameOcupacional.TIPO_EXAME}
+        status_validos = {status for status, _label in ExameOcupacional.STATUS}
+        tipo = data.get("tipo_exame", "outro")
+        if tipo not in tipos_validos:
+            return JsonResponse({"erro": "Tipo de exame inválido"}, status=400)
+        status = data.get("status", "pendente")
+        if status not in status_validos:
+            return JsonResponse({"erro": "Status de exame inválido"}, status=400)
+        try:
+            dr_str = data.get("data_realizacao") or ""
+            dr = date.fromisoformat(dr_str) if dr_str else date.today()
+        except ValueError:
+            dr = date.today()
+        try:
+            dv_str = data.get("data_validade") or ""
+            dv = date.fromisoformat(dv_str) if dv_str else None
+        except ValueError:
+            dv = None
+        exame = ExameOcupacional.objects.create(
+            empresa=empresa,
+            funcionario=func,
+            tipo_exame=tipo,
+            data_realizacao=dr,
+            data_validade=dv,
+            resultado=data.get("resultado", ""),
+            status=status,
+            observacoes=data.get("observacoes", ""),
+        )
+        return JsonResponse({"id": exame.id, "ok": True}, status=201)
+
     return JsonResponse({"erro": "método não permitido"}, status=405)
 
 
@@ -560,3 +616,157 @@ def api_esocial_eventos(request):
         return JsonResponse({"id": ev.id, "ok": True}, status=201)
 
     return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+# ── Páginas: Relatórios e Agendamento ────────────────────────────────────────
+
+def sst_relatorios_page(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_relatorios.html", {"empresa_nome": empresa.nome})
+
+
+def sst_agendamento_page(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_agendamento.html", {"empresa_nome": empresa.nome})
+
+
+def sst_funcionarios_novo_redirect(request):
+    return redirect("/sst/funcionarios/?modal=novo")
+
+
+def sst_documentos_novo_redirect(request):
+    return redirect("/sst/documentos/?modal=novo")
+
+
+# ── API: Relatórios ──────────────────────────────────────────────────────────
+
+def _mes_label(ano, mes):
+    meses = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"]
+    return f"{meses[mes-1]}/{str(ano)[2:]}"
+
+
+def api_relatorios_sst(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    hoje = date.today()
+    if hoje.month == 12:
+        inicio_12m = date(hoje.year, 1, 1)
+    else:
+        inicio_12m = date(hoje.year - 1, hoje.month + 1, 1)
+
+    # ── Série mensal de ASOs ──────────────────────────────────────────────────
+    asos_qs = ASOOcupacional.objects.filter(empresa=empresa, data_emissao__gte=inicio_12m)
+    asos_por_mes = defaultdict(int)
+    for a in asos_qs.values("data_emissao"):
+        d = a["data_emissao"]
+        asos_por_mes[(d.year, d.month)] += 1
+
+    # ── Série mensal de CATs ──────────────────────────────────────────────────
+    cats_qs = CATOcupacional.objects.filter(empresa=empresa, data_acidente__gte=inicio_12m)
+    cats_por_mes = defaultdict(int)
+    for c in cats_qs.values("data_acidente"):
+        d = c["data_acidente"]
+        cats_por_mes[(d.year, d.month)] += 1
+
+    # ── Série mensal de Afastamentos ─────────────────────────────────────────
+    afas_qs = AfastamentoSST.objects.filter(empresa=empresa, data_inicio__gte=inicio_12m)
+    afas_por_mes = defaultdict(int)
+    dias_por_mes = defaultdict(int)
+    for a in afas_qs.values("data_inicio", "data_retorno_real", "data_prevista_retorno"):
+        d = a["data_inicio"]
+        afas_por_mes[(d.year, d.month)] += 1
+        fim = a["data_retorno_real"] or a["data_prevista_retorno"] or d
+        dias_por_mes[(d.year, d.month)] += max(0, (fim - d).days)
+
+    # ── Monta série ───────────────────────────────────────────────────────────
+    serie = []
+    m = inicio_12m
+    while m <= hoje:
+        k = (m.year, m.month)
+        serie.append({
+            "label": _mes_label(m.year, m.month),
+            "ano": m.year,
+            "mes": m.month,
+            "asos": asos_por_mes.get(k, 0),
+            "cats": cats_por_mes.get(k, 0),
+            "afastamentos": afas_por_mes.get(k, 0),
+            "dias_afastados": dias_por_mes.get(k, 0),
+        })
+        m = date(m.year + (1 if m.month == 12 else 0), (m.month % 12) + 1, 1)
+
+    # ── Exames por tipo e status ──────────────────────────────────────────────
+    exames_status = (
+        ExameOcupacional.objects.filter(empresa=empresa)
+        .values("tipo_exame", "status")
+        .annotate(total=Count("id"))
+    )
+    exames_resumo = defaultdict(lambda: {"pendente": 0, "realizado": 0, "vencido": 0})
+    for e in exames_status:
+        exames_resumo[e["tipo_exame"]][e["status"]] = e["total"]
+
+    tipo_labels = dict(ExameOcupacional.TIPO_EXAME)
+    exames_out = [
+        {
+            "tipo": t,
+            "label": tipo_labels.get(t, t),
+            **cnts,
+            "total": sum(cnts.values()),
+        }
+        for t, cnts in sorted(exames_resumo.items())
+    ]
+
+    # ── Documentos compliance ─────────────────────────────────────────────────
+    docs_status = (
+        DocumentoSST.objects.filter(empresa=empresa)
+        .values("tipo", "status")
+        .annotate(n=Count("id"))
+    )
+    docs_out = [{"tipo": d["tipo"], "status": d["status"], "total": d["n"]} for d in docs_status]
+
+    # ── FAP inputs (referência) ───────────────────────────────────────────────
+    total_func = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).count()
+    total_cats_ano = CATOcupacional.objects.filter(empresa=empresa, data_acidente__year=hoje.year).count()
+    total_afas_acidente = AfastamentoSST.objects.filter(
+        empresa=empresa,
+        data_inicio__year=hoje.year,
+        motivo__in=["acidente_trabalho", "doenca_ocupacional"],
+    ).count()
+    freq_acidente = round((total_cats_ano / total_func * 1000), 2) if total_func > 0 else 0
+
+    fap_inputs = {
+        "total_funcionarios": total_func,
+        "cats_ano": total_cats_ano,
+        "afastamentos_acidente_ano": total_afas_acidente,
+        "frequencia_acidente": freq_acidente,
+        "referencia": f"Jan–{_mes_label(hoje.year, hoje.month)} {hoje.year}",
+    }
+
+    if request.GET.get("formato") == "csv":
+        return _exportar_csv_relatorio(serie, empresa.nome)
+
+    return JsonResponse({
+        "serie_mensal": serie,
+        "exames_por_tipo": exames_out,
+        "documentos": docs_out,
+        "fap_inputs": fap_inputs,
+        "gerado_em": hoje.isoformat(),
+    })
+
+
+def _exportar_csv_relatorio(serie, empresa_nome):
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Empresa", empresa_nome])
+    w.writerow([])
+    w.writerow(["Mês", "ASOs emitidos", "CATs registradas", "Afastamentos", "Dias afastados"])
+    for s in serie:
+        w.writerow([s["label"], s["asos"], s["cats"], s["afastamentos"], s["dias_afastados"]])
+    resp = HttpResponse(buf.getvalue(), content_type="text/csv; charset=utf-8-sig")
+    resp["Content-Disposition"] = f'attachment; filename="sst_relatorio_{date.today()}.csv"'
+    return resp

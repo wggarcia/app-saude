@@ -385,7 +385,7 @@ function renderTabela(exames) {
         <div class="func-nome">${e.funcionario || '—'}</div>
         <div class="func-cargo">${e.cargo || '—'}</div>
       </td>
-      <td>${e.tipo_exame || '—'}</td>
+      <td>${e.tipo_exame_label || e.tipo_exame || '—'}</td>
       <td>${formatarData(e.data_realizacao)}</td>
       <td>${formatarData(e.data_validade)}</td>
       <td style="font-size:.78rem">${e.resultado || '—'}</td>

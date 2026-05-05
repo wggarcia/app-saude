@@ -47,6 +47,9 @@ from api.views_sst import (
     api_afastamentos_sst,
     api_exames,
     api_esocial_eventos,
+    api_relatorios_sst,
+    sst_home_redirect,
+    sst_configuracoes_redirect,
     sst_funcionarios_page,
     sst_asos_page,
     sst_exames_page,
@@ -54,6 +57,10 @@ from api.views_sst import (
     sst_cats_page,
     sst_documentos_page,
     sst_esocial_page,
+    sst_relatorios_page,
+    sst_agendamento_page,
+    sst_funcionarios_novo_redirect,
+    sst_documentos_novo_redirect,
 )
 from api.views_gestao import (
     gestao_corporativa,
@@ -165,13 +172,19 @@ urlpatterns = [
     path('api/lider/unidade/<int:unidade_id>/dados', api_unidade_dados),
 
     # 🏥 SST / Saúde Ocupacional — páginas
+    path('sst/', sst_home_redirect),
     path('sst/funcionarios/', sst_funcionarios_page),
+    path('sst/funcionarios/novo/', sst_funcionarios_novo_redirect),
     path('sst/asos/', sst_asos_page),
     path('sst/exames/', sst_exames_page),
+    path('sst/exames/agendar/', sst_agendamento_page),
     path('sst/afastamentos/', sst_afastamentos_page),
     path('sst/cats/', sst_cats_page),
     path('sst/documentos/', sst_documentos_page),
+    path('sst/documentos/novo/', sst_documentos_novo_redirect),
     path('sst/esocial/', sst_esocial_page),
+    path('sst/relatorios/', sst_relatorios_page),
+    path('sst/configuracoes/', sst_configuracoes_redirect),
     # 🏥 SST / Saúde Ocupacional — API
     path('api/sst/dashboard', api_sst_dashboard),
     path('api/sst/funcionarios', api_funcionarios),
@@ -181,6 +194,7 @@ urlpatterns = [
     path('api/sst/afastamentos', api_afastamentos_sst),
     path('api/sst/exames', api_exames),
     path('api/sst/esocial', api_esocial_eventos),
+    path('api/sst/relatorios', api_relatorios_sst),
 
     # 📊 API PRINCIPAL
     path('api/registrar', registrar_sintoma),
