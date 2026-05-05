@@ -11,184 +11,330 @@
       --soft:rgba(255,255,255,.08);--text:#ebf7ff;--muted:#9ab9ce;
       --accent:#7ee1c3;--accent2:#7db6ff;--gold:#f0bf6b;--danger:#ff7a91;
     }
-    *{box-sizing:border-box}
-    body{margin:0;min-height:100vh;font-family:"Manrope",sans-serif;color:var(--text);
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100%;overflow-x:hidden}
+    body{font-family:"Manrope",sans-serif;color:var(--text);
       background:radial-gradient(circle at top left,rgba(126,225,195,.13),transparent 20rem),
         radial-gradient(circle at bottom right,rgba(125,182,255,.14),transparent 22rem),
         linear-gradient(180deg,#041018,#06111a);}
-    .shell{width:min(1200px,calc(100% - 28px));margin:0 auto;padding:20px 0 40px}
-    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap}
-    h1{margin:0;font-size:1.2rem;font-weight:800}
-    .nav{display:flex;gap:10px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:0 16px;min-height:40px;
+    .shell{width:min(1280px,calc(100% - 28px));margin:0 auto;padding:20px 0 60px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+    .topbar h1{font-size:1.2rem;font-weight:800}
+    .sub{color:var(--muted);font-size:.82rem;margin-top:2px}
+    .nav{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:0 16px;min-height:38px;
       border-radius:999px;border:1px solid var(--soft);text-decoration:none;color:var(--text);
-      font-weight:700;background:rgba(255,255,255,.06);font-family:inherit;font-size:.88rem;cursor:pointer}
+      font-weight:700;background:rgba(255,255,255,.06);font-family:inherit;font-size:.85rem;cursor:pointer;transition:.15s}
+    .btn:hover{background:rgba(255,255,255,.1)}
     .btn.primary{background:linear-gradient(135deg,#0db794,#1f6ff2);border:0}
     .btn.warn{background:linear-gradient(135deg,#8b2239,#5e1b1b);border:0}
-    .glass{background:var(--panel);border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(16px)}
-    .selector{display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
-    .selector select{background:rgba(255,255,255,.06);border:1px solid var(--soft);border-radius:12px;
-      color:var(--text);font-family:inherit;font-size:.92rem;padding:10px 14px;min-width:220px}
-    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px}
-    .metric-card{background:rgba(255,255,255,.05);border:1px solid var(--soft);border-radius:14px;padding:14px}
-    .metric-card .label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
-    .metric-card .val{font-size:1.4rem;font-weight:800;margin:6px 0 2px}
-    .metric-card .delta{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:8px;display:inline-block}
-    .delta.up{color:var(--accent);background:rgba(126,225,195,.12)}
-    .delta.down{color:var(--danger);background:rgba(255,122,145,.12)}
-    .delta.neutral{color:var(--muted);background:rgba(154,193,220,.08)}
-    .row-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    @media(max-width:640px){.row-grid{grid-template-columns:1fr}}
-    .card{padding:18px}
-    .card h2{margin:0 0 12px;font-size:.95rem;font-weight:800}
-    .alert-strip{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
-    .alert-pill{background:rgba(255,255,255,.06);border:1px solid var(--soft);border-radius:12px;
-      padding:10px 16px;display:flex;flex-direction:column;gap:2px;min-width:130px}
-    .alert-pill strong{font-size:1.3rem;font-weight:800}
-    .alert-pill span{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
-    .alert-pill.warn strong{color:var(--gold)}
+    .btn.sm{min-height:30px;font-size:.78rem;padding:0 12px}
+    .btn.ghost{background:transparent;border:1px solid rgba(126,225,195,.25);color:var(--accent)}
+    /* seletor */
+    .selector-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      backdrop-filter:blur(14px);padding:20px 22px;margin-bottom:18px}
+    .selector-inner{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .selector-inner label{color:var(--muted);font-size:.85rem;white-space:nowrap}
+    .unidade-select{background:rgba(255,255,255,.06);border:1px solid var(--soft);border-radius:12px;
+      color:var(--text);font-family:inherit;font-size:.92rem;padding:10px 14px;min-width:240px;flex:1;max-width:400px}
+    .unidade-select option{background:#0d2030}
+    .priv-note{font-size:.78rem;color:var(--muted);margin-top:8px;
+      padding:8px 12px;background:rgba(255,255,255,.03);border-radius:8px;border-left:3px solid rgba(125,182,255,.4)}
+    /* KPI */
+    .kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+    @media(max-width:900px){.kpi-strip{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:580px){.kpi-strip{grid-template-columns:1fr 1fr}}
+    .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;backdrop-filter:blur(14px)}
+    .kpi .k-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .kpi .k-val{font-size:1.5rem;font-weight:800;margin:4px 0 1px}
+    .kpi .k-detail{font-size:.72rem;color:var(--muted)}
+    .kpi.ok .k-val{color:var(--accent)} .kpi.alerta .k-val{color:var(--gold)} .kpi.critico .k-val{color:var(--danger)}
+    /* layout */
+    .main-grid{display:grid;grid-template-columns:1fr 340px;gap:14px}
+    @media(max-width:900px){.main-grid{grid-template-columns:1fr}}
+    .left-col,.right-col{display:flex;flex-direction:column;gap:14px}
+    .glass{background:var(--panel);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(14px)}
+    .card-pad{padding:18px 20px}
+    .card-pad h2{font-size:.95rem;font-weight:800;margin-bottom:14px}
+    /* métricas */
+    .metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    @media(max-width:700px){.metrics-grid{grid-template-columns:1fr 1fr}}
+    .metric-card{background:rgba(255,255,255,.04);border:1px solid var(--soft);border-radius:14px;padding:12px 14px}
+    .metric-card .m-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+    .metric-card .m-val{font-size:1.4rem;font-weight:800;margin:4px 0 4px}
+    .metric-card .m-bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:4px}
+    .metric-card .m-bar-fill{height:100%;border-radius:3px;transition:width .5s}
+    .metric-card .m-delta{font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:7px;display:inline-block}
+    .d-up{color:var(--accent);background:rgba(126,225,195,.12)}
+    .d-dn{color:var(--danger);background:rgba(255,122,145,.12)}
+    .d-ok{color:var(--muted);background:rgba(154,193,220,.08)}
+    /* setores */
     .setor-row{display:flex;align-items:center;gap:10px;padding:8px 10px;
-      border-radius:10px;background:rgba(255,255,255,.04);margin-bottom:6px;font-size:.85rem}
-    .setor-row .bar{height:6px;border-radius:3px;background:var(--accent);flex:1;max-width:100px}
-    #dadosView{display:none}
-    #privacyMsg{color:var(--muted);font-size:.85rem;padding:16px 0}
+      border-radius:10px;background:rgba(255,255,255,.04);margin-bottom:6px;font-size:.84rem}
+    .setor-row .s-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .setor-row .s-bar-wrap{width:80px}
+    .setor-row .s-bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+    .setor-row .s-bar-fill{height:100%;border-radius:3px;background:var(--danger)}
+    /* sinais */
+    .sinal-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;
+      border-bottom:1px solid rgba(255,255,255,.05);font-size:.84rem}
+    .sinal-item:last-child{border-bottom:0}
+    .sinal-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+    .sinal-badge{font-size:.7rem;padding:2px 8px;border-radius:7px;font-weight:700;flex-shrink:0;align-self:center}
+    /* apoio */
+    .action-card{background:rgba(255,255,255,.04);border:1px solid var(--soft);border-radius:12px;
+      padding:10px 12px;display:flex;align-items:center;gap:10px;font-size:.84rem;margin-bottom:6px}
+    .action-card .a-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .action-card .a-info .a-label{font-weight:700}
+    .action-card .a-info .a-sub{font-size:.72rem;color:var(--muted)}
+    /* banner */
+    .alert-banner{display:flex;align-items:center;gap:10px;padding:12px 16px;
+      border-radius:12px;font-size:.85rem;margin-bottom:14px}
+    .alert-banner.gold{background:rgba(240,191,107,.1);border:1px solid rgba(240,191,107,.25)}
+    .empty{padding:20px;text-align:center;color:var(--muted);font-size:.86rem}
+    @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+    .loading{animation:pulse 1.2s infinite;color:var(--muted);font-size:.85rem}
   </style>
 </head>
 <body>
-  <div class="shell">
-    <div class="topbar">
-      <div>
-        <h1>Painel do Líder</h1>
-        <div style="color:var(--muted);font-size:.83rem;margin-top:2px">{{ empresa_nome }} · visao por unidade, sem dado individual</div>
-      </div>
-      <div class="nav">
-        <a class="btn" href="/dashboard-empresa/">← Dashboard</a>
-        <a class="btn" href="/gestao/">Centro de Gestao</a>
-        <a class="btn" href="/escalas/">Escalas</a>
-        <a class="btn warn" href="/logout/">Sair</a>
-      </div>
-    </div>
+<div class="shell">
 
-    <div class="selector">
-      <label style="color:var(--muted);font-size:.85rem">Selecionar unidade:</label>
-      <select id="unidadeSelect" onchange="carregarUnidade()">
-        <option value="">— escolha a unidade —</option>
-        {% for u in unidades %}
-        <option value="{{ u.id }}">{{ u.nome }}</option>
-        {% endfor %}
+  <div class="topbar">
+    <div>
+      <h1>Painel do Líder</h1>
+      <div class="sub">{{ empresa_nome }} · visão agregada por unidade, dados 100% anônimos</div>
+    </div>
+    <div class="nav">
+      <a class="btn" href="/dashboard-empresa/">← Dashboard</a>
+      <a class="btn" href="/escalas/">Escalas</a>
+      <a class="btn" href="/sst/">Saúde Ocup.</a>
+      <a class="btn warn" href="/logout/">Sair</a>
+    </div>
+  </div>
+
+  <!-- SELETOR -->
+  <div class="selector-card">
+    <div class="selector-inner">
+      <label>Analisar unidade:</label>
+      <select class="unidade-select" id="unidadeSelect" onchange="carregarUnidade()">
+        <option value="">— selecione a unidade —</option>
       </select>
-      <span id="loadingMsg" style="color:var(--muted);font-size:.83rem"></span>
+      <span id="loadingMsg" class="loading" style="display:none">Carregando…</span>
+    </div>
+    <div class="priv-note">
+      🔒 Dados exibidos apenas com pelo menos <strong>{{ min_group }}</strong> respondentes. Nenhum dado individual é rastreado.
+    </div>
+  </div>
+
+  <div id="privacyBlock" style="display:none">
+    <div class="alert-banner gold">
+      <span style="font-size:1.2rem">🔒</span>
+      <span id="privacyMsg"></span>
+    </div>
+  </div>
+
+  <div id="dadosView" style="display:none">
+    <div class="kpi-strip">
+      <div class="kpi"><div class="k-label">Respondentes</div><div class="k-val" id="kpiResp">—</div><div class="k-detail">últimos 30 dias</div></div>
+      <div class="kpi" id="kpiHumorCard"><div class="k-label">Humor médio</div><div class="k-val" id="kpiHumor">—</div><div class="k-detail">escala 1–5</div></div>
+      <div class="kpi" id="kpiEstresseCard"><div class="k-label">Estresse médio</div><div class="k-val" id="kpiEstresse">—</div><div class="k-detail">escala 1–5</div></div>
+      <div class="kpi" id="kpiApoioCard"><div class="k-label">Apoios abertos</div><div class="k-val" id="kpiApoio">—</div><div class="k-detail">aguardando resposta</div></div>
+      <div class="kpi" id="kpiAcoesCard"><div class="k-label">Ações em aberto</div><div class="k-val" id="kpiAcoes">—</div><div class="k-detail">plano de ação</div></div>
     </div>
 
-    <div id="privacyMsg"></div>
-    <div id="dadosView">
-      <div class="alert-strip">
-        <div class="alert-pill" id="pillRespondents"><strong id="valRespondents">—</strong><span>Respondentes</span></div>
-        <div class="alert-pill warn" id="pillApoio"><strong id="valApoio">—</strong><span>Apoios abertos</span></div>
-        <div class="alert-pill warn" id="pillAcoes"><strong id="valAcoes">—</strong><span>Acoes abertas</span></div>
-      </div>
-
-      <div class="metrics-grid" id="metricasGrid"></div>
-
-      <div class="row-grid">
-        <div class="glass card">
-          <h2>Setores com mais pressao</h2>
-          <div id="setoresLista"><p style="color:var(--muted);font-size:.85rem">Sem dados suficientes por setor.</p></div>
+    <div class="main-grid">
+      <div class="left-col">
+        <div class="glass card-pad">
+          <h2>Indicadores de Bem-Estar · últimos 30 dias</h2>
+          <div class="metrics-grid" id="metricsGrid"></div>
         </div>
-        <div class="glass card">
-          <h2>Sinais de atencao</h2>
-          <div id="sinaisLista"></div>
+        <div class="glass card-pad">
+          <h2>Setores com maior estresse</h2>
+          <div id="setoresLista"><div class="empty">Sem dados suficientes por setor.</div></div>
+        </div>
+      </div>
+      <div class="right-col">
+        <div class="glass card-pad">
+          <h2>Sinais de atenção</h2>
+          <div id="sinaisLista"><div class="empty">Carregando…</div></div>
+        </div>
+        <div class="glass card-pad">
+          <h2>Pedidos de apoio</h2>
+          <div id="apoioLista"><div class="empty">Nenhum pedido aberto.</div></div>
+          <div style="margin-top:10px">
+            <a class="btn ghost sm" href="/gestao/" style="width:100%;justify-content:center">Ver centro de gestão →</a>
+          </div>
+        </div>
+        <div class="glass card-pad" id="sstCard" style="display:none">
+          <h2>Saúde Ocupacional</h2>
+          <div id="sstContent"></div>
+          <div style="margin-top:10px"><a class="btn ghost sm" href="/sst/" style="width:100%;justify-content:center">Módulo SST →</a></div>
         </div>
       </div>
     </div>
   </div>
 
-  <script>
-    const LABELS = {
-      humor: {label:'Humor',inverted:false},
-      energia: {label:'Energia',inverted:false},
-      estresse: {label:'Estresse',inverted:true},
-      sono: {label:'Sono',inverted:false},
-      fadiga: {label:'Fadiga',inverted:true},
-      ansiedade: {label:'Ansiedade',inverted:true},
-      risco_burnout: {label:'Burnout',inverted:true},
-      carga_emocional: {label:'Carga emocional',inverted:true},
-      seguranca_psicologica: {label:'Seg. psicologica',inverted:false},
-    };
+</div>
 
-    function deltaClass(delta, inverted) {
-      if (delta === 0) return 'neutral';
-      const positive = delta > 0;
-      return (positive !== inverted) ? 'up' : 'down';
+<script>
+const LABELS = {
+  humor:{label:'Humor',inverted:false,cor:'#7ee1c3'},
+  energia:{label:'Energia',inverted:false,cor:'#7db6ff'},
+  estresse:{label:'Estresse',inverted:true,cor:'#ff7a91'},
+  sono:{label:'Sono',inverted:false,cor:'#a78bfa'},
+  fadiga:{label:'Fadiga',inverted:true,cor:'#fb923c'},
+  ansiedade:{label:'Ansiedade',inverted:true,cor:'#f472b6'},
+  risco_burnout:{label:'Risco Burnout',inverted:true,cor:'#ef4444'},
+  carga_emocional:{label:'Carga Emocional',inverted:true,cor:'#f59e0b'},
+  seguranca_psicologica:{label:'Seg. Psicológica',inverted:false,cor:'#34d399'},
+};
+
+function popularUnidades() {
+  const sel = document.getElementById('unidadeSelect');
+  const unidades = {{ unidades_json|safe }};
+  if (!unidades || !unidades.length) {
+    const opt = document.createElement('option');
+    opt.disabled=true; opt.textContent='Nenhuma unidade cadastrada'; sel.appendChild(opt); return;
+  }
+  unidades.forEach(u => {
+    const opt = document.createElement('option');
+    opt.value=u.id; opt.textContent=u.nome; sel.appendChild(opt);
+  });
+}
+
+async function carregarUnidade() {
+  const id = document.getElementById('unidadeSelect').value;
+  const view = document.getElementById('dadosView');
+  const priv = document.getElementById('privacyBlock');
+  const loading = document.getElementById('loadingMsg');
+  view.style.display='none'; priv.style.display='none';
+  if (!id) return;
+  loading.style.display='';
+  try {
+    const r = await fetch(`/api/lider/unidade/${id}/dados`);
+    const d = await r.json();
+    loading.style.display='none';
+    if (!r.ok) { document.getElementById('privacyMsg').textContent=d.erro||'Erro.'; priv.style.display=''; return; }
+    if (!d.privacy_ok) {
+      document.getElementById('privacyMsg').textContent=
+        `Grupo com ${d.respondents} respondente(s) — necessário mínimo de {{ min_group }} para exibir dados desta unidade.`;
+      priv.style.display=''; return;
     }
+    renderDados(d); view.style.display='';
+    carregarSSTUnidade();
+  } catch(e) { loading.style.display='none'; document.getElementById('privacyMsg').textContent='Erro de conexão.'; priv.style.display=''; }
+}
 
-    function deltaLabel(delta) {
-      if (delta === 0) return '— estavel';
-      return (delta > 0 ? '▲ +' : '▼ ') + delta;
-    }
+function renderDados(d) {
+  document.getElementById('kpiResp').textContent = d.respondents;
+  const m = d.metricas;
 
-    async function carregarUnidade() {
-      const id = document.getElementById('unidadeSelect').value;
-      const view = document.getElementById('dadosView');
-      const msg = document.getElementById('privacyMsg');
-      const loading = document.getElementById('loadingMsg');
-      view.style.display = 'none';
-      msg.textContent = '';
-      if (!id) return;
-      loading.textContent = 'Carregando…';
-      try {
-        const r = await fetch(`/api/lider/unidade/${id}/dados`);
-        const d = await r.json();
-        loading.textContent = '';
-        if (!r.ok) { msg.textContent = d.erro || 'Erro ao carregar dados.'; return; }
-        if (!d.privacy_ok) {
-          msg.textContent = `Grupo menor que ${d.respondents} respondentes — dados protegidos por privacidade. Aguarde mais check-ins.`;
-          return;
-        }
-        document.getElementById('valRespondents').textContent = d.respondents;
-        document.getElementById('valApoio').textContent = d.apoio_aberto;
-        document.getElementById('valAcoes').textContent = d.acoes_abertas;
+  const setKpi = (id, cardId, val, invertedBad) => {
+    document.getElementById(id).textContent = val.toFixed(1);
+    const good = invertedBad ? val<=2.5 : val>=3;
+    const med = invertedBad ? val<=3.5 : val>=2;
+    document.getElementById(cardId).className = 'kpi ' + (good?'ok':med?'alerta':'critico');
+  };
+  setKpi('kpiHumor','kpiHumorCard',m.humor.atual||0,false);
+  setKpi('kpiEstresse','kpiEstresseCard',m.estresse.atual||0,true);
+  document.getElementById('kpiApoio').textContent = d.apoio_aberto;
+  document.getElementById('kpiApoioCard').className = 'kpi '+(d.apoio_aberto===0?'ok':d.apoio_aberto<=2?'alerta':'critico');
+  document.getElementById('kpiAcoes').textContent = d.acoes_abertas;
+  document.getElementById('kpiAcoesCard').className = 'kpi '+(d.acoes_abertas===0?'ok':'alerta');
 
-        const grid = document.getElementById('metricasGrid');
-        grid.innerHTML = Object.entries(d.metricas).map(([key, m]) => {
-          const cfg = LABELS[key] || {label:key, inverted:false};
-          const cls = deltaClass(m.delta, cfg.inverted);
-          return `<div class="metric-card">
-            <div class="label">${cfg.label}</div>
-            <div class="val">${m.atual}/5</div>
-            <div class="delta ${cls}">${deltaLabel(m.delta)}</div>
-          </div>`;
-        }).join('');
+  // Métricas grid
+  const grid = document.getElementById('metricsGrid');
+  grid.innerHTML = Object.entries(m).map(([key,mv]) => {
+    const cfg = LABELS[key]||{label:key,inverted:false,cor:'#7db6ff'};
+    const val = mv.atual||0;
+    const pct = (val/5)*100;
+    const good = cfg.inverted ? val<=2.5 : val>=3;
+    const med = cfg.inverted ? val<=3.5 : val>=2;
+    const cor = good ? cfg.cor : med ? '#f0bf6b' : '#ff7a91';
+    const delta = mv.delta||0;
+    const dGood = delta===0?null:(cfg.inverted?delta<0:delta>0);
+    const dCls = delta===0?'d-ok':dGood?'d-up':'d-dn';
+    const dLbl = delta===0?'— estável':(delta>0?'▲ +':'▼ ')+Math.abs(delta);
+    return `<div class="metric-card">
+      <div class="m-label">${cfg.label}</div>
+      <div class="m-val" style="color:${cor}">${val.toFixed(1)}<span style="font-size:.7rem;color:var(--muted)">/5</span></div>
+      <div class="m-bar"><div class="m-bar-fill" style="width:${pct}%;background:${cor}"></div></div>
+      <span class="m-delta ${dCls}">${dLbl}</span>
+    </div>`;
+  }).join('');
 
-        const setores = document.getElementById('setoresLista');
-        if (d.setores.length) {
-          const maxE = Math.max(...d.setores.map(s=>s.estresse), 1);
-          setores.innerHTML = d.setores.map(s=>`
-            <div class="setor-row">
-              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.nome}</span>
-              <div class="bar" style="width:${Math.round((s.estresse/maxE)*100)}px"></div>
-              <span style="font-size:.75rem;color:var(--muted)">${s.respondents} resp · estresse ${s.estresse}</span>
-            </div>`).join('');
-        } else {
-          setores.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Sem dados suficientes por setor.</p>';
-        }
+  // Setores
+  const set = document.getElementById('setoresLista');
+  if (d.setores && d.setores.length) {
+    const maxE = Math.max(...d.setores.map(s=>s.estresse),1);
+    set.innerHTML = d.setores.map(s => {
+      const pct = Math.round(s.estresse/maxE*100);
+      const cor = s.estresse>=3.5?'var(--danger)':s.estresse>=2.5?'var(--gold)':'var(--accent)';
+      return `<div class="setor-row">
+        <span class="s-name">${s.nome}</span>
+        <div class="s-bar-wrap"><div class="s-bar"><div class="s-bar-fill" style="width:${pct}%;background:${cor}"></div></div></div>
+        <span style="font-size:.75rem;color:${cor};font-weight:700;min-width:2rem;text-align:right">${s.estresse.toFixed(1)}</span>
+        <span style="font-size:.72rem;color:var(--muted)">${s.respondents} resp.</span>
+      </div>`;
+    }).join('');
+  } else {
+    set.innerHTML = '<div class="empty">Sem dados suficientes por setor (mín. 5 respondentes).</div>';
+  }
 
-        const sinais = document.getElementById('sinaisLista');
-        const alerts = [];
-        const m = d.metricas;
-        if (m.estresse.atual >= 3.5) alerts.push({icon:'⚠️', txt:`Estresse medio alto: ${m.estresse.atual}/5`});
-        if (m.fadiga.atual >= 3.5) alerts.push({icon:'😮‍💨', txt:`Fadiga elevada: ${m.fadiga.atual}/5`});
-        if (m.risco_burnout.atual >= 3) alerts.push({icon:'🔥', txt:`Risco de burnout: ${m.risco_burnout.atual}/5`});
-        if (m.sono.atual <= 2.5) alerts.push({icon:'💤', txt:`Sono ruim: ${m.sono.atual}/5`});
-        if (m.seguranca_psicologica.atual <= 2.5) alerts.push({icon:'🛡️', txt:`Baixa seguranca psicologica: ${m.seguranca_psicologica.atual}/5`});
-        if (d.apoio_aberto > 0) alerts.push({icon:'🆘', txt:`${d.apoio_aberto} pedido(s) de apoio aguardando`});
-        sinais.innerHTML = alerts.length
-          ? alerts.map(a=>`<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.85rem"><span>${a.icon}</span><span>${a.txt}</span></div>`).join('')
-          : '<p style="color:var(--accent);font-size:.85rem">Sem alertas criticos no momento.</p>';
+  // Sinais de atenção
+  const sin = document.getElementById('sinaisLista');
+  const alertas = [];
+  if ((m.estresse.atual||0)>=3.5) alertas.push({icon:'⚠️',txt:`Estresse médio elevado: ${m.estresse.atual.toFixed(1)}/5`,sev:'critico'});
+  if ((m.fadiga.atual||0)>=3.5) alertas.push({icon:'😮‍💨',txt:`Fadiga elevada: ${m.fadiga.atual.toFixed(1)}/5`,sev:'alerta'});
+  if ((m.risco_burnout.atual||0)>=3) alertas.push({icon:'🔥',txt:`Risco de burnout: ${m.risco_burnout.atual.toFixed(1)}/5`,sev:'critico'});
+  if ((m.sono.atual||0)<=2) alertas.push({icon:'💤',txt:`Sono muito comprometido: ${m.sono.atual.toFixed(1)}/5`,sev:'critico'});
+  else if ((m.sono.atual||0)<=2.5) alertas.push({icon:'💤',txt:`Qualidade do sono baixa: ${m.sono.atual.toFixed(1)}/5`,sev:'alerta'});
+  if ((m.seguranca_psicologica.atual||0)<=2.5) alertas.push({icon:'🛡️',txt:`Baixa segurança psicológica: ${m.seguranca_psicologica.atual.toFixed(1)}/5`,sev:'critico'});
+  if ((m.ansiedade.atual||0)>=3.5) alertas.push({icon:'😰',txt:`Ansiedade elevada: ${m.ansiedade.atual.toFixed(1)}/5`,sev:'alerta'});
+  if (d.apoio_aberto>0) alertas.push({icon:'🆘',txt:`${d.apoio_aberto} pedido(s) de apoio aguardando atendimento`,sev:'critico'});
+  if ((m.humor.delta||0)<=-0.5) alertas.push({icon:'📉',txt:`Queda no humor vs. período anterior: ${m.humor.delta}`,sev:'alerta'});
 
-        view.style.display = '';
-      } catch(e) { loading.textContent=''; msg.textContent='Erro de conexao.'; }
-    }
-  </script>
+  const corSev={critico:'var(--danger)',alerta:'var(--gold)'};
+  const bgSev={critico:'rgba(255,122,145,.15)',alerta:'rgba(240,191,107,.15)'};
+  sin.innerHTML = alertas.length
+    ? alertas.map(a=>`<div class="sinal-item"><span class="sinal-icon">${a.icon}</span><span style="flex:1">${a.txt}</span><span class="sinal-badge" style="background:${bgSev[a.sev]};color:${corSev[a.sev]}">${a.sev}</span></div>`).join('')
+    : '<div style="color:var(--accent);font-size:.85rem;padding:8px 0">✅ Nenhum sinal crítico no momento.</div>';
+
+  // Apoios
+  const ap = document.getElementById('apoioLista');
+  ap.innerHTML = d.apoio_aberto===0
+    ? '<div style="color:var(--accent);font-size:.85rem;padding:4px 0">✅ Nenhum pedido aberto.</div>'
+    : `<div class="action-card"><div class="a-dot" style="background:var(--danger)"></div><div class="a-info"><div class="a-label">${d.apoio_aberto} pedido(s) de apoio aberto(s)</div><div class="a-sub">Resposta protegida · sem identificação individual</div></div></div>
+       ${d.acoes_abertas>0?`<div class="action-card"><div class="a-dot" style="background:var(--gold)"></div><div class="a-info"><div class="a-label">${d.acoes_abertas} ação(ões) em andamento</div><div class="a-sub">Plano de ação da unidade</div></div></div>`:''}`;
+}
+
+async function carregarSSTUnidade() {
+  try {
+    const r = await fetch('/api/sst/dashboard'); if (!r.ok) return;
+    const d = await r.json();
+    const asos = d.asos_vencendo_30d||0;
+    const asosV = d.asos_vencidos||0;
+    const abs = d.absenteismo_pct ? parseFloat(d.absenteismo_pct).toFixed(1) : '—';
+    const cats = d.cats_abertas||0;
+    const cor = v => parseFloat(v)>5?'var(--danger)':parseFloat(v)>2?'var(--gold)':'var(--accent)';
+    document.getElementById('sstContent').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:10px 12px">
+          <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">Absenteísmo</div>
+          <div style="font-size:1.3rem;font-weight:800;color:${cor(abs)}">${abs}%</div>
+        </div>
+        <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:10px 12px">
+          <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em">ASOs a vencer</div>
+          <div style="font-size:1.3rem;font-weight:800;color:${asos>0?'var(--gold)':'var(--accent)'}">${asos}</div>
+        </div>
+        ${asosV>0?`<div style="background:rgba(255,122,145,.1);border:1px solid rgba(255,122,145,.2);border-radius:10px;padding:10px 12px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase">ASOs vencidos</div><div style="font-size:1.3rem;font-weight:800;color:var(--danger)">${asosV}</div></div>`:''}
+        ${cats>0?`<div style="background:rgba(255,122,145,.1);border:1px solid rgba(255,122,145,.2);border-radius:10px;padding:10px 12px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase">CATs em aberto</div><div style="font-size:1.3rem;font-weight:800;color:var(--danger)">${cats}</div></div>`:''}
+      </div>`;
+    document.getElementById('sstCard').style.display='';
+  } catch(e){}
+}
+
+popularUnidades();
+</script>
 </body>
 </html>

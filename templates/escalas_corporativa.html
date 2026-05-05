@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Escalas Corporativas · SolusCRT</title>
+  <title>Escalas Operacionais · SolusCRT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -11,287 +11,492 @@
       --soft:rgba(255,255,255,.08);--text:#ebf7ff;--muted:#9ab9ce;
       --accent:#7ee1c3;--accent2:#7db6ff;--gold:#f0bf6b;--danger:#ff7a91;
     }
-    *{box-sizing:border-box}
-    body{margin:0;min-height:100vh;font-family:"Manrope",sans-serif;color:var(--text);
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100%;overflow-x:hidden}
+    body{font-family:"Manrope",sans-serif;color:var(--text);
       background:radial-gradient(circle at top left,rgba(126,225,195,.13),transparent 20rem),
         radial-gradient(circle at bottom right,rgba(125,182,255,.14),transparent 22rem),
         linear-gradient(180deg,#041018,#06111a);}
-    .shell{width:min(1200px,calc(100% - 28px));margin:0 auto;padding:20px 0 40px}
-    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap}
-    h1{margin:0;font-size:1.2rem;font-weight:800}
-    .nav{display:flex;gap:10px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:0 16px;min-height:40px;border-radius:999px;
-      border:1px solid var(--soft);text-decoration:none;color:var(--text);font-weight:700;background:rgba(255,255,255,.06);
-      font-family:inherit;font-size:.88rem;cursor:pointer}
+    .shell{width:min(1280px,calc(100% - 28px));margin:0 auto;padding:20px 0 60px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+    .topbar h1{font-size:1.2rem;font-weight:800}
+    .sub{color:var(--muted);font-size:.82rem;margin-top:2px}
+    .nav{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:0 16px;min-height:38px;
+      border-radius:999px;border:1px solid var(--soft);text-decoration:none;color:var(--text);
+      font-weight:700;background:rgba(255,255,255,.06);font-family:inherit;font-size:.85rem;cursor:pointer;transition:.15s}
+    .btn:hover{background:rgba(255,255,255,.1)}
     .btn.primary{background:linear-gradient(135deg,#0db794,#1f6ff2);border:0}
     .btn.accent{background:linear-gradient(135deg,#f0bf6b,#e08a20);color:#0b0f14;border:0}
     .btn.warn{background:linear-gradient(135deg,#8b2239,#5e1b1b);border:0}
-    .btn.sm{min-height:32px;font-size:.78rem;padding:0 12px}
-    .glass{background:var(--panel);border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(16px)}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    @media(max-width:700px){.grid{grid-template-columns:1fr}}
-    .card{padding:20px 18px}
-    .card h2{margin:0 0 14px;font-size:1rem;font-weight:800}
-    .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+    .btn.sm{min-height:30px;font-size:.78rem;padding:0 12px}
+    .btn.ghost{background:transparent;border:1px solid rgba(126,225,195,.25);color:var(--accent)}
+    /* KPI strip */
+    .kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+    @media(max-width:700px){.kpi-strip{grid-template-columns:1fr 1fr}}
+    .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;backdrop-filter:blur(14px)}
+    .kpi .k-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .kpi .k-val{font-size:1.5rem;font-weight:800;margin:4px 0 1px}
+    .kpi .k-detail{font-size:.72rem;color:var(--muted)}
+    .kpi.emb .k-val{color:var(--accent)}
+    .kpi.folg .k-val{color:var(--accent2)}
+    .kpi.alerta .k-val{color:var(--gold)}
+    /* tabs */
+    .tab-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+    .tab-btn{padding:7px 18px;border-radius:999px;border:1px solid var(--soft);
+      background:transparent;color:var(--muted);font-family:inherit;font-size:.85rem;cursor:pointer;font-weight:600;transition:.15s}
+    .tab-btn.active{background:rgba(126,225,195,.15);color:var(--accent);border-color:rgba(126,225,195,.3)}
+    .tab-btn:hover:not(.active){background:rgba(255,255,255,.05)}
+    /* glass */
+    .glass{background:var(--panel);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(14px)}
+    .card-pad{padding:18px 20px}
+    .card-pad h2{font-size:.95rem;font-weight:800;margin-bottom:14px}
+    /* escala cards */
+    .escalas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+    .escala-card{background:rgba(255,255,255,.04);border:1px solid var(--soft);border-radius:16px;padding:16px 18px}
+    .escala-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+    .escala-card-header strong{font-size:.96rem;font-weight:800;flex:1}
+    .badge{font-size:.72rem;padding:3px 10px;border-radius:8px;font-weight:700}
+    .badge.tipo{background:rgba(126,225,195,.12);color:var(--accent)}
+    .badge.emb{background:rgba(126,225,195,.18);color:var(--accent)}
+    .badge.folg{background:rgba(125,182,255,.18);color:var(--accent2)}
+    /* barras */
+    .ciclo-stats{display:flex;gap:8px;font-size:.78rem;color:var(--muted);margin-bottom:10px;flex-wrap:wrap;align-items:center}
+    .two-bars{display:flex;gap:6px;margin-bottom:10px}
+    .bar-group{flex:1;font-size:.72rem;color:var(--muted);text-align:center}
+    .bar-group .bar{height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:3px}
+    .bar-group .fill-emb{height:100%;border-radius:4px;background:var(--accent)}
+    .bar-group .fill-folg{height:100%;border-radius:4px;background:var(--accent2)}
+    /* trocas */
+    .troca-item{display:flex;align-items:center;gap:8px;font-size:.78rem;padding:4px 0;
+      border-bottom:1px solid rgba(255,255,255,.04);color:var(--muted)}
+    .troca-item:last-child{border-bottom:0}
+    .troca-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    /* ciclo view */
+    .ciclo-col-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+    @media(max-width:640px){.ciclo-col-grid{grid-template-columns:1fr}}
+    .pessoa-row{display:flex;align-items:center;gap:10px;padding:8px 10px;
+      border-radius:10px;background:rgba(255,255,255,.04);margin-bottom:6px;font-size:.85rem}
+    .pessoa-row .alias{font-weight:700;flex:1}
+    .dias-pill{font-size:.7rem;padding:2px 8px;border-radius:8px;font-weight:700;white-space:nowrap}
+    /* form */
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:580px){.form-grid{grid-template-columns:1fr}}
+    .field{display:flex;flex-direction:column;gap:5px}
+    .field.full{grid-column:1/-1}
     .field label{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
     .field input,.field select,.field textarea{
       background:rgba(255,255,255,.06);border:1px solid var(--soft);border-radius:10px;
-      color:var(--text);font-family:inherit;font-size:.9rem;padding:9px 12px}
-    .field textarea{min-height:60px;resize:vertical}
-    .row{display:flex;gap:10px}
-    .row .field{flex:1}
+      color:var(--text);font-family:inherit;font-size:.9rem;padding:9px 12px;outline:none}
+    .field textarea{resize:vertical;min-height:70px}
+    .field select option{background:#0d2030}
     .msg{font-size:.82rem;margin-top:8px;min-height:16px}
-    .escala-card{
-      background:rgba(255,255,255,.04);border:1px solid var(--soft);border-radius:14px;
-      padding:14px 16px;margin-bottom:10px;display:flex;flex-direction:column;gap:6px}
-    .escala-header{display:flex;justify-content:space-between;align-items:center}
-    .badge{font-size:.72rem;padding:3px 10px;border-radius:8px;font-weight:700;background:rgba(126,225,195,.15);color:var(--accent)}
-    .badge.folga{background:rgba(125,182,255,.15);color:var(--accent2)}
-    .badge.warn{background:rgba(255,122,145,.15);color:var(--danger)}
-    .ciclo-wrap{margin-top:12px}
-    .fase-section{margin-bottom:14px}
-    .fase-section h3{font-size:.85rem;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
-    .alias-row{display:flex;gap:8px;align-items:center;font-size:.85rem;
-      padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.04);margin-bottom:4px}
-    .alias-row small{color:var(--muted);font-size:.75rem}
-    .tab-nav{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-    .tab-btn{padding:6px 16px;border-radius:999px;border:1px solid var(--soft);
-      background:transparent;color:var(--muted);font-family:inherit;font-size:.85rem;cursor:pointer;font-weight:600}
-    .tab-btn.active{background:rgba(126,225,195,.15);color:var(--accent);border-color:rgba(126,225,195,.3)}
-    .summary-strip{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
-    .summary-pill{background:rgba(255,255,255,.06);border:1px solid var(--soft);border-radius:12px;
-      padding:10px 16px;font-size:.85rem;display:flex;flex-direction:column;gap:2px;min-width:120px}
-    .summary-pill strong{font-size:1.2rem;font-weight:800}
-    .summary-pill span{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
-    #cicloView{display:none}
+    /* próximas trocas */
+    .trocas-list{display:flex;flex-direction:column;gap:6px}
+    .troca-card{background:rgba(255,255,255,.04);border:1px solid var(--soft);border-radius:12px;
+      padding:10px 14px;display:flex;align-items:center;gap:12px}
+    .troca-card .info{flex:1;min-width:0}
+    .troca-card .nome{font-size:.85rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .troca-card .meta{font-size:.75rem;color:var(--muted)}
+    /* atribuição inline */
+    .atr-form{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;
+      background:rgba(255,255,255,.03);border:1px solid var(--soft);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+    @media(max-width:600px){.atr-form{grid-template-columns:1fr}}
+    /* empty */
+    .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:.88rem}
+    /* modal */
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;
+      align-items:center;justify-content:center;z-index:999;padding:20px;overflow-y:auto}
+    .modal-bg.open{display:flex}
+    .modal{background:#0a1c2b;border:1px solid var(--line);border-radius:22px;
+      padding:28px 24px;width:100%;max-width:480px;position:relative}
+    .modal h3{font-size:1rem;font-weight:800;margin-bottom:18px}
+    .modal-close{position:absolute;top:14px;right:16px;background:none;border:none;
+      color:var(--muted);cursor:pointer;font-size:1.2rem;line-height:1}
+    /* breadcrumb */
+    .escala-nav{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--muted);margin-bottom:14px}
+    .escala-nav a{color:var(--accent);text-decoration:none;cursor:pointer}
+    /* filtro trocas */
+    .filter-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+    .filter-label{font-size:.78rem;color:var(--muted)}
   </style>
 </head>
 <body>
-  <div class="shell">
-    <div class="topbar">
-      <div>
-        <h1>Escalas Corporativas</h1>
-        <div style="color:var(--muted);font-size:.83rem;margin-top:2px">{{ empresa_nome }} · gestao de ciclos 14x14, 28x28 e personalizados</div>
-      </div>
-      <div class="nav">
-        <a class="btn" href="/dashboard-empresa/">← Dashboard</a>
-        <a class="btn" href="/gestao/">Centro de Gestao</a>
-        <a class="btn warn" href="/logout/">Sair</a>
-      </div>
-    </div>
+<div class="shell">
 
-    <div class="summary-strip" id="resumoStrip">
-      <div class="summary-pill"><strong id="resEscalas">—</strong><span>Escalas ativas</span></div>
-      <div class="summary-pill"><strong id="resEmbarcados">—</strong><span>Embarcados hoje</span></div>
-      <div class="summary-pill"><strong id="resFolga">—</strong><span>Em folga hoje</span></div>
+  <div class="topbar">
+    <div>
+      <h1>Escalas Operacionais</h1>
+      <div class="sub">{{ empresa_nome }} · ciclos 14×14, 28×28, 7×7 e personalizados</div>
     </div>
-
-    <div class="tab-nav">
-      <button class="tab-btn active" onclick="mostrarTab('escalas',this)">Escalas</button>
-      <button class="tab-btn" onclick="mostrarTab('nova',this)">Nova escala</button>
-      <button class="tab-btn" id="btnCicloTab" onclick="mostrarTab('ciclo',this)" style="display:none">Ciclo atual</button>
-    </div>
-
-    <!-- TAB: Lista de escalas -->
-    <div id="tabEscalas">
-      <div id="listaEscalas" style="margin-bottom:16px"></div>
-      <div id="msgEscalas" class="msg"></div>
-    </div>
-
-    <!-- TAB: Nova escala -->
-    <div id="tabNova" style="display:none">
-      <div class="glass card" style="max-width:520px">
-        <h2>Criar escala</h2>
-        <div class="field">
-          <label>Nome da escala</label>
-          <input id="novaName" placeholder="Ex: Turno Offshore Norte">
-        </div>
-        <div class="row">
-          <div class="field">
-            <label>Tipo</label>
-            <select id="novaTipo">
-              <option value="14x14">14x14</option>
-              <option value="28x28">28x28</option>
-              <option value="7x7">7x7</option>
-              <option value="personalizado">Personalizado</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Dias embarcado</label>
-            <input id="novaDiasE" type="number" min="1" value="14">
-          </div>
-          <div class="field">
-            <label>Dias folga</label>
-            <input id="novaDiasF" type="number" min="1" value="14">
-          </div>
-        </div>
-        <div class="field">
-          <label>Descricao</label>
-          <textarea id="novaDesc" placeholder="Contexto operacional, unidade, turno…"></textarea>
-        </div>
-        <button class="btn primary" onclick="criarEscala()">Criar escala</button>
-        <div class="msg" id="msgNova"></div>
-      </div>
-    </div>
-
-    <!-- TAB: Ciclo atual de uma escala -->
-    <div id="tabCiclo" style="display:none">
-      <div id="cicloInfo"></div>
-      <div class="glass card" style="max-width:460px;margin-bottom:16px">
-        <h2>Atribuir colaborador</h2>
-        <div class="field">
-          <label>Alias anonimo do colaborador</label>
-          <input id="atrAlias" placeholder="alias do colaborador">
-        </div>
-        <div class="field">
-          <label>Inicio do ciclo atual</label>
-          <input id="atrInicio" type="date">
-        </div>
-        <button class="btn accent" onclick="atribuirColaborador()">Atribuir</button>
-        <div class="msg" id="msgAtr"></div>
-      </div>
-      <div id="cicloWrap"></div>
+    <div class="nav">
+      <a class="btn" href="/dashboard-empresa/">← Dashboard</a>
+      <a class="btn" href="/sst/">Saúde Ocup.</a>
+      <a class="btn" href="/painel-lider/">Painel Líder</a>
+      <a class="btn warn" href="/logout/">Sair</a>
     </div>
   </div>
 
-  <script>
-    let escalaSelecionadaId = null;
+  <!-- KPI -->
+  <div class="kpi-strip">
+    <div class="kpi"><div class="k-label">Escalas ativas</div><div class="k-val" id="kpiEscalas">—</div><div class="k-detail" id="kpiEscalasD">—</div></div>
+    <div class="kpi emb"><div class="k-label">Embarcados hoje</div><div class="k-val" id="kpiEmb">—</div><div class="k-detail" id="kpiEmbD">em operação</div></div>
+    <div class="kpi folg"><div class="k-label">Em folga hoje</div><div class="k-val" id="kpiFolg">—</div><div class="k-detail" id="kpiFolgD">descanso</div></div>
+    <div class="kpi alerta"><div class="k-label">Trocas em 7 dias</div><div class="k-val" id="kpiTrocas">—</div><div class="k-detail" id="kpiTrocasD">mudanças de fase</div></div>
+  </div>
 
-    function mostrarTab(tab, btn) {
-      ['tabEscalas','tabNova','tabCiclo'].forEach(id => {
-        document.getElementById(id).style.display = 'none';
-      });
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = '';
-      btn.classList.add('active');
+  <!-- TABS -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="mostrarTab('visao',this)">Visão Geral</button>
+    <button class="tab-btn" id="btnTabCiclo" onclick="mostrarTab('ciclo',this)" style="display:none">Ciclo Detalhado</button>
+    <button class="tab-btn" onclick="mostrarTab('trocas',this)">Próximas Trocas</button>
+    <button class="tab-btn" onclick="mostrarTab('nova',this)">+ Nova Escala</button>
+  </div>
+
+  <!-- VISÃO GERAL -->
+  <div id="tabVisao">
+    <div id="escalasGrid" class="escalas-grid"></div>
+    <div id="escalasVazio" class="empty" style="display:none">
+      <div style="font-size:2rem;margin-bottom:8px">🔄</div>
+      <div>Nenhuma escala cadastrada.</div>
+      <div style="margin-top:10px"><button class="btn primary" onclick="mostrarTab('nova', document.querySelectorAll('.tab-btn')[3])">Criar primeira escala</button></div>
+    </div>
+  </div>
+
+  <!-- CICLO DETALHADO -->
+  <div id="tabCiclo" style="display:none">
+    <div class="escala-nav">
+      <a onclick="mostrarTab('visao', document.querySelector('.tab-btn'))">← Todas as escalas</a>
+      <span>/</span><span id="cicloEscalaNome">—</span>
+    </div>
+    <div class="glass card-pad" style="margin-bottom:14px">
+      <h2>Atribuir Colaborador</h2>
+      <div class="atr-form">
+        <div class="field"><label>Alias anônimo</label><input id="atrAlias" placeholder="código do colaborador"></div>
+        <div class="field"><label>Início do ciclo</label><input id="atrInicio" type="date"></div>
+        <button class="btn primary" style="min-height:40px" onclick="atribuirColaborador()">Atribuir</button>
+      </div>
+      <div class="msg" id="msgAtr"></div>
+    </div>
+    <div class="ciclo-col-grid">
+      <div class="glass card-pad"><h2 id="cicloTitleEmb">Embarcados</h2><div id="cicloEmbarcados"></div></div>
+      <div class="glass card-pad"><h2 id="cicloTitleFolga">Em Folga</h2><div id="cicloFolga"></div></div>
+    </div>
+    <div class="msg" id="msgCiclo"></div>
+  </div>
+
+  <!-- PRÓXIMAS TROCAS -->
+  <div id="tabTrocas" style="display:none">
+    <div class="filter-row">
+      <span class="filter-label">Trocas nos próximos:</span>
+      <button class="btn sm" id="f7" onclick="filtrarTrocas(7,this)">7 dias</button>
+      <button class="btn sm" id="f14" onclick="filtrarTrocas(14,this)">14 dias</button>
+      <button class="btn sm" id="f30" onclick="filtrarTrocas(30,this)">30 dias</button>
+    </div>
+    <div class="glass card-pad">
+      <h2>Mudanças de fase previstas</h2>
+      <div class="trocas-list" id="trocasList"></div>
+    </div>
+  </div>
+
+  <!-- NOVA ESCALA -->
+  <div id="tabNova" style="display:none">
+    <div class="glass card-pad" style="max-width:560px">
+      <h2>Criar nova escala</h2>
+      <div class="form-grid">
+        <div class="field full"><label>Nome da escala *</label><input id="novaName" placeholder="Ex: Turno Offshore Norte – Plataforma A"></div>
+        <div class="field"><label>Tipo</label><select id="novaTipo" onchange="autoFill()">
+          <option value="14x14">14×14</option><option value="28x28">28×28</option>
+          <option value="7x7">7×7</option><option value="personalizado">Personalizado</option>
+        </select></div>
+        <div class="field"><label>Unidade (opcional)</label><select id="novaUnidade"><option value="">— nenhuma —</option></select></div>
+        <div class="field"><label>Dias embarcado</label><input id="novaDiasE" type="number" min="1" value="14"></div>
+        <div class="field"><label>Dias de folga</label><input id="novaDiasF" type="number" min="1" value="14"></div>
+        <div class="field full"><label>Descrição</label><textarea id="novaDesc" placeholder="Contexto operacional, turno, localização…"></textarea></div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn primary" onclick="criarEscala()">Criar escala</button>
+        <button class="btn ghost" onclick="mostrarTab('visao', document.querySelector('.tab-btn'))">Cancelar</button>
+      </div>
+      <div class="msg" id="msgNova"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL remover -->
+<div class="modal-bg" id="modalRemover">
+  <div class="modal">
+    <button class="modal-close" onclick="fecharModal()">✕</button>
+    <h3>Remover escala?</h3>
+    <p style="color:var(--muted);font-size:.88rem;margin-bottom:18px">A escala será desativada. Dados históricos preservados.</p>
+    <div style="display:flex;gap:10px">
+      <button class="btn warn" onclick="confirmarRemover()">Confirmar</button>
+      <button class="btn ghost" onclick="fecharModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let todasEscalas = [];
+let dadosCiclos = {};
+let escalaSelecionadaId = null;
+let escalaParaRemover = null;
+let diasFiltro = 7;
+
+const hoje = () => {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+};
+function addDias(base, n) {
+  const d = new Date(base); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10);
+}
+function calcFase(inicioCicloISO, diasEmb, diasFolg) {
+  const inicio = new Date(inicioCicloISO);
+  const ciclo = diasEmb + diasFolg;
+  const dias = Math.floor((hoje() - inicio) / 86400000);
+  if (dias < 0) return { fase:'desconhecida', diasRestantes:0, proximaFase:'—', proximaTroca:inicioCicloISO };
+  const pos = dias % ciclo;
+  if (pos < diasEmb) {
+    const r = diasEmb - pos;
+    return { fase:'embarcado', diasRestantes:r, proximaFase:'folga', proximaTroca:addDias(hoje(),r) };
+  }
+  const r = ciclo - pos;
+  return { fase:'folga', diasRestantes:r, proximaFase:'embarcado', proximaTroca:addDias(hoje(),r) };
+}
+
+function mostrarTab(tab, btn) {
+  ['tabVisao','tabCiclo','tabTrocas','tabNova'].forEach(id => document.getElementById(id).style.display='none');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).style.display='';
+  if (btn) btn.classList.add('active');
+  if (tab==='trocas') renderTrocas(diasFiltro);
+}
+function fecharModal() { document.getElementById('modalRemover').classList.remove('open'); }
+
+async function carregarResumo() {
+  try {
+    const r = await fetch('/api/escalas/resumo'); if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('kpiEscalas').textContent = d.total_escalas;
+    document.getElementById('kpiEmb').textContent = d.total_embarcados;
+    document.getElementById('kpiFolg').textContent = d.total_folga;
+    const tot = d.total_embarcados + d.total_folga;
+    if (tot>0) {
+      document.getElementById('kpiEmbD').textContent = Math.round(d.total_embarcados/tot*100)+'% do efetivo';
+      document.getElementById('kpiFolgD').textContent = Math.round(d.total_folga/tot*100)+'% do efetivo';
     }
+  } catch(e){}
+}
 
-    async function carregarResumo() {
-      const r = await fetch('/api/escalas/resumo');
-      if (!r.ok) return;
-      const d = await r.json();
-      document.getElementById('resEscalas').textContent = d.total_escalas;
-      document.getElementById('resEmbarcados').textContent = d.total_embarcados;
-      document.getElementById('resFolga').textContent = d.total_folga;
-    }
+async function carregarEscalas() {
+  try {
+    const r = await fetch('/api/escalas'); if (!r.ok) { document.getElementById('escalasVazio').style.display=''; return; }
+    const d = await r.json();
+    todasEscalas = d.escalas || [];
+    if (!todasEscalas.length) { document.getElementById('escalasVazio').style.display=''; document.getElementById('escalasGrid').style.display='none'; return; }
+    renderEscalas();
+    carregarTodosCiclos();
+  } catch(e) { document.getElementById('escalasVazio').style.display=''; }
+}
 
-    async function carregarEscalas() {
-      const lista = document.getElementById('listaEscalas');
-      const msg = document.getElementById('msgEscalas');
-      const r = await fetch('/api/escalas');
-      if (!r.ok) { msg.textContent = 'Erro ao carregar escalas.'; return; }
-      const d = await r.json();
-      if (!d.escalas.length) {
-        lista.innerHTML = '<p style="color:var(--muted)">Nenhuma escala cadastrada ainda.</p>';
-        return;
+async function carregarTodosCiclos() {
+  let trocas = 0;
+  for (const esc of todasEscalas) {
+    try {
+      const r = await fetch(`/api/escalas/${esc.id}/ciclo`); if (!r.ok) continue;
+      const d = await r.json(); dadosCiclos[esc.id] = d;
+      for (const a of [...(d.embarcados||[]), ...(d.em_folga||[])]) {
+        const f = calcFase(a.inicio_ciclo, esc.dias_embarcado, esc.dias_folga);
+        if (f.diasRestantes <= 7) trocas++;
       }
-      lista.innerHTML = d.escalas.map(e => `
-        <div class="escala-card">
-          <div class="escala-header">
-            <strong>${e.nome}</strong>
-            <span class="badge">${e.tipo}</span>
-          </div>
-          <div style="font-size:.82rem;color:var(--muted)">${e.dias_embarcado}d embarcado · ${e.dias_folga}d folga · ${e.total_colaboradores} colaboradores</div>
-          ${e.unidade_nome ? `<div style="font-size:.78rem;color:var(--muted)">Unidade: ${e.unidade_nome}</div>` : ''}
-          ${e.descricao ? `<div style="font-size:.82rem">${e.descricao}</div>` : ''}
-          <div style="display:flex;gap:8px;margin-top:6px">
-            <button class="btn sm accent" onclick="verCiclo(${e.id},'${e.nome.replace(/'/g,"\\'")}')">Ver ciclo</button>
-            <button class="btn sm warn" onclick="removerEscala(${e.id})">Remover</button>
-          </div>
-        </div>`).join('');
-    }
+    } catch(e){}
+  }
+  document.getElementById('kpiTrocas').textContent = trocas;
+  document.getElementById('kpiTrocasD').textContent = trocas===1?'1 troca prevista':`${trocas} trocas previstas`;
+  renderEscalas();
+}
 
-    async function criarEscala() {
-      const nome = document.getElementById('novaName').value.trim();
-      const tipo = document.getElementById('novaTipo').value;
-      const diasE = parseInt(document.getElementById('novaDiasE').value) || 14;
-      const diasF = parseInt(document.getElementById('novaDiasF').value) || 14;
-      const descricao = document.getElementById('novaDesc').value.trim();
-      const msg = document.getElementById('msgNova');
-      if (!nome) { msg.style.color='var(--danger)'; msg.textContent='Informe o nome.'; return; }
-      msg.style.color='var(--muted)'; msg.textContent='Criando…';
-      const r = await fetch('/api/escalas', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({nome,tipo,dias_embarcado:diasE,dias_folga:diasF,descricao})
-      });
-      const d = await r.json();
-      if (r.ok) {
-        msg.style.color='var(--accent)'; msg.textContent='Escala criada.';
-        carregarEscalas(); carregarResumo();
-        setTimeout(()=>{ mostrarTab('escalas', document.querySelector('.tab-btn')); },800);
-      } else {
-        msg.style.color='var(--danger)'; msg.textContent=d.erro||'Erro ao criar.';
+function renderEscalas() {
+  const grid = document.getElementById('escalasGrid');
+  if (!todasEscalas.length) return;
+  grid.innerHTML = todasEscalas.map(esc => {
+    const c = dadosCiclos[esc.id];
+    const emb = c ? c.embarcados.length : '…';
+    const folg = c ? c.em_folga.length : '…';
+    const tot = typeof emb==='number' ? emb+folg : null;
+    const embPct = tot ? Math.round(emb/tot*100) : 0;
+    const folgPct = tot ? 100-embPct : 0;
+
+    let trocasHtml = '';
+    if (c) {
+      const list = [];
+      for (const a of [...c.embarcados, ...c.em_folga]) {
+        const f = calcFase(a.inicio_ciclo, esc.dias_embarcado, esc.dias_folga);
+        if (f.diasRestantes <= 14) list.push({alias:a.alias, ...f});
       }
-    }
-
-    async function removerEscala(id) {
-      if (!confirm('Remover esta escala?')) return;
-      await fetch(`/api/escalas/${id}`, {method:'DELETE'});
-      carregarEscalas(); carregarResumo();
-    }
-
-    async function verCiclo(id, nome) {
-      escalaSelecionadaId = id;
-      document.getElementById('btnCicloTab').style.display = '';
-      document.getElementById('btnCicloTab').textContent = `Ciclo: ${nome}`;
-      mostrarTab('ciclo', document.getElementById('btnCicloTab'));
-      document.getElementById('atrInicio').value = new Date().toISOString().slice(0,10);
-      await carregarCiclo();
-    }
-
-    async function carregarCiclo() {
-      if (!escalaSelecionadaId) return;
-      const r = await fetch(`/api/escalas/${escalaSelecionadaId}/ciclo`);
-      if (!r.ok) return;
-      const d = await r.json();
-      document.getElementById('cicloInfo').innerHTML = `
-        <div class="summary-strip" style="margin-bottom:12px">
-          <div class="summary-pill"><strong>${d.total_embarcados}</strong><span>Embarcados</span></div>
-          <div class="summary-pill"><strong>${d.total_folga}</strong><span>Em folga</span></div>
-          <div class="summary-pill"><strong style="font-size:.9rem">${d.hoje}</strong><span>Hoje</span></div>
+      list.sort((a,b)=>a.diasRestantes-b.diasRestantes);
+      if (list.length) {
+        trocasHtml = `<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.06);padding-top:8px">
+          <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Trocas próximas</div>
+          ${list.slice(0,3).map(t=>`<div class="troca-item">
+            <div class="troca-dot" style="background:${t.fase==='embarcado'?'var(--accent)':'var(--accent2)'}"></div>
+            <span style="flex:1">${t.alias}</span>
+            <span style="color:var(--muted)">→ ${t.proximaFase}</span>
+            <span style="color:${t.diasRestantes<=3?'var(--danger)':t.diasRestantes<=7?'var(--gold)':'var(--muted)'}">${t.diasRestantes}d</span>
+          </div>`).join('')}
         </div>`;
-      const wrap = document.getElementById('cicloWrap');
-      wrap.innerHTML = '';
-      if (d.embarcados.length) {
-        wrap.innerHTML += `<div class="fase-section glass card" style="margin-bottom:12px">
-          <h3>Embarcados (${d.embarcados.length})</h3>
-          ${d.embarcados.map(a=>`<div class="alias-row"><span class="badge">${a.fase}</span><span>${a.alias}</span><small>${a.unidade||''} ${a.setor?'· '+a.setor:''}</small></div>`).join('')}
-        </div>`;
-      }
-      if (d.em_folga.length) {
-        wrap.innerHTML += `<div class="fase-section glass card">
-          <h3>Em folga (${d.em_folga.length})</h3>
-          ${d.em_folga.map(a=>`<div class="alias-row"><span class="badge folga">${a.fase}</span><span>${a.alias}</span><small>${a.unidade||''} ${a.setor?'· '+a.setor:''}</small></div>`).join('')}
-        </div>`;
-      }
-      if (!d.embarcados.length && !d.em_folga.length) {
-        wrap.innerHTML = '<p style="color:var(--muted)">Nenhum colaborador atribuido ainda.</p>';
       }
     }
 
-    async function atribuirColaborador() {
-      if (!escalaSelecionadaId) return;
-      const alias_code = document.getElementById('atrAlias').value.trim();
-      const inicio_ciclo = document.getElementById('atrInicio').value;
-      const msg = document.getElementById('msgAtr');
-      if (!alias_code) { msg.style.color='var(--danger)'; msg.textContent='Informe o alias.'; return; }
-      msg.style.color='var(--muted)'; msg.textContent='Atribuindo…';
-      const r = await fetch(`/api/escalas/${escalaSelecionadaId}/atribuicoes`, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({alias_code, inicio_ciclo})
-      });
-      const d = await r.json();
-      if (r.ok) {
-        msg.style.color='var(--accent)'; msg.textContent='Colaborador atribuido.';
-        document.getElementById('atrAlias').value='';
-        carregarCiclo(); carregarResumo();
-      } else {
-        msg.style.color='var(--danger)'; msg.textContent=d.erro||'Erro.';
-      }
-    }
+    return `<div class="escala-card">
+      <div class="escala-card-header"><strong>${esc.nome}</strong><span class="badge tipo">${esc.tipo}</span></div>
+      <div class="ciclo-stats"><span>${esc.dias_embarcado}d emb. · ${esc.dias_folga}d folga</span>${esc.unidade_nome?`<span>· ${esc.unidade_nome}</span>`:''}</div>
+      <div class="two-bars">
+        <div class="bar-group"><div class="bar"><div class="fill-emb" style="width:${embPct}%"></div></div><span><span style="color:var(--accent);font-weight:700">${emb}</span> emb. (${embPct}%)</span></div>
+        <div class="bar-group"><div class="bar"><div class="fill-folg" style="width:${folgPct}%"></div></div><span><span style="color:var(--accent2);font-weight:700">${folg}</span> folga (${folgPct}%)</span></div>
+      </div>
+      ${esc.descricao?`<div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">${esc.descricao}</div>`:''}
+      ${trocasHtml}
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn sm primary" onclick="verCiclo(${esc.id},'${esc.nome.replace(/'/g,"\\'")}')">Ver ciclo</button>
+        <button class="btn sm warn" onclick="pedirRemover(${esc.id})">Remover</button>
+      </div>
+    </div>`;
+  }).join('');
+}
 
-    carregarResumo();
-    carregarEscalas();
-  </script>
+async function verCiclo(id, nome) {
+  escalaSelecionadaId = id;
+  document.getElementById('cicloEscalaNome').textContent = nome;
+  document.getElementById('atrInicio').value = hoje().toISOString().slice(0,10);
+  const btn = document.getElementById('btnTabCiclo');
+  btn.style.display=''; btn.textContent=`Ciclo: ${nome.length>20?nome.slice(0,20)+'…':nome}`;
+  mostrarTab('ciclo', btn);
+  await carregarCicloDados(id);
+}
+
+async function carregarCicloDados(id) {
+  const esc = todasEscalas.find(e=>e.id===id);
+  const msg = document.getElementById('msgCiclo');
+  msg.textContent='Carregando…';
+  try {
+    const r = await fetch(`/api/escalas/${id}/ciclo`); if (!r.ok) { msg.textContent='Erro.'; return; }
+    const d = await r.json(); dadosCiclos[id]=d; msg.textContent='';
+    const diasE = esc?esc.dias_embarcado:14, diasF = esc?esc.dias_folga:14;
+
+    const renderP = (a, fase) => {
+      const f = calcFase(a.inicio_ciclo, diasE, diasF);
+      const cor = f.diasRestantes<=1?'var(--danger)':f.diasRestantes<=3?'var(--gold)':'var(--muted)';
+      return `<div class="pessoa-row">
+        <span class="alias">${a.alias}</span>
+        ${a.setor?`<small style="color:var(--muted);font-size:.72rem">${a.setor}</small>`:''}
+        <span class="dias-pill" style="background:rgba(255,255,255,.06);color:${cor}">${f.diasRestantes}d → ${f.proximaFase}</span>
+      </div>`;
+    };
+
+    document.getElementById('cicloTitleEmb').textContent = `Embarcados (${d.embarcados.length})`;
+    document.getElementById('cicloTitleFolga').textContent = `Em Folga (${d.em_folga.length})`;
+    document.getElementById('cicloEmbarcados').innerHTML = d.embarcados.length
+      ? d.embarcados.map(a=>renderP(a,'embarcado')).join('')
+      : '<p style="color:var(--muted);font-size:.85rem">Nenhum embarcado.</p>';
+    document.getElementById('cicloFolga').innerHTML = d.em_folga.length
+      ? d.em_folga.map(a=>renderP(a,'folga')).join('')
+      : '<p style="color:var(--muted);font-size:.85rem">Nenhum em folga.</p>';
+  } catch(e) { msg.textContent='Erro de conexão.'; }
+}
+
+function filtrarTrocas(dias, btn) {
+  diasFiltro = dias;
+  document.querySelectorAll('#f7,#f14,#f30').forEach(b=>{b.style.background='';b.style.color='';});
+  if (btn) { btn.style.background='rgba(126,225,195,.15)'; btn.style.color='var(--accent)'; }
+  renderTrocas(dias);
+}
+
+function renderTrocas(dias) {
+  const lista = document.getElementById('trocasList');
+  const trocas = [];
+  for (const esc of todasEscalas) {
+    const c = dadosCiclos[esc.id]; if (!c) continue;
+    for (const a of [...c.embarcados, ...c.em_folga]) {
+      const f = calcFase(a.inicio_ciclo, esc.dias_embarcado, esc.dias_folga);
+      if (f.diasRestantes <= dias) trocas.push({alias:a.alias, escala:esc.nome, setor:a.setor, unidade:a.unidade, ...f});
+    }
+  }
+  trocas.sort((a,b)=>a.diasRestantes-b.diasRestantes);
+  if (!trocas.length) { lista.innerHTML=`<div class="empty">Nenhuma troca nos próximos ${dias} dias. ✅</div>`; return; }
+  lista.innerHTML = trocas.map(t => {
+    const cor = t.diasRestantes<=1?'var(--danger)':t.diasRestantes<=3?'var(--gold)':'var(--muted)';
+    const badge = t.fase==='embarcado'
+      ? `<span class="badge emb">emb → folga</span>`
+      : `<span class="badge folg">folga → emb</span>`;
+    return `<div class="troca-card">
+      <div class="troca-dot" style="background:${t.fase==='embarcado'?'var(--accent)':'var(--accent2)'}"></div>
+      <div class="info"><div class="nome">${t.alias}</div><div class="meta">${t.escala}${t.unidade?' · '+t.unidade:''}${t.setor?' · '+t.setor:''}</div></div>
+      ${badge}
+      <div style="text-align:right">
+        <div style="font-size:.9rem;font-weight:800;color:${cor}">${t.diasRestantes===0?'Hoje':t.diasRestantes===1?'Amanhã':'em '+t.diasRestantes+'d'}</div>
+        <div style="font-size:.72rem;color:var(--muted)">${t.proximaTroca}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function autoFill() {
+  const p={'14x14':[14,14],'28x28':[28,28],'7x7':[7,7],'personalizado':[14,14]};
+  const [e,f]=p[document.getElementById('novaTipo').value]||[14,14];
+  document.getElementById('novaDiasE').value=e; document.getElementById('novaDiasF').value=f;
+}
+
+async function criarEscala() {
+  const nome = document.getElementById('novaName').value.trim();
+  const tipo = document.getElementById('novaTipo').value;
+  const diasE = parseInt(document.getElementById('novaDiasE').value)||14;
+  const diasF = parseInt(document.getElementById('novaDiasF').value)||14;
+  const descricao = document.getElementById('novaDesc').value.trim();
+  const unidade_id = document.getElementById('novaUnidade').value||null;
+  const msg = document.getElementById('msgNova');
+  if (!nome) { msg.style.color='var(--danger)'; msg.textContent='Informe o nome da escala.'; return; }
+  msg.style.color='var(--muted)'; msg.textContent='Criando…';
+  try {
+    const r = await fetch('/api/escalas',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({nome,tipo,dias_embarcado:diasE,dias_folga:diasF,descricao,unidade_id})});
+    const d = await r.json();
+    if (r.ok) {
+      msg.style.color='var(--accent)'; msg.textContent='Criada!';
+      document.getElementById('novaName').value=''; document.getElementById('novaDesc').value='';
+      await carregarEscalas(); await carregarResumo();
+      setTimeout(()=>mostrarTab('visao', document.querySelector('.tab-btn')),700);
+    } else { msg.style.color='var(--danger)'; msg.textContent=d.erro||'Erro.'; }
+  } catch(e) { msg.style.color='var(--danger)'; msg.textContent='Erro de conexão.'; }
+}
+
+function pedirRemover(id) { escalaParaRemover=id; document.getElementById('modalRemover').classList.add('open'); }
+async function confirmarRemover() {
+  if (!escalaParaRemover) return;
+  await fetch(`/api/escalas/${escalaParaRemover}`,{method:'DELETE'});
+  fecharModal(); escalaParaRemover=null;
+  await carregarEscalas(); await carregarResumo();
+}
+
+async function atribuirColaborador() {
+  if (!escalaSelecionadaId) return;
+  const alias_code = document.getElementById('atrAlias').value.trim();
+  const inicio_ciclo = document.getElementById('atrInicio').value;
+  const msg = document.getElementById('msgAtr');
+  if (!alias_code) { msg.style.color='var(--danger)'; msg.textContent='Informe o alias.'; return; }
+  msg.style.color='var(--muted)'; msg.textContent='Atribuindo…';
+  try {
+    const r = await fetch(`/api/escalas/${escalaSelecionadaId}/atribuicoes`,
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({alias_code,inicio_ciclo})});
+    const d = await r.json();
+    if (r.ok) { msg.style.color='var(--accent)'; msg.textContent='Atribuído!'; document.getElementById('atrAlias').value=''; await carregarCicloDados(escalaSelecionadaId); await carregarResumo(); }
+    else { msg.style.color='var(--danger)'; msg.textContent=d.erro||'Erro.'; }
+  } catch(e) { msg.style.color='var(--danger)'; msg.textContent='Erro de conexão.'; }
+}
+
+carregarResumo();
+carregarEscalas();
+</script>
 </body>
 </html>

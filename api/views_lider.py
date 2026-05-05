@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 
 from django.db.models import Avg, Count, Q
@@ -30,10 +31,12 @@ def painel_lider(request):
     empresa = _empresa_lider(request)
     if not empresa:
         return redirect("/")
-    unidades = EmpresaUnidade.objects.filter(empresa=empresa, ativo=True).values("id", "nome")
+    unidades = list(EmpresaUnidade.objects.filter(empresa=empresa, ativo=True).values("id", "nome"))
     return render(request, "painel_lider.html", {
         "empresa_nome": empresa.nome,
-        "unidades": list(unidades),
+        "unidades": unidades,
+        "unidades_json": json.dumps(unidades),
+        "min_group": MIN_GROUP_SIZE,
     })
 
 
