@@ -6,6 +6,7 @@ import json
 from datetime import date, timedelta
 
 from django.http import JsonResponse
+from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
@@ -435,5 +436,127 @@ def api_afastamentos_sst(request):
                 for a in qs[:50]
             ]
         })
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+# ── Páginas SST ───────────────────────────────────────────────────────────────
+
+def _sst_redirect(request):
+    return redirect("/login-empresa/")
+
+
+def sst_funcionarios_page(request):
+    if not _empresa_autenticada(request):
+        return _sst_redirect(request)
+    return render(request, "sst_funcionarios.html")
+
+
+def sst_asos_page(request):
+    if not _empresa_autenticada(request):
+        return _sst_redirect(request)
+    return render(request, "sst_asos.html")
+
+
+def sst_exames_page(request):
+    if not _empresa_autenticada(request):
+        return _sst_redirect(request)
+    return render(request, "sst_exames.html")
+
+
+def sst_afastamentos_page(request):
+    if not _empresa_autenticada(request):
+        return _sst_redirect(request)
+    return render(request, "sst_afastamentos.html")
+
+
+def sst_cats_page(request):
+    if not _empresa_autenticada(request):
+        return _sst_redirect(request)
+    return render(request, "sst_cats.html")
+
+
+def sst_documentos_page(request):
+    if not _empresa_autenticada(request):
+        return _sst_redirect(request)
+    return render(request, "sst_documentos.html")
+
+
+def sst_esocial_page(request):
+    if not _empresa_autenticada(request):
+        return _sst_redirect(request)
+    return render(request, "sst_esocial.html")
+
+
+# ── Exames (API) ──────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_exames(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    if request.method == "GET":
+        status_filtro = request.GET.get("status", "")
+        qs = ExameOcupacional.objects.filter(empresa=empresa).select_related("funcionario")
+        if status_filtro:
+            qs = qs.filter(status=status_filtro)
+        return JsonResponse({
+            "exames": [
+                {
+                    "id": e.id,
+                    "funcionario": e.funcionario.nome,
+                    "cargo": e.funcionario.cargo,
+                    "tipo_exame": e.get_tipo_exame_display(),
+                    "data_realizacao": e.data_realizacao.strftime("%d/%m/%Y") if e.data_realizacao else None,
+                    "data_validade": e.data_validade.strftime("%d/%m/%Y") if e.data_validade else None,
+                    "status": e.status,
+                    "resultado": e.resultado,
+                }
+                for e in qs[:100]
+            ]
+        })
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+# ── eSocial (API) ─────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_esocial_eventos(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    if request.method == "GET":
+        qs = eSocialEventoSST.objects.filter(empresa=empresa).order_by("-criado_em")
+        return JsonResponse({
+            "eventos": [
+                {
+                    "id": ev.id,
+                    "tipo": ev.tipo_evento,
+                    "label": dict(eSocialEventoSST.TIPO_EVENTO).get(ev.tipo_evento, ev.tipo_evento),
+                    "status": ev.status,
+                    "referencia": ev.referencia,
+                    "protocolo": ev.protocolo,
+                    "mensagem_erro": ev.mensagem_erro,
+                    "data_envio": ev.data_envio.strftime("%d/%m/%Y %H:%M") if ev.data_envio else None,
+                    "criado_em": ev.criado_em.strftime("%d/%m/%Y"),
+                }
+                for ev in qs[:100]
+            ]
+        })
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        ev = eSocialEventoSST.objects.create(
+            empresa=empresa,
+            tipo_evento=data.get("tipo_evento", "S-2220"),
+            referencia=data.get("referencia", ""),
+            status="pendente",
+        )
+        return JsonResponse({"id": ev.id, "ok": True}, status=201)
 
     return JsonResponse({"erro": "método não permitido"}, status=405)

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · eSocial SST</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2233;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.13);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7;--blue:#3b82f6;--amber:#f59e0b;--red:#ef4444;--green:#22c55e;--purple:#8b5cf6}
+html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:52px;display:flex;align-items:center;background:rgba(10,14,26,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(14px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:210px;border-right:1px solid var(--line);height:100%}
+.tb-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#0a0e1a;flex-shrink:0}
+.tb-nome{font-size:.8rem;font-weight:700}.tb-sub{font-size:.6rem;color:var(--muted);margin-top:1px}
+.tb-nav{display:flex;align-items:center;gap:1px;padding:0 14px;flex:1;overflow-x:auto}.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{padding:5px 11px;border-radius:6px;font-size:.75rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap}
+.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tb-nav a.active{color:var(--teal);background:rgba(0,201,167,.08)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.btn-main{padding:6px 13px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .2s}
+.btn-main:hover{opacity:.88}
+.app{display:flex;min-height:100vh;padding-top:52px}
+.sidebar{width:200px;flex-shrink:0;background:rgba(17,24,39,.55);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:52px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.77rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.06);border-left-color:var(--teal);font-weight:600}
+.sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
+.main{flex:1;margin-left:200px;padding:20px;display:flex;flex-direction:column;gap:16px}
+/* Evento cards */
+.eventos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.ev-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
+.ev-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--ec,var(--muted))}
+.ev-card.transmitido{--ec:var(--green)}
+.ev-card.pendente{--ec:var(--amber)}
+.ev-card.enviado{--ec:var(--blue)}
+.ev-card.erro{--ec:var(--red)}
+.ev-card.nao_enviado{--ec:var(--muted)}
+.ev-tipo{font-size:1.4rem;font-weight:900;font-family:monospace;letter-spacing:.04em}
+.ev-tipo.s2210{color:#f87171}
+.ev-tipo.s2220{color:#60a5fa}
+.ev-tipo.s2240{color:#a78bfa}
+.ev-descricao{font-size:.78rem;font-weight:600;color:var(--text);line-height:1.4}
+.ev-nr{font-size:.68rem;color:var(--muted);margin-top:3px}
+.ev-status-big{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.ev-status-icon{font-size:1.3rem}
+.ev-status-info{}
+.ev-status-label{font-size:.8rem;font-weight:800}
+.ev-status-data{font-size:.67rem;color:var(--muted);margin-top:2px}
+.st-transmitido .ev-status-label{color:#4ade80}
+.st-pendente .ev-status-label{color:#fbbf24}
+.st-erro .ev-status-label{color:#f87171}
+.st-nao_enviado .ev-status-label{color:var(--muted)}
+.ev-btn{padding:8px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.74rem;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:600;text-align:center}
+.ev-btn:hover{border-color:var(--teal);color:var(--teal)}
+/* Aviso */
+.aviso{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.15);border-radius:10px;font-size:.78rem;color:var(--muted);line-height:1.6}
+.aviso strong{color:#60a5fa;display:block;margin-bottom:2px}
+/* Tabela histórico */
+.table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.table-header h3{font-size:.8rem;font-weight:700}.table-header span{font-size:.72rem;color:var(--muted)}
+.tbl{width:100%;border-collapse:collapse;overflow-x:auto;display:block}
+.tbl thead th{padding:10px 14px;text-align:left;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+.tbl tbody tr{border-bottom:1px solid var(--line)}
+.tbl tbody tr:last-child{border-bottom:none}
+.tbl tbody tr:hover{background:rgba(255,255,255,.02)}
+.tbl td{padding:10px 14px;font-size:.79rem;color:var(--text);vertical-align:middle;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:.63rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.b-verde{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.18)}
+.b-vermelho{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.18)}
+.b-amarelo{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.18)}
+.b-azul{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.18)}
+.b-cinza{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line)}
+.b-roxo{background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.18)}
+.empty-state{padding:40px;text-align:center;color:var(--muted)}
+.empty-state .ei{font-size:2rem;margin-bottom:10px}
+.empty-state h3{font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:5px}
+.skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.07) 50%,rgba(255,255,255,.04) 75%);background-size:200%;animation:shimmer 1.8s infinite;border-radius:5px}
+@keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:440px;max-width:95vw}
+.modal h3{font-size:1rem;font-weight:800;margin-bottom:4px}
+.modal-sub{font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.mf{margin-bottom:10px}
+.mf label{display:block;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(226,238,255,.35);margin-bottom:5px}
+.mf input,.mf select{width:100%;padding:9px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:.85rem;outline:none;font-family:inherit}
+.mf input:focus,.mf select:focus{border-color:var(--teal)}
+.mf select option{background:var(--surface)}
+.modal-acts{display:flex;gap:8px;margin-top:16px}
+.btn-cancel{flex:1;padding:9px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:none;color:var(--muted);font-family:inherit;cursor:pointer}
+.btn-submit{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-weight:800;font-family:inherit;cursor:pointer}
+@media(max-width:900px){.eventos-grid{grid-template-columns:1fr}}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="tb-logo"><div class="tb-icon">S</div><div><div class="tb-nome">SST</div><div class="tb-sub">Saúde Ocupacional</div></div></div>
+  <nav class="tb-nav">
+    <a href="/dashboard-empresa/">Painel</a>
+    <a href="/sst/funcionarios/">Funcionários</a>
+    <a href="/sst/asos/">ASO</a>
+    <a href="/sst/exames/">Exames</a>
+    <a href="/sst/afastamentos/">Afastamentos</a>
+    <a href="/sst/cats/">CAT</a>
+    <a href="/sst/documentos/">Documentos</a>
+    <a href="/sst/esocial/" class="active">eSocial</a>
+  </nav>
+  <div class="tb-actions"><button class="btn-main" onclick="openModal()">+ Registrar Evento</button></div>
+</header>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-label">Conformidade</div>
+    <a class="sb-link" href="/dashboard-empresa/"><span class="sb-icon">📊</span><span>Painel SST</span></a>
+    <a class="sb-link" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span></a>
+    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🔬</span><span>Exames</span></a>
+    <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
+    <a class="sb-link" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
+    <div class="sb-label">Documentação</div>
+    <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">📁</span><span>PGR · PCMSO</span></a>
+    <a class="sb-link active" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial</span></a>
+    <div class="sb-label">Gestão</div>
+    <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
+    <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
+  </aside>
+  <main class="main">
+
+    <div class="aviso">
+      <div>ℹ️</div>
+      <div><strong>Integração eSocial — Informação importante</strong>
+      A transmissão real dos eventos requer certificado digital A1/A3 e homologação junto ao ambiente de produção do eSocial (gov.br). Os eventos registrados aqui ficam na fila de transmissão. Para integrar, configure o certificado digital nas configurações da conta.</div>
+    </div>
+
+    <!-- Status por tipo de evento -->
+    <div class="eventos-grid" id="eventos-cards">
+      <div class="ev-card"><div class="skel" style="height:120px;border-radius:8px"></div></div>
+      <div class="ev-card"><div class="skel" style="height:120px;border-radius:8px"></div></div>
+      <div class="ev-card"><div class="skel" style="height:120px;border-radius:8px"></div></div>
+    </div>
+
+    <!-- Histórico -->
+    <div class="table-wrap">
+      <div class="table-header"><h3>Histórico de Eventos eSocial</h3><span id="contagem">carregando...</span></div>
+      <table class="tbl">
+        <thead><tr><th>Tipo</th><th>Referência</th><th>Status</th><th>Data Envio</th><th>Protocolo</th><th>Erro</th></tr></thead>
+        <tbody id="tbody">
+          <tr><td colspan="6"><div class="skel" style="height:36px;margin:8px 14px"></div></td></tr>
+          <tr><td colspan="6"><div class="skel" style="height:36px;margin:8px 14px"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>Registrar Evento eSocial</h3>
+    <div class="modal-sub">Adicione um evento à fila de transmissão. A transmissão efetiva ocorre após a configuração do certificado digital.</div>
+    <div class="mf"><label>Tipo de Evento</label>
+      <select id="e-tipo">
+        <option value="S-2210">S-2210 — Comunicação de Acidente do Trabalho</option>
+        <option value="S-2220">S-2220 — Monitoramento da Saúde do Trabalhador</option>
+        <option value="S-2240">S-2240 — Condições Ambientais do Trabalho</option>
+      </select>
+    </div>
+    <div class="mf"><label>Referência (funcionário, período ou competência)</label>
+      <input id="e-ref" type="text" placeholder="Ex: João Silva — 01/2025 ou Competência 2025-01">
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-submit" onclick="salvar()">Registrar na Fila</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TIPOS_DEF={
+  "S-2210":{descricao:"Comunicação de Acidente do Trabalho",nr:"Prazo: até o 1º dia útil após o acidente",cls:"s2210"},
+  "S-2220":{descricao:"Monitoramento da Saúde do Trabalhador (ASO)",nr:"Prazo: até o dia 15 do mês seguinte",cls:"s2220"},
+  "S-2240":{descricao:"Condições Ambientais do Trabalho",nr:"Prazo: até o último dia do mês seguinte",cls:"s2240"},
+};
+const statusLabel={transmitido:"Transmitido ✓",pendente:"Pendente",enviado:"Enviado",erro:"Erro na Transmissão",nao_enviado:"Não Enviado",retificacao:"Em Retificação"};
+const statusCls={transmitido:"b-verde",pendente:"b-amarelo",enviado:"b-azul",erro:"b-vermelho",nao_enviado:"b-cinza",retificacao:"b-roxo"};
+const statusIcon={transmitido:"✅",pendente:"⏳",enviado:"📤",erro:"❌",nao_enviado:"📭",retificacao:"🔄"};
+
+function openModal(tipo){
+  document.getElementById("modal").classList.add("open");
+  if(tipo)document.getElementById("e-tipo").value=tipo;
+}
+function closeModal(){document.getElementById("modal").classList.remove("open")}
+document.getElementById("modal").addEventListener("click",e=>{if(e.target===document.getElementById("modal"))closeModal()});
+
+function renderCards(eventos){
+  const porTipo={};
+  eventos.forEach(ev=>{
+    if(!porTipo[ev.tipo]||new Date(ev.data_envio||ev.criado_em)>new Date(porTipo[ev.tipo].data_envio||porTipo[ev.tipo].criado_em)){
+      porTipo[ev.tipo]=ev;
+    }
+  });
+  const grid=document.getElementById("eventos-cards");
+  grid.innerHTML=Object.entries(TIPOS_DEF).map(([tipo,def])=>{
+    const ev=porTipo[tipo];
+    const st=ev?ev.status:"nao_enviado";
+    return`<div class="ev-card ${st}">
+      <div>
+        <div class="ev-tipo ${def.cls}">${tipo}</div>
+      </div>
+      <div>
+        <div class="ev-descricao">${def.descricao}</div>
+        <div class="ev-nr">${def.nr}</div>
+      </div>
+      <div class="ev-status-big st-${st}">
+        <div class="ev-status-icon">${statusIcon[st]||"📭"}</div>
+        <div class="ev-status-info">
+          <div class="ev-status-label">${statusLabel[st]||st}</div>
+          <div class="ev-status-data">${ev?.data_envio||"Nenhuma transmissão registrada"}</div>
+        </div>
+      </div>
+      <button class="ev-btn" onclick="openModal('${tipo}')">+ Registrar Evento</button>
+    </div>`;
+  }).join("");
+}
+
+function renderTabela(eventos){
+  document.getElementById("contagem").textContent=`${eventos.length} evento(s)`;
+  const tbody=document.getElementById("tbody");
+  if(!eventos.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="ei">🔗</div><h3>Nenhum evento registrado</h3><p>Registre eventos eSocial SST para acompanhar as transmissões.</p></div></td></tr>`;return;}
+  tbody.innerHTML=eventos.map(ev=>`
+    <tr>
+      <td><span class="badge b-roxo" style="font-family:monospace">${ev.tipo}</span></td>
+      <td style="color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis">${ev.referencia||'—'}</td>
+      <td><span class="badge ${statusCls[ev.status]||'b-cinza'}">${statusLabel[ev.status]||ev.status}</span></td>
+      <td style="color:var(--muted)">${ev.data_envio||'—'}</td>
+      <td style="color:var(--muted);font-family:monospace;font-size:.72rem">${ev.protocolo||'—'}</td>
+      <td style="color:#f87171;font-size:.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis">${ev.mensagem_erro||'—'}</td>
+    </tr>`).join("");
+}
+
+async function carregar(){
+  const r=await fetch("/api/sst/esocial");
+  if(!r.ok)return;
+  const d=await r.json();
+  renderCards(d.eventos||[]);
+  renderTabela(d.eventos||[]);
+}
+
+async function salvar(){
+  const btn=document.querySelector(".btn-submit");btn.textContent="Registrando...";btn.disabled=true;
+  const r=await fetch("/api/sst/esocial",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+    tipo_evento:document.getElementById("e-tipo").value,
+    referencia:document.getElementById("e-ref").value.trim(),
+  })});
+  const d=await r.json();
+  if(r.ok){closeModal();document.getElementById("e-ref").value="";carregar();}
+  else alert(d.erro||"Erro ao registrar evento");
+  btn.textContent="Registrar na Fila";btn.disabled=false;
+}
+
+carregar();
+</script>
+</body>
+</html>
