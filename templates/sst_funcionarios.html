@@ -119,6 +119,8 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial</span></a>
     <div class="sb-label">Gestão</div>
     <a class="sb-link active" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
+    <a class="sb-link" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos NR</span></a>
+    <a class="sb-link" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
     <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
   </aside>
   <main class="main">
@@ -227,6 +229,7 @@ function renderTabela(){
       <td><span class="badge ${riscoCls[f.classe_risco]||'b-cinza'}">${riscoLabel[f.classe_risco]||f.classe_risco}</span></td>
       <td><span class="badge b-verde">Ativo</span></td>
       <td><div class="row-actions">
+        <button class="btn-row" onclick="window.location.href='/sst/funcionarios/${f.id}/'">Prontuário</button>
         <button class="btn-row" onclick="irASO('${f.nome}')">Ver ASOs</button>
         <button class="btn-row" onclick="emitirASO('${f.nome}')">Emitir ASO</button>
       </div></td>
