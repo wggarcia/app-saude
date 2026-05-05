@@ -66,6 +66,7 @@ from api.views_sst import (
     sst_documentos_novo_redirect,
     sst_prontuario_page,
     sst_treinamentos_page,
+    sst_normas_page,
 )
 from api.views_gestao import (
     gestao_corporativa,
@@ -190,6 +191,7 @@ urlpatterns = [
     path('sst/esocial/', sst_esocial_page),
     path('sst/relatorios/', sst_relatorios_page),
     path('sst/treinamentos/', sst_treinamentos_page),
+    path('sst/normas/', sst_normas_page),
     path('sst/funcionarios/<int:funcionario_id>/', sst_prontuario_page),
     path('sst/configuracoes/', sst_configuracoes_redirect),
     # 🏥 SST / Saúde Ocupacional — API

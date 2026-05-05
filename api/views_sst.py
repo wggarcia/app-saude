@@ -1032,3 +1032,12 @@ def api_treinamentos_resumo(request):
         "pendentes": pendentes,
         "por_nr": sorted(nr_map.values(), key=lambda x: x["nr"]),
     })
+
+
+def sst_normas_page(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_normas.html", {
+        "empresa_nome": empresa.nome,
+    })
