@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Normas Regulamentadoras · SolusCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#041018;--panel:#071c28;--border:rgba(126,225,195,.12);
+  --text:#e8f4f1;--muted:#7a9fa0;--teal:#00c9a7;--blue:#1f6ff2;
+  --amber:#f0bf6b;--red:#f87171;--green:#4ade80;
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;overflow-x:hidden}
+/* HEADER */
+.header{background:var(--panel);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#041018;flex-shrink:0}
+.logo-name{font-size:.82rem;font-weight:800;color:var(--text)}
+.logo-sub{font-size:.62rem;color:var(--muted)}
+.header-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.hbtn{padding:5px 13px;border-radius:7px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.75rem;font-weight:600;text-decoration:none;cursor:pointer;font-family:inherit;transition:all .15s}
+.hbtn:hover{color:var(--text);border-color:rgba(126,225,195,.3)}
+.hbtn.primary{background:linear-gradient(135deg,var(--teal),#0077ff);border:none;color:#041018;font-weight:800}
+/* LAYOUT */
+.app{display:flex}
+.sidebar{width:220px;flex-shrink:0;background:rgba(7,28,40,.7);border-right:1px solid var(--border);min-height:calc(100vh - 56px);padding:10px 0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+.sb-label{font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:.77rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.06);border-left-color:var(--teal);font-weight:700}
+.sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
+/* MAIN */
+.main{flex:1;padding:24px;min-width:0}
+/* KPI */
+.kpi-row{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.kpi{flex:1;min-width:140px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--teal))}
+.kpi-label{font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi-val{font-size:1.8rem;font-weight:900;line-height:1}
+.kpi-sub{font-size:.7rem;color:var(--muted);margin-top:4px}
+/* TOOLBAR */
+.toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.search-wrap{flex:1;min-width:240px;position:relative}
+.search-wrap input{width:100%;padding:9px 12px 9px 38px;border-radius:9px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.85rem;font-family:inherit;outline:none;transition:border .15s}
+.search-wrap input:focus{border-color:rgba(0,201,167,.4)}
+.search-wrap input::placeholder{color:var(--muted)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.9rem;pointer-events:none}
+.cats{display:flex;gap:6px;flex-wrap:wrap}
+.cat-btn{padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.73rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.cat-btn:hover{color:var(--text);border-color:rgba(126,225,195,.3)}
+.cat-btn.active{background:rgba(0,201,167,.1);border-color:rgba(0,201,167,.35);color:var(--teal)}
+/* GRID */
+.nr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:14px}
+/* CARD */
+.nr-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s}
+.nr-card:hover{border-color:rgba(126,225,195,.25)}
+.nr-card.revogada{opacity:.55}
+.nr-card.revogada:hover{opacity:.7}
+.nr-header{display:flex;align-items:flex-start;gap:12px;padding:16px 18px;cursor:pointer;user-select:none}
+.nr-num{font-size:1.3rem;font-weight:900;color:var(--teal);flex-shrink:0;min-width:52px}
+.nr-card.revogada .nr-num{color:var(--muted)}
+.nr-info{flex:1;min-width:0}
+.nr-nome{font-size:.85rem;font-weight:700;line-height:1.3;margin-bottom:6px}
+.nr-badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;font-size:.62rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.b-vigente{background:rgba(0,201,167,.12);color:var(--teal);border:1px solid rgba(0,201,167,.2)}
+.b-revogada{background:rgba(122,159,160,.08);color:var(--muted);border:1px solid var(--border)}
+.b-cat{background:rgba(31,111,242,.1);color:#7db6ff;border:1px solid rgba(31,111,242,.2)}
+.nr-chevron{font-size:.8rem;color:var(--muted);margin-left:auto;transition:transform .25s;flex-shrink:0;padding-top:4px}
+.nr-ementa{padding:0 18px 14px;font-size:.8rem;color:var(--muted);line-height:1.6}
+/* DETALHES */
+.nr-details{display:none;border-top:1px solid var(--border)}
+.nr-card.open .nr-details{display:block}
+.nr-card.open .nr-chevron{transform:rotate(180deg)}
+.detail-section{padding:14px 18px;border-bottom:1px solid var(--border)}
+.detail-section:last-child{border-bottom:none}
+.detail-title{font-size:.65rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.detail-list{display:flex;flex-direction:column;gap:5px}
+.detail-item{display:flex;align-items:flex-start;gap:8px;font-size:.79rem;line-height:1.5;color:var(--text)}
+.detail-item::before{content:"›";color:var(--teal);flex-shrink:0;margin-top:1px}
+.penalidade{font-size:.79rem;color:var(--amber);font-weight:600}
+.pontos-criticos .detail-item::before{content:"⚠";color:var(--amber);font-size:.65rem}
+.related{display:flex;gap:6px;flex-wrap:wrap}
+.rel-chip{padding:3px 9px;border-radius:5px;background:rgba(31,111,242,.1);border:1px solid rgba(31,111,242,.2);color:#7db6ff;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s}
+.rel-chip:hover{background:rgba(31,111,242,.2)}
+/* EMPTY */
+.empty{padding:60px 20px;text-align:center;color:var(--muted)}
+.empty-icon{font-size:2.5rem;margin-bottom:12px}
+.empty h3{font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:6px}
+.count-info{font-size:.78rem;color:var(--muted);margin-bottom:16px}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <a class="logo" href="/dashboard-empresa/">
+    <div class="logo-icon">S</div>
+    <div>
+      <div class="logo-name">SolusCRT</div>
+      <div class="logo-sub">{{ empresa_nome }}</div>
+    </div>
+  </a>
+  <div class="header-right">
+    <a class="hbtn" href="/sst/treinamentos/">🎓 Treinamentos</a>
+    <a class="hbtn" href="/sst/relatorios/">📈 Relatórios</a>
+    <a class="hbtn" href="https://www.gov.br/trabalho-e-emprego/pt-br/acesso-a-informacao/participacao-social/conselhos-e-orgaos-colegiados/ctpp-nrs/normas-regulamentadoras-nrs" target="_blank">🔗 MTE Oficial</a>
+    <a class="hbtn" href="/logout/" style="color:var(--red)">Sair</a>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-label">Conformidade</div>
+    <a class="sb-link" href="/dashboard-empresa/"><span class="sb-icon">📊</span><span>Painel SST</span></a>
+    <a class="sb-link" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span></a>
+    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🔬</span><span>Exames</span></a>
+    <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
+    <a class="sb-link" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
+    <div class="sb-label">Documentação</div>
+    <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">📁</span><span>PGR · PCMSO</span></a>
+    <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial</span></a>
+    <div class="sb-label">Gestão</div>
+    <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
+    <a class="sb-link" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos NR</span></a>
+    <a class="sb-link" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
+    <a class="sb-link active" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
+    <a class="sb-link" href="/logout/" style="color:var(--red)"><span class="sb-icon">↩</span><span>Sair</span></a>
+  </aside>
+
+  <main class="main">
+    <div style="margin-bottom:20px">
+      <h1 style="font-size:1.3rem;font-weight:900;margin-bottom:4px">📚 Normas Regulamentadoras</h1>
+      <p style="color:var(--muted);font-size:.82rem">Todas as 37 NRs do Ministério do Trabalho · consulta técnica para profissionais de SST</p>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi" style="--kc:var(--teal)"><div class="kpi-label">Total NRs</div><div class="kpi-val">37</div><div class="kpi-sub">no ordenamento jurídico</div></div>
+      <div class="kpi" style="--kc:var(--green)"><div class="kpi-label">Vigentes</div><div class="kpi-val">35</div><div class="kpi-sub">em vigor</div></div>
+      <div class="kpi" style="--kc:var(--muted)"><div class="kpi-label">Revogadas</div><div class="kpi-val">2</div><div class="kpi-sub">NR-2 e NR-27</div></div>
+      <div class="kpi" style="--kc:var(--red)"><div class="kpi-label">Penalidade máx.</div><div class="kpi-val">R$133k</div><div class="kpi-sub">por infração (grupo IV)</div></div>
+      <div class="kpi" style="--kc:var(--blue)"><div class="kpi-label">Visíveis</div><div class="kpi-val" id="k-visible">37</div><div class="kpi-sub">no filtro atual</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="busca" placeholder="Buscar NR, obrigação, documento, penalidade..." oninput="filtrar()">
+      </div>
+      <div class="cats" id="cats"></div>
+    </div>
+
+    <p class="count-info" id="count-info">Exibindo 37 normas</p>
+    <div class="nr-grid" id="grid"></div>
+    <div class="empty" id="empty" style="display:none">
+      <div class="empty-icon">🔍</div>
+      <h3>Nenhuma NR encontrada</h3>
+      <p>Tente outros termos de busca</p>
+    </div>
+  </main>
+</div>
+
+<script>
+const CATS = ["Todas","Gestão de SST","EPI e EPC","Saúde Ocupacional","Riscos Específicos","Segurança em Máquinas","Construção Civil","Indústrias Específicas","Ergonomia e Conforto","Fiscalização"];
+
+const NRS = [
+  {num:1,nome:"Disposições Gerais e Gerenciamento de Riscos Ocupacionais (GRO/PGR)",status:"vigente",cat:"Gestão de SST",setores:"Todos os empregadores com registro CLT",
+   ementa:"Base legal de todas as NRs. Define o GRO (Gerenciamento de Riscos Ocupacionais) e exige o PGR (Programa de Gerenciamento de Riscos) contendo inventário de riscos e plano de ação. Estabelece hierarquia de controles: eliminação > controle na fonte > EPC > EPI.",
+   obrigacoes:["Elaborar e manter PGR atualizado com inventário de riscos e plano de ação","Identificar perigos e avaliar riscos com metodologia documentada","Implementar medidas de prevenção seguindo a hierarquia de controles","Comunicar trabalhadores sobre os riscos a que estão expostos","Registrar, investigar e analisar acidentes e doenças do trabalho","Realizar capacitação em SST antes da exposição ao risco","Consultar os trabalhadores no processo de gestão de riscos"],
+   documentos:["PGR — Programa de Gerenciamento de Riscos","Inventário de Riscos Ocupacionais","Plano de Ação com prazos e responsáveis","Registros de capacitações e treinamentos","Registros de acidentes e investigações"],
+   treinamentos:["Capacitação em SST: carga horária mínima definida por acordo coletivo ou empresa, obrigatoriamente antes da exposição"],
+   periodicidade:"PGR revisado anualmente ou sempre que houver mudança de processo, layout ou introdução de novos agentes de risco",
+   penalidades:"Infrações classificadas em grupos I a IV; multa de R$ 668,18 (leve) a R$ 133.616,17 (gravíssima reincidente)",
+   criticos:["PGR ausente ou desatualizado há mais de 12 meses","Inventário de riscos genérico sem análise real do ambiente","Trabalhadores sem capacitação documentada antes de iniciar atividades","Plano de ação com prazos vencidos e medidas não implementadas","Acidentes sem investigação formal registrada"],
+   rel:[9,4,5,6,7]},
+
+  {num:2,nome:"Inspeção Prévia — REVOGADA",status:"revogada",cat:"Fiscalização",setores:"N/A",
+   ementa:"Previa inspeção prévia do Ministério do Trabalho antes do início das atividades do estabelecimento. Revogada pela Portaria SEPRT nº 915/2019 como medida de desburocratização.",
+   obrigacoes:[],documentos:[],treinamentos:[],periodicidade:"—",penalidades:"Não aplicável — norma revogada",criticos:[],rel:[]},
+
+  {num:3,nome:"Embargo ou Interdição",status:"vigente",cat:"Fiscalização",setores:"Todos (poder de polícia do Auditor Fiscal do Trabalho)",
+   ementa:"Regula o poder do Auditor Fiscal do Trabalho de embargar obra ou interditar estabelecimento, setor, máquina ou equipamento em situação de grave e iminente risco à vida do trabalhador. O embargo/interdição é imediato, sem notificação prévia.",
+   obrigacoes:["Cessar imediatamente a atividade quando notificado de embargo ou interdição","Eliminar a condição de risco que gerou o ato administrativo","Comunicar ao sindicato da categoria sobre o embargo/interdição","Solicitar levantamento formal ao AUFC após sanear o risco","Não reiniciar atividade antes do levantamento formal"],
+   documentos:["Auto de Embargo ou Interdição (emitido pelo AUFC)","Laudo técnico de levantamento do embargo/interdição","Comunicação ao sindicato"],
+   treinamentos:[],periodicidade:"N/A — aplicação imediata pelo AUFC",
+   penalidades:"Desobediência ao embargo/interdição configura crime de desobediência (art. 205 do CP) + autuação administrativa gravíssima",
+   criticos:["Reinício de atividade sem levantamento formal do embargo","Não comunicação ao sindicato no prazo","Descumprimento das condições impostas para levantamento"],
+   rel:[28]},
+
+  {num:4,nome:"SESMT — Serviços Especializados em Engenharia de Segurança e em Medicina do Trabalho",status:"vigente",cat:"Gestão de SST",setores:"Empresas que atingem os limites do Quadro I (grau de risco × nº de empregados)",
+   ementa:"Obriga empresas acima de determinado porte e grau de risco a manter SESMT próprio dimensionado conforme Quadro I da NR. Profissionais: Médico do Trabalho, Engenheiro de Segurança do Trabalho, Técnico de Segurança do Trabalho, Enfermeiro do Trabalho, Auxiliar de Enfermagem.",
+   obrigacoes:["Dimensionar SESMT conforme Quadro I (cruzamento de grau de risco com número de empregados)","Manter profissionais habilitados com registro no MTE","Elaborar PCMSO e PGR com participação obrigatória do SESMT","Emitir laudos, pareceres e relatórios técnicos periodicamente","Registrar atividades do SESMT no Relatório Anual"],
+   documentos:["Quadro do SESMT afixado no estabelecimento","Registros no MTE dos profissionais (Técnico e Engenheiro de Segurança)","Laudos periciais e relatório anual de atividades","Registro do Médico no CRM com especialização em medicina do trabalho"],
+   treinamentos:["Técnico de Segurança do Trabalho: curso técnico habilitante + registro MTE","Engenheiro de Segurança: especialização lato sensu + registro no CREA","Médico do Trabalho: residência ou especialização em medicina do trabalho + CRM"],
+   periodicidade:"Relatório anual de atividades do SESMT",
+   penalidades:"Grave; multa calculada por profissional em falta no SESMT",
+   criticos:["Empresa que atingiu o limiar do Quadro I sem SESMT constituído","Técnico de Segurança sem registro no MTE","Dimensionamento incorreto (menos profissionais do que o exigido)","Médico coordenador sem especialização em medicina do trabalho","Ausência de Relatório Anual de Atividades"],
+   rel:[1,5,7,9]},
+
+  {num:5,nome:"CIPA — Comissão Interna de Prevenção de Acidentes e de Assédio",status:"vigente",cat:"Gestão de SST",setores:"Todos os empregadores que atingem os limites do Quadro I da NR-5",
+   ementa:"Obriga a constituição da CIPA (paritária: membros eleitos pelos empregados + designados pelo empregador) para identificar riscos, elaborar Mapa de Riscos e propor melhorias preventivas. Desde 2022 inclui prevenção ao assédio moral e sexual.",
+   obrigacoes:["Dimensionar CIPA conforme Quadro I da NR-5","Realizar eleição anual de membros titulares e suplentes","Garantir estabilidade provisória no emprego aos cipeiros eleitos (1 ano após mandato)","Realizar treinamento obrigatório antes da posse","Elaborar Mapa de Riscos anualmente","Registrar atas das reuniões mensais","Registrar a CIPA no e-CIPA (sistema do MTE)"],
+   documentos:["Ata de eleição e posse dos cipeiros","Registro no MTE via sistema e-CIPA","Mapa de Riscos elaborado pelos cipeiros","Atas de reuniões mensais assinadas","Relatório Anual da CIPA","Certificados de treinamento dos membros"],
+   treinamentos:["Membros titulares: treinamento mínimo de 20 horas (parte A da NR-5) antes da posse","Suplentes: 8 horas mínimas","Reciclagem: não há obrigatoriedade expressa de periodicidade, mas recomendada a cada gestão"],
+   periodicidade:"Mandato de 1 ano; eleição realizada a cada gestão; reuniões mensais obrigatórias",
+   penalidades:"Grave; multa por cipeiro não eleito, não treinado ou sem estabilidade garantida",
+   criticos:["CIPA não registrada no e-CIPA do MTE","Cipeiros sem treinamento mínimo de 20h antes da posse","Mapa de Riscos desatualizado ou inexistente","Reuniões mensais não realizadas ou sem ata assinada","Presidente ou vice-presidente sem mandato formalizado","Demissão de cipeiro eleito sem justa causa (estabilidade violada)"],
+   rel:[1,4,9]},
+
+  {num:6,nome:"EPI — Equipamentos de Proteção Individual",status:"vigente",cat:"EPI e EPC",setores:"Todos onde há riscos não controlados adequadamente por medidas coletivas",
+   ementa:"Regulamenta a obrigação do empregador de fornecer gratuitamente EPI com CA (Certificado de Aprovação) válido emitido pelo MTE. Define responsabilidades mútuas: empregador fornece e treina; empregado usa e conserva. A neutralização do risco por EPI elimina o adicional de insalubridade.",
+   obrigacoes:["Fornecer gratuitamente EPI com Certificado de Aprovação (CA) válido","Treinar o trabalhador quanto ao uso, guarda e higienização do EPI","Substituir imediatamente EPI danificado, extraviado ou com CA vencido","Fiscalizar o uso obrigatório do EPI e adotar medidas disciplinares","Manter ficha de entrega e devolução assinada pelo trabalhador","Higienizar ou substituir EPI quando sujo ou contaminado"],
+   documentos:["Ficha de EPI assinada pelo trabalhador (entrega e devolução)","CA de cada EPI fornecido (número e validade)","Laudo de insalubridade ou periculosidade indicando o EPI adequado","Registros de inspeção e substituição de EPIs"],
+   treinamentos:["Treinamento no uso correto de cada EPI antes da primeira utilização — sem carga horária mínima definida, mas deve ser documentado"],
+   periodicidade:"Inspeção do EPI: a cada uso (pelo trabalhador) e periodicamente pelo responsável; CA: verificar validade antes da compra",
+   penalidades:"Grave; multa por trabalhador sem EPI ou com CA vencido",
+   criticos:["EPI fornecido com CA vencido ou sem CA","Ficha de EPI sem assinatura do trabalhador","EPI inadequado para o agente de risco específico (ex.: protetor auricular para químico)","Trabalhador sem treinamento documentado no uso do EPI","EPIs deteriorados ou sem higienização periódica"],
+   rel:[9,15,16,26]},
+
+  {num:7,nome:"PCMSO — Programa de Controle Médico de Saúde Ocupacional",status:"vigente",cat:"Saúde Ocupacional",setores:"Todos os empregadores com trabalhadores celetistas",
+   ementa:"Exige elaboração anual do PCMSO coordenado por Médico do Trabalho. Estabelece os 5 tipos obrigatórios de exame médico: admissional, periódico, retorno ao trabalho, mudança de função e demissional. O ASO é o documento comprobatório da aptidão do trabalhador.",
+   obrigacoes:["Elaborar PCMSO anualmente com Médico Coordenador habilitado","Realizar exames admissionais, periódicos, de retorno, de mudança de função e demissionais","Emitir ASO em duas vias (uma para o trabalhador, uma para a empresa)","Armazenar prontuários e resultados por mínimo de 20 anos","Incluir LTCAT como base para definição de exames específicos de insalubridade","Elaborar Relatório Anual do PCMSO"],
+   documentos:["PCMSO assinado pelo médico coordenador e pelo representante legal da empresa","ASOs de todos os tipos de exame","Prontuários médicos individuais (sigilo médico)","LTCAT — Laudo Técnico das Condições Ambientais do Trabalho","Relatório Anual do PCMSO"],
+   treinamentos:["Médico Coordenador: residência médica em medicina do trabalho ou especialização MTE + registro no CRM"],
+   periodicidade:"PCMSO elaborado/revisado anualmente; exames periódicos conforme tabela de periodicidade da NR-7 (risco e idade do trabalhador)",
+   penalidades:"Grave; multa por trabalhador com exame periódico vencido ou sem ASO",
+   criticos:["ASO periódico vencido — o mais frequente em autuações","PCMSO sem assinatura do médico coordenador","Médico coordenador sem especialização em medicina do trabalho","Resultados de exames não arquivados por 20 anos","Ausência de exame demissional no desligamento","LTCAT desatualizado servindo de base ao PCMSO"],
+   rel:[4,9,15]},
+
+  {num:8,nome:"Edificações",status:"vigente",cat:"Ergonomia e Conforto",setores:"Todos (condições físicas das instalações)",
+   ementa:"Estabelece requisitos técnicos mínimos para as edificações onde os trabalhadores exercem atividades: pé-direito, circulação, pisos, aberturas para iluminação e ventilação natural, escadas e rampas, guarda-corpos.",
+   obrigacoes:["Garantir pé-direito mínimo de 3,0m (2,70m em casos excepcionais aprovados)","Prover iluminação e ventilação adequadas às atividades","Manter pisos nivelados, limpos e antiderrapantes","Instalar guarda-corpo em varandas, aberturas e diferenças de nível ≥2m","Manter escadas com espelho, piso e corrimão adequados","Sinalizar degraus e mudanças de nível"],
+   documentos:["Projeto arquitetônico aprovado pela prefeitura","Auto de Conclusão de Obra (habite-se)","Laudo de conformidade quando houver risco estrutural"],
+   treinamentos:[],periodicidade:"Verificação contínua das condições das instalações",
+   penalidades:"Leve a grave conforme a natureza do risco",
+   criticos:["Pé-direito abaixo do mínimo em reformas não aprovadas","Pisos escorregadios sem sinalização nem tratamento antiderrapante","Aberturas acima de 2m sem guarda-corpo","Escadas sem corrimão ou com degraus irregulares","Iluminação insuficiente em postos de trabalho de precisão"],
+   rel:[17,24,26]},
+
+  {num:9,nome:"PGR — Programa de Gerenciamento de Riscos (riscos ambientais)",status:"vigente",cat:"Gestão de SST",setores:"Todos os empregadores",
+   ementa:"A NR-9 foi reestruturada em 2021 e integra o PGR junto com a NR-1. Regulamenta a antecipação, reconhecimento, avaliação e controle de riscos ambientais (físicos: ruído, calor, frio, vibrações; químicos; biológicos) com medições quantitativas quando os níveis de ação forem superados.",
+   obrigacoes:["Medir agentes físicos (ruído: NHO-01; calor: IBUTG NHO-06; vibração: NHO-09) quando superar nível de ação","Avaliar concentração de agentes químicos conforme limites de tolerância da NR","Identificar agentes biológicos em serviços de saúde, coleta de lixo e esgoto","Documentar resultados no Inventário de Riscos do PGR","Implementar controles e reavaliações periódicas","Elaborar LTCAT quando houver exposição a riscos que podem gerar aposentadoria especial"],
+   documentos:["PGR — Inventário de Riscos com agentes ambientais medidos","LTCAT (Laudo Técnico das Condições Ambientais — para INSS)","Laudos de medição por Engenheiro de Segurança ou Higienista Ocupacional","Calibrações dos equipamentos de medição (rastreabilidade INMETRO)"],
+   treinamentos:["Engenheiro de Segurança do Trabalho: habilitado para medições; Higienista Ocupacional (ABHO) para programas mais complexos"],
+   periodicidade:"Avaliações quantitativas periodicamente ou após mudança de processo/layout; reavaliação quando nível de ação for superado",
+   penalidades:"Grave; LTCAT desatualizado pode gerar passivo previdenciário à empresa",
+   criticos:["Ausência de medição de ruído em ambientes claramente barulhentos","LTCAT desatualizado servindo de base ao INSS","Medições sem rastreabilidade metrológica (calibração dos equipamentos)","Avaliação de agentes químicos sem equipamento adequado","PGR genérico sem dados reais do ambiente de trabalho"],
+   rel:[1,4,7,15]},
+
+  {num:10,nome:"Segurança em Instalações e Serviços em Eletricidade",status:"vigente",cat:"Riscos Específicos",setores:"Elétrico, manutenção predial e industrial, construção civil, telecomunicações",
+   ementa:"Regulamenta medidas de segurança para trabalhos em instalações elétricas em todas as fases (projeto, construção, operação, manutenção, demolição). Define Zona Livre, Zona Controlada e Zona de Risco. Distingue Trabalho em Desenergizado (preferencial) e Trabalho em Energizado (autorizado apenas com justificativa e controles específicos).",
+   obrigacoes:["Treinar todos que trabalham em ou próximo de instalações elétricas (NR-10 Básico 40h + reciclagem bienal)","Elaborar e manter Prontuário das Instalações Elétricas (diagramas, projetos, laudos)","Emitir Permissão de Trabalho (PT) para trabalhos em instalações energizadas","Implementar LOTO — Lockout/Tagout — antes de qualquer serviço em equipamentos elétricos","Usar EPI elétrico com CA válido (luvas dielétricas, capacetes isolantes, calçado isolante)","Para SEP — Sistema Elétrico de Potência: treinamento complementar de 40h"],
+   documentos:["Prontuário das Instalações Elétricas (projeto, diagramas unifilares, SPDA, laudos)","Certificados de NR-10 Básico (40h) e SEP (40h) dos trabalhadores","PT — Permissão de Trabalho para serviços em energizado","Registros de LOTO aplicado","CA válido de cada EPI elétrico utilizado"],
+   treinamentos:["NR-10 Básico: 40 horas (teórico + prático)","NR-10 SEP (para trabalhos em Alta Tensão): 40 horas complementares","Reciclagem NR-10 Básico: 8 horas a cada 2 anos","Reciclagem NR-10 SEP: 8 horas a cada 2 anos"],
+   periodicidade:"Reciclagem bienal; prontuário atualizado sempre que houver modificação nas instalações",
+   penalidades:"Gravíssima; risco de interdição imediata; acidente com eletricidade gera processo criminal ao responsável técnico",
+   criticos:["Eletricista sem certificado NR-10 válido trabalhando em instalações elétricas","Prontuário das instalações inexistente ou sem diagrama unifilar","Trabalho em circuito energizado sem PT emitida","LOTO não implementado em manutenção de quadros e equipamentos","Luvas dielétricas com CA vencido ou sem teste periódico de dielétrico","Eletricista sem NR-10 SEP realizando trabalhos em MT/AT"],
+   rel:[16,35]},
+
+  {num:11,nome:"Transporte, Movimentação, Armazenagem e Manuseio de Materiais",status:"vigente",cat:"Segurança em Máquinas",setores:"Logística, armazéns, construção civil, indústria",
+   ementa:"Regulamenta a operação segura de equipamentos de movimentação: empilhadeiras, pontes rolantes, guindastes, paleteiras, esteiras e transporte manual. Exige habilitação de operadores, afixação de capacidade nominal e manutenção periódica.",
+   obrigacoes:["Habilitar operadores de empilhadeiras e equipamentos de içamento com curso específico","Afixar capacidade nominal de carga em todos os equipamentos de movimentação","Realizar manutenção preventiva e inspeção periódica documentada","Manter corredores de circulação sinalizados e livres de obstáculos","Treinar trabalhadores na movimentação manual de cargas (ergonomia NR-17)","Instalar espelhos convexos em cruzamentos internos de empilhadeiras"],
+   documentos:["Habilitação dos operadores de empilhadeira (certificado de curso)","Registros de inspeção e manutenção preventiva dos equipamentos","ART do responsável técnico por equipamentos de içamento","Manual do fabricante em português"],
+   treinamentos:["Operador de Empilhadeira: curso de 16h mínimas (teoria + prática)","Reciclagem a cada 3 anos ou após acidente","Operadores de pontes rolantes e guindastes: habilitação específica conforme porte"],
+   periodicidade:"Inspeção de empilhadeiras: diária (check list pelo operador) + inspeção técnica periódica conforme fabricante",
+   penalidades:"Grave; acidente com equipamento de movimentação gera responsabilidade civil e criminal",
+   criticos:["Operador de empilhadeira sem habilitação","Capacidade de carga não afixada ou desgastada/ilegível","Ausência de check list diário do operador","Corredores de circulação obstruídos ou sem demarcação","Falta de espelhos em cruzamentos cegos de empilhadeiras"],
+   rel:[12,17]},
+
+  {num:12,nome:"Segurança no Trabalho em Máquinas e Equipamentos",status:"vigente",cat:"Segurança em Máquinas",setores:"Indústria manufatureira (metalurgia, madeireiro, alimentício, plástico, confecção, papel, etc.)",
+   ementa:"NR mais complexa da manufatura. Estabelece requisitos de segurança para projeto, fabricação, importação, comercialização, instalação, operação, manutenção e desmonte de máquinas. Exige proteções em partes móveis, dispositivos de intertravamento, paradas de emergência e procedimentos de LOTO.",
+   obrigacoes:["Realizar inventário de todas as máquinas com avaliação de riscos","Instalar proteções fixas ou intertravadas em todas as zonas de perigo (distâncias mínimas das Tabelas da NR-12)","Instalar botão de parada de emergência cogumelo cor vermelha com fundo amarelo em local acessível","Elaborar Manual de Instrução de cada máquina em português","Implementar LOTO (Lockout/Tagout) para manutenção","Treinar operadores e mantenedores antes do início das atividades","Elaborar Ordem de Serviço para cada máquina"],
+   documentos:["Inventário de máquinas com apreciação de risco (FMEA, PHA ou método equivalente)","Manual de Instrução de cada máquina","ART de adequação à NR-12 quando exigida","Registros de manutenção preventiva e corretiva","Ordens de Serviço de operação"],
+   treinamentos:["Operadores: mínimo 8 horas iniciais + treinamento prático na máquina específica","Mantenedores: carga horária proporcional à complexidade (≥16h para máquinas complexas)","LOTO: treinamento específico para todos que realizam manutenção"],
+   periodicidade:"Inventário revisado após aquisição de nova máquina ou modificação de layout; manutenção conforme manual do fabricante",
+   penalidades:"Gravíssima para máquinas sem proteção em partes móveis; risco de interdição imediata",
+   criticos:["Protetores removidos pelos próprios trabalhadores para ganhar produtividade","Botão de emergência com trava ou impedido de funcionar","Máquinas sem Manual de Instrução em português","Operadores sem registro de treinamento documentado","LOTO não implementado — manutenção com máquina energizada","Distâncias de segurança menores que as Tabelas das zonas perigosas"],
+   rel:[11,13,35]},
+
+  {num:13,nome:"Caldeiras, Vasos de Pressão, Tubulações e Tanques de Armazenamento",status:"vigente",cat:"Riscos Específicos",setores:"Industrial com caldeiras (alimentício, farmacêutico, têxtil, papel e celulose, petroquímica)",
+   ementa:"Regulamenta instalação, operação, inspeção e manutenção de caldeiras (categorias A, B, C), vasos de pressão (classes 1 a 5), tubulações de processo e tanques metálicos de armazenamento. Exige inspeção periódica por Profissional Habilitado (PH) com registro no CREA.",
+   obrigacoes:["Registrar caldeiras e vasos de pressão no órgão regional do MTE","Realizar inspeção de segurança periódica por PH (Engenheiro Mecânico ou de Segurança com CREA)","Manter Prontuário individual de cada equipamento (projeto, histórico, laudos)","Capacitar operadores de caldeira conforme categoria","Instalar válvulas de segurança calibradas e instrumentos de controle funcionando","Elaborar Plano de Manutenção Preventiva"],
+   documentos:["Prontuário de cada caldeira/vaso (projeto, ART, histórico de inspeções)","Registro no órgão regional do MTE","Certificado de Inspeção emitido pelo PH","Habilitação do operador de caldeira","Calibrações de manômetros e válvulas de segurança"],
+   treinamentos:["Operador de Caldeira Categoria A (>1.000L ou pressão máx. >0,06 MPa): curso de 40h + 4h de prática","Operadores de caldeiras B e C têm requisitos proporcionalmente menores","Reciclagem: não há periodicidade fixa, mas recomendada a cada 3 anos"],
+   periodicidade:"Caldeira Cat.A: inspeção interna a cada 24 meses + inspeção externa anual; Cat.B/C: a cada 36 meses; vasos conforme criticidade e código de projeto",
+   penalidades:"Gravíssima; explosão de caldeira gera processo criminal; risco de interdição imediata",
+   criticos:["Caldeira sem inspeção dentro do prazo","Válvula de segurança bloqueada, adulterada ou sem teste de calibração","Operador sem habilitação específica para a categoria da caldeira","Prontuário incompleto ou desatualizado","Manômetro fora da escala ou com vidro quebrado","Nível d'água não visível (visor obstruído)"],
+   rel:[12,14,20]},
+
+  {num:14,nome:"Fornos",status:"vigente",cat:"Riscos Específicos",setores:"Metalurgia, cerâmica, vidro, alimentício, fundição",
+   ementa:"Estabelece requisitos de segurança para fornos industriais de qualquer tipo (combustão, resistência elétrica, indução, micro-ondas). Exige proteções contra queimaduras por calor radiante e contato com superfícies quentes, proteção contra gases tóxicos e explosão.",
+   obrigacoes:["Instalar proteções físicas contra contato com superfícies aquecidas","Prover ventilação adequada para dispersão de gases de combustão","Treinar operadores nos procedimentos de operação e emergência","Manter extintores compatíveis com o tipo de fogo próximos ao forno","Instalar válvulas de segurança e cut-off em fornos a gás","Elaborar procedimento de partida e parada segura"],
+   documentos:["Manual de operação do forno","Registros de manutenção de queimadores e válvulas de segurança","CA dos EPIs térmicos (luvas refratárias, avental aluminizado, óculos IR)"],
+   treinamentos:["Treinamento de operadores: carga horária não definida pela NR; mínimo recomendado: 8h com prática supervisionada"],
+   periodicidade:"Manutenção preventiva de queimadores: semestral ou conforme fabricante",
+   penalidades:"Grave; exposição ao calor acima dos limites da NR-15 gera adicional de insalubridade",
+   criticos:["Ausência de proteção em superfícies que atingem temperatura acima de 50°C","Ventilação insuficiente com acúmulo de CO em fornos a gás","Operadores sem EPI térmico adequado","Válvulas de corte (shut-off) de gás sem manutenção"],
+   rel:[13,15,20]},
+
+  {num:15,nome:"Atividades e Operações Insalubres",status:"vigente",cat:"Riscos Específicos",setores:"Todos onde há exposição acima dos limites de tolerância a agentes físicos, químicos ou biológicos",
+   ementa:"Define quais atividades e agentes são insalubres e os adicionais correspondentes (Grau Mínimo 10%, Médio 20%, Máximo 40% do salário mínimo). Agentes: ruído, calor, frio, pressão hiperbárica, radiações ionizantes e não-ionizantes, agentes químicos (anexos), agentes biológicos.",
+   obrigacoes:["Realizar avaliação qualitativa e/ou quantitativa por Engenheiro de Segurança ou Médico do Trabalho","Emitir Laudo de Insalubridade formalizando a caracterização ou descaracterização","Pagar adicional de insalubridade quando caracterizado","Implementar EPI e EPC como medidas de controle (eliminar ou neutralizar o agente)","Reclassificar e emitir novo laudo após implementação de controles eficazes","Avaliar agentes biológicos em serviços de saúde, coleta de lixo, esgoto e atividades similares"],
+   documentos:["Laudo de Insalubridade assinado por Engenheiro de Segurança do Trabalho ou Médico do Trabalho","Medições quantitativas (ruído: NHO-01; calor: IBUTG NHO-06; químicos: ACGIH/NIOSH)","Calibrações dos equipamentos de medição","LTCAT (para fins previdenciários)"],
+   treinamentos:["Profissional emissor deve ser Engenheiro de Segurança do Trabalho ou Médico do Trabalho habilitado"],
+   periodicidade:"Laudo revisado quando há mudança de processo, layout, EPI ou controles; não há periodicidade mínima expressa na NR, mas recomendado anualmente",
+   penalidades:"Grave; passivo trabalhista retroativo por adicional não pago pode ser milionário em ações coletivas",
+   criticos:["Laudo de insalubridade desatualizado (processo mudou mas laudo não foi revisado)","Medições de ruído sem calibração rastreável (dosímetros sem certificado INMETRO)","Emissão de laudo por profissional não habilitado","Adicional não pago apesar de laudo que caracteriza insalubridade","Ausência de avaliação de agentes biológicos em serviços de saúde e coleta de lixo","Pagamento de adicional sem laudo formal (gera passivo mesmo sem direito real)"],
+   rel:[6,7,9,16]},
+
+  {num:16,nome:"Atividades e Operações Perigosas",status:"vigente",cat:"Riscos Específicos",setores:"Petroquímica, distribuidoras de combustível, energia elétrica, segurança patrimonial, motofretistas",
+   ementa:"Define atividades perigosas que dão direito ao adicional de periculosidade de 30% sobre o salário base (não cumulativo com insalubridade — trabalhador opta pelo maior). Inclui: inflamáveis/explosivos, energia elétrica (NR-10), radiações ionizantes, substâncias radioativas, motociclistas em serviço, trabalhadores da segurança pessoal/patrimonial, trabalhadores em condições hiperbáricas.",
+   obrigacoes:["Emitir Laudo de Periculosidade por Engenheiro de Segurança quando identificada a atividade perigosa","Pagar adicional de 30% sobre o salário base","Implementar medidas para eliminação do risco sempre que tecnicamente viável","Dar ao trabalhador a opção de escolher entre adicional de periculosidade ou de insalubridade"],
+   documentos:["Laudo de Periculosidade assinado por Engenheiro de Segurança do Trabalho","Laudo de eletricidade (para NR-10) quando base para periculosidade","Documentação de escolha do trabalhador (periculosidade vs. insalubridade)"],
+   treinamentos:["Profissional emissor: Engenheiro de Segurança do Trabalho habilitado (CREA + especialização)"],
+   periodicidade:"Laudo revisado após mudança de processo ou implementação de controles que eliminem o risco",
+   penalidades:"Grave; passivo trabalhista retroativo por adicional não pago",
+   criticos:["Atividade perigosa caracterizada sem emissão de laudo formal","Adicional não pago por anos — passivo em ações coletivas","Cumulação indevida de insalubridade e periculosidade sem opção do trabalhador","Motofretistas sem adicional de periculosidade (obrigatório desde a Lei 12.997/2014)","Laudo emitido por Técnico de Segurança (não habilitado para este laudo)"],
+   rel:[6,10,15]},
+
+  {num:17,nome:"Ergonomia",status:"vigente",cat:"Ergonomia e Conforto",setores:"Todos, com ênfase em teleatendimento, escritório, produção em linha, serviços de saúde e varejo",
+   ementa:"Estabelece parâmetros para adaptar condições de trabalho às características psicofisiológicas do trabalhador. Cobre: posto de trabalho (mobiliário, tela, teclado), levantamento manual de cargas, trabalho repetitivo, condições ambientais, organização do trabalho e fatores psicossociais.",
+   obrigacoes:["Realizar Avaliação Ergonômica Preliminar (AEP) em todos os postos de trabalho","Realizar Análise Ergonômica do Trabalho (AET) quando AEP identificar riscos relevantes","Adequar mobiliário: cadeiras reguláveis, mesas na altura correta, telas sem reflexo","Conceder pausas de recuperação em atividades repetitivas (teleatendimento: 10min/50min)","Limitar levantamento manual de cargas (máx. 23 kg para homens adultos em condições ideais)","Instruir trabalhadores sobre posturas corretas e técnicas de levantamento"],
+   documentos:["AET — Análise Ergonômica do Trabalho (em atividades de risco ergonômico significativo)","Programa de Ergonomia documentado","Laudos de adequação de postos de trabalho"],
+   treinamentos:["Treinamento em ergonomia para trabalhadores expostos a riscos ergonômicos — sem carga horária mínima definida pela NR","Ergonomista certificado (ABERGO) para realização da AET"],
+   periodicidade:"AET revisada após mudança de processo, layout ou reclamações de LER/DORT",
+   penalidades:"Leve a grave; LER/DORT podem gerar indenizações trabalhistas vultosas e custeio de tratamento",
+   criticos:["Ausência de AET em linhas de produção intensamente repetitivas","Cadeiras sem regulagem de altura em escritórios com muitas horas de trabalho sentado","Ausência de pausas documentadas em operadores de teleatendimento","Monitor posicionado abaixo ou acima da linha dos olhos","Levantamento manual de cargas pesadas sem orientação ou auxílio mecânico","Iluminância insuficiente (abaixo de 500 lux) em atividades de precisão"],
+   rel:[8,11,24]},
+
+  {num:18,nome:"Segurança e Saúde no Trabalho na Indústria da Construção Civil",status:"vigente",cat:"Construção Civil",setores:"Construção civil em geral (edificações, obras de infraestrutura, demolições, reformas)",
+   ementa:"NR mais abrangente da construção civil. Regulamenta condições e ambiente de trabalho em obras, incluindo: andaimes, plataformas de trabalho, escoramentos, demolições, escavações, instalações elétricas provisórias, ferramentas manuais, PCMAT e EPI obrigatório na entrada da obra.",
+   obrigacoes:["Elaborar PCMAT (Programa de Condições e Meio Ambiente de Trabalho) para obras com ≥20 trabalhadores","Instalar CIPA ou designar Representante de Segurança em obras menores","Instalar andaimes com guarda-corpo (1,20m) e travessa intermediária (0,70m) e rodapé (0,20m)","Prover instalações sanitárias, vestiário, refeitório e área de descanso","Fornecer EPI completo obrigatório na entrada da obra","Instalar proteção de periferia e redes de proteção em edifícios em altura","Comunicar CAT em todos os acidentes com afastamento"],
+   documentos:["PCMAT elaborado e assinado por Engenheiro de Segurança","PGR da obra","Registros de treinamentos de integração e NRs específicas","ART do responsável técnico pela segurança da obra","Planta de layout da obra com sinalizações de segurança"],
+   treinamentos:["Integração de Segurança: mínimo 6 horas antes de iniciar qualquer atividade na obra","NR-35 para todos que trabalham em altura ≥2m: 8h","NR-10 para eletricistas da obra: 40h","Primeiros socorros: pelo menos 1 trabalhador treinado por turno","NR-33 para trabalhos em espaços confinados em obras"],
+   periodicidade:"PCMAT atualizado conforme progresso da obra e mudanças no layout",
+   penalidades:"Gravíssima; construção civil é o setor com maior índice de interdições no Brasil",
+   criticos:["Andaimes sem guarda-corpo ou com guarda-corpo abaixo de 1,20m","Trabalhadores em altura sem cinto de segurança tipo paraquedista","PCMAT inexistente em obra com ≥20 trabalhadores","Ausência de rede de proteção na periferia de edifícios","Instalações sanitárias insuficientes para o número de trabalhadores","Trabalhadores sem integração de segurança antes de iniciar na obra","Estoque de materiais e entulho obstruindo rotas de fuga"],
+   rel:[35,10,33,23]},
+
+  {num:19,nome:"Explosivos",status:"vigente",cat:"Indústrias Específicas",setores:"Mineração, construção pesada com detonações, pirotecnia, defesa e forças de segurança",
+   ementa:"Regulamenta armazenamento, manuseio e uso de explosivos no trabalho. Exige paiol de explosivos com distâncias de segurança aprovadas pelo Exército Brasileiro, Blaster habilitado (detonador licenciado pelo Exército), controle rigoroso de estoque e Plano de Fogo para cada operação.",
+   obrigacoes:["Manter paiol com projeto aprovado pelo Exército Brasileiro e distâncias de segurança","Designar apenas Blaster com habilitação do Exército para manusear explosivos","Elaborar Plano de Fogo para cada operação de detonação","Controlar rigorosamente o estoque de explosivos (entrada, saída, saldo)","Comunicar ao Exército e à polícia qualquer roubo ou perda de explosivos"],
+   documentos:["Licença do paiol (Exército)","Habilitação de Blaster (ativada e válida)","Plano de Fogo de cada operação","Registro de consumo e estoque de explosivos","FISPQ dos explosivos utilizados"],
+   treinamentos:["Blaster: curso de habilitação do Exército Brasileiro (40h + prova)","Auxiliares: treinamento sob supervisão do Blaster"],
+   periodicidade:"Plano de Fogo: elaborado antes de cada detonação; renovação de habilitação do Blaster: conforme Exército",
+   penalidades:"Gravíssima; posse e uso irregular de explosivos é crime previsto na Lei 10.826/2003 (Estatuto do Desarmamento)",
+   criticos:["Manuseio por pessoa não habilitada como Blaster","Armazenamento fora do paiol aprovado","Plano de Fogo ausente ou sem cálculo de carga de ruptura","Falta de controle de estoque — explosivos desaparecidos","Zona de segurança não evacuada durante detonação"],
+   rel:[20,22]},
+
+  {num:20,nome:"Segurança e Saúde no Trabalho com Inflamáveis e Combustíveis",status:"vigente",cat:"Riscos Específicos",setores:"Postos de combustível, petroquímica, distribuidoras, industria química, transporte de cargas perigosas",
+   ementa:"Regula as condições de segurança nos trabalhos com líquidos combustíveis e inflamáveis. Classifica estabelecimentos em categorias (I, II, III) e trabalhadores por tipo de atividade, exigindo treinamentos específicos, sistemas de combate a incêndio e gerenciamento de emergências.",
+   obrigacoes:["Classificar o estabelecimento (Categoria I, II ou III) conforme inventário e tipo de produto","Classificar e treinar trabalhadores por categoria de atividade","Elaborar Análise de Risco (AR) para operações não rotineiras","Implementar aterramento elétrico em tanques e equipamentos de transferência","Instalar e manter sistema de detecção e combate a incêndio","Elaborar Plano de Emergência específico para derramamentos e incêndios"],
+   documentos:["Classificação do estabelecimento documentada","Registros de treinamento por categoria de trabalhador","ARs para operações especiais","Laudos de aterramento (SPDA e aterramento de equipamentos)","FISPQ dos produtos armazenados"],
+   treinamentos:["Categoria I (operadores de posto de abastecimento): 8h na admissão + 4h reciclagem anual","Categoria II (operadores de transferência de inflamáveis): 20h inicial + 8h anual","Categoria III (trabalhadores em produção petroquímica): 40h inicial + 20h anual"],
+   periodicidade:"Reciclagem anual para todas as categorias; revisão do Plano de Emergência anual",
+   penalidades:"Gravíssima; derramamento de combustível gera responsabilidade ambiental (IBAMA) além da trabalhista",
+   criticos:["Trabalhadores sem treinamento na categoria correta","Ausência de aterramento em pontos de transferência de combustível","Sistema de combate a incêndio sem manutenção semestral","FISPQ não disponível para os trabalhadores","Ausência de AR em operações de transferência não rotineiras"],
+   rel:[13,19,23]},
+
+  {num:21,nome:"Trabalho a Céu Aberto",status:"vigente",cat:"Ergonomia e Conforto",setores:"Agricultura, construção civil, mineração a céu aberto, obras públicas, topografia",
+   ementa:"Estabelece condições mínimas para trabalhadores em atividades ao ar livre: proteção contra intempéries (chuva, sol intenso, calor e frio extremos), fornecimento de água potável, sanitários portáteis, proteção contra animais peçonhentos e proteção solar.",
+   obrigacoes:["Prover abrigo contra chuva e exposição direta ao sol durante pausas","Fornecer água potável em quantidade suficiente (mínimo 1 litro/hora em calor intenso)","Instalar sanitários portáteis na área de trabalho","Fornecer protetor solar FPS ≥30 para exposição solar ≥2 horas contínuas","Treinar trabalhadores sobre proteção contra animais peçonhentos","Garantir roupas de proteção contra exposição ao sol (manga longa, chapéu)"],
+   documentos:["Registros de fornecimento de EPI de proteção solar","Comunicados de treinamento sobre animais peçonhentos"],
+   treinamentos:["Treinamento sobre animais peçonhentos: identificação e procedimento em caso de acidente (picada/mordida)"],
+   periodicidade:"N/A — condições devem ser mantidas permanentemente",
+   penalidades:"Leve a grave conforme a gravidade da ausência",
+   criticos:["Ausência de protetor solar em atividade com exposição direta ao sol","Água não potável (cisterna contaminada, galões sem higienização)","Ausência de sanitários portáteis em obras rurais","Falta de treinamento para acidentes com animais peçonhentos em áreas de risco"],
+   rel:[15,24]},
+
+  {num:22,nome:"Segurança e Saúde Ocupacional na Mineração",status:"vigente",cat:"Indústrias Específicas",setores:"Mineração subterrânea e a céu aberto, garimpo regularizado, extração de calcário e pedras",
+   ementa:"Regulamenta todas as condições de trabalho em mineração: estabilidade de taludes e maciços, ventilação e qualidade do ar em minas subterrâneas, drenagem, iluminação, comunicação de emergência, transporte interno, CSSM (comissão de saúde e segurança na mineração) e PGR específico.",
+   obrigacoes:["Elaborar PGR específico para mineração com avaliação de riscos geotécnicos","Constituir CSSM (equivalente à CIPA na mineração)","Monitorar continuamente a qualidade do ar em minas subterrâneas (O2, CH4, CO, poeira)","Elaborar e testar Plano de Fuga e Resgate periodicamente","Instalar sistemas de comunicação em toda a extensão subterrânea","Garantir estabilidade de taludes com laudos geotécnicos periódicos"],
+   documentos:["PGR de mineração com análise geotécnica","Laudos de estabilidade de taludes (Engenheiro Geotécnico)","Plano de Fuga e Resgate atualizado","Registros de monitoramento de qualidade do ar","Atas da CSSM"],
+   treinamentos:["Treinamento em procedimentos de emergência e evacuação: todos os trabalhadores, a cada 12 meses","Brigada de resgate em minas: treinamento avançado com simulados periódicos"],
+   periodicidade:"Laudos geotécnicos: após eventos climáticos extremos ou conforme plano de inspeção; monitoramento de ar: contínuo em subterrâneo",
+   penalidades:"Gravíssima; colapso de talude e explosão em mina subterrânea são os maiores acidentes coletivos da história do trabalho no Brasil",
+   criticos:["Minas subterrâneas sem sistema de ventilação ou com ventilação insuficiente","Taludes sem laudo geotécnico de estabilidade","Trabalhadores sem treinamento em procedimentos de evacuação","Plano de Fuga desatualizado ou não testado","Explosivos sem controle de estoque (integra com NR-19)"],
+   rel:[19,33,35]},
+
+  {num:23,nome:"Proteção Contra Incêndios",status:"vigente",cat:"Riscos Específicos",setores:"Todos os estabelecimentos",
+   ementa:"Estabelece requisitos para proteção contra incêndio nos locais de trabalho: extintores, hidrantes, saídas de emergência desobstruídas, brigada de incêndio treinada, sinalização e plano de emergência com simulados periódicos. Complementa as normas estaduais dos Corpos de Bombeiros.",
+   obrigacoes:["Instalar extintores adequados ao tipo de risco (Classes A, B, C, D) conforme ABNT NBR 12693","Manter saídas de emergência desobstruídas e com sinalização luminosa de emergência","Constituir Brigada de Incêndio treinada conforme ABNT NBR 14276","Elaborar Plano de Emergência e realizar simulados periódicos documentados","Manter extintores com inspeção mensal, manutenção anual e recarga pós-uso","Obter e manter AVCB (Auto de Vistoria do Corpo de Bombeiros) válido"],
+   documentos:["AVCB válido (renovado conforme legislação estadual, geralmente 2-5 anos)","Relatório de inspeção mensal dos extintores","Registros de manutenção e recarga de extintores","Lista da Brigada de Incêndio com certificados de treinamento","Relatório de simulado de emergência"],
+   treinamentos:["Brigada de Incêndio: curso teórico-prático de mínimo 8h/ano (ABNT NBR 14276)","Simulado completo de evacuação: anual","Todos os trabalhadores: orientação básica de uso do extintor e rotas de fuga"],
+   periodicidade:"Inspeção de extintores: mensal; manutenção de extintores: anual; recarga: após uso ou conforme prazo do fabricante; simulado: anual",
+   penalidades:"Gravíssima; extintores vencidos ou saídas bloqueadas são causa frequente de interdição",
+   criticos:["Extintores com prazo de manutenção vencido (manômetro na zona vermelha)","Saídas de emergência trancadas com chave ou bloqueadas por materiais","AVCB vencido há mais de 1 ano","Brigada de Incêndio sem treinamento anual","Ausência de sinalização luminosa de emergência nas saídas","Simulado de evacuação não realizado há mais de 12 meses"],
+   rel:[20,26]},
+
+  {num:24,nome:"Condições Sanitárias e de Conforto nos Locais de Trabalho",status:"vigente",cat:"Ergonomia e Conforto",setores:"Todos os estabelecimentos",
+   ementa:"Regulamenta as condições sanitárias mínimas nos locais de trabalho: banheiros (proporção por sexo e número de trabalhadores), vestiários, refeitórios, cozinhas industriais, locais de repouso e fornecimento de água potável.",
+   obrigacoes:["Instalar banheiros na proporção de 1 vaso e 1 lavatório por 20 trabalhadores do mesmo sexo","Separar sanitários por sexo em estabelecimentos com homens e mulheres","Prover vestiário com armários individuais para atividades com troca obrigatória de roupa","Manter refeitório com mesas e assentos suficientes quando não há restaurante próximo","Fornecer água potável em qualidade (ANVISA) e quantidade adequada","Manter banheiros, vestiários e refeitório em condições higiênicas"],
+   documentos:["Laudo de potabilidade da água (quando abastecimento próprio por poço)","Registros de higienização dos banheiros, vestiários e refeitório"],
+   treinamentos:[],periodicidade:"Condições devem ser mantidas permanentemente; higienização de banheiros: mínimo 1x/turno",
+   penalidades:"Leve a grave conforme a magnitude do descumprimento e o número de trabalhadores afetados",
+   criticos:["Número de vasos sanitários insuficiente para o número de trabalhadores","Banheiros de uso misto em empresas com ambos os sexos","Ausência de vestiário em atividade com exposição a agentes insalubres","Refeitório sem condições mínimas de higiene","Água disponibilizada sem controle de potabilidade"],
+   rel:[8,17]},
+
+  {num:25,nome:"Resíduos Industriais",status:"vigente",cat:"Riscos Específicos",setores:"Indústria (metalurgia, química, farmacêutica, alimentícia), serviços de saúde, laboratórios",
+   ementa:"Regulamenta descarte, coleta, armazenamento e destinação final de resíduos industriais (sólidos, líquidos, gasosos) gerados nos locais de trabalho, visando proteger o trabalhador e o meio ambiente. Integra-se com a PNRS (Política Nacional de Resíduos Sólidos — Lei 12.305/2010).",
+   obrigacoes:["Identificar e classificar todos os resíduos conforme ABNT NBR 10004 (I, II-A, II-B)","Armazenar resíduos em áreas adequadas, segregados e identificados","Contratar destinação final por empresa licenciada pelo órgão ambiental","Emitir e manter Manifesto de Transporte de Resíduos (MTR)","Treinar trabalhadores que manuseiam resíduos perigosos","Elaborar PGRSS quando for Serviço de Saúde"],
+   documentos:["MTR — Manifesto de Transporte de Resíduos (para cada lote de resíduo perigoso)","Licença ambiental do destinador final","PGRSS — Plano de Gerenciamento de Resíduos dos Serviços de Saúde (quando aplicável)","Inventário de resíduos gerados"],
+   treinamentos:["Trabalhadores que manuseiam resíduos perigosos: treinamento em FISPQ e uso de EPI específico"],
+   periodicidade:"MTR: por lote transportado; destinação: conforme geração e capacidade de armazenamento",
+   penalidades:"Grave a gravíssima; destinação inadequada de resíduos perigosos gera autuação do IBAMA/órgão ambiental estadual além da autuação trabalhista",
+   criticos:["Resíduos perigosos e comuns misturados no mesmo contêiner","Destinação por empresa não licenciada","Ausência de MTR — resíduo sem rastreabilidade","Trabalhadores sem EPI ao manusear resíduos tóxicos ou corrosivos","Armazenamento de resíduos líquidos sem bacia de contenção"],
+   rel:[6,32]},
+
+  {num:26,nome:"Sinalização de Segurança",status:"vigente",cat:"EPI e EPC",setores:"Todos os estabelecimentos",
+   ementa:"Estabelece a padronização de cores, símbolos e pictogramas para sinalização de segurança nos locais de trabalho, baseada nas normas ISO 3864 e ABNT NBR 7195. Define: vermelho (proibição/combate a incêndio), amarelo (atenção/cuidado), verde (segurança/saídas), azul (obrigação/EPI), branco (organização).",
+   obrigacoes:["Instalar sinalização de proibição (vermelho) em áreas de risco e equipamentos de combate a incêndio","Sinalizar zonas de atenção e perigo com amarelo (piso, degraus, obstáculos)","Identificar rotas de fuga e saídas de emergência com verde (fotoluminescente)","Indicar EPI obrigatório por área com azul","Sinalizar tubulações conforme ABNT NBR 6493","Manter sinalização legível, limpa e íntegra"],
+   documentos:["Planta de sinalização de segurança do estabelecimento","Registros de inspeção periódica da sinalização"],
+   treinamentos:["Orientação a todos os trabalhadores sobre o significado das sinalizações na admissão"],
+   periodicidade:"Inspeção visual da sinalização: mensal; reposição imediata de sinalização danificada",
+   penalidades:"Leve; ausência de sinalização em conjunto com outras infrações agrava a penalidade total",
+   criticos:["Sinalização fotoluminescente de saída de emergência apagada ou coberta","Extintor sem identificação do tipo (A, B, C)","Piso molhado sem placa de advertência","Tubulações sem identificação conforme NBR 6493","Demarcação de corredores de empilhadeiras apagada"],
+   rel:[23,6,8]},
+
+  {num:27,nome:"Registro Profissional do Técnico de Segurança — REVOGADA",status:"revogada",cat:"Fiscalização",setores:"N/A",
+   ementa:"Tratava do Registro Profissional do Técnico de Segurança do Trabalho no Ministério do Trabalho. Revogada pela Portaria MTE nº 194/2010. O registro continua obrigatório, mas passou a ser gerenciado diretamente pelo MTE sem NR específica.",
+   obrigacoes:[],documentos:[],treinamentos:[],periodicidade:"—",penalidades:"Não aplicável — norma revogada",criticos:[],rel:[4]},
+
+  {num:28,nome:"Fiscalização e Penalidades",status:"vigente",cat:"Fiscalização",setores:"Todos (regula a atividade de fiscalização do MTE)",
+   ementa:"Define as sanções administrativas aplicáveis pela Auditoria Fiscal do Trabalho (AUFC) em caso de infrações às NRs. Classifica infrações em 4 grupos (I a IV) com valores progressivos e agravamentos por reincidência, contumácia, dolo e resultado de acidente.",
+   obrigacoes:["Regularizar autuações dentro do prazo concedido","Exercer direito de defesa administrativa em 10 dias corridos via SEI/MTE","Conhecer a tabela de valores de multa e agravamentos","Manter documentação de conformidade disponível para inspeção","Acompanhar AUFC durante a inspeção e fornecer documentos solicitados"],
+   documentos:["Auto de Infração (emitido pelo AUFC)","Notificação de Regularização","Recurso Administrativo (defesa dentro do prazo)","Documentação de conformidade regularizada"],
+   treinamentos:[],periodicidade:"N/A — aplicação conforme infrações identificadas em inspeção",
+   penalidades:"Grupo I (R$ 668,18), Grupo II (R$ 2.238,44), Grupo III (R$ 4.476,88), Grupo IV (R$ 44.767,30). Com reincidência: dobro. Com resultado de morte: até 3x o valor máximo",
+   criticos:["Prazo de defesa de 10 dias perdido sem protocolo — auto transita em julgado","Desconhecimento dos valores de multa impedindo priorização das regularizações","Não regularização após autuação gera novo auto por contumácia","Reincidência dobra o valor da multa — empresa que nunca se regulariza acumula multas crescentes","Representação por procurador sem mandato em vigor"],
+   rel:[3]},
+
+  {num:29,nome:"Segurança e Saúde no Trabalho Portuário",status:"vigente",cat:"Indústrias Específicas",setores:"Portos organizados, terminais marítimos, trabalhadores avulsos portuários (OGMO)",
+   ementa:"Regulamenta as condições de segurança nos portos e terminais marítimos: movimentação de cargas perigosas (IMDG), trabalho em convés de embarcações, risco de afogamento, OGMO (Órgão Gestor de Mão de Obra Portuária) e Comissão Paritária Portuária (CPP).",
+   obrigacoes:["Constituir SESMT portuário dimensionado conforme o número de trabalhadores","Criar CPP — Comissão Paritária Portuária (equivalente à CIPA no porto)","Treinar trabalhadores em movimentação de cargas perigosas (IMDG)","Elaborar PGR específico para as operações portuárias","Prover equipamentos de resgate aquático para trabalho sobre ou próximo à água","Monitorar a saúde de trabalhadores avulsos periodicamente"],
+   documentos:["PGR portuário","Registro e certificação da CPP","Certificações de operadores de equipamentos de içamento portuário","Registros de saúde dos trabalhadores avulsos (PCMSO coordenado pelo OGMO)"],
+   treinamentos:["Operadores de guindastes e equipamentos portuários: habilitação específica","Movimentação de cargas perigosas (IMDG): curso de 16h","Resgate aquático: treinamento básico para todos que trabalham em convés"],
+   periodicidade:"PCMSO dos avulsos: gerenciado pelo OGMO com periodicidade conforme NR-7",
+   penalidades:"Grave a gravíssima",
+   criticos:["Trabalhadores sem treinamento para movimentação de cargas IMDG (perigosas)","Ausência de equipamento de resgate aquático em operações em convés","CPP não constituída ou sem reuniões regulares","Trabalhadores avulsos sem exames periódicos em dia"],
+   rel:[30,11]},
+
+  {num:30,nome:"Segurança e Saúde no Trabalho Aquaviário",status:"vigente",cat:"Indústrias Específicas",setores:"Embarcações de cabotagem, navegação interior, fluvial, lacustre, pesca profissional",
+   ementa:"Regulamenta condições de segurança para trabalhadores em embarcações: organização do trabalho a bordo, horas de repouso, EPIs náuticos (coletes salva-vidas, macacões de imersão), condições de alojamento e alimentação, equipamentos de salvamento e primeiros socorros.",
+   obrigacoes:["Dimensionar SESMT aquaviário conforme número de tripulantes e tipo de navegação","Treinar tripulação em abandono de embarcação e combate a incêndio a bordo","Manter equipamentos de salvatagem em condições e dentro do prazo de validade","Garantir condições mínimas de alojamento (espaço, ventilação, iluminação) a bordo","Respeitar limites de horas de trabalho e descanso (STCW/MLC 2006 para navegação de longo curso)","Fornecer alimentação adequada à tripulação embarcada"],
+   documentos:["Certificado de Segurança da Embarcação (Marinha do Brasil)","Registros de treinamento da tripulação (STCW)","PGR aquaviário","Registro de inspeção dos equipamentos de salvatagem"],
+   treinamentos:["Treinamento Básico de Sobrevivência (BST/STCW): 40h — renovação a cada 5 anos","Combate a Incêndio a bordo: 16h — renovação a cada 5 anos","Primeiros Socorros a bordo: 16h"],
+   periodicidade:"Equipamentos de salvatagem: inspeção anual; coletes: teste de flutuabilidade periódico",
+   penalidades:"Grave; Marinha do Brasil também tem poder fiscalizatório sobre embarcações",
+   criticos:["Coletes salva-vidas sem quantidade suficiente ou vencidos","Balsas infláveis sem inspeção periódica","Tripulação sem treinamento BST válido","Excesso de horas de trabalho sem registros a bordo","Alojamentos superlotados ou sem ventilação"],
+   rel:[29,37]},
+
+  {num:31,nome:"Segurança e Saúde no Trabalho na Agricultura, Pecuária, Silvicultura, Exploração Florestal e Aquicultura",status:"vigente",cat:"Indústrias Específicas",setores:"Agronegócio, usinas sucroalcooleiras, silvicultura, piscicultura, aquicultura, trabalhadores rurais",
+   ementa:"Regulamenta as condições de trabalho no campo: uso seguro de agrotóxicos, mecanização agrícola, trabalho em ambientes quentes, proteção contra animais peçonhentos, instalações de campo (água, banheiros, alojamentos para turmas volantes) e CIPAAR (CIPA rural).",
+   obrigacoes:["Treinar trabalhadores em uso de agrotóxicos antes da aplicação (Lei dos Agrotóxicos + NR-31)","Fornecer EPI específico para aplicação de defensivos (macacão, máscara P3, luvas nitrílica, bota)","Instalar sanitários portáteis nos campos de trabalho","Garantir transporte adequado (não em caçambas ou carroças)","Monitorar colinesterase de trabalhadores expostos a organofosforados","Elaborar PGR rural e constituir CIPAAR quando exigido","Manter máquinas agrícolas com protetores nas PTOs (tomadas de força)"],
+   documentos:["Receituário agronômico dos defensivos utilizados","Registros de treinamento em agrotóxicos","PCMSO com monitoramento de colinesterase","Registros de manutenção de máquinas agrícolas","PGR rural"],
+   treinamentos:["Aplicadores de agrotóxicos: treinamento obrigatório por lei antes de qualquer aplicação","Operadores de máquinas agrícolas (tratores, colhedoras): habilitação específica e NR-12 adaptada ao setor rural"],
+   periodicidade:"Colinesterase: monitoramento a cada 60 dias para expostos a organofosforados; receituário: por campanha",
+   penalidades:"Grave; intoxicação por agrotóxico é doença de notificação compulsória (NÃO pagar o laudo não elimina o passivo)",
+   criticos:["Aplicadores de agrotóxico sem EPI completo ou sem treinamento documentado","PTOs de tratores e colhedoras sem proteção (causa de amputações)","Monitoramento de colinesterase não realizado em trabalhadores expostos a organofosforados","Transporte de trabalhadores em carroças ou caçambas (proibido)","Ausência de sanitários portáteis nos locais de trabalho rurais"],
+   rel:[6,15,21]},
+
+  {num:32,nome:"Segurança e Saúde no Trabalho em Serviços de Saúde",status:"vigente",cat:"Saúde Ocupacional",setores:"Hospitais, clínicas, laboratórios, farmácias, ambulatórios, hemocentros, radiologia, odontologia, IML",
+   ementa:"Regulamenta as condições de segurança para trabalhadores da saúde expostos a: riscos biológicos (patógenos transmitidos por sangue e fluidos corporais), agentes químicos (quimioterápicos, desinfetantes, anestésicos gasosos), radiações ionizantes e não ionizantes, e riscos ergonômicos e psicossociais.",
+   obrigacoes:["Elaborar e implementar PGRSS (Plano de Gerenciamento de Resíduos dos Serviços de Saúde — ABNT NBR 10004)","Implementar Precauções Padrão em todos os procedimentos (luvas, máscara, óculos/protetor facial, avental)","Disponibilizar coletor de perfurocortantes em ponto de uso imediato","Vacinar trabalhadores: hepatite B (3 doses), tríplice viral, influenza anual, varicela","Monitorar dosimetricamente trabalhadores expostos a radiações ionizantes (TLD mensal)","Treinar equipe em biossegurança na admissão e anualmente"],
+   documentos:["PGRSS assinado por Responsável Técnico","Programa de imunização dos trabalhadores com comprovantes","Fichas de dosimetria individual (trabalhadores em radiologia, medicina nuclear)","PCMSO com ênfase em riscos biológicos","Registros de treinamento em biossegurança"],
+   treinamentos:["Biossegurança: mínimo 4h na admissão + reciclagem anual","Radiologia: formação específica conforme CNEN (Comissão Nacional de Energia Nuclear) — antes da exposição"],
+   periodicidade:"Dosimetria individual: mensal para expostos a radiação; imunização: conforme calendário; PGRSS: revisado anualmente",
+   penalidades:"Grave a gravíssima; ANVISA e Vigilância Sanitária também fiscalizam os serviços de saúde",
+   criticos:["Trabalhadores não vacinados contra hepatite B (obrigatório e custeado pelo empregador)","Coletores de perfurocortantes superlotados acima de 2/3 da capacidade","PGRSS ausente ou desatualizado","Trabalhadores de radiologia sem dosímetro individual","Ausência de EPI (óculos e máscara) em procedimentos com risco de respingo","Quimioterápicos manipulados sem cabine de fluxo laminar e EPI específico"],
+   rel:[6,7,25,15]},
+
+  {num:33,nome:"Segurança e Saúde nos Trabalhos em Espaços Confinados",status:"vigente",cat:"Riscos Específicos",setores:"Saneamento, petroquímica, indústria (tanques, silos, tubulações), construção civil, mineração subterrânea",
+   ementa:"Regulamenta trabalhos em espaços confinados (ambientes não projetados para ocupação humana contínua, com meios limitados de entrada/saída e possibilidade de atmosfera IDLH — Immediately Dangerous to Life and Health). Exige PET — Permissão de Entrada e Trabalho — emitida antes de cada entrada.",
+   obrigacoes:["Identificar, mapear e sinalizar todos os espaços confinados do estabelecimento","Elaborar Inventário de Espaços Confinados com classificação de risco","Emitir PET antes de cada entrada, mesmo para entradas rotineiras","Medir a atmosfera (O2, gases inflamáveis, CO, H2S) antes de entrar e durante todo o trabalho","Designar Vigia externo durante toda a operação — nunca deixar o entrante desacompanhado","Manter equipe de resgate treinada e equipada (sem USAR o espaço para resgatar, exceto equipe treinada)","Treinar todos os envolvidos na entrada com certificado válido"],
+   documentos:["Inventário de Espaços Confinados do estabelecimento","PET — Permissão de Entrada e Trabalho (emitida para cada entrada, descartada após)","Registros de medição da atmosfera (com dados do medidor multigas)","Certificados de treinamento NR-33 de todos os envolvidos","Procedimento de Resgate escrito e testado"],
+   treinamentos:["Supervisor de Entrada (Vigia): 16 horas (teoria + prática)","Entrante Autorizado: 16 horas","Equipe de Resgate: 16 horas + exercício prático de resgate anual","Reciclagem: todos os envolvidos, anual","Supervisores com Autorização de Entrada: formação adicional em análise de risco"],
+   periodicidade:"PET: emitida para cada entrada sem validade reaproveitável; treinamento: reciclagem anual obrigatória",
+   penalidades:"Gravíssima; acidentes em espaços confinados têm alta letalidade (socorrista sem treinamento morre tentando salvar) e geram processo criminal aos responsáveis",
+   criticos:["Entrada sem PET emitida — infraçãomais comum e mais fatal","Ausência de Vigia externo durante a operação","Atmosfera não medida antes da entrada","Equipe de resgate não treinada em resgate em espaço confinado","Espaços confinados não inventariados (tanques, caixas d'água, valas, silos)","Trabalhadores sem certificado NR-33 válido entrando em espaços confinados"],
+   rel:[22,34,35,18]},
+
+  {num:34,nome:"Condições e Meio Ambiente de Trabalho na Indústria da Construção e Reparação de Embarcações",status:"vigente",cat:"Indústrias Específicas",setores:"Estaleiros, construção naval, reparo e desmonte de embarcações",
+   ementa:"Regulamenta as condições de trabalho em estaleiros: trabalho em altura sobre a água, espaços confinados de embarcações (porões, tanques, cofferdam), uso de solventes e tintas anticorrosivas, proteção contra afogamento, reparos elétricos e trabalho com rebite e solda em ambientes confinados.",
+   obrigacoes:["Fornecer colete salva-vidas para todo trabalho realizado sobre ou próximo à água","Classificar e gerenciar todos os espaços confinados das embarcações (NR-33)","Controlar a exposição a solventes aromáticos (tolueno, xileno) com medições e ventilação forçada","Garantir que trabalhadores em espaços confinados de embarcações possuam NR-33 válida","Controlar solda em locais próximos a inflamáveis com AR e Permissão de Trabalho","Instalar ancoragens para NR-35 em estruturas de estaleiro"],
+   documentos:["PGR de estaleiro com inventário de riscos específicos","Inventário de Espaços Confinados das embarcações","Registros de controle de solventes (FISPQ + medições de concentração)","Certificados multidisciplinares: NR-10, NR-33, NR-35"],
+   treinamentos:["NR-33 para trabalhos em porões e tanques de embarcações","NR-35 para trabalho em casco e estruturas em altura","NR-10 para trabalhos elétricos em embarcações","Integração sobre afogamento e colete salva-vidas"],
+   periodicidade:"Revisão de PGR conforme contrato de construção ou reparo",
+   penalidades:"Gravíssima; o setor naval tem histórico de acidentes coletivos fatais em espaços confinados",
+   criticos:["Trabalho sobre a água sem colete salva-vidas","Solda dentro de porão ou tanque sem PET (NR-33) e análise de atmosfera","Trabalhadores sem NR-33 válida dentro de espaços confinados de embarcações","Solventes utilizados sem ventilação forçada e sem medição de concentração","Ausência de ancoragens estruturais certificadas para trabalho em altura no casco"],
+   rel:[33,35,10,20]},
+
+  {num:35,nome:"Trabalho em Altura",status:"vigente",cat:"Riscos Específicos",setores:"Construção civil, manutenção industrial, telecomunicações, energia elétrica, limpeza de fachadas, serviços gerais",
+   ementa:"Regulamenta todo trabalho realizado acima de 2,0m do nível inferior onde exista risco de queda. Prioriza proteção coletiva (andaimes, guarda-corpos) sobre proteção individual. Quando coletiva é inviável: SPC individual — cinto paraquedista + talabarte duplo + ancoragem resistente a 150kgf.",
+   obrigacoes:["Capacitar todo trabalhador que realiza trabalho em altura (mínimo 8h teórico-prático) antes da atividade","Emitir Permissão de Trabalho (PT) para trabalhos não rotineiros em altura","Elaborar Análise de Risco para cada atividade em altura","Instalar proteção coletiva como primeira opção: andaimes com guarda-corpo NR-18, redes de proteção","Quando inviável a coletiva: cinto paraquedista CA + talabarte duplo CA + ponto de ancoragem calculado","Inspecionar cinto, talabarte e ancoragem antes de cada uso","Realizar reciclagem bienal ou após acidentes/mudança de condições"],
+   documentos:["Certificado de NR-35 de cada trabalhador (com assinatura do instrutor e carga horária)","Registros de inspeção periódica de cintos e talabartes","PT — Permissão de Trabalho para atividade não rotineira em altura","AR — Análise de Risco por atividade","ART do projeto de andaime ou ancoragem quando estrutura provisória"],
+   treinamentos:["Capacitação Inicial NR-35: mínimo 8 horas (teórica + prática com simulação de queda)","Reciclagem NR-35: mínimo 4 horas a cada 2 anos","Reciclagem imediata: após qualquer acidente com queda ou mudança significativa de condição"],
+   periodicidade:"Reciclagem bienal; inspeção do EPI de altura: antes de cada uso pelo trabalhador",
+   penalidades:"Gravíssima; queda em altura é a PRINCIPAL causa de morte por acidente do trabalho no Brasil (≈30% dos óbitos)",
+   criticos:["Trabalhadores em altura sem certificado NR-35 válido (mais de 2 anos ou sem prática documentada)","Cinto de segurança com fabricação acima de 5 anos ou após impacto de queda (deve ser descartado)","Talabarte com CA vencido ou com desgaste visível em costuras","Ancoragem improvisada em estrutura não calculada (ex.: cinto amarrado em cano de PVC)","Ausência de PT para trabalho não rotineiro (ex.: substituição eventual de telha)","Andaimes sem guarda-corpo e rodapé na plataforma de trabalho","Trabalho em telhado de fibrocimento sem proteção coletiva e sem plataforma sobreposta"],
+   rel:[18,10,33,12]},
+
+  {num:36,nome:"Segurança e Saúde no Trabalho em Empresas de Abate e Processamento de Carnes e Derivados",status:"vigente",cat:"Indústrias Específicas",setores:"Frigoríficos, abatedouros, processamento de embutidos, derivados cárneos e pescado",
+   ementa:"Regulamenta as condições específicas dos frigoríficos: trabalho em ambientes frios extremos (câmaras frigoríficas a -18°C), uso de instrumentos cortantes (facas, serras), ritmo intenso de trabalho em linha, risco de LER/DORT por repetitividade, riscos biológicos por zoonoses e pausas de recuperação obrigatórias.",
+   obrigacoes:["Conceder pausas de recuperação térmica: 20 minutos a cada hora trabalhada em câmaras frigoríficas","Conceder pausas de recuperação de fadiga em atividades intensamente repetitivas","Realizar rodízio de funções para reduzir exposição à repetitividade","Fornecer EPI adequado ao trabalho em frio (luva térmica, macacão térmico, bota impermeável)","Implementar AET para postos com alta repetitividade e risco de LER/DORT","Monitorar saúde com exames específicos (DORT, sorologia para zoonoses — brucelose, leptospirose)","Alinhar as facas e manter afiação para reduzir força aplicada"],
+   documentos:["AET dos postos de trabalho em linha de processamento","PCMSO com monitoramento específico (DORT, zoonoses)","Registros de pausas de recuperação e rodízio de funções","Programa ergonômico documentado"],
+   treinamentos:["Treinamento no uso seguro de facas e equipamentos cortantes","Biossegurança para zoonoses: brucelose, leptospirose, hepatite E"],
+   periodicidade:"Monitoramento sorológico de zoonoses: anual ou conforme PCMSO; AET revisada após mudança de processo ou reclamações de DORT",
+   penalidades:"Grave a gravíssima; o setor frigorífico possui o maior índice de LER/DORT do Brasil e frequentes inspeções do MTE",
+   criticos:["Ausência de pausas de recuperação em câmaras frigoríficas","Linha de processamento acima da capacidade ergonômica sem pausas adicionais","Ausência de rodízio de funções em atividades altamente repetitivas","EPI de frio insuficiente (ex.: luva simples em câmara a -18°C)","Ausência de monitoramento sorológico para brucelose em trabalhadores de bovinos e suínos","Facas sem programa de afiação — trabalhadores usam força excessiva por fadiga da lâmina"],
+   rel:[17,6,32,15]},
+
+  {num:37,nome:"Segurança e Saúde em Plataformas de Petróleo",status:"vigente",cat:"Indústrias Específicas",setores:"Petróleo e gás — plataformas offshore fixas e flutuantes (FPSO, semissubmersíveis, jack-up)",
+   ementa:"Regulamenta as condições de trabalho em plataformas de petróleo: regime de embarque/desembarque, horas de trabalho e descanso (12h/dia max.), alojamentos a bordo, riscos de incêndio e explosão em ambiente ATEX, trabalho em altura sobre o mar, espaços confinados offshore, transporte por helicóptero e evacuação de emergência.",
+   obrigacoes:["Treinar todos os trabalhadores offshore em HUET (Helicopter Underwater Escape Training) obrigatório","Treinar em BST — Basic Survival Training (sobrevivência no mar)","Elaborar e manter Plano de Abandono da Plataforma atualizado e testado","Respeitar limites de horas de trabalho: 12h/dia, 14h em emergência","Garantir alojamentos com leito individual, ventilação, iluminação e isolamento acústico","Constituir SESMT offshore dimensionado conforme número de trabalhadores embarcados","Elaborar AR para operações especiais em ATEX (atmosfera explosiva)"],
+   documentos:["Certificado HUET válido de cada trabalhador offshore (emitido por centro credenciado)","Certificado BST válido","Plano de Abandono da Plataforma","PGR offshore com análise de risco ATEX","Registros de horas de trabalho da tripulação","AVCB/equivalente da plataforma"],
+   treinamentos:["HUET (Helicopter Underwater Escape Training): 8h prático + teoria — reciclagem a cada 4 anos","BST (Basic Survival Training / STCW): 40h — reciclagem a cada 5 anos","NR-10, NR-33 e NR-35 com módulos adaptados ao ambiente offshore","Combate a Incêndio em ambiente ATEX: treinamento específico anual"],
+   periodicidade:"HUET: reciclagem a cada 4 anos; BST: a cada 5 anos; Plano de Abandono: simulado semestral",
+   penalidades:"Gravíssima; plataformas estão sob fiscalização conjunta do MTE e da ANP (Agência Nacional do Petróleo)",
+   criticos:["Trabalhadores embarcados sem HUET válido (comum em técnicos eventuais de terra)","Plano de Abandono desatualizado ou sem simulado nos últimos 6 meses","Excesso de horas de trabalho sem registro — common em situações de manutenção crítica","Alojamentos superlotados — 2 ou 3 pessoas em beliche de 1 por turno (hot-bunking ilegal)","Operações em ATEX sem AR e sem Permissão de Trabalho quente (hot work permit)","Trabalhadores em altura sobre o mar sem EPI de flutuação (colete autoinflável)"],
+   rel:[30,33,35,20,10]}
+];
+
+// ─── State ───────────────────────────────────────────────────
+let catAtiva = "Todas";
+let busca = "";
+
+// ─── Build category buttons ──────────────────────────────────
+const catsEl = document.getElementById("cats");
+CATS.forEach(c => {
+  const b = document.createElement("button");
+  b.className = "cat-btn" + (c === "Todas" ? " active" : "");
+  b.textContent = c;
+  b.onclick = () => {
+    catAtiva = c;
+    document.querySelectorAll(".cat-btn").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    render();
+  };
+  catsEl.appendChild(b);
+});
+
+function filtrar() {
+  busca = document.getElementById("busca").value.toLowerCase();
+  render();
+}
+
+function filtrarPorNR(num) {
+  document.getElementById("busca").value = "NR-" + num;
+  busca = "nr-" + num;
+  catAtiva = "Todas";
+  document.querySelectorAll(".cat-btn").forEach(x => x.classList.remove("active"));
+  document.querySelector(".cat-btn").classList.add("active");
+  render();
+  window.scrollTo({top: 0, behavior: "smooth"});
+}
+
+function matches(nr) {
+  if (catAtiva !== "Todas" && nr.cat !== catAtiva) return false;
+  if (!busca) return true;
+  const haystack = [
+    "nr-" + nr.num,
+    nr.nome, nr.ementa,
+    ...(nr.obrigacoes || []),
+    ...(nr.documentos || []),
+    ...(nr.treinamentos || []),
+    nr.penalidades,
+    ...(nr.criticos || []),
+    nr.setores, nr.cat
+  ].join(" ").toLowerCase();
+  return haystack.includes(busca);
+}
+
+function list(arr, cls) {
+  if (!arr || arr.length === 0) return '<span style="color:var(--muted);font-size:.78rem">—</span>';
+  return `<div class="detail-list ${cls||""}">${arr.map(i => `<div class="detail-item">${i}</div>`).join("")}</div>`;
+}
+
+function render() {
+  const grid = document.getElementById("grid");
+  const empty = document.getElementById("empty");
+  const visible = NRS.filter(matches);
+
+  document.getElementById("k-visible").textContent = visible.length;
+  document.getElementById("count-info").textContent = `Exibindo ${visible.length} de 37 normas`;
+
+  if (visible.length === 0) {
+    grid.innerHTML = "";
+    empty.style.display = "";
+    return;
+  }
+  empty.style.display = "none";
+
+  grid.innerHTML = visible.map(nr => {
+    const rev = nr.status === "revogada";
+    const relChips = (nr.rel || []).map(n =>
+      `<span class="rel-chip" onclick="filtrarPorNR(${n})">NR-${n}</span>`
+    ).join("");
+
+    const details = rev ? "" : `
+      <div class="nr-details">
+        <div class="detail-section">
+          <div class="detail-title">📋 Obrigações do Empregador</div>
+          ${list(nr.obrigacoes)}
+        </div>
+        <div class="detail-section">
+          <div class="detail-title">📄 Documentos Exigidos</div>
+          ${list(nr.documentos)}
+        </div>
+        ${nr.treinamentos && nr.treinamentos.length ? `
+        <div class="detail-section">
+          <div class="detail-title">🎓 Treinamentos Obrigatórios</div>
+          ${list(nr.treinamentos)}
+        </div>` : ""}
+        <div class="detail-section" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div>
+            <div class="detail-title">🔄 Periodicidade</div>
+            <p style="font-size:.79rem;color:var(--text);line-height:1.5">${nr.periodicidade}</p>
+          </div>
+          <div>
+            <div class="detail-title">💰 Penalidades</div>
+            <p class="penalidade">${nr.penalidades}</p>
+          </div>
+        </div>
+        ${nr.criticos && nr.criticos.length ? `
+        <div class="detail-section">
+          <div class="detail-title" style="color:var(--amber)">⚠️ Pontos Críticos de Fiscalização</div>
+          ${list(nr.criticos, "pontos-criticos")}
+        </div>` : ""}
+        ${nr.rel && nr.rel.length ? `
+        <div class="detail-section">
+          <div class="detail-title">🔗 NRs Relacionadas</div>
+          <div class="related">${relChips}</div>
+        </div>` : ""}
+      </div>`;
+
+    return `<div class="nr-card ${rev ? "revogada" : ""}" id="card-${nr.num}">
+      <div class="nr-header" onclick="toggleCard(${nr.num})">
+        <div class="nr-num">NR-${nr.num}</div>
+        <div class="nr-info">
+          <div class="nr-nome">${nr.nome}</div>
+          <div class="nr-badges">
+            <span class="badge ${rev ? "b-revogada" : "b-vigente"}">${rev ? "Revogada" : "Vigente"}</span>
+            <span class="badge b-cat">${nr.cat}</span>
+          </div>
+        </div>
+        ${!rev ? '<div class="nr-chevron">▼</div>' : ""}
+      </div>
+      <div class="nr-ementa">${nr.ementa}</div>
+      ${details}
+    </div>`;
+  }).join("");
+}
+
+function toggleCard(num) {
+  const card = document.getElementById("card-" + num);
+  if (!card) return;
+  card.classList.toggle("open");
+}
+
+// Init
+render();
+</script>
+</body>
+</html>
