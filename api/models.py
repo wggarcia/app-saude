@@ -1662,3 +1662,112 @@ class AgendamentoSST(models.Model):
 
     def __str__(self):
         return f"{self.funcionario.nome} – {self.get_tipo_display()} em {self.data_hora:%d/%m/%Y}"
+
+
+# ─── Farmácia — Lotes e Rastreabilidade ───────────────────────────────────────
+
+class LoteMedicamento(models.Model):
+    """Rastreabilidade de lote de medicamento em estoque (FEFO)."""
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="lotes_medicamento")
+    item             = models.ForeignKey("ItemFarmacia", on_delete=models.CASCADE, related_name="lotes")
+    numero_lote      = models.CharField(max_length=100)
+    fabricante       = models.CharField(max_length=200, blank=True, default="")
+    data_fabricacao  = models.DateField(null=True, blank=True)
+    data_validade    = models.DateField()
+    quantidade_inicial = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    quantidade_atual = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    nota_fiscal      = models.CharField(max_length=100, blank=True, default="")
+    fornecedor       = models.ForeignKey("FornecedorFarmacia", on_delete=models.SET_NULL, null=True, blank=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["data_validade"]  # FEFO — primeiro a vencer, primeiro a sair
+        unique_together = [("empresa", "item", "numero_lote")]
+
+    def __str__(self):
+        return f"Lote {self.numero_lote} — {self.item.nome} (val: {self.data_validade})"
+
+    @property
+    def vencido(self):
+        from datetime import date
+        return self.data_validade < date.today()
+
+    @property
+    def dias_para_vencer(self):
+        from datetime import date
+        return (self.data_validade - date.today()).days
+
+
+# ─── Hospital — Prescrição Médica ──────────────────────────────────────────────
+
+class PrescricaoMedica(models.Model):
+    """Prescrição médica vinculada a uma internação hospitalar."""
+    STATUS_CHOICES = [
+        ("ativa", "Ativa"),
+        ("suspensa", "Suspensa"),
+        ("concluida", "Concluída"),
+        ("cancelada", "Cancelada"),
+    ]
+    VIA_CHOICES = [
+        ("oral", "Oral"), ("ev", "Endovenosa"), ("im", "Intramuscular"),
+        ("sc", "Subcutânea"), ("inalatoria", "Inalatória"), ("topica", "Tópica"),
+        ("sublingual", "Sublingual"), ("outra", "Outra"),
+    ]
+    internacao       = models.ForeignKey("InternacaoHospital", on_delete=models.CASCADE, related_name="prescricoes")
+    medicamento      = models.CharField(max_length=300)
+    dose             = models.CharField(max_length=100, blank=True, default="")
+    via              = models.CharField(max_length=20, choices=VIA_CHOICES, default="oral")
+    frequencia       = models.CharField(max_length=100, blank=True, default="",
+                                        help_text="Ex: 8/8h, 1x ao dia, SN")
+    duracao_dias     = models.PositiveSmallIntegerField(null=True, blank=True)
+    status           = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ativa")
+    medico           = models.CharField(max_length=200, blank=True, default="")
+    observacoes      = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.medicamento} — {self.dose} ({self.via})"
+
+
+# ─── Governo — Publicação / Ato Normativo ─────────────────────────────────────
+
+class AtoNormativoGov(models.Model):
+    """Atos normativos, portarias e resoluções de saúde pública."""
+    TIPO_CHOICES = [
+        ("portaria", "Portaria"),
+        ("resolucao", "Resolução"),
+        ("decreto", "Decreto"),
+        ("lei", "Lei"),
+        ("instrucao", "Instrução Normativa"),
+        ("nota_tecnica", "Nota Técnica"),
+        ("outro", "Outro"),
+    ]
+    STATUS_CHOICES = [
+        ("vigente", "Vigente"),
+        ("revogado", "Revogado"),
+        ("suspenso", "Suspenso"),
+        ("em_consulta", "Em Consulta Pública"),
+    ]
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="atos_normativos")
+    tipo             = models.CharField(max_length=20, choices=TIPO_CHOICES, default="portaria")
+    numero           = models.CharField(max_length=50, blank=True, default="")
+    titulo           = models.CharField(max_length=400)
+    ementa           = models.TextField(blank=True, default="")
+    data_publicacao  = models.DateField(null=True, blank=True)
+    data_vigencia    = models.DateField(null=True, blank=True)
+    status           = models.CharField(max_length=20, choices=STATUS_CHOICES, default="vigente")
+    orgao_emissor    = models.CharField(max_length=200, blank=True, default="")
+    url_documento    = models.URLField(blank=True, default="")
+    programa         = models.ForeignKey("ProgramaSaudeGov", on_delete=models.SET_NULL, null=True, blank=True, related_name="atos")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_publicacao", "-criado_em"]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} {self.numero} — {self.titulo[:60]}"

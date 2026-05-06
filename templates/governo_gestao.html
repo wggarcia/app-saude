@@ -150,6 +150,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="tab-btn" onclick="setTab('indicadores')">📈 Indicadores</button>
       <button class="tab-btn" onclick="setTab('planos')">✅ Planos de Ação</button>
       <button class="tab-btn" onclick="setTab('orcamento')">💰 Orçamento</button>
+      <button class="tab-btn" onclick="setTab('atos')">📜 Atos Normativos</button>
     </div>
 
     <!-- Programas -->
@@ -209,6 +210,37 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <table>
           <thead><tr><th>Ano</th><th>Previsto</th><th>Executado</th><th>Execução</th><th>Fonte</th></tr></thead>
           <tbody id="tbodyOrc"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Atos Normativos -->
+    <div class="tab-panel" id="tab-atos" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📜 Atos Normativos</span>
+          <div style="display:flex;gap:8px">
+            <select id="filtroAtoStatus" onchange="carregarAtos()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;color:#e8f4ff;font-size:12px">
+              <option value="">Todos os status</option>
+              <option value="vigente">Vigentes</option>
+              <option value="revogado">Revogados</option>
+              <option value="em_consulta">Em Consulta Pública</option>
+            </select>
+            <select id="filtroAtoTipo" onchange="carregarAtos()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;color:#e8f4ff;font-size:12px">
+              <option value="">Todos os tipos</option>
+              <option value="portaria">Portaria</option>
+              <option value="resolucao">Resolução</option>
+              <option value="decreto">Decreto</option>
+              <option value="lei">Lei</option>
+              <option value="instrucao">Instrução Normativa</option>
+              <option value="nota_tecnica">Nota Técnica</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalAto()">+ Publicar Ato</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Tipo</th><th>Número</th><th>Título</th><th>Programa</th><th>Publicação</th><th>Órgão</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyAtos"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -320,6 +352,44 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalOrc')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarOrcamento()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ato Normativo -->
+<div class="modal-bg" id="modalAto">
+  <div class="modal" style="max-width:560px">
+    <h3>📜 Ato Normativo</h3>
+    <input type="hidden" id="atoId">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Tipo</label>
+        <select id="atoTipo">
+          <option value="portaria">Portaria</option><option value="resolucao">Resolução</option>
+          <option value="decreto">Decreto</option><option value="lei">Lei</option>
+          <option value="instrucao">Instrução Normativa</option>
+          <option value="nota_tecnica">Nota Técnica</option><option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Número</label><input id="atoNumero" placeholder="Ex: 123/2026"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Título *</label><input id="atoTitulo" placeholder="Título completo do ato normativo"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Ementa</label><textarea id="atoEmenta" rows="2" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px;color:#e8f4ff;font-family:Manrope,sans-serif"></textarea></div>
+      <div class="form-group"><label>Data de Publicação</label><input type="date" id="atoPub"></div>
+      <div class="form-group"><label>Data de Vigência</label><input type="date" id="atoVig"></div>
+      <div class="form-group"><label>Status</label>
+        <select id="atoStatus">
+          <option value="vigente">Vigente</option><option value="revogado">Revogado</option>
+          <option value="suspenso">Suspenso</option><option value="em_consulta">Em Consulta Pública</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Órgão Emissor</label><input id="atoOrgao" placeholder="Ex: Secretaria Estadual de Saúde"></div>
+      <div class="form-group"><label>Programa Relacionado</label>
+        <select id="atoProg"><option value="">— nenhum —</option></select>
+      </div>
+      <div class="form-group"><label>URL do Documento</label><input id="atoUrl" type="url" placeholder="https://…"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalAto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAto()">Salvar</button>
     </div>
   </div>
 </div>
@@ -663,7 +733,7 @@ function fecharModal(id) { document.getElementById(id).classList.remove('open');
 let _currentTab = 'programas';
 function setTab(tab) {
   _currentTab = tab;
-  const tabs = ['programas','indicadores','planos','orcamento'];
+  const tabs = ['programas','indicadores','planos','orcamento','atos'];
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===tab));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
@@ -671,6 +741,85 @@ function setTab(tab) {
   else if (tab==='indicadores') carregarIndicadores();
   else if (tab==='planos') { popularSelectProgramas('planoProg'); carregarPlanos(); }
   else if (tab==='orcamento') carregarOrcamentos();
+  else if (tab==='atos') carregarAtos();
+}
+
+// ── Atos Normativos ────────────────────────────────────────────
+let _atos = [];
+async function carregarAtos() {
+  const status = document.getElementById('filtroAtoStatus')?.value || '';
+  const tipo = document.getElementById('filtroAtoTipo')?.value || '';
+  let url = '/api/governo/atos-normativos/?';
+  if (status) url += 'status='+status+'&';
+  if (tipo)   url += 'tipo='+tipo;
+  const d = await api(url);
+  _atos = d.atos || [];
+  const tb = document.getElementById('tbodyAtos');
+  if (!_atos.length) { tb.innerHTML='<tr><td colspan="8" class="empty">Nenhum ato normativo cadastrado</td></tr>'; return; }
+  const SMAP={vigente:'<span style="color:var(--ok)">Vigente</span>',revogado:'<span style="color:var(--muted)">Revogado</span>',suspenso:'<span style="color:var(--warn)">Suspenso</span>',em_consulta:'<span style="color:var(--accent)">Consulta Pública</span>'};
+  tb.innerHTML = _atos.map(a=>`<tr>
+    <td>${a.tipo_label}</td>
+    <td><code style="font-size:11px">${a.numero||'—'}</code></td>
+    <td style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.titulo}</td>
+    <td>${a.programa_nome||'—'}</td>
+    <td>${a.data_publicacao||'—'}</td>
+    <td>${a.orgao_emissor||'—'}</td>
+    <td>${SMAP[a.status]||a.status}</td>
+    <td>
+      ${a.url_documento ? `<a href="${a.url_documento}" target="_blank" class="btn btn-ghost btn-sm">🔗</a>` : ''}
+      <button class="btn btn-ghost btn-sm" onclick="editarAto(${a.id})">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deletarAto(${a.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+function abrirModalAto() {
+  document.getElementById('atoId').value='';
+  ['atoNumero','atoTitulo','atoEmenta','atoPub','atoVig','atoOrgao','atoUrl'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('atoTipo').value='portaria';
+  document.getElementById('atoStatus').value='vigente';
+  popularSelectProgramas('atoProg');
+  abrirModal('modalAto');
+}
+
+function editarAto(id) {
+  const a = _atos.find(x=>x.id===id); if(!a) return;
+  document.getElementById('atoId').value=a.id;
+  document.getElementById('atoTipo').value=a.tipo;
+  document.getElementById('atoNumero').value=a.numero||'';
+  document.getElementById('atoTitulo').value=a.titulo;
+  document.getElementById('atoEmenta').value=a.ementa||'';
+  document.getElementById('atoPub').value=a.data_publicacao||'';
+  document.getElementById('atoVig').value=a.data_vigencia||'';
+  document.getElementById('atoStatus').value=a.status;
+  document.getElementById('atoOrgao').value=a.orgao_emissor||'';
+  document.getElementById('atoUrl').value=a.url_documento||'';
+  popularSelectProgramas('atoProg');
+  if(a.programa_id) document.getElementById('atoProg').value=a.programa_id;
+  abrirModal('modalAto');
+}
+
+async function salvarAto() {
+  const id = document.getElementById('atoId').value;
+  const body = {
+    tipo:v('atoTipo'), numero:v('atoNumero'), titulo:v('atoTitulo'),
+    ementa:v('atoEmenta'), data_publicacao:v('atoPub')||null,
+    data_vigencia:v('atoVig')||null, status:v('atoStatus'),
+    orgao_emissor:v('atoOrgao'), url_documento:v('atoUrl'),
+    programa_id:v('atoProg')||null,
+  };
+  if (!body.titulo) return alert('Título obrigatório');
+  const url = id ? `/api/governo/atos-normativos/${id}/` : '/api/governo/atos-normativos/';
+  const method = id ? 'PUT' : 'POST';
+  await api(url, {method, body:JSON.stringify(body)});
+  fecharModal('modalAto');
+  carregarAtos();
+}
+
+async function deletarAto(id) {
+  if (!confirm('Excluir este ato normativo?')) return;
+  await api(`/api/governo/atos-normativos/${id}/`, {method:'DELETE'});
+  carregarAtos();
 }
 
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
