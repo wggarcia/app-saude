@@ -95,6 +95,20 @@ from api.views_lotes_farmacia import (
     api_lote_farmacia_detalhe,
     api_lotes_farmacia_kpis,
 )
+from api.views_riscos_sst import (
+    api_planos_acao_sst,
+    api_plano_acao_sst_detalhe,
+    api_risco_detalhe,
+    api_riscos_kpis,
+    api_riscos_ocupacionais,
+)
+from api.views_vacinacao import (
+    api_campanha_detalhe,
+    api_campanhas_vacinacao,
+    api_registro_vacinacao_detalhe,
+    api_registros_vacinacao,
+    api_vacinacao_kpis,
+)
 from api.views_prescricao import (
     api_prescricoes_internacao,
     api_prescricao_status,
@@ -326,6 +340,18 @@ urlpatterns = [
     path('api/sst/conformidade', api_sst_conformidade),
     path('api/sst/conformidade/pdf', api_sst_conformidade_pdf),
     path('api/sst/conformidade/pdf/', api_sst_conformidade_pdf),
+    # Riscos ocupacionais / PGR
+    path('api/sst/riscos/', api_riscos_ocupacionais),
+    path('api/sst/riscos/kpis/', api_riscos_kpis),
+    path('api/sst/riscos/<int:risco_id>/', api_risco_detalhe),
+    path('api/sst/planos-acao/', api_planos_acao_sst),
+    path('api/sst/planos-acao/<int:plano_id>/', api_plano_acao_sst_detalhe),
+    # Vacinação ocupacional
+    path('api/sst/vacinacao/kpis/', api_vacinacao_kpis),
+    path('api/sst/vacinacao/campanhas/', api_campanhas_vacinacao),
+    path('api/sst/vacinacao/campanhas/<int:campanha_id>/', api_campanha_detalhe),
+    path('api/sst/vacinacao/campanhas/<int:campanha_id>/registros/', api_registros_vacinacao),
+    path('api/sst/vacinacao/registros/<int:reg_id>/', api_registro_vacinacao_detalhe),
     # Agendamento SST
     path('api/sst/agendamentos/', api_agendamentos_sst),
     path('api/sst/agendamentos', api_agendamentos_sst),

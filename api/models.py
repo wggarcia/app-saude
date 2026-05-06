@@ -1771,3 +1771,164 @@ class AtoNormativoGov(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_display()} {self.numero} — {self.titulo[:60]}"
+
+
+# ─── Empresa SST — PGR, planos de ação e vacinação ───────────────────────────
+
+class RiscoOcupacional(models.Model):
+    """Risco identificado no PGR (Programa de Gerenciamento de Riscos)."""
+    TIPO_CHOICES = [
+        ("fisico", "Físico"),
+        ("quimico", "Químico"),
+        ("biologico", "Biológico"),
+        ("ergonomico", "Ergonômico"),
+        ("acidente", "Acidente / Mecânico"),
+        ("psicossocial", "Psicossocial"),
+    ]
+    NIVEL_CHOICES = [
+        ("I", "I - Muito Baixo"),
+        ("II", "II - Baixo"),
+        ("III", "III - Médio"),
+        ("IV", "IV - Alto"),
+        ("V", "V - Muito Alto / Crítico"),
+    ]
+    STATUS_CHOICES = [
+        ("identificado", "Identificado"),
+        ("em_controle", "Em Controle"),
+        ("controlado", "Controlado"),
+        ("residual", "Risco Residual"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="riscos_ocupacionais")
+    setor = models.CharField(max_length=150)
+    tipo_risco = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    agente = models.CharField(max_length=200, help_text="Ex: ruido, poeira, virus, postura inadequada")
+    descricao = models.TextField(blank=True, default="")
+    nivel = models.CharField(max_length=5, choices=NIVEL_CHOICES, default="III")
+    probabilidade = models.PositiveSmallIntegerField(
+        default=3,
+        help_text="1=Raro  2=Improvavel  3=Possivel  4=Provavel  5=Quase certo",
+    )
+    severidade = models.PositiveSmallIntegerField(
+        default=3,
+        help_text="1=Insignificante  2=Leve  3=Moderado  4=Grave  5=Catastrofico",
+    )
+    nr_referencia = models.CharField(max_length=50, blank=True, default="", help_text="Ex: NR-15, NR-17, NR-36")
+    medida_controle_existente = models.TextField(blank=True, default="")
+    medida_controle_proposta = models.TextField(blank=True, default="")
+    prazo = models.DateField(null=True, blank=True)
+    responsavel = models.CharField(max_length=150, blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="identificado")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-probabilidade", "-severidade"]
+
+    @property
+    def grr(self):
+        return self.probabilidade * self.severidade
+
+    def __str__(self):
+        return f"[{self.tipo_risco}] {self.agente} - {self.setor}"
+
+
+class PlanoAcaoSST(models.Model):
+    """Plano de ação SST vinculado ou não a um risco ocupacional."""
+    ORIGEM_CHOICES = [
+        ("risco", "Risco Ocupacional"),
+        ("cat", "CAT / Acidente"),
+        ("afastamento", "Afastamento"),
+        ("auditoria", "Auditoria Interna"),
+        ("conformidade", "Não-Conformidade"),
+        ("outro", "Outro"),
+    ]
+    PRIORIDADE_CHOICES = [
+        ("baixa", "Baixa"),
+        ("media", "Média"),
+        ("alta", "Alta"),
+        ("critica", "Crítica"),
+    ]
+    STATUS_CHOICES = [
+        ("aberto", "Aberto"),
+        ("em_andamento", "Em Andamento"),
+        ("concluido", "Concluído"),
+        ("cancelado", "Cancelado"),
+        ("atrasado", "Atrasado"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="planos_acao_sst")
+    risco = models.ForeignKey(RiscoOcupacional, on_delete=models.SET_NULL, null=True, blank=True, related_name="planos_acao")
+    titulo = models.CharField(max_length=250)
+    descricao = models.TextField(blank=True, default="")
+    origem = models.CharField(max_length=20, choices=ORIGEM_CHOICES, default="risco")
+    prioridade = models.CharField(max_length=10, choices=PRIORIDADE_CHOICES, default="media")
+    responsavel = models.CharField(max_length=150, blank=True, default="")
+    setor = models.CharField(max_length=150, blank=True, default="")
+    data_prazo = models.DateField(null=True, blank=True)
+    data_conclusao = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="aberto")
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return self.titulo
+
+
+class CampanhaVacinacao(models.Model):
+    STATUS_CHOICES = [
+        ("planejada", "Planejada"),
+        ("em_andamento", "Em Andamento"),
+        ("concluida", "Concluída"),
+        ("cancelada", "Cancelada"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="campanhas_vacinacao")
+    nome = models.CharField(max_length=200)
+    vacina = models.CharField(max_length=150, help_text="Ex: Influenza, Hepatite B, COVID-19")
+    descricao = models.TextField(blank=True, default="")
+    data_inicio = models.DateField()
+    data_fim = models.DateField(null=True, blank=True)
+    meta_doses = models.PositiveIntegerField(default=0)
+    doses_aplicadas = models.PositiveIntegerField(default=0)
+    local = models.CharField(max_length=200, blank=True, default="")
+    responsavel = models.CharField(max_length=150, blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="planejada")
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_inicio"]
+
+    def __str__(self):
+        return f"{self.nome} - {self.vacina}"
+
+
+class RegistroVacinacao(models.Model):
+    DOSE_CHOICES = [
+        ("1a_dose", "1ª Dose"),
+        ("2a_dose", "2ª Dose"),
+        ("3a_dose", "3ª Dose"),
+        ("reforco", "Reforço"),
+        ("dose_unica", "Dose Única"),
+    ]
+
+    campanha = models.ForeignKey(CampanhaVacinacao, on_delete=models.CASCADE, related_name="registros")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="vacinacoes")
+    data_aplicacao = models.DateField()
+    dose = models.CharField(max_length=15, choices=DOSE_CHOICES, default="dose_unica")
+    lote_vacina = models.CharField(max_length=80, blank=True, default="")
+    aplicador = models.CharField(max_length=150, blank=True, default="")
+    observacoes = models.CharField(max_length=300, blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_aplicacao"]
+        unique_together = [("campanha", "funcionario", "dose")]
+
+    def __str__(self):
+        return f"{self.funcionario.nome} - {self.campanha.vacina} ({self.get_dose_display()})"
