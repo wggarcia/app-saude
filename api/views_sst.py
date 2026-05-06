@@ -1445,13 +1445,13 @@ def api_sst_conformidade_pdf(request):
 
     for f in funcionarios:
         # ASO
-        aso = f.asos.filter(valido=True).order_by("-data_validade").first()
+        aso = f.asos.filter(resultado="apto").order_by("-data_validade").first()
         aso_ok = bool(aso and aso.data_validade and aso.data_validade >= hoje)
         aso_alerta = bool(aso and aso.data_validade and hoje <= aso.data_validade <= hoje + timedelta(days=alerta_dias))
 
         # Exames
         exames = ExameMedico.objects.filter(funcionario=f)
-        exames_vencidos = sum(1 for e in exames if e.data_vencimento and e.data_vencimento < hoje)
+        exames_vencidos = sum(1 for e in exames if e.data_validade and e.data_validade < hoje)
         exames_ok = exames.exists() and exames_vencidos == 0
 
         # EPI
@@ -1502,4 +1502,143 @@ def api_sst_conformidade_pdf(request):
     buf = gerar_pdf_conformidade_sst(empresa, resumo, resultado)
     resp = HttpResponse(buf, content_type="application/pdf")
     resp["Content-Disposition"] = 'inline; filename="conformidade_sst.pdf"'
+    return resp
+
+
+def api_sst_relatorio_consolidado_pdf(request):
+    """
+    Gera PDF consolidado SST: resumo de conformidade + ASOs + exames vencidos
+    + afastamentos ativos + CATs + agendamentos atrasados.
+    """
+    from django.http import HttpResponse
+    from .pdf_ops import gerar_pdf_relatorio_sst_consolidado
+    from .models import (
+        FuncionarioSST, ExameMedico, EntregaEPI, TreinamentoNR,
+        AfastamentoSST, CATRegistro, AgendamentoSST, ASOSSE,
+    )
+    from datetime import date, timedelta
+
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        from django.http import JsonResponse
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    hoje = date.today()
+    alerta_dias = 30
+
+    # ── Conformidade ──────────────────────────────────────────────
+    funcionarios = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).order_by("nome")
+    resultado = []
+    for f in funcionarios:
+        aso = f.asos.filter(resultado="apto").order_by("-data_validade").first()
+        aso_ok = bool(aso and aso.data_validade and aso.data_validade >= hoje)
+        aso_alerta = bool(aso and aso.data_validade and hoje <= aso.data_validade <= hoje + timedelta(days=alerta_dias))
+        exames_q = ExameMedico.objects.filter(funcionario=f)
+        exames_venc = sum(1 for e in exames_q if e.data_validade and e.data_validade < hoje)
+        exames_ok = exames_q.exists() and exames_venc == 0
+        epi_ativo = EntregaEPI.objects.filter(funcionario=f, devolvido=False).exists()
+        trein_ok = TreinamentoNR.objects.filter(funcionario=f, data_validade__gte=hoje).exists()
+        score = sum([aso_ok, exames_ok, epi_ativo, trein_ok])
+        status = "conforme" if score == 4 else "alerta" if score >= 2 else "critico"
+        resultado.append({"nome": f.nome, "cargo": f.cargo, "setor": f.setor, "score": score, "status": status})
+
+    total = len(resultado)
+    conformes = sum(1 for r in resultado if r["status"] == "conforme")
+    alertas = sum(1 for r in resultado if r["status"] == "alerta")
+    criticos = sum(1 for r in resultado if r["status"] == "critico")
+
+    # ── ASOs vencidos ou vencendo ─────────────────────────────────
+    try:
+        asos_qs = ASOSSE.objects.filter(
+            funcionario__empresa=empresa,
+            funcionario__ativo=True,
+        ).select_related("funcionario").order_by("data_validade")
+        asos_lista = []
+        for a in asos_qs:
+            vencido = a.data_validade and a.data_validade < hoje
+            alerta = a.data_validade and hoje <= a.data_validade <= hoje + timedelta(days=alerta_dias)
+            if vencido or alerta:
+                asos_lista.append({
+                    "funcionario_nome": a.funcionario.nome,
+                    "tipo_display": a.tipo if hasattr(a, 'tipo') else "—",
+                    "data_validade": str(a.data_validade) if a.data_validade else "—",
+                    "vencido": vencido,
+                    "alerta": alerta,
+                })
+    except Exception:
+        asos_lista = []
+
+    # ── Exames Vencidos ───────────────────────────────────────────
+    exames_venc_lista = []
+    for e in ExameMedico.objects.filter(
+        funcionario__empresa=empresa, funcionario__ativo=True,
+        data_validade__lt=hoje,
+    ).select_related("funcionario").order_by("data_validade"):
+        exames_venc_lista.append({
+            "funcionario_nome": e.funcionario.nome,
+            "tipo_exame": getattr(e, "tipo_exame", "—") or "—",
+            "data_vencimento": str(e.data_validade) if e.data_vencimento else "—",
+            "dias_vencido": (hoje - e.data_validade).days if e.data_validade else 0,
+        })
+
+    # ── Afastamentos Ativos ───────────────────────────────────────
+    afastamentos_lista = []
+    try:
+        for af in AfastamentoSST.objects.filter(
+            funcionario__empresa=empresa, data_retorno__isnull=True
+        ).select_related("funcionario").order_by("data_inicio"):
+            dias = (hoje - af.data_inicio).days if af.data_inicio else 0
+            afastamentos_lista.append({
+                "funcionario_nome": af.funcionario.nome,
+                "cid": getattr(af, "cid", "—") or "—",
+                "data_inicio": str(af.data_inicio) if af.data_inicio else "—",
+                "dias": dias,
+                "tipo_display": af.get_tipo_display() if hasattr(af, 'get_tipo_display') else "—",
+            })
+    except Exception:
+        pass
+
+    # ── CATs ─────────────────────────────────────────────────────
+    cats_lista = []
+    try:
+        for c in CATRegistro.objects.filter(
+            funcionario__empresa=empresa
+        ).select_related("funcionario").order_by("-data_acidente")[:30]:
+            cats_lista.append({
+                "funcionario_nome": c.funcionario.nome,
+                "data_acidente": str(c.data_acidente) if c.data_acidente else "—",
+                "tipo_display": c.get_tipo_display() if hasattr(c, 'get_tipo_display') else "—",
+                "cid_principal": getattr(c, "cid_principal", "—") or "—",
+                "status": getattr(c, "status", "—"),
+            })
+    except Exception:
+        pass
+
+    # ── Agendamentos Atrasados ────────────────────────────────────
+    from api.views_agendamento_sst import _agenda_to_dict
+    agendamentos_atrasados = AgendamentoSST.objects.filter(
+        empresa=empresa,
+        status__in=["agendado", "confirmado"],
+        data_hora__date__lt=hoje,
+    ).select_related("funcionario").order_by("data_hora")[:30]
+
+    dados = {
+        "resumo": {
+            "total": total,
+            "conformes": conformes,
+            "alertas": alertas,
+            "criticos": criticos,
+            "indice_conformidade": round(conformes / max(total, 1) * 100, 1),
+        },
+        "funcionarios": resultado,
+        "asos": asos_lista,
+        "exames_vencidos": exames_venc_lista,
+        "afastamentos": afastamentos_lista,
+        "cats": cats_lista,
+        "agendamentos_atrasados": [_agenda_to_dict(a) for a in agendamentos_atrasados],
+    }
+
+    buf = gerar_pdf_relatorio_sst_consolidado(empresa, dados)
+    resp = HttpResponse(buf, content_type="application/pdf")
+    resp["Content-Disposition"] = f'inline; filename="sst_relatorio_consolidado_{hoje}.pdf"'
     return resp

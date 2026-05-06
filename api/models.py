@@ -1771,3 +1771,9 @@ class AtoNormativoGov(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_display()} {self.numero} — {self.titulo[:60]}"
+
+
+# ── Aliases para retrocompatibilidade com código de conformidade ──────────────
+ExameMedico = ExameOcupacional
+ASOSSE = ASOOcupacional
+CATRegistro = CATOcupacional

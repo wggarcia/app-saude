@@ -427,3 +427,158 @@ def gerar_pdf_conformidade_sst(empresa, resumo, funcionarios):
     doc.build(story)
     buf.seek(0)
     return buf
+
+
+def gerar_pdf_relatorio_sst_consolidado(empresa, dados):
+    """
+    Relatório SST consolidado: resumo executivo, conformidade, ASOs,
+    exames vencidos, afastamentos, CATs, agendamentos pendentes.
+    dados = dict com chaves: resumo, funcionarios, asos, exames_vencidos,
+            afastamentos, cats, agendamentos_atrasados
+    """
+    buf = io.BytesIO()
+    doc = _doc(buf)
+    s = _styles()
+    story = []
+
+    hoje = datetime.now()
+    _header(story, s, "Relatório SST Consolidado", empresa.nome,
+            f"Gerado em {hoje.strftime('%d/%m/%Y %H:%M')}")
+
+    # ── Resumo Executivo ──────────────────────────────────────────
+    story.append(Paragraph("1. Resumo Executivo", s["section"]))
+    res = dados.get("resumo", {})
+    total = res.get("total", 0)
+    conformes = res.get("conformes", 0)
+    alertas = res.get("alertas", 0)
+    criticos = res.get("criticos", 0)
+    idx = res.get("indice_conformidade", 0)
+
+    exec_data = [
+        ["Indicador", "Valor", "Situação"],
+        ["Total de Funcionários Ativos", str(total), "—"],
+        ["Conformes (4/4 critérios)", str(conformes),
+         "OK" if conformes == total else f"{round(conformes/max(total,1)*100,0):.0f}%"],
+        ["Em Alerta (2-3 critérios)", str(alertas), "ATENÇÃO" if alertas else "OK"],
+        ["Críticos (0-1 critério)", str(criticos), "CRÍTICO" if criticos else "OK"],
+        ["Índice de Conformidade Geral", f"{idx}%",
+         "BOM" if idx >= 80 else "REGULAR" if idx >= 60 else "CRÍTICO"],
+    ]
+    t_exec = Table(exec_data, colWidths=[8*cm, 4*cm, 5.7*cm], repeatRows=1)
+    st_exec = _table_style()
+    for i, row in enumerate(exec_data[1:], 1):
+        val = row[2]
+        if "CRÍTICO" in val:
+            st_exec.add("TEXTCOLOR", (2, i), (2, i), DANGER)
+        elif "ATENÇÃO" in val:
+            st_exec.add("TEXTCOLOR", (2, i), (2, i), WARN)
+        elif "OK" in val or "BOM" in val:
+            st_exec.add("TEXTCOLOR", (2, i), (2, i), OK)
+    t_exec.setStyle(st_exec)
+    story.append(t_exec)
+    story.append(Spacer(1, 16))
+
+    # ── ASOs ─────────────────────────────────────────────────────
+    asos = dados.get("asos", [])
+    if asos:
+        story.append(Paragraph("2. ASOs — Atenção Médica Ocupacional", s["section"]))
+        aso_data = [["Funcionário", "Tipo", "Validade", "Situação"]]
+        for a in asos[:50]:
+            situacao = "Vencido" if a.get("vencido") else ("Vencendo" if a.get("alerta") else "OK")
+            aso_data.append([
+                a.get("funcionario_nome", "—")[:35],
+                a.get("tipo_display", "—"),
+                a.get("data_validade", "—"),
+                situacao,
+            ])
+        t_aso = Table(aso_data, colWidths=[6*cm, 4*cm, 3.5*cm, 4.2*cm], repeatRows=1)
+        st_aso = _table_style()
+        for i, row in enumerate(aso_data[1:], 1):
+            if row[3] == "Vencido":
+                st_aso.add("TEXTCOLOR", (3, i), (3, i), DANGER)
+            elif row[3] == "Vencendo":
+                st_aso.add("TEXTCOLOR", (3, i), (3, i), WARN)
+            else:
+                st_aso.add("TEXTCOLOR", (3, i), (3, i), OK)
+        t_aso.setStyle(st_aso)
+        story.append(t_aso)
+        story.append(Spacer(1, 16))
+
+    # ── Exames Vencidos ───────────────────────────────────────────
+    exames = dados.get("exames_vencidos", [])
+    if exames:
+        story.append(Paragraph("3. Exames Vencidos", s["section"]))
+        ex_data = [["Funcionário", "Exame", "Vencimento", "Dias Vencido"]]
+        for e in exames[:40]:
+            ex_data.append([
+                e.get("funcionario_nome", "—")[:30],
+                e.get("tipo_exame", "—")[:25],
+                e.get("data_vencimento", "—"),
+                str(e.get("dias_vencido", 0)) + "d",
+            ])
+        t_ex = Table(ex_data, colWidths=[5.5*cm, 5.5*cm, 3.5*cm, 3.2*cm], repeatRows=1)
+        st_ex = _table_style()
+        for i in range(1, len(ex_data)):
+            st_ex.add("TEXTCOLOR", (3, i), (3, i), DANGER)
+        t_ex.setStyle(st_ex)
+        story.append(t_ex)
+        story.append(Spacer(1, 16))
+
+    # ── Afastamentos ──────────────────────────────────────────────
+    afastamentos = dados.get("afastamentos", [])
+    if afastamentos:
+        story.append(Paragraph("4. Afastamentos Ativos", s["section"]))
+        af_data = [["Funcionário", "CID", "Início", "Dias Afastado", "Tipo"]]
+        for af in afastamentos[:40]:
+            af_data.append([
+                af.get("funcionario_nome", "—")[:30],
+                af.get("cid", "—"),
+                af.get("data_inicio", "—"),
+                str(af.get("dias", 0)) + "d",
+                af.get("tipo_display", "—"),
+            ])
+        t_af = Table(af_data, colWidths=[5.5*cm, 2*cm, 3*cm, 3*cm, 4.2*cm], repeatRows=1)
+        t_af.setStyle(_table_style())
+        story.append(t_af)
+        story.append(Spacer(1, 16))
+
+    # ── CATs ─────────────────────────────────────────────────────
+    cats = dados.get("cats", [])
+    if cats:
+        story.append(Paragraph("5. CATs — Comunicações de Acidente", s["section"]))
+        cat_data = [["Funcionário", "Data", "Tipo", "CID", "Situação"]]
+        for c in cats[:30]:
+            cat_data.append([
+                c.get("funcionario_nome", "—")[:30],
+                c.get("data_acidente", "—"),
+                c.get("tipo_display", "—"),
+                c.get("cid_principal", "—"),
+                c.get("status", "—"),
+            ])
+        t_cat = Table(cat_data, colWidths=[5*cm, 3*cm, 3*cm, 2.5*cm, 4.2*cm], repeatRows=1)
+        t_cat.setStyle(_table_style())
+        story.append(t_cat)
+        story.append(Spacer(1, 16))
+
+    # ── Agendamentos Atrasados ────────────────────────────────────
+    agendamentos = dados.get("agendamentos_atrasados", [])
+    if agendamentos:
+        story.append(Paragraph("6. Agendamentos Não Realizados", s["section"]))
+        ag_data = [["Funcionário", "Tipo", "Data Prevista", "Status"]]
+        for ag in agendamentos[:30]:
+            ag_data.append([
+                ag.get("funcionario_nome", "—")[:30],
+                ag.get("tipo_label", "—"),
+                ag.get("data_exib", "—"),
+                ag.get("status_label", "—"),
+            ])
+        t_ag = Table(ag_data, colWidths=[5.5*cm, 4.5*cm, 3.5*cm, 4.2*cm], repeatRows=1)
+        st_ag = _table_style()
+        for i in range(1, len(ag_data)):
+            st_ag.add("TEXTCOLOR", (3, i), (3, i), WARN)
+        t_ag.setStyle(st_ag)
+        story.append(t_ag)
+
+    doc.build(story)
+    buf.seek(0)
+    return buf

@@ -81,6 +81,7 @@ from api.views_sst import (
     api_prontuario_pdf,
     api_sst_conformidade,
     api_sst_conformidade_pdf,
+    api_sst_relatorio_consolidado_pdf,
     sst_conformidade_page,
 )
 from api.views_agendamento_sst import (
@@ -326,6 +327,8 @@ urlpatterns = [
     path('api/sst/conformidade', api_sst_conformidade),
     path('api/sst/conformidade/pdf', api_sst_conformidade_pdf),
     path('api/sst/conformidade/pdf/', api_sst_conformidade_pdf),
+    path('api/sst/relatorio/consolidado/pdf', api_sst_relatorio_consolidado_pdf),
+    path('api/sst/relatorio/consolidado/pdf/', api_sst_relatorio_consolidado_pdf),
     # Agendamento SST
     path('api/sst/agendamentos/', api_agendamentos_sst),
     path('api/sst/agendamentos', api_agendamentos_sst),
