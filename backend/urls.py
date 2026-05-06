@@ -89,6 +89,7 @@ from api.views_agendamento_sst import (
     api_agendamentos_sst_kpis,
 )
 from api.views_alertas import api_alertas, alertas_page
+from api.views_executive import api_executive_dashboard, executive_dashboard_page
 from api.views_lotes_farmacia import (
     api_lotes_farmacia,
     api_lote_farmacia_detalhe,
@@ -271,6 +272,10 @@ urlpatterns = [
     path('alertas/', alertas_page),
     path('api/alertas/', api_alertas),
     path('api/alertas', api_alertas),
+    # 📊 Dashboard Executivo
+    path('executive/', executive_dashboard_page),
+    path('api/executive/dashboard/', api_executive_dashboard),
+    path('api/executive/dashboard', api_executive_dashboard),
 
     # 🏥 SST / Saúde Ocupacional — páginas
     path('sst/', sst_home_redirect),
