@@ -123,6 +123,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="tab-btn" onclick="setTab('internacoes')">📋 Internações</button>
       <button class="tab-btn" onclick="setTab('pacientes')">👤 Pacientes</button>
       <button class="tab-btn" onclick="setTab('departamentos')">🏢 Departamentos</button>
+      <button class="tab-btn" onclick="setTab('prescricoes')">💊 Prescrições</button>
     </div>
 
     <!-- Leitos -->
@@ -209,6 +210,29 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <table>
           <thead><tr><th>Nome</th><th>Tipo</th><th>Capacidade</th><th>Responsável</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="tbodyDep"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Prescrições -->
+    <div class="tab-panel" id="tab-prescricoes" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">💊 Prescrições Médicas Ativas</span>
+          <div style="display:flex;gap:8px">
+            <select id="filtroPrescStatus" onchange="carregarPrescricoes()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;color:#e8f4ff;font-size:12px">
+              <option value="">Todos os status</option>
+              <option value="ativa" selected>Ativas</option>
+              <option value="suspensa">Suspensas</option>
+              <option value="concluida">Concluídas</option>
+              <option value="cancelada">Canceladas</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalPresc()">+ Nova Prescrição</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Paciente</th><th>Medicamento</th><th>Dose</th><th>Via</th><th>Frequência</th><th>Duração</th><th>Médico</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyPresc"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -374,6 +398,44 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalDep')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarDep()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Prescrição -->
+<div class="modal-bg" id="modalPresc">
+  <div class="modal">
+    <h3>💊 Nova Prescrição Médica</h3>
+    <div class="form-group"><label>Internação (Paciente) *</label>
+      <select id="pIntId"><option value="">— selecione —</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="grid-column:1/-1"><label>Medicamento *</label><input id="pMed" placeholder="Ex: Dipirona 500mg"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Dose</label><input id="pDose" placeholder="Ex: 1 comprimido, 5 mL"></div>
+      <div class="form-group"><label>Via</label>
+        <select id="pVia">
+          <option value="oral">Oral</option>
+          <option value="ev">Endovenosa</option>
+          <option value="im">Intramuscular</option>
+          <option value="sc">Subcutânea</option>
+          <option value="inalatoria">Inalatória</option>
+          <option value="topica">Tópica</option>
+          <option value="sublingual">Sublingual</option>
+          <option value="outra">Outra</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Frequência</label><input id="pFreq" placeholder="Ex: 8/8h, 1x ao dia, SN"></div>
+      <div class="form-group"><label>Duração (dias)</label><input id="pDur" type="number" min="1" placeholder="Opcional"></div>
+    </div>
+    <div class="form-group"><label>Médico Responsável</label><input id="pMedico" placeholder="Nome do médico"></div>
+    <div class="form-group"><label>Observações</label><textarea id="pObs" rows="2" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px;color:#e8f4ff;font-family:Manrope,sans-serif"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalPresc')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPresc()">Salvar Prescrição</button>
     </div>
   </div>
 </div>
@@ -665,7 +727,7 @@ function fmtDt(s) {
 let _currentTab = 'leitos';
 function setTab(tab) {
   _currentTab = tab;
-  const tabs = ['leitos','triagem','internacoes','pacientes','departamentos'];
+  const tabs = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes'];
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===tab));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
@@ -674,6 +736,75 @@ function setTab(tab) {
   else if (tab==='internacoes') { carregarPacientes(); carregarLeitos(); carregarInternacoes(); }
   else if (tab==='pacientes') carregarPacientes();
   else if (tab==='departamentos') carregarDepartamentos();
+  else if (tab==='prescricoes') carregarPrescricoes();
+}
+
+// ── Prescrições ────────────────────────────────────────────────
+let _internacoesList = [];
+async function carregarPrescricoes() {
+  // Buscar todas as internações ativas e depois suas prescrições
+  const di = await api('/api/hospital/internacoes/?status=ativo');
+  _internacoesList = di.internacoes || [];
+  const status = document.getElementById('filtroPrescStatus')?.value || '';
+  const tb = document.getElementById('tbodyPresc');
+  if (!_internacoesList.length) {
+    tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma internação ativa</td></tr>'; return;
+  }
+  // Carregar prescrições de todas as internações ativas em paralelo
+  const resultados = await Promise.all(_internacoesList.map(async int => {
+    const dp = await api(`/api/hospital/internacoes/${int.id}/prescricoes/?status=${status}`);
+    return (dp.prescricoes || []).map(p => ({...p, _int: int}));
+  }));
+  const prescricoes = resultados.flat();
+  if (!prescricoes.length) {
+    tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma prescrição encontrada</td></tr>'; return;
+  }
+  const SMAP = {ativa:'<span style="color:var(--ok)">Ativa</span>',suspensa:'<span style="color:var(--warn)">Suspensa</span>',concluida:'<span style="color:var(--muted)">Concluída</span>',cancelada:'<span style="color:var(--danger)">Cancelada</span>'};
+  tb.innerHTML = prescricoes.map(p => `<tr>
+    <td>${p.paciente_nome}</td>
+    <td><strong>${p.medicamento}</strong></td>
+    <td>${p.dose||'—'}</td>
+    <td>${p.via_label}</td>
+    <td>${p.frequencia||'—'}</td>
+    <td>${p.duracao_dias ? p.duracao_dias+'d' : '—'}</td>
+    <td>${p.medico||'—'}</td>
+    <td>${SMAP[p.status]||p.status}</td>
+    <td>
+      ${p.status==='ativa' ? `<button class="btn btn-ghost btn-sm" onclick="suspenderPresc(${p.id})">⏸ Suspender</button>` : ''}
+      ${p.status==='suspensa' ? `<button class="btn btn-ghost btn-sm" onclick="ativarPresc(${p.id})">▶ Ativar</button>` : ''}
+    </td>
+  </tr>`).join('');
+}
+
+function abrirModalPresc() {
+  const sel = document.getElementById('pIntId');
+  if (sel) sel.innerHTML = '<option value="">— selecione —</option>' + _internacoesList.map(i=>`<option value="${i.id}">${i.paciente_nome} (leito ${i.leito_numero})</option>`).join('');
+  ['pMed','pDose','pFreq','pDur','pMedico','pObs'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  const via=document.getElementById('pVia'); if(via) via.value='oral';
+  abrirModal('modalPresc');
+}
+
+async function salvarPresc() {
+  const intId = v('pIntId');
+  if (!intId) return alert('Selecione a internação');
+  if (!v('pMed')) return alert('Informe o medicamento');
+  const body = {
+    medicamento: v('pMed'), dose: v('pDose'), via: v('pVia'),
+    frequencia: v('pFreq'), duracao_dias: v('pDur') || null,
+    medico: v('pMedico'), observacoes: v('pObs'),
+  };
+  await api(`/api/hospital/internacoes/${intId}/prescricoes/`, {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalPresc');
+  carregarPrescricoes();
+}
+
+async function suspenderPresc(id) {
+  await api(`/api/hospital/prescricoes/${id}/status/`, {method:'PUT', body:JSON.stringify({status:'suspensa'})});
+  carregarPrescricoes();
+}
+async function ativarPresc(id) {
+  await api(`/api/hospital/prescricoes/${id}/status/`, {method:'PUT', body:JSON.stringify({status:'ativa'})});
+  carregarPrescricoes();
 }
 
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));

@@ -120,6 +120,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="tab-btn" onclick="setTab('movimentos')">↕️ Movimentos</button>
       <button class="tab-btn" onclick="setTab('fornecedores')">🏭 Fornecedores</button>
       <button class="tab-btn" onclick="setTab('pedidos')">🛒 Pedidos de Compra</button>
+      <button class="tab-btn" onclick="setTab('lotes')">🏷️ Lotes / Validade</button>
     </div>
 
     <!-- Estoque -->
@@ -195,6 +196,39 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <thead><tr><th>Pedido</th><th>Fornecedor</th><th>Itens</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
           <tbody id="tbodyPed"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Lotes / Validade -->
+    <div class="tab-panel" id="tab-lotes" style="margin-top:16px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px" id="kpiLotes">
+        <div class="kpi"><div class="kpi-value" id="lkTotal" style="color:var(--accent)">—</div><div class="kpi-label">Total de Lotes Ativos</div></div>
+        <div class="kpi"><div class="kpi-value" id="lkVenc" style="color:var(--danger)">—</div><div class="kpi-label">🔴 Vencidos (em estoque)</div></div>
+        <div class="kpi"><div class="kpi-value" id="lkAlerta" style="color:var(--warn)">—</div><div class="kpi-label">⚠️ Vencendo em 30 dias</div></div>
+        <div class="kpi"><div class="kpi-value" id="lkOk" style="color:var(--ok)">—</div><div class="kpi-label">✅ Vigentes</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🏷️ Rastreabilidade de Lotes (FEFO)</span>
+          <div style="display:flex;gap:8px">
+            <select id="filtroLoteStatus" onchange="carregarLotes()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;color:#e8f4ff;font-size:12px">
+              <option value="">Todos (com estoque)</option>
+              <option value="vencidos">Vencidos</option>
+              <option value="vencendo_30">Vencendo em 30 dias</option>
+              <option value="vigentes">Vigentes (+30d)</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalLote()">+ Registrar Lote</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Medicamento</th><th>Lote</th><th>Fabricante</th><th>Fabricação</th><th>Validade</th><th>Dias</th><th>Qtd. Atual</th><th>NF</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyLotes"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+      <!-- Vencendo em breve -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-header"><span class="card-title">⚠️ Próximos a Vencer (30 dias)</span></div>
+        <div id="proxVencer" style="padding:16px 20px;font-size:13px;color:var(--muted)">Carregando…</div>
       </div>
     </div>
   </div>
@@ -291,6 +325,37 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalForn')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarFornecedor()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Lote -->
+<div class="modal-bg" id="modalLote">
+  <div class="modal">
+    <h3>🏷️ Registrar Lote de Medicamento</h3>
+    <div class="form-row">
+      <div class="form-group" style="grid-column:1/-1"><label>Medicamento / Item *</label>
+        <select id="lItem"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Número do Lote *</label><input id="lNumero" placeholder="Ex: LOT-20260101"></div>
+      <div class="form-group"><label>Fabricante</label><input id="lFabricante" placeholder="Nome do fabricante"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Data de Fabricação</label><input type="date" id="lFabricacao"></div>
+      <div class="form-group"><label>Data de Validade *</label><input type="date" id="lValidade"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Quantidade Recebida *</label><input type="number" step="0.001" min="0" id="lQtd" placeholder="0"></div>
+      <div class="form-group"><label>Nota Fiscal</label><input id="lNF" placeholder="Nº da NF"></div>
+    </div>
+    <div class="form-group"><label>Fornecedor</label>
+      <select id="lForn"><option value="">— nenhum —</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalLote')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarLote()">Registrar Lote</button>
     </div>
   </div>
 </div>
@@ -605,7 +670,7 @@ let _currentTab = 'estoque';
 function setTab(tab) {
   _currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    const tabs = ['estoque','dispensacoes','movimentos','fornecedores','pedidos'];
+    const tabs = ['estoque','dispensacoes','movimentos','fornecedores','pedidos','lotes'];
     b.classList.toggle('active', tabs[i] === tab);
   });
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -615,6 +680,85 @@ function setTab(tab) {
   else if (tab === 'movimentos') carregarMovimentos();
   else if (tab === 'fornecedores') carregarFornecedores();
   else if (tab === 'pedidos') carregarPedidos();
+  else if (tab === 'lotes') carregarLotes();
+}
+
+// ── Lotes ─────────────────────────────────────────────────────
+async function carregarLotes() {
+  const filtro = document.getElementById('filtroLoteStatus')?.value || '';
+  const url = `/api/farmacia/lotes/?${filtro ? 'filtro='+filtro : 'todos=0'}`;
+  const d = await api(url);
+  const tb = document.getElementById('tbodyLotes');
+  if (!d.lotes?.length) { tb.innerHTML='<tr><td colspan="9" class="empty">Nenhum lote encontrado</td></tr>'; }
+  else tb.innerHTML = d.lotes.map(l => {
+    const cls = l.vencido ? 'color:var(--danger)' : l.alerta ? 'color:var(--warn)' : 'color:var(--ok)';
+    const dias = l.vencido ? `<span style="${cls}">Vencido (${Math.abs(l.dias_para_vencer)}d)</span>` : `<span style="${cls}">${l.dias_para_vencer}d</span>`;
+    return `<tr>
+      <td>${l.item_nome}</td>
+      <td><code style="font-size:11px">${l.numero_lote}</code></td>
+      <td>${l.fabricante||'—'}</td>
+      <td>${l.data_fabricacao||'—'}</td>
+      <td style="${cls}">${l.data_validade}</td>
+      <td>${dias}</td>
+      <td><strong>${l.quantidade_atual}</strong></td>
+      <td>${l.nota_fiscal||'—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deletarLote(${l.id})">🗑</button></td>
+    </tr>`;
+  }).join('');
+
+  // KPIs lotes
+  const k = await api('/api/farmacia/lotes/kpis/');
+  document.getElementById('lkTotal').textContent = k.kpis.total_lotes;
+  document.getElementById('lkVenc').textContent = k.kpis.vencidos;
+  document.getElementById('lkAlerta').textContent = k.kpis.vencendo_30;
+  document.getElementById('lkOk').textContent = k.kpis.vigentes;
+
+  const proxEl = document.getElementById('proxVencer');
+  if (!k.proximos_vencer?.length) { proxEl.innerHTML='<p style="color:var(--ok)">✅ Nenhum lote vencendo nos próximos 30 dias</p>'; }
+  else proxEl.innerHTML = k.proximos_vencer.map(l =>
+    `<div style="display:flex;gap:12px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="min-width:90px;color:var(--warn);font-weight:700">${l.data_validade}</span>
+      <span style="flex:1">${l.item_nome}</span>
+      <span style="color:var(--muted)">Lote ${l.numero_lote}</span>
+      <span style="color:var(--warn)">${l.dias_para_vencer}d restantes</span>
+      <span style="color:var(--accent)">${l.quantidade_atual} un</span>
+    </div>`
+  ).join('');
+}
+
+function abrirModalLote() {
+  // popular selects
+  const selItem = document.getElementById('lItem');
+  selItem.innerHTML = '<option value="">— selecione —</option>' + _itens.map(i=>`<option value="${i.id}">${i.nome}</option>`).join('');
+  const selForn = document.getElementById('lForn');
+  selForn.innerHTML = '<option value="">— nenhum —</option>' + _fornecedores.map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');
+  ['lNumero','lFabricante','lFabricacao','lValidade','lQtd','lNF'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  abrirModal('modalLote');
+}
+
+async function salvarLote() {
+  const body = {
+    item_id: parseInt(v('lItem')),
+    numero_lote: v('lNumero'),
+    fabricante: v('lFabricante'),
+    data_fabricacao: v('lFabricacao') || null,
+    data_validade: v('lValidade'),
+    quantidade_inicial: parseFloat(v('lQtd') || 0),
+    nota_fiscal: v('lNF'),
+    fornecedor_id: v('lForn') ? parseInt(v('lForn')) : null,
+  };
+  if (!body.item_id) return alert('Selecione o medicamento');
+  if (!body.numero_lote) return alert('Informe o número do lote');
+  if (!body.data_validade) return alert('Informe a data de validade');
+  await api('/api/farmacia/lotes/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalLote');
+  carregarLotes(); carregarEstoque(); carregarKpis();
+}
+
+async function deletarLote(id) {
+  if (!confirm('Excluir este lote? O estoque será ajustado.')) return;
+  await api(`/api/farmacia/lotes/${id}/`, {method:'DELETE'});
+  carregarLotes(); carregarEstoque(); carregarKpis();
 }
 
 // Fechar modal ao clicar fora

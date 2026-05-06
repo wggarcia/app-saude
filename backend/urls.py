@@ -89,6 +89,17 @@ from api.views_agendamento_sst import (
     api_agendamentos_sst_kpis,
 )
 from api.views_alertas import api_alertas, alertas_page
+from api.views_lotes_farmacia import (
+    api_lotes_farmacia,
+    api_lote_farmacia_detalhe,
+    api_lotes_farmacia_kpis,
+)
+from api.views_prescricao import (
+    api_prescricoes_internacao,
+    api_prescricao_status,
+    api_atos_normativos,
+    api_ato_normativo_detalhe,
+)
 from api.views_gestao import (
     gestao_corporativa,
     api_apoio_fila,
@@ -385,6 +396,10 @@ urlpatterns = [
     path('api/farmacia/pedidos/<int:pedido_id>/status/', api_pedido_compra_status),
     path('api/farmacia/pdf/estoque/', api_farmacia_pdf_estoque),
     path('api/farmacia/pdf/dispensacoes/', api_farmacia_pdf_dispensacoes),
+    # ── Lotes / Rastreabilidade ──────────────────────────────────
+    path('api/farmacia/lotes/', api_lotes_farmacia),
+    path('api/farmacia/lotes/kpis/', api_lotes_farmacia_kpis),
+    path('api/farmacia/lotes/<int:lote_id>/', api_lote_farmacia_detalhe),
     path('api/hospital/painel', api_hospital_painel),
     # ── Hospital Operacional ─────────────────────────────────
     path('api/hospital/ops/kpis/', api_hospital_ops_kpis),
@@ -397,6 +412,8 @@ urlpatterns = [
     path('api/hospital/internacoes/', api_internacoes_hospital),
     path('api/hospital/internacoes/<int:internacao_id>/status/', api_internacao_status),
     path('api/hospital/internacoes/<int:internacao_id>/evolucoes/', api_evolucoes_internacao),
+    path('api/hospital/internacoes/<int:internacao_id>/prescricoes/', api_prescricoes_internacao),
+    path('api/hospital/prescricoes/<int:prescricao_id>/status/', api_prescricao_status),
     path('api/hospital/pdf/internacoes/', api_hospital_pdf_internacoes),
     path('api/hospital/pdf/internacao/<int:internacao_id>/', api_hospital_pdf_ficha_internacao),
     path('api/governo/alertas', api_alertas_governo),
@@ -410,6 +427,9 @@ urlpatterns = [
     path('api/governo/planos-acao/', api_planos_acao_gov),
     path('api/governo/planos-acao/<int:plano_id>/', api_plano_acao_gov_detalhe),
     path('api/governo/pdf/relatorio/', api_governo_pdf_relatorio),
+    # ── Atos Normativos ──────────────────────────────────────────
+    path('api/governo/atos-normativos/', api_atos_normativos),
+    path('api/governo/atos-normativos/<int:ato_id>/', api_ato_normativo_detalhe),
     path('api/governo/alertas/criar', api_criar_alerta_governo),
     path('api/governo/alertas/toggle', api_toggle_alerta_governo),
     path('api/governo/alertas/fluxo', api_fluxo_alerta_governo),
