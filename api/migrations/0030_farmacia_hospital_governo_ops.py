@@ -5,7 +5,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("api", "0029_configuracao_epi_grupos"),
+        ("api", "0029_comunicacao_chat_video"),
     ]
 
     operations = [
@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="FornecedorFarmacia",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("nome", models.CharField(max_length=200)),
                 ("cnpj", models.CharField(blank=True, default="", max_length=18)),
                 ("contato", models.CharField(blank=True, default="", max_length=200)),
@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="ItemFarmacia",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("nome", models.CharField(max_length=200)),
                 ("codigo", models.CharField(blank=True, default="", max_length=50)),
                 ("categoria", models.CharField(choices=[("medicamento","Medicamento"),("material","Material"),("insumo","Insumo"),("outro","Outro")], default="medicamento", max_length=20)),
@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="MovimentoEstoque",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("tipo", models.CharField(choices=[("entrada","Entrada"),("saida","Saída"),("ajuste","Ajuste"),("vencimento","Vencimento")], max_length=20)),
                 ("quantidade", models.IntegerField()),
                 ("estoque_anterior", models.IntegerField()),
@@ -62,7 +62,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="PedidoCompraFarmacia",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("status", models.CharField(choices=[("rascunho","Rascunho"),("enviado","Enviado"),("aprovado","Aprovado"),("recebido","Recebido"),("cancelado","Cancelado")], default="rascunho", max_length=20)),
                 ("observacoes", models.TextField(blank=True, default="")),
                 ("criado_em", models.DateTimeField(auto_now_add=True)),
@@ -75,7 +75,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="ItemPedidoCompra",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("quantidade_solicitada", models.PositiveIntegerField()),
                 ("quantidade_recebida", models.PositiveIntegerField(default=0)),
                 ("item", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="api.itemfarmacia")),
@@ -86,7 +86,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="DispensacaoMedicamento",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("paciente_nome", models.CharField(max_length=200)),
                 ("paciente_cpf", models.CharField(blank=True, default="", max_length=14)),
                 ("quantidade", models.PositiveIntegerField()),
@@ -102,7 +102,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="DepartamentoHospital",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("nome", models.CharField(max_length=200)),
                 ("tipo", models.CharField(blank=True, default="", max_length=50)),
                 ("capacidade_leitos", models.PositiveIntegerField(default=0)),
@@ -115,7 +115,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="LeitoHospital",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("numero", models.CharField(max_length=20)),
                 ("tipo", models.CharField(blank=True, default="", max_length=50)),
                 ("status", models.CharField(choices=[("disponivel","Disponível"),("ocupado","Ocupado"),("manutencao","Manutenção"),("reservado","Reservado")], default="disponivel", max_length=20)),
@@ -127,7 +127,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="PacienteHospital",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("nome", models.CharField(max_length=200)),
                 ("cpf", models.CharField(blank=True, default="", max_length=14)),
                 ("data_nascimento", models.DateField(blank=True, null=True)),
@@ -144,7 +144,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="TriagemHospital",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("prioridade", models.CharField(choices=[("vermelho","Vermelho - Emergência"),("laranja","Laranja - Muito Urgente"),("amarelo","Amarelo - Urgente"),("verde","Verde - Pouco Urgente"),("azul","Azul - Não Urgente")], max_length=20)),
                 ("queixa_principal", models.TextField()),
                 ("pressao_arterial", models.CharField(blank=True, default="", max_length=20)),
@@ -161,7 +161,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="InternacaoHospital",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("diagnostico", models.TextField()),
                 ("medico_responsavel", models.CharField(blank=True, default="", max_length=200)),
                 ("status", models.CharField(choices=[("ativa","Ativa"),("alta","Alta"),("transferido","Transferido"),("obito","Óbito")], default="ativa", max_length=20)),
@@ -176,7 +176,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="EvolucaoClinica",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("descricao", models.TextField()),
                 ("responsavel", models.CharField(blank=True, default="", max_length=200)),
                 ("registrado_em", models.DateTimeField(auto_now_add=True)),
@@ -188,7 +188,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="ProgramaSaudeGov",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("nome", models.CharField(max_length=200)),
                 ("descricao", models.TextField(blank=True, default="")),
                 ("status", models.CharField(choices=[("planejamento","Planejamento"),("ativo","Ativo"),("suspenso","Suspenso"),("concluido","Concluído")], default="planejamento", max_length=20)),
@@ -207,7 +207,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="IndicadorSaudeGov",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("nome", models.CharField(max_length=200)),
                 ("descricao", models.TextField(blank=True, default="")),
                 ("tipo", models.CharField(choices=[("quantitativo","Quantitativo"),("percentual","Percentual"),("indice","Índice")], default="quantitativo", max_length=20)),
@@ -224,7 +224,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="OrcamentoSaudeGov",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("ano", models.PositiveSmallIntegerField()),
                 ("total_previsto", models.DecimalField(decimal_places=2, default=0, max_digits=18)),
                 ("total_executado", models.DecimalField(decimal_places=2, default=0, max_digits=18)),
@@ -238,7 +238,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="PlanoAcaoGov",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("titulo", models.CharField(max_length=300)),
                 ("descricao", models.TextField(blank=True, default="")),
                 ("responsavel", models.CharField(blank=True, default="", max_length=200)),
