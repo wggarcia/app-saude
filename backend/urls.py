@@ -88,6 +88,7 @@ from api.views_agendamento_sst import (
     api_agendamento_sst_detalhe,
     api_agendamentos_sst_kpis,
 )
+from api.views_alertas import api_alertas, alertas_page
 from api.views_gestao import (
     gestao_corporativa,
     api_apoio_fila,
@@ -254,6 +255,11 @@ urlpatterns = [
     path('api/escalas/<int:escala_id>/atribuicoes', api_escala_atribuicoes),
     path('painel-lider/', painel_lider),
     path('api/lider/unidade/<int:unidade_id>/dados', api_unidade_dados),
+
+    # 🚨 Alertas inteligentes
+    path('alertas/', alertas_page),
+    path('api/alertas/', api_alertas),
+    path('api/alertas', api_alertas),
 
     # 🏥 SST / Saúde Ocupacional — páginas
     path('sst/', sst_home_redirect),
