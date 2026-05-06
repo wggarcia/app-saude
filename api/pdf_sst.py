@@ -97,22 +97,22 @@ def gerar_pdf_aso(aso, funcionario, empresa_nome, config=None):
     story = []
 
     tipo_labels = {
-        "admissional":    "Admissional",
-        "periodico":      "Periódico",
-        "retorno":        "Retorno ao Trabalho",
-        "mudanca_funcao": "Mudança de Função",
-        "demissional":    "Demissional",
+        "admissional":     "Admissional",
+        "periodico":       "Periódico",
+        "retorno_trabalho":"Retorno ao Trabalho",
+        "mudanca_risco":   "Mudança de Risco",
+        "demissional":     "Demissional",
     }
     resultado_labels = {
         "apto":            "APTO",
-        "apto_restricoes": "APTO COM RESTRIÇÕES",
+        "apto_restricao":  "APTO COM RESTRIÇÃO",
         "inapto":          "INAPTO",
     }
 
     _header_empresa(
         story, empresa_nome,
         "Atestado de Saúde Ocupacional — ASO",
-        f"Tipo: {tipo_labels.get(aso.tipo_exame, aso.tipo_exame)}  ·  Emissão: {aso.data_emissao.strftime('%d/%m/%Y') if aso.data_emissao else '—'}",
+        f"Tipo: {tipo_labels.get(aso.tipo, aso.tipo)}  ·  Emissão: {aso.data_emissao.strftime('%d/%m/%Y') if aso.data_emissao else '—'}",
         styles,
     )
 
@@ -147,7 +147,7 @@ def gerar_pdf_aso(aso, funcionario, empresa_nome, config=None):
     # Dados do ASO
     story.append(Paragraph("DADOS DO EXAME", styles["h2"]))
     rows2 = [
-        ["Tipo de exame",    tipo_labels.get(aso.tipo_exame, aso.tipo_exame),
+        ["Tipo de exame",    tipo_labels.get(aso.tipo, aso.tipo),
          "Data de emissão",  aso.data_emissao.strftime("%d/%m/%Y") if aso.data_emissao else "—"],
         ["Data de validade", aso.data_validade.strftime("%d/%m/%Y") if aso.data_validade else "—",
          "Médico examinador", aso.medico_responsavel or (config.nome_medico_coordenador if config else "—")],
@@ -175,7 +175,7 @@ def gerar_pdf_aso(aso, funcionario, empresa_nome, config=None):
 
     # Resultado
     res = resultado_labels.get(aso.resultado, aso.resultado or "—")
-    res_color = TEAL if aso.resultado == "apto" else (AMBER if aso.resultado == "apto_restricoes" else RED)
+    res_color = TEAL if aso.resultado == "apto" else (AMBER if aso.resultado == "apto_restricao" else RED)
     res_box = Table(
         [[Paragraph(res, ParagraphStyle("r", fontName="Helvetica-Bold", fontSize=16, alignment=TA_CENTER, textColor=WHITE))]],
         colWidths=[W - 4*cm],
@@ -227,8 +227,8 @@ def gerar_pdf_cat(cat, funcionario, empresa_nome, config=None):
     styles = _styles()
     story = []
 
-    tipo_labels     = {"tipica":"Típica","trajeto":"Trajeto","doenca":"Doença Ocupacional"}
-    grav_labels     = {"leve":"Leve","grave":"Grave","gravissimo":"Gravíssimo","obito":"Óbito"}
+    tipo_labels     = {"tipico":"Típico","trajeto":"De Trajeto","doenca":"Doença Ocupacional"}
+    grav_labels     = {"leve":"Leve","moderado":"Moderado","grave":"Grave","fatal":"Fatal"}
 
     _header_empresa(
         story, empresa_nome,
@@ -266,7 +266,7 @@ def gerar_pdf_cat(cat, funcionario, empresa_nome, config=None):
 
     story.append(Paragraph("2. DADOS DO ACIDENTE", styles["h2"]))
     story.append(info_table([
-        ["Tipo",            tipo_labels.get(cat.tipo_cat, cat.tipo_cat or "—"),
+        ["Tipo",            tipo_labels.get(cat.tipo, cat.tipo or "—"),
          "Data do acidente", cat.data_acidente.strftime("%d/%m/%Y") if cat.data_acidente else "—"],
         ["Gravidade",       grav_labels.get(cat.gravidade, cat.gravidade or "—"),
          "CID",             cat.cid or "—"],
@@ -276,13 +276,8 @@ def gerar_pdf_cat(cat, funcionario, empresa_nome, config=None):
     story.append(Spacer(1, 8))
 
     story.append(Paragraph("3. DESCRIÇÃO DO ACIDENTE", styles["h2"]))
-    story.append(Paragraph(cat.descricao_acidente or "—", styles["value"]))
+    story.append(Paragraph(cat.descricao or "—", styles["value"]))
     story.append(Spacer(1, 8))
-
-    if cat.medidas_tomadas:
-        story.append(Paragraph("4. MEDIDAS ADOTADAS", styles["h2"]))
-        story.append(Paragraph(cat.medidas_tomadas, styles["value"]))
-        story.append(Spacer(1, 8))
 
     story.append(HRFlowable(width="100%", thickness=0.5, color=LGREY, spaceBefore=20))
     sig_data = [[
@@ -364,13 +359,13 @@ def gerar_pdf_prontuario(funcionario, asos, exames, cats, afastamentos, empresa_
         story.append(t)
         story.append(Spacer(1, 10))
 
-    tipo_aso = {"admissional":"Admissional","periodico":"Periódico","retorno":"Retorno","mudanca_funcao":"Mud. Função","demissional":"Demissional"}
-    res_aso  = {"apto":"Apto","apto_restricoes":"Apto c/ restrições","inapto":"Inapto"}
+    tipo_aso = {"admissional":"Admissional","periodico":"Periódico","retorno_trabalho":"Retorno","mudanca_risco":"Mud. Risco","demissional":"Demissional"}
+    res_aso  = {"apto":"Apto","apto_restricao":"Apto c/ restrição","inapto":"Inapto"}
 
     simple_table(
         f"ASOs ({len(asos)})",
         ["Tipo", "Data Emissão", "Validade", "Resultado", "Médico"],
-        [[tipo_aso.get(a.tipo_exame, a.tipo_exame),
+        [[tipo_aso.get(a.tipo, a.tipo),
           a.data_emissao.strftime("%d/%m/%Y") if a.data_emissao else "—",
           a.data_validade.strftime("%d/%m/%Y") if a.data_validade else "—",
           res_aso.get(a.resultado, a.resultado or "—"),
@@ -387,25 +382,25 @@ def gerar_pdf_prontuario(funcionario, asos, exames, cats, afastamentos, empresa_
         [4*cm, 3*cm, 3*cm, 3*cm, 4*cm],
     )
 
-    tipo_cat = {"tipica":"Típica","trajeto":"Trajeto","doenca":"Doença Ocup."}
+    tipo_cat = {"tipico":"Típico","trajeto":"De Trajeto","doenca":"Doença Ocup."}
     simple_table(
         f"CATs ({len(cats)})",
         ["Tipo", "Data Acidente", "CID", "Gravidade", "Nº CAT"],
-        [[tipo_cat.get(c.tipo_cat, c.tipo_cat or "—"),
+        [[tipo_cat.get(c.tipo, c.tipo or "—"),
           c.data_acidente.strftime("%d/%m/%Y") if c.data_acidente else "—",
           c.cid or "—", c.gravidade or "—", c.numero_cat or "Não reg."] for c in cats],
         [3*cm, 3*cm, 2.5*cm, 3*cm, 3*cm],
     )
 
-    motivo_af = {"acidente_trabalho":"Acidente","doenca_ocupacional":"D. Ocup.","doenca_comum":"D. Comum","maternidade":"Maternidade","outros":"Outros"}
+    motivo_af = {"acidente_trabalho":"Acidente","doenca_ocupacional":"D. Ocup.","doenca_comum":"D. Comum","licenca_maternidade":"Maternidade","licenca_paternidade":"Paternidade","outro":"Outro"}
     simple_table(
         f"Afastamentos ({len(afastamentos)})",
-        ["Motivo", "Início", "Retorno", "Dias", "CID"],
+        ["Motivo", "Início", "Retorno Previsto", "CID"],
         [[motivo_af.get(af.motivo, af.motivo or "—"),
           af.data_inicio.strftime("%d/%m/%Y") if af.data_inicio else "—",
-          af.data_retorno_previsto.strftime("%d/%m/%Y") if af.data_retorno_previsto else "Em curso",
-          str(af.dias_afastamento or "—"), af.cid or "—"] for af in afastamentos],
-        [3.5*cm, 3*cm, 3*cm, 2*cm, 3*cm],
+          af.data_prevista_retorno.strftime("%d/%m/%Y") if af.data_prevista_retorno else "Em curso",
+          af.cid or "—"] for af in afastamentos],
+        [4.5*cm, 3*cm, 4*cm, 2.5*cm],
     )
 
     story.append(_footer_text(styles))
