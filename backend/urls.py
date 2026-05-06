@@ -128,7 +128,7 @@ from api.views_farmacia_ops import (
     api_itens_farmacia, api_item_farmacia_detalhe,
     api_movimentos_estoque, api_dispensacoes_farmacia,
     api_pedidos_compra_farmacia, api_pedido_compra_status,
-    api_farmacia_ops_kpis,
+    api_farmacia_ops_kpis, api_farmacia_pdf_estoque, api_farmacia_pdf_dispensacoes,
 )
 from api.views_hospital_ops import (
     api_departamentos_hospital, api_departamento_hospital_detalhe,
@@ -136,12 +136,13 @@ from api.views_hospital_ops import (
     api_pacientes_hospital, api_triagens_hospital,
     api_internacoes_hospital, api_internacao_status,
     api_evolucoes_internacao, api_hospital_ops_kpis,
+    api_hospital_pdf_internacoes, api_hospital_pdf_ficha_internacao,
 )
 from api.views_governo_ops import (
     api_programas_gov, api_programa_gov_detalhe,
     api_indicadores_gov, api_indicador_gov_detalhe,
     api_orcamentos_gov, api_planos_acao_gov, api_plano_acao_gov_detalhe,
-    api_governo_ops_kpis,
+    api_governo_ops_kpis, api_governo_pdf_relatorio,
 )
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
@@ -175,7 +176,9 @@ urlpatterns = [
     path('api/sessao/aba', ativar_sessao_aba),
     path('api/operacao-central/login', login_dono_saas),
     path('logout/', logout_empresa),
+    path('sair/', logout_empresa),          # alias amigável
     path('logout-governo/', logout_governo),
+    path('sair-governo/', logout_governo),  # alias amigável
     path('logout-operacao/', logout_operacao),
     path('solicitar-reset-senha/', solicitar_reset_senha),
     path('redefinir-senha/<str:token_str>/', redefinir_senha),
@@ -354,6 +357,8 @@ urlpatterns = [
     path('api/farmacia/dispensacoes/', api_dispensacoes_farmacia),
     path('api/farmacia/pedidos/', api_pedidos_compra_farmacia),
     path('api/farmacia/pedidos/<int:pedido_id>/status/', api_pedido_compra_status),
+    path('api/farmacia/pdf/estoque/', api_farmacia_pdf_estoque),
+    path('api/farmacia/pdf/dispensacoes/', api_farmacia_pdf_dispensacoes),
     path('api/hospital/painel', api_hospital_painel),
     # ── Hospital Operacional ─────────────────────────────────
     path('api/hospital/ops/kpis/', api_hospital_ops_kpis),
@@ -366,6 +371,8 @@ urlpatterns = [
     path('api/hospital/internacoes/', api_internacoes_hospital),
     path('api/hospital/internacoes/<int:internacao_id>/status/', api_internacao_status),
     path('api/hospital/internacoes/<int:internacao_id>/evolucoes/', api_evolucoes_internacao),
+    path('api/hospital/pdf/internacoes/', api_hospital_pdf_internacoes),
+    path('api/hospital/pdf/internacao/<int:internacao_id>/', api_hospital_pdf_ficha_internacao),
     path('api/governo/alertas', api_alertas_governo),
     # ── Governo Gestão ───────────────────────────────────────
     path('api/governo/ops/kpis/', api_governo_ops_kpis),
@@ -376,6 +383,7 @@ urlpatterns = [
     path('api/governo/orcamentos/', api_orcamentos_gov),
     path('api/governo/planos-acao/', api_planos_acao_gov),
     path('api/governo/planos-acao/<int:plano_id>/', api_plano_acao_gov_detalhe),
+    path('api/governo/pdf/relatorio/', api_governo_pdf_relatorio),
     path('api/governo/alertas/criar', api_criar_alerta_governo),
     path('api/governo/alertas/toggle', api_toggle_alerta_governo),
     path('api/governo/alertas/fluxo', api_fluxo_alerta_governo),

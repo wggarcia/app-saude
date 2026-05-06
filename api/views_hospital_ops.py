@@ -289,3 +289,37 @@ def api_hospital_ops_kpis(request):
         "triagens_hoje": triagens_hoje,
         "taxa_ocupacao": taxa_ocupacao,
     })
+
+
+# ── PDFs ───────────────────────────────────────────────────────────────────────
+def api_hospital_pdf_internacoes(request):
+    from django.http import HttpResponse
+    from .pdf_ops import gerar_pdf_internacoes_hospital
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    internacoes = list(InternacaoHospital.objects.filter(empresa=e).select_related(
+        "paciente", "leito", "leito__departamento"
+    ))
+    buf = gerar_pdf_internacoes_hospital(e, internacoes)
+    resp = HttpResponse(buf.read(), content_type="application/pdf")
+    resp["Content-Disposition"] = 'inline; filename="internacoes.pdf"'
+    return resp
+
+
+def api_hospital_pdf_ficha_internacao(request, internacao_id):
+    from django.http import HttpResponse
+    from .pdf_ops import gerar_pdf_ficha_internacao
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    try:
+        internacao = InternacaoHospital.objects.select_related(
+            "paciente", "leito", "leito__departamento"
+        ).prefetch_related("evolucoes").get(pk=internacao_id, empresa=e)
+    except InternacaoHospital.DoesNotExist:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+    buf = gerar_pdf_ficha_internacao(e, internacao)
+    resp = HttpResponse(buf.read(), content_type="application/pdf")
+    resp["Content-Disposition"] = f'inline; filename="internacao_{internacao_id}.pdf"'
+    return resp

@@ -171,6 +171,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
               <option value="transferido">Transferidos</option>
               <option value="obito">Óbito</option>
             </select>
+            <a href="/api/hospital/pdf/internacoes/" target="_blank" class="btn btn-ghost">📄 PDF Geral</a>
             <button class="btn btn-primary" onclick="abrirModalInternacao()">+ Internar Paciente</button>
           </div>
         </div>
@@ -343,6 +344,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="btn btn-ghost btn-sm" onclick="darAlta('alta')">✅ Alta</button>
       <button class="btn btn-ghost btn-sm" onclick="darAlta('transferido')">↗️ Transferir</button>
       <button class="btn btn-danger btn-sm" onclick="darAlta('obito')">💔 Óbito</button>
+      <a id="btnFichaInt" href="#" target="_blank" class="btn btn-ghost btn-sm">📄 Ficha PDF</a>
     </div>
     <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--muted)">EVOLUÇÕES CLÍNICAS</div>
     <div class="evolucao-list" id="evolucaoList"></div>
@@ -522,6 +524,7 @@ async function salvarInternacao() {
 async function abrirGerenciarInt(id, nome) {
   document.getElementById('altaId').value = id;
   document.getElementById('altaTitle').textContent = `Internação — ${nome}`;
+  document.getElementById('btnFichaInt').href = `/api/hospital/pdf/internacao/${id}/`;
   document.getElementById('evolDesc').value='';
   document.getElementById('evolResp').value='';
   const d = await api(`/api/hospital/internacoes/${id}/evolucoes/`);

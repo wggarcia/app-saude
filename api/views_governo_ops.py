@@ -246,3 +246,19 @@ def api_governo_ops_kpis(request):
         "orcamento_previsto": str(orcamento_ano.total_previsto) if orcamento_ano else "0",
         "orcamento_executado": str(orcamento_ano.total_executado) if orcamento_ano else "0",
     })
+
+
+# ── PDF ────────────────────────────────────────────────────────────────────────
+def api_governo_pdf_relatorio(request):
+    from django.http import HttpResponse
+    from .pdf_ops import gerar_pdf_programas_gov
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    programas = list(ProgramaSaudeGov.objects.filter(empresa=e))
+    indicadores = list(IndicadorSaudeGov.objects.filter(empresa=e).select_related("programa"))
+    planos = list(PlanoAcaoGov.objects.filter(empresa=e).select_related("programa"))
+    buf = gerar_pdf_programas_gov(e, programas, indicadores, planos)
+    resp = HttpResponse(buf.read(), content_type="application/pdf")
+    resp["Content-Disposition"] = 'inline; filename="relatorio_gestao_saude.pdf"'
+    return resp
