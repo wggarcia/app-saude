@@ -326,6 +326,7 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
     <a href="/sst/asos/">ASOs</a>
     <a href="/sst/exames/">Exames</a>
     <a href="/sst/treinamentos/" class="active">Treinamentos</a>
+    <a href="/sst/normas/">Normas NR</a>
     <a href="/sst/afastamentos/">Afastamentos</a>
     <a href="/sst/cats/">CATs</a>
     <a href="/sst/documentos/">Documentos</a>
@@ -348,6 +349,7 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
     <a href="/sst/asos/" class="sb-link"><span class="sb-icon">📋</span> ASOs</a>
     <a href="/sst/exames/" class="sb-link"><span class="sb-icon">🔬</span> Exames</a>
     <a href="/sst/treinamentos/" class="sb-link active"><span class="sb-icon">🎓</span> Treinamentos NR</a>
+    <a href="/sst/normas/" class="sb-link"><span class="sb-icon">📚</span> Normas NR</a>
     <a href="/sst/afastamentos/" class="sb-link"><span class="sb-icon">🏥</span> Afastamentos</a>
     <a href="/sst/cats/" class="sb-link"><span class="sb-icon">⚠️</span> CATs</a>
     <div class="sb-divider"></div>
@@ -402,18 +404,6 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
       </div>
       <select class="select-nr" id="selectNr" onchange="filtrarTabela()">
         <option value="">Todas as NRs</option>
-        <option value="NR-5">NR-5 — CIPA</option>
-        <option value="NR-6">NR-6 — EPI</option>
-        <option value="NR-10">NR-10 — Eletricidade</option>
-        <option value="NR-11">NR-11</option>
-        <option value="NR-12">NR-12</option>
-        <option value="NR-18">NR-18</option>
-        <option value="NR-20">NR-20</option>
-        <option value="NR-23">NR-23</option>
-        <option value="NR-33">NR-33 — Espaços Confinados</option>
-        <option value="NR-34">NR-34</option>
-        <option value="NR-35">NR-35 — Trabalho em Altura</option>
-        <option value="outro">Outro</option>
       </select>
     </div>
 
@@ -480,18 +470,6 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
           <label for="fNr">NR *</label>
           <select id="fNr" required>
             <option value="">Selecione a NR</option>
-            <option value="NR-5">NR-5 — CIPA</option>
-            <option value="NR-6">NR-6 — EPI</option>
-            <option value="NR-10">NR-10 — Eletricidade</option>
-            <option value="NR-11">NR-11</option>
-            <option value="NR-12">NR-12</option>
-            <option value="NR-18">NR-18</option>
-            <option value="NR-20">NR-20</option>
-            <option value="NR-23">NR-23</option>
-            <option value="NR-33">NR-33 — Espaços Confinados</option>
-            <option value="NR-34">NR-34</option>
-            <option value="NR-35">NR-35 — Trabalho em Altura</option>
-            <option value="outro">Outro</option>
           </select>
           <div class="error-msg" id="errNr">Selecione a NR.</div>
         </div>
@@ -545,6 +523,7 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
   </div>
 </div>
 
+<script id="nrCatalogoData" type="application/json">{{ normas_json|safe }}</script>
 <script>
 /* ═══════════════════════════════════════════
    DADOS E ESTADO
@@ -554,20 +533,16 @@ let resumoNR = [];
 let filtroStatus = '';
 let filtroNr = '';
 
-const NR_LABELS = {
-  'NR-5':  'CIPA',
-  'NR-6':  'EPI',
-  'NR-10': 'Eletricidade',
-  'NR-11': 'NR-11',
-  'NR-12': 'NR-12',
-  'NR-18': 'NR-18',
-  'NR-20': 'NR-20',
-  'NR-23': 'NR-23',
-  'NR-33': 'Espaços Confinados',
-  'NR-34': 'NR-34',
-  'NR-35': 'Trabalho em Altura',
-  'outro': 'Outro',
-};
+const NR_CATALOGO = JSON.parse(document.getElementById('nrCatalogoData')?.textContent || '[]');
+const NR_LABELS = Object.fromEntries(NR_CATALOGO.map(n => [n.nr, n.tema || n.titulo || n.nr]));
+NR_LABELS.outro = 'Outro';
+
+function popularSelectsNR() {
+  const optsFiltro = NR_CATALOGO.map(n => `<option value="${n.nr}">${n.nr} — ${n.tema || n.titulo}${n.revogada ? ' (revogada)' : ''}</option>`).join('');
+  const optsForm = NR_CATALOGO.map(n => `<option value="${n.nr}"${n.revogada ? ' disabled' : ''}>${n.nr} — ${n.tema || n.titulo}${n.revogada ? ' (revogada)' : ''}</option>`).join('');
+  document.getElementById('selectNr').insertAdjacentHTML('beforeend', optsFiltro + '<option value="outro">Outro</option>');
+  document.getElementById('fNr').insertAdjacentHTML('beforeend', optsForm + '<option value="outro">Outro</option>');
+}
 
 /* ═══════════════════════════════════════════
    UTILIDADES
@@ -657,7 +632,7 @@ function renderNRGrid(porNr) {
       <div class="nr-card">
         <div class="nr-card-top">
           <span class="nr-card-name">${nr.nr}</span>
-          <span class="nr-card-label">${label}</span>
+          <span class="nr-card-label">${label}${nr.status_norma === 'revogada' ? ' · revogada' : ''}</span>
         </div>
         <div class="nr-card-counts">
           <span class="nr-count-ok">✔ ${nr.valido || 0}</span>
@@ -665,7 +640,7 @@ function renderNRGrid(porNr) {
           <span class="nr-count-pend">◷ ${(nr.pendente || 0) + (nr.agendado || 0)}</span>
         </div>
         <div class="nr-progress"><div class="nr-progress-bar" style="width:${pct}%"></div></div>
-        <button class="nr-card-btn" onclick="filtrarPorNR('${nr.nr}')">+ Registrar</button>
+        <button class="nr-card-btn" onclick="filtrarPorNR('${nr.nr}')">${nr.status_norma === 'revogada' ? 'Consultar' : '+ Registrar'}</button>
       </div>
     `;
   }).join('');
@@ -676,6 +651,7 @@ function filtrarPorNR(nr) {
   filtroNr = nr;
   filtrarTabela();
   document.querySelector('.table-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (!todosTreinamentos.some(t => t.nr === nr) && NR_CATALOGO.find(n => n.nr === nr && !n.revogada)) abrirModal(nr);
 }
 
 /* ═══════════════════════════════════════════
@@ -926,8 +902,9 @@ function lerQuerystring() {
 }
 
 /* ═══════════════════════════════════════════
-   INIT
+INIT
 ═══════════════════════════════════════════ */
+popularSelectsNR();
 lerQuerystring();
 Promise.all([carregarResumo(), carregarTreinamentos()]);
 </script>

@@ -1,6 +1,8 @@
 from django.db import models
 import uuid
 
+from .normas_regulamentadoras import NR_CHOICES as NR_CATALOGO_CHOICES
+
 
 def _codigo_acesso():
     return uuid.uuid4().hex
@@ -1085,20 +1087,7 @@ class AfastamentoSST(models.Model):
 
 class TreinamentoNR(models.Model):
     """Treinamentos obrigatórios por NR — registro por funcionário."""
-    NR_CHOICES = [
-        ("NR-5",  "NR-5 · CIPA"),
-        ("NR-6",  "NR-6 · EPI"),
-        ("NR-10", "NR-10 · Segurança em Eletricidade"),
-        ("NR-11", "NR-11 · Transporte de Cargas"),
-        ("NR-12", "NR-12 · Segurança em Máquinas"),
-        ("NR-18", "NR-18 · Construção Civil"),
-        ("NR-20", "NR-20 · Inflamáveis e Combustíveis"),
-        ("NR-23", "NR-23 · Proteção Contra Incêndios"),
-        ("NR-33", "NR-33 · Espaços Confinados"),
-        ("NR-34", "NR-34 · Construção Naval"),
-        ("NR-35", "NR-35 · Trabalho em Altura"),
-        ("outro", "Outro"),
-    ]
+    NR_CHOICES = NR_CATALOGO_CHOICES
     STATUS = [
         ("valido",    "Válido"),
         ("vencido",   "Vencido"),

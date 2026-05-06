@@ -23,6 +23,11 @@ from .models import (
     FuncionarioSST,
     eSocialEventoSST,
 )
+from .normas_regulamentadoras import (
+    FONTE_OFICIAL_NR,
+    NR_CATALOGO,
+    catalogo_normas_json_ready,
+)
 from .views_dashboard import _empresa_autenticada
 
 
@@ -912,7 +917,10 @@ def sst_treinamentos_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return redirect("/login-empresa/")
-    return render(request, "sst_treinamentos.html", {"empresa_nome": empresa.nome})
+    return render(request, "sst_treinamentos.html", {
+        "empresa_nome": empresa.nome,
+        "normas_json": json.dumps(catalogo_normas_json_ready(), ensure_ascii=False),
+    })
 
 
 @csrf_exempt
@@ -961,6 +969,9 @@ def api_treinamentos(request):
         if not func:
             return JsonResponse({"erro": "Funcionário não encontrado"}, status=404)
         nr = data.get("nr", "outro")
+        nr_validas = {codigo for codigo, _label in TreinamentoNR.NR_CHOICES}
+        if nr not in nr_validas:
+            return JsonResponse({"erro": "NR inválida"}, status=400)
         try:
             dr = date.fromisoformat(data.get("data_realizacao") or "") if data.get("data_realizacao") else None
         except ValueError:
@@ -1017,7 +1028,21 @@ def api_treinamentos_resumo(request):
         .values("nr", "status")
         .annotate(total=Count("id"))
     )
-    nr_map = {}
+    nr_map = {
+        item["nr"]: {
+            "nr": item["nr"],
+            "label": item["tema"],
+            "titulo": item["titulo"],
+            "categoria": item["categoria"],
+            "status_norma": item["status"],
+            "url": item["url"],
+            "valido": 0,
+            "vencido": 0,
+            "pendente": 0,
+            "agendado": 0,
+        }
+        for item in NR_CATALOGO
+    }
     nr_labels = dict(TreinamentoNR.NR_CHOICES)
     for row in por_nr:
         k = row["nr"]
@@ -1030,7 +1055,7 @@ def api_treinamentos_resumo(request):
         "vencidos": vencidos,
         "validos": validos,
         "pendentes": pendentes,
-        "por_nr": sorted(nr_map.values(), key=lambda x: x["nr"]),
+        "por_nr": sorted(nr_map.values(), key=lambda x: int(x["nr"].split("-")[1]) if x["nr"].startswith("NR-") else 999),
     })
 
 
@@ -1038,6 +1063,13 @@ def sst_normas_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return redirect("/login-empresa/")
+    normas = catalogo_normas_json_ready()
     return render(request, "sst_normas.html", {
         "empresa_nome": empresa.nome,
+        "normas": normas,
+        "normas_json": json.dumps(normas, ensure_ascii=False),
+        "fonte_oficial": FONTE_OFICIAL_NR,
+        "total_normas": len(normas),
+        "total_vigentes": sum(1 for item in normas if item["status"] == "vigente"),
+        "total_revogadas": sum(1 for item in normas if item["status"] == "revogada"),
     })

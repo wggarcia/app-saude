@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · Normas Regulamentadoras</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#041018;--surface:#081820;--surface2:#0c2030;--line:rgba(126,225,195,.08);--line2:rgba(126,225,195,.18);--text:#d6f0e8;--accent:#7ee1c3;--accent2:#7db6ff;--gold:#f0bf6b;--danger:#ff7a91;--muted:#9ab9ce;--green:#4ade80}
+html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:54px;display:flex;align-items:center;background:rgba(4,16,24,.97);border-bottom:1px solid var(--line);backdrop-filter:blur(16px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:220px;border-right:1px solid var(--line);height:100%;flex-shrink:0}
+.tb-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-weight:900;font-size:.78rem;color:#041018}
+.tb-nome{font-size:.8rem;font-weight:800}.tb-sub{font-size:.59rem;color:var(--muted);margin-top:1px}
+.tb-nav{display:flex;align-items:center;gap:1px;padding:0 14px;flex:1;overflow-x:auto}.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{padding:5px 11px;border-radius:6px;font-size:.73rem;font-weight:600;color:var(--muted);text-decoration:none;white-space:nowrap}.tb-nav a:hover{color:var(--text);background:rgba(126,225,195,.06)}.tb-nav a.active{color:var(--accent);background:rgba(126,225,195,.09)}
+.btn-topbar{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;border:1px solid var(--line2);background:none;color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;white-space:nowrap}.btn-topbar:hover{border-color:var(--accent);color:var(--accent)}.btn-topbar.warn{border-color:rgba(255,122,145,.25);color:var(--danger)}
+.app{display:flex;min-height:calc(100vh - 54px);padding-top:54px}
+.sidebar{width:200px;flex-shrink:0;background:rgba(8,24,32,.6);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:54px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.57rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px;opacity:.6}.sb-link{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.76rem;font-weight:600;color:var(--muted);text-decoration:none;border-left:2px solid transparent}.sb-link:hover{color:var(--text);background:rgba(126,225,195,.04)}.sb-link.active{color:var(--accent);background:rgba(126,225,195,.07);border-left-color:var(--accent);font-weight:700}.sb-icon{font-size:.9rem;width:18px;text-align:center}
+.main{flex:1;margin-left:200px;min-width:0;padding-bottom:30px}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px;padding:16px 22px;border-bottom:1px solid var(--line)}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:13px 14px;position:relative;overflow:hidden}.kpi:before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--accent));opacity:.8}.k-label{font-size:.58rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}.k-val{font-size:1.7rem;font-weight:900;line-height:1}.k-sub{font-size:.63rem;color:var(--muted);margin-top:4px}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 22px;border-bottom:1px solid var(--line)}.search{flex:1;min-width:260px}.search input,.select{width:100%;height:34px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--text);padding:0 12px;font-family:inherit;font-size:.78rem;outline:none}.search input:focus,.select:focus{border-color:var(--accent)}.select{width:auto;color:var(--muted);font-weight:700}
+.source{margin-left:auto;font-size:.72rem;color:var(--muted)}.source a{color:var(--accent);text-decoration:none}
+.normas{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:10px;padding:16px 22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:188px}.card:hover{border-color:var(--line2)}.card.revogada{opacity:.72}.head{display:flex;justify-content:space-between;gap:10px}.nr{font-size:1rem;font-weight:900;color:var(--accent)}.badge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:5px;font-size:.59rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}.badge.vigente{background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.2)}.badge.revogada{background:rgba(255,122,145,.1);color:var(--danger);border:1px solid rgba(255,122,145,.2)}
+.title{font-size:.85rem;font-weight:800;line-height:1.35}.meta{display:flex;flex-wrap:wrap;gap:5px}.pill{font-size:.62rem;font-weight:800;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--line);padding:3px 7px;border-radius:5px}.actions{display:flex;gap:7px;margin-top:auto;flex-wrap:wrap}.btn{height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--line2);padding:0 10px;font-size:.7rem;font-weight:800;color:var(--muted);text-decoration:none;background:none}.btn:hover{color:var(--accent);border-color:var(--accent)}.btn.primary{color:#041018;background:linear-gradient(135deg,var(--accent),var(--accent2));border:0}.empty{display:none;padding:28px 22px;color:var(--muted);font-size:.86rem}
+@media(max-width:880px){.sidebar{display:none}.main{margin-left:0}.summary{grid-template-columns:1fr 1fr}.source{width:100%;margin-left:0}.tb-logo{min-width:auto}.tb-actions{display:none}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="tb-logo"><div class="tb-icon">NR</div><div><div class="tb-nome">Normas Regulamentadoras</div><div class="tb-sub">{{ empresa_nome }}</div></div></div>
+  <nav class="tb-nav">
+    <a href="/dashboard-empresa/">Painel SST</a>
+    <a href="/sst/funcionarios/">Funcionários</a>
+    <a href="/sst/asos/">ASO</a>
+    <a href="/sst/exames/">Exames</a>
+    <a href="/sst/documentos/">PGR · PCMSO</a>
+    <a href="/sst/treinamentos/">Treinamentos</a>
+    <a href="/sst/normas/" class="active">Normas NR</a>
+  </nav>
+  <div class="tb-actions"><a class="btn-topbar warn" href="/logout/">Sair</a></div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-label">Conformidade</div>
+    <a class="sb-link" href="/dashboard-empresa/"><span class="sb-icon">📊</span><span>Painel SST</span></a>
+    <a class="sb-link" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span></a>
+    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🔬</span><span>Exames</span></a>
+    <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
+    <a class="sb-link" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
+    <div class="sb-label">Documentação</div>
+    <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">📁</span><span>PGR · PCMSO</span></a>
+    <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial</span></a>
+    <div class="sb-label">Gestão</div>
+    <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
+    <a class="sb-link" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos NR</span></a>
+    <a class="sb-link" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
+    <a class="sb-link active" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
+  </aside>
+
+  <main class="main">
+    <section class="summary">
+      <div class="kpi" style="--kc:var(--accent)"><div class="k-label">Catálogo</div><div class="k-val">{{ total_normas }}</div><div class="k-sub">NR-1 a NR-38</div></div>
+      <div class="kpi" style="--kc:var(--green)"><div class="k-label">Vigentes</div><div class="k-val" style="color:var(--green)">{{ total_vigentes }}</div><div class="k-sub">para consulta técnica</div></div>
+      <div class="kpi" style="--kc:var(--danger)"><div class="k-label">Revogadas</div><div class="k-val" style="color:var(--danger)">{{ total_revogadas }}</div><div class="k-sub">histórico normativo</div></div>
+      <div class="kpi" style="--kc:var(--gold)"><div class="k-label">Fonte</div><div class="k-val" style="font-size:1rem;color:var(--gold)">MTE</div><div class="k-sub">conteúdo oficial gov.br</div></div>
+    </section>
+
+    <section class="toolbar">
+      <div class="search"><input id="busca" placeholder="Buscar NR, tema, categoria ou título" oninput="renderNormas()"></div>
+      <select class="select" id="categoria" onchange="renderNormas()">
+        <option value="">Todas categorias</option>
+      </select>
+      <select class="select" id="status" onchange="renderNormas()">
+        <option value="">Todos status</option>
+        <option value="vigente">Vigentes</option>
+        <option value="revogada">Revogadas</option>
+      </select>
+      <div class="source">Fonte: <a href="{{ fonte_oficial }}" target="_blank" rel="noopener">Normas Regulamentadoras vigentes · gov.br</a></div>
+    </section>
+
+    <section class="normas" id="normasGrid"></section>
+    <div class="empty" id="emptyState">Nenhuma NR encontrada para os filtros selecionados.</div>
+  </main>
+</div>
+
+<script id="normasData" type="application/json">{{ normas_json|safe }}</script>
+<script>
+const NORMAS = JSON.parse(document.getElementById('normasData').textContent || '[]');
+
+function esc(v){return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function popularCategorias(){
+  const select = document.getElementById('categoria');
+  const categorias = [...new Set(NORMAS.map(n => n.categoria).filter(Boolean))].sort();
+  select.insertAdjacentHTML('beforeend', categorias.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join(''));
+}
+
+function renderNormas(){
+  const termo = document.getElementById('busca').value.trim().toLowerCase();
+  const cat = document.getElementById('categoria').value;
+  const status = document.getElementById('status').value;
+  const grid = document.getElementById('normasGrid');
+  const empty = document.getElementById('emptyState');
+
+  const lista = NORMAS.filter(n => {
+    const texto = [n.nr,n.titulo,n.tema,n.categoria,n.status].join(' ').toLowerCase();
+    return (!termo || texto.includes(termo)) && (!cat || n.categoria === cat) && (!status || n.status === status);
+  });
+
+  empty.style.display = lista.length ? 'none' : 'block';
+  grid.innerHTML = lista.map(n => {
+    const treinoUrl = n.revogada ? '' : `/sst/treinamentos/?nr=${encodeURIComponent(n.nr)}`;
+    return `<article class="card ${n.revogada ? 'revogada' : ''}">
+      <div class="head"><div class="nr">${esc(n.nr)}</div><span class="badge ${esc(n.status)}">${esc(n.status)}</span></div>
+      <div class="title">${esc(n.titulo)}</div>
+      <div class="meta"><span class="pill">${esc(n.tema)}</span><span class="pill">${esc(n.categoria)}</span></div>
+      <div class="actions">
+        <a class="btn primary" href="${esc(n.url)}" target="_blank" rel="noopener">Abrir oficial</a>
+        ${treinoUrl ? `<a class="btn" href="${treinoUrl}">Treinamentos</a>` : ''}
+      </div>
+    </article>`;
+  }).join('');
+}
+
+popularCategorias();
+renderNormas();
+</script>
+</body>
+</html>
