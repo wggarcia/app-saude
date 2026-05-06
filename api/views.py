@@ -95,6 +95,21 @@ SITE_TRANSLATIONS = {
             {"small": "Farmacias e hospitais", "title": "Demanda futura", "text": "Preparacao de estoque, atendimento, exames, leitos e campanhas preventivas."},
             {"small": "Governo", "title": "Sala de situacao", "text": "Alertas oficiais, fontes brasileiras, matriz de decisao, auditoria e contratos anuais."},
         ],
+        "enterprise": {
+            "eyebrow": "Ambiente Empresa",
+            "title": "Saude ocupacional, absenteismo e risco da forca de trabalho",
+            "lead": "O ambiente Empresa conecta SST, sinais territoriais e rotina interna para ajudar lideres a antecipar afastamentos, proteger equipes e manter continuidade operacional.",
+            "items": [
+                {"title": "Saude ocupacional", "text": "ASO, CAT, exames, treinamentos NR, EPI/EPC, documentos e acompanhamento tecnico em um painel de gestao."},
+                {"title": "Absenteismo", "text": "Leitura de afastamentos, retorno previsto, setores pressionados e impacto por unidade para agir antes da perda de capacidade."},
+                {"title": "Risco da forca de trabalho", "text": "Cruzamento de territorio, sintomas, unidade, funcao e alertas internos para priorizar cuidado e acao preventiva."},
+            ],
+            "metrics": [
+                {"value": "37 NRs", "text": "consulta tecnica para seguranca do trabalho"},
+                {"value": "SST", "text": "documentos, treinamentos e evidencias operacionais"},
+                {"value": "Forca ativa", "text": "visao de capacidade, risco e continuidade por unidade"},
+            ],
+        },
         "matrix": [
             {"label": "Radar vivo", "title": "Mapa de risco", "text": "Focos por bairro, municipio e estado, com icones por grupos de sintomas e intensidade temporal."},
             {"label": "IA preditiva", "title": "Motor epidemiologico", "text": "Classifica sinais, estima doencas provaveis, mede crescimento e valida reducao gradual com serie temporal, dados agregados e fontes oficiais."},
@@ -203,6 +218,21 @@ SITE_TRANSLATIONS = {
             {"small": "Pharmacies and hospitals", "title": "Future demand", "text": "Preparation for stock, care, tests, beds and preventive campaigns."},
             {"small": "Government", "title": "Situation room", "text": "Official alerts, Brazilian sources, decision matrix, audit trail and annual contracts."},
         ],
+        "enterprise": {
+            "eyebrow": "Company Environment",
+            "title": "Occupational health, absenteeism and workforce risk",
+            "lead": "The Company environment connects OSH, territorial signals and internal routines to help leaders anticipate absences, protect teams and preserve operational continuity.",
+            "items": [
+                {"title": "Occupational health", "text": "Medical certificates, incident records, exams, NR training, PPE/EPC, documents and technical follow-up in one management panel."},
+                {"title": "Absenteeism", "text": "Read absences, expected returns, pressured sectors and unit impact before capacity is compromised."},
+                {"title": "Workforce risk", "text": "Cross territory, symptoms, unit, role and internal alerts to prioritize care and preventive action."},
+            ],
+            "metrics": [
+                {"value": "37 NRs", "text": "technical consultation for occupational safety"},
+                {"value": "OSH", "text": "documents, training and operational evidence"},
+                {"value": "Active workforce", "text": "capacity, risk and continuity view by unit"},
+            ],
+        },
         "matrix": [
             {"label": "Live radar", "title": "Risk map", "text": "Hotspots by neighborhood, city and state, with icons by symptom groups and time intensity."},
             {"label": "Predictive AI", "title": "Epidemiological engine", "text": "Classifies signals, estimates likely diseases, measures growth and validates gradual decline with time series, aggregated data and official sources."},
@@ -311,6 +341,21 @@ SITE_TRANSLATIONS = {
             {"small": "Farmacias y hospitales", "title": "Demanda futura", "text": "Preparacion de stock, atencion, examenes, camas y campanas preventivas."},
             {"small": "Gobierno", "title": "Sala de situacion", "text": "Alertas oficiales, fuentes brasilenas, matriz de decision, auditoria y contratos anuales."},
         ],
+        "enterprise": {
+            "eyebrow": "Ambiente Empresa",
+            "title": "Salud ocupacional, ausentismo y riesgo de la fuerza laboral",
+            "lead": "El ambiente Empresa conecta SST, senales territoriales y rutina interna para ayudar a lideres a anticipar ausencias, proteger equipos y mantener continuidad operacional.",
+            "items": [
+                {"title": "Salud ocupacional", "text": "Certificados, registros de accidente, examenes, capacitaciones NR, EPI/EPC, documentos y seguimiento tecnico en un panel de gestion."},
+                {"title": "Ausentismo", "text": "Lectura de ausencias, retorno previsto, sectores presionados e impacto por unidad antes de perder capacidad."},
+                {"title": "Riesgo laboral", "text": "Cruce de territorio, sintomas, unidad, funcion y alertas internas para priorizar cuidado y accion preventiva."},
+            ],
+            "metrics": [
+                {"value": "37 NRs", "text": "consulta tecnica para seguridad laboral"},
+                {"value": "SST", "text": "documentos, capacitaciones y evidencias operacionales"},
+                {"value": "Fuerza activa", "text": "vision de capacidad, riesgo y continuidad por unidad"},
+            ],
+        },
         "matrix": [
             {"label": "Radar vivo", "title": "Mapa de riesgo", "text": "Focos por barrio, municipio y estado, con iconos por grupos de sintomas e intensidad temporal."},
             {"label": "IA predictiva", "title": "Motor epidemiologico", "text": "Clasifica senales, estima enfermedades probables, mide crecimiento y valida la reduccion gradual con serie temporal, datos agregados y fuentes oficiales."},
