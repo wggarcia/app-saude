@@ -474,10 +474,10 @@ document.getElementById('modal-nova').addEventListener('click',e=>{if(e.target==
 async function carregarColabs(){
   document.getElementById('colab-list').innerHTML=`<div style="padding:20px;text-align:center;color:var(--muted);font-size:.78rem">Carregando...</div>`;
   try{
-    const r=await fetch('/api/empresa/catalogo');
+    const r=await fetch('/api/comunicacao/colaboradores/');
     if(!r.ok)throw new Error();
     const d=await r.json();
-    _colabs=d.colaboradores||d.funcionarios||[];
+    _colabs=d.colaboradores||[];
     renderColabs();
   }catch(e){
     document.getElementById('colab-list').innerHTML=`<div style="padding:20px;text-align:center;color:var(--red);font-size:.78rem">Erro ao carregar colaboradores.</div>`;
@@ -508,7 +508,9 @@ function renderColabs(){
 }
 
 function selecionarColab(id){
-  _colabSelecionado=id;
+  // Store alias_codigo (not PK) for the create-sala API
+  const colab=_colabs.find(c=>c.id===id);
+  _colabSelecionado=colab?colab.alias_codigo:id;
   document.querySelectorAll('.colab-item').forEach(el=>el.classList.remove('sel'));
   const el=document.getElementById('ci-'+id);
   if(el)el.classList.add('sel');
@@ -520,10 +522,10 @@ async function criarSala(){
   const btn=document.getElementById('btn-criar-sala');
   btn.textContent='Criando...';btn.disabled=true;
   try{
-    const r=await fetch('/api/comunicacao/salas/',{
+    const r=await fetch('/api/comunicacao/salas/criar/',{
       method:'POST',
       headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
-      body:JSON.stringify({colaborador_id:_colabSelecionado})
+      body:JSON.stringify({alias_codigo:_colabSelecionado})
     });
     const d=await r.json();
     if(r.ok&&d.sala){

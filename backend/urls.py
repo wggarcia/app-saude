@@ -115,7 +115,8 @@ from api.views_reset_senha import solicitar_reset_senha, redefinir_senha, reset_
 from api.views_comunicacao import (
     painel_comunicacao, sala_video_empresa,
     api_listar_salas, api_criar_sala, api_mensagens, api_enviar_mensagem,
-    api_criar_video, api_encerrar_video,
+    api_marcar_lida, api_criar_video, api_encerrar_video,
+    api_colaboradores_comunicacao,
     colaborador_chat, colaborador_video,
     api_colab_mensagens, api_colab_enviar, api_colab_video_ativa,
     painel_grupos, api_criar_grupo, api_listar_salas_por_tipo, api_membros_grupo,
@@ -177,10 +178,12 @@ urlpatterns = [
     # 💬 COMUNICAÇÃO — Teams-like
     path('sst/comunicacao/', painel_comunicacao),
     path('sst/video/<int:sessao_id>/', sala_video_empresa),
-    path('api/comunicacao/salas/', api_listar_salas),
+    path('api/comunicacao/salas/', api_listar_salas_por_tipo),
     path('api/comunicacao/salas/criar/', api_criar_sala),
+    path('api/comunicacao/colaboradores/', api_colaboradores_comunicacao),
     path('api/comunicacao/sala/<int:sala_id>/mensagens/', api_mensagens),
     path('api/comunicacao/sala/<int:sala_id>/enviar/', api_enviar_mensagem),
+    path('api/comunicacao/sala/<int:sala_id>/lida/', api_marcar_lida),
     path('api/comunicacao/video/criar/', api_criar_video),
     path('api/comunicacao/video/<int:sessao_id>/encerrar/', api_encerrar_video),
     # colaborador side
@@ -235,6 +238,7 @@ urlpatterns = [
     # 🏥 SST / Saúde Ocupacional — API
     path('api/sst/dashboard', api_sst_dashboard),
     path('api/sst/funcionarios', api_funcionarios),
+    path('api/sst/funcionarios/', api_funcionarios),
     path('api/sst/asos', api_asos),
     path('api/sst/cats', api_cats),
     path('api/sst/documentos', api_documentos_sst),
@@ -260,6 +264,7 @@ urlpatterns = [
     path('api/sst/cats/<int:cat_id>/pdf', api_cat_pdf),
     path('api/sst/funcionarios/<int:funcionario_id>/prontuario/pdf', api_prontuario_pdf),
     # grupos de chat
+    path('api/comunicacao/grupos/', api_criar_grupo),
     path('api/comunicacao/grupos/criar/', api_criar_grupo),
     path('api/comunicacao/salas/filtro/', api_listar_salas_por_tipo),
     path('api/comunicacao/grupos/<int:sala_id>/membros/', api_membros_grupo),

@@ -88,6 +88,27 @@ def api_listar_salas(request):
     return JsonResponse({"salas": [_sala_json(s) for s in salas]})
 
 
+def api_colaboradores_comunicacao(request):
+    """GET → lista de ColaboradorAliasCorporativo da empresa para o modal Nova Conversa"""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    aliases = ColaboradorAliasCorporativo.objects.filter(
+        empresa=empresa, ativo=True
+    ).select_related("cargo")
+    return JsonResponse({
+        "colaboradores": [
+            {
+                "id": a.id,
+                "alias_codigo": a.alias_publico,
+                "nome": a.alias_publico,
+                "cargo": a.cargo.nome if a.cargo else "",
+            }
+            for a in aliases
+        ]
+    })
+
+
 def api_criar_sala(request):
     """POST {alias_codigo} → cria ou retorna sala direta"""
     empresa = _empresa_autenticada(request)
@@ -125,6 +146,16 @@ def api_mensagens(request, sala_id):
         except ValueError:
             pass
     return JsonResponse({"mensagens": [_mensagem_json(m) for m in qs]})
+
+
+def api_marcar_lida(request, sala_id):
+    """POST → marca msgs do colaborador como lidas (atalho; api_mensagens já faz isso)"""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    sala = get_object_or_404(SalaChat, id=sala_id, empresa=empresa)
+    sala.mensagens.filter(origem=MensagemChat.ORIGEM_COLABORADOR, lida=False).update(lida=True)
+    return JsonResponse({"ok": True})
 
 
 def api_enviar_mensagem(request, sala_id):

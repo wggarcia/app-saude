@@ -397,7 +397,7 @@ async function carregarFuncionarios() {
     const data = await r.json();
     const sel = document.getElementById('ent-funcionario');
     sel.innerHTML = '<option value="">Selecione o funcionário...</option>';
-    const lista = Array.isArray(data) ? data : (data.results || []);
+    const lista = data.funcionarios || data.results || (Array.isArray(data) ? data : []);
     lista.forEach(f => {
       const op = document.createElement('option');
       op.value = f.id || f.alias_codigo;
@@ -419,7 +419,7 @@ function atualizarKPIs() {
   document.getElementById('k-ca').textContent = caVenc.length;
   // sem-epi via API separada
   fetch('/api/sst/epis/sem-epi/').then(r => r.json()).then(d => {
-    document.getElementById('k-sem-epi').textContent = d.count ?? d.length ?? '—';
+    document.getElementById('k-sem-epi').textContent = d.total ?? '—';
   }).catch(() => { document.getElementById('k-sem-epi').textContent = '—'; });
 }
 

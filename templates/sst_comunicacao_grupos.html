@@ -532,9 +532,9 @@ function editarGrupo() {
 // ── Load colaboradores ────────────────────────────────────────
 async function carregarColaboradores() {
   try {
-    const r = await fetch('/api/sst/funcionarios/');
+    const r = await fetch('/api/comunicacao/colaboradores/');
     const data = await r.json();
-    colaboradores = Array.isArray(data) ? data : (data.results || []);
+    colaboradores = data.colaboradores || [];
     renderCheckboxes();
   } catch(e) {
     document.getElementById('membros-checkboxes').innerHTML = '<div style="color:var(--muted);font-size:.78rem;padding:8px">Erro ao carregar colaboradores</div>';
