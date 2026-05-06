@@ -79,6 +79,8 @@ from api.views_sst import (
     api_aso_pdf,
     api_cat_pdf,
     api_prontuario_pdf,
+    api_sst_conformidade,
+    sst_conformidade_page,
 )
 from api.views_gestao import (
     gestao_corporativa,
@@ -265,6 +267,7 @@ urlpatterns = [
     path('sst/funcionarios/<int:funcionario_id>/', sst_prontuario_page),
     path('sst/configuracoes/', sst_configuracoes_page),
     path('sst/epis/', sst_epis_page),
+    path('sst/conformidade/', sst_conformidade_page),
     path('sst/comunicacao/grupos/', painel_grupos),
     # 🏥 SST / Saúde Ocupacional — API
     path('api/sst/dashboard', api_sst_dashboard),
@@ -291,6 +294,8 @@ urlpatterns = [
     path('api/sst/epis/ficha/<int:funcionario_id>/pdf', api_epis_pdf_ficha),
     path('api/sst/epis/sem-epi/', api_epis_sem_epi),
     path('api/sst/epis/sem-epi', api_epis_sem_epi),
+    path('api/sst/conformidade/', api_sst_conformidade),
+    path('api/sst/conformidade', api_sst_conformidade),
     path('api/sst/asos/<int:aso_id>/pdf', api_aso_pdf),
     path('api/sst/cats/<int:cat_id>/pdf', api_cat_pdf),
     path('api/sst/funcionarios/<int:funcionario_id>/prontuario/pdf', api_prontuario_pdf),

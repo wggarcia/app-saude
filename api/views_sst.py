@@ -1344,3 +1344,83 @@ def api_epis_sem_epi(request):
         ],
         "total": sem_epi.count(),
     })
+
+
+# ── Relatório de Conformidade SST ───────────────────────────────────────────────
+def api_sst_conformidade(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    hoje = date.today()
+    em_30d = hoje + timedelta(days=30)
+
+    funcionarios = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).order_by("nome")
+    from .models import EntregaEPI
+
+    resultado = []
+    for f in funcionarios:
+        # ASO vigente
+        aso = ASOOcupacional.objects.filter(funcionario=f, empresa=empresa).order_by("-data_exame").first()
+        aso_ok = aso is not None and (aso.data_validade is None or aso.data_validade >= hoje)
+        aso_alerta = aso is not None and aso.data_validade and hoje <= aso.data_validade <= em_30d
+
+        # Exames OK
+        exames_vencidos = ExameOcupacional.objects.filter(
+            empresa=empresa, funcionario=f, status="vencido"
+        ).count()
+        exames_ok = exames_vencidos == 0
+
+        # EPI entregue
+        epi_ativo = EntregaEPI.objects.filter(
+            empresa=empresa, funcionario=f, data_devolucao__isnull=True
+        ).exists()
+
+        # Treinamentos válidos
+        from .models import TreinamentoNR
+        trein = TreinamentoNR.objects.filter(empresa=empresa, funcionario=f).order_by("-data_realizacao").first()
+        trein_ok = trein is not None and (trein.data_validade is None or trein.data_validade >= hoje)
+
+        # Afastamento ativo
+        afastado = AfastamentoSST.objects.filter(empresa=empresa, funcionario=f, status="ativo").exists()
+
+        score = sum([aso_ok, exames_ok, epi_ativo, trein_ok])
+        status = "conforme" if score == 4 else ("alerta" if score >= 2 else "critico")
+
+        resultado.append({
+            "id": f.id,
+            "nome": f.nome,
+            "cargo": f.cargo,
+            "setor": f.setor,
+            "aso_ok": aso_ok,
+            "aso_alerta": aso_alerta,
+            "aso_validade": str(aso.data_validade) if aso and aso.data_validade else None,
+            "exames_ok": exames_ok,
+            "exames_vencidos": exames_vencidos,
+            "epi_ok": epi_ativo,
+            "treinamento_ok": trein_ok,
+            "afastado": afastado,
+            "score": score,
+            "status": status,
+        })
+
+    total = len(resultado)
+    conformes = sum(1 for r in resultado if r["status"] == "conforme")
+    alertas = sum(1 for r in resultado if r["status"] == "alerta")
+    criticos = sum(1 for r in resultado if r["status"] == "critico")
+
+    return JsonResponse({
+        "resumo": {
+            "total": total,
+            "conformes": conformes,
+            "alertas": alertas,
+            "criticos": criticos,
+            "indice_conformidade": round(conformes / max(total, 1) * 100, 1),
+        },
+        "funcionarios": resultado,
+    })
+
+
+def sst_conformidade_page(request):
+    from django.shortcuts import render
+    return render(request, "sst_conformidade.html")

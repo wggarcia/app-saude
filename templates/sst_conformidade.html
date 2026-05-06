@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conformidade SST</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:28px 32px}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:28px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+/* Gauge */
+.gauge-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;gap:32px;margin-bottom:24px}
+.gauge-wrap{position:relative}
+.gauge-label{text-align:center;margin-top:8px;font-size:12px;font-weight:600;color:var(--muted)}
+.gauge-info{flex:1}
+.gauge-info h3{font-size:16px;font-weight:800;margin-bottom:8px}
+.gauge-info p{font-size:13px;color:var(--muted);line-height:1.6}
+/* Filter bar */
+.filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.filter-bar input,.filter-bar select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.filter-bar input{width:260px}
+/* Table */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02);position:sticky;top:0;z-index:1}
+td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot-ok{background:var(--ok)}.dot-warn{background:var(--warn)}.dot-danger{background:var(--danger)}
+.check{color:var(--ok);font-weight:700}.cross{color:var(--danger);font-weight:700}.alerta{color:var(--warn);font-weight:700}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:Manrope,sans-serif}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border);text-decoration:none}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">🛡️ Conformidade SST</div>
+    <div class="page-sub">Índice de conformidade dos funcionários em saúde e segurança do trabalho</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <a href="/sst/" class="btn btn-ghost">← Voltar ao SST</a>
+    <a href="/api/sst/conformidade/pdf" id="btnPdf" class="btn btn-ghost">📄 Exportar PDF</a>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-row" id="kpiRow">
+  <div class="kpi"><div class="kpi-val" id="kTotal">—</div><div class="kpi-lbl">Total Funcionários</div></div>
+  <div class="kpi ok"><div class="kpi-val" id="kConf">—</div><div class="kpi-lbl">Conformes ✅</div></div>
+  <div class="kpi warn"><div class="kpi-val" id="kAlert">—</div><div class="kpi-lbl">Em Alerta ⚠️</div></div>
+  <div class="kpi danger"><div class="kpi-val" id="kCrit">—</div><div class="kpi-lbl">Críticos 🔴</div></div>
+  <div class="kpi"><div class="kpi-val" id="kIdx">—%</div><div class="kpi-lbl">Índice de Conformidade</div></div>
+</div>
+
+<!-- Gauge -->
+<div class="gauge-section">
+  <div>
+    <svg viewBox="0 0 200 110" width="200" height="110">
+      <path fill="none" stroke="rgba(255,255,255,.08)" stroke-width="16" stroke-linecap="round" d="M 20 100 A 80 80 0 0 1 180 100"/>
+      <path fill="none" stroke="url(#gaugeGrad)" stroke-width="16" stroke-linecap="round" id="gaugePath" d="M 20 100 A 80 80 0 0 1 20 100"/>
+      <defs>
+        <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#ff4d6d"/>
+          <stop offset="50%" stop-color="#ffb347"/>
+          <stop offset="100%" stop-color="#00e5b0"/>
+        </linearGradient>
+      </defs>
+      <text x="100" y="90" text-anchor="middle" font-size="28" font-weight="800" fill="#e8f4ff" id="gaugeText">—%</text>
+      <text x="100" y="108" text-anchor="middle" font-size="10" fill="#7a9bb5">conformidade</text>
+    </svg>
+    <div class="gauge-label">Índice Geral</div>
+  </div>
+  <div class="gauge-info">
+    <h3>Visão Geral da Conformidade SST</h3>
+    <p>Cada funcionário é avaliado em <strong>4 critérios</strong>: ASO vigente, exames em dia, EPI entregue e treinamento NR válido. O índice de conformidade representa a proporção de funcionários com todos os critérios atendidos.</p>
+    <div style="display:flex;gap:16px;margin-top:12px;font-size:12px">
+      <span><span class="status-dot dot-ok"></span>Conforme: todos os 4 critérios</span>
+      <span><span class="status-dot dot-warn"></span>Alerta: 2-3 critérios</span>
+      <span><span class="status-dot dot-danger"></span>Crítico: 0-1 critério</span>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela -->
+<div class="filter-bar">
+  <input type="text" id="busca" placeholder="🔍 Buscar funcionário…" oninput="filtrar()">
+  <select id="filtroStatus" onchange="filtrar()">
+    <option value="">Todos os status</option>
+    <option value="conforme">Conforme</option>
+    <option value="alerta">Em Alerta</option>
+    <option value="critico">Crítico</option>
+  </select>
+  <select id="filtroSetor" onchange="filtrar()">
+    <option value="">Todos os setores</option>
+  </select>
+  <span style="color:var(--muted);font-size:12px" id="countLabel"></span>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Funcionário</th>
+        <th>Cargo</th>
+        <th>Setor</th>
+        <th>ASO</th>
+        <th>Exames</th>
+        <th>EPI</th>
+        <th>Treinamento</th>
+        <th>Score</th>
+        <th>Situação</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script>
+let _dados = [];
+let _filtrado = [];
+
+async function carregar() {
+  const r = await fetch('/api/sst/conformidade/', {credentials:'same-origin'});
+  const d = await r.json();
+  _dados = d.funcionarios || [];
+
+  // KPIs
+  const res = d.resumo || {};
+  document.getElementById('kTotal').textContent = res.total ?? '—';
+  document.getElementById('kConf').textContent = res.conformes ?? '—';
+  document.getElementById('kAlert').textContent = res.alertas ?? '—';
+  document.getElementById('kCrit').textContent = res.criticos ?? '—';
+  document.getElementById('kIdx').textContent = (res.indice_conformidade ?? '—') + '%';
+
+  // Gauge
+  const pct = parseFloat(res.indice_conformidade || 0);
+  document.getElementById('gaugeText').textContent = pct + '%';
+  const r80 = 80, cx = 100, cy = 100;
+  const startAngle = Math.PI;
+  const endAngle = Math.PI + (Math.PI * pct / 100);
+  const x1 = cx + r80 * Math.cos(startAngle);
+  const y1 = cy + r80 * Math.sin(startAngle);
+  const x2 = cx + r80 * Math.cos(endAngle);
+  const y2 = cy + r80 * Math.sin(endAngle);
+  const large = pct > 50 ? 1 : 0;
+  document.getElementById('gaugePath').setAttribute('d',
+    pct === 0
+      ? `M ${x1} ${y1} A ${r80} ${r80} 0 0 1 ${x1+0.01} ${y1}`
+      : `M ${x1} ${y1} A ${r80} ${r80} 0 ${large} 1 ${x2} ${y2}`
+  );
+
+  // Setores únicos
+  const setores = [...new Set(_dados.map(f => f.setor).filter(Boolean))].sort();
+  const sel = document.getElementById('filtroSetor');
+  sel.innerHTML = '<option value="">Todos os setores</option>' + setores.map(s => `<option value="${s}">${s}</option>`).join('');
+
+  filtrar();
+}
+
+function filtrar() {
+  const busca = document.getElementById('busca').value.toLowerCase();
+  const status = document.getElementById('filtroStatus').value;
+  const setor = document.getElementById('filtroSetor').value;
+
+  _filtrado = _dados.filter(f => {
+    if (busca && !f.nome.toLowerCase().includes(busca) && !f.cargo?.toLowerCase().includes(busca)) return false;
+    if (status && f.status !== status) return false;
+    if (setor && f.setor !== setor) return false;
+    return true;
+  });
+
+  document.getElementById('countLabel').textContent = `${_filtrado.length} funcionário(s)`;
+  renderTabela();
+}
+
+function renderTabela() {
+  const tb = document.getElementById('tbody');
+  if (!_filtrado.length) {
+    tb.innerHTML = '<tr><td colspan="10" class="empty">Nenhum funcionário encontrado</td></tr>';
+    return;
+  }
+
+  const statusMap = {
+    conforme: '<span class="badge badge-ok">✅ Conforme</span>',
+    alerta:   '<span class="badge badge-warn">⚠️ Alerta</span>',
+    critico:  '<span class="badge badge-danger">🔴 Crítico</span>',
+  };
+  const dotMap = {conforme:'dot-ok', alerta:'dot-warn', critico:'dot-danger'};
+
+  tb.innerHTML = _filtrado.map(f => {
+    const aso = f.aso_ok ? (f.aso_alerta ? `<span class="alerta">⚠ ${f.aso_validade}</span>` : '<span class="check">✓</span>') : '<span class="cross">✗</span>';
+    const exames = f.exames_ok ? '<span class="check">✓</span>' : `<span class="cross">✗ ${f.exames_vencidos} vencido(s)</span>`;
+    const epi = f.epi_ok ? '<span class="check">✓</span>' : '<span class="cross">✗ sem EPI</span>';
+    const trein = f.treinamento_ok ? '<span class="check">✓</span>' : '<span class="cross">✗</span>';
+    return `<tr>
+      <td><span class="status-dot ${dotMap[f.status]||''}"></span></td>
+      <td>
+        <strong>${f.nome}</strong>
+        ${f.afastado ? '<br><small style="color:var(--warn)">⚕ Afastado</small>' : ''}
+      </td>
+      <td>${f.cargo || '—'}</td>
+      <td>${f.setor || '—'}</td>
+      <td>${aso}</td>
+      <td>${exames}</td>
+      <td>${epi}</td>
+      <td>${trein}</td>
+      <td>
+        <strong>${f.score}/4</strong>
+        <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:3px;width:40px">
+          <div style="height:100%;width:${f.score*25}%;background:${f.status==='conforme'?'var(--ok)':f.status==='alerta'?'var(--warn)':'var(--danger)'};border-radius:2px"></div>
+        </div>
+      </td>
+      <td>${statusMap[f.status] || f.status}</td>
+    </tr>`;
+  }).join('');
+}
+
+carregar();
+</script>
+</body>
+</html>
