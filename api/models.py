@@ -1207,3 +1207,88 @@ class SessaoVideo(models.Model):
 
     def __str__(self):
         return f"{self.titulo} ({self.empresa.nome}) — {self.status}"
+
+
+# ─────────────────────────────────────────────────────────────
+#  SST — Configurações + EPI/EPC
+# ─────────────────────────────────────────────────────────────
+
+class ConfiguracaoSST(models.Model):
+    GRAU_CHOICES = [("1", "Grau 1"), ("2", "Grau 2"), ("3", "Grau 3"), ("4", "Grau 4")]
+
+    empresa = models.OneToOneField(Empresa, on_delete=models.CASCADE, related_name="configuracao_sst")
+    nome_medico_coordenador = models.CharField(max_length=120, blank=True, default="")
+    crm_medico = models.CharField(max_length=30, blank=True, default="")
+    especialidade_medico = models.CharField(max_length=80, blank=True, default="Medicina do Trabalho")
+    nome_engenheiro = models.CharField(max_length=120, blank=True, default="")
+    crea_engenheiro = models.CharField(max_length=30, blank=True, default="")
+    nome_tecnico = models.CharField(max_length=120, blank=True, default="")
+    registro_tecnico = models.CharField(max_length=30, blank=True, default="")
+    nome_enfermeiro = models.CharField(max_length=120, blank=True, default="")
+    coren_enfermeiro = models.CharField(max_length=30, blank=True, default="")
+    alerta_aso_dias = models.PositiveSmallIntegerField(default=30)
+    alerta_exame_dias = models.PositiveSmallIntegerField(default=30)
+    alerta_treinamento_dias = models.PositiveSmallIntegerField(default=60)
+    email_alertas = models.EmailField(blank=True, default="")
+    alertas_ativos = models.BooleanField(default=True)
+    cnpj = models.CharField(max_length=18, blank=True, default="")
+    cnae_principal = models.CharField(max_length=100, blank=True, default="")
+    grau_risco = models.CharField(max_length=1, choices=GRAU_CHOICES, default="2")
+    numero_funcionarios = models.PositiveIntegerField(default=0)
+    endereco_completo = models.TextField(blank=True, default="")
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Config SST — {self.empresa.nome}"
+
+
+class EPIItem(models.Model):
+    TIPO_CHOICES = [
+        ("auditiva", "Proteção Auditiva"),
+        ("respiratoria", "Proteção Respiratória"),
+        ("visual", "Proteção Visual"),
+        ("maos", "Proteção de Mãos"),
+        ("pes", "Proteção de Pés"),
+        ("cabeca", "Proteção de Cabeça"),
+        ("altura", "Proteção Contra Quedas"),
+        ("corpo", "Proteção do Corpo"),
+        ("outro", "Outro"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="epis")
+    nome = models.CharField(max_length=120)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    ca_numero = models.CharField(max_length=20, blank=True, default="")
+    validade_ca = models.DateField(null=True, blank=True)
+    fornecedor = models.CharField(max_length=120, blank=True, default="")
+    descricao = models.TextField(blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["tipo", "nome"]
+        indexes = [models.Index(fields=["empresa", "tipo"])]
+
+    def __str__(self):
+        return f"{self.nome} (CA {self.ca_numero}) — {self.empresa.nome}"
+
+
+class EntregaEPI(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="entregas_epi")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="entregas_epi")
+    epi = models.ForeignKey(EPIItem, on_delete=models.CASCADE, related_name="entregas")
+    data_entrega = models.DateField()
+    quantidade = models.PositiveSmallIntegerField(default=1)
+    data_devolucao = models.DateField(null=True, blank=True)
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_entrega"]
+        indexes = [
+            models.Index(fields=["empresa", "funcionario"]),
+            models.Index(fields=["empresa", "data_entrega"]),
+        ]
+
+    def __str__(self):
+        return f"{self.funcionario.nome} — {self.epi.nome} em {self.data_entrega}"
