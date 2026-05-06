@@ -1426,7 +1426,6 @@ def sst_conformidade_page(request):
     return render(request, "sst_conformidade.html")
 
 
-@login_required_empresa
 def api_sst_conformidade_pdf(request):
     """Exporta relatório de conformidade SST em PDF."""
     from django.http import HttpResponse
