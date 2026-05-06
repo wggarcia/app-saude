@@ -127,7 +127,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="card">
         <div class="card-header">
           <span class="card-title">Itens em Estoque</span>
-          <button class="btn btn-primary" onclick="abrirModalItem()">+ Novo Item</button>
+          <div style="display:flex;gap:8px">
+            <a href="/api/farmacia/pdf/estoque/" target="_blank" class="btn btn-ghost">📄 Exportar PDF</a>
+            <button class="btn btn-primary" onclick="abrirModalItem()">+ Novo Item</button>
+          </div>
         </div>
         <table>
           <thead><tr><th>Item</th><th>Categoria</th><th>Estoque Atual</th><th>Mínimo</th><th>Situação</th><th>Ações</th></tr></thead>
@@ -141,7 +144,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="card">
         <div class="card-header">
           <span class="card-title">Dispensações de Medicamentos</span>
-          <button class="btn btn-primary" onclick="abrirModalDispensacao()">+ Nova Dispensação</button>
+          <div style="display:flex;gap:8px">
+            <a href="/api/farmacia/pdf/dispensacoes/" target="_blank" class="btn btn-ghost">📄 Exportar PDF</a>
+            <button class="btn btn-primary" onclick="abrirModalDispensacao()">+ Nova Dispensação</button>
+          </div>
         </div>
         <table>
           <thead><tr><th>Item</th><th>Paciente</th><th>CPF</th><th>Qtd</th><th>Responsável</th><th>Data/Hora</th></tr></thead>

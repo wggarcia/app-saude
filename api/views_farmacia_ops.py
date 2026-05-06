@@ -295,3 +295,30 @@ def api_farmacia_ops_kpis(request):
         "total_dispensacoes": total_dispensacoes,
         "pedidos_abertos": pedidos_abertos,
     })
+
+
+# ── PDFs ───────────────────────────────────────────────────────────────────────
+def api_farmacia_pdf_estoque(request):
+    from django.http import HttpResponse
+    from .pdf_ops import gerar_pdf_estoque_farmacia
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    itens = list(ItemFarmacia.objects.filter(empresa=e, ativo=True).select_related("fornecedor"))
+    buf = gerar_pdf_estoque_farmacia(e, itens)
+    resp = HttpResponse(buf.read(), content_type="application/pdf")
+    resp["Content-Disposition"] = 'inline; filename="estoque_farmacia.pdf"'
+    return resp
+
+
+def api_farmacia_pdf_dispensacoes(request):
+    from django.http import HttpResponse
+    from .pdf_ops import gerar_pdf_dispensacoes_farmacia
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    disp = list(DispensacaoMedicamento.objects.filter(empresa=e).select_related("item")[:200])
+    buf = gerar_pdf_dispensacoes_farmacia(e, disp)
+    resp = HttpResponse(buf.read(), content_type="application/pdf")
+    resp["Content-Disposition"] = 'inline; filename="dispensacoes_farmacia.pdf"'
+    return resp
