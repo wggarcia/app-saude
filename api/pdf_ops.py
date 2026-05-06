@@ -427,3 +427,133 @@ def gerar_pdf_conformidade_sst(empresa, resumo, funcionarios):
     doc.build(story)
     buf.seek(0)
     return buf
+
+
+def gerar_pdf_relatorio_sst_consolidado(empresa, dados):
+    """Relatório SST consolidado com conformidade, ASOs, exames, afastamentos, CATs e agenda."""
+    buf = io.BytesIO()
+    doc = _doc(buf)
+    s = _styles()
+    story = []
+
+    hoje = datetime.now()
+    _header(
+        story,
+        s,
+        "Relatório SST Consolidado",
+        empresa.nome,
+        f"Gerado em {hoje.strftime('%d/%m/%Y %H:%M')}",
+    )
+
+    story.append(Paragraph("1. Resumo Executivo", s["section"]))
+    resumo = dados.get("resumo", {})
+    total = resumo.get("total", 0)
+    conformes = resumo.get("conformes", 0)
+    alertas = resumo.get("alertas", 0)
+    criticos = resumo.get("criticos", 0)
+    indice = resumo.get("indice_conformidade", 0)
+    tabela_resumo = Table([
+        ["Indicador", "Valor", "Situação"],
+        ["Funcionários ativos", str(total), "-"],
+        ["Conformes", str(conformes), "OK" if conformes == total else f"{round(conformes / max(total, 1) * 100, 0):.0f}%"],
+        ["Em alerta", str(alertas), "ATENÇÃO" if alertas else "OK"],
+        ["Críticos", str(criticos), "CRÍTICO" if criticos else "OK"],
+        ["Índice de conformidade", f"{indice}%", "BOM" if indice >= 80 else "REGULAR" if indice >= 60 else "CRÍTICO"],
+    ], colWidths=[8*cm, 4*cm, 5.7*cm], repeatRows=1)
+    style = _table_style()
+    for row_idx, row in enumerate(tabela_resumo._cellvalues[1:], 1):
+        if "CRÍTICO" in row[2]:
+            style.add("TEXTCOLOR", (2, row_idx), (2, row_idx), DANGER)
+        elif "ATENÇÃO" in row[2]:
+            style.add("TEXTCOLOR", (2, row_idx), (2, row_idx), WARN)
+        elif "OK" in row[2] or "BOM" in row[2]:
+            style.add("TEXTCOLOR", (2, row_idx), (2, row_idx), OK)
+    tabela_resumo.setStyle(style)
+    story.append(tabela_resumo)
+    story.append(Spacer(1, 16))
+
+    asos = dados.get("asos", [])
+    if asos:
+        story.append(Paragraph("2. ASOs em Atenção", s["section"]))
+        rows = [["Funcionário", "Tipo", "Validade", "Situação"]]
+        for item in asos[:50]:
+            situacao = "Vencido" if item.get("vencido") else "Vencendo" if item.get("alerta") else "OK"
+            rows.append([
+                item.get("funcionario_nome", "-")[:35],
+                item.get("tipo_display", "-"),
+                item.get("data_validade", "-"),
+                situacao,
+            ])
+        tbl = Table(rows, colWidths=[6*cm, 4*cm, 3.5*cm, 4.2*cm], repeatRows=1)
+        tbl.setStyle(_table_style())
+        story.append(tbl)
+        story.append(Spacer(1, 16))
+
+    exames = dados.get("exames_vencidos", [])
+    if exames:
+        story.append(Paragraph("3. Exames Vencidos", s["section"]))
+        rows = [["Funcionário", "Exame", "Vencimento", "Dias"]]
+        for item in exames[:40]:
+            rows.append([
+                item.get("funcionario_nome", "-")[:30],
+                item.get("tipo_exame", "-")[:25],
+                item.get("data_vencimento", "-"),
+                f"{item.get('dias_vencido', 0)}d",
+            ])
+        tbl = Table(rows, colWidths=[5.5*cm, 5.5*cm, 3.5*cm, 3.2*cm], repeatRows=1)
+        tbl.setStyle(_table_style())
+        story.append(tbl)
+        story.append(Spacer(1, 16))
+
+    afastamentos = dados.get("afastamentos", [])
+    if afastamentos:
+        story.append(Paragraph("4. Afastamentos Ativos", s["section"]))
+        rows = [["Funcionário", "CID", "Início", "Dias", "Tipo"]]
+        for item in afastamentos[:40]:
+            rows.append([
+                item.get("funcionario_nome", "-")[:30],
+                item.get("cid", "-"),
+                item.get("data_inicio", "-"),
+                f"{item.get('dias', 0)}d",
+                item.get("tipo_display", "-"),
+            ])
+        tbl = Table(rows, colWidths=[5.5*cm, 2*cm, 3*cm, 3*cm, 4.2*cm], repeatRows=1)
+        tbl.setStyle(_table_style())
+        story.append(tbl)
+        story.append(Spacer(1, 16))
+
+    cats = dados.get("cats", [])
+    if cats:
+        story.append(Paragraph("5. CATs", s["section"]))
+        rows = [["Funcionário", "Data", "Tipo", "CID", "Situação"]]
+        for item in cats[:30]:
+            rows.append([
+                item.get("funcionario_nome", "-")[:30],
+                item.get("data_acidente", "-"),
+                item.get("tipo_display", "-"),
+                item.get("cid_principal", "-"),
+                item.get("status", "-"),
+            ])
+        tbl = Table(rows, colWidths=[5*cm, 3*cm, 3*cm, 2.5*cm, 4.2*cm], repeatRows=1)
+        tbl.setStyle(_table_style())
+        story.append(tbl)
+        story.append(Spacer(1, 16))
+
+    agendamentos = dados.get("agendamentos_atrasados", [])
+    if agendamentos:
+        story.append(Paragraph("6. Agendamentos Não Realizados", s["section"]))
+        rows = [["Funcionário", "Tipo", "Data prevista", "Status"]]
+        for item in agendamentos[:30]:
+            rows.append([
+                item.get("funcionario_nome", "-")[:30],
+                item.get("tipo_label", "-"),
+                item.get("data_exib", "-"),
+                item.get("status_label", "-"),
+            ])
+        tbl = Table(rows, colWidths=[5.5*cm, 4.5*cm, 3.5*cm, 4.2*cm], repeatRows=1)
+        tbl.setStyle(_table_style())
+        story.append(tbl)
+
+    doc.build(story)
+    buf.seek(0)
+    return buf

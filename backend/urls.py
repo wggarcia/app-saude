@@ -81,6 +81,7 @@ from api.views_sst import (
     api_prontuario_pdf,
     api_sst_conformidade,
     api_sst_conformidade_pdf,
+    api_sst_relatorio_consolidado_pdf,
     sst_conformidade_page,
 )
 from api.views_agendamento_sst import (
@@ -90,6 +91,22 @@ from api.views_agendamento_sst import (
 )
 from api.views_alertas import api_alertas, alertas_page
 from api.views_executive import api_executive_dashboard, executive_dashboard_page
+from api.views_contratos import (
+    api_beneficiario_excluir,
+    api_beneficiarios_contrato,
+    api_contrato_saude_detalhe,
+    api_contratos_kpis,
+    api_contratos_saude,
+    contratos_page,
+)
+from api.views_series_epi import (
+    api_ponto_serie_detalhe,
+    api_pontos_serie,
+    api_serie_epidemiologica_detalhe,
+    api_series_dashboard,
+    api_series_epidemiologicas,
+    series_epi_page,
+)
 from api.views_lotes_farmacia import (
     api_lotes_farmacia,
     api_lote_farmacia_detalhe,
@@ -101,6 +118,7 @@ from api.views_riscos_sst import (
     api_risco_detalhe,
     api_riscos_kpis,
     api_riscos_ocupacionais,
+    sst_riscos_page,
 )
 from api.views_vacinacao import (
     api_campanha_detalhe,
@@ -290,6 +308,9 @@ urlpatterns = [
     path('executive/', executive_dashboard_page),
     path('api/executive/dashboard/', api_executive_dashboard),
     path('api/executive/dashboard', api_executive_dashboard),
+    # Contratos de saúde e séries epidemiológicas
+    path('contratos/', contratos_page),
+    path('series-epidemiologicas/', series_epi_page),
 
     # 🏥 SST / Saúde Ocupacional — páginas
     path('sst/', sst_home_redirect),
@@ -310,6 +331,7 @@ urlpatterns = [
     path('sst/configuracoes/', sst_configuracoes_page),
     path('sst/epis/', sst_epis_page),
     path('sst/conformidade/', sst_conformidade_page),
+    path('sst/riscos/', sst_riscos_page),
     path('sst/comunicacao/grupos/', painel_grupos),
     # 🏥 SST / Saúde Ocupacional — API
     path('api/sst/dashboard', api_sst_dashboard),
@@ -340,6 +362,8 @@ urlpatterns = [
     path('api/sst/conformidade', api_sst_conformidade),
     path('api/sst/conformidade/pdf', api_sst_conformidade_pdf),
     path('api/sst/conformidade/pdf/', api_sst_conformidade_pdf),
+    path('api/sst/relatorio/consolidado/pdf', api_sst_relatorio_consolidado_pdf),
+    path('api/sst/relatorio/consolidado/pdf/', api_sst_relatorio_consolidado_pdf),
     # Riscos ocupacionais / PGR
     path('api/sst/riscos/', api_riscos_ocupacionais),
     path('api/sst/riscos/kpis/', api_riscos_kpis),
@@ -352,6 +376,18 @@ urlpatterns = [
     path('api/sst/vacinacao/campanhas/<int:campanha_id>/', api_campanha_detalhe),
     path('api/sst/vacinacao/campanhas/<int:campanha_id>/registros/', api_registros_vacinacao),
     path('api/sst/vacinacao/registros/<int:reg_id>/', api_registro_vacinacao_detalhe),
+    # Contratos de saúde / convênios
+    path('api/contratos/', api_contratos_saude),
+    path('api/contratos/kpis/', api_contratos_kpis),
+    path('api/contratos/<int:contrato_id>/', api_contrato_saude_detalhe),
+    path('api/contratos/<int:contrato_id>/beneficiarios/', api_beneficiarios_contrato),
+    path('api/contratos/beneficiarios/<int:beneficiario_id>/', api_beneficiario_excluir),
+    # Séries epidemiológicas
+    path('api/series-epi/', api_series_epidemiologicas),
+    path('api/series-epi/dashboard/', api_series_dashboard),
+    path('api/series-epi/<int:serie_id>/', api_serie_epidemiologica_detalhe),
+    path('api/series-epi/<int:serie_id>/pontos/', api_pontos_serie),
+    path('api/series-epi/pontos/<int:ponto_id>/', api_ponto_serie_detalhe),
     # Agendamento SST
     path('api/sst/agendamentos/', api_agendamentos_sst),
     path('api/sst/agendamentos', api_agendamentos_sst),

@@ -1773,6 +1773,139 @@ class AtoNormativoGov(models.Model):
         return f"{self.get_tipo_display()} {self.numero} — {self.titulo[:60]}"
 
 
+# ── Aliases para retrocompatibilidade com código de conformidade ──────────────
+ExameMedico = ExameOcupacional
+ASOSSE = ASOOcupacional
+CATRegistro = CATOcupacional
+
+
+# ─── Contratos de Saúde / Convênios ───────────────────────────────────────────
+
+class ContratoSaude(models.Model):
+    TIPO_CHOICES = [
+        ("plano_saude", "Plano de Saúde"),
+        ("convenio_medico", "Convênio Médico"),
+        ("seguro_saude", "Seguro Saúde"),
+        ("convenio_odontologico", "Convênio Odontológico"),
+        ("medicina_trabalho", "Medicina do Trabalho"),
+        ("outro", "Outro"),
+    ]
+    STATUS_CHOICES = [
+        ("ativo", "Ativo"),
+        ("vencido", "Vencido"),
+        ("suspenso", "Suspenso"),
+        ("em_renovacao", "Em Renovação"),
+        ("cancelado", "Cancelado"),
+    ]
+    ABRANGENCIA_CHOICES = [
+        ("municipal", "Municipal"),
+        ("estadual", "Estadual"),
+        ("nacional", "Nacional"),
+        ("internacional", "Internacional"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="contratos_saude")
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    operadora = models.CharField(max_length=300)
+    numero_contrato = models.CharField(max_length=100, blank=True, default="")
+    registro_ans = models.CharField(max_length=50, blank=True, default="", help_text="Registro na ANS")
+    descricao = models.CharField(max_length=500, blank=True, default="")
+    abrangencia = models.CharField(max_length=20, choices=ABRANGENCIA_CHOICES, default="nacional")
+    data_inicio = models.DateField()
+    data_fim = models.DateField(null=True, blank=True)
+    valor_mensal = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    valor_per_capita = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_beneficiarios = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ativo")
+    cobertura_detalhes = models.TextField(blank=True, default="")
+    carencias = models.TextField(blank=True, default="")
+    contato_operadora = models.CharField(max_length=200, blank=True, default="")
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_inicio"]
+
+    @property
+    def dias_para_vencer(self):
+        if not self.data_fim:
+            return None
+        from datetime import date
+        return (self.data_fim - date.today()).days
+
+    @property
+    def vencido(self):
+        if not self.data_fim:
+            return False
+        from datetime import date
+        return self.data_fim < date.today()
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.operadora}"
+
+
+class BeneficiarioContrato(models.Model):
+    contrato = models.ForeignKey(ContratoSaude, on_delete=models.CASCADE, related_name="beneficiarios")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="contratos_saude")
+    numero_carteirinha = models.CharField(max_length=100, blank=True, default="")
+    data_inclusao = models.DateField(null=True, blank=True)
+    data_exclusao = models.DateField(null=True, blank=True)
+    ativo = models.BooleanField(default=True)
+    dependentes = models.PositiveSmallIntegerField(default=0)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["funcionario__nome"]
+        unique_together = [("contrato", "funcionario")]
+
+    def __str__(self):
+        return f"{self.funcionario.nome} - {self.contrato.operadora}"
+
+
+# ─── Indicadores Epidemiológicos com Série Temporal ───────────────────────────
+
+class SerieEpidemiologica(models.Model):
+    GRANULARIDADE_CHOICES = [
+        ("diario", "Diário"),
+        ("semanal", "Semanal"),
+        ("mensal", "Mensal"),
+        ("trimestral", "Trimestral"),
+        ("anual", "Anual"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="series_epidemiologicas")
+    nome = models.CharField(max_length=200)
+    descricao = models.TextField(blank=True, default="")
+    unidade = models.CharField(max_length=50, default="casos", help_text="Ex: casos, óbitos, internações")
+    granularidade = models.CharField(max_length=15, choices=GRANULARIDADE_CHOICES, default="mensal")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome"]
+        unique_together = [("empresa", "nome")]
+
+    def __str__(self):
+        return f"{self.nome} ({self.unidade})"
+
+
+class PontoSerie(models.Model):
+    serie = models.ForeignKey(SerieEpidemiologica, on_delete=models.CASCADE, related_name="pontos")
+    data_referencia = models.DateField()
+    valor = models.DecimalField(max_digits=14, decimal_places=4)
+    fonte = models.CharField(max_length=200, blank=True, default="")
+    observacoes = models.CharField(max_length=300, blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["data_referencia"]
+        unique_together = [("serie", "data_referencia")]
+
+    def __str__(self):
+        return f"{self.serie.nome} - {self.data_referencia}: {self.valor}"
+
+
 # ─── Empresa SST — PGR, planos de ação e vacinação ───────────────────────────
 
 class RiscoOcupacional(models.Model):

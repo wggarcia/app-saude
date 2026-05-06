@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PGR — Gestão de Riscos Ocupacionais</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#041018;--bg2:#071c28;--bg3:#0a2536;--bg4:#0d2f42;
+  --border:#1a3a50;--border2:#1f4a64;
+  --text:#e2eaf0;--text2:#8da8bb;--text3:#5a7a8e;
+  --blue:#2196f3;--blue2:#1976d2;--green:#00c853;--green2:#00e676;
+  --yellow:#ffd600;--orange:#ff9100;--red:#f44336;--purple:#9c27b0;
+  --teal:#009688;
+  --radius:12px;--radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+
+/* ── Sidebar ── */
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);padding:20px 14px;display:flex;flex-direction:column;gap:3px;flex-shrink:0;min-height:100vh}
+.sidebar .logo{font-size:16px;font-weight:800;color:var(--text);padding:0 10px;margin-bottom:12px}
+.sidebar a{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--radius-sm);color:var(--text2);text-decoration:none;font-size:13px;font-weight:500;transition:all .18s}
+.sidebar a:hover{background:var(--bg3);color:var(--text)}
+.sidebar a.active{background:var(--bg4);color:var(--blue)}
+.sidebar .divider{height:1px;background:var(--border);margin:6px 0}
+.sidebar h2{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:6px 10px;margin-top:4px}
+
+/* ── Main ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.header h1{font-size:19px;font-weight:800}
+.header-actions{display:flex;gap:10px;align-items:center}
+.content{flex:1;padding:24px;overflow-y:auto}
+
+/* ── KPIs ── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:14px;margin-bottom:24px}
+.kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-card.blue::before{background:var(--blue)}
+.kpi-card.red::before{background:var(--red)}
+.kpi-card.green::before{background:var(--green)}
+.kpi-card.yellow::before{background:var(--yellow)}
+.kpi-card.orange::before{background:var(--orange)}
+.kpi-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:800;line-height:1}
+.kpi-card.blue .kpi-value{color:var(--blue)}
+.kpi-card.red .kpi-value{color:#ff6659}
+.kpi-card.green .kpi-value{color:var(--green2)}
+.kpi-card.yellow .kpi-value{color:var(--yellow)}
+.kpi-card.orange .kpi-value{color:#ffb74d}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;width:fit-content}
+.tab{padding:10px 22px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;border:none;background:none;font-family:inherit;border-right:1px solid var(--border);transition:all .18s}
+.tab:last-child{border-right:none}
+.tab.active{background:var(--bg4);color:var(--text)}
+.tab:hover:not(.active){background:var(--bg3);color:var(--text)}
+
+/* ── Filters ── */
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+.filters select,.filters input{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:9px 13px;font-size:13px;font-family:inherit;outline:none}
+.filters select:focus,.filters input:focus{border-color:var(--blue)}
+.filters input{width:220px}
+
+/* ── Matriz ── */
+.matriz-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:24px}
+.matriz-wrap h3{font-size:14px;font-weight:700;margin-bottom:14px;color:var(--text2)}
+.matriz{display:grid;grid-template-columns:auto repeat(5,1fr);gap:4px}
+.m-hdr{padding:8px;text-align:center;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase}
+.m-lbl{padding:8px;font-size:11px;font-weight:600;color:var(--text3);display:flex;align-items:center;justify-content:flex-end;padding-right:10px}
+.m-cell{padding:10px 6px;border-radius:6px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s;min-height:44px;display:flex;align-items:center;justify-content:center}
+.m-cell:hover{transform:scale(1.08)}
+.m-cell.lvl1{background:#00c85318;color:#00e676}
+.m-cell.lvl2{background:#ffd60018;color:#ffd600}
+.m-cell.lvl3{background:#ff910028;color:#ffb74d}
+.m-cell.lvl4{background:#f4433630;color:#ff6659}
+.m-cell.lvl5{background:#b71c1c40;color:#ef5350}
+.m-cell.highlight{outline:2px solid #fff4;transform:scale(1.08)}
+
+/* ── Table ── */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--bg3)}
+th{padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+td{padding:12px 14px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--bg3)}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-red{background:#f4433620;color:#ff6659}
+.badge-orange{background:#ff910020;color:#ffb74d}
+.badge-yellow{background:#ffd60020;color:#ffd600}
+.badge-green{background:#00c85320;color:#00e676}
+.badge-blue{background:#2196f320;color:#64b5f6}
+.badge-gray{background:#ffffff10;color:var(--text2)}
+.badge-purple{background:#9c27b020;color:#ce93d8}
+
+/* ── GRR indicator ── */
+.grr{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;font-size:13px;font-weight:800}
+.grr-critico{background:#b71c1c40;color:#ef5350}
+.grr-alto{background:#f4433630;color:#ff6659}
+.grr-medio{background:#ff910028;color:#ffb74d}
+.grr-baixo{background:#ffd60018;color:#ffd600}
+.grr-minimo{background:#00c85318;color:#00e676}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .18s}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue2)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-icon{padding:6px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;transition:all .18s;font-size:14px}
+.btn-icon:hover{background:var(--bg4);color:var(--text)}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:#00000090;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:100%;max-width:640px;max-height:92vh;overflow-y:auto;padding:24px}
+.modal h2{font-size:17px;font-weight:800;margin-bottom:18px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:14px;border-top:1px solid var(--border)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-full{grid-column:1/-1}
+.form-group{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:600;color:var(--text2)}
+input,select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:9px 13px;font-size:13px;font-family:inherit;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+textarea{resize:vertical;min-height:72px}
+
+/* ── Range ── */
+.range-row{display:flex;align-items:center;gap:12px}
+input[type=range]{padding:0;background:transparent;border:none;accent-color:var(--blue)}
+.range-val{font-size:18px;font-weight:800;color:var(--blue);min-width:28px;text-align:center}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:50px 20px;color:var(--text3)}
+.empty-icon{font-size:38px;margin-bottom:10px}
+
+/* ── Priority dot ── */
+.prio{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+.prio-critica{background:#ef5350}
+.prio-alta{background:#ffb74d}
+.prio-media{background:#ffd600}
+.prio-baixa{background:#00e676}
+</style>
+</head>
+<body>
+
+<!-- Sidebar SST -->
+<nav class="sidebar">
+  <div class="logo">🦺 SST</div>
+  <a href="/sst/funcionarios/">👷 Funcionários</a>
+  <a href="/sst/asos/">📋 ASOs</a>
+  <a href="/sst/exames/">🧪 Exames</a>
+  <a href="/sst/epis/">🦺 EPIs</a>
+  <a href="/sst/afastamentos/">🏥 Afastamentos</a>
+  <a href="/sst/cats/">⚠️ CATs</a>
+  <a href="/sst/treinamentos/">📚 Treinamentos</a>
+  <div class="divider"></div>
+  <h2>Prevenção</h2>
+  <a href="/sst/riscos/" class="active">🔴 Riscos / PGR</a>
+  <a href="/sst/conformidade/">🛡️ Conformidade</a>
+  <div class="divider"></div>
+  <h2>Sistema</h2>
+  <a href="/alertas/">🚨 Alertas</a>
+  <a href="/sst/relatorios/">📊 Relatórios</a>
+  <a href="/sst/configuracoes/">⚙️ Configurações</a>
+  <a href="/sst/">🏠 Painel SST</a>
+</nav>
+
+<div class="main">
+  <div class="header">
+    <h1>🔴 PGR — Programa de Gerenciamento de Riscos</h1>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" onclick="setTab('planos')">📋 Planos de Ação</button>
+      <button class="btn btn-primary" onclick="abrirModalRisco()">+ Novo Risco</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- KPIs -->
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi-card blue"><div class="kpi-label">Total Riscos</div><div class="kpi-value" id="kTotal">—</div></div>
+      <div class="kpi-card red"><div class="kpi-label">Críticos (IV-V)</div><div class="kpi-value" id="kCriticos">—</div></div>
+      <div class="kpi-card yellow"><div class="kpi-label">Pendentes</div><div class="kpi-value" id="kPendentes">—</div></div>
+      <div class="kpi-card orange"><div class="kpi-label">Prazos Vencidos</div><div class="kpi-value" id="kVencidos">—</div></div>
+      <div class="kpi-card green"><div class="kpi-label">Controlados</div><div class="kpi-value" id="kControlados">—</div></div>
+      <div class="kpi-card blue"><div class="kpi-label">Planos Abertos</div><div class="kpi-value" id="kPlanos">—</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" id="tabRiscos" onclick="setTab('riscos')">🔴 Inventário de Riscos</button>
+      <button class="tab" id="tabMatriz" onclick="setTab('matriz')">📊 Matriz de Risco</button>
+      <button class="tab" id="tabPlanos" onclick="setTab('planos')">📋 Planos de Ação</button>
+    </div>
+
+    <!-- ── Inventário de Riscos ── -->
+    <div id="viewRiscos">
+      <div class="filters">
+        <select id="fTipo" onchange="carregarRiscos()">
+          <option value="">Todos os tipos</option>
+          <option value="fisico">Físico</option>
+          <option value="quimico">Químico</option>
+          <option value="biologico">Biológico</option>
+          <option value="ergonomico">Ergonômico</option>
+          <option value="acidente">Acidente / Mecânico</option>
+          <option value="psicossocial">Psicossocial</option>
+        </select>
+        <select id="fNivel" onchange="carregarRiscos()">
+          <option value="">Todos os níveis</option>
+          <option value="V">V — Crítico</option>
+          <option value="IV">IV — Alto</option>
+          <option value="III">III — Médio</option>
+          <option value="II">II — Baixo</option>
+          <option value="I">I — Muito Baixo</option>
+        </select>
+        <select id="fStatus" onchange="carregarRiscos()">
+          <option value="">Todos os status</option>
+          <option value="identificado">Identificado</option>
+          <option value="em_controle">Em Controle</option>
+          <option value="controlado">Controlado</option>
+          <option value="residual">Residual</option>
+        </select>
+        <input type="search" id="fBusca" placeholder="Buscar agente / setor..." oninput="filtrarRiscos()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>GRR</th>
+              <th>Setor</th>
+              <th>Tipo</th>
+              <th>Agente / Risco</th>
+              <th>NR Ref.</th>
+              <th>Nível</th>
+              <th>Status</th>
+              <th>Prazo</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbRiscos">
+            <tr><td colspan="9"><div class="empty"><div class="empty-icon">⏳</div>Carregando...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Matriz de Risco ── -->
+    <div id="viewMatriz" style="display:none">
+      <div class="matriz-wrap">
+        <h3>Matriz Probabilidade × Severidade — clique na célula para filtrar</h3>
+        <div class="matriz" id="matrizGrid"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>GRR</th><th>Setor</th><th>Tipo</th><th>Agente</th><th>Nível</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="tbMatrizFiltro">
+            <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">Clique em uma célula da matriz para ver os riscos</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Planos de Ação ── -->
+    <div id="viewPlanos" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+        <button class="btn btn-primary" onclick="abrirModalPlano()">+ Novo Plano de Ação</button>
+      </div>
+      <div class="filters">
+        <select id="fpStatus" onchange="carregarPlanos()">
+          <option value="">Todos os status</option>
+          <option value="aberto">Aberto</option>
+          <option value="em_andamento">Em Andamento</option>
+          <option value="concluido">Concluído</option>
+          <option value="cancelado">Cancelado</option>
+          <option value="atrasado">Atrasado</option>
+        </select>
+        <select id="fpPrioridade" onchange="carregarPlanos()">
+          <option value="">Todas as prioridades</option>
+          <option value="critica">Crítica</option>
+          <option value="alta">Alta</option>
+          <option value="media">Média</option>
+          <option value="baixa">Baixa</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Prioridade</th><th>Título</th><th>Origem</th><th>Responsável</th><th>Setor</th><th>Prazo</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="tbPlanos">
+            <tr><td colspan="8"><div class="empty"><div class="empty-icon">⏳</div>Carregando...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Risco -->
+<div class="overlay" id="ovRisco">
+  <div class="modal">
+    <h2 id="mRiscoTitle">Novo Risco Ocupacional</h2>
+    <input type="hidden" id="rId">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Tipo de Risco *</label>
+        <select id="rTipo">
+          <option value="fisico">Físico</option>
+          <option value="quimico">Químico</option>
+          <option value="biologico">Biológico</option>
+          <option value="ergonomico">Ergonômico</option>
+          <option value="acidente">Acidente / Mecânico</option>
+          <option value="psicossocial">Psicossocial</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Setor *</label>
+        <input type="text" id="rSetor" placeholder="Ex: Produção, Almoxarifado...">
+      </div>
+      <div class="form-full form-group">
+        <label>Agente / Risco *</label>
+        <input type="text" id="rAgente" placeholder="Ex: Ruído acima de 85dB, Postura inadequada, Agente químico X">
+      </div>
+      <div class="form-full form-group">
+        <label>Descrição</label>
+        <textarea id="rDesc" placeholder="Descreva as condições, fontes e exposição..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Probabilidade (1-5) — <span id="rProbVal">3</span></label>
+        <div class="range-row">
+          <input type="range" id="rProb" min="1" max="5" value="3" oninput="calcGRR()">
+          <span class="range-val" id="rProbDisp">3</span>
+        </div>
+        <small style="color:var(--text3);font-size:11px">1=Raro · 3=Possível · 5=Quase certo</small>
+      </div>
+      <div class="form-group">
+        <label>Severidade (1-5) — <span id="rSevVal">3</span></label>
+        <div class="range-row">
+          <input type="range" id="rSev" min="1" max="5" value="3" oninput="calcGRR()">
+          <span class="range-val" id="rSevDisp">3</span>
+        </div>
+        <small style="color:var(--text3);font-size:11px">1=Insignificante · 3=Moderado · 5=Catastrófico</small>
+      </div>
+      <div class="form-group">
+        <label>GRR Calculado</label>
+        <div id="grrDisplay" style="font-size:22px;font-weight:800;color:var(--orange);padding:8px 0">9</div>
+      </div>
+      <div class="form-group">
+        <label>Nível de Risco</label>
+        <select id="rNivel">
+          <option value="I">I — Muito Baixo</option>
+          <option value="II">II — Baixo</option>
+          <option value="III" selected>III — Médio</option>
+          <option value="IV">IV — Alto</option>
+          <option value="V">V — Muito Alto / Crítico</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>NR de Referência</label>
+        <input type="text" id="rNR" placeholder="Ex: NR-15, NR-17">
+      </div>
+      <div class="form-full form-group">
+        <label>Medidas de Controle Existentes</label>
+        <textarea id="rMedExist" placeholder="Descreva o que já está sendo feito..."></textarea>
+      </div>
+      <div class="form-full form-group">
+        <label>Medidas Propostas / Recomendadas</label>
+        <textarea id="rMedProp" placeholder="Descreva as medidas a implementar..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Prazo</label>
+        <input type="date" id="rPrazo">
+      </div>
+      <div class="form-group">
+        <label>Responsável</label>
+        <input type="text" id="rResp" placeholder="Nome do responsável">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="rStatus">
+          <option value="identificado">Identificado</option>
+          <option value="em_controle">Em Controle</option>
+          <option value="controlado">Controlado</option>
+          <option value="residual">Residual</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('ovRisco')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarRisco()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Plano de Ação -->
+<div class="overlay" id="ovPlano">
+  <div class="modal">
+    <h2 id="mPlanoTitle">Novo Plano de Ação</h2>
+    <input type="hidden" id="pId">
+    <div class="form-grid">
+      <div class="form-full form-group">
+        <label>Título *</label>
+        <input type="text" id="pTitulo" placeholder="Descreva a ação a ser tomada">
+      </div>
+      <div class="form-group">
+        <label>Origem</label>
+        <select id="pOrigem">
+          <option value="risco">Risco Ocupacional</option>
+          <option value="cat">CAT / Acidente</option>
+          <option value="afastamento">Afastamento</option>
+          <option value="auditoria">Auditoria Interna</option>
+          <option value="conformidade">Não-Conformidade</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Prioridade</label>
+        <select id="pPrio">
+          <option value="baixa">Baixa</option>
+          <option value="media" selected>Média</option>
+          <option value="alta">Alta</option>
+          <option value="critica">Crítica</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Responsável</label>
+        <input type="text" id="pResp" placeholder="Quem executará">
+      </div>
+      <div class="form-group">
+        <label>Setor</label>
+        <input type="text" id="pSetor" placeholder="Setor afetado">
+      </div>
+      <div class="form-group">
+        <label>Prazo</label>
+        <input type="date" id="pPrazo">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="pStatus">
+          <option value="aberto" selected>Aberto</option>
+          <option value="em_andamento">Em Andamento</option>
+          <option value="concluido">Concluído</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </div>
+      <div class="form-full form-group">
+        <label>Descrição</label>
+        <textarea id="pDesc" placeholder="O que, como, por que fazer..."></textarea>
+      </div>
+      <div class="form-full form-group">
+        <label>Observações</label>
+        <textarea id="pObs" placeholder="Andamento, impedimentos, resultados..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('ovPlano')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPlano()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const getCsrf = () => document.cookie.split(';').find(c=>c.trim().startsWith('csrftoken='))?.split('=')[1] || '';
+
+let todosRiscos = [];
+let todosPlanos = [];
+let tabAtual = 'riscos';
+
+document.addEventListener('DOMContentLoaded', () => {
+  carregarKPIs();
+  carregarRiscos();
+  buildMatriz();
+  calcGRR();
+});
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+function setTab(t) {
+  tabAtual = t;
+  ['riscos','matriz','planos'].forEach(id => {
+    document.getElementById('view' + id.charAt(0).toUpperCase() + id.slice(1)).style.display = t===id ? '' : 'none';
+    document.getElementById('tab' + id.charAt(0).toUpperCase() + id.slice(1)).classList.toggle('active', t===id);
+  });
+  if (t==='planos' && !todosPlanos.length) carregarPlanos();
+}
+
+// ── KPIs ───────────────────────────────────────────────────────────────────
+async function carregarKPIs() {
+  try {
+    const r = await fetch('/api/sst/riscos/kpis/');
+    const d = await r.json();
+    const k = d.kpis;
+    document.getElementById('kTotal').textContent     = k.total_riscos;
+    document.getElementById('kCriticos').textContent  = k.criticos;
+    document.getElementById('kPendentes').textContent = k.pendentes;
+    document.getElementById('kVencidos').textContent  = k.prazos_vencidos;
+    document.getElementById('kControlados').textContent = k.controlados;
+    document.getElementById('kPlanos').textContent    = k.planos_abertos;
+  } catch(e) { console.error(e); }
+}
+
+// ── Riscos ─────────────────────────────────────────────────────────────────
+async function carregarRiscos() {
+  const tipo   = document.getElementById('fTipo').value;
+  const nivel  = document.getElementById('fNivel').value;
+  const status = document.getElementById('fStatus').value;
+  let url = '/api/sst/riscos/?';
+  if (tipo)   url += 'tipo_risco=' + tipo + '&';
+  if (nivel)  url += 'nivel=' + nivel + '&';
+  if (status) url += 'status=' + status;
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    todosRiscos = d.riscos || [];
+    filtrarRiscos();
+  } catch(e) { console.error(e); }
+}
+
+function filtrarRiscos() {
+  const q = document.getElementById('fBusca').value.toLowerCase();
+  const lista = todosRiscos.filter(r =>
+    r.agente.toLowerCase().includes(q) ||
+    r.setor.toLowerCase().includes(q) ||
+    (r.descricao||'').toLowerCase().includes(q)
+  );
+  renderRiscos(lista);
+}
+
+function renderRiscos(lista) {
+  const tb = document.getElementById('tbRiscos');
+  if (!lista.length) {
+    tb.innerHTML = '<tr><td colspan="9"><div class="empty"><div class="empty-icon">🔍</div>Nenhum risco encontrado</div></td></tr>';
+    return;
+  }
+  tb.innerHTML = lista.map(r => {
+    const grrCls = r.grr >= 20 ? 'grr-critico' : r.grr >= 12 ? 'grr-alto' : r.grr >= 6 ? 'grr-medio' : r.grr >= 3 ? 'grr-baixo' : 'grr-minimo';
+    const nivelBadge = {'V':'badge-red','IV':'badge-orange','III':'badge-yellow','II':'badge-blue','I':'badge-green'}[r.nivel]||'badge-gray';
+    const statusBadge = {'identificado':'badge-yellow','em_controle':'badge-blue','controlado':'badge-green','residual':'badge-gray'}[r.status]||'badge-gray';
+    const tipoCor = {'fisico':'#64b5f6','quimico':'#ce93d8','biologico':'#80cbc4','ergonomico':'#ffb74d','acidente':'#ff6659','psicossocial':'#a5d6a7'}[r.tipo_risco]||'#888';
+    return `<tr>
+      <td><span class="grr ${grrCls}">${r.grr}</span></td>
+      <td>${r.setor}</td>
+      <td><span style="color:${tipoCor};font-weight:600">${r.tipo_risco_label}</span></td>
+      <td><strong>${r.agente}</strong>${r.nr_referencia?'<br><small style="color:var(--text3)">'+r.nr_referencia+'</small>':''}</td>
+      <td>${r.nr_referencia||'—'}</td>
+      <td><span class="badge ${nivelBadge}">${r.nivel}</span></td>
+      <td><span class="badge ${statusBadge}">${r.status_label}</span></td>
+      <td style="color:${r.prazo && r.prazo < new Date().toISOString().slice(0,10) ? 'var(--red)' : 'var(--text2)'}">
+        ${r.prazo ? fmtDate(r.prazo) : '—'}
+      </td>
+      <td>
+        <div style="display:flex;gap:5px">
+          <button class="btn-icon" title="Editar" onclick="editarRisco(${r.id})">✏️</button>
+          <button class="btn-icon" title="Excluir" onclick="deletarRisco(${r.id})">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Matriz ─────────────────────────────────────────────────────────────────
+function buildMatriz() {
+  const grid = document.getElementById('matrizGrid');
+  const sev  = ['','Insignif.','Leve','Moderado','Grave','Catastrófico'];
+  const prob = ['','Raro','Improvável','Possível','Provável','Quase certo'];
+  let html = '<div class="m-hdr"></div>';
+  for (let s=1;s<=5;s++) html += `<div class="m-hdr">${sev[s]}</div>`;
+  for (let p=5;p>=1;p--) {
+    html += `<div class="m-lbl">${prob[p]}</div>`;
+    for (let s=1;s<=5;s++) {
+      const grr = p*s;
+      const cls = grr>=20?'lvl5':grr>=12?'lvl4':grr>=6?'lvl3':grr>=3?'lvl2':'lvl1';
+      html += `<div class="m-cell ${cls}" onclick="filtrarMatriz(${p},${s})" title="P=${p} S=${s} GRR=${grr}">${grr}</div>`;
+    }
+  }
+  grid.innerHTML = html;
+}
+
+function filtrarMatriz(p, s) {
+  // Highlight cell
+  document.querySelectorAll('.m-cell').forEach(c => c.classList.remove('highlight'));
+  event.target.classList.add('highlight');
+  const lista = todosRiscos.filter(r => r.probabilidade===p && r.severidade===s);
+  const tb = document.getElementById('tbMatrizFiltro');
+  if (!lista.length) {
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3)">Nenhum risco com P='+p+' S='+s+'</td></tr>';
+    return;
+  }
+  const nivelBadge = {'V':'badge-red','IV':'badge-orange','III':'badge-yellow','II':'badge-blue','I':'badge-green'};
+  tb.innerHTML = lista.map(r => `<tr>
+    <td><span class="grr grr-${r.grr>=20?'critico':r.grr>=12?'alto':r.grr>=6?'medio':r.grr>=3?'baixo':'minimo'}">${r.grr}</span></td>
+    <td>${r.setor}</td>
+    <td>${r.tipo_risco_label}</td>
+    <td><strong>${r.agente}</strong></td>
+    <td><span class="badge ${nivelBadge[r.nivel]||'badge-gray'}">${r.nivel}</span></td>
+    <td>${r.status_label}</td>
+    <td><button class="btn-icon" onclick="editarRisco(${r.id})">✏️</button></td>
+  </tr>`).join('');
+}
+
+// ── CRUD Risco ─────────────────────────────────────────────────────────────
+function abrirModalRisco() {
+  document.getElementById('mRiscoTitle').textContent = 'Novo Risco Ocupacional';
+  document.getElementById('rId').value = '';
+  ['rSetor','rAgente','rDesc','rNR','rMedExist','rMedProp','rPrazo','rResp'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('rTipo').value = 'fisico';
+  document.getElementById('rNivel').value = 'III';
+  document.getElementById('rStatus').value = 'identificado';
+  document.getElementById('rProb').value = 3;
+  document.getElementById('rSev').value = 3;
+  calcGRR();
+  abrirModal('ovRisco');
+}
+
+function editarRisco(id) {
+  const r = todosRiscos.find(x=>x.id===id);
+  if (!r) return;
+  document.getElementById('mRiscoTitle').textContent = 'Editar Risco';
+  document.getElementById('rId').value = r.id;
+  document.getElementById('rTipo').value = r.tipo_risco;
+  document.getElementById('rSetor').value = r.setor;
+  document.getElementById('rAgente').value = r.agente;
+  document.getElementById('rDesc').value = r.descricao||'';
+  document.getElementById('rNivel').value = r.nivel;
+  document.getElementById('rNR').value = r.nr_referencia||'';
+  document.getElementById('rMedExist').value = r.medida_controle_existente||'';
+  document.getElementById('rMedProp').value = r.medida_controle_proposta||'';
+  document.getElementById('rPrazo').value = r.prazo||'';
+  document.getElementById('rResp').value = r.responsavel||'';
+  document.getElementById('rStatus').value = r.status;
+  document.getElementById('rProb').value = r.probabilidade;
+  document.getElementById('rSev').value = r.severidade;
+  calcGRR();
+  abrirModal('ovRisco');
+}
+
+async function salvarRisco() {
+  const id = document.getElementById('rId').value;
+  const payload = {
+    tipo_risco: document.getElementById('rTipo').value,
+    setor: document.getElementById('rSetor').value,
+    agente: document.getElementById('rAgente').value,
+    descricao: document.getElementById('rDesc').value,
+    nivel: document.getElementById('rNivel').value,
+    nr_referencia: document.getElementById('rNR').value,
+    medida_controle_existente: document.getElementById('rMedExist').value,
+    medida_controle_proposta: document.getElementById('rMedProp').value,
+    prazo: document.getElementById('rPrazo').value||null,
+    responsavel: document.getElementById('rResp').value,
+    status: document.getElementById('rStatus').value,
+    probabilidade: parseInt(document.getElementById('rProb').value),
+    severidade: parseInt(document.getElementById('rSev').value),
+  };
+  if (!payload.agente) { alert('Agente é obrigatório'); return; }
+  if (!payload.setor) { alert('Setor é obrigatório'); return; }
+  const url = id ? `/api/sst/riscos/${id}/` : '/api/sst/riscos/';
+  const method = id ? 'PUT' : 'POST';
+  try {
+    const r = await fetch(url, {
+      method, headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) { const e=await r.json(); alert(e.erro||'Erro'); return; }
+    fecharModal('ovRisco');
+    carregarRiscos();
+    carregarKPIs();
+  } catch(e) { console.error(e); }
+}
+
+async function deletarRisco(id) {
+  if (!confirm('Excluir este risco e seus planos vinculados?')) return;
+  try {
+    await fetch(`/api/sst/riscos/${id}/`, {
+      method:'DELETE', headers:{'X-CSRFToken':getCsrf()}
+    });
+    carregarRiscos();
+    carregarKPIs();
+  } catch(e) { console.error(e); }
+}
+
+// ── Planos ─────────────────────────────────────────────────────────────────
+async function carregarPlanos() {
+  const status    = document.getElementById('fpStatus').value;
+  const prioridade= document.getElementById('fpPrioridade').value;
+  let url = '/api/sst/planos-acao/?';
+  if (status)     url += 'status=' + status + '&';
+  if (prioridade) url += 'prioridade=' + prioridade;
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    todosPlanos = d.planos || [];
+    renderPlanos(todosPlanos);
+  } catch(e) { console.error(e); }
+}
+
+function renderPlanos(lista) {
+  const tb = document.getElementById('tbPlanos');
+  if (!lista.length) {
+    tb.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">📋</div>Nenhum plano encontrado</div></td></tr>';
+    return;
+  }
+  tb.innerHTML = lista.map(p => {
+    const prioMap = {'critica':'badge-red','alta':'badge-orange','media':'badge-yellow','baixa':'badge-green'};
+    const statMap = {'aberto':'badge-blue','em_andamento':'badge-blue','concluido':'badge-green','cancelado':'badge-gray','atrasado':'badge-red'};
+    return `<tr${p.atrasado?' style="background:rgba(244,67,54,.04)"':''}>
+      <td><span class="badge ${prioMap[p.prioridade]||'badge-gray'}">${p.prioridade_label}</span></td>
+      <td><strong>${p.titulo}</strong>${p.atrasado?'<br><small style="color:var(--red)">⚠️ Atrasado</small>':''}</td>
+      <td>${p.origem_label}</td>
+      <td>${p.responsavel||'—'}</td>
+      <td>${p.setor||'—'}</td>
+      <td style="color:${p.atrasado?'var(--red)':'var(--text2)'}">${p.data_prazo?fmtDate(p.data_prazo):'—'}</td>
+      <td><span class="badge ${statMap[p.status]||'badge-gray'}">${p.status_label}</span></td>
+      <td>
+        <div style="display:flex;gap:5px">
+          <button class="btn-icon" title="Editar" onclick="editarPlano(${p.id})">✏️</button>
+          <button class="btn-icon" title="Excluir" onclick="deletarPlano(${p.id})">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirModalPlano(riscoId) {
+  document.getElementById('mPlanoTitle').textContent = 'Novo Plano de Ação';
+  document.getElementById('pId').value = '';
+  ['pTitulo','pResp','pSetor','pPrazo','pDesc','pObs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pOrigem').value = riscoId ? 'risco' : 'risco';
+  document.getElementById('pPrio').value = 'media';
+  document.getElementById('pStatus').value = 'aberto';
+  abrirModal('ovPlano');
+}
+
+function editarPlano(id) {
+  const p = todosPlanos.find(x=>x.id===id);
+  if (!p) return;
+  document.getElementById('mPlanoTitle').textContent = 'Editar Plano de Ação';
+  document.getElementById('pId').value = p.id;
+  document.getElementById('pTitulo').value = p.titulo;
+  document.getElementById('pOrigem').value = p.origem;
+  document.getElementById('pPrio').value = p.prioridade;
+  document.getElementById('pResp').value = p.responsavel||'';
+  document.getElementById('pSetor').value = p.setor||'';
+  document.getElementById('pPrazo').value = p.data_prazo||'';
+  document.getElementById('pStatus').value = p.status;
+  document.getElementById('pDesc').value = p.descricao||'';
+  document.getElementById('pObs').value = p.observacoes||'';
+  abrirModal('ovPlano');
+}
+
+async function salvarPlano() {
+  const id = document.getElementById('pId').value;
+  const payload = {
+    titulo:     document.getElementById('pTitulo').value,
+    origem:     document.getElementById('pOrigem').value,
+    prioridade: document.getElementById('pPrio').value,
+    responsavel:document.getElementById('pResp').value,
+    setor:      document.getElementById('pSetor').value,
+    data_prazo: document.getElementById('pPrazo').value||null,
+    status:     document.getElementById('pStatus').value,
+    descricao:  document.getElementById('pDesc').value,
+    observacoes:document.getElementById('pObs').value,
+  };
+  if (!payload.titulo) { alert('Título é obrigatório'); return; }
+  const url = id ? `/api/sst/planos-acao/${id}/` : '/api/sst/planos-acao/';
+  const method = id ? 'PUT' : 'POST';
+  try {
+    const r = await fetch(url, {
+      method, headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) { const e=await r.json(); alert(e.erro||'Erro'); return; }
+    fecharModal('ovPlano');
+    carregarPlanos();
+    carregarKPIs();
+  } catch(e) { console.error(e); }
+}
+
+async function deletarPlano(id) {
+  if (!confirm('Excluir este plano de ação?')) return;
+  try {
+    await fetch(`/api/sst/planos-acao/${id}/`, {
+      method:'DELETE', headers:{'X-CSRFToken':getCsrf()}
+    });
+    carregarPlanos();
+    carregarKPIs();
+  } catch(e) { console.error(e); }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function calcGRR() {
+  const p = parseInt(document.getElementById('rProb').value);
+  const s = parseInt(document.getElementById('rSev').value);
+  const grr = p * s;
+  document.getElementById('rProbDisp').textContent = p;
+  document.getElementById('rSevDisp').textContent = s;
+  const el = document.getElementById('grrDisplay');
+  el.textContent = grr;
+  el.style.color = grr>=20?'#ef5350':grr>=12?'#ff6659':grr>=6?'#ffb74d':grr>=3?'#ffd600':'#00e676';
+  // Auto-sugerir nível
+  const nivel = grr>=20?'V':grr>=12?'IV':grr>=6?'III':grr>=3?'II':'I';
+  document.getElementById('rNivel').value = nivel;
+}
+
+function abrirModal(id) { document.getElementById(id).classList.add('show'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('show'); }
+function fmtDate(s) {
+  if (!s) return '—';
+  const [y,m,d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click', e => { if(e.target===ov) fecharModal(ov.id); }));
+</script>
+</body>
+</html>

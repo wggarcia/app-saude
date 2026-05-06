@@ -290,3 +290,8 @@ def api_plano_acao_sst_detalhe(request, plano_id):
         return JsonResponse({"ok": True})
 
     return JsonResponse({"erro": "Metodo nao suportado"}, status=405)
+
+
+def sst_riscos_page(request):
+    from django.shortcuts import render
+    return render(request, "sst_riscos.html")
