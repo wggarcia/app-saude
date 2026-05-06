@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gestão Hospital</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.kpi-row-6{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}.kpi.info::before{background:#a78bfa}.kpi.teal::before{background:#2dd4bf}
+.kpi-val{font-size:28px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}.kpi.info .kpi-val{color:#a78bfa}.kpi.teal .kpi-val{color:#2dd4bf}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border)}
+.tab-btn{padding:10px 18px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-purple{background:rgba(167,139,250,.12);color:#a78bfa}
+.badge-teal{background:rgba(45,212,191,.12);color:#2dd4bf}
+/* Manchester triage colors */
+.triage-vermelho{background:#ff4d6d22;color:#ff4d6d;border:1px solid #ff4d6d44}
+.triage-laranja{background:#ff8c0022;color:#ff8c00;border:1px solid #ff8c0044}
+.triage-amarelo{background:#ffd70022;color:#ffd700;border:1px solid #ffd70044}
+.triage-verde{background:#00e5b022;color:#00e5b0;border:1px solid #00e5b044}
+.triage-azul{background:#00c2ff22;color:#00c2ff;border:1px solid #00c2ff44}
+/* Bed grid */
+.bed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;padding:16px}
+.bed-card{border-radius:10px;padding:12px;text-align:center;font-size:12px;font-weight:700;border:2px solid transparent;cursor:pointer;transition:.15s}
+.bed-card.disponivel{background:rgba(0,229,176,.1);border-color:#00e5b066;color:var(--ok)}
+.bed-card.ocupado{background:rgba(255,77,109,.1);border-color:#ff4d6d66;color:var(--danger)}
+.bed-card.manutencao{background:rgba(255,179,71,.1);border-color:#ffb34766;color:var(--warn)}
+.bed-card.reservado{background:rgba(0,194,255,.1);border-color:#00c2ff66;color:var(--accent)}
+.bed-num{font-size:18px;margin-bottom:4px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:72px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+/* Evolução panel */
+.evolucao-list{display:flex;flex-direction:column;gap:10px;padding:16px;max-height:300px;overflow-y:auto}
+.evolucao-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:14px}
+.evolucao-meta{font-size:11px;color:var(--muted);margin-top:6px}
+@media(max-width:1100px){.kpi-row-6{grid-template-columns:repeat(3,1fr)}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">🏥 Hospital</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/hospital/"><span>📊</span> Inteligência</a>
+  <a class="nav-link active" href="/hospital/gestao/"><span>🏨</span> Gestão Operacional</a>
+  <div class="nav-section" style="margin-top:12px">Sistema</div>
+  <a class="nav-link" href="/dashboard/"><span>🏠</span> Dashboard</a>
+  <a class="nav-link" href="/sair/"><span>🚪</span> Sair</a>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Gestão Hospitalar</div>
+      <div class="page-sub">Leitos, pacientes, triagem e internações</div>
+    </div>
+    <a href="/hospital/" class="btn btn-ghost">📊 Ver Inteligência Epidemiológica</a>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row-6" id="kpiRow">
+    <div class="kpi"><div class="kpi-val">—</div><div class="kpi-lbl">Total Leitos</div></div>
+    <div class="kpi ok"><div class="kpi-val">—</div><div class="kpi-lbl">Disponíveis</div></div>
+    <div class="kpi danger"><div class="kpi-val">—</div><div class="kpi-lbl">Ocupados</div></div>
+    <div class="kpi warn"><div class="kpi-val">—</div><div class="kpi-lbl">Internações Ativas</div></div>
+    <div class="kpi teal"><div class="kpi-val">—</div><div class="kpi-lbl">Triagens Hoje</div></div>
+    <div class="kpi info"><div class="kpi-val">—%</div><div class="kpi-lbl">Taxa Ocupação</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="setTab('leitos')">🛏 Leitos</button>
+      <button class="tab-btn" onclick="setTab('triagem')">🚨 Triagem</button>
+      <button class="tab-btn" onclick="setTab('internacoes')">📋 Internações</button>
+      <button class="tab-btn" onclick="setTab('pacientes')">👤 Pacientes</button>
+      <button class="tab-btn" onclick="setTab('departamentos')">🏢 Departamentos</button>
+    </div>
+
+    <!-- Leitos -->
+    <div class="tab-panel active" id="tab-leitos" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Mapa de Leitos</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost" onclick="abrirModalLeito()">+ Novo Leito</button>
+            <div style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)">
+              <span style="width:10px;height:10px;border-radius:50%;background:var(--ok);display:inline-block"></span>Disponível
+              <span style="width:10px;height:10px;border-radius:50%;background:var(--danger);display:inline-block"></span>Ocupado
+              <span style="width:10px;height:10px;border-radius:50%;background:var(--warn);display:inline-block"></span>Manutenção
+              <span style="width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block"></span>Reservado
+            </div>
+          </div>
+        </div>
+        <div id="bedGrid" class="bed-grid"><div class="empty">Carregando…</div></div>
+      </div>
+    </div>
+
+    <!-- Triagem -->
+    <div class="tab-panel" id="tab-triagem" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Fila de Triagem — Protocolo Manchester</span>
+          <button class="btn btn-primary" onclick="abrirModalTriagem()">+ Nova Triagem</button>
+        </div>
+        <table>
+          <thead><tr><th>Prioridade</th><th>Paciente</th><th>Queixa</th><th>PA</th><th>Temp</th><th>SpO₂</th><th>FC</th><th>Responsável</th><th>Horário</th></tr></thead>
+          <tbody id="tbodyTriagem"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Internações -->
+    <div class="tab-panel" id="tab-internacoes" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Internações</span>
+          <div style="display:flex;gap:8px">
+            <select id="filtroStatus" onchange="carregarInternacoes()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+              <option value="">Todos os status</option>
+              <option value="ativa">Ativas</option>
+              <option value="alta">Alta</option>
+              <option value="transferido">Transferidos</option>
+              <option value="obito">Óbito</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalInternacao()">+ Internar Paciente</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Paciente</th><th>Leito</th><th>Departamento</th><th>Diagnóstico</th><th>Médico</th><th>Status</th><th>Entrada</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyInt"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pacientes -->
+    <div class="tab-panel" id="tab-pacientes" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Cadastro de Pacientes</span>
+          <div style="display:flex;gap:8px">
+            <input id="buscaPac" placeholder="🔍 Buscar por nome…" oninput="buscarPacientes()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;width:220px">
+            <button class="btn btn-primary" onclick="abrirModalPaciente()">+ Novo Paciente</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Nome</th><th>CPF</th><th>Nascimento</th><th>Sexo</th><th>Tipo Sanguíneo</th><th>Telefone</th><th>Alergias</th></tr></thead>
+          <tbody id="tbodyPac"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Departamentos -->
+    <div class="tab-panel" id="tab-departamentos" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Departamentos / Alas</span>
+          <button class="btn btn-primary" onclick="abrirModalDep()">+ Novo Departamento</button>
+        </div>
+        <table>
+          <thead><tr><th>Nome</th><th>Tipo</th><th>Capacidade</th><th>Responsável</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyDep"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal: Leito -->
+<div class="modal-bg" id="modalLeito">
+  <div class="modal">
+    <h3>🛏 Cadastrar Leito</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Número *</label><input id="lNum" placeholder="Ex: A-01"></div>
+      <div class="form-group"><label>Tipo</label><input id="lTipo" placeholder="Ex: UTI, Enfermaria…"></div>
+    </div>
+    <div class="form-group"><label>Departamento *</label>
+      <select id="lDep"><option value="">— selecione —</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalLeito')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarLeito()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Status Leito -->
+<div class="modal-bg" id="modalBedStatus">
+  <div class="modal" style="min-width:320px">
+    <h3 id="bedStatusTitle">Alterar Status do Leito</h3>
+    <input type="hidden" id="bedStatusId">
+    <div class="form-group"><label>Novo Status</label>
+      <select id="bedStatusVal">
+        <option value="disponivel">✅ Disponível</option>
+        <option value="manutencao">🔧 Manutenção</option>
+        <option value="reservado">🔒 Reservado</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalBedStatus')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarStatusLeito()">Atualizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Triagem -->
+<div class="modal-bg" id="modalTriagem">
+  <div class="modal">
+    <h3>🚨 Registrar Triagem</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Paciente *</label>
+        <select id="tPac"><option value="">— selecione —</option></select>
+      </div>
+      <div class="form-group"><label>Prioridade *</label>
+        <select id="tPrioridade">
+          <option value="vermelho">🔴 Vermelho — Emergência</option>
+          <option value="laranja">🟠 Laranja — Muito Urgente</option>
+          <option value="amarelo">🟡 Amarelo — Urgente</option>
+          <option value="verde" selected>🟢 Verde — Pouco Urgente</option>
+          <option value="azul">🔵 Azul — Não Urgente</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Queixa Principal *</label><textarea id="tQueixa" rows="2" placeholder="Descreva a queixa principal do paciente"></textarea></div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Pressão Arterial</label><input id="tPa" placeholder="120/80"></div>
+      <div class="form-group"><label>Temperatura (°C)</label><input id="tTemp" type="number" step="0.1" placeholder="36.5"></div>
+      <div class="form-group"><label>SpO₂ (%)</label><input id="tSat" type="number" min="0" max="100" placeholder="98"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Freq. Cardíaca (bpm)</label><input id="tFc" type="number" placeholder="72"></div>
+      <div class="form-group"><label>Responsável</label><input id="tResp" placeholder="Nome do profissional"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalTriagem')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarTriagem()">Registrar Triagem</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Paciente -->
+<div class="modal-bg" id="modalPaciente">
+  <div class="modal">
+    <h3>👤 Cadastrar Paciente</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="pNome" placeholder="Nome completo"></div>
+      <div class="form-group"><label>CPF</label><input id="pCpf" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Nascimento</label><input id="pNasc" type="date"></div>
+      <div class="form-group"><label>Sexo</label>
+        <select id="pSexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option><option value="O">Outro</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Telefone</label><input id="pTel" placeholder="(00) 00000-0000"></div>
+      <div class="form-group"><label>Tipo Sanguíneo</label><input id="pSang" placeholder="A+, B-, O+…"></div>
+    </div>
+    <div class="form-group"><label>Alergias</label><input id="pAleg" placeholder="Ex: Penicilina, Dipirona…"></div>
+    <div class="form-group"><label>Endereço</label><textarea id="pEnd" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalPaciente')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPaciente()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Internação -->
+<div class="modal-bg" id="modalInt">
+  <div class="modal">
+    <h3>📋 Internar Paciente</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Paciente *</label>
+        <select id="intPac"><option value="">— selecione —</option></select>
+      </div>
+      <div class="form-group"><label>Leito</label>
+        <select id="intLeito"><option value="">— sem leito —</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Diagnóstico *</label><textarea id="intDiag" rows="2"></textarea></div>
+    <div class="form-group"><label>Médico Responsável</label><input id="intMedico" placeholder="Nome do médico"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalInt')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarInternacao()">Internar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Alta/Evolução -->
+<div class="modal-bg" id="modalAlta">
+  <div class="modal">
+    <h3 id="altaTitle">Gerenciar Internação</h3>
+    <input type="hidden" id="altaId">
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="darAlta('alta')">✅ Alta</button>
+      <button class="btn btn-ghost btn-sm" onclick="darAlta('transferido')">↗️ Transferir</button>
+      <button class="btn btn-danger btn-sm" onclick="darAlta('obito')">💔 Óbito</button>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--muted)">EVOLUÇÕES CLÍNICAS</div>
+    <div class="evolucao-list" id="evolucaoList"></div>
+    <div style="margin-top:12px">
+      <div class="form-group"><label>Nova Evolução</label><textarea id="evolDesc" rows="3" placeholder="Descreva a evolução clínica…"></textarea></div>
+      <div class="form-group"><label>Responsável</label><input id="evolResp" placeholder="Nome do profissional"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalAlta')">Fechar</button>
+      <button class="btn btn-primary" onclick="salvarEvolucao()">Registrar Evolução</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Departamento -->
+<div class="modal-bg" id="modalDep">
+  <div class="modal">
+    <h3>🏢 Cadastrar Departamento</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="depNome" placeholder="Ex: UTI, Pediatria…"></div>
+      <div class="form-group"><label>Tipo</label><input id="depTipo" placeholder="Ex: Intensivo, Clínico…"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Capacidade de Leitos</label><input id="depCap" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Responsável</label><input id="depResp" placeholder="Nome do responsável"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalDep')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarDep()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _pacientes = [], _leitos = [], _departamentos = [];
+
+async function api(url, opts={}) {
+  const r = await fetch(url, {headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},...opts});
+  return r.json();
+}
+function getCsrf() {
+  return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1]||'';
+}
+
+async function carregarKpis() {
+  const d = await api('/api/hospital/ops/kpis/');
+  const cards = document.querySelectorAll('#kpiRow .kpi');
+  cards[0].querySelector('.kpi-val').textContent = d.total_leitos ?? '—';
+  cards[1].querySelector('.kpi-val').textContent = d.leitos_disponiveis ?? '—';
+  cards[2].querySelector('.kpi-val').textContent = d.leitos_ocupados ?? '—';
+  cards[3].querySelector('.kpi-val').textContent = d.internacoes_ativas ?? '—';
+  cards[4].querySelector('.kpi-val').textContent = d.triagens_hoje ?? '—';
+  cards[5].querySelector('.kpi-val').textContent = (d.taxa_ocupacao ?? '—') + '%';
+}
+
+// ── Leitos ────────────────────────────────────────────────────
+async function carregarLeitos() {
+  const d = await api('/api/hospital/leitos/');
+  _leitos = d.leitos || [];
+  const grid = document.getElementById('bedGrid');
+  if (!_leitos.length) { grid.innerHTML = '<div class="empty">Nenhum leito cadastrado</div>'; return; }
+  grid.innerHTML = _leitos.map(l => `
+    <div class="bed-card ${l.status}" onclick="abrirBedStatus(${l.id},'${l.numero}','${l.status}')">
+      <div class="bed-num">🛏 ${l.numero}</div>
+      <div>${l.departamento_nome}</div>
+      <div style="margin-top:4px;font-size:10px;opacity:.7">${l.status}</div>
+    </div>
+  `).join('');
+  popularSelectLeitos();
+}
+function abrirBedStatus(id, num, status) {
+  if (status === 'ocupado') return; // só muda via internação
+  document.getElementById('bedStatusId').value = id;
+  document.getElementById('bedStatusTitle').textContent = `Leito ${num} — Alterar Status`;
+  document.getElementById('bedStatusVal').value = status;
+  abrirModal('modalBedStatus');
+}
+async function salvarStatusLeito() {
+  const id = document.getElementById('bedStatusId').value;
+  const status = document.getElementById('bedStatusVal').value;
+  await api(`/api/hospital/leitos/${id}/status/`, {method:'PUT', body:JSON.stringify({status})});
+  fecharModal('modalBedStatus');
+  carregarLeitos(); carregarKpis();
+}
+function abrirModalLeito() {
+  popularSelectDeps('lDep');
+  document.getElementById('lNum').value='';
+  document.getElementById('lTipo').value='';
+  abrirModal('modalLeito');
+}
+async function salvarLeito() {
+  const body = {numero:v('lNum'), tipo:v('lTipo'), departamento_id:parseInt(v('lDep'))};
+  if (!body.numero || !body.departamento_id) return alert('Número e departamento obrigatórios');
+  await api('/api/hospital/leitos/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalLeito');
+  carregarLeitos();
+}
+
+// ── Triagem ───────────────────────────────────────────────────
+async function carregarTriagens() {
+  const d = await api('/api/hospital/triagens/');
+  const tb = document.getElementById('tbodyTriagem');
+  const list = d.triagens || [];
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Sem triagens registradas</td></tr>'; return; }
+  tb.innerHTML = list.map(t => `<tr>
+    <td><span class="badge triage-${t.prioridade}">${triageLabel(t.prioridade)}</span></td>
+    <td><strong>${t.paciente_nome}</strong></td>
+    <td style="max-width:160px">${t.queixa_principal}</td>
+    <td>${t.pressao_arterial||'—'}</td>
+    <td>${t.temperatura||'—'}</td>
+    <td>${t.saturacao!=null?t.saturacao+'%':'—'}</td>
+    <td>${t.frequencia_cardiaca!=null?t.frequencia_cardiaca+' bpm':'—'}</td>
+    <td>${t.responsavel||'—'}</td>
+    <td>${fmtDt(t.triado_em)}</td>
+  </tr>`).join('');
+}
+function triageLabel(p) {
+  return {vermelho:'🔴 Emergência',laranja:'🟠 Muito Urgente',amarelo:'🟡 Urgente',verde:'🟢 Pouco Urgente',azul:'🔵 Não Urgente'}[p]||p;
+}
+function abrirModalTriagem() {
+  popularSelectPacientes('tPac');
+  ['tQueixa','tPa','tTemp','tSat','tFc','tResp'].forEach(id=>document.getElementById(id).value='');
+  abrirModal('modalTriagem');
+}
+async function salvarTriagem() {
+  const body = {
+    paciente_id:parseInt(v('tPac')), prioridade:v('tPrioridade'),
+    queixa_principal:v('tQueixa'), pressao_arterial:v('tPa'),
+    temperatura:v('tTemp')||null, saturacao:v('tSat')||null,
+    frequencia_cardiaca:v('tFc')||null, responsavel:v('tResp'),
+  };
+  if (!body.paciente_id||!body.queixa_principal) return alert('Paciente e queixa obrigatórios');
+  await api('/api/hospital/triagens/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalTriagem');
+  carregarTriagens(); carregarKpis();
+}
+
+// ── Internações ───────────────────────────────────────────────
+async function carregarInternacoes() {
+  const status = document.getElementById('filtroStatus')?.value || '';
+  const d = await api('/api/hospital/internacoes/' + (status?`?status=${status}`:''));
+  const tb = document.getElementById('tbodyInt');
+  const list = d.internacoes || [];
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma internação encontrada</td></tr>'; return; }
+  const statusMap = {ativa:'badge-warn',alta:'badge-ok',transferido:'badge-info',obito:'badge-danger'};
+  tb.innerHTML = list.map(i => `<tr>
+    <td><strong>${i.paciente_nome}</strong></td>
+    <td>${i.leito_numero||'—'}</td>
+    <td>${i.departamento_nome||'—'}</td>
+    <td style="max-width:160px">${i.diagnostico}</td>
+    <td>${i.medico_responsavel||'—'}</td>
+    <td><span class="badge ${statusMap[i.status]||'badge-info'}">${i.status}</span></td>
+    <td>${fmtDt(i.data_entrada)}</td>
+    <td>
+      <button class="btn btn-ghost btn-sm" onclick="abrirGerenciarInt(${i.id},'${i.paciente_nome}')">📋 Gerenciar</button>
+    </td>
+  </tr>`).join('');
+}
+function abrirModalInternacao() {
+  popularSelectPacientes('intPac');
+  popularSelectLeitos('intLeito', true);
+  document.getElementById('intDiag').value='';
+  document.getElementById('intMedico').value='';
+  abrirModal('modalInt');
+}
+async function salvarInternacao() {
+  const body = {
+    paciente_id:parseInt(v('intPac')), diagnostico:v('intDiag'),
+    medico_responsavel:v('intMedico'),
+    leito_id: v('intLeito')?parseInt(v('intLeito')):null,
+  };
+  if (!body.paciente_id||!body.diagnostico) return alert('Paciente e diagnóstico obrigatórios');
+  await api('/api/hospital/internacoes/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalInt');
+  carregarInternacoes(); carregarLeitos(); carregarKpis();
+}
+async function abrirGerenciarInt(id, nome) {
+  document.getElementById('altaId').value = id;
+  document.getElementById('altaTitle').textContent = `Internação — ${nome}`;
+  document.getElementById('evolDesc').value='';
+  document.getElementById('evolResp').value='';
+  const d = await api(`/api/hospital/internacoes/${id}/evolucoes/`);
+  const evs = d.evolucoes || [];
+  document.getElementById('evolucaoList').innerHTML = evs.length
+    ? evs.map(e=>`<div class="evolucao-item"><div>${e.descricao}</div><div class="evolucao-meta">${e.responsavel} — ${fmtDt(e.registrado_em)}</div></div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px">Nenhuma evolução registrada</div>';
+  abrirModal('modalAlta');
+}
+async function darAlta(status) {
+  const id = document.getElementById('altaId').value;
+  if (!confirm(`Confirmar status: ${status}?`)) return;
+  await api(`/api/hospital/internacoes/${id}/status/`, {method:'PUT', body:JSON.stringify({status})});
+  fecharModal('modalAlta');
+  carregarInternacoes(); carregarLeitos(); carregarKpis();
+}
+async function salvarEvolucao() {
+  const id = document.getElementById('altaId').value;
+  const body = {descricao:v('evolDesc'), responsavel:v('evolResp')};
+  if (!body.descricao) return alert('Descrição obrigatória');
+  await api(`/api/hospital/internacoes/${id}/evolucoes/`, {method:'POST', body:JSON.stringify(body)});
+  document.getElementById('evolDesc').value='';
+  abrirGerenciarInt(id, document.getElementById('altaTitle').textContent.replace('Internação — ',''));
+}
+
+// ── Pacientes ─────────────────────────────────────────────────
+async function carregarPacientes(q='') {
+  const d = await api('/api/hospital/pacientes/' + (q?`?q=${encodeURIComponent(q)}`:''));
+  _pacientes = d.pacientes || [];
+  const tb = document.getElementById('tbodyPac');
+  if (!_pacientes.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum paciente cadastrado</td></tr>'; return; }
+  tb.innerHTML = _pacientes.map(p=>`<tr>
+    <td><strong>${p.nome}</strong></td>
+    <td>${p.cpf||'—'}</td>
+    <td>${p.data_nascimento||'—'}</td>
+    <td>${{M:'Masculino',F:'Feminino',O:'Outro'}[p.sexo]||'—'}</td>
+    <td>${p.tipo_sanguineo||'—'}</td>
+    <td>${p.telefone||'—'}</td>
+    <td>${p.alergias||'—'}</td>
+  </tr>`).join('');
+  popularSelectPacientes();
+}
+function buscarPacientes() {
+  const q = document.getElementById('buscaPac').value;
+  clearTimeout(window._pacTimer);
+  window._pacTimer = setTimeout(()=>carregarPacientes(q), 400);
+}
+function abrirModalPaciente() {
+  ['pNome','pCpf','pNasc','pTel','pSang','pAleg','pEnd'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.value='';
+  });
+  document.getElementById('pSexo').value='';
+  abrirModal('modalPaciente');
+}
+async function salvarPaciente() {
+  const body = {
+    nome:v('pNome'), cpf:v('pCpf'), data_nascimento:v('pNasc')||null,
+    sexo:v('pSexo'), telefone:v('pTel'), tipo_sanguineo:v('pSang'),
+    alergias:v('pAleg'), endereco:v('pEnd'),
+  };
+  if (!body.nome) return alert('Nome obrigatório');
+  await api('/api/hospital/pacientes/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalPaciente');
+  carregarPacientes();
+}
+
+// ── Departamentos ─────────────────────────────────────────────
+async function carregarDepartamentos() {
+  const d = await api('/api/hospital/departamentos/');
+  _departamentos = d.departamentos || [];
+  const tb = document.getElementById('tbodyDep');
+  if (!_departamentos.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum departamento cadastrado</td></tr>'; return; }
+  tb.innerHTML = _departamentos.map(d=>`<tr>
+    <td><strong>${d.nome}</strong></td>
+    <td>${d.tipo||'—'}</td>
+    <td>${d.capacidade_leitos} leitos</td>
+    <td>${d.responsavel||'—'}</td>
+    <td>${d.ativo?'<span class="badge badge-ok">Ativo</span>':'<span class="badge badge-danger">Inativo</span>'}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deletarDep(${d.id})">🗑</button></td>
+  </tr>`).join('');
+  popularSelectDeps();
+}
+async function deletarDep(id) {
+  if (!confirm('Excluir departamento?')) return;
+  await api(`/api/hospital/departamentos/${id}/`, {method:'DELETE'});
+  carregarDepartamentos();
+}
+function abrirModalDep() {
+  ['depNome','depTipo','depResp'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('depCap').value='0';
+  abrirModal('modalDep');
+}
+async function salvarDep() {
+  const body = {nome:v('depNome'),tipo:v('depTipo'),capacidade_leitos:parseInt(v('depCap')||0),responsavel:v('depResp')};
+  if (!body.nome) return alert('Nome obrigatório');
+  await api('/api/hospital/departamentos/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalDep');
+  carregarDepartamentos();
+}
+
+// ── Helpers selects ───────────────────────────────────────────
+function popularSelectPacientes(sid) {
+  const ids = sid ? [sid] : ['tPac','intPac'];
+  ids.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— selecione —</option>' + _pacientes.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+    if (prev) sel.value = prev;
+  });
+}
+function popularSelectLeitos(sid, soDisp=false) {
+  const sel = document.getElementById(sid||'intLeito');
+  if (!sel) return;
+  const lista = soDisp ? _leitos.filter(l=>l.status==='disponivel') : _leitos;
+  sel.innerHTML = '<option value="">— sem leito —</option>' + lista.map(l=>`<option value="${l.id}">Leito ${l.numero} (${l.departamento_nome})</option>`).join('');
+}
+function popularSelectDeps(sid) {
+  const ids = sid ? [sid] : ['lDep'];
+  ids.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— selecione —</option>' + _departamentos.map(d=>`<option value="${d.id}">${d.nome}</option>`).join('');
+  });
+}
+
+// ── Utils ─────────────────────────────────────────────────────
+function v(id) { return document.getElementById(id)?.value?.trim()||''; }
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+function fmtDt(s) {
+  if (!s) return '—';
+  const d = new Date(s);
+  return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+let _currentTab = 'leitos';
+function setTab(tab) {
+  _currentTab = tab;
+  const tabs = ['leitos','triagem','internacoes','pacientes','departamentos'];
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===tab));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if (tab==='leitos') carregarLeitos();
+  else if (tab==='triagem') { carregarPacientes(); carregarTriagens(); }
+  else if (tab==='internacoes') { carregarPacientes(); carregarLeitos(); carregarInternacoes(); }
+  else if (tab==='pacientes') carregarPacientes();
+  else if (tab==='departamentos') carregarDepartamentos();
+}
+
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
+
+// Init
+carregarKpis();
+carregarDepartamentos();
+carregarPacientes();
+carregarLeitos();
+</script>
+</body>
+</html>

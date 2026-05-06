@@ -235,6 +235,18 @@ def dashboard_governo(request):
     return _render_dashboard(request, "governo")
 
 
+def farmacia_gestao_page(request):
+    return render(request, "farmacia_gestao.html")
+
+
+def hospital_gestao_page(request):
+    return render(request, "hospital_gestao.html")
+
+
+def governo_gestao_page(request):
+    return render(request, "governo_gestao.html")
+
+
 def _dashboard_return_url(empresa):
     return _dashboard_url_por_setor(_setor_conta(empresa))
 
