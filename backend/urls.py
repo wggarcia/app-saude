@@ -67,6 +67,18 @@ from api.views_sst import (
     sst_prontuario_page,
     sst_treinamentos_page,
     sst_normas_page,
+    # new
+    sst_configuracoes_page,
+    api_sst_configuracoes,
+    sst_epis_page,
+    api_epis_catalogo,
+    api_epis_entregas,
+    api_epis_devolver,
+    api_epis_pdf_ficha,
+    api_epis_sem_epi,
+    api_aso_pdf,
+    api_cat_pdf,
+    api_prontuario_pdf,
 )
 from api.views_gestao import (
     gestao_corporativa,
@@ -106,6 +118,7 @@ from api.views_comunicacao import (
     api_criar_video, api_encerrar_video,
     colaborador_chat, colaborador_video,
     api_colab_mensagens, api_colab_enviar, api_colab_video_ativa,
+    painel_grupos, api_criar_grupo, api_listar_salas_por_tipo, api_membros_grupo,
 )
 from api.views_farmacia import api_farmacia_painel
 from api.views_hospital import api_hospital_painel
@@ -216,7 +229,9 @@ urlpatterns = [
     path('sst/treinamentos/', sst_treinamentos_page),
     path('sst/normas/', sst_normas_page),
     path('sst/funcionarios/<int:funcionario_id>/', sst_prontuario_page),
-    path('sst/configuracoes/', sst_configuracoes_redirect),
+    path('sst/configuracoes/', sst_configuracoes_page),
+    path('sst/epis/', sst_epis_page),
+    path('sst/comunicacao/grupos/', painel_grupos),
     # 🏥 SST / Saúde Ocupacional — API
     path('api/sst/dashboard', api_sst_dashboard),
     path('api/sst/funcionarios', api_funcionarios),
@@ -230,6 +245,24 @@ urlpatterns = [
     path('api/sst/funcionarios/<int:funcionario_id>/prontuario', api_prontuario_funcionario),
     path('api/sst/treinamentos', api_treinamentos),
     path('api/sst/treinamentos/resumo', api_treinamentos_resumo),
+    path('api/sst/configuracoes', api_sst_configuracoes),
+    path('api/sst/configuracoes/', api_sst_configuracoes),
+    path('api/sst/epis/catalogo', api_epis_catalogo),
+    path('api/sst/epis/catalogo/', api_epis_catalogo),
+    path('api/sst/epis/entregas', api_epis_entregas),
+    path('api/sst/epis/entregas/', api_epis_entregas),
+    path('api/sst/epis/entregas/<int:entrega_id>/devolver', api_epis_devolver),
+    path('api/sst/epis/entregas/<int:entrega_id>/devolver/', api_epis_devolver),
+    path('api/sst/epis/ficha/<int:funcionario_id>/pdf', api_epis_pdf_ficha),
+    path('api/sst/epis/sem-epi/', api_epis_sem_epi),
+    path('api/sst/epis/sem-epi', api_epis_sem_epi),
+    path('api/sst/asos/<int:aso_id>/pdf', api_aso_pdf),
+    path('api/sst/cats/<int:cat_id>/pdf', api_cat_pdf),
+    path('api/sst/funcionarios/<int:funcionario_id>/prontuario/pdf', api_prontuario_pdf),
+    # grupos de chat
+    path('api/comunicacao/grupos/criar/', api_criar_grupo),
+    path('api/comunicacao/salas/filtro/', api_listar_salas_por_tipo),
+    path('api/comunicacao/grupos/<int:sala_id>/membros/', api_membros_grupo),
 
     # 📊 API PRINCIPAL
     path('api/registrar', registrar_sintoma),

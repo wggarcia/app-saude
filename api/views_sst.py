@@ -1041,3 +1041,306 @@ def sst_normas_page(request):
     return render(request, "sst_normas.html", {
         "empresa_nome": empresa.nome,
     })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SST — Configurações
+# ─────────────────────────────────────────────────────────────────────────────
+from .models import ConfiguracaoSST, EPIItem, EntregaEPI
+
+def sst_configuracoes_page(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    config = ConfiguracaoSST.objects.filter(empresa=empresa).first()
+    import json as _json
+    config_json = "null"
+    if config:
+        config_json = _json.dumps({
+            "nome_medico_coordenador": config.nome_medico_coordenador,
+            "crm_medico": config.crm_medico,
+            "especialidade_medico": config.especialidade_medico,
+            "nome_engenheiro": config.nome_engenheiro,
+            "crea_engenheiro": config.crea_engenheiro,
+            "nome_tecnico": config.nome_tecnico,
+            "registro_tecnico": config.registro_tecnico,
+            "nome_enfermeiro": config.nome_enfermeiro,
+            "coren_enfermeiro": config.coren_enfermeiro,
+            "alerta_aso_dias": config.alerta_aso_dias,
+            "alerta_exame_dias": config.alerta_exame_dias,
+            "alerta_treinamento_dias": config.alerta_treinamento_dias,
+            "email_alertas": config.email_alertas,
+            "alertas_ativos": config.alertas_ativos,
+            "cnpj": config.cnpj,
+            "cnae_principal": config.cnae_principal,
+            "grau_risco": config.grau_risco,
+            "numero_funcionarios": config.numero_funcionarios,
+            "endereco_completo": config.endereco_completo,
+        })
+    return render(request, "sst_configuracoes.html", {
+        "empresa_nome": empresa.nome,
+        "config_json": config_json,
+    })
+
+
+def api_sst_configuracoes(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method == "GET":
+        config = ConfiguracaoSST.objects.filter(empresa=empresa).first()
+        if not config:
+            return JsonResponse({"config": None})
+        return JsonResponse({"config": {
+            "nome_medico_coordenador": config.nome_medico_coordenador,
+            "crm_medico": config.crm_medico,
+            "especialidade_medico": config.especialidade_medico,
+            "nome_engenheiro": config.nome_engenheiro,
+            "crea_engenheiro": config.crea_engenheiro,
+            "nome_tecnico": config.nome_tecnico,
+            "registro_tecnico": config.registro_tecnico,
+            "nome_enfermeiro": config.nome_enfermeiro,
+            "coren_enfermeiro": config.coren_enfermeiro,
+            "alerta_aso_dias": config.alerta_aso_dias,
+            "alerta_exame_dias": config.alerta_exame_dias,
+            "alerta_treinamento_dias": config.alerta_treinamento_dias,
+            "email_alertas": config.email_alertas,
+            "alertas_ativos": config.alertas_ativos,
+            "cnpj": config.cnpj,
+            "cnae_principal": config.cnae_principal,
+            "grau_risco": config.grau_risco,
+            "numero_funcionarios": config.numero_funcionarios,
+            "endereco_completo": config.endereco_completo,
+        }})
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        config, _ = ConfiguracaoSST.objects.get_or_create(empresa=empresa)
+        fields = [
+            "nome_medico_coordenador","crm_medico","especialidade_medico",
+            "nome_engenheiro","crea_engenheiro","nome_tecnico","registro_tecnico",
+            "nome_enfermeiro","coren_enfermeiro","email_alertas",
+            "cnpj","cnae_principal","grau_risco","endereco_completo",
+        ]
+        for f in fields:
+            if f in data:
+                setattr(config, f, data[f])
+        int_fields = ["alerta_aso_dias","alerta_exame_dias","alerta_treinamento_dias","numero_funcionarios"]
+        for f in int_fields:
+            if f in data:
+                try:
+                    setattr(config, f, int(data[f]))
+                except (ValueError, TypeError):
+                    pass
+        if "alertas_ativos" in data:
+            config.alertas_ativos = bool(data["alertas_ativos"])
+        config.save()
+        return JsonResponse({"ok": True})
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SST — EPI / EPC
+# ─────────────────────────────────────────────────────────────────────────────
+
+def sst_epis_page(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_epis.html", {"empresa_nome": empresa.nome})
+
+
+def api_epis_catalogo(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method == "GET":
+        epis = EPIItem.objects.filter(empresa=empresa, ativo=True)
+        hoje = date.today()
+        return JsonResponse({"epis": [{
+            "id": e.id,
+            "nome": e.nome,
+            "tipo": e.tipo,
+            "tipo_label": e.get_tipo_display(),
+            "ca_numero": e.ca_numero,
+            "validade_ca": e.validade_ca.isoformat() if e.validade_ca else None,
+            "dias_validade_ca": (e.validade_ca - hoje).days if e.validade_ca else None,
+            "fornecedor": e.fornecedor,
+            "descricao": e.descricao,
+        } for e in epis]})
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        nome = data.get("nome","").strip()
+        if not nome:
+            return JsonResponse({"erro": "nome obrigatório"}, status=400)
+        epi = EPIItem.objects.create(
+            empresa=empresa,
+            nome=nome,
+            tipo=data.get("tipo","outro"),
+            ca_numero=data.get("ca_numero",""),
+            validade_ca=data.get("validade_ca") or None,
+            fornecedor=data.get("fornecedor",""),
+            descricao=data.get("descricao",""),
+        )
+        return JsonResponse({"id": epi.id, "nome": epi.nome}, status=201)
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+def api_epis_entregas(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method == "GET":
+        func_id = request.GET.get("funcionario_id")
+        qs = EntregaEPI.objects.filter(empresa=empresa).select_related("funcionario","epi")
+        if func_id:
+            qs = qs.filter(funcionario_id=func_id)
+        return JsonResponse({"entregas": [{
+            "id": e.id,
+            "funcionario_id": e.funcionario_id,
+            "funcionario_nome": e.funcionario.nome,
+            "epi_id": e.epi_id,
+            "epi_nome": e.epi.nome,
+            "epi_tipo": e.epi.get_tipo_display(),
+            "ca_numero": e.epi.ca_numero,
+            "data_entrega": e.data_entrega.isoformat(),
+            "quantidade": e.quantidade,
+            "data_devolucao": e.data_devolucao.isoformat() if e.data_devolucao else None,
+            "observacoes": e.observacoes,
+            "ativo": e.data_devolucao is None,
+        } for e in qs]})
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        from .models import FuncionarioSST
+        func = FuncionarioSST.objects.filter(id=data.get("funcionario_id"), empresa=empresa).first()
+        epi  = EPIItem.objects.filter(id=data.get("epi_id"), empresa=empresa).first()
+        if not func or not epi:
+            return JsonResponse({"erro": "funcionário ou EPI não encontrado"}, status=404)
+        entrega = EntregaEPI.objects.create(
+            empresa=empresa,
+            funcionario=func,
+            epi=epi,
+            data_entrega=data.get("data_entrega") or date.today().isoformat(),
+            quantidade=int(data.get("quantidade", 1)),
+            observacoes=data.get("observacoes",""),
+        )
+        return JsonResponse({"id": entrega.id}, status=201)
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+def api_epis_devolver(request, entrega_id):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "método não permitido"}, status=405)
+    entrega = EntregaEPI.objects.filter(id=entrega_id, empresa=empresa).first()
+    if not entrega:
+        return JsonResponse({"erro": "não encontrado"}, status=404)
+    entrega.data_devolucao = date.today()
+    entrega.save(update_fields=["data_devolucao"])
+    return JsonResponse({"ok": True})
+
+
+def api_epis_pdf_ficha(request, funcionario_id):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    from .models import FuncionarioSST
+    from .pdf_sst import gerar_pdf_ficha_epi
+    from django.http import HttpResponse
+    func = FuncionarioSST.objects.filter(id=funcionario_id, empresa=empresa).first()
+    if not func:
+        return JsonResponse({"erro": "não encontrado"}, status=404)
+    entregas = EntregaEPI.objects.filter(empresa=empresa, funcionario=func).select_related("epi")
+    pdf_bytes = gerar_pdf_ficha_epi(func, entregas, empresa.nome)
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    resp["Content-Disposition"] = f'inline; filename="ficha_epi_{func.matricula or func.id}.pdf"'
+    return resp
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SST — PDFs de ASO / CAT / Prontuário
+# ─────────────────────────────────────────────────────────────────────────────
+
+def api_aso_pdf(request, aso_id):
+    from django.http import HttpResponse
+    from .pdf_sst import gerar_pdf_aso
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    from .models import ASOOcupacional, FuncionarioSST
+    aso = ASOOcupacional.objects.filter(id=aso_id, funcionario__empresa=empresa).select_related("funcionario").first()
+    if not aso:
+        return JsonResponse({"erro": "não encontrado"}, status=404)
+    config = ConfiguracaoSST.objects.filter(empresa=empresa).first()
+    pdf_bytes = gerar_pdf_aso(aso, aso.funcionario, empresa.nome, config)
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    resp["Content-Disposition"] = f'inline; filename="aso_{aso.id}.pdf"'
+    return resp
+
+
+def api_cat_pdf(request, cat_id):
+    from django.http import HttpResponse
+    from .pdf_sst import gerar_pdf_cat
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    from .models import CATOcupacional
+    cat = CATOcupacional.objects.filter(id=cat_id, funcionario__empresa=empresa).select_related("funcionario").first()
+    if not cat:
+        return JsonResponse({"erro": "não encontrado"}, status=404)
+    config = ConfiguracaoSST.objects.filter(empresa=empresa).first()
+    pdf_bytes = gerar_pdf_cat(cat, cat.funcionario, empresa.nome, config)
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    resp["Content-Disposition"] = f'inline; filename="cat_{cat.id}.pdf"'
+    return resp
+
+
+def api_prontuario_pdf(request, funcionario_id):
+    from django.http import HttpResponse
+    from .pdf_sst import gerar_pdf_prontuario
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    from .models import FuncionarioSST, ASOOcupacional, ExameOcupacional, CATOcupacional, AfastamentoSST
+    func = FuncionarioSST.objects.filter(id=funcionario_id, empresa=empresa).first()
+    if not func:
+        return JsonResponse({"erro": "não encontrado"}, status=404)
+    asos        = ASOOcupacional.objects.filter(funcionario=func).order_by("-data_emissao")
+    exames      = ExameOcupacional.objects.filter(funcionario=func).order_by("-data_realizacao")
+    cats        = CATOcupacional.objects.filter(funcionario=func).order_by("-data_acidente")
+    afastamentos = AfastamentoSST.objects.filter(funcionario=func).order_by("-data_inicio")
+    pdf_bytes = gerar_pdf_prontuario(func, list(asos), list(exames), list(cats), list(afastamentos), empresa.nome)
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    resp["Content-Disposition"] = f'inline; filename="prontuario_{func.matricula or func.id}.pdf"'
+    return resp
+
+
+def api_epis_sem_epi(request):
+    """GET → funcionários sem nenhuma entrega de EPI ativa"""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    from .models import FuncionarioSST, EntregaEPI
+    ativos = FuncionarioSST.objects.filter(empresa=empresa, ativo=True)
+    # IDs que já têm pelo menos uma entrega sem devolução
+    com_epi_ids = EntregaEPI.objects.filter(
+        empresa=empresa, data_devolucao__isnull=True
+    ).values_list("funcionario_id", flat=True)
+    sem_epi = ativos.exclude(id__in=com_epi_ids)
+    return JsonResponse({
+        "funcionarios": [
+            {"id": f.id, "nome": f.nome, "cargo": f.cargo or "—"}
+            for f in sem_epi
+        ],
+        "total": sem_epi.count(),
+    })

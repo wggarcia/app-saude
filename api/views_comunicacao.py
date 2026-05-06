@@ -301,3 +301,74 @@ def api_colab_video_ativa(request, codigo):
             "link": f"/colaborador/c/{codigo}/video/{sessao.sala_jitsi}/",
         }
     })
+
+
+# ─── Grupos de chat ───────────────────────────────────────────────────────────
+from .models import MembroGrupoChat
+
+
+def painel_grupos(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_comunicacao_grupos.html", {"empresa_nome": empresa.nome})
+
+
+def api_criar_grupo(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "método não permitido"}, status=405)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+    nome = data.get("nome", "").strip()
+    if not nome:
+        return JsonResponse({"erro": "nome obrigatório"}, status=400)
+    membros_codigos = data.get("membros", [])
+
+    sala = SalaChat.objects.create(
+        empresa=empresa, tipo=SalaChat.TIPO_GRUPO, nome=nome
+    )
+    adicionados = 0
+    for codigo in membros_codigos:
+        alias = ColaboradorAliasCorporativo.objects.filter(
+            empresa=empresa, alias_publico=codigo
+        ).first()
+        if alias:
+            MembroGrupoChat.objects.get_or_create(sala=sala, alias=alias)
+            adicionados += 1
+
+    return JsonResponse({"sala": _sala_json(sala), "membros_adicionados": adicionados}, status=201)
+
+
+def api_listar_salas_por_tipo(request):
+    """GET /api/comunicacao/salas/?tipo=grupo|direto — filtra por tipo"""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    tipo = request.GET.get("tipo")
+    qs = SalaChat.objects.filter(empresa=empresa, ativo=True)
+    if tipo:
+        qs = qs.filter(tipo=tipo)
+    # Enrich with member count for groups
+    salas = []
+    for s in qs:
+        d = _sala_json(s)
+        if s.tipo == SalaChat.TIPO_GRUPO:
+            d["membros_count"] = MembroGrupoChat.objects.filter(sala=s).count()
+        salas.append(d)
+    return JsonResponse({"salas": salas})
+
+
+def api_membros_grupo(request, sala_id):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    sala = get_object_or_404(SalaChat, id=sala_id, empresa=empresa, tipo=SalaChat.TIPO_GRUPO)
+    membros = MembroGrupoChat.objects.filter(sala=sala).select_related("alias")
+    return JsonResponse({
+        "membros": [{"codigo": m.alias.alias_publico} for m in membros]
+    })
