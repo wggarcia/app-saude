@@ -165,7 +165,8 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
       <button class="ch-tab active" id="tab-diretas" onclick="setTab('diretas')">Diretas</button>
       <button class="ch-tab" id="tab-grupos" onclick="setTab('grupos')">Grupos</button>
     </div>
-    <button class="ch-nova" onclick="abrirModalNova()">+ Nova Conversa</button>
+    <button class="ch-nova" id="btn-nova-tab" onclick="abrirModalNova()">+ Nova Conversa</button>
+    <a class="ch-nova" id="btn-grupo-tab" href="/sst/comunicacao/grupos/" style="display:none;text-decoration:none;text-align:center">👥 Gerenciar Grupos</a>
     <div class="ch-list" id="ch-list">
       <div style="padding:14px">
         <div class="skel" style="height:52px;margin-bottom:8px"></div>
@@ -261,13 +262,15 @@ function setTab(tab){
   _tabAtiva=tab;
   document.getElementById('tab-diretas').classList.toggle('active',tab==='diretas');
   document.getElementById('tab-grupos').classList.toggle('active',tab==='grupos');
+  document.getElementById('btn-nova-tab').style.display=tab==='diretas'?'':'none';
+  document.getElementById('btn-grupo-tab').style.display=tab==='grupos'?'':'none';
   renderSalas();
 }
 
 function renderSalas(){
   const q=(document.getElementById('ch-search').value||'').toLowerCase();
   const lista=_salas.filter(s=>{
-    if(_tabAtiva==='diretas'&&s.tipo!=='direta')return false;
+    if(_tabAtiva==='diretas'&&s.tipo!=='direto')return false;
     if(_tabAtiva==='grupos'&&s.tipo!=='grupo')return false;
     if(q&&!s.nome.toLowerCase().includes(q))return false;
     return true;

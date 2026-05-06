@@ -301,7 +301,7 @@ async function carregarGrupos() {
   try {
     const r = await fetch('/api/comunicacao/salas/?tipo=grupo');
     const data = await r.json();
-    grupos = Array.isArray(data) ? data : (data.results || []);
+    grupos = data.salas || data.results || (Array.isArray(data) ? data : []);
     renderGrupos();
   } catch(e) {
     document.getElementById('grupos-list').innerHTML = `<div style="padding:16px;color:var(--muted);font-size:.78rem">Erro ao carregar grupos</div>`;
