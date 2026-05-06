@@ -136,7 +136,7 @@ function addMensagens(novas) {
     }
 
     const isEmpresa = msg.origem === "empresa";
-    const isSystem = msg.texto.startsWith("📹") || msg.texto.includes("/video/");
+    const isSystem = msg.texto.startsWith("📹");
 
     const row = document.createElement("div");
     row.className = `msg-row ${isEmpresa ? "empresa" : "colaborador"}`;

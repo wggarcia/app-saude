@@ -370,8 +370,7 @@ function setFiltroTipo(tipo, el) {
 async function carregarCatalogo() {
   try {
     const r = await fetch('/api/sst/epis/catalogo');
-    const data = await r.json();
-    catalogo = data.epis || data.results || [];
+    catalogo = await r.json();
     atualizarKPIs();
     renderCatalogo();
     renderVencimentos();
@@ -384,8 +383,7 @@ async function carregarCatalogo() {
 async function carregarEntregas() {
   try {
     const r = await fetch('/api/sst/epis/entregas');
-    const data = await r.json();
-    entregas = data.entregas || data.results || [];
+    entregas = await r.json();
     atualizarKPIs();
     renderEntregas();
   } catch(e) {
@@ -395,11 +393,11 @@ async function carregarEntregas() {
 
 async function carregarFuncionarios() {
   try {
-    const r = await fetch('/api/sst/funcionarios');
+    const r = await fetch('/api/sst/funcionarios/');
     const data = await r.json();
     const sel = document.getElementById('ent-funcionario');
     sel.innerHTML = '<option value="">Selecione o funcionário...</option>';
-    const lista = data.funcionarios || data.results || [];
+    const lista = data.funcionarios || data.results || (Array.isArray(data) ? data : []);
     lista.forEach(f => {
       const op = document.createElement('option');
       op.value = f.id || f.alias_codigo;
@@ -420,8 +418,8 @@ function atualizarKPIs() {
   });
   document.getElementById('k-ca').textContent = caVenc.length;
   // sem-epi via API separada
-  fetch('/api/sst/epis/sem-epi').then(r => r.json()).then(d => {
-    document.getElementById('k-sem-epi').textContent = d.count ?? d.length ?? '—';
+  fetch('/api/sst/epis/sem-epi/').then(r => r.json()).then(d => {
+    document.getElementById('k-sem-epi').textContent = d.total ?? '—';
   }).catch(() => { document.getElementById('k-sem-epi').textContent = '—'; });
 }
 
@@ -570,7 +568,7 @@ async function criarEPI() {
   };
   if (!body.nome) { showToast('Informe o nome do EPI', true); return; }
   try {
-    const r = await fetch('/api/sst/epis/catalogo', {
+    const r = await fetch('/api/sst/epis/catalogo/', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
       body: JSON.stringify(body)
@@ -586,15 +584,15 @@ async function criarEPI() {
 
 async function criarEntrega() {
   const body = {
-    funcionario_id: document.getElementById('ent-funcionario').value,
-    epi_id: document.getElementById('ent-epi').value,
+    funcionario: document.getElementById('ent-funcionario').value,
+    epi: document.getElementById('ent-epi').value,
     data_entrega: document.getElementById('ent-data').value,
     quantidade: parseInt(document.getElementById('ent-qtd').value) || 1,
     observacoes: document.getElementById('ent-obs').value.trim()
   };
-  if (!body.funcionario_id || !body.epi_id) { showToast('Selecione funcionário e EPI', true); return; }
+  if (!body.funcionario || !body.epi) { showToast('Selecione funcionário e EPI', true); return; }
   try {
-    const r = await fetch('/api/sst/epis/entregas', {
+    const r = await fetch('/api/sst/epis/entregas/', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
       body: JSON.stringify(body)
@@ -615,7 +613,7 @@ async function confirmarDevolucao() {
     observacoes: document.getElementById('dev-obs').value.trim()
   };
   try {
-    const r = await fetch(`/api/sst/epis/entregas/${id}/devolver`, {
+    const r = await fetch(`/api/sst/epis/entregas/${id}/devolver/`, {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
       body: JSON.stringify(body)

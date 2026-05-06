@@ -97,11 +97,11 @@ def gerar_pdf_aso(aso, funcionario, empresa_nome, config=None):
     story = []
 
     tipo_labels = {
-        "admissional":    "Admissional",
-        "periodico":      "Periódico",
-        "retorno_trabalho": "Retorno ao Trabalho",
-        "mudanca_risco":    "Mudança de Risco",
-        "demissional":    "Demissional",
+        "admissional":     "Admissional",
+        "periodico":       "Periódico",
+        "retorno_trabalho":"Retorno ao Trabalho",
+        "mudanca_risco":   "Mudança de Risco",
+        "demissional":     "Demissional",
     }
     resultado_labels = {
         "apto":            "APTO",
@@ -227,7 +227,7 @@ def gerar_pdf_cat(cat, funcionario, empresa_nome, config=None):
     styles = _styles()
     story = []
 
-    tipo_labels     = {"tipico":"Típico","trajeto":"Trajeto","doenca":"Doença Ocupacional"}
+    tipo_labels     = {"tipico":"Típico","trajeto":"De Trajeto","doenca":"Doença Ocupacional"}
     grav_labels     = {"leve":"Leve","moderado":"Moderado","grave":"Grave","fatal":"Fatal"}
 
     _header_empresa(
@@ -278,11 +278,6 @@ def gerar_pdf_cat(cat, funcionario, empresa_nome, config=None):
     story.append(Paragraph("3. DESCRIÇÃO DO ACIDENTE", styles["h2"]))
     story.append(Paragraph(cat.descricao or "—", styles["value"]))
     story.append(Spacer(1, 8))
-
-    if cat.parte_corpo:
-        story.append(Paragraph("4. PARTE DO CORPO ATINGIDA", styles["h2"]))
-        story.append(Paragraph(cat.parte_corpo, styles["value"]))
-        story.append(Spacer(1, 8))
 
     story.append(HRFlowable(width="100%", thickness=0.5, color=LGREY, spaceBefore=20))
     sig_data = [[
@@ -387,7 +382,7 @@ def gerar_pdf_prontuario(funcionario, asos, exames, cats, afastamentos, empresa_
         [4*cm, 3*cm, 3*cm, 3*cm, 4*cm],
     )
 
-    tipo_cat = {"tipico":"Típico","trajeto":"Trajeto","doenca":"Doença Ocup."}
+    tipo_cat = {"tipico":"Típico","trajeto":"De Trajeto","doenca":"Doença Ocup."}
     simple_table(
         f"CATs ({len(cats)})",
         ["Tipo", "Data Acidente", "CID", "Gravidade", "Nº CAT"],
@@ -397,15 +392,15 @@ def gerar_pdf_prontuario(funcionario, asos, exames, cats, afastamentos, empresa_
         [3*cm, 3*cm, 2.5*cm, 3*cm, 3*cm],
     )
 
-    motivo_af = {"acidente_trabalho":"Acidente","doenca_ocupacional":"D. Ocup.","doenca_comum":"D. Comum","maternidade":"Maternidade","outros":"Outros"}
+    motivo_af = {"acidente_trabalho":"Acidente","doenca_ocupacional":"D. Ocup.","doenca_comum":"D. Comum","licenca_maternidade":"Maternidade","licenca_paternidade":"Paternidade","outro":"Outro"}
     simple_table(
         f"Afastamentos ({len(afastamentos)})",
-        ["Motivo", "Início", "Retorno", "Dias", "CID"],
+        ["Motivo", "Início", "Retorno Previsto", "CID"],
         [[motivo_af.get(af.motivo, af.motivo or "—"),
           af.data_inicio.strftime("%d/%m/%Y") if af.data_inicio else "—",
           af.data_prevista_retorno.strftime("%d/%m/%Y") if af.data_prevista_retorno else "Em curso",
-          str((af.data_prevista_retorno - af.data_inicio).days if af.data_prevista_retorno else "—"), af.cid or "—"] for af in afastamentos],
-        [3.5*cm, 3*cm, 3*cm, 2*cm, 3*cm],
+          af.cid or "—"] for af in afastamentos],
+        [4.5*cm, 3*cm, 4*cm, 2.5*cm],
     )
 
     story.append(_footer_text(styles))

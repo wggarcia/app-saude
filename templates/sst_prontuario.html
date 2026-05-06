@@ -187,6 +187,9 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
     <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">&#128279;</span><span>eSocial</span></a>
     <div class="sb-label">Gestão</div>
     <a class="sb-link active" href="/sst/funcionarios/"><span class="sb-icon">&#128101;</span><span>Funcionários</span></a>
+    <a class="sb-link" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação</span></a>
+    <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI / EPC</span></a>
+    <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
     <a class="sb-link" href="/logout/" style="color:#ff7a91"><span class="sb-icon">&#8617;</span><span>Sair</span></a>
   </aside>
 
@@ -226,6 +229,8 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
           <a id="btn-emitir-aso" href="#" class="btn-action primary">+ Emitir ASO</a>
           <a href="/sst/exames/agendar/" class="btn-action">Agendar Exame</a>
           <a href="/sst/cats/" class="btn-action">Registrar CAT</a>
+          <a id="btn-pdf-prontuario" href="/api/sst/funcionarios/{{ funcionario_id }}/prontuario/pdf" target="_blank" class="btn-action">📄 Baixar Prontuário PDF</a>
+          <a id="btn-pdf-epi" href="/api/sst/epis/ficha/{{ funcionario_id }}/pdf" target="_blank" class="btn-action">🦺 Ficha EPI PDF</a>
         </div>
       </div>
     </div>

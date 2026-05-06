@@ -122,6 +122,8 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <a class="sb-link" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
     <a class="sb-link" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
     <a class="sb-link" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação</span></a>
+    <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI / EPC</span></a>
+    <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
     <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
   </aside>
   <main class="main">
@@ -224,6 +226,7 @@ function renderTabela(){
       <td><span class="badge ${esocialCls[c.status_esocial]||'b-cinza'}">${esocialLabel[c.status_esocial]||c.status_esocial}</span></td>
       <td><div class="row-actions">
         ${c.status_esocial==="nao_enviado"?`<button class="btn-row" onclick="irEsocial()">Transmitir eSocial</button>`:''}
+        <a class="btn-row" href="/api/sst/cats/${c.id}/pdf" target="_blank" title="Baixar CAT PDF">📄 PDF</a>
       </div></td>
     </tr>`).join("");
 }

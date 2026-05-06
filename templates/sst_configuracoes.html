@@ -378,7 +378,7 @@ async function salvarConfiguracoes() {
   btn.textContent = 'Salvando...';
   btn.disabled = true;
   try {
-    const r = await fetch('/api/sst/configuracoes', {
+    const r = await fetch('/api/sst/configuracoes/', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken': getCookie('csrftoken')},
       body: JSON.stringify(coletarDados())

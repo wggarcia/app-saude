@@ -1,14 +1,11 @@
 import json
-from datetime import datetime
-
-from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_http_methods
 
 from .models import (
     ColaboradorAliasCorporativo,
-    MembroGrupoChat,
     MensagemChat,
     SalaChat,
     SessaoVideo,
@@ -16,106 +13,42 @@ from .models import (
 from .views_dashboard import _empresa_autenticada
 
 
-def _alias_queryset(empresa):
-    return (
-        ColaboradorAliasCorporativo.objects.filter(empresa=empresa, ativo=True)
-        .select_related("unidade", "setor", "turno", "cargo")
-        .order_by("-atualizado_em")
-    )
-
-
-def _alias_label(alias):
-    partes = []
-    if alias.cargo:
-        partes.append(alias.cargo.nome)
-    if alias.setor:
-        partes.append(alias.setor.nome)
-    if alias.unidade:
-        partes.append(alias.unidade.nome)
-    return " · ".join(partes) or f"Colaborador {alias.alias_publico[:8]}"
-
-
-def _alias_json(alias):
-    return {
-        "id": alias.alias_publico,
-        "codigo": alias.alias_publico,
-        "alias_codigo": alias.alias_publico,
-        "nome": _alias_label(alias),
-        "cargo": alias.cargo.nome if alias.cargo else "",
-        "setor": alias.setor.nome if alias.setor else "",
-        "unidade": alias.unidade.nome if alias.unidade else "",
-        "turno": alias.turno.nome if alias.turno else "",
-        "permite_contato": alias.permite_contato,
-    }
-
+# ─── helpers ──────────────────────────────────────────────────────────────────
 
 def _get_or_create_sala_direta(empresa, alias):
-    sala, created = SalaChat.objects.get_or_create(
+    sala, _ = SalaChat.objects.get_or_create(
         empresa=empresa,
         alias=alias,
-        defaults={"tipo": SalaChat.TIPO_DIRETO, "nome": _alias_label(alias)},
+        defaults={"tipo": SalaChat.TIPO_DIRETO, "nome": alias.alias_publico},
     )
-    if not created and (sala.tipo != SalaChat.TIPO_DIRETO or not sala.nome):
-        sala.tipo = SalaChat.TIPO_DIRETO
-        sala.nome = sala.nome or _alias_label(alias)
-        sala.save(update_fields=["tipo", "nome"])
     return sala
 
 
 def _sala_json(sala):
-    ultima = sala.mensagens.order_by("-criado_em").first()
+    ultima = sala.mensagens.last()
     nao_lidas = sala.mensagens.filter(origem=MensagemChat.ORIGEM_COLABORADOR, lida=False).count()
-    membros_count = sala.membros.count() if sala.tipo == SalaChat.TIPO_GRUPO else 0
-    nome = sala.nome
-    if sala.tipo == SalaChat.TIPO_DIRETO and sala.alias:
-        nome = sala.nome or _alias_label(sala.alias)
     return {
         "id": sala.id,
         "tipo": sala.tipo,
-        "nome": nome or "Grupo",
+        "nome": sala.nome or (sala.alias.alias_publico if sala.alias else "Grupo"),
         "alias_codigo": sala.alias.alias_publico if sala.alias else None,
         "ultima_mensagem": ultima.texto[:80] if ultima else None,
         "ultima_mensagem_em": ultima.criado_em.isoformat() if ultima else None,
-        "ultima_atividade": (ultima.criado_em if ultima else sala.criado_em).isoformat(),
         "nao_lidas": nao_lidas,
-        "membros_count": membros_count,
     }
 
 
 def _mensagem_json(msg):
-    remetente_nome = "Empresa" if msg.origem == MensagemChat.ORIGEM_EMPRESA else "Colaborador"
     return {
         "id": msg.id,
         "origem": msg.origem,
-        "remetente": msg.origem,
-        "remetente_nome": remetente_nome,
-        "tipo": msg.origem,
         "texto": msg.texto,
-        "conteudo": msg.texto,
-        "enviado_por_empresa": msg.origem == MensagemChat.ORIGEM_EMPRESA,
         "lida": msg.lida,
         "criado_em": msg.criado_em.isoformat(),
     }
 
 
-def _json_body(request):
-    try:
-        return json.loads(request.body or "{}")
-    except Exception:
-        return None
-
-
-def _filtrar_desde(qs, valor):
-    if not valor:
-        return qs
-    if str(valor).isdigit():
-        return qs.filter(id__gt=int(valor))
-    try:
-        dt = datetime.fromisoformat(str(valor).replace("Z", "+00:00"))
-        return qs.filter(criado_em__gt=dt)
-    except ValueError:
-        return qs
-
+# ─── Empresa-side pages ───────────────────────────────────────────────────────
 
 def painel_comunicacao(request):
     empresa = _empresa_autenticada(request)
@@ -131,8 +64,10 @@ def sala_video_empresa(request, sessao_id):
     sessao = get_object_or_404(SessaoVideo, id=sessao_id, empresa=empresa)
     link_colaborador = ""
     if sessao.alias:
-        link_colaborador = request.build_absolute_uri(
-            f"/colaborador/c/{sessao.alias.alias_publico}/video/{sessao.sala_jitsi}/"
+        link_colaborador = (
+            request.build_absolute_uri(
+                f"/colaborador/c/{sessao.alias.alias_publico}/video/{sessao.sala_jitsi}/"
+            )
         )
     return render(request, "comunicacao_video.html", {
         "empresa_nome": empresa.nome,
@@ -143,89 +78,54 @@ def sala_video_empresa(request, sessao_id):
     })
 
 
-def api_colaboradores_comunicacao(request):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "não autenticado"}, status=401)
-    return JsonResponse({"colaboradores": [_alias_json(alias) for alias in _alias_queryset(empresa)]})
-
+# ─── Empresa-side API ─────────────────────────────────────────────────────────
 
 def api_listar_salas(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "não autenticado"}, status=401)
-    tipo = request.GET.get("tipo", "")
-    salas = (
-        SalaChat.objects.filter(empresa=empresa, ativo=True)
-        .select_related("alias", "alias__unidade", "alias__setor", "alias__turno", "alias__cargo")
-        .prefetch_related("mensagens", "membros")
-    )
-    if tipo in {SalaChat.TIPO_DIRETO, SalaChat.TIPO_GRUPO}:
-        salas = salas.filter(tipo=tipo)
-    return JsonResponse({"salas": [_sala_json(sala) for sala in salas]})
+    salas = SalaChat.objects.filter(empresa=empresa, ativo=True).prefetch_related("mensagens")
+    return JsonResponse({"salas": [_sala_json(s) for s in salas]})
+
+
+def api_colaboradores_comunicacao(request):
+    """GET → lista de ColaboradorAliasCorporativo da empresa para o modal Nova Conversa"""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    aliases = ColaboradorAliasCorporativo.objects.filter(
+        empresa=empresa, ativo=True
+    ).select_related("cargo")
+    return JsonResponse({
+        "colaboradores": [
+            {
+                "id": a.id,
+                "alias_codigo": a.alias_publico,
+                "nome": a.alias_publico,
+                "cargo": a.cargo.nome if a.cargo else "",
+            }
+            for a in aliases
+        ]
+    })
 
 
 def api_criar_sala(request):
+    """POST {alias_codigo} → cria ou retorna sala direta"""
     empresa = _empresa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "não autenticado"}, status=401)
     if request.method != "POST":
         return JsonResponse({"erro": "método não permitido"}, status=405)
-    data = _json_body(request)
-    if data is None:
+    try:
+        data = json.loads(request.body)
+    except Exception:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
-
-    codigo = str(
-        data.get("alias_codigo")
-        or data.get("alias_code")
-        or data.get("codigo")
-        or data.get("colaborador_id")
-        or ""
-    ).strip()
-    alias = _alias_queryset(empresa).filter(alias_publico=codigo).first()
-    if not alias and codigo.isdigit():
-        alias = _alias_queryset(empresa).filter(id=int(codigo)).first()
+    codigo = data.get("alias_codigo", "").strip()
+    alias = ColaboradorAliasCorporativo.objects.filter(empresa=empresa, alias_publico=codigo).first()
     if not alias:
         return JsonResponse({"erro": "colaborador não encontrado"}, status=404)
-
     sala = _get_or_create_sala_direta(empresa, alias)
     return JsonResponse({"sala": _sala_json(sala)})
-
-
-def api_criar_grupo(request):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "não autenticado"}, status=401)
-    if request.method != "POST":
-        return JsonResponse({"erro": "método não permitido"}, status=405)
-    data = _json_body(request)
-    if data is None:
-        return JsonResponse({"erro": "JSON inválido"}, status=400)
-
-    nome = (data.get("nome") or "").strip()
-    membros_codigos = data.get("membros") or []
-    if not nome:
-        return JsonResponse({"erro": "nome obrigatório"}, status=400)
-    if not membros_codigos:
-        return JsonResponse({"erro": "selecione pelo menos um colaborador"}, status=400)
-
-    sala = SalaChat.objects.create(empresa=empresa, tipo=SalaChat.TIPO_GRUPO, nome=nome[:120])
-    aliases = _alias_queryset(empresa).filter(alias_publico__in=membros_codigos)
-    for alias in aliases:
-        MembroGrupoChat.objects.get_or_create(sala=sala, alias=alias)
-    payload = _sala_json(sala)
-    return JsonResponse({"sala": payload, **payload}, status=201)
-
-
-def api_membros_grupo(request, sala_id):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "não autenticado"}, status=401)
-    sala = get_object_or_404(SalaChat, id=sala_id, empresa=empresa, tipo=SalaChat.TIPO_GRUPO)
-    membros = MembroGrupoChat.objects.filter(sala=sala).select_related(
-        "alias", "alias__unidade", "alias__setor", "alias__turno", "alias__cargo"
-    )
-    return JsonResponse({"membros": [_alias_json(m.alias) for m in membros]})
 
 
 def api_mensagens(request, sala_id):
@@ -233,9 +133,29 @@ def api_mensagens(request, sala_id):
     if not empresa:
         return JsonResponse({"erro": "não autenticado"}, status=401)
     sala = get_object_or_404(SalaChat, id=sala_id, empresa=empresa)
+    # mark colaborador messages as read
     sala.mensagens.filter(origem=MensagemChat.ORIGEM_COLABORADOR, lida=False).update(lida=True)
-    qs = _filtrar_desde(sala.mensagens.all(), request.GET.get("desde"))
+    # optional: only return messages after ?desde=<iso>
+    desde = request.GET.get("desde")
+    qs = sala.mensagens.all()
+    if desde:
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(desde.replace("Z", "+00:00"))
+            qs = qs.filter(criado_em__gt=dt)
+        except ValueError:
+            pass
     return JsonResponse({"mensagens": [_mensagem_json(m) for m in qs]})
+
+
+def api_marcar_lida(request, sala_id):
+    """POST → marca msgs do colaborador como lidas (atalho; api_mensagens já faz isso)"""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    sala = get_object_or_404(SalaChat, id=sala_id, empresa=empresa)
+    sala.mensagens.filter(origem=MensagemChat.ORIGEM_COLABORADOR, lida=False).update(lida=True)
+    return JsonResponse({"ok": True})
 
 
 def api_enviar_mensagem(request, sala_id):
@@ -245,41 +165,19 @@ def api_enviar_mensagem(request, sala_id):
     if request.method != "POST":
         return JsonResponse({"erro": "método não permitido"}, status=405)
     sala = get_object_or_404(SalaChat, id=sala_id, empresa=empresa)
-    data = _json_body(request)
-    if data is None:
+    try:
+        data = json.loads(request.body)
+    except Exception:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
-    texto = (data.get("texto") or data.get("conteudo") or "").strip()
+    texto = data.get("texto", "").strip()
     if not texto:
         return JsonResponse({"erro": "mensagem vazia"}, status=400)
-
     msg = MensagemChat.objects.create(
-        sala=sala,
-        empresa=empresa,
+        sala=sala, empresa=empresa,
         origem=MensagemChat.ORIGEM_EMPRESA,
         texto=texto[:2000],
     )
-    if sala.tipo == SalaChat.TIPO_GRUPO:
-        prefixo = f"[{sala.nome}] "
-        for membro in sala.membros.select_related("alias"):
-            direta = _get_or_create_sala_direta(empresa, membro.alias)
-            MensagemChat.objects.create(
-                sala=direta,
-                empresa=empresa,
-                origem=MensagemChat.ORIGEM_EMPRESA,
-                texto=(prefixo + texto)[:2000],
-            )
     return JsonResponse({"mensagem": _mensagem_json(msg)})
-
-
-def api_marcar_lida(request, sala_id):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "não autenticado"}, status=401)
-    if request.method != "POST":
-        return JsonResponse({"erro": "método não permitido"}, status=405)
-    sala = get_object_or_404(SalaChat, id=sala_id, empresa=empresa)
-    sala.mensagens.filter(origem=MensagemChat.ORIGEM_COLABORADOR, lida=False).update(lida=True)
-    return JsonResponse({"ok": True})
 
 
 def api_criar_video(request):
@@ -288,46 +186,30 @@ def api_criar_video(request):
         return JsonResponse({"erro": "não autenticado"}, status=401)
     if request.method != "POST":
         return JsonResponse({"erro": "método não permitido"}, status=405)
-    data = _json_body(request)
-    if data is None:
+    try:
+        data = json.loads(request.body)
+    except Exception:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
 
-    sala = None
-    alias = None
     sala_id = data.get("sala_id")
+    titulo = data.get("titulo", "Reunião")[:120]
+    alias = None
     if sala_id:
         sala = SalaChat.objects.filter(id=sala_id, empresa=empresa).first()
-        if sala and sala.tipo == SalaChat.TIPO_DIRETO:
+        if sala and sala.alias:
             alias = sala.alias
 
-    titulo = (data.get("titulo") or "Reunião")[:120]
     sessao = SessaoVideo.objects.create(empresa=empresa, alias=alias, titulo=titulo)
 
-    if sala:
-        if sala.tipo == SalaChat.TIPO_GRUPO:
-            MensagemChat.objects.create(
-                sala=sala,
-                empresa=empresa,
-                origem=MensagemChat.ORIGEM_EMPRESA,
-                texto=f"Reunião iniciada para o grupo: /colaborador/c/SEU-CODIGO/video/{sessao.sala_jitsi}/",
-            )
-            for membro in sala.membros.select_related("alias"):
-                link = f"/colaborador/c/{membro.alias.alias_publico}/video/{sessao.sala_jitsi}/"
-                direta = _get_or_create_sala_direta(empresa, membro.alias)
-                MensagemChat.objects.create(
-                    sala=direta,
-                    empresa=empresa,
-                    origem=MensagemChat.ORIGEM_EMPRESA,
-                    texto=f"Reunião do grupo {sala.nome} iniciada. Entre por aqui: {link}",
-                )
-        elif alias:
-            link = f"/colaborador/c/{alias.alias_publico}/video/{sessao.sala_jitsi}/"
-            MensagemChat.objects.create(
-                sala=sala,
-                empresa=empresa,
-                origem=MensagemChat.ORIGEM_EMPRESA,
-                texto=f"Reunião iniciada. Entre por aqui: {link}",
-            )
+    # Post a system message in the sala so the colaborador sees the video link
+    if alias:
+        sala = _get_or_create_sala_direta(empresa, alias)
+        link = f"/colaborador/c/{alias.alias_publico}/video/{sessao.sala_jitsi}/"
+        MensagemChat.objects.create(
+            sala=sala, empresa=empresa,
+            origem=MensagemChat.ORIGEM_EMPRESA,
+            texto=f"📹 Reunião iniciada! Clique para entrar: {link}",
+        )
 
     return JsonResponse({
         "sessao_id": sessao.id,
@@ -352,10 +234,11 @@ def api_encerrar_video(request, sessao_id):
     return JsonResponse({"ok": True})
 
 
+# ─── Colaborador-side pages ───────────────────────────────────────────────────
+
 def _resolve_alias(codigo):
     return ColaboradorAliasCorporativo.objects.select_related("empresa").filter(
-        alias_publico=codigo,
-        ativo=True,
+        alias_publico=codigo
     ).first()
 
 
@@ -375,14 +258,12 @@ def colaborador_video(request, codigo, sala):
     alias = _resolve_alias(codigo)
     if not alias:
         return redirect("/")
-    sessao = SessaoVideo.objects.filter(
-        Q(alias=alias) | Q(alias__isnull=True),
+    sessao = get_object_or_404(
+        SessaoVideo,
         sala_jitsi=sala,
         empresa=alias.empresa,
         status=SessaoVideo.STATUS_ATIVA,
-    ).first()
-    if not sessao:
-        return redirect(f"/colaborador/c/{codigo}/chat/")
+    )
     return render(request, "colaborador_video.html", {
         "codigo": codigo,
         "sala_jitsi": sessao.sala_jitsi,
@@ -391,13 +272,24 @@ def colaborador_video(request, codigo, sala):
     })
 
 
+# ─── Colaborador-side API ─────────────────────────────────────────────────────
+
 def api_colab_mensagens(request, codigo):
     alias = _resolve_alias(codigo)
     if not alias:
         return JsonResponse({"erro": "não encontrado"}, status=404)
     sala = _get_or_create_sala_direta(alias.empresa, alias)
+    # mark empresa messages as read
     sala.mensagens.filter(origem=MensagemChat.ORIGEM_EMPRESA, lida=False).update(lida=True)
-    qs = _filtrar_desde(sala.mensagens.all(), request.GET.get("desde"))
+    desde = request.GET.get("desde")
+    qs = sala.mensagens.all()
+    if desde:
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(desde.replace("Z", "+00:00"))
+            qs = qs.filter(criado_em__gt=dt)
+        except ValueError:
+            pass
     return JsonResponse({"mensagens": [_mensagem_json(m) for m in qs]})
 
 
@@ -407,16 +299,16 @@ def api_colab_enviar(request, codigo):
         return JsonResponse({"erro": "não encontrado"}, status=404)
     if request.method != "POST":
         return JsonResponse({"erro": "método não permitido"}, status=405)
-    data = _json_body(request)
-    if data is None:
+    try:
+        data = json.loads(request.body)
+    except Exception:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
-    texto = (data.get("texto") or data.get("conteudo") or "").strip()
+    texto = data.get("texto", "").strip()
     if not texto:
         return JsonResponse({"erro": "mensagem vazia"}, status=400)
     sala = _get_or_create_sala_direta(alias.empresa, alias)
     msg = MensagemChat.objects.create(
-        sala=sala,
-        empresa=alias.empresa,
+        sala=sala, empresa=alias.empresa,
         origem=MensagemChat.ORIGEM_COLABORADOR,
         texto=texto[:2000],
     )
@@ -428,9 +320,7 @@ def api_colab_video_ativa(request, codigo):
     if not alias:
         return JsonResponse({"erro": "não encontrado"}, status=404)
     sessao = SessaoVideo.objects.filter(
-        empresa=alias.empresa,
-        alias=alias,
-        status=SessaoVideo.STATUS_ATIVA,
+        empresa=alias.empresa, alias=alias, status=SessaoVideo.STATUS_ATIVA
     ).first()
     if not sessao:
         return JsonResponse({"video": None})
@@ -441,4 +331,75 @@ def api_colab_video_ativa(request, codigo):
             "titulo": sessao.titulo,
             "link": f"/colaborador/c/{codigo}/video/{sessao.sala_jitsi}/",
         }
+    })
+
+
+# ─── Grupos de chat ───────────────────────────────────────────────────────────
+from .models import MembroGrupoChat
+
+
+def painel_grupos(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_comunicacao_grupos.html", {"empresa_nome": empresa.nome})
+
+
+def api_criar_grupo(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "método não permitido"}, status=405)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+    nome = data.get("nome", "").strip()
+    if not nome:
+        return JsonResponse({"erro": "nome obrigatório"}, status=400)
+    membros_codigos = data.get("membros", [])
+
+    sala = SalaChat.objects.create(
+        empresa=empresa, tipo=SalaChat.TIPO_GRUPO, nome=nome
+    )
+    adicionados = 0
+    for codigo in membros_codigos:
+        alias = ColaboradorAliasCorporativo.objects.filter(
+            empresa=empresa, alias_publico=codigo
+        ).first()
+        if alias:
+            MembroGrupoChat.objects.get_or_create(sala=sala, alias=alias)
+            adicionados += 1
+
+    return JsonResponse({"sala": _sala_json(sala), "membros_adicionados": adicionados}, status=201)
+
+
+def api_listar_salas_por_tipo(request):
+    """GET /api/comunicacao/salas/?tipo=grupo|direto — filtra por tipo"""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    tipo = request.GET.get("tipo")
+    qs = SalaChat.objects.filter(empresa=empresa, ativo=True)
+    if tipo:
+        qs = qs.filter(tipo=tipo)
+    # Enrich with member count for groups
+    salas = []
+    for s in qs:
+        d = _sala_json(s)
+        if s.tipo == SalaChat.TIPO_GRUPO:
+            d["membros_count"] = MembroGrupoChat.objects.filter(sala=s).count()
+        salas.append(d)
+    return JsonResponse({"salas": salas})
+
+
+def api_membros_grupo(request, sala_id):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    sala = get_object_or_404(SalaChat, id=sala_id, empresa=empresa, tipo=SalaChat.TIPO_GRUPO)
+    membros = MembroGrupoChat.objects.filter(sala=sala).select_related("alias")
+    return JsonResponse({
+        "membros": [{"codigo": m.alias.alias_publico} for m in membros]
     })

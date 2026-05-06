@@ -147,13 +147,13 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
     <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial</span></a>
     <div class="sb-label">Gestão</div>
     <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
-    <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI / EPC</span></a>
     <a class="sb-link" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos NR</span></a>
     <a class="sb-link" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
     <a class="sb-link" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
-    <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Config. SST</span></a>
     <div class="sb-label">Comunicação</div>
     <a class="sb-link active" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação</span></a>
+    <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI / EPC</span></a>
+    <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
     <a class="sb-link" href="/logout/" style="color:var(--red)"><span class="sb-icon">↩</span><span>Sair</span></a>
   </aside>
 
@@ -161,13 +161,14 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
   <div class="ch-col">
     <div class="ch-top">
       <h2>Conversas</h2>
-      <input class="ch-search" id="ch-search" type="text" placeholder="Buscar conversa..." oninput="filtrarSalas()">
+      <input class="ch-search" id="ch-search" type="text" placeholder="Buscar colaborador..." oninput="filtrarSalas()">
     </div>
     <div class="ch-tabs" style="padding-bottom:8px">
       <button class="ch-tab active" id="tab-diretas" onclick="setTab('diretas')">Diretas</button>
       <button class="ch-tab" id="tab-grupos" onclick="setTab('grupos')">Grupos</button>
     </div>
-    <button class="ch-nova" id="btn-nova" onclick="abrirModalNova()">+ Nova Conversa</button>
+    <button class="ch-nova" id="btn-nova-tab" onclick="abrirModalNova()">+ Nova Conversa</button>
+    <a class="ch-nova" id="btn-grupo-tab" href="/sst/comunicacao/grupos/" style="display:none;text-decoration:none;text-align:center">👥 Gerenciar Grupos</a>
     <div class="ch-list" id="ch-list">
       <div style="padding:14px">
         <div class="skel" style="height:52px;margin-bottom:8px"></div>
@@ -226,28 +227,6 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
   </div>
 </div>
 
-<!-- ── Modal Novo Grupo ── -->
-<div class="modal-bg" id="modal-grupo">
-  <div class="modal">
-    <h3>Novo Grupo</h3>
-    <div class="modal-sub">Crie um canal para avisos e reuniões com vários colaboradores.</div>
-    <div class="mf">
-      <label>Nome do grupo</label>
-      <input id="grupo-nome" type="text" placeholder="Ex: Turno manhã, Produção, CIPA...">
-    </div>
-    <div class="mf">
-      <label>Colaboradores</label>
-      <div class="colab-list" id="grupo-colabs">
-        <div style="padding:20px;text-align:center;color:var(--muted);font-size:.78rem">Carregando...</div>
-      </div>
-    </div>
-    <div class="modal-acts">
-      <button class="btn-cancel" onclick="fecharModalGrupo()">Cancelar</button>
-      <button class="btn-submit" id="btn-criar-grupo" onclick="criarGrupo()">Criar Grupo</button>
-    </div>
-  </div>
-</div>
-
 <script>
 /* ── helpers ── */
 function getCookie(n){let v=null;document.cookie.split(';').forEach(c=>{c=c.trim();if(c.startsWith(n+'=')){v=decodeURIComponent(c.slice(n.length+1))}});return v}
@@ -265,7 +244,6 @@ let _salaAtiva=null;
 let _ultimaMensagem=null;
 let _colabs=[];
 let _colabSelecionado=null;
-let _grupoSelecionados=new Set();
 let _pollTimer=null;
 let _msgIds=new Set();
 
@@ -286,7 +264,8 @@ function setTab(tab){
   _tabAtiva=tab;
   document.getElementById('tab-diretas').classList.toggle('active',tab==='diretas');
   document.getElementById('tab-grupos').classList.toggle('active',tab==='grupos');
-  document.getElementById('btn-nova').textContent=tab==='grupos'?'+ Novo Grupo':'+ Nova Conversa';
+  document.getElementById('btn-nova-tab').style.display=tab==='diretas'?'':'none';
+  document.getElementById('btn-grupo-tab').style.display=tab==='grupos'?'':'none';
   renderSalas();
 }
 
@@ -300,8 +279,7 @@ function renderSalas(){
   });
   const el=document.getElementById('ch-list');
   if(!lista.length){
-    const msg=_tabAtiva==='grupos'?'Nenhum grupo criado ainda.':'Nenhuma conversa encontrada.';
-    el.innerHTML=`<div style="padding:24px;text-align:center;color:var(--muted);font-size:.78rem">${msg}</div>`;
+    el.innerHTML=`<div style="padding:24px;text-align:center;color:var(--muted);font-size:.78rem">Nenhuma conversa encontrada.</div>`;
     return;
   }
   el.innerHTML=lista.map(s=>{
@@ -348,9 +326,7 @@ async function selecionarSala(id){
   hdrAv.style.background=av;
   hdrAv.innerHTML=ini+(sala.online?'<div class="online-dot"></div>':'');
   document.getElementById('hdr-name').textContent=sala.nome;
-  document.getElementById('hdr-status').textContent=sala.tipo==='grupo'
-    ?`${sala.membros_count||0} membros · grupo`
-    :(sala.online?'Online agora':'Colaborador');
+  document.getElementById('hdr-status').textContent=sala.online?'Online agora':'Colaborador';
 
   // load messages
   document.getElementById('msgs-area').innerHTML=`<div style="padding:20px;text-align:center"><div class="skel" style="height:38px;margin-bottom:8px"></div><div class="skel" style="height:38px;margin-bottom:8px;max-width:60%"></div><div class="skel" style="height:38px;max-width:75%;margin-left:auto"></div></div>`;
@@ -416,7 +392,7 @@ function renderMensagensCompletas(msgs){
 }
 
 function buildMsgEl(m){
-  const isOut=(m.remetente||m.origem||m.tipo)==='empresa'||m.enviado_por_empresa;
+  const isOut=m.remetente==='empresa';
   const wrap=document.createElement('div');
   wrap.className='msg-wrap '+(isOut?'out':'in');
   const hora=fmtHora(m.criado_em);
@@ -489,7 +465,6 @@ async function iniciarVideo(){
 
 /* ── modal nova conversa ── */
 function abrirModalNova(){
-  if(_tabAtiva==='grupos'){abrirModalGrupo();return;}
   _colabSelecionado=null;
   document.getElementById('btn-criar-sala').disabled=true;
   document.getElementById('modal-busca').value='';
@@ -498,10 +473,8 @@ function abrirModalNova(){
 }
 
 function fecharModalNova(){document.getElementById('modal-nova').classList.remove('open')}
-function fecharModalGrupo(){document.getElementById('modal-grupo').classList.remove('open')}
 
 document.getElementById('modal-nova').addEventListener('click',e=>{if(e.target===document.getElementById('modal-nova'))fecharModalNova()});
-document.getElementById('modal-grupo').addEventListener('click',e=>{if(e.target===document.getElementById('modal-grupo'))fecharModalGrupo()});
 
 async function carregarColabs(){
   document.getElementById('colab-list').innerHTML=`<div style="padding:20px;text-align:center;color:var(--muted);font-size:.78rem">Carregando...</div>`;
@@ -529,19 +502,20 @@ function renderColabs(){
   el.innerHTML=lista.map(c=>{
     const av=avatarColor(c.nome||'?');
     const ini=initials(c.nome||'?');
-    const codigo=c.alias_codigo||c.codigo||c.id;
-    return `<div class="colab-item" id="ci-${codigo}" onclick="selecionarColab('${codigo}')">
+    return `<div class="colab-item" id="ci-${c.id}" onclick="selecionarColab(${c.id})">
       <div class="colab-av" style="background:${av}">${ini}</div>
       <div>
         <div class="colab-info-name">${c.nome}</div>
-        <div class="colab-info-cargo">${c.cargo||c.setor||c.unidade||c.alias_codigo||''}</div>
+        <div class="colab-info-cargo">${c.cargo||''}</div>
       </div>
     </div>`;
   }).join('');
 }
 
 function selecionarColab(id){
-  _colabSelecionado=id;
+  // Store alias_codigo (not PK) for the create-sala API
+  const colab=_colabs.find(c=>c.id===id);
+  _colabSelecionado=colab?colab.alias_codigo:id;
   document.querySelectorAll('.colab-item').forEach(el=>el.classList.remove('sel'));
   const el=document.getElementById('ci-'+id);
   if(el)el.classList.add('sel');
@@ -568,77 +542,6 @@ async function criarSala(){
     }
   }catch(e){alert('Erro ao criar conversa.')}
   btn.textContent='Iniciar Conversa';btn.disabled=false;
-}
-
-/* ── grupos ── */
-function abrirModalGrupo(){
-  _grupoSelecionados=new Set();
-  document.getElementById('grupo-nome').value='';
-  document.getElementById('grupo-colabs').innerHTML=`<div style="padding:20px;text-align:center;color:var(--muted);font-size:.78rem">Carregando...</div>`;
-  document.getElementById('modal-grupo').classList.add('open');
-  carregarColabsGrupo();
-}
-
-async function carregarColabsGrupo(){
-  try{
-    const r=await fetch('/api/comunicacao/colaboradores/');
-    if(!r.ok)throw new Error();
-    const d=await r.json();
-    _colabs=d.colaboradores||[];
-    renderColabsGrupo();
-  }catch(e){
-    document.getElementById('grupo-colabs').innerHTML=`<div style="padding:20px;text-align:center;color:var(--red);font-size:.78rem">Erro ao carregar colaboradores.</div>`;
-  }
-}
-
-function renderColabsGrupo(){
-  const el=document.getElementById('grupo-colabs');
-  if(!_colabs.length){
-    el.innerHTML=`<div style="padding:20px;text-align:center;color:var(--muted);font-size:.78rem">Nenhum colaborador com contato liberado ainda.</div>`;
-    return;
-  }
-  el.innerHTML=_colabs.map(c=>{
-    const codigo=c.alias_codigo||c.codigo||c.id;
-    return `<label class="colab-item" style="cursor:pointer">
-      <input type="checkbox" value="${codigo}" onchange="toggleGrupoColab('${codigo}',this.checked)" style="accent-color:var(--teal)">
-      <div class="colab-av" style="background:${avatarColor(c.nome||'?')}">${initials(c.nome||'?')}</div>
-      <div>
-        <div class="colab-info-name">${c.nome}</div>
-        <div class="colab-info-cargo">${c.cargo||c.setor||c.unidade||c.alias_codigo||''}</div>
-      </div>
-    </label>`;
-  }).join('');
-}
-
-function toggleGrupoColab(codigo, checked){
-  if(checked)_grupoSelecionados.add(codigo);
-  else _grupoSelecionados.delete(codigo);
-}
-
-async function criarGrupo(){
-  const nome=document.getElementById('grupo-nome').value.trim();
-  if(!nome){alert('Informe o nome do grupo.');return;}
-  const membros=[..._grupoSelecionados];
-  if(!membros.length){alert('Selecione pelo menos um colaborador.');return;}
-  const btn=document.getElementById('btn-criar-grupo');
-  btn.textContent='Criando...';btn.disabled=true;
-  try{
-    const r=await fetch('/api/comunicacao/grupos/',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
-      body:JSON.stringify({nome,membros})
-    });
-    const d=await r.json();
-    if(r.ok&&(d.sala||d.id)){
-      fecharModalGrupo();
-      setTab('grupos');
-      await carregarSalas();
-      selecionarSala((d.sala&&d.sala.id)||d.id);
-    }else{
-      alert(d.erro||'Erro ao criar grupo.');
-    }
-  }catch(e){alert('Erro ao criar grupo.')}
-  btn.textContent='Criar Grupo';btn.disabled=false;
 }
 
 /* ── init ── */

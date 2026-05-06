@@ -126,6 +126,8 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <a class="sb-link" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
     <a class="sb-link" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
     <a class="sb-link" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação</span></a>
+    <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI / EPC</span></a>
+    <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
     <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
   </aside>
   <main class="main">
@@ -234,7 +236,7 @@ function renderTabela(){
       <td>${diasBadge(dr)}</td>
       <td><span class="badge ${resultadoCls[a.resultado_raw]||'b-cinza'}">${a.resultado}</span></td>
       <td style="color:var(--muted);font-size:.74rem">${a.medico||'—'}</td>
-      <td><div class="row-actions"><button class="btn-row" onclick="renovar('${a.funcionario}')">Renovar</button></div></td>
+      <td><div class="row-actions"><button class="btn-row" onclick="renovar('${a.funcionario}')">Renovar</button><a class="btn-row" href="/api/sst/asos/${a.id}/pdf" target="_blank" title="Baixar PDF">📄 PDF</a></div></td>
     </tr>`;
   }).join("");
 }
