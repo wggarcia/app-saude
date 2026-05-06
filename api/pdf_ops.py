@@ -335,3 +335,95 @@ def gerar_pdf_programas_gov(empresa, programas, indicadores, planos):
     doc.build(story)
     buf.seek(0)
     return buf
+
+
+def gerar_pdf_conformidade_sst(empresa, resumo, funcionarios):
+    """Relatório de conformidade SST por funcionário."""
+    buf = io.BytesIO()
+    doc = _doc(buf)
+    s = _styles()
+    story = []
+
+    _header(story, s, "Relatório de Conformidade SST", empresa.nome,
+            f"Índice de conformidade: {resumo.get('indice_conformidade', 0)}%")
+
+    # Resumo KPIs como tabela
+    story.append(Paragraph("Resumo Geral", s["section"]))
+    kpi_data = [
+        ["Total Funcionários", "Conformes", "Em Alerta", "Críticos", "Índice"],
+        [
+            str(resumo.get("total", 0)),
+            str(resumo.get("conformes", 0)),
+            str(resumo.get("alertas", 0)),
+            str(resumo.get("criticos", 0)),
+            f"{resumo.get('indice_conformidade', 0)}%",
+        ]
+    ]
+    kpi_t = Table(kpi_data, colWidths=[3.5*cm, 3.5*cm, 3.5*cm, 3.5*cm, 3.5*cm], repeatRows=1)
+    kpi_style = TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), ACCENT),
+        ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#f0f8ff"), WHITE]),
+        ("BOX", (0, 0), (-1, -1), 0.5, MUTED),
+        ("GRID", (0, 0), (-1, -1), 0.3, MUTED),
+        ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+    ])
+    kpi_t.setStyle(kpi_style)
+    story.append(kpi_t)
+    story.append(Spacer(1, 16))
+
+    # Tabela por funcionário
+    story.append(Paragraph("Avaliação por Funcionário", s["section"]))
+    headers = ["Funcionário", "Cargo", "Setor", "ASO", "Exames", "EPI", "Treinamento", "Score", "Status"]
+    rows = [headers]
+
+    STATUS_LABELS = {"conforme": "Conforme", "alerta": "Alerta", "critico": "Crítico"}
+    for f in funcionarios:
+        aso_val = "✓" if f.get("aso_ok") else "✗"
+        if f.get("aso_ok") and f.get("aso_alerta"):
+            aso_val = f"⚠ {f.get('aso_validade', '')}"
+        exames_val = "✓" if f.get("exames_ok") else f"✗ {f.get('exames_vencidos', 0)}v"
+        epi_val = "✓" if f.get("epi_ok") else "✗"
+        trein_val = "✓" if f.get("treinamento_ok") else "✗"
+        rows.append([
+            (f["nome"][:28] + "…") if len(f["nome"]) > 28 else f["nome"],
+            (f.get("cargo") or "—")[:18],
+            (f.get("setor") or "—")[:16],
+            aso_val,
+            exames_val,
+            epi_val,
+            trein_val,
+            f"{f.get('score', 0)}/4",
+            STATUS_LABELS.get(f.get("status", ""), f.get("status", "")),
+        ])
+
+    col_widths = [4*cm, 3*cm, 2.8*cm, 1.8*cm, 1.8*cm, 1.5*cm, 2.2*cm, 1.5*cm, 2*cm]
+    tbl = Table(rows, colWidths=col_widths, repeatRows=1)
+    tbl_style = _table_style()
+    # Color-code status rows
+    for idx, f in enumerate(funcionarios, start=1):
+        if f.get("status") == "conforme":
+            tbl_style.add("TEXTCOLOR", (8, idx), (8, idx), OK)
+        elif f.get("status") == "alerta":
+            tbl_style.add("TEXTCOLOR", (8, idx), (8, idx), WARN)
+        elif f.get("status") == "critico":
+            tbl_style.add("TEXTCOLOR", (8, idx), (8, idx), DANGER)
+    tbl.setStyle(tbl_style)
+    story.append(tbl)
+
+    # Footer note
+    story.append(Spacer(1, 16))
+    story.append(Paragraph(
+        f"<font color='#7a9bb5' size='8'>Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')} · "
+        f"Critérios: ASO vigente, exames em dia, EPI entregue, treinamento NR válido.</font>",
+        s["normal"]
+    ))
+
+    doc.build(story)
+    buf.seek(0)
+    return buf

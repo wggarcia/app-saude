@@ -1424,3 +1424,83 @@ def api_sst_conformidade(request):
 def sst_conformidade_page(request):
     from django.shortcuts import render
     return render(request, "sst_conformidade.html")
+
+
+@login_required_empresa
+def api_sst_conformidade_pdf(request):
+    """Exporta relatório de conformidade SST em PDF."""
+    from django.http import HttpResponse
+    from .pdf_ops import gerar_pdf_conformidade_sst
+    from .models import FuncionarioSST, ExameMedico, EntregaEPI, TreinamentoNR
+    from datetime import date, timedelta
+
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        from django.http import JsonResponse
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    hoje = date.today()
+    alerta_dias = 30
+    funcionarios = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).order_by("nome")
+    resultado = []
+
+    for f in funcionarios:
+        # ASO
+        aso = f.asos.filter(valido=True).order_by("-data_validade").first()
+        aso_ok = bool(aso and aso.data_validade and aso.data_validade >= hoje)
+        aso_alerta = bool(aso and aso.data_validade and hoje <= aso.data_validade <= hoje + timedelta(days=alerta_dias))
+
+        # Exames
+        exames = ExameMedico.objects.filter(funcionario=f)
+        exames_vencidos = sum(1 for e in exames if e.data_vencimento and e.data_vencimento < hoje)
+        exames_ok = exames.exists() and exames_vencidos == 0
+
+        # EPI
+        epi_ativo = EntregaEPI.objects.filter(funcionario=f, devolvido=False).exists()
+
+        # Treinamento NR
+        trein_ok = TreinamentoNR.objects.filter(funcionario=f, data_validade__gte=hoje).exists()
+
+        # Afastamento
+        afastado = f.afastamentos.filter(data_retorno__isnull=True).exists()
+
+        score = sum([aso_ok, exames_ok, epi_ativo, trein_ok])
+        if score == 4:
+            status = "conforme"
+        elif score >= 2:
+            status = "alerta"
+        else:
+            status = "critico"
+
+        resultado.append({
+            "nome": f.nome,
+            "cargo": f.cargo,
+            "setor": f.setor,
+            "aso_ok": aso_ok,
+            "aso_alerta": aso_alerta,
+            "aso_validade": str(aso.data_validade) if aso and aso.data_validade else None,
+            "exames_ok": exames_ok,
+            "exames_vencidos": exames_vencidos,
+            "epi_ok": epi_ativo,
+            "treinamento_ok": trein_ok,
+            "afastado": afastado,
+            "score": score,
+            "status": status,
+        })
+
+    total = len(resultado)
+    conformes = sum(1 for r in resultado if r["status"] == "conforme")
+    alertas = sum(1 for r in resultado if r["status"] == "alerta")
+    criticos = sum(1 for r in resultado if r["status"] == "critico")
+    resumo = {
+        "total": total,
+        "conformes": conformes,
+        "alertas": alertas,
+        "criticos": criticos,
+        "indice_conformidade": round(conformes / max(total, 1) * 100, 1),
+    }
+
+    buf = gerar_pdf_conformidade_sst(empresa, resumo, resultado)
+    resp = HttpResponse(buf, content_type="application/pdf")
+    resp["Content-Disposition"] = 'inline; filename="conformidade_sst.pdf"'
+    return resp

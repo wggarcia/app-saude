@@ -80,6 +80,7 @@ from api.views_sst import (
     api_cat_pdf,
     api_prontuario_pdf,
     api_sst_conformidade,
+    api_sst_conformidade_pdf,
     sst_conformidade_page,
 )
 from api.views_gestao import (
@@ -296,6 +297,8 @@ urlpatterns = [
     path('api/sst/epis/sem-epi', api_epis_sem_epi),
     path('api/sst/conformidade/', api_sst_conformidade),
     path('api/sst/conformidade', api_sst_conformidade),
+    path('api/sst/conformidade/pdf', api_sst_conformidade_pdf),
+    path('api/sst/conformidade/pdf/', api_sst_conformidade_pdf),
     path('api/sst/asos/<int:aso_id>/pdf', api_aso_pdf),
     path('api/sst/cats/<int:cat_id>/pdf', api_cat_pdf),
     path('api/sst/funcionarios/<int:funcionario_id>/prontuario/pdf', api_prontuario_pdf),
