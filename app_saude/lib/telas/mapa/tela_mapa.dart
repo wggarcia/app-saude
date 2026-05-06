@@ -1036,12 +1036,7 @@ class _HotspotMarker extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Focos recentes: ${item['total']}',
-                    style: const TextStyle(color: Color(0xFF9CC4DB)),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Indice ativo: ${item['indice_ativo'] ?? item['total']} | participacao: ${item['percentual_ativo'] ?? 0}%',
+                    'Foco ativo: ${item['indice_ativo'] ?? item['total']} | registros 30d: ${item['total_registros_30d'] ?? item['raw_total'] ?? item['total']}',
                     style: const TextStyle(color: Color(0xFF9CC4DB)),
                   ),
                   const SizedBox(height: 4),

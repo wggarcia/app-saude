@@ -6,6 +6,7 @@ import json
 from time import time
 
 from django.db.models import Avg, Count, Q
+from django.db.models.functions import TruncDate
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 
@@ -100,6 +101,9 @@ DISEASE_WEIGHTS = {
 _PANORAMA_CACHE = {"created_at": 0.0, "payload": None}
 _CACHE_TTL_SECONDS = 15
 _CITY_TO_UF = None
+FOCUS_STABILITY_DAYS = 10
+FOCUS_DECAY_WINDOW_DAYS = 30
+FOCUS_MIN_WEIGHT = 0.01
 
 UF_CODES = {
     11: "RO", 12: "AC", 13: "AM", 14: "RR", 15: "PA", 16: "AP", 17: "TO",
@@ -150,6 +154,27 @@ def _safe_growth(current, previous):
     if previous <= 0:
         return 100.0 if current > 0 else 0.0
     return round(((current - previous) / previous) * 100, 2)
+
+
+def _temporal_focus_weight(day, now=None):
+    now = now or timezone.now()
+    if not day:
+        return 1.0
+    if hasattr(day, "date"):
+        day = day.date()
+    days = max((now.date() - day).days, 0)
+    if days <= FOCUS_STABILITY_DAYS:
+        return 1.0
+    if days >= FOCUS_DECAY_WINDOW_DAYS:
+        return FOCUS_MIN_WEIGHT
+    decay_span = FOCUS_DECAY_WINDOW_DAYS - FOCUS_STABILITY_DAYS
+    days_decaying = days - FOCUS_STABILITY_DAYS
+    decay = days_decaying / decay_span
+    return round(max(FOCUS_MIN_WEIGHT, 1 - (decay * (1 - FOCUS_MIN_WEIGHT))), 3)
+
+
+def _active_case_value(value):
+    return round(float(value or 0), 2)
 
 
 def _risk_score(total, max_total, recent_24h, max_recent, growth):
@@ -501,13 +526,19 @@ def _build_layer_queryset(group_fields):
     now = timezone.now()
     last_24h = now - timedelta(hours=24)
     previous_24h = now - timedelta(hours=48)
+    window_start = now - timedelta(days=FOCUS_DECAY_WINDOW_DAYS)
 
-    queryset = RegistroSintoma.objects.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
+    queryset = (
+        RegistroSintoma.objects
+        .filter(data_registro__gte=window_start)
+        .exclude(latitude__isnull=True)
+        .exclude(longitude__isnull=True)
+    )
 
     for field in group_fields:
         queryset = queryset.exclude(**{f"{field}__isnull": True}).exclude(**{field: ""})
 
-    return list(
+    rows = list(
         queryset.values(*group_fields)
         .annotate(
             total=Count("id"),
@@ -526,24 +557,45 @@ def _build_layer_queryset(group_fields):
         )
         .order_by("-total")
     )
+    active_by_group = defaultdict(float)
+    daily_rows = (
+        queryset.annotate(day=TruncDate("data_registro"))
+        .values(*group_fields, "day")
+        .annotate(total=Count("id"))
+    )
+
+    for item in daily_rows:
+        key = tuple(item[field] for field in group_fields)
+        active_by_group[key] += int(item["total"] or 0) * _temporal_focus_weight(item["day"], now)
+
+    for row in rows:
+        key = tuple(row[field] for field in group_fields)
+        row["raw_total_cases"] = int(row["total"] or 0)
+        row["active_cases"] = _active_case_value(active_by_group.get(key, row["total"] or 0))
+        row["temporal_retention_percent"] = _safe_pct(row["active_cases"], row["raw_total_cases"])
+
+    return sorted(rows, key=lambda item: item["active_cases"], reverse=True)
 
 
 def _serialize_layer(level, group_fields):
     rows = _build_layer_queryset(group_fields)
-    max_total = max((row["total"] for row in rows), default=1)
+    max_total = max((float(row.get("active_cases") or 0) for row in rows), default=1)
     max_recent = max((row["recent_24h"] for row in rows), default=1)
     areas = []
 
     for index, row in enumerate(rows, start=1):
-        total_cases = int(row["total"] or 0)
+        raw_total_cases = int(row.get("raw_total_cases", row["total"] or 0) or 0)
+        total_cases = float(row.get("active_cases", raw_total_cases) or 0)
         normalized_state = _normalize_state(row.get("cidade"), row.get("estado"))
         symptom_counts = {
             key: int(row.get(key, 0) or 0)
             for key in SYMPTOM_LABELS
         }
-        symptom_breakdown = _serialize_symptoms(symptom_counts, total_cases)
+        symptom_breakdown = _serialize_symptoms(symptom_counts, raw_total_cases)
         dominant_symptom = symptom_breakdown[0]["label"] if symptom_breakdown else "Sem dados"
-        disease_probabilities = _build_disease_probabilities(symptom_counts, total_cases)
+        disease_probabilities = _build_disease_probabilities(symptom_counts, raw_total_cases)
+        for disease in disease_probabilities:
+            disease["active_estimated_cases"] = _active_case_value(total_cases * disease["probability"] / 100)
         activity_percent = _activity_percent(total_cases, int(row["recent_24h"] or 0))
         disease_probabilities = _attach_active_probabilities(disease_probabilities, activity_percent)
         dominant_disease = disease_probabilities[0]["name"] if disease_probabilities else "Indefinido"
@@ -571,6 +623,10 @@ def _serialize_layer(level, group_fields):
             "latitude": round(float(row["latitude"]), 6) if row["latitude"] is not None else None,
             "longitude": round(float(row["longitude"]), 6) if row["longitude"] is not None else None,
             "total_cases": total_cases,
+            "active_cases": total_cases,
+            "raw_total_cases": raw_total_cases,
+            "total_registros_30d": raw_total_cases,
+            "temporal_retention_percent": row.get("temporal_retention_percent", 100),
             "recent_24h": int(row["recent_24h"] or 0),
             "previous_24h": int(row["previous_24h"] or 0),
             "growth_percent": growth,
@@ -611,6 +667,7 @@ def _build_state_layer(municipios):
     grouped = defaultdict(lambda: {
         "estado": None,
         "total_cases": 0,
+        "raw_total_cases": 0,
         "recent_24h": 0,
         "previous_24h": 0,
         "lat_sum": 0.0,
@@ -624,13 +681,15 @@ def _build_state_layer(municipios):
         entry = grouped[state_key]
         entry["estado"] = state_key
         entry["total_cases"] += area["total_cases"]
+        entry["raw_total_cases"] += area.get("raw_total_cases", area["total_cases"])
         entry["recent_24h"] += area["recent_24h"]
         entry["previous_24h"] += area["previous_24h"]
 
         if area["latitude"] is not None and area["longitude"] is not None:
-            entry["lat_sum"] += area["latitude"] * area["total_cases"]
-            entry["lng_sum"] += area["longitude"] * area["total_cases"]
-            entry["weight"] += area["total_cases"]
+            geo_weight = area["total_cases"] or area.get("raw_total_cases", 1) or 1
+            entry["lat_sum"] += area["latitude"] * geo_weight
+            entry["lng_sum"] += area["longitude"] * geo_weight
+            entry["weight"] += geo_weight
 
         for symptom in area["symptoms"]:
             entry["symptom_counts"][symptom["key"]] += symptom["count"]
@@ -642,9 +701,12 @@ def _build_state_layer(municipios):
 
     for index, row in enumerate(sorted(rows, key=lambda item: item["total_cases"], reverse=True), start=1):
         total_cases = row["total_cases"]
-        symptom_breakdown = _serialize_symptoms(row["symptom_counts"], total_cases)
+        raw_total_cases = int(row.get("raw_total_cases") or 0)
+        symptom_breakdown = _serialize_symptoms(row["symptom_counts"], raw_total_cases)
         dominant_symptom = symptom_breakdown[0]["label"] if symptom_breakdown else "Sem dados"
-        probable_diseases = _build_disease_probabilities(row["symptom_counts"], total_cases)
+        probable_diseases = _build_disease_probabilities(row["symptom_counts"], raw_total_cases)
+        for disease in probable_diseases:
+            disease["active_estimated_cases"] = _active_case_value(total_cases * disease["probability"] / 100)
         activity_percent = _activity_percent(total_cases, row["recent_24h"])
         probable_diseases = _attach_active_probabilities(probable_diseases, activity_percent)
         dominant_disease = probable_diseases[0]["name"] if probable_diseases else "Indefinido"
@@ -666,7 +728,11 @@ def _build_state_layer(municipios):
             "label": row["estado"],
             "latitude": round(row["lat_sum"] / weight, 6),
             "longitude": round(row["lng_sum"] / weight, 6),
-            "total_cases": total_cases,
+            "total_cases": _active_case_value(total_cases),
+            "active_cases": _active_case_value(total_cases),
+            "raw_total_cases": raw_total_cases,
+            "total_registros_30d": raw_total_cases,
+            "temporal_retention_percent": _safe_pct(total_cases, raw_total_cases),
             "recent_24h": row["recent_24h"],
             "previous_24h": row["previous_24h"],
             "growth_percent": growth,
@@ -780,9 +846,11 @@ def _build_operational_profiles():
 def _aggregate_overview(layers):
     bairros = layers["bairros"]
     total_cases = sum(area["total_cases"] for area in bairros)
+    raw_total_cases = sum(area.get("raw_total_cases", area["total_cases"]) for area in bairros)
     active_areas = len(bairros)
     symptoms = defaultdict(int)
-    disease_totals = defaultdict(int)
+    disease_totals = defaultdict(float)
+    raw_disease_totals = defaultdict(int)
     active_disease_totals = defaultdict(float)
     growth_values = []
     highest_risk = 0.0
@@ -795,11 +863,12 @@ def _aggregate_overview(layers):
             symptoms[symptom["key"]] += symptom["count"]
 
         for disease in area["probable_diseases"]:
-            disease_totals[disease["name"]] += disease["estimated_cases"]
+            disease_totals[disease["name"]] += disease.get("active_estimated_cases", disease["estimated_cases"])
+            raw_disease_totals[disease["name"]] += disease["estimated_cases"]
             recency_weight = 0.25 + min(area["activity_percent"] / 100, 1.0)
-            active_disease_totals[disease["name"]] += disease["estimated_cases"] * recency_weight
+            active_disease_totals[disease["name"]] += disease.get("active_estimated_cases", disease["estimated_cases"]) * recency_weight
 
-    symptom_breakdown = _serialize_symptoms(symptoms, total_cases)
+    symptom_breakdown = _serialize_symptoms(symptoms, raw_total_cases)
     disease_breakdown = []
     disease_total_sum = sum(disease_totals.values()) or 1
     active_disease_total_sum = sum(active_disease_totals.values()) or 1
@@ -811,7 +880,8 @@ def _aggregate_overview(layers):
     ):
         disease_breakdown.append({
             "name": disease_name,
-            "estimated_cases": int(estimated_cases),
+            "estimated_cases": _active_case_value(estimated_cases),
+            "raw_estimated_cases": int(raw_disease_totals[disease_name]),
             "probability": _safe_pct(estimated_cases, disease_total_sum),
             "active_probability": round((active_disease_totals[disease_name] / active_disease_total_sum) * 100, 2),
         })
@@ -823,7 +893,11 @@ def _aggregate_overview(layers):
     top_hospital_load = sorted(bairros, key=lambda area: (area["hospital_load_estimate"], area["growth_percent"]), reverse=True)[:5]
 
     overview = {
-        "total_cases": total_cases,
+        "total_cases": _active_case_value(total_cases),
+        "active_cases": _active_case_value(total_cases),
+        "raw_total_cases": int(raw_total_cases),
+        "total_registros_30d": int(raw_total_cases),
+        "temporal_retention_percent": _safe_pct(total_cases, raw_total_cases),
         "active_areas": active_areas,
         "growth_percent": round(sum(growth_values) / len(growth_values), 2) if growth_values else 0.0,
         "risk_level": _risk_level(highest_risk),

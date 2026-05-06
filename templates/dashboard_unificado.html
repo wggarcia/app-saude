@@ -1099,7 +1099,8 @@
 
       return `
         <strong>${area.label}</strong><br>
-        Casos: ${area.total_cases.toLocaleString("pt-BR")}<br>
+        Casos ativos: ${area.total_cases.toLocaleString("pt-BR")}<br>
+        Registros 30d: ${(area.raw_total_cases ?? area.total_registros_30d ?? area.total_cases).toLocaleString("pt-BR")}<br>
         Crescimento: ${area.growth_percent.toFixed(1)}%<br>
         Risco: ${area.risk_level}<br><br>
         <strong>Foco predominante:</strong> ${area.dominant_symptom}<br>
@@ -1147,7 +1148,8 @@
           <div class="detail-box">
             <strong>Radar do foco</strong>
             <ul>
-              <li>Casos acumulados: ${area.total_cases.toLocaleString("pt-BR")}</li>
+              <li>Casos ativos temporais: ${area.total_cases.toLocaleString("pt-BR")}</li>
+              <li>Registros 30d: ${(area.raw_total_cases ?? area.total_registros_30d ?? area.total_cases).toLocaleString("pt-BR")}</li>
               <li>Ultimas 24h: ${area.recent_24h.toLocaleString("pt-BR")}</li>
               <li>Janela anterior: ${area.previous_24h.toLocaleString("pt-BR")}</li>
               <li>Crescimento: ${area.growth_percent.toFixed(1)}%</li>
@@ -1210,7 +1212,7 @@
             <span class="risk-badge risk-${area.risk_level}" style="color:${riskTextColor(area.risk_level)}">${area.risk_level}</span>
           </div>
           <div class="mini">
-            ${area.total_cases.toLocaleString("pt-BR")} casos | crescimento ${area.growth_percent.toFixed(1)}%<br>
+            ${area.total_cases.toLocaleString("pt-BR")} casos ativos | registros 30d ${(area.raw_total_cases ?? area.total_registros_30d ?? area.total_cases).toLocaleString("pt-BR")} | crescimento ${area.growth_percent.toFixed(1)}%<br>
             Sintoma dominante: ${area.dominant_symptom}<br>
             Doenca provavel: ${area.dominant_disease}
           </div>

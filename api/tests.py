@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from .maintenance import maintenance_report
 from .models import AceiteLegalPublico, AlertaGovernamental, DispositivoAutorizado, DispositivoPushPublico, DonoSaaS, Empresa, EmpresaUsuario, RegistroSintoma
+from . import epidemiologia
 from .epidemiologia import DISEASE_WEIGHTS
 from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_codigo_pacote, pacotes_por_setor
 from .push_service import _tokens_para_alerta
@@ -1115,6 +1116,71 @@ class TemporalDecayTests(TestCase):
         self.assertEqual(dez_dias, 3.27)
         self.assertGreater(dez_dias, vinte_dias)
         self.assertEqual(trinta_dias, 0.05)
+
+    def test_mapa_publico_mostra_total_ativo_reduzido(self):
+        empresa = Empresa.objects.create(
+            nome="Populacao Decaimento",
+            email="decaimento-mapa@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        agora = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
+        for _ in range(4):
+            registro = RegistroSintoma.objects.create(
+                empresa=empresa,
+                febre=True,
+                latitude=-22.9,
+                longitude=-43.1,
+                cidade="Rio de Janeiro",
+                estado="RJ",
+                bairro="Centro",
+                grupo="Respiratorio",
+            )
+            RegistroSintoma.objects.filter(id=registro.id).update(
+                data_registro=agora - timedelta(days=15)
+            )
+
+        response = Client().get("/api/public/mapa?cidade=Rio de Janeiro&estado=RJ")
+        hotspot = response.json()["hotspots"][0]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(hotspot["total_registros_30d"], 4)
+        self.assertEqual(hotspot["total"], hotspot["indice_ativo"])
+        self.assertLess(hotspot["total"], hotspot["total_registros_30d"])
+
+    def test_panorama_epidemiologico_usa_casos_ativos_temporais(self):
+        empresa = Empresa.objects.create(
+            nome="Populacao Panorama",
+            email="decaimento-panorama@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        agora = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
+        for _ in range(4):
+            registro = RegistroSintoma.objects.create(
+                empresa=empresa,
+                febre=True,
+                latitude=-22.9,
+                longitude=-43.1,
+                cidade="Rio de Janeiro",
+                estado="RJ",
+                bairro="Centro",
+                grupo="Respiratorio",
+            )
+            RegistroSintoma.objects.filter(id=registro.id).update(
+                data_registro=agora - timedelta(days=15)
+            )
+
+        epidemiologia._PANORAMA_CACHE["created_at"] = 0.0
+        epidemiologia._PANORAMA_CACHE["payload"] = None
+        payload = epidemiologia.build_panorama_payload()
+        area = payload["layers"]["bairros"][0]
+
+        self.assertEqual(area["raw_total_cases"], 4)
+        self.assertEqual(area["total_cases"], area["active_cases"])
+        self.assertLess(area["total_cases"], area["raw_total_cases"])
+        self.assertEqual(payload["overview"]["raw_total_cases"], 4)
+        self.assertLess(payload["overview"]["total_cases"], payload["overview"]["raw_total_cases"])
 
 
 class WebhookMiddlewareTests(TestCase):
