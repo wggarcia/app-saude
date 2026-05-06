@@ -91,6 +91,16 @@ from api.views_agendamento_sst import (
 )
 from api.views_alertas import api_alertas, alertas_page
 from api.views_executive import api_executive_dashboard, executive_dashboard_page
+from api.views_contratos import (
+    api_contratos_saude, api_contrato_saude_detalhe,
+    api_beneficiarios_contrato, api_beneficiario_excluir,
+    api_contratos_kpis, contratos_page,
+)
+from api.views_series_epi import (
+    api_series_epidemiologicas, api_serie_epidemiologica_detalhe,
+    api_pontos_serie, api_ponto_serie_detalhe,
+    api_series_dashboard, series_epi_page,
+)
 from api.views_lotes_farmacia import (
     api_lotes_farmacia,
     api_lote_farmacia_detalhe,
@@ -438,6 +448,20 @@ urlpatterns = [
     # ── Atos Normativos ──────────────────────────────────────────
     path('api/governo/atos-normativos/', api_atos_normativos),
     path('api/governo/atos-normativos/<int:ato_id>/', api_ato_normativo_detalhe),
+    # ── Contratos de Saúde / Convênios ───────────────────────────
+    path('contratos/', contratos_page),
+    path('api/contratos/', api_contratos_saude),
+    path('api/contratos/kpis/', api_contratos_kpis),
+    path('api/contratos/<int:contrato_id>/', api_contrato_saude_detalhe),
+    path('api/contratos/<int:contrato_id>/beneficiarios/', api_beneficiarios_contrato),
+    path('api/contratos/beneficiarios/<int:beneficiario_id>/', api_beneficiario_excluir),
+    # ── Séries Epidemiológicas ────────────────────────────────────
+    path('series-epidemiologicas/', series_epi_page),
+    path('api/series-epi/', api_series_epidemiologicas),
+    path('api/series-epi/dashboard/', api_series_dashboard),
+    path('api/series-epi/<int:serie_id>/', api_serie_epidemiologica_detalhe),
+    path('api/series-epi/<int:serie_id>/pontos/', api_pontos_serie),
+    path('api/series-epi/pontos/<int:ponto_id>/', api_ponto_serie_detalhe),
     path('api/governo/alertas/criar', api_criar_alerta_governo),
     path('api/governo/alertas/toggle', api_toggle_alerta_governo),
     path('api/governo/alertas/fluxo', api_fluxo_alerta_governo),

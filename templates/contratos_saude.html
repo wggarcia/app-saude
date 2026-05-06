@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contratos de Saúde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#041018;--bg2:#071c28;--bg3:#0a2536;--bg4:#0d2f42;
+  --border:#1a3a50;--border2:#1f4a64;
+  --text:#e2eaf0;--text2:#8da8bb;--text3:#5a7a8e;
+  --blue:#2196f3;--blue2:#1976d2;--green:#00c853;--green2:#00e676;
+  --yellow:#ffd600;--orange:#ff9100;--red:#f44336;--purple:#9c27b0;
+  --teal:#009688;
+  --radius:12px;--radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── Layout ── */
+.app{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.sidebar h2{font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:8px 12px;margin-bottom:4px}
+.sidebar a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);color:var(--text2);text-decoration:none;font-size:14px;font-weight:500;transition:all .2s}
+.sidebar a:hover{background:var(--bg3);color:var(--text)}
+.sidebar a.active{background:var(--bg4);color:var(--blue)}
+.sidebar .logo{font-size:18px;font-weight:800;color:var(--text);margin-bottom:16px;padding:0 12px}
+.sidebar .divider{height:1px;background:var(--border);margin:8px 0}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:20px;font-weight:700}
+.header-actions{display:flex;gap:12px;align-items:center}
+.content{flex:1;padding:28px;overflow-y:auto}
+
+/* ── KPI Cards ── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+.kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:6px}
+.kpi-label{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.kpi-value{font-size:28px;font-weight:800;line-height:1}
+.kpi-sub{font-size:12px;color:var(--text2)}
+.kpi-card.green .kpi-value{color:var(--green2)}
+.kpi-card.yellow .kpi-value{color:var(--yellow)}
+.kpi-card.red .kpi-value{color:var(--red)}
+.kpi-card.blue .kpi-value{color:var(--blue)}
+.kpi-card.purple .kpi-value{color:#ce93d8}
+
+/* ── Filters ── */
+.filters{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.filters select,.filters input{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:9px 14px;font-size:14px;font-family:inherit;outline:none}
+.filters select:focus,.filters input:focus{border-color:var(--blue)}
+.filters input{width:260px}
+
+/* ── Table ── */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--bg3)}
+th{padding:12px 16px;text-align:left;font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+td{padding:13px 16px;font-size:14px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--bg3)}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.badge-green{background:#00c85320;color:#00e676}
+.badge-yellow{background:#ffd60020;color:#ffd600}
+.badge-red{background:#f4433620;color:#ff6659}
+.badge-blue{background:#2196f320;color:#64b5f6}
+.badge-gray{background:#ffffff10;color:var(--text2)}
+.badge-orange{background:#ff910020;color:#ffb74d}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .2s;text-decoration:none}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue2)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-danger{background:#f4433620;color:#ff6659;border:1px solid #f4433640}
+.btn-danger:hover{background:#f4433640}
+.btn-sm{padding:6px 12px;font-size:13px}
+.btn-icon{padding:7px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;transition:all .2s}
+.btn-icon:hover{background:var(--bg4);color:var(--text)}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:#00000088;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:100%;max-width:640px;max-height:90vh;overflow-y:auto;padding:28px}
+.modal-lg{max-width:880px}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:20px}
+.modal-footer{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-grid.col3{grid-template-columns:1fr 1fr 1fr}
+.form-full{grid-column:1/-1}
+.form-group{display:flex;flex-direction:column;gap:6px}
+label{font-size:13px;font-weight:600;color:var(--text2)}
+input,select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:10px 14px;font-size:14px;font-family:inherit;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+textarea{resize:vertical;min-height:80px}
+
+/* ── Detail panel ── */
+.detail-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:20px}
+.detail-panel h3{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+
+/* ── Vencimento alert ── */
+.venc-ok{color:var(--green2)}
+.venc-warn{color:var(--yellow)}
+.venc-danger{color:var(--red)}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty .icon{font-size:40px;margin-bottom:12px}
+
+/* ── Tooltip chip ── */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--bg4);color:var(--text2)}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="logo">💼 Contratos</div>
+    <a href="/dashboard-farmacia/">🏠 Dashboard</a>
+    <a href="/alertas/">🚨 Alertas</a>
+    <a href="/executive/">📊 Executivo</a>
+    <div class="divider"></div>
+    <h2>Módulos</h2>
+    <a href="/farmacia/gestao/">💊 Farmácia</a>
+    <a href="/hospital/gestao/">🏥 Hospital</a>
+    <a href="/governo/gestao/">🏛️ Governo</a>
+    <a href="/sst/">🦺 SST</a>
+    <div class="divider"></div>
+    <a href="/contratos/" class="active">📋 Contratos de Saúde</a>
+    <a href="/series-epidemiologicas/">📈 Séries Epi.</a>
+  </nav>
+
+  <div class="main">
+    <!-- Header -->
+    <div class="header">
+      <h1>📋 Contratos de Saúde &amp; Convênios</h1>
+      <div class="header-actions">
+        <span id="hojeDt" style="font-size:13px;color:var(--text3)"></span>
+        <button class="btn btn-primary" onclick="abrirModalContrato()">+ Novo Contrato</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- KPIs -->
+      <div class="kpi-row" id="kpiRow">
+        <div class="kpi-card blue"><div class="kpi-label">Total</div><div class="kpi-value" id="kTotal">—</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Ativos</div><div class="kpi-value" id="kAtivos">—</div></div>
+        <div class="kpi-card yellow"><div class="kpi-label">Vencendo 30d</div><div class="kpi-value" id="kVencendo">—</div></div>
+        <div class="kpi-card red"><div class="kpi-label">Vencidos</div><div class="kpi-value" id="kVencidos">—</div></div>
+        <div class="kpi-card purple"><div class="kpi-label">Beneficiários</div><div class="kpi-value" id="kBenef">—</div></div>
+        <div class="kpi-card blue"><div class="kpi-label">Custo Mensal</div><div class="kpi-value" id="kCusto" style="font-size:20px">—</div></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <select id="fTipo" onchange="carregarContratos()">
+          <option value="">Todos os tipos</option>
+          <option value="plano_saude">Plano de Saúde</option>
+          <option value="plano_odonto">Plano Odontológico</option>
+          <option value="seguro_vida">Seguro de Vida</option>
+          <option value="seguro_acidente">Seguro Acidente</option>
+          <option value="convenio_farmacia">Convênio Farmácia</option>
+          <option value="outros">Outros</option>
+        </select>
+        <select id="fStatus" onchange="carregarContratos()">
+          <option value="">Todos os status</option>
+          <option value="ativo">Ativo</option>
+          <option value="suspenso">Suspenso</option>
+          <option value="encerrado">Encerrado</option>
+          <option value="em_negociacao">Em Negociação</option>
+          <option value="rescindido">Rescindido</option>
+        </select>
+        <input type="search" id="fBusca" placeholder="Buscar operadora..." oninput="filtrarTabela()">
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Operadora</th>
+              <th>Tipo</th>
+              <th>Abrangência</th>
+              <th>Início</th>
+              <th>Vencimento</th>
+              <th>Beneficiários</th>
+              <th>Custo/mês</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbContratos">
+            <tr><td colspan="9" class="empty"><div class="icon">⏳</div>Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Detail panel (shown when a contract is selected) -->
+      <div class="detail-panel" id="detailPanel" style="display:none">
+        <h3>
+          <span id="detailTitle">Detalhes do Contrato</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="abrirModalBenef()">+ Beneficiário</button>
+            <button class="btn btn-ghost btn-sm" onclick="fecharDetalhe()">✕ Fechar</button>
+          </div>
+        </h3>
+        <div id="detailBenef">
+          <table>
+            <thead>
+              <tr>
+                <th>Funcionário</th>
+                <th>Cargo</th>
+                <th>Carteirinha</th>
+                <th>Inclusão</th>
+                <th>Dependentes</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbBenef"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Contrato -->
+<div class="overlay" id="ovContrato">
+  <div class="modal">
+    <h2 id="modalTitle">Novo Contrato de Saúde</h2>
+    <input type="hidden" id="cId">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Tipo *</label>
+        <select id="cTipo">
+          <option value="plano_saude">Plano de Saúde</option>
+          <option value="plano_odonto">Plano Odontológico</option>
+          <option value="seguro_vida">Seguro de Vida</option>
+          <option value="seguro_acidente">Seguro Acidente</option>
+          <option value="convenio_farmacia">Convênio Farmácia</option>
+          <option value="outros">Outros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Operadora / Seguradora *</label>
+        <input type="text" id="cOperadora" placeholder="Ex: Unimed, Bradesco Saúde...">
+      </div>
+      <div class="form-group">
+        <label>Nº do Contrato</label>
+        <input type="text" id="cNumero" placeholder="Número ou código">
+      </div>
+      <div class="form-group">
+        <label>Registro ANS</label>
+        <input type="text" id="cANS" placeholder="Registro na ANS">
+      </div>
+      <div class="form-group">
+        <label>Abrangência</label>
+        <select id="cAbrang">
+          <option value="nacional">Nacional</option>
+          <option value="estadual">Estadual</option>
+          <option value="municipal">Municipal</option>
+          <option value="regional">Regional</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="cStatus">
+          <option value="ativo">Ativo</option>
+          <option value="suspenso">Suspenso</option>
+          <option value="encerrado">Encerrado</option>
+          <option value="em_negociacao">Em Negociação</option>
+          <option value="rescindido">Rescindido</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Data de Início *</label>
+        <input type="date" id="cDataIni">
+      </div>
+      <div class="form-group">
+        <label>Data de Fim</label>
+        <input type="date" id="cDataFim">
+      </div>
+      <div class="form-group">
+        <label>Valor Mensal (R$)</label>
+        <input type="number" id="cValMensal" placeholder="0,00" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Valor Per Capita (R$)</label>
+        <input type="number" id="cValPerCap" placeholder="0,00" step="0.01">
+      </div>
+      <div class="form-full form-group">
+        <label>Descrição</label>
+        <textarea id="cDesc" placeholder="Descreva o contrato..."></textarea>
+      </div>
+      <div class="form-full form-group">
+        <label>Coberturas / Detalhes</label>
+        <textarea id="cCobert" placeholder="Descreva as coberturas incluídas..."></textarea>
+      </div>
+      <div class="form-full form-group">
+        <label>Carências</label>
+        <textarea id="cCarenc" placeholder="Informações sobre carências..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Contato da Operadora</label>
+        <input type="text" id="cContato" placeholder="Telefone ou e-mail">
+      </div>
+      <div class="form-group">
+        <label>Observações</label>
+        <input type="text" id="cObs" placeholder="Observações adicionais">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('ovContrato')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarContrato()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Beneficiário -->
+<div class="overlay" id="ovBenef">
+  <div class="modal">
+    <h2>Adicionar Beneficiário</h2>
+    <input type="hidden" id="bContratoId">
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label>Funcionário *</label>
+        <select id="bFuncId">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Nº Carteirinha</label>
+        <input type="text" id="bCarteirinha" placeholder="Número da carteirinha">
+      </div>
+      <div class="form-group">
+        <label>Data de Inclusão</label>
+        <input type="date" id="bDataInc">
+      </div>
+      <div class="form-group">
+        <label>Nº de Dependentes</label>
+        <input type="number" id="bDep" value="0" min="0">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('ovBenef')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarBenef()">+ Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const getCsrf = () => document.cookie.split(';').find(c=>c.trim().startsWith('csrftoken='))?.split('=')[1] || '';
+
+let todosContratos = [];
+let contratoSelecionadoId = null;
+
+// ── Inicialização ──────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('hojeDt').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  carregarKPIs();
+  carregarContratos();
+});
+
+// ── KPIs ─────────────────────────────────────────────────────────────────
+async function carregarKPIs() {
+  try {
+    const r = await fetch('/api/contratos/kpis/');
+    const d = await r.json();
+    const k = d.kpis;
+    document.getElementById('kTotal').textContent = k.total;
+    document.getElementById('kAtivos').textContent = k.ativos;
+    document.getElementById('kVencendo').textContent = k.vencendo_30d;
+    document.getElementById('kVencidos').textContent = k.vencidos;
+    document.getElementById('kBenef').textContent = k.total_beneficiarios;
+    document.getElementById('kCusto').textContent = k.custo_mensal_total
+      ? 'R$ ' + k.custo_mensal_total.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})
+      : 'R$ 0';
+  } catch(e) { console.error(e); }
+}
+
+// ── Contratos ──────────────────────────────────────────────────────────────
+async function carregarContratos() {
+  const tipo = document.getElementById('fTipo').value;
+  const status = document.getElementById('fStatus').value;
+  let url = '/api/contratos/?';
+  if (tipo) url += 'tipo=' + tipo + '&';
+  if (status) url += 'status=' + status;
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    todosContratos = d.contratos || [];
+    renderTabela(todosContratos);
+  } catch(e) { console.error(e); }
+}
+
+function filtrarTabela() {
+  const q = document.getElementById('fBusca').value.toLowerCase();
+  renderTabela(todosContratos.filter(c => c.operadora.toLowerCase().includes(q)));
+}
+
+function renderTabela(lista) {
+  const tb = document.getElementById('tbContratos');
+  if (!lista.length) {
+    tb.innerHTML = '<tr><td colspan="9"><div class="empty"><div class="icon">📋</div>Nenhum contrato encontrado</div></td></tr>';
+    return;
+  }
+  tb.innerHTML = lista.map(c => {
+    const bVenc = c.vencido ? 'badge-red' : c.vencendo_30d ? 'badge-yellow' : c.data_fim ? 'badge-green' : 'badge-gray';
+    const diasTxt = c.data_fim ? (c.vencido ? `Vencido há ${Math.abs(c.dias_para_vencer)}d` : `${c.dias_para_vencer}d`) : 'Indeterminado';
+    const sBadge = {'ativo':'badge-green','suspenso':'badge-yellow','encerrado':'badge-gray','em_negociacao':'badge-blue','rescindido':'badge-red'}[c.status]||'badge-gray';
+    const custo = c.valor_mensal ? 'R$ '+c.valor_mensal.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+    return `<tr>
+      <td><strong>${c.operadora}</strong>${c.numero_contrato?'<br><span class="chip">'+c.numero_contrato+'</span>':''}</td>
+      <td>${c.tipo_label}</td>
+      <td>${c.abrangencia_label}</td>
+      <td>${fmtDate(c.data_inicio)}</td>
+      <td><span class="badge ${bVenc}">${diasTxt}</span></td>
+      <td>${c.total_beneficiarios}</td>
+      <td>${custo}</td>
+      <td><span class="badge ${sBadge}">${c.status_label}</span></td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn-icon" title="Ver beneficiários" onclick="abrirDetalhe(${c.id},'${c.operadora}')">👥</button>
+          <button class="btn-icon" title="Editar" onclick="editarContrato(${c.id})">✏️</button>
+          <button class="btn-icon" title="Excluir" onclick="deletarContrato(${c.id})">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Detalhe / Beneficiários ────────────────────────────────────────────────
+async function abrirDetalhe(id, nome) {
+  contratoSelecionadoId = id;
+  document.getElementById('detailTitle').textContent = `👥 Beneficiários — ${nome}`;
+  document.getElementById('bContratoId').value = id;
+  document.getElementById('detailPanel').style.display = '';
+  await carregarBenef(id);
+  await carregarFuncionarios();
+}
+
+function fecharDetalhe() {
+  document.getElementById('detailPanel').style.display = 'none';
+  contratoSelecionadoId = null;
+}
+
+async function carregarBenef(id) {
+  try {
+    const r = await fetch(`/api/contratos/${id}/beneficiarios/`);
+    const d = await r.json();
+    const tb = document.getElementById('tbBenef');
+    const lista = d.beneficiarios || [];
+    if (!lista.length) {
+      tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">Nenhum beneficiário cadastrado</td></tr>';
+      return;
+    }
+    tb.innerHTML = lista.map(b => `<tr>
+      <td><strong>${b.funcionario_nome}</strong></td>
+      <td>${b.funcionario_cargo||'—'}</td>
+      <td>${b.numero_carteirinha||'—'}</td>
+      <td>${fmtDate(b.data_inclusao)||'—'}</td>
+      <td>${b.dependentes}</td>
+      <td><span class="badge ${b.ativo?'badge-green':'badge-gray'}">${b.ativo?'Ativo':'Inativo'}</span></td>
+      <td>
+        ${b.ativo
+          ? `<button class="btn-icon" title="Inativar" onclick="inativarBenef(${b.id})">⏸️</button>`
+          : `<button class="btn-icon" title="Excluir" onclick="deletarBenef(${b.id})">🗑️</button>`}
+      </td>
+    </tr>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function carregarFuncionarios() {
+  try {
+    const r = await fetch('/api/sst/funcionarios/');
+    const d = await r.json();
+    const sel = document.getElementById('bFuncId');
+    sel.innerHTML = '<option value="">Selecione...</option>';
+    (d.funcionarios||[]).forEach(f => {
+      const o = document.createElement('option');
+      o.value = f.id;
+      o.textContent = f.nome + (f.cargo ? ` (${f.cargo})` : '');
+      sel.appendChild(o);
+    });
+  } catch(e) { console.error(e); }
+}
+
+function abrirModalBenef() {
+  document.getElementById('bFuncId').value = '';
+  document.getElementById('bCarteirinha').value = '';
+  document.getElementById('bDataInc').value = '';
+  document.getElementById('bDep').value = '0';
+  abrirModal('ovBenef');
+}
+
+async function salvarBenef() {
+  const cid = document.getElementById('bContratoId').value;
+  const fid = document.getElementById('bFuncId').value;
+  if (!fid) { alert('Selecione um funcionário'); return; }
+  const payload = {
+    funcionario_id: parseInt(fid),
+    numero_carteirinha: document.getElementById('bCarteirinha').value,
+    data_inclusao: document.getElementById('bDataInc').value || null,
+    dependentes: parseInt(document.getElementById('bDep').value)||0,
+  };
+  try {
+    const r = await fetch(`/api/contratos/${cid}/beneficiarios/`, {
+      method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) { const e = await r.json(); alert(e.erro||'Erro'); return; }
+    fecharModal('ovBenef');
+    carregarBenef(parseInt(cid));
+    carregarKPIs();
+  } catch(e) { console.error(e); }
+}
+
+async function inativarBenef(id) {
+  if (!confirm('Inativar este beneficiário do plano?')) return;
+  try {
+    await fetch(`/api/contratos/beneficiarios/${id}/`, {
+      method:'PUT', headers:{'X-CSRFToken':getCsrf()}
+    });
+    carregarBenef(contratoSelecionadoId);
+    carregarKPIs();
+  } catch(e) { console.error(e); }
+}
+
+async function deletarBenef(id) {
+  if (!confirm('Remover definitivamente este beneficiário?')) return;
+  try {
+    await fetch(`/api/contratos/beneficiarios/${id}/`, {
+      method:'DELETE', headers:{'X-CSRFToken':getCsrf()}
+    });
+    carregarBenef(contratoSelecionadoId);
+    carregarKPIs();
+  } catch(e) { console.error(e); }
+}
+
+// ── CRUD Contrato ──────────────────────────────────────────────────────────
+function abrirModalContrato() {
+  document.getElementById('modalTitle').textContent = 'Novo Contrato de Saúde';
+  document.getElementById('cId').value = '';
+  ['cOperadora','cNumero','cANS','cDesc','cCobert','cCarenc','cContato','cObs','cDataIni','cDataFim','cValMensal','cValPerCap'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cTipo').value = 'plano_saude';
+  document.getElementById('cAbrang').value = 'nacional';
+  document.getElementById('cStatus').value = 'ativo';
+  abrirModal('ovContrato');
+}
+
+function editarContrato(id) {
+  const c = todosContratos.find(x=>x.id===id);
+  if (!c) return;
+  document.getElementById('modalTitle').textContent = 'Editar Contrato';
+  document.getElementById('cId').value = c.id;
+  document.getElementById('cTipo').value = c.tipo;
+  document.getElementById('cOperadora').value = c.operadora;
+  document.getElementById('cNumero').value = c.numero_contrato||'';
+  document.getElementById('cANS').value = c.registro_ans||'';
+  document.getElementById('cAbrang').value = c.abrangencia;
+  document.getElementById('cStatus').value = c.status;
+  document.getElementById('cDataIni').value = c.data_inicio||'';
+  document.getElementById('cDataFim').value = c.data_fim||'';
+  document.getElementById('cValMensal').value = c.valor_mensal||'';
+  document.getElementById('cValPerCap').value = c.valor_per_capita||'';
+  document.getElementById('cDesc').value = c.descricao||'';
+  document.getElementById('cCobert').value = c.cobertura_detalhes||'';
+  document.getElementById('cCarenc').value = c.carencias||'';
+  document.getElementById('cContato').value = c.contato_operadora||'';
+  document.getElementById('cObs').value = c.observacoes||'';
+  abrirModal('ovContrato');
+}
+
+async function salvarContrato() {
+  const id = document.getElementById('cId').value;
+  const payload = {
+    tipo: document.getElementById('cTipo').value,
+    operadora: document.getElementById('cOperadora').value,
+    numero_contrato: document.getElementById('cNumero').value,
+    registro_ans: document.getElementById('cANS').value,
+    abrangencia: document.getElementById('cAbrang').value,
+    status: document.getElementById('cStatus').value,
+    data_inicio: document.getElementById('cDataIni').value,
+    data_fim: document.getElementById('cDataFim').value||null,
+    valor_mensal: document.getElementById('cValMensal').value||null,
+    valor_per_capita: document.getElementById('cValPerCap').value||null,
+    descricao: document.getElementById('cDesc').value,
+    cobertura_detalhes: document.getElementById('cCobert').value,
+    carencias: document.getElementById('cCarenc').value,
+    contato_operadora: document.getElementById('cContato').value,
+    observacoes: document.getElementById('cObs').value,
+  };
+  if (!payload.operadora) { alert('Operadora é obrigatória'); return; }
+  if (!payload.data_inicio) { alert('Data de início é obrigatória'); return; }
+
+  const url = id ? `/api/contratos/${id}/` : '/api/contratos/';
+  const method = id ? 'PUT' : 'POST';
+  try {
+    const r = await fetch(url, {
+      method, headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) { const e = await r.json(); alert(e.erro||'Erro ao salvar'); return; }
+    fecharModal('ovContrato');
+    carregarContratos();
+    carregarKPIs();
+  } catch(e) { console.error(e); }
+}
+
+async function deletarContrato(id) {
+  if (!confirm('Excluir este contrato? Esta ação não pode ser desfeita.')) return;
+  try {
+    await fetch(`/api/contratos/${id}/`, {
+      method:'DELETE', headers:{'X-CSRFToken':getCsrf()}
+    });
+    if (contratoSelecionadoId === id) fecharDetalhe();
+    carregarContratos();
+    carregarKPIs();
+  } catch(e) { console.error(e); }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function abrirModal(id) { document.getElementById(id).classList.add('show'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('show'); }
+function fmtDate(s) {
+  if (!s) return null;
+  const [y,m,d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+// Close on backdrop click
+document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click', e => { if(e.target===ov) fecharModal(ov.id); }));
+</script>
+</body>
+</html>
