@@ -80,8 +80,15 @@ from api.views_sst import (
     api_cat_pdf,
     api_prontuario_pdf,
     api_sst_conformidade,
+    api_sst_conformidade_pdf,
     sst_conformidade_page,
 )
+from api.views_agendamento_sst import (
+    api_agendamentos_sst,
+    api_agendamento_sst_detalhe,
+    api_agendamentos_sst_kpis,
+)
+from api.views_alertas import api_alertas, alertas_page
 from api.views_gestao import (
     gestao_corporativa,
     api_apoio_fila,
@@ -249,6 +256,11 @@ urlpatterns = [
     path('painel-lider/', painel_lider),
     path('api/lider/unidade/<int:unidade_id>/dados', api_unidade_dados),
 
+    # 🚨 Alertas inteligentes
+    path('alertas/', alertas_page),
+    path('api/alertas/', api_alertas),
+    path('api/alertas', api_alertas),
+
     # 🏥 SST / Saúde Ocupacional — páginas
     path('sst/', sst_home_redirect),
     path('sst/funcionarios/', sst_funcionarios_page),
@@ -296,6 +308,15 @@ urlpatterns = [
     path('api/sst/epis/sem-epi', api_epis_sem_epi),
     path('api/sst/conformidade/', api_sst_conformidade),
     path('api/sst/conformidade', api_sst_conformidade),
+    path('api/sst/conformidade/pdf', api_sst_conformidade_pdf),
+    path('api/sst/conformidade/pdf/', api_sst_conformidade_pdf),
+    # Agendamento SST
+    path('api/sst/agendamentos/', api_agendamentos_sst),
+    path('api/sst/agendamentos', api_agendamentos_sst),
+    path('api/sst/agendamentos/kpis/', api_agendamentos_sst_kpis),
+    path('api/sst/agendamentos/kpis', api_agendamentos_sst_kpis),
+    path('api/sst/agendamentos/<int:ag_id>/', api_agendamento_sst_detalhe),
+    path('api/sst/agendamentos/<int:ag_id>', api_agendamento_sst_detalhe),
     path('api/sst/asos/<int:aso_id>/pdf', api_aso_pdf),
     path('api/sst/cats/<int:cat_id>/pdf', api_cat_pdf),
     path('api/sst/funcionarios/<int:funcionario_id>/prontuario/pdf', api_prontuario_pdf),

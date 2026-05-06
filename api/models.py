@@ -1622,3 +1622,43 @@ class PlanoAcaoGov(models.Model):
 
     def __str__(self):
         return self.titulo
+
+
+# ─── SST Agendamento ───────────────────────────────────────────────────────────
+
+class AgendamentoSST(models.Model):
+    TIPO_CHOICES = [
+        ("exame_admissional", "Exame Admissional"),
+        ("exame_periodico", "Exame Periódico"),
+        ("exame_retorno", "Retorno ao Trabalho"),
+        ("exame_demissional", "Exame Demissional"),
+        ("exame_mudanca", "Mudança de Função"),
+        ("consulta", "Consulta Médica"),
+        ("treinamento", "Treinamento NR"),
+        ("outro", "Outro"),
+    ]
+    STATUS_CHOICES = [
+        ("agendado", "Agendado"),
+        ("confirmado", "Confirmado"),
+        ("realizado", "Realizado"),
+        ("faltou", "Não Compareceu"),
+        ("cancelado", "Cancelado"),
+        ("reagendado", "Reagendado"),
+    ]
+    empresa         = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="agendamentos_sst")
+    funcionario     = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="agendamentos")
+    tipo            = models.CharField(max_length=30, choices=TIPO_CHOICES, default="exame_periodico")
+    status          = models.CharField(max_length=20, choices=STATUS_CHOICES, default="agendado")
+    data_hora       = models.DateTimeField()
+    local           = models.CharField(max_length=300, blank=True, default="")
+    medico          = models.CharField(max_length=200, blank=True, default="")
+    observacoes     = models.TextField(blank=True, default="")
+    lembrete_enviado = models.BooleanField(default=False)
+    criado_em       = models.DateTimeField(auto_now_add=True)
+    atualizado_em   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["data_hora"]
+
+    def __str__(self):
+        return f"{self.funcionario.nome} – {self.get_tipo_display()} em {self.data_hora:%d/%m/%Y}"

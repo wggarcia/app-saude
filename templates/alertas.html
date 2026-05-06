@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🚨 Central de Alertas · SolusCRT</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:28px 32px}
+/* Header */
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.nav-links{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 12px;font-size:12px;border-radius:6px}
+/* KPIs */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+@media(max-width:900px){.kpi-row{grid-template-columns:1fr 1fr}}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden;cursor:pointer;transition:.2s}
+.kpi:hover{background:rgba(255,255,255,.07)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.danger::before{background:var(--danger)}.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}
+.kpi-val{font-size:32px;font-weight:800;color:var(--accent)}
+.kpi.danger .kpi-val{color:var(--danger)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+/* Filters */
+.filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+.filter-bar select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.filter-tab{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--muted);transition:.15s}
+.filter-tab:hover,.filter-tab.active{background:rgba(0,194,255,.1);color:var(--accent);border-color:rgba(0,194,255,.3)}
+.filter-tab.danger{border-color:rgba(255,77,109,.3)}.filter-tab.danger.active,.filter-tab.danger:hover{background:rgba(255,77,109,.1);color:var(--danger)}
+.filter-tab.warn{border-color:rgba(255,179,71,.3)}.filter-tab.warn.active,.filter-tab.warn:hover{background:rgba(255,179,71,.1);color:var(--warn)}
+.filter-tab.ok{border-color:rgba(0,229,176,.3)}.filter-tab.ok.active,.filter-tab.ok:hover{background:rgba(0,229,176,.1);color:var(--ok)}
+/* Grid de alertas */
+.alertas-grid{display:grid;gap:12px}
+/* Card de alerta */
+.alerta-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:flex-start;gap:14px;transition:.15s;text-decoration:none;color:var(--text)}
+.alerta-card:hover{background:rgba(255,255,255,.06)}
+.alerta-card.critico{border-left:3px solid var(--danger)}
+.alerta-card.alerta{border-left:3px solid var(--warn)}
+.alerta-card.info{border-left:3px solid var(--accent)}
+.alerta-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+.alerta-body{flex:1}
+.alerta-titulo{font-size:14px;font-weight:700;margin-bottom:4px}
+.alerta-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.alerta-meta{display:flex;align-items:center;gap:10px;margin-top:8px}
+.tag-modulo{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.tag-sst{background:rgba(0,194,255,.12);color:var(--accent)}
+.tag-farmacia{background:rgba(0,229,176,.12);color:var(--ok)}
+.tag-hospital{background:rgba(255,77,109,.12);color:var(--danger)}
+.tag-governo{background:rgba(255,179,71,.12);color:var(--warn)}
+.sev-badge{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+.sev-critico{background:rgba(255,77,109,.15);color:var(--danger)}
+.sev-alerta{background:rgba(255,179,71,.15);color:var(--warn)}
+.sev-info{background:rgba(0,194,255,.15);color:var(--accent)}
+.alerta-link{font-size:11px;color:var(--muted);text-decoration:none}
+.alerta-link:hover{color:var(--accent)}
+/* Vazio */
+.empty-state{padding:60px;text-align:center;color:var(--muted);font-size:16px}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+/* Refresh */
+.refresh-info{font-size:12px;color:var(--muted);margin-left:auto}
+/* Seção por módulo */
+.modulo-section{margin-bottom:28px}
+.modulo-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.modulo-header h2{font-size:15px;font-weight:700}
+.modulo-count{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(255,255,255,.08);color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">🚨 Central de Alertas</div>
+    <div class="page-sub">Monitoramento inteligente de todos os módulos do sistema</div>
+  </div>
+  <div class="nav-links">
+    <a href="/sst/" class="btn btn-ghost btn-sm">🛡️ SST</a>
+    <a href="/farmacia/" class="btn btn-ghost btn-sm">💊 Farmácia</a>
+    <a href="/hospital/" class="btn btn-ghost btn-sm">🏥 Hospital</a>
+    <a href="/governo/" class="btn btn-ghost btn-sm">🏛️ Governo</a>
+    <button class="btn btn-ghost btn-sm" onclick="carregar()">🔄 Atualizar</button>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-row">
+  <div class="kpi" onclick="setFiltro('','')">
+    <div class="kpi-val" id="kTotal">—</div>
+    <div class="kpi-lbl">Total de Alertas</div>
+  </div>
+  <div class="kpi danger" onclick="setFiltro('','critico')">
+    <div class="kpi-val" id="kCritico">—</div>
+    <div class="kpi-lbl">🔴 Críticos</div>
+  </div>
+  <div class="kpi warn" onclick="setFiltro('','alerta')">
+    <div class="kpi-val" id="kAlerta">—</div>
+    <div class="kpi-lbl">⚠️ Em Alerta</div>
+  </div>
+  <div class="kpi ok" onclick="setFiltro('','info')">
+    <div class="kpi-val" id="kInfo">—</div>
+    <div class="kpi-lbl">ℹ️ Informativos</div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="filter-bar">
+  <button class="filter-tab active" id="tabTodos" onclick="setFiltro('','')">Todos</button>
+  <button class="filter-tab danger" id="tabCritico" onclick="setFiltro('','critico')">🔴 Críticos</button>
+  <button class="filter-tab warn" id="tabAlerta" onclick="setFiltro('','alerta')">⚠️ Alertas</button>
+  <button class="filter-tab ok" id="tabInfo" onclick="setFiltro('','info')">ℹ️ Info</button>
+  <select id="filtroModulo" onchange="setFiltro(this.value, _sevFiltro)">
+    <option value="">Todos os módulos</option>
+    <option value="SST">🛡️ SST</option>
+    <option value="Farmácia">💊 Farmácia</option>
+    <option value="Hospital">🏥 Hospital</option>
+    <option value="Governo">🏛️ Governo</option>
+  </select>
+  <span class="refresh-info" id="refreshInfo"></span>
+</div>
+
+<!-- Conteúdo -->
+<div id="conteudo"></div>
+
+<script>
+let _todos = [];
+let _sevFiltro = '';
+let _modFiltro = '';
+
+const ICONS = { critico: '🔴', alerta: '⚠️', info: 'ℹ️' };
+const MOD_TAG = {
+  'SST': 'tag-sst',
+  'Farmácia': 'tag-farmacia',
+  'Hospital': 'tag-hospital',
+  'Governo': 'tag-governo',
+};
+
+async function carregar() {
+  document.getElementById('conteudo').innerHTML = '<div class="empty-state"><div class="icon">⏳</div><p>Carregando alertas…</p></div>';
+  const d = await fetch('/api/alertas/', {credentials:'same-origin'}).then(r=>r.json());
+
+  document.getElementById('kTotal').textContent = d.resumo.total;
+  document.getElementById('kCritico').textContent = d.resumo.criticos;
+  document.getElementById('kAlerta').textContent = d.resumo.alertas;
+  document.getElementById('kInfo').textContent = d.resumo.infos;
+
+  _todos = d.alertas || [];
+  document.getElementById('refreshInfo').textContent = `Atualizado: ${new Date().toLocaleTimeString('pt-BR')}`;
+  renderAlertas();
+}
+
+function setFiltro(mod, sev) {
+  _modFiltro = mod;
+  _sevFiltro = sev;
+  document.getElementById('filtroModulo').value = mod;
+
+  // Tab active state
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  if (!sev)       document.getElementById('tabTodos').classList.add('active');
+  if (sev==='critico') document.getElementById('tabCritico').classList.add('active');
+  if (sev==='alerta')  document.getElementById('tabAlerta').classList.add('active');
+  if (sev==='info')    document.getElementById('tabInfo').classList.add('active');
+
+  renderAlertas();
+}
+
+function renderAlertas() {
+  let lista = _todos.filter(a => {
+    if (_modFiltro && a.modulo !== _modFiltro) return false;
+    if (_sevFiltro && a.severidade !== _sevFiltro) return false;
+    return true;
+  });
+
+  const el = document.getElementById('conteudo');
+
+  if (!lista.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">✅</div><p>Nenhum alerta encontrado — tudo em ordem!</p></div>`;
+    return;
+  }
+
+  // Agrupar por módulo
+  const grupos = {};
+  lista.forEach(a => {
+    if (!grupos[a.modulo]) grupos[a.modulo] = [];
+    grupos[a.modulo].push(a);
+  });
+
+  const MOD_ICONS = { SST: '🛡️', 'Farmácia': '💊', Hospital: '🏥', Governo: '🏛️' };
+
+  el.innerHTML = Object.entries(grupos).map(([mod, items]) => `
+    <div class="modulo-section">
+      <div class="modulo-header">
+        <h2>${MOD_ICONS[mod] || '📋'} ${mod}</h2>
+        <span class="modulo-count">${items.length} alerta(s)</span>
+      </div>
+      <div class="alertas-grid">
+        ${items.map(a => `
+          <a class="alerta-card ${a.severidade}" href="${a.link || '#'}">
+            <div class="alerta-icon">${ICONS[a.severidade] || '📌'}</div>
+            <div class="alerta-body">
+              <div class="alerta-titulo">${a.titulo}</div>
+              <div class="alerta-desc">${a.descricao}</div>
+              <div class="alerta-meta">
+                <span class="tag-modulo ${MOD_TAG[a.modulo]||''}">${a.modulo}</span>
+                <span class="sev-badge sev-${a.severidade}">${a.severidade.charAt(0).toUpperCase()+a.severidade.slice(1)}</span>
+                ${a.link ? `<span class="alerta-link">→ Ver detalhes</span>` : ''}
+              </div>
+            </div>
+          </a>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// Auto-refresh a cada 5 minutos
+carregar();
+setInterval(carregar, 5 * 60 * 1000);
+</script>
+</body>
+</html>
