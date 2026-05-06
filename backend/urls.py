@@ -27,7 +27,7 @@ from api.views import (
 )
 
 from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba
-from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo
+from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page
 from api.views_corporativo import (
     dashboard_empresa_corporativo,
     api_empresa_corporativo_resumo,
@@ -123,6 +123,26 @@ from api.views_comunicacao import (
 )
 from api.views_farmacia import api_farmacia_painel
 from api.views_hospital import api_hospital_painel
+from api.views_farmacia_ops import (
+    api_fornecedores_farmacia, api_fornecedor_farmacia_detalhe,
+    api_itens_farmacia, api_item_farmacia_detalhe,
+    api_movimentos_estoque, api_dispensacoes_farmacia,
+    api_pedidos_compra_farmacia, api_pedido_compra_status,
+    api_farmacia_ops_kpis,
+)
+from api.views_hospital_ops import (
+    api_departamentos_hospital, api_departamento_hospital_detalhe,
+    api_leitos_hospital, api_leito_status,
+    api_pacientes_hospital, api_triagens_hospital,
+    api_internacoes_hospital, api_internacao_status,
+    api_evolucoes_internacao, api_hospital_ops_kpis,
+)
+from api.views_governo_ops import (
+    api_programas_gov, api_programa_gov_detalhe,
+    api_indicadores_gov, api_indicador_gov_detalhe,
+    api_orcamentos_gov, api_planos_acao_gov, api_plano_acao_gov_detalhe,
+    api_governo_ops_kpis,
+)
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
 from api.governanca import api_auditoria_institucional, api_matriz_decisao, api_metodologia_epidemiologica
@@ -167,6 +187,14 @@ urlpatterns = [
     path('dashboard-farmacia/', dashboard_farmacia),
     path('dashboard-hospital/', dashboard_hospital),
     path('dashboard-governo/', dashboard_governo),
+    # Aliases com slug mais curto
+    path('farmacia/', dashboard_farmacia),
+    path('hospital/', dashboard_hospital),
+    path('governo/', dashboard_governo),
+    # Gestão operacional
+    path('farmacia/gestao/', farmacia_gestao_page),
+    path('hospital/gestao/', hospital_gestao_page),
+    path('governo/gestao/', governo_gestao_page),
     path('sala-decisao-ia/', command_ai),
     path('command-ai/', command_ai),
     path('contrato-governo/', contrato_governo),
@@ -316,8 +344,38 @@ urlpatterns = [
     path('api/operacao-central/financeiro/acao', api_dono_financeiro_acao),
     path('api/operacao-central/exportar', api_dono_exportar),
     path('api/farmacia/painel', api_farmacia_painel),
+    # ── Farmácia Operacional ──────────────────────────────────
+    path('api/farmacia/ops/kpis/', api_farmacia_ops_kpis),
+    path('api/farmacia/fornecedores/', api_fornecedores_farmacia),
+    path('api/farmacia/fornecedores/<int:fornecedor_id>/', api_fornecedor_farmacia_detalhe),
+    path('api/farmacia/itens/', api_itens_farmacia),
+    path('api/farmacia/itens/<int:item_id>/', api_item_farmacia_detalhe),
+    path('api/farmacia/movimentos/', api_movimentos_estoque),
+    path('api/farmacia/dispensacoes/', api_dispensacoes_farmacia),
+    path('api/farmacia/pedidos/', api_pedidos_compra_farmacia),
+    path('api/farmacia/pedidos/<int:pedido_id>/status/', api_pedido_compra_status),
     path('api/hospital/painel', api_hospital_painel),
+    # ── Hospital Operacional ─────────────────────────────────
+    path('api/hospital/ops/kpis/', api_hospital_ops_kpis),
+    path('api/hospital/departamentos/', api_departamentos_hospital),
+    path('api/hospital/departamentos/<int:dep_id>/', api_departamento_hospital_detalhe),
+    path('api/hospital/leitos/', api_leitos_hospital),
+    path('api/hospital/leitos/<int:leito_id>/status/', api_leito_status),
+    path('api/hospital/pacientes/', api_pacientes_hospital),
+    path('api/hospital/triagens/', api_triagens_hospital),
+    path('api/hospital/internacoes/', api_internacoes_hospital),
+    path('api/hospital/internacoes/<int:internacao_id>/status/', api_internacao_status),
+    path('api/hospital/internacoes/<int:internacao_id>/evolucoes/', api_evolucoes_internacao),
     path('api/governo/alertas', api_alertas_governo),
+    # ── Governo Gestão ───────────────────────────────────────
+    path('api/governo/ops/kpis/', api_governo_ops_kpis),
+    path('api/governo/programas/', api_programas_gov),
+    path('api/governo/programas/<int:programa_id>/', api_programa_gov_detalhe),
+    path('api/governo/indicadores/', api_indicadores_gov),
+    path('api/governo/indicadores/<int:indicador_id>/', api_indicador_gov_detalhe),
+    path('api/governo/orcamentos/', api_orcamentos_gov),
+    path('api/governo/planos-acao/', api_planos_acao_gov),
+    path('api/governo/planos-acao/<int:plano_id>/', api_plano_acao_gov_detalhe),
     path('api/governo/alertas/criar', api_criar_alerta_governo),
     path('api/governo/alertas/toggle', api_toggle_alerta_governo),
     path('api/governo/alertas/fluxo', api_fluxo_alerta_governo),

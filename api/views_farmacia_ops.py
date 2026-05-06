@@ -1,0 +1,297 @@
+import json
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from .models import (
+    FornecedorFarmacia, ItemFarmacia, MovimentoEstoque,
+    PedidoCompraFarmacia, ItemPedidoCompra, DispensacaoMedicamento,
+)
+from .views_dashboard import _empresa_autenticada
+
+
+def _e(req):
+    return _empresa_autenticada(req)
+
+
+# ── Fornecedores ───────────────────────────────────────────────────────────────
+@require_http_methods(["GET", "POST"])
+def api_fornecedores_farmacia(request):
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if request.method == "GET":
+        qs = FornecedorFarmacia.objects.filter(empresa=e)
+        return JsonResponse({"fornecedores": [
+            {"id": f.id, "nome": f.nome, "cnpj": f.cnpj,
+             "email": f.email, "telefone": f.telefone,
+             "contato": f.contato, "ativo": f.ativo}
+            for f in qs
+        ]})
+    data = json.loads(request.body or "{}")
+    f = FornecedorFarmacia.objects.create(
+        empresa=e,
+        nome=data.get("nome", ""),
+        cnpj=data.get("cnpj", ""),
+        contato=data.get("contato", ""),
+        email=data.get("email", ""),
+        telefone=data.get("telefone", ""),
+    )
+    return JsonResponse({"id": f.id, "nome": f.nome}, status=201)
+
+
+@require_http_methods(["PUT", "DELETE"])
+def api_fornecedor_farmacia_detalhe(request, fornecedor_id):
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    try:
+        f = FornecedorFarmacia.objects.get(pk=fornecedor_id, empresa=e)
+    except FornecedorFarmacia.DoesNotExist:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+    if request.method == "DELETE":
+        f.delete()
+        return JsonResponse({"ok": True})
+    data = json.loads(request.body or "{}")
+    for campo in ["nome", "cnpj", "contato", "email", "telefone", "ativo"]:
+        if campo in data:
+            setattr(f, campo, data[campo])
+    f.save()
+    return JsonResponse({"ok": True})
+
+
+# ── Itens / Estoque ────────────────────────────────────────────────────────────
+@require_http_methods(["GET", "POST"])
+def api_itens_farmacia(request):
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if request.method == "GET":
+        qs = ItemFarmacia.objects.filter(empresa=e).select_related("fornecedor")
+        return JsonResponse({"itens": [
+            {"id": i.id, "nome": i.nome, "codigo": i.codigo,
+             "categoria": i.categoria, "unidade_medida": i.unidade_medida,
+             "estoque_atual": i.estoque_atual, "estoque_minimo": i.estoque_minimo,
+             "ativo": i.ativo,
+             "abaixo_minimo": i.estoque_atual < i.estoque_minimo,
+             "fornecedor_id": i.fornecedor_id,
+             "fornecedor_nome": i.fornecedor.nome if i.fornecedor else ""}
+            for i in qs
+        ]})
+    data = json.loads(request.body or "{}")
+    forn = None
+    if data.get("fornecedor_id"):
+        try:
+            forn = FornecedorFarmacia.objects.get(pk=data["fornecedor_id"], empresa=e)
+        except FornecedorFarmacia.DoesNotExist:
+            pass
+    item = ItemFarmacia.objects.create(
+        empresa=e,
+        nome=data.get("nome", ""),
+        codigo=data.get("codigo", ""),
+        categoria=data.get("categoria", "medicamento"),
+        descricao=data.get("descricao", ""),
+        unidade_medida=data.get("unidade_medida", "unidade"),
+        estoque_minimo=int(data.get("estoque_minimo", 0)),
+        fornecedor=forn,
+    )
+    return JsonResponse({"id": item.id, "nome": item.nome}, status=201)
+
+
+@require_http_methods(["PUT", "DELETE"])
+def api_item_farmacia_detalhe(request, item_id):
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    try:
+        item = ItemFarmacia.objects.get(pk=item_id, empresa=e)
+    except ItemFarmacia.DoesNotExist:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+    if request.method == "DELETE":
+        item.delete()
+        return JsonResponse({"ok": True})
+    data = json.loads(request.body or "{}")
+    for campo in ["nome", "codigo", "categoria", "descricao", "unidade_medida", "estoque_minimo", "ativo"]:
+        if campo in data:
+            setattr(item, campo, data[campo])
+    item.save()
+    return JsonResponse({"ok": True})
+
+
+# ── Movimentos de Estoque ──────────────────────────────────────────────────────
+@require_http_methods(["GET", "POST"])
+def api_movimentos_estoque(request):
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if request.method == "GET":
+        item_id = request.GET.get("item_id")
+        qs = MovimentoEstoque.objects.filter(empresa=e).select_related("item")
+        if item_id:
+            qs = qs.filter(item_id=item_id)
+        qs = qs[:100]
+        return JsonResponse({"movimentos": [
+            {"id": m.id, "tipo": m.tipo, "quantidade": m.quantidade,
+             "estoque_anterior": m.estoque_anterior, "estoque_posterior": m.estoque_posterior,
+             "motivo": m.motivo, "responsavel": m.responsavel,
+             "item_id": m.item_id, "item_nome": m.item.nome,
+             "data_movimento": m.data_movimento.isoformat()}
+            for m in qs
+        ]})
+    data = json.loads(request.body or "{}")
+    try:
+        item = ItemFarmacia.objects.get(pk=data["item_id"], empresa=e)
+    except (KeyError, ItemFarmacia.DoesNotExist):
+        return JsonResponse({"erro": "Item não encontrado"}, status=404)
+    quantidade = int(data.get("quantidade", 0))
+    tipo = data.get("tipo", "entrada")
+    estoque_anterior = item.estoque_atual
+    if tipo == "entrada":
+        item.estoque_atual += quantidade
+    elif tipo in ("saida", "vencimento"):
+        item.estoque_atual -= quantidade
+    else:  # ajuste
+        item.estoque_atual = quantidade
+    item.save()
+    m = MovimentoEstoque.objects.create(
+        empresa=e, item=item, tipo=tipo,
+        quantidade=quantidade,
+        estoque_anterior=estoque_anterior,
+        estoque_posterior=item.estoque_atual,
+        motivo=data.get("motivo", ""),
+        responsavel=data.get("responsavel", ""),
+    )
+    return JsonResponse({"id": m.id, "estoque_atual": item.estoque_atual}, status=201)
+
+
+# ── Dispensações ───────────────────────────────────────────────────────────────
+@require_http_methods(["GET", "POST"])
+def api_dispensacoes_farmacia(request):
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if request.method == "GET":
+        qs = DispensacaoMedicamento.objects.filter(empresa=e).select_related("item")[:100]
+        return JsonResponse({"dispensacoes": [
+            {"id": d.id, "item_nome": d.item.nome, "paciente_nome": d.paciente_nome,
+             "paciente_cpf": d.paciente_cpf, "quantidade": d.quantidade,
+             "responsavel": d.responsavel, "observacoes": d.observacoes,
+             "dispensado_em": d.dispensado_em.isoformat()}
+            for d in qs
+        ]})
+    data = json.loads(request.body or "{}")
+    try:
+        item = ItemFarmacia.objects.get(pk=data["item_id"], empresa=e)
+    except (KeyError, ItemFarmacia.DoesNotExist):
+        return JsonResponse({"erro": "Item não encontrado"}, status=404)
+    quantidade = int(data.get("quantidade", 1))
+    ant = item.estoque_atual
+    item.estoque_atual -= quantidade
+    item.save()
+    MovimentoEstoque.objects.create(
+        empresa=e, item=item, tipo="saida",
+        quantidade=quantidade, estoque_anterior=ant,
+        estoque_posterior=item.estoque_atual,
+        motivo=f"Dispensação para {data.get('paciente_nome', '')}",
+        responsavel=data.get("responsavel", ""),
+    )
+    d = DispensacaoMedicamento.objects.create(
+        empresa=e, item=item,
+        paciente_nome=data.get("paciente_nome", ""),
+        paciente_cpf=data.get("paciente_cpf", ""),
+        quantidade=quantidade,
+        responsavel=data.get("responsavel", ""),
+        observacoes=data.get("observacoes", ""),
+    )
+    return JsonResponse({"id": d.id}, status=201)
+
+
+# ── Pedidos de Compra ──────────────────────────────────────────────────────────
+@require_http_methods(["GET", "POST"])
+def api_pedidos_compra_farmacia(request):
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if request.method == "GET":
+        qs = PedidoCompraFarmacia.objects.filter(empresa=e).select_related("fornecedor").prefetch_related("itens__item")
+        return JsonResponse({"pedidos": [
+            {"id": p.id, "status": p.status,
+             "fornecedor_nome": p.fornecedor.nome if p.fornecedor else "",
+             "observacoes": p.observacoes,
+             "criado_em": p.criado_em.isoformat(),
+             "itens": [
+                 {"item_nome": ip.item.nome,
+                  "qtd_sol": ip.quantidade_solicitada,
+                  "qtd_rec": ip.quantidade_recebida}
+                 for ip in p.itens.all()
+             ]}
+            for p in qs
+        ]})
+    data = json.loads(request.body or "{}")
+    forn = None
+    if data.get("fornecedor_id"):
+        try:
+            forn = FornecedorFarmacia.objects.get(pk=data["fornecedor_id"], empresa=e)
+        except FornecedorFarmacia.DoesNotExist:
+            pass
+    p = PedidoCompraFarmacia.objects.create(
+        empresa=e, fornecedor=forn,
+        observacoes=data.get("observacoes", ""),
+    )
+    for it in data.get("itens", []):
+        try:
+            item = ItemFarmacia.objects.get(pk=it["item_id"], empresa=e)
+            ItemPedidoCompra.objects.create(
+                pedido=p, item=item,
+                quantidade_solicitada=int(it.get("quantidade", 1)),
+            )
+        except (KeyError, ItemFarmacia.DoesNotExist):
+            pass
+    return JsonResponse({"id": p.id}, status=201)
+
+
+@require_http_methods(["PUT"])
+def api_pedido_compra_status(request, pedido_id):
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    try:
+        p = PedidoCompraFarmacia.objects.get(pk=pedido_id, empresa=e)
+    except PedidoCompraFarmacia.DoesNotExist:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+    data = json.loads(request.body or "{}")
+    p.status = data.get("status", p.status)
+    p.save()
+    if p.status == "recebido":
+        for ip in p.itens.select_related("item").all():
+            item = ip.item
+            ant = item.estoque_atual
+            item.estoque_atual += ip.quantidade_solicitada
+            item.save()
+            ip.quantidade_recebida = ip.quantidade_solicitada
+            ip.save()
+            MovimentoEstoque.objects.create(
+                empresa=e, item=item, tipo="entrada",
+                quantidade=ip.quantidade_solicitada,
+                estoque_anterior=ant,
+                estoque_posterior=item.estoque_atual,
+                motivo=f"Recebimento pedido #{p.id}",
+            )
+    return JsonResponse({"ok": True})
+
+
+# ── KPIs ───────────────────────────────────────────────────────────────────────
+def api_farmacia_ops_kpis(request):
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    itens = list(ItemFarmacia.objects.filter(empresa=e, ativo=True))
+    abaixo_min = sum(1 for i in itens if i.estoque_atual < i.estoque_minimo)
+    total_dispensacoes = DispensacaoMedicamento.objects.filter(empresa=e).count()
+    pedidos_abertos = PedidoCompraFarmacia.objects.filter(
+        empresa=e, status__in=["rascunho", "enviado", "aprovado"]
+    ).count()
+    return JsonResponse({
+        "total_itens": len(itens),
+        "itens_abaixo_minimo": abaixo_min,
+        "total_dispensacoes": total_dispensacoes,
+        "pedidos_abertos": pedidos_abertos,
+    })

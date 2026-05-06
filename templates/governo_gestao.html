@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gestão Governamental de Saúde</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.info::before{background:#a78bfa}.kpi.teal::before{background:#2dd4bf}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.info .kpi-val{color:#a78bfa}.kpi.teal .kpi-val{color:#2dd4bf}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+/* Budget gauge */
+.budget-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.budget-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.budget-title{font-size:13px;font-weight:700;margin-bottom:12px;color:var(--muted)}
+.gauge-wrap{position:relative;width:160px;height:80px;margin:0 auto 8px}
+.gauge-bg{fill:none;stroke:rgba(255,255,255,.08);stroke-width:12;stroke-linecap:round}
+.gauge-fill{fill:none;stroke:var(--accent);stroke-width:12;stroke-linecap:round;transition:.5s}
+.gauge-text{font-size:22px;font-weight:800;fill:var(--accent);text-anchor:middle}
+.gauge-sub{font-size:10px;fill:var(--muted);text-anchor:middle}
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border)}
+.tab-btn{padding:10px 18px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-purple{background:rgba(167,139,250,.12);color:#a78bfa}
+.badge-teal{background:rgba(45,212,191,.12);color:#2dd4bf}
+/* Progress bar */
+.prog-bar{height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;margin-top:4px}
+.prog-fill{height:100%;border-radius:4px;background:var(--accent)}
+/* Indicator card */
+.ind-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;padding:16px}
+.ind-card{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:16px}
+.ind-name{font-size:13px;font-weight:700;margin-bottom:8px}
+.ind-vals{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px}
+.ind-bar{height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.ind-bar-fill{height:100%;border-radius:3px;background:var(--accent);transition:.4s}
+.ind-bar-fill.atingiu{background:var(--ok)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:72px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}.budget-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/"><span>📊</span> Alertas e Monitoramento</a>
+  <a class="nav-link active" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section" style="margin-top:12px">Sistema</div>
+  <a class="nav-link" href="/dashboard/"><span>🏠</span> Dashboard</a>
+  <a class="nav-link" href="/sair/"><span>🚪</span> Sair</a>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Gestão Governamental de Saúde</div>
+      <div class="page-sub">Programas, indicadores, orçamento e planos de ação</div>
+    </div>
+    <a href="/governo/" class="btn btn-ghost">🚨 Ver Alertas e Monitoramento</a>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row" id="kpiRow">
+    <div class="kpi"><div class="kpi-val">—</div><div class="kpi-lbl">Programas Ativos</div></div>
+    <div class="kpi ok"><div class="kpi-val">—</div><div class="kpi-lbl">Metas Atingidas</div></div>
+    <div class="kpi warn"><div class="kpi-val">—</div><div class="kpi-lbl">Planos Pendentes</div></div>
+    <div class="kpi info"><div class="kpi-val">—</div><div class="kpi-lbl">Planos em Andamento</div></div>
+  </div>
+
+  <!-- Budget widgets -->
+  <div class="budget-row" id="budgetRow">
+    <div class="budget-card">
+      <div class="budget-title">💰 ORÇAMENTO ANUAL <span id="budgetAno"></span></div>
+      <div style="display:flex;align-items:center;gap:24px">
+        <svg viewBox="0 0 180 100" width="180" height="100">
+          <path class="gauge-bg" d="M 30 90 A 60 60 0 0 1 150 90"/>
+          <path class="gauge-fill" id="gaugePath" d="M 30 90 A 60 60 0 0 1 30 90"/>
+          <text class="gauge-text" x="90" y="80" id="gaugePct">0%</text>
+          <text class="gauge-sub" x="90" y="96" id="gaugeSub">executado</text>
+        </svg>
+        <div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Previsto</div>
+          <div style="font-size:18px;font-weight:700" id="budgetPrev">R$ 0</div>
+          <div style="font-size:12px;color:var(--muted);margin:8px 0 4px">Executado</div>
+          <div style="font-size:18px;font-weight:700;color:var(--ok)" id="budgetExec">R$ 0</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="abrirModalOrcamento()">✏️ Atualizar Orçamento</button>
+    </div>
+    <div class="budget-card">
+      <div class="budget-title">📋 RESUMO DE PROGRAMAS</div>
+      <div id="programasSummary" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="setTab('programas')">📋 Programas</button>
+      <button class="tab-btn" onclick="setTab('indicadores')">📈 Indicadores</button>
+      <button class="tab-btn" onclick="setTab('planos')">✅ Planos de Ação</button>
+      <button class="tab-btn" onclick="setTab('orcamento')">💰 Orçamento</button>
+    </div>
+
+    <!-- Programas -->
+    <div class="tab-panel active" id="tab-programas" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Programas de Saúde</span>
+          <button class="btn btn-primary" onclick="abrirModalPrograma()">+ Novo Programa</button>
+        </div>
+        <table>
+          <thead><tr><th>Nome</th><th>Status</th><th>População Alvo</th><th>Orçamento</th><th>Responsável</th><th>Início</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyProg"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Indicadores -->
+    <div class="tab-panel" id="tab-indicadores" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Indicadores de Saúde</span>
+          <button class="btn btn-primary" onclick="abrirModalIndicador()">+ Novo Indicador</button>
+        </div>
+        <div class="ind-grid" id="indGrid"><div class="empty">Carregando…</div></div>
+      </div>
+    </div>
+
+    <!-- Planos -->
+    <div class="tab-panel" id="tab-planos" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Planos de Ação</span>
+          <div style="display:flex;gap:8px">
+            <select id="filtroPlano" onchange="carregarPlanos()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+              <option value="">Todos</option>
+              <option value="pendente">Pendentes</option>
+              <option value="em_andamento">Em Andamento</option>
+              <option value="concluido">Concluídos</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalPlano()">+ Novo Plano</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Título</th><th>Programa</th><th>Prioridade</th><th>Status</th><th>Progresso</th><th>Prazo</th><th>Responsável</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyPlano"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Orçamento histórico -->
+    <div class="tab-panel" id="tab-orcamento" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Histórico de Orçamentos</span>
+          <button class="btn btn-primary" onclick="abrirModalOrcamento()">+ Atualizar Orçamento</button>
+        </div>
+        <table>
+          <thead><tr><th>Ano</th><th>Previsto</th><th>Executado</th><th>Execução</th><th>Fonte</th></tr></thead>
+          <tbody id="tbodyOrc"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal: Programa -->
+<div class="modal-bg" id="modalProg">
+  <div class="modal">
+    <h3>📋 Programa de Saúde</h3>
+    <input type="hidden" id="progId">
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="progNome" placeholder="Nome do programa"></div>
+      <div class="form-group"><label>Status</label>
+        <select id="progStatus"><option value="planejamento">Planejamento</option><option value="ativo">Ativo</option><option value="suspenso">Suspenso</option><option value="concluido">Concluído</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Descrição</label><textarea id="progDesc" rows="2"></textarea></div>
+    <div class="form-group"><label>População Alvo</label><input id="progPop" placeholder="Ex: Idosos acima de 60 anos…"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Orçamento Previsto (R$)</label><input id="progOrcPrev" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="form-group"><label>Orçamento Executado (R$)</label><input id="progOrcExec" type="number" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Início</label><input id="progInicio" type="date"></div>
+      <div class="form-group"><label>Fim Previsto</label><input id="progFim" type="date"></div>
+    </div>
+    <div class="form-group"><label>Responsável</label><input id="progResp" placeholder="Nome do responsável"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalProg')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPrograma()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Indicador -->
+<div class="modal-bg" id="modalInd">
+  <div class="modal">
+    <h3>📈 Indicador de Saúde</h3>
+    <input type="hidden" id="indId">
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="indNome" placeholder="Nome do indicador"></div>
+      <div class="form-group"><label>Tipo</label>
+        <select id="indTipo"><option value="quantitativo">Quantitativo</option><option value="percentual">Percentual</option><option value="indice">Índice</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Programa (opcional)</label>
+      <select id="indProg"><option value="">— nenhum —</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Meta</label><input id="indMeta" type="number" step="0.01" placeholder="Valor alvo"></div>
+      <div class="form-group"><label>Valor Atual</label><input id="indValor" type="number" step="0.01" placeholder="Valor atual"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Unidade</label><input id="indUnidade" placeholder="Ex: pessoas, %, pontos…"></div>
+      <div class="form-group"><label>Período de Referência</label><input id="indPeriodo" placeholder="Ex: Mai/2026, Q2 2026…"></div>
+    </div>
+    <div class="form-group"><label>Descrição</label><textarea id="indDesc" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalInd')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarIndicador()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Plano -->
+<div class="modal-bg" id="modalPlano">
+  <div class="modal">
+    <h3>✅ Plano de Ação</h3>
+    <input type="hidden" id="planoId">
+    <div class="form-group"><label>Título *</label><input id="planoTitulo" placeholder="Título do plano"></div>
+    <div class="form-group"><label>Programa (opcional)</label>
+      <select id="planoProg"><option value="">— nenhum —</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Prioridade</label>
+        <select id="planoPrioridade"><option value="alta">Alta</option><option value="media" selected>Média</option><option value="baixa">Baixa</option></select>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select id="planoStatus"><option value="pendente">Pendente</option><option value="em_andamento">Em Andamento</option><option value="concluido">Concluído</option><option value="cancelado">Cancelado</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Prazo</label><input id="planoPrazo" type="date"></div>
+      <div class="form-group"><label>Progresso (%)</label><input id="planoProgresso" type="number" min="0" max="100" value="0"></div>
+    </div>
+    <div class="form-group"><label>Responsável</label><input id="planoResp" placeholder="Nome do responsável"></div>
+    <div class="form-group"><label>Descrição</label><textarea id="planoDesc" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalPlano')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPlano()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Orçamento -->
+<div class="modal-bg" id="modalOrc">
+  <div class="modal">
+    <h3>💰 Atualizar Orçamento Anual</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Ano *</label><input id="orcAno" type="number" placeholder="2026"></div>
+      <div class="form-group"><label>Fonte do Recurso</label><input id="orcFonte" placeholder="Ex: Fundo Municipal de Saúde"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Total Previsto (R$)</label><input id="orcPrev" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="form-group"><label>Total Executado (R$)</label><input id="orcExec" type="number" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="form-group"><label>Observações</label><textarea id="orcObs" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalOrc')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarOrcamento()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _programas = [];
+
+async function api(url, opts={}) {
+  const r = await fetch(url, {headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},...opts});
+  return r.json();
+}
+function getCsrf() {
+  return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1]||'';
+}
+
+// ── KPIs + Budget ─────────────────────────────────────────────
+async function carregarKpis() {
+  const d = await api('/api/governo/ops/kpis/');
+  const cards = document.querySelectorAll('#kpiRow .kpi');
+  cards[0].querySelector('.kpi-val').textContent = d.programas_ativos ?? '—';
+  cards[1].querySelector('.kpi-val').textContent = `${d.indicadores_meta_atingida??'—'}/${d.indicadores_total??'—'}`;
+  cards[2].querySelector('.kpi-val').textContent = d.planos_pendentes ?? '—';
+  cards[3].querySelector('.kpi-val').textContent = d.planos_andamento ?? '—';
+  // Budget gauge
+  const prev = parseFloat(d.orcamento_previsto || 0);
+  const exec = parseFloat(d.orcamento_executado || 0);
+  const pct = prev > 0 ? Math.min(100, Math.round(exec/prev*100)) : 0;
+  document.getElementById('gaugePct').textContent = pct + '%';
+  document.getElementById('budgetPrev').textContent = 'R$ ' + prev.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  document.getElementById('budgetExec').textContent = 'R$ ' + exec.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  // Draw gauge arc
+  const r = 60, cx = 90, cy = 90;
+  const startAngle = Math.PI; // 180°
+  const endAngle = Math.PI + (Math.PI * pct / 100);
+  const x1 = cx + r * Math.cos(startAngle);
+  const y1 = cy + r * Math.sin(startAngle);
+  const x2 = cx + r * Math.cos(endAngle);
+  const y2 = cy + r * Math.sin(endAngle);
+  const large = pct > 50 ? 1 : 0;
+  document.getElementById('gaugePath').setAttribute('d', pct === 0
+    ? `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x1+0.01} ${y1}`
+    : `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`
+  );
+}
+
+// ── Programas ─────────────────────────────────────────────────
+async function carregarProgramas() {
+  const d = await api('/api/governo/programas/');
+  _programas = d.programas || [];
+  const tb = document.getElementById('tbodyProg');
+  if (!_programas.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum programa cadastrado</td></tr>'; return; }
+  const statusMap = {planejamento:'badge-info',ativo:'badge-ok',suspenso:'badge-warn',concluido:'badge-purple'};
+  tb.innerHTML = _programas.map(p=>`<tr>
+    <td><strong>${p.nome}</strong>${p.descricao?`<br><small style="color:var(--muted)">${p.descricao.substring(0,60)}${p.descricao.length>60?'…':''}</small>`:''}</td>
+    <td><span class="badge ${statusMap[p.status]||'badge-info'}">${p.status}</span></td>
+    <td>${p.populacao_alvo||'—'}</td>
+    <td>${p.orcamento_previsto?`R$ ${parseFloat(p.orcamento_previsto).toLocaleString('pt-BR',{minimumFractionDigits:2})}`:'—'}</td>
+    <td>${p.responsavel||'—'}</td>
+    <td>${p.data_inicio||'—'}</td>
+    <td style="display:flex;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="editarPrograma(${p.id})">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deletarPrograma(${p.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+  // Summary widget
+  const statusLabels = {planejamento:'Planejamento',ativo:'Ativo',suspenso:'Suspenso',concluido:'Concluído'};
+  const counts = {};
+  _programas.forEach(p=>counts[p.status]=(counts[p.status]||0)+1);
+  document.getElementById('programasSummary').innerHTML = Object.entries(counts).map(([s,c])=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span class="badge ${statusMap[s]||'badge-info'}">${statusLabels[s]||s}</span>
+      <strong>${c} programa${c>1?'s':''}</strong>
+    </div>
+  `).join('');
+  popularSelectProgramas();
+}
+
+async function deletarPrograma(id) {
+  if (!confirm('Excluir programa?')) return;
+  await api(`/api/governo/programas/${id}/`, {method:'DELETE'});
+  carregarProgramas(); carregarKpis();
+}
+
+function abrirModalPrograma() {
+  document.getElementById('progId').value='';
+  ['progNome','progDesc','progPop','progOrcPrev','progOrcExec','progInicio','progFim','progResp'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('progStatus').value='planejamento';
+  abrirModal('modalProg');
+}
+
+function editarPrograma(id) {
+  const p = _programas.find(x=>x.id===id);
+  if (!p) return;
+  document.getElementById('progId').value=id;
+  document.getElementById('progNome').value=p.nome;
+  document.getElementById('progStatus').value=p.status;
+  document.getElementById('progDesc').value=p.descricao;
+  document.getElementById('progPop').value=p.populacao_alvo;
+  document.getElementById('progOrcPrev').value=p.orcamento_previsto;
+  document.getElementById('progOrcExec').value=p.orcamento_executado;
+  document.getElementById('progInicio').value=p.data_inicio;
+  document.getElementById('progFim').value=p.data_fim_prevista;
+  document.getElementById('progResp').value=p.responsavel;
+  abrirModal('modalProg');
+}
+
+async function salvarPrograma() {
+  const body = {
+    nome:v('progNome'), status:v('progStatus'), descricao:v('progDesc'),
+    populacao_alvo:v('progPop'), responsavel:v('progResp'),
+    orcamento_previsto:v('progOrcPrev')||null, orcamento_executado:v('progOrcExec')||null,
+    data_inicio:v('progInicio')||null, data_fim_prevista:v('progFim')||null,
+  };
+  if (!body.nome) return alert('Nome obrigatório');
+  const id = document.getElementById('progId').value;
+  if (id) await api(`/api/governo/programas/${id}/`, {method:'PUT', body:JSON.stringify(body)});
+  else await api('/api/governo/programas/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalProg');
+  carregarProgramas(); carregarKpis();
+}
+
+// ── Indicadores ───────────────────────────────────────────────
+async function carregarIndicadores() {
+  const d = await api('/api/governo/indicadores/');
+  const grid = document.getElementById('indGrid');
+  const lista = d.indicadores || [];
+  if (!lista.length) { grid.innerHTML = '<div class="empty">Nenhum indicador cadastrado</div>'; return; }
+  grid.innerHTML = lista.map(i => {
+    const meta = parseFloat(i.meta)||0;
+    const valor = parseFloat(i.valor_atual)||0;
+    const pct = meta > 0 ? Math.min(100, Math.round(valor/meta*100)) : 0;
+    const atingiu = i.atingiu_meta;
+    return `<div class="ind-card">
+      <div class="ind-name">${i.nome}</div>
+      ${i.programa_nome?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">📋 ${i.programa_nome}</div>`:''}
+      <div class="ind-vals">
+        <span>Atual: <strong style="color:${atingiu?'var(--ok)':'var(--accent)'}">${valor} ${i.unidade}</strong></span>
+        <span>Meta: ${meta} ${i.unidade}</span>
+      </div>
+      <div class="ind-bar"><div class="ind-bar-fill ${atingiu?'atingiu':''}" style="width:${pct}%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--muted)">
+        <span>${i.periodo_referencia||''}</span>
+        <span style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="editarIndicador(${i.id})" style="padding:3px 6px;font-size:10px">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deletarIndicador(${i.id})" style="padding:3px 6px;font-size:10px">🗑</button>
+        </span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let _indicadores = [];
+async function carregarIndicadoresData() {
+  const d = await api('/api/governo/indicadores/');
+  _indicadores = d.indicadores || [];
+}
+
+async function deletarIndicador(id) {
+  if (!confirm('Excluir indicador?')) return;
+  await api(`/api/governo/indicadores/${id}/`, {method:'DELETE'});
+  carregarIndicadores();
+}
+
+function abrirModalIndicador() {
+  document.getElementById('indId').value='';
+  ['indNome','indDesc','indMeta','indValor','indUnidade','indPeriodo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('indTipo').value='quantitativo';
+  popularSelectProgramas('indProg');
+  abrirModal('modalInd');
+}
+
+async function editarIndicador(id) {
+  await carregarIndicadoresData();
+  const i = _indicadores.find(x=>x.id===id);
+  if (!i) return;
+  document.getElementById('indId').value=id;
+  document.getElementById('indNome').value=i.nome;
+  document.getElementById('indTipo').value=i.tipo;
+  document.getElementById('indMeta').value=i.meta;
+  document.getElementById('indValor').value=i.valor_atual;
+  document.getElementById('indUnidade').value=i.unidade;
+  document.getElementById('indPeriodo').value=i.periodo_referencia;
+  document.getElementById('indDesc').value=i.descricao;
+  popularSelectProgramas('indProg');
+  document.getElementById('indProg').value=i.programa_id||'';
+  abrirModal('modalInd');
+}
+
+async function salvarIndicador() {
+  const body = {
+    nome:v('indNome'), tipo:v('indTipo'), descricao:v('indDesc'),
+    meta:v('indMeta')||null, valor_atual:v('indValor')||null,
+    unidade:v('indUnidade'), periodo_referencia:v('indPeriodo'),
+    programa_id:v('indProg')||null,
+  };
+  if (!body.nome) return alert('Nome obrigatório');
+  const id = document.getElementById('indId').value;
+  if (id) await api(`/api/governo/indicadores/${id}/`, {method:'PUT', body:JSON.stringify(body)});
+  else await api('/api/governo/indicadores/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalInd');
+  carregarIndicadores();
+}
+
+// ── Planos ────────────────────────────────────────────────────
+let _planos = [];
+async function carregarPlanos() {
+  const status = document.getElementById('filtroPlano')?.value||'';
+  const d = await api('/api/governo/planos-acao/' + (status?`?status=${status}`:''));
+  _planos = d.planos || [];
+  const tb = document.getElementById('tbodyPlano');
+  if (!_planos.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhum plano de ação</td></tr>'; return; }
+  const prioMap = {alta:'badge-danger',media:'badge-warn',baixa:'badge-info'};
+  const statMap = {pendente:'badge-warn',em_andamento:'badge-teal',concluido:'badge-ok',cancelado:'badge-danger'};
+  tb.innerHTML = _planos.map(p=>`<tr>
+    <td><strong>${p.titulo}</strong></td>
+    <td>${p.programa_nome||'—'}</td>
+    <td><span class="badge ${prioMap[p.prioridade]||'badge-info'}">${p.prioridade}</span></td>
+    <td><span class="badge ${statMap[p.status]||'badge-info'}">${p.status.replace('_',' ')}</span></td>
+    <td>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="prog-bar" style="width:80px"><div class="prog-fill" style="width:${p.progresso}%"></div></div>
+        <span style="font-size:12px">${p.progresso}%</span>
+      </div>
+    </td>
+    <td>${p.prazo||'—'}</td>
+    <td>${p.responsavel||'—'}</td>
+    <td style="display:flex;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="editarPlano(${p.id})">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deletarPlano(${p.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+async function deletarPlano(id) {
+  if (!confirm('Excluir plano?')) return;
+  await api(`/api/governo/planos-acao/${id}/`, {method:'DELETE'});
+  carregarPlanos(); carregarKpis();
+}
+
+function abrirModalPlano() {
+  document.getElementById('planoId').value='';
+  ['planoTitulo','planoResp','planoDesc','planoPrazo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('planoProgresso').value='0';
+  document.getElementById('planoPrioridade').value='media';
+  document.getElementById('planoStatus').value='pendente';
+  popularSelectProgramas('planoProg');
+  abrirModal('modalPlano');
+}
+
+function editarPlano(id) {
+  const p = _planos.find(x=>x.id===id);
+  if (!p) return;
+  document.getElementById('planoId').value=id;
+  document.getElementById('planoTitulo').value=p.titulo;
+  document.getElementById('planoResp').value=p.responsavel;
+  document.getElementById('planoDesc').value=p.descricao;
+  document.getElementById('planoPrazo').value=p.prazo;
+  document.getElementById('planoProgresso').value=p.progresso;
+  document.getElementById('planoPrioridade').value=p.prioridade;
+  document.getElementById('planoStatus').value=p.status;
+  popularSelectProgramas('planoProg');
+  document.getElementById('planoProg').value=p.programa_id||'';
+  abrirModal('modalPlano');
+}
+
+async function salvarPlano() {
+  const body = {
+    titulo:v('planoTitulo'), responsavel:v('planoResp'), descricao:v('planoDesc'),
+    prazo:v('planoPrazo')||null, progresso:parseInt(v('planoProgresso')||0),
+    prioridade:v('planoPrioridade'), status:v('planoStatus'),
+    programa_id:v('planoProg')||null,
+  };
+  if (!body.titulo) return alert('Título obrigatório');
+  const id = document.getElementById('planoId').value;
+  if (id) await api(`/api/governo/planos-acao/${id}/`, {method:'PUT', body:JSON.stringify(body)});
+  else await api('/api/governo/planos-acao/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalPlano');
+  carregarPlanos(); carregarKpis();
+}
+
+// ── Orçamento ─────────────────────────────────────────────────
+async function carregarOrcamentos() {
+  const d = await api('/api/governo/orcamentos/');
+  const tb = document.getElementById('tbodyOrc');
+  const list = d.orcamentos || [];
+  document.getElementById('budgetAno').textContent = list[0]?.ano || new Date().getFullYear();
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Nenhum orçamento registrado</td></tr>'; return; }
+  tb.innerHTML = list.map(o=>`<tr>
+    <td><strong>${o.ano}</strong></td>
+    <td>R$ ${parseFloat(o.total_previsto).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+    <td>R$ ${parseFloat(o.total_executado).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+    <td>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="prog-bar" style="width:80px"><div class="prog-fill" style="width:${Math.min(100,o.execucao_pct)}%;background:${o.execucao_pct>100?'var(--danger)':o.execucao_pct>80?'var(--ok)':'var(--accent)'}"></div></div>
+        <span style="font-size:12px">${o.execucao_pct}%</span>
+      </div>
+    </td>
+    <td>${o.fonte_recurso||'—'}</td>
+  </tr>`).join('');
+}
+
+function abrirModalOrcamento() {
+  document.getElementById('orcAno').value=new Date().getFullYear();
+  document.getElementById('orcPrev').value='';
+  document.getElementById('orcExec').value='';
+  document.getElementById('orcFonte').value='';
+  document.getElementById('orcObs').value='';
+  abrirModal('modalOrc');
+}
+
+async function salvarOrcamento() {
+  const body = {
+    ano:parseInt(v('orcAno')),
+    total_previsto:v('orcPrev')||0,
+    total_executado:v('orcExec')||0,
+    fonte_recurso:v('orcFonte'),
+    observacoes:v('orcObs'),
+  };
+  if (!body.ano) return alert('Ano obrigatório');
+  await api('/api/governo/orcamentos/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalOrc');
+  carregarOrcamentos(); carregarKpis();
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function popularSelectProgramas(sid) {
+  const ids = sid ? [sid] : ['indProg','planoProg'];
+  ids.forEach(id=>{
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— nenhum —</option>' + _programas.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+    if (prev) sel.value=prev;
+  });
+}
+
+function v(id) { return document.getElementById(id)?.value?.trim()||''; }
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+
+let _currentTab = 'programas';
+function setTab(tab) {
+  _currentTab = tab;
+  const tabs = ['programas','indicadores','planos','orcamento'];
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===tab));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if (tab==='programas') carregarProgramas();
+  else if (tab==='indicadores') carregarIndicadores();
+  else if (tab==='planos') { popularSelectProgramas('planoProg'); carregarPlanos(); }
+  else if (tab==='orcamento') carregarOrcamentos();
+}
+
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
+
+// Init
+carregarKpis();
+carregarProgramas();
+carregarOrcamentos();
+</script>
+</body>
+</html>
