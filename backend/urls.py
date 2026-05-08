@@ -112,6 +112,16 @@ from api.views_lotes_farmacia import (
     api_lote_farmacia_detalhe,
     api_lotes_farmacia_kpis,
 )
+from api.views_farmacia_avancado import (
+    api_pacientes_farmacia, api_paciente_farmacia_detalhe,
+    api_receitas_farmacia, api_receita_farmacia_detalhe,
+    api_inventarios_farmacia, api_inventario_farmacia_detalhe,
+    api_descartes_farmacia,
+    api_farmacia_kpis_avancados,
+    api_farmacia_relatorio_curva_abc,
+    api_farmacia_relatorio_cmm,
+    api_farmacia_relatorio_giro,
+)
 from api.views_riscos_sst import (
     api_planos_acao_sst,
     api_plano_acao_sst_detalhe,
@@ -467,6 +477,18 @@ urlpatterns = [
     path('api/farmacia/lotes/', api_lotes_farmacia),
     path('api/farmacia/lotes/kpis/', api_lotes_farmacia_kpis),
     path('api/farmacia/lotes/<int:lote_id>/', api_lote_farmacia_detalhe),
+    # ── Farmácia Avançado ─────────────────────────────────────────
+    path('api/farmacia/pacientes/', api_pacientes_farmacia),
+    path('api/farmacia/pacientes/<int:paciente_id>/', api_paciente_farmacia_detalhe),
+    path('api/farmacia/receitas/', api_receitas_farmacia),
+    path('api/farmacia/receitas/<int:receita_id>/', api_receita_farmacia_detalhe),
+    path('api/farmacia/inventarios/', api_inventarios_farmacia),
+    path('api/farmacia/inventarios/<int:inventario_id>/', api_inventario_farmacia_detalhe),
+    path('api/farmacia/descartes/', api_descartes_farmacia),
+    path('api/farmacia/kpis/avancados/', api_farmacia_kpis_avancados),
+    path('api/farmacia/relatorios/curva-abc/', api_farmacia_relatorio_curva_abc),
+    path('api/farmacia/relatorios/cmm/', api_farmacia_relatorio_cmm),
+    path('api/farmacia/relatorios/giro/', api_farmacia_relatorio_giro),
     path('api/hospital/painel', api_hospital_painel),
     # ── Hospital Operacional ─────────────────────────────────
     path('api/hospital/ops/kpis/', api_hospital_ops_kpis),
