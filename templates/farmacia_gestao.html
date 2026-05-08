@@ -104,12 +104,19 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <a href="/farmacia/" class="btn btn-ghost">📊 Ver Inteligência Epidemiológica</a>
   </div>
 
-  <!-- KPIs -->
+  <!-- KPIs Row 1 — Operacional -->
   <div class="kpi-row" id="kpiRow">
     <div class="kpi"><div class="kpi-val">—</div><div class="kpi-lbl">Itens Cadastrados</div></div>
     <div class="kpi warn"><div class="kpi-val">—</div><div class="kpi-lbl">Abaixo do Mínimo</div></div>
     <div class="kpi ok"><div class="kpi-val">—</div><div class="kpi-lbl">Dispensações</div></div>
     <div class="kpi info"><div class="kpi-val">—</div><div class="kpi-lbl">Pedidos em Aberto</div></div>
+  </div>
+  <!-- KPIs Row 2 — Avançado -->
+  <div class="kpi-row" id="kpiRowAvancado">
+    <div class="kpi"><div class="kpi-val" id="kavPacientes" style="color:#a78bfa">—</div><div class="kpi-lbl">Pacientes Cadastrados</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kavReceitas">—</div><div class="kpi-lbl">Receitas Pendentes</div></div>
+    <div class="kpi"><div class="kpi-val" id="kavRuptura" style="color:var(--danger)">—</div><div class="kpi-lbl">Ruptura de Estoque</div></div>
+    <div class="kpi"><div class="kpi-val" id="kavVencendo7" style="color:var(--warn)">—</div><div class="kpi-lbl">Vencendo em 7 Dias</div></div>
   </div>
 
   <!-- Tabs -->
@@ -121,6 +128,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="tab-btn" onclick="setTab('fornecedores')">🏭 Fornecedores</button>
       <button class="tab-btn" onclick="setTab('pedidos')">🛒 Pedidos de Compra</button>
       <button class="tab-btn" onclick="setTab('lotes')">🏷️ Lotes / Validade</button>
+      <button class="tab-btn" onclick="setTab('pacientes')">👥 Pacientes</button>
+      <button class="tab-btn" onclick="setTab('receitas')">📋 Receitas</button>
+      <button class="tab-btn" onclick="setTab('inventario')">🔍 Inventário</button>
+      <button class="tab-btn" onclick="setTab('descarte')">🗑️ Descarte</button>
+      <button class="tab-btn" onclick="setTab('relatorios')">📊 Relatórios</button>
     </div>
 
     <!-- Estoque -->
@@ -231,6 +243,132 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div id="proxVencer" style="padding:16px 20px;font-size:13px;color:var(--muted)">Carregando…</div>
       </div>
     </div>
+
+    <!-- Pacientes -->
+    <div class="tab-panel" id="tab-pacientes" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">👥 Cadastro de Pacientes</span>
+          <div style="display:flex;gap:8px">
+            <input id="buscaPaciente" placeholder="Buscar por nome ou CPF…" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;width:220px" oninput="buscarPacientes()">
+            <button class="btn btn-primary" onclick="abrirModalPaciente()">+ Novo Paciente</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>Alergias</th><th>Condições Crônicas</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyPacientes"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Receitas -->
+    <div class="tab-panel" id="tab-receitas" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📋 Receitas Médicas</span>
+          <div style="display:flex;gap:8px">
+            <select id="filtroReceitaStatus" onchange="carregarReceitas()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:#e8f4ff;font-size:12px">
+              <option value="">Todas</option>
+              <option value="pendente">Pendentes</option>
+              <option value="dispensada">Dispensadas</option>
+              <option value="vencida">Vencidas</option>
+              <option value="cancelada">Canceladas</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalReceita()">+ Nova Receita</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Tipo</th><th>Nº Receita</th><th>Paciente</th><th>Medicamento</th><th>Médico / CRM</th><th>Emissão</th><th>Validade</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyReceitas"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Inventário Periódico -->
+    <div class="tab-panel" id="tab-inventario" style="margin-top:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <!-- Lista de inventários -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🔍 Inventários Periódicos</span>
+            <button class="btn btn-primary" onclick="abrirModalInventario()">+ Novo Inventário</button>
+          </div>
+          <div id="listaInventarios" style="padding:0">
+            <div class="empty">Carregando…</div>
+          </div>
+        </div>
+        <!-- Detalhe do inventário selecionado -->
+        <div class="card" id="cardDetalheInventario" style="display:none">
+          <div class="card-header">
+            <span class="card-title" id="tituloInventario">Contagem</span>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost btn-sm" onclick="fecharDetalheInventario()">✕ Fechar</button>
+              <button class="btn btn-primary btn-sm" id="btnConcluirInventario" onclick="concluirInventario()">✓ Concluir</button>
+            </div>
+          </div>
+          <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div id="barraProgresso" style="flex:1;height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden">
+                <div id="fillProgresso" style="height:100%;background:var(--ok);border-radius:4px;width:0%;transition:.3s"></div>
+              </div>
+              <span id="txtProgresso" style="font-size:12px;color:var(--muted)">0%</span>
+            </div>
+          </div>
+          <div id="tabelaInventarioItens" style="max-height:400px;overflow-y:auto">
+            <table>
+              <thead><tr><th>Item</th><th>Sistema</th><th>Contado</th><th>Diferença</th><th>Obs</th></tr></thead>
+              <tbody id="tbodyInventarioItens"></tbody>
+            </table>
+          </div>
+          <div style="padding:12px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center">
+            <label style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center">
+              <input type="checkbox" id="chkAplicarAjustes"> Aplicar ajustes no estoque ao concluir
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Descarte -->
+    <div class="tab-panel" id="tab-descarte" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🗑️ Registro de Descarte de Medicamentos</span>
+          <button class="btn btn-primary" onclick="abrirModalDescarte()">+ Registrar Descarte</button>
+        </div>
+        <table>
+          <thead><tr><th>Medicamento</th><th>Lote</th><th>Motivo</th><th>Quantidade</th><th>Responsável</th><th>Empresa Descarte</th><th>Manifesto</th><th>Data</th></tr></thead>
+          <tbody id="tbodyDescartes"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Relatórios -->
+    <div class="tab-panel" id="tab-relatorios" style="margin-top:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+        <button class="btn btn-ghost" style="padding:16px;flex-direction:column;gap:6px;height:auto" onclick="carregarCurvaABC()">
+          <span style="font-size:22px">📈</span>
+          <strong>Curva ABC</strong>
+          <span style="font-size:11px;color:var(--muted)">Classificação por consumo</span>
+        </button>
+        <button class="btn btn-ghost" style="padding:16px;flex-direction:column;gap:6px;height:auto" onclick="carregarCMM()">
+          <span style="font-size:22px">📉</span>
+          <strong>CMM — Cobertura</strong>
+          <span style="font-size:11px;color:var(--muted)">Consumo médio mensal</span>
+        </button>
+        <button class="btn btn-ghost" style="padding:16px;flex-direction:column;gap:6px;height:auto" onclick="carregarGiro()">
+          <span style="font-size:22px">🔄</span>
+          <strong>Giro de Estoque</strong>
+          <span style="font-size:11px;color:var(--muted)">Rotatividade anual</span>
+        </button>
+      </div>
+      <div id="relatorioConteudo">
+        <div class="card">
+          <div class="empty" style="padding:48px">Selecione um relatório acima para visualizar</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </main>
 
@@ -380,8 +518,127 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 </div>
 
+<!-- Modal: Paciente -->
+<div class="modal-bg" id="modalPaciente">
+  <div class="modal" style="max-width:620px">
+    <h3>👥 Cadastrar Paciente</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome Completo *</label><input id="pacNome" placeholder="Nome do paciente"></div>
+      <div class="form-group"><label>CPF</label><input id="pacCpf" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Data de Nascimento</label><input type="date" id="pacNasc"></div>
+      <div class="form-group"><label>Sexo</label>
+        <select id="pacSexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option><option value="O">Outro</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Telefone</label><input id="pacTel" placeholder="(00) 00000-0000"></div>
+      <div class="form-group"><label>Email</label><input id="pacEmail" type="email" placeholder="email@exemplo.com"></div>
+    </div>
+    <div class="form-group"><label>Endereço</label><input id="pacEnd" placeholder="Rua, número, bairro, cidade"></div>
+    <div class="form-group"><label>⚠️ Alergias e Contraindicações</label><textarea id="pacAlergias" rows="2" placeholder="Ex: Penicilina, AAS, Dipirona…"></textarea></div>
+    <div class="form-group"><label>🩺 Condições Crônicas / CIDs</label><textarea id="pacCondicoes" rows="2" placeholder="Ex: Hipertensão (I10), Diabetes tipo 2 (E11)…"></textarea></div>
+    <div class="form-group"><label>💊 Medicamentos de Uso Contínuo</label><textarea id="pacMedUso" rows="2" placeholder="Ex: Losartana 50mg, Metformina 850mg…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalPaciente')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPaciente()">Salvar Paciente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Receita -->
+<div class="modal-bg" id="modalReceita">
+  <div class="modal" style="max-width:620px">
+    <h3>📋 Nova Receita Médica</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Receita *</label>
+        <select id="recTipo">
+          <option value="simples">Receita Simples</option>
+          <option value="especial_branca">Especial Branca (2 vias)</option>
+          <option value="especial_amarela">Especial Amarela (Psicotrópico)</option>
+          <option value="alto_custo">Medicamento de Alto Custo</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Nº da Receita</label><input id="recNumero" placeholder="Ex: REC-2026-001"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Paciente (Nome)</label><input id="recPacNome" placeholder="Nome do paciente"></div>
+      <div class="form-group"><label>CPF do Paciente</label><input id="recPacCpf" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Médico Prescritor</label><input id="recMedico" placeholder="Nome do médico"></div>
+      <div class="form-group"><label>CRM</label><input id="recCrm" placeholder="CRM/SP 123456"></div>
+    </div>
+    <div class="form-group"><label>Medicamento / Item</label>
+      <select id="recItem"><option value="">— selecione ou use campo livre —</option></select>
+    </div>
+    <div class="form-group"><label>Descrição do Medicamento (se não cadastrado)</label><input id="recMedDesc" placeholder="Ex: Amoxicilina 500mg caps — uso oral"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Quantidade</label><input type="number" id="recQtd" min="1" value="1"></div>
+      <div class="form-group"><label>Data de Emissão *</label><input type="date" id="recEmissao"></div>
+    </div>
+    <div class="form-group"><label>Validade da Receita</label><input type="date" id="recValidade"></div>
+    <div class="form-group"><label>Posologia / Instruções</label><textarea id="recPosologia" rows="2" placeholder="Ex: 1 comprimido a cada 8h por 7 dias"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalReceita')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarReceita()">Registrar Receita</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Inventário -->
+<div class="modal-bg" id="modalInventario">
+  <div class="modal">
+    <h3>🔍 Novo Inventário Periódico</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Será criada uma contagem com snapshot do estoque atual de todos os itens ativos.</p>
+    <div class="form-group"><label>Descrição</label><input id="invDesc" placeholder="Ex: Inventário mensal — Maio 2026"></div>
+    <div class="form-group"><label>Responsável</label><input id="invResp" placeholder="Nome do responsável"></div>
+    <div class="form-group"><label>Observações</label><textarea id="invObs" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalInventario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarInventario()">Iniciar Inventário</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Descarte -->
+<div class="modal-bg" id="modalDescarte">
+  <div class="modal">
+    <h3>🗑️ Registrar Descarte</h3>
+    <div class="form-group"><label>Medicamento / Item *</label>
+      <select id="descItem" onchange="carregarLotesDescarte()"><option value="">— selecione —</option></select>
+    </div>
+    <div class="form-group"><label>Lote (opcional)</label>
+      <select id="descLote"><option value="">— sem lote específico —</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Motivo *</label>
+        <select id="descMotivo">
+          <option value="vencimento">Vencimento</option>
+          <option value="avaria">Avaria / Dano físico</option>
+          <option value="contaminacao">Contaminação</option>
+          <option value="recolhimento">Recolhimento ANVISA</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Quantidade *</label><input type="number" id="descQtd" min="1" value="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Responsável</label><input id="descResp" placeholder="Nome do responsável"></div>
+      <div class="form-group"><label>Empresa de Descarte</label><input id="descEmpresa" placeholder="Nome da empresa licenciada"></div>
+    </div>
+    <div class="form-group"><label>Nº do Manifesto</label><input id="descManifesto" placeholder="Código do manifesto de resíduos"></div>
+    <div class="form-group"><label>Observações</label><textarea id="descObs" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalDescarte')">Cancelar</button>
+      <button class="btn btn-danger" onclick="salvarDescarte()">Registrar Descarte</button>
+    </div>
+  </div>
+</div>
+
 <script>
-let _itens = [], _fornecedores = [];
+let _itens = [], _fornecedores = [], _inventarioAtual = null;
 
 async function api(url, opts={}) {
   const r = await fetch(url, {
@@ -396,12 +653,20 @@ function getCsrf() {
 
 // ── KPIs ──────────────────────────────────────────────────────
 async function carregarKpis() {
-  const d = await api('/api/farmacia/ops/kpis/');
+  const [d, av] = await Promise.all([
+    api('/api/farmacia/ops/kpis/'),
+    api('/api/farmacia/kpis/avancados/'),
+  ]);
   const cards = document.querySelectorAll('#kpiRow .kpi');
   cards[0].querySelector('.kpi-val').textContent = d.total_itens ?? '—';
   cards[1].querySelector('.kpi-val').textContent = d.itens_abaixo_minimo ?? '—';
   cards[2].querySelector('.kpi-val').textContent = d.total_dispensacoes ?? '—';
   cards[3].querySelector('.kpi-val').textContent = d.pedidos_abertos ?? '—';
+  // avançados
+  document.getElementById('kavPacientes').textContent = av.total_pacientes ?? '—';
+  document.getElementById('kavReceitas').textContent = av.receitas_pendentes ?? '—';
+  document.getElementById('kavRuptura').textContent = av.ruptura_estoque ?? '—';
+  document.getElementById('kavVencendo7').textContent = av.vencendo_7_dias ?? '—';
 }
 
 // ── Estoque ───────────────────────────────────────────────────
@@ -666,13 +931,372 @@ function fmtDt(s) {
   return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 
+// ── Pacientes ──────────────────────────────────────────────────
+let _pacientes = [];
+async function carregarPacientes(q='') {
+  const url = q ? `/api/farmacia/pacientes/?q=${encodeURIComponent(q)}` : '/api/farmacia/pacientes/';
+  const d = await api(url);
+  _pacientes = d.pacientes || [];
+  const tb = document.getElementById('tbodyPacientes');
+  if (!_pacientes.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum paciente cadastrado</td></tr>'; return; }
+  tb.innerHTML = _pacientes.map(p => `<tr>
+    <td><strong>${p.nome}</strong>${p.data_nascimento ? `<br><small style="color:var(--muted)">${fmtData(p.data_nascimento)}</small>` : ''}</td>
+    <td>${p.cpf || '—'}</td>
+    <td>${p.telefone || '—'}</td>
+    <td style="max-width:150px;font-size:12px;color:var(--warn)">${p.alergias ? `⚠️ ${p.alergias.substring(0,60)}${p.alergias.length>60?'…':''}` : '—'}</td>
+    <td style="max-width:150px;font-size:12px">${p.condicoes_cronicas ? p.condicoes_cronicas.substring(0,60)+(p.condicoes_cronicas.length>60?'…':'') : '—'}</td>
+    <td>
+      <button class="btn btn-ghost btn-sm" onclick="editarPaciente(${p.id})">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="inativarPaciente(${p.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+async function buscarPacientes() {
+  const q = document.getElementById('buscaPaciente').value.trim();
+  await carregarPacientes(q);
+}
+
+function abrirModalPaciente(dados=null) {
+  ['pacNome','pacCpf','pacTel','pacEmail','pacEnd','pacAlergias','pacCondicoes','pacMedUso'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('pacNasc').value = '';
+  document.getElementById('pacSexo').value = '';
+  document.getElementById('modalPaciente').dataset.editId = '';
+  if (dados) {
+    document.getElementById('pacNome').value = dados.nome||'';
+    document.getElementById('pacCpf').value = dados.cpf||'';
+    document.getElementById('pacNasc').value = dados.data_nascimento||'';
+    document.getElementById('pacSexo').value = dados.sexo||'';
+    document.getElementById('pacTel').value = dados.telefone||'';
+    document.getElementById('pacEmail').value = dados.email||'';
+    document.getElementById('pacEnd').value = dados.endereco||'';
+    document.getElementById('pacAlergias').value = dados.alergias||'';
+    document.getElementById('pacCondicoes').value = dados.condicoes_cronicas||'';
+    document.getElementById('pacMedUso').value = dados.medicamentos_uso_continuo||'';
+    document.getElementById('modalPaciente').dataset.editId = dados.id;
+  }
+  abrirModal('modalPaciente');
+}
+
+async function editarPaciente(id) {
+  const dados = _pacientes.find(p => p.id === id);
+  if (dados) abrirModalPaciente(dados);
+}
+
+async function salvarPaciente() {
+  const body = {
+    nome: v('pacNome'), cpf: v('pacCpf'), data_nascimento: v('pacNasc')||'',
+    sexo: v('pacSexo'), telefone: v('pacTel'), email: v('pacEmail'),
+    endereco: v('pacEnd'), alergias: v('pacAlergias'),
+    condicoes_cronicas: v('pacCondicoes'), medicamentos_uso_continuo: v('pacMedUso'),
+  };
+  if (!body.nome) return alert('Nome obrigatório');
+  const editId = document.getElementById('modalPaciente').dataset.editId;
+  if (editId) {
+    await api(`/api/farmacia/pacientes/${editId}/`, {method:'PUT', body:JSON.stringify(body)});
+  } else {
+    const res = await api('/api/farmacia/pacientes/', {method:'POST', body:JSON.stringify(body)});
+    if (res.erro) return alert(res.erro);
+  }
+  fecharModal('modalPaciente');
+  carregarPacientes(); carregarKpis();
+}
+
+async function inativarPaciente(id) {
+  if (!confirm('Inativar este paciente?')) return;
+  await api(`/api/farmacia/pacientes/${id}/`, {method:'DELETE'});
+  carregarPacientes(); carregarKpis();
+}
+
+// ── Receitas ───────────────────────────────────────────────────
+async function carregarReceitas() {
+  const status = document.getElementById('filtroReceitaStatus')?.value || '';
+  const url = status ? `/api/farmacia/receitas/?status=${status}` : '/api/farmacia/receitas/';
+  const d = await api(url);
+  const tb = document.getElementById('tbodyReceitas');
+  const recs = d.receitas || [];
+  if (!recs.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma receita encontrada</td></tr>'; return; }
+  const statusCls = {pendente:'badge-warn',dispensada:'badge-ok',vencida:'badge-danger',cancelada:'badge-danger'};
+  const tipoCls = {simples:'badge-info',especial_branca:'badge-purple',especial_amarela:'badge-warn',alto_custo:'badge-danger'};
+  tb.innerHTML = recs.map(r => `<tr>
+    <td><span class="badge ${tipoCls[r.tipo]||'badge-info'}" style="font-size:10px">${r.tipo_label}</span></td>
+    <td>${r.numero_receita||'—'}</td>
+    <td>${r.paciente_nome||'—'}<br><small style="color:var(--muted)">${r.paciente_cpf||''}</small></td>
+    <td>${r.item_nome||'—'}<br><small style="color:var(--muted)">Qtd: ${r.quantidade}</small></td>
+    <td>${r.medico_nome||'—'}<br><small style="color:var(--muted)">${r.medico_crm||''}</small></td>
+    <td>${fmtData(r.data_emissao)||'—'}</td>
+    <td style="${r.data_validade && new Date(r.data_validade)<new Date() ? 'color:var(--danger)' : ''}">${fmtData(r.data_validade)||'—'}</td>
+    <td><span class="badge ${statusCls[r.status]||'badge-info'}">${r.status_label}</span></td>
+    <td>
+      ${r.status==='pendente'?`<button class="btn btn-ghost btn-sm" onclick="marcarReceitaDispensada(${r.id})">✓ Dispensar</button>`:''}
+      <button class="btn btn-danger btn-sm" onclick="deletarReceita(${r.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+function abrirModalReceita() {
+  ['recNumero','recPacNome','recPacCpf','recMedico','recCrm','recMedDesc','recPosologia'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('recQtd').value='1';
+  document.getElementById('recEmissao').value = new Date().toISOString().split('T')[0];
+  document.getElementById('recValidade').value='';
+  const sel = document.getElementById('recItem');
+  sel.innerHTML = '<option value="">— selecione ou use campo livre —</option>' + _itens.map(i=>`<option value="${i.id}">${i.nome}</option>`).join('');
+  abrirModal('modalReceita');
+}
+
+async function salvarReceita() {
+  const body = {
+    tipo: v('recTipo'), numero_receita: v('recNumero'),
+    paciente_nome: v('recPacNome'), paciente_cpf: v('recPacCpf'),
+    medico_nome: v('recMedico'), medico_crm: v('recCrm'),
+    data_emissao: v('recEmissao'), data_validade: v('recValidade')||'',
+    item_id: v('recItem') ? parseInt(v('recItem')) : null,
+    medicamento_descricao: v('recMedDesc'),
+    quantidade: parseInt(v('recQtd')||1),
+    posologia: v('recPosologia'),
+  };
+  if (!body.data_emissao) return alert('Data de emissão obrigatória');
+  await api('/api/farmacia/receitas/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalReceita');
+  carregarReceitas(); carregarKpis();
+}
+
+async function marcarReceitaDispensada(id) {
+  await api(`/api/farmacia/receitas/${id}/`, {method:'PUT', body:JSON.stringify({status:'dispensada'})});
+  carregarReceitas(); carregarKpis();
+}
+
+async function deletarReceita(id) {
+  if (!confirm('Excluir esta receita?')) return;
+  await api(`/api/farmacia/receitas/${id}/`, {method:'DELETE'});
+  carregarReceitas(); carregarKpis();
+}
+
+// ── Inventário Periódico ───────────────────────────────────────
+async function carregarInventarios() {
+  const d = await api('/api/farmacia/inventarios/');
+  const lista = document.getElementById('listaInventarios');
+  const invs = d.inventarios || [];
+  if (!invs.length) { lista.innerHTML='<div class="empty">Nenhum inventário realizado</div>'; return; }
+  const stCls = {aberto:'badge-warn',concluido:'badge-ok',cancelado:'badge-danger'};
+  lista.innerHTML = invs.map(inv => `
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;cursor:pointer" onclick="abrirDetalheInventario(${inv.id})">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${inv.descricao || `Inventário #${inv.id}`}</div>
+        <div style="font-size:11px;color:var(--muted)">${fmtDt(inv.iniciado_em)} · ${inv.responsavel||'—'}</div>
+        <div style="margin-top:4px">
+          <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;width:120px">
+            <div style="height:100%;background:var(--ok);border-radius:2px;width:${inv.progresso}%"></div>
+          </div>
+          <span style="font-size:10px;color:var(--muted)">${inv.progresso}% contado · ${inv.diferencas} diferença(s)</span>
+        </div>
+      </div>
+      <span class="badge ${stCls[inv.status]||'badge-info'}">${inv.status_label}</span>
+    </div>
+  `).join('');
+}
+
+async function abrirDetalheInventario(id) {
+  _inventarioAtual = id;
+  const d = await api(`/api/farmacia/inventarios/${id}/`);
+  document.getElementById('tituloInventario').textContent = d.descricao || `Inventário #${id}`;
+  document.getElementById('fillProgresso').style.width = d.progresso + '%';
+  document.getElementById('txtProgresso').textContent = d.progresso + '%';
+  const btnConcluir = document.getElementById('btnConcluirInventario');
+  btnConcluir.style.display = d.status === 'aberto' ? '' : 'none';
+  const tb = document.getElementById('tbodyInventarioItens');
+  tb.innerHTML = (d.itens||[]).map(ii => `<tr>
+    <td>${ii.item_nome}</td>
+    <td style="color:var(--muted)">${ii.estoque_sistema}</td>
+    <td><input type="number" min="0" value="${ii.estoque_contado ?? ''}" placeholder="Contar…"
+      style="width:72px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-family:Manrope,sans-serif;font-size:12px"
+      oninput="salvarContagem(${ii.id},this.value)"></td>
+    <td id="dif-${ii.id}" style="font-weight:700;${ii.diferenca===null?'color:var(--muted)':ii.diferenca!==0?'color:var(--warn)':'color:var(--ok)'}">${ii.diferenca===null?'—':(ii.diferenca>=0?'+':'')+ii.diferenca}</td>
+    <td><input value="${ii.observacao||''}" placeholder="Obs" id="obs-${ii.id}"
+      style="width:100px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-family:Manrope,sans-serif;font-size:12px"></td>
+  </tr>`).join('');
+  document.getElementById('cardDetalheInventario').style.display = '';
+}
+
+async function salvarContagem(iid, val) {
+  if (val === '') return;
+  const contado = parseInt(val);
+  const body = { contagens: [{ id: iid, estoque_contado: contado }] };
+  await api(`/api/farmacia/inventarios/${_inventarioAtual}/`, {method:'PUT', body:JSON.stringify(body)});
+  // atualizar diferença visual
+  const row = document.getElementById(`dif-${iid}`);
+  if (row) {
+    const d = await api(`/api/farmacia/inventarios/${_inventarioAtual}/`);
+    const item = (d.itens||[]).find(i => i.id === iid);
+    if (item) {
+      row.textContent = item.diferenca===null?'—':(item.diferenca>=0?'+':'')+item.diferenca;
+      row.style.color = item.diferenca===0?'var(--ok)':'var(--warn)';
+    }
+    document.getElementById('fillProgresso').style.width = d.progresso+'%';
+    document.getElementById('txtProgresso').textContent = d.progresso+'%';
+  }
+}
+
+async function concluirInventario() {
+  if (!_inventarioAtual) return;
+  const aplicar = document.getElementById('chkAplicarAjustes').checked;
+  if (!confirm(`Concluir inventário?${aplicar?' O estoque será ajustado conforme contagem.':''}`)) return;
+  await api(`/api/farmacia/inventarios/${_inventarioAtual}/`, {method:'PUT', body:JSON.stringify({acao:'concluir', aplicar_ajustes: aplicar})});
+  fecharDetalheInventario();
+  carregarInventarios(); carregarEstoque(); carregarKpis();
+}
+
+function fecharDetalheInventario() {
+  document.getElementById('cardDetalheInventario').style.display = 'none';
+  _inventarioAtual = null;
+}
+
+function abrirModalInventario() {
+  ['invDesc','invResp','invObs'].forEach(id => document.getElementById(id).value='');
+  abrirModal('modalInventario');
+}
+
+async function salvarInventario() {
+  const body = {descricao: v('invDesc'), responsavel: v('invResp'), observacoes: v('invObs')};
+  const res = await api('/api/farmacia/inventarios/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalInventario');
+  carregarInventarios();
+  if (res.id) abrirDetalheInventario(res.id);
+}
+
+// ── Descarte ───────────────────────────────────────────────────
+let _lotesDescarte = [];
+async function carregarDescartes() {
+  const d = await api('/api/farmacia/descartes/');
+  const tb = document.getElementById('tbodyDescartes');
+  const descs = d.descartes || [];
+  if (!descs.length) { tb.innerHTML='<tr><td colspan="8" class="empty">Nenhum descarte registrado</td></tr>'; return; }
+  tb.innerHTML = descs.map(d => `<tr>
+    <td>${d.item_nome}</td>
+    <td>${d.lote_numero||'—'}</td>
+    <td><span class="badge badge-danger">${d.motivo_label}</span></td>
+    <td><strong>${d.quantidade}</strong></td>
+    <td>${d.responsavel||'—'}</td>
+    <td>${d.empresa_descarte||'—'}</td>
+    <td>${d.numero_manifesto||'—'}</td>
+    <td>${fmtDt(d.data_descarte)}</td>
+  </tr>`).join('');
+}
+
+function abrirModalDescarte() {
+  const sel = document.getElementById('descItem');
+  sel.innerHTML = '<option value="">— selecione —</option>' + _itens.map(i=>`<option value="${i.id}">${i.nome} (estoque: ${i.estoque_atual})</option>`).join('');
+  document.getElementById('descLote').innerHTML = '<option value="">— sem lote específico —</option>';
+  ['descResp','descEmpresa','descManifesto','descObs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('descQtd').value='1';
+  abrirModal('modalDescarte');
+}
+
+async function carregarLotesDescarte() {
+  const itemId = v('descItem');
+  if (!itemId) return;
+  const d = await api(`/api/farmacia/lotes/?item_id=${itemId}`);
+  const sel = document.getElementById('descLote');
+  sel.innerHTML = '<option value="">— sem lote específico —</option>' +
+    (d.lotes||[]).map(l=>`<option value="${l.id}">${l.numero_lote} — val: ${l.data_validade} (${l.quantidade_atual} un)</option>`).join('');
+}
+
+async function salvarDescarte() {
+  const body = {
+    item_id: parseInt(v('descItem')),
+    lote_id: v('descLote') ? parseInt(v('descLote')) : null,
+    motivo: v('descMotivo'), quantidade: parseInt(v('descQtd')||1),
+    responsavel: v('descResp'), empresa_descarte: v('descEmpresa'),
+    numero_manifesto: v('descManifesto'), observacoes: v('descObs'),
+  };
+  if (!body.item_id) return alert('Selecione o item');
+  if (!body.quantidade || body.quantidade < 1) return alert('Informe a quantidade');
+  if (!confirm(`Confirmar descarte de ${body.quantidade} unidade(s)? Esta ação irá baixar o estoque.`)) return;
+  await api('/api/farmacia/descartes/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalDescarte');
+  carregarDescartes(); carregarEstoque(); carregarMovimentos(); carregarKpis();
+}
+
+// ── Relatórios ─────────────────────────────────────────────────
+async function carregarCurvaABC() {
+  document.getElementById('relatorioConteudo').innerHTML = '<div class="card"><div class="empty">Carregando curva ABC…</div></div>';
+  const d = await api('/api/farmacia/relatorios/curva-abc/');
+  const itens = d.itens || [];
+  const res = d.resumo || {};
+  document.getElementById('relatorioConteudo').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+      <div class="kpi"><div class="kpi-val" style="color:var(--danger)">${res.A||0}</div><div class="kpi-lbl">Classe A — 80% do consumo</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:var(--warn)">${res.B||0}</div><div class="kpi-lbl">Classe B — 15% do consumo</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:var(--ok)">${res.C||0}</div><div class="kpi-lbl">Classe C — 5% do consumo</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">📈 Curva ABC — ${d.periodo||''}</span></div>
+      <table>
+        <thead><tr><th>#</th><th>Item</th><th>Consumo</th><th>%</th><th>Acumulado</th><th>Classe</th></tr></thead>
+        <tbody>${itens.map((it,i) => `<tr>
+          <td style="color:var(--muted)">${i+1}</td>
+          <td>${it.nome}</td>
+          <td>${it.quantidade}</td>
+          <td>${it.percentual}%</td>
+          <td>${it.acumulado}%</td>
+          <td><span class="badge ${it.classe==='A'?'badge-danger':it.classe==='B'?'badge-warn':'badge-ok'}">${it.classe}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+async function carregarCMM() {
+  document.getElementById('relatorioConteudo').innerHTML = '<div class="card"><div class="empty">Calculando CMM…</div></div>';
+  const d = await api('/api/farmacia/relatorios/cmm/');
+  const itens = d.itens || [];
+  document.getElementById('relatorioConteudo').innerHTML = `
+    <div class="card">
+      <div class="card-header"><span class="card-title">📉 Consumo Médio Mensal e Cobertura — ${d.periodo||''}</span></div>
+      <table>
+        <thead><tr><th>Item</th><th>CMM</th><th>Estoque Atual</th><th>Cobertura (meses)</th><th>Status</th></tr></thead>
+        <tbody>${itens.map(it => `<tr>
+          <td>${it.nome}</td>
+          <td>${it.cmm}</td>
+          <td>${it.estoque_atual}</td>
+          <td>${it.cobertura_meses}</td>
+          <td><span class="badge ${it.status==='critico'?'badge-danger':it.status==='alerta'?'badge-warn':'badge-ok'}">${it.status}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+async function carregarGiro() {
+  document.getElementById('relatorioConteudo').innerHTML = '<div class="card"><div class="empty">Calculando giro de estoque…</div></div>';
+  const d = await api('/api/farmacia/relatorios/giro/');
+  const itens = d.itens || [];
+  document.getElementById('relatorioConteudo').innerHTML = `
+    <div class="card">
+      <div class="card-header"><span class="card-title">🔄 Giro de Estoque — ${d.periodo||''}</span></div>
+      <table>
+        <thead><tr><th>Item</th><th>Consumo Anual</th><th>Compras Anual</th><th>Estoque Atual</th><th>Índice de Giro</th><th>Classificação</th></tr></thead>
+        <tbody>${itens.map(it => `<tr>
+          <td>${it.nome}</td>
+          <td>${it.consumo_anual}</td>
+          <td>${it.compras_anual}</td>
+          <td>${it.estoque_atual}</td>
+          <td><strong>${it.giro}</strong></td>
+          <td><span class="badge ${it.classificacao==='alto'?'badge-ok':it.classificacao==='medio'?'badge-warn':'badge-danger'}">${it.classificacao}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+function fmtData(s) {
+  if (!s) return '';
+  const [y,m,d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+
 let _currentTab = 'estoque';
 function setTab(tab) {
   _currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    const tabs = ['estoque','dispensacoes','movimentos','fornecedores','pedidos','lotes'];
-    b.classList.toggle('active', tabs[i] === tab);
-  });
+  const tabs = ['estoque','dispensacoes','movimentos','fornecedores','pedidos','lotes','pacientes','receitas','inventario','descarte','relatorios'];
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', tabs[i] === tab));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
   if (tab === 'estoque') carregarEstoque();
@@ -681,6 +1305,10 @@ function setTab(tab) {
   else if (tab === 'fornecedores') carregarFornecedores();
   else if (tab === 'pedidos') carregarPedidos();
   else if (tab === 'lotes') carregarLotes();
+  else if (tab === 'pacientes') carregarPacientes();
+  else if (tab === 'receitas') carregarReceitas();
+  else if (tab === 'inventario') carregarInventarios();
+  else if (tab === 'descarte') carregarDescartes();
 }
 
 // ── Lotes ─────────────────────────────────────────────────────

@@ -1419,6 +1419,135 @@ class DispensacaoMedicamento(models.Model):
         return f"{self.item.nome} → {self.paciente_nome}"
 
 
+# ─── Farmácia — Módulos Avançados ─────────────────────────────────────────────
+
+class PacienteFarmacia(models.Model):
+    SEXO_CHOICES = [("M", "Masculino"), ("F", "Feminino"), ("O", "Outro")]
+    empresa           = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="pacientes_farmacia")
+    nome              = models.CharField(max_length=200)
+    cpf               = models.CharField(max_length=14, blank=True, default="")
+    data_nascimento   = models.DateField(null=True, blank=True)
+    sexo              = models.CharField(max_length=1, choices=SEXO_CHOICES, blank=True, default="")
+    telefone          = models.CharField(max_length=20, blank=True, default="")
+    email             = models.EmailField(blank=True, default="")
+    endereco          = models.CharField(max_length=300, blank=True, default="")
+    alergias          = models.TextField(blank=True, default="", help_text="Alergias e contraindicações conhecidas")
+    condicoes_cronicas = models.TextField(blank=True, default="", help_text="CIDs ou condições crônicas em acompanhamento")
+    medicamentos_uso_continuo = models.TextField(blank=True, default="")
+    ativo             = models.BooleanField(default=True)
+    criado_em         = models.DateTimeField(auto_now_add=True)
+    atualizado_em     = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return self.nome
+
+
+class ReceitaMedica(models.Model):
+    TIPO_CHOICES = [
+        ("simples", "Receita Simples"),
+        ("especial_branca", "Receita Especial Branca (2 vias)"),
+        ("especial_amarela", "Receita Especial Amarela (Psicotrópico)"),
+        ("alto_custo", "Medicamento de Alto Custo"),
+    ]
+    STATUS_CHOICES = [
+        ("pendente", "Pendente"),
+        ("dispensada", "Dispensada"),
+        ("vencida", "Vencida"),
+        ("cancelada", "Cancelada"),
+    ]
+    empresa         = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="receitas_farmacia")
+    paciente        = models.ForeignKey(PacienteFarmacia, on_delete=models.SET_NULL, null=True, blank=True, related_name="receitas")
+    paciente_nome   = models.CharField(max_length=200, blank=True, default="")
+    paciente_cpf    = models.CharField(max_length=14, blank=True, default="")
+    tipo            = models.CharField(max_length=25, choices=TIPO_CHOICES, default="simples")
+    numero_receita  = models.CharField(max_length=50, blank=True, default="")
+    medico_nome     = models.CharField(max_length=200, blank=True, default="")
+    medico_crm      = models.CharField(max_length=30, blank=True, default="")
+    data_emissao    = models.DateField()
+    data_validade   = models.DateField(null=True, blank=True)
+    item            = models.ForeignKey(ItemFarmacia, on_delete=models.SET_NULL, null=True, blank=True, related_name="receitas")
+    medicamento_descricao = models.TextField(blank=True, default="")
+    quantidade      = models.PositiveIntegerField(default=1)
+    posologia       = models.TextField(blank=True, default="")
+    status          = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pendente")
+    dispensacao     = models.ForeignKey(DispensacaoMedicamento, on_delete=models.SET_NULL, null=True, blank=True, related_name="receitas")
+    observacoes     = models.TextField(blank=True, default="")
+    criado_em       = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"Receita {self.numero_receita or self.pk} — {self.paciente_nome or (self.paciente.nome if self.paciente else '')}"
+
+
+class InventarioFarmacia(models.Model):
+    STATUS_CHOICES = [
+        ("aberto", "Em andamento"),
+        ("concluido", "Concluído"),
+        ("cancelado", "Cancelado"),
+    ]
+    empresa       = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="inventarios_farmacia")
+    descricao     = models.CharField(max_length=200, blank=True, default="")
+    status        = models.CharField(max_length=15, choices=STATUS_CHOICES, default="aberto")
+    responsavel   = models.CharField(max_length=200, blank=True, default="")
+    iniciado_em   = models.DateTimeField(auto_now_add=True)
+    concluido_em  = models.DateTimeField(null=True, blank=True)
+    observacoes   = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-iniciado_em"]
+
+    def __str__(self):
+        return f"Inventário {self.pk} — {self.status} ({self.iniciado_em.date()})"
+
+
+class ItemInventario(models.Model):
+    inventario        = models.ForeignKey(InventarioFarmacia, on_delete=models.CASCADE, related_name="itens")
+    item              = models.ForeignKey(ItemFarmacia, on_delete=models.CASCADE)
+    estoque_sistema   = models.IntegerField()
+    estoque_contado   = models.IntegerField(null=True, blank=True)
+    diferenca         = models.IntegerField(null=True, blank=True)
+    ajustado          = models.BooleanField(default=False)
+    observacao        = models.CharField(max_length=300, blank=True, default="")
+
+    class Meta:
+        ordering = ["item__nome"]
+        unique_together = [("inventario", "item")]
+
+    def __str__(self):
+        return f"{self.item.nome} — contado: {self.estoque_contado}"
+
+
+class DescarteItemFarmacia(models.Model):
+    MOTIVO_CHOICES = [
+        ("vencimento", "Vencimento"),
+        ("avaria", "Avaria / Dano físico"),
+        ("contaminacao", "Contaminação"),
+        ("recolhimento", "Recolhimento ANVISA"),
+        ("outro", "Outro"),
+    ]
+    empresa       = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="descartes_farmacia")
+    item          = models.ForeignKey(ItemFarmacia, on_delete=models.CASCADE, related_name="descartes")
+    lote          = models.ForeignKey("LoteMedicamento", on_delete=models.SET_NULL, null=True, blank=True)
+    motivo        = models.CharField(max_length=20, choices=MOTIVO_CHOICES, default="vencimento")
+    quantidade    = models.PositiveIntegerField()
+    responsavel   = models.CharField(max_length=200, blank=True, default="")
+    empresa_descarte = models.CharField(max_length=200, blank=True, default="", help_text="Empresa responsável pelo descarte")
+    numero_manifesto = models.CharField(max_length=100, blank=True, default="")
+    observacoes   = models.TextField(blank=True, default="")
+    data_descarte = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_descarte"]
+
+    def __str__(self):
+        return f"Descarte {self.item.nome} ({self.quantidade}) — {self.motivo}"
+
+
 # ─── Hospital Operacional ─────────────────────────────────────────────────────
 
 class DepartamentoHospital(models.Model):

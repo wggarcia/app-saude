@@ -720,6 +720,16 @@
           </div>
         </section>
 
+        <section class="section" id="secAlertasIntegrados">
+          <h2>⚡ Alertas de Estoque × Surto</h2>
+          <div id="alertasIntegrados" class="mini">Cruzando dados epidemiológicos com estoque…</div>
+        </section>
+
+        <section class="section" id="secKpisOperacionais">
+          <h2>📦 Situação Operacional</h2>
+          <div id="kpisOperacionaisWidget" class="mini">Carregando…</div>
+        </section>
+
         <section class="detail-card">
           <h2 style="margin:0 0 10px; font-size:0.98rem;">Detalhes da Localidade</h2>
           <div id="detailsBody" class="mini">
@@ -1517,11 +1527,105 @@
       }
     }
 
+    async function loadAlertasIntegrados() {
+      try {
+        const [painelRes, kpisRes, avancadosRes] = await Promise.all([
+          fetch("/api/farmacia/painel", { credentials: "same-origin" }),
+          fetch("/api/farmacia/ops/kpis/", { credentials: "same-origin" }),
+          fetch("/api/farmacia/kpis/avancados/", { credentials: "same-origin" }),
+        ]);
+        if (!painelRes.ok) return;
+        const painel = (await painelRes.json()).painel || {};
+        const kpis = painelRes.ok ? await kpisRes.json() : {};
+        const av = avancadosRes.ok ? await avancadosRes.json() : {};
+
+        const pressao = painel.pressao_estoque_global || 0;
+        const nivelRisco = painel.nivel_risco || "baixo";
+        const doencaDom = painel.doenca_dominante || "";
+        const medsAlta = painel.medicamentos_alta || [];
+        const abaixoMin = kpis.itens_abaixo_minimo || 0;
+        const ruptura = av.ruptura_estoque || 0;
+        const vencendo7 = av.vencendo_7_dias || 0;
+
+        const cor = pressao >= 80 ? "var(--critico)" : pressao >= 55 ? "var(--alto)" : pressao >= 30 ? "var(--moderado)" : "var(--baixo)";
+
+        let alertas = [];
+
+        if (pressao >= 55 && abaixoMin > 0) {
+          alertas.push(`<div style="border-left:3px solid ${cor};padding:6px 8px;margin-bottom:8px;background:rgba(255,54,95,.08);border-radius:4px">
+            <strong style="color:${cor}">🔴 Risco de ruptura em surto</strong><br>
+            <span style="font-size:0.8rem">${abaixoMin} item(s) abaixo do mínimo durante pressão ${pressao.toFixed(0)}% com surto de <strong>${doencaDom||'doenças'}</strong></span>
+          </div>`);
+        }
+
+        if (vencendo7 > 0) {
+          alertas.push(`<div style="border-left:3px solid var(--alto);padding:6px 8px;margin-bottom:8px;background:rgba(255,122,24,.08);border-radius:4px">
+            <strong style="color:var(--alto)">⚠️ Lotes críticos de validade</strong><br>
+            <span style="font-size:0.8rem">${vencendo7} lote(s) vencendo em 7 dias — verificar urgência de uso ou descarte</span>
+          </div>`);
+        }
+
+        if (ruptura > 0) {
+          alertas.push(`<div style="border-left:3px solid var(--critico);padding:6px 8px;margin-bottom:8px;background:rgba(255,54,95,.1);border-radius:4px">
+            <strong style="color:var(--critico)">⛔ Ruptura de estoque ativa</strong><br>
+            <span style="font-size:0.8rem">${ruptura} item(s) com estoque zerado — priorizar reabastecimento imediato</span>
+          </div>`);
+        }
+
+        if (medsAlta.length > 0 && pressao >= 30) {
+          alertas.push(`<div style="border-left:3px solid var(--moderado);padding:6px 8px;margin-bottom:8px;background:rgba(255,209,102,.07);border-radius:4px">
+            <strong style="color:var(--moderado)">📈 Demanda aumentada prevista</strong><br>
+            <span style="font-size:0.8rem">Pelo surto de <strong>${doencaDom}</strong>, priorize: ${medsAlta.slice(0,4).join(', ')}</span>
+          </div>`);
+        }
+
+        const el = document.getElementById("alertasIntegrados");
+        if (el) {
+          if (!alertas.length) {
+            el.innerHTML = `<div style="color:var(--baixo);font-size:0.85rem">✅ Estoque equilibrado com o perfil epidemiológico atual. Nenhum alerta crítico.</div>`;
+          } else {
+            el.innerHTML = alertas.join('');
+          }
+        }
+
+        // KPIs operacionais widget
+        const kpisEl = document.getElementById("kpisOperacionaisWidget");
+        if (kpisEl) {
+          kpisEl.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.8rem">
+              <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px;text-align:center">
+                <div style="font-size:1.2rem;font-weight:700;color:var(--accent-3)">${kpis.total_itens||0}</div>
+                <div style="color:var(--muted)">Itens cadastrados</div>
+              </div>
+              <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px;text-align:center">
+                <div style="font-size:1.2rem;font-weight:700;color:${abaixoMin>0?'var(--alto)':'var(--baixo)'}">${abaixoMin}</div>
+                <div style="color:var(--muted)">Abaixo do mínimo</div>
+              </div>
+              <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px;text-align:center">
+                <div style="font-size:1.2rem;font-weight:700;color:var(--accent)">${kpis.total_dispensacoes||0}</div>
+                <div style="color:var(--muted)">Dispensações</div>
+              </div>
+              <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px;text-align:center">
+                <div style="font-size:1.2rem;font-weight:700;color:${ruptura>0?'var(--critico)':'var(--baixo)'}">${ruptura}</div>
+                <div style="color:var(--muted)">Ruptura ativa</div>
+              </div>
+            </div>
+            <a href="/farmacia/gestao/" style="display:block;margin-top:10px;text-align:center;padding:6px 12px;border-radius:6px;background:rgba(124,242,154,.12);color:var(--accent);font-size:0.8rem;text-decoration:none;border:1px solid rgba(124,242,154,.2)">
+              → Abrir Gestão Operacional
+            </a>`;
+        }
+      } catch (e) {
+        console.warn("Erro ao carregar alertas integrados:", e);
+      }
+    }
+
     updateDockState();
     loadPanorama();
     loadFarmaciaPainel();
+    loadAlertasIntegrados();
     setInterval(loadPanorama, 15000);
     setInterval(loadFarmaciaPainel, 30000);
+    setInterval(loadAlertasIntegrados, 60000);
   </script>
 </body>
 </html>
