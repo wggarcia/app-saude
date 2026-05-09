@@ -89,6 +89,18 @@ from api.views_agendamento_sst import (
     api_agendamento_sst_detalhe,
     api_agendamentos_sst_kpis,
 )
+from api.views_esocial_sst import (
+    api_esocial_eventos,
+    api_esocial_gerar_xml,
+    api_esocial_registrar_cat,
+    api_esocial_registrar_aso,
+    api_esocial_registrar_afastamento,
+    api_esocial_marcar_transmitido,
+    api_esocial_kpis,
+    api_aso_compartilhamentos,
+    api_aso_revogar_compartilhamento,
+    portal_aso_publico,
+)
 from api.views_alertas import api_alertas, alertas_page
 from api.views_executive import api_executive_dashboard, executive_dashboard_page
 from api.views_contratos import (
@@ -405,6 +417,18 @@ urlpatterns = [
     path('api/sst/agendamentos/kpis', api_agendamentos_sst_kpis),
     path('api/sst/agendamentos/<int:ag_id>/', api_agendamento_sst_detalhe),
     path('api/sst/agendamentos/<int:ag_id>', api_agendamento_sst_detalhe),
+    # ── eSocial SST ──────────────────────────────────────────────────────────
+    path('api/sst/esocial/eventos/', api_esocial_eventos),
+    path('api/sst/esocial/kpis/', api_esocial_kpis),
+    path('api/sst/esocial/eventos/<int:evento_id>/xml/', api_esocial_gerar_xml),
+    path('api/sst/esocial/eventos/<int:evento_id>/transmitido/', api_esocial_marcar_transmitido),
+    path('api/sst/cats/<int:cat_id>/esocial/', api_esocial_registrar_cat),
+    path('api/sst/asos/<int:aso_id>/esocial/', api_esocial_registrar_aso),
+    path('api/sst/afastamentos/<int:afastamento_id>/esocial/', api_esocial_registrar_afastamento),
+    # ── Compartilhamento de ASO ───────────────────────────────────────────────
+    path('api/sst/asos/<int:aso_id>/compartilhar/', api_aso_compartilhamentos),
+    path('api/sst/aso/compartilhamento/<str:token>/revogar/', api_aso_revogar_compartilhamento),
+    path('sst/aso/portal/<str:token>/', portal_aso_publico),
     path('api/sst/asos/<int:aso_id>/pdf', api_aso_pdf),
     path('api/sst/cats/<int:cat_id>/pdf', api_cat_pdf),
     path('api/sst/funcionarios/<int:funcionario_id>/prontuario/pdf', api_prontuario_pdf),

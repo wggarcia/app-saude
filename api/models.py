@@ -977,6 +977,7 @@ class eSocialEventoSST(models.Model):
     TIPO_EVENTO = [
         ("S-2210", "S-2210 — Comunicação de Acidente do Trabalho"),
         ("S-2220", "S-2220 — Monitoramento da Saúde do Trabalhador"),
+        ("S-2230", "S-2230 — Afastamento Temporário"),
         ("S-2240", "S-2240 — Condições Ambientais do Trabalho"),
     ]
     STATUS = [
@@ -993,6 +994,7 @@ class eSocialEventoSST(models.Model):
     referencia = models.CharField(max_length=200, blank=True)
     protocolo = models.CharField(max_length=60, blank=True)
     mensagem_erro = models.TextField(blank=True)
+    xml_gerado = models.TextField(blank=True, default="")
     data_envio = models.DateTimeField(null=True, blank=True)
     data_retorno = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -1006,6 +1008,26 @@ class eSocialEventoSST(models.Model):
 
     def __str__(self):
         return f"{self.tipo_evento} — {self.status} ({self.empresa.nome})"
+
+
+class ASOCompartilhamento(models.Model):
+    aso              = models.ForeignKey(ASOOcupacional, on_delete=models.CASCADE, related_name="compartilhamentos")
+    empresa_origem   = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="asos_compartilhados")
+    token            = models.CharField(max_length=64, unique=True)
+    empresa_destino_cnpj = models.CharField(max_length=18, blank=True, default="")
+    empresa_destino_nome = models.CharField(max_length=200, blank=True, default="")
+    email_destino    = models.EmailField(blank=True, default="")
+    acessos          = models.PositiveIntegerField(default=0)
+    max_acessos      = models.PositiveIntegerField(default=20)
+    expira_em        = models.DateTimeField()
+    ativo            = models.BooleanField(default=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"ASO#{self.aso_id} → {self.empresa_destino_nome or 'link público'}"
 
 
 class DocumentoSST(models.Model):

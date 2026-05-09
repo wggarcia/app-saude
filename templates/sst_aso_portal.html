@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal ASO — SolusCRT Saúde</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f4f8; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1a56db, #0e9f6e); color: #fff; padding: 1.5rem 2rem; display: flex; align-items: center; gap: 1rem; }
+  .header h1 { font-size: 1.3rem; }
+  .header small { opacity: .75; font-size: .85rem; }
+  .badge-origem { background: rgba(255,255,255,.2); border-radius: 20px; padding: .25rem .75rem; font-size: .8rem; }
+  .container { max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+  .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); margin-bottom: 1.5rem; overflow: hidden; }
+  .card-header { padding: 1rem 1.5rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155; display: flex; align-items: center; gap: .5rem; }
+  .card-body { padding: 1.5rem; }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+  .info-item label { display: block; font-size: .75rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .25rem; }
+  .info-item span { font-weight: 600; color: #1e293b; }
+  .badge { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .8rem; border-radius: 20px; font-size: .82rem; font-weight: 600; }
+  .badge-apto { background: #d1fae5; color: #065f46; }
+  .badge-inapto { background: #fee2e2; color: #991b1b; }
+  .badge-restricao { background: #fef3c7; color: #92400e; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f1f5f9; padding: .6rem 1rem; text-align: left; font-size: .8rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
+  td { padding: .65rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: .9rem; }
+  .btn-print { display: inline-flex; align-items: center; gap: .5rem; background: #1a56db; color: #fff; border: none; border-radius: 8px; padding: .65rem 1.4rem; font-size: .9rem; font-weight: 600; cursor: pointer; }
+  .btn-print:hover { background: #1e40af; }
+  .alerta { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px; padding: 1rem 1.5rem; color: #92400e; }
+  .erro-box { background: #fff; border-radius: 12px; padding: 3rem; text-align: center; max-width: 480px; margin: 4rem auto; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+  .erro-box .icon { font-size: 3rem; margin-bottom: 1rem; }
+  .erro-box h2 { color: #ef4444; margin-bottom: .5rem; }
+  .footer-info { text-align: center; color: #94a3b8; font-size: .8rem; margin-top: 2rem; padding-bottom: 2rem; }
+  .acesso-info { background: #eff6ff; border-radius: 8px; padding: .75rem 1rem; font-size: .85rem; color: #1d4ed8; display: flex; justify-content: space-between; align-items: center; }
+  @media print {
+    .header, .acesso-info, .btn-print, .footer-info { display: none !important; }
+    .card { box-shadow: none; border: 1px solid #e2e8f0; }
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+
+{% if erro %}
+<div class="erro-box">
+  <div class="icon">🔒</div>
+  <h2>Acesso negado</h2>
+  <p style="color:#64748b; margin-top:.5rem">{{ erro }}</p>
+</div>
+{% else %}
+
+<div class="header">
+  <div>
+    <h1>📋 Atestado de Saúde Ocupacional</h1>
+    <small>Documento compartilhado por <strong>{{ empresa_origem.nome }}</strong></small>
+  </div>
+  <span class="badge-origem">SolusCRT Saúde</span>
+</div>
+
+<div class="container">
+
+  <div class="acesso-info">
+    <span>⏳ Válido até {{ comp.expira_em|date:"d/m/Y H:i" }}</span>
+    <span>👁️ Acessos restantes: {{ restantes }}</span>
+  </div>
+
+  <br>
+
+  <!-- Trabalhador -->
+  <div class="card">
+    <div class="card-header">👤 Dados do Trabalhador</div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div class="info-item"><label>Nome</label><span>{{ func.nome }}</span></div>
+        <div class="info-item"><label>CPF</label><span>{{ func.cpf|default:"—" }}</span></div>
+        <div class="info-item"><label>Matrícula</label><span>{{ func.matricula|default:"—" }}</span></div>
+        <div class="info-item"><label>Cargo</label><span>{{ func.cargo|default:"—" }}</span></div>
+        <div class="info-item"><label>Setor</label><span>{{ func.setor|default:"—" }}</span></div>
+        <div class="info-item"><label>Data de Admissão</label><span>{{ func.data_admissao|date:"d/m/Y"|default:"—" }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ASO -->
+  <div class="card">
+    <div class="card-header">🩺 ASO — Atestado de Saúde Ocupacional</div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div class="info-item"><label>Tipo</label><span>{{ aso.get_tipo_display }}</span></div>
+        <div class="info-item"><label>Data de Emissão</label><span>{{ aso.data_emissao|date:"d/m/Y" }}</span></div>
+        <div class="info-item"><label>Validade</label><span>{{ aso.data_validade|date:"d/m/Y"|default:"Sem validade definida" }}</span></div>
+        <div class="info-item">
+          <label>Resultado</label>
+          <span>
+            {% if aso.resultado == "apto" %}<span class="badge badge-apto">✅ Apto</span>
+            {% elif aso.resultado == "inapto" %}<span class="badge badge-inapto">❌ Inapto</span>
+            {% else %}<span class="badge badge-restricao">⚠️ Apto c/ Restrição</span>{% endif %}
+          </span>
+        </div>
+        <div class="info-item"><label>Médico Responsável</label><span>{{ aso.medico_responsavel|default:"—" }}</span></div>
+        <div class="info-item"><label>CRM</label><span>{{ aso.crm|default:"—" }}</span></div>
+      </div>
+      {% if aso.restricoes %}
+      <div style="margin-top:1rem; padding:1rem; background:#fef9ec; border-radius:8px;">
+        <label style="font-size:.75rem; color:#92400e; text-transform:uppercase; font-weight:600;">Restrições</label>
+        <p style="margin-top:.35rem; color:#78350f;">{{ aso.restricoes }}</p>
+      </div>
+      {% endif %}
+      {% if aso.observacoes %}
+      <div style="margin-top:.75rem; color:#64748b; font-size:.9rem;">
+        <strong>Observações:</strong> {{ aso.observacoes }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Exames -->
+  {% if exames %}
+  <div class="card">
+    <div class="card-header">🔬 Exames Realizados</div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>Exame</th>
+            <th>Data</th>
+            <th>Validade</th>
+            <th>Resultado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ex in exames %}
+          <tr>
+            <td>{{ ex.get_tipo_exame_display }}</td>
+            <td>{{ ex.data_realizacao|date:"d/m/Y"|default:"—" }}</td>
+            <td>{{ ex.data_validade|date:"d/m/Y"|default:"—" }}</td>
+            <td>{{ ex.resultado|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Empresa emissora -->
+  <div class="card">
+    <div class="card-header">🏢 Empresa Responsável pelo Exame</div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div class="info-item"><label>Empresa</label><span>{{ empresa_origem.nome }}</span></div>
+        {% if comp.empresa_destino_nome %}
+        <div class="info-item"><label>Destinatário</label><span>{{ comp.empresa_destino_nome }}</span></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:right; margin-bottom:1.5rem">
+    <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+  </div>
+
+</div>
+
+<div class="footer-info">
+  Documento gerado via SolusCRT Saúde · Compartilhamento autorizado pela empresa emissora · Token: {{ comp.token|slice:":8" }}...
+</div>
+
+{% endif %}
+</body>
+</html>
