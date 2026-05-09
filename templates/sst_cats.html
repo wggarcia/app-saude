@@ -59,9 +59,13 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .b-roxo{background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.18)}
 .grav-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;flex-shrink:0}
 .g-leve{background:#4ade80}.g-moderado{background:#fbbf24}.g-grave{background:#f87171}.g-fatal{background:#dc2626}
-.row-actions{display:flex;gap:6px}
-.btn-row{padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.7rem;cursor:pointer;font-family:inherit;transition:all .15s}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap}
+.btn-row{padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.7rem;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
 .btn-row:hover{border-color:var(--teal);color:var(--teal)}
+.btn-esocial{border-color:rgba(59,130,246,.3);color:#60a5fa}
+.btn-esocial:hover{border-color:var(--blue);background:rgba(59,130,246,.07)}
+.btn-xml{border-color:rgba(0,201,167,.3);color:var(--teal)}
+.btn-xml:hover{border-color:var(--teal);background:rgba(0,201,167,.07)}
 .empty-state{padding:48px 20px;text-align:center;color:var(--muted)}
 .empty-state .ei{font-size:2.5rem;margin-bottom:12px}
 .empty-state h3{font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:6px}
@@ -85,12 +89,20 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .modal-acts{display:flex;gap:8px;margin-top:16px}
 .btn-cancel{flex:1;padding:9px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:none;color:var(--muted);font-family:inherit;cursor:pointer}
 .btn-submit{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-weight:800;font-family:inherit;cursor:pointer}
+.xml-box{background:rgba(0,0,0,.35);border:1px solid rgba(0,201,167,.2);border-radius:8px;padding:12px;font-family:monospace;font-size:.72rem;color:#a5f3fc;max-height:240px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;margin-top:8px}
+.copy-btn{width:100%;padding:8px;border-radius:7px;border:1px solid rgba(0,201,167,.3);background:rgba(0,201,167,.07);color:var(--teal);font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;margin-top:8px;transition:all .15s}
+.copy-btn:hover{background:rgba(0,201,167,.14)}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:12px 18px;font-size:.82rem;font-weight:600;color:var(--text);z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none;max-width:320px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:rgba(34,197,94,.3);color:#4ade80}
+.toast.err{border-color:rgba(239,68,68,.3);color:#f87171}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
 </style>
 </head>
 <body>
+<div class="toast" id="toast"></div>
 <header class="topbar">
   <div class="tb-logo"><div class="tb-icon">S</div><div><div class="tb-nome">SST</div><div class="tb-sub">Saúde Ocupacional</div></div></div>
   <nav class="tb-nav">
@@ -128,19 +140,19 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
   </aside>
   <main class="main">
-    <div class="aviso"><div>⚠️</div><div><strong>Prazo legal:</strong> A CAT deve ser registrada até o primeiro dia útil após o acidente. Em caso de óbito, o registro é imediato. Após o registro, transmita pelo eSocial (evento S-2210).</div></div>
+    <div class="aviso"><div>⚠️</div><div><strong>Prazo legal:</strong> A CAT deve ser registrada até o primeiro dia útil após o acidente. Em caso de óbito, o registro é imediato. Após o registro, transmita pelo eSocial (evento S-2210) diretamente por esta tela.</div></div>
     <div class="kpi-strip">
       <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">Total de CATs</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub">acidentes registrados</div></div>
-      <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Pendentes eSocial</div><div class="kpi-val" id="k-pendentes">—</div><div class="kpi-sub">aguardando transmissão</div></div>
+      <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Pendentes eSocial</div><div class="kpi-val" id="k-pendentes">—</div><div class="kpi-sub">aguardando transmissão S-2210</div></div>
       <div class="kpi-card" style="--kc:var(--blue)"><div class="kpi-label">Com Afastamento</div><div class="kpi-val" id="k-afas">—</div><div class="kpi-sub">geraram afastamento</div></div>
-      <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Transmitidas</div><div class="kpi-val" id="k-trans">—</div><div class="kpi-sub">eSocial confirmado</div></div>
+      <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">S-2210 Gerados</div><div class="kpi-val" id="k-trans">—</div><div class="kpi-sub">eventos criados no eSocial</div></div>
     </div>
     <div class="toolbar">
       <div class="search-box"><input id="busca" type="text" placeholder="Buscar por funcionário ou CID..." oninput="renderTabela()"></div>
       <div class="filter-tabs">
         <button class="ftab active" onclick="setFiltro('todos',this)">Todos</button>
         <button class="ftab" onclick="setFiltro('nao_enviado',this)">Pendentes</button>
-        <button class="ftab" onclick="setFiltro('transmitido',this)">Transmitidas</button>
+        <button class="ftab" onclick="setFiltro('transmitido',this)">S-2210 Gerados</button>
         <button class="ftab" onclick="setFiltro('erro',this)">Com Erro</button>
         <button class="ftab" onclick="setFiltro('tipico',this)">Típico</button>
         <button class="ftab" onclick="setFiltro('trajeto',this)">Trajeto</button>
@@ -150,7 +162,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <div class="table-wrap">
       <div class="table-header"><h3>Comunicações de Acidente do Trabalho</h3><span id="contagem">carregando...</span></div>
       <table class="tbl">
-        <thead><tr><th>Gravidade</th><th>Funcionário</th><th>Tipo</th><th>Data do Acidente</th><th>CID</th><th>Afastamento</th><th>eSocial</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Gravidade</th><th>Funcionário</th><th>Tipo</th><th>Data Acidente</th><th>CID</th><th>Afastamento</th><th>S-2210</th><th>Ações</th></tr></thead>
         <tbody id="tbody">
           <tr><td colspan="8"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
           <tr><td colspan="8"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
@@ -160,6 +172,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
   </main>
 </div>
 
+<!-- Modal: Registrar CAT -->
 <div class="modal-bg" id="modal">
   <div class="modal">
     <h3>Registrar Comunicação de Acidente do Trabalho</h3>
@@ -186,18 +199,69 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
   </div>
 </div>
 
+<!-- Modal: S-2210 XML Preview -->
+<div class="modal-bg" id="modal-xml">
+  <div class="modal" style="width:560px">
+    <h3>📄 S-2210 — CAT gerada no eSocial</h3>
+    <div class="modal-sub" id="xml-sub">Evento criado com sucesso. Confira o XML gerado abaixo e faça o download para transmissão.</div>
+    <div class="xml-box" id="xml-content"></div>
+    <button class="copy-btn" onclick="copiarXml()">📋 Copiar XML</button>
+    <div class="modal-acts" style="margin-top:12px">
+      <button class="btn-cancel" onclick="closeXmlModal()">Fechar</button>
+      <button class="btn-submit" style="background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a" onclick="baixarXml()">⬇️ Baixar XML</button>
+    </div>
+  </div>
+</div>
+
 <script>
-let _todos=[];let _filtro='todos';
-const esocialLabel={nao_enviado:'Não enviado',pendente:'Pendente',transmitido:'Transmitido',erro:'Erro',retificado:'Retificado'};
+let _todos=[];let _filtro='todos';let _xmlEventoId=null;
+const esocialLabel={nao_enviado:'Pendente',pendente:'Pendente',transmitido:'Gerado',erro:'Erro',retificado:'Retificado'};
 const esocialCls={nao_enviado:'b-cinza',pendente:'b-amarelo',transmitido:'b-verde',erro:'b-vermelho',retificado:'b-azul'};
 const tipoLabel={tipico:'Típico',trajeto:'Trajeto',doenca:'Doença Ocup.'};
 const gravLabel={leve:'Leve',moderado:'Moderado',grave:'Grave',fatal:'Fatal'};
 const gravCls={leve:'g-leve',moderado:'g-moderado',grave:'g-grave',fatal:'g-fatal'};
 
+function toast(msg,tipo='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+(tipo==='ok'?'ok':'err');clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',3500);}
+
 function openModal(){document.getElementById("modal").classList.add("open");document.getElementById("c-data").value=new Date().toISOString().split("T")[0];}
 function closeModal(){document.getElementById("modal").classList.remove("open")}
 document.getElementById("modal").addEventListener("click",e=>{if(e.target===document.getElementById("modal"))closeModal()});
+
+function closeXmlModal(){document.getElementById('modal-xml').classList.remove('open');_xmlEventoId=null;}
+document.getElementById('modal-xml').addEventListener('click',e=>{if(e.target===document.getElementById('modal-xml'))closeXmlModal();});
+
+function copiarXml(){navigator.clipboard.writeText(document.getElementById('xml-content').textContent).then(()=>toast('XML copiado!'));}
+function baixarXml(){if(_xmlEventoId)window.open(`/api/sst/esocial/eventos/${_xmlEventoId}/xml/?download=1`,'_blank');}
+
 function setFiltro(f,btn){_filtro=f;document.querySelectorAll(".ftab").forEach(b=>b.classList.remove("active"));btn.classList.add("active");renderTabela();}
+
+async function transmitirS2210(catId, btn){
+  btn.textContent='Gerando...';btn.disabled=true;
+  const r=await fetch(`/api/sst/cats/${catId}/esocial/`,{method:'POST',headers:{'Content-Type':'application/json'}});
+  const d=await r.json();
+  btn.textContent='📤 S-2210';btn.disabled=false;
+  if(!r.ok){toast(d.erro||'Erro ao gerar S-2210','err');return;}
+  const eventoId=d.evento_id||d.id;
+  _xmlEventoId=eventoId;
+  if(d.xml){
+    document.getElementById('xml-content').textContent=d.xml;
+    document.getElementById('xml-sub').textContent=`Evento S-2210 criado (ID: ${eventoId}). Acesse a aba eSocial para marcar como transmitido após envio ao portal.`;
+    document.getElementById('modal-xml').classList.add('open');
+  }else{
+    toast('S-2210 gerado! Acesse eSocial para transmitir.','ok');
+  }
+  carregar();
+}
+
+async function verXml(eventoId){
+  _xmlEventoId=eventoId;
+  const r=await fetch(`/api/sst/esocial/eventos/${eventoId}/xml/`);
+  if(!r.ok){toast('XML não disponível','err');return;}
+  const d=await r.json();
+  document.getElementById('xml-content').textContent=d.xml||'XML não gerado ainda';
+  document.getElementById('xml-sub').textContent=`Evento S-2210 (ID: ${eventoId})`;
+  document.getElementById('modal-xml').classList.add('open');
+}
 
 function renderTabela(){
   const q=(document.getElementById("busca").value||"").toLowerCase();
@@ -216,34 +280,39 @@ function renderTabela(){
   document.getElementById("contagem").textContent=`${lista.length} CAT(s)`;
   const tbody=document.getElementById("tbody");
   if(!lista.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="ei">⚠️</div><h3>Nenhuma CAT registrada</h3><p>Registre comunicações de acidente do trabalho para manter a conformidade legal.</p></div></td></tr>`;return;}
-  tbody.innerHTML=lista.map(c=>`
-    <tr>
+  tbody.innerHTML=lista.map(c=>{
+    const esCls=esocialCls[c.status_esocial]||'b-cinza';
+    const esLbl=esocialLabel[c.status_esocial]||'—';
+    const isPending=["nao_enviado","pendente"].includes(c.status_esocial);
+    const hasXml=c.status_esocial==="transmitido"&&c.evento_id;
+    return`<tr>
       <td><span class="grav-dot ${gravCls[c.gravidade]||'g-leve'}"></span>${gravLabel[c.gravidade]||c.gravidade}</td>
       <td><strong>${c.funcionario}</strong></td>
       <td><span class="badge b-azul">${tipoLabel[c.tipo_raw]||c.tipo}</span></td>
       <td style="color:var(--muted)">${c.data_acidente}</td>
       <td style="color:var(--muted);font-family:monospace">${c.cid||'—'}</td>
       <td>${c.houve_afastamento?'<span class="badge b-amarelo">Sim</span>':'<span class="badge b-cinza">Não</span>'}</td>
-      <td><span class="badge ${esocialCls[c.status_esocial]||'b-cinza'}">${esocialLabel[c.status_esocial]||c.status_esocial}</span></td>
+      <td><span class="badge ${esCls}">${esLbl}</span></td>
       <td><div class="row-actions">
-        ${c.status_esocial==="nao_enviado"?`<button class="btn-row" onclick="irEsocial()">Transmitir eSocial</button>`:''}
-        <a class="btn-row" href="/api/sst/cats/${c.id}/pdf" target="_blank" title="Baixar CAT PDF">📄 PDF</a>
+        ${isPending?`<button class="btn-row btn-esocial" onclick="transmitirS2210(${c.id},this)">📤 S-2210</button>`:''}
+        ${hasXml?`<button class="btn-row btn-xml" onclick="verXml(${c.evento_id})">📄 XML</button>`:''}
+        <a class="btn-row" href="/api/sst/cats/${c.id}/pdf" target="_blank">📋 PDF</a>
       </div></td>
-    </tr>`).join("");
+    </tr>`;
+  }).join("");
 }
-function irEsocial(){window.location.href='/sst/esocial/';}
 
 async function carregar(){
   const r=await fetch("/api/sst/cats");
   if(!r.ok)return;
   const d=await r.json();
   const tipoMap={'Típico':'tipico','De Trajeto':'trajeto','Doença Ocupacional':'doenca'};
-  _todos=(d.cats||[]).map(c=>({...c,tipo_raw:tipoMap[c.tipo]||c.tipo,houve_afastamento:false}));
+  _todos=(d.cats||[]).map(c=>({...c,tipo_raw:tipoMap[c.tipo]||c.tipo,houve_afastamento:c.houve_afastamento||false}));
   renderTabela();
 }
 
 async function salvar(){
-  const btn=document.querySelector(".btn-submit");btn.textContent="Salvando...";btn.disabled=true;
+  const btn=document.querySelector("#modal .btn-submit");btn.textContent="Salvando...";btn.disabled=true;
   const r=await fetch("/api/sst/cats",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
     funcionario_nome:document.getElementById("c-func").value.trim(),
     tipo:document.getElementById("c-tipo").value,
@@ -256,8 +325,8 @@ async function salvar(){
     descricao:document.getElementById("c-desc").value.trim(),
   })});
   const d=await r.json();
-  if(r.ok){closeModal();alert("CAT registrada! Transmita pelo eSocial (S-2210).");carregar();}
-  else alert(d.erro||"Erro ao registrar CAT");
+  if(r.ok){closeModal();toast('CAT registrada! Clique em S-2210 para transmitir ao eSocial.','ok');carregar();}
+  else toast(d.erro||"Erro ao registrar CAT",'err');
   btn.textContent="Registrar CAT";btn.disabled=false;
 }
 carregar();

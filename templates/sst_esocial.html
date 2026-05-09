@@ -28,39 +28,37 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .sb-link.active{color:var(--teal);background:rgba(0,201,167,.06);border-left-color:var(--teal);font-weight:600}
 .sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
 .main{flex:1;margin-left:200px;padding:20px;display:flex;flex-direction:column;gap:16px}
-/* Evento cards */
-.eventos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.ev-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.kpi-card{padding:14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
+.kpi-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--teal));opacity:.7}
+.kpi-label{font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi-val{font-size:1.7rem;font-weight:900;line-height:1}.kpi-sub{font-size:.67rem;color:var(--muted);margin-top:5px}
+.ev-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.ev-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
 .ev-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--ec,var(--muted))}
-.ev-card.transmitido{--ec:var(--green)}
-.ev-card.pendente{--ec:var(--amber)}
-.ev-card.enviado{--ec:var(--blue)}
-.ev-card.erro{--ec:var(--red)}
-.ev-card.nao_enviado{--ec:var(--muted)}
-.ev-tipo{font-size:1.4rem;font-weight:900;font-family:monospace;letter-spacing:.04em}
-.ev-tipo.s2210{color:#f87171}
-.ev-tipo.s2220{color:#60a5fa}
-.ev-tipo.s2240{color:#a78bfa}
-.ev-descricao{font-size:.78rem;font-weight:600;color:var(--text);line-height:1.4}
-.ev-nr{font-size:.68rem;color:var(--muted);margin-top:3px}
-.ev-status-big{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
-.ev-status-icon{font-size:1.3rem}
-.ev-status-info{}
-.ev-status-label{font-size:.8rem;font-weight:800}
-.ev-status-data{font-size:.67rem;color:var(--muted);margin-top:2px}
-.st-transmitido .ev-status-label{color:#4ade80}
-.st-pendente .ev-status-label{color:#fbbf24}
-.st-erro .ev-status-label{color:#f87171}
-.st-nao_enviado .ev-status-label{color:var(--muted)}
-.ev-btn{padding:8px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.74rem;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:600;text-align:center}
-.ev-btn:hover{border-color:var(--teal);color:var(--teal)}
-/* Aviso */
+.ev-card.transmitido{--ec:var(--green)}.ev-card.pendente{--ec:var(--amber)}.ev-card.enviado{--ec:var(--blue)}.ev-card.erro{--ec:var(--red)}.ev-card.nao_enviado{--ec:var(--muted)}
+.ev-tipo{font-size:1.2rem;font-weight:900;font-family:monospace;letter-spacing:.04em}
+.ev-tipo.s2210{color:#f87171}.ev-tipo.s2220{color:#60a5fa}.ev-tipo.s2230{color:#34d399}.ev-tipo.s2240{color:#a78bfa}
+.ev-descricao{font-size:.75rem;color:var(--text);line-height:1.4;font-weight:600}
+.ev-prazo{font-size:.67rem;color:var(--muted);margin-top:2px}
+.ev-status-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:.7rem;font-weight:700}
+.pill-verde{background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.pill-amarelo{background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+.pill-cinza{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line)}
+.pill-vermelho{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.ev-btns{display:flex;gap:6px;flex-wrap:wrap}
+.ev-btn{flex:1;padding:6px 8px;border-radius:7px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.69rem;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:600;text-align:center;white-space:nowrap}
+.ev-btn:hover{border-color:var(--teal);color:var(--teal);background:rgba(0,201,167,.06)}
+.ev-btn.primary{background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;border:none}
+.ev-btn.primary:hover{opacity:.85}
 .aviso{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.15);border-radius:10px;font-size:.78rem;color:var(--muted);line-height:1.6}
 .aviso strong{color:#60a5fa;display:block;margin-bottom:2px}
-/* Tabela histórico */
 .table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);gap:10px;flex-wrap:wrap}
 .table-header h3{font-size:.8rem;font-weight:700}.table-header span{font-size:.72rem;color:var(--muted)}
+.filter-tabs{display:flex;gap:4px}
+.ftab{padding:5px 11px;border-radius:6px;font-size:.72rem;font-weight:600;cursor:pointer;color:var(--muted);border:1px solid var(--line);background:none;font-family:inherit;transition:all .15s}
+.ftab.active{color:var(--teal);background:rgba(0,201,167,.08);border-color:rgba(0,201,167,.2)}
 .tbl{width:100%;border-collapse:collapse;overflow-x:auto;display:block}
 .tbl thead th{padding:10px 14px;text-align:left;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
 .tbl tbody tr{border-bottom:1px solid var(--line)}
@@ -74,6 +72,10 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .b-azul{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.18)}
 .b-cinza{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line)}
 .b-roxo{background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.18)}
+.row-actions{display:flex;gap:5px}
+.btn-row{padding:3px 9px;border-radius:5px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.68rem;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-row:hover{border-color:var(--teal);color:var(--teal)}
+.btn-row.danger:hover{border-color:var(--red);color:var(--red)}
 .empty-state{padding:40px;text-align:center;color:var(--muted)}
 .empty-state .ei{font-size:2rem;margin-bottom:10px}
 .empty-state h3{font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:5px}
@@ -81,7 +83,8 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 @keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
 .modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
-.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:440px;max-width:95vw}
+.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-wide{width:720px}
 .modal h3{font-size:1rem;font-weight:800;margin-bottom:4px}
 .modal-sub{font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.5}
 .mf{margin-bottom:10px}
@@ -92,7 +95,13 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .modal-acts{display:flex;gap:8px;margin-top:16px}
 .btn-cancel{flex:1;padding:9px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:none;color:var(--muted);font-family:inherit;cursor:pointer}
 .btn-submit{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-weight:800;font-family:inherit;cursor:pointer}
-@media(max-width:900px){.eventos-grid{grid-template-columns:1fr}}
+.xml-box{background:#0d1117;border:1px solid var(--line);border-radius:8px;padding:14px;font-family:monospace;font-size:.72rem;color:#7ec8e3;white-space:pre-wrap;max-height:360px;overflow-y:auto;line-height:1.6}
+.copy-btn{padding:7px 14px;border-radius:7px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:600}
+.copy-btn:hover{border-color:var(--teal);color:var(--teal)}
+.copy-btn.copied{border-color:var(--green);color:#4ade80}
+.dl-btn{padding:7px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-size:.75rem;cursor:pointer;font-family:inherit;font-weight:800}
+@media(max-width:1100px){.ev-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.ev-grid{grid-template-columns:1fr}.kpi-strip{grid-template-columns:repeat(2,1fr)}}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
 </style>
 </head>
@@ -127,7 +136,6 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <a class="sb-link" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos NR</span></a>
     <a class="sb-link" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
     <a class="sb-link" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
-    <a class="sb-link" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação</span></a>
     <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI / EPC</span></a>
     <a class="sb-link" href="/sst/conformidade/"><span class="sb-icon">🛡️</span><span>Conformidade</span></a>
     <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
@@ -135,138 +143,264 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
   </aside>
   <main class="main">
 
+    <!-- KPIs -->
+    <div class="kpi-strip">
+      <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Pendentes</div><div class="kpi-val" id="k-pend">—</div><div class="kpi-sub">na fila de transmissão</div></div>
+      <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Transmitidos</div><div class="kpi-val" id="k-trans">—</div><div class="kpi-sub">confirmados gov.br</div></div>
+      <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">Erros</div><div class="kpi-val" id="k-erro">—</div><div class="kpi-sub">falha na transmissão</div></div>
+      <div class="kpi-card" style="--kc:var(--blue)"><div class="kpi-label">Total Eventos</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub">todos os tipos</div></div>
+      <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">CATs s/ eSocial</div><div class="kpi-val" id="k-cats">—</div><div class="kpi-sub">pendentes de S-2210</div></div>
+    </div>
+
     <div class="aviso">
       <div>ℹ️</div>
-      <div><strong>Integração eSocial — Informação importante</strong>
-      A transmissão real dos eventos requer certificado digital A1/A3 e homologação junto ao ambiente de produção do eSocial (gov.br). Os eventos registrados aqui ficam na fila de transmissão. Para integrar, configure o certificado digital nas configurações da conta.</div>
+      <div><strong>eSocial SST — Geração e Transmissão de XML</strong>
+      Gere o XML de cada evento (S-2210, S-2220, S-2230, S-2240) com um clique e faça download para submissão direta no portal <strong>esocial.gov.br</strong>. Após transmitir, registre o protocolo aqui para rastreabilidade completa.</div>
     </div>
 
-    <!-- Status por tipo de evento -->
-    <div class="eventos-grid" id="eventos-cards">
-      <div class="ev-card"><div class="skel" style="height:120px;border-radius:8px"></div></div>
-      <div class="ev-card"><div class="skel" style="height:120px;border-radius:8px"></div></div>
-      <div class="ev-card"><div class="skel" style="height:120px;border-radius:8px"></div></div>
+    <!-- Cards por tipo de evento -->
+    <div class="ev-grid" id="ev-grid">
+      <div class="ev-card"><div class="skel" style="height:140px;border-radius:8px"></div></div>
+      <div class="ev-card"><div class="skel" style="height:140px;border-radius:8px"></div></div>
+      <div class="ev-card"><div class="skel" style="height:140px;border-radius:8px"></div></div>
+      <div class="ev-card"><div class="skel" style="height:140px;border-radius:8px"></div></div>
     </div>
 
-    <!-- Histórico -->
+    <!-- Histórico de eventos -->
     <div class="table-wrap">
-      <div class="table-header"><h3>Histórico de Eventos eSocial</h3><span id="contagem">carregando...</span></div>
+      <div class="table-header">
+        <h3>📋 Fila de Transmissão eSocial</h3>
+        <div class="filter-tabs">
+          <button class="ftab active" onclick="setFiltro('',this)">Todos</button>
+          <button class="ftab" onclick="setFiltro('pendente',this)">Pendentes</button>
+          <button class="ftab" onclick="setFiltro('transmitido',this)">Transmitidos</button>
+          <button class="ftab" onclick="setFiltro('erro',this)">Erros</button>
+        </div>
+        <span id="contagem">carregando...</span>
+      </div>
       <table class="tbl">
-        <thead><tr><th>Tipo</th><th>Referência</th><th>Status</th><th>Data Envio</th><th>Protocolo</th><th>Erro</th></tr></thead>
+        <thead><tr><th>Tipo</th><th>Referência</th><th>Status</th><th>XML</th><th>Data Envio</th><th>Protocolo</th><th>Ações</th></tr></thead>
         <tbody id="tbody">
-          <tr><td colspan="6"><div class="skel" style="height:36px;margin:8px 14px"></div></td></tr>
-          <tr><td colspan="6"><div class="skel" style="height:36px;margin:8px 14px"></div></td></tr>
+          <tr><td colspan="7"><div class="skel" style="height:36px;margin:8px 14px"></div></td></tr>
+          <tr><td colspan="7"><div class="skel" style="height:36px;margin:8px 14px"></div></td></tr>
         </tbody>
       </table>
     </div>
   </main>
 </div>
 
+<!-- Modal: Registrar Evento -->
 <div class="modal-bg" id="modal">
   <div class="modal">
     <h3>Registrar Evento eSocial</h3>
-    <div class="modal-sub">Adicione um evento à fila de transmissão. A transmissão efetiva ocorre após a configuração do certificado digital.</div>
+    <div class="modal-sub">Adicione manualmente um evento à fila, ou use os botões de transmissão diretos nas telas de CAT, ASO e Afastamento.</div>
     <div class="mf"><label>Tipo de Evento</label>
       <select id="e-tipo">
-        <option value="S-2210">S-2210 — Comunicação de Acidente do Trabalho</option>
-        <option value="S-2220">S-2220 — Monitoramento da Saúde do Trabalhador</option>
+        <option value="S-2210">S-2210 — Comunicação de Acidente do Trabalho (CAT)</option>
+        <option value="S-2220">S-2220 — Monitoramento da Saúde do Trabalhador (ASO)</option>
+        <option value="S-2230">S-2230 — Afastamento Temporário</option>
         <option value="S-2240">S-2240 — Condições Ambientais do Trabalho</option>
       </select>
     </div>
-    <div class="mf"><label>Referência (funcionário, período ou competência)</label>
-      <input id="e-ref" type="text" placeholder="Ex: João Silva — 01/2025 ou Competência 2025-01">
+    <div class="mf"><label>ID da Referência (CAT, ASO ou Afastamento)</label>
+      <input id="e-ref" type="text" placeholder="Ex: 42 (ID da CAT no sistema)">
     </div>
     <div class="modal-acts">
-      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-cancel" onclick="closeModal('modal')">Cancelar</button>
       <button class="btn-submit" onclick="salvar()">Registrar na Fila</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Preview XML -->
+<div class="modal-bg" id="modalXml">
+  <div class="modal modal-wide">
+    <h3>📄 XML eSocial — <span id="xml-tipo-label"></span></h3>
+    <div class="modal-sub">Revise o XML antes de baixar. O arquivo está no formato aceito pelo portal esocial.gov.br.</div>
+    <div class="xml-box" id="xml-content">Carregando XML...</div>
+    <div style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap">
+      <button class="copy-btn" id="copy-btn" onclick="copiarXml()">📋 Copiar XML</button>
+      <button class="dl-btn" id="dl-btn">⬇️ Baixar XML</button>
+      <span style="flex:1"></span>
+      <button class="btn-cancel" style="flex:none;padding:7px 16px" onclick="closeModal('modalXml')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Marcar Transmitido -->
+<div class="modal-bg" id="modalTransmitido">
+  <div class="modal">
+    <h3>✅ Confirmar Transmissão</h3>
+    <div class="modal-sub">Após submeter o XML no portal eSocial, registre o protocolo aqui para rastreabilidade.</div>
+    <div class="mf"><label>Protocolo eSocial (opcional)</label>
+      <input id="t-protocolo" type="text" placeholder="Ex: 1.1.1234567890123456789012345678901234567">
+    </div>
+    <div class="mf"><label>Status</label>
+      <select id="t-status">
+        <option value="transmitido">Transmitido com Sucesso</option>
+        <option value="erro">Erro na Transmissão</option>
+        <option value="retificacao">Em Retificação</option>
+      </select>
+    </div>
+    <div class="mf"><label>Mensagem de Erro (se houver)</label>
+      <input id="t-erro" type="text" placeholder="Deixe vazio se transmissão foi bem-sucedida">
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="closeModal('modalTransmitido')">Cancelar</button>
+      <button class="btn-submit" onclick="confirmarTransmissao()">Confirmar</button>
     </div>
   </div>
 </div>
 
 <script>
 const TIPOS_DEF={
-  "S-2210":{descricao:"Comunicação de Acidente do Trabalho",nr:"Prazo: até o 1º dia útil após o acidente",cls:"s2210"},
-  "S-2220":{descricao:"Monitoramento da Saúde do Trabalhador (ASO)",nr:"Prazo: até o dia 15 do mês seguinte",cls:"s2220"},
-  "S-2240":{descricao:"Condições Ambientais do Trabalho",nr:"Prazo: até o último dia do mês seguinte",cls:"s2240"},
+  "S-2210":{descricao:"Comunicação de Acidente do Trabalho",prazo:"Prazo: até o 1º dia útil após o acidente",cls:"s2210"},
+  "S-2220":{descricao:"Monitoramento da Saúde do Trabalhador",prazo:"Prazo: até o dia 15 do mês seguinte",cls:"s2220"},
+  "S-2230":{descricao:"Afastamento Temporário",prazo:"Prazo: até 1 dia útil após o início",cls:"s2230"},
+  "S-2240":{descricao:"Condições Ambientais do Trabalho",prazo:"Prazo: até o último dia do mês seguinte",cls:"s2240"},
 };
-const statusLabel={transmitido:"Transmitido ✓",pendente:"Pendente",enviado:"Enviado",erro:"Erro na Transmissão",nao_enviado:"Não Enviado",retificacao:"Em Retificação"};
-const statusCls={transmitido:"b-verde",pendente:"b-amarelo",enviado:"b-azul",erro:"b-vermelho",nao_enviado:"b-cinza",retificacao:"b-roxo"};
-const statusIcon={transmitido:"✅",pendente:"⏳",enviado:"📤",erro:"❌",nao_enviado:"📭",retificacao:"🔄"};
+const stLabel={transmitido:"Transmitido ✓",pendente:"Pendente",enviado:"Enviado",erro:"Erro",nao_enviado:"Não Enviado",retificacao:"Em Retificação"};
+const stCls={transmitido:"b-verde",pendente:"b-amarelo",enviado:"b-azul",erro:"b-vermelho",nao_enviado:"b-cinza",retificacao:"b-roxo"};
+const stPill={transmitido:"pill-verde",pendente:"pill-amarelo",nao_enviado:"pill-cinza",erro:"pill-vermelho",enviado:"pill-amarelo"};
 
-function openModal(tipo){
-  document.getElementById("modal").classList.add("open");
-  if(tipo)document.getElementById("e-tipo").value=tipo;
+let _todos=[];let _filtroSt="";let _eventoAtual=null;
+
+function openModal(id="modal",tipo){
+  document.getElementById(id).classList.add("open");
+  if(tipo&&id==="modal")document.getElementById("e-tipo").value=tipo;
 }
-function closeModal(){document.getElementById("modal").classList.remove("open")}
-document.getElementById("modal").addEventListener("click",e=>{if(e.target===document.getElementById("modal"))closeModal()});
+function closeModal(id="modal"){document.getElementById(id).classList.remove("open")}
+document.querySelectorAll(".modal-bg").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("open")}));
 
-function renderCards(eventos){
+function setFiltro(f,btn){_filtroSt=f;document.querySelectorAll(".ftab").forEach(b=>b.classList.remove("active"));btn.classList.add("active");renderTabela();}
+
+function renderCards(kpis,eventos){
   const porTipo={};
-  eventos.forEach(ev=>{
-    if(!porTipo[ev.tipo]||new Date(ev.data_envio||ev.criado_em)>new Date(porTipo[ev.tipo].data_envio||porTipo[ev.tipo].criado_em)){
-      porTipo[ev.tipo]=ev;
-    }
-  });
-  const grid=document.getElementById("eventos-cards");
-  grid.innerHTML=Object.entries(TIPOS_DEF).map(([tipo,def])=>{
+  eventos.forEach(ev=>{if(!porTipo[ev.tipo_evento]||ev.id>porTipo[ev.tipo_evento].id)porTipo[ev.tipo_evento]=ev;});
+  document.getElementById("ev-grid").innerHTML=Object.entries(TIPOS_DEF).map(([tipo,def])=>{
     const ev=porTipo[tipo];
     const st=ev?ev.status:"nao_enviado";
+    const cnt=eventos.filter(e=>e.tipo_evento===tipo).length;
     return`<div class="ev-card ${st}">
-      <div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
         <div class="ev-tipo ${def.cls}">${tipo}</div>
+        <span style="font-size:.68rem;color:var(--muted);font-weight:700">${cnt} evento${cnt!==1?'s':''}</span>
       </div>
       <div>
         <div class="ev-descricao">${def.descricao}</div>
-        <div class="ev-nr">${def.nr}</div>
+        <div class="ev-prazo">${def.prazo}</div>
       </div>
-      <div class="ev-status-big st-${st}">
-        <div class="ev-status-icon">${statusIcon[st]||"📭"}</div>
-        <div class="ev-status-info">
-          <div class="ev-status-label">${statusLabel[st]||st}</div>
-          <div class="ev-status-data">${ev?.data_envio||"Nenhuma transmissão registrada"}</div>
-        </div>
+      <span class="ev-status-pill ${stPill[st]||'pill-cinza'}">${st==='transmitido'?'✅':st==='pendente'?'⏳':st==='erro'?'❌':'📭'} ${stLabel[st]||st}</span>
+      <div class="ev-btns">
+        <button class="ev-btn primary" onclick="openModal('modal','${tipo}')">+ Registrar</button>
+        ${ev?`<button class="ev-btn" onclick="verXml(${ev.id},'${tipo}')">📄 XML</button>`:''}
       </div>
-      <button class="ev-btn" onclick="openModal('${tipo}')">+ Registrar Evento</button>
     </div>`;
   }).join("");
 }
 
-function renderTabela(eventos){
-  document.getElementById("contagem").textContent=`${eventos.length} evento(s)`;
+function renderTabela(){
+  let lista=_todos.filter(ev=>!_filtroSt||ev.status===_filtroSt);
+  document.getElementById("contagem").textContent=`${lista.length} evento(s)`;
   const tbody=document.getElementById("tbody");
-  if(!eventos.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="ei">🔗</div><h3>Nenhum evento registrado</h3><p>Registre eventos eSocial SST para acompanhar as transmissões.</p></div></td></tr>`;return;}
-  tbody.innerHTML=eventos.map(ev=>`
+  if(!lista.length){
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="ei">🔗</div><h3>Nenhum evento encontrado</h3><p>Use os botões "Transmitir eSocial" nas telas de CAT, ASO ou Afastamento.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=lista.map(ev=>`
     <tr>
-      <td><span class="badge b-roxo" style="font-family:monospace">${ev.tipo}</span></td>
-      <td style="color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis">${ev.referencia||'—'}</td>
-      <td><span class="badge ${statusCls[ev.status]||'b-cinza'}">${statusLabel[ev.status]||ev.status}</span></td>
-      <td style="color:var(--muted)">${ev.data_envio||'—'}</td>
-      <td style="color:var(--muted);font-family:monospace;font-size:.72rem">${ev.protocolo||'—'}</td>
-      <td style="color:#f87171;font-size:.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis">${ev.mensagem_erro||'—'}</td>
+      <td><span class="badge b-roxo" style="font-family:monospace">${ev.tipo_evento}</span></td>
+      <td style="color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis">${ev.referencia||'—'}</td>
+      <td><span class="badge ${stCls[ev.status]||'b-cinza'}">${stLabel[ev.status]||ev.status}</span></td>
+      <td>${ev.tem_xml?'<span class="badge b-verde">Gerado ✓</span>':'<span class="badge b-cinza">—</span>'}</td>
+      <td style="color:var(--muted);font-size:.73rem">${ev.data_envio?ev.data_envio.slice(0,16).replace('T',' '):'—'}</td>
+      <td style="color:var(--muted);font-family:monospace;font-size:.68rem;max-width:140px;overflow:hidden;text-overflow:ellipsis">${ev.protocolo||'—'}</td>
+      <td>
+        <div class="row-actions">
+          <button class="btn-row" onclick="verXml(${ev.id},'${ev.tipo_evento}')">📄 XML</button>
+          ${ev.status!=='transmitido'?`<button class="btn-row" onclick="abrirTransmitido(${ev.id})">✅ Transmitido</button>`:''}
+        </div>
+      </td>
     </tr>`).join("");
 }
 
-async function carregar(){
-  const r=await fetch("/api/sst/esocial");
-  if(!r.ok)return;
+async function verXml(id,tipo){
+  _eventoAtual={id,tipo};
+  document.getElementById("xml-tipo-label").textContent=tipo;
+  document.getElementById("xml-content").textContent="Gerando XML...";
+  document.getElementById("dl-btn").onclick=()=>baixarXml(id,tipo);
+  openModal("modalXml");
+  const r=await fetch(`/api/sst/esocial/eventos/${id}/xml/`);
+  if(!r.ok){document.getElementById("xml-content").textContent="Erro ao gerar XML. Verifique se o evento tem referência válida.";return;}
   const d=await r.json();
-  renderCards(d.eventos||[]);
-  renderTabela(d.eventos||[]);
+  document.getElementById("xml-content").textContent=d.xml||"XML vazio";
+}
+
+function baixarXml(id,tipo){
+  window.open(`/api/sst/esocial/eventos/${id}/xml/?download=1`,"_blank");
+}
+
+function copiarXml(){
+  const txt=document.getElementById("xml-content").textContent;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn=document.getElementById("copy-btn");
+    btn.textContent="✅ Copiado!";btn.classList.add("copied");
+    setTimeout(()=>{btn.textContent="📋 Copiar XML";btn.classList.remove("copied");},2000);
+  });
+}
+
+function abrirTransmitido(id){
+  _eventoAtual={id};
+  document.getElementById("t-protocolo").value="";
+  document.getElementById("t-erro").value="";
+  openModal("modalTransmitido");
+}
+
+async function confirmarTransmissao(){
+  if(!_eventoAtual)return;
+  const btn=document.querySelector("#modalTransmitido .btn-submit");
+  btn.textContent="Salvando...";btn.disabled=true;
+  const r=await fetch(`/api/sst/esocial/eventos/${_eventoAtual.id}/transmitido/`,{
+    method:"PUT",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      status:document.getElementById("t-status").value,
+      protocolo:document.getElementById("t-protocolo").value.trim(),
+      mensagem_erro:document.getElementById("t-erro").value.trim(),
+    })
+  });
+  if(r.ok){closeModal("modalTransmitido");carregar();}
+  else alert("Erro ao confirmar transmissão");
+  btn.textContent="Confirmar";btn.disabled=false;
+}
+
+async function carregar(){
+  const [rEvt,rKpi]=await Promise.all([fetch("/api/sst/esocial/eventos/"),fetch("/api/sst/esocial/kpis/")]);
+  if(!rEvt.ok||!rKpi.ok)return;
+  const[dEvt,dKpi]=await Promise.all([rEvt.json(),rKpi.json()]);
+  _todos=dEvt.eventos||[];
+  document.getElementById("k-pend").textContent=dKpi.pendentes??'—';
+  document.getElementById("k-trans").textContent=dKpi.transmitidos??'—';
+  document.getElementById("k-erro").textContent=dKpi.erros??'—';
+  document.getElementById("k-total").textContent=dKpi.total??'—';
+  document.getElementById("k-cats").textContent=dKpi.cats_nao_enviadas??'—';
+  renderCards(dKpi,_todos);
+  renderTabela();
 }
 
 async function salvar(){
-  const btn=document.querySelector(".btn-submit");btn.textContent="Registrando...";btn.disabled=true;
-  const r=await fetch("/api/sst/esocial",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+  const btn=document.querySelector("#modal .btn-submit");btn.textContent="Registrando...";btn.disabled=true;
+  const r=await fetch("/api/sst/esocial/eventos/",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
     tipo_evento:document.getElementById("e-tipo").value,
     referencia:document.getElementById("e-ref").value.trim(),
   })});
   const d=await r.json();
-  if(r.ok){closeModal();document.getElementById("e-ref").value="";carregar();}
+  if(r.ok){closeModal("modal");document.getElementById("e-ref").value="";carregar();}
   else alert(d.erro||"Erro ao registrar evento");
   btn.textContent="Registrar na Fila";btn.disabled=false;
 }
 
 carregar();
+setInterval(carregar,60000);
 </script>
 </body>
 </html>
