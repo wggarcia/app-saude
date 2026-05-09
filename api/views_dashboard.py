@@ -235,14 +235,17 @@ def dashboard_governo(request):
     return _render_dashboard(request, "governo")
 
 
+@ensure_csrf_cookie
 def farmacia_gestao_page(request):
     return render(request, "farmacia_gestao.html")
 
 
+@ensure_csrf_cookie
 def hospital_gestao_page(request):
     return render(request, "hospital_gestao.html")
 
 
+@ensure_csrf_cookie
 def governo_gestao_page(request):
     return render(request, "governo_gestao.html")
 
