@@ -12,13 +12,13 @@ class Migration(migrations.Migration):
     operations = [
         # xml_gerado no evento eSocial
         migrations.AddField(
-            model_name="esocialevtossst",
+            model_name="esocialeventosst",
             name="xml_gerado",
             field=models.TextField(blank=True, default=""),
         ),
         # S-2230 no choices de tipo_evento
         migrations.AlterField(
-            model_name="esocialevtossst",
+            model_name="esocialeventosst",
             name="tipo_evento",
             field=models.CharField(
                 choices=[
