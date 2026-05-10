@@ -3,241 +3,533 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Gestão Hospital</title>
+<title>Gestão Hospitalar — HospitalOS</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+:root{
+  --bg:#041018;--surface:#072030;--surface2:#0a2d45;--surface3:#0d3555;
+  --accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;
+  --text:#e8f4ff;--muted:#7a9bb5;--radius:12px;
+  --card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07);
+  --manche-red:#ff4d6d;--manche-orange:#ff8c00;--manche-yellow:#ffd700;
+  --manche-green:#00e5b0;--manche-blue:#00c2ff;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
-.sidebar{width:240px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0}
-.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
-.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
-.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;gap:16px;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;flex-shrink:0}
+.topbar-logo{font-size:15px;font-weight:800;color:var(--accent);white-space:nowrap;display:flex;align-items:center;gap:8px}
+.topbar-logo svg{width:22px;height:22px}
+.topbar-search{flex:1;max-width:360px;position:relative}
+.topbar-search input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px 7px 34px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.topbar-search input:focus{border-color:var(--accent);background:rgba(0,194,255,.05)}
+.topbar-search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
+.topbar-spacer{flex:1}
+.topbar-refresh{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);white-space:nowrap}
+.topbar-refresh-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.topbar-bell{position:relative;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:.15s}
+.topbar-bell:hover{background:rgba(255,255,255,.1)}
+.bell-badge{position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;font-size:9px;font-weight:800;border-radius:10px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--bg)}
+.topbar-user{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:6px 12px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--ok));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#041018}
+/* ── LAYOUT ── */
+.layout{display:flex;flex:1;overflow:hidden}
+/* ── SIDEBAR ── */
+.sidebar{width:220px;min-height:calc(100vh - 56px);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0;flex-shrink:0;overflow-y:auto}
+.nav-section{padding:10px 16px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:1px 8px;transition:.15s;cursor:pointer;border:none;background:none;width:calc(100% - 16px);font-family:Manrope,sans-serif}
+.nav-link-inner{display:flex;align-items:center;gap:9px}
 .nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
-.nav-link span{font-size:16px}
-.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
-.page-header{display:flex;align-items:center;justify-content:space-between}
-.page-title{font-size:22px;font-weight:800}
-.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
-.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.nav-link.active{box-shadow:inset 3px 0 0 var(--accent)}
+.nav-badge{background:var(--danger);color:#fff;font-size:10px;font-weight:700;border-radius:10px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.nav-badge.warn{background:var(--warn);color:#041018}
+.nav-badge.ok{background:var(--ok);color:#041018}
+/* ── MAIN ── */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+/* ── ALERT STRIP ── */
+.alert-strip{display:flex;align-items:center;gap:8px;padding:10px 28px;background:rgba(255,77,109,.06);border-bottom:1px solid rgba(255,77,109,.15);flex-wrap:wrap;min-height:44px}
+.alert-strip-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-right:4px}
+.alert-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid transparent;transition:.15s}
+.alert-pill:hover{opacity:.8;transform:translateY(-1px)}
+.alert-pill.red{background:rgba(255,77,109,.15);color:var(--danger);border-color:rgba(255,77,109,.3)}
+.alert-pill.orange{background:rgba(255,140,0,.15);color:var(--warn);border-color:rgba(255,140,0,.3)}
+.alert-pill.blue{background:rgba(0,194,255,.12);color:var(--accent);border-color:rgba(0,194,255,.25)}
+.alert-pill .pill-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.5s infinite}
+/* ── CONTENT ── */
+.content{padding:24px 28px;display:flex;flex-direction:column;gap:20px;flex:1}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:20px;font-weight:800}
+.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
+/* ── KPI GRID ── */
 .kpi-row-6{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
-.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
-.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}.kpi.info::before{background:#a78bfa}.kpi.teal::before{background:#2dd4bf}
-.kpi-val{font-size:28px;font-weight:800;color:var(--accent)}
-.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}.kpi.info .kpi-val{color:#a78bfa}.kpi.teal .kpi-val{color:#2dd4bf}
-.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border)}
-.tab-btn{padding:10px 18px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;border-left:4px solid var(--accent)}
+.kpi.kpi-ok{border-left-color:var(--ok)}
+.kpi.kpi-danger{border-left-color:var(--danger)}
+.kpi.kpi-warn{border-left-color:var(--warn)}
+.kpi.kpi-info{border-left-color:#a78bfa}
+.kpi.kpi-teal{border-left-color:#2dd4bf}
+.kpi-val{font-size:26px;font-weight:800;color:var(--accent);line-height:1}
+.kpi.kpi-ok .kpi-val{color:var(--ok)}
+.kpi.kpi-danger .kpi-val{color:var(--danger)}
+.kpi.kpi-warn .kpi-val{color:var(--warn)}
+.kpi.kpi-info .kpi-val{color:#a78bfa}
+.kpi.kpi-teal .kpi-val{color:#2dd4bf}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:5px}
+.kpi-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.kpi-trend{font-size:11px;font-weight:700;display:flex;align-items:center;gap:3px}
+.kpi-trend.up{color:var(--danger)}.kpi-trend.down{color:var(--ok)}.kpi-trend.neutral{color:var(--muted)}
+.kpi-gauge{flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:4px;margin-left:8px;overflow:hidden}
+.kpi-gauge-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .5s}
+.kpi.kpi-ok .kpi-gauge-fill{background:var(--ok)}
+.kpi.kpi-danger .kpi-gauge-fill{background:var(--danger)}
+.kpi.kpi-warn .kpi-gauge-fill{background:var(--warn)}
+/* ── TABS ── */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);overflow-x:auto}
+.tab-btn{padding:10px 16px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
-.tab-panel{display:none}.tab-panel.active{display:block}
+.tab-btn:hover:not(.active){color:var(--text)}
+.tab-panel{display:none;margin-top:16px}.tab-panel.active{display:block}
+/* ── CARDS ── */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
 .card-title{font-size:14px;font-weight:700}
+/* ── TABLES ── */
 table{width:100%;border-collapse:collapse}
-th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
-td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
-tr:hover td{background:rgba(255,255,255,.02)}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:rgba(255,255,255,.02);white-space:nowrap}
+td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.018)}
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
 .badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
 .badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
 .badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
 .badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
 .badge-purple{background:rgba(167,139,250,.12);color:#a78bfa}
 .badge-teal{background:rgba(45,212,191,.12);color:#2dd4bf}
-/* Manchester triage colors */
-.triage-vermelho{background:#ff4d6d22;color:#ff4d6d;border:1px solid #ff4d6d44}
-.triage-laranja{background:#ff8c0022;color:#ff8c00;border:1px solid #ff8c0044}
-.triage-amarelo{background:#ffd70022;color:#ffd700;border:1px solid #ffd70044}
-.triage-verde{background:#00e5b022;color:#00e5b0;border:1px solid #00e5b044}
-.triage-azul{background:#00c2ff22;color:#00c2ff;border:1px solid #00c2ff44}
-/* Bed grid */
-.bed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;padding:16px}
-.bed-card{border-radius:10px;padding:12px;text-align:center;font-size:12px;font-weight:700;border:2px solid transparent;cursor:pointer;transition:.15s}
-.bed-card.disponivel{background:rgba(0,229,176,.1);border-color:#00e5b066;color:var(--ok)}
-.bed-card.ocupado{background:rgba(255,77,109,.1);border-color:#ff4d6d66;color:var(--danger)}
-.bed-card.manutencao{background:rgba(255,179,71,.1);border-color:#ffb34766;color:var(--warn)}
-.bed-card.reservado{background:rgba(0,194,255,.1);border-color:#00c2ff66;color:var(--accent)}
-.bed-num{font-size:18px;margin-bottom:4px}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.badge-muted{background:rgba(255,255,255,.06);color:var(--muted)}
+/* Manchester */
+.triage-row-vermelho td:first-child{border-left:3px solid var(--manche-red)}
+.triage-row-laranja td:first-child{border-left:3px solid var(--manche-orange)}
+.triage-row-amarelo td:first-child{border-left:3px solid var(--manche-yellow)}
+.triage-row-verde td:first-child{border-left:3px solid var(--manche-green)}
+.triage-row-azul td:first-child{border-left:3px solid var(--manche-blue)}
+.triage-vermelho{background:rgba(255,77,109,.15);color:#ff4d6d;border:1px solid rgba(255,77,109,.3)}
+.triage-laranja{background:rgba(255,140,0,.15);color:#ff8c00;border:1px solid rgba(255,140,0,.3)}
+.triage-amarelo{background:rgba(255,215,0,.15);color:#ffd700;border:1px solid rgba(255,215,0,.3)}
+.triage-verde{background:rgba(0,229,176,.12);color:#00e5b0;border:1px solid rgba(0,229,176,.3)}
+.triage-azul{background:rgba(0,194,255,.12);color:#00c2ff;border:1px solid rgba(0,194,255,.3)}
+/* vital badges */
+.vital{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+.vital-ok{background:rgba(0,229,176,.1);color:var(--ok)}
+.vital-warn{background:rgba(255,179,71,.15);color:var(--warn)}
+.vital-danger{background:rgba(255,77,109,.15);color:var(--danger)}
+.vital-muted{background:rgba(255,255,255,.05);color:var(--muted)}
+/* ── BED GRID ── */
+.dept-filter{display:flex;gap:6px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--border)}
+.dept-pill{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:.15s;font-family:Manrope,sans-serif}
+.dept-pill.active,.dept-pill:hover{background:rgba(0,194,255,.1);border-color:rgba(0,194,255,.4);color:var(--accent)}
+.bed-summary{display:flex;gap:16px;padding:10px 16px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border)}
+.bed-summary span{display:flex;align-items:center;gap:5px}
+.bed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:14px}
+.bed-card{border-radius:10px;padding:12px 10px;text-align:center;font-size:12px;font-weight:600;border:1.5px solid transparent;cursor:pointer;transition:.2s;position:relative}
+.bed-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.bed-card.disponivel{background:rgba(0,229,176,.08);border-color:rgba(0,229,176,.3);color:var(--ok)}
+.bed-card.ocupado{background:rgba(255,77,109,.08);border-color:rgba(255,77,109,.3);color:var(--danger)}
+.bed-card.manutencao{background:rgba(255,179,71,.08);border-color:rgba(255,179,71,.3);color:var(--warn)}
+.bed-card.reservado{background:rgba(0,194,255,.08);border-color:rgba(0,194,255,.3);color:var(--accent)}
+.bed-num{font-size:17px;font-weight:800;margin-bottom:3px}
+.bed-dept{font-size:10px;opacity:.7;margin-bottom:4px}
+.bed-patient{font-size:10px;font-weight:700;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bed-hours{font-size:10px;opacity:.6;margin-top:2px}
+.bed-status-dot{width:8px;height:8px;border-radius:50%;position:absolute;top:8px;right:8px}
+.disponivel .bed-status-dot{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+.ocupado .bed-status-dot{background:var(--danger);box-shadow:0 0 6px var(--danger)}
+.manutencao .bed-status-dot{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+.reservado .bed-status-dot{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+/* ── INTERNAÇÃO PIPELINE ── */
+.pipeline{display:inline-flex;align-items:center;gap:0;font-size:10px;font-weight:700}
+.pipeline-step{padding:3px 8px;background:rgba(255,255,255,.05);border:1px solid var(--border)}
+.pipeline-step:first-child{border-radius:6px 0 0 6px}
+.pipeline-step:last-child{border-radius:0 6px 6px 0}
+.pipeline-step.active{background:rgba(0,194,255,.15);color:var(--accent);border-color:rgba(0,194,255,.4)}
+.pipeline-step.done{background:rgba(0,229,176,.12);color:var(--ok);border-color:rgba(0,229,176,.3)}
+.pipeline-arrow{color:var(--muted);font-size:10px;margin:0 -1px;z-index:1}
+.days-badge{background:rgba(167,139,250,.12);color:#a78bfa;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px}
+/* ── DEPARTAMENTO CAPACITY BAR ── */
+.cap-bar-wrap{display:flex;align-items:center;gap:8px;min-width:120px}
+.cap-bar{flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+.cap-bar-fill{height:100%;border-radius:4px;transition:width .5s}
+.cap-label{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}
+/* ── PRESCRIÇÃO SCHEDULE ── */
+.sched{display:flex;align-items:center;gap:4px}
+.sched-icon{font-size:14px;opacity:.35}
+.sched-icon.active{opacity:1}
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;white-space:nowrap}
 .btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
 .btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
-.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
-.btn-sm{padding:5px 10px;font-size:11px}
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.btn-danger{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.25)}.btn-danger:hover{background:rgba(255,77,109,.2)}
+.btn-ok{background:rgba(0,229,176,.12);color:var(--ok);border:1px solid rgba(0,229,176,.25)}.btn-ok:hover{background:rgba(0,229,176,.2)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
+/* ── MODALS ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center;padding:16px}
 .modal-bg.open{display:flex}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
-.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;min-width:440px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:8px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
-.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
-.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
-.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
-.form-group textarea{resize:vertical;min-height:72px}
-.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.form-group label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s;width:100%}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);background:rgba(0,194,255,.04)}
+.form-group textarea{resize:vertical;min-height:70px}
+.form-group select option{background:var(--surface);color:var(--text)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px;padding-top:14px;border-top:1px solid var(--border)}
 .empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
-/* Evolução panel */
-.evolucao-list{display:flex;flex-direction:column;gap:10px;padding:16px;max-height:300px;overflow-y:auto}
-.evolucao-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:14px}
-.evolucao-meta{font-size:11px;color:var(--muted);margin-top:6px}
-@media(max-width:1100px){.kpi-row-6{grid-template-columns:repeat(3,1fr)}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+/* ── EVOLUÇÃO ── */
+.evolucao-list{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;padding:2px}
+.evolucao-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px;border-left:3px solid var(--accent)}
+.evolucao-meta{font-size:11px;color:var(--muted);margin-top:5px;display:flex;align-items:center;gap:8px}
+/* ── TOAST ── */
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{display:flex;align-items:flex-start;gap:10px;padding:14px 18px;border-radius:12px;min-width:280px;max-width:360px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.5);border:1px solid transparent;pointer-events:all;animation:slideIn .3s ease;transition:opacity .3s,transform .3s}
+.toast.hiding{opacity:0;transform:translateX(20px)}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.toast-ok{background:#072030;border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast-error{background:#1a0812;border-color:rgba(255,77,109,.3);color:var(--danger)}
+.toast-warn{background:#12100a;border-color:rgba(255,179,71,.3);color:var(--warn)}
+.toast-info{background:#072030;border-color:rgba(0,194,255,.3);color:var(--accent)}
+.toast-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.toast-close{margin-left:auto;cursor:pointer;opacity:.6;font-size:16px;flex-shrink:0}
+.toast-close:hover{opacity:1}
+/* ── MISC ── */
+.section-divider{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:6px 0 10px;border-bottom:1px solid var(--border);margin-bottom:14px}
+@media(max-width:1200px){.kpi-row-6{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){.kpi-row-6{grid-template-columns:repeat(2,1fr)}.sidebar{width:60px}.nav-link-inner span:last-child{display:none}.nav-badge{display:none}}
 </style>
 </head>
 <body>
 
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M12 2v20M9 9h6"/></svg>
+    HospitalOS
+  </div>
+  <div class="topbar-search">
+    <span class="topbar-search-icon">🔍</span>
+    <input id="globalSearch" placeholder="Buscar paciente, leito, departamento…" oninput="handleGlobalSearch(this.value)">
+  </div>
+  <div class="topbar-spacer"></div>
+  <div class="topbar-refresh">
+    <span class="topbar-refresh-dot"></span>
+    <span id="refreshLabel">Atualizado agora</span>
+  </div>
+  <div class="topbar-bell" onclick="toggleNotifications()" title="Notificações">
+    🔔
+    <span class="bell-badge" id="bellBadge" style="display:none">0</span>
+  </div>
+  <div class="topbar-user">
+    <div class="user-avatar">HO</div>
+    Hospital
+  </div>
+  <a href="/hospital/" class="btn btn-ghost" style="font-size:12px;padding:6px 12px">📊 Inteligência</a>
+</header>
+
+<div class="layout">
+<!-- SIDEBAR -->
 <aside class="sidebar">
-  <div class="logo">🏥 Hospital</div>
-  <div class="nav-section">Navegação</div>
-  <a class="nav-link" href="/hospital/"><span>📊</span> Inteligência</a>
-  <a class="nav-link active" href="/hospital/gestao/"><span>🏨</span> Gestão Operacional</a>
-  <div class="nav-section" style="margin-top:12px">Sistema</div>
-  <a class="nav-link" href="/dashboard/"><span>🏠</span> Dashboard</a>
-  <a class="nav-link" href="/logout/"><span>🚪</span> Sair</a>
+  <div class="nav-section">Operacional</div>
+  <button class="nav-link active" id="nav-leitos" onclick="setTab('leitos')">
+    <div class="nav-link-inner"><span>🛏</span><span>Leitos</span></div>
+    <span class="nav-badge ok" id="nb-disp" style="display:none">0</span>
+  </button>
+  <button class="nav-link" id="nav-triagem" onclick="setTab('triagem')">
+    <div class="nav-link-inner"><span>🚨</span><span>Triagem</span></div>
+    <span class="nav-badge" id="nb-triage" style="display:none">0</span>
+  </button>
+  <button class="nav-link" id="nav-internacoes" onclick="setTab('internacoes')">
+    <div class="nav-link-inner"><span>📋</span><span>Internações</span></div>
+    <span class="nav-badge warn" id="nb-int" style="display:none">0</span>
+  </button>
+  <button class="nav-link" id="nav-pacientes" onclick="setTab('pacientes')">
+    <div class="nav-link-inner"><span>👤</span><span>Pacientes</span></div>
+  </button>
+  <div class="nav-section" style="margin-top:8px">Configuração</div>
+  <button class="nav-link" id="nav-departamentos" onclick="setTab('departamentos')">
+    <div class="nav-link-inner"><span>🏢</span><span>Departamentos</span></div>
+  </button>
+  <button class="nav-link" id="nav-prescricoes" onclick="setTab('prescricoes')">
+    <div class="nav-link-inner"><span>💊</span><span>Prescrições</span></div>
+  </button>
+  <div class="nav-section" style="margin-top:8px">Sistema</div>
+  <a class="nav-link" href="/dashboard/" style="text-decoration:none">
+    <div class="nav-link-inner"><span>🏠</span><span>Dashboard</span></div>
+  </a>
+  <a class="nav-link" href="/logout/" style="text-decoration:none">
+    <div class="nav-link-inner"><span>🚪</span><span>Sair</span></div>
+  </a>
 </aside>
 
 <main class="main">
-  <div class="page-header">
+  <!-- ALERT STRIP -->
+  <div class="alert-strip" id="alertStrip">
+    <span class="alert-strip-label">⚡ Alertas</span>
+    <span class="alert-pill red" id="apOcupacao" onclick="setTab('leitos')" style="display:none">
+      <span class="pill-dot"></span><span id="apOcupacaoTxt"></span>
+    </span>
+    <span class="alert-pill red" id="apVermelhos" onclick="setTab('triagem')" style="display:none">
+      <span class="pill-dot"></span><span id="apVermelhosTxt"></span>
+    </span>
+    <span class="alert-pill orange" id="apLaranjas" onclick="setTab('triagem')" style="display:none">
+      <span class="pill-dot"></span><span id="apLaranjasTxt"></span>
+    </span>
+    <span class="alert-pill blue" id="apInternacoes" onclick="setTab('internacoes')" style="display:none">
+      <span class="pill-dot"></span><span id="apInternacoesTxt"></span>
+    </span>
+    <span id="apNone" style="font-size:12px;color:var(--ok);font-weight:600">✅ Todos os indicadores dentro do normal</span>
+  </div>
+
+  <div class="content">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Gestão Hospitalar</div>
+        <div class="page-sub">Centro de controle operacional — leitos, triagem, internações e prescrições</div>
+      </div>
+      <a href="/api/hospital/pdf/internacoes/" target="_blank" class="btn btn-ghost">📄 Relatório PDF</a>
+    </div>
+
+    <!-- KPI ROW -->
+    <div class="kpi-row-6" id="kpiRow">
+      <div class="kpi">
+        <div class="kpi-val" id="kv0">—</div>
+        <div class="kpi-lbl">Total Leitos</div>
+        <div class="kpi-footer">
+          <span class="kpi-trend neutral" id="kt0">—</span>
+          <div class="kpi-gauge"><div class="kpi-gauge-fill" id="kg0" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="kpi kpi-ok">
+        <div class="kpi-val" id="kv1">—</div>
+        <div class="kpi-lbl">Disponíveis</div>
+        <div class="kpi-footer">
+          <span class="kpi-trend down" id="kt1">Livres</span>
+          <div class="kpi-gauge"><div class="kpi-gauge-fill" id="kg1" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="kpi kpi-danger">
+        <div class="kpi-val" id="kv2">—</div>
+        <div class="kpi-lbl">Ocupados</div>
+        <div class="kpi-footer">
+          <span class="kpi-trend up" id="kt2">Em uso</span>
+          <div class="kpi-gauge"><div class="kpi-gauge-fill" id="kg2" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="kpi kpi-warn">
+        <div class="kpi-val" id="kv3">—</div>
+        <div class="kpi-lbl">Internações Ativas</div>
+        <div class="kpi-footer">
+          <span class="kpi-trend neutral" id="kt3">Pacientes</span>
+          <div class="kpi-gauge"><div class="kpi-gauge-fill" id="kg3" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="kpi kpi-teal">
+        <div class="kpi-val" id="kv4">—</div>
+        <div class="kpi-lbl">Triagens Hoje</div>
+        <div class="kpi-footer">
+          <span class="kpi-trend neutral" id="kt4">Hoje</span>
+          <div class="kpi-gauge"><div class="kpi-gauge-fill" id="kg4" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="kpi kpi-info">
+        <div class="kpi-val" id="kv5">—%</div>
+        <div class="kpi-lbl">Taxa Ocupação</div>
+        <div class="kpi-footer">
+          <span class="kpi-trend" id="kt5">—</span>
+          <div class="kpi-gauge"><div class="kpi-gauge-fill" id="kg5" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS -->
     <div>
-      <div class="page-title">Gestão Hospitalar</div>
-      <div class="page-sub">Leitos, pacientes, triagem e internações</div>
-    </div>
-    <a href="/hospital/" class="btn btn-ghost">📊 Ver Inteligência Epidemiológica</a>
-  </div>
+      <div class="tabs">
+        <button class="tab-btn active" id="tabBtn-leitos" onclick="setTab('leitos')">🛏 Leitos</button>
+        <button class="tab-btn" id="tabBtn-triagem" onclick="setTab('triagem')">
+          🚨 Triagem
+          <span class="nav-badge" id="tabBadge-triagem" style="display:none;font-size:10px">0</span>
+        </button>
+        <button class="tab-btn" id="tabBtn-internacoes" onclick="setTab('internacoes')">
+          📋 Internações
+          <span class="nav-badge warn" id="tabBadge-internacoes" style="display:none;font-size:10px">0</span>
+        </button>
+        <button class="tab-btn" id="tabBtn-pacientes" onclick="setTab('pacientes')">👤 Pacientes</button>
+        <button class="tab-btn" id="tabBtn-departamentos" onclick="setTab('departamentos')">🏢 Departamentos</button>
+        <button class="tab-btn" id="tabBtn-prescricoes" onclick="setTab('prescricoes')">💊 Prescrições</button>
+      </div>
 
-  <!-- KPIs -->
-  <div class="kpi-row-6" id="kpiRow">
-    <div class="kpi"><div class="kpi-val">—</div><div class="kpi-lbl">Total Leitos</div></div>
-    <div class="kpi ok"><div class="kpi-val">—</div><div class="kpi-lbl">Disponíveis</div></div>
-    <div class="kpi danger"><div class="kpi-val">—</div><div class="kpi-lbl">Ocupados</div></div>
-    <div class="kpi warn"><div class="kpi-val">—</div><div class="kpi-lbl">Internações Ativas</div></div>
-    <div class="kpi teal"><div class="kpi-val">—</div><div class="kpi-lbl">Triagens Hoje</div></div>
-    <div class="kpi info"><div class="kpi-val">—%</div><div class="kpi-lbl">Taxa Ocupação</div></div>
-  </div>
-
-  <!-- Tabs -->
-  <div>
-    <div class="tabs">
-      <button class="tab-btn active" onclick="setTab('leitos')">🛏 Leitos</button>
-      <button class="tab-btn" onclick="setTab('triagem')">🚨 Triagem</button>
-      <button class="tab-btn" onclick="setTab('internacoes')">📋 Internações</button>
-      <button class="tab-btn" onclick="setTab('pacientes')">👤 Pacientes</button>
-      <button class="tab-btn" onclick="setTab('departamentos')">🏢 Departamentos</button>
-      <button class="tab-btn" onclick="setTab('prescricoes')">💊 Prescrições</button>
-    </div>
-
-    <!-- Leitos -->
-    <div class="tab-panel active" id="tab-leitos" style="margin-top:16px">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Mapa de Leitos</span>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-ghost" onclick="abrirModalLeito()">+ Novo Leito</button>
-            <div style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)">
-              <span style="width:10px;height:10px;border-radius:50%;background:var(--ok);display:inline-block"></span>Disponível
-              <span style="width:10px;height:10px;border-radius:50%;background:var(--danger);display:inline-block"></span>Ocupado
-              <span style="width:10px;height:10px;border-radius:50%;background:var(--warn);display:inline-block"></span>Manutenção
-              <span style="width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block"></span>Reservado
+      <!-- ══════ TAB: LEITOS ══════ -->
+      <div class="tab-panel active" id="tab-leitos">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🗺 Mapa de Leitos</span>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <div style="display:flex;gap:6px;align-items:center;font-size:11px;color:var(--muted)">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;box-shadow:0 0 5px var(--ok)"></span>Disponível
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--danger);display:inline-block;box-shadow:0 0 5px var(--danger)"></span>Ocupado
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--warn);display:inline-block;box-shadow:0 0 5px var(--warn)"></span>Manutenção
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;box-shadow:0 0 5px var(--accent)"></span>Reservado
+              </div>
+              <button class="btn btn-ghost" style="font-size:12px" onclick="abrirModalLeito()">+ Novo Leito</button>
             </div>
           </div>
-        </div>
-        <div id="bedGrid" class="bed-grid"><div class="empty">Carregando…</div></div>
-      </div>
-    </div>
-
-    <!-- Triagem -->
-    <div class="tab-panel" id="tab-triagem" style="margin-top:16px">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Fila de Triagem — Protocolo Manchester</span>
-          <button class="btn btn-primary" onclick="abrirModalTriagem()">+ Nova Triagem</button>
-        </div>
-        <table>
-          <thead><tr><th>Prioridade</th><th>Paciente</th><th>Queixa</th><th>PA</th><th>Temp</th><th>SpO₂</th><th>FC</th><th>Responsável</th><th>Horário</th></tr></thead>
-          <tbody id="tbodyTriagem"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Internações -->
-    <div class="tab-panel" id="tab-internacoes" style="margin-top:16px">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Internações</span>
-          <div style="display:flex;gap:8px">
-            <select id="filtroStatus" onchange="carregarInternacoes()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
-              <option value="">Todos os status</option>
-              <option value="ativa">Ativas</option>
-              <option value="alta">Alta</option>
-              <option value="transferido">Transferidos</option>
-              <option value="obito">Óbito</option>
-            </select>
-            <a href="/api/hospital/pdf/internacoes/" target="_blank" class="btn btn-ghost">📄 PDF Geral</a>
-            <button class="btn btn-primary" onclick="abrirModalInternacao()">+ Internar Paciente</button>
+          <div class="dept-filter" id="deptFilterBar">
+            <button class="dept-pill active" onclick="filtrarLeitos('todos',this)">Todos</button>
           </div>
-        </div>
-        <table>
-          <thead><tr><th>Paciente</th><th>Leito</th><th>Departamento</th><th>Diagnóstico</th><th>Médico</th><th>Status</th><th>Entrada</th><th>Ações</th></tr></thead>
-          <tbody id="tbodyInt"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Pacientes -->
-    <div class="tab-panel" id="tab-pacientes" style="margin-top:16px">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Cadastro de Pacientes</span>
-          <div style="display:flex;gap:8px">
-            <input id="buscaPac" placeholder="🔍 Buscar por nome…" oninput="buscarPacientes()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;width:220px">
-            <button class="btn btn-primary" onclick="abrirModalPaciente()">+ Novo Paciente</button>
+          <div class="bed-summary" id="bedSummary">
+            <span><span style="color:var(--ok)">●</span> <span id="bs-disp">0</span> disponíveis</span>
+            <span><span style="color:var(--danger)">●</span> <span id="bs-ocup">0</span> ocupados</span>
+            <span><span style="color:var(--warn)">●</span> <span id="bs-man">0</span> manutenção</span>
+            <span><span style="color:var(--accent)">●</span> <span id="bs-res">0</span> reservados</span>
           </div>
+          <div id="bedGrid" class="bed-grid"><div class="empty">Carregando…</div></div>
         </div>
-        <table>
-          <thead><tr><th>Nome</th><th>CPF</th><th>Nascimento</th><th>Sexo</th><th>Tipo Sanguíneo</th><th>Telefone</th><th>Alergias</th></tr></thead>
-          <tbody id="tbodyPac"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
-        </table>
       </div>
-    </div>
 
-    <!-- Departamentos -->
-    <div class="tab-panel" id="tab-departamentos" style="margin-top:16px">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Departamentos / Alas</span>
-          <button class="btn btn-primary" onclick="abrirModalDep()">+ Novo Departamento</button>
-        </div>
-        <table>
-          <thead><tr><th>Nome</th><th>Tipo</th><th>Capacidade</th><th>Responsável</th><th>Status</th><th>Ações</th></tr></thead>
-          <tbody id="tbodyDep"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Prescrições -->
-    <div class="tab-panel" id="tab-prescricoes" style="margin-top:16px">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">💊 Prescrições Médicas Ativas</span>
-          <div style="display:flex;gap:8px">
-            <select id="filtroPrescStatus" onchange="carregarPrescricoes()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;color:#e8f4ff;font-size:12px">
-              <option value="">Todos os status</option>
-              <option value="ativa" selected>Ativas</option>
-              <option value="suspensa">Suspensas</option>
-              <option value="concluida">Concluídas</option>
-              <option value="cancelada">Canceladas</option>
-            </select>
-            <button class="btn btn-primary" onclick="abrirModalPresc()">+ Nova Prescrição</button>
+      <!-- ══════ TAB: TRIAGEM ══════ -->
+      <div class="tab-panel" id="tab-triagem">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <span class="card-title">🚨 Fila de Triagem — Protocolo Manchester</span>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px">Ordenado por prioridade clínica · Mais críticos primeiro</div>
+            </div>
+            <button class="btn btn-primary" onclick="abrirModalTriagem()">+ Nova Triagem</button>
           </div>
+          <table>
+            <thead><tr>
+              <th>Prioridade</th>
+              <th>Paciente</th>
+              <th>Queixa</th>
+              <th>Tempo</th>
+              <th>PA</th>
+              <th>Temp</th>
+              <th>SpO₂</th>
+              <th>FC</th>
+              <th>Responsável</th>
+              <th>Horário</th>
+            </tr></thead>
+            <tbody id="tbodyTriagem"><tr><td colspan="10" class="empty">Carregando…</td></tr></tbody>
+          </table>
         </div>
-        <table>
-          <thead><tr><th>Paciente</th><th>Medicamento</th><th>Dose</th><th>Via</th><th>Frequência</th><th>Duração</th><th>Médico</th><th>Status</th><th>Ações</th></tr></thead>
-          <tbody id="tbodyPresc"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
-        </table>
       </div>
-    </div>
-  </div>
+
+      <!-- ══════ TAB: INTERNAÇÕES ══════ -->
+      <div class="tab-panel" id="tab-internacoes">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📋 Internações</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <select id="filtroStatus" onchange="carregarInternacoes()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+                <option value="">Todos os status</option>
+                <option value="ativa">Ativas</option>
+                <option value="alta">Alta</option>
+                <option value="transferido">Transferidos</option>
+                <option value="obito">Óbito</option>
+              </select>
+              <a href="/api/hospital/pdf/internacoes/" target="_blank" class="btn btn-ghost" style="font-size:12px">📄 PDF Geral</a>
+              <button class="btn btn-primary" onclick="abrirModalInternacao()">+ Internar Paciente</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Paciente</th>
+              <th>Leito</th>
+              <th>Departamento</th>
+              <th>Diagnóstico</th>
+              <th>Médico</th>
+              <th>Dias</th>
+              <th>Pipeline</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr></thead>
+            <tbody id="tbodyInt"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════ TAB: PACIENTES ══════ -->
+      <div class="tab-panel" id="tab-pacientes">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">👤 Cadastro de Pacientes</span>
+            <div style="display:flex;gap:8px">
+              <input id="buscaPac" placeholder="🔍 Buscar por nome…" oninput="buscarPacientes()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;width:220px">
+              <button class="btn btn-primary" onclick="abrirModalPaciente()">+ Novo Paciente</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Nome</th><th>CPF</th><th>Nascimento</th><th>Sexo</th><th>Tipo Sanguíneo</th><th>Telefone</th><th>Alergias</th></tr></thead>
+            <tbody id="tbodyPac"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════ TAB: DEPARTAMENTOS ══════ -->
+      <div class="tab-panel" id="tab-departamentos">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🏢 Departamentos / Alas</span>
+            <button class="btn btn-primary" onclick="abrirModalDep()">+ Novo Departamento</button>
+          </div>
+          <table>
+            <thead><tr><th>Nome</th><th>Tipo</th><th>Capacidade</th><th>Ocupação</th><th>Responsável</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody id="tbodyDep"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════ TAB: PRESCRIÇÕES ══════ -->
+      <div class="tab-panel" id="tab-prescricoes">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">💊 Prescrições Médicas</span>
+            <div style="display:flex;gap:8px">
+              <select id="filtroPrescStatus" onchange="carregarPrescricoes()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+                <option value="">Todos os status</option>
+                <option value="ativa" selected>Ativas</option>
+                <option value="suspensa">Suspensas</option>
+                <option value="concluida">Concluídas</option>
+                <option value="cancelada">Canceladas</option>
+              </select>
+              <button class="btn btn-primary" onclick="abrirModalPresc()">+ Nova Prescrição</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Paciente</th>
+              <th>Medicamento</th>
+              <th>Dose / Via</th>
+              <th>Frequência</th>
+              <th>Horários</th>
+              <th>Duração</th>
+              <th>Médico</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr></thead>
+            <tbody id="tbodyPresc"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- end tabs wrapper -->
+  </div><!-- end .content -->
 </main>
+</div><!-- end .layout -->
+
+<!-- ══════ MODALS ══════ -->
 
 <!-- Modal: Leito -->
 <div class="modal-bg" id="modalLeito">
@@ -252,26 +544,26 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalLeito')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarLeito()">Salvar</button>
+      <button class="btn btn-primary" onclick="salvarLeito()">Salvar Leito</button>
     </div>
   </div>
 </div>
 
 <!-- Modal: Status Leito -->
 <div class="modal-bg" id="modalBedStatus">
-  <div class="modal" style="min-width:320px">
-    <h3 id="bedStatusTitle">Alterar Status do Leito</h3>
+  <div class="modal" style="min-width:340px">
+    <h3 id="bedStatusTitle">🔧 Alterar Status do Leito</h3>
     <input type="hidden" id="bedStatusId">
     <div class="form-group"><label>Novo Status</label>
       <select id="bedStatusVal">
         <option value="disponivel">✅ Disponível</option>
-        <option value="manutencao">🔧 Manutenção</option>
+        <option value="manutencao">🔧 Em Manutenção</option>
         <option value="reservado">🔒 Reservado</option>
       </select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalBedStatus')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarStatusLeito()">Atualizar</button>
+      <button class="btn btn-primary" onclick="salvarStatusLeito()">Atualizar Status</button>
     </div>
   </div>
 </div>
@@ -284,7 +576,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Paciente *</label>
         <select id="tPac"><option value="">— selecione —</option></select>
       </div>
-      <div class="form-group"><label>Prioridade *</label>
+      <div class="form-group"><label>Prioridade Manchester *</label>
         <select id="tPrioridade">
           <option value="vermelho">🔴 Vermelho — Emergência</option>
           <option value="laranja">🟠 Laranja — Muito Urgente</option>
@@ -294,7 +586,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </select>
       </div>
     </div>
-    <div class="form-group"><label>Queixa Principal *</label><textarea id="tQueixa" rows="2" placeholder="Descreva a queixa principal do paciente"></textarea></div>
+    <div class="form-group"><label>Queixa Principal *</label>
+      <textarea id="tQueixa" rows="2" placeholder="Descreva a queixa principal do paciente"></textarea>
+    </div>
     <div class="form-row-3">
       <div class="form-group"><label>Pressão Arterial</label><input id="tPa" placeholder="120/80"></div>
       <div class="form-group"><label>Temperatura (°C)</label><input id="tTemp" type="number" step="0.1" placeholder="36.5"></div>
@@ -316,11 +610,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="modal">
     <h3>👤 Cadastrar Paciente</h3>
     <div class="form-row">
-      <div class="form-group"><label>Nome *</label><input id="pNome" placeholder="Nome completo"></div>
+      <div class="form-group"><label>Nome Completo *</label><input id="pNome" placeholder="Nome completo"></div>
       <div class="form-group"><label>CPF</label><input id="pCpf" placeholder="000.000.000-00"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Nascimento</label><input id="pNasc" type="date"></div>
+      <div class="form-group"><label>Data de Nascimento</label><input id="pNasc" type="date"></div>
       <div class="form-group"><label>Sexo</label>
         <select id="pSexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option><option value="O">Outro</option></select>
       </div>
@@ -333,7 +627,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="form-group"><label>Endereço</label><textarea id="pEnd" rows="2"></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalPaciente')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarPaciente()">Salvar</button>
+      <button class="btn btn-primary" onclick="salvarPaciente()">Salvar Paciente</button>
     </div>
   </div>
 </div>
@@ -350,31 +644,41 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <select id="intLeito"><option value="">— sem leito —</option></select>
       </div>
     </div>
-    <div class="form-group"><label>Diagnóstico *</label><textarea id="intDiag" rows="2"></textarea></div>
-    <div class="form-group"><label>Médico Responsável</label><input id="intMedico" placeholder="Nome do médico"></div>
+    <div class="form-group"><label>Diagnóstico *</label><textarea id="intDiag" rows="2" placeholder="Diagnóstico ou hipótese diagnóstica"></textarea></div>
+    <div class="form-group"><label>Médico Responsável</label><input id="intMedico" placeholder="Nome do médico responsável"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalInt')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarInternacao()">Internar</button>
+      <button class="btn btn-primary" onclick="salvarInternacao()">Confirmar Internação</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Alta/Evolução -->
+<!-- Modal: Gerenciar Internação (Alta / Evolução) -->
 <div class="modal-bg" id="modalAlta">
-  <div class="modal">
-    <h3 id="altaTitle">Gerenciar Internação</h3>
+  <div class="modal" style="max-width:680px">
+    <h3 id="altaTitle">📋 Gerenciar Internação</h3>
     <input type="hidden" id="altaId">
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-      <button class="btn btn-ghost btn-sm" onclick="darAlta('alta')">✅ Alta</button>
-      <button class="btn btn-ghost btn-sm" onclick="darAlta('transferido')">↗️ Transferir</button>
-      <button class="btn btn-danger btn-sm" onclick="darAlta('obito')">💔 Óbito</button>
-      <a id="btnFichaInt" href="#" target="_blank" class="btn btn-ghost btn-sm">📄 Ficha PDF</a>
+    <div style="margin-bottom:16px">
+      <div class="section-divider">Ações Clínicas</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ok btn-sm" onclick="darAlta('alta')">✅ Dar Alta</button>
+        <button class="btn btn-ghost btn-sm" onclick="darAlta('transferido')">↗️ Transferir</button>
+        <button class="btn btn-danger btn-sm" onclick="darAlta('obito')">💔 Registrar Óbito</button>
+        <a id="btnFichaInt" href="#" target="_blank" class="btn btn-ghost btn-sm">📄 Ficha PDF</a>
+        <button class="btn btn-ghost btn-sm" onclick="abrirPrescricaoInt()">💊 Prescrever</button>
+      </div>
     </div>
-    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--muted)">EVOLUÇÕES CLÍNICAS</div>
-    <div class="evolucao-list" id="evolucaoList"></div>
-    <div style="margin-top:12px">
-      <div class="form-group"><label>Nova Evolução</label><textarea id="evolDesc" rows="3" placeholder="Descreva a evolução clínica…"></textarea></div>
-      <div class="form-group"><label>Responsável</label><input id="evolResp" placeholder="Nome do profissional"></div>
+    <div class="section-divider">Evoluções Clínicas</div>
+    <div class="evolucao-list" id="evolucaoList">
+      <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nenhuma evolução registrada</div>
+    </div>
+    <div style="margin-top:14px">
+      <div class="form-group"><label>📝 Nova Evolução Clínica</label>
+        <textarea id="evolDesc" rows="3" placeholder="Descreva a evolução clínica, sinais vitais, conduta…"></textarea>
+      </div>
+      <div class="form-group"><label>Profissional Responsável</label>
+        <input id="evolResp" placeholder="Nome do médico ou enfermeiro">
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalAlta')">Fechar</button>
@@ -388,8 +692,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="modal">
     <h3>🏢 Cadastrar Departamento</h3>
     <div class="form-row">
-      <div class="form-group"><label>Nome *</label><input id="depNome" placeholder="Ex: UTI, Pediatria…"></div>
-      <div class="form-group"><label>Tipo</label><input id="depTipo" placeholder="Ex: Intensivo, Clínico…"></div>
+      <div class="form-group"><label>Nome *</label><input id="depNome" placeholder="Ex: UTI, Pediatria, Oncologia…"></div>
+      <div class="form-group"><label>Tipo</label><input id="depTipo" placeholder="Ex: Intensivo, Clínico, Cirúrgico…"></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>Capacidade de Leitos</label><input id="depCap" type="number" min="0" value="0"></div>
@@ -397,7 +701,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalDep')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarDep()">Salvar</button>
+      <button class="btn btn-primary" onclick="salvarDep()">Salvar Departamento</button>
     </div>
   </div>
 </div>
@@ -407,14 +711,12 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="modal">
     <h3>💊 Nova Prescrição Médica</h3>
     <div class="form-group"><label>Internação (Paciente) *</label>
-      <select id="pIntId"><option value="">— selecione —</option></select>
+      <select id="pIntId"><option value="">— selecione internação —</option></select>
     </div>
-    <div class="form-row">
-      <div class="form-group" style="grid-column:1/-1"><label>Medicamento *</label><input id="pMed" placeholder="Ex: Dipirona 500mg"></div>
-    </div>
+    <div class="form-group"><label>Medicamento *</label><input id="pMed" placeholder="Ex: Dipirona 500mg, Amoxicilina 500mg…"></div>
     <div class="form-row">
       <div class="form-group"><label>Dose</label><input id="pDose" placeholder="Ex: 1 comprimido, 5 mL"></div>
-      <div class="form-group"><label>Via</label>
+      <div class="form-group"><label>Via de Administração</label>
         <select id="pVia">
           <option value="oral">Oral</option>
           <option value="ev">Endovenosa</option>
@@ -431,8 +733,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="form-group"><label>Frequência</label><input id="pFreq" placeholder="Ex: 8/8h, 1x ao dia, SN"></div>
       <div class="form-group"><label>Duração (dias)</label><input id="pDur" type="number" min="1" placeholder="Opcional"></div>
     </div>
-    <div class="form-group"><label>Médico Responsável</label><input id="pMedico" placeholder="Nome do médico"></div>
-    <div class="form-group"><label>Observações</label><textarea id="pObs" rows="2" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px;color:#e8f4ff;font-family:Manrope,sans-serif"></textarea></div>
+    <div class="form-group"><label>Médico Responsável</label><input id="pMedico" placeholder="Nome do médico prescritor"></div>
+    <div class="form-group"><label>Observações</label><textarea id="pObs" rows="2" placeholder="Orientações especiais, diluição, horários…"></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalPresc')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarPresc()">Salvar Prescrição</button>
@@ -440,56 +742,305 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 </div>
 
-<script>
-let _pacientes = [], _leitos = [], _departamentos = [];
+<!-- Toast Container -->
+<div id="toast-container"></div>
 
+<script>
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let _pacientes = [], _leitos = [], _departamentos = [], _internacoesList = [];
+let _currentTab = 'leitos';
+let _bedDeptFilter = 'todos';
+let _lastRefresh = Date.now();
+let _refreshInterval = null;
+let _kpiData = {};
+let _urgentTriageCount = 0;
+let _activeIntCount = 0;
+
+// ══════════════════════════════════════════════════════════════
+// TOAST SYSTEM (replaces all alert() calls)
+// ══════════════════════════════════════════════════════════════
+function toast(msg, type='info', duration=4000) {
+  const icons = {ok:'✅',error:'❌',warn:'⚠️',info:'ℹ️'};
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `
+    <span class="toast-icon">${icons[type]||'ℹ️'}</span>
+    <span style="flex:1">${msg}</span>
+    <span class="toast-close" onclick="removeToast(this.parentElement)">×</span>
+  `;
+  container.appendChild(el);
+  setTimeout(()=>removeToast(el), duration);
+}
+function removeToast(el) {
+  if (!el || !el.parentElement) return;
+  el.classList.add('hiding');
+  setTimeout(()=>el.remove(), 350);
+}
+
+// ══════════════════════════════════════════════════════════════
+// API
+// ══════════════════════════════════════════════════════════════
 async function api(url, opts={}) {
-  const r = await fetch(url, {headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},...opts});
-  return r.json();
+  try {
+    const r = await fetch(url, {
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      ...opts
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error(txt || r.statusText);
+    }
+    if (r.status === 204) return {};
+    return r.json();
+  } catch(e) {
+    console.error('API error:', url, e);
+    throw e;
+  }
 }
 function getCsrf() {
   return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1]||'';
 }
 
-async function carregarKpis() {
-  const d = await api('/api/hospital/ops/kpis/');
-  const cards = document.querySelectorAll('#kpiRow .kpi');
-  cards[0].querySelector('.kpi-val').textContent = d.total_leitos ?? '—';
-  cards[1].querySelector('.kpi-val').textContent = d.leitos_disponiveis ?? '—';
-  cards[2].querySelector('.kpi-val').textContent = d.leitos_ocupados ?? '—';
-  cards[3].querySelector('.kpi-val').textContent = d.internacoes_ativas ?? '—';
-  cards[4].querySelector('.kpi-val').textContent = d.triagens_hoje ?? '—';
-  cards[5].querySelector('.kpi-val').textContent = (d.taxa_ocupacao ?? '—') + '%';
+// ══════════════════════════════════════════════════════════════
+// AUTO-REFRESH
+// ══════════════════════════════════════════════════════════════
+function startAutoRefresh() {
+  _refreshInterval = setInterval(()=>{
+    carregarKpis();
+    if (_currentTab === 'leitos') carregarLeitos();
+    else if (_currentTab === 'triagem') carregarTriagens();
+    else if (_currentTab === 'internacoes') carregarInternacoes();
+  }, 60000);
+}
+function updateRefreshLabel() {
+  const mins = Math.floor((Date.now() - _lastRefresh) / 60000);
+  const el = document.getElementById('refreshLabel');
+  if (!el) return;
+  el.textContent = mins < 1 ? 'Atualizado agora' : `Atualizado há ${mins} min`;
+}
+setInterval(updateRefreshLabel, 30000);
+
+// ══════════════════════════════════════════════════════════════
+// ALERT STRIP
+// ══════════════════════════════════════════════════════════════
+function atualizarAlertStrip(kpis, triagens) {
+  const taxa = parseFloat(kpis.taxa_ocupacao||0);
+  const vermelhos = (triagens||[]).filter(t=>t.prioridade==='vermelho').length;
+  const laranjas  = (triagens||[]).filter(t=>t.prioridade==='laranja').length;
+  const intAtivas = kpis.internacoes_ativas || 0;
+
+  let hasAlert = false;
+
+  const apOcup = document.getElementById('apOcupacao');
+  if (taxa > 85) {
+    document.getElementById('apOcupacaoTxt').textContent = `Ocupação crítica: ${taxa}%`;
+    apOcup.style.display = 'inline-flex'; hasAlert = true;
+  } else { apOcup.style.display = 'none'; }
+
+  const apV = document.getElementById('apVermelhos');
+  if (vermelhos > 0) {
+    document.getElementById('apVermelhosTxt').textContent = `${vermelhos} emergência${vermelhos>1?'s':''} na triagem`;
+    apV.style.display = 'inline-flex'; hasAlert = true;
+  } else { apV.style.display = 'none'; }
+
+  const apL = document.getElementById('apLaranjas');
+  if (laranjas > 0) {
+    document.getElementById('apLaranjasTxt').textContent = `${laranjas} muito urgente${laranjas>1?'s':''} aguardando`;
+    apL.style.display = 'inline-flex'; hasAlert = true;
+  } else { apL.style.display = 'none'; }
+
+  const apI = document.getElementById('apInternacoes');
+  if (intAtivas > 0) {
+    document.getElementById('apInternacoesTxt').textContent = `${intAtivas} internação${intAtivas>1?'s':''} ativa${intAtivas>1?'s':''}`;
+    apI.style.display = 'inline-flex';
+  } else { apI.style.display = 'none'; }
+
+  document.getElementById('apNone').style.display = hasAlert ? 'none' : '';
+
+  // Badges sidebar / tabs
+  _urgentTriageCount = vermelhos + laranjas;
+  _activeIntCount = intAtivas;
+  updateBadges();
 }
 
-// ── Leitos ────────────────────────────────────────────────────
-async function carregarLeitos() {
-  const d = await api('/api/hospital/leitos/');
-  _leitos = d.leitos || [];
-  const grid = document.getElementById('bedGrid');
-  if (!_leitos.length) { grid.innerHTML = '<div class="empty">Nenhum leito cadastrado</div>'; return; }
-  grid.innerHTML = _leitos.map(l => `
-    <div class="bed-card ${l.status}" onclick="abrirBedStatus(${l.id},'${l.numero}','${l.status}')">
-      <div class="bed-num">🛏 ${l.numero}</div>
-      <div>${l.departamento_nome}</div>
-      <div style="margin-top:4px;font-size:10px;opacity:.7">${l.status}</div>
-    </div>
-  `).join('');
-  popularSelectLeitos();
+function updateBadges() {
+  // Sidebar
+  const nbT = document.getElementById('nb-triage');
+  if (_urgentTriageCount > 0) { nbT.textContent = _urgentTriageCount; nbT.style.display='flex'; }
+  else nbT.style.display='none';
+
+  const nbI = document.getElementById('nb-int');
+  if (_activeIntCount > 0) { nbI.textContent = _activeIntCount; nbI.style.display='flex'; }
+  else nbI.style.display='none';
+
+  // Bell
+  const total = _urgentTriageCount;
+  const bell = document.getElementById('bellBadge');
+  if (total > 0) { bell.textContent = total; bell.style.display='flex'; }
+  else bell.style.display='none';
+
+  // Tab badges
+  const tbT = document.getElementById('tabBadge-triagem');
+  if (_urgentTriageCount > 0) { tbT.textContent = _urgentTriageCount; tbT.style.display='flex'; }
+  else tbT.style.display='none';
+
+  const tbI = document.getElementById('tabBadge-internacoes');
+  if (_activeIntCount > 0) { tbI.textContent = _activeIntCount; tbI.style.display='flex'; }
+  else tbI.style.display='none';
 }
+
+// ══════════════════════════════════════════════════════════════
+// KPIs
+// ══════════════════════════════════════════════════════════════
+async function carregarKpis() {
+  try {
+    const d = await api('/api/hospital/ops/kpis/');
+    _kpiData = d;
+    _lastRefresh = Date.now();
+    updateRefreshLabel();
+
+    const total = d.total_leitos || 0;
+    const disp  = d.leitos_disponiveis || 0;
+    const ocup  = d.leitos_ocupados || 0;
+    const ativas= d.internacoes_ativas || 0;
+    const triage= d.triagens_hoje || 0;
+    const taxa  = parseFloat(d.taxa_ocupacao || 0);
+
+    document.getElementById('kv0').textContent = total;
+    document.getElementById('kv1').textContent = disp;
+    document.getElementById('kv2').textContent = ocup;
+    document.getElementById('kv3').textContent = ativas;
+    document.getElementById('kv4').textContent = triage;
+    document.getElementById('kv5').textContent = taxa + '%';
+
+    // Gauges
+    if (total > 0) {
+      document.getElementById('kg0').style.width = '100%';
+      document.getElementById('kg1').style.width = ((disp/total)*100).toFixed(1)+'%';
+      document.getElementById('kg2').style.width = ((ocup/total)*100).toFixed(1)+'%';
+      document.getElementById('kg3').style.width = Math.min((ativas/Math.max(total,1))*100,100).toFixed(1)+'%';
+    }
+    document.getElementById('kg4').style.width = Math.min(triage*5,100)+'%';
+    document.getElementById('kg5').style.width = taxa+'%';
+
+    // Trends
+    const t5 = document.getElementById('kt5');
+    if (taxa > 85) { t5.textContent = '▲ Crítico'; t5.className = 'kpi-trend up'; }
+    else if (taxa > 65) { t5.textContent = '→ Atenção'; t5.className = 'kpi-trend neutral'; }
+    else { t5.textContent = '▼ Normal'; t5.className = 'kpi-trend down'; }
+
+    // Nav disponíveis badge
+    const nbD = document.getElementById('nb-disp');
+    if (disp > 0) { nbD.textContent = disp; nbD.style.display = 'flex'; }
+    else nbD.style.display = 'none';
+
+    // Alert strip needs triagens too — load them silently
+    try {
+      const td = await api('/api/hospital/triagens/');
+      atualizarAlertStrip(d, td.triagens||[]);
+    } catch(e) {
+      atualizarAlertStrip(d, []);
+    }
+  } catch(e) {
+    console.error('KPI load error', e);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// LEITOS
+// ══════════════════════════════════════════════════════════════
+async function carregarLeitos() {
+  try {
+    const d = await api('/api/hospital/leitos/');
+    _leitos = d.leitos || [];
+    renderBedGrid();
+    popularSelectLeitos();
+    renderDeptFilterBar();
+  } catch(e) {
+    document.getElementById('bedGrid').innerHTML = '<div class="empty">Erro ao carregar leitos</div>';
+  }
+}
+
+function renderDeptFilterBar() {
+  const bar = document.getElementById('deptFilterBar');
+  const depts = [...new Set(_leitos.map(l=>l.departamento_nome).filter(Boolean))];
+  bar.innerHTML = `<button class="dept-pill ${_bedDeptFilter==='todos'?'active':''}" onclick="filtrarLeitos('todos',this)">Todos</button>`;
+  depts.forEach(dep=>{
+    const active = _bedDeptFilter === dep ? 'active' : '';
+    bar.innerHTML += `<button class="dept-pill ${active}" onclick="filtrarLeitos('${dep.replace(/'/g,"\\'")}',this)">${dep}</button>`;
+  });
+}
+
+function filtrarLeitos(dept, btn) {
+  _bedDeptFilter = dept;
+  document.querySelectorAll('.dept-pill').forEach(p=>p.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderBedGrid();
+}
+
+function renderBedGrid() {
+  const grid = document.getElementById('bedGrid');
+  const leitos = _bedDeptFilter === 'todos'
+    ? _leitos
+    : _leitos.filter(l=>l.departamento_nome === _bedDeptFilter);
+
+  if (!leitos.length) {
+    grid.innerHTML = '<div class="empty">Nenhum leito nesta ala</div>';
+    return;
+  }
+
+  // Counts
+  const disp = leitos.filter(l=>l.status==='disponivel').length;
+  const ocup = leitos.filter(l=>l.status==='ocupado').length;
+  const man  = leitos.filter(l=>l.status==='manutencao').length;
+  const res  = leitos.filter(l=>l.status==='reservado').length;
+  document.getElementById('bs-disp').textContent = disp;
+  document.getElementById('bs-ocup').textContent = ocup;
+  document.getElementById('bs-man').textContent  = man;
+  document.getElementById('bs-res').textContent  = res;
+
+  // Sort: occupied first, then disponivel, then reservado, then manutencao
+  const order = {ocupado:0,disponivel:1,reservado:2,manutencao:3};
+  const sorted = [...leitos].sort((a,b)=>(order[a.status]||9)-(order[b.status]||9));
+
+  grid.innerHTML = sorted.map(l => {
+    const hoursHtml = l.hora_entrada
+      ? `<div class="bed-hours">${calcHours(l.hora_entrada)}</div>`
+      : '';
+    const patHtml = l.paciente_nome
+      ? `<div class="bed-patient" title="${l.paciente_nome}">👤 ${l.paciente_nome}</div>`
+      : `<div class="bed-patient" style="opacity:.4">Vazio</div>`;
+
+    return `<div class="bed-card ${l.status}" onclick="abrirBedStatus(${l.id},'${l.numero}','${l.status}')">
+      <div class="bed-status-dot"></div>
+      <div class="bed-num">🛏 ${l.numero}</div>
+      <div class="bed-dept">${l.departamento_nome||''}</div>
+      ${patHtml}
+      ${hoursHtml}
+      <div style="margin-top:5px;font-size:10px;opacity:.6;text-transform:capitalize">${l.status}</div>
+    </div>`;
+  }).join('');
+}
+
 function abrirBedStatus(id, num, status) {
-  if (status === 'ocupado') return; // só muda via internação
+  if (status === 'ocupado') { toast('Leito ocupado — gerencie via Internações', 'warn'); return; }
   document.getElementById('bedStatusId').value = id;
-  document.getElementById('bedStatusTitle').textContent = `Leito ${num} — Alterar Status`;
+  document.getElementById('bedStatusTitle').textContent = `🔧 Leito ${num} — Alterar Status`;
   document.getElementById('bedStatusVal').value = status;
   abrirModal('modalBedStatus');
 }
 async function salvarStatusLeito() {
   const id = document.getElementById('bedStatusId').value;
   const status = document.getElementById('bedStatusVal').value;
-  await api(`/api/hospital/leitos/${id}/status/`, {method:'PUT', body:JSON.stringify({status})});
-  fecharModal('modalBedStatus');
-  carregarLeitos(); carregarKpis();
+  try {
+    await api(`/api/hospital/leitos/${id}/status/`, {method:'PUT', body:JSON.stringify({status})});
+    fecharModal('modalBedStatus');
+    toast('Status do leito atualizado', 'ok');
+    carregarLeitos(); carregarKpis();
+  } catch(e) { toast('Erro ao atualizar status: '+e.message,'error'); }
 }
 function abrirModalLeito() {
   popularSelectDeps('lDep');
@@ -499,36 +1050,68 @@ function abrirModalLeito() {
 }
 async function salvarLeito() {
   const body = {numero:v('lNum'), tipo:v('lTipo'), departamento_id:parseInt(v('lDep'))};
-  if (!body.numero || !body.departamento_id) return alert('Número e departamento obrigatórios');
-  await api('/api/hospital/leitos/', {method:'POST', body:JSON.stringify(body)});
-  fecharModal('modalLeito');
-  carregarLeitos();
+  if (!body.numero) return toast('Número do leito é obrigatório','warn');
+  if (!body.departamento_id) return toast('Selecione um departamento','warn');
+  try {
+    await api('/api/hospital/leitos/', {method:'POST', body:JSON.stringify(body)});
+    fecharModal('modalLeito');
+    toast('Leito cadastrado com sucesso','ok');
+    carregarLeitos();
+  } catch(e) { toast('Erro ao salvar leito: '+e.message,'error'); }
 }
 
-// ── Triagem ───────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// TRIAGEM
+// ══════════════════════════════════════════════════════════════
+const TRIAGE_ORDER = {vermelho:0,laranja:1,amarelo:2,verde:3,azul:4};
+const TRIAGE_LABELS = {
+  vermelho:'🔴 Emergência',laranja:'🟠 Muito Urgente',
+  amarelo:'🟡 Urgente',verde:'🟢 Pouco Urgente',azul:'🔵 Não Urgente'
+};
+
 async function carregarTriagens() {
-  const d = await api('/api/hospital/triagens/');
-  const tb = document.getElementById('tbodyTriagem');
-  const list = d.triagens || [];
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Sem triagens registradas</td></tr>'; return; }
-  tb.innerHTML = list.map(t => `<tr>
-    <td><span class="badge triage-${t.prioridade}">${triageLabel(t.prioridade)}</span></td>
-    <td><strong>${t.paciente_nome}</strong></td>
-    <td style="max-width:160px">${t.queixa_principal}</td>
-    <td>${t.pressao_arterial||'—'}</td>
-    <td>${t.temperatura||'—'}</td>
-    <td>${t.saturacao!=null?t.saturacao+'%':'—'}</td>
-    <td>${t.frequencia_cardiaca!=null?t.frequencia_cardiaca+' bpm':'—'}</td>
-    <td>${t.responsavel||'—'}</td>
-    <td>${fmtDt(t.triado_em)}</td>
-  </tr>`).join('');
+  try {
+    const d = await api('/api/hospital/triagens/');
+    const list = (d.triagens || []).sort((a,b)=>
+      (TRIAGE_ORDER[a.prioridade]??9)-(TRIAGE_ORDER[b.prioridade]??9)
+    );
+    const tb = document.getElementById('tbodyTriagem');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="10" class="empty">Sem triagens registradas</td></tr>'; return; }
+
+    tb.innerHTML = list.map(t => {
+      const pa   = t.pressao_arterial;
+      const temp = parseFloat(t.temperatura);
+      const sat  = parseInt(t.saturacao);
+      const fc   = parseInt(t.frequencia_cardiaca);
+
+      const paClass   = !pa ? 'vital-muted' : 'vital-ok';
+      const tempClass = !t.temperatura ? 'vital-muted' : (temp<36||temp>37.8?'vital-danger':'vital-ok');
+      const satClass  = !t.saturacao ? 'vital-muted' : (sat<94?'vital-danger':sat<96?'vital-warn':'vital-ok');
+      const fcClass   = !t.frequencia_cardiaca ? 'vital-muted' : (fc<50||fc>100?'vital-danger':'vital-ok');
+
+      return `<tr class="triage-row-${t.prioridade}">
+        <td><span class="badge triage-${t.prioridade}">${TRIAGE_LABELS[t.prioridade]||t.prioridade}</span></td>
+        <td><strong>${t.paciente_nome}</strong></td>
+        <td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${t.queixa_principal}">${t.queixa_principal}</td>
+        <td><span style="font-size:12px;color:var(--muted)">${calcElapsed(t.triado_em)}</span></td>
+        <td><span class="vital ${paClass}">${pa||'—'}</span></td>
+        <td><span class="vital ${tempClass}">${t.temperatura?t.temperatura+'°':'—'}</span></td>
+        <td><span class="vital ${satClass}">${t.saturacao!=null?t.saturacao+'%':'—'}</span></td>
+        <td><span class="vital ${fcClass}">${t.frequencia_cardiaca!=null?t.frequencia_cardiaca+' bpm':'—'}</span></td>
+        <td>${t.responsavel||'—'}</td>
+        <td style="font-size:11px;color:var(--muted)">${fmtDt(t.triado_em)}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('tbodyTriagem').innerHTML = '<tr><td colspan="10" class="empty">Erro ao carregar triagens</td></tr>';
+  }
 }
-function triageLabel(p) {
-  return {vermelho:'🔴 Emergência',laranja:'🟠 Muito Urgente',amarelo:'🟡 Urgente',verde:'🟢 Pouco Urgente',azul:'🔵 Não Urgente'}[p]||p;
-}
+
 function abrirModalTriagem() {
   popularSelectPacientes('tPac');
-  ['tQueixa','tPa','tTemp','tSat','tFc','tResp'].forEach(id=>document.getElementById(id).value='');
+  ['tQueixa','tPa','tTemp','tSat','tFc','tResp'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
   abrirModal('modalTriagem');
 }
 async function salvarTriagem() {
@@ -538,33 +1121,73 @@ async function salvarTriagem() {
     temperatura:v('tTemp')||null, saturacao:v('tSat')||null,
     frequencia_cardiaca:v('tFc')||null, responsavel:v('tResp'),
   };
-  if (!body.paciente_id||!body.queixa_principal) return alert('Paciente e queixa obrigatórios');
-  await api('/api/hospital/triagens/', {method:'POST', body:JSON.stringify(body)});
-  fecharModal('modalTriagem');
-  carregarTriagens(); carregarKpis();
+  if (!body.paciente_id) return toast('Selecione o paciente','warn');
+  if (!body.queixa_principal) return toast('Queixa principal é obrigatória','warn');
+  try {
+    await api('/api/hospital/triagens/', {method:'POST', body:JSON.stringify(body)});
+    fecharModal('modalTriagem');
+    toast('Triagem registrada com sucesso','ok');
+    carregarTriagens(); carregarKpis();
+  } catch(e) { toast('Erro ao registrar triagem: '+e.message,'error'); }
 }
 
-// ── Internações ───────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// INTERNAÇÕES
+// ══════════════════════════════════════════════════════════════
 async function carregarInternacoes() {
-  const status = document.getElementById('filtroStatus')?.value || '';
-  const d = await api('/api/hospital/internacoes/' + (status?`?status=${status}`:''));
-  const tb = document.getElementById('tbodyInt');
-  const list = d.internacoes || [];
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma internação encontrada</td></tr>'; return; }
-  const statusMap = {ativa:'badge-warn',alta:'badge-ok',transferido:'badge-info',obito:'badge-danger'};
-  tb.innerHTML = list.map(i => `<tr>
-    <td><strong>${i.paciente_nome}</strong></td>
-    <td>${i.leito_numero||'—'}</td>
-    <td>${i.departamento_nome||'—'}</td>
-    <td style="max-width:160px">${i.diagnostico}</td>
-    <td>${i.medico_responsavel||'—'}</td>
-    <td><span class="badge ${statusMap[i.status]||'badge-info'}">${i.status}</span></td>
-    <td>${fmtDt(i.data_entrada)}</td>
-    <td>
-      <button class="btn btn-ghost btn-sm" onclick="abrirGerenciarInt(${i.id},'${i.paciente_nome}')">📋 Gerenciar</button>
-    </td>
-  </tr>`).join('');
+  try {
+    const status = document.getElementById('filtroStatus')?.value || '';
+    const d = await api('/api/hospital/internacoes/' + (status?`?status=${status}`:''));
+    const list = d.internacoes || [];
+    const tb = document.getElementById('tbodyInt');
+    if (!list.length) {
+      tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma internação encontrada</td></tr>';
+      return;
+    }
+    const statusMap = {ativa:'badge-warn',alta:'badge-ok',transferido:'badge-info',obito:'badge-danger'};
+    tb.innerHTML = list.map(i => {
+      const days = calcDays(i.data_entrada);
+      const pipe = buildPipeline(i.status);
+      return `<tr>
+        <td><strong>${i.paciente_nome}</strong></td>
+        <td>${i.leito_numero||'—'}</td>
+        <td><span class="badge badge-muted">${i.departamento_nome||'—'}</span></td>
+        <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${i.diagnostico}">${i.diagnostico}</td>
+        <td style="font-size:12px">${i.medico_responsavel||'—'}</td>
+        <td><span class="days-badge">${days}d</span></td>
+        <td>${pipe}</td>
+        <td><span class="badge ${statusMap[i.status]||'badge-info'}">${i.status}</span></td>
+        <td>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-ghost btn-sm" onclick="abrirGerenciarInt(${i.id},'${i.paciente_nome.replace(/'/g,"\\'")}')">📋 Evoluir</button>
+            <button class="btn btn-ghost btn-sm" onclick="abrirPrescricaoIntId(${i.id},'${i.paciente_nome.replace(/'/g,"\\'")}')">💊</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('tbodyInt').innerHTML = '<tr><td colspan="9" class="empty">Erro ao carregar internações</td></tr>';
+  }
 }
+
+function buildPipeline(status) {
+  const steps = [
+    {key:'ativa', label:'Internado'},
+    {key:'tratamento', label:'Em Tratamento'},
+    {key:'alta', label:'Alta'},
+  ];
+  const doneStatuses = ['alta','obito','transferido'];
+  const html = steps.map((s,i) => {
+    let cls = '';
+    if (status === 'ativa' && i === 0) cls = 'active';
+    else if (status === 'ativa' && i === 1) cls = 'active';
+    else if (doneStatuses.includes(status)) cls = i <= 1 ? 'done' : (i===2?'done':'');
+    const arrow = i < steps.length-1 ? '<span class="pipeline-arrow">›</span>' : '';
+    return `<span class="pipeline-step ${cls}">${s.label}</span>${arrow}`;
+  }).join('');
+  return `<div class="pipeline">${html}</div>`;
+}
+
 function abrirModalInternacao() {
   popularSelectPacientes('intPac');
   popularSelectLeitos('intLeito', true);
@@ -578,66 +1201,120 @@ async function salvarInternacao() {
     medico_responsavel:v('intMedico'),
     leito_id: v('intLeito')?parseInt(v('intLeito')):null,
   };
-  if (!body.paciente_id||!body.diagnostico) return alert('Paciente e diagnóstico obrigatórios');
-  await api('/api/hospital/internacoes/', {method:'POST', body:JSON.stringify(body)});
-  fecharModal('modalInt');
-  carregarInternacoes(); carregarLeitos(); carregarKpis();
+  if (!body.paciente_id) return toast('Selecione o paciente','warn');
+  if (!body.diagnostico) return toast('Diagnóstico é obrigatório','warn');
+  try {
+    await api('/api/hospital/internacoes/', {method:'POST', body:JSON.stringify(body)});
+    fecharModal('modalInt');
+    toast('Paciente internado com sucesso','ok');
+    carregarInternacoes(); carregarLeitos(); carregarKpis();
+  } catch(e) { toast('Erro ao internar: '+e.message,'error'); }
 }
+
 async function abrirGerenciarInt(id, nome) {
   document.getElementById('altaId').value = id;
-  document.getElementById('altaTitle').textContent = `Internação — ${nome}`;
+  document.getElementById('altaTitle').textContent = `📋 ${nome}`;
   document.getElementById('btnFichaInt').href = `/api/hospital/pdf/internacao/${id}/`;
   document.getElementById('evolDesc').value='';
   document.getElementById('evolResp').value='';
-  const d = await api(`/api/hospital/internacoes/${id}/evolucoes/`);
-  const evs = d.evolucoes || [];
-  document.getElementById('evolucaoList').innerHTML = evs.length
-    ? evs.map(e=>`<div class="evolucao-item"><div>${e.descricao}</div><div class="evolucao-meta">${e.responsavel} — ${fmtDt(e.registrado_em)}</div></div>`).join('')
-    : '<div style="color:var(--muted);font-size:13px">Nenhuma evolução registrada</div>';
+  try {
+    const d = await api(`/api/hospital/internacoes/${id}/evolucoes/`);
+    const evs = d.evolucoes || [];
+    document.getElementById('evolucaoList').innerHTML = evs.length
+      ? evs.slice().reverse().map(e=>`
+          <div class="evolucao-item">
+            <div style="font-size:13px">${e.descricao}</div>
+            <div class="evolucao-meta">
+              <span>👤 ${e.responsavel||'—'}</span>
+              <span>🕐 ${fmtDt(e.registrado_em)}</span>
+            </div>
+          </div>`).join('')
+      : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nenhuma evolução registrada</div>';
+  } catch(e) {}
   abrirModal('modalAlta');
 }
+
 async function darAlta(status) {
   const id = document.getElementById('altaId').value;
-  if (!confirm(`Confirmar status: ${status}?`)) return;
-  await api(`/api/hospital/internacoes/${id}/status/`, {method:'PUT', body:JSON.stringify({status})});
-  fecharModal('modalAlta');
-  carregarInternacoes(); carregarLeitos(); carregarKpis();
+  const nome = document.getElementById('altaTitle').textContent.replace('📋 ','');
+  const labels = {alta:'Alta médica',transferido:'Transferência',obito:'Óbito'};
+  if (!confirm(`Confirmar: ${labels[status]||status} para ${nome}?`)) return;
+  try {
+    await api(`/api/hospital/internacoes/${id}/status/`, {method:'PUT', body:JSON.stringify({status})});
+    fecharModal('modalAlta');
+    toast(`Status atualizado: ${labels[status]||status}`,'ok');
+    carregarInternacoes(); carregarLeitos(); carregarKpis();
+  } catch(e) { toast('Erro ao atualizar status: '+e.message,'error'); }
 }
+
 async function salvarEvolucao() {
   const id = document.getElementById('altaId').value;
   const body = {descricao:v('evolDesc'), responsavel:v('evolResp')};
-  if (!body.descricao) return alert('Descrição obrigatória');
-  await api(`/api/hospital/internacoes/${id}/evolucoes/`, {method:'POST', body:JSON.stringify(body)});
-  document.getElementById('evolDesc').value='';
-  abrirGerenciarInt(id, document.getElementById('altaTitle').textContent.replace('Internação — ',''));
+  if (!body.descricao) return toast('Descreva a evolução clínica','warn');
+  try {
+    await api(`/api/hospital/internacoes/${id}/evolucoes/`, {method:'POST', body:JSON.stringify(body)});
+    toast('Evolução registrada','ok');
+    document.getElementById('evolDesc').value='';
+    const nome = document.getElementById('altaTitle').textContent.replace('📋 ','');
+    abrirGerenciarInt(id, nome);
+  } catch(e) { toast('Erro ao salvar evolução: '+e.message,'error'); }
 }
 
-// ── Pacientes ─────────────────────────────────────────────────
+function abrirPrescricaoInt() {
+  // Called from gerenciar modal — pre-select this internação
+  const intId = document.getElementById('altaId').value;
+  fecharModal('modalAlta');
+  setTimeout(()=>{
+    carregarPrescricoes().then(()=>{
+      const sel = document.getElementById('pIntId');
+      if (sel && intId) sel.value = intId;
+      abrirModal('modalPresc');
+    });
+  }, 200);
+}
+function abrirPrescricaoIntId(intId, nome) {
+  setTab('prescricoes');
+  setTimeout(()=>{
+    const sel = document.getElementById('pIntId');
+    if (sel) sel.value = intId;
+    abrirModal('modalPresc');
+  }, 400);
+}
+
+// ══════════════════════════════════════════════════════════════
+// PACIENTES
+// ══════════════════════════════════════════════════════════════
 async function carregarPacientes(q='') {
-  const d = await api('/api/hospital/pacientes/' + (q?`?q=${encodeURIComponent(q)}`:''));
-  _pacientes = d.pacientes || [];
-  const tb = document.getElementById('tbodyPac');
-  if (!_pacientes.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum paciente cadastrado</td></tr>'; return; }
-  tb.innerHTML = _pacientes.map(p=>`<tr>
-    <td><strong>${p.nome}</strong></td>
-    <td>${p.cpf||'—'}</td>
-    <td>${p.data_nascimento||'—'}</td>
-    <td>${{M:'Masculino',F:'Feminino',O:'Outro'}[p.sexo]||'—'}</td>
-    <td>${p.tipo_sanguineo||'—'}</td>
-    <td>${p.telefone||'—'}</td>
-    <td>${p.alergias||'—'}</td>
-  </tr>`).join('');
-  popularSelectPacientes();
+  try {
+    const d = await api('/api/hospital/pacientes/' + (q?`?q=${encodeURIComponent(q)}`:''));
+    _pacientes = d.pacientes || [];
+    const tb = document.getElementById('tbodyPac');
+    if (!_pacientes.length) {
+      tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum paciente cadastrado</td></tr>';
+    } else {
+      const sexoMap = {M:'Masculino',F:'Feminino',O:'Outro'};
+      tb.innerHTML = _pacientes.map(p=>`<tr>
+        <td><strong>${p.nome}</strong></td>
+        <td style="font-size:12px;color:var(--muted)">${p.cpf||'—'}</td>
+        <td style="font-size:12px">${p.data_nascimento||'—'}</td>
+        <td>${sexoMap[p.sexo]||'—'}</td>
+        <td>${p.tipo_sanguineo?`<span class="badge badge-danger">${p.tipo_sanguineo}</span>`:'—'}</td>
+        <td style="font-size:12px">${p.telefone||'—'}</td>
+        <td style="font-size:12px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.alergias||'—'}</td>
+      </tr>`).join('');
+    }
+    popularSelectPacientes();
+  } catch(e) {
+    document.getElementById('tbodyPac').innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar pacientes</td></tr>';
+  }
 }
 function buscarPacientes() {
-  const q = document.getElementById('buscaPac').value;
   clearTimeout(window._pacTimer);
-  window._pacTimer = setTimeout(()=>carregarPacientes(q), 400);
+  window._pacTimer = setTimeout(()=>carregarPacientes(document.getElementById('buscaPac').value), 400);
 }
 function abrirModalPaciente() {
   ['pNome','pCpf','pNasc','pTel','pSang','pAleg','pEnd'].forEach(id=>{
-    const el = document.getElementById(id);
-    if (el) el.value='';
+    const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('pSexo').value='';
   abrirModal('modalPaciente');
@@ -648,32 +1325,61 @@ async function salvarPaciente() {
     sexo:v('pSexo'), telefone:v('pTel'), tipo_sanguineo:v('pSang'),
     alergias:v('pAleg'), endereco:v('pEnd'),
   };
-  if (!body.nome) return alert('Nome obrigatório');
-  await api('/api/hospital/pacientes/', {method:'POST', body:JSON.stringify(body)});
-  fecharModal('modalPaciente');
-  carregarPacientes();
+  if (!body.nome) return toast('Nome do paciente é obrigatório','warn');
+  try {
+    await api('/api/hospital/pacientes/', {method:'POST', body:JSON.stringify(body)});
+    fecharModal('modalPaciente');
+    toast('Paciente cadastrado com sucesso','ok');
+    carregarPacientes();
+  } catch(e) { toast('Erro ao salvar paciente: '+e.message,'error'); }
 }
 
-// ── Departamentos ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// DEPARTAMENTOS
+// ══════════════════════════════════════════════════════════════
 async function carregarDepartamentos() {
-  const d = await api('/api/hospital/departamentos/');
-  _departamentos = d.departamentos || [];
-  const tb = document.getElementById('tbodyDep');
-  if (!_departamentos.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum departamento cadastrado</td></tr>'; return; }
-  tb.innerHTML = _departamentos.map(d=>`<tr>
-    <td><strong>${d.nome}</strong></td>
-    <td>${d.tipo||'—'}</td>
-    <td>${d.capacidade_leitos} leitos</td>
-    <td>${d.responsavel||'—'}</td>
-    <td>${d.ativo?'<span class="badge badge-ok">Ativo</span>':'<span class="badge badge-danger">Inativo</span>'}</td>
-    <td><button class="btn btn-danger btn-sm" onclick="deletarDep(${d.id})">🗑</button></td>
-  </tr>`).join('');
-  popularSelectDeps();
+  try {
+    const d = await api('/api/hospital/departamentos/');
+    _departamentos = d.departamentos || [];
+    const tb = document.getElementById('tbodyDep');
+    if (!_departamentos.length) {
+      tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum departamento cadastrado</td></tr>';
+    } else {
+      tb.innerHTML = _departamentos.map(dep => {
+        const cap = dep.capacidade_leitos || 0;
+        // Count occupied leitos in this dept
+        const depLeitos = _leitos.filter(l=>l.departamento_id===dep.id||l.departamento_nome===dep.nome);
+        const ocup = depLeitos.filter(l=>l.status==='ocupado').length;
+        const pct  = cap > 0 ? Math.min((ocup/cap)*100,100) : 0;
+        const barColor = pct>85?'var(--danger)':pct>65?'var(--warn)':'var(--ok)';
+        return `<tr>
+          <td><strong>${dep.nome}</strong></td>
+          <td><span class="badge badge-muted">${dep.tipo||'—'}</span></td>
+          <td>${cap} leitos</td>
+          <td>
+            <div class="cap-bar-wrap">
+              <div class="cap-bar"><div class="cap-bar-fill" style="width:${pct.toFixed(0)}%;background:${barColor}"></div></div>
+              <span class="cap-label">${ocup}/${cap}</span>
+            </div>
+          </td>
+          <td style="font-size:12px">${dep.responsavel||'—'}</td>
+          <td>${dep.ativo?'<span class="badge badge-ok">Ativo</span>':'<span class="badge badge-danger">Inativo</span>'}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="deletarDep(${dep.id})">🗑 Remover</button></td>
+        </tr>`;
+      }).join('');
+    }
+    popularSelectDeps();
+  } catch(e) {
+    document.getElementById('tbodyDep').innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar departamentos</td></tr>';
+  }
 }
 async function deletarDep(id) {
-  if (!confirm('Excluir departamento?')) return;
-  await api(`/api/hospital/departamentos/${id}/`, {method:'DELETE'});
-  carregarDepartamentos();
+  if (!confirm('Excluir este departamento? Esta ação não pode ser desfeita.')) return;
+  try {
+    await api(`/api/hospital/departamentos/${id}/`, {method:'DELETE'});
+    toast('Departamento removido','ok');
+    carregarDepartamentos();
+  } catch(e) { toast('Erro ao remover departamento: '+e.message,'error'); }
 }
 function abrirModalDep() {
   ['depNome','depTipo','depResp'].forEach(id=>document.getElementById(id).value='');
@@ -682,20 +1388,158 @@ function abrirModalDep() {
 }
 async function salvarDep() {
   const body = {nome:v('depNome'),tipo:v('depTipo'),capacidade_leitos:parseInt(v('depCap')||0),responsavel:v('depResp')};
-  if (!body.nome) return alert('Nome obrigatório');
-  await api('/api/hospital/departamentos/', {method:'POST', body:JSON.stringify(body)});
-  fecharModal('modalDep');
-  carregarDepartamentos();
+  if (!body.nome) return toast('Nome do departamento é obrigatório','warn');
+  try {
+    await api('/api/hospital/departamentos/', {method:'POST', body:JSON.stringify(body)});
+    fecharModal('modalDep');
+    toast('Departamento cadastrado com sucesso','ok');
+    carregarDepartamentos();
+  } catch(e) { toast('Erro ao salvar departamento: '+e.message,'error'); }
 }
 
-// ── Helpers selects ───────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// PRESCRIÇÕES
+// ══════════════════════════════════════════════════════════════
+async function carregarPrescricoes() {
+  try {
+    const di = await api('/api/hospital/internacoes/?status=ativo');
+    _internacoesList = di.internacoes || [];
+    const status = document.getElementById('filtroPrescStatus')?.value || '';
+    const tb = document.getElementById('tbodyPresc');
+    if (!_internacoesList.length) {
+      tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma internação ativa</td></tr>';
+      popularSelectInternacoes();
+      return;
+    }
+    const resultados = await Promise.all(_internacoesList.map(async int => {
+      try {
+        const dp = await api(`/api/hospital/internacoes/${int.id}/prescricoes/` + (status?`?status=${status}`:''));
+        return (dp.prescricoes || []).map(p => ({...p, _int: int}));
+      } catch(e) { return []; }
+    }));
+    const prescricoes = resultados.flat();
+
+    // Group by patient
+    const byPaciente = {};
+    prescricoes.forEach(p => {
+      const key = p.paciente_nome || p._int.paciente_nome;
+      if (!byPaciente[key]) byPaciente[key] = [];
+      byPaciente[key].push(p);
+    });
+
+    if (!prescricoes.length) {
+      tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma prescrição encontrada</td></tr>';
+      popularSelectInternacoes(); return;
+    }
+
+    const SMAP = {
+      ativa:`<span class="badge badge-ok">Ativa</span>`,
+      suspensa:`<span class="badge badge-warn">Suspensa</span>`,
+      concluida:`<span class="badge badge-muted">Concluída</span>`,
+      cancelada:`<span class="badge badge-danger">Cancelada</span>`
+    };
+
+    let html = '';
+    Object.entries(byPaciente).forEach(([pac, precs]) => {
+      html += `<tr><td colspan="9" style="background:rgba(0,194,255,.04);padding:8px 14px;font-size:11px;font-weight:700;color:var(--accent);border-top:2px solid rgba(0,194,255,.15)">👤 ${pac} <span style="color:var(--muted);font-weight:600">(${precs.length} prescrição${precs.length>1?'ões':''})</span></td></tr>`;
+      precs.forEach(p => {
+        const sched = buildSchedule(p.frequencia||'');
+        html += `<tr>
+          <td style="padding-left:24px;color:var(--muted);font-size:12px">${pac}</td>
+          <td><strong>${p.medicamento}</strong></td>
+          <td style="font-size:12px">${p.dose||'—'} / ${p.via_label||p.via||'—'}</td>
+          <td style="font-size:12px">${p.frequencia||'—'}</td>
+          <td>${sched}</td>
+          <td style="font-size:12px">${p.duracao_dias?p.duracao_dias+'d':'—'}</td>
+          <td style="font-size:12px">${p.medico||'—'}</td>
+          <td>${SMAP[p.status]||p.status}</td>
+          <td>
+            <div style="display:flex;gap:4px">
+              ${p.status==='ativa'?`<button class="btn btn-ghost btn-sm" onclick="suspenderPresc(${p.id})">⏸</button>`:''}
+              ${p.status==='suspensa'?`<button class="btn btn-ok btn-sm" onclick="ativarPresc(${p.id})">▶</button>`:''}
+            </div>
+          </td>
+        </tr>`;
+      });
+    });
+    tb.innerHTML = html;
+    popularSelectInternacoes();
+  } catch(e) {
+    document.getElementById('tbodyPresc').innerHTML = '<tr><td colspan="9" class="empty">Erro ao carregar prescrições</td></tr>';
+  }
+}
+
+function buildSchedule(freq) {
+  const f = freq.toLowerCase();
+  const manha  = /1x|manhã|morning|6h|7h|8h|12.12|24h/i.test(f);
+  const tarde  = /2x|tarde|afternoon|12h|8.8|almoço/i.test(f);
+  const noite  = /3x|noite|night|8h|6.6|8.8/i.test(f);
+  const cont   = /contínuo|ev|infusão/i.test(f);
+
+  if (cont) return `<div class="sched"><span class="sched-icon active" title="Contínuo">🔄</span></div>`;
+  return `<div class="sched">
+    <span class="sched-icon ${manha||!freq?'active':''}" title="Manhã">🌅</span>
+    <span class="sched-icon ${tarde?'active':''}" title="Tarde">☀️</span>
+    <span class="sched-icon ${noite||f.includes('8.8')||f.includes('8/8')?'active':''}" title="Noite">🌙</span>
+  </div>`;
+}
+
+function abrirModalPresc() {
+  popularSelectInternacoes();
+  ['pMed','pDose','pFreq','pDur','pMedico','pObs'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.value='';
+  });
+  const via=document.getElementById('pVia'); if(via) via.value='oral';
+  abrirModal('modalPresc');
+}
+function popularSelectInternacoes() {
+  const sel = document.getElementById('pIntId');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— selecione internação —</option>' +
+    _internacoesList.map(i=>`<option value="${i.id}">${i.paciente_nome} (Leito ${i.leito_numero||'—'})</option>`).join('');
+}
+async function salvarPresc() {
+  const intId = v('pIntId');
+  if (!intId) return toast('Selecione a internação','warn');
+  if (!v('pMed')) return toast('Informe o medicamento','warn');
+  const body = {
+    medicamento:v('pMed'), dose:v('pDose'), via:v('pVia'),
+    frequencia:v('pFreq'), duracao_dias:v('pDur')||null,
+    medico:v('pMedico'), observacoes:v('pObs'),
+  };
+  try {
+    await api(`/api/hospital/internacoes/${intId}/prescricoes/`, {method:'POST', body:JSON.stringify(body)});
+    fecharModal('modalPresc');
+    toast('Prescrição salva com sucesso','ok');
+    carregarPrescricoes();
+  } catch(e) { toast('Erro ao salvar prescrição: '+e.message,'error'); }
+}
+async function suspenderPresc(id) {
+  try {
+    await api(`/api/hospital/prescricoes/${id}/status/`, {method:'PUT', body:JSON.stringify({status:'suspensa'})});
+    toast('Prescrição suspensa','warn');
+    carregarPrescricoes();
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+async function ativarPresc(id) {
+  try {
+    await api(`/api/hospital/prescricoes/${id}/status/`, {method:'PUT', body:JSON.stringify({status:'ativa'})});
+    toast('Prescrição reativada','ok');
+    carregarPrescricoes();
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// SELECT HELPERS
+// ══════════════════════════════════════════════════════════════
 function popularSelectPacientes(sid) {
   const ids = sid ? [sid] : ['tPac','intPac'];
   ids.forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
     const prev = sel.value;
-    sel.innerHTML = '<option value="">— selecione —</option>' + _pacientes.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+    sel.innerHTML = '<option value="">— selecione paciente —</option>' +
+      _pacientes.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
     if (prev) sel.value = prev;
   });
 }
@@ -703,34 +1547,34 @@ function popularSelectLeitos(sid, soDisp=false) {
   const sel = document.getElementById(sid||'intLeito');
   if (!sel) return;
   const lista = soDisp ? _leitos.filter(l=>l.status==='disponivel') : _leitos;
-  sel.innerHTML = '<option value="">— sem leito —</option>' + lista.map(l=>`<option value="${l.id}">Leito ${l.numero} (${l.departamento_nome})</option>`).join('');
+  sel.innerHTML = '<option value="">— sem leito —</option>' +
+    lista.map(l=>`<option value="${l.id}">Leito ${l.numero} (${l.departamento_nome||'—'})</option>`).join('');
 }
 function popularSelectDeps(sid) {
   const ids = sid ? [sid] : ['lDep'];
   ids.forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
-    sel.innerHTML = '<option value="">— selecione —</option>' + _departamentos.map(d=>`<option value="${d.id}">${d.nome}</option>`).join('');
+    sel.innerHTML = '<option value="">— selecione departamento —</option>' +
+      _departamentos.map(d=>`<option value="${d.id}">${d.nome}</option>`).join('');
   });
 }
 
-// ── Utils ─────────────────────────────────────────────────────
-function v(id) { return document.getElementById(id)?.value?.trim()||''; }
-function abrirModal(id) { document.getElementById(id).classList.add('open'); }
-function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
-function fmtDt(s) {
-  if (!s) return '—';
-  const d = new Date(s);
-  return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-}
+// ══════════════════════════════════════════════════════════════
+// TAB NAVIGATION
+// ══════════════════════════════════════════════════════════════
+const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes'];
 
-let _currentTab = 'leitos';
 function setTab(tab) {
   _currentTab = tab;
-  const tabs = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes'];
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===tab));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('tab-'+tab).classList.add('active');
+  ALL_TABS.forEach(t => {
+    const btn = document.getElementById('tabBtn-'+t);
+    const panel = document.getElementById('tab-'+t);
+    const nav = document.getElementById('nav-'+t);
+    if (btn) btn.classList.toggle('active', t===tab);
+    if (panel) panel.classList.toggle('active', t===tab);
+    if (nav) nav.classList.toggle('active', t===tab);
+  });
   if (tab==='leitos') carregarLeitos();
   else if (tab==='triagem') { carregarPacientes(); carregarTriagens(); }
   else if (tab==='internacoes') { carregarPacientes(); carregarLeitos(); carregarInternacoes(); }
@@ -739,81 +1583,89 @@ function setTab(tab) {
   else if (tab==='prescricoes') carregarPrescricoes();
 }
 
-// ── Prescrições ────────────────────────────────────────────────
-let _internacoesList = [];
-async function carregarPrescricoes() {
-  // Buscar todas as internações ativas e depois suas prescrições
-  const di = await api('/api/hospital/internacoes/?status=ativo');
-  _internacoesList = di.internacoes || [];
-  const status = document.getElementById('filtroPrescStatus')?.value || '';
-  const tb = document.getElementById('tbodyPresc');
-  if (!_internacoesList.length) {
-    tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma internação ativa</td></tr>'; return;
+// ══════════════════════════════════════════════════════════════
+// GLOBAL SEARCH
+// ══════════════════════════════════════════════════════════════
+function handleGlobalSearch(q) {
+  if (!q || q.length < 2) return;
+  clearTimeout(window._gsTimer);
+  window._gsTimer = setTimeout(()=>{
+    // Search in pacientes tab
+    setTab('pacientes');
+    document.getElementById('buscaPac').value = q;
+    carregarPacientes(q);
+  }, 400);
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODAL HELPERS
+// ══════════════════════════════════════════════════════════════
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>
+  m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); })
+);
+
+// ══════════════════════════════════════════════════════════════
+// NOTIFICATION PANEL (simple toggle)
+// ══════════════════════════════════════════════════════════════
+function toggleNotifications() {
+  if (_urgentTriageCount > 0) {
+    toast(`${_urgentTriageCount} paciente${_urgentTriageCount>1?'s':''} urgente${_urgentTriageCount>1?'s':''} na triagem`, 'warn', 6000);
+  } else {
+    toast('Sem alertas críticos no momento', 'info', 3000);
   }
-  // Carregar prescrições de todas as internações ativas em paralelo
-  const resultados = await Promise.all(_internacoesList.map(async int => {
-    const dp = await api(`/api/hospital/internacoes/${int.id}/prescricoes/?status=${status}`);
-    return (dp.prescricoes || []).map(p => ({...p, _int: int}));
-  }));
-  const prescricoes = resultados.flat();
-  if (!prescricoes.length) {
-    tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma prescrição encontrada</td></tr>'; return;
-  }
-  const SMAP = {ativa:'<span style="color:var(--ok)">Ativa</span>',suspensa:'<span style="color:var(--warn)">Suspensa</span>',concluida:'<span style="color:var(--muted)">Concluída</span>',cancelada:'<span style="color:var(--danger)">Cancelada</span>'};
-  tb.innerHTML = prescricoes.map(p => `<tr>
-    <td>${p.paciente_nome}</td>
-    <td><strong>${p.medicamento}</strong></td>
-    <td>${p.dose||'—'}</td>
-    <td>${p.via_label}</td>
-    <td>${p.frequencia||'—'}</td>
-    <td>${p.duracao_dias ? p.duracao_dias+'d' : '—'}</td>
-    <td>${p.medico||'—'}</td>
-    <td>${SMAP[p.status]||p.status}</td>
-    <td>
-      ${p.status==='ativa' ? `<button class="btn btn-ghost btn-sm" onclick="suspenderPresc(${p.id})">⏸ Suspender</button>` : ''}
-      ${p.status==='suspensa' ? `<button class="btn btn-ghost btn-sm" onclick="ativarPresc(${p.id})">▶ Ativar</button>` : ''}
-    </td>
-  </tr>`).join('');
 }
 
-function abrirModalPresc() {
-  const sel = document.getElementById('pIntId');
-  if (sel) sel.innerHTML = '<option value="">— selecione —</option>' + _internacoesList.map(i=>`<option value="${i.id}">${i.paciente_nome} (leito ${i.leito_numero})</option>`).join('');
-  ['pMed','pDose','pFreq','pDur','pMedico','pObs'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  const via=document.getElementById('pVia'); if(via) via.value='oral';
-  abrirModal('modalPresc');
+// ══════════════════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════════════════
+function v(id) { return document.getElementById(id)?.value?.trim()||''; }
+
+function fmtDt(s) {
+  if (!s) return '—';
+  const d = new Date(s);
+  return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 
-async function salvarPresc() {
-  const intId = v('pIntId');
-  if (!intId) return alert('Selecione a internação');
-  if (!v('pMed')) return alert('Informe o medicamento');
-  const body = {
-    medicamento: v('pMed'), dose: v('pDose'), via: v('pVia'),
-    frequencia: v('pFreq'), duracao_dias: v('pDur') || null,
-    medico: v('pMedico'), observacoes: v('pObs'),
-  };
-  await api(`/api/hospital/internacoes/${intId}/prescricoes/`, {method:'POST', body:JSON.stringify(body)});
-  fecharModal('modalPresc');
-  carregarPrescricoes();
+function calcElapsed(s) {
+  if (!s) return '—';
+  const diff = Date.now() - new Date(s).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h${mins%60>0?` ${mins%60}min`:''}`;
+  return `${Math.floor(hrs/24)}d`;
 }
 
-async function suspenderPresc(id) {
-  await api(`/api/hospital/prescricoes/${id}/status/`, {method:'PUT', body:JSON.stringify({status:'suspensa'})});
-  carregarPrescricoes();
-}
-async function ativarPresc(id) {
-  await api(`/api/hospital/prescricoes/${id}/status/`, {method:'PUT', body:JSON.stringify({status:'ativa'})});
-  carregarPrescricoes();
+function calcHours(s) {
+  if (!s) return '';
+  const diff = Date.now() - new Date(s).getTime();
+  const hrs = Math.floor(diff / 3600000);
+  if (hrs < 1) return '< 1h';
+  if (hrs < 24) return `${hrs}h internado`;
+  return `${Math.floor(hrs/24)}d internado`;
 }
 
-document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
+function calcDays(s) {
+  if (!s) return 0;
+  return Math.max(0, Math.floor((Date.now() - new Date(s).getTime()) / 86400000));
+}
 
-// Init
-carregarKpis();
-carregarDepartamentos();
-carregarPacientes();
-carregarLeitos();
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+async function init() {
+  await Promise.all([
+    carregarKpis(),
+    carregarDepartamentos(),
+    carregarPacientes(),
+    carregarLeitos(),
+  ]);
+  startAutoRefresh();
+}
+
+init();
 </script>
 </body>
 </html>
