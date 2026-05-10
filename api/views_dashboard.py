@@ -250,6 +250,16 @@ def governo_gestao_page(request):
     return render(request, "governo_gestao.html")
 
 
+@ensure_csrf_cookie
+def rede_gestao_page(request):
+    return render(request, "rede_gestao.html")
+
+
+@ensure_csrf_cookie
+def plano_saude_gestao_page(request):
+    return render(request, "plano_saude_gestao.html")
+
+
 def _dashboard_return_url(empresa):
     return _dashboard_url_por_setor(_setor_conta(empresa))
 

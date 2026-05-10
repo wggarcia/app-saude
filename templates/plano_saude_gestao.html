@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plano de Saúde | SaúdeSaaS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#1a2332;min-height:100vh}
+.topbar{position:sticky;top:0;z-index:100;background:#0f2027;display:flex;align-items:center;gap:12px;padding:0 20px;height:56px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.topbar .brand{font-weight:700;font-size:1.05rem;color:#4fd1c5;letter-spacing:.5px}
+.topbar .page-title{color:#cbd5e0;font-size:.95rem;border-left:1px solid #2d3748;padding-left:12px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.btn-back{background:#2d3748;color:#cbd5e0;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-back:hover{background:#4a5568}
+.container{max-width:1400px;margin:0 auto;padding:24px 20px}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.page-header h1{font-size:1.4rem;font-weight:700}
+.page-header h1 span{color:#0bc5ea}
+.btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-size:.88rem;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.btn-primary{background:#0bc5ea;color:#fff}.btn-primary:hover{background:#00b5d8}
+.btn-success{background:#38a169;color:#fff}.btn-success:hover{background:#2f855a}
+.btn-warning{background:#d69e2e;color:#fff}.btn-warning:hover{background:#b7791f}
+.btn-danger{background:#e53e3e;color:#fff}.btn-danger:hover{background:#c53030}
+.btn-sm{padding:5px 12px;font-size:.8rem}
+.btn-ghost{background:transparent;border:1px solid #cbd5e0;color:#4a5568}.btn-ghost:hover{background:#edf2f7}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}
+.kpi{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.06);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ac,#0bc5ea)}
+.kpi-label{font-size:.75rem;color:#718096;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.kpi-val{font-size:1.8rem;font-weight:800;color:#1a2332;margin:4px 0 2px}
+.kpi-sub{font-size:.75rem;color:#718096}
+.layout{display:grid;grid-template-columns:280px 1fr;gap:20px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.sidebar-planos{display:flex;flex-direction:column;gap:12px}
+.plano-item{background:#fff;border-radius:12px;padding:16px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06);border-left:4px solid transparent;transition:all .15s}
+.plano-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.plano-item.active{border-left-color:#0bc5ea;background:#ebf8ff}
+.plano-item-name{font-weight:700;font-size:.95rem}
+.plano-item-ans{font-size:.75rem;color:#718096;margin-top:2px}
+.plano-item-stats{display:flex;gap:10px;margin-top:8px}
+.plano-item-stat{font-size:.75rem;color:#4a5568;background:#f0f4f8;padding:3px 8px;border-radius:6px;font-weight:600}
+.add-plano-btn{background:#f0f4f8;border:2px dashed #cbd5e0;border-radius:12px;padding:20px;text-align:center;cursor:pointer;color:#718096;font-size:.875rem;transition:all .15s}
+.add-plano-btn:hover{border-color:#0bc5ea;color:#0bc5ea}
+.content-area{min-height:400px}
+.tabs{display:flex;gap:4px;background:#fff;border-radius:10px;padding:6px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 18px;border-radius:8px;cursor:pointer;font-size:.88rem;font-weight:600;color:#718096;transition:all .15s;border:none;background:transparent}
+.tab.active{background:#0bc5ea;color:#fff}
+.tab-pane{display:none}.tab-pane.active{display:block}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e2e8f0}
+.card-header h3{font-size:1rem;font-weight:700}
+.card-body{padding:20px}
+table{width:100%;border-collapse:collapse;font-size:.875rem}
+th{text-align:left;padding:10px 12px;background:#f7fafc;font-weight:700;color:#4a5568;font-size:.8rem;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e2e8f0}
+td{padding:10px 12px;border-bottom:1px solid #f0f4f8;color:#2d3748}
+tr:hover td{background:#f7fafc}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:.75rem;font-weight:700}
+.badge-green{background:#c6f6d5;color:#276749}.badge-yellow{background:#fefcbf;color:#744210}.badge-red{background:#fed7d7;color:#822727}.badge-blue{background:#bee3f8;color:#2a69ac}.badge-gray{background:#edf2f7;color:#4a5568}.badge-purple{background:#e9d8fd;color:#553c9a}.badge-orange{background:#feebc8;color:#744210}
+.pipeline{display:flex;gap:0;margin-bottom:20px;overflow-x:auto}
+.ps{flex:1;min-width:100px;text-align:center;padding:12px 8px;font-size:.8rem;font-weight:700;background:#edf2f7;color:#718096;border-right:2px solid #fff;position:relative;cursor:pointer;transition:all .15s}
+.ps:first-child{border-radius:8px 0 0 8px}.ps:last-child{border-radius:0 8px 8px 0;border-right:none}
+.ps.active{background:#0bc5ea;color:#fff}
+.ps .ps-count{display:block;font-size:1.4rem;font-weight:800;margin-bottom:2px}
+.empty-state{text-align:center;padding:48px;color:#a0aec0}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.hidden{display:none}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal-head{padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1}
+.modal-head h3{font-size:1.05rem;font-weight:700}
+.modal-close{background:none;border:none;cursor:pointer;font-size:1.3rem;color:#718096}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:#fff}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:.8rem;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.3px}
+.form-group input,.form-group select,.form-group textarea{padding:9px 13px;border:1px solid #e2e8f0;border-radius:8px;font-size:.875rem;outline:none;width:100%}
+.form-group input:focus,.form-group select:focus{border-color:#0bc5ea}
+.form-group textarea{resize:vertical;min-height:80px}
+.search-bar{display:flex;gap:10px;margin-bottom:16px}
+.search-bar input{flex:1;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:.875rem;outline:none}
+.search-bar input:focus{border-color:#0bc5ea}
+.search-bar select{padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:.875rem}
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{background:#1a2332;color:#fff;padding:12px 18px;border-radius:10px;font-size:.875rem;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.3);transform:translateX(120%);transition:transform .3s;max-width:320px;display:flex;align-items:center;gap:8px}
+.toast.show{transform:translateX(0)}
+.toast.ok::before{content:'✓';color:#38a169;font-weight:800}
+.toast.err::before{content:'✕';color:#e53e3e;font-weight:800}
+.info-banner{background:#ebf8ff;border:1px solid #bee3f8;border-radius:10px;padding:16px;color:#2a69ac;font-size:.875rem;margin-bottom:16px}
+.guia-workflow{display:flex;gap:0;margin-bottom:20px}
+.wf-step{flex:1;text-align:center;padding:10px;font-size:.75rem;font-weight:700;background:#f7fafc;color:#a0aec0;border-right:1px solid #e2e8f0;transition:all .15s}
+.wf-step:first-child{border-radius:8px 0 0 8px}.wf-step:last-child{border-radius:0 8px 8px 0;border-right:none}
+.wf-step .wf-n{font-size:1.4rem;font-weight:800;display:block;margin-bottom:2px}
+.wf-step.s{color:#0bc5ea;background:#ebf8ff}
+.wf-step.a{color:#38a169;background:#c6f6d5}
+.wf-step.n{color:#e53e3e;background:#fed7d7}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="brand">SaúdeSaaS</span>
+  <span class="page-title">Plano de Saúde</span>
+  <div class="topbar-right">
+    <a href="/farmacia/gestao/" class="btn-back">← Farmácia</a>
+    <a href="/hospital/gestao/" class="btn-back">← Hospital</a>
+    <a href="/rede/gestao/" class="btn-back">← Rede</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Gestão de <span>Planos de Saúde</span></h1>
+    <button class="btn btn-primary" onclick="abrirModalPlano()">+ Novo Plano</button>
+  </div>
+
+  <!-- KPIs globais -->
+  <div class="kpi-row" id="kpiRow">
+    <div class="kpi" style="--ac:#0bc5ea"><div class="kpi-label">Total Beneficiários</div><div class="kpi-val" id="kpiTotalBens">—</div><div class="kpi-sub">em todos os planos</div></div>
+    <div class="kpi" style="--ac:#38a169"><div class="kpi-label">Beneficiários Ativos</div><div class="kpi-val" id="kpiBensAtivos">—</div><div class="kpi-sub">situação ativa</div></div>
+    <div class="kpi" style="--ac:#d69e2e"><div class="kpi-label">Guias Pendentes</div><div class="kpi-val" id="kpiGuiasPend">—</div><div class="kpi-sub">aguardando análise</div></div>
+    <div class="kpi" style="--ac:#e53e3e"><div class="kpi-label">Guias Negadas</div><div class="kpi-val" id="kpiGuiasNeg">—</div><div class="kpi-sub">no período</div></div>
+  </div>
+
+  <div class="layout">
+    <!-- Sidebar: Lista de planos -->
+    <div class="sidebar-planos">
+      <div id="listPlanos"><div style="color:#a0aec0;font-size:.85rem;padding:16px;text-align:center">Carregando...</div></div>
+      <div class="add-plano-btn" onclick="abrirModalPlano()">+ Adicionar Plano</div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="content-area">
+      <div id="selectPlanoMsg" class="info-banner">Selecione um plano de saúde na lista à esquerda para gerenciar beneficiários e guias de autorização.</div>
+
+      <div id="planoContent" style="display:none">
+        <!-- Plano header -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header">
+            <div>
+              <h3 id="planoNome">—</h3>
+              <div style="font-size:.8rem;color:#718096;margin-top:2px" id="planoMeta">—</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost btn-sm" onclick="abrirModalEditarPlano()">Editar</button>
+              <button class="btn btn-danger btn-sm" onclick="desativarPlano()">Desativar</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <!-- Mini KPIs do plano selecionado -->
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+              <div style="text-align:center"><div style="font-size:.7rem;color:#718096;font-weight:600;text-transform:uppercase">Beneficiários</div><div style="font-size:1.4rem;font-weight:800" id="pkBens">—</div></div>
+              <div style="text-align:center"><div style="font-size:.7rem;color:#718096;font-weight:600;text-transform:uppercase">Ativos</div><div style="font-size:1.4rem;font-weight:800;color:#38a169" id="pkAtivos">—</div></div>
+              <div style="text-align:center"><div style="font-size:.7rem;color:#718096;font-weight:600;text-transform:uppercase">Guias Pend.</div><div style="font-size:1.4rem;font-weight:800;color:#d69e2e" id="pkPend">—</div></div>
+              <div style="text-align:center"><div style="font-size:.7rem;color:#718096;font-weight:600;text-transform:uppercase">Autorizadas</div><div style="font-size:1.4rem;font-weight:800;color:#0bc5ea" id="pkAuth">—</div></div>
+              <div style="text-align:center"><div style="font-size:.7rem;color:#718096;font-weight:600;text-transform:uppercase">Negadas</div><div style="font-size:1.4rem;font-weight:800;color:#e53e3e" id="pkNeg">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-tabs -->
+        <div class="tabs">
+          <button class="tab active" onclick="abrirSubAba('sub-beneficiarios')">Beneficiários</button>
+          <button class="tab" onclick="abrirSubAba('sub-guias')">Guias de Autorização</button>
+        </div>
+
+        <!-- Sub-tab: Beneficiários -->
+        <div class="tab-pane active" id="sub-beneficiarios">
+          <div class="search-bar">
+            <input type="text" id="searchBen" placeholder="Buscar por nome, CPF ou carteirinha..." oninput="carregarBeneficiarios()">
+            <select id="filterSituacao" onchange="carregarBeneficiarios()">
+              <option value="">Todas situações</option>
+              <option value="ativo">Ativo</option>
+              <option value="suspenso">Suspenso</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="abrirModalBeneficiario()">+ Novo</button>
+          </div>
+          <div class="card">
+            <table>
+              <thead><tr><th>Nome</th><th>CPF</th><th>Carteirinha</th><th>Plano</th><th>Acomodação</th><th>Situação</th><th>Vigência</th><th></th></tr></thead>
+              <tbody id="tbBens"><tr><td colspan="8" style="text-align:center;padding:24px;color:#a0aec0">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sub-tab: Guias -->
+        <div class="tab-pane" id="sub-guias">
+          <!-- Pipeline de guias -->
+          <div class="guia-workflow" id="guiaWorkflow">
+            <div class="wf-step"><span class="wf-n" id="wfSolic">—</span>Solicitadas</div>
+            <div class="wf-step s"><span class="wf-n" id="wfAnal">—</span>Em Análise</div>
+            <div class="wf-step a"><span class="wf-n" id="wfAuth">—</span>Autorizadas</div>
+            <div class="wf-step n"><span class="wf-n" id="wfNeg">—</span>Negadas</div>
+          </div>
+          <div class="search-bar">
+            <select id="filterGuiaStatus" onchange="carregarGuias()">
+              <option value="">Todos os status</option>
+              <option value="solicitada">Solicitada</option>
+              <option value="em_analise">Em Análise</option>
+              <option value="autorizada">Autorizada</option>
+              <option value="negada">Negada</option>
+              <option value="cancelada">Cancelada</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="abrirModalGuia()">+ Nova Guia</button>
+          </div>
+          <div class="card">
+            <table>
+              <thead><tr><th>Nº Guia</th><th>Tipo</th><th>Beneficiário</th><th>Procedimento</th><th>Médico/CRM</th><th>Valor Est.</th><th>Status</th><th></th></tr></thead>
+              <tbody id="tbGuias"><tr><td colspan="8" style="text-align:center;padding:24px;color:#a0aec0">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo/Editar Plano -->
+<div class="modal-overlay hidden" id="modalPlano">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalPlanoTitle">Novo Plano de Saúde</h3><button class="modal-close" onclick="fecharModal('modalPlano')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1"><label>Nome do Plano</label><input type="text" id="plNome" placeholder="Ex: Unimed Nacional"></div>
+        <div class="form-group"><label>Registro ANS</label><input type="text" id="plANS" placeholder="000000"></div>
+        <div class="form-group"><label>CNPJ</label><input type="text" id="plCNPJ" placeholder="00.000.000/0001-00"></div>
+        <div class="form-group"><label>Modalidade</label><select id="plModalidade"><option value="">Selecione</option><option value="cooperativa">Cooperativa Médica</option><option value="autogestao">Autogestão</option><option value="seguradora">Seguradora</option><option value="filantropico">Filantrópico</option><option value="outro">Outro</option></select></div>
+        <div class="form-group"><label>Abrangência</label><select id="plAbrangencia"><option value="nacional">Nacional</option><option value="regional">Regional</option><option value="municipal">Municipal</option><option value="estadual">Estadual</option></select></div>
+        <div class="form-group"><label>Telefone</label><input type="text" id="plTelefone"></div>
+        <div class="form-group"><label>E-mail</label><input type="email" id="plEmail"></div>
+        <div class="form-group"><label>Site</label><input type="url" id="plSite" placeholder="https://"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalPlano')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPlano()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo/Editar Beneficiário -->
+<div class="modal-overlay hidden" id="modalBeneficiario">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalBenTitle">Novo Beneficiário</h3><button class="modal-close" onclick="fecharModal('modalBeneficiario')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1"><label>Nome Completo</label><input type="text" id="benNome"></div>
+        <div class="form-group"><label>CPF</label><input type="text" id="benCPF" placeholder="000.000.000-00"></div>
+        <div class="form-group"><label>Nº Carteirinha</label><input type="text" id="benCarteirinha"></div>
+        <div class="form-group"><label>Data de Nascimento</label><input type="date" id="benNasc"></div>
+        <div class="form-group"><label>Sexo</label><select id="benSexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option></select></div>
+        <div class="form-group"><label>Telefone</label><input type="text" id="benTel"></div>
+        <div class="form-group"><label>E-mail</label><input type="email" id="benEmail"></div>
+        <div class="form-group"><label>Plano/Tipo</label><input type="text" id="benTipo" placeholder="Ex: Ouro, Enfermaria"></div>
+        <div class="form-group"><label>Acomodação</label><select id="benAcomoda"><option value="enfermaria">Enfermaria</option><option value="apartamento">Apartamento</option><option value="uti">UTI</option></select></div>
+        <div class="form-group"><label>Situação</label><select id="benSituacao"><option value="ativo">Ativo</option><option value="suspenso">Suspenso</option><option value="cancelado">Cancelado</option></select></div>
+        <div class="form-group"><label>Início Vigência</label><input type="date" id="benInicioVig"></div>
+        <div class="form-group"><label>Fim Vigência</label><input type="date" id="benFimVig"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalBeneficiario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarBeneficiario()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova Guia -->
+<div class="modal-overlay hidden" id="modalGuia">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalGuiaTitle">Nova Guia de Autorização</h3><button class="modal-close" onclick="fecharModal('modalGuia')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1"><label>Beneficiário</label><select id="guiaBen"><option value="">Selecione...</option></select></div>
+        <div class="form-group"><label>Tipo</label><select id="guiaTipo"><option value="consulta">Consulta</option><option value="exame">Exame</option><option value="internacao">Internação</option><option value="medicamento">Medicamento Alto Custo</option><option value="procedimento">Procedimento Cirúrgico</option></select></div>
+        <div class="form-group"><label>Nº Guia</label><input type="text" id="guiaNumero" placeholder="Gerado automaticamente se vazio"></div>
+        <div class="form-group"><label>Código Procedimento (TUSS)</label><input type="text" id="guiaCodProc"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>Descrição do Procedimento</label><textarea id="guiaDescProc"></textarea></div>
+        <div class="form-group"><label>CID</label><input type="text" id="guiaCID" placeholder="Ex: J18.9"></div>
+        <div class="form-group"><label>Médico Solicitante</label><input type="text" id="guiaMedico"></div>
+        <div class="form-group"><label>CRM</label><input type="text" id="guiaCRM"></div>
+        <div class="form-group"><label>Quantidade</label><input type="number" id="guiaQtd" min="1" value="1"></div>
+        <div class="form-group"><label>Valor Estimado (R$)</label><input type="number" id="guiaValor" step="0.01" min="0"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalGuia')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarGuia()">Solicitar Guia</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Atualizar Status Guia -->
+<div class="modal-overlay hidden" id="modalGuiaStatus">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head"><h3>Atualizar Guia</h3><button class="modal-close" onclick="fecharModal('modalGuiaStatus')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="guiaStatusId">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1"><label>Status</label><select id="guiaNovoStatus"><option value="solicitada">Solicitada</option><option value="em_analise">Em Análise</option><option value="autorizada">Autorizada</option><option value="negada">Negada</option><option value="cancelada">Cancelada</option></select></div>
+        <div class="form-group"><label>Nº Autorização</label><input type="text" id="guiaNumAuth"></div>
+        <div class="form-group"><label>Validade</label><input type="date" id="guiaValidade"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>Justificativa (se negada)</label><textarea id="guiaJustif" rows="3"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalGuiaStatus')">Cancelar</button>
+      <button class="btn btn-primary" onclick="atualizarGuia()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+let _planos=[],_planoAtivo=null,_beneficiarios=[],_benMap={},_editBenId=null,_editGuiaId=null;
+
+function getCsrf(){return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1]||''}
+function toast(msg,tipo='ok'){const d=document.createElement('div');d.className=`toast ${tipo}`;d.textContent=msg;const c=document.getElementById('toastContainer');c.appendChild(d);requestAnimationFrame(()=>d.classList.add('show'));setTimeout(()=>{d.classList.remove('show');setTimeout(()=>d.remove(),400)},4000)}
+function fecharModal(id){document.getElementById(id).classList.add('hidden')}
+function abrirSubAba(id){document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById(id).classList.add('active');const idx={'sub-beneficiarios':0,'sub-guias':1}[id]??0;document.querySelectorAll('.tab')[idx]?.classList.add('active');if(id==='sub-guias')carregarGuias()}
+
+async function carregarPlanos(){
+  const r=await fetch('/api/planos-saude/');
+  const d=await r.json();
+  _planos=d.planos||[];
+  renderListaPlanos();
+  // aggregate KPIs
+  let tb=0,ta=0,tp=0,tn=0;
+  for(const p of _planos){tb+=p.total_beneficiarios||0;tp+=p.guias_pendentes||0}
+  document.getElementById('kpiTotalBens').textContent=tb;
+  document.getElementById('kpiGuiasPend').textContent=tp;
+  if(_planoAtivo)selecionarPlano(_planoAtivo.id);
+}
+
+function renderListaPlanos(){
+  const el=document.getElementById('listPlanos');
+  if(!_planos.length){el.innerHTML='<div style="color:#a0aec0;font-size:.85rem;padding:16px;text-align:center">Nenhum plano cadastrado</div>';return}
+  el.innerHTML=_planos.map(p=>`<div class="plano-item ${_planoAtivo?.id===p.id?'active':''}" onclick="selecionarPlano(${p.id})">
+    <div class="plano-item-name">${p.nome}</div>
+    <div class="plano-item-ans">ANS: ${p.registro_ans||'—'} • ${p.modalidade||'—'}</div>
+    <div class="plano-item-stats">
+      <span class="plano-item-stat">${p.total_beneficiarios} benef.</span>
+      ${p.guias_pendentes?`<span class="plano-item-stat" style="background:#fefcbf;color:#744210">${p.guias_pendentes} guias pend.</span>`:''}
+      <span class="plano-item-stat ${p.status==='ativo'?'':'opacity:.5'}">${p.status}</span>
+    </div>
+  </div>`).join('');
+}
+
+function selecionarPlano(id){
+  _planoAtivo=_planos.find(p=>p.id===id);
+  renderListaPlanos();
+  document.getElementById('selectPlanoMsg').style.display='none';
+  document.getElementById('planoContent').style.display='block';
+  document.getElementById('planoNome').textContent=_planoAtivo.nome;
+  document.getElementById('planoMeta').textContent=`ANS ${_planoAtivo.registro_ans||'—'} • CNPJ ${_planoAtivo.cnpj||'—'} • ${_planoAtivo.modalidade||'—'} • ${_planoAtivo.abrangencia||'—'}`;
+  carregarKpisPlano();
+  carregarBeneficiarios();
+}
+
+async function carregarKpisPlano(){
+  const r=await fetch(`/api/planos-saude/${_planoAtivo.id}/kpis/`);
+  const d=await r.json();
+  document.getElementById('pkBens').textContent=d.total_beneficiarios;
+  document.getElementById('pkAtivos').textContent=d.beneficiarios_ativos;
+  document.getElementById('pkPend').textContent=d.guias_pendentes;
+  document.getElementById('pkAuth').textContent=d.guias_autorizadas;
+  document.getElementById('pkNeg').textContent=d.guias_negadas;
+  document.getElementById('kpiBensAtivos').textContent=d.beneficiarios_ativos;
+  document.getElementById('kpiGuiasNeg').textContent=d.guias_negadas;
+}
+
+async function carregarBeneficiarios(){
+  if(!_planoAtivo)return;
+  const q=document.getElementById('searchBen')?.value||'';
+  const r=await fetch(`/api/planos-saude/${_planoAtivo.id}/beneficiarios/?q=${encodeURIComponent(q)}`);
+  const d=await r.json();
+  _beneficiarios=d.beneficiarios||[];
+  _benMap={};_beneficiarios.forEach(b=>_benMap[b.id]=b);
+  const STATUS_BADGE={ativo:'badge-green',suspenso:'badge-yellow',cancelado:'badge-red'};
+  const tb=document.getElementById('tbBens');
+  if(!_beneficiarios.length){tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:24px;color:#a0aec0">Nenhum beneficiário encontrado.</td></tr>`;return}
+  tb.innerHTML=_beneficiarios.map(b=>`<tr>
+    <td><strong>${b.nome}</strong></td>
+    <td>${b.cpf||'—'}</td>
+    <td>${b.numero_carteirinha||'—'}</td>
+    <td>${b.plano_tipo||'—'}</td>
+    <td>${b.acomodacao||'—'}</td>
+    <td><span class="badge ${STATUS_BADGE[b.situacao]||'badge-gray'}">${b.situacao}</span></td>
+    <td>${b.data_inicio_vigencia||'—'}${b.data_fim_vigencia?' → '+b.data_fim_vigencia:''}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="editarBeneficiario(${b.id})">Editar</button></td>
+  </tr>`).join('');
+}
+
+async function carregarGuias(){
+  if(!_planoAtivo)return;
+  const sf=document.getElementById('filterGuiaStatus')?.value||'';
+  const r=await fetch(`/api/planos-saude/${_planoAtivo.id}/guias/${sf?'?status='+sf:''}`);
+  const d=await r.json();
+  const stats=d.stats||{};
+  document.getElementById('wfSolic').textContent=stats.solicitadas||0;
+  document.getElementById('wfAnal').textContent=stats.em_analise||0;
+  document.getElementById('wfAuth').textContent=stats.autorizadas||0;
+  document.getElementById('wfNeg').textContent=stats.negadas||0;
+  const STATUS_BADGE={solicitada:'badge-gray',em_analise:'badge-yellow',autorizada:'badge-green',negada:'badge-red',cancelada:'badge-gray'};
+  const TIPO_LABEL={consulta:'Consulta',exame:'Exame',internacao:'Internação',medicamento:'Medicamento',procedimento:'Procedimento'};
+  const tb=document.getElementById('tbGuias');
+  const guias=d.guias||[];
+  if(!guias.length){tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:24px;color:#a0aec0">Nenhuma guia encontrada.</td></tr>`;return}
+  tb.innerHTML=guias.map(g=>`<tr>
+    <td><strong>${g.numero_guia}</strong></td>
+    <td><span class="badge badge-blue">${TIPO_LABEL[g.tipo]||g.tipo}</span></td>
+    <td>${g.beneficiario_nome}<br><small style="color:#718096">${g.beneficiario_carteirinha}</small></td>
+    <td>${g.descricao_procedimento||g.codigo_procedimento||'—'}</td>
+    <td>${g.medico_solicitante||'—'}${g.crm_medico?' ('+g.crm_medico+')':''}</td>
+    <td>${g.valor_estimado?'R$ '+parseFloat(g.valor_estimado).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td>
+    <td><span class="badge ${STATUS_BADGE[g.status]||'badge-gray'}">${g.status}</span></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="abrirStatusGuia(${g.id},'${g.status}','${g.numero_autorizacao||''}','${g.validade_autorizacao||''}','${g.justificativa_negativa||''}')">Atualizar</button></td>
+  </tr>`).join('');
+}
+
+function abrirModalPlano(){_editBenId=null;document.getElementById('modalPlanoTitle').textContent='Novo Plano de Saúde';['plNome','plANS','plCNPJ','plTelefone','plEmail','plSite'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('modalPlano').classList.remove('hidden')}
+function abrirModalEditarPlano(){if(!_planoAtivo)return;document.getElementById('modalPlanoTitle').textContent='Editar Plano';document.getElementById('plNome').value=_planoAtivo.nome||'';document.getElementById('plANS').value=_planoAtivo.registro_ans||'';document.getElementById('plCNPJ').value=_planoAtivo.cnpj||'';document.getElementById('plModalidade').value=_planoAtivo.modalidade||'';document.getElementById('plAbrangencia').value=_planoAtivo.abrangencia||'nacional';document.getElementById('plTelefone').value=_planoAtivo.telefone||'';document.getElementById('plEmail').value=_planoAtivo.email||'';document.getElementById('plSite').value=_planoAtivo.site||'';document.getElementById('modalPlano').classList.remove('hidden')}
+
+async function salvarPlano(){
+  const nome=document.getElementById('plNome').value.trim();
+  if(!nome){toast('Informe o nome do plano','err');return}
+  const body={nome,registro_ans:document.getElementById('plANS').value,cnpj:document.getElementById('plCNPJ').value,modalidade:document.getElementById('plModalidade').value,abrangencia:document.getElementById('plAbrangencia').value,telefone:document.getElementById('plTelefone').value,email:document.getElementById('plEmail').value,site:document.getElementById('plSite').value};
+  const r=await fetch('/api/planos-saude/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(d.ok){fecharModal('modalPlano');carregarPlanos();toast('Plano salvo!')}else toast(d.erro||'Erro','err');
+}
+
+async function desativarPlano(){
+  if(!_planoAtivo||!confirm('Desativar este plano?'))return;
+  const r=await fetch(`/api/planos-saude/${_planoAtivo.id}/`,{method:'DELETE',headers:{'X-CSRFToken':getCsrf()}});
+  if(r.ok){_planoAtivo=null;document.getElementById('planoContent').style.display='none';document.getElementById('selectPlanoMsg').style.display='';toast('Plano desativado');carregarPlanos()}else toast('Erro','err');
+}
+
+function abrirModalBeneficiario(){_editBenId=null;document.getElementById('modalBenTitle').textContent='Novo Beneficiário';['benNome','benCPF','benCarteirinha','benNasc','benTel','benEmail','benTipo','benInicioVig','benFimVig'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('benSexo').value='';document.getElementById('benAcomoda').value='enfermaria';document.getElementById('benSituacao').value='ativo';document.getElementById('modalBeneficiario').classList.remove('hidden')}
+
+function editarBeneficiario(id){
+  const b=_benMap[id];if(!b)return;
+  _editBenId=id;
+  document.getElementById('modalBenTitle').textContent='Editar Beneficiário';
+  document.getElementById('benNome').value=b.nome||'';
+  document.getElementById('benCPF').value=b.cpf||'';
+  document.getElementById('benCarteirinha').value=b.numero_carteirinha||'';
+  document.getElementById('benNasc').value=b.data_nascimento||'';
+  document.getElementById('benSexo').value=b.sexo||'';
+  document.getElementById('benTel').value=b.telefone||'';
+  document.getElementById('benEmail').value=b.email||'';
+  document.getElementById('benTipo').value=b.plano_tipo||'';
+  document.getElementById('benAcomoda').value=b.acomodacao||'enfermaria';
+  document.getElementById('benSituacao').value=b.situacao||'ativo';
+  document.getElementById('benInicioVig').value=b.data_inicio_vigencia||'';
+  document.getElementById('benFimVig').value=b.data_fim_vigencia||'';
+  document.getElementById('modalBeneficiario').classList.remove('hidden');
+}
+
+async function salvarBeneficiario(){
+  if(!_planoAtivo)return;
+  const body={nome:document.getElementById('benNome').value,cpf:document.getElementById('benCPF').value,numero_carteirinha:document.getElementById('benCarteirinha').value,data_nascimento:document.getElementById('benNasc').value||null,sexo:document.getElementById('benSexo').value,telefone:document.getElementById('benTel').value,email:document.getElementById('benEmail').value,plano_tipo:document.getElementById('benTipo').value,acomodacao:document.getElementById('benAcomoda').value,situacao:document.getElementById('benSituacao').value,data_inicio_vigencia:document.getElementById('benInicioVig').value||null,data_fim_vigencia:document.getElementById('benFimVig').value||null};
+  const url=_editBenId?`/api/planos-saude/${_planoAtivo.id}/beneficiarios/${_editBenId}/`:`/api/planos-saude/${_planoAtivo.id}/beneficiarios/`;
+  const method=_editBenId?'PUT':'POST';
+  const r=await fetch(url,{method,headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(d.ok){fecharModal('modalBeneficiario');carregarBeneficiarios();carregarKpisPlano();toast('Beneficiário salvo!')}else toast(d.erro||'Erro','err');
+}
+
+function abrirModalGuia(){
+  if(!_planoAtivo)return;
+  document.getElementById('modalGuiaTitle').textContent='Nova Guia de Autorização';
+  const sel=document.getElementById('guiaBen');
+  sel.innerHTML='<option value="">Selecione o beneficiário...</option>'+_beneficiarios.filter(b=>b.situacao==='ativo').map(b=>`<option value="${b.id}">${b.nome} (${b.numero_carteirinha||b.cpf||'—'})</option>`).join('');
+  ['guiaNumero','guiaCodProc','guiaDescProc','guiaCID','guiaMedico','guiaCRM','guiaValor'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  document.getElementById('guiaQtd').value='1';
+  document.getElementById('modalGuia').classList.remove('hidden');
+}
+
+async function salvarGuia(){
+  if(!_planoAtivo)return;
+  const benId=document.getElementById('guiaBen').value;
+  if(!benId){toast('Selecione o beneficiário','err');return}
+  const body={beneficiario_id:parseInt(benId),tipo:document.getElementById('guiaTipo').value,numero_guia:document.getElementById('guiaNumero').value,codigo_procedimento:document.getElementById('guiaCodProc').value,descricao_procedimento:document.getElementById('guiaDescProc').value,cid:document.getElementById('guiaCID').value,medico_solicitante:document.getElementById('guiaMedico').value,crm_medico:document.getElementById('guiaCRM').value,quantidade:parseInt(document.getElementById('guiaQtd').value)||1,valor_estimado:parseFloat(document.getElementById('guiaValor').value)||null};
+  const r=await fetch(`/api/planos-saude/${_planoAtivo.id}/guias/`,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(d.ok){fecharModal('modalGuia');carregarGuias();carregarKpisPlano();toast(`Guia ${d.numero_guia} criada!`)}else toast(d.erro||'Erro','err');
+}
+
+function abrirStatusGuia(id,status,numAuth,validade,justif){
+  document.getElementById('guiaStatusId').value=id;
+  document.getElementById('guiaNovoStatus').value=status;
+  document.getElementById('guiaNumAuth').value=numAuth;
+  document.getElementById('guiaValidade').value=validade;
+  document.getElementById('guiaJustif').value=justif;
+  document.getElementById('modalGuiaStatus').classList.remove('hidden');
+}
+
+async function atualizarGuia(){
+  if(!_planoAtivo)return;
+  const id=document.getElementById('guiaStatusId').value;
+  const body={status:document.getElementById('guiaNovoStatus').value,numero_autorizacao:document.getElementById('guiaNumAuth').value,validade_autorizacao:document.getElementById('guiaValidade').value||null,justificativa_negativa:document.getElementById('guiaJustif').value};
+  const r=await fetch(`/api/planos-saude/${_planoAtivo.id}/guias/${id}/`,{method:'PUT',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(body)});
+  if(r.ok){fecharModal('modalGuiaStatus');carregarGuias();carregarKpisPlano();toast('Guia atualizada!')}else toast('Erro','err');
+}
+
+carregarPlanos();
+setInterval(carregarPlanos,60000);
+</script>
+</body>
+</html>

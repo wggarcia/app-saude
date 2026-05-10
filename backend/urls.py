@@ -27,7 +27,7 @@ from api.views import (
 )
 
 from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba
-from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page
+from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page, rede_gestao_page, plano_saude_gestao_page
 from api.views_corporativo import (
     dashboard_empresa_corporativo,
     api_empresa_corporativo_resumo,
@@ -219,6 +219,14 @@ from api.views_governo_ops import (
     api_orcamentos_gov, api_planos_acao_gov, api_plano_acao_gov_detalhe,
     api_governo_ops_kpis, api_governo_pdf_relatorio,
 )
+from api.views_rede import (
+    api_redes, api_rede_convidar, api_rede_estoque, api_rede_item_disponibilidade,
+    api_transferencias, api_transferencia_detalhe,
+    api_mensagens_rede, api_mensagem_marcar_lida,
+    api_planos_saude, api_plano_saude_detalhe,
+    api_beneficiarios, api_beneficiario_detalhe,
+    api_guias, api_guia_detalhe, api_plano_kpis,
+)
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
 from api.governanca import api_auditoria_institucional, api_matriz_decisao, api_metodologia_epidemiologica
@@ -273,6 +281,8 @@ urlpatterns = [
     path('farmacia/gestao/', farmacia_gestao_page),
     path('hospital/gestao/', hospital_gestao_page),
     path('governo/gestao/', governo_gestao_page),
+    path('rede/gestao/', rede_gestao_page),
+    path('plano-saude/gestao/', plano_saude_gestao_page),
     path('sala-decisao-ia/', command_ai),
     path('command-ai/', command_ai),
     path('contrato-governo/', contrato_governo),
@@ -529,6 +539,23 @@ urlpatterns = [
     path('api/hospital/prescricoes/<int:prescricao_id>/status/', api_prescricao_status),
     path('api/hospital/pdf/internacoes/', api_hospital_pdf_internacoes),
     path('api/hospital/pdf/internacao/<int:internacao_id>/', api_hospital_pdf_ficha_internacao),
+    # ── Rede / Network ───────────────────────────────────────────
+    path('api/rede/', api_redes),
+    path('api/rede/convidar/', api_rede_convidar),
+    path('api/rede/estoque/', api_rede_estoque),
+    path('api/rede/disponibilidade/<str:nome_item>/', api_rede_item_disponibilidade),
+    path('api/rede/transferencias/', api_transferencias),
+    path('api/rede/transferencias/<int:transferencia_id>/', api_transferencia_detalhe),
+    path('api/rede/mensagens/', api_mensagens_rede),
+    path('api/rede/mensagens/<int:msg_id>/lida/', api_mensagem_marcar_lida),
+    # ── Plano de Saúde ───────────────────────────────────────────
+    path('api/planos-saude/', api_planos_saude),
+    path('api/planos-saude/<int:plano_id>/', api_plano_saude_detalhe),
+    path('api/planos-saude/<int:plano_id>/kpis/', api_plano_kpis),
+    path('api/planos-saude/<int:plano_id>/beneficiarios/', api_beneficiarios),
+    path('api/planos-saude/<int:plano_id>/beneficiarios/<int:ben_id>/', api_beneficiario_detalhe),
+    path('api/planos-saude/<int:plano_id>/guias/', api_guias),
+    path('api/planos-saude/<int:plano_id>/guias/<int:guia_id>/', api_guia_detalhe),
     path('api/governo/alertas', api_alertas_governo),
     # ── Governo Gestão ───────────────────────────────────────
     path('api/governo/ops/kpis/', api_governo_ops_kpis),

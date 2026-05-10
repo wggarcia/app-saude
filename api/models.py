@@ -2216,3 +2216,282 @@ class RegistroVacinacao(models.Model):
 
     def __str__(self):
         return f"{self.funcionario.nome} - {self.campanha.vacina} ({self.get_dose_display()})"
+
+
+# ─── REDE (NETWORK) ──────────────────────────────────────────────────────────
+
+class Rede(models.Model):
+    """Network grouping multiple pharmacy/hospital units under one brand."""
+    TIPO_FARMACIA = "farmacia"
+    TIPO_HOSPITAL = "hospital"
+    TIPO_MISTO = "misto"
+    TIPOS = [
+        (TIPO_FARMACIA, "Rede de Farmácias"),
+        (TIPO_HOSPITAL, "Rede Hospitalar"),
+        (TIPO_MISTO, "Rede Mista"),
+    ]
+
+    nome = models.CharField(max_length=200)
+    tipo = models.CharField(max_length=20, choices=TIPOS, default=TIPO_FARMACIA)
+    cnpj_raiz = models.CharField(max_length=18, blank=True, default="")
+    logo_url = models.URLField(blank=True, default="")
+    descricao = models.TextField(blank=True, default="")
+    ativa = models.BooleanField(default=True)
+    criada_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return self.nome
+
+
+class UnidadeRede(models.Model):
+    """A pharmacy or hospital unit, either standalone or part of a Rede."""
+    TIPO_FARMACIA = "farmacia"
+    TIPO_HOSPITAL = "hospital"
+    TIPOS = [
+        (TIPO_FARMACIA, "Farmácia"),
+        (TIPO_HOSPITAL, "Hospital"),
+    ]
+
+    empresa = models.OneToOneField(
+        "Empresa",
+        on_delete=models.CASCADE,
+        related_name="unidade_rede",
+    )
+    rede = models.ForeignKey(
+        Rede,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="unidades",
+    )
+    tipo = models.CharField(max_length=20, choices=TIPOS, default=TIPO_FARMACIA)
+    nome_unidade = models.CharField(max_length=200, blank=True, default="")
+    codigo_unidade = models.CharField(max_length=20, blank=True, default="")
+    endereco = models.TextField(blank=True, default="")
+    cidade = models.CharField(max_length=100, blank=True, default="")
+    estado = models.CharField(max_length=2, blank=True, default="")
+    responsavel = models.CharField(max_length=150, blank=True, default="")
+    telefone = models.CharField(max_length=20, blank=True, default="")
+    ativa = models.BooleanField(default=True)
+    criada_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome_unidade"]
+
+    def __str__(self):
+        return self.nome_unidade or str(self.empresa)
+
+
+class TransferenciaEstoque(models.Model):
+    """Stock transfer request between units of the same network."""
+    STATUS_PENDENTE = "pendente"
+    STATUS_APROVADA = "aprovada"
+    STATUS_ENVIADA = "enviada"
+    STATUS_RECEBIDA = "recebida"
+    STATUS_CANCELADA = "cancelada"
+    STATUS_CHOICES = [
+        (STATUS_PENDENTE, "Pendente"),
+        (STATUS_APROVADA, "Aprovada"),
+        (STATUS_ENVIADA, "Enviada"),
+        (STATUS_RECEBIDA, "Recebida"),
+        (STATUS_CANCELADA, "Cancelada"),
+    ]
+
+    rede = models.ForeignKey(Rede, on_delete=models.CASCADE, related_name="transferencias")
+    unidade_solicitante = models.ForeignKey(
+        UnidadeRede, on_delete=models.CASCADE, related_name="transferencias_solicitadas"
+    )
+    unidade_fornecedora = models.ForeignKey(
+        UnidadeRede, on_delete=models.CASCADE, related_name="transferencias_fornecidas"
+    )
+    item_farmacia = models.ForeignKey(
+        "ItemFarmacia",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="transferencias",
+    )
+    nome_item = models.CharField(max_length=200, blank=True, default="")
+    quantidade_solicitada = models.DecimalField(max_digits=10, decimal_places=3)
+    quantidade_aprovada = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDENTE)
+    motivo = models.TextField(blank=True, default="")
+    observacoes = models.TextField(blank=True, default="")
+    urgente = models.BooleanField(default=False)
+    solicitado_por = models.CharField(max_length=150, blank=True, default="")
+    aprovado_por = models.CharField(max_length=150, blank=True, default="")
+    solicitado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-solicitado_em"]
+
+    def __str__(self):
+        return f"Transferência #{self.id} — {self.nome_item}"
+
+
+class MensagemRede(models.Model):
+    """Internal message between units within a network."""
+    TIPO_GERAL = "geral"
+    TIPO_TRANSFERENCIA = "transferencia"
+    TIPO_ALERTA = "alerta"
+    TIPO_CHOICES = [
+        (TIPO_GERAL, "Mensagem Geral"),
+        (TIPO_TRANSFERENCIA, "Sobre Transferência"),
+        (TIPO_ALERTA, "Alerta"),
+    ]
+
+    rede = models.ForeignKey(Rede, on_delete=models.CASCADE, related_name="mensagens")
+    remetente = models.ForeignKey(
+        UnidadeRede, on_delete=models.CASCADE, related_name="mensagens_enviadas"
+    )
+    destinatario = models.ForeignKey(
+        UnidadeRede, on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name="mensagens_recebidas",
+    )
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default=TIPO_GERAL)
+    assunto = models.CharField(max_length=200, blank=True, default="")
+    corpo = models.TextField()
+    transferencia = models.ForeignKey(
+        TransferenciaEstoque, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="mensagens"
+    )
+    lida = models.BooleanField(default=False)
+    enviada_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-enviada_em"]
+
+    def __str__(self):
+        return f"[{self.tipo}] {self.remetente} → {self.destinatario or 'todos'}"
+
+
+# ─── PLANO DE SAÚDE ──────────────────────────────────────────────────────────
+
+class PlanoSaude(models.Model):
+    """Health insurance operator (operadora)."""
+    STATUS_ATIVO = "ativo"
+    STATUS_INATIVO = "inativo"
+    STATUS_CHOICES = [
+        (STATUS_ATIVO, "Ativo"),
+        (STATUS_INATIVO, "Inativo"),
+    ]
+    MODALIDADE_CHOICES = [
+        ("cooperativa", "Cooperativa Médica"),
+        ("autogestao", "Autogestão"),
+        ("seguradora", "Seguradora"),
+        ("filantropico", "Filantrópico"),
+        ("outro", "Outro"),
+    ]
+
+    empresa = models.ForeignKey(
+        "Empresa", on_delete=models.CASCADE,
+        related_name="planos_saude", null=True, blank=True,
+    )
+    nome = models.CharField(max_length=200)
+    registro_ans = models.CharField(max_length=20, blank=True, default="")
+    cnpj = models.CharField(max_length=18, blank=True, default="")
+    modalidade = models.CharField(max_length=20, choices=MODALIDADE_CHOICES, blank=True, default="")
+    telefone = models.CharField(max_length=20, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
+    site = models.URLField(blank=True, default="")
+    abrangencia = models.CharField(max_length=50, blank=True, default="nacional")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_ATIVO)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return self.nome
+
+
+class BeneficiarioPlano(models.Model):
+    """Patient enrolled in a health plan."""
+    SITUACAO_ATIVO = "ativo"
+    SITUACAO_SUSPENSO = "suspenso"
+    SITUACAO_CANCELADO = "cancelado"
+    SITUACAO_CHOICES = [
+        (SITUACAO_ATIVO, "Ativo"),
+        (SITUACAO_SUSPENSO, "Suspenso"),
+        (SITUACAO_CANCELADO, "Cancelado"),
+    ]
+
+    plano = models.ForeignKey(PlanoSaude, on_delete=models.CASCADE, related_name="beneficiarios")
+    nome = models.CharField(max_length=200)
+    cpf = models.CharField(max_length=14, blank=True, default="")
+    numero_carteirinha = models.CharField(max_length=50, blank=True, default="")
+    data_nascimento = models.DateField(null=True, blank=True)
+    sexo = models.CharField(max_length=1, blank=True, default="")
+    telefone = models.CharField(max_length=20, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
+    data_inicio_vigencia = models.DateField(null=True, blank=True)
+    data_fim_vigencia = models.DateField(null=True, blank=True)
+    situacao = models.CharField(max_length=15, choices=SITUACAO_CHOICES, default=SITUACAO_ATIVO)
+    plano_tipo = models.CharField(max_length=100, blank=True, default="")
+    acomodacao = models.CharField(max_length=50, blank=True, default="enfermaria", choices=[("enfermaria","Enfermaria"),("apartamento","Apartamento"),("uti","UTI")])
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.nome} — {self.plano.nome}"
+
+
+class GuiaAutorizacao(models.Model):
+    """Prior authorization request (guia) for procedure or medication."""
+    TIPO_CONSULTA = "consulta"
+    TIPO_EXAME = "exame"
+    TIPO_INTERNACAO = "internacao"
+    TIPO_MEDICAMENTO = "medicamento"
+    TIPO_PROCEDIMENTO = "procedimento"
+    TIPO_CHOICES = [
+        (TIPO_CONSULTA, "Consulta"),
+        (TIPO_EXAME, "Exame"),
+        (TIPO_INTERNACAO, "Internação"),
+        (TIPO_MEDICAMENTO, "Medicamento de Alto Custo"),
+        (TIPO_PROCEDIMENTO, "Procedimento Cirúrgico"),
+    ]
+    STATUS_SOLICITADA = "solicitada"
+    STATUS_EM_ANALISE = "em_analise"
+    STATUS_AUTORIZADA = "autorizada"
+    STATUS_NEGADA = "negada"
+    STATUS_CANCELADA = "cancelada"
+    STATUS_CHOICES = [
+        (STATUS_SOLICITADA, "Solicitada"),
+        (STATUS_EM_ANALISE, "Em Análise"),
+        (STATUS_AUTORIZADA, "Autorizada"),
+        (STATUS_NEGADA, "Negada"),
+        (STATUS_CANCELADA, "Cancelada"),
+    ]
+
+    plano = models.ForeignKey(PlanoSaude, on_delete=models.CASCADE, related_name="guias")
+    beneficiario = models.ForeignKey(BeneficiarioPlano, on_delete=models.CASCADE, related_name="guias")
+    unidade = models.ForeignKey(
+        UnidadeRede, on_delete=models.SET_NULL, null=True, blank=True, related_name="guias"
+    )
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    numero_guia = models.CharField(max_length=50, blank=True, default="")
+    codigo_procedimento = models.CharField(max_length=20, blank=True, default="")
+    descricao_procedimento = models.TextField()
+    cid = models.CharField(max_length=10, blank=True, default="")
+    medico_solicitante = models.CharField(max_length=150, blank=True, default="")
+    crm_medico = models.CharField(max_length=30, blank=True, default="")
+    quantidade = models.PositiveIntegerField(default=1)
+    valor_estimado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_SOLICITADA)
+    justificativa_negativa = models.TextField(blank=True, default="")
+    numero_autorizacao = models.CharField(max_length=50, blank=True, default="")
+    validade_autorizacao = models.DateField(null=True, blank=True)
+    solicitada_em = models.DateTimeField(auto_now_add=True)
+    atualizada_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-solicitada_em"]
+
+    def __str__(self):
+        return f"Guia #{self.numero_guia or self.id} — {self.beneficiario.nome}"
