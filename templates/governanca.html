@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Governança Executiva</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0e1a;color:#e2e8f0;font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+    .top-bar{background:#111827;border-bottom:1px solid #1e293b;padding:12px 24px;display:flex;align-items:center;gap:12px}
+    .top-bar h1{font-size:1.1rem;font-weight:700}
+    .back-link{color:#64748b;font-size:.85rem;text-decoration:none}
+    .tabs{display:flex;gap:4px;margin-left:auto}
+    .tab{padding:6px 16px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:#64748b}
+    .tab.active{background:#1e293b;color:#f8fafc}
+    .main{max-width:1300px;margin:0 auto;padding:24px}
+    .kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px}
+    .kpi{background:#111827;border:1px solid #1e293b;border-radius:10px;padding:14px 16px}
+    .kpi-label{font-size:.68rem;color:#64748b;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+    .kpi-val{font-size:1.5rem;font-weight:800}
+    .kpi-grade{font-size:.72rem;margin-top:3px}
+    .c-green{color:#10b981}.c-blue{color:#3b82f6}.c-amber{color:#f59e0b}.c-rose{color:#f43f5e}.c-violet{color:#8b5cf6}.c-cyan{color:#06b6d4}
+    .card{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:18px;margin-bottom:18px}
+    .card-title{font-size:.76rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+    /* Pauta executiva */
+    .pauta-row{padding:12px 16px;border-radius:10px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start}
+    .pauta-p1{background:#1f0a0a;border-left:3px solid #f43f5e}
+    .pauta-p2{background:#1c1100;border-left:3px solid #f59e0b}
+    .pauta-p3{background:#052e16;border-left:3px solid #10b981}
+    .pauta-num{font-size:.8rem;font-weight:800;width:20px;flex-shrink:0;padding-top:1px}
+    .pauta-p1 .pauta-num{color:#f43f5e}
+    .pauta-p2 .pauta-num{color:#f59e0b}
+    .pauta-p3 .pauta-num{color:#10b981}
+    .pauta-topico{font-size:.86rem;font-weight:700;color:#f8fafc;margin-bottom:3px}
+    .pauta-acao{font-size:.78rem;color:#94a3b8}
+    .pauta-owner{font-size:.72rem;color:#475569;margin-top:3px}
+    /* ARR Waterfall */
+    .waterfall-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .wf-label{width:120px;font-size:.82rem;color:#94a3b8}
+    .wf-bar-w{flex:1;background:#0f172a;border-radius:4px;height:24px;position:relative;overflow:hidden}
+    .wf-bar{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:.75rem;font-weight:700;color:#fff;min-width:2px}
+    .wf-val{width:90px;text-align:right;font-size:.82rem;font-weight:700}
+    /* Pricing */
+    .pricing-card{background:#0f172a;border-radius:10px;padding:14px;margin-bottom:10px}
+    .pc-nome{font-size:.88rem;font-weight:700;color:#f8fafc;margin-bottom:4px}
+    .pc-formula{font-size:.8rem;color:#10b981;margin-bottom:4px;font-family:monospace}
+    .pc-desc{font-size:.78rem;color:#64748b;margin-bottom:6px}
+    .pc-pot{font-size:.74rem;color:#818cf8}
+    /* Fairness */
+    .fair-row{padding:10px 12px;background:#0f172a;border-radius:8px;margin-bottom:6px}
+    .fair-modelo{font-size:.86rem;font-weight:700;margin-bottom:6px}
+    .fair-bar-w{background:#1e293b;border-radius:4px;height:10px;overflow:hidden;position:relative;margin-bottom:4px}
+    .fair-bar{height:100%;border-radius:4px}
+    .fair-meta{display:flex;justify-content:space-between;font-size:.72rem;color:#64748b}
+    /* Causal */
+    .causal-metric{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #1e293b}
+    .causal-metric:last-child{border:none}
+    .causal-k{font-size:.83rem;color:#94a3b8}
+    .causal-v{font-size:.85rem;font-weight:700}
+    .panel{display:none}.panel.active{display:block}
+    @media(max-width:768px){.grid-2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="top-bar">
+  <a href="/dashboard-empresa/" class="back-link">←</a>
+  <h1>Governança Executiva</h1>
+  <div class="tabs">
+    <button class="tab active" onclick="showPanel('semanal')">Painel Semanal</button>
+    <button class="tab" onclick="showPanel('pricing')">Pricing por Valor</button>
+    <button class="tab" onclick="showPanel('fairness')">ML Fairness</button>
+    <button class="tab" onclick="showPanel('causal')">Impacto Causal</button>
+  </div>
+</div>
+<div class="main">
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-label">ARR</div><div class="kpi-val c-green" id="kArr">—</div></div>
+    <div class="kpi"><div class="kpi-label">MRR</div><div class="kpi-val c-blue" id="kMrr">—</div></div>
+    <div class="kpi"><div class="kpi-label">NRR</div><div class="kpi-val c-violet" id="kNrr">—</div></div>
+    <div class="kpi"><div class="kpi-label">Burn Multiple</div><div class="kpi-val c-amber" id="kBm">—</div><div class="kpi-grade" id="kBmGrade"></div></div>
+    <div class="kpi"><div class="kpi-label">Runway</div><div class="kpi-val c-cyan" id="kRunway">—</div></div>
+    <div class="kpi"><div class="kpi-label">Churn 90d</div><div class="kpi-val c-rose" id="kChurn">—</div></div>
+  </div>
+
+  <!-- Painel Semanal -->
+  <div class="panel active" id="panel-semanal">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Pauta Executiva da Semana <span id="semanaLabel" style="color:#64748b"></span></div>
+        <div id="pautaContent"></div>
+        <div style="margin-top:14px;font-size:.75rem;color:#475569">Próxima revisão: <span id="proximaRevisao"></span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">ARR Waterfall — Mês Atual</div>
+        <div id="waterfallContent"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Burn Multiple Detalhado</div>
+      <div id="burnContent"></div>
+    </div>
+  </div>
+
+  <!-- Pricing -->
+  <div class="panel" id="panel-pricing">
+    <div class="card">
+      <div class="card-title">Modelos de Pricing por Valor/Resultado</div>
+      <div id="pricingContent"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Scoring de Leads — Critérios e Pesos</div>
+      <div id="scoringContent"></div>
+    </div>
+  </div>
+
+  <!-- ML Fairness -->
+  <div class="panel" id="panel-fairness">
+    <div class="card">
+      <div class="card-title">Fairness por Modelo — Análise de Precisão</div>
+      <div id="fairnessContent"></div>
+    </div>
+  </div>
+
+  <!-- Impacto Causal -->
+  <div class="panel" id="panel-causal">
+    <div class="card">
+      <div class="card-title">Impacto Causal da Plataforma</div>
+      <div id="causalContent"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const fmtBRL = v => v >= 1e6 ? `R$ ${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `R$ ${(v/1e3).toFixed(0)}K` : `R$ ${v.toFixed(0)}`;
+const bmColor = g => ({excelente:'#10b981',bom:'#06b6d4',aceitável:'#f59e0b',preocupante:'#f43f5e'}[g]||'#94a3b8');
+
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'pricing') carregarPricing();
+  if (name === 'fairness') carregarFairness();
+  if (name === 'causal') carregarCausal();
+}
+
+async function carregarSemanal() {
+  const r = await fetch('/api/governanca/semanal').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  const k = r.kpis_semana || {};
+  document.getElementById('kArr').textContent = fmtBRL(k.arr||0);
+  document.getElementById('kMrr').textContent = fmtBRL(k.mrr||0);
+  document.getElementById('kNrr').textContent = (k.nrr||0) + '%';
+  const bm = k.burn_multiple;
+  document.getElementById('kBm').textContent = bm !== null && bm !== undefined ? bm + 'x' : '—';
+  document.getElementById('kBm').style.color = bm ? bmColor(k.burn_multiple_grade) : '#94a3b8';
+  document.getElementById('kBmGrade').textContent = k.burn_multiple_grade || '';
+  document.getElementById('kBmGrade').style.color = bm ? bmColor(k.burn_multiple_grade) : '#94a3b8';
+  document.getElementById('kRunway').textContent = k.runway_meses >= 999 ? '∞' : k.runway_meses + 'm';
+  document.getElementById('kChurn').textContent = (k.churn_rate_90d||0) + '%';
+  document.getElementById('semanaLabel').textContent = r.semana || '';
+  document.getElementById('proximaRevisao').textContent = r.proxima_revisao || '';
+
+  // Pauta
+  const pauta = r.pauta_executiva || [];
+  document.getElementById('pautaContent').innerHTML = pauta.map(p => `
+    <div class="pauta-row pauta-p${p.prioridade}">
+      <div class="pauta-num">P${p.prioridade}</div>
+      <div>
+        <div class="pauta-topico">${p.topico}</div>
+        <div class="pauta-acao">${p.acao}</div>
+        <div class="pauta-owner">Owner: ${p.owner}</div>
+      </div>
+    </div>`).join('');
+
+  // Waterfall
+  const wf = r.arr_waterfall || {};
+  const maxWf = Math.max(wf.arr_novos||0, wf.arr_churn||0, Math.abs(wf.arr_liquido||0), 1000);
+  document.getElementById('waterfallContent').innerHTML = [
+    ['Novos', wf.arr_novos||0, '#10b981'],
+    ['Expansão', wf.arr_expansao||0, '#3b82f6'],
+    ['Contração', -(wf.arr_contracao||0), '#f59e0b'],
+    ['Churn', -(wf.arr_churn||0), '#f43f5e'],
+    ['Líquido', wf.arr_liquido||0, wf.arr_liquido>=0?'#10b981':'#f43f5e'],
+  ].map(([l,v,c]) => `<div class="waterfall-row">
+    <div class="wf-label">${l}</div>
+    <div class="wf-bar-w"><div class="wf-bar" style="width:${Math.abs(v)/maxWf*100}%;background:${c}">${fmtBRL(Math.abs(v))}</div></div>
+    <div class="wf-val" style="color:${c}">${v >= 0 ? '+' : ''}${fmtBRL(v)}</div>
+  </div>`).join('') + `<p style="font-size:.72rem;color:#475569;margin-top:8px">${wf.nota||''}</p>`;
+}
+
+async function carregarBurn() {
+  const r = await fetch('/api/governanca/burn-multiple').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  document.getElementById('burnContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px">
+      ${Object.entries(r.benchmarks||{}).map(([k,v]) => `
+      <div style="background:#0f172a;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:.75rem;color:#64748b;text-transform:capitalize;margin-bottom:4px">${k}</div>
+        <div style="font-size:.9rem;font-weight:700;color:${bmColor(k)}">${v}</div>
+      </div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+      <div style="background:#0f172a;border-radius:8px;padding:14px">
+        <div style="font-size:.72rem;color:#64748b;margin-bottom:4px">MRR atual</div>
+        <div style="font-size:1.1rem;font-weight:700;color:#10b981">${fmtBRL(r.mrr_atual||0)}</div>
+      </div>
+      <div style="background:#0f172a;border-radius:8px;padding:14px">
+        <div style="font-size:.72rem;color:#64748b;margin-bottom:4px">Burn mensal estimado</div>
+        <div style="font-size:1.1rem;font-weight:700;color:#f43f5e">${fmtBRL(r.burn_mensal_estimado||0)}</div>
+      </div>
+      <div style="background:#0f172a;border-radius:8px;padding:14px">
+        <div style="font-size:.72rem;color:#64748b;margin-bottom:4px">Burn Multiple</div>
+        <div style="font-size:1.1rem;font-weight:700;color:${bmColor(r.grade)}">${r.burn_multiple !== null ? r.burn_multiple + 'x' : '—'} (${r.grade})</div>
+      </div>
+    </div>
+    <p style="font-size:.73rem;color:#475569;margin-top:12px">${r.nota||''}</p>`;
+}
+
+async function carregarPricing() {
+  const r = await fetch('/api/governanca/pricing-valor').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  document.getElementById('pricingContent').innerHTML = (r.modelos||[]).map(m => `
+    <div class="pricing-card">
+      <div class="pc-nome">${m.nome}</div>
+      <div class="pc-formula">${m.formula}</div>
+      <div class="pc-desc">${m.descricao}</div>
+      <div class="pc-pot">Potencial de upsell: ${m.potencial_upsell}</div>
+    </div>`).join('');
+  document.getElementById('scoringContent').innerHTML = `
+    <p style="font-size:.82rem;color:#64748b;margin-bottom:12px">${r.scoring_leads?.nota||''}</p>
+    ${(r.scoring_leads?.criterios||[]).map(c => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="width:160px;font-size:.82rem;color:#94a3b8">${c.criterio}</div>
+      <div style="flex:1;background:#1e293b;border-radius:4px;height:8px;overflow:hidden">
+        <div style="width:${c.peso}%;height:100%;background:#3b82f6;border-radius:4px"></div>
+      </div>
+      <div style="width:40px;text-align:right;font-size:.78rem;color:#64748b">${c.peso}pts</div>
+    </div>`).join('')}`;
+}
+
+async function carregarFairness() {
+  const r = await fetch('/api/governanca/ml-fairness').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  const modelos = r.modelos || [];
+  document.getElementById('fairnessContent').innerHTML = modelos.length ? modelos.map(m => `
+    <div class="fair-row">
+      <div class="fair-modelo">${m.modelo} <span style="font-size:.72rem;color:#64748b">— ${m.total_runs_avaliados} runs avaliados</span></div>
+      <div style="font-size:.75rem;color:#64748b;margin-bottom:4px">Precisão global vs SLO mínimo (${m.slo_min}%)</div>
+      <div class="fair-bar-w">
+        <div class="fair-bar" style="width:${m.precisao_global}%;background:${m.dentro_slo?'#10b981':'#f43f5e'}"></div>
+        <div style="position:absolute;top:0;left:${m.slo_min}%;width:2px;height:100%;background:#f59e0b"></div>
+      </div>
+      <div class="fair-meta"><span>${m.precisao_global}% atual</span><span>SLO: ${m.slo_min}%</span></div>
+      <div style="margin-top:8px;font-size:.75rem;color:#475569">${m.nota_fairness}</div>
+      <div style="margin-top:4px">${(m.proximos_passos||[]).map((p,i) => `<div style="font-size:.74rem;color:#64748b;margin-top:2px">${i+1}. ${p}</div>`).join('')}</div>
+    </div>`).join('') : `<div style="color:#475569;text-align:center;padding:24px">
+      Nenhum modelo com runs avaliados (ground_truth) ainda.<br>
+      <span style="font-size:.78rem">Use <code>/api/mlops/modelos/&lt;slug&gt;/run/</code> com ground_truth para registrar avaliações.</span>
+    </div>`;
+}
+
+async function carregarCausal() {
+  const r = await fetch('/api/governanca/causal-impact').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  const burnout = r.burnout || {};
+  const afast = r.afastamentos || {};
+  document.getElementById('causalContent').innerHTML = `
+    <p style="font-size:.82rem;color:#64748b;margin-bottom:16px">Período: ${r.periodo_analise||'—'}</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div style="background:#0f172a;border-radius:10px;padding:16px">
+        <div style="font-size:.76rem;color:#94a3b8;font-weight:700;text-transform:uppercase;margin-bottom:10px">Score Burnout</div>
+        <div class="causal-metric"><span class="causal-k">Antes (90d)</span><span class="causal-v">${burnout.media_antes||'—'}</span></div>
+        <div class="causal-metric"><span class="causal-k">Depois (90d)</span><span class="causal-v">${burnout.media_depois||'—'}</span></div>
+        <div class="causal-metric"><span class="causal-k">Delta</span><span class="causal-v" style="color:${burnout.direcao==='melhora'?'#10b981':burnout.direcao==='piora'?'#f43f5e':'#94a3b8'}">${burnout.delta > 0 ? '-' : '+'}${Math.abs(burnout.delta||0)} (${burnout.direcao||'—'})</span></div>
+      </div>
+      <div style="background:#0f172a;border-radius:10px;padding:16px">
+        <div style="font-size:.76rem;color:#94a3b8;font-weight:700;text-transform:uppercase;margin-bottom:10px">Afastamentos SST</div>
+        <div class="causal-metric"><span class="causal-k">Antes (90d)</span><span class="causal-v">${afast.antes_90d||0}</span></div>
+        <div class="causal-metric"><span class="causal-k">Depois (90d)</span><span class="causal-v">${afast.depois_90d||0}</span></div>
+        <div class="causal-metric"><span class="causal-k">Delta</span><span class="causal-v" style="color:${afast.direcao==='melhora'?'#10b981':afast.direcao==='piora'?'#f43f5e':'#94a3b8'}">${afast.delta > 0 ? '+' : ''}${afast.delta||0} (${afast.direcao||'—'})</span></div>
+      </div>
+    </div>
+    <div style="background:#1c1100;border:1px solid #92400e;border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-size:.78rem;color:#fbbf24">⚠ ${r.nota_causalidade||''}</div>
+    </div>
+    <div style="font-size:.76rem;color:#64748b">
+      <strong style="color:#94a3b8">Próximos passos para análise causal real:</strong>
+      ${(r.proximos_passos||[]).map((p,i)=>`<div style="margin-top:5px">${i+1}. ${p}</div>`).join('')}
+    </div>`;
+}
+
+carregarSemanal().then(() => carregarBurn());
+</script>
+</body>
+</html>

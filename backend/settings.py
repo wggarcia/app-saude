@@ -107,6 +107,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'api.middleware.EmpresaMiddleware',
+    'api.views_api_versioning.EnterpriseAPIMiddleware',
 ]
 
 if not DEBUG:

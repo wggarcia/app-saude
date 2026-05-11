@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Feature Store & Data Dictionary</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0e1a;color:#e2e8f0;font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+    .top-bar{background:#111827;border-bottom:1px solid #1e293b;padding:12px 24px;display:flex;align-items:center;gap:12px}
+    .top-bar h1{font-size:1.1rem;font-weight:700}
+    .back-link{color:#64748b;font-size:.85rem;text-decoration:none}
+    .tabs{display:flex;gap:4px;margin-left:auto}
+    .tab{padding:6px 16px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:#64748b}
+    .tab.active{background:#1e293b;color:#f8fafc}
+    .main{max-width:1300px;margin:0 auto;padding:24px}
+    .kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px}
+    .kpi{background:#111827;border:1px solid #1e293b;border-radius:10px;padding:14px 16px}
+    .kpi-label{font-size:.68rem;color:#64748b;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+    .kpi-val{font-size:1.5rem;font-weight:800}
+    .c-green{color:#10b981}.c-blue{color:#3b82f6}.c-amber{color:#f59e0b}.c-rose{color:#f43f5e}.c-violet{color:#8b5cf6}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+    .card{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:18px;margin-bottom:18px}
+    .card-title{font-size:.76rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
+    /* Feature rows */
+    .feat-row{padding:10px 12px;background:#0f172a;border-radius:8px;margin-bottom:6px}
+    .feat-header{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+    .feat-nome{font-size:.84rem;font-weight:700;color:#f8fafc;flex:1}
+    .feat-tipo{font-size:.7rem;background:#1e293b;color:#94a3b8;padding:2px 7px;border-radius:999px}
+    .feat-freq{font-size:.7rem;background:#1e1b4b;color:#818cf8;padding:2px 7px;border-radius:999px}
+    .feat-desc{font-size:.78rem;color:#64748b;margin-bottom:4px}
+    .feat-meta{font-size:.72rem;color:#475569}
+    .tag{display:inline-block;background:#0f172a;border:1px solid #1e293b;color:#64748b;font-size:.65rem;padding:1px 6px;border-radius:999px;margin-right:3px}
+    /* SLA quality */
+    .sla-row{padding:12px 14px;border-radius:8px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+    .sla-ok{background:#052e16;border:1px solid #166534}
+    .sla-atencao{background:#1c1100;border:1px solid #92400e}
+    .sla-violado{background:#1f0a0a;border:1px solid #991b1b}
+    .sla-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .sla-ok .sla-dot{background:#10b981}
+    .sla-atencao .sla-dot{background:#f59e0b}
+    .sla-violado .sla-dot{background:#f43f5e}
+    .sla-fonte{flex:1;font-size:.85rem;font-weight:600;color:#cbd5e1}
+    .sla-meta{font-size:.78rem;color:#64748b;width:120px}
+    .sla-atraso{font-size:.82rem;font-weight:700;width:80px;text-align:right}
+    /* Eventos */
+    .evt-row{padding:10px 12px;background:#0f172a;border-radius:8px;margin-bottom:6px}
+    .evt-tipo{font-size:.84rem;font-weight:700;color:#3b82f6;margin-bottom:3px}
+    .evt-desc{font-size:.78rem;color:#94a3b8;margin-bottom:4px}
+    .evt-meta{display:flex;gap:12px;font-size:.72rem;color:#475569}
+    .crit-critica{color:#f43f5e}.crit-alta{color:#f59e0b}.crit-media{color:#06b6d4}
+    .panel{display:none}.panel.active{display:block}
+    @media(max-width:768px){.grid-2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="top-bar">
+  <a href="/dashboard-empresa/" class="back-link">←</a>
+  <h1>Feature Store & Data Dictionary</h1>
+  <div class="tabs">
+    <button class="tab active" onclick="showPanel('features')">Features</button>
+    <button class="tab" onclick="showPanel('eventos')">Eventos</button>
+    <button class="tab" onclick="showPanel('qualidade')">SLA Dados</button>
+  </div>
+</div>
+<div class="main">
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-label">Total Features</div><div class="kpi-val c-blue" id="kFeatures">—</div></div>
+    <div class="kpi"><div class="kpi-label">Tipos de Eventos</div><div class="kpi-val c-violet" id="kEventos">—</div></div>
+    <div class="kpi"><div class="kpi-label">Score Qualidade</div><div class="kpi-val c-green" id="kQual">—</div></div>
+    <div class="kpi"><div class="kpi-label">Violações SLA</div><div class="kpi-val c-rose" id="kViolacoes">—</div></div>
+    <div class="kpi"><div class="kpi-label">Domínios</div><div class="kpi-val c-amber" id="kDominios">—</div></div>
+  </div>
+
+  <div class="panel active" id="panel-features">
+    <div id="featuresContent"></div>
+  </div>
+
+  <div class="panel" id="panel-eventos">
+    <div class="card">
+      <div class="card-title">Dicionário de Eventos da Plataforma</div>
+      <div id="eventosContent"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-qualidade">
+    <div class="card">
+      <div class="card-title">SLA de Qualidade por Fonte</div>
+      <div id="qualidadeContent"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+async function carregarDicionario() {
+  const r = await fetch('/api/feature-store/dicionario').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  document.getElementById('kFeatures').textContent = r.total_features || 0;
+  document.getElementById('kEventos').textContent = r.total_eventos || 0;
+  document.getElementById('kDominios').textContent = (r.dominios||[]).length;
+
+  // Features por tipo de entidade
+  const registry = r.feature_registry || {};
+  let html = '';
+  Object.entries(registry).forEach(([tipo, feats]) => {
+    html += `<div class="card"><div class="card-title">Features — ${tipo}</div>`;
+    Object.entries(feats).forEach(([nome, spec]) => {
+      html += `<div class="feat-row">
+        <div class="feat-header">
+          <div class="feat-nome">${nome}</div>
+          <span class="feat-tipo">${spec.tipo}</span>
+          <span class="feat-freq">${spec.frequencia_atualizacao}</span>
+        </div>
+        <div class="feat-desc">${spec.descricao}</div>
+        <div class="feat-meta">Fonte: ${spec.fonte} · Owner: ${spec.owner} · SLA: ${spec.sla_atraso_max_horas}h</div>
+        <div style="margin-top:5px">${(spec.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('featuresContent').innerHTML = html;
+
+  // Eventos
+  const eventos = r.eventos || [];
+  document.getElementById('eventosContent').innerHTML = eventos.map(e => {
+    const critCls = {critica:'crit-critica',alta:'crit-alta',media:'crit-media'}[e.criticidade]||'';
+    return `<div class="evt-row">
+      <div class="evt-tipo">${e.tipo}</div>
+      <div class="evt-desc">${e.descricao}</div>
+      <div class="evt-meta">
+        <span>📡 Produtor: ${e.produtor}</span>
+        <span>👥 Consumidores: ${(e.consumidores||[]).join(', ')}</span>
+        <span class="${critCls}">⚡ ${e.criticidade}</span>
+        <span>⏱ SLA: ${e.sla_entrega_ms}ms</span>
+      </div>
+      <div style="margin-top:5px">${(e.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+    </div>`;
+  }).join('') || '<div style="color:#475569;text-align:center;padding:20px">Sem eventos</div>';
+}
+
+async function carregarQualidade() {
+  const r = await fetch('/api/feature-store/qualidade').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  document.getElementById('kQual').textContent = (r.score_qualidade_dados || 0) + '%';
+  document.getElementById('kViolacoes').textContent = r.violacoes_sla || 0;
+
+  const fontes = r.fontes || [];
+  document.getElementById('qualidadeContent').innerHTML = fontes.map(f => {
+    const cls = {ok:'sla-ok',atencao:'sla-atencao',violado:'sla-violado',indisponivel:'sla-atencao'}[f.status||'atencao'];
+    return `<div class="sla-row ${cls}">
+      <div class="sla-dot"></div>
+      <div class="sla-fonte">${f.fonte}</div>
+      <div class="sla-meta">${f.dominio||''} · SLA ${f.sla_horas}h</div>
+      <div class="sla-atraso" style="color:${f.status==='ok'?'#10b981':f.status==='atencao'?'#f59e0b':'#f43f5e'}">
+        ${f.atraso_dias !== undefined ? f.atraso_dias + 'd atraso' : f.status}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+carregarDicionario();
+carregarQualidade();
+</script>
+</body>
+</html>

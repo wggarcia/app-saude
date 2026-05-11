@@ -124,6 +124,16 @@ from api.views_mlops import (
     api_mlops_modelos, api_mlops_modelo_detalhe, api_mlops_run,
     api_mlops_snapshot, api_mlops_drift_alertas, api_mlops_seed, mlops_page,
 )
+from api.views_feature_store import (
+    api_feature_store_features, api_feature_store_dicionario,
+    api_feature_store_qualidade, feature_store_page,
+)
+from api.views_governanca import (
+    api_governanca_semanal, api_governanca_burn_multiple,
+    api_governanca_pricing_valor, api_governanca_ml_fairness,
+    api_governanca_causal_impact, governanca_page,
+)
+from api.views_api_versioning import api_circuit_breaker_status, api_rate_limit_status
 from api.views_contratos import (
     api_beneficiario_excluir,
     api_beneficiarios_contrato,
@@ -725,4 +735,32 @@ urlpatterns = [
     path('api/mlops/drift/alertas/', api_mlops_drift_alertas),
     path('api/mlops/seed', api_mlops_seed),
     path('api/mlops/seed/', api_mlops_seed),
+
+    # Feature Store & Data Dictionary
+    path('feature-store/', feature_store_page),
+    path('api/feature-store/features', api_feature_store_features),
+    path('api/feature-store/features/', api_feature_store_features),
+    path('api/feature-store/dicionario', api_feature_store_dicionario),
+    path('api/feature-store/dicionario/', api_feature_store_dicionario),
+    path('api/feature-store/qualidade', api_feature_store_qualidade),
+    path('api/feature-store/qualidade/', api_feature_store_qualidade),
+
+    # Governança Executiva
+    path('governanca/', governanca_page),
+    path('api/governanca/semanal', api_governanca_semanal),
+    path('api/governanca/semanal/', api_governanca_semanal),
+    path('api/governanca/burn-multiple', api_governanca_burn_multiple),
+    path('api/governanca/burn-multiple/', api_governanca_burn_multiple),
+    path('api/governanca/pricing-valor', api_governanca_pricing_valor),
+    path('api/governanca/pricing-valor/', api_governanca_pricing_valor),
+    path('api/governanca/ml-fairness', api_governanca_ml_fairness),
+    path('api/governanca/ml-fairness/', api_governanca_ml_fairness),
+    path('api/governanca/causal-impact', api_governanca_causal_impact),
+    path('api/governanca/causal-impact/', api_governanca_causal_impact),
+
+    # API Infra (versioning, rate limit, circuit breaker)
+    path('api/infra/circuit-breaker', api_circuit_breaker_status),
+    path('api/infra/circuit-breaker/', api_circuit_breaker_status),
+    path('api/infra/rate-limit', api_rate_limit_status),
+    path('api/infra/rate-limit/', api_rate_limit_status),
 ]
