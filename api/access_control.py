@@ -8,7 +8,11 @@ TODOS_SETORES = ("empresa", "farmacia", "hospital", "governo", "rede", "plano_sa
 
 def get_setor(empresa):
     """Return the sector/module for this empresa based on its plan."""
-    return detalhes_pacote(empresa.pacote_codigo).get("setor", "empresa")
+    setor = detalhes_pacote(empresa.pacote_codigo).get("setor", "empresa")
+    # Safety fallback: TIPO_GOVERNO accounts must never land on empresa sector
+    if setor == "empresa" and getattr(empresa, "tipo_conta", "empresa") == "governo":
+        return "governo"
+    return setor
 
 
 def _destino_correto(setor):

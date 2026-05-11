@@ -143,9 +143,50 @@ PACOTES_SAAS = {
         "ciclos": ["anual"],
         "populacao_cobertura": "cobertura estadual",
     },
+    "rede_regional": {
+        "label": "Rede de Saúde Regional",
+        "setor": "rede",
+        "descricao": "Gestao multi-unidades com benchmarking, consolidacao de KPIs e mapa de rede.",
+        "usuarios": 250,
+        "dispositivos": 250,
+        "mensal": 8900.00,
+        "anual": 89000.00,
+        "ciclos": ["mensal", "anual"],
+    },
+    "rede_nacional": {
+        "label": "Rede de Saúde Nacional",
+        "setor": "rede",
+        "descricao": "Operacao de rede nacional com governanca, analytics e sala de situacao.",
+        "usuarios": 1000,
+        "dispositivos": 1000,
+        "mensal": 29900.00,
+        "anual": 299000.00,
+        "ciclos": ["mensal", "anual"],
+    },
+    "plano_saude_operadora": {
+        "label": "Operadora de Plano de Saúde",
+        "setor": "plano_saude",
+        "descricao": "Gestao de beneficiarios, contratos, sinistros, coberturas e reembolsos.",
+        "usuarios": 100,
+        "dispositivos": 100,
+        "mensal": 12000.00,
+        "anual": 120000.00,
+        "ciclos": ["mensal", "anual"],
+    },
+    "plano_saude_enterprise": {
+        "label": "Operadora Enterprise",
+        "setor": "plano_saude",
+        "descricao": "Plano de saude de grande porte com inteligencia epidemiologica e LGPD avancado.",
+        "usuarios": 500,
+        "dispositivos": 500,
+        "mensal": 45000.00,
+        "anual": 450000.00,
+        "ciclos": ["mensal", "anual"],
+    },
 }
 
 LEGACY_PACOTE_MAP = {
+    # codes from before the new naming scheme (v1 era)
     "starter_5": "empresa_starter_5",
     "growth_10": "empresa_profissional_25",
     "scale_25": "empresa_profissional_25",
@@ -154,6 +195,15 @@ LEGACY_PACOTE_MAP = {
     "network_250": "empresa_corporativo_250",
     "grid_500": "empresa_nacional_500",
     "national_1000": "empresa_nacional_1000",
+    # short-name legacy codes present in production DB
+    "basico": "empresa_starter_5",
+    "profissional": "empresa_profissional_25",
+    "enterprise": "empresa_enterprise_100",
+    "hospital": "hospital_medio",
+    "governo": "governo_municipio_pequeno",
+    "farmacia": "farmacia_local",
+    "rede": "rede_regional",
+    "plano_saude": "plano_saude_operadora",
 }
 
 
