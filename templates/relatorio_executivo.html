@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relatório Executivo · SolusCRT Saúde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#030810;--surface:rgba(255,255,255,.042);--line:rgba(255,255,255,.1);
+  --ink:#edf2f7;--muted:#7a8fa0;--gold:#d9b86f;--cyan:#45ead9;--rose:#ff6f8f;
+  --blue:#60a5fa;--green:#4ade80;--amber:#fbbf24;--purple:#a78bfa;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:Geist,Arial,sans-serif}
+body{min-height:100vh;padding:0 0 80px}
+
+/* ── TOPBAR ── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:14px 32px;border-bottom:1px solid var(--line);
+  background:rgba(3,8,16,.92);backdrop-filter:blur(24px);
+  position:sticky;top:0;z-index:50;
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:.92rem}
+.mark{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--gold),#f6e9bd);color:#090d12;font-size:.6rem;font-weight:900}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pill-btn{padding:7px 14px;border-radius:999px;font-size:.78rem;font-weight:700;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);color:var(--muted);
+  text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:.18s}
+.pill-btn:hover{background:rgba(255,255,255,.08);color:var(--ink)}
+.print-btn{border-color:rgba(96,165,250,.3);color:var(--blue);background:rgba(96,165,250,.07)}
+
+/* ── PERIOD SELECTOR ── */
+.period-bar{
+  display:flex;align-items:center;gap:12px;padding:16px 32px;
+  border-bottom:1px solid var(--line);flex-wrap:wrap;
+}
+.period-label{font-size:.8rem;color:var(--muted);font-weight:600}
+.period-btn{padding:6px 14px;border-radius:999px;font-size:.78rem;font-weight:700;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);color:var(--muted);transition:.18s}
+.period-btn:hover{background:rgba(255,255,255,.07);color:var(--ink)}
+.period-btn.active{background:rgba(217,184,111,.1);border-color:rgba(217,184,111,.35);color:var(--gold)}
+.custom-dates{display:flex;gap:8px;align-items:center}
+.date-input{padding:6px 12px;border-radius:999px;border:1px solid var(--line);
+  background:rgba(255,255,255,.04);color:var(--ink);font-size:.78rem;font-family:Geist,sans-serif;outline:none}
+.date-input:focus{border-color:var(--gold)}
+
+/* ── SHELL ── */
+.shell{width:min(1200px,100%);margin:0 auto;padding:28px 28px 0}
+
+/* ── COVER ── */
+.cover{
+  padding:40px 44px;border-radius:28px;
+  background:linear-gradient(135deg,rgba(217,184,111,.1),rgba(69,234,217,.06));
+  border:1px solid rgba(217,184,111,.2);
+  margin-bottom:28px;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+.cover-left .eyebrow{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold);font-weight:800;margin-bottom:10px}
+.cover-left h1{font-family:Newsreader,serif;font-size:2.6rem;line-height:1.05;margin-bottom:10px}
+.cover-left .subtitle{color:var(--muted);font-size:.95rem;line-height:1.6}
+.cover-meta{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+.meta-item{font-size:.78rem;color:var(--muted);text-align:right}
+.meta-item strong{display:block;color:var(--ink);font-size:.92rem;margin-bottom:2px}
+.score-ring{
+  width:96px;height:96px;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:3px solid var(--gold);background:rgba(217,184,111,.08);
+  box-shadow:0 0 0 12px rgba(217,184,111,.08);
+}
+.score-ring .score-num{font-size:1.8rem;font-weight:800;color:var(--gold)}
+.score-ring .score-lbl{font-size:.62rem;color:var(--muted);font-weight:700;text-transform:uppercase}
+
+/* ── SECTIONS ── */
+.section{margin-bottom:28px}
+.section-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.section-icon{font-size:1.4rem}
+.section-title{font-family:Newsreader,serif;font-size:1.5rem}
+.section-badge{margin-left:auto;padding:4px 12px;border-radius:999px;font-size:.72rem;font-weight:800}
+.badge-ok{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);color:var(--green)}
+.badge-warn{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);color:var(--amber)}
+.badge-critico{background:rgba(255,111,143,.1);border:1px solid rgba(255,111,143,.2);color:var(--rose)}
+.badge-info{background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.2);color:var(--blue)}
+.badge-indisponivel{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--muted)}
+
+/* ── METRIC GRID ── */
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.metric-card{padding:18px 20px;border-radius:18px;background:var(--surface);border:1px solid var(--line)}
+.metric-card .m-label{font-size:.7rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.metric-card .m-val{font-size:1.6rem;font-weight:800;line-height:1}
+.metric-card .m-note{font-size:.72rem;color:var(--muted);margin-top:5px}
+
+/* ── INSIGHT BARS ── */
+.insight-bars{display:grid;gap:12px}
+.insight-item{display:flex;align-items:center;gap:14px;padding:14px 18px;
+  border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.insight-icon{font-size:1.4rem;flex:0 0 auto}
+.insight-body{flex:1}
+.insight-title{font-weight:700;font-size:.9rem;margin-bottom:3px}
+.insight-sub{font-size:.78rem;color:var(--muted);line-height:1.5}
+.insight-score{
+  min-width:56px;height:56px;border-radius:14px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.05);flex:0 0 56px;
+}
+.insight-score .is-num{font-size:1.3rem;font-weight:800}
+.insight-score .is-lbl{font-size:.58rem;color:var(--muted);font-weight:700;text-transform:uppercase}
+
+/* ── WELLBEING BARS ── */
+.wb-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.wb-bar-item{display:flex;align-items:center;gap:10px}
+.wb-label{font-size:.78rem;color:var(--muted);min-width:80px}
+.wb-bg{flex:1;height:8px;border-radius:999px;background:rgba(255,255,255,.07)}
+.wb-fill{height:100%;border-radius:999px}
+.wb-val{font-size:.8rem;font-weight:700;min-width:24px;text-align:right}
+
+/* ── RECOMMENDATIONS ── */
+.rec-list{display:grid;gap:10px}
+.rec-item{
+  display:flex;align-items:flex-start;gap:14px;
+  padding:16px 20px;border-radius:18px;border:1px solid var(--line);background:var(--surface);
+}
+.rec-type-ok{border-color:rgba(74,222,128,.2);background:rgba(74,222,128,.04)}
+.rec-type-alerta{border-color:rgba(251,191,36,.2);background:rgba(251,191,36,.04)}
+.rec-type-critico{border-color:rgba(255,111,143,.2);background:rgba(255,111,143,.04)}
+.rec-icon{font-size:1.3rem;flex:0 0 auto;margin-top:2px}
+.rec-titulo{font-weight:700;font-size:.9rem;margin-bottom:4px}
+.rec-modulo{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.rec-acao{font-size:.82rem;color:var(--muted);line-height:1.55}
+
+/* ── COMPLIANCE SUMMARY ── */
+.comp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.comp-item{padding:16px 18px;border-radius:16px;background:var(--surface);border:1px solid var(--line);text-align:center}
+.comp-val{font-size:1.5rem;font-weight:800;margin-bottom:6px}
+.comp-label{font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+
+/* ── NOT AVAILABLE ── */
+.not-available{
+  padding:24px;border-radius:18px;text-align:center;
+  background:rgba(255,255,255,.03);border:1px solid var(--line);
+  color:var(--muted);font-size:.88rem;
+}
+
+/* ── FOOTER ── */
+.report-footer{
+  margin-top:32px;padding:20px 0;border-top:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+}
+.footer-brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:.85rem}
+.footer-note{font-size:.72rem;color:var(--muted)}
+
+/* ── LOADING ── */
+.loading-overlay{
+  position:fixed;inset:0;background:rgba(3,8,16,.85);
+  display:flex;align-items:center;justify-content:center;z-index:100;
+  flex-direction:column;gap:16px;backdrop-filter:blur(8px);
+}
+.loading-overlay.hidden{display:none}
+.spinner{width:48px;height:48px;border-radius:50%;border:3px solid rgba(255,255,255,.1);
+  border-top-color:var(--gold);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:.9rem;color:var(--muted)}
+
+/* ── PRINT ── */
+@media print{
+  :root{--bg:#fff;--ink:#1a1a2e;--muted:#555;--line:#ddd;--surface:#f9f9f9}
+  body{background:#fff;color:#1a1a2e;padding:0}
+  .topbar,.period-bar,.topbar-right,.print-btn,.pill-btn{display:none!important}
+  .shell{padding:20px;max-width:100%}
+  .cover{background:linear-gradient(135deg,#fef9ec,#ecfdf5)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .section{page-break-inside:avoid}
+}
+
+@media(max-width:900px){
+  .cover{flex-direction:column}
+  .cover-meta{align-items:flex-start}
+  .metric-grid{grid-template-columns:repeat(2,1fr)}
+  .comp-grid{grid-template-columns:repeat(2,1fr)}
+  .wb-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .metric-grid{grid-template-columns:1fr}
+  .shell{padding:16px 16px 0}
+  .topbar{padding:12px 16px}
+  .period-bar{padding:12px 16px}
+  .cover{padding:24px 20px}
+  .cover-left h1{font-size:1.9rem}
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Gerando relatório...</div>
+</div>
+
+<div class="topbar">
+  <a class="brand" href="/"><span class="mark">CRT</span> SolusCRT Saúde</a>
+  <div class="topbar-right">
+    <button class="pill-btn print-btn" onclick="window.print()">🖨 Imprimir / PDF</button>
+    <a class="pill-btn" href="/compliance/">Auditoria</a>
+    <a class="pill-btn" href="/dashboard-empresa/">Dashboard</a>
+  </div>
+</div>
+
+<div class="period-bar">
+  <span class="period-label">Período:</span>
+  <button class="period-btn" data-periodo="semana" onclick="setPeriodo('semana')">Semana</button>
+  <button class="period-btn active" data-periodo="mes" onclick="setPeriodo('mes')">Mês atual</button>
+  <button class="period-btn" data-periodo="trimestre" onclick="setPeriodo('trimestre')">Trimestre</button>
+  <div class="custom-dates">
+    <span class="period-label">ou:</span>
+    <input type="date" class="date-input" id="date-desde" placeholder="De">
+    <span class="period-label">até</span>
+    <input type="date" class="date-input" id="date-ate" placeholder="Até">
+    <button class="period-btn" onclick="setPeriodo('custom')">Aplicar</button>
+  </div>
+</div>
+
+<div class="shell" id="report-content">
+  <!-- Rendered by JS -->
+</div>
+
+<script>
+let currentPeriodo = 'mes';
+
+function setPeriodo(p) {
+  currentPeriodo = p;
+  document.querySelectorAll('.period-btn[data-periodo]').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.period-btn[data-periodo="${p}"]`);
+  if (btn) btn.classList.add('active');
+  loadRelatorio();
+}
+
+async function loadRelatorio() {
+  document.getElementById('loading').classList.remove('hidden');
+  const params = new URLSearchParams({periodo: currentPeriodo});
+  if (currentPeriodo === 'custom') {
+    params.set('desde', document.getElementById('date-desde').value);
+    params.set('ate', document.getElementById('date-ate').value);
+  }
+  try {
+    const res = await fetch('/api/relatorio/executivo?' + params);
+    if (!res.ok) throw new Error(res.statusText);
+    const d = await res.json();
+    renderRelatorio(d);
+  } catch(e) {
+    document.getElementById('report-content').innerHTML =
+      `<div style="text-align:center;padding:60px;color:var(--rose)">Erro ao gerar relatório: ${e.message}</div>`;
+  } finally {
+    document.getElementById('loading').classList.add('hidden');
+  }
+}
+
+function renderRelatorio(d) {
+  const periodoLabel = {mes:'Mês Atual', trimestre:'Último Trimestre', semana:'Esta Semana', custom:'Período Personalizado'}[d.periodo] || d.periodo;
+  const container = document.getElementById('report-content');
+
+  // Calculate overall score
+  let scores = [];
+  if (d.sst?.score_sst) scores.push(d.sst.score_sst);
+  if (d.empresa_corp?.score_bem_estar) scores.push(d.empresa_corp.score_bem_estar * 20);
+  const overallScore = scores.length ? Math.round(scores.reduce((a,b) => a+b) / scores.length) : null;
+
+  container.innerHTML = `
+    <!-- COVER -->
+    <div class="cover">
+      <div class="cover-left">
+        <div class="eyebrow">SolusCRT Saúde · Relatório Executivo</div>
+        <h1>Saúde &<br>Segurança<br>Corporativa</h1>
+        <div class="subtitle">${escHtml(d.empresa)} · ${periodoLabel}<br>${fmtDate(d.desde)} → ${fmtDate(d.ate)}</div>
+      </div>
+      <div class="cover-meta">
+        ${overallScore != null ? `
+        <div class="score-ring">
+          <div class="score-num">${overallScore}</div>
+          <div class="score-lbl">score</div>
+        </div>` : ''}
+        <div class="meta-item"><strong>${escHtml(d.empresa)}</strong>Organização</div>
+        <div class="meta-item"><strong>${fmtDate(d.gerado_em)}</strong>Data do relatório</div>
+      </div>
+    </div>
+
+    <!-- RECOMENDAÇÕES -->
+    ${renderRecomendacoes(d.recomendacoes)}
+
+    <!-- SST -->
+    ${renderSST(d.sst)}
+
+    <!-- EMPRESA / BEM-ESTAR -->
+    ${renderEmpresa(d.empresa_corp)}
+
+    <!-- FARMÁCIA -->
+    ${renderFarmacia(d.farmacia)}
+
+    <!-- HOSPITAL -->
+    ${renderHospital(d.hospital)}
+
+    <!-- COMPLIANCE -->
+    ${renderCompliance(d.compliance)}
+
+    <!-- FOOTER -->
+    <div class="report-footer">
+      <div class="footer-brand"><span style="font-size:1.1rem">🏥</span> SolusCRT Saúde</div>
+      <div class="footer-note">Relatório gerado em ${fmtDate(d.gerado_em)} · Dados confidenciais · Uso interno</div>
+    </div>
+  `;
+}
+
+function renderRecomendacoes(recs) {
+  if (!recs || !recs.length) return '';
+  const icons = {ok:'✅', alerta:'⚠️', critico:'🚨'};
+  const colorMap = {ok:'var(--green)', alerta:'var(--amber)', critico:'var(--rose)'};
+  return `
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">💡</span>
+        <h2 class="section-title">Recomendações do Período</h2>
+        <span class="section-badge ${recs.some(r=>r.tipo==='critico') ? 'badge-critico' : recs.some(r=>r.tipo==='alerta') ? 'badge-warn' : 'badge-ok'}">
+          ${recs.some(r=>r.tipo==='critico') ? 'Atenção urgente' : recs.some(r=>r.tipo==='alerta') ? 'Ação recomendada' : 'Situação normal'}
+        </span>
+      </div>
+      <div class="rec-list">
+        ${recs.map(r => `
+          <div class="rec-item rec-type-${r.tipo}">
+            <div class="rec-icon">${icons[r.tipo] || '📌'}</div>
+            <div>
+              <div class="rec-modulo" style="color:${colorMap[r.tipo] || 'var(--muted)'}">${escHtml(r.modulo)}</div>
+              <div class="rec-titulo">${escHtml(r.titulo)}</div>
+              <div class="rec-acao">→ ${escHtml(r.acao)}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderSST(sst) {
+  if (!sst?.disponivel) return modulo_indisponivel('SST — Saúde Ocupacional', '🦺');
+  const score = sst.score_sst;
+  const status = score >= 80 ? 'ok' : score >= 60 ? 'warn' : 'critico';
+  return `
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">🦺</span>
+        <h2 class="section-title">SST — Saúde Ocupacional</h2>
+        <span class="section-badge badge-${status}">${score >= 80 ? 'Conforme' : score >= 60 ? 'Atenção' : 'Crítico'} · ${score}/100</span>
+      </div>
+      <div class="metric-grid">
+        ${metricCard('Funcionários', fmtNum(sst.total_funcionarios), 'Ativos em monitoramento', 'var(--cyan)')}
+        ${metricCard('Exames no período', fmtNum(sst.exames_periodo), 'ASOs e periódicos realizados', 'var(--green)')}
+        ${metricCard('Exames vencidos', fmtNum(sst.exames_vencidos), 'Requerem renovação', sst.exames_vencidos > 0 ? 'var(--rose)' : 'var(--green)')}
+        ${metricCard('Afastamentos', fmtNum(sst.afastamentos_periodo), 'No período analisado', 'var(--amber)')}
+      </div>
+      ${sst.agendamentos_total > 0 ? `
+      <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">
+        <div class="comp-item" style="text-align:left;padding:12px 16px;flex:1">
+          <div class="comp-label">Agendamentos realizados</div>
+          <div class="comp-val" style="color:var(--green)">${sst.agendamentos_realizados} / ${sst.agendamentos_total}</div>
+        </div>
+        <div class="comp-item" style="text-align:left;padding:12px 16px;flex:1">
+          <div class="comp-label">EPIs entregues</div>
+          <div class="comp-val" style="color:var(--cyan)">${fmtNum(sst.epis_entregues)}</div>
+        </div>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function renderEmpresa(corp) {
+  if (!corp?.disponivel) return modulo_indisponivel('Saúde & Bem-estar', '💚');
+  const score = corp.score_bem_estar;
+  const status = score >= 3.5 ? 'ok' : score >= 2.5 ? 'warn' : 'critico';
+  const pct = (score - 1) / 4 * 100;
+  return `
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">💚</span>
+        <h2 class="section-title">Saúde & Bem-estar Corporativo</h2>
+        <span class="section-badge badge-${status}">Score ${score?.toFixed(1)}/5</span>
+      </div>
+      <div class="metric-grid">
+        ${metricCard('Check-ins', fmtNum(corp.total_checkins), 'Registros no período', 'var(--cyan)')}
+        ${metricCard('Bem-estar', corp.score_bem_estar?.toFixed(1) + '/5', 'Média geral', score >= 3.5 ? 'var(--green)' : score >= 2.5 ? 'var(--amber)' : 'var(--rose)')}
+        ${metricCard('Pedidos apoio', fmtNum(corp.apoios_total), corp.apoios_resolvidos + ' resolvidos', corp.apoios_total > 0 ? 'var(--amber)' : 'var(--green)')}
+        ${metricCard('Risco burnout', corp.media_risco_burnout?.toFixed(1) + '/5', 'Média semanal', corp.media_risco_burnout >= 3.5 ? 'var(--rose)' : 'var(--green)')}
+      </div>
+      <div style="margin-top:16px">
+        <div style="font-size:.78rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px">Indicadores de bem-estar</div>
+        <div class="wb-grid">
+          ${wbBar('Humor', corp.media_humor, 5, 'var(--gold)')}
+          ${wbBar('Energia', corp.media_energia, 5, 'var(--cyan)')}
+          ${wbBar('Estresse', 5 - corp.media_estresse, 5, 'var(--rose)', true)}
+          ${wbBar('Sono', corp.media_sono, 5, 'var(--purple)')}
+          ${wbBar('Bem-estar geral', corp.media_bem_estar_semanal, 5, 'var(--green)')}
+          ${wbBar('Pressão trabalho', 5 - (corp.media_pressao_trabalho || 3), 5, 'var(--amber)', true)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFarmacia(farm) {
+  if (!farm?.disponivel) return modulo_indisponivel('Farmácia & Estoque', '💊');
+  const vencidos = farm.lotes_vencidos;
+  const status = vencidos > 0 ? 'warn' : 'ok';
+  return `
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">💊</span>
+        <h2 class="section-title">Farmácia & Rastreabilidade</h2>
+        <span class="section-badge badge-${status}">${vencidos > 0 ? vencidos + ' lote(s) vencido(s)' : 'Estoque OK'}</span>
+      </div>
+      <div class="metric-grid">
+        ${metricCard('Lotes ativos', fmtNum(farm.total_lotes_ativos), 'Com estoque > 0', 'var(--cyan)')}
+        ${metricCard('Lotes vencidos', fmtNum(farm.lotes_vencidos), 'Requerem descarte', vencidos > 0 ? 'var(--rose)' : 'var(--green)')}
+        ${metricCard('Vencendo em 30d', fmtNum(farm.lotes_vencendo_30), 'Prioridade FEFO', farm.lotes_vencendo_30 > 0 ? 'var(--amber)' : 'var(--green)')}
+        ${metricCard('Itens críticos', fmtNum(farm.itens_estoque_critico), 'Abaixo do mínimo', farm.itens_estoque_critico > 0 ? 'var(--rose)' : 'var(--green)')}
+      </div>
+    </div>
+  `;
+}
+
+function renderHospital(hosp) {
+  if (!hosp?.disponivel) return modulo_indisponivel('Hospital & Leitos', '🏥');
+  const taxa = hosp.taxa_ocupacao_pct;
+  const status = taxa >= 90 ? 'critico' : taxa >= 75 ? 'warn' : 'ok';
+  return `
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">🏥</span>
+        <h2 class="section-title">Hospital & Gestão de Leitos</h2>
+        <span class="section-badge badge-${status}">Ocupação: ${taxa}%</span>
+      </div>
+      <div class="metric-grid">
+        ${metricCard('Total leitos', fmtNum(hosp.total_leitos), 'Capacidade instalada', 'var(--blue)')}
+        ${metricCard('Leitos ocupados', fmtNum(hosp.leitos_ocupados), 'Ocupação: ' + taxa + '%', taxa >= 90 ? 'var(--rose)' : taxa >= 75 ? 'var(--amber)' : 'var(--green)')}
+        ${metricCard('Internações', fmtNum(hosp.internacoes_periodo), 'No período', 'var(--cyan)')}
+        ${metricCard('Altas', fmtNum(hosp.altas_periodo), 'No período', 'var(--green)')}
+      </div>
+    </div>
+  `;
+}
+
+function renderCompliance(comp) {
+  if (!comp?.disponivel) return '';
+  return `
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">🔒</span>
+        <h2 class="section-title">Compliance & Conformidade LGPD</h2>
+        <span class="section-badge badge-ok">Conforme</span>
+      </div>
+      <div class="comp-grid">
+        <div class="comp-item">
+          <div class="comp-val" style="color:var(--blue)">${fmtNum(comp.eventos_auditoria_periodo)}</div>
+          <div class="comp-label">Eventos de auditoria</div>
+        </div>
+        <div class="comp-item">
+          <div class="comp-val" style="color:var(--green)">${fmtNum(comp.dispositivos_ativos)}</div>
+          <div class="comp-label">Dispositivos autorizados</div>
+        </div>
+        <div class="comp-item">
+          <div class="comp-val" style="color:var(--green)">✓</div>
+          <div class="comp-label">Status LGPD: ${comp.status_lgpd}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function modulo_indisponivel(titulo, icon) {
+  return `
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">${icon}</span>
+        <h2 class="section-title">${titulo}</h2>
+        <span class="section-badge badge-indisponivel">Sem dados</span>
+      </div>
+      <div class="not-available">Módulo não configurado ou sem dados no período</div>
+    </div>
+  `;
+}
+
+function metricCard(label, val, note, color) {
+  return `<div class="metric-card">
+    <div class="m-label">${label}</div>
+    <div class="m-val" style="color:${color}">${val}</div>
+    <div class="m-note">${note}</div>
+  </div>`;
+}
+
+function wbBar(label, val, max, color, inverted) {
+  const v = val || 0;
+  const pct = Math.max(0, Math.min(100, (v / max) * 100));
+  return `<div class="wb-bar-item">
+    <div class="wb-label">${label}</div>
+    <div class="wb-bg"><div class="wb-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div>
+    <div class="wb-val" style="color:${color}">${v.toFixed(1)}</div>
+  </div>`;
+}
+
+function fmtDate(s) {
+  if (!s) return '—';
+  const [y,m,d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+function fmtNum(n) { return n != null ? Number(n).toLocaleString('pt-BR') : '—'; }
+function escHtml(s) {
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+loadRelatorio();
+</script>
+</body>
+</html>

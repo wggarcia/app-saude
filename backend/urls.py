@@ -96,6 +96,7 @@ from api.views_compliance import (
     api_compliance_resumo, api_compliance_trilha,
     api_compliance_dispositivos, api_compliance_exportar, compliance_page,
 )
+from api.views_relatorio import api_relatorio_executivo, relatorio_page
 from api.views_contratos import (
     api_beneficiario_excluir,
     api_beneficiarios_contrato,
@@ -337,6 +338,10 @@ urlpatterns = [
     path('api/compliance/dispositivos', api_compliance_dispositivos),
     path('api/compliance/exportar/', api_compliance_exportar),
     path('api/compliance/exportar', api_compliance_exportar),
+    # 📄 Relatório Executivo
+    path('relatorio-executivo/', relatorio_page),
+    path('api/relatorio/executivo/', api_relatorio_executivo),
+    path('api/relatorio/executivo', api_relatorio_executivo),
     # Contratos de saúde e séries epidemiológicas
     path('contratos/', contratos_page),
     path('series-epidemiologicas/', series_epi_page),
