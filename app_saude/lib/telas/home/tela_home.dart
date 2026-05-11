@@ -466,6 +466,8 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                       'Acompanhe o radar local, o mapa publico e comunicados oficiais para tomar decisoes melhores no seu dia a dia.',
                   icon: Icons.language,
                 ),
+                const SizedBox(height: 20),
+                const _AcessoEmpresarialCard(),
               ],
             ),
           ),
@@ -1076,6 +1078,78 @@ class _ValueCard extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AcessoEmpresarialCard extends StatelessWidget {
+  const _AcessoEmpresarialCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: () => Navigator.of(context).pushNamed('/empresa'),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0B2333),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: const Color(0xFF39D0C3).withValues(alpha: 0.35),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF39D0C3).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFF39D0C3).withValues(alpha: 0.35),
+                ),
+              ),
+              child: const Icon(
+                Icons.health_and_safety_outlined,
+                color: Color(0xFF39D0C3),
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Acesso Empresarial',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Gestao SST, eSocial e compliance para empresas',
+                    style: TextStyle(
+                      color: Color(0xFF9CC4DB),
+                      fontSize: 13,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Color(0xFF39D0C3),
+              size: 16,
             ),
           ],
         ),
