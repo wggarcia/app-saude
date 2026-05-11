@@ -455,11 +455,25 @@ def ativar_sessao_aba(request):
         return JsonResponse({"erro": "token ausente"}, status=401)
 
     token = auth.split(" ", 1)[1].strip()
-    empresa = getattr(request, "empresa", None)
-    principal = getattr(request, "principal", None) or empresa
 
-    if not empresa or not principal:
-        return JsonResponse({"erro": "nao autenticado"}, status=401)
+    # Decode the token from the Authorization header directly — do NOT rely on
+    # request.empresa (middleware cookie), which may already point to a different
+    # account if the user is logged into another tab.
+    try:
+        data = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
+        empresa = Empresa.objects.get(id=data["empresa_id"], ativo=True)
+        principal_kind = data.get("principal_kind")
+        principal_id = data.get("principal_id")
+        if principal_kind == "usuario_empresa":
+            principal = EmpresaUsuario.objects.get(id=principal_id, empresa=empresa, ativo=True)
+        else:
+            principal = empresa
+
+        if principal.sessao_ativa_chave and data.get("session_key") != principal.sessao_ativa_chave:
+            return JsonResponse({"erro": "sessão encerrada"}, status=401)
+
+    except Exception:
+        return JsonResponse({"erro": "token inválido"}, status=401)
 
     response = JsonResponse({
         "status": "ok",
@@ -467,6 +481,7 @@ def ativar_sessao_aba(request):
         "tipo_conta": empresa.tipo_conta,
         "destination": _destino_conta(empresa),
     })
+    # Re-apply cookie so this tab's cookie matches its sessionStorage token
     return _aplicar_cookies_autenticacao(response, empresa, token)
 
 

@@ -269,6 +269,7 @@ def hub_view(request):
     )
 
     return render(request, "hub_enterprise.html", {
+        "empresa_id": empresa.id,
         "setor": setor,
         "setor_label": LABEL_SETOR.get(setor, setor.title()),
         "empresa_nome": empresa_nome,
