@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MLOps Pipeline</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0e1a;color:#e2e8f0;font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+    .top-bar{background:#111827;border-bottom:1px solid #1e293b;padding:12px 24px;display:flex;align-items:center;gap:12px}
+    .top-bar h1{font-size:1.1rem;font-weight:700}
+    .back-link{color:#64748b;font-size:.85rem;text-decoration:none;margin-right:4px}
+    .tabs{display:flex;gap:4px;margin-left:auto}
+    .tab{padding:6px 16px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:#64748b}
+    .tab.active{background:#1e293b;color:#f8fafc}
+    .main{max-width:1300px;margin:0 auto;padding:24px}
+    .kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px}
+    .kpi{background:#111827;border:1px solid #1e293b;border-radius:10px;padding:14px 16px}
+    .kpi-label{font-size:.68rem;color:#64748b;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+    .kpi-val{font-size:1.5rem;font-weight:800}
+    .c-green{color:#10b981}.c-blue{color:#3b82f6}.c-amber{color:#f59e0b}.c-rose{color:#f43f5e}.c-violet{color:#8b5cf6}.c-cyan{color:#06b6d4}
+    .card{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:18px;margin-bottom:18px}
+    .card-title{font-size:.76rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+    /* Modelo cards */
+    .modelo-card{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:16px;margin-bottom:12px;cursor:pointer;transition:.15s}
+    .modelo-card:hover{border-color:#334155}
+    .modelo-card.selected{border-color:#3b82f6}
+    .mc-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .mc-nome{font-size:.92rem;font-weight:700;color:#f8fafc;flex:1}
+    .mc-status{font-size:.7rem;padding:3px 10px;border-radius:999px;font-weight:700}
+    .ms-producao{background:#052e16;color:#10b981}
+    .ms-staging{background:#1e1b4b;color:#818cf8}
+    .ms-deprecado{background:#1f0a0a;color:#f43f5e}
+    .ms-pausado{background:#1c1100;color:#f59e0b}
+    .mc-tipo{font-size:.72rem;color:#64748b;margin-bottom:8px}
+    .mc-metrics{display:flex;gap:12px}
+    .mc-metric{text-align:center}
+    .mc-metric-val{font-size:.9rem;font-weight:700}
+    .mc-metric-label{font-size:.65rem;color:#64748b}
+    /* Alert badge */
+    .alerta-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:.72rem;font-weight:700}
+    .ab-ok{background:#052e16;color:#10b981}
+    .ab-atencao{background:#1c1100;color:#f59e0b}
+    .ab-drift{background:#130026;color:#a855f7}
+    .ab-degradacao{background:#1f0a0a;color:#f43f5e}
+    /* Sparkline */
+    .sparkline-wrap{display:flex;align-items:flex-end;gap:3px;height:50px;margin-top:8px}
+    .spark-bar{flex:1;border-radius:2px 2px 0 0;min-height:2px;transition:height .3s}
+    /* Detalhe */
+    .detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1e293b}
+    .detail-row:last-child{border:none}
+    .detail-k{font-size:.82rem;color:#94a3b8}
+    .detail-v{font-size:.84rem;font-weight:700;color:#f8fafc}
+    /* SLO bars */
+    .slo-bar-wrap{margin-bottom:12px}
+    .slo-label{display:flex;justify-content:space-between;font-size:.76rem;color:#64748b;margin-bottom:4px}
+    .slo-bar-bg{background:#1e293b;border-radius:4px;height:8px;overflow:hidden;position:relative}
+    .slo-bar-fill{height:100%;border-radius:4px;transition:width .5s}
+    .slo-target{position:absolute;top:0;width:2px;height:100%;background:#f59e0b;opacity:.8}
+    /* Snapshot table */
+    .snap-table{width:100%;border-collapse:collapse}
+    .snap-table th{font-size:.7rem;color:#64748b;font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid #1e293b;text-transform:uppercase}
+    .snap-table td{font-size:.8rem;color:#cbd5e1;padding:8px;border-bottom:1px solid #0f172a}
+    .btn{padding:8px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:700;cursor:pointer}
+    .btn-seed{background:#1e1b4b;color:#818cf8;border:1px solid #3730a3}
+    .panel{display:none}.panel.active{display:block}
+    .empty{color:#475569;font-size:.84rem;text-align:center;padding:20px}
+    @media(max-width:768px){.grid-2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="top-bar">
+  <a href="/dashboard-empresa/" class="back-link">←</a>
+  <h1>MLOps Pipeline</h1>
+  <div class="tabs">
+    <button class="tab active" onclick="showPanel('modelos')">Modelos</button>
+    <button class="tab" onclick="showPanel('drift')">Alertas Drift</button>
+  </div>
+  <button class="btn btn-seed" style="margin-left:12px;padding:6px 14px;font-size:.78rem" onclick="seedModelos()">+ Modelos Padrão</button>
+</div>
+<div class="main">
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-label">Em Produção</div><div class="kpi-val c-green" id="kProd">—</div></div>
+    <div class="kpi"><div class="kpi-label">Total Modelos</div><div class="kpi-val c-blue" id="kTotal">—</div></div>
+    <div class="kpi"><div class="kpi-label">Com Drift 7d</div><div class="kpi-val c-violet" id="kDrift">—</div></div>
+    <div class="kpi"><div class="kpi-label">Alertas Ativos</div><div class="kpi-val c-rose" id="kAlertas">—</div></div>
+  </div>
+
+  <div class="panel active" id="panel-modelos">
+    <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:18px">
+      <div>
+        <div style="font-size:.78rem;color:#64748b;margin-bottom:12px;font-weight:600">MODELOS REGISTRADOS</div>
+        <div id="modelosList"><div class="empty">Carregando...</div></div>
+      </div>
+      <div id="modeloDetalhe">
+        <div class="card">
+          <div class="card-title">Selecione um modelo</div>
+          <div class="empty">Clique em um modelo para ver detalhes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-drift">
+    <div class="card">
+      <div class="card-title">Alertas de Drift & Degradação — 30 dias</div>
+      <div id="driftList"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const statusCls = s => ({producao:'ms-producao',staging:'ms-staging',deprecado:'ms-deprecado',pausado:'ms-pausado'}[s]||'ms-staging');
+const alertaCls = s => ({ok:'ab-ok',atencao:'ab-atencao',drift:'ab-drift',degradacao:'ab-degradacao'}[s]||'ab-ok');
+const alertaEmoji = s => ({ok:'✓',atencao:'⚠',drift:'〜',degradacao:'↓'}[s]||'✓');
+
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'drift') carregarDrift();
+}
+
+async function carregar() {
+  const r = await fetch('/api/mlops/modelos').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+
+  document.getElementById('kProd').textContent = r.em_producao || 0;
+  document.getElementById('kTotal').textContent = r.total || 0;
+  document.getElementById('kDrift').textContent = r.com_drift || 0;
+
+  const modelos = r.modelos || [];
+  let alertas_total = 0;
+  document.getElementById('modelosList').innerHTML = modelos.length ? modelos.map(m => {
+    const ult = m.ultimo_monitoramento;
+    const alertaStatus = ult ? ult.status_alerta : 'ok';
+    if (alertaStatus !== 'ok') alertas_total++;
+    const baseline = m.metricas_baseline || {};
+    return `<div class="modelo-card" onclick="verDetalhe('${m.slug}')" id="mc-${m.slug}">
+      <div class="mc-header">
+        <div class="mc-nome">${m.nome}</div>
+        <span class="mc-status ${statusCls(m.status)}">${m.status}</span>
+        <span class="alerta-badge ${alertaCls(alertaStatus)}">${alertaEmoji(alertaStatus)} ${alertaStatus}</span>
+      </div>
+      <div class="mc-tipo">${m.tipo} · v${m.versao_atual} · ${m.owner_equipe||'—'}</div>
+      <div class="mc-metrics">
+        ${baseline.accuracy !== undefined ? `<div class="mc-metric"><div class="mc-metric-val" style="color:#10b981">${(baseline.accuracy*100).toFixed(0)}%</div><div class="mc-metric-label">Accuracy</div></div>` : ''}
+        ${baseline.f1 !== undefined ? `<div class="mc-metric"><div class="mc-metric-val" style="color:#3b82f6">${(baseline.f1*100).toFixed(0)}%</div><div class="mc-metric-label">F1</div></div>` : ''}
+        <div class="mc-metric"><div class="mc-metric-val" style="color:#94a3b8">${m.slo_latencia_ms}ms</div><div class="mc-metric-label">SLO Lat.</div></div>
+        ${ult && ult.drift_score !== null ? `<div class="mc-metric"><div class="mc-metric-val" style="color:${ult.drift_score>0.3?'#a855f7':'#94a3b8'}">${(ult.drift_score*100).toFixed(0)}%</div><div class="mc-metric-label">Drift</div></div>` : ''}
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty">Nenhum modelo registrado. Clique em "+ Modelos Padrão" para começar.</div>';
+
+  document.getElementById('kAlertas').textContent = alertas_total;
+}
+
+async function verDetalhe(slug) {
+  document.querySelectorAll('.modelo-card').forEach(c => c.classList.remove('selected'));
+  const mc = document.getElementById('mc-' + slug);
+  if (mc) mc.classList.add('selected');
+
+  const r = await fetch(`/api/mlops/modelos/${slug}/`).then(r=>r.json()).catch(()=>null);
+  if (!r || r.erro) return;
+
+  const snapshots = r.snapshots || [];
+  const precisoes = snapshots.map(s => s.precisao_periodo).filter(v => v !== null).reverse();
+  const maxPrec = Math.max(...precisoes, r.slo_precisao_min, 1);
+
+  // Sparkline de precisão
+  const sparkHtml = precisoes.map(p => {
+    const h = Math.round(p / maxPrec * 45);
+    const col = p >= r.slo_precisao_min ? '#10b981' : p >= r.slo_precisao_min - 0.05 ? '#f59e0b' : '#f43f5e';
+    return `<div class="spark-bar" style="height:${h}px;background:${col}"></div>`;
+  }).join('');
+
+  const baselinePct = r.slo_precisao_min * 100;
+
+  document.getElementById('modeloDetalhe').innerHTML = `
+    <div class="card">
+      <div class="card-title">${r.nome} <span style="color:#64748b;font-size:.75rem">v${r.versao_atual}</span></div>
+      <p style="font-size:.82rem;color:#64748b;margin-bottom:16px">${r.descricao||''}</p>
+
+      <div class="slo-bar-wrap">
+        <div class="slo-label"><span>Precisão atual vs SLO (${baselinePct.toFixed(0)}%)</span><span>${r.snapshots[0]?.precisao_periodo ? (r.snapshots[0].precisao_periodo*100).toFixed(1)+'%' : '—'}</span></div>
+        <div class="slo-bar-bg">
+          <div class="slo-bar-fill" style="width:${r.snapshots[0]?.precisao_periodo ? r.snapshots[0].precisao_periodo/1*100 : 0}%;background:${r.snapshots[0]?.precisao_periodo >= r.slo_precisao_min ? '#10b981' : '#f43f5e'}"></div>
+          <div class="slo-target" style="left:${baselinePct}%"></div>
+        </div>
+      </div>
+
+      <div style="font-size:.74rem;color:#64748b;margin-bottom:4px">Precisão — últimas execuções</div>
+      <div class="sparkline-wrap">${sparkHtml||'<div class="empty" style="width:100%">Sem dados de execução</div>'}</div>
+
+      <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div class="detail-row"><span class="detail-k">Tipo</span><span class="detail-v">${r.tipo}</span></div>
+          <div class="detail-row"><span class="detail-k">Status</span><span class="detail-v">${r.status}</span></div>
+          <div class="detail-row"><span class="detail-k">Owner</span><span class="detail-v">${r.owner_equipe||'—'}</span></div>
+          <div class="detail-row"><span class="detail-k">Tendência</span><span class="detail-v" style="color:${r.tendencia_precisao==='decrescente'?'#f43f5e':r.tendencia_precisao==='crescente'?'#10b981':'#94a3b8'}">${r.tendencia_precisao}</span></div>
+        </div>
+        <div>
+          <div class="detail-row"><span class="detail-k">SLO Latência</span><span class="detail-v">${r.slo_latencia_ms}ms</span></div>
+          <div class="detail-row"><span class="detail-k">SLO Precisão</span><span class="detail-v">${(r.slo_precisao_min*100).toFixed(0)}%</span></div>
+          <div class="detail-row"><span class="detail-k">Drift 7d</span><span class="detail-v" style="color:${r.drift_medio_7d>0.3?'#a855f7':'#94a3b8'}">${r.drift_medio_7d !== null ? (r.drift_medio_7d*100).toFixed(1)+'%' : '—'}</span></div>
+          <div class="detail-row"><span class="detail-k">Feature alvo</span><span class="detail-v">${r.feature_alvo||'—'}</span></div>
+        </div>
+      </div>
+
+      ${snapshots.length ? `
+      <div style="margin-top:16px">
+        <div class="card-title">Snapshots de Monitoramento</div>
+        <table class="snap-table">
+          <thead><tr><th>Data</th><th>Predições</th><th>Precisão</th><th>Lat p95</th><th>Drift</th><th>Status</th></tr></thead>
+          <tbody>${snapshots.slice(0,7).map(s => `<tr>
+            <td>${s.data_referencia}</td>
+            <td>${s.total_predicoes}</td>
+            <td>${s.precisao_periodo !== null ? (s.precisao_periodo*100).toFixed(1)+'%' : '—'}</td>
+            <td>${s.latencia_p95_ms !== null ? s.latencia_p95_ms+'ms' : '—'}</td>
+            <td>${s.drift_score !== null ? (s.drift_score*100).toFixed(1)+'%' : '—'}</td>
+            <td><span class="alerta-badge ${alertaCls(s.status_alerta)}">${s.status_alerta}</span></td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>` : ''}
+    </div>`;
+}
+
+async function carregarDrift() {
+  const r = await fetch('/api/mlops/drift/alertas').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  const alertas = r.alertas || [];
+  document.getElementById('driftList').innerHTML = alertas.length ? `
+    <table class="snap-table" style="margin-bottom:0">
+      <thead><tr><th>Modelo</th><th>Data</th><th>Predições</th><th>Precisão</th><th>Drift Score</th><th>Status</th></tr></thead>
+      <tbody>${alertas.map(a => `<tr>
+        <td style="font-weight:600">${a.modelo_nome}</td>
+        <td>${a.data_referencia}</td>
+        <td>${a.total_predicoes}</td>
+        <td style="color:${a.precisao_periodo < a.slo_precisao_min ? '#f43f5e' : '#10b981'}">${a.precisao_periodo !== null ? (a.precisao_periodo*100).toFixed(1)+'%' : '—'}</td>
+        <td style="color:#a855f7">${a.drift_score !== null ? (a.drift_score*100).toFixed(1)+'%' : '—'}</td>
+        <td><span class="alerta-badge ${alertaCls(a.status_alerta)}">${alertaEmoji(a.status_alerta)} ${a.status_alerta}</span></td>
+      </tr>`).join('')}</tbody>
+    </table>` : '<div class="empty">Nenhum alerta de drift nos últimos 30 dias</div>';
+}
+
+async function seedModelos() {
+  const r = await fetch('/api/mlops/seed').then(r=>r.json()).catch(()=>null);
+  if (r) alert(`${r.criados} modelo(s) padrão criados`);
+  carregar();
+}
+
+carregar();
+setInterval(carregar, 60000);
+</script>
+</body>
+</html>

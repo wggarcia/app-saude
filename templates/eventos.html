@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Event Backbone — Outbox</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0e1a;color:#e2e8f0;font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+    .top-bar{background:#111827;border-bottom:1px solid #1e293b;padding:12px 24px;display:flex;align-items:center;gap:16px}
+    .top-bar h1{font-size:1.1rem;font-weight:700}
+    .tabs{display:flex;gap:4px;margin-left:auto}
+    .tab{padding:6px 16px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:#64748b;transition:.15s}
+    .tab.active{background:#1e293b;color:#f8fafc}
+    .back-link{color:#64748b;font-size:.85rem;text-decoration:none}
+    .back-link:hover{color:#94a3b8}
+    .main{max-width:1300px;margin:0 auto;padding:24px}
+    .kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px}
+    .kpi{background:#111827;border:1px solid #1e293b;border-radius:10px;padding:14px 16px}
+    .kpi-label{font-size:.68rem;color:#64748b;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+    .kpi-val{font-size:1.5rem;font-weight:800}
+    .c-green{color:#10b981}.c-blue{color:#3b82f6}.c-amber{color:#f59e0b}.c-rose{color:#f43f5e}.c-cyan{color:#06b6d4}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px}
+    .card{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:18px}
+    .card-title{font-size:.76rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+    /* Eventos list */
+    .evt-row{padding:10px 12px;border-radius:8px;background:#0f172a;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+    .evt-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .dot-pendente{background:#64748b}.dot-processando{background:#3b82f6}.dot-entregue{background:#10b981}.dot-falha{background:#f59e0b}.dot-dlq{background:#f43f5e}
+    .evt-tipo{flex:1;font-size:.82rem;color:#cbd5e1;font-weight:600}
+    .evt-agr{font-size:.75rem;color:#64748b;width:120px}
+    .evt-tempo{font-size:.73rem;color:#475569;width:120px;text-align:right}
+    .evt-status{font-size:.72rem;padding:2px 8px;border-radius:999px;font-weight:700;flex-shrink:0}
+    .s-pendente{background:#0f172a;color:#64748b;border:1px solid #334155}
+    .s-entregue{background:#052e16;color:#10b981}
+    .s-falha{background:#1c1100;color:#f59e0b}
+    .s-dlq{background:#1f0a0a;color:#f43f5e}
+    /* Tipo chart */
+    .tipo-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .tipo-nome{flex:1;font-size:.8rem;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .tipo-bar-w{width:120px;background:#1e293b;border-radius:3px;height:6px}
+    .tipo-bar{height:100%;border-radius:3px;background:#3b82f6}
+    .tipo-count{width:32px;text-align:right;font-size:.78rem;color:#64748b}
+    /* Subscriptions */
+    .sub-row{padding:10px 12px;background:#0f172a;border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+    .sub-pattern{font-size:.82rem;color:#cbd5e1;font-weight:600;flex:1}
+    .sub-url{font-size:.75rem;color:#64748b;width:200px;overflow:hidden;text-overflow:ellipsis}
+    .sub-ativo{font-size:.72rem;padding:2px 8px;border-radius:999px}
+    .ativo-s{background:#052e16;color:#10b981}
+    .inativo-s{background:#1f0a0a;color:#f43f5e}
+    /* Form */
+    .form-row{display:flex;gap:10px;margin-top:14px}
+    .inp{flex:1;background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:8px 12px;color:#f8fafc;font-size:.84rem}
+    .inp:focus{outline:none;border-color:#3b82f6}
+    .btn{padding:8px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:700;cursor:pointer}
+    .btn-primary{background:#3b82f6;color:#fff}
+    .btn-primary:hover{background:#2563eb}
+    .btn-danger{background:#991b1b;color:#fff;font-size:.75rem;padding:4px 10px}
+    .empty{color:#475569;font-size:.84rem;text-align:center;padding:20px}
+    .panel{display:none}
+    .panel.active{display:block}
+    @media(max-width:768px){.grid-2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="top-bar">
+  <a href="/dashboard-empresa/" class="back-link">←</a>
+  <h1>Event Backbone</h1>
+  <div class="tabs">
+    <button class="tab active" onclick="showPanel('status')">Status</button>
+    <button class="tab" onclick="showPanel('dlq')">DLQ</button>
+    <button class="tab" onclick="showPanel('subs')">Subscriptions</button>
+  </div>
+</div>
+<div class="main">
+  <!-- Status Panel -->
+  <div class="panel active" id="panel-status">
+    <div class="kpi-strip">
+      <div class="kpi"><div class="kpi-label">Total Eventos</div><div class="kpi-val c-blue" id="kTotal">—</div></div>
+      <div class="kpi"><div class="kpi-label">Pendentes</div><div class="kpi-val c-amber" id="kPendentes">—</div></div>
+      <div class="kpi"><div class="kpi-label">Entregues 24h</div><div class="kpi-val c-green" id="kEntregues">—</div></div>
+      <div class="kpi"><div class="kpi-label">Taxa Sucesso 24h</div><div class="kpi-val c-cyan" id="kTaxa">—</div></div>
+      <div class="kpi"><div class="kpi-label">DLQ</div><div class="kpi-val c-rose" id="kDlq">—</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Pendentes <span id="countPend" style="color:#f59e0b"></span></div>
+        <div id="pendentesList"><div class="empty">Nenhum evento pendente</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Top Tipos — 7 dias</div>
+        <div id="tiposChart"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Falhas Recentes</div>
+      <div id="falhasList"><div class="empty">Sem falhas recentes</div></div>
+    </div>
+  </div>
+
+  <!-- DLQ Panel -->
+  <div class="panel" id="panel-dlq">
+    <div class="card">
+      <div class="card-title">Dead Letter Queue <span id="dlqCount" style="color:#f43f5e"></span></div>
+      <div id="dlqList"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- Subscriptions Panel -->
+  <div class="panel" id="panel-subs">
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">Subscriptions Ativas</div>
+      <div id="subsList"><div class="empty">Sem subscriptions</div></div>
+      <div class="form-row">
+        <input class="inp" id="inpPattern" placeholder="Padrão (ex: sst.* ou sst.exame.vencido)"/>
+        <input class="inp" id="inpUrl" placeholder="URL destino (webhook)"/>
+        <button class="btn btn-primary" onclick="criarSub()">+ Adicionar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Publicar Evento Manual</div>
+      <div class="form-row">
+        <input class="inp" id="inpTipo" placeholder="tipo_evento (ex: sst.exame.vencido)"/>
+        <input class="inp" id="inpAgr" placeholder="agregado_tipo"/>
+        <input class="inp" id="inpAgrId" placeholder="agregado_id"/>
+        <button class="btn btn-primary" onclick="publicarEvento()">Publicar</button>
+      </div>
+      <div id="pubResult" style="margin-top:10px;font-size:.8rem;color:#10b981"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let estadoAtual = {};
+
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'dlq') carregarDlq();
+  if (name === 'subs') carregarSubs();
+}
+
+const statusCls = s => ({pendente:'s-pendente',entregue:'s-entregue',falha:'s-falha',dlq:'s-dlq'}[s]||'s-pendente');
+const dotCls = s => `dot-${s}`;
+
+function renderEvento(e) {
+  return `<div class="evt-row">
+    <div class="evt-dot ${dotCls(e.status)}"></div>
+    <div class="evt-tipo">${e.tipo_evento}</div>
+    <div class="evt-agr">${e.agregado_tipo||''} ${e.agregado_id||''}</div>
+    <div class="evt-tempo">${e.criado_em_fmt}</div>
+    <span class="evt-status ${statusCls(e.status)}">${e.status}</span>
+    ${e.status==='dlq'||e.status==='falha'?`<button class="btn btn-danger" onclick="reprocessar('${e.id}')">↺</button>`:''}
+  </div>`;
+}
+
+async function carregar() {
+  const r = await fetch('/api/eventos/status').then(r=>r.json()).catch(()=>null);
+  if (!r||r.erro) return;
+  estadoAtual = r;
+
+  const por_status = r.resumo.por_status || {};
+  document.getElementById('kTotal').textContent = r.resumo.total || 0;
+  document.getElementById('kPendentes').textContent = por_status.pendente || 0;
+  document.getElementById('kEntregues').textContent = r.resumo.entregues_24h || 0;
+  document.getElementById('kTaxa').textContent = (r.resumo.taxa_sucesso_24h||0) + '%';
+  document.getElementById('kDlq').textContent = por_status.dlq || 0;
+
+  const pend = r.pendentes || [];
+  document.getElementById('countPend').textContent = pend.length > 0 ? `(${pend.length})` : '';
+  document.getElementById('pendentesList').innerHTML = pend.length ? pend.map(renderEvento).join('') : '<div class="empty">Nenhum evento pendente</div>';
+
+  const falhas = r.falhas_recentes || [];
+  document.getElementById('falhasList').innerHTML = falhas.length ? falhas.map(renderEvento).join('') : '<div class="empty">Sem falhas recentes</div>';
+
+  const tipos = r.por_tipo_7d || [];
+  const maxT = Math.max(...tipos.map(t=>t.total), 1);
+  document.getElementById('tiposChart').innerHTML = tipos.map(t => `
+    <div class="tipo-row">
+      <div class="tipo-nome">${t.tipo_evento}</div>
+      <div class="tipo-bar-w"><div class="tipo-bar" style="width:${t.total/maxT*100}%"></div></div>
+      <div class="tipo-count">${t.total}</div>
+    </div>`).join('') || '<div class="empty">Sem dados</div>';
+}
+
+async function carregarDlq() {
+  const r = await fetch('/api/eventos/dlq').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  document.getElementById('dlqCount').textContent = `(${r.total_dlq})`;
+  document.getElementById('dlqList').innerHTML = r.eventos && r.eventos.length
+    ? r.eventos.map(renderEvento).join('')
+    : '<div class="empty">DLQ vazia — nenhum evento descartado</div>';
+}
+
+async function carregarSubs() {
+  const r = await fetch('/api/eventos/subscricoes').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  const subs = r.subscricoes || [];
+  document.getElementById('subsList').innerHTML = subs.length ? subs.map(s => `
+    <div class="sub-row">
+      <div class="sub-pattern">${s.pattern}</div>
+      <div class="sub-url">${s.url}</div>
+      <span class="sub-ativo ${s.ativo?'ativo-s':'inativo-s'}">${s.ativo?'Ativa':'Inativa'}</span>
+    </div>`).join('') : '<div class="empty">Sem subscriptions configuradas</div>';
+}
+
+async function criarSub() {
+  const pattern = document.getElementById('inpPattern').value.trim();
+  const url = document.getElementById('inpUrl').value.trim();
+  if (!pattern || !url) return;
+  await fetch('/api/eventos/subscricoes/', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo_evento_pattern:pattern,url_destino:url})});
+  document.getElementById('inpPattern').value = '';
+  document.getElementById('inpUrl').value = '';
+  carregarSubs();
+}
+
+async function publicarEvento() {
+  const tipo = document.getElementById('inpTipo').value.trim();
+  if (!tipo) return;
+  const r = await fetch('/api/eventos/publicar', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({tipo_evento:tipo, agregado_tipo:document.getElementById('inpAgr').value, agregado_id:document.getElementById('inpAgrId').value})
+  }).then(r=>r.json()).catch(()=>null);
+  if (r) {
+    document.getElementById('pubResult').textContent = `Evento ${r.id} publicado — status: ${r.status}`;
+    carregar();
+  }
+}
+
+async function reprocessar(id) {
+  await fetch(`/api/eventos/reprocessar/${id}/`, {method:'POST'});
+  carregar();
+}
+
+carregar();
+setInterval(carregar, 30000);
+</script>
+</body>
+</html>

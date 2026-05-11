@@ -2194,3 +2194,202 @@ class RegistroVacinacao(models.Model):
 
     def __str__(self):
         return f"{self.funcionario.nome} - {self.campanha.vacina} ({self.get_dose_display()})"
+
+
+# ─── Event Backbone / Outbox Pattern ─────────────────────────────────────────
+
+class OutboxEvento(models.Model):
+    """Eventos publicados via outbox pattern — garantia de entrega at-least-once."""
+    STATUS_CHOICES = [
+        ("pendente", "Pendente"),
+        ("processando", "Processando"),
+        ("entregue", "Entregue"),
+        ("falha", "Falha"),
+        ("dlq", "Dead Letter Queue"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="outbox_eventos", null=True, blank=True)
+    tipo_evento = models.CharField(max_length=120)           # ex: "sst.exame.vencido"
+    agregado_tipo = models.CharField(max_length=80, blank=True, default="")  # ex: "FuncionarioSST"
+    agregado_id = models.CharField(max_length=80, blank=True, default="")
+    payload = models.JSONField(default=dict)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pendente", db_index=True)
+    tentativas = models.PositiveSmallIntegerField(default=0)
+    max_tentativas = models.PositiveSmallIntegerField(default=3)
+    proxima_tentativa = models.DateTimeField(null=True, blank=True)
+    erro_ultimo = models.TextField(blank=True, default="")
+    processado_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["criado_em"]
+        indexes = [
+            models.Index(fields=["status", "proxima_tentativa"]),
+            models.Index(fields=["tipo_evento", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.tipo_evento} [{self.status}]"
+
+
+class SubscricaoEvento(models.Model):
+    """Assinantes de tipos de eventos (webhook destinations)."""
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="subscricoes_evento")
+    tipo_evento_pattern = models.CharField(max_length=200)  # ex: "sst.*" ou "sst.exame.vencido"
+    url_destino = models.URLField(max_length=500)
+    secret_hmac = models.CharField(max_length=128, blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.tipo_evento_pattern} → {self.url_destino[:50]}"
+
+
+# ─── Schema Registry / Data Contracts ────────────────────────────────────────
+
+class SchemaContrato(models.Model):
+    """Contrato de dados para um tipo de evento ou entidade."""
+    COMPATIBILIDADE_CHOICES = [
+        ("full", "Full (retrocompatível e forward)"),
+        ("backward", "Backward (novos leitores leem old)"),
+        ("forward", "Forward (old leitores leem new)"),
+        ("none", "Nenhuma (breaking changes permitidas)"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="schema_contratos", null=True, blank=True)
+    nome = models.CharField(max_length=200)                 # ex: "sst.exame.vencido"
+    dominio = models.CharField(max_length=80, default="")   # ex: "sst", "farmacia"
+    descricao = models.TextField(blank=True, default="")
+    owner_equipe = models.CharField(max_length=120, blank=True, default="")
+    compatibilidade = models.CharField(max_length=20, choices=COMPATIBILIDADE_CHOICES, default="backward")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("empresa", "nome")]
+        ordering = ["dominio", "nome"]
+
+    def __str__(self):
+        return self.nome
+
+
+class VersaoSchema(models.Model):
+    """Versão específica de um schema contrato (imutável após publicação)."""
+    STATUS_CHOICES = [
+        ("rascunho", "Rascunho"),
+        ("publicado", "Publicado"),
+        ("deprecado", "Deprecado"),
+    ]
+
+    schema = models.ForeignKey(SchemaContrato, on_delete=models.CASCADE, related_name="versoes")
+    versao = models.PositiveSmallIntegerField()
+    schema_json = models.JSONField()                       # JSON Schema (draft-07)
+    exemplo_payload = models.JSONField(default=dict)
+    changelog = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="rascunho")
+    publicado_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("schema", "versao")]
+        ordering = ["-versao"]
+
+    def __str__(self):
+        return f"{self.schema.nome} v{self.versao}"
+
+
+# ─── MLOps Pipeline ───────────────────────────────────────────────────────────
+
+class ModeloML(models.Model):
+    """Registro de modelos de ML em produção."""
+    TIPO_CHOICES = [
+        ("classificacao", "Classificação"),
+        ("regressao", "Regressão"),
+        ("anomalia", "Detecção de Anomalia"),
+        ("nlp", "NLP / Texto"),
+        ("series_temporais", "Séries Temporais"),
+        ("regras", "Motor de Regras"),
+    ]
+    STATUS_CHOICES = [
+        ("staging", "Staging"),
+        ("producao", "Produção"),
+        ("deprecado", "Deprecado"),
+        ("pausado", "Pausado"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="modelos_ml", null=True, blank=True)
+    nome = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=100)
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES, default="classificacao")
+    descricao = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="staging", db_index=True)
+    versao_atual = models.CharField(max_length=30, default="1.0.0")
+    owner_equipe = models.CharField(max_length=120, blank=True, default="")
+    endpoint_inferencia = models.URLField(max_length=500, blank=True, default="")
+    metricas_baseline = models.JSONField(default=dict)     # ex: {"accuracy":0.92,"f1":0.89}
+    features_entrada = models.JSONField(default=list)      # lista de features
+    feature_alvo = models.CharField(max_length=100, blank=True, default="")
+    slo_latencia_ms = models.PositiveIntegerField(default=500)
+    slo_precisao_min = models.FloatField(default=0.80)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("empresa", "slug")]
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.nome} v{self.versao_atual} [{self.status}]"
+
+
+class RunModelo(models.Model):
+    """Execução / predição de um modelo — log de inferências."""
+    modelo = models.ForeignKey(ModeloML, on_delete=models.CASCADE, related_name="runs")
+    versao = models.CharField(max_length=30)
+    input_hash = models.CharField(max_length=64, blank=True, default="")  # sha256 do input
+    predicao = models.JSONField(default=dict)
+    confianca = models.FloatField(null=True, blank=True)
+    latencia_ms = models.PositiveIntegerField(null=True, blank=True)
+    ground_truth = models.JSONField(null=True, blank=True)  # preenchido depois (feedback loop)
+    correto = models.BooleanField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["modelo", "criado_em"])]
+
+
+class MonitoramentoModelo(models.Model):
+    """Snapshot diário de métricas de um modelo em produção."""
+    ALERTA_CHOICES = [
+        ("ok", "OK"),
+        ("atencao", "Atenção"),
+        ("drift", "Drift Detectado"),
+        ("degradacao", "Degradação de Performance"),
+    ]
+
+    modelo = models.ForeignKey(ModeloML, on_delete=models.CASCADE, related_name="monitoramentos")
+    data_referencia = models.DateField(db_index=True)
+    total_predicoes = models.PositiveIntegerField(default=0)
+    precisao_periodo = models.FloatField(null=True, blank=True)
+    f1_periodo = models.FloatField(null=True, blank=True)
+    latencia_p50_ms = models.FloatField(null=True, blank=True)
+    latencia_p95_ms = models.FloatField(null=True, blank=True)
+    latencia_p99_ms = models.FloatField(null=True, blank=True)
+    taxa_erro = models.FloatField(default=0.0)
+    drift_score = models.FloatField(null=True, blank=True)    # 0-1, >0.3 = atenção
+    status_alerta = models.CharField(max_length=20, choices=ALERTA_CHOICES, default="ok", db_index=True)
+    distribuicao_features = models.JSONField(default=dict)   # estatísticas de features
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("modelo", "data_referencia")]
+        ordering = ["-data_referencia"]
+
+    def __str__(self):
+        return f"{self.modelo.nome} {self.data_referencia} [{self.status_alerta}]"

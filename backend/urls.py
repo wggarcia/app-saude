@@ -100,6 +100,18 @@ from api.views_relatorio import api_relatorio_executivo, relatorio_page
 from api.views_financeiro import api_financeiro_metricas, api_financeiro_cohorts, financeiro_page
 from api.views_observabilidade import api_health, api_slo_status, api_slo_incidentes, observabilidade_page
 from api.views_gtm import api_gtm_funil, api_gtm_pipeline, api_gtm_expansao, gtm_page
+from api.views_eventos import (
+    api_eventos_status, api_eventos_dlq, api_eventos_publicar,
+    api_eventos_reprocessar, api_eventos_subscricoes, eventos_page,
+)
+from api.views_schema import (
+    api_schema_contratos, api_schema_contrato_detalhe,
+    api_schema_versoes, api_schema_validar, api_schema_seed, schema_registry_page,
+)
+from api.views_mlops import (
+    api_mlops_modelos, api_mlops_modelo_detalhe, api_mlops_run,
+    api_mlops_snapshot, api_mlops_drift_alertas, api_mlops_seed, mlops_page,
+)
 from api.views_contratos import (
     api_beneficiario_excluir,
     api_beneficiarios_contrato,
@@ -626,4 +638,40 @@ urlpatterns = [
     path('api/gtm/pipeline/', api_gtm_pipeline),
     path('api/gtm/expansao', api_gtm_expansao),
     path('api/gtm/expansao/', api_gtm_expansao),
+
+    # Event Backbone / Outbox
+    path('eventos/', eventos_page),
+    path('api/eventos/status', api_eventos_status),
+    path('api/eventos/status/', api_eventos_status),
+    path('api/eventos/dlq', api_eventos_dlq),
+    path('api/eventos/dlq/', api_eventos_dlq),
+    path('api/eventos/publicar', api_eventos_publicar),
+    path('api/eventos/publicar/', api_eventos_publicar),
+    path('api/eventos/subscricoes', api_eventos_subscricoes),
+    path('api/eventos/subscricoes/', api_eventos_subscricoes),
+    path('api/eventos/reprocessar/<uuid:evento_id>/', api_eventos_reprocessar),
+
+    # Schema Registry
+    path('schema-registry/', schema_registry_page),
+    path('api/schema/contratos', api_schema_contratos),
+    path('api/schema/contratos/', api_schema_contratos),
+    path('api/schema/contratos/<int:contrato_id>/', api_schema_contrato_detalhe),
+    path('api/schema/contratos/<int:contrato_id>/versoes/', api_schema_versoes),
+    path('api/schema/validar', api_schema_validar),
+    path('api/schema/validar/', api_schema_validar),
+    path('api/schema/seed', api_schema_seed),
+    path('api/schema/seed/', api_schema_seed),
+
+    # MLOps Pipeline
+    path('mlops/', mlops_page),
+    path('api/mlops/modelos', api_mlops_modelos),
+    path('api/mlops/modelos/', api_mlops_modelos),
+    path('api/mlops/modelos/<slug:slug>/', api_mlops_modelo_detalhe),
+    path('api/mlops/modelos/<slug:slug>/run/', api_mlops_run),
+    path('api/mlops/monitoramento/snapshot', api_mlops_snapshot),
+    path('api/mlops/monitoramento/snapshot/', api_mlops_snapshot),
+    path('api/mlops/drift/alertas', api_mlops_drift_alertas),
+    path('api/mlops/drift/alertas/', api_mlops_drift_alertas),
+    path('api/mlops/seed', api_mlops_seed),
+    path('api/mlops/seed/', api_mlops_seed),
 ]
