@@ -173,7 +173,7 @@ class EmpresaMiddleware:
             try:
                 owner_data = jwt.decode(owner_token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
                 dono = DonoSaaS.objects.get(id=owner_data["owner_id"], ativo=True)
-                if dono.sessao_ativa_chave and owner_data.get("session_key") != dono.sessao_ativa_chave:
+                if owner_data.get("session_key") != dono.sessao_ativa_chave:
                     if request.path.startswith("/api/"):
                         return JsonResponse({"erro": "sessão operacional encerrada"}, status=401)
                     return redirect("/operacao-central/")
@@ -215,7 +215,7 @@ class EmpresaMiddleware:
             else:
                 principal = empresa
 
-            if principal.sessao_ativa_chave and data.get("session_key") != principal.sessao_ativa_chave:
+            if data.get("session_key") != principal.sessao_ativa_chave:
                 if request.path.startswith("/api/"):
                     return JsonResponse({"erro": "sessão encerrada ou substituída"}, status=401)
                 login_target = "/login-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/login-empresa/"

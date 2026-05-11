@@ -8,6 +8,20 @@ import json
 from collections import defaultdict
 from datetime import date, timedelta
 
+
+def _paginar(request, qs, limit_default=100, limit_max=500):
+    """Return (page_qs, meta_dict) applying ?limit= and ?offset= from request."""
+    try:
+        limit = min(int(request.GET.get("limit", limit_default)), limit_max)
+    except (ValueError, TypeError):
+        limit = limit_default
+    try:
+        offset = max(int(request.GET.get("offset", 0)), 0)
+    except (ValueError, TypeError):
+        offset = 0
+    total = qs.count()
+    return qs[offset: offset + limit], {"total": total, "limit": limit, "offset": offset}
+
 from django.db.models import Count
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
@@ -212,6 +226,7 @@ def api_funcionarios(request):
 
     if request.method == "GET":
         qs = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).select_related("unidade")
+        page, meta = _paginar(request, qs)
         return JsonResponse({
             "funcionarios": [
                 {
@@ -222,8 +237,9 @@ def api_funcionarios(request):
                     "data_admissao": f.data_admissao.strftime("%d/%m/%Y") if f.data_admissao else None,
                     "classe_risco": f.classe_risco,
                 }
-                for f in qs
-            ]
+                for f in page
+            ],
+            **meta,
         })
 
     if request.method == "POST":
@@ -516,6 +532,7 @@ def api_exames(request):
         qs = ExameOcupacional.objects.filter(empresa=empresa).select_related("funcionario")
         if status_filtro:
             qs = qs.filter(status=status_filtro)
+        page, meta = _paginar(request, qs.order_by("data_realizacao"))
         return JsonResponse({
             "exames": [
                 {
@@ -530,8 +547,9 @@ def api_exames(request):
                     "status": e.status,
                     "resultado": e.resultado,
                 }
-                for e in qs.order_by("data_realizacao")[:200]
-            ]
+                for e in page
+            ],
+            **meta,
         })
 
     if request.method == "POST":
@@ -930,6 +948,7 @@ def api_treinamentos(request):
         if nr_filtro:
             qs = qs.filter(nr=nr_filtro)
         hoje = date.today()
+        page, meta = _paginar(request, qs)
         return JsonResponse({
             "treinamentos": [
                 {
@@ -948,8 +967,9 @@ def api_treinamentos(request):
                     "status": t.status,
                     "certificado": t.certificado,
                 }
-                for t in qs[:200]
-            ]
+                for t in page
+            ],
+            **meta,
         })
 
     if request.method == "POST":

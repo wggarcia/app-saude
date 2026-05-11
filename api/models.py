@@ -109,7 +109,7 @@ class DispositivoAutorizado(models.Model):
 class EmpresaUsuario(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="usuarios")
     nome = models.CharField(max_length=120)
-    email = models.EmailField(unique=True)
+    email = models.EmailField()
     senha = models.CharField(max_length=255)
     cargo = models.CharField(max_length=100, null=True, blank=True)
     ativo = models.BooleanField(default=True)
@@ -118,6 +118,9 @@ class EmpresaUsuario(models.Model):
     sessao_ativa_device_id = models.CharField(max_length=120, null=True, blank=True)
     sessao_ativa_em = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "email")
 
     def __str__(self):
         return f"{self.empresa.nome} - {self.email}"
