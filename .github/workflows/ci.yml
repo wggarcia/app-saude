@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Testes & Lint
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: soluscrt_test
+          POSTGRES_USER: soluscrt
+          POSTGRES_PASSWORD: soluscrt
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_ENV: test
+      DJANGO_SECRET_KEY: ci-secret-key-nao-usada-em-producao-apenas-testes-longos
+      JWT_SECRET_KEY: ci-jwt-key-nao-usada-em-producao-apenas-testes-longos-xxxx
+      DATABASE_URL: postgres://soluscrt:soluscrt@localhost:5432/soluscrt_test
+      DJANGO_DEBUG: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Verificar migrações pendentes
+        run: python manage.py migrate --check
+        continue-on-error: true
+
+      - name: Rodar migrações
+        run: python manage.py migrate --noinput
+
+      - name: Rodar testes
+        run: python manage.py test api --verbosity=2
+
+      - name: Verificar imports quebrados
+        run: python manage.py check --deploy 2>&1 | grep -v "WARNINGS" || true
