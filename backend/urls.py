@@ -97,6 +97,9 @@ from api.views_compliance import (
     api_compliance_dispositivos, api_compliance_exportar, compliance_page,
 )
 from api.views_relatorio import api_relatorio_executivo, relatorio_page
+from api.views_financeiro import api_financeiro_metricas, api_financeiro_cohorts, financeiro_page
+from api.views_observabilidade import api_health, api_slo_status, api_slo_incidentes, observabilidade_page
+from api.views_gtm import api_gtm_funil, api_gtm_pipeline, api_gtm_expansao, gtm_page
 from api.views_contratos import (
     api_beneficiario_excluir,
     api_beneficiarios_contrato,
@@ -598,5 +601,29 @@ urlpatterns = [
     path("api/sintoma/", registrar_sintoma),
     path("api/mapa-risco", mapa_risco),
     path("api/bairros", views.bairros_por_cidade),
-    
+
+    # Financial OS
+    path('financeiro/', financeiro_page),
+    path('api/financeiro/metricas', api_financeiro_metricas),
+    path('api/financeiro/metricas/', api_financeiro_metricas),
+    path('api/financeiro/cohorts', api_financeiro_cohorts),
+    path('api/financeiro/cohorts/', api_financeiro_cohorts),
+
+    # Observabilidade & SLO
+    path('observabilidade/', observabilidade_page),
+    path('api/saude', api_health),
+    path('api/saude/', api_health),
+    path('api/slo/status', api_slo_status),
+    path('api/slo/status/', api_slo_status),
+    path('api/slo/incidentes', api_slo_incidentes),
+    path('api/slo/incidentes/', api_slo_incidentes),
+
+    # GTM Analytics
+    path('gtm/', gtm_page),
+    path('api/gtm/funil', api_gtm_funil),
+    path('api/gtm/funil/', api_gtm_funil),
+    path('api/gtm/pipeline', api_gtm_pipeline),
+    path('api/gtm/pipeline/', api_gtm_pipeline),
+    path('api/gtm/expansao', api_gtm_expansao),
+    path('api/gtm/expansao/', api_gtm_expansao),
 ]
