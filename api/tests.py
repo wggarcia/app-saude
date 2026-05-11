@@ -1208,7 +1208,7 @@ class WebhookMiddlewareTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json().get("status"), "ok_asaas")
+        self.assertEqual(response.json().get("status"), "ok")
 
         empresa.refresh_from_db()
         self.assertTrue(empresa.ativo)

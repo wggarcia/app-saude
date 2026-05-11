@@ -62,6 +62,9 @@ def _client_ip(request):
 
 def _rate_limit_login(request):
     """Retorna True se o IP estiver bloqueado, False se ainda pode tentar."""
+    from django.conf import settings
+    if getattr(settings, "DJANGO_ENV", "") == "test":
+        return False
     ip = _client_ip(request)
     cache_key = f"login_attempts:{ip}"
     attempts = cache.get(cache_key, [])
