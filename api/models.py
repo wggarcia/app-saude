@@ -2694,3 +2694,298 @@ class MonitoramentoModelo(models.Model):
 
     def __str__(self):
         return f"{self.modelo.nome} {self.data_referencia} [{self.status_alerta}]"
+
+
+# ─── GTM Machine ─────────────────────────────────────────────────────────────
+
+class LeadComercial(models.Model):
+    ETAPAS = [
+        ("leads", "Lead Captado"),
+        ("qualificados", "Qualificado (MQL)"),
+        ("demo", "Demo Realizada"),
+        ("proposta", "Proposta Enviada"),
+        ("negociacao", "Em Negociação"),
+        ("fechado", "Fechado (Won)"),
+        ("perdido", "Perdido (Lost)"),
+    ]
+    SEGMENTOS = [
+        ("industria", "Indústria"),
+        ("saude", "Saúde"),
+        ("varejo", "Varejo"),
+        ("governo", "Governo"),
+        ("financeiro", "Financeiro"),
+        ("outros", "Outros"),
+    ]
+
+    nome_empresa = models.CharField(max_length=200)
+    cnpj = models.CharField(max_length=18, blank=True, default="")
+    etapa = models.CharField(max_length=20, choices=ETAPAS, default="leads", db_index=True)
+    segmento = models.CharField(max_length=20, choices=SEGMENTOS, default="outros")
+    plano_interesse = models.CharField(max_length=50, blank=True, default="")
+    valor_estimado = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    owner = models.CharField(max_length=100, blank=True, default="")
+    fonte = models.CharField(max_length=100, blank=True, default="")
+    data_entrada = models.DateField(auto_now_add=True, db_index=True)
+    data_conversao = models.DateField(null=True, blank=True)
+    ciclo_dias = models.PositiveIntegerField(null=True, blank=True)
+    notas = models.TextField(blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["etapa", "criado_em"], name="lead_etapa_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.nome_empresa} [{self.etapa}]"
+
+
+class ExpansaoContrato(models.Model):
+    """Registra upsell/expansão de clientes existentes para cálculo de NRR real."""
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="expansoes")
+    pacote_anterior = models.CharField(max_length=50)
+    pacote_novo = models.CharField(max_length=50)
+    mrr_anterior = models.DecimalField(max_digits=10, decimal_places=2)
+    mrr_novo = models.DecimalField(max_digits=10, decimal_places=2)
+    delta_mrr = models.DecimalField(max_digits=10, decimal_places=2)
+    motivo = models.CharField(max_length=200, blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} {self.pacote_anterior}→{self.pacote_novo}"
+
+
+# ─── Feature Store ────────────────────────────────────────────────────────────
+
+class FeatureRegistro(models.Model):
+    """Catálogo persistente de features ML — substitui o dict in-memory."""
+    FREQUENCIAS = [
+        ("realtime", "Real-time"),
+        ("diaria", "Diária"),
+        ("semanal", "Semanal"),
+        ("mensal", "Mensal"),
+    ]
+    TIPOS = [
+        ("float", "Float"),
+        ("int", "Integer"),
+        ("bool", "Boolean"),
+        ("str", "String"),
+        ("embedding", "Embedding"),
+    ]
+    ENTIDADES = [
+        ("colaborador", "Colaborador"),
+        ("empresa", "Empresa"),
+        ("unidade", "Unidade"),
+    ]
+
+    entidade = models.CharField(max_length=30, choices=ENTIDADES, db_index=True)
+    nome = models.CharField(max_length=100)
+    descricao = models.TextField()
+    tipo = models.CharField(max_length=20, choices=TIPOS, default="float")
+    fonte = models.CharField(max_length=100)
+    frequencia_atualizacao = models.CharField(max_length=20, choices=FREQUENCIAS, default="diaria")
+    sla_atraso_max_horas = models.PositiveIntegerField(default=25)
+    owner = models.CharField(max_length=100)
+    tags = models.JSONField(default=list)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("entidade", "nome")]
+        ordering = ["entidade", "nome"]
+
+    def __str__(self):
+        return f"{self.entidade}.{self.nome}"
+
+
+# ─── Financial OS — Unicorn Metrics ─────────────────────────────────────────
+
+class CentroCusto(models.Model):
+    TIPOS = [
+        ("headcount", "Headcount"),
+        ("infraestrutura", "Infraestrutura"),
+        ("marketing", "Marketing"),
+        ("vendas", "Vendas"),
+        ("outros", "Outros"),
+    ]
+
+    nome = models.CharField(max_length=100)
+    tipo = models.CharField(max_length=30, choices=TIPOS, default="outros")
+    responsavel = models.CharField(max_length=100, blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["tipo", "nome"]
+
+    def __str__(self):
+        return f"{self.nome} [{self.tipo}]"
+
+
+class LancamentoDespesa(models.Model):
+    """Lançamento mensal de despesas reais — base para Burn Multiple verdadeiro."""
+    centro = models.ForeignKey(CentroCusto, on_delete=models.PROTECT, related_name="lancamentos")
+    competencia = models.DateField(db_index=True)
+    valor = models.DecimalField(max_digits=12, decimal_places=2)
+    descricao = models.CharField(max_length=200, blank=True, default="")
+    recorrente = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-competencia"]
+        indexes = [
+            models.Index(fields=["competencia", "centro"], name="despesa_comp_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.centro.nome} {self.competencia} R${self.valor}"
+
+
+class CohortRetencao(models.Model):
+    """Cohort mensal de retenção de receita — base para LTV/CAC real."""
+    cohort_mes = models.DateField(db_index=True)
+    empresas_adquiridas = models.PositiveIntegerField(default=0)
+    mrr_inicial = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    mes_referencia = models.DateField(db_index=True)
+    empresas_ativas = models.PositiveIntegerField(default=0)
+    mrr_retido = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    mrr_expandido = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    retencao_pct = models.FloatField(default=0.0)
+    nrr_pct = models.FloatField(default=0.0)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("cohort_mes", "mes_referencia")]
+        ordering = ["-cohort_mes", "-mes_referencia"]
+
+    def __str__(self):
+        return f"Cohort {self.cohort_mes} @ {self.mes_referencia} NRR={self.nrr_pct}%"
+
+
+# ─── Compliance — SOC2 / ISO 27001 ───────────────────────────────────────────
+
+class SOC2Controle(models.Model):
+    CATEGORIAS_TSC = [
+        ("CC", "Common Criteria"),
+        ("A", "Availability"),
+        ("C", "Confidentiality"),
+        ("PI", "Processing Integrity"),
+        ("P", "Privacy"),
+    ]
+    STATUS = [
+        ("nao_iniciado", "Não Iniciado"),
+        ("em_andamento", "Em Andamento"),
+        ("implementado", "Implementado"),
+        ("auditado", "Auditado"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="soc2_controles")
+    codigo = models.CharField(max_length=20)
+    categoria = models.CharField(max_length=5, choices=CATEGORIAS_TSC, db_index=True)
+    titulo = models.CharField(max_length=200)
+    descricao = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS, default="nao_iniciado", db_index=True)
+    responsavel = models.CharField(max_length=100, blank=True, default="")
+    data_prevista = models.DateField(null=True, blank=True)
+    data_implementacao = models.DateField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("empresa", "codigo")]
+        ordering = ["categoria", "codigo"]
+
+    def __str__(self):
+        return f"{self.codigo} — {self.titulo} [{self.status}]"
+
+
+class EvidenciaControle(models.Model):
+    TIPOS = [
+        ("screenshot", "Screenshot"),
+        ("log", "Log de Sistema"),
+        ("documento", "Documento"),
+        ("politica", "Política"),
+        ("procedimento", "Procedimento"),
+        ("relatorio", "Relatório"),
+    ]
+
+    controle = models.ForeignKey(SOC2Controle, on_delete=models.CASCADE, related_name="evidencias")
+    tipo = models.CharField(max_length=20, choices=TIPOS)
+    titulo = models.CharField(max_length=200)
+    descricao = models.TextField(blank=True, default="")
+    arquivo_url = models.URLField(blank=True, default="")
+    coletado_por = models.CharField(max_length=100, blank=True, default="")
+    data_coleta = models.DateField(auto_now_add=True)
+    valido_ate = models.DateField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.controle.codigo} — {self.titulo}"
+
+
+class TesteControle(models.Model):
+    RESULTADOS = [
+        ("aprovado", "Aprovado"),
+        ("reprovado", "Reprovado"),
+        ("excecao", "Exceção Documentada"),
+    ]
+
+    controle = models.ForeignKey(SOC2Controle, on_delete=models.CASCADE, related_name="testes")
+    testado_por = models.CharField(max_length=100)
+    data_teste = models.DateField(db_index=True)
+    resultado = models.CharField(max_length=20, choices=RESULTADOS)
+    observacoes = models.TextField(blank=True, default="")
+    evidencias_ids = models.JSONField(default=list)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_teste"]
+
+    def __str__(self):
+        return f"{self.controle.codigo} {self.data_teste} [{self.resultado}]"
+
+
+# ─── RBAC ────────────────────────────────────────────────────────────────────
+
+class RBACPermissao(models.Model):
+    codigo = models.CharField(max_length=100, unique=True)
+    descricao = models.CharField(max_length=200)
+    modulo = models.CharField(max_length=50, db_index=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["modulo", "codigo"]
+
+    def __str__(self):
+        return f"{self.modulo}.{self.codigo}"
+
+
+class RBACAtribuicao(models.Model):
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="rbac_atribuicoes")
+    usuario = models.ForeignKey("EmpresaUsuario", on_delete=models.CASCADE, related_name="rbac_atribuicoes")
+    permissao = models.ForeignKey(RBACPermissao, on_delete=models.CASCADE, related_name="atribuicoes")
+    concedido_por = models.CharField(max_length=100, blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("empresa", "usuario", "permissao")]
+        indexes = [
+            models.Index(fields=["empresa", "usuario", "ativo"], name="rbac_emp_usr_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.empresa.nome} / {self.usuario} / {self.permissao.codigo}"

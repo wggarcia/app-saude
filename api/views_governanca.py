@@ -225,9 +225,9 @@ def _causal_impact(empresa):
 
 
 def api_governanca_semanal(request):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from .views_dashboard import _dono_autenticado
+    if not _dono_autenticado(request):
+        return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     arr_anual, mrr, clientes = _arr_atual()
     canceladas, base, churn_rate = _churn_ultimos_90()
@@ -281,9 +281,9 @@ def api_governanca_semanal(request):
 
 
 def api_governanca_burn_multiple(request):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from .views_dashboard import _dono_autenticado
+    if not _dono_autenticado(request):
+        return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     arr_anual, mrr, clientes = _arr_atual()
     waterfall = _arr_waterfall()
@@ -309,9 +309,9 @@ def api_governanca_burn_multiple(request):
 
 
 def api_governanca_pricing_valor(request):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from .views_dashboard import _dono_autenticado
+    if not _dono_autenticado(request):
+        return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
     return JsonResponse({
         "empresa": empresa.nome,
         **_pricing_por_valor(),
@@ -320,9 +320,9 @@ def api_governanca_pricing_valor(request):
 
 
 def api_governanca_ml_fairness(request):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from .views_dashboard import _dono_autenticado
+    if not _dono_autenticado(request):
+        return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
     return JsonResponse({
         "empresa": empresa.nome,
         "modelos": _ml_fairness(empresa),
@@ -335,9 +335,9 @@ def api_governanca_ml_fairness(request):
 
 
 def api_governanca_causal_impact(request):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from .views_dashboard import _dono_autenticado
+    if not _dono_autenticado(request):
+        return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
     return JsonResponse({
         "empresa": empresa.nome,
         **_causal_impact(empresa),
@@ -345,5 +345,13 @@ def api_governanca_causal_impact(request):
 
 
 def governanca_page(request):
-    from django.shortcuts import render
+    from django.shortcuts import render, redirect
+    from .views_dashboard import _dono_autenticado
+    dono = _dono_autenticado(request)
+    if not dono:
+        empresa = getattr(request, "empresa", None)
+        if empresa:
+            from .access_control import get_setor, _destino_correto
+            return redirect(_destino_correto(get_setor(empresa)))
+        return redirect("/operacao-central/")
     return render(request, "governanca.html")

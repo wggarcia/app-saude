@@ -225,6 +225,135 @@ def api_compliance_exportar(request):
     return response
 
 
+def api_soc2_controles(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    if request.method == "POST":
+        import json as _json
+        data = _json.loads(request.body)
+        from .models import SOC2Controle
+        controle = SOC2Controle.objects.create(
+            empresa=empresa,
+            codigo=data.get("codigo", ""),
+            categoria=data.get("categoria", "CC"),
+            titulo=data.get("titulo", ""),
+            descricao=data.get("descricao", ""),
+            responsavel=data.get("responsavel", ""),
+            data_prevista=data.get("data_prevista") or None,
+        )
+        return JsonResponse({"id": controle.id, "codigo": controle.codigo, "status": controle.status})
+
+    try:
+        from .models import SOC2Controle
+        from django.db.models import Count
+        qs = SOC2Controle.objects.filter(empresa=empresa)
+        categoria_q = request.GET.get("categoria")
+        if categoria_q:
+            qs = qs.filter(categoria=categoria_q)
+
+        resumo_status = dict(
+            qs.values("status").annotate(total=Count("id")).values_list("status", "total")
+        )
+        total = qs.count()
+        implementados = resumo_status.get("implementado", 0) + resumo_status.get("auditado", 0)
+        score_soc2 = round(implementados / total * 100, 1) if total > 0 else 0
+
+        controles = list(qs.values(
+            "id", "codigo", "categoria", "titulo", "status",
+            "responsavel", "data_prevista", "data_implementacao",
+        ))
+        return JsonResponse({
+            "empresa": empresa.nome,
+            "score_soc2_pct": score_soc2,
+            "total_controles": total,
+            "resumo_status": resumo_status,
+            "controles": controles,
+        })
+    except Exception as e:
+        return JsonResponse({"erro": str(e)}, status=500)
+
+
+def api_soc2_evidencias(request, controle_id):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    try:
+        from .models import SOC2Controle, EvidenciaControle
+        controle = SOC2Controle.objects.filter(empresa=empresa, id=controle_id).first()
+        if not controle:
+            return JsonResponse({"erro": "Controle não encontrado"}, status=404)
+
+        if request.method == "POST":
+            import json as _json
+            data = _json.loads(request.body)
+            ev = EvidenciaControle.objects.create(
+                controle=controle,
+                tipo=data.get("tipo", "documento"),
+                titulo=data.get("titulo", ""),
+                descricao=data.get("descricao", ""),
+                arquivo_url=data.get("arquivo_url", ""),
+                coletado_por=data.get("coletado_por", ""),
+                valido_ate=data.get("valido_ate") or None,
+            )
+            return JsonResponse({"id": ev.id, "titulo": ev.titulo, "criado_em": ev.criado_em.isoformat()})
+
+        evidencias = list(controle.evidencias.values(
+            "id", "tipo", "titulo", "descricao", "arquivo_url",
+            "coletado_por", "data_coleta", "valido_ate",
+        ))
+        return JsonResponse({"controle": controle.codigo, "evidencias": evidencias})
+    except Exception as e:
+        return JsonResponse({"erro": str(e)}, status=500)
+
+
+def api_rbac_permissoes(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    try:
+        from .models import RBACPermissao, RBACAtribuicao
+        permissoes = list(RBACPermissao.objects.values("id", "codigo", "descricao", "modulo"))
+        atribuicoes = list(
+            RBACAtribuicao.objects.filter(empresa=empresa, ativo=True)
+            .values("usuario__email", "permissao__codigo", "concedido_por", "criado_em")
+        )
+        return JsonResponse({"permissoes": permissoes, "atribuicoes": atribuicoes})
+    except Exception as e:
+        return JsonResponse({"erro": str(e)}, status=500)
+
+
+def api_rbac_atribuir(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    try:
+        import json as _json
+        data = _json.loads(request.body)
+        from .models import RBACPermissao, RBACAtribuicao, EmpresaUsuario
+        permissao = RBACPermissao.objects.filter(codigo=data.get("permissao_codigo")).first()
+        usuario = EmpresaUsuario.objects.filter(empresa=empresa, id=data.get("usuario_id")).first()
+        if not permissao or not usuario:
+            return JsonResponse({"erro": "Permissão ou usuário não encontrado"}, status=404)
+        at, criado = RBACAtribuicao.objects.get_or_create(
+            empresa=empresa, usuario=usuario, permissao=permissao,
+            defaults={"concedido_por": data.get("concedido_por", "admin"), "ativo": True},
+        )
+        if not criado:
+            at.ativo = True
+            at.save(update_fields=["ativo", "atualizado_em"])
+        return JsonResponse({"atribuido": True, "id": at.id})
+    except Exception as e:
+        return JsonResponse({"erro": str(e)}, status=500)
+
+
 def compliance_page(request):
-    from django.shortcuts import render
+    from django.shortcuts import render, redirect
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return redirect("/login-empresa/")
     return render(request, "compliance.html")

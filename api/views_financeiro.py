@@ -153,10 +153,59 @@ def _crescimento_clientes():
         return []
 
 
+def _burn_mensal_real():
+    """Burn mensal real via LancamentoDespesa do mês corrente."""
+    try:
+        from .models import LancamentoDespesa
+        hoje = date.today()
+        mes_atual = hoje.replace(day=1)
+        total = LancamentoDespesa.objects.filter(
+            competencia__gte=mes_atual
+        ).aggregate(t=Sum("valor"))["t"]
+        return float(total or 0)
+    except Exception:
+        return 0.0
+
+
+def _cac_real(mrr):
+    """CAC real = spend de vendas+marketing / novos clientes no mês."""
+    try:
+        from .models import LancamentoDespesa, CentroCusto, Empresa
+        hoje = date.today()
+        mes_atual = hoje.replace(day=1)
+        prox_mes = (mes_atual.replace(day=28) + timedelta(days=4)).replace(day=1)
+        spend = LancamentoDespesa.objects.filter(
+            competencia__gte=mes_atual,
+            centro__tipo__in=["marketing", "vendas"],
+        ).aggregate(t=Sum("valor"))["t"] or 0
+        novos = Empresa.objects.filter(
+            criado_em__date__gte=mes_atual,
+            criado_em__date__lt=prox_mes,
+        ).count()
+        return round(float(spend) / novos, 2) if novos > 0 else 0.0
+    except Exception:
+        return 0.0
+
+
+def _ltv_cohort_real(ticket_medio):
+    """LTV médio calculado via CohortRetencao persistido."""
+    try:
+        from .models import CohortRetencao
+        from django.db.models import Avg
+        avg_nrr = CohortRetencao.objects.aggregate(a=Avg("nrr_pct"))["a"]
+        if avg_nrr and avg_nrr > 0 and ticket_medio > 0:
+            churn_impl = max(1 - avg_nrr / 100, 0.01)
+            return round(ticket_medio / churn_impl, 2)
+        return 0.0
+    except Exception:
+        return 0.0
+
+
 def api_financeiro_metricas(request):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from .views_dashboard import _dono_autenticado
+    dono = _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     arr_anual, mrr, total_clientes = _arr_atual()
     canceladas, base, churn_rate = _churn_ultimos_90()
@@ -165,19 +214,30 @@ def api_financeiro_metricas(request):
     crescimento = _crescimento_clientes()
     mrr_hist = _mrr_historico(6)
 
-    # Métricas derivadas
-    ticket_medio = round(mrr / total_clientes, 2) if total_clientes > 0 else 0
-    # LTV simples: ticket / churn mensal
-    churn_mensal = churn_rate / 100 / 3  # churn_rate é de 90 dias
-    ltv = round(ticket_medio / churn_mensal, 2) if churn_mensal > 0 else ticket_medio * 36
+    # Burn real via LancamentoDespesa — cai para estimativa se não houver dados
+    burn_mensal_real = _burn_mensal_real()
+    burn_mensal = burn_mensal_real if burn_mensal_real > 0 else mrr * 0.7
+    burn_fonte = "real" if burn_mensal_real > 0 else "estimativa_70pct_mrr"
 
-    # CAC estimado (placeholder — sem dados de mkt spend ainda)
-    cac_estimado = round(ticket_medio * 3, 2)  # benchmark SaaS: 3x ticket
+    # CAC real via despesas de vendas/marketing
+    cac_real = _cac_real(mrr)
+    ticket_medio = round(mrr / total_clientes, 2) if total_clientes > 0 else 0
+    cac_estimado = cac_real if cac_real > 0 else round(ticket_medio * 3, 2)
+    cac_fonte = "real" if cac_real > 0 else "estimativa_3x_ticket"
+
+    # LTV via cohort real — cai para estimativa simples se não houver dados
+    ltv_cohort = _ltv_cohort_real(ticket_medio)
+    churn_mensal = churn_rate / 100 / 3
+    ltv_simples = round(ticket_medio / churn_mensal, 2) if churn_mensal > 0 else ticket_medio * 36
+    ltv = ltv_cohort if ltv_cohort > 0 else ltv_simples
+    ltv_fonte = "cohort_real" if ltv_cohort > 0 else "estimativa"
+
     payback_meses = round(cac_estimado / ticket_medio, 1) if ticket_medio > 0 else 0
     ltv_cac = round(ltv / cac_estimado, 1) if cac_estimado > 0 else 0
+    burn_multiple = round(burn_mensal / mrr, 2) if mrr > 0 else 0
+    runway_meses = round(mrr * 6 / burn_mensal, 0) if burn_mensal > 0 else 0
 
     return JsonResponse({
-        "empresa": empresa.nome,
         "gerado_em": str(date.today()),
         "kpis": {
             "arr": round(arr_anual, 2),
@@ -192,9 +252,15 @@ def api_financeiro_metricas(request):
             "nrr": nrr,
             "ltv": round(ltv, 2),
             "ltv_fmt": f"R$ {ltv:,.0f}",
+            "ltv_fonte": ltv_fonte,
             "cac_estimado": cac_estimado,
+            "cac_fonte": cac_fonte,
             "payback_meses": payback_meses,
             "ltv_cac_ratio": ltv_cac,
+            "burn_mensal": round(burn_mensal, 2),
+            "burn_fonte": burn_fonte,
+            "burn_multiple": burn_multiple,
+            "runway_meses_est": runway_meses,
         },
         "distribuicao_planos": dist_planos,
         "crescimento_clientes": crescimento,
@@ -256,9 +322,9 @@ def _alertas_financeiros(churn_rate, nrr, ltv_cac, payback_meses):
 
 
 def api_financeiro_cohorts(request):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from .views_dashboard import _dono_autenticado
+    if not _dono_autenticado(request):
+        return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     try:
         from .models import Empresa
@@ -294,4 +360,14 @@ def api_financeiro_cohorts(request):
 
 def financeiro_page(request):
     from django.shortcuts import render
+    from .access_control import requer_dono
+    from .views_dashboard import _dono_autenticado
+    from django.shortcuts import redirect
+    dono = _dono_autenticado(request)
+    if not dono:
+        empresa = getattr(request, "empresa", None)
+        if empresa:
+            from .access_control import get_setor, _destino_correto
+            return redirect(_destino_correto(get_setor(empresa)))
+        return redirect("/operacao-central/")
     return render(request, "financeiro.html")

@@ -257,5 +257,13 @@ def _alertas_resumo(empresa, hoje):
 
 
 def executive_dashboard_page(request):
-    from django.shortcuts import render
+    from django.shortcuts import render, redirect
+    from .views_dashboard import _dono_autenticado
+    dono = _dono_autenticado(request)
+    if not dono:
+        empresa = getattr(request, "empresa", None)
+        if empresa:
+            from .access_control import get_setor, _destino_correto
+            return redirect(_destino_correto(get_setor(empresa)))
+        return redirect("/operacao-central/")
     return render(request, "executive_dashboard.html")

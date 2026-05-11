@@ -316,5 +316,8 @@ def _gerar_recomendacoes(empresa, ini, fim):
 
 
 def relatorio_page(request):
-    from django.shortcuts import render
+    from django.shortcuts import render, redirect
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return redirect("/login-empresa/")
     return render(request, "relatorio_executivo.html")

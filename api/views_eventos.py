@@ -243,5 +243,11 @@ def api_eventos_subscricoes(request):
 
 
 def eventos_page(request):
-    from django.shortcuts import render
+    from django.shortcuts import render, redirect
+    from .access_control import get_setor, _destino_correto
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return redirect("/login-empresa/")
+    if get_setor(empresa) not in ("empresa", "hospital"):
+        return redirect(_destino_correto(get_setor(empresa)))
     return render(request, "eventos.html")

@@ -154,49 +154,96 @@ def _metas_trimestre():
         "meta_arr_incremental": 500000,
         "meta_nrr": 110,
         "meta_churn_max_pct": 2.0,
-        "nota": "Metas definidas manualmente — integrar com CRM para automação",
     }
 
 
+def _nrr_real():
+    """NRR real calculado via ExpansaoContrato + churn dos últimos 90 dias."""
+    try:
+        from .models import ExpansaoContrato, Empresa
+        from django.db.models import Sum
+        hoje = date.today()
+        janela = hoje - timedelta(days=90)
+
+        # MRR base (início do período)
+        canceladas = Empresa.objects.filter(ativo=False, atualizado_em__date__gte=janela).count()
+        base = Empresa.objects.filter(criado_em__date__lte=janela).count()
+
+        # Expansão real de MRR no período
+        expansao = ExpansaoContrato.objects.filter(
+            criado_em__date__gte=janela
+        ).aggregate(delta=Sum("delta_mrr"))["delta"] or 0
+
+        TICKETS_BASE = {
+            "basico": 990, "profissional": 2490, "enterprise": 5990,
+            "governo": 3990, "hospital": 4490,
+        }
+        mrr_base = sum(
+            TICKETS_BASE.get(e["pacote_codigo"], 990)
+            for e in Empresa.objects.filter(criado_em__date__lte=janela).values("pacote_codigo")
+        )
+
+        if mrr_base <= 0:
+            return 100.0
+
+        churn_mrr = canceladas * 990  # estimativa conservadora
+        nrr = round(((mrr_base - churn_mrr + float(expansao)) / mrr_base) * 100, 1)
+        return min(max(nrr, 0.0), 200.0)
+    except Exception:
+        return 0.0
+
+
+def _ciclo_medio_real():
+    """Ciclo médio de vendas real em dias por segmento."""
+    try:
+        from .models import LeadComercial
+        from django.db.models import Avg
+        resultado = {}
+        for seg in SEGMENTOS:
+            avg = LeadComercial.objects.filter(
+                segmento=seg,
+                etapa="fechado",
+                ciclo_dias__isnull=False,
+            ).aggregate(media=Avg("ciclo_dias"))["media"]
+            if avg:
+                resultado[seg] = round(avg, 0)
+        return resultado or {"nota": "Nenhum ciclo registrado ainda"}
+    except Exception:
+        return {}
+
+
 def api_gtm_funil(request):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from .views_dashboard import _dono_autenticado
+    dono = _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     funil, tem_dados = _funil_dados()
     return JsonResponse({
-        "empresa": empresa.nome,
         "periodo": "últimos 30 dias",
         "funil": funil,
         "tem_dados_crm": tem_dados,
-        "nota": "Integre LeadComercial para dados reais de funil" if not tem_dados else None,
     })
 
 
 def api_gtm_pipeline(request):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from .views_dashboard import _dono_autenticado
+    if not _dono_autenticado(request):
+        return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     pipeline = _pipeline_valor()
     expansao = _land_and_expand()
     metas = _metas_trimestre()
-
-    # Ciclo médio de venda estimado (benchmark SaaS enterprise B2B)
-    ciclo_medio = {
-        "basico": 21,        # dias
-        "profissional": 45,
-        "enterprise": 90,
-        "governo": 180,
-    }
+    nrr = _nrr_real()
+    ciclo_real = _ciclo_medio_real()
 
     return JsonResponse({
-        "empresa": empresa.nome,
         "gerado_em": str(date.today()),
         "pipeline": pipeline,
         "land_and_expand": expansao,
         "metas_trimestre": metas,
-        "ciclo_venda_estimado_dias": ciclo_medio,
+        "nrr_real_pct": nrr,
+        "ciclo_medio_real_dias": ciclo_real,
         "distribuicao_por_segmento": [
             {"segmento": s, "oportunidades": 0, "nota": "integrar CRM"} for s in SEGMENTOS
         ],
@@ -204,33 +251,50 @@ def api_gtm_pipeline(request):
 
 
 def api_gtm_expansao(request):
-    empresa = _empresa_autenticada(request)
-    if not empresa:
-        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    from .views_dashboard import _dono_autenticado
+    if not _dono_autenticado(request):
+        return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     expansao = _land_and_expand()
 
-    # Oportunidades de expansão por cliente
+    # Oportunidades de expansão — empresas em planos inferiores
     try:
-        from .models import Empresa
-        MODULOS_EXTRAS = ["farmacia", "hospital", "sst", "competencia", "escalas"]
-        clientes_sem_modulos = []
-        for emp in Empresa.objects.filter(ativo=True)[:50]:
-            modulos_ativos = emp.pacote_codigo or "basico"
-            oportunidades = [m for m in MODULOS_EXTRAS if m not in modulos_ativos]
-            if oportunidades:
-                clientes_sem_modulos.append({
+        from .models import Empresa, ExpansaoContrato
+        from django.db.models import Sum
+        ORDEM_PLANO = [
+            "empresa_starter_5", "empresa_profissional_25",
+            "empresa_enterprise_100", "empresa_corporativo_250", "empresa_nacional_500",
+        ]
+        clientes_upsell = []
+        for emp in Empresa.objects.filter(ativo=True).order_by("pacote_codigo")[:50]:
+            idx = ORDEM_PLANO.index(emp.pacote_codigo) if emp.pacote_codigo in ORDEM_PLANO else -1
+            if 0 <= idx < len(ORDEM_PLANO) - 1:
+                clientes_upsell.append({
                     "empresa": emp.nome,
                     "plano_atual": emp.pacote_codigo,
-                    "modulos_oportunidade": oportunidades[:3],
+                    "proximo_plano": ORDEM_PLANO[idx + 1],
                 })
-        expansao["oportunidades_upsell"] = clientes_sem_modulos[:10]
+        expansao["oportunidades_upsell"] = clientes_upsell[:10]
+        expansao["expansao_mrr_90d"] = float(
+            ExpansaoContrato.objects.filter(
+                criado_em__date__gte=date.today() - timedelta(days=90)
+            ).aggregate(t=Sum("delta_mrr"))["t"] or 0
+        )
     except Exception:
         expansao["oportunidades_upsell"] = []
+        expansao["expansao_mrr_90d"] = 0.0
 
     return JsonResponse(expansao)
 
 
 def gtm_page(request):
-    from django.shortcuts import render
+    from django.shortcuts import render, redirect
+    from .views_dashboard import _dono_autenticado
+    dono = _dono_autenticado(request)
+    if not dono:
+        empresa = getattr(request, "empresa", None)
+        if empresa:
+            from .access_control import get_setor, _destino_correto
+            return redirect(_destino_correto(get_setor(empresa)))
+        return redirect("/operacao-central/")
     return render(request, "gtm.html")

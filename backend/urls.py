@@ -107,7 +107,9 @@ from api.views_rede import api_rede_kpis, dashboard_rede_page
 from api.views_compliance import (
     api_compliance_resumo, api_compliance_trilha,
     api_compliance_dispositivos, api_compliance_exportar, compliance_page,
+    api_soc2_controles, api_soc2_evidencias, api_rbac_permissoes, api_rbac_atribuir,
 )
+from api.views_hub import hub_view
 from api.views_relatorio import api_relatorio_executivo, relatorio_page
 from api.views_financeiro import api_financeiro_metricas, api_financeiro_cohorts, financeiro_page
 from api.views_observabilidade import api_health, api_slo_status, api_slo_incidentes, observabilidade_page
@@ -385,6 +387,16 @@ urlpatterns = [
     path('api/compliance/dispositivos', api_compliance_dispositivos),
     path('api/compliance/exportar/', api_compliance_exportar),
     path('api/compliance/exportar', api_compliance_exportar),
+    # SOC2 / ISO
+    path('api/compliance/soc2/controles/', api_soc2_controles),
+    path('api/compliance/soc2/controles', api_soc2_controles),
+    path('api/compliance/soc2/controles/<int:controle_id>/evidencias/', api_soc2_evidencias),
+    path('api/compliance/soc2/controles/<int:controle_id>/evidencias', api_soc2_evidencias),
+    # RBAC
+    path('api/rbac/permissoes/', api_rbac_permissoes),
+    path('api/rbac/permissoes', api_rbac_permissoes),
+    path('api/rbac/atribuir/', api_rbac_atribuir),
+    path('api/rbac/atribuir', api_rbac_atribuir),
     # 📄 Relatório Executivo
     path('relatorio-executivo/', relatorio_page),
     path('api/relatorio/executivo/', api_relatorio_executivo),
@@ -758,13 +770,40 @@ urlpatterns = [
     path('api/governanca/causal-impact', api_governanca_causal_impact),
     path('api/governanca/causal-impact/', api_governanca_causal_impact),
 
-    # Hub Enterprise
-    path('hub/', lambda req: __import__('django.shortcuts', fromlist=['render']).render(req, 'hub_enterprise.html')),
-    path('plataforma/', lambda req: __import__('django.shortcuts', fromlist=['render']).render(req, 'hub_enterprise.html')),
+    # Hub Enterprise — filtrado por setor, isolamento total entre ambientes
+    path('hub/', hub_view),
+    path('plataforma/', hub_view),
 
     # API Infra (versioning, rate limit, circuit breaker)
     path('api/infra/circuit-breaker', api_circuit_breaker_status),
     path('api/infra/circuit-breaker/', api_circuit_breaker_status),
     path('api/infra/rate-limit', api_rate_limit_status),
     path('api/infra/rate-limit/', api_rate_limit_status),
+
+    # ── API v1 — stable surface (tenant-scoped) ──────────────────────────────
+    path('api/v1/compliance/resumo', api_compliance_resumo),
+    path('api/v1/compliance/trilha', api_compliance_trilha),
+    path('api/v1/compliance/soc2/controles', api_soc2_controles),
+    path('api/v1/rbac/permissoes', api_rbac_permissoes),
+    path('api/v1/mlops/modelos', api_mlops_modelos),
+    path('api/v1/mlops/monitoramento/snapshot', api_mlops_snapshot),
+    path('api/v1/feature-store/features', api_feature_store_features),
+    path('api/v1/feature-store/dicionario', api_feature_store_dicionario),
+    path('api/v1/eventos/status', api_eventos_status),
+    path('api/v1/schema/contratos', api_schema_contratos),
+    path('api/v1/slo/status', api_slo_status),
+    path('api/v1/saude', api_health),
+
+    # ── API v2 — envelope padronizado + rate-limit headers ───────────────────
+    path('api/v2/compliance/resumo', api_compliance_resumo),
+    path('api/v2/compliance/trilha', api_compliance_trilha),
+    path('api/v2/compliance/soc2/controles', api_soc2_controles),
+    path('api/v2/rbac/permissoes', api_rbac_permissoes),
+    path('api/v2/mlops/modelos', api_mlops_modelos),
+    path('api/v2/mlops/monitoramento/snapshot', api_mlops_snapshot),
+    path('api/v2/feature-store/features', api_feature_store_features),
+    path('api/v2/eventos/status', api_eventos_status),
+    path('api/v2/schema/contratos', api_schema_contratos),
+    path('api/v2/slo/status', api_slo_status),
+    path('api/v2/saude', api_health),
 ]

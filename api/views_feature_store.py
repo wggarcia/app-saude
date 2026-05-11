@@ -310,6 +310,54 @@ def api_feature_store_features(request):
     })
 
 
+def _registry_do_db():
+    """Lê o catálogo de features do DB; cai de volta no dict estático se vazio."""
+    try:
+        from .models import FeatureRegistro
+        qs = FeatureRegistro.objects.filter(ativo=True).values(
+            "entidade", "nome", "descricao", "tipo", "fonte",
+            "frequencia_atualizacao", "sla_atraso_max_horas", "owner", "tags",
+        )
+        if not qs.exists():
+            _seed_feature_registry()
+            qs = FeatureRegistro.objects.filter(ativo=True).values(
+                "entidade", "nome", "descricao", "tipo", "fonte",
+                "frequencia_atualizacao", "sla_atraso_max_horas", "owner", "tags",
+            )
+        registry = {}
+        for row in qs:
+            entidade = row.pop("entidade")
+            nome = row.pop("nome")
+            registry.setdefault(entidade, {})[nome] = row
+        return registry
+    except Exception:
+        return FEATURE_REGISTRY
+
+
+def _seed_feature_registry():
+    """Popula FeatureRegistro a partir do dict estático FEATURE_REGISTRY."""
+    try:
+        from .models import FeatureRegistro
+        objs = []
+        for entidade, features in FEATURE_REGISTRY.items():
+            for nome, meta in features.items():
+                if not FeatureRegistro.objects.filter(entidade=entidade, nome=nome).exists():
+                    objs.append(FeatureRegistro(
+                        entidade=entidade, nome=nome,
+                        descricao=meta.get("descricao", ""),
+                        tipo=meta.get("tipo", "float"),
+                        fonte=meta.get("fonte", ""),
+                        frequencia_atualizacao=meta.get("frequencia_atualizacao", "diaria"),
+                        sla_atraso_max_horas=meta.get("sla_atraso_max_horas", 25),
+                        owner=meta.get("owner", ""),
+                        tags=meta.get("tags", []),
+                    ))
+        if objs:
+            FeatureRegistro.objects.bulk_create(objs, ignore_conflicts=True)
+    except Exception:
+        pass
+
+
 def api_feature_store_dicionario(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -320,15 +368,17 @@ def api_feature_store_dicionario(request):
     if dominio_q:
         eventos = [e for e in eventos if dominio_q in e["dominio"].lower() or dominio_q in " ".join(e.get("tags", []))]
 
-    total_features = sum(len(v) for v in FEATURE_REGISTRY.values())
+    registry = _registry_do_db()
+    total_features = sum(len(v) for v in registry.values())
 
     return JsonResponse({
         "empresa": empresa.nome,
         "total_eventos": len(eventos),
         "total_features": total_features,
-        "feature_registry": FEATURE_REGISTRY,
+        "feature_registry": registry,
         "eventos": eventos,
         "dominios": sorted(set(e["dominio"] for e in EVENTO_DICIONARIO)),
+        "fonte_registry": "db",
     })
 
 
@@ -417,5 +467,11 @@ def api_feature_store_qualidade(request):
 
 
 def feature_store_page(request):
-    from django.shortcuts import render
+    from django.shortcuts import render, redirect
+    from .access_control import get_setor, _destino_correto
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return redirect("/login-empresa/")
+    if get_setor(empresa) != "empresa":
+        return redirect(_destino_correto(get_setor(empresa)))
     return render(request, "feature_store.html")
