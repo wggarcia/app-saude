@@ -10,12 +10,20 @@ from .models import (
 
 
 def get_empresa(request):
-    eid = request.session.get('empresa_id')
-    if not eid:
+    empresa = getattr(request, 'empresa', None)
+    if empresa:
+        return empresa
+    # Fallback: try auth_token cookie
+    from django.conf import settings
+    import jwt as pyjwt
+    token = request.COOKIES.get('auth_token')
+    if not token:
         return None
     try:
-        return Empresa.objects.get(id=eid)
-    except Empresa.DoesNotExist:
+        payload = pyjwt.decode(token, settings.JWT_SECRET_KEY, algorithms=['HS256'])
+        from .models import Empresa
+        return Empresa.objects.filter(id=payload.get('empresa_id')).first()
+    except Exception:
         return None
 
 

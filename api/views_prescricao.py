@@ -6,6 +6,14 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import PrescricaoMedica, InternacaoHospital, AtoNormativoGov
 from .views_dashboard import _empresa_autenticada
+from .access_control import get_setor
+
+
+def _get_empresa_hospital(req):
+    empresa = _empresa_autenticada(req)
+    if empresa and get_setor(empresa) not in ('hospital',):
+        return None
+    return empresa
 
 
 # ─── Prescrições Médicas ───────────────────────────────────────────────────────
@@ -32,7 +40,7 @@ def _prescricao_to_dict(p):
 @csrf_exempt
 def api_prescricoes_internacao(request, internacao_id):
     """GET prescriptions for an internação / POST new prescription."""
-    empresa = _empresa_autenticada(request)
+    empresa = _get_empresa_hospital(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -75,7 +83,7 @@ def api_prescricoes_internacao(request, internacao_id):
 @csrf_exempt
 def api_prescricao_status(request, prescricao_id):
     """PUT status of a prescription."""
-    empresa = _empresa_autenticada(request)
+    empresa = _get_empresa_hospital(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -123,7 +131,7 @@ def _ato_to_dict(a):
 @csrf_exempt
 def api_atos_normativos(request):
     """GET list / POST create atos normativos governamentais."""
-    empresa = _empresa_autenticada(request)
+    empresa = _get_empresa_hospital(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -172,7 +180,7 @@ def api_atos_normativos(request):
 @csrf_exempt
 def api_ato_normativo_detalhe(request, ato_id):
     """GET / PUT / DELETE ato normativo."""
-    empresa = _empresa_autenticada(request)
+    empresa = _get_empresa_hospital(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 

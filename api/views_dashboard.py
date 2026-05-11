@@ -15,6 +15,7 @@ from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_ciclo, normalizar_
 from .push_service import enviar_alerta_governamental, push_disponivel
 from .governanca import registrar_auditoria_institucional
 from .command_ai import build_command_ai_payload
+from .access_control import requer_setor
 import csv
 
 
@@ -236,26 +237,31 @@ def dashboard_governo(request):
 
 
 @ensure_csrf_cookie
+@requer_setor('farmacia')
 def farmacia_gestao_page(request):
     return render(request, "farmacia_gestao.html")
 
 
 @ensure_csrf_cookie
+@requer_setor('hospital')
 def hospital_gestao_page(request):
     return render(request, "hospital_gestao.html")
 
 
 @ensure_csrf_cookie
+@requer_setor('governo')
 def governo_gestao_page(request):
     return render(request, "governo_gestao.html")
 
 
 @ensure_csrf_cookie
+@requer_setor('farmacia', 'hospital')
 def rede_gestao_page(request):
     return render(request, "rede_gestao.html")
 
 
 @ensure_csrf_cookie
+@requer_setor('farmacia', 'hospital')
 def plano_saude_gestao_page(request):
     return render(request, "plano_saude_gestao.html")
 

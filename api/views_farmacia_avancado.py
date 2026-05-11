@@ -10,10 +10,14 @@ from .models import (
     DispensacaoMedicamento,
 )
 from .views_dashboard import _empresa_autenticada
+from .access_control import get_setor
 
 
 def _e(req):
-    return _empresa_autenticada(req)
+    empresa = _empresa_autenticada(req)
+    if empresa and get_setor(empresa) not in ('farmacia',):
+        return None
+    return empresa
 
 
 # ── Pacientes ──────────────────────────────────────────────────────────────────

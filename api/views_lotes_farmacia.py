@@ -7,6 +7,14 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import LoteMedicamento, ItemFarmacia, FornecedorFarmacia, MovimentoEstoque
 from .views_dashboard import _empresa_autenticada
+from .access_control import get_setor
+
+
+def _e(req):
+    empresa = _empresa_autenticada(req)
+    if empresa and get_setor(empresa) not in ('farmacia',):
+        return None
+    return empresa
 
 
 def _lote_to_dict(l):
@@ -35,7 +43,7 @@ def _lote_to_dict(l):
 @csrf_exempt
 def api_lotes_farmacia(request):
     """GET list / POST create lotes de medicamentos."""
-    empresa = _empresa_autenticada(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -121,7 +129,7 @@ def api_lotes_farmacia(request):
 @csrf_exempt
 def api_lote_farmacia_detalhe(request, lote_id):
     """GET / PUT / DELETE lote."""
-    empresa = _empresa_autenticada(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -169,7 +177,7 @@ def api_lote_farmacia_detalhe(request, lote_id):
 
 def api_lotes_farmacia_kpis(request):
     """KPIs de rastreabilidade: vencidos, vencendo, alertas."""
-    empresa = _empresa_autenticada(request)
+    empresa = _e(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
