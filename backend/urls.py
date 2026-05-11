@@ -758,6 +758,10 @@ urlpatterns = [
     path('api/governanca/causal-impact', api_governanca_causal_impact),
     path('api/governanca/causal-impact/', api_governanca_causal_impact),
 
+    # Hub Enterprise
+    path('hub/', lambda req: __import__('django.shortcuts', fromlist=['render']).render(req, 'hub_enterprise.html')),
+    path('plataforma/', lambda req: __import__('django.shortcuts', fromlist=['render']).render(req, 'hub_enterprise.html')),
+
     # API Infra (versioning, rate limit, circuit breaker)
     path('api/infra/circuit-breaker', api_circuit_breaker_status),
     path('api/infra/circuit-breaker/', api_circuit_breaker_status),

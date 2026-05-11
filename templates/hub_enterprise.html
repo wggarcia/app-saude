@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hub Enterprise — Plataforma SolusCRT</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0e1a;color:#e2e8f0;font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+    .header{background:#111827;border-bottom:1px solid #1e293b;padding:16px 32px;display:flex;align-items:center;gap:16px}
+    .logo{font-size:1.2rem;font-weight:900;background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .empresa-nome{font-size:.85rem;color:#64748b;margin-left:4px}
+    .back{margin-left:auto;color:#64748b;font-size:.84rem;text-decoration:none}
+    .back:hover{color:#94a3b8}
+    .main{max-width:1400px;margin:0 auto;padding:32px}
+    .hero{text-align:center;margin-bottom:40px}
+    .hero h1{font-size:2rem;font-weight:900;background:linear-gradient(135deg,#f8fafc,#94a3b8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+    .hero p{font-size:.95rem;color:#64748b;max-width:600px;margin:0 auto}
+    /* Categoria */
+    .categoria{margin-bottom:36px}
+    .cat-titulo{font-size:.72rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .cat-titulo::after{content:'';flex:1;height:1px;background:#1e293b}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+    /* Card de módulo */
+    .mod-card{background:#111827;border:1px solid #1e293b;border-radius:14px;padding:20px;text-decoration:none;color:inherit;transition:.2s;display:block;position:relative;overflow:hidden}
+    .mod-card:hover{border-color:#334155;transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+    .mod-card::before{content:'';position:absolute;inset:0;opacity:0;transition:.2s;border-radius:14px}
+    .mod-card:hover::before{opacity:1}
+    .mod-icon{font-size:1.8rem;margin-bottom:12px;display:block}
+    .mod-nome{font-size:.95rem;font-weight:700;color:#f8fafc;margin-bottom:4px}
+    .mod-desc{font-size:.78rem;color:#64748b;line-height:1.5}
+    .mod-badge{display:inline-block;margin-top:10px;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:999px}
+    .badge-live{background:#052e16;color:#10b981;border:1px solid #166534}
+    .badge-novo{background:#1e1b4b;color:#818cf8;border:1px solid #3730a3}
+    .badge-ia{background:#130026;color:#a855f7;border:1px solid #7e22ce}
+    /* Status bar global */
+    .status-bar{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:20px;margin-bottom:32px;flex-wrap:wrap}
+    .status-item{display:flex;align-items:center;gap:8px}
+    .status-dot{width:8px;height:8px;border-radius:50%}
+    .dot-ok{background:#10b981;box-shadow:0 0 0 3px #10b98133}
+    .dot-warn{background:#f59e0b}
+    .dot-err{background:#f43f5e}
+    .status-label{font-size:.78rem;color:#94a3b8}
+    .status-val{font-size:.78rem;font-weight:700;color:#f8fafc}
+    @media(max-width:640px){.grid{grid-template-columns:1fr 1fr}.hero h1{font-size:1.4rem}}
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">SolusCRT</div>
+  <span class="empresa-nome" id="empNome"></span>
+  <a href="/dashboard-empresa/" class="back">← Painel SST</a>
+</div>
+<div class="main">
+  <div class="hero">
+    <h1>Plataforma Enterprise</h1>
+    <p>Central de acesso a todos os módulos da plataforma — analytics, compliance, IA e operações.</p>
+  </div>
+
+  <!-- Status rápido -->
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="status-dot dot-ok" id="sdDb"></div>
+      <span class="status-label">Banco de Dados</span>
+      <span class="status-val" id="svDb">—</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot" id="sdScore"></div>
+      <span class="status-label">Score Disponibilidade</span>
+      <span class="status-val" id="svScore">—</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot dot-ok"></div>
+      <span class="status-label">ARR</span>
+      <span class="status-val" id="svArr">—</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot" id="sdChurn"></div>
+      <span class="status-label">Churn 90d</span>
+      <span class="status-val" id="svChurn">—</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot dot-ok"></div>
+      <span class="status-label">Clientes</span>
+      <span class="status-val" id="svClientes">—</span>
+    </div>
+    <span style="margin-left:auto;font-size:.72rem;color:#475569" id="svTs"></span>
+  </div>
+
+  <!-- Módulos Operacionais -->
+  <div class="categoria">
+    <div class="cat-titulo">Operacional</div>
+    <div class="grid">
+      <a href="/dashboard-empresa/" class="mod-card">
+        <span class="mod-icon">🛡️</span>
+        <div class="mod-nome">Saúde & Segurança (SST)</div>
+        <div class="mod-desc">Funcionários, exames, ASO, EPIs, CAT, eSocial, treinamentos NR</div>
+        <span class="mod-badge badge-live">Live</span>
+      </a>
+      <a href="/farmacia/gestao/" class="mod-card">
+        <span class="mod-icon">💊</span>
+        <div class="mod-nome">Farmácia</div>
+        <div class="mod-desc">Estoque FEFO, dispensações, receitas, inventário, descarte, curva ABC</div>
+        <span class="mod-badge badge-live">Live</span>
+      </a>
+      <a href="/hospital/gestao/" class="mod-card">
+        <span class="mod-icon">🏥</span>
+        <div class="mod-nome">Hospital</div>
+        <div class="mod-desc">Leitos, internações, triagem, evoluções clínicas, alta médica</div>
+        <span class="mod-badge badge-live">Live</span>
+      </a>
+      <a href="/dashboard-empresa-corporativo/" class="mod-card">
+        <span class="mod-icon">❤️</span>
+        <div class="mod-nome">Saúde Ocupacional</div>
+        <div class="mod-desc">Check-ins diários/semanais, bem-estar, burnout, apoio psicológico</div>
+        <span class="mod-badge badge-live">Live</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Módulos Analytics -->
+  <div class="categoria">
+    <div class="cat-titulo">Analytics & Relatórios</div>
+    <div class="grid">
+      <a href="/executive-dashboard/" class="mod-card">
+        <span class="mod-icon">📊</span>
+        <div class="mod-nome">Dashboard Executivo</div>
+        <div class="mod-desc">Visão consolidada de todos os módulos em tempo real</div>
+        <span class="mod-badge badge-live">Live</span>
+      </a>
+      <a href="/dashboard-rede/" class="mod-card">
+        <span class="mod-icon">🌐</span>
+        <div class="mod-nome">Dashboard de Rede</div>
+        <div class="mod-desc">KPIs de múltiplas unidades, ranking, mapa de rede, tendência 30d</div>
+        <span class="mod-badge badge-novo">Novo</span>
+      </a>
+      <a href="/relatorio-executivo/" class="mod-card">
+        <span class="mod-icon">📄</span>
+        <div class="mod-nome">Relatório Executivo</div>
+        <div class="mod-desc">Relatório consolidado por período, exportável em PDF — SST, farmácia, hospital, compliance</div>
+        <span class="mod-badge badge-novo">Novo</span>
+      </a>
+      <a href="/gtm/" class="mod-card">
+        <span class="mod-icon">🎯</span>
+        <div class="mod-nome">GTM Analytics</div>
+        <div class="mod-desc">Funil de vendas, pipeline, Land-and-Expand, ciclo por plano, upsell</div>
+        <span class="mod-badge badge-novo">Novo</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Módulos Financial OS -->
+  <div class="categoria">
+    <div class="cat-titulo">Financial OS</div>
+    <div class="grid">
+      <a href="/financeiro/" class="mod-card">
+        <span class="mod-icon">💰</span>
+        <div class="mod-nome">Financial OS</div>
+        <div class="mod-desc">ARR, MRR, NRR, churn, LTV:CAC, CAC payback, cohorts de retenção</div>
+        <span class="mod-badge badge-novo">Novo</span>
+      </a>
+      <a href="/governanca/" class="mod-card">
+        <span class="mod-icon">🏛</span>
+        <div class="mod-nome">Governança Executiva</div>
+        <div class="mod-desc">Pauta semanal automática, ARR Waterfall, Burn Multiple, Runway, Pricing por valor</div>
+        <span class="mod-badge badge-novo">Novo</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Módulos Compliance -->
+  <div class="categoria">
+    <div class="cat-titulo">Compliance & Segurança</div>
+    <div class="grid">
+      <a href="/compliance/" class="mod-card">
+        <span class="mod-icon">🔒</span>
+        <div class="mod-nome">Compliance & Auditoria</div>
+        <div class="mod-desc">Trilha de auditoria, LGPD, dispositivos autorizados, exportação CSV/JSON</div>
+        <span class="mod-badge badge-novo">Novo</span>
+      </a>
+      <a href="/observabilidade/" class="mod-card">
+        <span class="mod-icon">📡</span>
+        <div class="mod-nome">Observabilidade & SLO</div>
+        <div class="mod-desc">Score de disponibilidade, latência por domínio, incidentes 30d, health check</div>
+        <span class="mod-badge badge-novo">Novo</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Módulos Plataforma de Dados & IA -->
+  <div class="categoria">
+    <div class="cat-titulo">Plataforma de Dados & IA</div>
+    <div class="grid">
+      <a href="/mlops/" class="mod-card">
+        <span class="mod-icon">🤖</span>
+        <div class="mod-nome">MLOps Pipeline</div>
+        <div class="mod-desc">Registro de modelos, drift detection, feedback loop, fairness, monitoramento de performance</div>
+        <span class="mod-badge badge-ia">IA</span>
+      </a>
+      <a href="/schema-registry/" class="mod-card">
+        <span class="mod-icon">📐</span>
+        <div class="mod-nome">Schema Registry</div>
+        <div class="mod-desc">Contratos de dados versionados, validação de payload, compatibilidade backward/forward</div>
+        <span class="mod-badge badge-novo">Novo</span>
+      </a>
+      <a href="/feature-store/" class="mod-card">
+        <span class="mod-icon">🗃</span>
+        <div class="mod-nome">Feature Store</div>
+        <div class="mod-desc">Registry de features ML, dicionário de eventos, SLA de qualidade de dados por fonte</div>
+        <span class="mod-badge badge-novo">Novo</span>
+      </a>
+      <a href="/eventos/" class="mod-card">
+        <span class="mod-icon">⚡</span>
+        <div class="mod-nome">Event Backbone</div>
+        <div class="mod-desc">Outbox Pattern, at-least-once delivery, DLQ, webhook subscriptions com HMAC</div>
+        <span class="mod-badge badge-novo">Novo</span>
+      </a>
+      <a href="/sala-decisao-ia/" class="mod-card">
+        <span class="mod-icon">🧠</span>
+        <div class="mod-nome">IA Decisória</div>
+        <div class="mod-desc">Análise de casos clínicos, recomendações automáticas, diagnóstico assistido</div>
+        <span class="mod-badge badge-ia">IA</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+const fmtBRL = v => v >= 1e6 ? `R$ ${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `R$ ${(v/1e3).toFixed(0)}K` : `R$ ${v.toFixed(0)}`;
+
+async function carregarStatus() {
+  document.getElementById('svTs').textContent = new Date().toLocaleTimeString('pt-BR');
+
+  const [saude, fin] = await Promise.all([
+    fetch('/api/saude').then(r=>r.json()).catch(()=>null),
+    fetch('/api/financeiro/metricas').then(r=>r.json()).catch(()=>null),
+  ]);
+
+  if (saude) {
+    const ok = saude.status === 'ok';
+    const dot = document.getElementById('sdDb');
+    dot.className = 'status-dot ' + (ok ? 'dot-ok' : 'dot-err');
+    document.getElementById('svDb').textContent = ok ? saude.componentes?.db_latencia_ms + 'ms' : 'Erro';
+
+    const scoreDot = document.getElementById('sdScore');
+    const comp = saude.componentes || {};
+    document.getElementById('svScore').textContent = ok ? '100%' : 'Degradado';
+    scoreDot.className = 'status-dot ' + (ok ? 'dot-ok' : 'dot-warn');
+  }
+
+  if (fin && !fin.erro) {
+    const k = fin.kpis || {};
+    document.getElementById('svArr').textContent = fmtBRL(k.arr || 0);
+    const churn = k.churn_rate_90d || 0;
+    document.getElementById('svChurn').textContent = churn + '%';
+    document.getElementById('sdChurn').className = 'status-dot ' + (churn > 5 ? 'dot-err' : churn > 2 ? 'dot-warn' : 'dot-ok');
+    document.getElementById('svClientes').textContent = k.total_clientes || 0;
+    document.getElementById('empNome').textContent = fin.empresa || '';
+  }
+}
+
+carregarStatus();
+setInterval(carregarStatus, 60000);
+</script>
+</body>
+</html>
