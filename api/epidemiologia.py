@@ -96,6 +96,13 @@ DISEASE_WEIGHTS = {
         "dor_corpo": 0.44,
         "tosse": 0.22,
     },
+    "Hantavirus": {
+        "falta_ar": 0.95,
+        "cansaco": 0.92,
+        "febre": 0.88,
+        "dor_corpo": 0.85,
+        "tosse": 0.30,
+    },
 }
 
 _PANORAMA_CACHE = {"created_at": 0.0, "payload": None}
@@ -230,6 +237,7 @@ def _public_recommendation(dominant_disease, dominant_symptom, risk_level):
         "Malaria": "priorizar investigacao em areas de transmissao e encaminhamento para testagem conforme protocolo local",
         "Sarampo": "reforcar alerta para febre com tosse, isolamento orientado e verificacao de cobertura vacinal",
         "Meningite": "orientar busca imediata de atendimento diante de febre intensa, rigidez ou piora rapida",
+        "Hantavirus": "evitar contato com roedores e areas contaminadas, nao varrer ambientes fechados sem mascara e buscar atendimento imediato ao primeiro sinal respiratorio",
     }
     action = base.get(dominant_disease, f"priorizar monitoramento de {dominant_symptom.lower()} e orientacao local")
 
@@ -251,6 +259,8 @@ def _market_recommendation(dominant_disease, dominant_symptom):
         return "reforcar hidratacao, antitermicos seguros, orientacao de encaminhamento e materiais educativos"
     if dominant_disease in {"Sarampo", "Meningite"}:
         return "reforcar mascaras, antitermicos, orientacao de isolamento/encaminhamento e comunicacao de risco"
+    if dominant_disease == "Hantavirus":
+        return "reforcar mascaras PFF2/N95, materiais de desinfeccao, orientacao de risco ambiental e encaminhamento urgente"
     if dominant_symptom == "Falta de Ar":
         return "priorizar itens respiratorios e protocolos de encaminhamento"
     return "acompanhar demanda de sintomaticos e ajustar estoque de suporte"
@@ -263,6 +273,8 @@ def _hospital_recommendation(dominant_disease, dominant_symptom, risk_level):
         action = "preparar hidratacao venosa, analgesia, observacao e fluxo para sinais de alarme"
     elif dominant_disease == "Meningite":
         action = "preparar triagem de emergencia, isolamento quando indicado, coleta diagnostica e protocolo de notificação"
+    elif dominant_disease == "Hantavirus":
+        action = "preparar UTI com suporte ventilatório mecanico, isolamento de contato/respiratorio e protocolo de notificacao imediata"
     elif dominant_disease == "Sarampo":
         action = "reforcar triagem respiratoria, isolamento orientado, vigilancia de contatos e verificacao vacinal"
     elif dominant_disease == "Gripe":
@@ -282,6 +294,8 @@ def _government_recommendation(dominant_disease, dominant_symptom, risk_level, g
         action = "intensificar vigilancia vetorial, bloqueio territorial, comunicacao comunitaria e mutirao de campo"
     elif dominant_disease in {"Leptospirose", "Malaria"}:
         action = "acionar vigilancia territorial, investigacao ambiental, comunicacao de risco e rede de testagem/encaminhamento"
+    elif dominant_disease == "Hantavirus":
+        action = "acionar notificacao compulsoria imediata, investigacao de foco de roedores, interdição de area contaminada e articulacao com CIEVS/SVS"
     elif dominant_disease in {"Sarampo", "Meningite"}:
         action = "acionar notificacao imediata, investigacao de contatos, comunicacao de risco e articulacao da rede assistencial"
     elif dominant_symptom == "Falta de Ar" or dominant_disease == "COVID":

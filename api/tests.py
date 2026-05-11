@@ -594,6 +594,7 @@ class PublicApiTests(TestCase):
             "Malaria",
             "Sarampo",
             "Meningite",
+            "Hantavirus",
         ]:
             self.assertIn(doenca, DISEASE_WEIGHTS)
 
