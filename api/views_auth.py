@@ -353,23 +353,31 @@ def registrar_empresa(request):
     if not nome or not email or not senha:
         return JsonResponse({"erro": "Preencha todos os campos"}, status=400)
 
+    if len(senha) < 8:
+        return JsonResponse({"erro": "Senha deve ter pelo menos 8 caracteres"}, status=400)
+
     if Empresa.objects.filter(email=email).exists():
-        return JsonResponse({"erro": "Email já existe"}, status=400)
+        return JsonResponse({"erro": "Email já cadastrado"}, status=400)
+
+    # Resolve pacote — governo só via contrato, nunca via self-service
+    from .planos import PACOTES_SAAS
+    pacote_solicitado = normalizar_codigo_pacote(dados.get("pacote_codigo") or pacote_padrao())
+    pacote_info = PACOTES_SAAS.get(pacote_solicitado, PACOTES_SAAS[pacote_padrao()])
+    if pacote_info.get("setor") == "governo":
+        pacote_solicitado = pacote_padrao()
+        pacote_info = PACOTES_SAAS[pacote_padrao()]
 
     # 🔐 salva empresa
     empresa = Empresa.objects.create(
         nome=nome,
         email=email,
         senha=make_password(senha),
-        pacote_codigo=normalizar_codigo_pacote(pacote_padrao()),
-        max_dispositivos=1,
-        max_usuarios=1,
+        pacote_codigo=pacote_solicitado,
+        max_dispositivos=pacote_info["dispositivos"],
+        max_usuarios=pacote_info["usuarios"],
     )
 
     pacote = detalhes_pacote(empresa.pacote_codigo)
-    empresa.max_dispositivos = pacote["dispositivos"]
-    empresa.max_usuarios = pacote["usuarios"]
-    empresa.save(update_fields=["pacote_codigo", "max_dispositivos", "max_usuarios"])
 
     autorizado, device_id, dispositivos_em_uso, erro_dispositivo = _registrar_dispositivo_login(empresa, request, dados)
     if not autorizado:

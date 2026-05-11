@@ -61,14 +61,17 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .b-amarelo{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.18)}
 .b-azul{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.18)}
 .b-cinza{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line)}
+.b-roxo{background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.18)}
 .dias-badge{padding:3px 9px;border-radius:5px;font-size:.68rem;font-weight:800}
 .dias-urgente{background:rgba(239,68,68,.14);color:#f87171}
 .dias-atencao{background:rgba(245,158,11,.12);color:#fbbf24}
 .dias-ok{background:rgba(34,197,94,.08);color:#4ade80}
 .dias-vencido{background:rgba(239,68,68,.2);color:#f87171;text-decoration:line-through}
-.row-actions{display:flex;gap:6px}
-.btn-row{padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.7rem;cursor:pointer;font-family:inherit;transition:all .15s}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap}
+.btn-row{padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.7rem;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
 .btn-row:hover{border-color:var(--teal);color:var(--teal)}
+.btn-row.btn-share:hover{border-color:#8b5cf6;color:#a78bfa}
+.btn-row.btn-esocial:hover{border-color:var(--blue);color:#60a5fa}
 .empty-state{padding:48px 20px;text-align:center;color:var(--muted)}
 .empty-state .ei{font-size:2.5rem;margin-bottom:12px}
 .empty-state h3{font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:6px}
@@ -89,12 +92,21 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .modal-acts{display:flex;gap:8px;margin-top:16px}
 .btn-cancel{flex:1;padding:9px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:none;color:var(--muted);font-family:inherit;cursor:pointer}
 .btn-submit{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-weight:800;font-family:inherit;cursor:pointer}
+.btn-submit-roxo{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;font-weight:800;font-family:inherit;cursor:pointer}
+.link-box{background:rgba(255,255,255,.04);border:1px solid rgba(0,201,167,.25);border-radius:8px;padding:10px 12px;font-family:monospace;font-size:.78rem;color:var(--teal);word-break:break-all;margin-top:8px;cursor:text;user-select:all}
+.copy-btn{width:100%;padding:8px;border-radius:7px;border:1px solid rgba(0,201,167,.3);background:rgba(0,201,167,.07);color:var(--teal);font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;margin-top:8px;transition:all .15s}
+.copy-btn:hover{background:rgba(0,201,167,.14)}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:12px 18px;font-size:.82rem;font-weight:600;color:var(--text);z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none;max-width:320px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:rgba(34,197,94,.3);color:#4ade80}
+.toast.err{border-color:rgba(239,68,68,.3);color:#f87171}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
 </style>
 </head>
 <body>
+<div class="toast" id="toast"></div>
 <header class="topbar">
   <div class="tb-logo"><div class="tb-icon">S</div><div><div class="tb-nome">SST</div><div class="tb-sub">Saúde Ocupacional</div></div></div>
   <nav class="tb-nav">
@@ -137,6 +149,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Vencendo em 30d</div><div class="kpi-val" id="k-vencendo">—</div><div class="kpi-sub">requerem renovação em breve</div></div>
       <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">Vencidos</div><div class="kpi-val" id="k-vencidos">—</div><div class="kpi-sub">ASOs fora da validade</div></div>
       <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Aptos</div><div class="kpi-val" id="k-aptos">—</div><div class="kpi-sub">resultado apto no último ASO</div></div>
+      <div class="kpi-card" style="--kc:#8b5cf6"><div class="kpi-label">S-2220 Enviados</div><div class="kpi-val" id="k-s2220">—</div><div class="kpi-sub">transmitidos ao eSocial</div></div>
     </div>
     <div class="toolbar">
       <div class="search-box"><input id="busca" type="text" placeholder="Buscar por funcionário, cargo ou médico..." oninput="renderTabela()"></div>
@@ -152,16 +165,17 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <div class="table-wrap">
       <div class="table-header"><h3>Atestados de Saúde Ocupacional</h3><span id="contagem">carregando...</span></div>
       <table class="tbl">
-        <thead><tr><th>Funcionário</th><th>Tipo</th><th>Emitido em</th><th>Válido até</th><th>Validade</th><th>Resultado</th><th>Médico</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Funcionário</th><th>Tipo</th><th>Emitido em</th><th>Válido até</th><th>Validade</th><th>Resultado</th><th>Médico</th><th>eSocial</th><th>Ações</th></tr></thead>
         <tbody id="tbody">
-          <tr><td colspan="8"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
-          <tr><td colspan="8"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+          <tr><td colspan="9"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+          <tr><td colspan="9"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
         </tbody>
       </table>
     </div>
   </main>
 </div>
 
+<!-- Modal: Emitir ASO -->
 <div class="modal-bg" id="modal">
   <div class="modal">
     <h3>Emitir Atestado de Saúde Ocupacional</h3>
@@ -187,8 +201,41 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
   </div>
 </div>
 
+<!-- Modal: Compartilhar ASO -->
+<div class="modal-bg" id="modal-share">
+  <div class="modal">
+    <h3>🔗 Compartilhar ASO</h3>
+    <div class="modal-sub" id="share-sub">Gere um link seguro para que a empresa contratante acesse o ASO diretamente. O link expira automaticamente.</div>
+    <div id="share-form">
+      <div class="mf"><label>Empresa Destinatária</label><input id="s-nome-empresa" type="text" placeholder="Ex: Construtora XYZ Ltda"></div>
+      <div class="mf-row">
+        <div class="mf"><label>CNPJ Destino (opcional)</label><input id="s-cnpj" type="text" placeholder="00.000.000/0000-00"></div>
+        <div class="mf"><label>E-mail Destino (opcional)</label><input id="s-email" type="email" placeholder="rh@empresa.com.br"></div>
+      </div>
+      <div class="mf-row">
+        <div class="mf"><label>Validade (dias)</label><input id="s-dias" type="number" value="30" min="1" max="365"></div>
+        <div class="mf"><label>Máx. de acessos</label><input id="s-max" type="number" value="20" min="1" max="200"></div>
+      </div>
+      <div class="modal-acts">
+        <button class="btn-cancel" onclick="closeShareModal()">Cancelar</button>
+        <button class="btn-submit-roxo" onclick="gerarLink()">Gerar Link</button>
+      </div>
+    </div>
+    <div id="share-result" style="display:none">
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">✅ Link gerado com sucesso! Copie e envie para a empresa:</div>
+      <div class="link-box" id="share-link-box"></div>
+      <button class="copy-btn" onclick="copiarLink()">📋 Copiar Link</button>
+      <div style="margin-top:12px;font-size:.74rem;color:var(--muted);line-height:1.6" id="share-info"></div>
+      <div class="modal-acts" style="margin-top:12px">
+        <button class="btn-cancel" onclick="closeShareModal()">Fechar</button>
+        <button class="btn-submit" onclick="novoLink()">Gerar outro link</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-let _todos=[];let _filtro='todos';
+let _todos=[];let _filtro='todos';let _shareAsoId=null;
 const hoje=new Date();hoje.setHours(0,0,0,0);
 function diasRestantes(s){if(!s)return null;const d=new Date(s.split("/").reverse().join("-"));return Math.round((d-hoje)/(86400000));}
 function diasBadge(dias){
@@ -201,10 +248,71 @@ function diasBadge(dias){
 const resultadoCls={apto:'b-verde',inapto:'b-vermelho',apto_restricao:'b-amarelo'};
 const resultadoLabel={apto:'Apto',inapto:'Inapto',apto_restricao:'Apto c/ Restrição'};
 const tipoLabel={admissional:'Admissional',periodico:'Periódico',retorno_trabalho:'Retorno',mudanca_risco:'Mudança Risco',demissional:'Demissional'};
+const esocialCls={nao_enviado:'b-cinza',pendente:'b-amarelo',transmitido:'b-verde',erro:'b-vermelho'};
+const esocialLbl={nao_enviado:'—',pendente:'Pendente',transmitido:'S-2220 ✓',erro:'Erro'};
+
+function toast(msg,tipo='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+(tipo==='ok'?'ok':'err');clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',3500);}
 
 function openModal(){document.getElementById("modal").classList.add("open");document.getElementById("a-emissao").value=new Date().toISOString().split("T")[0];}
 function closeModal(){document.getElementById("modal").classList.remove("open")}
 document.getElementById("modal").addEventListener("click",e=>{if(e.target===document.getElementById("modal"))closeModal()});
+
+function openShareModal(asoId,funcNome){
+  _shareAsoId=asoId;
+  document.getElementById('share-sub').textContent=`Compartilhar ASO de ${funcNome} com empresa contratante via link seguro.`;
+  document.getElementById('share-form').style.display='';
+  document.getElementById('share-result').style.display='none';
+  document.getElementById('s-nome-empresa').value='';
+  document.getElementById('s-cnpj').value='';
+  document.getElementById('s-email').value='';
+  document.getElementById('s-dias').value='30';
+  document.getElementById('s-max').value='20';
+  document.getElementById('modal-share').classList.add('open');
+}
+function closeShareModal(){document.getElementById('modal-share').classList.remove('open');_shareAsoId=null;}
+document.getElementById('modal-share').addEventListener('click',e=>{if(e.target===document.getElementById('modal-share'))closeShareModal();});
+
+function novoLink(){document.getElementById('share-form').style.display='';document.getElementById('share-result').style.display='none';}
+
+function copiarLink(){
+  const url=document.getElementById('share-link-box').textContent;
+  navigator.clipboard.writeText(url).then(()=>toast('Link copiado para a área de transferência!'));
+}
+
+async function gerarLink(){
+  if(!_shareAsoId){toast('ASO não identificado','err');return;}
+  const btn=document.querySelector('#share-form .btn-submit-roxo');
+  btn.textContent='Gerando...';btn.disabled=true;
+  const body={
+    empresa_destino_nome:document.getElementById('s-nome-empresa').value.trim(),
+    empresa_destino_cnpj:document.getElementById('s-cnpj').value.trim(),
+    email_destino:document.getElementById('s-email').value.trim(),
+    dias_validade:parseInt(document.getElementById('s-dias').value)||30,
+    max_acessos:parseInt(document.getElementById('s-max').value)||20,
+  };
+  const r=await fetch(`/api/sst/asos/${_shareAsoId}/compartilhar/`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json();
+  btn.textContent='Gerar Link';btn.disabled=false;
+  if(!r.ok){toast(d.erro||'Erro ao gerar link','err');return;}
+  const url=d.url||`${location.origin}/sst/aso/portal/${d.token}/`;
+  document.getElementById('share-link-box').textContent=url;
+  document.getElementById('share-info').innerHTML=`Válido por <strong style="color:var(--text)">${body.dias_validade} dias</strong> · Máx. <strong style="color:var(--text)">${body.max_acessos}</strong> acessos${body.empresa_destino_nome?` · Para: <strong style="color:var(--text)">${body.empresa_destino_nome}</strong>`:''}`;
+  document.getElementById('share-form').style.display='none';
+  document.getElementById('share-result').style.display='';
+}
+
+async function enviarS2220(asoId,btn){
+  btn.textContent='Enviando...';btn.disabled=true;
+  const r=await fetch(`/api/sst/asos/${asoId}/esocial/`,{method:'POST',headers:{'Content-Type':'application/json'}});
+  const d=await r.json();
+  btn.textContent='📤 S-2220';btn.disabled=false;
+  if(r.ok){
+    toast('Evento S-2220 gerado com sucesso! Acesse eSocial para transmitir.','ok');
+    carregar();
+  }else{
+    toast(d.erro||'Erro ao gerar S-2220','err');
+  }
+}
 
 function setFiltro(f,btn){_filtro=f;document.querySelectorAll(".ftab").forEach(b=>b.classList.remove("active"));btn.classList.add("active");renderTabela();}
 
@@ -223,12 +331,18 @@ function renderTabela(){
   document.getElementById("k-vencendo").textContent=_todos.filter(vencendo30).length;
   document.getElementById("k-vencidos").textContent=_todos.filter(vencido).length;
   document.getElementById("k-aptos").textContent=_todos.filter(a=>a.resultado==="Apto").length;
+  document.getElementById("k-s2220").textContent=_todos.filter(a=>a.status_esocial==="transmitido").length;
   document.getElementById("contagem").textContent=`${lista.length} ASO(s)`;
   const tbody=document.getElementById("tbody");
-  if(!lista.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="ei">📋</div><h3>Nenhum ASO encontrado</h3><p>Emita o primeiro ASO para começar o controle.</p></div></td></tr>`;return;}
+  if(!lista.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><div class="ei">📋</div><h3>Nenhum ASO encontrado</h3><p>Emita o primeiro ASO para começar o controle.</p></div></td></tr>`;return;}
   tbody.innerHTML=lista.map(a=>{
     const dr=diasRestantes(a.data_validade);
     const rowCls=dr!==null&&dr<0?"vencido":dr!==null&&dr<=30?"urgente":"";
+    const esCls=esocialCls[a.status_esocial]||'b-cinza';
+    const esLbl=esocialLbl[a.status_esocial]||'—';
+    const s2220Btn=a.status_esocial!=='transmitido'
+      ?`<button class="btn-row btn-esocial" id="btn-s2220-${a.id}" onclick="enviarS2220(${a.id},this)">📤 S-2220</button>`
+      :'';
     return`<tr class="${rowCls}">
       <td><strong>${a.funcionario}</strong></td>
       <td><span class="badge b-azul">${tipoLabel[a.tipo]||a.tipo}</span></td>
@@ -237,7 +351,13 @@ function renderTabela(){
       <td>${diasBadge(dr)}</td>
       <td><span class="badge ${resultadoCls[a.resultado_raw]||'b-cinza'}">${a.resultado}</span></td>
       <td style="color:var(--muted);font-size:.74rem">${a.medico||'—'}</td>
-      <td><div class="row-actions"><button class="btn-row" onclick="renovar('${a.funcionario}')">Renovar</button><a class="btn-row" href="/api/sst/asos/${a.id}/pdf" target="_blank" title="Baixar PDF">📄 PDF</a></div></td>
+      <td><span class="badge ${esCls}">${esLbl}</span></td>
+      <td><div class="row-actions">
+        <button class="btn-row" onclick="renovar('${a.funcionario}')">Renovar</button>
+        <a class="btn-row" href="/api/sst/asos/${a.id}/pdf" target="_blank">📄 PDF</a>
+        <button class="btn-row btn-share" onclick="openShareModal(${a.id},'${a.funcionario.replace(/'/g,"\\'")}')">🔗 Compartilhar</button>
+        ${s2220Btn}
+      </div></td>
     </tr>`;
   }).join("");
 }
@@ -247,20 +367,18 @@ async function carregar(){
   const r=await fetch("/api/sst/asos");
   if(!r.ok)return;
   const d=await r.json();
-  // Enrich with raw resultado for CSS
   _todos=(d.asos||[]).map(a=>{
     const rm={Apto:"apto",Inapto:"inapto","Apto com Restrição":"apto_restricao"};
-    return{...a,resultado_raw:rm[a.resultado]||"apto",tipo:Object.keys(tipoLabel).find(k=>tipoLabel[k]===a.tipo)||a.tipo};
+    return{...a,resultado_raw:rm[a.resultado]||"apto",tipo:Object.keys(tipoLabel).find(k=>tipoLabel[k]===a.tipo)||a.tipo,status_esocial:a.status_esocial||'nao_enviado'};
   });
   renderTabela();
-  // Pré-preencher busca via query string
   const p=new URLSearchParams(location.search);
   if(p.get("busca")){document.getElementById("busca").value=p.get("busca");renderTabela();}
   if(p.get("novo")){openModal();document.getElementById("a-func").value=p.get("novo");}
 }
 
 async function salvar(){
-  const btn=document.querySelector(".btn-submit");btn.textContent="Salvando...";btn.disabled=true;
+  const btn=document.querySelector("#modal .btn-submit");btn.textContent="Salvando...";btn.disabled=true;
   const r=await fetch("/api/sst/asos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
     funcionario_nome:document.getElementById("a-func").value.trim(),
     tipo:document.getElementById("a-tipo").value,
@@ -272,7 +390,7 @@ async function salvar(){
     observacoes:document.getElementById("a-obs").value.trim(),
   })});
   const d=await r.json();
-  if(r.ok){closeModal();carregar();}else alert(d.erro||"Erro ao emitir ASO");
+  if(r.ok){closeModal();toast('ASO emitido com sucesso!');carregar();}else toast(d.erro||"Erro ao emitir ASO",'err');
   btn.textContent="Emitir ASO";btn.disabled=false;
 }
 carregar();

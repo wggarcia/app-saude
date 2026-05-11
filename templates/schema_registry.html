@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Schema Registry — Contratos de Dados</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0e1a;color:#e2e8f0;font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+    .top-bar{background:#111827;border-bottom:1px solid #1e293b;padding:12px 24px;display:flex;align-items:center;gap:12px}
+    .top-bar h1{font-size:1.1rem;font-weight:700}
+    .back-link{color:#64748b;font-size:.85rem;text-decoration:none;margin-right:8px}
+    .tabs{display:flex;gap:4px;margin-left:auto}
+    .tab{padding:6px 16px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:#64748b}
+    .tab.active{background:#1e293b;color:#f8fafc}
+    .main{max-width:1200px;margin:0 auto;padding:24px}
+    .kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+    .kpi{background:#111827;border:1px solid #1e293b;border-radius:10px;padding:14px 16px}
+    .kpi-label{font-size:.68rem;color:#64748b;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
+    .kpi-val{font-size:1.6rem;font-weight:800}
+    .c-green{color:#10b981}.c-blue{color:#3b82f6}.c-violet{color:#8b5cf6}.c-amber{color:#f59e0b}
+    .grid-2{display:grid;grid-template-columns:280px 1fr;gap:18px}
+    .card{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:18px}
+    .card-title{font-size:.76rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+    /* Contratos sidebar */
+    .contrato-item{padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;transition:.15s}
+    .contrato-item:hover{background:#1e293b}
+    .contrato-item.selected{background:#1e293b;border-color:#3b82f6}
+    .contrato-nome{font-size:.85rem;color:#cbd5e1;font-weight:600}
+    .contrato-dominio{font-size:.72rem;color:#64748b;margin-top:2px}
+    .contrato-vers{font-size:.7rem;color:#475569;margin-top:2px}
+    /* Detalhe */
+    .detail-section{margin-bottom:20px}
+    .detail-label{font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+    .detail-value{font-size:.85rem;color:#cbd5e1}
+    .vers-row{padding:10px 12px;background:#0f172a;border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:12px}
+    .vers-num{font-size:.9rem;font-weight:700;color:#f8fafc;width:40px}
+    .vers-status{font-size:.72rem;padding:2px 8px;border-radius:999px;font-weight:700}
+    .vs-publicado{background:#052e16;color:#10b981}
+    .vs-rascunho{background:#1e1b4b;color:#818cf8}
+    .vs-deprecado{background:#1f0a0a;color:#f43f5e}
+    .vers-changelog{flex:1;font-size:.8rem;color:#64748b}
+    .json-preview{background:#0f172a;border-radius:8px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:#94a3b8;overflow-x:auto;white-space:pre;max-height:300px;overflow-y:auto;margin-top:8px}
+    /* Validador */
+    .validador{background:#0f172a;border-radius:10px;padding:16px;margin-top:20px}
+    .validador h3{font-size:.82rem;color:#94a3b8;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
+    .textarea-inp{width:100%;background:#111827;border:1px solid #1e293b;border-radius:8px;padding:10px;color:#f8fafc;font-family:monospace;font-size:.8rem;min-height:100px;resize:vertical}
+    .textarea-inp:focus{outline:none;border-color:#3b82f6}
+    .inp{background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 12px;color:#f8fafc;font-size:.84rem;width:100%}
+    .btn{padding:8px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:700;cursor:pointer;margin-top:8px}
+    .btn-primary{background:#3b82f6;color:#fff}
+    .btn-seed{background:#1e1b4b;color:#818cf8;border:1px solid #3730a3}
+    .valid-result{margin-top:10px;padding:12px;border-radius:8px;font-size:.84rem}
+    .valid-ok{background:#052e16;border:1px solid #166534;color:#10b981}
+    .valid-fail{background:#1f0a0a;border:1px solid #991b1b;color:#f43f5e}
+    .panel{display:none}.panel.active{display:block}
+    .empty{color:#475569;font-size:.84rem;text-align:center;padding:20px}
+    @media(max-width:768px){.grid-2{grid-template-columns:1fr}.kpi-strip{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+<div class="top-bar">
+  <a href="/dashboard-empresa/" class="back-link">←</a>
+  <h1>Schema Registry</h1>
+  <button class="btn btn-seed" style="margin-left:auto;padding:6px 14px;font-size:.78rem" onclick="seedSchemas()">+ Schemas Padrão</button>
+</div>
+<div class="main">
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-label">Total Contratos</div><div class="kpi-val c-blue" id="kTotal">—</div></div>
+    <div class="kpi"><div class="kpi-label">Domínios</div><div class="kpi-val c-violet" id="kDominios">—</div></div>
+    <div class="kpi"><div class="kpi-label">Versões Publicadas</div><div class="kpi-val c-green" id="kPublicadas">—</div></div>
+    <div class="kpi"><div class="kpi-label">Compatibilidade</div><div class="kpi-val c-amber" id="kCompat">backward</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Contratos <span id="contratosCount" style="color:#3b82f6"></span></div>
+        <div id="contratosList"><div class="empty">Carregando...</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card" id="detalheCard">
+        <div class="card-title">Selecione um contrato</div>
+        <div id="detalheContent"><div class="empty">Clique em um contrato para ver detalhes e versões</div></div>
+      </div>
+
+      <div class="validador">
+        <h3>Validar Payload</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input class="inp" id="inpContrato" placeholder="Nome do contrato (ex: sst.exame.vencido)"/>
+          <input class="inp" id="inpVersao" placeholder="Versão (vazio = última publicada)" type="number"/>
+        </div>
+        <textarea class="textarea-inp" id="inpPayload" placeholder='{"funcionario_id": 42, "tipo_exame": "periodico", ...}'></textarea>
+        <button class="btn btn-primary" onclick="validarPayload()">Validar</button>
+        <div id="validResult" style="display:none" class="valid-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let contratos = [];
+
+async function carregar() {
+  const r = await fetch('/api/schema/contratos').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  contratos = r.contratos || [];
+  document.getElementById('kTotal').textContent = r.total || 0;
+  document.getElementById('kDominios').textContent = (r.dominios||[]).length;
+
+  let totalPublicadas = 0;
+  contratos.forEach(c => { totalPublicadas += c.total_versoes; });
+  document.getElementById('kPublicadas').textContent = totalPublicadas;
+
+  document.getElementById('contratosCount').textContent = `(${contratos.length})`;
+
+  // Agrupar por domínio
+  const por_dominio = {};
+  contratos.forEach(c => {
+    const d = c.dominio || 'outros';
+    if (!por_dominio[d]) por_dominio[d] = [];
+    por_dominio[d].push(c);
+  });
+
+  let html = '';
+  Object.entries(por_dominio).forEach(([dom, lista]) => {
+    html += `<div style="font-size:.68rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:10px 0 4px;padding:0 2px">${dom}</div>`;
+    lista.forEach(c => {
+      html += `<div class="contrato-item" onclick="verDetalhe(${c.id})" id="ci-${c.id}">
+        <div class="contrato-nome">${c.nome}</div>
+        <div class="contrato-vers">${c.total_versoes} versão(ões) · ${c.compatibilidade}</div>
+      </div>`;
+    });
+  });
+  document.getElementById('contratosList').innerHTML = html || '<div class="empty">Nenhum contrato ainda</div>';
+}
+
+async function verDetalhe(id) {
+  document.querySelectorAll('.contrato-item').forEach(el => el.classList.remove('selected'));
+  const el = document.getElementById('ci-' + id);
+  if (el) el.classList.add('selected');
+
+  const r = await fetch(`/api/schema/contratos/${id}/`).then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+
+  document.getElementById('inpContrato').value = r.nome;
+
+  const versores = (r.versoes || []).map(v => {
+    const cls = {publicado:'vs-publicado',rascunho:'vs-rascunho',deprecado:'vs-deprecado'}[v.status]||'vs-rascunho';
+    return `<div class="vers-row">
+      <div class="vers-num">v${v.versao}</div>
+      <span class="vers-status ${cls}">${v.status}</span>
+      <div class="vers-changelog">${v.changelog || 'Sem changelog'}</div>
+      <button onclick="toggleJson(${v.id})" style="font-size:.7rem;color:#3b82f6;background:none;border:none;cursor:pointer">schema</button>
+      <div id="json-${v.id}" style="display:none;position:absolute;z-index:99;width:500px;right:0"></div>
+    </div>
+    <div id="json-${v.id}" style="display:none">
+      <div class="json-preview">${JSON.stringify(v.schema_json, null, 2)}</div>
+      ${v.exemplo_payload && Object.keys(v.exemplo_payload).length ? `<div style="margin-top:6px;font-size:.7rem;color:#64748b;margin-bottom:2px">Exemplo</div><div class="json-preview">${JSON.stringify(v.exemplo_payload, null, 2)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('detalheCard').querySelector('.card-title').textContent = r.nome;
+  document.getElementById('detalheContent').innerHTML = `
+    <div class="detail-section">
+      <div class="detail-label">Domínio</div>
+      <div class="detail-value">${r.dominio || '—'}</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">Descrição</div>
+      <div class="detail-value">${r.descricao || '—'}</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">Owner</div>
+      <div class="detail-value">${r.owner_equipe || '—'}</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">Compatibilidade</div>
+      <div class="detail-value">${r.compatibilidade}</div>
+    </div>
+    <div class="detail-label" style="margin-bottom:8px">Versões</div>
+    ${versores || '<div class="empty">Sem versões</div>'}`;
+}
+
+function toggleJson(id) {
+  const el = document.getElementById('json-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function validarPayload() {
+  const contrato = document.getElementById('inpContrato').value.trim();
+  const versao = document.getElementById('inpVersao').value.trim();
+  const payloadStr = document.getElementById('inpPayload').value.trim();
+  let payload;
+  try { payload = JSON.parse(payloadStr || '{}'); } catch { alert('JSON inválido'); return; }
+
+  const r = await fetch('/api/schema/validar', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({contrato, versao: versao ? parseInt(versao) : null, payload})
+  }).then(r=>r.json()).catch(()=>null);
+
+  const div = document.getElementById('validResult');
+  div.style.display = 'block';
+  if (!r) { div.className='valid-result valid-fail'; div.textContent='Erro de comunicação'; return; }
+  if (r.erro) { div.className='valid-result valid-fail'; div.textContent=r.erro; return; }
+
+  if (r.valido) {
+    div.className = 'valid-result valid-ok';
+    div.textContent = `✓ Payload válido — contrato ${r.contrato} v${r.versao}`;
+  } else {
+    div.className = 'valid-result valid-fail';
+    div.innerHTML = `✗ ${r.total_erros} erro(s):<br>• ${r.erros.join('<br>• ')}`;
+  }
+}
+
+async function seedSchemas() {
+  const r = await fetch('/api/schema/seed').then(r=>r.json()).catch(()=>null);
+  if (r) alert(`${r.mensagem}`);
+  carregar();
+}
+
+carregar();
+</script>
+</body>
+</html>

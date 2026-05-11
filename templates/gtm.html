@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GTM Analytics — Pipeline & Expansão</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0a0e1a;color:#e2e8f0;font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+    .top-bar{background:#111827;border-bottom:1px solid #1e293b;padding:12px 24px;display:flex;align-items:center;gap:16px}
+    .top-bar h1{font-size:1.1rem;font-weight:700}
+    .back-link{margin-left:auto;color:#64748b;font-size:.85rem;text-decoration:none}
+    .back-link:hover{color:#94a3b8}
+    .main{max-width:1300px;margin:0 auto;padding:24px}
+    /* KPI strip */
+    .kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px}
+    .kpi{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:16px 18px}
+    .kpi-label{font-size:.7rem;color:#64748b;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+    .kpi-val{font-size:1.6rem;font-weight:800;line-height:1}
+    .kpi-sub{font-size:.75rem;color:#64748b;margin-top:4px}
+    .c-green{color:#10b981}.c-blue{color:#3b82f6}.c-amber{color:#f59e0b}.c-rose{color:#f43f5e}.c-cyan{color:#06b6d4}.c-violet{color:#8b5cf6}
+    /* Funil */
+    .funil-wrap{display:flex;flex-direction:column;gap:8px}
+    .funil-etapa{display:flex;align-items:center;gap:12px}
+    .funil-label{width:140px;font-size:.82rem;color:#94a3b8;flex-shrink:0}
+    .funil-bar-wrap{flex:1;background:#1e293b;border-radius:4px;height:28px;position:relative;overflow:hidden}
+    .funil-bar{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:10px;font-size:.78rem;font-weight:700;color:#fff;transition:width .5s ease;min-width:24px}
+    .funil-count{width:40px;text-align:right;font-size:.88rem;font-weight:700;color:#f8fafc}
+    .funil-conv{width:50px;text-align:right;font-size:.72rem;color:#64748b}
+    /* Metas Q */
+    .meta-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #1e293b}
+    .meta-row:last-child{border:none}
+    .meta-info h4{font-size:.85rem;color:#cbd5e1}
+    .meta-info p{font-size:.75rem;color:#64748b;margin-top:2px}
+    .meta-badge{padding:4px 12px;border-radius:999px;font-size:.75rem;font-weight:700}
+    .badge-meta{background:#052e16;color:#10b981}
+    .badge-setup{background:#1e1b4b;color:#818cf8}
+    /* Grid */
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+    .card{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:20px}
+    .card-title{font-size:.78rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px}
+    /* Ciclos */
+    .ciclo-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #1e293b}
+    .ciclo-row:last-child{border:none}
+    .ciclo-seg{font-size:.85rem;color:#94a3b8;text-transform:capitalize}
+    .ciclo-dias{font-size:.85rem;font-weight:700}
+    /* Expansão */
+    .exp-stat{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #1e293b}
+    .exp-stat:last-child{border:none}
+    .exp-key{font-size:.83rem;color:#94a3b8}
+    .exp-val{font-size:.85rem;font-weight:700;color:#f8fafc}
+    /* Upsell list */
+    .upsell-row{padding:10px 12px;background:#0f172a;border-radius:8px;margin-bottom:8px}
+    .upsell-emp{font-size:.83rem;color:#cbd5e1;font-weight:600}
+    .upsell-plano{font-size:.75rem;color:#64748b;margin-top:2px}
+    .upsell-mods{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+    .mod-chip{background:#1e293b;color:#94a3b8;font-size:.7rem;padding:2px 8px;border-radius:999px}
+    .nota-crm{background:#1c1100;border:1px solid #92400e;border-radius:10px;padding:14px 16px;font-size:.82rem;color:#fbbf24;margin-bottom:24px}
+    @media(max-width:768px){.grid-2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="top-bar">
+  <h1>GTM Analytics</h1>
+  <a href="/dashboard-empresa/" class="back-link">← Painel</a>
+</div>
+<div class="main">
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-label">Pipeline Ativo</div><div class="kpi-val c-blue" id="kPipeline">—</div><div class="kpi-sub">oportunidades</div></div>
+    <div class="kpi"><div class="kpi-label">Valor Pipeline</div><div class="kpi-val c-green" id="kValorPipe">—</div><div class="kpi-sub">estimado</div></div>
+    <div class="kpi"><div class="kpi-label">Win Rate</div><div class="kpi-val c-violet" id="kWinRate">—</div><div class="kpi-sub">taxa de fechamento</div></div>
+    <div class="kpi"><div class="kpi-label">Clientes Ativos</div><div class="kpi-val c-cyan" id="kClientes">—</div><div class="kpi-sub">base total</div></div>
+    <div class="kpi"><div class="kpi-label">Multi-unidade</div><div class="kpi-val c-amber" id="kMulti">—</div><div class="kpi-sub">expandiram</div></div>
+    <div class="kpi"><div class="kpi-label">Expansão %</div><div class="kpi-val c-green" id="kExpPct">—</div><div class="kpi-sub">da base</div></div>
+  </div>
+
+  <div id="notaCrm" class="nota-crm" style="display:none">
+    ⚠ Modelo LeadComercial não configurado — funil mostrará zeros. Implemente o modelo CRM para dados reais de pipeline.
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Funil de Vendas — 30 dias</div>
+      <div class="funil-wrap" id="funilWrap"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Metas do Trimestre</div>
+      <div id="metasTrimestreDiv"></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Ciclo Médio de Venda por Plano</div>
+      <div id="ciclosDiv"></div>
+      <div style="margin-top:16px;padding:12px;background:#0f172a;border-radius:8px;font-size:.75rem;color:#475569">
+        Benchmarks SaaS B2B. Atualize com dados reais do CRM quando disponível.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Land-and-Expand — Métricas</div>
+      <div id="expansaoDiv"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Oportunidades de Upsell</div>
+    <div id="upsellDiv"></div>
+  </div>
+</div>
+
+<script>
+const fmtBRL = v => v >= 1e6 ? `R$ ${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `R$ ${(v/1e3).toFixed(0)}K` : `R$ ${v.toFixed(0)}`;
+const CORES_FUNIL = ['#3b82f6','#6366f1','#8b5cf6','#a855f7','#d946ef','#f43f5e'];
+
+async function carregarFunil() {
+  const r = await fetch('/api/gtm/funil').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  if (!r.tem_dados_crm) document.getElementById('notaCrm').style.display = 'block';
+
+  const funil = r.funil || [];
+  const maxQ = Math.max(...funil.map(e=>e.quantidade), 1);
+  document.getElementById('funilWrap').innerHTML = funil.map((e,i) => `
+    <div class="funil-etapa">
+      <div class="funil-label">${e.label}</div>
+      <div class="funil-bar-wrap">
+        <div class="funil-bar" style="width:${e.quantidade/maxQ*100}%;background:${CORES_FUNIL[i]}">${e.quantidade > 0 ? e.quantidade : ''}</div>
+      </div>
+      <div class="funil-count">${e.quantidade}</div>
+      <div class="funil-conv">${e.conversao_pct !== undefined ? e.conversao_pct + '%' : ''}</div>
+    </div>`).join('');
+}
+
+async function carregarPipeline() {
+  const r = await fetch('/api/gtm/pipeline').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+
+  const p = r.pipeline || {};
+  document.getElementById('kPipeline').textContent = p.oportunidades_ativas || 0;
+  document.getElementById('kValorPipe').textContent = fmtBRL(p.valor_pipeline || 0);
+  document.getElementById('kWinRate').textContent = (p.win_rate_pct || 0) + '%';
+
+  const ex = r.land_and_expand || {};
+  document.getElementById('kClientes').textContent = ex.total_clientes_ativos || 0;
+  document.getElementById('kMulti').textContent = ex.clientes_multi_unidade || 0;
+  document.getElementById('kExpPct').textContent = (ex.taxa_expansao_pct || 0) + '%';
+
+  // Metas
+  const metas = r.metas_trimestre || {};
+  document.getElementById('metasTrimestreDiv').innerHTML = `
+    <div style="font-size:.85rem;color:#64748b;margin-bottom:12px">${metas.trimestre || ''}</div>
+    ${[
+      ['Novos clientes', metas.meta_novos_clientes],
+      ['ARR incremental', metas.meta_arr_incremental ? fmtBRL(metas.meta_arr_incremental) : '—'],
+      ['NRR alvo', (metas.meta_nrr || 0) + '%'],
+      ['Churn máx.', (metas.meta_churn_max_pct || 0) + '%'],
+    ].map(([n,v]) => `
+    <div class="meta-row">
+      <div class="meta-info"><h4>${n}</h4><p>Meta ${metas.trimestre || ''}</p></div>
+      <span class="meta-badge badge-meta">${v}</span>
+    </div>`).join('')}
+    <div style="margin-top:12px;font-size:.73rem;color:#475569">${metas.nota || ''}</div>`;
+
+  // Ciclos
+  const ciclos = r.ciclo_venda_estimado_dias || {};
+  document.getElementById('ciclosDiv').innerHTML = Object.entries(ciclos).map(([plano, dias]) => `
+    <div class="ciclo-row">
+      <span class="ciclo-seg">${plano}</span>
+      <span class="ciclo-dias" style="color:${dias<=30?'#10b981':dias<=60?'#06b6d4':dias<=90?'#f59e0b':'#f43f5e'}">${dias} dias</span>
+    </div>`).join('');
+
+  // Expansão
+  document.getElementById('expansaoDiv').innerHTML = [
+    ['Total clientes ativos', ex.total_clientes_ativos || 0],
+    ['Clientes multi-unidade', ex.clientes_multi_unidade || 0],
+    ['Taxa de expansão', (ex.taxa_expansao_pct || 0) + '%'],
+    ['Novas unidades 30d', ex.novas_unidades_30d || 0],
+  ].map(([k,v]) => `
+    <div class="exp-stat"><span class="exp-key">${k}</span><span class="exp-val">${v}</span></div>`).join('');
+}
+
+async function carregarUpsell() {
+  const r = await fetch('/api/gtm/expansao').then(r=>r.json()).catch(()=>null);
+  if (!r) return;
+  const up = r.oportunidades_upsell || [];
+  if (up.length === 0) {
+    document.getElementById('upsellDiv').innerHTML = '<p style="color:#475569;font-size:.84rem;text-align:center;padding:16px">Nenhuma oportunidade de upsell mapeada ainda</p>';
+    return;
+  }
+  document.getElementById('upsellDiv').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
+      ${up.map(u => `
+      <div class="upsell-row">
+        <div class="upsell-emp">${u.empresa}</div>
+        <div class="upsell-plano">Plano atual: ${u.plano_atual}</div>
+        <div class="upsell-mods">${(u.modulos_oportunidade||[]).map(m=>`<span class="mod-chip">+${m}</span>`).join('')}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+carregarFunil();
+carregarPipeline();
+carregarUpsell();
+</script>
+</body>
+</html>

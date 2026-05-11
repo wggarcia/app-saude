@@ -103,6 +103,27 @@ from api.views_esocial_sst import (
 )
 from api.views_alertas import api_alertas, alertas_page
 from api.views_executive import api_executive_dashboard, executive_dashboard_page
+from api.views_rede import api_rede_kpis, dashboard_rede_page
+from api.views_compliance import (
+    api_compliance_resumo, api_compliance_trilha,
+    api_compliance_dispositivos, api_compliance_exportar, compliance_page,
+)
+from api.views_relatorio import api_relatorio_executivo, relatorio_page
+from api.views_financeiro import api_financeiro_metricas, api_financeiro_cohorts, financeiro_page
+from api.views_observabilidade import api_health, api_slo_status, api_slo_incidentes, observabilidade_page
+from api.views_gtm import api_gtm_funil, api_gtm_pipeline, api_gtm_expansao, gtm_page
+from api.views_eventos import (
+    api_eventos_status, api_eventos_dlq, api_eventos_publicar,
+    api_eventos_reprocessar, api_eventos_subscricoes, eventos_page,
+)
+from api.views_schema import (
+    api_schema_contratos, api_schema_contrato_detalhe,
+    api_schema_versoes, api_schema_validar, api_schema_seed, schema_registry_page,
+)
+from api.views_mlops import (
+    api_mlops_modelos, api_mlops_modelo_detalhe, api_mlops_run,
+    api_mlops_snapshot, api_mlops_drift_alertas, api_mlops_seed, mlops_page,
+)
 from api.views_contratos import (
     api_beneficiario_excluir,
     api_beneficiarios_contrato,
@@ -340,6 +361,24 @@ urlpatterns = [
     path('executive/', executive_dashboard_page),
     path('api/executive/dashboard/', api_executive_dashboard),
     path('api/executive/dashboard', api_executive_dashboard),
+    # 🌐 Dashboard Executivo de Rede
+    path('dashboard-rede/', dashboard_rede_page),
+    path('api/rede/kpis/', api_rede_kpis),
+    path('api/rede/kpis', api_rede_kpis),
+    # 🔒 Compliance & Auditoria
+    path('compliance/', compliance_page),
+    path('api/compliance/resumo/', api_compliance_resumo),
+    path('api/compliance/resumo', api_compliance_resumo),
+    path('api/compliance/trilha/', api_compliance_trilha),
+    path('api/compliance/trilha', api_compliance_trilha),
+    path('api/compliance/dispositivos/', api_compliance_dispositivos),
+    path('api/compliance/dispositivos', api_compliance_dispositivos),
+    path('api/compliance/exportar/', api_compliance_exportar),
+    path('api/compliance/exportar', api_compliance_exportar),
+    # 📄 Relatório Executivo
+    path('relatorio-executivo/', relatorio_page),
+    path('api/relatorio/executivo/', api_relatorio_executivo),
+    path('api/relatorio/executivo', api_relatorio_executivo),
     # Contratos de saúde e séries epidemiológicas
     path('contratos/', contratos_page),
     path('series-epidemiologicas/', series_epi_page),
@@ -625,5 +664,65 @@ urlpatterns = [
     path("api/sintoma/", registrar_sintoma),
     path("api/mapa-risco", mapa_risco),
     path("api/bairros", views.bairros_por_cidade),
-    
+
+    # Financial OS
+    path('financeiro/', financeiro_page),
+    path('api/financeiro/metricas', api_financeiro_metricas),
+    path('api/financeiro/metricas/', api_financeiro_metricas),
+    path('api/financeiro/cohorts', api_financeiro_cohorts),
+    path('api/financeiro/cohorts/', api_financeiro_cohorts),
+
+    # Observabilidade & SLO
+    path('observabilidade/', observabilidade_page),
+    path('api/saude', api_health),
+    path('api/saude/', api_health),
+    path('api/slo/status', api_slo_status),
+    path('api/slo/status/', api_slo_status),
+    path('api/slo/incidentes', api_slo_incidentes),
+    path('api/slo/incidentes/', api_slo_incidentes),
+
+    # GTM Analytics
+    path('gtm/', gtm_page),
+    path('api/gtm/funil', api_gtm_funil),
+    path('api/gtm/funil/', api_gtm_funil),
+    path('api/gtm/pipeline', api_gtm_pipeline),
+    path('api/gtm/pipeline/', api_gtm_pipeline),
+    path('api/gtm/expansao', api_gtm_expansao),
+    path('api/gtm/expansao/', api_gtm_expansao),
+
+    # Event Backbone / Outbox
+    path('eventos/', eventos_page),
+    path('api/eventos/status', api_eventos_status),
+    path('api/eventos/status/', api_eventos_status),
+    path('api/eventos/dlq', api_eventos_dlq),
+    path('api/eventos/dlq/', api_eventos_dlq),
+    path('api/eventos/publicar', api_eventos_publicar),
+    path('api/eventos/publicar/', api_eventos_publicar),
+    path('api/eventos/subscricoes', api_eventos_subscricoes),
+    path('api/eventos/subscricoes/', api_eventos_subscricoes),
+    path('api/eventos/reprocessar/<uuid:evento_id>/', api_eventos_reprocessar),
+
+    # Schema Registry
+    path('schema-registry/', schema_registry_page),
+    path('api/schema/contratos', api_schema_contratos),
+    path('api/schema/contratos/', api_schema_contratos),
+    path('api/schema/contratos/<int:contrato_id>/', api_schema_contrato_detalhe),
+    path('api/schema/contratos/<int:contrato_id>/versoes/', api_schema_versoes),
+    path('api/schema/validar', api_schema_validar),
+    path('api/schema/validar/', api_schema_validar),
+    path('api/schema/seed', api_schema_seed),
+    path('api/schema/seed/', api_schema_seed),
+
+    # MLOps Pipeline
+    path('mlops/', mlops_page),
+    path('api/mlops/modelos', api_mlops_modelos),
+    path('api/mlops/modelos/', api_mlops_modelos),
+    path('api/mlops/modelos/<slug:slug>/', api_mlops_modelo_detalhe),
+    path('api/mlops/modelos/<slug:slug>/run/', api_mlops_run),
+    path('api/mlops/monitoramento/snapshot', api_mlops_snapshot),
+    path('api/mlops/monitoramento/snapshot/', api_mlops_snapshot),
+    path('api/mlops/drift/alertas', api_mlops_drift_alertas),
+    path('api/mlops/drift/alertas/', api_mlops_drift_alertas),
+    path('api/mlops/seed', api_mlops_seed),
+    path('api/mlops/seed/', api_mlops_seed),
 ]

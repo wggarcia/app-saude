@@ -1,42 +1,619 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-  <title>Criar Conta</title>
-</head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Criar Conta — SolusCRT Saúde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,600;6..72,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05070a;--ink:#f7f2e9;--muted:#8a99a6;--line:rgba(255,255,255,.13);
+  --glass:rgba(255,255,255,.06);--gold:#d9b86f;--cyan:#45ead9;--rose:#ff6f8f;
+  --green:#4ade80;--blue:#60a5fa;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:var(--bg);color:var(--ink);font-family:Geist,Arial,sans-serif}
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 15% 10%,rgba(69,234,217,.13),transparent 26rem),
+    radial-gradient(circle at 85% 8%,rgba(217,184,111,.14),transparent 28rem),
+    radial-gradient(circle at 50% 55%,rgba(96,165,250,.08),transparent 30rem),
+    #05070a;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  padding:0 16px 60px;
+}
+body:before{
+  content:"";position:fixed;inset:0;pointer-events:none;
+  background:linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:70px 70px;mask-image:linear-gradient(to bottom,#000 0%,transparent 75%);
+}
 
+/* NAV */
+.topnav{
+  position:sticky;top:16px;z-index:50;margin:16px auto 0;
+  width:min(820px,100%);
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:11px 16px;
+  border:1px solid var(--line);border-radius:999px;
+  background:rgba(5,7,10,.8);backdrop-filter:blur(24px);
+  box-shadow:0 16px 60px rgba(0,0,0,.28);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:.95rem}
+.mark{width:34px;height:34px;border-radius:13px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--gold),#f6e9bd);color:#090d12;font-size:.65rem;font-weight:900}
+.nav-link{font-size:.83rem;color:var(--muted);padding:8px 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--glass)}
+
+/* WRAPPER */
+.wrap{width:min(820px,100%);margin:40px auto 0;position:relative;z-index:2}
+
+/* PROGRESS */
+.progress{display:flex;align-items:center;gap:0;margin-bottom:40px;justify-content:center}
+.step-dot{
+  display:flex;flex-direction:column;align-items:center;gap:8px;cursor:default;
+}
+.step-dot-circle{
+  width:36px;height:36px;border-radius:50%;border:2px solid var(--line);
+  background:var(--glass);display:grid;place-items:center;
+  font-weight:800;font-size:.8rem;color:var(--muted);
+  transition:all .35s ease;position:relative;z-index:2;
+}
+.step-dot.done .step-dot-circle{background:var(--cyan);border-color:var(--cyan);color:#05070a}
+.step-dot.active .step-dot-circle{
+  background:linear-gradient(135deg,#f6e7b7,var(--gold));border:0;color:#05070a;
+  box-shadow:0 0 0 6px rgba(217,184,111,.18),0 8px 24px rgba(217,184,111,.24);
+}
+.step-dot span{font-size:.72rem;color:var(--muted);font-weight:600;white-space:nowrap}
+.step-dot.active span{color:var(--gold)}
+.step-dot.done span{color:var(--cyan)}
+.step-line{flex:1;height:2px;background:var(--line);margin:0 6px;margin-bottom:24px;
+  max-width:80px;transition:background .35s}
+.step-line.done{background:var(--cyan)}
+
+/* STEP PANEL */
+.panel{
+  background:rgba(255,255,255,.055);border:1px solid var(--line);
+  border-radius:32px;padding:36px 40px;
+  box-shadow:0 28px 90px rgba(0,0,0,.38);
+}
+.panel-title{font-family:Newsreader,serif;font-size:2.2rem;line-height:1.1;margin-bottom:8px}
+.panel-sub{color:var(--muted);font-size:1rem;line-height:1.65;margin-bottom:32px}
+
+/* MODULE GRID */
+.module-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.mod-card{
+  padding:24px;border-radius:22px;border:2px solid var(--line);
+  background:rgba(255,255,255,.04);cursor:pointer;
+  transition:all .25s ease;position:relative;overflow:hidden;
+  text-align:left;
+}
+.mod-card:hover{border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.07);
+  transform:translateY(-2px)}
+.mod-card.selected{
+  border-color:var(--gold);
+  background:rgba(217,184,111,.1);
+  box-shadow:0 0 0 1px rgba(217,184,111,.3),0 12px 36px rgba(217,184,111,.12);
+}
+.mod-card.selected-cyan{
+  border-color:var(--cyan);
+  background:rgba(69,234,217,.08);
+  box-shadow:0 0 0 1px rgba(69,234,217,.28),0 12px 36px rgba(69,234,217,.1);
+}
+.mod-icon{font-size:2rem;margin-bottom:14px;display:block}
+.mod-title{font-weight:800;font-size:1.15rem;margin-bottom:6px}
+.mod-desc{font-size:.85rem;color:var(--muted);line-height:1.55}
+.mod-badge{
+  display:inline-flex;align-items:center;gap:6px;margin-top:12px;
+  padding:4px 10px;border-radius:999px;font-size:.72rem;font-weight:800;
+  background:rgba(69,234,217,.1);border:1px solid rgba(69,234,217,.24);color:var(--cyan);
+}
+.mod-badge.gold{background:rgba(217,184,111,.1);border-color:rgba(217,184,111,.24);color:var(--gold)}
+.mod-badge.rose{background:rgba(255,111,143,.1);border-color:rgba(255,111,143,.22);color:var(--rose)}
+.mod-badge.blue{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.22);color:var(--blue)}
+.mod-check{
+  position:absolute;top:16px;right:16px;width:22px;height:22px;border-radius:50%;
+  background:var(--gold);color:#05070a;display:none;align-items:center;justify-content:center;
+  font-size:.8rem;font-weight:900;
+}
+.mod-card.selected .mod-check,
+.mod-card.selected-cyan .mod-check{display:flex}
+.mod-card.selected-cyan .mod-check{background:var(--cyan)}
+
+/* PLAN GRID */
+.plan-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.plan-card{
+  padding:22px;border-radius:20px;border:2px solid var(--line);
+  background:rgba(255,255,255,.04);cursor:pointer;
+  transition:all .25s ease;
+}
+.plan-card:hover{border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.07)}
+.plan-card.selected{
+  border-color:var(--gold);background:rgba(217,184,111,.08);
+  box-shadow:0 0 0 1px rgba(217,184,111,.28),0 10px 30px rgba(217,184,111,.1);
+}
+.plan-name{font-weight:800;font-size:1rem;margin-bottom:4px}
+.plan-price{font-size:1.5rem;font-weight:800;color:var(--gold);margin:8px 0}
+.plan-price span{font-size:.8rem;color:var(--muted);font-weight:400}
+.plan-desc{font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:10px}
+.plan-feat{font-size:.78rem;color:var(--muted)}
+.plan-feat li{list-style:none;padding:2px 0}
+.plan-feat li:before{content:"✓ ";color:var(--cyan)}
+.plan-card.selected .plan-feat li:before{color:var(--gold)}
+.plan-check{display:none;float:right;color:var(--gold);font-weight:900}
+.plan-card.selected .plan-check{display:block}
+
+/* FORM */
+.form-group{margin-bottom:20px}
+label{display:block;font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:8px;
+  text-transform:uppercase;letter-spacing:.08em}
+input[type=text],input[type=email],input[type=password]{
+  width:100%;padding:15px 18px;border-radius:14px;
+  border:1.5px solid var(--line);background:rgba(255,255,255,.04);
+  color:var(--ink);font-size:1rem;font-family:Geist,Arial,sans-serif;
+  outline:none;transition:all .22s;
+}
+input:focus{border-color:var(--gold);background:rgba(217,184,111,.05);
+  box-shadow:0 0 0 3px rgba(217,184,111,.12)}
+input::placeholder{color:var(--muted)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.selected-summary{
+  padding:16px 20px;border-radius:16px;
+  background:rgba(69,234,217,.07);border:1px solid rgba(69,234,217,.2);
+  margin-bottom:24px;display:flex;align-items:center;gap:14px;
+}
+.summary-icon{font-size:1.6rem}
+.summary-text b{display:block;font-weight:700;margin-bottom:3px}
+.summary-text span{font-size:.83rem;color:var(--muted)}
+
+/* ACTIONS */
+.actions{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:52px;padding:0 28px;border-radius:999px;font-weight:800;
+  font-size:.95rem;cursor:pointer;border:none;font-family:Geist,Arial,sans-serif;
+  transition:all .22s ease;
+}
+.btn-primary{
+  background:linear-gradient(135deg,#f6e7b7,var(--gold));color:#070a0e;
+  box-shadow:0 8px 28px rgba(217,184,111,.24);
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(217,184,111,.36)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-ghost{
+  background:rgba(255,255,255,.06);color:var(--ink);
+  border:1px solid var(--line);
+}
+.btn-ghost:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22)}
+.btn-full{width:100%}
+
+/* GOVERNO CTA */
+.governo-cta{
+  text-align:center;padding:40px 24px;
+  background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);
+  border-radius:24px;margin-top:16px;
+}
+.governo-cta .icon{font-size:3rem;margin-bottom:16px}
+.governo-cta h3{font-family:Newsreader,serif;font-size:1.8rem;margin-bottom:10px}
+.governo-cta p{color:var(--muted);line-height:1.65;margin-bottom:24px;max-width:480px;margin-inline:auto}
+.btn-blue{background:linear-gradient(135deg,#60a5fa,#3b82f6);color:#fff;
+  box-shadow:0 8px 28px rgba(96,165,250,.24)}
+.btn-blue:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(96,165,250,.36)}
+
+/* MESSAGES */
+.msg-error{
+  padding:14px 18px;border-radius:14px;margin-top:16px;
+  background:rgba(255,111,143,.1);border:1px solid rgba(255,111,143,.25);
+  color:var(--rose);font-size:.88rem;display:none;
+}
+.msg-loading{text-align:center;padding:16px;color:var(--cyan);font-size:.9rem;display:none}
+
+/* LOGIN LINK */
+.login-hint{text-align:center;margin-top:24px;font-size:.85rem;color:var(--muted)}
+.login-hint a{color:var(--gold);font-weight:600}
+
+/* STEP VISIBILITY */
+.step-content{display:none}
+.step-content.active{display:block}
+
+/* ANIMATE */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.step-content.active{animation:fadeUp .3s ease}
+
+@media(max-width:600px){
+  .wrap{margin-top:24px}
+  .panel{padding:24px 20px;border-radius:24px}
+  .module-grid{grid-template-columns:1fr}
+  .plan-grid{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+  .panel-title{font-size:1.75rem}
+  .actions{flex-direction:column}
+  .btn{width:100%}
+}
+</style>
+</head>
 <body>
 
-<h2>Criar Conta</h2>
+<nav class="topnav">
+  <a class="brand" href="/"><span class="mark">CRT</span> SolusCRT Saúde</a>
+  <a class="nav-link" href="/login-empresa/">Já tenho conta</a>
+</nav>
 
-<input id="nome" placeholder="Nome"><br><br>
-<input id="email" placeholder="Email"><br><br>
-<input id="senha" type="password" placeholder="Senha"><br><br>
+<div class="wrap">
+  <!-- PROGRESS -->
+  <div class="progress">
+    <div class="step-dot active" id="dot1">
+      <div class="step-dot-circle">1</div>
+      <span>Módulo</span>
+    </div>
+    <div class="step-line" id="line1"></div>
+    <div class="step-dot" id="dot2">
+      <div class="step-dot-circle">2</div>
+      <span>Plano</span>
+    </div>
+    <div class="step-line" id="line2"></div>
+    <div class="step-dot" id="dot3">
+      <div class="step-dot-circle">3</div>
+      <span>Conta</span>
+    </div>
+  </div>
 
-<button onclick="cadastrar()">Criar Conta</button>
+  <div class="panel">
+
+    <!-- STEP 1: CHOOSE MODULE -->
+    <div class="step-content active" id="step1">
+      <div class="panel-title">Qual é o seu segmento?</div>
+      <div class="panel-sub">Escolha o módulo que melhor representa sua operação. Cada ambiente é isolado e configurado para seu setor.</div>
+
+      <div class="module-grid">
+        <button class="mod-card" data-module="empresa" onclick="selectModule(this)">
+          <div class="mod-check">✓</div>
+          <span class="mod-icon">🏢</span>
+          <div class="mod-title">Empresa & Corporativo</div>
+          <div class="mod-desc">Saúde ocupacional, radar epidemiológico territorial e monitoramento de equipes B2B.</div>
+          <span class="mod-badge gold">A partir de R$ 799/mês</span>
+        </button>
+
+        <button class="mod-card" data-module="farmacia" onclick="selectModule(this)">
+          <div class="mod-check">✓</div>
+          <span class="mod-icon">💊</span>
+          <div class="mod-title">Farmácia & Rede Farmacêutica</div>
+          <div class="mod-desc">Gestão de lotes FEFO, estoque inteligente, rastreabilidade e inteligência de demanda por região.</div>
+          <span class="mod-badge">A partir de R$ 699/mês</span>
+        </button>
+
+        <button class="mod-card" data-module="hospital" onclick="selectModule(this)">
+          <div class="mod-check">✓</div>
+          <span class="mod-icon">🏥</span>
+          <div class="mod-title">Hospital & Rede Hospitalar</div>
+          <div class="mod-desc">Gestão de leitos, internações, prescrições médicas, sala de situação e pressão assistencial.</div>
+          <span class="mod-badge rose">A partir de R$ 12.000/mês</span>
+        </button>
+
+        <button class="mod-card" data-module="governo" onclick="selectModule(this)">
+          <div class="mod-check">✓</div>
+          <span class="mod-icon">🏛️</span>
+          <div class="mod-title">Governo & Vigilância Pública</div>
+          <div class="mod-desc">Sala de controle epidemiológico municipal, estadual ou regional com atos normativos e alertas oficiais.</div>
+          <span class="mod-badge blue">Contrato anual</span>
+        </button>
+      </div>
+
+      <div class="actions" style="margin-top:32px">
+        <button class="btn btn-primary" id="btn-step1" onclick="goToStep2()" disabled>
+          Continuar →
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 2: CHOOSE PLAN -->
+    <div class="step-content" id="step2">
+      <div class="panel-title" id="step2-title">Escolha seu plano</div>
+      <div class="panel-sub" id="step2-sub">Todos os planos incluem 14 dias grátis. Sem cartão de crédito.</div>
+
+      <div id="plan-options"></div>
+
+      <!-- Governo special flow -->
+      <div id="governo-cta" style="display:none" class="governo-cta">
+        <div class="icon">🏛️</div>
+        <h3>Contratação Governamental</h3>
+        <p>Órgãos públicos, secretarias e prefeituras contam com processo de contratação dedicado com licitação, proposta técnica e SLA institucional.</p>
+        <div class="actions" style="justify-content:center">
+          <a href="mailto:comercial@soluscrt.com.br?subject=Contrato%20Governo%20SolusCRT" class="btn btn-blue">Falar com especialista</a>
+        </div>
+      </div>
+
+      <div class="actions" id="step2-actions">
+        <button class="btn btn-ghost" onclick="goToStep(1)">← Voltar</button>
+        <button class="btn btn-primary" id="btn-step2" onclick="goToStep3()" disabled>Continuar →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: ACCOUNT DETAILS -->
+    <div class="step-content" id="step3">
+      <div class="panel-title">Criar sua conta</div>
+      <div class="panel-sub">Sua conta estará pronta em instantes. Nenhuma configuração técnica necessária.</div>
+
+      <div class="selected-summary" id="step3-summary"></div>
+
+      <div class="form-group">
+        <label>Nome da empresa / organização</label>
+        <input type="text" id="nome" placeholder="Ex: Rede Farma São Paulo" autocomplete="organization">
+      </div>
+      <div class="form-group">
+        <label>Email corporativo</label>
+        <input type="email" id="email" placeholder="gerente@suaempresa.com.br" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="senha" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+      </div>
+
+      <div id="msg-error" class="msg-error"></div>
+      <div id="msg-loading" class="msg-loading">Criando sua conta...</div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="goToStep(2)">← Voltar</button>
+        <button class="btn btn-primary btn-full" id="btn-submit" onclick="cadastrar()">
+          Criar conta grátis →
+        </button>
+      </div>
+
+      <div class="login-hint">
+        Já tem conta? <a href="/login-empresa/">Entrar</a>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <script>
-async function cadastrar(){
+const PLANOS = {
+  empresa: [
+    {
+      codigo: "empresa_starter_5",
+      nome: "Starter",
+      preco: "R$ 799",
+      ciclo: "/mês",
+      desc: "Para pequenas equipes com até 5 usuários.",
+      feats: ["5 usuários", "5 dispositivos", "Radar territorial", "Alertas automáticos"]
+    },
+    {
+      codigo: "empresa_profissional_25",
+      nome: "Profissional",
+      preco: "R$ 1.990",
+      ciclo: "/mês",
+      desc: "Dashboards avançados e gestão de 25 usuários.",
+      feats: ["25 usuários", "25 dispositivos", "Multi-unidade", "Relatórios executivos"]
+    },
+    {
+      codigo: "empresa_enterprise_100",
+      nome: "Enterprise",
+      preco: "R$ 4.900",
+      ciclo: "/mês",
+      desc: "Operação multiunidade com inteligência epidemiológica.",
+      feats: ["100 usuários", "100 dispositivos", "API de integração", "SLA dedicado"]
+    },
+    {
+      codigo: "empresa_corporativo_250",
+      nome: "Corporativo",
+      preco: "R$ 9.900",
+      ciclo: "/mês",
+      desc: "Cobertura nacional com governança de acesso.",
+      feats: ["250 usuários", "250 dispositivos", "Dashboard nacional", "Gestor de conta"]
+    }
+  ],
+  farmacia: [
+    {
+      codigo: "farmacia_local",
+      nome: "Farmácia Local",
+      preco: "R$ 699",
+      ciclo: "/mês",
+      desc: "Gestão completa para farmácia independente.",
+      feats: ["5 usuários", "Gestão de lotes FEFO", "Controle de vencimentos", "Movimentação de estoque"]
+    },
+    {
+      codigo: "farmacia_rede_regional",
+      nome: "Rede Regional",
+      preco: "R$ 6.000",
+      ciclo: "/mês",
+      desc: "Inteligência de demanda para redes farmacêuticas.",
+      feats: ["50 usuários", "Multi-unidade", "Transferências entre filiais", "Relatórios FEFO"]
+    }
+  ],
+  hospital: [
+    {
+      codigo: "hospital_medio",
+      nome: "Hospital Médio",
+      preco: "R$ 12.000",
+      ciclo: "/mês",
+      desc: "Gestão hospitalar completa com leitos e prescrições.",
+      feats: ["50 usuários", "Gestão de leitos", "Prescrições médicas", "Internações"]
+    },
+    {
+      codigo: "hospital_rede",
+      nome: "Rede Hospitalar",
+      preco: "R$ 60.000",
+      ciclo: "/mês",
+      desc: "Sala de situação para rede hospitalar com SRAG.",
+      feats: ["250 usuários", "Multi-hospital", "Dashboard executivo", "Análise de SRAG"]
+    }
+  ]
+};
 
-  const res = await fetch("/api/registrar_empresa", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      nome: document.getElementById("nome").value,
-      email: document.getElementById("email").value,
-      senha: document.getElementById("senha").value
-    })
+const ICONES = {empresa:"🏢", farmacia:"💊", hospital:"🏥", governo:"🏛️"};
+const LABELS = {empresa:"Empresa & Corporativo", farmacia:"Farmácia", hospital:"Hospital", governo:"Governo"};
+
+let selectedModule = null;
+let selectedPlan = null;
+let currentStep = 1;
+
+function selectModule(el) {
+  document.querySelectorAll('.mod-card').forEach(c => {
+    c.classList.remove('selected','selected-cyan');
   });
+  const module = el.dataset.module;
+  el.classList.add(module === 'farmacia' || module === 'hospital' ? 'selected-cyan' : 'selected');
+  selectedModule = module;
+  selectedPlan = null;
+  document.getElementById('btn-step1').disabled = false;
+}
 
-  const data = await res.json();
+function goToStep2() {
+  if (!selectedModule) return;
+  renderPlans();
+  goToStep(2);
+}
 
-  if (data.status === "ok") {
-    alert("Conta criada com sucesso!");
-    window.location.href = "/";
-  } else {
-    alert("Erro ao cadastrar");
+function renderPlans() {
+  const container = document.getElementById('plan-options');
+  const govCta = document.getElementById('governo-cta');
+  const step2actions = document.getElementById('step2-actions');
+  const step2title = document.getElementById('step2-title');
+  const step2sub = document.getElementById('step2-sub');
+
+  if (selectedModule === 'governo') {
+    container.innerHTML = '';
+    govCta.style.display = 'block';
+    step2actions.style.display = 'none';
+    step2title.textContent = 'Contratação Governamental';
+    step2sub.textContent = 'Módulo exclusivo para órgãos públicos com processo licitatório.';
+    return;
+  }
+
+  govCta.style.display = 'none';
+  step2actions.style.display = 'flex';
+  step2title.textContent = 'Escolha seu plano';
+  step2sub.textContent = 'Todos os planos incluem 14 dias grátis. Sem cartão de crédito.';
+
+  const planos = PLANOS[selectedModule] || [];
+  container.innerHTML = `<div class="plan-grid">${planos.map((p,i) => `
+    <div class="plan-card${i===0?' selected':''}" data-codigo="${p.codigo}" onclick="selectPlan(this,'${p.codigo}','${p.nome}')">
+      <span class="plan-check">✓</span>
+      <div class="plan-name">${p.nome}</div>
+      <div class="plan-price">${p.preco}<span>${p.ciclo}</span></div>
+      <div class="plan-desc">${p.desc}</div>
+      <ul class="plan-feat">${p.feats.map(f=>`<li>${f}</li>`).join('')}</ul>
+    </div>
+  `).join('')}</div>`;
+
+  // auto-select first
+  if (planos.length > 0) {
+    selectedPlan = {codigo: planos[0].codigo, nome: planos[0].nome, preco: planos[0].preco};
+    document.getElementById('btn-step2').disabled = false;
   }
 }
-</script>
 
+function selectPlan(el, codigo, nome) {
+  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  const planos = PLANOS[selectedModule] || [];
+  const p = planos.find(x => x.codigo === codigo);
+  selectedPlan = {codigo, nome, preco: p ? p.preco : ''};
+  document.getElementById('btn-step2').disabled = false;
+}
+
+function goToStep3() {
+  if (!selectedPlan) return;
+  const icon = ICONES[selectedModule] || '🏢';
+  const label = LABELS[selectedModule] || selectedModule;
+  document.getElementById('step3-summary').innerHTML = `
+    <div class="summary-icon">${icon}</div>
+    <div class="summary-text">
+      <b>${label} — ${selectedPlan.nome}</b>
+      <span>${selectedPlan.preco}/mês · 14 dias grátis · Sem cartão de crédito</span>
+    </div>
+  `;
+  goToStep(3);
+}
+
+function goToStep(n) {
+  currentStep = n;
+  document.querySelectorAll('.step-content').forEach((el,i) => {
+    el.classList.toggle('active', i+1 === n);
+  });
+  // Update dots
+  for (let i = 1; i <= 3; i++) {
+    const dot = document.getElementById(`dot${i}`);
+    dot.classList.remove('active','done');
+    if (i < n) dot.classList.add('done');
+    else if (i === n) dot.classList.add('active');
+  }
+  for (let i = 1; i <= 2; i++) {
+    const line = document.getElementById(`line${i}`);
+    line.classList.toggle('done', i < n);
+  }
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function getDeviceId() {
+  let id = localStorage.getItem('device_id');
+  if (!id) {
+    id = 'dev-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('device_id', id);
+  }
+  return id;
+}
+
+async function cadastrar() {
+  const nome = document.getElementById('nome').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const senha = document.getElementById('senha').value;
+  const errEl = document.getElementById('msg-error');
+  const loadEl = document.getElementById('msg-loading');
+  const btn = document.getElementById('btn-submit');
+
+  errEl.style.display = 'none';
+
+  if (!nome) return showError('Informe o nome da sua empresa.');
+  if (!email || !email.includes('@')) return showError('Informe um email válido.');
+  if (senha.length < 8) return showError('A senha deve ter pelo menos 8 caracteres.');
+  if (!selectedPlan) return showError('Selecione um plano antes de continuar.');
+
+  btn.disabled = true;
+  loadEl.style.display = 'block';
+
+  try {
+    const res = await fetch('/api/registrar_empresa', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        nome,
+        email,
+        senha,
+        pacote_codigo: selectedPlan.codigo,
+        device_id: getDeviceId(),
+        device_name: navigator.platform || 'Computador'
+      })
+    });
+
+    const data = await res.json();
+    loadEl.style.display = 'none';
+
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+      if (data.device_id) localStorage.setItem('device_id', data.device_id);
+      window.location.href = data.destination || '/dashboard-empresa/';
+    } else {
+      btn.disabled = false;
+      showError(data.erro || 'Erro ao criar conta. Tente novamente.');
+    }
+  } catch(e) {
+    loadEl.style.display = 'none';
+    btn.disabled = false;
+    showError('Erro de conexão. Verifique sua internet e tente novamente.');
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('msg-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+</script>
 </body>
 </html>

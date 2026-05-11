@@ -1,165 +1,133 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestão Farmácia</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#041018;--sur:#072030;--sur2:#0a2d45;--acc:#00c2ff;--grn:#00e5b0;--red:#ff4d6d;--orn:#ffb347;--pur:#a78bfa;--txt:#e8f4ff;--mut:#7a9bb5;--brd:rgba(255,255,255,.07);--card:rgba(255,255,255,.04);--r:12px}
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;display:flex;flex-direction:column}
-.topbar{height:56px;background:var(--sur);border-bottom:1px solid var(--brd);display:flex;align-items:center;padding:0 20px;gap:14px;position:sticky;top:0;z-index:100;flex-shrink:0}
-.topbar-logo{font-size:15px;font-weight:800;color:var(--acc);white-space:nowrap}
-.topbar-search{flex:1;max-width:380px;position:relative}
-.topbar-search input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:8px;padding:7px 12px 7px 32px;font-size:13px;color:var(--txt);font-family:Manrope,sans-serif;outline:none}
-.topbar-search input:focus{border-color:var(--acc)}
-.topbar-search::before{content:'🔍';position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:11px}
-.topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
-.refresh-lbl{font-size:11px;color:var(--mut)}
-.bell-btn{position:relative;background:none;border:none;cursor:pointer;font-size:17px;padding:4px}
-.bell-badge{position:absolute;top:0;right:0;background:var(--red);color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 4px;min-width:14px;text-align:center;display:none}
-.alert-strip{background:rgba(255,179,71,.04);border-bottom:1px solid rgba(255,179,71,.12);padding:7px 20px;display:none;gap:8px;align-items:center;flex-wrap:wrap}
-.alert-strip.show{display:flex}
-.alert-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer}
-.ap-red{background:rgba(255,77,109,.12);color:var(--red);border:1px solid rgba(255,77,109,.25)}
-.ap-orn{background:rgba(255,179,71,.12);color:var(--orn);border:1px solid rgba(255,179,71,.25)}
-.ap-blu{background:rgba(0,194,255,.1);color:var(--acc);border:1px solid rgba(0,194,255,.2)}
-.layout{display:flex;flex:1;overflow:hidden}
-.sidebar{width:216px;background:var(--sur);border-right:1px solid var(--brd);display:flex;flex-direction:column;padding:14px 0;overflow-y:auto;flex-shrink:0}
-.nav-s{padding:10px 14px 3px;font-size:10px;font-weight:700;color:var(--mut);letter-spacing:1px;text-transform:uppercase}
-.nav-l{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;font-size:13px;font-weight:600;color:var(--mut);text-decoration:none;border-radius:8px;margin:1px 6px;transition:.15s;cursor:pointer;background:none;border:none;width:calc(100% - 12px);font-family:Manrope,sans-serif;text-align:left}
-.nav-l:hover,.nav-l.active{background:rgba(0,194,255,.1);color:var(--acc)}
-.nb{background:var(--red);color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 5px;display:none}
-.nb.orn{background:var(--orn);color:#041018}
-.nb.blu{background:var(--acc);color:#041018}
-.nb.show{display:inline-block}
-.main{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:18px}
-.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.kpi{background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:16px 18px;position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px}
-.kpi.acc::before{background:var(--acc)}.kpi.grn::before{background:var(--grn)}.kpi.red::before{background:var(--red)}.kpi.orn::before{background:var(--orn)}.kpi.pur::before{background:var(--pur)}
-.kpi-v{font-size:28px;font-weight:800}
-.kpi.acc .kpi-v{color:var(--acc)}.kpi.grn .kpi-v{color:var(--grn)}.kpi.red .kpi-v{color:var(--red)}.kpi.orn .kpi-v{color:var(--orn)}.kpi.pur .kpi-v{color:var(--pur)}
-.kpi-l{font-size:11px;font-weight:600;color:var(--mut);margin-top:3px}
-.tabs-wrap{background:var(--card);border:1px solid var(--brd);border-radius:var(--r);overflow:hidden}
-.tabs{display:flex;border-bottom:1px solid var(--brd);overflow-x:auto;padding:0 6px}
-.tab-btn{padding:10px 14px;font-size:12px;font-weight:600;color:var(--mut);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif;white-space:nowrap}
-.tab-btn.active{color:var(--acc);border-bottom-color:var(--acc)}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+/* Sidebar */
+.sidebar{width:240px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+/* Main */
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+/* KPIs */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.ok::before{background:var(--ok)}
+.kpi.info::before{background:#a78bfa}
+.kpi-val{font-size:32px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}
+.kpi.ok .kpi-val{color:var(--ok)}
+.kpi.info .kpi-val{color:#a78bfa}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab-btn{padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
 .tab-panel{display:none}.tab-panel.active{display:block}
-.card-h{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--brd);gap:8px;flex-wrap:wrap}
-.card-t{font-size:13px;font-weight:700}
-.ca{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.tw{overflow-x:auto}
+/* Table */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:700}
 table{width:100%;border-collapse:collapse}
-th{padding:8px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02);cursor:pointer;white-space:nowrap}
-th:hover{color:var(--txt)}
-td{padding:10px 14px;font-size:13px;border-top:1px solid var(--brd)}
-tr:nth-child(even) td{background:rgba(255,255,255,.012)}
-tr:hover td{background:rgba(0,194,255,.04)}
-.es{padding:40px;text-align:center;color:var(--mut)}
-.es-i{font-size:32px;margin-bottom:8px}
-.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
-.b-ok{background:rgba(0,229,176,.12);color:var(--grn)}.b-w{background:rgba(255,179,71,.12);color:var(--orn)}.b-d{background:rgba(255,77,109,.12);color:var(--red)}.b-i{background:rgba(0,194,255,.12);color:var(--acc)}.b-p{background:rgba(167,139,250,.12);color:var(--pur)}
-.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
-.bp{background:var(--acc);color:#041018}.bp:hover{opacity:.85}
-.bg{background:rgba(255,255,255,.06);color:var(--txt);border:1px solid var(--brd)}.bg:hover{background:rgba(255,255,255,.1)}
-.bd{background:rgba(255,77,109,.1);color:var(--red);border:1px solid rgba(255,77,109,.2)}.bd:hover{background:rgba(255,77,109,.18)}
-.bs{padding:4px 9px;font-size:11px}
-.sb{height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;width:80px;margin-top:4px}
-.sf{height:100%;border-radius:2px;background:var(--grn)}.sf.low{background:var(--orn)}.sf.crit{background:var(--red)}
-.pipe{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--brd);gap:2px;font-size:10px;font-weight:700}
-.ps{padding:3px 10px;background:rgba(255,255,255,.05);color:var(--mut);border-radius:4px}
-.ps.act{background:rgba(0,194,255,.12);color:var(--acc)}.ps.done{background:rgba(0,229,176,.1);color:var(--grn)}
-.pa{color:var(--mut);padding:0 3px}
-.lkpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px;border-bottom:1px solid var(--brd)}
-.prog-b{height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
-.prog-f{height:100%;background:var(--grn);border-radius:3px;transition:.3s}
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center;padding:16px}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+/* Badges */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-purple{background:rgba(167,139,250,.12);color:#a78bfa}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
-.modal{background:var(--sur);border:1px solid var(--brd);border-radius:14px;padding:22px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto}
-.modal h3{font-size:15px;font-weight:700;margin-bottom:16px}
-.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
-.fg label{font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
-.fg input,.fg select,.fg textarea{background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:7px;padding:8px 10px;font-size:13px;color:var(--txt);font-family:Manrope,sans-serif;outline:none;transition:.15s}
-.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--acc)}
-.fg textarea{resize:vertical;min-height:60px}
-.mf{display:flex;gap:8px;justify-content:flex-end;margin-top:6px;padding-top:12px;border-top:1px solid var(--brd)}
-.toast-w{position:fixed;bottom:18px;right:18px;z-index:9999;display:flex;flex-direction:column;gap:7px}
-.toast{background:var(--sur2);border:1px solid var(--brd);border-radius:10px;padding:11px 15px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px;min-width:240px;box-shadow:0 8px 28px rgba(0,0,0,.45);transform:translateX(120%);transition:transform .3s;pointer-events:none}
-.toast.show{transform:translateX(0);pointer-events:auto}
-.toast.ok{border-left:3px solid var(--grn);color:var(--grn)}.toast.err{border-left:3px solid var(--red);color:var(--red)}.toast.warn{border-left:3px solid var(--orn);color:var(--orn)}.toast.info{border-left:3px solid var(--acc);color:var(--acc)}
-.abc-bar{height:10px;border-radius:3px;display:inline-block}
-@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:860px){.sidebar{display:none}}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:420px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:72px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+/* Estoque bar */
+.stock-bar{height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;margin-top:4px}
+.stock-fill{height:100%;border-radius:3px;background:var(--ok);transition:.3s}
+.stock-fill.low{background:var(--warn)}
+.stock-fill.critical{background:var(--danger)}
+/* Empty */
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="topbar-logo">💊 FarmaCloud</div>
-  <div class="topbar-search"><input id="globalSearch" placeholder="Buscar itens, pacientes, receitas…" oninput="globalSearchFn(this.value)"></div>
-  <div class="topbar-right">
-    <span class="refresh-lbl" id="refreshLbl">Carregando…</span>
-    <button class="bell-btn" onclick="setTab('estoque')">🔔<span class="bell-badge" id="bellBadge"></span></button>
-    <a href="/farmacia/" class="btn bg bs">📊 Inteligência</a>
-    <a href="/dashboard/" class="btn bg bs">🏠 Home</a>
-  </div>
-</div>
-
-<div class="alert-strip" id="alertStrip">
-  <span style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.8px">Alertas</span>
-  <span id="aAbaixo" class="alert-pill ap-red" onclick="setTab('estoque')" style="display:none"></span>
-  <span id="aVenc7" class="alert-pill ap-orn" onclick="setTab('lotes')" style="display:none"></span>
-  <span id="aRuptura" class="alert-pill ap-red" onclick="setTab('estoque')" style="display:none"></span>
-  <span id="aReceitas" class="alert-pill ap-blu" onclick="setTab('receitas')" style="display:none"></span>
-</div>
-
-<div class="layout">
 <aside class="sidebar">
-  <div class="nav-s">Principal</div>
-  <a class="nav-l" href="/farmacia/">📊 Inteligência</a>
-  <button class="nav-l active" onclick="setTab('estoque')">📦 Estoque <span class="nb" id="nbEst">0</span></button>
-  <button class="nav-l" onclick="setTab('dispensacoes')">💊 Dispensações</button>
-  <button class="nav-l" onclick="setTab('movimentos')">↕️ Movimentos</button>
-  <div class="nav-s">Suprimentos</div>
-  <button class="nav-l" onclick="setTab('fornecedores')">🏭 Fornecedores</button>
-  <button class="nav-l" onclick="setTab('pedidos')">🛒 Pedidos <span class="nb orn" id="nbPed">0</span></button>
-  <button class="nav-l" onclick="setTab('lotes')">🏷️ Lotes <span class="nb" id="nbLot">0</span></button>
-  <div class="nav-s">Pacientes</div>
-  <button class="nav-l" onclick="setTab('pacientes')">👥 Pacientes</button>
-  <button class="nav-l" onclick="setTab('receitas')">📋 Receitas <span class="nb blu" id="nbRec">0</span></button>
-  <div class="nav-s">Controle</div>
-  <button class="nav-l" onclick="setTab('inventario')">🔍 Inventário</button>
-  <button class="nav-l" onclick="setTab('descarte')">🗑️ Descarte</button>
-  <button class="nav-l" onclick="setTab('relatorios')">📊 Relatórios</button>
-  <div class="nav-s" style="margin-top:10px">Rede & Planos</div>
-  <a class="nav-l" href="/rede/gestao/">🌐 Gestão de Rede</a>
-  <a class="nav-l" href="/plano-saude/gestao/">🏥 Plano de Saúde</a>
-  <div class="nav-s">Sistema</div>
-  <a class="nav-l" href="/logout/">🚪 Sair</a>
+  <div class="logo">💊 Farmácia</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/farmacia/"><span>📊</span> Inteligência</a>
+  <a class="nav-link active" href="/farmacia/gestao/"><span>🏪</span> Gestão Operacional</a>
+  <div class="nav-section" style="margin-top:12px">Sistema</div>
+  <a class="nav-link" href="/dashboard/"><span>🏠</span> Dashboard</a>
+  <a class="nav-link" href="/logout/"><span>🚪</span> Sair</a>
 </aside>
 
 <main class="main">
-  <div class="kpi-grid">
-    <div class="kpi acc"><div class="kpi-v" id="kIt">—</div><div class="kpi-l">Itens Cadastrados</div></div>
-    <div class="kpi orn"><div class="kpi-v" id="kAb">—</div><div class="kpi-l">Abaixo do Mínimo</div></div>
-    <div class="kpi grn"><div class="kpi-v" id="kDi">—</div><div class="kpi-l">Dispensações</div></div>
-    <div class="kpi acc"><div class="kpi-v" id="kPe">—</div><div class="kpi-l">Pedidos em Aberto</div></div>
-    <div class="kpi pur"><div class="kpi-v" id="kPa">—</div><div class="kpi-l">Pacientes Cadastrados</div></div>
-    <div class="kpi orn"><div class="kpi-v" id="kRe">—</div><div class="kpi-l">Receitas Pendentes</div></div>
-    <div class="kpi red"><div class="kpi-v" id="kRu">—</div><div class="kpi-l">Ruptura de Estoque</div></div>
-    <div class="kpi orn"><div class="kpi-v" id="kV7">—</div><div class="kpi-l">Vencendo em 7 Dias</div></div>
+  <div class="page-header">
+    <div>
+      <div class="page-title">Gestão de Farmácia</div>
+      <div class="page-sub">Estoque, dispensações, fornecedores e pedidos</div>
+    </div>
+    <a href="/farmacia/" class="btn btn-ghost">📊 Ver Inteligência Epidemiológica</a>
   </div>
 
-  <div class="tabs-wrap">
+  <!-- KPIs Row 1 — Operacional -->
+  <div class="kpi-row" id="kpiRow">
+    <div class="kpi"><div class="kpi-val">—</div><div class="kpi-lbl">Itens Cadastrados</div></div>
+    <div class="kpi warn"><div class="kpi-val">—</div><div class="kpi-lbl">Abaixo do Mínimo</div></div>
+    <div class="kpi ok"><div class="kpi-val">—</div><div class="kpi-lbl">Dispensações</div></div>
+    <div class="kpi info"><div class="kpi-val">—</div><div class="kpi-lbl">Pedidos em Aberto</div></div>
+  </div>
+  <!-- KPIs Row 2 — Avançado -->
+  <div class="kpi-row" id="kpiRowAvancado">
+    <div class="kpi"><div class="kpi-val" id="kavPacientes" style="color:#a78bfa">—</div><div class="kpi-lbl">Pacientes Cadastrados</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kavReceitas">—</div><div class="kpi-lbl">Receitas Pendentes</div></div>
+    <div class="kpi"><div class="kpi-val" id="kavRuptura" style="color:var(--danger)">—</div><div class="kpi-lbl">Ruptura de Estoque</div></div>
+    <div class="kpi"><div class="kpi-val" id="kavVencendo7" style="color:var(--warn)">—</div><div class="kpi-lbl">Vencendo em 7 Dias</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div>
     <div class="tabs">
       <button class="tab-btn active" onclick="setTab('estoque')">📦 Estoque</button>
       <button class="tab-btn" onclick="setTab('dispensacoes')">💊 Dispensações</button>
       <button class="tab-btn" onclick="setTab('movimentos')">↕️ Movimentos</button>
       <button class="tab-btn" onclick="setTab('fornecedores')">🏭 Fornecedores</button>
-      <button class="tab-btn" onclick="setTab('pedidos')">🛒 Pedidos</button>
-      <button class="tab-btn" onclick="setTab('lotes')">🏷️ Lotes</button>
+      <button class="tab-btn" onclick="setTab('pedidos')">🛒 Pedidos de Compra</button>
+      <button class="tab-btn" onclick="setTab('lotes')">🏷️ Lotes / Validade</button>
       <button class="tab-btn" onclick="setTab('pacientes')">👥 Pacientes</button>
       <button class="tab-btn" onclick="setTab('receitas')">📋 Receitas</button>
       <button class="tab-btn" onclick="setTab('inventario')">🔍 Inventário</button>
@@ -167,533 +135,1267 @@ tr:hover td{background:rgba(0,194,255,.04)}
       <button class="tab-btn" onclick="setTab('relatorios')">📊 Relatórios</button>
     </div>
 
-    <!-- ESTOQUE -->
-    <div class="tab-panel active" id="tab-estoque">
-      <div class="card-h"><span class="card-t">Itens em Estoque</span>
-        <div class="ca">
-          <input placeholder="Filtrar…" oninput="filtrarTb('tbEst',this.value)" style="background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:7px;padding:5px 9px;font-size:12px;color:var(--txt);font-family:Manrope,sans-serif;outline:none;width:140px">
-          <a href="/api/farmacia/pdf/estoque/" target="_blank" class="btn bg bs">📄 PDF</a>
-          <button class="btn bg bs" onclick="exportCSV('tbEst',['Item','Código','Categoria','Estoque','Mínimo','Status'])">📥 CSV</button>
-          <button class="btn bp bs" onclick="abrirModalItem()">+ Novo Item</button>
-        </div>
-      </div>
-      <div class="tw"><table><thead><tr><th onclick="sortTb('tbEst',0)">Item ▲▼</th><th>Categoria</th><th onclick="sortTb('tbEst',2)">Estoque ▲▼</th><th>Mínimo</th><th>Status</th><th>Ações</th></tr></thead>
-      <tbody id="tbEst"><tr><td colspan="6" class="es"><div class="es-i">📦</div><p>Carregando…</p></td></tr></tbody></table></div>
-    </div>
-
-    <!-- DISPENSAÇÕES -->
-    <div class="tab-panel" id="tab-dispensacoes">
-      <div class="card-h"><span class="card-t">Dispensações de Medicamentos</span>
-        <div class="ca">
-          <a href="/api/farmacia/pdf/dispensacoes/" target="_blank" class="btn bg bs">📄 PDF</a>
-          <button class="btn bg bs" onclick="exportCSV('tbDis',['Item','Paciente','CPF','Qtd','Responsável','Data'])">📥 CSV</button>
-          <button class="btn bp bs" onclick="abrirModalDispensacao()">+ Nova Dispensação</button>
-        </div>
-      </div>
-      <div class="tw"><table><thead><tr><th>Item</th><th>Paciente</th><th>CPF</th><th>Qtd</th><th>Responsável</th><th>Data/Hora</th></tr></thead>
-      <tbody id="tbDis"><tr><td colspan="6" class="es"><div class="es-i">💊</div><p>Carregando…</p></td></tr></tbody></table></div>
-    </div>
-
-    <!-- MOVIMENTOS -->
-    <div class="tab-panel" id="tab-movimentos">
-      <div class="card-h"><span class="card-t">Histórico de Movimentos</span>
-        <div class="ca">
-          <button class="btn bg bs" onclick="exportCSV('tbMov',['Item','Tipo','Qtd','Antes','Depois','Motivo','Data'])">📥 CSV</button>
-          <button class="btn bp bs" onclick="abrirModalMovimento()">+ Registrar Movimento</button>
-        </div>
-      </div>
-      <div class="tw"><table><thead><tr><th>Item</th><th>Tipo</th><th>Quantidade</th><th>Antes</th><th>Depois</th><th>Motivo</th><th>Data</th></tr></thead>
-      <tbody id="tbMov"><tr><td colspan="7" class="es"><div class="es-i">↕️</div><p>Carregando…</p></td></tr></tbody></table></div>
-    </div>
-
-    <!-- FORNECEDORES -->
-    <div class="tab-panel" id="tab-fornecedores">
-      <div class="card-h"><span class="card-t">Fornecedores</span>
-        <div class="ca">
-          <button class="btn bg bs" onclick="exportCSV('tbFor',['Nome','CNPJ','Contato','Email','Tel','Status'])">📥 CSV</button>
-          <button class="btn bp bs" onclick="abrirModalFornecedor()">+ Novo Fornecedor</button>
-        </div>
-      </div>
-      <div class="tw"><table><thead><tr><th>Nome</th><th>CNPJ</th><th>Contato</th><th>Email</th><th>Telefone</th><th>Status</th><th>Ações</th></tr></thead>
-      <tbody id="tbFor"><tr><td colspan="7" class="es"><div class="es-i">🏭</div><p>Carregando…</p></td></tr></tbody></table></div>
-    </div>
-
-    <!-- PEDIDOS -->
-    <div class="tab-panel" id="tab-pedidos">
-      <div class="card-h"><span class="card-t">Pedidos de Compra</span>
-        <div class="ca">
-          <select id="filtroPedSt" onchange="carregarPedidos()" style="background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:7px;padding:5px 9px;color:var(--txt);font-size:12px;font-family:Manrope,sans-serif">
-            <option value="">Todos</option><option value="rascunho">Rascunho</option><option value="enviado">Enviado</option><option value="aprovado">Aprovado</option><option value="recebido">Recebido</option>
-          </select>
-          <button class="btn bp bs" onclick="abrirModalPedido()">+ Novo Pedido</button>
-        </div>
-      </div>
-      <div class="pipe">
-        <span class="ps" id="pp-rascunho">Rascunho</span><span class="pa">›</span>
-        <span class="ps" id="pp-enviado">Enviado</span><span class="pa">›</span>
-        <span class="ps" id="pp-aprovado">Aprovado</span><span class="pa">›</span>
-        <span class="ps" id="pp-recebido">Recebido</span>
-      </div>
-      <div class="tw"><table><thead><tr><th>Pedido</th><th>Fornecedor</th><th>Itens</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
-      <tbody id="tbPed"><tr><td colspan="6" class="es"><div class="es-i">🛒</div><p>Carregando…</p></td></tr></tbody></table></div>
-    </div>
-
-    <!-- LOTES -->
-    <div class="tab-panel" id="tab-lotes">
-      <div class="lkpi">
-        <div class="kpi acc" style="border-radius:10px"><div class="kpi-v" id="lkTot">—</div><div class="kpi-l">Total Ativos</div></div>
-        <div class="kpi red" style="border-radius:10px"><div class="kpi-v" id="lkVen">—</div><div class="kpi-l">🔴 Vencidos</div></div>
-        <div class="kpi orn" style="border-radius:10px"><div class="kpi-v" id="lkAlt">—</div><div class="kpi-l">⚠️ Vencendo 30d</div></div>
-        <div class="kpi grn" style="border-radius:10px"><div class="kpi-v" id="lkOk">—</div><div class="kpi-l">✅ Vigentes</div></div>
-      </div>
-      <div class="card-h"><span class="card-t">🏷️ Rastreabilidade de Lotes — FEFO</span>
-        <div class="ca">
-          <select id="filtroLoteSt" onchange="carregarLotes()" style="background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:7px;padding:5px 9px;color:var(--txt);font-size:12px;font-family:Manrope,sans-serif">
-            <option value="">Todos (com estoque)</option><option value="vencidos">Vencidos</option><option value="vencendo_30">Vencendo 30d</option><option value="vigentes">Vigentes</option>
-          </select>
-          <button class="btn bp bs" onclick="abrirModalLote()">+ Registrar Lote</button>
-        </div>
-      </div>
-      <div class="tw"><table><thead><tr><th>Medicamento</th><th>Lote</th><th>Fabricante</th><th>Fabricação</th><th>Validade</th><th>Dias</th><th>Qtd Atual</th><th>NF</th><th>Ações</th></tr></thead>
-      <tbody id="tbLot"><tr><td colspan="9" class="es"><div class="es-i">🏷️</div><p>Carregando…</p></td></tr></tbody></table></div>
-      <div style="border-top:1px solid var(--brd)">
-        <div class="card-h"><span class="card-t">⚠️ Próximos a Vencer (30 dias)</span></div>
-        <div id="proxVencer" style="padding:12px 16px;font-size:13px;color:var(--mut)">Carregando…</div>
-      </div>
-    </div>
-
-    <!-- PACIENTES -->
-    <div class="tab-panel" id="tab-pacientes">
-      <div class="card-h"><span class="card-t">👥 Cadastro de Pacientes</span>
-        <div class="ca">
-          <input id="buscaPaciente" placeholder="Buscar nome ou CPF…" oninput="buscarPacientes()" style="background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:7px;padding:5px 9px;font-size:12px;color:var(--txt);font-family:Manrope,sans-serif;outline:none;width:200px">
-          <button class="btn bp bs" onclick="abrirModalPaciente()">+ Novo Paciente</button>
-        </div>
-      </div>
-      <div class="tw"><table><thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>Alergias</th><th>Condições Crônicas</th><th>Ações</th></tr></thead>
-      <tbody id="tbPac"><tr><td colspan="6" class="es"><div class="es-i">👥</div><p>Carregando…</p></td></tr></tbody></table></div>
-    </div>
-
-    <!-- RECEITAS -->
-    <div class="tab-panel" id="tab-receitas">
-      <div class="card-h"><span class="card-t">📋 Receitas Médicas</span>
-        <div class="ca">
-          <select id="filtroRecSt" onchange="carregarReceitas()" style="background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:7px;padding:5px 9px;color:var(--txt);font-size:12px;font-family:Manrope,sans-serif">
-            <option value="">Todas</option><option value="pendente">Pendentes</option><option value="dispensada">Dispensadas</option><option value="vencida">Vencidas</option><option value="cancelada">Canceladas</option>
-          </select>
-          <button class="btn bg bs" onclick="exportCSV('tbRec',['Tipo','Nº','Paciente','Medicamento','Médico','Emissão','Validade','Status'])">📥 CSV</button>
-          <button class="btn bp bs" onclick="abrirModalReceita()">+ Nova Receita</button>
-        </div>
-      </div>
-      <div class="tw"><table><thead><tr><th>Tipo</th><th>Nº Receita</th><th>Paciente</th><th>Medicamento</th><th>Médico/CRM</th><th>Emissão</th><th>Validade</th><th>Status</th><th>Ações</th></tr></thead>
-      <tbody id="tbRec"><tr><td colspan="9" class="es"><div class="es-i">📋</div><p>Carregando…</p></td></tr></tbody></table></div>
-    </div>
-
-    <!-- INVENTÁRIO -->
-    <div class="tab-panel" id="tab-inventario">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px">
-        <div>
-          <div class="card-h" style="border:1px solid var(--brd);border-radius:10px 10px 0 0;border-bottom:none">
-            <span class="card-t">🔍 Inventários Periódicos</span>
-            <button class="btn bp bs" onclick="abrirModalInventario()">+ Novo</button>
+    <!-- Estoque -->
+    <div class="tab-panel active" id="tab-estoque" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Itens em Estoque</span>
+          <div style="display:flex;gap:8px">
+            <a href="/api/farmacia/pdf/estoque/" target="_blank" class="btn btn-ghost">📄 Exportar PDF</a>
+            <button class="btn btn-primary" onclick="abrirModalItem()">+ Novo Item</button>
           </div>
-          <div id="listaInv" style="border:1px solid var(--brd);border-radius:0 0 10px 10px;overflow:hidden"><div class="es"><div class="es-i">🔍</div><p>Carregando…</p></div></div>
         </div>
-        <div id="cardDetInv" style="display:none;border:1px solid var(--brd);border-radius:10px;overflow:hidden">
-          <div class="card-h">
-            <span class="card-t" id="tituloInventario">Contagem</span>
-            <div class="ca">
-              <button class="btn bg bs" onclick="fecharDetInv()">✕</button>
-              <button class="btn bp bs" id="btnConcluirInventario" onclick="concluirInventario()">✓ Concluir</button>
+        <table>
+          <thead><tr><th>Item</th><th>Categoria</th><th>Estoque Atual</th><th>Mínimo</th><th>Situação</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyEstoque"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Dispensações -->
+    <div class="tab-panel" id="tab-dispensacoes" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Dispensações de Medicamentos</span>
+          <div style="display:flex;gap:8px">
+            <a href="/api/farmacia/pdf/dispensacoes/" target="_blank" class="btn btn-ghost">📄 Exportar PDF</a>
+            <button class="btn btn-primary" onclick="abrirModalDispensacao()">+ Nova Dispensação</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Item</th><th>Paciente</th><th>CPF</th><th>Qtd</th><th>Responsável</th><th>Data/Hora</th></tr></thead>
+          <tbody id="tbodyDisp"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Movimentos -->
+    <div class="tab-panel" id="tab-movimentos" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Histórico de Movimentos</span>
+          <button class="btn btn-primary" onclick="abrirModalMovimento()">+ Registrar Movimento</button>
+        </div>
+        <table>
+          <thead><tr><th>Item</th><th>Tipo</th><th>Quantidade</th><th>Antes</th><th>Depois</th><th>Motivo</th><th>Data</th></tr></thead>
+          <tbody id="tbodyMov"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Fornecedores -->
+    <div class="tab-panel" id="tab-fornecedores" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Fornecedores</span>
+          <button class="btn btn-primary" onclick="abrirModalFornecedor()">+ Novo Fornecedor</button>
+        </div>
+        <table>
+          <thead><tr><th>Nome</th><th>CNPJ</th><th>Contato</th><th>Email</th><th>Telefone</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyForn"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pedidos -->
+    <div class="tab-panel" id="tab-pedidos" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Pedidos de Compra</span>
+          <button class="btn btn-primary" onclick="abrirModalPedido()">+ Novo Pedido</button>
+        </div>
+        <table>
+          <thead><tr><th>Pedido</th><th>Fornecedor</th><th>Itens</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyPed"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Lotes / Validade -->
+    <div class="tab-panel" id="tab-lotes" style="margin-top:16px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px" id="kpiLotes">
+        <div class="kpi"><div class="kpi-value" id="lkTotal" style="color:var(--accent)">—</div><div class="kpi-label">Total de Lotes Ativos</div></div>
+        <div class="kpi"><div class="kpi-value" id="lkVenc" style="color:var(--danger)">—</div><div class="kpi-label">🔴 Vencidos (em estoque)</div></div>
+        <div class="kpi"><div class="kpi-value" id="lkAlerta" style="color:var(--warn)">—</div><div class="kpi-label">⚠️ Vencendo em 30 dias</div></div>
+        <div class="kpi"><div class="kpi-value" id="lkOk" style="color:var(--ok)">—</div><div class="kpi-label">✅ Vigentes</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🏷️ Rastreabilidade de Lotes (FEFO)</span>
+          <div style="display:flex;gap:8px">
+            <select id="filtroLoteStatus" onchange="carregarLotes()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;color:#e8f4ff;font-size:12px">
+              <option value="">Todos (com estoque)</option>
+              <option value="vencidos">Vencidos</option>
+              <option value="vencendo_30">Vencendo em 30 dias</option>
+              <option value="vigentes">Vigentes (+30d)</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalLote()">+ Registrar Lote</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Medicamento</th><th>Lote</th><th>Fabricante</th><th>Fabricação</th><th>Validade</th><th>Dias</th><th>Qtd. Atual</th><th>NF</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyLotes"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+      <!-- Vencendo em breve -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-header"><span class="card-title">⚠️ Próximos a Vencer (30 dias)</span></div>
+        <div id="proxVencer" style="padding:16px 20px;font-size:13px;color:var(--muted)">Carregando…</div>
+      </div>
+    </div>
+
+    <!-- Pacientes -->
+    <div class="tab-panel" id="tab-pacientes" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">👥 Cadastro de Pacientes</span>
+          <div style="display:flex;gap:8px">
+            <input id="buscaPaciente" placeholder="Buscar por nome ou CPF…" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;width:220px" oninput="buscarPacientes()">
+            <button class="btn btn-primary" onclick="abrirModalPaciente()">+ Novo Paciente</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>Alergias</th><th>Condições Crônicas</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyPacientes"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Receitas -->
+    <div class="tab-panel" id="tab-receitas" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📋 Receitas Médicas</span>
+          <div style="display:flex;gap:8px">
+            <select id="filtroReceitaStatus" onchange="carregarReceitas()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:#e8f4ff;font-size:12px">
+              <option value="">Todas</option>
+              <option value="pendente">Pendentes</option>
+              <option value="dispensada">Dispensadas</option>
+              <option value="vencida">Vencidas</option>
+              <option value="cancelada">Canceladas</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalReceita()">+ Nova Receita</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Tipo</th><th>Nº Receita</th><th>Paciente</th><th>Medicamento</th><th>Médico / CRM</th><th>Emissão</th><th>Validade</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyReceitas"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Inventário Periódico -->
+    <div class="tab-panel" id="tab-inventario" style="margin-top:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <!-- Lista de inventários -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🔍 Inventários Periódicos</span>
+            <button class="btn btn-primary" onclick="abrirModalInventario()">+ Novo Inventário</button>
+          </div>
+          <div id="listaInventarios" style="padding:0">
+            <div class="empty">Carregando…</div>
+          </div>
+        </div>
+        <!-- Detalhe do inventário selecionado -->
+        <div class="card" id="cardDetalheInventario" style="display:none">
+          <div class="card-header">
+            <span class="card-title" id="tituloInventario">Contagem</span>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost btn-sm" onclick="fecharDetalheInventario()">✕ Fechar</button>
+              <button class="btn btn-primary btn-sm" id="btnConcluirInventario" onclick="concluirInventario()">✓ Concluir</button>
             </div>
           </div>
-          <div style="padding:8px 14px;border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:10px">
-            <div class="prog-b" style="flex:1"><div class="prog-f" id="fillProg" style="width:0%"></div></div>
-            <span style="font-size:12px;color:var(--mut)" id="txtProg">0%</span>
+          <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+            <div style="display:flex;gap:8px;align-items:center">
+              <div id="barraProgresso" style="flex:1;height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden">
+                <div id="fillProgresso" style="height:100%;background:var(--ok);border-radius:4px;width:0%;transition:.3s"></div>
+              </div>
+              <span id="txtProgresso" style="font-size:12px;color:var(--muted)">0%</span>
+            </div>
           </div>
-          <div style="max-height:340px;overflow-y:auto"><table><thead><tr><th>Item</th><th>Sistema</th><th>Contado</th><th>Diferença</th><th>Obs</th></tr></thead>
-          <tbody id="tbInvIt"></tbody></table></div>
-          <div style="padding:9px 14px;display:flex;justify-content:flex-end"><label style="font-size:12px;color:var(--mut);display:flex;gap:6px;align-items:center"><input type="checkbox" id="chkAjustes"> Aplicar ajustes ao concluir</label></div>
+          <div id="tabelaInventarioItens" style="max-height:400px;overflow-y:auto">
+            <table>
+              <thead><tr><th>Item</th><th>Sistema</th><th>Contado</th><th>Diferença</th><th>Obs</th></tr></thead>
+              <tbody id="tbodyInventarioItens"></tbody>
+            </table>
+          </div>
+          <div style="padding:12px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center">
+            <label style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center">
+              <input type="checkbox" id="chkAplicarAjustes"> Aplicar ajustes no estoque ao concluir
+            </label>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- DESCARTE -->
-    <div class="tab-panel" id="tab-descarte">
-      <div class="card-h"><span class="card-t">🗑️ Registro de Descarte de Medicamentos</span>
-        <div class="ca">
-          <button class="btn bg bs" onclick="exportCSV('tbDesc',['Medicamento','Lote','Motivo','Qtd','Responsável','Empresa','Manifesto','Data'])">📥 CSV</button>
-          <button class="btn bd bs" onclick="abrirModalDescarte()">+ Registrar Descarte</button>
+    <!-- Descarte -->
+    <div class="tab-panel" id="tab-descarte" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🗑️ Registro de Descarte de Medicamentos</span>
+          <button class="btn btn-primary" onclick="abrirModalDescarte()">+ Registrar Descarte</button>
         </div>
+        <table>
+          <thead><tr><th>Medicamento</th><th>Lote</th><th>Motivo</th><th>Quantidade</th><th>Responsável</th><th>Empresa Descarte</th><th>Manifesto</th><th>Data</th></tr></thead>
+          <tbody id="tbodyDescartes"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+        </table>
       </div>
-      <div class="tw"><table><thead><tr><th>Medicamento</th><th>Lote</th><th>Motivo</th><th>Quantidade</th><th>Responsável</th><th>Empresa Descarte</th><th>Manifesto</th><th>Data</th></tr></thead>
-      <tbody id="tbDesc"><tr><td colspan="8" class="es"><div class="es-i">🗑️</div><p>Nenhum descarte registrado</p></td></tr></tbody></table></div>
     </div>
 
-    <!-- RELATÓRIOS -->
-    <div class="tab-panel" id="tab-relatorios">
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px;border-bottom:1px solid var(--brd)">
-        <button class="btn bg" style="padding:14px;flex-direction:column;gap:5px;height:auto;width:100%" onclick="carregarCurvaABC()"><span style="font-size:20px">📈</span><strong>Curva ABC</strong><span style="font-size:11px;color:var(--mut)">Classificação por consumo</span></button>
-        <button class="btn bg" style="padding:14px;flex-direction:column;gap:5px;height:auto;width:100%" onclick="carregarCMM()"><span style="font-size:20px">📉</span><strong>CMM — Cobertura</strong><span style="font-size:11px;color:var(--mut)">Consumo médio mensal</span></button>
-        <button class="btn bg" style="padding:14px;flex-direction:column;gap:5px;height:auto;width:100%" onclick="carregarGiro()"><span style="font-size:20px">🔄</span><strong>Giro de Estoque</strong><span style="font-size:11px;color:var(--mut)">Rotatividade anual</span></button>
+    <!-- Relatórios -->
+    <div class="tab-panel" id="tab-relatorios" style="margin-top:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+        <button class="btn btn-ghost" style="padding:16px;flex-direction:column;gap:6px;height:auto" onclick="carregarCurvaABC()">
+          <span style="font-size:22px">📈</span>
+          <strong>Curva ABC</strong>
+          <span style="font-size:11px;color:var(--muted)">Classificação por consumo</span>
+        </button>
+        <button class="btn btn-ghost" style="padding:16px;flex-direction:column;gap:6px;height:auto" onclick="carregarCMM()">
+          <span style="font-size:22px">📉</span>
+          <strong>CMM — Cobertura</strong>
+          <span style="font-size:11px;color:var(--muted)">Consumo médio mensal</span>
+        </button>
+        <button class="btn btn-ghost" style="padding:16px;flex-direction:column;gap:6px;height:auto" onclick="carregarGiro()">
+          <span style="font-size:22px">🔄</span>
+          <strong>Giro de Estoque</strong>
+          <span style="font-size:11px;color:var(--muted)">Rotatividade anual</span>
+        </button>
       </div>
-      <div id="relConteudo" style="padding:14px"><div class="es"><div class="es-i">📊</div><p>Selecione um relatório acima</p></div></div>
+      <div id="relatorioConteudo">
+        <div class="card">
+          <div class="empty" style="padding:48px">Selecione um relatório acima para visualizar</div>
+        </div>
+      </div>
     </div>
+
   </div>
 </main>
+
+<!-- Modal: Novo Item -->
+<div class="modal-bg" id="modalItem">
+  <div class="modal">
+    <h3>📦 Cadastrar Item</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="iNome" placeholder="Ex: Paracetamol 500mg"></div>
+      <div class="form-group"><label>Código</label><input id="iCodigo" placeholder="SKU ou lote"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Categoria</label>
+        <select id="iCategoria"><option value="medicamento">Medicamento</option><option value="material">Material</option><option value="insumo">Insumo</option><option value="outro">Outro</option></select>
+      </div>
+      <div class="form-group"><label>Unidade de Medida</label><input id="iUnidade" placeholder="comprimido, frasco…" value="unidade"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Estoque Mínimo</label><input id="iEstMin" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Fornecedor</label>
+        <select id="iFornecedor"><option value="">— nenhum —</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Descrição</label><textarea id="iDesc" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalItem')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarItem()">Salvar Item</button>
+    </div>
+  </div>
 </div>
 
-<div class="toast-w" id="toastW"></div>
+<!-- Modal: Dispensação -->
+<div class="modal-bg" id="modalDisp">
+  <div class="modal">
+    <h3>💊 Registrar Dispensação</h3>
+    <div class="form-group"><label>Medicamento *</label>
+      <select id="dItem"><option value="">— selecione —</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Paciente *</label><input id="dPaciente" placeholder="Nome completo"></div>
+      <div class="form-group"><label>CPF</label><input id="dCpf" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Quantidade *</label><input id="dQtd" type="number" min="1" value="1"></div>
+      <div class="form-group"><label>Responsável</label><input id="dResp" placeholder="Nome do farmacêutico"></div>
+    </div>
+    <div class="form-group"><label>Observações</label><textarea id="dObs" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalDisp')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarDispensacao()">Dispensar</button>
+    </div>
+  </div>
+</div>
 
-<!-- MODAIS -->
-<div class="modal-bg" id="modalItem"><div class="modal"><h3>📦 Cadastrar Item</h3>
-  <div class="fr"><div class="fg"><label>Nome *</label><input id="iNome" placeholder="Ex: Paracetamol 500mg"></div><div class="fg"><label>Código</label><input id="iCodigo" placeholder="SKU"></div></div>
-  <div class="fr"><div class="fg"><label>Categoria</label><select id="iCategoria"><option value="medicamento">Medicamento</option><option value="material">Material</option><option value="insumo">Insumo</option><option value="outro">Outro</option></select></div><div class="fg"><label>Unidade</label><input id="iUnidade" value="unidade"></div></div>
-  <div class="fr"><div class="fg"><label>Estoque Mínimo</label><input id="iEstMin" type="number" min="0" value="0"></div><div class="fg"><label>Fornecedor</label><select id="iFornecedor"><option value="">— nenhum —</option></select></div></div>
-  <div class="fg"><label>Descrição</label><textarea id="iDesc" rows="2"></textarea></div>
-  <div class="mf"><button class="btn bg" onclick="fecharModal('modalItem')">Cancelar</button><button class="btn bp" onclick="salvarItem()">Salvar Item</button></div>
-</div></div>
+<!-- Modal: Movimento -->
+<div class="modal-bg" id="modalMov">
+  <div class="modal">
+    <h3>↕️ Registrar Movimento de Estoque</h3>
+    <div class="form-group"><label>Item *</label>
+      <select id="mItem"><option value="">— selecione —</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo *</label>
+        <select id="mTipo"><option value="entrada">Entrada</option><option value="saida">Saída</option><option value="ajuste">Ajuste</option><option value="vencimento">Vencimento/Perda</option></select>
+      </div>
+      <div class="form-group"><label>Quantidade *</label><input id="mQtd" type="number" min="1" value="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Responsável</label><input id="mResp" placeholder="Nome"></div>
+      <div class="form-group"><label>Motivo</label><input id="mMotivo" placeholder="Motivo do movimento"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalMov')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarMovimento()">Registrar</button>
+    </div>
+  </div>
+</div>
 
-<div class="modal-bg" id="modalDisp"><div class="modal"><h3>💊 Registrar Dispensação</h3>
-  <div class="fg"><label>Medicamento *</label><select id="dItem"><option value="">— selecione —</option></select></div>
-  <div class="fr"><div class="fg"><label>Paciente *</label><input id="dPaciente" placeholder="Nome completo"></div><div class="fg"><label>CPF</label><input id="dCpf" placeholder="000.000.000-00"></div></div>
-  <div class="fr"><div class="fg"><label>Quantidade *</label><input id="dQtd" type="number" min="1" value="1"></div><div class="fg"><label>Responsável</label><input id="dResp"></div></div>
-  <div class="fg"><label>Observações</label><textarea id="dObs" rows="2"></textarea></div>
-  <div class="mf"><button class="btn bg" onclick="fecharModal('modalDisp')">Cancelar</button><button class="btn bp" onclick="salvarDispensacao()">Dispensar</button></div>
-</div></div>
+<!-- Modal: Fornecedor -->
+<div class="modal-bg" id="modalForn">
+  <div class="modal">
+    <h3>🏭 Cadastrar Fornecedor</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="fNome" placeholder="Razão social"></div>
+      <div class="form-group"><label>CNPJ</label><input id="fCnpj" placeholder="00.000.000/0001-00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Contato</label><input id="fContato" placeholder="Nome do contato"></div>
+      <div class="form-group"><label>Telefone</label><input id="fTel" placeholder="(00) 00000-0000"></div>
+    </div>
+    <div class="form-group"><label>Email</label><input id="fEmail" type="email" placeholder="email@fornecedor.com"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalForn')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarFornecedor()">Salvar</button>
+    </div>
+  </div>
+</div>
 
-<div class="modal-bg" id="modalMov"><div class="modal"><h3>↕️ Registrar Movimento</h3>
-  <div class="fg"><label>Item *</label><select id="mItem"><option value="">— selecione —</option></select></div>
-  <div class="fr"><div class="fg"><label>Tipo *</label><select id="mTipo"><option value="entrada">Entrada</option><option value="saida">Saída</option><option value="ajuste">Ajuste</option><option value="vencimento">Vencimento/Perda</option></select></div><div class="fg"><label>Quantidade *</label><input id="mQtd" type="number" min="1" value="1"></div></div>
-  <div class="fr"><div class="fg"><label>Responsável</label><input id="mResp"></div><div class="fg"><label>Motivo</label><input id="mMotivo"></div></div>
-  <div class="mf"><button class="btn bg" onclick="fecharModal('modalMov')">Cancelar</button><button class="btn bp" onclick="salvarMovimento()">Registrar</button></div>
-</div></div>
+<!-- Modal: Lote -->
+<div class="modal-bg" id="modalLote">
+  <div class="modal">
+    <h3>🏷️ Registrar Lote de Medicamento</h3>
+    <div class="form-row">
+      <div class="form-group" style="grid-column:1/-1"><label>Medicamento / Item *</label>
+        <select id="lItem"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Número do Lote *</label><input id="lNumero" placeholder="Ex: LOT-20260101"></div>
+      <div class="form-group"><label>Fabricante</label><input id="lFabricante" placeholder="Nome do fabricante"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Data de Fabricação</label><input type="date" id="lFabricacao"></div>
+      <div class="form-group"><label>Data de Validade *</label><input type="date" id="lValidade"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Quantidade Recebida *</label><input type="number" step="0.001" min="0" id="lQtd" placeholder="0"></div>
+      <div class="form-group"><label>Nota Fiscal</label><input id="lNF" placeholder="Nº da NF"></div>
+    </div>
+    <div class="form-group"><label>Fornecedor</label>
+      <select id="lForn"><option value="">— nenhum —</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalLote')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarLote()">Registrar Lote</button>
+    </div>
+  </div>
+</div>
 
-<div class="modal-bg" id="modalForn"><div class="modal"><h3>🏭 Cadastrar Fornecedor</h3>
-  <div class="fr"><div class="fg"><label>Nome *</label><input id="fNome" placeholder="Razão social"></div><div class="fg"><label>CNPJ</label><input id="fCnpj" placeholder="00.000.000/0001-00"></div></div>
-  <div class="fr"><div class="fg"><label>Contato</label><input id="fContato"></div><div class="fg"><label>Telefone</label><input id="fTel"></div></div>
-  <div class="fg"><label>Email</label><input id="fEmail" type="email"></div>
-  <div class="mf"><button class="btn bg" onclick="fecharModal('modalForn')">Cancelar</button><button class="btn bp" onclick="salvarFornecedor()">Salvar</button></div>
-</div></div>
+<!-- Modal: Pedido -->
+<div class="modal-bg" id="modalPed">
+  <div class="modal">
+    <h3>🛒 Novo Pedido de Compra</h3>
+    <div class="form-group"><label>Fornecedor</label>
+      <select id="pForn"><option value="">— selecione —</option></select>
+    </div>
+    <div class="form-group"><label>Observações</label><textarea id="pObs" rows="2"></textarea></div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">ITENS DO PEDIDO</div>
+      <div id="pedidoItens" style="display:flex;flex-direction:column;gap:8px"></div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="addItemPedido()">+ Adicionar Item</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalPed')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPedido()">Criar Pedido</button>
+    </div>
+  </div>
+</div>
 
-<div class="modal-bg" id="modalPed"><div class="modal"><h3>🛒 Novo Pedido de Compra</h3>
-  <div class="fg"><label>Fornecedor</label><select id="pForn"><option value="">— selecione —</option></select></div>
-  <div class="fg"><label>Observações</label><textarea id="pObs" rows="2"></textarea></div>
-  <div style="margin-bottom:11px"><div style="font-size:10px;font-weight:700;color:var(--mut);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Itens do Pedido</div>
-  <div id="pedidoItens" style="display:flex;flex-direction:column;gap:7px"></div>
-  <button class="btn bg bs" style="margin-top:7px" onclick="addItemPedido()">+ Adicionar Item</button></div>
-  <div class="mf"><button class="btn bg" onclick="fecharModal('modalPed')">Cancelar</button><button class="btn bp" onclick="salvarPedido()">Criar Pedido</button></div>
-</div></div>
+<!-- Modal: Paciente -->
+<div class="modal-bg" id="modalPaciente">
+  <div class="modal" style="max-width:620px">
+    <h3>👥 Cadastrar Paciente</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome Completo *</label><input id="pacNome" placeholder="Nome do paciente"></div>
+      <div class="form-group"><label>CPF</label><input id="pacCpf" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Data de Nascimento</label><input type="date" id="pacNasc"></div>
+      <div class="form-group"><label>Sexo</label>
+        <select id="pacSexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option><option value="O">Outro</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Telefone</label><input id="pacTel" placeholder="(00) 00000-0000"></div>
+      <div class="form-group"><label>Email</label><input id="pacEmail" type="email" placeholder="email@exemplo.com"></div>
+    </div>
+    <div class="form-group"><label>Endereço</label><input id="pacEnd" placeholder="Rua, número, bairro, cidade"></div>
+    <div class="form-group"><label>⚠️ Alergias e Contraindicações</label><textarea id="pacAlergias" rows="2" placeholder="Ex: Penicilina, AAS, Dipirona…"></textarea></div>
+    <div class="form-group"><label>🩺 Condições Crônicas / CIDs</label><textarea id="pacCondicoes" rows="2" placeholder="Ex: Hipertensão (I10), Diabetes tipo 2 (E11)…"></textarea></div>
+    <div class="form-group"><label>💊 Medicamentos de Uso Contínuo</label><textarea id="pacMedUso" rows="2" placeholder="Ex: Losartana 50mg, Metformina 850mg…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalPaciente')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPaciente()">Salvar Paciente</button>
+    </div>
+  </div>
+</div>
 
-<div class="modal-bg" id="modalLote"><div class="modal"><h3>🏷️ Registrar Lote</h3>
-  <div class="fg"><label>Medicamento / Item *</label><select id="lItem"></select></div>
-  <div class="fr"><div class="fg"><label>Número do Lote *</label><input id="lNumero" placeholder="LOT-20260101"></div><div class="fg"><label>Fabricante</label><input id="lFabricante"></div></div>
-  <div class="fr"><div class="fg"><label>Data de Fabricação</label><input type="date" id="lFabricacao"></div><div class="fg"><label>Data de Validade *</label><input type="date" id="lValidade"></div></div>
-  <div class="fr"><div class="fg"><label>Quantidade Recebida *</label><input type="number" step="0.001" min="0" id="lQtd"></div><div class="fg"><label>Nota Fiscal</label><input id="lNF"></div></div>
-  <div class="fg"><label>Fornecedor</label><select id="lForn"><option value="">— nenhum —</option></select></div>
-  <div class="mf"><button class="btn bg" onclick="fecharModal('modalLote')">Cancelar</button><button class="btn bp" onclick="salvarLote()">Registrar Lote</button></div>
-</div></div>
+<!-- Modal: Receita -->
+<div class="modal-bg" id="modalReceita">
+  <div class="modal" style="max-width:620px">
+    <h3>📋 Nova Receita Médica</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Receita *</label>
+        <select id="recTipo">
+          <option value="simples">Receita Simples</option>
+          <option value="especial_branca">Especial Branca (2 vias)</option>
+          <option value="especial_amarela">Especial Amarela (Psicotrópico)</option>
+          <option value="alto_custo">Medicamento de Alto Custo</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Nº da Receita</label><input id="recNumero" placeholder="Ex: REC-2026-001"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Paciente (Nome)</label><input id="recPacNome" placeholder="Nome do paciente"></div>
+      <div class="form-group"><label>CPF do Paciente</label><input id="recPacCpf" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Médico Prescritor</label><input id="recMedico" placeholder="Nome do médico"></div>
+      <div class="form-group"><label>CRM</label><input id="recCrm" placeholder="CRM/SP 123456"></div>
+    </div>
+    <div class="form-group"><label>Medicamento / Item</label>
+      <select id="recItem"><option value="">— selecione ou use campo livre —</option></select>
+    </div>
+    <div class="form-group"><label>Descrição do Medicamento (se não cadastrado)</label><input id="recMedDesc" placeholder="Ex: Amoxicilina 500mg caps — uso oral"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Quantidade</label><input type="number" id="recQtd" min="1" value="1"></div>
+      <div class="form-group"><label>Data de Emissão *</label><input type="date" id="recEmissao"></div>
+    </div>
+    <div class="form-group"><label>Validade da Receita</label><input type="date" id="recValidade"></div>
+    <div class="form-group"><label>Posologia / Instruções</label><textarea id="recPosologia" rows="2" placeholder="Ex: 1 comprimido a cada 8h por 7 dias"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalReceita')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarReceita()">Registrar Receita</button>
+    </div>
+  </div>
+</div>
 
-<div class="modal-bg" id="modalPaciente"><div class="modal" style="max-width:580px"><h3>👥 Cadastrar Paciente</h3>
-  <div class="fr"><div class="fg"><label>Nome Completo *</label><input id="pacNome"></div><div class="fg"><label>CPF</label><input id="pacCpf" placeholder="000.000.000-00"></div></div>
-  <div class="fr"><div class="fg"><label>Data Nascimento</label><input type="date" id="pacNasc"></div><div class="fg"><label>Sexo</label><select id="pacSexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option><option value="O">Outro</option></select></div></div>
-  <div class="fr"><div class="fg"><label>Telefone</label><input id="pacTel"></div><div class="fg"><label>Email</label><input id="pacEmail" type="email"></div></div>
-  <div class="fg"><label>Endereço</label><input id="pacEnd"></div>
-  <div class="fg"><label>⚠️ Alergias e Contraindicações</label><textarea id="pacAlergias" rows="2" placeholder="Ex: Penicilina, AAS…"></textarea></div>
-  <div class="fg"><label>🩺 Condições Crônicas / CIDs</label><textarea id="pacCondicoes" rows="2"></textarea></div>
-  <div class="fg"><label>💊 Medicamentos de Uso Contínuo</label><textarea id="pacMedUso" rows="2"></textarea></div>
-  <div class="mf"><button class="btn bg" onclick="fecharModal('modalPaciente')">Cancelar</button><button class="btn bp" onclick="salvarPaciente()">Salvar Paciente</button></div>
-</div></div>
+<!-- Modal: Inventário -->
+<div class="modal-bg" id="modalInventario">
+  <div class="modal">
+    <h3>🔍 Novo Inventário Periódico</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Será criada uma contagem com snapshot do estoque atual de todos os itens ativos.</p>
+    <div class="form-group"><label>Descrição</label><input id="invDesc" placeholder="Ex: Inventário mensal — Maio 2026"></div>
+    <div class="form-group"><label>Responsável</label><input id="invResp" placeholder="Nome do responsável"></div>
+    <div class="form-group"><label>Observações</label><textarea id="invObs" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalInventario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarInventario()">Iniciar Inventário</button>
+    </div>
+  </div>
+</div>
 
-<div class="modal-bg" id="modalReceita"><div class="modal" style="max-width:600px"><h3>📋 Nova Receita Médica</h3>
-  <div class="fr"><div class="fg"><label>Tipo *</label><select id="recTipo"><option value="simples">Receita Simples</option><option value="especial_branca">Especial Branca (2 vias)</option><option value="especial_amarela">Especial Amarela</option><option value="alto_custo">Alto Custo</option></select></div><div class="fg"><label>Nº Receita</label><input id="recNumero"></div></div>
-  <div class="fr"><div class="fg"><label>Paciente</label><input id="recPacNome"></div><div class="fg"><label>CPF</label><input id="recPacCpf"></div></div>
-  <div class="fr"><div class="fg"><label>Médico Prescritor</label><input id="recMedico"></div><div class="fg"><label>CRM</label><input id="recCrm"></div></div>
-  <div class="fg"><label>Medicamento / Item</label><select id="recItem"><option value="">— selecione ou use campo livre —</option></select></div>
-  <div class="fg"><label>Descrição (se não cadastrado)</label><input id="recMedDesc" placeholder="Ex: Amoxicilina 500mg"></div>
-  <div class="fr"><div class="fg"><label>Quantidade</label><input type="number" id="recQtd" min="1" value="1"></div><div class="fg"><label>Data de Emissão *</label><input type="date" id="recEmissao"></div></div>
-  <div class="fg"><label>Validade da Receita</label><input type="date" id="recValidade"></div>
-  <div class="fg"><label>Posologia / Instruções</label><textarea id="recPosologia" rows="2"></textarea></div>
-  <div class="mf"><button class="btn bg" onclick="fecharModal('modalReceita')">Cancelar</button><button class="btn bp" onclick="salvarReceita()">Registrar Receita</button></div>
-</div></div>
-
-<div class="modal-bg" id="modalInventario"><div class="modal"><h3>🔍 Novo Inventário Periódico</h3>
-  <p style="font-size:13px;color:var(--mut);margin-bottom:14px">Será criada uma contagem com snapshot do estoque atual.</p>
-  <div class="fg"><label>Descrição</label><input id="invDesc" placeholder="Ex: Inventário mensal — Maio 2026"></div>
-  <div class="fg"><label>Responsável</label><input id="invResp"></div>
-  <div class="fg"><label>Observações</label><textarea id="invObs" rows="2"></textarea></div>
-  <div class="mf"><button class="btn bg" onclick="fecharModal('modalInventario')">Cancelar</button><button class="btn bp" onclick="salvarInventario()">Iniciar Inventário</button></div>
-</div></div>
-
-<div class="modal-bg" id="modalDescarte"><div class="modal"><h3>🗑️ Registrar Descarte</h3>
-  <div class="fg"><label>Medicamento / Item *</label><select id="descItem" onchange="carregarLotesDescarte()"><option value="">— selecione —</option></select></div>
-  <div class="fg"><label>Lote (opcional)</label><select id="descLote"><option value="">— sem lote específico —</option></select></div>
-  <div class="fr"><div class="fg"><label>Motivo *</label><select id="descMotivo"><option value="vencimento">Vencimento</option><option value="avaria">Avaria</option><option value="contaminacao">Contaminação</option><option value="recolhimento">Recolhimento ANVISA</option><option value="outro">Outro</option></select></div><div class="fg"><label>Quantidade *</label><input type="number" id="descQtd" min="1" value="1"></div></div>
-  <div class="fr"><div class="fg"><label>Responsável</label><input id="descResp"></div><div class="fg"><label>Empresa de Descarte</label><input id="descEmpresa"></div></div>
-  <div class="fg"><label>Nº do Manifesto</label><input id="descManifesto"></div>
-  <div class="fg"><label>Observações</label><textarea id="descObs" rows="2"></textarea></div>
-  <div class="mf"><button class="btn bg" onclick="fecharModal('modalDescarte')">Cancelar</button><button class="btn bd" onclick="salvarDescarte()">Registrar Descarte</button></div>
-</div></div>
+<!-- Modal: Descarte -->
+<div class="modal-bg" id="modalDescarte">
+  <div class="modal">
+    <h3>🗑️ Registrar Descarte</h3>
+    <div class="form-group"><label>Medicamento / Item *</label>
+      <select id="descItem" onchange="carregarLotesDescarte()"><option value="">— selecione —</option></select>
+    </div>
+    <div class="form-group"><label>Lote (opcional)</label>
+      <select id="descLote"><option value="">— sem lote específico —</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Motivo *</label>
+        <select id="descMotivo">
+          <option value="vencimento">Vencimento</option>
+          <option value="avaria">Avaria / Dano físico</option>
+          <option value="contaminacao">Contaminação</option>
+          <option value="recolhimento">Recolhimento ANVISA</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Quantidade *</label><input type="number" id="descQtd" min="1" value="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Responsável</label><input id="descResp" placeholder="Nome do responsável"></div>
+      <div class="form-group"><label>Empresa de Descarte</label><input id="descEmpresa" placeholder="Nome da empresa licenciada"></div>
+    </div>
+    <div class="form-group"><label>Nº do Manifesto</label><input id="descManifesto" placeholder="Código do manifesto de resíduos"></div>
+    <div class="form-group"><label>Observações</label><textarea id="descObs" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalDescarte')">Cancelar</button>
+      <button class="btn btn-danger" onclick="salvarDescarte()">Registrar Descarte</button>
+    </div>
+  </div>
+</div>
 
 <script>
-let _itens=[],_fornecedores=[],_pacientes=[],_invAt=null,_refreshAt=new Date();
+let _itens = [], _fornecedores = [], _inventarioAtual = null;
 
-function getCsrf(){return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1]||'';}
-async function api(url,opts={}){const r=await fetch(url,{headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},...opts});return r.json();}
-function v(id){return document.getElementById(id)?.value?.trim()||'';}
-function abrirModal(id){document.getElementById(id).classList.add('open');}
-function fecharModal(id){document.getElementById(id).classList.remove('open');}
-function fmtDt(s){if(!s)return'—';const d=new Date(s);return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
-function fmtD(s){if(!s)return'';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;}
-function catL(c){return{medicamento:'💊 Med.',material:'🧪 Mat.',insumo:'⚗️ Ins.',outro:'📦 Outro'}[c]||c;}
-
-function toast(msg,tipo='ok'){
-  const w=document.getElementById('toastW');
-  const el=document.createElement('div');
-  el.className=`toast ${tipo}`;
-  el.innerHTML=`<span>${{ok:'✅',err:'❌',warn:'⚠️',info:'ℹ️'}[tipo]||'ℹ️'}</span><span>${msg}</span>`;
-  w.appendChild(el);
-  requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('show')));
-  setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),350);},4000);
+async function api(url, opts={}) {
+  const r = await fetch(url, {
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+    ...opts
+  });
+  return r.json();
+}
+function getCsrf() {
+  return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1]||'';
 }
 
-function updRefresh(){const d=Math.floor((new Date()-_refreshAt)/60000);document.getElementById('refreshLbl').textContent=d<1?'Atualizado agora':`Atualizado há ${d} min`;}
-setInterval(updRefresh,30000);
-
-function globalSearchFn(q){
-  if(!q){document.querySelectorAll('.tab-panel.active tbody tr').forEach(r=>r.style.display='');return;}
-  q=q.toLowerCase();
-  document.querySelectorAll('.tab-panel.active tbody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q)?'':'none';});
-}
-function filtrarTb(id,q){q=q.toLowerCase();document.querySelectorAll(`#${id} tr`).forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q)?'':'none';});}
-function sortTb(id,col){
-  const tb=document.getElementById(id);const rows=[...tb.querySelectorAll('tr')];
-  const dir=tb.dataset.sc==col&&tb.dataset.sd=='asc'?'desc':'asc';tb.dataset.sc=col;tb.dataset.sd=dir;
-  rows.sort((a,b)=>{const at=a.cells[col]?.textContent.trim()||'';const bt=b.cells[col]?.textContent.trim()||'';const an=parseFloat(at),bn=parseFloat(bt);if(!isNaN(an)&&!isNaN(bn))return dir==='asc'?an-bn:bn-an;return dir==='asc'?at.localeCompare(bt,'pt'):bt.localeCompare(at,'pt');});
-  rows.forEach(r=>tb.appendChild(r));
-}
-function exportCSV(id,hdrs){
-  const rows=[[...hdrs]];document.querySelectorAll(`#${id} tr`).forEach(r=>{const c=[...r.cells].map(td=>td.textContent.trim().replace(/,/g,' '));if(c.length>1)rows.push(c);});
-  const csv=rows.map(r=>r.join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);a.download=`${id}-${new Date().toISOString().slice(0,10)}.csv`;a.click();
+// ── KPIs ──────────────────────────────────────────────────────
+async function carregarKpis() {
+  const [d, av] = await Promise.all([
+    api('/api/farmacia/ops/kpis/'),
+    api('/api/farmacia/kpis/avancados/'),
+  ]);
+  const cards = document.querySelectorAll('#kpiRow .kpi');
+  cards[0].querySelector('.kpi-val').textContent = d.total_itens ?? '—';
+  cards[1].querySelector('.kpi-val').textContent = d.itens_abaixo_minimo ?? '—';
+  cards[2].querySelector('.kpi-val').textContent = d.total_dispensacoes ?? '—';
+  cards[3].querySelector('.kpi-val').textContent = d.pedidos_abertos ?? '—';
+  // avançados
+  document.getElementById('kavPacientes').textContent = av.total_pacientes ?? '—';
+  document.getElementById('kavReceitas').textContent = av.receitas_pendentes ?? '—';
+  document.getElementById('kavRuptura').textContent = av.ruptura_estoque ?? '—';
+  document.getElementById('kavVencendo7').textContent = av.vencendo_7_dias ?? '—';
 }
 
-async function carregarKpis(){
-  try{
-    const[d,av]=await Promise.all([api('/api/farmacia/ops/kpis/'),api('/api/farmacia/kpis/avancados/')]);
-    document.getElementById('kIt').textContent=d.total_itens??'—';
-    document.getElementById('kAb').textContent=d.itens_abaixo_minimo??'—';
-    document.getElementById('kDi').textContent=d.total_dispensacoes??'—';
-    document.getElementById('kPe').textContent=d.pedidos_abertos??'—';
-    document.getElementById('kPa').textContent=av.total_pacientes??'—';
-    document.getElementById('kRe').textContent=av.receitas_pendentes??'—';
-    document.getElementById('kRu').textContent=av.ruptura_estoque??'—';
-    document.getElementById('kV7').textContent=av.vencendo_7_dias??'—';
-    const ab=d.itens_abaixo_minimo||0,v7=av.vencendo_7_dias||0,ru=av.ruptura_estoque||0,re=av.receitas_pendentes||0;
-    const st=document.getElementById('alertStrip');
-    let ha=false;
-    const sa=(id,val,lbl,sh)=>{const el=document.getElementById(id);el.style.display=sh?'':'none';if(sh){el.textContent=lbl;ha=true;}};
-    sa('aAbaixo',ab,`⚠️ ${ab} itens abaixo do mínimo`,ab>0);
-    sa('aVenc7',v7,`🕐 ${v7} lotes vencendo em 7 dias`,v7>0);
-    sa('aRuptura',ru,`🚨 ${ru} em ruptura`,ru>0);
-    sa('aReceitas',re,`📋 ${re} receitas pendentes`,re>0);
-    st.classList.toggle('show',ha);
-    const bell=ab+ru+v7;const bb=document.getElementById('bellBadge');bb.textContent=bell;bb.style.display=bell>0?'':'none';
-    const sbn=(id,v,cls='')=>{const el=document.getElementById(id);el.textContent=v;el.classList.toggle('show',v>0);};
-    sbn('nbEst',ab);sbn('nbLot',v7);sbn('nbRec',re);
-    const po=d.pedidos_abertos||0;sbn('nbPed',po);
-    _refreshAt=new Date();updRefresh();
-  }catch(e){}
-}
-
-async function carregarEstoque(){
-  const d=await api('/api/farmacia/itens/');_itens=d.itens||[];
-  const tb=document.getElementById('tbEst');
-  if(!_itens.length){tb.innerHTML='<tr><td colspan="6" class="es"><div class="es-i">📦</div><p>Nenhum item cadastrado</p><button class="btn bp bs" onclick="abrirModalItem()">+ Novo Item</button></td></tr>';return;}
-  tb.innerHTML=_itens.map(i=>{
-    const pct=i.estoque_minimo>0?Math.min(100,Math.round(i.estoque_atual/i.estoque_minimo*100)):100;
-    const cls=pct<50?'crit':pct<100?'low':'';
-    return`<tr><td><strong>${i.nome}</strong>${i.codigo?`<br><small style="color:var(--mut)">${i.codigo}</small>`:''}</td>
-      <td>${catL(i.categoria)}</td>
-      <td><strong style="font-size:15px">${i.estoque_atual}</strong> <small style="color:var(--mut)">${i.unidade_medida}</small><div class="sb"><div class="sf ${cls}" style="width:${pct}%"></div></div></td>
+// ── Estoque ───────────────────────────────────────────────────
+async function carregarEstoque() {
+  const d = await api('/api/farmacia/itens/');
+  _itens = d.itens || [];
+  const tb = document.getElementById('tbodyEstoque');
+  if (!_itens.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum item cadastrado</td></tr>'; return; }
+  tb.innerHTML = _itens.map(i => {
+    const pct = i.estoque_minimo > 0 ? Math.min(100, Math.round(i.estoque_atual / i.estoque_minimo * 100)) : 100;
+    const cls = pct < 50 ? 'critical' : pct < 100 ? 'low' : '';
+    const badge = i.abaixo_minimo ? '<span class="badge badge-warn">⚠ Baixo</span>' : '<span class="badge badge-ok">✓ OK</span>';
+    return `<tr>
+      <td><strong>${i.nome}</strong>${i.codigo ? `<br><small style="color:var(--muted)">${i.codigo}</small>` : ''}</td>
+      <td>${catLabel(i.categoria)}</td>
+      <td><strong style="font-size:16px">${i.estoque_atual}</strong> ${i.unidade_medida}
+        <div class="stock-bar"><div class="stock-fill ${cls}" style="width:${pct}%"></div></div>
+      </td>
       <td>${i.estoque_minimo} ${i.unidade_medida}</td>
-      <td>${i.abaixo_minimo?'<span class="badge b-w">⚠ Baixo</span>':'<span class="badge b-ok">✓ OK</span>'}</td>
-      <td><button class="btn bg bs" onclick="abrirModalMovimento(${i.id})">↕️ Mov.</button> <button class="btn bd bs" onclick="deletarItem(${i.id})">🗑</button></td></tr>`;
+      <td>${badge}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalMovimento(${i.id})">↕️ Mov.</button>
+        <button class="btn btn-danger btn-sm" onclick="deletarItem(${i.id})">🗑</button>
+      </td>
+    </tr>`;
   }).join('');
-  popularSelItens();
-}
-async function deletarItem(id){if(!confirm('Excluir item?'))return;await api(`/api/farmacia/itens/${id}/`,{method:'DELETE'});toast('Item excluído','ok');carregarEstoque();carregarKpis();}
-
-async function carregarDispensacoes(){
-  const d=await api('/api/farmacia/dispensacoes/');const dis=d.dispensacoes||[];const tb=document.getElementById('tbDis');
-  if(!dis.length){tb.innerHTML='<tr><td colspan="6" class="es"><div class="es-i">💊</div><p>Nenhuma dispensação registrada</p></td></tr>';return;}
-  tb.innerHTML=dis.map(d=>`<tr><td>${d.item_nome}</td><td>${d.paciente_nome}</td><td>${d.paciente_cpf||'—'}</td><td><strong>${d.quantidade}</strong></td><td>${d.responsavel||'—'}</td><td>${fmtDt(d.dispensado_em)}</td></tr>`).join('');
+  popularSelectItens();
 }
 
-async function carregarMovimentos(){
-  const d=await api('/api/farmacia/movimentos/');const movs=d.movimentos||[];const tb=document.getElementById('tbMov');
-  if(!movs.length){tb.innerHTML='<tr><td colspan="7" class="es"><div class="es-i">↕️</div><p>Sem movimentos</p></td></tr>';return;}
-  const tm={entrada:'<span class="badge b-ok">▲ Entrada</span>',saida:'<span class="badge b-d">▼ Saída</span>',ajuste:'<span class="badge b-i">⇄ Ajuste</span>',vencimento:'<span class="badge b-w">⚠ Vencimento</span>'};
-  tb.innerHTML=movs.map(m=>`<tr><td>${m.item_nome}</td><td>${tm[m.tipo]||m.tipo}</td><td><strong>${m.quantidade}</strong></td><td>${m.estoque_anterior}</td><td>${m.estoque_posterior}</td><td>${m.motivo||'—'}</td><td>${fmtDt(m.data_movimento)}</td></tr>`).join('');
+function catLabel(c) {
+  return {medicamento:'💊 Medicamento',material:'🧪 Material',insumo:'⚗️ Insumo',outro:'📦 Outro'}[c]||c;
 }
 
-async function carregarFornecedores(){
-  const d=await api('/api/farmacia/fornecedores/');_fornecedores=d.fornecedores||[];const tb=document.getElementById('tbFor');
-  if(!_fornecedores.length){tb.innerHTML='<tr><td colspan="7" class="es"><div class="es-i">🏭</div><p>Nenhum fornecedor</p></td></tr>';return;}
-  tb.innerHTML=_fornecedores.map(f=>`<tr><td><strong>${f.nome}</strong></td><td>${f.cnpj||'—'}</td><td>${f.contato||'—'}</td><td>${f.email||'—'}</td><td>${f.telefone||'—'}</td><td>${f.ativo?'<span class="badge b-ok">Ativo</span>':'<span class="badge b-d">Inativo</span>'}</td><td><button class="btn bd bs" onclick="deletarFornecedor(${f.id})">🗑</button></td></tr>`).join('');
-  popularSelForn();
+async function deletarItem(id) {
+  if (!confirm('Excluir item?')) return;
+  await api(`/api/farmacia/itens/${id}/`, {method:'DELETE'});
+  carregarEstoque(); carregarKpis();
 }
-async function deletarFornecedor(id){if(!confirm('Excluir fornecedor?'))return;await api(`/api/farmacia/fornecedores/${id}/`,{method:'DELETE'});toast('Fornecedor excluído','ok');carregarFornecedores();}
 
-async function carregarPedidos(){
-  const filtro=v('filtroPedSt');const d=await api('/api/farmacia/pedidos/');let peds=d.pedidos||[];
-  if(filtro)peds=peds.filter(p=>p.status===filtro);
-  const cnt={rascunho:0,enviado:0,aprovado:0,recebido:0};(d.pedidos||[]).forEach(p=>{if(cnt[p.status]!==undefined)cnt[p.status]++;});
-  ['rascunho','enviado','aprovado','recebido'].forEach(s=>{const el=document.getElementById('pp-'+s);if(!el)return;el.textContent=`${s.charAt(0).toUpperCase()+s.slice(1)} (${cnt[s]})`;el.className='ps'+(cnt[s]>0&&(s==='enviado'||s==='aprovado')?' act':cnt[s]>0&&s==='recebido'?' done':'');});
-  const tb=document.getElementById('tbPed');
-  if(!peds.length){tb.innerHTML='<tr><td colspan="6" class="es"><div class="es-i">🛒</div><p>Nenhum pedido</p></td></tr>';return;}
-  const sm={rascunho:'b-w',enviado:'b-i',aprovado:'b-p',recebido:'b-ok',cancelado:'b-d'};
-  tb.innerHTML=peds.map(p=>{const its=p.itens.map(i=>`${i.item_nome} ×${i.qtd_sol}`).join(', ');return`<tr><td><strong>#${p.id}</strong></td><td>${p.fornecedor_nome||'—'}</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${its||'—'}</td><td><span class="badge ${sm[p.status]||'b-i'}">${p.status}</span></td><td>${fmtDt(p.criado_em)}</td><td>${p.status==='rascunho'||p.status==='enviado'?`<button class="btn bg bs" onclick="atualizarPedido(${p.id},'enviado')">📤</button> `:''} ${p.status==='enviado'?`<button class="btn bg bs" onclick="atualizarPedido(${p.id},'aprovado')">✓</button> `:''} ${p.status==='aprovado'?`<button class="btn bg bs" onclick="atualizarPedido(${p.id},'recebido')">📦</button>`:''}</td></tr>`;}).join('');
+// ── Dispensações ──────────────────────────────────────────────
+async function carregarDispensacoes() {
+  const d = await api('/api/farmacia/dispensacoes/');
+  const tb = document.getElementById('tbodyDisp');
+  const disp = d.dispensacoes || [];
+  if (!disp.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma dispensação registrada</td></tr>'; return; }
+  tb.innerHTML = disp.map(d => `<tr>
+    <td>${d.item_nome}</td>
+    <td>${d.paciente_nome}</td>
+    <td>${d.paciente_cpf||'—'}</td>
+    <td><strong>${d.quantidade}</strong></td>
+    <td>${d.responsavel||'—'}</td>
+    <td>${fmtDt(d.dispensado_em)}</td>
+  </tr>`).join('');
 }
-async function atualizarPedido(id,status){await api(`/api/farmacia/pedidos/${id}/status/`,{method:'PUT',body:JSON.stringify({status})});toast(`Pedido: ${status}`,'ok');carregarPedidos();carregarEstoque();carregarMovimentos();carregarKpis();}
 
-async function carregarLotes(){
-  const filtro=document.getElementById('filtroLoteSt')?.value||'';
-  const d=await api(`/api/farmacia/lotes/?${filtro?'filtro='+filtro:'todos=0'}`);
-  const tb=document.getElementById('tbLot');
-  if(!d.lotes?.length){tb.innerHTML='<tr><td colspan="9" class="es"><div class="es-i">🏷️</div><p>Nenhum lote</p></td></tr>';}
-  else tb.innerHTML=d.lotes.map(l=>{const cls=l.vencido?'color:var(--red)':l.alerta?'color:var(--orn)':'color:var(--grn)';const dias=l.vencido?`<span style="${cls}">Vencido (${Math.abs(l.dias_para_vencer)}d)</span>`:`<span style="${cls}">${l.dias_para_vencer}d</span>`;return`<tr><td>${l.item_nome}</td><td><code style="font-size:11px;color:var(--acc)">${l.numero_lote}</code></td><td>${l.fabricante||'—'}</td><td>${l.data_fabricacao||'—'}</td><td style="${cls}">${l.data_validade}</td><td>${dias}</td><td><strong>${l.quantidade_atual}</strong></td><td>${l.nota_fiscal||'—'}</td><td><button class="btn bd bs" onclick="deletarLote(${l.id})">🗑</button></td></tr>`;}).join('');
-  const k=await api('/api/farmacia/lotes/kpis/');
-  document.getElementById('lkTot').textContent=k.kpis.total_lotes;document.getElementById('lkVen').textContent=k.kpis.vencidos;document.getElementById('lkAlt').textContent=k.kpis.vencendo_30;document.getElementById('lkOk').textContent=k.kpis.vigentes;
-  const px=document.getElementById('proxVencer');
-  if(!k.proximos_vencer?.length)px.innerHTML='<p style="color:var(--grn)">✅ Nenhum lote vencendo nos próximos 30 dias</p>';
-  else px.innerHTML=k.proximos_vencer.map(l=>`<div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--brd)"><span style="min-width:78px;color:var(--orn);font-weight:700">${l.data_validade}</span><span style="flex:1">${l.item_nome}</span><span style="color:var(--mut);font-size:12px">Lote ${l.numero_lote}</span><span style="color:var(--orn);font-weight:700">${l.dias_para_vencer}d</span><span style="color:var(--acc)">${l.quantidade_atual} un</span></div>`).join('');
+// ── Movimentos ────────────────────────────────────────────────
+async function carregarMovimentos() {
+  const d = await api('/api/farmacia/movimentos/');
+  const tb = document.getElementById('tbodyMov');
+  const movs = d.movimentos || [];
+  if (!movs.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Sem movimentos registrados</td></tr>'; return; }
+  const tipoMap = {entrada:'<span class="badge badge-ok">▲ Entrada</span>',saida:'<span class="badge badge-danger">▼ Saída</span>',ajuste:'<span class="badge badge-info">⇄ Ajuste</span>',vencimento:'<span class="badge badge-warn">⚠ Vencimento</span>'};
+  tb.innerHTML = movs.map(m => `<tr>
+    <td>${m.item_nome}</td>
+    <td>${tipoMap[m.tipo]||m.tipo}</td>
+    <td><strong>${m.quantidade}</strong></td>
+    <td>${m.estoque_anterior}</td>
+    <td>${m.estoque_posterior}</td>
+    <td>${m.motivo||'—'}</td>
+    <td>${fmtDt(m.data_movimento)}</td>
+  </tr>`).join('');
 }
-async function deletarLote(id){if(!confirm('Excluir lote?'))return;await api(`/api/farmacia/lotes/${id}/`,{method:'DELETE'});toast('Lote excluído','ok');carregarLotes();carregarEstoque();carregarKpis();}
 
-async function carregarPacientes(q=''){
-  const d=await api(q?`/api/farmacia/pacientes/?q=${encodeURIComponent(q)}`:'/api/farmacia/pacientes/');_pacientes=d.pacientes||[];
-  const tb=document.getElementById('tbPac');
-  if(!_pacientes.length){tb.innerHTML='<tr><td colspan="6" class="es"><div class="es-i">👥</div><p>Nenhum paciente</p></td></tr>';return;}
-  tb.innerHTML=_pacientes.map(p=>`<tr><td><strong>${p.nome}</strong>${p.data_nascimento?`<br><small style="color:var(--mut)">${fmtD(p.data_nascimento)}</small>`:''}</td><td>${p.cpf||'—'}</td><td>${p.telefone||'—'}</td><td style="font-size:12px;color:var(--orn)">${p.alergias?`⚠️ ${p.alergias.substring(0,50)}${p.alergias.length>50?'…':''}`:''}</td><td style="font-size:12px">${p.condicoes_cronicas?p.condicoes_cronicas.substring(0,50)+(p.condicoes_cronicas.length>50?'…':''):'—'}</td><td><button class="btn bg bs" onclick="editarPaciente(${p.id})">✏️</button> <button class="btn bd bs" onclick="inativarPaciente(${p.id})">🗑</button></td></tr>`).join('');
+// ── Fornecedores ──────────────────────────────────────────────
+async function carregarFornecedores() {
+  const d = await api('/api/farmacia/fornecedores/');
+  _fornecedores = d.fornecedores || [];
+  const tb = document.getElementById('tbodyForn');
+  if (!_fornecedores.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum fornecedor cadastrado</td></tr>'; return; }
+  tb.innerHTML = _fornecedores.map(f => `<tr>
+    <td><strong>${f.nome}</strong></td>
+    <td>${f.cnpj||'—'}</td>
+    <td>${f.contato||'—'}</td>
+    <td>${f.email||'—'}</td>
+    <td>${f.telefone||'—'}</td>
+    <td>${f.ativo ? '<span class="badge badge-ok">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>'}</td>
+    <td>
+      <button class="btn btn-danger btn-sm" onclick="deletarFornecedor(${f.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+  popularSelectFornecedores();
 }
-async function buscarPacientes(){const q=document.getElementById('buscaPaciente').value.trim();await carregarPacientes(q);}
-function abrirModalPaciente(dados=null){
-  ['pacNome','pacCpf','pacTel','pacEmail','pacEnd','pacAlergias','pacCondicoes','pacMedUso'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('pacNasc').value='';document.getElementById('pacSexo').value='';document.getElementById('modalPaciente').dataset.eid='';
-  if(dados){document.getElementById('pacNome').value=dados.nome||'';document.getElementById('pacCpf').value=dados.cpf||'';document.getElementById('pacNasc').value=dados.data_nascimento||'';document.getElementById('pacSexo').value=dados.sexo||'';document.getElementById('pacTel').value=dados.telefone||'';document.getElementById('pacEmail').value=dados.email||'';document.getElementById('pacEnd').value=dados.endereco||'';document.getElementById('pacAlergias').value=dados.alergias||'';document.getElementById('pacCondicoes').value=dados.condicoes_cronicas||'';document.getElementById('pacMedUso').value=dados.medicamentos_uso_continuo||'';document.getElementById('modalPaciente').dataset.eid=dados.id;}
+
+async function deletarFornecedor(id) {
+  if (!confirm('Excluir fornecedor?')) return;
+  await api(`/api/farmacia/fornecedores/${id}/`, {method:'DELETE'});
+  carregarFornecedores();
+}
+
+// ── Pedidos ───────────────────────────────────────────────────
+async function carregarPedidos() {
+  const d = await api('/api/farmacia/pedidos/');
+  const tb = document.getElementById('tbodyPed');
+  const peds = d.pedidos || [];
+  if (!peds.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum pedido</td></tr>'; return; }
+  const statusMap = {rascunho:'badge-warn',enviado:'badge-info',aprovado:'badge-purple',recebido:'badge-ok',cancelado:'badge-danger'};
+  tb.innerHTML = peds.map(p => {
+    const itensStr = p.itens.map(i=>`${i.item_nome} ×${i.qtd_sol}`).join(', ');
+    return `<tr>
+      <td>#${p.id}</td>
+      <td>${p.fornecedor_nome||'—'}</td>
+      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${itensStr||'—'}</td>
+      <td><span class="badge ${statusMap[p.status]||'badge-info'}">${p.status}</span></td>
+      <td>${fmtDt(p.criado_em)}</td>
+      <td>
+        ${p.status==='enviado'?`<button class="btn btn-ghost btn-sm" onclick="atualizarPedido(${p.id},'aprovado')">✓ Aprovar</button>`:''}
+        ${p.status==='aprovado'?`<button class="btn btn-ghost btn-sm" onclick="atualizarPedido(${p.id},'recebido')">📦 Receber</button>`:''}
+        ${['rascunho','enviado'].includes(p.status)?`<button class="btn btn-ghost btn-sm" onclick="atualizarPedido(${p.id},'enviado')">📤 Enviar</button>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function atualizarPedido(id, status) {
+  await api(`/api/farmacia/pedidos/${id}/status/`, {method:'PUT', body:JSON.stringify({status})});
+  carregarPedidos(); carregarEstoque(); carregarMovimentos(); carregarKpis();
+}
+
+// ── Helpers selects ───────────────────────────────────────────
+function popularSelectItens() {
+  ['dItem','mItem'].forEach(sid => {
+    const sel = document.getElementById(sid);
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— selecione —</option>' + _itens.map(i=>`<option value="${i.id}">${i.nome} (${i.estoque_atual} ${i.unidade_medida})</option>`).join('');
+    if (prev) sel.value = prev;
+  });
+}
+function popularSelectFornecedores() {
+  ['iFornecedor','pForn'].forEach(sid => {
+    const sel = document.getElementById(sid);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— nenhum —</option>' + _fornecedores.map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');
+  });
+}
+
+// ── Modais ────────────────────────────────────────────────────
+function abrirModalItem() {
+  popularSelectFornecedores();
+  document.getElementById('iNome').value='';
+  document.getElementById('iCodigo').value='';
+  document.getElementById('iDesc').value='';
+  document.getElementById('iEstMin').value='0';
+  abrirModal('modalItem');
+}
+async function salvarItem() {
+  const body = {
+    nome: v('iNome'), codigo: v('iCodigo'), categoria: v('iCategoria'),
+    unidade_medida: v('iUnidade'), estoque_minimo: parseInt(v('iEstMin')||0),
+    descricao: v('iDesc'), fornecedor_id: v('iFornecedor')||null,
+  };
+  if (!body.nome) return alert('Nome obrigatório');
+  await api('/api/farmacia/itens/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalItem');
+  carregarEstoque(); carregarKpis();
+}
+
+function abrirModalDispensacao() {
+  popularSelectItens();
+  ['dPaciente','dCpf','dResp','dObs'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('dQtd').value='1';
+  abrirModal('modalDisp');
+}
+async function salvarDispensacao() {
+  const body = {
+    item_id: parseInt(v('dItem')), paciente_nome: v('dPaciente'),
+    paciente_cpf: v('dCpf'), quantidade: parseInt(v('dQtd')||1),
+    responsavel: v('dResp'), observacoes: v('dObs'),
+  };
+  if (!body.item_id || !body.paciente_nome) return alert('Item e Paciente obrigatórios');
+  await api('/api/farmacia/dispensacoes/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalDisp');
+  carregarDispensacoes(); carregarEstoque(); carregarMovimentos(); carregarKpis();
+}
+
+function abrirModalMovimento(itemId) {
+  popularSelectItens();
+  if (itemId) document.getElementById('mItem').value = itemId;
+  document.getElementById('mQtd').value='1';
+  document.getElementById('mResp').value='';
+  document.getElementById('mMotivo').value='';
+  abrirModal('modalMov');
+}
+async function salvarMovimento() {
+  const body = {
+    item_id: parseInt(v('mItem')), tipo: v('mTipo'),
+    quantidade: parseInt(v('mQtd')||1),
+    responsavel: v('mResp'), motivo: v('mMotivo'),
+  };
+  if (!body.item_id) return alert('Selecione o item');
+  await api('/api/farmacia/movimentos/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalMov');
+  carregarEstoque(); carregarMovimentos(); carregarKpis();
+}
+
+function abrirModalFornecedor() {
+  ['fNome','fCnpj','fContato','fTel','fEmail'].forEach(id => document.getElementById(id).value='');
+  abrirModal('modalForn');
+}
+async function salvarFornecedor() {
+  const body = {nome:v('fNome'),cnpj:v('fCnpj'),contato:v('fContato'),telefone:v('fTel'),email:v('fEmail')};
+  if (!body.nome) return alert('Nome obrigatório');
+  await api('/api/farmacia/fornecedores/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalForn');
+  carregarFornecedores();
+}
+
+function abrirModalPedido() {
+  popularSelectFornecedores();
+  document.getElementById('pObs').value='';
+  document.getElementById('pedidoItens').innerHTML='';
+  addItemPedido();
+  abrirModal('modalPed');
+}
+function addItemPedido() {
+  const container = document.getElementById('pedidoItens');
+  const row = document.createElement('div');
+  row.style.cssText='display:flex;gap:8px;align-items:center';
+  row.innerHTML = `<select style="flex:2;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:Manrope,sans-serif">
+    <option value="">— item —</option>
+    ${_itens.map(i=>`<option value="${i.id}">${i.nome}</option>`).join('')}
+  </select>
+  <input type="number" min="1" value="1" placeholder="Qtd" style="width:70px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:Manrope,sans-serif">
+  <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+  container.appendChild(row);
+}
+async function salvarPedido() {
+  const rows = document.querySelectorAll('#pedidoItens > div');
+  const itens = [];
+  rows.forEach(r => {
+    const sel = r.querySelector('select');
+    const inp = r.querySelector('input');
+    if (sel.value) itens.push({item_id: parseInt(sel.value), quantidade: parseInt(inp.value||1)});
+  });
+  const body = {
+    fornecedor_id: v('pForn') ? parseInt(v('pForn')) : null,
+    observacoes: v('pObs'), itens,
+  };
+  if (!itens.length) return alert('Adicione ao menos 1 item');
+  await api('/api/farmacia/pedidos/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalPed');
+  carregarPedidos(); carregarKpis();
+}
+
+// ── Utils ─────────────────────────────────────────────────────
+function v(id) { return document.getElementById(id)?.value?.trim()||''; }
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+function fmtDt(s) {
+  if (!s) return '—';
+  const d = new Date(s);
+  return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+// ── Pacientes ──────────────────────────────────────────────────
+let _pacientes = [];
+async function carregarPacientes(q='') {
+  const url = q ? `/api/farmacia/pacientes/?q=${encodeURIComponent(q)}` : '/api/farmacia/pacientes/';
+  const d = await api(url);
+  _pacientes = d.pacientes || [];
+  const tb = document.getElementById('tbodyPacientes');
+  if (!_pacientes.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum paciente cadastrado</td></tr>'; return; }
+  tb.innerHTML = _pacientes.map(p => `<tr>
+    <td><strong>${p.nome}</strong>${p.data_nascimento ? `<br><small style="color:var(--muted)">${fmtData(p.data_nascimento)}</small>` : ''}</td>
+    <td>${p.cpf || '—'}</td>
+    <td>${p.telefone || '—'}</td>
+    <td style="max-width:150px;font-size:12px;color:var(--warn)">${p.alergias ? `⚠️ ${p.alergias.substring(0,60)}${p.alergias.length>60?'…':''}` : '—'}</td>
+    <td style="max-width:150px;font-size:12px">${p.condicoes_cronicas ? p.condicoes_cronicas.substring(0,60)+(p.condicoes_cronicas.length>60?'…':'') : '—'}</td>
+    <td>
+      <button class="btn btn-ghost btn-sm" onclick="editarPaciente(${p.id})">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="inativarPaciente(${p.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+async function buscarPacientes() {
+  const q = document.getElementById('buscaPaciente').value.trim();
+  await carregarPacientes(q);
+}
+
+function abrirModalPaciente(dados=null) {
+  ['pacNome','pacCpf','pacTel','pacEmail','pacEnd','pacAlergias','pacCondicoes','pacMedUso'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('pacNasc').value = '';
+  document.getElementById('pacSexo').value = '';
+  document.getElementById('modalPaciente').dataset.editId = '';
+  if (dados) {
+    document.getElementById('pacNome').value = dados.nome||'';
+    document.getElementById('pacCpf').value = dados.cpf||'';
+    document.getElementById('pacNasc').value = dados.data_nascimento||'';
+    document.getElementById('pacSexo').value = dados.sexo||'';
+    document.getElementById('pacTel').value = dados.telefone||'';
+    document.getElementById('pacEmail').value = dados.email||'';
+    document.getElementById('pacEnd').value = dados.endereco||'';
+    document.getElementById('pacAlergias').value = dados.alergias||'';
+    document.getElementById('pacCondicoes').value = dados.condicoes_cronicas||'';
+    document.getElementById('pacMedUso').value = dados.medicamentos_uso_continuo||'';
+    document.getElementById('modalPaciente').dataset.editId = dados.id;
+  }
   abrirModal('modalPaciente');
 }
-async function editarPaciente(id){const d=_pacientes.find(p=>p.id===id);if(d)abrirModalPaciente(d);}
-async function salvarPaciente(){
-  const body={nome:v('pacNome'),cpf:v('pacCpf'),data_nascimento:v('pacNasc')||'',sexo:v('pacSexo'),telefone:v('pacTel'),email:v('pacEmail'),endereco:v('pacEnd'),alergias:v('pacAlergias'),condicoes_cronicas:v('pacCondicoes'),medicamentos_uso_continuo:v('pacMedUso')};
-  if(!body.nome)return toast('Nome obrigatório','warn');
-  const eid=document.getElementById('modalPaciente').dataset.eid;
-  if(eid)await api(`/api/farmacia/pacientes/${eid}/`,{method:'PUT',body:JSON.stringify(body)});
-  else{const res=await api('/api/farmacia/pacientes/',{method:'POST',body:JSON.stringify(body)});if(res.erro)return toast(res.erro,'err');}
-  fecharModal('modalPaciente');toast('Paciente salvo','ok');carregarPacientes();carregarKpis();
-}
-async function inativarPaciente(id){if(!confirm('Inativar?'))return;await api(`/api/farmacia/pacientes/${id}/`,{method:'DELETE'});toast('Paciente inativado','ok');carregarPacientes();carregarKpis();}
 
-async function carregarReceitas(){
-  const st=document.getElementById('filtroRecSt')?.value||'';const d=await api(st?`/api/farmacia/receitas/?status=${st}`:'/api/farmacia/receitas/');const recs=d.receitas||[];const tb=document.getElementById('tbRec');
-  if(!recs.length){tb.innerHTML='<tr><td colspan="9" class="es"><div class="es-i">📋</div><p>Nenhuma receita</p></td></tr>';return;}
-  const sc={pendente:'b-w',dispensada:'b-ok',vencida:'b-d',cancelada:'b-d'};const tc={simples:'b-i',especial_branca:'b-p',especial_amarela:'b-w',alto_custo:'b-d'};
-  tb.innerHTML=recs.map(r=>`<tr><td><span class="badge ${tc[r.tipo]||'b-i'}" style="font-size:10px">${r.tipo_label}</span></td><td>${r.numero_receita||'—'}</td><td>${r.paciente_nome||'—'}<br><small style="color:var(--mut)">${r.paciente_cpf||''}</small></td><td>${r.item_nome||'—'}<br><small style="color:var(--mut)">Qtd: ${r.quantidade}</small></td><td>${r.medico_nome||'—'}<br><small style="color:var(--mut)">${r.medico_crm||''}</small></td><td>${fmtD(r.data_emissao)||'—'}</td><td style="${r.data_validade&&new Date(r.data_validade)<new Date()?'color:var(--red)':''}">${fmtD(r.data_validade)||'—'}</td><td><span class="badge ${sc[r.status]||'b-i'}">${r.status_label}</span></td><td>${r.status==='pendente'?`<button class="btn bg bs" onclick="marcarDispensada(${r.id})">✓</button> `:''}<button class="btn bd bs" onclick="deletarReceita(${r.id})">🗑</button></td></tr>`).join('');
-}
-function abrirModalReceita(){['recNumero','recPacNome','recPacCpf','recMedico','recCrm','recMedDesc','recPosologia'].forEach(id=>document.getElementById(id).value='');document.getElementById('recQtd').value='1';document.getElementById('recEmissao').value=new Date().toISOString().split('T')[0];document.getElementById('recValidade').value='';document.getElementById('recItem').innerHTML='<option value="">— selecione —</option>'+_itens.map(i=>`<option value="${i.id}">${i.nome}</option>`).join('');abrirModal('modalReceita');}
-async function salvarReceita(){const body={tipo:v('recTipo'),numero_receita:v('recNumero'),paciente_nome:v('recPacNome'),paciente_cpf:v('recPacCpf'),medico_nome:v('recMedico'),medico_crm:v('recCrm'),data_emissao:v('recEmissao'),data_validade:v('recValidade')||'',item_id:v('recItem')?parseInt(v('recItem')):null,medicamento_descricao:v('recMedDesc'),quantidade:parseInt(v('recQtd')||1),posologia:v('recPosologia')};if(!body.data_emissao)return toast('Data de emissão obrigatória','warn');await api('/api/farmacia/receitas/',{method:'POST',body:JSON.stringify(body)});fecharModal('modalReceita');toast('Receita registrada','ok');carregarReceitas();carregarKpis();}
-async function marcarDispensada(id){await api(`/api/farmacia/receitas/${id}/`,{method:'PUT',body:JSON.stringify({status:'dispensada'})});toast('Receita dispensada','ok');carregarReceitas();carregarKpis();}
-async function deletarReceita(id){if(!confirm('Excluir receita?'))return;await api(`/api/farmacia/receitas/${id}/`,{method:'DELETE'});toast('Receita excluída','ok');carregarReceitas();carregarKpis();}
-
-async function carregarInventarios(){
-  const d=await api('/api/farmacia/inventarios/');const invs=d.inventarios||[];const lista=document.getElementById('listaInv');
-  if(!invs.length){lista.innerHTML='<div class="es"><div class="es-i">🔍</div><p>Nenhum inventário realizado</p></div>';return;}
-  const sc={aberto:'b-w',concluido:'b-ok',cancelado:'b-d'};
-  lista.innerHTML=invs.map(inv=>`<div style="padding:11px 14px;border-bottom:1px solid var(--brd);display:flex;gap:10px;align-items:center;cursor:pointer" onclick="abrirDetInv(${inv.id})"><div style="flex:1"><div style="font-size:13px;font-weight:700">${inv.descricao||`Inventário #${inv.id}`}</div><div style="font-size:11px;color:var(--mut)">${fmtDt(inv.iniciado_em)} · ${inv.responsavel||'—'}</div><div style="height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;width:90px;margin-top:3px"><div style="height:100%;background:var(--grn);border-radius:2px;width:${inv.progresso}%"></div></div></div><span class="badge ${sc[inv.status]||'b-i'}">${inv.status_label}</span></div>`).join('');
-}
-async function abrirDetInv(id){
-  _invAt=id;const d=await api(`/api/farmacia/inventarios/${id}/`);
-  document.getElementById('tituloInventario').textContent=d.descricao||`Inventário #${id}`;
-  document.getElementById('fillProg').style.width=d.progresso+'%';document.getElementById('txtProg').textContent=d.progresso+'%';
-  document.getElementById('btnConcluirInventario').style.display=d.status==='aberto'?'':'none';
-  document.getElementById('tbInvIt').innerHTML=(d.itens||[]).map(ii=>`<tr><td>${ii.item_nome}</td><td style="color:var(--mut)">${ii.estoque_sistema}</td><td><input type="number" min="0" value="${ii.estoque_contado??''}" placeholder="Contar…" style="width:65px;background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:5px;padding:3px 6px;color:var(--txt);font-family:Manrope,sans-serif;font-size:12px" oninput="salvarContagem(${ii.id},this.value)"></td><td id="dif-${ii.id}" style="font-weight:700;${ii.diferenca===null?'color:var(--mut)':ii.diferenca!==0?'color:var(--orn)':'color:var(--grn)'}">${ii.diferenca===null?'—':(ii.diferenca>=0?'+':'')+ii.diferenca}</td><td><input value="${ii.observacao||''}" id="obs-${ii.id}" style="width:80px;background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:5px;padding:3px 6px;color:var(--txt);font-family:Manrope,sans-serif;font-size:12px"></td></tr>`).join('');
-  document.getElementById('cardDetInv').style.display='';
-}
-async function salvarContagem(iid,val){if(val==='')return;await api(`/api/farmacia/inventarios/${_invAt}/`,{method:'PUT',body:JSON.stringify({contagens:[{id:iid,estoque_contado:parseInt(val)}]})});const d=await api(`/api/farmacia/inventarios/${_invAt}/`);const item=(d.itens||[]).find(i=>i.id===iid);if(item){const row=document.getElementById(`dif-${iid}`);if(row){row.textContent=item.diferenca===null?'—':(item.diferenca>=0?'+':'')+item.diferenca;row.style.color=item.diferenca===0?'var(--grn)':'var(--orn)';}}document.getElementById('fillProg').style.width=d.progresso+'%';document.getElementById('txtProg').textContent=d.progresso+'%';}
-async function concluirInventario(){if(!_invAt)return;const ap=document.getElementById('chkAjustes').checked;if(!confirm(`Concluir inventário?${ap?' O estoque será ajustado.':''}`))return;await api(`/api/farmacia/inventarios/${_invAt}/`,{method:'PUT',body:JSON.stringify({acao:'concluir',aplicar_ajustes:ap})});fecharDetInv();toast('Inventário concluído','ok');carregarInventarios();carregarEstoque();carregarKpis();}
-function fecharDetInv(){document.getElementById('cardDetInv').style.display='none';_invAt=null;}
-function abrirModalInventario(){['invDesc','invResp','invObs'].forEach(id=>document.getElementById(id).value='');abrirModal('modalInventario');}
-async function salvarInventario(){const body={descricao:v('invDesc'),responsavel:v('invResp'),observacoes:v('invObs')};const res=await api('/api/farmacia/inventarios/',{method:'POST',body:JSON.stringify(body)});fecharModal('modalInventario');carregarInventarios();if(res.id)abrirDetInv(res.id);}
-
-async function carregarDescartes(){const d=await api('/api/farmacia/descartes/');const des=d.descartes||[];const tb=document.getElementById('tbDesc');if(!des.length){tb.innerHTML='<tr><td colspan="8" class="es"><div class="es-i">🗑️</div><p>Nenhum descarte</p></td></tr>';return;}tb.innerHTML=des.map(d=>`<tr><td>${d.item_nome}</td><td>${d.lote_numero||'—'}</td><td><span class="badge b-d">${d.motivo_label}</span></td><td><strong>${d.quantidade}</strong></td><td>${d.responsavel||'—'}</td><td>${d.empresa_descarte||'—'}</td><td>${d.numero_manifesto||'—'}</td><td>${fmtDt(d.data_descarte)}</td></tr>`).join('');}
-function abrirModalDescarte(){document.getElementById('descItem').innerHTML='<option value="">— selecione —</option>'+_itens.map(i=>`<option value="${i.id}">${i.nome} (estoque: ${i.estoque_atual})</option>`).join('');document.getElementById('descLote').innerHTML='<option value="">— sem lote —</option>';['descResp','descEmpresa','descManifesto','descObs'].forEach(id=>document.getElementById(id).value='');document.getElementById('descQtd').value='1';abrirModal('modalDescarte');}
-async function carregarLotesDescarte(){const id=v('descItem');if(!id)return;const d=await api(`/api/farmacia/lotes/?item_id=${id}`);document.getElementById('descLote').innerHTML='<option value="">— sem lote —</option>'+(d.lotes||[]).map(l=>`<option value="${l.id}">${l.numero_lote} — val: ${l.data_validade} (${l.quantidade_atual} un)</option>`).join('');}
-async function salvarDescarte(){const body={item_id:parseInt(v('descItem')),lote_id:v('descLote')?parseInt(v('descLote')):null,motivo:v('descMotivo'),quantidade:parseInt(v('descQtd')||1),responsavel:v('descResp'),empresa_descarte:v('descEmpresa'),numero_manifesto:v('descManifesto'),observacoes:v('descObs')};if(!body.item_id)return toast('Selecione o item','warn');if(!body.quantidade||body.quantidade<1)return toast('Informe a quantidade','warn');if(!confirm(`Confirmar descarte de ${body.quantidade} unidade(s)?`))return;await api('/api/farmacia/descartes/',{method:'POST',body:JSON.stringify(body)});fecharModal('modalDescarte');toast('Descarte registrado','ok');carregarDescartes();carregarEstoque();carregarMovimentos();carregarKpis();}
-
-async function carregarCurvaABC(){
-  document.getElementById('relConteudo').innerHTML='<div class="es"><div class="es-i">⏳</div><p>Calculando…</p></div>';
-  const d=await api('/api/farmacia/relatorios/curva-abc/');const its=d.itens||[];const res=d.resumo||{};const maxQ=Math.max(...its.map(i=>i.quantidade),1);
-  document.getElementById('relConteudo').innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px"><div class="kpi red" style="border-radius:10px"><div class="kpi-v">${res.A||0}</div><div class="kpi-l">Classe A — 80%</div></div><div class="kpi orn" style="border-radius:10px"><div class="kpi-v">${res.B||0}</div><div class="kpi-l">Classe B — 15%</div></div><div class="kpi grn" style="border-radius:10px"><div class="kpi-v">${res.C||0}</div><div class="kpi-l">Classe C — 5%</div></div></div>
-  <div style="border:1px solid var(--brd);border-radius:10px;overflow:hidden"><div class="card-h"><span class="card-t">📈 Curva ABC — ${d.periodo||''}</span></div><div class="tw"><table><thead><tr><th>#</th><th>Item</th><th>Consumo</th><th>%</th><th>Acumulado</th><th>Classe</th><th style="width:160px">Barra</th></tr></thead><tbody>${its.map((it,i)=>{const pct=Math.round(it.quantidade/maxQ*100);const bc=it.classe==='A'?'var(--red)':it.classe==='B'?'var(--orn)':'var(--grn)';return`<tr><td style="color:var(--mut)">${i+1}</td><td>${it.nome}</td><td>${it.quantidade}</td><td>${it.percentual}%</td><td>${it.acumulado}%</td><td><span class="badge ${it.classe==='A'?'b-d':it.classe==='B'?'b-w':'b-ok'}">${it.classe}</span></td><td><div style="display:flex;align-items:center;gap:6px"><div class="abc-bar" style="width:${pct}%;background:${bc}"></div><span style="font-size:11px;color:var(--mut)">${pct}%</span></div></td></tr>`;}).join('')}</tbody></table></div></div>`;
-}
-async function carregarCMM(){
-  document.getElementById('relConteudo').innerHTML='<div class="es"><div class="es-i">⏳</div><p>Calculando CMM…</p></div>';
-  const d=await api('/api/farmacia/relatorios/cmm/');const its=d.itens||[];
-  document.getElementById('relConteudo').innerHTML=`<div style="border:1px solid var(--brd);border-radius:10px;overflow:hidden"><div class="card-h"><span class="card-t">📉 CMM e Cobertura — ${d.periodo||''}</span></div><div class="tw"><table><thead><tr><th>Item</th><th>CMM</th><th>Estoque Atual</th><th>Cobertura (meses)</th><th>Status</th></tr></thead><tbody>${its.map(it=>`<tr><td>${it.nome}</td><td>${it.cmm}</td><td>${it.estoque_atual}</td><td>${it.cobertura_meses}</td><td><span class="badge ${it.status==='critico'?'b-d':it.status==='alerta'?'b-w':'b-ok'}">${it.status}</span></td></tr>`).join('')}</tbody></table></div></div>`;
-}
-async function carregarGiro(){
-  document.getElementById('relConteudo').innerHTML='<div class="es"><div class="es-i">⏳</div><p>Calculando giro…</p></div>';
-  const d=await api('/api/farmacia/relatorios/giro/');const its=d.itens||[];
-  document.getElementById('relConteudo').innerHTML=`<div style="border:1px solid var(--brd);border-radius:10px;overflow:hidden"><div class="card-h"><span class="card-t">🔄 Giro de Estoque — ${d.periodo||''}</span></div><div class="tw"><table><thead><tr><th>Item</th><th>Consumo Anual</th><th>Compras Anual</th><th>Estoque Atual</th><th>Índice de Giro</th><th>Classificação</th></tr></thead><tbody>${its.map(it=>`<tr><td>${it.nome}</td><td>${it.consumo_anual}</td><td>${it.compras_anual}</td><td>${it.estoque_atual}</td><td><strong>${it.giro}</strong></td><td><span class="badge ${it.classificacao==='alto'?'b-ok':it.classificacao==='medio'?'b-w':'b-d'}">${it.classificacao}</span></td></tr>`).join('')}</tbody></table></div></div>`;
+async function editarPaciente(id) {
+  const dados = _pacientes.find(p => p.id === id);
+  if (dados) abrirModalPaciente(dados);
 }
 
-function popularSelItens(){['dItem','mItem'].forEach(sid=>{const sel=document.getElementById(sid);if(!sel)return;const prev=sel.value;sel.innerHTML='<option value="">— selecione —</option>'+_itens.map(i=>`<option value="${i.id}">${i.nome} (${i.estoque_atual} ${i.unidade_medida})</option>`).join('');if(prev)sel.value=prev;});}
-function popularSelForn(){['iFornecedor','pForn'].forEach(sid=>{const sel=document.getElementById(sid);if(!sel)return;sel.innerHTML='<option value="">— nenhum —</option>'+_fornecedores.map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');});}
-
-function abrirModalItem(){popularSelForn();['iNome','iCodigo','iDesc'].forEach(id=>document.getElementById(id).value='');document.getElementById('iEstMin').value='0';abrirModal('modalItem');}
-async function salvarItem(){const body={nome:v('iNome'),codigo:v('iCodigo'),categoria:v('iCategoria'),unidade_medida:v('iUnidade'),estoque_minimo:parseInt(v('iEstMin')||0),descricao:v('iDesc'),fornecedor_id:v('iFornecedor')||null};if(!body.nome)return toast('Nome obrigatório','warn');await api('/api/farmacia/itens/',{method:'POST',body:JSON.stringify(body)});fecharModal('modalItem');toast('Item cadastrado','ok');carregarEstoque();carregarKpis();}
-
-function abrirModalDispensacao(){popularSelItens();['dPaciente','dCpf','dResp','dObs'].forEach(id=>document.getElementById(id).value='');document.getElementById('dQtd').value='1';abrirModal('modalDisp');}
-async function salvarDispensacao(){const body={item_id:parseInt(v('dItem')),paciente_nome:v('dPaciente'),paciente_cpf:v('dCpf'),quantidade:parseInt(v('dQtd')||1),responsavel:v('dResp'),observacoes:v('dObs')};if(!body.item_id||!body.paciente_nome)return toast('Item e Paciente obrigatórios','warn');await api('/api/farmacia/dispensacoes/',{method:'POST',body:JSON.stringify(body)});fecharModal('modalDisp');toast('Dispensação registrada','ok');carregarDispensacoes();carregarEstoque();carregarMovimentos();carregarKpis();}
-
-function abrirModalMovimento(itemId){popularSelItens();if(itemId)document.getElementById('mItem').value=itemId;['mQtd'].forEach(id=>document.getElementById(id).value='1');['mResp','mMotivo'].forEach(id=>document.getElementById(id).value='');abrirModal('modalMov');}
-async function salvarMovimento(){const body={item_id:parseInt(v('mItem')),tipo:v('mTipo'),quantidade:parseInt(v('mQtd')||1),responsavel:v('mResp'),motivo:v('mMotivo')};if(!body.item_id)return toast('Selecione o item','warn');await api('/api/farmacia/movimentos/',{method:'POST',body:JSON.stringify(body)});fecharModal('modalMov');toast('Movimento registrado','ok');carregarEstoque();carregarMovimentos();carregarKpis();}
-
-function abrirModalFornecedor(){['fNome','fCnpj','fContato','fTel','fEmail'].forEach(id=>document.getElementById(id).value='');abrirModal('modalForn');}
-async function salvarFornecedor(){const body={nome:v('fNome'),cnpj:v('fCnpj'),contato:v('fContato'),telefone:v('fTel'),email:v('fEmail')};if(!body.nome)return toast('Nome obrigatório','warn');await api('/api/farmacia/fornecedores/',{method:'POST',body:JSON.stringify(body)});fecharModal('modalForn');toast('Fornecedor cadastrado','ok');carregarFornecedores();}
-
-function abrirModalPedido(){popularSelForn();document.getElementById('pObs').value='';document.getElementById('pedidoItens').innerHTML='';addItemPedido();abrirModal('modalPed');}
-function addItemPedido(){const c=document.getElementById('pedidoItens');const r=document.createElement('div');r.style.cssText='display:flex;gap:7px;align-items:center';r.innerHTML=`<select style="flex:2;background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:7px;padding:6px;color:var(--txt);font-family:Manrope,sans-serif"><option value="">— item —</option>${_itens.map(i=>`<option value="${i.id}">${i.nome}</option>`).join('')}</select><input type="number" min="1" value="1" style="width:65px;background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:7px;padding:6px;color:var(--txt);font-family:Manrope,sans-serif"><button class="btn bd bs" onclick="this.parentElement.remove()">✕</button>`;c.appendChild(r);}
-async function salvarPedido(){const rows=document.querySelectorAll('#pedidoItens > div');const itens=[];rows.forEach(r=>{const s=r.querySelector('select');const inp=r.querySelector('input');if(s.value)itens.push({item_id:parseInt(s.value),quantidade:parseInt(inp.value||1)});});if(!itens.length)return toast('Adicione ao menos 1 item','warn');const body={fornecedor_id:v('pForn')?parseInt(v('pForn')):null,observacoes:v('pObs'),itens};await api('/api/farmacia/pedidos/',{method:'POST',body:JSON.stringify(body)});fecharModal('modalPed');toast('Pedido criado','ok');carregarPedidos();carregarKpis();}
-
-function abrirModalLote(){document.getElementById('lItem').innerHTML='<option value="">— selecione —</option>'+_itens.map(i=>`<option value="${i.id}">${i.nome}</option>`).join('');document.getElementById('lForn').innerHTML='<option value="">— nenhum —</option>'+_fornecedores.map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');['lNumero','lFabricante','lFabricacao','lValidade','lQtd','lNF'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});abrirModal('modalLote');}
-async function salvarLote(){const body={item_id:parseInt(v('lItem')),numero_lote:v('lNumero'),fabricante:v('lFabricante'),data_fabricacao:v('lFabricacao')||null,data_validade:v('lValidade'),quantidade_inicial:parseFloat(v('lQtd')||0),nota_fiscal:v('lNF'),fornecedor_id:v('lForn')?parseInt(v('lForn')):null};if(!body.item_id)return toast('Selecione o medicamento','warn');if(!body.numero_lote)return toast('Informe o número do lote','warn');if(!body.data_validade)return toast('Informe a data de validade','warn');await api('/api/farmacia/lotes/',{method:'POST',body:JSON.stringify(body)});fecharModal('modalLote');toast('Lote registrado','ok');carregarLotes();carregarEstoque();carregarKpis();}
-
-let _curTab='estoque';
-function setTab(tab){
-  _curTab=tab;
-  const tabs=['estoque','dispensacoes','movimentos','fornecedores','pedidos','lotes','pacientes','receitas','inventario','descarte','relatorios'];
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===tab));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('tab-'+tab).classList.add('active');
-  if(tab==='estoque')carregarEstoque();
-  else if(tab==='dispensacoes')carregarDispensacoes();
-  else if(tab==='movimentos')carregarMovimentos();
-  else if(tab==='fornecedores')carregarFornecedores();
-  else if(tab==='pedidos'){carregarFornecedores();carregarEstoque();carregarPedidos();}
-  else if(tab==='lotes')carregarLotes();
-  else if(tab==='pacientes')carregarPacientes();
-  else if(tab==='receitas')carregarReceitas();
-  else if(tab==='inventario')carregarInventarios();
-  else if(tab==='descarte')carregarDescartes();
+async function salvarPaciente() {
+  const body = {
+    nome: v('pacNome'), cpf: v('pacCpf'), data_nascimento: v('pacNasc')||'',
+    sexo: v('pacSexo'), telefone: v('pacTel'), email: v('pacEmail'),
+    endereco: v('pacEnd'), alergias: v('pacAlergias'),
+    condicoes_cronicas: v('pacCondicoes'), medicamentos_uso_continuo: v('pacMedUso'),
+  };
+  if (!body.nome) return alert('Nome obrigatório');
+  const editId = document.getElementById('modalPaciente').dataset.editId;
+  if (editId) {
+    await api(`/api/farmacia/pacientes/${editId}/`, {method:'PUT', body:JSON.stringify(body)});
+  } else {
+    const res = await api('/api/farmacia/pacientes/', {method:'POST', body:JSON.stringify(body)});
+    if (res.erro) return alert(res.erro);
+  }
+  fecharModal('modalPaciente');
+  carregarPacientes(); carregarKpis();
 }
 
-setInterval(()=>{carregarKpis();if(_curTab==='estoque')carregarEstoque();},60000);
-document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+async function inativarPaciente(id) {
+  if (!confirm('Inativar este paciente?')) return;
+  await api(`/api/farmacia/pacientes/${id}/`, {method:'DELETE'});
+  carregarPacientes(); carregarKpis();
+}
 
+// ── Receitas ───────────────────────────────────────────────────
+async function carregarReceitas() {
+  const status = document.getElementById('filtroReceitaStatus')?.value || '';
+  const url = status ? `/api/farmacia/receitas/?status=${status}` : '/api/farmacia/receitas/';
+  const d = await api(url);
+  const tb = document.getElementById('tbodyReceitas');
+  const recs = d.receitas || [];
+  if (!recs.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma receita encontrada</td></tr>'; return; }
+  const statusCls = {pendente:'badge-warn',dispensada:'badge-ok',vencida:'badge-danger',cancelada:'badge-danger'};
+  const tipoCls = {simples:'badge-info',especial_branca:'badge-purple',especial_amarela:'badge-warn',alto_custo:'badge-danger'};
+  tb.innerHTML = recs.map(r => `<tr>
+    <td><span class="badge ${tipoCls[r.tipo]||'badge-info'}" style="font-size:10px">${r.tipo_label}</span></td>
+    <td>${r.numero_receita||'—'}</td>
+    <td>${r.paciente_nome||'—'}<br><small style="color:var(--muted)">${r.paciente_cpf||''}</small></td>
+    <td>${r.item_nome||'—'}<br><small style="color:var(--muted)">Qtd: ${r.quantidade}</small></td>
+    <td>${r.medico_nome||'—'}<br><small style="color:var(--muted)">${r.medico_crm||''}</small></td>
+    <td>${fmtData(r.data_emissao)||'—'}</td>
+    <td style="${r.data_validade && new Date(r.data_validade)<new Date() ? 'color:var(--danger)' : ''}">${fmtData(r.data_validade)||'—'}</td>
+    <td><span class="badge ${statusCls[r.status]||'badge-info'}">${r.status_label}</span></td>
+    <td>
+      ${r.status==='pendente'?`<button class="btn btn-ghost btn-sm" onclick="marcarReceitaDispensada(${r.id})">✓ Dispensar</button>`:''}
+      <button class="btn btn-danger btn-sm" onclick="deletarReceita(${r.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+function abrirModalReceita() {
+  ['recNumero','recPacNome','recPacCpf','recMedico','recCrm','recMedDesc','recPosologia'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('recQtd').value='1';
+  document.getElementById('recEmissao').value = new Date().toISOString().split('T')[0];
+  document.getElementById('recValidade').value='';
+  const sel = document.getElementById('recItem');
+  sel.innerHTML = '<option value="">— selecione ou use campo livre —</option>' + _itens.map(i=>`<option value="${i.id}">${i.nome}</option>`).join('');
+  abrirModal('modalReceita');
+}
+
+async function salvarReceita() {
+  const body = {
+    tipo: v('recTipo'), numero_receita: v('recNumero'),
+    paciente_nome: v('recPacNome'), paciente_cpf: v('recPacCpf'),
+    medico_nome: v('recMedico'), medico_crm: v('recCrm'),
+    data_emissao: v('recEmissao'), data_validade: v('recValidade')||'',
+    item_id: v('recItem') ? parseInt(v('recItem')) : null,
+    medicamento_descricao: v('recMedDesc'),
+    quantidade: parseInt(v('recQtd')||1),
+    posologia: v('recPosologia'),
+  };
+  if (!body.data_emissao) return alert('Data de emissão obrigatória');
+  await api('/api/farmacia/receitas/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalReceita');
+  carregarReceitas(); carregarKpis();
+}
+
+async function marcarReceitaDispensada(id) {
+  await api(`/api/farmacia/receitas/${id}/`, {method:'PUT', body:JSON.stringify({status:'dispensada'})});
+  carregarReceitas(); carregarKpis();
+}
+
+async function deletarReceita(id) {
+  if (!confirm('Excluir esta receita?')) return;
+  await api(`/api/farmacia/receitas/${id}/`, {method:'DELETE'});
+  carregarReceitas(); carregarKpis();
+}
+
+// ── Inventário Periódico ───────────────────────────────────────
+async function carregarInventarios() {
+  const d = await api('/api/farmacia/inventarios/');
+  const lista = document.getElementById('listaInventarios');
+  const invs = d.inventarios || [];
+  if (!invs.length) { lista.innerHTML='<div class="empty">Nenhum inventário realizado</div>'; return; }
+  const stCls = {aberto:'badge-warn',concluido:'badge-ok',cancelado:'badge-danger'};
+  lista.innerHTML = invs.map(inv => `
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;cursor:pointer" onclick="abrirDetalheInventario(${inv.id})">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${inv.descricao || `Inventário #${inv.id}`}</div>
+        <div style="font-size:11px;color:var(--muted)">${fmtDt(inv.iniciado_em)} · ${inv.responsavel||'—'}</div>
+        <div style="margin-top:4px">
+          <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;width:120px">
+            <div style="height:100%;background:var(--ok);border-radius:2px;width:${inv.progresso}%"></div>
+          </div>
+          <span style="font-size:10px;color:var(--muted)">${inv.progresso}% contado · ${inv.diferencas} diferença(s)</span>
+        </div>
+      </div>
+      <span class="badge ${stCls[inv.status]||'badge-info'}">${inv.status_label}</span>
+    </div>
+  `).join('');
+}
+
+async function abrirDetalheInventario(id) {
+  _inventarioAtual = id;
+  const d = await api(`/api/farmacia/inventarios/${id}/`);
+  document.getElementById('tituloInventario').textContent = d.descricao || `Inventário #${id}`;
+  document.getElementById('fillProgresso').style.width = d.progresso + '%';
+  document.getElementById('txtProgresso').textContent = d.progresso + '%';
+  const btnConcluir = document.getElementById('btnConcluirInventario');
+  btnConcluir.style.display = d.status === 'aberto' ? '' : 'none';
+  const tb = document.getElementById('tbodyInventarioItens');
+  tb.innerHTML = (d.itens||[]).map(ii => `<tr>
+    <td>${ii.item_nome}</td>
+    <td style="color:var(--muted)">${ii.estoque_sistema}</td>
+    <td><input type="number" min="0" value="${ii.estoque_contado ?? ''}" placeholder="Contar…"
+      style="width:72px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-family:Manrope,sans-serif;font-size:12px"
+      oninput="salvarContagem(${ii.id},this.value)"></td>
+    <td id="dif-${ii.id}" style="font-weight:700;${ii.diferenca===null?'color:var(--muted)':ii.diferenca!==0?'color:var(--warn)':'color:var(--ok)'}">${ii.diferenca===null?'—':(ii.diferenca>=0?'+':'')+ii.diferenca}</td>
+    <td><input value="${ii.observacao||''}" placeholder="Obs" id="obs-${ii.id}"
+      style="width:100px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-family:Manrope,sans-serif;font-size:12px"></td>
+  </tr>`).join('');
+  document.getElementById('cardDetalheInventario').style.display = '';
+}
+
+async function salvarContagem(iid, val) {
+  if (val === '') return;
+  const contado = parseInt(val);
+  const body = { contagens: [{ id: iid, estoque_contado: contado }] };
+  await api(`/api/farmacia/inventarios/${_inventarioAtual}/`, {method:'PUT', body:JSON.stringify(body)});
+  // atualizar diferença visual
+  const row = document.getElementById(`dif-${iid}`);
+  if (row) {
+    const d = await api(`/api/farmacia/inventarios/${_inventarioAtual}/`);
+    const item = (d.itens||[]).find(i => i.id === iid);
+    if (item) {
+      row.textContent = item.diferenca===null?'—':(item.diferenca>=0?'+':'')+item.diferenca;
+      row.style.color = item.diferenca===0?'var(--ok)':'var(--warn)';
+    }
+    document.getElementById('fillProgresso').style.width = d.progresso+'%';
+    document.getElementById('txtProgresso').textContent = d.progresso+'%';
+  }
+}
+
+async function concluirInventario() {
+  if (!_inventarioAtual) return;
+  const aplicar = document.getElementById('chkAplicarAjustes').checked;
+  if (!confirm(`Concluir inventário?${aplicar?' O estoque será ajustado conforme contagem.':''}`)) return;
+  await api(`/api/farmacia/inventarios/${_inventarioAtual}/`, {method:'PUT', body:JSON.stringify({acao:'concluir', aplicar_ajustes: aplicar})});
+  fecharDetalheInventario();
+  carregarInventarios(); carregarEstoque(); carregarKpis();
+}
+
+function fecharDetalheInventario() {
+  document.getElementById('cardDetalheInventario').style.display = 'none';
+  _inventarioAtual = null;
+}
+
+function abrirModalInventario() {
+  ['invDesc','invResp','invObs'].forEach(id => document.getElementById(id).value='');
+  abrirModal('modalInventario');
+}
+
+async function salvarInventario() {
+  const body = {descricao: v('invDesc'), responsavel: v('invResp'), observacoes: v('invObs')};
+  const res = await api('/api/farmacia/inventarios/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalInventario');
+  carregarInventarios();
+  if (res.id) abrirDetalheInventario(res.id);
+}
+
+// ── Descarte ───────────────────────────────────────────────────
+let _lotesDescarte = [];
+async function carregarDescartes() {
+  const d = await api('/api/farmacia/descartes/');
+  const tb = document.getElementById('tbodyDescartes');
+  const descs = d.descartes || [];
+  if (!descs.length) { tb.innerHTML='<tr><td colspan="8" class="empty">Nenhum descarte registrado</td></tr>'; return; }
+  tb.innerHTML = descs.map(d => `<tr>
+    <td>${d.item_nome}</td>
+    <td>${d.lote_numero||'—'}</td>
+    <td><span class="badge badge-danger">${d.motivo_label}</span></td>
+    <td><strong>${d.quantidade}</strong></td>
+    <td>${d.responsavel||'—'}</td>
+    <td>${d.empresa_descarte||'—'}</td>
+    <td>${d.numero_manifesto||'—'}</td>
+    <td>${fmtDt(d.data_descarte)}</td>
+  </tr>`).join('');
+}
+
+function abrirModalDescarte() {
+  const sel = document.getElementById('descItem');
+  sel.innerHTML = '<option value="">— selecione —</option>' + _itens.map(i=>`<option value="${i.id}">${i.nome} (estoque: ${i.estoque_atual})</option>`).join('');
+  document.getElementById('descLote').innerHTML = '<option value="">— sem lote específico —</option>';
+  ['descResp','descEmpresa','descManifesto','descObs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('descQtd').value='1';
+  abrirModal('modalDescarte');
+}
+
+async function carregarLotesDescarte() {
+  const itemId = v('descItem');
+  if (!itemId) return;
+  const d = await api(`/api/farmacia/lotes/?item_id=${itemId}`);
+  const sel = document.getElementById('descLote');
+  sel.innerHTML = '<option value="">— sem lote específico —</option>' +
+    (d.lotes||[]).map(l=>`<option value="${l.id}">${l.numero_lote} — val: ${l.data_validade} (${l.quantidade_atual} un)</option>`).join('');
+}
+
+async function salvarDescarte() {
+  const body = {
+    item_id: parseInt(v('descItem')),
+    lote_id: v('descLote') ? parseInt(v('descLote')) : null,
+    motivo: v('descMotivo'), quantidade: parseInt(v('descQtd')||1),
+    responsavel: v('descResp'), empresa_descarte: v('descEmpresa'),
+    numero_manifesto: v('descManifesto'), observacoes: v('descObs'),
+  };
+  if (!body.item_id) return alert('Selecione o item');
+  if (!body.quantidade || body.quantidade < 1) return alert('Informe a quantidade');
+  if (!confirm(`Confirmar descarte de ${body.quantidade} unidade(s)? Esta ação irá baixar o estoque.`)) return;
+  await api('/api/farmacia/descartes/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalDescarte');
+  carregarDescartes(); carregarEstoque(); carregarMovimentos(); carregarKpis();
+}
+
+// ── Relatórios ─────────────────────────────────────────────────
+async function carregarCurvaABC() {
+  document.getElementById('relatorioConteudo').innerHTML = '<div class="card"><div class="empty">Carregando curva ABC…</div></div>';
+  const d = await api('/api/farmacia/relatorios/curva-abc/');
+  const itens = d.itens || [];
+  const res = d.resumo || {};
+  document.getElementById('relatorioConteudo').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+      <div class="kpi"><div class="kpi-val" style="color:var(--danger)">${res.A||0}</div><div class="kpi-lbl">Classe A — 80% do consumo</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:var(--warn)">${res.B||0}</div><div class="kpi-lbl">Classe B — 15% do consumo</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:var(--ok)">${res.C||0}</div><div class="kpi-lbl">Classe C — 5% do consumo</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">📈 Curva ABC — ${d.periodo||''}</span></div>
+      <table>
+        <thead><tr><th>#</th><th>Item</th><th>Consumo</th><th>%</th><th>Acumulado</th><th>Classe</th></tr></thead>
+        <tbody>${itens.map((it,i) => `<tr>
+          <td style="color:var(--muted)">${i+1}</td>
+          <td>${it.nome}</td>
+          <td>${it.quantidade}</td>
+          <td>${it.percentual}%</td>
+          <td>${it.acumulado}%</td>
+          <td><span class="badge ${it.classe==='A'?'badge-danger':it.classe==='B'?'badge-warn':'badge-ok'}">${it.classe}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+async function carregarCMM() {
+  document.getElementById('relatorioConteudo').innerHTML = '<div class="card"><div class="empty">Calculando CMM…</div></div>';
+  const d = await api('/api/farmacia/relatorios/cmm/');
+  const itens = d.itens || [];
+  document.getElementById('relatorioConteudo').innerHTML = `
+    <div class="card">
+      <div class="card-header"><span class="card-title">📉 Consumo Médio Mensal e Cobertura — ${d.periodo||''}</span></div>
+      <table>
+        <thead><tr><th>Item</th><th>CMM</th><th>Estoque Atual</th><th>Cobertura (meses)</th><th>Status</th></tr></thead>
+        <tbody>${itens.map(it => `<tr>
+          <td>${it.nome}</td>
+          <td>${it.cmm}</td>
+          <td>${it.estoque_atual}</td>
+          <td>${it.cobertura_meses}</td>
+          <td><span class="badge ${it.status==='critico'?'badge-danger':it.status==='alerta'?'badge-warn':'badge-ok'}">${it.status}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+async function carregarGiro() {
+  document.getElementById('relatorioConteudo').innerHTML = '<div class="card"><div class="empty">Calculando giro de estoque…</div></div>';
+  const d = await api('/api/farmacia/relatorios/giro/');
+  const itens = d.itens || [];
+  document.getElementById('relatorioConteudo').innerHTML = `
+    <div class="card">
+      <div class="card-header"><span class="card-title">🔄 Giro de Estoque — ${d.periodo||''}</span></div>
+      <table>
+        <thead><tr><th>Item</th><th>Consumo Anual</th><th>Compras Anual</th><th>Estoque Atual</th><th>Índice de Giro</th><th>Classificação</th></tr></thead>
+        <tbody>${itens.map(it => `<tr>
+          <td>${it.nome}</td>
+          <td>${it.consumo_anual}</td>
+          <td>${it.compras_anual}</td>
+          <td>${it.estoque_atual}</td>
+          <td><strong>${it.giro}</strong></td>
+          <td><span class="badge ${it.classificacao==='alto'?'badge-ok':it.classificacao==='medio'?'badge-warn':'badge-danger'}">${it.classificacao}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+function fmtData(s) {
+  if (!s) return '';
+  const [y,m,d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+let _currentTab = 'estoque';
+function setTab(tab) {
+  _currentTab = tab;
+  const tabs = ['estoque','dispensacoes','movimentos','fornecedores','pedidos','lotes','pacientes','receitas','inventario','descarte','relatorios'];
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', tabs[i] === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'estoque') carregarEstoque();
+  else if (tab === 'dispensacoes') carregarDispensacoes();
+  else if (tab === 'movimentos') carregarMovimentos();
+  else if (tab === 'fornecedores') carregarFornecedores();
+  else if (tab === 'pedidos') carregarPedidos();
+  else if (tab === 'lotes') carregarLotes();
+  else if (tab === 'pacientes') carregarPacientes();
+  else if (tab === 'receitas') carregarReceitas();
+  else if (tab === 'inventario') carregarInventarios();
+  else if (tab === 'descarte') carregarDescartes();
+}
+
+// ── Lotes ─────────────────────────────────────────────────────
+async function carregarLotes() {
+  const filtro = document.getElementById('filtroLoteStatus')?.value || '';
+  const url = `/api/farmacia/lotes/?${filtro ? 'filtro='+filtro : 'todos=0'}`;
+  const d = await api(url);
+  const tb = document.getElementById('tbodyLotes');
+  if (!d.lotes?.length) { tb.innerHTML='<tr><td colspan="9" class="empty">Nenhum lote encontrado</td></tr>'; }
+  else tb.innerHTML = d.lotes.map(l => {
+    const cls = l.vencido ? 'color:var(--danger)' : l.alerta ? 'color:var(--warn)' : 'color:var(--ok)';
+    const dias = l.vencido ? `<span style="${cls}">Vencido (${Math.abs(l.dias_para_vencer)}d)</span>` : `<span style="${cls}">${l.dias_para_vencer}d</span>`;
+    return `<tr>
+      <td>${l.item_nome}</td>
+      <td><code style="font-size:11px">${l.numero_lote}</code></td>
+      <td>${l.fabricante||'—'}</td>
+      <td>${l.data_fabricacao||'—'}</td>
+      <td style="${cls}">${l.data_validade}</td>
+      <td>${dias}</td>
+      <td><strong>${l.quantidade_atual}</strong></td>
+      <td>${l.nota_fiscal||'—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deletarLote(${l.id})">🗑</button></td>
+    </tr>`;
+  }).join('');
+
+  // KPIs lotes
+  const k = await api('/api/farmacia/lotes/kpis/');
+  document.getElementById('lkTotal').textContent = k.kpis.total_lotes;
+  document.getElementById('lkVenc').textContent = k.kpis.vencidos;
+  document.getElementById('lkAlerta').textContent = k.kpis.vencendo_30;
+  document.getElementById('lkOk').textContent = k.kpis.vigentes;
+
+  const proxEl = document.getElementById('proxVencer');
+  if (!k.proximos_vencer?.length) { proxEl.innerHTML='<p style="color:var(--ok)">✅ Nenhum lote vencendo nos próximos 30 dias</p>'; }
+  else proxEl.innerHTML = k.proximos_vencer.map(l =>
+    `<div style="display:flex;gap:12px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="min-width:90px;color:var(--warn);font-weight:700">${l.data_validade}</span>
+      <span style="flex:1">${l.item_nome}</span>
+      <span style="color:var(--muted)">Lote ${l.numero_lote}</span>
+      <span style="color:var(--warn)">${l.dias_para_vencer}d restantes</span>
+      <span style="color:var(--accent)">${l.quantidade_atual} un</span>
+    </div>`
+  ).join('');
+}
+
+function abrirModalLote() {
+  // popular selects
+  const selItem = document.getElementById('lItem');
+  selItem.innerHTML = '<option value="">— selecione —</option>' + _itens.map(i=>`<option value="${i.id}">${i.nome}</option>`).join('');
+  const selForn = document.getElementById('lForn');
+  selForn.innerHTML = '<option value="">— nenhum —</option>' + _fornecedores.map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');
+  ['lNumero','lFabricante','lFabricacao','lValidade','lQtd','lNF'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  abrirModal('modalLote');
+}
+
+async function salvarLote() {
+  const body = {
+    item_id: parseInt(v('lItem')),
+    numero_lote: v('lNumero'),
+    fabricante: v('lFabricante'),
+    data_fabricacao: v('lFabricacao') || null,
+    data_validade: v('lValidade'),
+    quantidade_inicial: parseFloat(v('lQtd') || 0),
+    nota_fiscal: v('lNF'),
+    fornecedor_id: v('lForn') ? parseInt(v('lForn')) : null,
+  };
+  if (!body.item_id) return alert('Selecione o medicamento');
+  if (!body.numero_lote) return alert('Informe o número do lote');
+  if (!body.data_validade) return alert('Informe a data de validade');
+  await api('/api/farmacia/lotes/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalLote');
+  carregarLotes(); carregarEstoque(); carregarKpis();
+}
+
+async function deletarLote(id) {
+  if (!confirm('Excluir este lote? O estoque será ajustado.')) return;
+  await api(`/api/farmacia/lotes/${id}/`, {method:'DELETE'});
+  carregarLotes(); carregarEstoque(); carregarKpis();
+}
+
+// Fechar modal ao clicar fora
+document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+// Init
 carregarKpis();
 carregarEstoque();
-carregarFornecedores();
+carregarFornecedores(); // preload para selects
 </script>
 </body>
 </html>
