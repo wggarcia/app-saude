@@ -2992,3 +2992,327 @@ class RBACAtribuicao(models.Model):
 
     def __str__(self):
         return f"{self.empresa.nome} / {self.usuario} / {self.permissao.codigo}"
+
+
+# ─── Farmácia — Módulo Gestão Completa ───────────────────────────────────────
+
+class MedicamentoFarmacia(models.Model):
+    """Catálogo de medicamentos com controle de estoque e classificação ANVISA."""
+
+    FORMA_CHOICES = [
+        ("comprimido", "Comprimido"),
+        ("capsula", "Cápsula"),
+        ("solucao", "Solução"),
+        ("suspensao", "Suspensão"),
+        ("injetavel", "Injetável"),
+        ("creme", "Creme"),
+        ("pomada", "Pomada"),
+        ("gel", "Gel"),
+        ("gotas", "Gotas"),
+        ("inalador", "Inalador"),
+        ("supositorio", "Supositório"),
+        ("outro", "Outro"),
+    ]
+
+    CLASSE_CHOICES = [
+        ("analgesico", "Analgésico"),
+        ("antibiotico", "Antibiótico"),
+        ("anti_inflamatorio", "Anti-inflamatório"),
+        ("antihipertensivo", "Anti-hipertensivo"),
+        ("antidiabetes", "Antidiabetes"),
+        ("cardiovascular", "Cardiovascular"),
+        ("neurologico", "Neurológico"),
+        ("psiquiatrico", "Psiquiátrico"),
+        ("oncologico", "Oncológico"),
+        ("vitamina", "Vitamina / Suplemento"),
+        ("outro", "Outro"),
+    ]
+
+    # Identificação do produto
+    empresa            = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="medicamentos_farmacia")
+    nome               = models.CharField(max_length=200)
+    principio_ativo    = models.CharField(max_length=200, blank=True, default="")
+    forma_farmaceutica = models.CharField(max_length=20, choices=FORMA_CHOICES, default="comprimido")
+    concentracao       = models.CharField(max_length=100, blank=True, default="", help_text="Ex: 500mg, 10mg/mL")
+    registro_anvisa    = models.CharField(max_length=50, blank=True, default="")
+    codigo_barras      = models.CharField(max_length=50, blank=True, default="")
+    fabricante         = models.CharField(max_length=200, blank=True, default="")
+    classe_terapeutica = models.CharField(max_length=30, choices=CLASSE_CHOICES, default="outro")
+
+    # Estoque
+    quantidade_atual   = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    quantidade_minima  = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    quantidade_maxima  = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    preco_custo        = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    preco_venda        = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Controle especial
+    controlado         = models.BooleanField(default=False, help_text="Medicamento sujeito a controle especial (Portaria 344)")
+    refrigerado        = models.BooleanField(default=False, help_text="Requer armazenamento refrigerado")
+    validade_media_dias = models.PositiveIntegerField(default=365, help_text="Validade média em dias após fabricação")
+
+    ativo              = models.BooleanField(default=True)
+    criado_em          = models.DateTimeField(auto_now_add=True)
+    atualizado_em      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["nome"]
+        indexes = [
+            models.Index(fields=["empresa", "ativo"], name="med_farm_emp_ativo_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.nome} {self.concentracao}".strip()
+
+    @property
+    def status_estoque(self):
+        if self.quantidade_atual <= 0:
+            return "critico"
+        if self.quantidade_minima > 0 and self.quantidade_atual <= self.quantidade_minima * 1.1:
+            return "critico"
+        if self.quantidade_minima > 0 and self.quantidade_atual <= self.quantidade_minima * 1.5:
+            return "baixo"
+        return "ok"
+
+
+class EstoqueMovimento(models.Model):
+    """Registro de movimentações de estoque de medicamentos."""
+
+    TIPO_CHOICES = [
+        ("entrada", "Entrada"),
+        ("saida", "Saída"),
+        ("ajuste", "Ajuste"),
+        ("descarte", "Descarte"),
+        ("transferencia", "Transferência"),
+    ]
+
+    empresa      = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="estoque_movimentos")
+    medicamento  = models.ForeignKey(MedicamentoFarmacia, on_delete=models.CASCADE, related_name="movimentos_estoque")
+    tipo         = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    quantidade   = models.DecimalField(max_digits=12, decimal_places=3)
+    motivo       = models.TextField(blank=True, default="")
+    lote         = models.CharField(max_length=100, blank=True, default="")
+    data_validade = models.DateField(null=True, blank=True)
+    responsavel  = models.CharField(max_length=200, blank=True, default="")
+    observacao   = models.TextField(blank=True, default="")
+    criado_em    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "medicamento"], name="estmov_emp_med_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.tipo} {self.quantidade} — {self.medicamento.nome}"
+
+
+class Dispensacao(models.Model):
+    """Dispensação de medicamentos a pacientes com controle de receita."""
+
+    STATUS_CHOICES = [
+        ("pendente", "Pendente"),
+        ("dispensada", "Dispensada"),
+        ("devolvida", "Devolvida"),
+        ("parcial", "Parcialmente Dispensada"),
+    ]
+
+    empresa            = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="dispensacoes_farmacia")
+    data               = models.DateTimeField(auto_now_add=True)
+    paciente_nome      = models.CharField(max_length=200)
+    paciente_cpf       = models.CharField(max_length=14, blank=True, default="")
+    prescricao_numero  = models.CharField(max_length=50, blank=True, default="")
+    medico_crm         = models.CharField(max_length=30, blank=True, default="")
+    medicamentos       = models.JSONField(default=list, help_text="Lista de itens: [{medicamento_id, nome, quantidade, ...}]")
+    valor_total        = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    convenio           = models.CharField(max_length=200, blank=True, default="")
+    status             = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pendente")
+    observacoes        = models.TextField(blank=True, default="")
+    criado_em          = models.DateTimeField(auto_now_add=True)
+    atualizado_em      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "status"], name="disp_farm_emp_status_idx"),
+        ]
+
+    def __str__(self):
+        return f"Dispensação #{self.pk} — {self.paciente_nome} ({self.status})"
+
+
+class FornecedorFarmaciaGestao(models.Model):
+    """Fornecedor de medicamentos para o módulo de gestão de farmácia."""
+
+    empresa            = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="fornecedores_farmacia_gestao")
+    nome               = models.CharField(max_length=200)
+    cnpj               = models.CharField(max_length=18, blank=True, default="")
+    contato            = models.CharField(max_length=200, blank=True, default="")
+    email              = models.EmailField(blank=True, default="")
+    telefone           = models.CharField(max_length=20, blank=True, default="")
+    prazo_entrega_dias = models.PositiveSmallIntegerField(default=7, help_text="Prazo médio de entrega em dias")
+    ativo              = models.BooleanField(default=True)
+    criado_em          = models.DateTimeField(auto_now_add=True)
+    atualizado_em      = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return self.nome
+
+
+class PedidoFarmacia(models.Model):
+    """Pedido de compra de medicamentos para fornecedores."""
+
+    STATUS_CHOICES = [
+        ("rascunho", "Rascunho"),
+        ("enviado", "Enviado"),
+        ("confirmado", "Confirmado"),
+        ("recebido", "Recebido"),
+        ("cancelado", "Cancelado"),
+    ]
+
+    empresa               = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="pedidos_farmacia_gestao")
+    fornecedor            = models.ForeignKey(FornecedorFarmaciaGestao, on_delete=models.SET_NULL, null=True, blank=True, related_name="pedidos_farmacia")
+    data_pedido           = models.DateField(auto_now_add=True)
+    data_entrega_prevista = models.DateField(null=True, blank=True)
+    status                = models.CharField(max_length=20, choices=STATUS_CHOICES, default="rascunho")
+    itens                 = models.JSONField(default=list, help_text="[{medicamento_id, quantidade, preco_unitario}]")
+    valor_total           = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    observacao            = models.TextField(blank=True, default="")
+    criado_em             = models.DateTimeField(auto_now_add=True)
+    atualizado_em         = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"Pedido #{self.pk} — {self.fornecedor.nome if self.fornecedor else 'sem fornecedor'} ({self.status})"
+
+
+# ─── Hospital — Gestão Integrada (Manchester / Leitos / Internação) ──────────
+
+class LeitoHospitalar(models.Model):
+    TIPO_CHOICES = [
+        ("uti", "UTI"),
+        ("enfermaria", "Enfermaria"),
+        ("particular", "Particular"),
+        ("emergencia", "Emergência"),
+        ("semi_intensivo", "Semi-Intensivo"),
+    ]
+    STATUS_CHOICES = [
+        ("livre", "Livre"),
+        ("ocupado", "Ocupado"),
+        ("manutencao", "Manutenção"),
+        ("bloqueado", "Bloqueado"),
+    ]
+
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="leitos_hospitalar")
+    numero           = models.CharField(max_length=20)
+    ala              = models.CharField(max_length=100, blank=True, default="")
+    tipo             = models.CharField(max_length=20, choices=TIPO_CHOICES, default="enfermaria")
+    status           = models.CharField(max_length=20, choices=STATUS_CHOICES, default="livre")
+    paciente_nome    = models.CharField(max_length=200, null=True, blank=True)
+    paciente_id      = models.UUIDField(null=True, blank=True)
+    data_internacao  = models.DateField(null=True, blank=True)
+    previsao_alta    = models.DateField(null=True, blank=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["ala", "numero"]
+        unique_together = [("empresa", "numero")]
+
+    def __str__(self):
+        return f"Leito {self.numero} ({self.tipo}) — {self.status}"
+
+
+class TriagemManchester(models.Model):
+    NIVEL_CHOICES = [
+        ("vermelho", "Vermelho — Emergência"),
+        ("laranja", "Laranja — Muito Urgente"),
+        ("amarelo", "Amarelo — Urgente"),
+        ("verde", "Verde — Pouco Urgente"),
+        ("azul", "Azul — Não Urgente"),
+    ]
+    STATUS_CHOICES = [
+        ("aguardando", "Aguardando"),
+        ("em_atendimento", "Em Atendimento"),
+        ("atendido", "Atendido"),
+        ("transferido", "Transferido"),
+        ("evadiu", "Evadiu"),
+    ]
+
+    empresa                = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="triagens_manchester")
+    data_hora              = models.DateTimeField()
+    paciente_nome          = models.CharField(max_length=200)
+    paciente_cpf           = models.CharField(max_length=14, null=True, blank=True)
+    queixa_principal       = models.TextField()
+    nivel                  = models.CharField(max_length=20, choices=NIVEL_CHOICES)
+    tempo_espera_minutos   = models.PositiveIntegerField(default=0)
+    status                 = models.CharField(max_length=20, choices=STATUS_CHOICES, default="aguardando")
+    medico_responsavel     = models.CharField(max_length=200, blank=True, default="")
+    observacao             = models.TextField(blank=True, default="")
+    criado_em              = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_hora"]
+
+    def __str__(self):
+        return f"Triagem {self.paciente_nome} [{self.nivel}] {self.data_hora.date()}"
+
+
+class PacienteInternado(models.Model):
+    STATUS_CHOICES = [
+        ("internado", "Internado"),
+        ("alta", "Alta"),
+        ("transferido", "Transferido"),
+        ("obito", "Óbito"),
+    ]
+
+    empresa             = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="pacientes_internados")
+    nome                = models.CharField(max_length=200)
+    cpf                 = models.CharField(max_length=14, blank=True, default="")
+    data_nascimento     = models.DateField(null=True, blank=True)
+    data_internacao     = models.DateField()
+    leito               = models.ForeignKey(LeitoHospitalar, on_delete=models.SET_NULL, null=True, blank=True, related_name="pacientes_internados")
+    diagnostico_cid     = models.CharField(max_length=20, blank=True, default="")
+    medico_responsavel  = models.CharField(max_length=200, blank=True, default="")
+    convenio            = models.CharField(max_length=200, blank=True, default="")
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="internado")
+    prescricao_atual    = models.JSONField(default=dict)
+    evolucao            = models.JSONField(default=list)
+    criado_em           = models.DateTimeField(auto_now_add=True)
+    atualizado_em       = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_internacao", "nome"]
+
+    def __str__(self):
+        return f"{self.nome} — {self.status}"
+
+
+class PrescricaoHospitalar(models.Model):
+    STATUS_CHOICES = [
+        ("ativa", "Ativa"),
+        ("encerrada", "Encerrada"),
+        ("cancelada", "Cancelada"),
+    ]
+
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="prescricoes_hospitalares")
+    paciente         = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="prescricoes_hospitalares")
+    data             = models.DateField()
+    medicamentos     = models.JSONField(default=list)
+    validade_horas   = models.PositiveSmallIntegerField(default=24)
+    medico_crm       = models.CharField(max_length=30, blank=True, default="")
+    medico_nome      = models.CharField(max_length=200, blank=True, default="")
+    status           = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ativa")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data", "-criado_em"]
+
+    def __str__(self):
+        return f"Prescrição {self.paciente.nome} {self.data} [{self.status}]"

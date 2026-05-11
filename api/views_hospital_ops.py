@@ -73,10 +73,20 @@ def api_leitos_hospital(request):
         qs = LeitoHospital.objects.filter(empresa=e).select_related("departamento")
         if dep_id:
             qs = qs.filter(departamento_id=dep_id)
+        # Enrich leitos with active internação data (paciente_nome, hora_entrada)
+        leito_ids = [l.id for l in qs]
+        internacoes_ativas = {
+            i.leito_id: i
+            for i in InternacaoHospital.objects.filter(
+                leito_id__in=leito_ids, status="ativa"
+            ).select_related("paciente")
+        }
         return JsonResponse({"leitos": [
             {"id": l.id, "numero": l.numero, "tipo": l.tipo,
              "status": l.status, "departamento_id": l.departamento_id,
-             "departamento_nome": l.departamento.nome}
+             "departamento_nome": l.departamento.nome,
+             "paciente_nome": internacoes_ativas[l.id].paciente.nome if l.id in internacoes_ativas else None,
+             "hora_entrada": internacoes_ativas[l.id].data_entrada.isoformat() if l.id in internacoes_ativas else None}
             for l in qs
         ]})
     data = json.loads(request.body or "{}")

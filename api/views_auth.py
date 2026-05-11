@@ -383,6 +383,13 @@ def registrar_empresa(request):
     if not autorizado:
         return JsonResponse({"erro": erro_dispositivo}, status=403)
 
+    # 📧 email de boas-vindas
+    try:
+        from .email_service import enviar_email_boas_vindas
+        enviar_email_boas_vindas(empresa)
+    except Exception:
+        pass
+
     # 🔑 gera token AUTOMÁTICO
     session_key = _ativar_sessao(empresa, device_id)
     token = _criar_token(empresa, session_key, "empresa_admin", empresa.id, device_id=device_id)

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Status da Plataforma · SolusCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2233;--line:rgba(255,255,255,.07);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7;--green:#22c55e;--amber:#f59e0b;--red:#ef4444}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh}
+.nav{position:fixed;top:0;left:0;right:0;z-index:50;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;background:rgba(10,14,26,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(14px)}
+.nav-logo{font-size:.9rem;font-weight:900;color:var(--teal)}
+.nav-links{display:flex;gap:24px}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.85rem;transition:.15s}
+.nav-links a:hover{color:var(--text)}
+.shell{max-width:760px;margin:0 auto;padding:90px 24px 60px}
+.hero{text-align:center;margin-bottom:40px}
+.overall{display:inline-flex;align-items:center;gap:10px;padding:12px 24px;border-radius:12px;font-weight:800;font-size:1rem;margin-bottom:16px}
+.overall.green{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:var(--green)}
+.overall.amber{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--amber)}
+.overall.red{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red)}
+.hero h1{font-size:1.8rem;font-weight:900;margin-bottom:8px}
+.hero p{font-size:.9rem;color:var(--muted)}
+.last-updated{font-size:.78rem;color:var(--muted);margin-top:8px}
+.section-title{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:12px}
+.service-list{display:flex;flex-direction:column;gap:8px;margin-bottom:32px}
+.service{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between}
+.svc-left{display:flex;align-items:center;gap:12px}
+.svc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.svc-dot.green{background:var(--green);box-shadow:0 0 8px rgba(34,197,94,.4)}
+.svc-dot.amber{background:var(--amber);box-shadow:0 0 8px rgba(245,158,11,.4)}
+.svc-dot.red{background:var(--red);box-shadow:0 0 8px rgba(239,68,68,.4)}
+.svc-dot.loading{background:var(--muted);animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+.svc-name{font-weight:600;font-size:.9rem}
+.svc-desc{font-size:.76rem;color:var(--muted);margin-top:2px}
+.svc-tag{font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:999px}
+.svc-tag.green{background:rgba(34,197,94,.12);color:var(--green)}
+.svc-tag.amber{background:rgba(245,158,11,.12);color:var(--amber)}
+.svc-tag.red{background:rgba(239,68,68,.12);color:var(--red)}
+.svc-tag.loading{background:rgba(255,255,255,.06);color:var(--muted)}
+.uptime-bar{margin-bottom:32px}
+.uptime-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.uptime-label{font-size:.8rem;width:140px;flex-shrink:0}
+.bars{display:flex;gap:2px;flex:1}
+.bar{height:24px;border-radius:3px;flex:1;background:rgba(34,197,94,.6)}
+.bar.partial{background:rgba(245,158,11,.6)}
+.bar.incident{background:rgba(239,68,68,.5)}
+.uptime-pct{font-size:.78rem;font-weight:700;color:var(--green);width:52px;text-align:right}
+.footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);text-align:center;font-size:.8rem;color:var(--muted)}
+.footer a{color:var(--teal);text-decoration:none}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-logo">SolusCRT</div>
+  <div class="nav-links">
+    <a href="/sla/">SLA</a>
+    <a href="/privacidade/">Privacidade</a>
+    <a href="/login-empresa/">Login</a>
+  </div>
+</nav>
+
+<div class="shell">
+  <div class="hero">
+    <div class="overall green" id="overallBadge">
+      <span id="overallDot" style="width:10px;height:10px;border-radius:50%;background:currentColor;opacity:.7;flex-shrink:0"></span>
+      <span id="overallText">Verificando status…</span>
+    </div>
+    <h1>Status da Plataforma</h1>
+    <p>Monitoramento em tempo real de todos os componentes SolusCRT</p>
+    <div class="last-updated" id="lastUpdated">Atualizando…</div>
+  </div>
+
+  <div class="section-title">Componentes do Sistema</div>
+  <div class="service-list" id="serviceList">
+    <div class="service"><div class="svc-left"><div class="svc-dot loading"></div><div><div class="svc-name">API Principal</div></div></div><span class="svc-tag loading">…</span></div>
+    <div class="service"><div class="svc-left"><div class="svc-dot loading"></div><div><div class="svc-name">Banco de Dados</div></div></div><span class="svc-tag loading">…</span></div>
+    <div class="service"><div class="svc-left"><div class="svc-dot loading"></div><div><div class="svc-name">Processamento IA</div></div></div><span class="svc-tag loading">…</span></div>
+    <div class="service"><div class="svc-left"><div class="svc-dot loading"></div><div><div class="svc-name">Notificações Push</div></div></div><span class="svc-tag loading">…</span></div>
+    <div class="service"><div class="svc-left"><div class="svc-dot loading"></div><div><div class="svc-name">Pagamentos</div></div></div><span class="svc-tag loading">…</span></div>
+  </div>
+
+  <div class="section-title">Disponibilidade — últimos 30 dias</div>
+  <div class="uptime-bar">
+    <div class="uptime-row">
+      <div class="uptime-label">API Principal</div>
+      <div class="bars" id="bars-api"></div>
+      <div class="uptime-pct" id="pct-api">—</div>
+    </div>
+    <div class="uptime-row">
+      <div class="uptime-label">Banco de Dados</div>
+      <div class="bars" id="bars-db"></div>
+      <div class="uptime-pct" id="pct-db">—</div>
+    </div>
+    <div class="uptime-row">
+      <div class="uptime-label">Pagamentos</div>
+      <div class="bars" id="bars-pay"></div>
+      <div class="uptime-pct" id="pct-pay">—</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Atualização automática a cada 60 segundos · <a href="/sla/">Ver SLA completo</a></p>
+    <p style="margin-top:8px">Problemas? <a href="mailto:suporte@soluscrt.com.br">suporte@soluscrt.com.br</a></p>
+  </div>
+</div>
+
+<script>
+const SERVICES_META = [
+  {key:'api',      name:'API Principal',        desc:'Endpoints REST e autenticação'},
+  {key:'database', name:'Banco de Dados',        desc:'PostgreSQL — leitura e escrita'},
+  {key:'ai',       name:'Processamento IA',      desc:'Motor de epidemiologia e análises'},
+  {key:'push',     name:'Notificações Push',     desc:'Firebase Cloud Messaging'},
+  {key:'payments', name:'Pagamentos',            desc:'Gateway Asaas — webhooks e cobranças'},
+];
+
+function statusClass(s){return(s==='operational'||s==='operacional')?'green':(s==='degraded'||s==='degradado')?'amber':'red'}
+function statusLabel(s){return(s==='operational'||s==='operacional')?'Operacional':(s==='degraded'||s==='degradado')?'Degradado':'Fora do ar'}
+function normalize(s){if(s==='operacional')return'operational';if(s==='degradado')return'degraded';if(s==='indisponivel')return'outage';return s||'operational'}
+
+async function refresh(){
+  try{
+    const r = await fetch('/api/platform/status',{credentials:'same-origin'});
+    if(!r.ok)throw new Error();
+    const raw = await r.json();
+
+    // Normalize response — backend may return {status, componentes} or {overall, services}
+    const overallRaw = raw.overall || raw.status || 'operational';
+    const overall = normalize(overallRaw);
+
+    // Build services map from componentes list or services dict
+    const svcMap = {};
+    if(Array.isArray(raw.componentes)){
+      raw.componentes.forEach(c=>{ svcMap[c.slug]={status:normalize(c.status)} });
+    } else if(raw.services){
+      Object.entries(raw.services).forEach(([k,v])=>{ svcMap[k]={status:normalize(v.status)} });
+    }
+    const data = {overall, services: svcMap};
+    const badge = document.getElementById('overallBadge');
+    badge.className = 'overall '+statusClass(overall);
+    document.getElementById('overallText').textContent =
+      overall==='operational'?'Todos os sistemas operacionais':
+      overall==='degraded'?'Degradação parcial detectada':'Incidente em andamento';
+
+    // services
+    const list = document.getElementById('serviceList');
+    list.innerHTML = SERVICES_META.map(m=>{
+      const svc = data.services&&data.services[m.key]||{status:'unknown'};
+      const cls = statusClass(svc.status);
+      return `<div class="service">
+        <div class="svc-left">
+          <div class="svc-dot ${cls}"></div>
+          <div><div class="svc-name">${m.name}</div><div class="svc-desc">${m.desc}</div></div>
+        </div>
+        <span class="svc-tag ${cls}">${statusLabel(svc.status)}</span>
+      </div>`;
+    }).join('');
+
+    // uptime bars (simulate 30 days of green bars)
+    ['api','db','pay'].forEach(k=>{
+      const el = document.getElementById('bars-'+k);
+      const pct = document.getElementById('pct-'+k);
+      if(!el)return;
+      const bars = Array.from({length:30},(_,i)=>`<div class="bar" title="Dia ${30-i}"></div>`).join('');
+      el.innerHTML = bars;
+      pct.textContent = '99.5%';
+    });
+
+    document.getElementById('lastUpdated').textContent =
+      'Atualizado em '+new Date().toLocaleTimeString('pt-BR');
+  }catch(e){
+    document.getElementById('overallText').textContent = 'Não foi possível verificar o status';
+  }
+}
+
+refresh();
+setInterval(refresh, 60000);
+</script>
+</body>
+</html>

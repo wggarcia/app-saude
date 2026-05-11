@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SLA · Acordo de Nível de Serviço · SolusCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--surface:#111827;--line:rgba(255,255,255,.07);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7;--blue:#3b82f6;--amber:#f59e0b;--green:#22c55e}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh}
+.nav{position:fixed;top:0;left:0;right:0;z-index:50;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;background:rgba(10,14,26,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(14px)}
+.nav-logo{font-size:.9rem;font-weight:900;color:var(--teal)}
+.nav-links{display:flex;gap:24px}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.85rem;transition:.15s}
+.nav-links a:hover{color:var(--text)}
+.shell{max-width:860px;margin:0 auto;padding:90px 24px 60px}
+.hero{text-align:center;margin-bottom:56px}
+.hero h1{font-size:2.4rem;font-weight:900;letter-spacing:-1px;margin-bottom:12px}
+.hero p{font-size:1rem;color:var(--muted);max-width:520px;margin:0 auto}
+.badge{display:inline-block;padding:6px 14px;border-radius:999px;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.25);color:var(--teal);font-size:.78rem;font-weight:700;letter-spacing:.05em;margin-bottom:20px}
+.section{margin-bottom:40px}
+.section-title{font-size:1rem;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:.08em;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.commit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.commit-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px}
+.commit-icon{font-size:1.6rem;margin-bottom:10px}
+.commit-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.commit-val{font-size:1.3rem;font-weight:800;color:var(--green);margin-bottom:6px}
+.commit-desc{font-size:.8rem;color:var(--muted);line-height:1.5}
+.support-table{width:100%;border-collapse:collapse}
+.support-table th{text-align:left;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:10px 14px;border-bottom:1px solid var(--line)}
+.support-table td{padding:14px;border-bottom:1px solid rgba(255,255,255,.04);font-size:.88rem}
+.support-table tr:last-child td{border:0}
+.tag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.72rem;font-weight:700}
+.tag.green{background:rgba(34,197,94,.12);color:var(--green)}
+.tag.amber{background:rgba(245,158,11,.12);color:var(--amber)}
+.tag.blue{background:rgba(59,130,246,.12);color:var(--blue)}
+.channel-list{display:flex;flex-direction:column;gap:10px}
+.channel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px}
+.ch-icon{font-size:1.2rem;width:36px;height:36px;border-radius:9px;background:rgba(0,201,167,.1);display:grid;place-items:center;flex-shrink:0}
+.ch-label{font-weight:700;font-size:.9rem;margin-bottom:2px}
+.ch-desc{font-size:.8rem;color:var(--muted)}
+.footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);text-align:center;font-size:.8rem;color:var(--muted)}
+.footer a{color:var(--teal);text-decoration:none}
+@media(max-width:600px){.hero h1{font-size:1.7rem}.commit-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-logo">SolusCRT</div>
+  <div class="nav-links">
+    <a href="/status/">Status</a>
+    <a href="/privacidade/">Privacidade</a>
+    <a href="/login-empresa/">Login</a>
+  </div>
+</nav>
+
+<div class="shell">
+  <div class="hero">
+    <div class="badge">Acordo de Nível de Serviço</div>
+    <h1>Nosso compromisso com você</h1>
+    <p>Definimos padrões claros de disponibilidade, suporte e segurança para que você possa confiar na SolusCRT como parceira estratégica da sua operação.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Disponibilidade e Performance</div>
+    <div class="commit-grid">
+      <div class="commit-card">
+        <div class="commit-icon">🟢</div>
+        <div class="commit-label">Uptime garantido</div>
+        <div class="commit-val">99,5%</div>
+        <div class="commit-desc">Disponibilidade mensal da plataforma, excluindo janelas de manutenção programada.</div>
+      </div>
+      <div class="commit-card">
+        <div class="commit-icon">⚡</div>
+        <div class="commit-label">Tempo de resposta API</div>
+        <div class="commit-val">&lt; 500ms</div>
+        <div class="commit-desc">95% das requisições respondidas em menos de 500ms no percentil 95.</div>
+      </div>
+      <div class="commit-card">
+        <div class="commit-icon">💾</div>
+        <div class="commit-label">Backup dos dados</div>
+        <div class="commit-val">Diário</div>
+        <div class="commit-desc">Backup automático diário com retenção de 30 dias. Point-in-time recovery disponível.</div>
+      </div>
+      <div class="commit-card">
+        <div class="commit-icon">🔐</div>
+        <div class="commit-label">Retenção de dados</div>
+        <div class="commit-val">5 anos</div>
+        <div class="commit-desc">Dados mantidos por 5 anos após encerramento do contrato conforme LGPD e NR-7.</div>
+      </div>
+      <div class="commit-card">
+        <div class="commit-icon">🔄</div>
+        <div class="commit-label">Manutenção programada</div>
+        <div class="commit-val">Domingos 02h-04h</div>
+        <div class="commit-desc">Janela de manutenção semanal com aviso prévio de 48h por e-mail.</div>
+      </div>
+      <div class="commit-card">
+        <div class="commit-icon">📡</div>
+        <div class="commit-label">Status em tempo real</div>
+        <div class="commit-val"><a href="/status/" style="color:var(--teal);text-decoration:none">status.soluscrt.com.br</a></div>
+        <div class="commit-desc">Página de status com monitoramento em tempo real de todos os componentes.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Canais de Suporte</div>
+    <div class="channel-list">
+      <div class="channel">
+        <div class="ch-icon">✉️</div>
+        <div>
+          <div class="ch-label">E-mail</div>
+          <div class="ch-desc"><a href="mailto:suporte@soluscrt.com.br" style="color:var(--teal)">suporte@soluscrt.com.br</a> — Canal principal de suporte técnico</div>
+        </div>
+      </div>
+      <div class="channel">
+        <div class="ch-icon">💬</div>
+        <div>
+          <div class="ch-label">WhatsApp Business</div>
+          <div class="ch-desc">Disponível para planos Profissional e Enterprise — link enviado por e-mail após ativação</div>
+        </div>
+      </div>
+      <div class="channel">
+        <div class="ch-icon">📞</div>
+        <div>
+          <div class="ch-label">Suporte prioritário</div>
+          <div class="ch-desc">Atendimento por chamada de vídeo disponível para planos Enterprise mediante agendamento</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Tempo de Resposta por Plano</div>
+    <table class="support-table">
+      <thead>
+        <tr>
+          <th>Plano</th>
+          <th>Tempo de resposta</th>
+          <th>Horário</th>
+          <th>Canal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Starter</strong></td>
+          <td><span class="tag amber">48 horas úteis</span></td>
+          <td>Seg–Sex 9h–18h</td>
+          <td>E-mail</td>
+        </tr>
+        <tr>
+          <td><strong>Profissional</strong></td>
+          <td><span class="tag green">24 horas úteis</span></td>
+          <td>Seg–Sex 8h–20h</td>
+          <td>E-mail + WhatsApp</td>
+        </tr>
+        <tr>
+          <td><strong>Enterprise / Governo</strong></td>
+          <td><span class="tag blue">4 horas (crítico) / 8h úteis (geral)</span></td>
+          <td>Seg–Sáb 7h–22h</td>
+          <td>E-mail + WhatsApp + Chamada</td>
+        </tr>
+        <tr>
+          <td><strong>Hospital / Rede</strong></td>
+          <td><span class="tag blue">2 horas (crítico) / 8h úteis (geral)</span></td>
+          <td>24/7 para críticos</td>
+          <td>Canal dedicado</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Segurança e Conformidade</div>
+    <div class="commit-grid">
+      <div class="commit-card">
+        <div class="commit-icon">🛡️</div>
+        <div class="commit-label">LGPD</div>
+        <div class="commit-val">Conforme</div>
+        <div class="commit-desc">Dados tratados conforme Lei 13.709/2018. DPO disponível para consulta.</div>
+      </div>
+      <div class="commit-card">
+        <div class="commit-icon">🔒</div>
+        <div class="commit-label">Criptografia</div>
+        <div class="commit-val">TLS 1.3</div>
+        <div class="commit-desc">Toda comunicação criptografada. Dados sensíveis criptografados em repouso.</div>
+      </div>
+      <div class="commit-card">
+        <div class="commit-icon">🏥</div>
+        <div class="commit-label">Normas NR</div>
+        <div class="commit-val">NR-7 / NR-9</div>
+        <div class="commit-desc">Módulo SST desenvolvido conforme requisitos das Normas Regulamentadoras vigentes.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Última atualização: Maio de 2026 · <a href="/privacidade/">Política de Privacidade</a> · <a href="/termos/">Termos de Uso</a></p>
+    <p style="margin-top:8px">Dúvidas sobre o SLA? <a href="mailto:suporte@soluscrt.com.br">suporte@soluscrt.com.br</a></p>
+  </div>
+</div>
+</body>
+</html>

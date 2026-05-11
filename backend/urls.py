@@ -230,7 +230,22 @@ from api.views_comunicacao import (
     painel_grupos, api_criar_grupo, api_listar_salas_por_tipo, api_membros_grupo,
 )
 from api.views_farmacia import api_farmacia_painel
+from api.views_farmacia_gestao import (
+    api_farmacia_dashboard,
+    api_farmacia_estoque,
+    api_farmacia_dispensacao,
+    api_farmacia_movimentos,
+    api_farmacia_fornecedores,
+    api_farmacia_pedidos,
+)
 from api.views_hospital import api_hospital_painel
+from api.views_hospital_dashboard import (
+    api_hospital_dashboard,
+    api_hospital_leitos,
+    api_hospital_triagem,
+    api_hospital_pacientes,
+    api_hospital_prescricao,
+)
 from api.views_farmacia_ops import (
     api_fornecedores_farmacia, api_fornecedor_farmacia_detalhe,
     api_itens_farmacia, api_item_farmacia_detalhe,
@@ -266,6 +281,13 @@ from api.governanca import api_auditoria_institucional, api_matriz_decisao, api_
 
 # 🔥 IMPORT CORRETO (APENAS UM)
 from api.views_pagamento import criar_pagamento, webhook, sucesso, erro, pendente, status_pagamento, planos_publicos
+from api.views_relatorios import (
+    relatorio_pdf_funcionarios,
+    relatorio_pdf_asos,
+    relatorio_pdf_cats,
+    relatorio_pdf_treinamentos,
+)
+from api.views_platform import platform_status, sla_page, status_page
 
 
 def service_worker(request):
@@ -283,6 +305,9 @@ urlpatterns = [
     path('seguranca-lgpd/', documento_publico, {"slug": "seguranca-lgpd"}),
     path('metodologia/', documento_publico, {"slug": "metodologia"}),
     path('suporte/', documento_publico, {"slug": "suporte"}),
+    path('sla/', sla_page),
+    path('status/', status_page),
+    path('api/platform/status', platform_status),
     path('login-empresa/', tela_login_empresa),
     path('login-governo/', tela_login_governo),
     path('operacao-central/', login_operacao),
@@ -556,6 +581,19 @@ urlpatterns = [
     path('api/operacao-central/financeiro/acao', api_dono_financeiro_acao),
     path('api/operacao-central/exportar', api_dono_exportar),
     path('api/farmacia/painel', api_farmacia_painel),
+    # ── Farmácia Gestão (módulo completo) ────────────────────────
+    path('api/farmacia/dashboard', api_farmacia_dashboard),
+    path('api/farmacia/dashboard/', api_farmacia_dashboard),
+    path('api/farmacia/estoque', api_farmacia_estoque),
+    path('api/farmacia/estoque/', api_farmacia_estoque),
+    path('api/farmacia/dispensacao', api_farmacia_dispensacao),
+    path('api/farmacia/dispensacao/', api_farmacia_dispensacao),
+    path('api/farmacia/movimentos', api_farmacia_movimentos),
+    path('api/farmacia/movimentos/', api_farmacia_movimentos),
+    path('api/farmacia/fornecedores-gestao', api_farmacia_fornecedores),
+    path('api/farmacia/fornecedores-gestao/', api_farmacia_fornecedores),
+    path('api/farmacia/pedidos-gestao', api_farmacia_pedidos),
+    path('api/farmacia/pedidos-gestao/', api_farmacia_pedidos),
     # ── Farmácia Operacional ──────────────────────────────────
     path('api/farmacia/ops/kpis/', api_farmacia_ops_kpis),
     path('api/farmacia/fornecedores/', api_fornecedores_farmacia),
@@ -585,6 +623,12 @@ urlpatterns = [
     path('api/farmacia/relatorios/cmm/', api_farmacia_relatorio_cmm),
     path('api/farmacia/relatorios/giro/', api_farmacia_relatorio_giro),
     path('api/hospital/painel', api_hospital_painel),
+    # ── Hospital Gestão (Manchester / KPIs) ─────────────────
+    path('api/hospital/dashboard', api_hospital_dashboard),
+    path('api/hospital/leitos', api_hospital_leitos),
+    path('api/hospital/triagem', api_hospital_triagem),
+    path('api/hospital/pacientes', api_hospital_pacientes),
+    path('api/hospital/prescricao', api_hospital_prescricao),
     # ── Hospital Operacional ─────────────────────────────────
     path('api/hospital/ops/kpis/', api_hospital_ops_kpis),
     path('api/hospital/departamentos/', api_departamentos_hospital),
@@ -806,4 +850,15 @@ urlpatterns = [
     path('api/v2/schema/contratos', api_schema_contratos),
     path('api/v2/slo/status', api_slo_status),
     path('api/v2/saude', api_health),
+
+    # ── Relatórios PDF SST ────────────────────────────────────────────────────
+    path('api/sst/relatorio/funcionarios.pdf', relatorio_pdf_funcionarios),
+    path('api/sst/relatorio/asos.pdf', relatorio_pdf_asos),
+    path('api/sst/relatorio/cats.pdf', relatorio_pdf_cats),
+    path('api/sst/relatorio/treinamentos.pdf', relatorio_pdf_treinamentos),
+
+    # ── Plataforma — SLA, Status ──────────────────────────────────────────────
+    path('sla/', sla_page),
+    path('status/', status_page),
+    path('api/platform/status', platform_status),
 ]
