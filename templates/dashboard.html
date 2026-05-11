@@ -142,9 +142,6 @@
 <body>
 
   <div class="topo">
-    <button onclick="irParaLogin()">💊 Farmácia</button>
-    <a href="/hub/" style="padding:6px 14px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-weight:700;font-size:12px;text-decoration:none;border:none;cursor:pointer">🚀 Plataforma Enterprise</a>
-    <a href="/executive-dashboard/" style="padding:6px 14px;border-radius:8px;background:#1e293b;color:#94a3b8;font-size:12px;text-decoration:none">📊 Dashboard Executivo</a>
     <button onclick="logout()" class="btn logout">🚪 Sair</button>
   </div>
 
@@ -270,18 +267,6 @@
     function irPagamento() {
       window.location.href = "/pagamento/";
     }
-
-    // 🏥 farmácia
-    function irParaLogin() {
-
-      if (token) {
-        window.location.href = "/dashboard-farmacia/";
-      } else {
-        window.location.href = "/";
-      }
-    }
-
-
 
     // 🔥 MAPA ESTADOS
     const mapaEstados = {
