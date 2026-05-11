@@ -2447,14 +2447,21 @@ def analisar_audio(request):
 from api.models import RegistroSintoma
 
 def limpar_casos(request):
-    total = RegistroSintoma.objects.count()
-    RegistroSintoma.objects.all().delete()
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    total = RegistroSintoma.objects.filter(empresa=empresa).count()
+    RegistroSintoma.objects.filter(empresa=empresa).delete()
     return JsonResponse({"apagados": total})
 
 
 def insights_nacional(request):
 
-    dados = RegistroSintoma.objects.values(
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    dados = RegistroSintoma.objects.filter(empresa=empresa).values(
         "estado", "cidade", "grupo"
     ).annotate(total=Count("id"))
 
@@ -2498,7 +2505,11 @@ def insights_nacional(request):
 
 def insights_farmacia(request):
 
-    dados = RegistroSintoma.objects.values(
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    dados = RegistroSintoma.objects.filter(empresa=empresa).values(
         "cidade", "estado", "grupo"
     ).annotate(total=Count("id"))
 
@@ -2636,12 +2647,11 @@ def pagamento(request):
 
 def painel(request):
 
-    empresa_id = request.GET.get("empresa_id")
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
 
-    if not empresa_id:
-        return JsonResponse({"erro": "sem empresa"}, status=400)
-
-    dados = RegistroSintoma.objects.filter(empresa_id=empresa_id)
+    dados = RegistroSintoma.objects.filter(empresa=empresa)
 
     total = dados.count()
 
@@ -2665,11 +2675,13 @@ def painel(request):
 
 def casos_por_regiao(request):
 
-    empresa_id = request.GET.get("empresa_id")
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
 
     dados = (
         RegistroSintoma.objects
-        .filter(empresa_id=empresa_id)
+        .filter(empresa=empresa)
         .values("bairro", "cidade", "estado")
         .annotate(
             total=Count("id"),

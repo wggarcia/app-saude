@@ -116,7 +116,7 @@ if not DEBUG:
         'whitenoise.middleware.WhiteNoiseMiddleware',
     )
 
-CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", default=not IS_PRODUCTION)
+CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", default=False)
 SOLUSCRT_DEFAULT_ORIGINS = [
     "https://app-saude-p9n8.onrender.com",
     "https://soluscrt.com.br",
@@ -250,6 +250,8 @@ PUBLIC_BASE_URL = os.environ.get(
 ASAAS_API_KEY = (os.environ.get("ASAAS_API_KEY", "") or "").strip()
 ASAAS_BASE_URL = (os.environ.get("ASAAS_BASE_URL", "https://api.asaas.com/v3") or "").strip().rstrip("/")
 ASAAS_WEBHOOK_TOKEN = (os.environ.get("ASAAS_WEBHOOK_TOKEN", "") or "").strip()
+if IS_PRODUCTION and not ASAAS_WEBHOOK_TOKEN:
+    raise RuntimeError("Configure ASAAS_WEBHOOK_TOKEN em producao para validar webhooks de pagamento.")
 ASAAS_USER_AGENT = (os.environ.get("ASAAS_USER_AGENT", "SolusCRT-Saude/1.0") or "SolusCRT-Saude/1.0").strip()
 FIREBASE_SERVICE_ACCOUNT_PATH = os.environ.get(
     "FIREBASE_SERVICE_ACCOUNT_PATH",
