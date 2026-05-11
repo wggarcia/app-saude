@@ -575,3 +575,119 @@ def _comp_dict(c):
         "criado_em": c.criado_em.isoformat(),
         "url": f"/sst/aso/portal/{c.token}/",
     }
+
+
+# ── eSocial Real Transmission ────────────────────────────────────────────────
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_esocial_transmitir(request, evento_id):
+    """Transmits a single eSocial event to the government REST API."""
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    try:
+        ev = eSocialEventoSST.objects.get(pk=evento_id, empresa=e)
+    except eSocialEventoSST.DoesNotExist:
+        return JsonResponse({"erro": "Evento não encontrado"}, status=404)
+
+    if ev.status == "transmitido":
+        return JsonResponse({"erro": "Evento já transmitido", "protocolo": ev.protocolo}, status=400)
+
+    from .esocial_transmissao import transmitir_evento
+    ok, mensagem = transmitir_evento(ev)
+
+    return JsonResponse({
+        "ok": ok,
+        "status": ev.status,
+        "protocolo": ev.protocolo,
+        "mensagem": mensagem,
+    }, status=200 if ok else 422)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_esocial_transmitir_pendentes(request):
+    """Transmits all pending events for the empresa (up to 50 at once)."""
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .esocial_transmissao import transmitir_pendentes
+    resultados = transmitir_pendentes(e)
+
+    transmitidos = sum(1 for r in resultados if r["ok"])
+    erros = len(resultados) - transmitidos
+
+    return JsonResponse({
+        "total": len(resultados),
+        "transmitidos": transmitidos,
+        "erros": erros,
+        "resultados": resultados,
+    })
+
+
+@csrf_exempt
+def api_esocial_certificado(request):
+    """
+    GET  — returns certificate status (name, expiry, environment).
+    POST — uploads PKCS#12 certificate (multipart: file=.pfx, senha=str, ambiente=str).
+    """
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    cfg = _cfg(e)
+    if not cfg:
+        from .models import ConfiguracaoSST
+        cfg = ConfiguracaoSST.objects.create(empresa=e)
+
+    if request.method == "GET":
+        return JsonResponse({
+            "configurado": bool(cfg.certificado_pfx_b64),
+            "nome": cfg.certificado_nome,
+            "validade": cfg.certificado_validade.isoformat() if cfg.certificado_validade else None,
+            "ambiente": cfg.esocial_ambiente,
+        })
+
+    if request.method == "POST":
+        import base64
+        arquivo = request.FILES.get("certificado")
+        senha = request.POST.get("senha", "")
+        ambiente = request.POST.get("ambiente", "homologacao")
+
+        if not arquivo:
+            return JsonResponse({"erro": "Envie o arquivo .pfx"}, status=400)
+
+        pfx_bytes = arquivo.read()
+
+        # Validate certificate
+        try:
+            from cryptography.hazmat.primitives.serialization import pkcs12
+            from cryptography.hazmat.backends import default_backend
+            senha_bytes = senha.encode() if senha else b""
+            private_key, cert, _ = pkcs12.load_key_and_certificates(
+                pfx_bytes, senha_bytes, backend=default_backend()
+            )
+            validade = cert.not_valid_after_utc.date() if hasattr(cert, "not_valid_after_utc") else cert.not_valid_after.date()
+            nome_cert = cert.subject.rfc4514_string()
+        except Exception as ex:
+            return JsonResponse({"erro": f"Certificado inválido: {ex}"}, status=400)
+
+        cfg.certificado_pfx_b64 = base64.b64encode(pfx_bytes).decode()
+        cfg.certificado_senha = senha
+        cfg.certificado_validade = validade
+        cfg.certificado_nome = nome_cert[:200]
+        cfg.esocial_ambiente = ambiente
+        cfg.save(update_fields=[
+            "certificado_pfx_b64", "certificado_senha",
+            "certificado_validade", "certificado_nome", "esocial_ambiente",
+        ])
+
+        return JsonResponse({
+            "ok": True,
+            "nome": nome_cert[:200],
+            "validade": validade.isoformat(),
+            "ambiente": ambiente,
+        })

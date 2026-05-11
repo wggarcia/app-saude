@@ -1264,6 +1264,16 @@ class ConfiguracaoSST(models.Model):
     numero_funcionarios     = models.PositiveIntegerField(default=0)
     endereco_completo       = models.TextField(blank=True, default="")
     atualizado_em           = models.DateTimeField(auto_now=True)
+    # eSocial digital certificate (PKCS#12 stored as base64)
+    certificado_pfx_b64     = models.TextField(blank=True, default="")
+    certificado_senha       = models.CharField(max_length=255, blank=True, default="")
+    certificado_validade    = models.DateField(null=True, blank=True)
+    certificado_nome        = models.CharField(max_length=200, blank=True, default="")
+    esocial_ambiente        = models.CharField(
+        max_length=20,
+        choices=[("homologacao", "Homologação"), ("producao", "Produção")],
+        default="homologacao",
+    )
 
     def __str__(self):
         return f"Config SST — {self.empresa.nome}"

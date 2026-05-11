@@ -100,6 +100,9 @@ from api.views_esocial_sst import (
     api_aso_compartilhamentos,
     api_aso_revogar_compartilhamento,
     portal_aso_publico,
+    api_esocial_transmitir,
+    api_esocial_transmitir_pendentes,
+    api_esocial_certificado,
 )
 from api.views_alertas import api_alertas, alertas_page
 from api.views_executive import api_executive_dashboard, executive_dashboard_page
@@ -517,6 +520,9 @@ urlpatterns = [
     path('api/sst/esocial/eventos/', api_esocial_eventos),
     path('api/sst/esocial/kpis/', api_esocial_kpis),
     path('api/sst/esocial/eventos/<int:evento_id>/xml/', api_esocial_gerar_xml),
+    path('api/sst/esocial/eventos/<int:evento_id>/transmitir/', api_esocial_transmitir),
+    path('api/sst/esocial/transmitir-pendentes/', api_esocial_transmitir_pendentes),
+    path('api/sst/esocial/certificado/', api_esocial_certificado),
     path('api/sst/esocial/eventos/<int:evento_id>/transmitido/', api_esocial_marcar_transmitido),
     path('api/sst/cats/<int:cat_id>/esocial/', api_esocial_registrar_cat),
     path('api/sst/asos/<int:aso_id>/esocial/', api_esocial_registrar_aso),
