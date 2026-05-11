@@ -6,7 +6,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("api", "0037_farmacia_avancado"),
+        ("api", "0039_rede_network_plano_saude"),
     ]
 
     operations = [
