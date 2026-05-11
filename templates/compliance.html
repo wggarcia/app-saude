@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compliance & Auditoria · SolusCRT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#030810;--surface:rgba(255,255,255,.042);--line:rgba(255,255,255,.1);
+  --ink:#edf2f7;--muted:#7a8fa0;--gold:#d9b86f;--cyan:#45ead9;--rose:#ff6f8f;
+  --blue:#60a5fa;--green:#4ade80;--amber:#fbbf24;--purple:#a78bfa;--mono:"Geist Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:Geist,Arial,sans-serif}
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 5% 6%,rgba(96,165,250,.09),transparent 22rem),
+    radial-gradient(circle at 95% 5%,rgba(167,139,250,.1),transparent 24rem),
+    #030810;
+  padding:0 0 80px;
+}
+
+/* TOPBAR */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:14px 32px;border-bottom:1px solid var(--line);
+  background:rgba(3,8,16,.92);backdrop-filter:blur(24px);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:.92rem}
+.mark{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--gold),#f6e9bd);color:#090d12;font-size:.6rem;font-weight:900}
+.page-title{font-weight:800;font-size:.95rem}
+.page-sub{font-size:.75rem;color:var(--muted)}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pill-btn{padding:7px 14px;border-radius:999px;font-size:.78rem;font-weight:700;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);color:var(--muted);
+  text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:.18s}
+.pill-btn:hover{background:rgba(255,255,255,.08);color:var(--ink)}
+.pill-btn.danger{border-color:rgba(255,111,143,.3);color:var(--rose);background:rgba(255,111,143,.07)}
+.export-btn{border-color:rgba(74,222,128,.3);color:var(--green);background:rgba(74,222,128,.07)}
+.export-btn:hover{background:rgba(74,222,128,.12)}
+
+/* SHELL */
+.shell{width:min(1400px,100%);margin:0 auto;padding:28px 28px 0}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--line);padding-bottom:0}
+.tab{padding:10px 18px;font-size:.83rem;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;
+  color:var(--muted);transition:.18s;border-radius:8px 8px 0 0}
+.tab:hover{color:var(--ink);background:rgba(255,255,255,.03)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* KPI STRIP */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.kpi{padding:16px 20px;border-radius:18px;background:var(--surface);border:1px solid var(--line);
+  position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.blue::before{background:var(--blue)}
+.kpi.cyan::before{background:var(--cyan)}
+.kpi.green::before{background:var(--green)}
+.kpi.amber::before{background:var(--amber)}
+.kpi.purple::before{background:var(--purple)}
+.kpi-label{font-size:.7rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+.kpi-val{font-size:1.75rem;font-weight:800;line-height:1}
+.kpi-note{font-size:.72rem;color:var(--muted);margin-top:5px}
+.kpi-skeleton{display:inline-block;width:56px;height:1.75rem;border-radius:6px;
+  background:linear-gradient(90deg,rgba(255,255,255,.06) 25%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.06) 75%);
+  background-size:200% 100%;animation:shimmer 1.5s infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* AUDIT TIMELINE */
+.filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.filter-input{
+  padding:8px 14px;border-radius:999px;border:1px solid var(--line);
+  background:rgba(255,255,255,.04);color:var(--ink);font-size:.82rem;font-family:Geist,sans-serif;
+  outline:none;min-width:160px;
+}
+.filter-input:focus{border-color:var(--blue)}
+.filter-input::placeholder{color:var(--muted)}
+.filter-label{font-size:.76rem;color:var(--muted);font-weight:600;white-space:nowrap}
+.filter-btn{padding:8px 16px;border-radius:999px;font-size:.8rem;font-weight:700;cursor:pointer;
+  border:1px solid rgba(96,165,250,.3);background:rgba(96,165,250,.08);color:var(--blue);transition:.18s}
+.filter-btn:hover{background:rgba(96,165,250,.15)}
+
+.timeline{display:grid;gap:0;position:relative}
+.timeline::before{content:'';position:absolute;left:22px;top:0;bottom:0;width:1px;
+  background:linear-gradient(to bottom,var(--line),transparent)}
+.tl-item{
+  display:grid;grid-template-columns:48px 1fr;gap:16px;
+  padding:14px 0;border-bottom:1px solid rgba(255,255,255,.04);
+  position:relative;
+}
+.tl-item:last-child{border-bottom:none}
+.tl-dot{
+  width:14px;height:14px;border-radius:50%;border:2px solid var(--line);
+  background:var(--bg);margin-top:4px;flex:0 0 14px;
+  position:relative;z-index:2;margin-left:16px;
+  transition:.18s;
+}
+.tl-dot.create{border-color:var(--green);background:rgba(74,222,128,.15)}
+.tl-dot.update{border-color:var(--cyan);background:rgba(69,234,217,.12)}
+.tl-dot.delete{border-color:var(--rose);background:rgba(255,111,143,.12)}
+.tl-dot.login{border-color:var(--blue);background:rgba(96,165,250,.12)}
+.tl-dot.export{border-color:var(--amber);background:rgba(251,191,36,.12)}
+.tl-dot.other{border-color:var(--muted);background:var(--surface)}
+.tl-body{}
+.tl-header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.tl-acao{font-weight:700;font-size:.88rem}
+.tl-time{font-size:.75rem;color:var(--muted)}
+.tl-detail{font-size:.8rem;color:var(--muted);line-height:1.5}
+.tl-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;
+  font-size:.68rem;font-weight:700;font-family:var(--mono);background:rgba(255,255,255,.06);
+  border:1px solid var(--line);color:var(--muted)}
+.tag.actor{border-color:rgba(96,165,250,.24);color:var(--blue);background:rgba(96,165,250,.07)}
+.tag.ip{border-color:rgba(167,139,250,.22);color:var(--purple);background:rgba(167,139,250,.07)}
+.tag.obj{border-color:rgba(69,234,217,.2);color:var(--cyan);background:rgba(69,234,217,.06)}
+
+.pagination{display:flex;align-items:center;gap:12px;margin-top:18px;flex-wrap:wrap}
+.page-info{font-size:.82rem;color:var(--muted)}
+.page-nav-btn{padding:7px 16px;border-radius:999px;font-size:.8rem;font-weight:700;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);color:var(--muted);transition:.18s}
+.page-nav-btn:hover:not(:disabled){background:rgba(255,255,255,.08);color:var(--ink)}
+.page-nav-btn:disabled{opacity:.35;cursor:not-allowed}
+
+/* DEVICES */
+.devices-grid{display:grid;gap:10px}
+.dev-card{
+  display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;
+  padding:16px 20px;border-radius:18px;background:var(--surface);border:1px solid var(--line);
+}
+.dev-icon{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+  font-size:1.1rem;background:rgba(255,255,255,.06)}
+.dev-name{font-weight:700;font-size:.9rem}
+.dev-meta{font-size:.75rem;color:var(--muted);margin-top:3px;font-family:var(--mono)}
+.dev-status{display:flex;align-items:center;gap:8px}
+.status-dot{width:8px;height:8px;border-radius:50%}
+.status-dot.active{background:var(--green);box-shadow:0 0 0 4px rgba(74,222,128,.15)}
+.status-dot.inactive{background:var(--muted)}
+.revoke-btn{padding:5px 12px;border-radius:999px;font-size:.75rem;font-weight:700;cursor:pointer;
+  border:1px solid rgba(255,111,143,.25);color:var(--rose);background:rgba(255,111,143,.07);
+  display:none;transition:.18s}
+.dev-card:hover .revoke-btn{display:block}
+
+/* LGPD PANEL */
+.lgpd-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.lgpd-card{padding:24px;border-radius:22px;background:var(--surface);border:1px solid var(--line)}
+.lgpd-card h3{font-size:.95rem;font-weight:800;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px}
+.lgpd-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.83rem}
+.lgpd-row:last-child{border-bottom:none}
+.lgpd-key{color:var(--muted);font-weight:600}
+.lgpd-val{font-weight:700;text-align:right;max-width:60%}
+.lgpd-val.ok{color:var(--green)}
+.lgpd-val.warn{color:var(--amber)}
+.lgpd-compliance-check{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  border-radius:12px;margin-bottom:10px;font-size:.83rem;font-weight:600;
+}
+.check-ok{background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.18);color:var(--green)}
+.check-info{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.18);color:var(--blue)}
+.check-warn{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.18);color:var(--amber)}
+
+.full-card{grid-column:span 2}
+
+/* TOP ACTIONS chart */
+.top-acoes{display:grid;gap:8px;margin-top:12px}
+.acao-bar{display:flex;align-items:center;gap:10px}
+.acao-name{font-size:.78rem;color:var(--muted);min-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acao-bg{flex:1;height:8px;border-radius:999px;background:rgba(255,255,255,.07)}
+.acao-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.acao-count{font-size:.75rem;font-weight:700;color:var(--ink);min-width:30px;text-align:right}
+
+@media(max-width:900px){
+  .kpi-strip{grid-template-columns:repeat(3,1fr)}
+  .lgpd-grid{grid-template-columns:1fr}
+  .full-card{grid-column:auto}
+  .topbar{padding:12px 16px}
+  .shell{padding:16px 16px 0}
+}
+@media(max-width:600px){
+  .kpi-strip{grid-template-columns:repeat(2,1fr)}
+  .dev-card{grid-template-columns:auto 1fr}
+  .filter-bar{flex-direction:column;align-items:stretch}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="brand" href="/"><span class="mark">CRT</span> SolusCRT Saúde</a>
+  <div>
+    <div class="page-title">Compliance & Auditoria</div>
+    <div class="page-sub" id="page-empresa">Carregando...</div>
+  </div>
+  <div class="topbar-right">
+    <a class="pill-btn export-btn" href="/api/compliance/exportar?formato=csv" download>⬇ Exportar CSV</a>
+    <a class="pill-btn export-btn" href="/api/compliance/exportar?formato=json" download>⬇ Exportar JSON</a>
+    <a class="pill-btn" href="/dashboard-empresa/">Dashboard</a>
+    <a class="pill-btn" href="/seguranca/">Segurança</a>
+  </div>
+</div>
+
+<div class="shell">
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip" id="kpi-strip">
+    <div class="kpi blue"><div class="kpi-label">Eventos (total)</div><div class="kpi-val kpi-skeleton"></div></div>
+    <div class="kpi cyan"><div class="kpi-label">Últimas 24h</div><div class="kpi-val kpi-skeleton"></div></div>
+    <div class="kpi green"><div class="kpi-label">Dispositivos ativos</div><div class="kpi-val kpi-skeleton"></div></div>
+    <div class="kpi amber"><div class="kpi-label">Titulares LGPD</div><div class="kpi-val kpi-skeleton"></div></div>
+    <div class="kpi purple"><div class="kpi-label">IPs distintos</div><div class="kpi-val kpi-skeleton"></div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('trilha')">📋 Trilha de Auditoria</div>
+    <div class="tab" onclick="switchTab('dispositivos')">💻 Dispositivos</div>
+    <div class="tab" onclick="switchTab('lgpd')">🔒 LGPD & Conformidade</div>
+  </div>
+
+  <!-- TAB: TRILHA -->
+  <div class="tab-panel active" id="tab-trilha">
+    <div class="filter-bar">
+      <span class="filter-label">Filtros:</span>
+      <input class="filter-input" type="text" id="f-acao" placeholder="Ação..." oninput="debounceLoad()">
+      <input class="filter-input" type="text" id="f-ator" placeholder="Ator...">
+      <input class="filter-input" type="text" id="f-objeto" placeholder="Objeto...">
+      <input class="filter-input" type="date" id="f-desde" style="width:140px">
+      <input class="filter-input" type="date" id="f-ate" style="width:140px">
+      <button class="filter-btn" onclick="loadTrilha(0)">🔍 Filtrar</button>
+      <button class="filter-btn" style="border-color:rgba(255,255,255,.15);color:var(--muted)" onclick="clearFilters()">✕ Limpar</button>
+    </div>
+
+    <div id="timeline-container">
+      <div style="text-align:center;padding:40px;color:var(--muted)">Carregando...</div>
+    </div>
+
+    <div class="pagination" id="pagination" style="display:none">
+      <button class="page-nav-btn" id="btn-prev" onclick="changePage(-1)" disabled>← Anterior</button>
+      <span class="page-info" id="page-info">—</span>
+      <button class="page-nav-btn" id="btn-next" onclick="changePage(1)">Próxima →</button>
+    </div>
+  </div>
+
+  <!-- TAB: DISPOSITIVOS -->
+  <div class="tab-panel" id="tab-dispositivos">
+    <div id="devices-container">
+      <div style="text-align:center;padding:40px;color:var(--muted)">Carregando...</div>
+    </div>
+  </div>
+
+  <!-- TAB: LGPD -->
+  <div class="tab-panel" id="tab-lgpd">
+    <div class="lgpd-grid" id="lgpd-container">
+      <div style="text-align:center;padding:40px;color:var(--muted)">Carregando...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let currentOffset = 0;
+const LIMIT = 50;
+let totalTrilha = 0;
+let debounceTimer = null;
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+(async function init() {
+  await loadResumo();
+  await loadTrilha(0);
+})();
+
+// ── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab,.tab-panel').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.tab:nth-child(${name==='trilha'?1:name==='dispositivos'?2:3})`).classList.add('active');
+  document.getElementById(`tab-${name}`).classList.add('active');
+  if (name === 'dispositivos') loadDispositivos();
+  if (name === 'lgpd') loadLGPD();
+}
+
+// ── RESUMO ────────────────────────────────────────────────────────────────────
+async function loadResumo() {
+  try {
+    const res = await fetch('/api/compliance/resumo');
+    if (!res.ok) return;
+    const d = await res.json();
+    renderKpis(d);
+    document.getElementById('page-empresa').textContent = d.empresa;
+    window._resumo = d;
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function renderKpis(d) {
+  document.getElementById('kpi-strip').innerHTML = `
+    <div class="kpi blue">
+      <div class="kpi-label">Eventos (total)</div>
+      <div class="kpi-val" style="color:var(--blue)">${fmt(d.auditoria?.total_eventos)}</div>
+      <div class="kpi-note">${fmt(d.auditoria?.eventos_30d)} nos últimos 30d</div>
+    </div>
+    <div class="kpi cyan">
+      <div class="kpi-label">Últimas 24h</div>
+      <div class="kpi-val" style="color:var(--cyan)">${fmt(d.auditoria?.eventos_24h)}</div>
+      <div class="kpi-note">${fmt(d.auditoria?.atores_distintos)} atores distintos</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Dispositivos ativos</div>
+      <div class="kpi-val" style="color:var(--green)">${fmt(d.dispositivos?.ativos)}</div>
+      <div class="kpi-note">${fmt(d.dispositivos?.total)} cadastrados</div>
+    </div>
+    <div class="kpi amber">
+      <div class="kpi-label">Titulares LGPD</div>
+      <div class="kpi-val" style="color:var(--amber)">${fmt(d.lgpd?.titulares_ativos)}</div>
+      <div class="kpi-note">${fmt(d.lgpd?.usuarios_sistema)} usuários sistema</div>
+    </div>
+    <div class="kpi purple">
+      <div class="kpi-label">IPs distintos</div>
+      <div class="kpi-val" style="color:var(--purple)">${fmt(d.auditoria?.ips_distintos)}</div>
+      <div class="kpi-note">Últimos 30 dias</div>
+    </div>
+  `;
+}
+
+// ── TRILHA ────────────────────────────────────────────────────────────────────
+async function loadTrilha(offset) {
+  currentOffset = offset;
+  const params = new URLSearchParams({
+    limit: LIMIT, offset,
+    acao: document.getElementById('f-acao').value,
+    ator: document.getElementById('f-ator').value,
+    objeto_tipo: document.getElementById('f-objeto').value,
+    desde: document.getElementById('f-desde').value,
+    ate: document.getElementById('f-ate').value,
+  });
+
+  const container = document.getElementById('timeline-container');
+  container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted)">Carregando...</div>`;
+
+  try {
+    const res = await fetch('/api/compliance/trilha?' + params);
+    const d = await res.json();
+    totalTrilha = d.total;
+    renderTimeline(d.registros);
+    renderPagination(d.total, d.offset, d.limit);
+  } catch(e) {
+    container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--rose)">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+function renderTimeline(registros) {
+  const container = document.getElementById('timeline-container');
+  if (registros.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Nenhum evento encontrado</div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="timeline">${registros.map(r => {
+    const dotClass = acaoToDotClass(r.acao);
+    return `
+      <div class="tl-item">
+        <div>
+          <div class="tl-dot ${dotClass}"></div>
+        </div>
+        <div class="tl-body">
+          <div class="tl-header">
+            <span class="tl-acao">${escHtml(r.acao)}</span>
+            <span class="tl-time">${r.criado_em_fmt}</span>
+          </div>
+          ${r.objeto_tipo ? `<div class="tl-detail">${escHtml(r.objeto_tipo)}${r.objeto_id ? ' #' + escHtml(r.objeto_id) : ''}</div>` : ''}
+          <div class="tl-tags">
+            ${r.principal_nome && r.principal_nome !== 'sistema' ? `<span class="tag actor">👤 ${escHtml(r.principal_nome)}</span>` : '<span class="tag">⚙ sistema</span>'}
+            ${r.ip ? `<span class="tag ip">${escHtml(r.ip)}</span>` : ''}
+            ${r.principal_tipo && r.principal_tipo !== 'sistema' ? `<span class="tag">${escHtml(r.principal_tipo)}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('')}</div>`;
+}
+
+function renderPagination(total, offset, limit) {
+  const pagination = document.getElementById('pagination');
+  pagination.style.display = total > limit ? 'flex' : 'none';
+  const page = Math.floor(offset / limit) + 1;
+  const pages = Math.ceil(total / limit);
+  document.getElementById('page-info').textContent = `Página ${page} de ${pages} · ${total} eventos`;
+  document.getElementById('btn-prev').disabled = offset === 0;
+  document.getElementById('btn-next').disabled = offset + limit >= total;
+}
+
+function changePage(dir) {
+  const newOffset = currentOffset + (dir * LIMIT);
+  if (newOffset >= 0 && newOffset < totalTrilha) loadTrilha(newOffset);
+}
+
+function clearFilters() {
+  ['f-acao','f-ator','f-objeto','f-desde','f-ate'].forEach(id => document.getElementById(id).value = '');
+  loadTrilha(0);
+}
+
+function debounceLoad() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => loadTrilha(0), 400);
+}
+
+function acaoToDotClass(acao) {
+  const a = (acao || '').toLowerCase();
+  if (a.includes('criar') || a.includes('create') || a.includes('cadastr') || a.includes('registr')) return 'create';
+  if (a.includes('atualiz') || a.includes('update') || a.includes('editar') || a.includes('alter')) return 'update';
+  if (a.includes('excluir') || a.includes('delete') || a.includes('remov')) return 'delete';
+  if (a.includes('login') || a.includes('logout') || a.includes('acess')) return 'login';
+  if (a.includes('export') || a.includes('baixar') || a.includes('download')) return 'export';
+  return 'other';
+}
+
+// ── DISPOSITIVOS ──────────────────────────────────────────────────────────────
+async function loadDispositivos() {
+  if (window._devsLoaded) return;
+  window._devsLoaded = true;
+  const container = document.getElementById('devices-container');
+  try {
+    const res = await fetch('/api/compliance/dispositivos');
+    const d = await res.json();
+    if (!d.dispositivos.length) {
+      container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Nenhum dispositivo registrado</div>`;
+      return;
+    }
+    container.innerHTML = `<div class="devices-grid">${d.dispositivos.map(dev => `
+      <div class="dev-card">
+        <div class="dev-icon">${dev.ativo ? '💻' : '🔒'}</div>
+        <div>
+          <div class="dev-name">${escHtml(dev.apelido || dev.device_id)}</div>
+          <div class="dev-meta">${dev.ip ? dev.ip + ' · ' : ''}${escHtml(dev.user_agent_curto || '')} · Último: ${dev.ultimo_acesso_fmt}</div>
+        </div>
+        <div class="dev-status">
+          <span class="status-dot ${dev.ativo ? 'active' : 'inactive'}"></span>
+          <span style="font-size:.78rem;color:${dev.ativo ? 'var(--green)' : 'var(--muted)'}">
+            ${dev.ativo ? 'Ativo' : 'Inativo'}
+          </span>
+          ${dev.ativo ? `<button class="revoke-btn" onclick="revogarDev(${dev.id})">Revogar</button>` : ''}
+        </div>
+      </div>
+    `).join('')}</div>`;
+  } catch(e) {
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--rose)">Erro: ${e.message}</div>`;
+  }
+}
+
+async function revogarDev(id) {
+  if (!confirm('Revogar acesso deste dispositivo?')) return;
+  try {
+    await fetch(`/api/revogar_dispositivo/${id}`, {method:'DELETE'});
+    window._devsLoaded = false;
+    loadDispositivos();
+  } catch(e) { alert('Erro ao revogar: ' + e.message); }
+}
+
+// ── LGPD ──────────────────────────────────────────────────────────────────────
+async function loadLGPD() {
+  if (window._lgpdLoaded) return;
+  window._lgpdLoaded = true;
+  const container = document.getElementById('lgpd-container');
+  const r = window._resumo;
+  if (!r) {
+    await loadResumo();
+  }
+  const lgpd = (window._resumo || {}).lgpd || {};
+  const top_acoes = (window._resumo || {}).auditoria?.top_acoes || [];
+  const max_count = top_acoes.length ? Math.max(...top_acoes.map(a => a.total)) : 1;
+
+  container.innerHTML = `
+    <div class="lgpd-card">
+      <h3>🔒 Dados Pessoais & LGPD</h3>
+      <div class="lgpd-row">
+        <span class="lgpd-key">Titulares ativos</span>
+        <span class="lgpd-val ok">${fmt(lgpd.titulares_ativos)}</span>
+      </div>
+      <div class="lgpd-row">
+        <span class="lgpd-key">Usuários do sistema</span>
+        <span class="lgpd-val">${fmt(lgpd.usuarios_sistema)}</span>
+      </div>
+      <div class="lgpd-row">
+        <span class="lgpd-key">Retenção de dados desde</span>
+        <span class="lgpd-val">${lgpd.retencao_desde || '—'}</span>
+      </div>
+      <div class="lgpd-row">
+        <span class="lgpd-key">Período de retenção</span>
+        <span class="lgpd-val ok">${lgpd.periodo_retencao_anos || 5} anos</span>
+      </div>
+      <div class="lgpd-row">
+        <span class="lgpd-key">Base legal</span>
+        <span class="lgpd-val" style="font-size:.75rem">${lgpd.base_legal || '—'}</span>
+      </div>
+      <div class="lgpd-row">
+        <span class="lgpd-key">Finalidade</span>
+        <span class="lgpd-val" style="font-size:.75rem">${lgpd.finalidade || '—'}</span>
+      </div>
+      <div class="lgpd-row">
+        <span class="lgpd-key">Responsável pelo tratamento</span>
+        <span class="lgpd-val">${escHtml(lgpd.responsavel || '—')}</span>
+      </div>
+    </div>
+
+    <div class="lgpd-card">
+      <h3>✅ Checklist de Conformidade</h3>
+      <div class="lgpd-compliance-check check-ok">✓ Trilha de auditoria habilitada</div>
+      <div class="lgpd-compliance-check check-ok">✓ Controle de dispositivos por empresa</div>
+      <div class="lgpd-compliance-check check-ok">✓ Dados anonimizados nos check-ins</div>
+      <div class="lgpd-compliance-check check-ok">✓ Autenticação por sessão com timeout</div>
+      <div class="lgpd-compliance-check check-ok">✓ Exportação de dados disponível</div>
+      <div class="lgpd-compliance-check check-info">ℹ Política de privacidade em /privacidade/</div>
+      <div class="lgpd-compliance-check check-info">ℹ Termos de uso em /termos/</div>
+      <div class="lgpd-compliance-check check-warn">! Solicitar exclusão de dados: suporte</div>
+    </div>
+
+    <div class="lgpd-card full-card">
+      <h3>📊 Ações mais frequentes (30 dias)</h3>
+      <div class="top-acoes">
+        ${top_acoes.length ? top_acoes.map(a => `
+          <div class="acao-bar">
+            <div class="acao-name">${escHtml(a.acao)}</div>
+            <div class="acao-bg"><div class="acao-fill" style="width:${Math.round(a.total/max_count*100)}%"></div></div>
+            <div class="acao-count">${a.total}</div>
+          </div>
+        `).join('') : '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Sem dados</div>'}
+      </div>
+    </div>
+  `;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmt(n) { return n != null ? Number(n).toLocaleString('pt-BR') : '—'; }
+function escHtml(s) {
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+</script>
+</body>
+</html>
