@@ -91,6 +91,7 @@ from api.views_agendamento_sst import (
 )
 from api.views_alertas import api_alertas, alertas_page
 from api.views_executive import api_executive_dashboard, executive_dashboard_page
+from api.views_rede import api_rede_kpis, dashboard_rede_page
 from api.views_contratos import (
     api_beneficiario_excluir,
     api_beneficiarios_contrato,
@@ -318,6 +319,10 @@ urlpatterns = [
     path('executive/', executive_dashboard_page),
     path('api/executive/dashboard/', api_executive_dashboard),
     path('api/executive/dashboard', api_executive_dashboard),
+    # 🌐 Dashboard Executivo de Rede
+    path('dashboard-rede/', dashboard_rede_page),
+    path('api/rede/kpis/', api_rede_kpis),
+    path('api/rede/kpis', api_rede_kpis),
     # Contratos de saúde e séries epidemiológicas
     path('contratos/', contratos_page),
     path('series-epidemiologicas/', series_epi_page),
