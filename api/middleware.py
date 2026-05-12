@@ -161,6 +161,9 @@ class EmpresaMiddleware:
         owner_paths = (
             "/console-operacional/",
             "/api/operacao-central/",
+            "/financeiro/",
+            "/governanca/",
+            "/gtm/",
         )
 
         if any(request.path.startswith(path) for path in owner_paths):
