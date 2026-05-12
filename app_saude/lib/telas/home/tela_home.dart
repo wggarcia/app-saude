@@ -468,6 +468,8 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                 ),
                 const SizedBox(height: 20),
                 const _AcessoEmpresarialCard(),
+                const SizedBox(height: 12),
+                const _PortalTrabalhadorCard(),
               ],
             ),
           ),
@@ -1078,6 +1080,78 @@ class _ValueCard extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PortalTrabalhadorCard extends StatelessWidget {
+  const _PortalTrabalhadorCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: () => Navigator.of(context).pushNamed('/funcionario'),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0B2333),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: const Color(0xFFFFA657).withValues(alpha: 0.35),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFA657).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFFFFA657).withValues(alpha: 0.35),
+                ),
+              ),
+              child: const Icon(
+                Icons.badge_outlined,
+                color: Color(0xFFFFA657),
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Portal do Trabalhador',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Meu ASO, treinamentos NR e EPIs',
+                    style: TextStyle(
+                      color: Color(0xFF9CC4DB),
+                      fontSize: 13,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Color(0xFFFFA657),
+              size: 16,
             ),
           ],
         ),
