@@ -12,7 +12,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
-from .models import FuncionarioSST, ASOOcupacional, TreinamentoNR, EPIEntrega
+from .models import FuncionarioSST, ASOOcupacional, TreinamentoNR, EntregaEPI
 
 
 # ── helpers ────────────────────────────────────────────────────────────────
@@ -196,16 +196,16 @@ def funcionario_meus_epis(request):
         return JsonResponse({"erro": "não autenticado"}, status=401)
 
     try:
-        entregas = EPIEntrega.objects.filter(
-            funcionario=func
-        ).select_related("item_epi").order_by("-data_entrega")
+        entregas = EntregaEPI.objects.filter(
+            funcionario=func, empresa=func.empresa
+        ).select_related("epi").order_by("-data_entrega")
 
         def e_dict(e):
             return {
                 "id": e.id,
-                "epi_nome": e.item_epi.nome if e.item_epi else e.descricao_livre,
-                "ca": e.item_epi.ca if e.item_epi else "",
-                "quantidade": float(e.quantidade),
+                "epi_nome": e.epi.nome if e.epi else "—",
+                "ca": e.epi.ca if e.epi else "",
+                "quantidade": e.quantidade,
                 "data_entrega": str(e.data_entrega),
                 "data_devolucao": str(e.data_devolucao) if e.data_devolucao else None,
                 "devolvido": bool(e.data_devolucao),
