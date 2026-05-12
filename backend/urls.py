@@ -291,6 +291,11 @@ from api.views_relatorios import (
     relatorio_pdf_treinamentos,
 )
 from api.views_platform import platform_status, sla_page, status_page
+from api.views_funcionario_portal import (
+    funcionario_login, funcionario_dashboard,
+    funcionario_meu_perfil, funcionario_meus_asos,
+    funcionario_meus_treinamentos, funcionario_meus_epis,
+)
 
 
 def service_worker(request):
@@ -868,4 +873,12 @@ urlpatterns = [
     path('sla/', sla_page),
     path('status/', status_page),
     path('api/platform/status', platform_status),
+
+    # ── Portal do Funcionário (app mobile trabalhador SST) ────────────────────
+    path('api/funcionario/login', funcionario_login),
+    path('api/funcionario/dashboard', funcionario_dashboard),
+    path('api/funcionario/meu-perfil', funcionario_meu_perfil),
+    path('api/funcionario/meus-asos', funcionario_meus_asos),
+    path('api/funcionario/meus-treinamentos', funcionario_meus_treinamentos),
+    path('api/funcionario/meus-epis', funcionario_meus_epis),
 ]

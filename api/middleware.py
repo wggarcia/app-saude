@@ -119,6 +119,8 @@ class EmpresaMiddleware:
         }
         rotas_livres_prefixo = (
             "/redefinir-senha/",
+            "/api/funcionario/",   # portal do trabalhador — auth própria via Bearer
+            "/api/funcionario",
             "/api/login",
             "/api/operacao-central/login",
             "/api/registrar_empresa",
