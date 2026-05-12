@@ -197,7 +197,7 @@ def _render_dashboard(request, variant):
         "acesso_governo": empresa.acesso_governo,
         "tipo_conta": empresa.tipo_conta,
     })
-    response.set_cookie("empresa_id", str(empresa.id), samesite="Lax")
+    response.set_cookie("empresa_id", str(empresa.id), samesite="Lax", secure=not settings.DEBUG)
     return response
 
 

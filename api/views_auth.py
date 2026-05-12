@@ -19,6 +19,7 @@ from .planos import pacote_padrao, detalhes_pacote, normalizar_codigo_pacote
 
 COOKIE_MAX_AGE = 7 * 24 * 60 * 60
 SESSION_IDLE_TIMEOUT = timedelta(minutes=15) if settings.DEBUG else timedelta(hours=8)
+_COOKIE_SECURE = not settings.DEBUG
 DEVICE_IDLE_TIMEOUT = SESSION_IDLE_TIMEOUT
 
 
@@ -199,14 +200,15 @@ def _criar_token(empresa, session_key, principal_kind, principal_id, device_id=N
 
 
 def _aplicar_cookies_autenticacao(response, empresa, token):
-    response.set_cookie("empresa_id", str(empresa.id), samesite="Lax", max_age=COOKIE_MAX_AGE)
-    response.set_cookie("tipo_conta", empresa.tipo_conta, samesite="Lax", max_age=COOKIE_MAX_AGE)
+    response.set_cookie("empresa_id", str(empresa.id), samesite="Lax", max_age=COOKIE_MAX_AGE, secure=_COOKIE_SECURE)
+    response.set_cookie("tipo_conta", empresa.tipo_conta, samesite="Lax", max_age=COOKIE_MAX_AGE, secure=_COOKIE_SECURE)
     response.set_cookie(
         "auth_token",
         token,
         httponly=True,
         samesite="Lax",
         max_age=COOKIE_MAX_AGE,
+        secure=_COOKIE_SECURE,
     )
     return response
 
@@ -448,7 +450,7 @@ def login_dono_saas(request):
         "owner_nome": dono.nome,
         "destination": "/console-operacional/",
     })
-    response.set_cookie("owner_token", token, httponly=True, samesite="Lax", max_age=COOKIE_MAX_AGE)
+    response.set_cookie("owner_token", token, httponly=True, samesite="Lax", max_age=COOKIE_MAX_AGE, secure=_COOKIE_SECURE)
     return response
 
 
