@@ -316,6 +316,7 @@ urlpatterns = [
     path('operacao-central/', login_operacao),
     path('api/login', login_empresa),
     path('api/login-empresa', login_portal_empresa),
+    path('api/login-empresa-api', login_portal_empresa),  # alias for mobile app
     path('api/login-governo', login_portal_governo),
     path('api/sessao/aba', ativar_sessao_aba),
     path('api/operacao-central/login', login_dono_saas),

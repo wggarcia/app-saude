@@ -116,6 +116,7 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
       <button class="tab-btn active" onclick="switchTab('sesmt',this)">⚕️ Equipe SESMT</button>
       <button class="tab-btn" onclick="switchTab('alertas',this)">🔔 Alertas de Vencimento</button>
       <button class="tab-btn" onclick="switchTab('empresa',this)">🏢 Dados da Empresa</button>
+      <button class="tab-btn" onclick="switchTab('esocial',this);carregarCertificado()">🔐 eSocial</button>
     </div>
 
     <!-- TAB 1: SESMT -->
@@ -195,6 +196,51 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
 
         <div class="form-actions">
           <button class="btn-save" onclick="salvarConfiguracoes()">Salvar Configurações de Alertas</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: eSocial -->
+    <div class="tab-panel" id="tab-esocial">
+      <div class="card">
+        <div class="card-title">Certificado Digital eSocial</div>
+        <div class="card-sub">Certificado A1 (.pfx) utilizado para assinar e transmitir eventos SST ao governo (S-2210, S-2220, S-2230, S-2240).</div>
+
+        <div id="cert-status-card" class="info-card dispensado" style="margin-bottom:20px">
+          <div class="info-card-title" id="cert-status-titulo">Carregando...</div>
+          <div class="info-card-body" id="cert-status-corpo">Verificando status do certificado...</div>
+        </div>
+
+        <div class="section-label">Carregar Novo Certificado</div>
+        <div class="form-grid">
+          <div class="mf form-col-full">
+            <label>Arquivo .pfx <span class="mf-optional">(certificado A1)</span></label>
+            <input type="file" id="pfx_arquivo" accept=".pfx,.p12" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(0,201,167,.03);color:var(--text);font-size:.84px;cursor:pointer">
+          </div>
+          <div class="mf">
+            <label>Senha do certificado</label>
+            <input type="password" id="pfx_senha" placeholder="Senha do arquivo .pfx">
+          </div>
+          <div class="mf">
+            <label>Ambiente eSocial</label>
+            <select id="esocial_ambiente">
+              <option value="homologacao">Homologação (testes)</option>
+              <option value="producao">Produção</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="info-card alerta" style="margin-top:16px">
+          <div class="info-card-title">Atenção</div>
+          <div class="info-card-body">
+            O certificado é armazenado de forma segura e criptografada. Use um certificado A1 emitido por autoridade certificadora ICP-Brasil.
+            Inicie sempre em <strong>Homologação</strong> até confirmar que os eventos estão sendo aceitos corretamente.
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-sec" onclick="carregarCertificado()">Atualizar Status</button>
+          <button class="btn-save" id="btn-upload-cert" onclick="uploadCertificado()">Salvar Certificado</button>
         </div>
       </div>
     </div>
@@ -410,6 +456,60 @@ document.getElementById('cnpj').addEventListener('input', function() {
 
 // ── Init ───────────────────────────────────────────────────────
 populateFields(CONFIG_JSON);
+
+// ── eSocial Certificate ────────────────────────────────────────
+async function carregarCertificado() {
+  try {
+    const r = await fetch('/api/sst/esocial/certificado/');
+    const d = await r.json();
+    const card = document.getElementById('cert-status-card');
+    const titulo = document.getElementById('cert-status-titulo');
+    const corpo = document.getElementById('cert-status-corpo');
+    if (d.certificado_presente) {
+      card.className = d.validade_ok ? 'info-card conforme' : 'info-card alerta';
+      titulo.textContent = d.validade_ok ? 'Certificado válido' : 'Certificado próximo do vencimento ou vencido';
+      corpo.innerHTML = `<strong>${d.certificado_nome || 'Certificado A1'}</strong> — Validade: <strong>${d.certificado_validade || 'N/A'}</strong><br>Ambiente: <strong>${d.esocial_ambiente === 'producao' ? 'Produção' : 'Homologação'}</strong>`;
+      document.getElementById('esocial_ambiente').value = d.esocial_ambiente || 'homologacao';
+    } else {
+      card.className = 'info-card dispensado';
+      titulo.textContent = 'Nenhum certificado cadastrado';
+      corpo.textContent = 'Faça o upload do certificado .pfx para habilitar a transmissão eSocial.';
+    }
+  } catch(e) {
+    document.getElementById('cert-status-corpo').textContent = 'Erro ao verificar certificado.';
+  }
+}
+
+async function uploadCertificado() {
+  const arquivo = document.getElementById('pfx_arquivo').files[0];
+  const senha = document.getElementById('pfx_senha').value.trim();
+  const ambiente = document.getElementById('esocial_ambiente').value;
+  if (!arquivo) { showToast('Selecione um arquivo .pfx', true); return; }
+  if (!senha) { showToast('Informe a senha do certificado', true); return; }
+
+  const btn = document.getElementById('btn-upload-cert');
+  btn.textContent = 'Enviando...'; btn.disabled = true;
+
+  try {
+    const bytes = await arquivo.arrayBuffer();
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
+    const r = await fetch('/api/sst/esocial/certificado/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({certificado_pfx_b64: b64, certificado_senha: senha, esocial_ambiente: ambiente})
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.erro || 'Erro ao salvar certificado', true); return; }
+    showToast('✓ Certificado salvo — ' + (d.certificado_nome || 'OK'));
+    document.getElementById('pfx_arquivo').value = '';
+    document.getElementById('pfx_senha').value = '';
+    await carregarCertificado();
+  } catch(e) {
+    showToast('Erro: ' + e.message, true);
+  } finally {
+    btn.textContent = 'Salvar Certificado'; btn.disabled = false;
+  }
+}
 </script>
 </body>
 </html>
