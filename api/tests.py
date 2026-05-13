@@ -9,7 +9,22 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .maintenance import maintenance_report
-from .models import AceiteLegalPublico, AlertaGovernamental, DispositivoAutorizado, DispositivoPushPublico, DonoSaaS, Empresa, EmpresaUsuario, RegistroSintoma
+from .models import (
+    AceiteLegalPublico,
+    AlertaGovernamental,
+    DepartamentoHospital,
+    DispositivoAutorizado,
+    DispositivoPushPublico,
+    DonoSaaS,
+    Empresa,
+    EmpresaUsuario,
+    FornecedorFarmaciaGestao,
+    LeitoHospital,
+    MedicamentoFarmacia,
+    PacienteHospital,
+    RegistroSintoma,
+    TriagemHospital,
+)
 from . import epidemiologia
 from .epidemiologia import DISEASE_WEIGHTS
 from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_codigo_pacote, pacotes_por_setor
@@ -411,6 +426,104 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(login.status_code, 200)
         self.assertEqual(self.client.get("/api/farmacia/dashboard").status_code, 403)
         self.assertEqual(self.client.get("/api/gestao/resumo").status_code, 403)
+
+    def test_enterprise_command_center_exige_autenticacao(self):
+        response = self.client.get("/api/enterprise/command-center")
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_enterprise_command_center_hospital_usa_dados_do_setor(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital Enterprise",
+            email="hospital-enterprise@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        departamento = DepartamentoHospital.objects.create(
+            empresa=hospital,
+            nome="UTI",
+            tipo="uti",
+            capacidade_leitos=2,
+            ativo=True,
+        )
+        LeitoHospital.objects.create(
+            empresa=hospital,
+            departamento=departamento,
+            numero="101",
+            status="ocupado",
+        )
+        PacienteHospital.objects.create(
+            empresa=hospital,
+            nome="Paciente Enterprise",
+        )
+        TriagemHospital.objects.create(
+            empresa=hospital,
+            paciente=PacienteHospital.objects.get(empresa=hospital),
+            prioridade="vermelho",
+            queixa_principal="Dor intensa",
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-enterprise-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.get("/api/enterprise/command-center")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["setor"], "hospital")
+        self.assertEqual(payload["modulos"][0]["codigo"], "leitos_ocupacao")
+        self.assertEqual(payload["modulos"][0]["metricas"]["leitos_ocupados"], 1)
+        self.assertNotIn("estoque_compras", [modulo["codigo"] for modulo in payload["modulos"]])
+        self.assertTrue(any(risco["severidade"] == "alta" for risco in payload["riscos_prioritarios"]))
+
+    def test_enterprise_command_center_farmacia_detecta_estoque_critico(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Enterprise",
+            email="farmacia-enterprise@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        FornecedorFarmaciaGestao.objects.create(empresa=farmacia, nome="Fornecedor A", ativo=True)
+        MedicamentoFarmacia.objects.create(
+            empresa=farmacia,
+            nome="Medicamento Critico",
+            quantidade_atual="1",
+            quantidade_minima="5",
+            ativo=True,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-enterprise-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.get("/api/enterprise/command-center")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["setor"], "farmacia")
+        self.assertEqual(payload["modulos"][0]["metricas"]["estoque_critico"], 1)
+        self.assertTrue(any("estoque critico" in risco["titulo"] for risco in payload["riscos_prioritarios"]))
 
     def test_dispositivo_revogado_bloqueia_reuso_do_cookie(self):
         login = self._login("device-a")
