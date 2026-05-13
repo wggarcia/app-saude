@@ -46,7 +46,7 @@ from api.views_sst import (
     api_documentos_sst,
     api_afastamentos_sst,
     api_exames,
-    api_esocial_eventos,
+    api_esocial_eventos as api_esocial_eventos_legacy,
     api_relatorios_sst,
     api_prontuario_funcionario,
     api_treinamentos,
@@ -90,7 +90,7 @@ from api.views_agendamento_sst import (
     api_agendamentos_sst_kpis,
 )
 from api.views_esocial_sst import (
-    api_esocial_eventos,
+    api_esocial_eventos as api_esocial_eventos_sst,
     api_esocial_gerar_xml,
     api_esocial_registrar_cat,
     api_esocial_registrar_aso,
@@ -469,7 +469,7 @@ urlpatterns = [
     path('api/sst/documentos', api_documentos_sst),
     path('api/sst/afastamentos', api_afastamentos_sst),
     path('api/sst/exames', api_exames),
-    path('api/sst/esocial', api_esocial_eventos),
+    path('api/sst/esocial', api_esocial_eventos_legacy),
     path('api/sst/relatorios', api_relatorios_sst),
     path('api/sst/funcionarios/<int:funcionario_id>/prontuario', api_prontuario_funcionario),
     path('api/sst/treinamentos', api_treinamentos),
@@ -523,7 +523,8 @@ urlpatterns = [
     path('api/sst/agendamentos/<int:ag_id>/', api_agendamento_sst_detalhe),
     path('api/sst/agendamentos/<int:ag_id>', api_agendamento_sst_detalhe),
     # ── eSocial SST ──────────────────────────────────────────────────────────
-    path('api/sst/esocial/eventos/', api_esocial_eventos),
+    path('api/sst/esocial/eventos/', api_esocial_eventos_sst),
+    path('api/sst/esocial/eventos', api_esocial_eventos_sst),
     path('api/sst/esocial/kpis/', api_esocial_kpis),
     path('api/sst/esocial/eventos/<int:evento_id>/xml/', api_esocial_gerar_xml),
     path('api/sst/esocial/eventos/<int:evento_id>/transmitir/', api_esocial_transmitir),

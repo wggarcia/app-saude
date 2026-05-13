@@ -1,17 +1,55 @@
-# backend
+# SolusCRT – Estrutura de Apps
 
-A new Flutter project.
+Este repositório possui **2 apps Flutter separados** e um backend Django:
 
-## Getting Started
+## 1) `app_saude` (POPULAÇÃO)
+- App epidemiológico público.
+- Sem acesso empresarial e sem portal do trabalhador.
 
-This project is a starting point for a Flutter application.
+## 2) `app_ocupacional` (SAÚDE OCUPACIONAL)
+- App dedicado ao ambiente SaaS ocupacional.
+- Entradas:
+  - Acesso Empresarial
+  - Portal do Trabalhador
 
-A few resources to get you started if this is your first Flutter project:
+## 3) Backend (Django)
+- APIs e painéis institucionais na raiz do projeto.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Rodar cada app separadamente
+
+### App populacional
+```bash
+cd app_saude
+flutter pub get
+flutter run -d chrome
+```
+
+### App ocupacional
+```bash
+cd app_ocupacional
+flutter pub get
+flutter run -d chrome
+```
+
+### Scripts prontos (recomendado)
+```bash
+# Abrir app_ocupacional no Xcode (gera iOS, instala pods e abre workspace)
+./scripts/open_xcode_ocupacional.sh
+
+# Rodar app_ocupacional no Chrome na porta 8080 (ou outra porta)
+./scripts/run_ocupacional_web.sh 8080
+
+# Preparar os 2 apps (app_saude + app_ocupacional) com plataformas iOS/Android/Web
+./scripts/bootstrap_two_apps.sh
+
+# Validar estrutura final sem duplicação
+./scripts/check_two_apps_structure.sh
+```
+
+---
+
+## Regra de produto
+- O app populacional deve permanecer limpo e focado em epidemiologia.
+- Funcionalidades empresariais/trabalhador ficam somente no `app_ocupacional`.

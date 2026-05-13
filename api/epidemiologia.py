@@ -84,6 +84,13 @@ DISEASE_WEIGHTS = {
         "cansaco": 0.66,
         "falta_ar": 0.12,
     },
+    "Hantavirose": {
+        "febre": 0.92,
+        "tosse": 0.72,
+        "falta_ar": 1.0,
+        "dor_corpo": 0.64,
+        "cansaco": 0.82,
+    },
     "Bronquite": {
         "tosse": 0.98,
         "falta_ar": 0.88,
@@ -237,7 +244,23 @@ def _public_recommendation(dominant_disease, dominant_symptom, risk_level):
         "Malaria": "priorizar investigacao em areas de transmissao e encaminhamento para testagem conforme protocolo local",
         "Sarampo": "reforcar alerta para febre com tosse, isolamento orientado e verificacao de cobertura vacinal",
         "Meningite": "orientar busca imediata de atendimento diante de febre intensa, rigidez ou piora rapida",
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
         "Hantavirus": "evitar contato com roedores e areas contaminadas, nao varrer ambientes fechados sem mascara e buscar atendimento imediato ao primeiro sinal respiratorio",
+=======
+        "Hantavirose": "priorizar casos com febre e sintomas respiratorios agudos, reforcar alerta para exposicao a roedores e encaminhar avaliacao urgente",
+>>>>>>> theirs
+=======
+        "Hantavirose": "priorizar casos com febre e sintomas respiratorios agudos, reforcar alerta para exposicao a roedores e encaminhar avaliacao urgente",
+>>>>>>> theirs
+=======
+        "Hantavirose": "priorizar casos com febre e sintomas respiratorios agudos, reforcar alerta para exposicao a roedores e encaminhar avaliacao urgente",
+>>>>>>> theirs
+=======
+        "Hantavirose": "priorizar casos com febre e sintomas respiratorios agudos, reforcar alerta para exposicao a roedores e encaminhar avaliacao urgente",
+>>>>>>> theirs
     }
     action = base.get(dominant_disease, f"priorizar monitoramento de {dominant_symptom.lower()} e orientacao local")
 
@@ -249,7 +272,7 @@ def _public_recommendation(dominant_disease, dominant_symptom, risk_level):
 
 
 def _market_recommendation(dominant_disease, dominant_symptom):
-    if dominant_disease == "COVID":
+    if dominant_disease in {"COVID", "Hantavirose"}:
         return "reforcar estoque de mascaras, antitermicos, testes e antigripais"
     if dominant_disease == "Gripe":
         return "reforcar antigripais, xaropes, vitamina C e analgesicos"
@@ -267,7 +290,7 @@ def _market_recommendation(dominant_disease, dominant_symptom):
 
 
 def _hospital_recommendation(dominant_disease, dominant_symptom, risk_level):
-    if dominant_symptom == "Falta de Ar" or dominant_disease == "COVID":
+    if dominant_symptom == "Falta de Ar" or dominant_disease in {"COVID", "Hantavirose"}:
         action = "preparar leitos respiratorios, triagem rapida, oxigenio e retaguarda de UTI"
     elif dominant_disease in {"Dengue", "Chikungunya", "Zika", "Febre Amarela", "Leptospirose", "Malaria"}:
         action = "preparar hidratacao venosa, analgesia, observacao e fluxo para sinais de alarme"
@@ -298,7 +321,7 @@ def _government_recommendation(dominant_disease, dominant_symptom, risk_level, g
         action = "acionar notificacao compulsoria imediata, investigacao de foco de roedores, interdição de area contaminada e articulacao com CIEVS/SVS"
     elif dominant_disease in {"Sarampo", "Meningite"}:
         action = "acionar notificacao imediata, investigacao de contatos, comunicacao de risco e articulacao da rede assistencial"
-    elif dominant_symptom == "Falta de Ar" or dominant_disease == "COVID":
+    elif dominant_symptom == "Falta de Ar" or dominant_disease in {"COVID", "Hantavirose"}:
         action = "acionar vigilancia sindromica respiratoria, campanha de protecao e retaguarda regional"
     elif dominant_disease == "Gripe":
         action = "reforcar sentinelas, testagem estrategica e comunicacao de sazonalidade"
@@ -383,6 +406,8 @@ def _strategic_tags(dominant_disease, dominant_symptom, growth_percent, risk_lev
         tags.append("Territorial")
     if dominant_disease in {"Sarampo", "Meningite"}:
         tags.append("Notificacao Rapida")
+    if dominant_disease == "Hantavirose":
+        tags.append("Risco Cardiopulmonar")
 
     return tags[:4]
 
@@ -398,6 +423,8 @@ def _government_tags(dominant_disease, dominant_symptom, growth_percent, risk_le
         tags.append("Investigacao Territorial")
     if dominant_disease in {"Sarampo", "Meningite"}:
         tags.append("Notificacao Imediata")
+    if dominant_disease == "Hantavirose":
+        tags.append("Vigilancia de Roedores")
     if growth_percent >= 50:
         tags.append("Escalada")
     if risk_level == "CRITICO":
@@ -422,7 +449,7 @@ def _market_signal(dominant_disease, dominant_symptom, stock_pressure):
         category = "hidratacao, antitermicos seguros e orientacao de encaminhamento"
     elif dominant_disease in {"Sarampo", "Meningite"}:
         category = "mascaras, antitermicos e comunicacao de risco"
-    elif dominant_disease in {"COVID", "Gripe"} or dominant_symptom == "Tosse":
+    elif dominant_disease in {"COVID", "Gripe", "Hantavirose"} or dominant_symptom == "Tosse":
         category = "antigripais, testes, mascaras e suporte respiratorio leve"
     elif dominant_symptom == "Falta de Ar":
         category = "oximetria, suporte respiratorio e itens de encaminhamento"

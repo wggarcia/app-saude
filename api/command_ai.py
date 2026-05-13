@@ -193,7 +193,7 @@ def _impact_phrase(area, setor):
 def _pharmacy_items(area):
     disease = area.get("dominant_disease")
     symptom = area.get("dominant_symptom")
-    if disease in {"COVID", "Gripe"} or symptom in {"Tosse", "Falta de Ar"}:
+    if disease in {"COVID", "Gripe", "Hantavirose"} or symptom in {"Tosse", "Falta de Ar"}:
         return [
             "testes respiratórios quando aplicável",
             "máscaras e itens de proteção",
@@ -225,7 +225,7 @@ def _pharmacy_items(area):
 def _hospital_resources(area):
     disease = area.get("dominant_disease")
     symptom = area.get("dominant_symptom")
-    if symptom == "Falta de Ar" or disease in {"COVID", "Gripe", "Bronquite"}:
+    if symptom == "Falta de Ar" or disease in {"COVID", "Gripe", "Bronquite", "Hantavirose"}:
         return ["triagem respiratória", "oxigênio", "observação", "retaguarda clínica"]
     if disease in {"Dengue", "Chikungunya", "Zika", "Febre Amarela", "Leptospirose", "Malaria"}:
         return ["hidratação", "analgesia", "observação", "fluxo para sinais de alarme"]
