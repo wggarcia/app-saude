@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.cache import cache
 from django.views.decorators.csrf import csrf_exempt
 import json
 import hashlib
@@ -18,6 +19,7 @@ from .planos import pacote_padrao, detalhes_pacote, normalizar_codigo_pacote
 
 
 COOKIE_MAX_AGE = 7 * 24 * 60 * 60
+TAB_SESSION_MAX_AGE = 8 * 60 * 60
 SESSION_IDLE_TIMEOUT = timedelta(minutes=15) if settings.DEBUG else timedelta(hours=8)
 _COOKIE_SECURE = not settings.DEBUG
 DEVICE_IDLE_TIMEOUT = SESSION_IDLE_TIMEOUT
@@ -211,6 +213,12 @@ def _aplicar_cookies_autenticacao(response, empresa, token):
         secure=_COOKIE_SECURE,
     )
     return response
+
+
+def _registrar_sessao_aba(token):
+    tab_key = secrets.token_urlsafe(24)
+    cache.set(f"tab_auth:{tab_key}", token, TAB_SESSION_MAX_AGE)
+    return tab_key
 
 
 def _limpar_sessao_principal(principal):
@@ -489,6 +497,7 @@ def ativar_sessao_aba(request):
         "empresa_id": empresa.id,
         "tipo_conta": empresa.tipo_conta,
         "destination": _destino_conta(empresa),
+        "tab_key": _registrar_sessao_aba(token),
     })
     # Re-apply cookie so this tab's cookie matches its sessionStorage token
     return _aplicar_cookies_autenticacao(response, empresa, token)

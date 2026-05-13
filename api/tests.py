@@ -336,7 +336,81 @@ class AuthDeviceTests(TestCase):
 
         self.assertEqual(switch.status_code, 200)
         self.assertEqual(switch.json()["destination"], "/dashboard-farmacia/")
+        self.assertTrue(switch.json()["tab_key"])
         self.assertEqual(self.client.get("/dashboard/")["Location"], "/dashboard-farmacia/")
+
+    def test_tab_key_preserva_dashboard_mesmo_com_cookie_de_outro_ambiente(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Aba",
+            email="farmacia-aba@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        hospital = Empresa.objects.create(
+            nome="Hospital Aba",
+            email="hospital-aba@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login_farmacia = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-aba-device",
+            }),
+            content_type="application/json",
+        )
+        tab = self.client.post(
+            "/api/sessao/aba",
+            HTTP_AUTHORIZATION=f"Bearer {login_farmacia.json()['token']}",
+        ).json()["tab_key"]
+
+        login_hospital = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-aba-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login_hospital.status_code, 200)
+        self.assertEqual(self.client.get("/dashboard/")["Location"], "/dashboard-hospital/")
+        self.assertEqual(self.client.get(f"/dashboard/?tab={tab}")["Location"], "/dashboard-farmacia/")
+
+    def test_apis_de_gestao_bloqueiam_setor_errado(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital API",
+            email="hospital-api@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-api-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertEqual(self.client.get("/api/farmacia/dashboard").status_code, 403)
+        self.assertEqual(self.client.get("/api/gestao/resumo").status_code, 403)
 
     def test_dispositivo_revogado_bloqueia_reuso_do_cookie(self):
         login = self._login("device-a")

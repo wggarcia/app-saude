@@ -716,6 +716,14 @@
       const payload = await response.json();
       sessionStorage.setItem("empresa_id", String(payload.empresa_id || ""));
       sessionStorage.setItem("tipo_conta", payload.tipo_conta || "governo");
+      if (payload.tab_key) {
+        sessionStorage.setItem("tab_session_key", payload.tab_key);
+        const url = new URL(window.location.href);
+        if (url.searchParams.get("tab") !== payload.tab_key) {
+          url.searchParams.set("tab", payload.tab_key);
+          window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        }
+      }
       return payload;
     }
 
