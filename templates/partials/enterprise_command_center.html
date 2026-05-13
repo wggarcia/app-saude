@@ -1,0 +1,120 @@
+<section class="ecc-panel" data-enterprise-command-center>
+  <div class="ecc-main">
+    <div>
+      <div class="ecc-kicker">Command Center Enterprise</div>
+      <div class="ecc-title">Maturidade operacional em tempo real</div>
+      <div class="ecc-sub">Score, riscos e proximas acoes calculados a partir dos dados reais deste ambiente.</div>
+    </div>
+    <div class="ecc-score">
+      <strong data-ecc-score>--</strong>
+      <span data-ecc-status>Carregando</span>
+    </div>
+  </div>
+  <div class="ecc-modules" data-ecc-modules>
+    <div class="ecc-skeleton">Lendo operacao do ambiente...</div>
+  </div>
+  <div class="ecc-risks" data-ecc-risks></div>
+</section>
+
+<style>
+.ecc-panel{margin:14px 0 18px;padding:16px;border:1px solid rgba(0,194,255,.24);border-radius:10px;background:linear-gradient(135deg,rgba(0,194,255,.12),rgba(0,229,176,.06));box-shadow:0 12px 36px rgba(0,0,0,.24);position:relative;z-index:5}
+.ecc-main{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.ecc-kicker{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#7dd3fc;margin-bottom:4px}
+.ecc-title{font-size:18px;font-weight:900;color:#f8fafc;line-height:1.15}
+.ecc-sub{font-size:12px;color:#9fb5ca;margin-top:5px;max-width:720px}
+.ecc-score{display:flex;align-items:center;gap:10px;background:rgba(4,16,24,.64);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;min-width:150px;justify-content:center}
+.ecc-score strong{font-size:28px;line-height:1;color:#00e5b0;font-weight:900}
+.ecc-score span{font-size:11px;color:#9fb5ca;text-transform:uppercase;font-weight:900;letter-spacing:.06em}
+.ecc-modules{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:12px}
+.ecc-module{background:rgba(4,16,24,.58);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px}
+.ecc-module-name{font-size:12px;color:#edf7ff;font-weight:800;line-height:1.25;min-height:31px}
+.ecc-module-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.ecc-module-status{font-size:10px;color:#8fb0c8;text-transform:uppercase;font-weight:900}
+.ecc-module-score{font-size:13px;color:#00e5b0;font-weight:900}
+.ecc-risks{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin-top:10px}
+.ecc-risk{background:rgba(4,16,24,.7);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px}
+.ecc-risk-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.ecc-sev{font-size:10px;text-transform:uppercase;font-weight:900;border-radius:999px;padding:2px 7px;background:rgba(148,163,184,.16);color:#cbd5e1}
+.ecc-sev.alta{background:rgba(255,77,109,.16);color:#fb7185}
+.ecc-sev.media{background:rgba(255,179,71,.16);color:#fbbf24}
+.ecc-risk-title{font-size:12px;font-weight:800;color:#f8fafc;line-height:1.25}
+.ecc-risk-action{font-size:11px;color:#93a9bd;line-height:1.4}
+.ecc-skeleton{font-size:12px;color:#93a9bd;padding:8px 0}
+@media(max-width:720px){.ecc-score{width:100%;justify-content:space-between}.ecc-title{font-size:16px}}
+</style>
+
+<script>
+(function(){
+  const panel = document.currentScript.previousElementSibling.previousElementSibling;
+  const root = panel && panel.matches("[data-enterprise-command-center]") ? panel : document.querySelector("[data-enterprise-command-center]");
+  if (!root || root.dataset.loaded === "1") return;
+  root.dataset.loaded = "1";
+
+  const scoreEl = root.querySelector("[data-ecc-score]");
+  const statusEl = root.querySelector("[data-ecc-status]");
+  const modulesEl = root.querySelector("[data-ecc-modules]");
+  const risksEl = root.querySelector("[data-ecc-risks]");
+
+  function txt(value) {
+    return value == null ? "" : String(value);
+  }
+
+  function normalized(value) {
+    return txt(value).replace(/_/g, " ");
+  }
+
+  function appendText(parent, className, value, tag) {
+    const el = document.createElement(tag || "div");
+    el.className = className;
+    el.textContent = txt(value);
+    parent.appendChild(el);
+    return el;
+  }
+
+  function renderRisk(item, isAction) {
+    const card = document.createElement("div");
+    card.className = "ecc-risk";
+    const head = appendText(card, "ecc-risk-head", "");
+    const sev = appendText(head, "ecc-sev " + (item.severidade || ""), isAction ? "acao" : item.severidade);
+    sev.className = "ecc-sev " + (item.severidade || "");
+    appendText(head, "ecc-risk-title", isAction ? item.modulo : item.titulo);
+    appendText(card, "ecc-risk-action", isAction ? item.acao : item.acao);
+    return card;
+  }
+
+  fetch("/api/enterprise/command-center", {credentials: "same-origin"})
+    .then((response) => response.ok ? response.json() : Promise.reject(response))
+    .then((data) => {
+      const maturity = data.maturidade_operacional || {};
+      scoreEl.textContent = txt(maturity.score || 0) + "%";
+      statusEl.textContent = normalized(maturity.status || "sem_dados");
+
+      modulesEl.textContent = "";
+      (data.modulos || []).slice(0, 6).forEach((module) => {
+        const card = document.createElement("div");
+        card.className = "ecc-module";
+        appendText(card, "ecc-module-name", module.nome);
+        const meta = appendText(card, "ecc-module-meta", "");
+        appendText(meta, "ecc-module-status", normalized(module.status));
+        appendText(meta, "ecc-module-score", txt(module.score) + "%");
+        modulesEl.appendChild(card);
+      });
+
+      risksEl.textContent = "";
+      const risks = (data.riscos_prioritarios || []).slice(0, 4);
+      const actions = (data.proximas_acoes || []).slice(0, 4);
+      risks.forEach((risk) => risksEl.appendChild(renderRisk(risk, false)));
+      actions.forEach((action) => risksEl.appendChild(renderRisk(action, true)));
+      if (!risks.length && !actions.length) {
+        const ok = document.createElement("div");
+        ok.className = "ecc-risk";
+        appendText(ok, "ecc-risk-action", "Nenhum risco critico detectado agora. Continue alimentando dados para melhorar a leitura.");
+        risksEl.appendChild(ok);
+      }
+    })
+    .catch(() => {
+      statusEl.textContent = "offline";
+      modulesEl.innerHTML = '<div class="ecc-skeleton">Nao foi possivel carregar o Command Center neste momento.</div>';
+    });
+})();
+</script>

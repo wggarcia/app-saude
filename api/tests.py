@@ -525,6 +525,81 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(payload["modulos"][0]["metricas"]["estoque_critico"], 1)
         self.assertTrue(any("estoque critico" in risco["titulo"] for risco in payload["riscos_prioritarios"]))
 
+    def test_dashboard_farmacia_mostra_command_center_enterprise(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Visual",
+            email="farmacia-visual@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-visual-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertContains(self.client.get("/dashboard-farmacia/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/farmacia/gestao/"), "Command Center Enterprise")
+
+    def test_dashboard_hospital_mostra_command_center_enterprise(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital Visual",
+            email="hospital-visual@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-visual-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertContains(self.client.get("/dashboard-hospital/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/hospital/gestao/"), "Command Center Enterprise")
+
+    def test_dashboard_empresa_mostra_command_center_enterprise(self):
+        empresa = Empresa.objects.create(
+            nome="Empresa Visual",
+            email="empresa-visual@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="empresa_profissional_25",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": empresa.email,
+                "senha": "123456",
+                "device_id": "empresa-visual-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertContains(self.client.get("/dashboard-empresa/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/gestao/"), "Command Center Enterprise")
+
     def test_dispositivo_revogado_bloqueia_reuso_do_cookie(self):
         login = self._login("device-a")
 
