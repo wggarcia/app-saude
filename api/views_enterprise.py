@@ -941,11 +941,36 @@ def _cards_por_setor(empresa, setor):
     return _generic_cards(empresa)
 
 
-def api_enterprise_command_center(request):
-    empresa = getattr(request, "empresa", None)
-    if not empresa:
-        return JsonResponse({"erro": "Nao autenticado"}, status=401)
+def _radar_concorrencial(setor):
+    base = [
+        {
+            "referencia": "Philips Tasy / TOTVS / MV",
+            "forca_mercado": "prontuario unico, leitos, materiais, medicamentos, protocolos e indicadores",
+            "resposta_solus": "Command Center cruza operacao, risco, estoque, receita, SLA e decisao IA por ambiente.",
+        },
+        {
+            "referencia": "Benner Saude",
+            "forca_mercado": "operadoras, beneficiarios, autorizacoes, glosas, sinistralidade e ANS",
+            "resposta_solus": "Plano de saude conecta guias, auditoria, valor em risco, prazos e proximas acoes.",
+        },
+        {
+            "referencia": "Clinicarx / SOC",
+            "forca_mercado": "servicos farmaceuticos digitais, protocolos, SST, eSocial, PCMSO e PGR/GRO",
+            "resposta_solus": "Farmacia, saude ocupacional e governo entram no mesmo ecossistema com rastreabilidade.",
+        },
+    ]
+    if setor == "hospital":
+        return base[:2]
+    if setor == "farmacia":
+        return [base[2], base[0]]
+    if setor == "empresa":
+        return [base[2], base[1]]
+    if setor == "plano_saude":
+        return [base[1], base[0]]
+    return base
 
+
+def build_enterprise_command_center_payload(empresa):
     setor = get_setor(empresa)
     cards = _cards_por_setor(empresa, setor)
     riscos = []
@@ -961,7 +986,7 @@ def api_enterprise_command_center(request):
         )
 
     score = _media(cards)
-    return JsonResponse({
+    return {
         "empresa": {"id": empresa.id, "nome": empresa.nome},
         "setor": setor,
         "setor_label": SETOR_LABELS.get(setor, setor.title()),
@@ -983,5 +1008,14 @@ def api_enterprise_command_center(request):
             "automacao_de_fluxo",
             "conformidade_e_auditoria",
         ],
+        "radar_concorrencial": _radar_concorrencial(setor),
         "atualizado_em": timezone.now().isoformat(),
-    })
+    }
+
+
+def api_enterprise_command_center(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Nao autenticado"}, status=401)
+
+    return JsonResponse(build_enterprise_command_center_payload(empresa))

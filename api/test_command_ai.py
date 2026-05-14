@@ -98,6 +98,8 @@ class CommandAITests(TestCase):
         self.assertIn("recommended_action", recomendacao)
         self.assertIn("Triagem", " ".join(bloco["title"] for bloco in recomendacao["sector_playbook"]))
         self.assertIn("Não altera mapa", " ".join(payload["safeguards"]))
+        self.assertEqual(payload["enterprise_command_center"]["setor"], "hospital")
+        self.assertIn("radar_concorrencial", payload["enterprise_command_center"])
 
     def test_farmacia_recebe_direcao_de_abastecimento_e_laboratorio(self):
         farmacia = Empresa.objects.create(
@@ -115,6 +117,7 @@ class CommandAITests(TestCase):
 
         self.assertEqual(payload["summary"]["setor"], "farmacia")
         self.assertIn("Farmácias e Laboratórios", payload["summary"]["title"])
+        self.assertEqual(payload["enterprise_command_center"]["setor"], "farmacia")
         self.assertIn("Pressão de estoque", metricas)
         self.assertIn("Janela de reposição", metricas)
         self.assertIn("Abastecimento", playbook)
@@ -165,6 +168,8 @@ class CommandAITests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "SolusCRT Sala de Decisão IA")
         self.assertContains(response, "Ambiente Hospital")
+        self.assertContains(response, "Ecossistema operacional")
+        self.assertContains(response, "Radar concorrencial")
         self.assertContains(response, 'href="/logout/"')
 
     def test_tela_command_ai_empresa_ganha_contexto_corporativo(self):
@@ -260,6 +265,7 @@ class CommandAITests(TestCase):
 
         self.assertEqual(payload["summary"]["setor"], "empresa")
         self.assertEqual(payload["source"]["engine"], "SolusCRT corporativo")
+        self.assertEqual(payload["enterprise_command_center"]["setor"], "empresa")
         self.assertIn("check-ins", payload["source"]["generated_from"])
         self.assertEqual(payload["recommendations"][0]["territory"], "Matriz")
         self.assertEqual(payload["recommendations"][0]["dominant_disease"], "Saúde ocupacional")
