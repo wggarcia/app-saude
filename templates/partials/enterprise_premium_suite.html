@@ -11,8 +11,17 @@
     </div>
   </div>
   <div class="eps-body">
-    <div class="eps-capabilities" id="epsCapabilities">
-      <div class="eps-empty">Carregando suite enterprise...</div>
+    <div>
+      <div class="eps-process">
+        <div class="eps-section-title">Processo guiado</div>
+        <div id="epsProcesses" class="eps-process-list">
+          <div class="eps-empty">Carregando processos...</div>
+        </div>
+      </div>
+      <div class="eps-section-title" style="margin-top:14px">Capacidades vivas</div>
+      <div class="eps-capabilities" id="epsCapabilities">
+        <div class="eps-empty">Carregando suite enterprise...</div>
+      </div>
     </div>
     <aside class="eps-actions">
       <strong>Proximas automacoes</strong>
@@ -31,6 +40,19 @@
 .eps-score strong{display:block;font-size:30px;line-height:1;color:#00c2ff}
 .eps-score span{font-size:11px;font-weight:800;text-transform:uppercase;color:#8fb1c9}
 .eps-body{display:grid;grid-template-columns:1fr 290px;gap:14px}
+.eps-section-title{font-size:11px;font-weight:900;letter-spacing:.9px;text-transform:uppercase;color:#00e5b0;margin-bottom:9px}
+.eps-process{background:rgba(4,16,24,.38);border:1px solid rgba(255,255,255,.075);border-radius:12px;padding:12px;margin-bottom:12px}
+.eps-process-list{display:grid;gap:12px}
+.eps-flow{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px}
+.eps-flow-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}
+.eps-flow-head strong{font-size:13px;color:#f3fbff}.eps-flow-head p{font-size:12px;max-width:620px}
+.eps-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.eps-step{background:rgba(4,16,24,.74);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;min-width:0}
+.eps-step-num{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#00e5b0,#00c2ff);color:#041018;font-size:11px;font-weight:950;margin-bottom:8px}
+.eps-step-title{font-size:12px;font-weight:900;color:#f3fbff;margin-bottom:4px}
+.eps-step p{font-size:11px;line-height:1.42;color:#8fb1c9;margin-bottom:9px}
+.eps-step button{width:100%;min-height:32px;border:0;border-radius:8px;background:#00c2ff;color:#041018;font-size:11px;font-weight:900;cursor:pointer;font-family:inherit}
+.eps-step button:hover{filter:brightness(1.08)}
 .eps-capabilities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .eps-cap{background:rgba(4,16,24,.66);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;min-width:0}
 .eps-cap-top{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;align-items:flex-start}
@@ -49,8 +71,8 @@
 .eps-action{font-size:12px;line-height:1.45;color:#d7e7f1;border-left:3px solid #00c2ff;background:rgba(255,255,255,.045);border-radius:8px;padding:9px 10px}
 .eps-action small{display:block;color:#8fb1c9;margin-top:3px}
 .eps-empty{grid-column:1/-1;padding:18px;color:#8fb1c9}
-@media(max-width:1100px){.eps-body{grid-template-columns:1fr}.eps-actions{width:100%}}
-@media(max-width:760px){.eps-head{flex-direction:column}.eps-score{text-align:left}.eps-capabilities{grid-template-columns:1fr}}
+@media(max-width:1100px){.eps-body{grid-template-columns:1fr}.eps-actions{width:100%}.eps-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.eps-head{flex-direction:column}.eps-score{text-align:left}.eps-capabilities,.eps-steps{grid-template-columns:1fr}}
 </style>
 
 <script>
@@ -60,10 +82,46 @@
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[char]));
+  function runAction(action, modal) {
+    if (action && action.startsWith("link:")) {
+      window.location.href = action.slice(5);
+      return;
+    }
+    if (action && action.startsWith("tab:") && typeof window.setTab === "function") {
+      window.setTab(action.slice(4));
+    }
+    if (action && action.startsWith("modal:") && typeof window.openModal === "function") {
+      window.openModal(action.slice(6));
+      return;
+    }
+    if (modal && typeof window[modal] === "function") {
+      window[modal]();
+    }
+  }
   function render(payload){
     document.getElementById("epsHeadline").textContent = payload.headline || payload.diferencial || "Suite enterprise ativa.";
     document.getElementById("epsScore").textContent = `${payload.score_suite || 0}%`;
     document.getElementById("epsStatus").textContent = payload.status || "em leitura";
+    document.getElementById("epsProcesses").innerHTML = (payload.processos || []).map((processo, processIndex) => `
+      <article class="eps-flow">
+        <div class="eps-flow-head">
+          <div>
+            <strong>${escapeHtml(processo.nome)}</strong>
+            <p>${escapeHtml(processo.descricao)}</p>
+          </div>
+        </div>
+        <div class="eps-steps">
+          ${(processo.etapas || []).map((step, stepIndex) => `
+            <div class="eps-step">
+              <div class="eps-step-num">${escapeHtml(step.ordem || stepIndex + 1)}</div>
+              <div class="eps-step-title">${escapeHtml(step.titulo)}</div>
+              <p>${escapeHtml(step.descricao)}</p>
+              <button type="button" data-action="${escapeHtml(step.acao || "")}" data-modal="${escapeHtml(step.modal || "")}">${escapeHtml(step.acao_label || "Executar")}</button>
+            </div>
+          `).join("")}
+        </div>
+      </article>
+    `).join("") || '<div class="eps-empty">Nenhum processo guiado carregado.</div>';
     document.getElementById("epsCapabilities").innerHTML = (payload.capacidades || []).map((cap) => `
       <article class="eps-cap">
         <div class="eps-cap-top">
@@ -82,6 +140,11 @@
       <div class="eps-action">${escapeHtml(item.acao)}<small>${escapeHtml(item.capacidade)}</small></div>
     `).join("") || '<div class="eps-action">Sem acao critica agora.<small>Continue alimentando dados reais.</small></div>';
   }
+  root.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    runAction(button.dataset.action || "", button.dataset.modal || "");
+  });
   fetch("/api/enterprise/premium-suite")
     .then((res) => res.ok ? res.json() : Promise.reject())
     .then(render)

@@ -1057,6 +1057,28 @@ def _suite_farmacia(empresa):
     return {
         "headline": "Farmacia clinica, estoque inteligente e receita assistencial em uma unica operacao.",
         "diferencial": "Vai alem do estoque: une prontuario farmaceutico, receitas, dispensacao, lotes, compras e indicadores em tempo real.",
+        "processos": [
+            {
+                "nome": "Atendimento farmaceutico completo",
+                "descricao": "Transforma a farmacia em servico clinico: paciente, receita, dispensacao e acompanhamento.",
+                "etapas": [
+                    {"ordem": 1, "titulo": "Cadastrar paciente", "descricao": "Cria prontuario com CPF, alergias e condicoes cronicas.", "acao_label": "Abrir pacientes", "acao": "tab:pacientes", "modal": "abrirModalPaciente"},
+                    {"ordem": 2, "titulo": "Registrar receita", "descricao": "Vincula medicamento, medico, CRM, validade e posologia.", "acao_label": "Nova receita", "acao": "tab:receitas", "modal": "abrirModalReceita"},
+                    {"ordem": 3, "titulo": "Dispensar com seguranca", "descricao": "Baixa estoque e grava responsavel, paciente e historico.", "acao_label": "Nova dispensacao", "acao": "tab:dispensacoes", "modal": "abrirModalDispensacao"},
+                    {"ordem": 4, "titulo": "Rastrear lote e reposicao", "descricao": "Fecha FEFO, vencimento, inventario e pedido ao fornecedor.", "acao_label": "Registrar lote", "acao": "tab:lotes", "modal": "abrirModalLote"},
+                ],
+            },
+            {
+                "nome": "Ruptura zero e compras",
+                "descricao": "Sai do estoque parado e cria rotina de compra orientada por minimo, fornecedor e ruptura.",
+                "etapas": [
+                    {"ordem": 1, "titulo": "Cadastrar item", "descricao": "Define minimo, unidade, categoria e fornecedor.", "acao_label": "Novo item", "acao": "tab:estoque", "modal": "abrirModalItem"},
+                    {"ordem": 2, "titulo": "Cadastrar fornecedor", "descricao": "Cria base de compra e contato operacional.", "acao_label": "Novo fornecedor", "acao": "tab:fornecedores", "modal": "abrirModalFornecedor"},
+                    {"ordem": 3, "titulo": "Gerar pedido", "descricao": "Conecta baixa de estoque a reposicao.", "acao_label": "Novo pedido", "acao": "tab:pedidos", "modal": "abrirModalPedido"},
+                    {"ordem": 4, "titulo": "Inventariar", "descricao": "Confere fisico contra sistema e aplica ajustes.", "acao_label": "Novo inventario", "acao": "tab:inventario", "modal": "abrirModalInventario"},
+                ],
+            },
+        ],
         "capacidades": [
             _capacidade("clinica", "Servicos farmaceuticos e prontuario", "Pacientes, receitas, posologia, alergias e cuidado assistido.", pacientes + receitas, 8, ["Clinicarx"], "Cadastrar pacientes, receitas e protocolos de acompanhamento."),
             _capacidade("dispensacao", "Dispensacao segura e rastreavel", "Dispensacao conectada a estoque, paciente, responsavel e historico.", dispensacoes, 10, ["Clinicarx", "Philips Tasy"], "Registrar dispensacoes com paciente e responsavel farmaceutico."),
@@ -1076,6 +1098,28 @@ def _suite_hospital(empresa):
     return {
         "headline": "HospitalOS integrado: porta de entrada, leitos, internacao, prescricao, planos e receita.",
         "diferencial": "Liga operacao clinica e administrativa para sair do painel vazio e virar comando hospitalar ponta a ponta.",
+        "processos": [
+            {
+                "nome": "Jornada assistencial hospitalar",
+                "descricao": "Leva o paciente da porta de entrada ate internacao, prescricao e continuidade do cuidado.",
+                "etapas": [
+                    {"ordem": 1, "titulo": "Preparar leito", "descricao": "Cadastra ala, capacidade e disponibilidade.", "acao_label": "Novo leito", "acao": "tab:leitos", "modal": "abrirModalLeito"},
+                    {"ordem": 2, "titulo": "Triar Manchester", "descricao": "Classifica risco e controla SLA de atendimento.", "acao_label": "Nova triagem", "acao": "tab:triagem", "modal": "abrirModalTriagem"},
+                    {"ordem": 3, "titulo": "Internar paciente", "descricao": "Vincula paciente, diagnostico, medico, leito e status.", "acao_label": "Internar", "acao": "tab:internacoes", "modal": "abrirModalInternacao"},
+                    {"ordem": 4, "titulo": "Prescrever e acompanhar", "descricao": "Cria prescricao ativa e fecha continuidade do cuidado.", "acao_label": "Nova prescricao", "acao": "tab:prescricoes", "modal": "abrirModalPresc"},
+                ],
+            },
+            {
+                "nome": "Ciclo financeiro assistencial",
+                "descricao": "Prepara o hospital para conectar plano, autorizacao, glosa e valor em risco.",
+                "etapas": [
+                    {"ordem": 1, "titulo": "Cadastrar departamentos", "descricao": "Organiza alas, capacidade e responsaveis.", "acao_label": "Novo departamento", "acao": "tab:departamentos", "modal": "abrirModalDep"},
+                    {"ordem": 2, "titulo": "Abrir planos de saude", "descricao": "Vai para guias, beneficiarios e autorizacoes.", "acao_label": "Planos", "acao": "link:/plano-saude/gestao/"},
+                    {"ordem": 3, "titulo": "Acompanhar rede", "descricao": "Controla unidades e comunicacao da rede.", "acao_label": "Rede", "acao": "link:/rede/gestao/"},
+                    {"ordem": 4, "titulo": "Gerar relatorio", "descricao": "Exporta internacoes para auditoria.", "acao_label": "Relatorio", "acao": "link:/api/hospital/pdf/internacoes/"},
+                ],
+            },
+        ],
         "capacidades": [
             _capacidade("porta_entrada", "Triagem Manchester e SLA", "Fila por prioridade, espera, riscos criticos e acionamento operacional.", triagens, 10, ["Philips Tasy", "TOTVS Saude"], "Registrar triagens com nivel Manchester e tempo de espera."),
             _capacidade("leitos", "Gestao de leitos e alas", "Mapa de leitos, ocupacao, manutencao, previsao de alta e capacidade.", leitos + departamentos, 12, ["TOTVS Saude", "MV"], "Cadastrar alas, leitos e regras de ocupacao por setor."),
@@ -1096,6 +1140,28 @@ def _suite_empresa(empresa):
     return {
         "headline": "SST enterprise com conformidade legal, eSocial, saude ocupacional e prevencao.",
         "diferencial": "Une SOC/SST, escuta operacional, documentos legais, ASO, absenteismo e planos de acao.",
+        "processos": [
+            {
+                "nome": "Admissao e conformidade SST",
+                "descricao": "Cria rotina legal para funcionario, ASO, documento obrigatorio e eSocial.",
+                "etapas": [
+                    {"ordem": 1, "titulo": "Cadastrar funcionario", "descricao": "Base para ASO, exames, CAT, EPI e treinamentos.", "acao_label": "Novo funcionario", "acao": "link:/sst/funcionarios/novo/"},
+                    {"ordem": 2, "titulo": "Emitir ASO", "descricao": "Gera atestado e alimenta S-2220.", "acao_label": "Emitir ASO", "acao": "modal:aso"},
+                    {"ordem": 3, "titulo": "Cadastrar PGR/PCMSO", "descricao": "Fecha documento legal, validade e responsavel tecnico.", "acao_label": "Documentos", "acao": "link:/sst/documentos/"},
+                    {"ordem": 4, "titulo": "Transmitir eSocial", "descricao": "Controla XML, protocolo, erros e pendencias.", "acao_label": "eSocial", "acao": "link:/sst/esocial/"},
+                ],
+            },
+            {
+                "nome": "Prevencao e resposta",
+                "descricao": "Transforma SST em rotina preventiva, nao so arquivo de documentos.",
+                "etapas": [
+                    {"ordem": 1, "titulo": "Registrar CAT", "descricao": "Abre acidente, gravidade e evento S-2210.", "acao_label": "Registrar CAT", "acao": "modal:cat"},
+                    {"ordem": 2, "titulo": "Agendar exame", "descricao": "Controla vencimentos e retorno ocupacional.", "acao_label": "Agendar exame", "acao": "link:/sst/exames/agendar/"},
+                    {"ordem": 3, "titulo": "Treinar NR", "descricao": "Organiza obrigacoes por norma e vencimento.", "acao_label": "Treinamentos", "acao": "link:/sst/treinamentos/"},
+                    {"ordem": 4, "titulo": "Relatorio executivo", "descricao": "Mostra conformidade, pendencias e risco legal.", "acao_label": "Relatorio", "acao": "link:/sst/relatorios/"},
+                ],
+            },
+        ],
         "capacidades": [
             _capacidade("legal", "PGR, PCMSO, LTCAT e documentacao", "Documentos obrigatorios, validade, responsaveis e conformidade.", documentos, 6, ["SOC WebSoc"], "Completar documentos obrigatorios e responsaveis tecnicos."),
             _capacidade("aso", "ASO, exames e prontuario ocupacional", "ASOs por funcionario, vencimentos, exames e historico ocupacional.", funcionarios + asos, 10, ["SOC WebSoc"], "Emitir ASO para funcionarios ativos e configurar exames."),
@@ -1117,6 +1183,15 @@ def build_enterprise_premium_suite_payload(empresa):
         suite = {
             "headline": "Suite enterprise integrada por ambiente.",
             "diferencial": "Command Center, indicadores, riscos e automacoes setoriais em uma unica operacao.",
+            "processos": [
+                {
+                    "nome": "Ativacao operacional",
+                    "descricao": "Alimenta dados reais e acompanha score no Command Center.",
+                    "etapas": [
+                        {"ordem": 1, "titulo": "Abrir painel", "descricao": "Volta para o centro operacional.", "acao_label": "Painel", "acao": "link:/hub/"},
+                    ],
+                }
+            ],
             "capacidades": [
                 _capacidade("operacao", "Operacao integrada", "Indicadores, riscos, acoes e governanca.", 1, 4, ["Philips Tasy", "TOTVS Saude", "MV"], "Alimentar dados reais do ambiente."),
             ],
@@ -1132,6 +1207,7 @@ def build_enterprise_premium_suite_payload(empresa):
         "score_suite": score,
         "status": _status(score),
         "capacidades": capacidades,
+        "processos": suite.get("processos", []),
         "proximas_acoes": [
             {"capacidade": item["nome"], "acao": item["proxima_acao"]}
             for item in capacidades

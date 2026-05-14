@@ -474,9 +474,17 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         nomes = " ".join(capacidade["nome"] for capacidade in payload["capacidades"])
+        processos = " ".join(processo["nome"] for processo in payload["processos"])
+        etapas = " ".join(
+            etapa["titulo"]
+            for processo in payload["processos"]
+            for etapa in processo["etapas"]
+        )
         self.assertEqual(payload["setor"], "farmacia")
         self.assertIn("Servicos farmaceuticos", nomes)
         self.assertIn("Lotes", nomes)
+        self.assertIn("Atendimento farmaceutico completo", processos)
+        self.assertIn("Registrar receita", etapas)
 
     def test_enterprise_command_center_hospital_usa_dados_do_setor(self):
         hospital = Empresa.objects.create(
@@ -684,6 +692,7 @@ class AuthDeviceTests(TestCase):
         self.assertContains(self.client.get("/dashboard-farmacia/"), "Command Center")
         self.assertContains(self.client.get("/farmacia/gestao/"), "Command Center Enterprise")
         self.assertContains(self.client.get("/farmacia/gestao/"), "Suite Enterprise")
+        self.assertContains(self.client.get("/farmacia/gestao/"), "Processo guiado")
 
     def test_dashboard_hospital_mostra_command_center_enterprise(self):
         hospital = Empresa.objects.create(
@@ -710,6 +719,7 @@ class AuthDeviceTests(TestCase):
         self.assertContains(self.client.get("/dashboard-hospital/"), "Command Center")
         self.assertContains(self.client.get("/hospital/gestao/"), "Command Center Enterprise")
         self.assertContains(self.client.get("/hospital/gestao/"), "Suite Enterprise")
+        self.assertContains(self.client.get("/hospital/gestao/"), "Processo guiado")
 
     def test_dashboard_empresa_mostra_command_center_enterprise(self):
         empresa = Empresa.objects.create(
@@ -735,6 +745,7 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(login.status_code, 200)
         self.assertContains(self.client.get("/dashboard-empresa/"), "Command Center Enterprise")
         self.assertContains(self.client.get("/dashboard-empresa/"), "Suite Enterprise")
+        self.assertContains(self.client.get("/dashboard-empresa/"), "Processo guiado")
         self.assertContains(self.client.get("/gestao/"), "Command Center Enterprise")
 
     def test_governo_mostra_command_center_enterprise_e_metricas_reais(self):
