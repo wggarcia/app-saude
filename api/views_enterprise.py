@@ -36,17 +36,27 @@ from .models import (
     PacienteFarmacia,
     PacienteHospital,
     PacienteInternado,
+    BeneficiarioPlano,
+    GuiaAutorizacao,
+    IndicadorSaudeGov,
+    OrcamentoSaudeGov,
+    PlanoAcaoGov,
+    PlanoSaude,
     PedidoApoioCorporativo,
     PedidoCompraFarmacia,
     PedidoFarmacia,
     PrescricaoHospitalar,
     PrescricaoMedica,
     ProgramaCorporativo,
+    ProgramaSaudeGov,
     ReceitaMedica,
+    Rede,
     RegistroSintoma,
     TreinamentoNR,
     TriagemHospital,
     TriagemManchester,
+    TransferenciaEstoque,
+    UnidadeRede,
     eSocialEventoSST,
 )
 
@@ -418,6 +428,159 @@ def _generic_cards(empresa):
     ]
 
 
+def _governo_cards(empresa):
+    ano = timezone.localdate().year
+    programas_ativos = ProgramaSaudeGov.objects.filter(empresa=empresa, status="ativo").count()
+    programas_total = ProgramaSaudeGov.objects.filter(empresa=empresa).count()
+    indicadores = IndicadorSaudeGov.objects.filter(empresa=empresa)
+    indicadores_total = indicadores.count()
+    metas_atingidas = 0
+    for indicador in indicadores:
+        if indicador.meta is not None and indicador.valor_atual is not None and indicador.valor_atual >= indicador.meta:
+            metas_atingidas += 1
+    planos_pendentes = PlanoAcaoGov.objects.filter(empresa=empresa, status="pendente").count()
+    planos_andamento = PlanoAcaoGov.objects.filter(empresa=empresa, status="em_andamento").count()
+    orcamento = OrcamentoSaudeGov.objects.filter(empresa=empresa, ano=ano).first()
+
+    programas_score = 0
+    programas_score += 45 if programas_ativos else 0
+    programas_score += 30 if indicadores_total else 0
+    programas_score += 25 if indicadores_total and metas_atingidas >= max(1, indicadores_total // 2) else 0
+
+    execucao_pct = 0
+    if orcamento and orcamento.total_previsto:
+        execucao_pct = round((orcamento.total_executado / orcamento.total_previsto) * 100)
+    orcamento_score = 0
+    orcamento_score += 50 if orcamento else 0
+    orcamento_score += 30 if 40 <= execucao_pct <= 100 else 0
+    orcamento_score += 20 if execucao_pct <= 100 and orcamento else 0
+    if execucao_pct > 100:
+        orcamento_score -= 30
+
+    acoes_score = 30 if planos_pendentes or planos_andamento else 0
+    acoes_score += 45 if planos_andamento else 0
+    acoes_score += 25 if planos_pendentes == 0 and (planos_andamento or programas_total) else 0
+
+    sinais = RegistroSintoma.objects.filter(empresa=empresa).count()
+    vigilancia_score = 60 if sinais else 20
+    vigilancia_score += 20 if programas_ativos else 0
+    vigilancia_score += 20 if indicadores_total else 0
+
+    return [
+        _card(
+            "programas_indicadores",
+            "Programas publicos e indicadores",
+            programas_score,
+            {"programas_total": programas_total, "programas_ativos": programas_ativos, "indicadores": indicadores_total, "metas_atingidas": metas_atingidas},
+            proximas_acoes=["Cadastrar programas, indicadores e metas para sair de monitoramento passivo."] if programas_score < 50 else [],
+        ),
+        _card(
+            "orcamento_saude",
+            "Orcamento e execucao financeira",
+            orcamento_score,
+            {"ano": ano, "execucao_pct": execucao_pct},
+            riscos=[_prioridade("Orcamento executado acima do previsto", "alta", "Revisar rubricas e aprovar suplementacao.", "Governo")] if execucao_pct > 100 else [],
+            proximas_acoes=["Cadastrar orcamento anual para medir execucao real."] if not orcamento else [],
+        ),
+        _card(
+            "planos_acao_gov",
+            "Planos de acao intersetoriais",
+            acoes_score,
+            {"planos_pendentes": planos_pendentes, "planos_em_andamento": planos_andamento},
+            riscos=[_prioridade("Planos pendentes aguardando dono", "media", "Atribuir responsavel e prazo.", "Governo")] if planos_pendentes else [],
+        ),
+        _card(
+            "vigilancia_territorial",
+            "Vigilancia e sinais territoriais",
+            vigilancia_score,
+            {"registros_epidemiologicos": sinais},
+            proximas_acoes=["Conectar registros territoriais aos programas de resposta."] if sinais == 0 else [],
+        ),
+    ]
+
+
+def _rede_cards(empresa):
+    unidade = UnidadeRede.objects.filter(empresa=empresa).select_related("rede").first()
+    rede = unidade.rede if unidade else None
+    unidades = UnidadeRede.objects.filter(rede=rede, ativa=True).count() if rede else 0
+    transferencias_abertas = TransferenciaEstoque.objects.filter(
+        rede=rede,
+        status__in=[
+            TransferenciaEstoque.STATUS_PENDENTE,
+            TransferenciaEstoque.STATUS_APROVADA,
+            TransferenciaEstoque.STATUS_ENVIADA,
+        ],
+    ).count() if rede else 0
+    urgentes = TransferenciaEstoque.objects.filter(rede=rede, urgente=True).exclude(
+        status__in=[TransferenciaEstoque.STATUS_RECEBIDA, TransferenciaEstoque.STATUS_CANCELADA]
+    ).count() if rede else 0
+
+    estrutura_score = 0
+    estrutura_score += 45 if rede else 0
+    estrutura_score += 35 if unidades >= 2 else unidades * 15
+    estrutura_score += 20 if unidade and unidade.codigo_unidade else 0
+
+    fluxo_score = 30 if transferencias_abertas else 0
+    fluxo_score += 35 if unidades >= 2 else 0
+    fluxo_score += 20 if urgentes == 0 and rede else 0
+    fluxo_score += 15 if rede else 0
+
+    return [
+        _card(
+            "rede_unidades",
+            "Rede, unidades e governanca",
+            estrutura_score,
+            {"rede": rede.nome if rede else "", "unidades_ativas": unidades},
+            proximas_acoes=["Criar rede e vincular unidades para coordenar estoque e atendimento."] if not rede else [],
+        ),
+        _card(
+            "transferencias_estoque",
+            "Transferencias e apoio entre unidades",
+            fluxo_score,
+            {"transferencias_abertas": transferencias_abertas, "transferencias_urgentes": urgentes},
+            riscos=[_prioridade("Transferencias urgentes em aberto", "alta", "Priorizar aprovacao e envio entre unidades.", "Rede")] if urgentes else [],
+        ),
+    ]
+
+
+def _plano_saude_cards(empresa):
+    planos = PlanoSaude.objects.filter(empresa=empresa)
+    planos_ativos = planos.filter(status=PlanoSaude.STATUS_ATIVO).count()
+    beneficiarios = BeneficiarioPlano.objects.filter(plano__empresa=empresa)
+    beneficiarios_ativos = beneficiarios.filter(situacao=BeneficiarioPlano.SITUACAO_ATIVO).count()
+    guias = GuiaAutorizacao.objects.filter(plano__empresa=empresa)
+    guias_pendentes = guias.filter(status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE]).count()
+    guias_negadas = guias.filter(status=GuiaAutorizacao.STATUS_NEGADA).count()
+
+    carteira_score = 0
+    carteira_score += 35 if planos_ativos else 0
+    carteira_score += 40 if beneficiarios_ativos else 0
+    carteira_score += 25 if planos_ativos and beneficiarios_ativos else 0
+
+    autorizacao_score = 0
+    autorizacao_score += 45 if guias.exists() else 0
+    autorizacao_score += 30 if guias_pendentes == 0 and guias.exists() else 0
+    autorizacao_score += 25 if guias_negadas == 0 and guias.exists() else 0
+    autorizacao_score -= min(30, guias_pendentes * 5)
+
+    return [
+        _card(
+            "carteira_beneficiarios",
+            "Carteira e beneficiarios",
+            carteira_score,
+            {"planos_ativos": planos_ativos, "beneficiarios_ativos": beneficiarios_ativos},
+            proximas_acoes=["Cadastrar planos e beneficiarios para habilitar gestao assistencial."] if carteira_score < 50 else [],
+        ),
+        _card(
+            "guias_autorizacao",
+            "Guias, autorizacoes e auditoria",
+            autorizacao_score,
+            {"guias_pendentes": guias_pendentes, "guias_negadas": guias_negadas},
+            riscos=[_prioridade("Guias aguardando analise", "media", "Criar fila de autorizacao com SLA.", "Plano de Saude")] if guias_pendentes else [],
+        ),
+    ]
+
+
 def _cards_por_setor(empresa, setor):
     if setor == "farmacia":
         return _farmacia_cards(empresa)
@@ -425,6 +588,12 @@ def _cards_por_setor(empresa, setor):
         return _hospital_cards(empresa)
     if setor == "empresa":
         return _empresa_cards(empresa)
+    if setor == "governo":
+        return _governo_cards(empresa)
+    if setor == "rede":
+        return _rede_cards(empresa)
+    if setor == "plano_saude":
+        return _plano_saude_cards(empresa)
     return _generic_cards(empresa)
 
 

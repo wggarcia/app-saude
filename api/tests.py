@@ -19,9 +19,13 @@ from .models import (
     Empresa,
     EmpresaUsuario,
     FornecedorFarmaciaGestao,
+    IndicadorSaudeGov,
     LeitoHospital,
     MedicamentoFarmacia,
+    OrcamentoSaudeGov,
     PacienteHospital,
+    PlanoAcaoGov,
+    ProgramaSaudeGov,
     RegistroSintoma,
     TriagemHospital,
 )
@@ -599,6 +603,77 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(login.status_code, 200)
         self.assertContains(self.client.get("/dashboard-empresa/"), "Command Center Enterprise")
         self.assertContains(self.client.get("/gestao/"), "Command Center Enterprise")
+
+    def test_governo_mostra_command_center_enterprise_e_metricas_reais(self):
+        governo = Empresa.objects.create(
+            nome="Governo Visual",
+            email="governo-visual@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_pequeno",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        programa = ProgramaSaudeGov.objects.create(empresa=governo, nome="Imunizacao", status="ativo")
+        IndicadorSaudeGov.objects.create(
+            empresa=governo,
+            programa=programa,
+            nome="Cobertura vacinal",
+            meta="80",
+            valor_atual="82",
+        )
+        OrcamentoSaudeGov.objects.create(
+            empresa=governo,
+            ano=timezone.localdate().year,
+            total_previsto="100000.00",
+            total_executado="50000.00",
+        )
+        PlanoAcaoGov.objects.create(empresa=governo, programa=programa, titulo="Busca ativa", status="em_andamento")
+
+        login = self.client.post(
+            "/api/login-governo",
+            data=json.dumps({
+                "email": governo.email,
+                "senha": "123456",
+                "device_id": "governo-visual-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertContains(self.client.get("/dashboard-governo/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/governo/gestao/"), "Command Center Enterprise")
+        payload = self.client.get("/api/enterprise/command-center").json()
+        self.assertEqual(payload["setor"], "governo")
+        self.assertEqual(payload["modulos"][0]["codigo"], "programas_indicadores")
+        self.assertEqual(payload["modulos"][0]["metricas"]["metas_atingidas"], 1)
+
+    def test_rede_e_plano_saude_mostram_command_center_enterprise(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Rede Visual",
+            email="farmacia-rede-visual@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-rede-visual-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertContains(self.client.get("/rede/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/plano-saude/gestao/"), "Command Center Enterprise")
 
     def test_dispositivo_revogado_bloqueia_reuso_do_cookie(self):
         login = self._login("device-a")
