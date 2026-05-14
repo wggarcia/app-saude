@@ -738,6 +738,7 @@ class AuthDeviceTests(TestCase):
         self.assertContains(self.client.get("/dashboard-governo/"), "Command Center")
         self.assertContains(self.client.get("/dashboard-governo/"), "Sala de Decisão IA")
         self.assertContains(self.client.get("/governo/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/governo/gestao/"), "Sala de Decisão IA")
         payload = self.client.get("/api/enterprise/command-center").json()
         self.assertEqual(payload["setor"], "governo")
         self.assertEqual(payload["modulos"][0]["codigo"], "programas_indicadores")
