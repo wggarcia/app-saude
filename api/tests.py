@@ -756,13 +756,16 @@ class AuthDeviceTests(TestCase):
             status=GuiaAutorizacao.STATUS_NEGADA,
             valor_estimado="1200.00",
         )
-        GuiaAutorizacao.objects.create(
+        guia_pendente = GuiaAutorizacao.objects.create(
             plano=plano,
             beneficiario=beneficiario,
             tipo=GuiaAutorizacao.TIPO_CONSULTA,
             descricao_procedimento="Consulta pendente",
             status=GuiaAutorizacao.STATUS_SOLICITADA,
             valor_estimado="200.00",
+        )
+        GuiaAutorizacao.objects.filter(id=guia_pendente.id).update(
+            solicitada_em=timezone.now() - timedelta(days=4)
         )
 
         login = self.client.post(
@@ -779,8 +782,11 @@ class AuthDeviceTests(TestCase):
         payload = self.client.get("/api/enterprise/command-center").json()
         ciclo = next(modulo for modulo in payload["modulos"] if modulo["codigo"] == "ciclo_receita_glosas")
         self.assertEqual(ciclo["metricas"]["guias_total"], 3)
+        self.assertEqual(ciclo["metricas"]["guias_sla_vencido"], 1)
         self.assertEqual(ciclo["metricas"]["valor_solicitado"], 2200.0)
         self.assertEqual(ciclo["metricas"]["valor_glosado"], 1200.0)
+        self.assertEqual(ciclo["metricas"]["valor_sla_vencido"], 200.0)
+        self.assertTrue(any("sla" in risco["titulo"].lower() for risco in payload["riscos_prioritarios"]))
         self.assertTrue(any("glosa" in risco["titulo"].lower() for risco in payload["riscos_prioritarios"]))
 
     def test_dispositivo_revogado_bloqueia_reuso_do_cookie(self):

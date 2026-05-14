@@ -279,10 +279,15 @@ def _card_ciclo_receita(empresa, contexto="prestador"):
         nome = "Receita assistencial e glosas"
         modulo = "Receita"
 
-    total = guias.count()
-    pendentes = guias.filter(
+    limite_sla = timezone.now() - timedelta(hours=72)
+    pendentes_qs = guias.filter(
         status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE]
-    ).count()
+    )
+    pendentes_sla_qs = pendentes_qs.filter(solicitada_em__lt=limite_sla)
+
+    total = guias.count()
+    pendentes = pendentes_qs.count()
+    pendentes_sla = pendentes_sla_qs.count()
     autorizadas_qs = guias.filter(status=GuiaAutorizacao.STATUS_AUTORIZADA)
     negadas_qs = guias.filter(status=GuiaAutorizacao.STATUS_NEGADA)
     autorizadas = autorizadas_qs.count()
@@ -290,9 +295,8 @@ def _card_ciclo_receita(empresa, contexto="prestador"):
     valor_solicitado = _sum_valor(guias)
     valor_autorizado = _sum_valor(autorizadas_qs)
     valor_glosado = _sum_valor(negadas_qs)
-    valor_pendente = _sum_valor(
-        guias.filter(status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE])
-    )
+    valor_pendente = _sum_valor(pendentes_qs)
+    valor_sla_vencido = _sum_valor(pendentes_sla_qs)
     taxa_glosa = round((negadas / total) * 100, 1) if total else 0
 
     score = 0
@@ -301,6 +305,7 @@ def _card_ciclo_receita(empresa, contexto="prestador"):
     score += 25 if total and pendentes == 0 else 0
     score += 25 if total and taxa_glosa < 10 else 0
     score -= min(30, pendentes * 4)
+    score -= min(35, pendentes_sla * 10)
     if taxa_glosa >= 20:
         score -= 25
 
@@ -312,6 +317,12 @@ def _card_ciclo_receita(empresa, contexto="prestador"):
                 "Atacar fila para reduzir atraso de atendimento e receita parada.",
                 modulo,
             ) if pendentes else None,
+            _prioridade(
+                "SLA de autorizacao vencido",
+                "alta",
+                "Escalar guias acima de 72h para evitar perda assistencial e receita parada.",
+                modulo,
+            ) if pendentes_sla else None,
             _prioridade(
                 "Taxa de glosa elevada",
                 "alta",
@@ -334,6 +345,7 @@ def _card_ciclo_receita(empresa, contexto="prestador"):
         {
             "guias_total": total,
             "guias_pendentes": pendentes,
+            "guias_sla_vencido": pendentes_sla,
             "guias_autorizadas": autorizadas,
             "guias_negadas": negadas,
             "taxa_glosa_pct": taxa_glosa,
@@ -341,6 +353,7 @@ def _card_ciclo_receita(empresa, contexto="prestador"):
             "valor_autorizado": round(valor_autorizado, 2),
             "valor_glosado": round(valor_glosado, 2),
             "valor_pendente": round(valor_pendente, 2),
+            "valor_sla_vencido": round(valor_sla_vencido, 2),
         },
         riscos=riscos,
         proximas_acoes=[
