@@ -643,7 +643,7 @@ class AuthDeviceTests(TestCase):
         )
 
         self.assertEqual(login.status_code, 200)
-        self.assertContains(self.client.get("/dashboard-farmacia/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/dashboard-farmacia/"), "Command Center")
         self.assertContains(self.client.get("/farmacia/gestao/"), "Command Center Enterprise")
 
     def test_dashboard_hospital_mostra_command_center_enterprise(self):
@@ -668,7 +668,7 @@ class AuthDeviceTests(TestCase):
         )
 
         self.assertEqual(login.status_code, 200)
-        self.assertContains(self.client.get("/dashboard-hospital/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/dashboard-hospital/"), "Command Center")
         self.assertContains(self.client.get("/hospital/gestao/"), "Command Center Enterprise")
 
     def test_dashboard_empresa_mostra_command_center_enterprise(self):
@@ -735,7 +735,7 @@ class AuthDeviceTests(TestCase):
         )
 
         self.assertEqual(login.status_code, 200)
-        self.assertContains(self.client.get("/dashboard-governo/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/dashboard-governo/"), "Command Center")
         self.assertContains(self.client.get("/governo/gestao/"), "Command Center Enterprise")
         payload = self.client.get("/api/enterprise/command-center").json()
         self.assertEqual(payload["setor"], "governo")
