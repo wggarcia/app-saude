@@ -10,6 +10,13 @@
       <span id="epsStatus">carregando</span>
     </div>
   </div>
+  <div class="eps-growth" id="epsGrowth">
+    <div class="eps-growth-card"><span>Progresso Enterprise</span><strong>--%</strong></div>
+    <div class="eps-growth-card"><span>Etapas Feitas</span><strong>--</strong></div>
+    <div class="eps-growth-card"><span>Pendentes</span><strong>--</strong></div>
+    <div class="eps-growth-card"><span>Sinais Reais</span><strong>--</strong></div>
+    <div class="eps-growth-card"><span>Pronto Demo</span><strong>--</strong></div>
+  </div>
   <div class="eps-body">
     <div>
       <div class="eps-process">
@@ -41,6 +48,10 @@
 .eps-score{min-width:96px;text-align:right}
 .eps-score strong{display:block;font-size:30px;line-height:1;color:#00c2ff}
 .eps-score span{font-size:11px;font-weight:800;text-transform:uppercase;color:#8fb1c9}
+.eps-growth{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.eps-growth-card{background:rgba(4,16,24,.66);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:12px}
+.eps-growth-card span{display:block;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.7px;color:#8fb1c9;margin-bottom:6px}
+.eps-growth-card strong{display:block;font-size:21px;line-height:1;color:#e8f4ff}
 .eps-body{display:grid;grid-template-columns:1fr 290px;gap:14px}
 .eps-section-title{font-size:11px;font-weight:900;letter-spacing:.9px;text-transform:uppercase;color:#00e5b0;margin-bottom:9px}
 .eps-process{background:rgba(4,16,24,.38);border:1px solid rgba(255,255,255,.075);border-radius:12px;padding:12px;margin-bottom:12px}
@@ -79,8 +90,8 @@
 .eps-action{font-size:12px;line-height:1.45;color:#d7e7f1;border-left:3px solid #00c2ff;background:rgba(255,255,255,.045);border-radius:8px;padding:9px 10px}
 .eps-action small{display:block;color:#8fb1c9;margin-top:3px}
 .eps-empty{grid-column:1/-1;padding:18px;color:#8fb1c9}
-@media(max-width:1100px){.eps-body{grid-template-columns:1fr}.eps-actions{width:100%}.eps-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:760px){.eps-head{flex-direction:column}.eps-score{text-align:left}.eps-capabilities,.eps-steps{grid-template-columns:1fr}}
+@media(max-width:1100px){.eps-body{grid-template-columns:1fr}.eps-actions{width:100%}.eps-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.eps-growth{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.eps-head{flex-direction:column}.eps-score{text-align:left}.eps-capabilities,.eps-steps,.eps-growth{grid-template-columns:1fr}}
 </style>
 
 <script>
@@ -112,6 +123,14 @@
     document.getElementById("epsHeadline").textContent = payload.headline || payload.diferencial || "Suite enterprise ativa.";
     document.getElementById("epsScore").textContent = `${payload.score_suite || 0}%`;
     document.getElementById("epsStatus").textContent = payload.status || "em leitura";
+    const crescimento = payload.crescimento || {};
+    document.getElementById("epsGrowth").innerHTML = `
+      <div class="eps-growth-card"><span>Crescimento Enterprise</span><strong>${escapeHtml(crescimento.progresso ?? 0)}%</strong></div>
+      <div class="eps-growth-card"><span>Etapas Feitas</span><strong>${escapeHtml(crescimento.etapas_feitas ?? 0)}/${escapeHtml(crescimento.etapas_total ?? 0)}</strong></div>
+      <div class="eps-growth-card"><span>Pendentes</span><strong>${escapeHtml(crescimento.etapas_pendentes ?? 0)}</strong></div>
+      <div class="eps-growth-card"><span>Sinais Reais</span><strong>${escapeHtml(crescimento.sinais_reais ?? 0)}</strong></div>
+      <div class="eps-growth-card"><span>Pronto Demo</span><strong>${crescimento.pronto_demo ? "Sim" : "Nao"}</strong></div>
+    `;
     document.getElementById("epsProcesses").innerHTML = (payload.processos || []).map((processo, processIndex) => `
       <article class="eps-flow">
         <div class="eps-flow-head">

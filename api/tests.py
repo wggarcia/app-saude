@@ -476,6 +476,8 @@ class AuthDeviceTests(TestCase):
         payload = response.json()
         self.assertEqual(payload["setor"], "farmacia")
         self.assertGreater(payload["total_criado"], 0)
+        self.assertGreater(payload["suite"]["crescimento"]["progresso"], 0)
+        self.assertTrue(payload["suite"]["crescimento"]["pronto_demo"])
         etapas = {
             etapa["titulo"]: etapa["status"]
             for processo in payload["suite"]["processos"]
@@ -528,6 +530,8 @@ class AuthDeviceTests(TestCase):
         self.assertIn("Lotes", nomes)
         self.assertIn("Atendimento farmaceutico completo", processos)
         self.assertIn("Registrar receita", etapas)
+        self.assertEqual(payload["crescimento"]["etapas_feitas"], 1)
+        self.assertEqual(payload["crescimento"]["etapas_pendentes"], 7)
         primeira_etapa = payload["processos"][0]["etapas"][0]
         self.assertEqual(primeira_etapa["status"], "feito")
         self.assertEqual(primeira_etapa["sinais"], 1)
@@ -739,6 +743,7 @@ class AuthDeviceTests(TestCase):
         self.assertContains(self.client.get("/farmacia/gestao/"), "Command Center Enterprise")
         self.assertContains(self.client.get("/farmacia/gestao/"), "Suite Enterprise")
         self.assertContains(self.client.get("/farmacia/gestao/"), "Processo guiado")
+        self.assertContains(self.client.get("/farmacia/gestao/"), "Crescimento Enterprise")
 
     def test_dashboard_hospital_mostra_command_center_enterprise(self):
         hospital = Empresa.objects.create(

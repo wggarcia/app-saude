@@ -1061,6 +1061,32 @@ def _enriquecer_processos(processos, status_map):
     return enriquecidos
 
 
+def _crescimento_enterprise(processos, capacidades):
+    etapas = [
+        etapa
+        for processo in processos
+        for etapa in processo.get("etapas", [])
+    ]
+    total_etapas = len(etapas)
+    etapas_feitas = sum(1 for etapa in etapas if etapa.get("status") == "feito")
+    sinais_reais = sum(int(etapa.get("sinais") or 0) for etapa in etapas)
+    processos_operacionais = sum(1 for processo in processos if processo.get("status") == "operacional")
+    capacidades_operacionais = sum(1 for item in capacidades if item.get("status") == "operacional")
+    progresso = round((etapas_feitas / total_etapas) * 100) if total_etapas else 0
+    return {
+        "progresso": progresso,
+        "etapas_total": total_etapas,
+        "etapas_feitas": etapas_feitas,
+        "etapas_pendentes": max(total_etapas - etapas_feitas, 0),
+        "sinais_reais": sinais_reais,
+        "processos_operacionais": processos_operacionais,
+        "processos_total": len(processos),
+        "capacidades_operacionais": capacidades_operacionais,
+        "capacidades_total": len(capacidades),
+        "pronto_demo": etapas_feitas >= max(3, total_etapas // 2) and sinais_reais >= 3,
+    }
+
+
 def _status_etapas_farmacia(empresa):
     itens = ItemFarmacia.objects.filter(empresa=empresa, ativo=True).count() + MedicamentoFarmacia.objects.filter(empresa=empresa, ativo=True).count()
     pacientes = PacienteFarmacia.objects.filter(empresa=empresa, ativo=True).count()
@@ -1290,6 +1316,7 @@ def build_enterprise_premium_suite_payload(empresa):
         status_map = {"Abrir painel": _etapa_status(1)}
     capacidades = suite["capacidades"]
     processos = _enriquecer_processos(suite.get("processos", []), status_map)
+    crescimento = _crescimento_enterprise(processos, capacidades)
     score = _media([{"score": item["progresso"]} for item in capacidades])
     return {
         "empresa": {"id": empresa.id, "nome": empresa.nome},
@@ -1299,6 +1326,7 @@ def build_enterprise_premium_suite_payload(empresa):
         "diferencial": suite["diferencial"],
         "score_suite": score,
         "status": _status(score),
+        "crescimento": crescimento,
         "capacidades": capacidades,
         "processos": processos,
         "proximas_acoes": [
