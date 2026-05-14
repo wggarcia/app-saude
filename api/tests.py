@@ -786,6 +786,7 @@ class AuthDeviceTests(TestCase):
             descricao_procedimento="Tomografia",
             status=GuiaAutorizacao.STATUS_AUTORIZADA,
             valor_estimado="800.00",
+            validade_autorizacao=timezone.localdate() - timedelta(days=1),
         )
         GuiaAutorizacao.objects.create(
             plano=plano,
@@ -822,11 +823,15 @@ class AuthDeviceTests(TestCase):
         ciclo = next(modulo for modulo in payload["modulos"] if modulo["codigo"] == "ciclo_receita_glosas")
         self.assertEqual(ciclo["metricas"]["guias_total"], 3)
         self.assertEqual(ciclo["metricas"]["guias_sla_vencido"], 1)
+        self.assertEqual(ciclo["metricas"]["autorizacoes_vencidas"], 1)
+        self.assertEqual(ciclo["metricas"]["glosas_sem_justificativa"], 1)
         self.assertEqual(ciclo["metricas"]["valor_solicitado"], 2200.0)
         self.assertEqual(ciclo["metricas"]["valor_glosado"], 1200.0)
         self.assertEqual(ciclo["metricas"]["valor_sla_vencido"], 200.0)
+        self.assertEqual(ciclo["metricas"]["valor_autorizacao_vencida"], 800.0)
         self.assertTrue(any("sla" in risco["titulo"].lower() for risco in payload["riscos_prioritarios"]))
         self.assertTrue(any("glosa" in risco["titulo"].lower() for risco in payload["riscos_prioritarios"]))
+        self.assertTrue(any("autorizacao vencida" in risco["titulo"].lower() for risco in payload["riscos_prioritarios"]))
 
     def test_dispositivo_revogado_bloqueia_reuso_do_cookie(self):
         login = self._login("device-a")

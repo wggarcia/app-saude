@@ -284,19 +284,34 @@ def _card_ciclo_receita(empresa, contexto="prestador"):
         status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE]
     )
     pendentes_sla_qs = pendentes_qs.filter(solicitada_em__lt=limite_sla)
+    hoje = timezone.localdate()
+    autorizacoes_vencidas_qs = guias.filter(
+        status=GuiaAutorizacao.STATUS_AUTORIZADA,
+        validade_autorizacao__lt=hoje,
+    )
+    autorizacoes_vencendo_qs = guias.filter(
+        status=GuiaAutorizacao.STATUS_AUTORIZADA,
+        validade_autorizacao__range=(hoje, hoje + timedelta(days=7)),
+    )
 
     total = guias.count()
     pendentes = pendentes_qs.count()
     pendentes_sla = pendentes_sla_qs.count()
+    autorizacoes_vencidas = autorizacoes_vencidas_qs.count()
+    autorizacoes_vencendo = autorizacoes_vencendo_qs.count()
     autorizadas_qs = guias.filter(status=GuiaAutorizacao.STATUS_AUTORIZADA)
     negadas_qs = guias.filter(status=GuiaAutorizacao.STATUS_NEGADA)
+    negadas_sem_justificativa_qs = negadas_qs.filter(justificativa_negativa="")
     autorizadas = autorizadas_qs.count()
     negadas = negadas_qs.count()
+    negadas_sem_justificativa = negadas_sem_justificativa_qs.count()
     valor_solicitado = _sum_valor(guias)
     valor_autorizado = _sum_valor(autorizadas_qs)
     valor_glosado = _sum_valor(negadas_qs)
     valor_pendente = _sum_valor(pendentes_qs)
     valor_sla_vencido = _sum_valor(pendentes_sla_qs)
+    valor_autorizacao_vencida = _sum_valor(autorizacoes_vencidas_qs)
+    valor_autorizacao_vencendo = _sum_valor(autorizacoes_vencendo_qs)
     taxa_glosa = round((negadas / total) * 100, 1) if total else 0
 
     score = 0
@@ -306,6 +321,8 @@ def _card_ciclo_receita(empresa, contexto="prestador"):
     score += 25 if total and taxa_glosa < 10 else 0
     score -= min(30, pendentes * 4)
     score -= min(35, pendentes_sla * 10)
+    score -= min(30, autorizacoes_vencidas * 10)
+    score -= min(20, negadas_sem_justificativa * 8)
     if taxa_glosa >= 20:
         score -= 25
 
@@ -323,6 +340,24 @@ def _card_ciclo_receita(empresa, contexto="prestador"):
                 "Escalar guias acima de 72h para evitar perda assistencial e receita parada.",
                 modulo,
             ) if pendentes_sla else None,
+            _prioridade(
+                "Autorizacao vencida com valor em risco",
+                "alta",
+                "Renovar guia ou cancelar execucao para evitar perda financeira.",
+                modulo,
+            ) if autorizacoes_vencidas else None,
+            _prioridade(
+                "Autorizacao vence em ate 7 dias",
+                "media",
+                "Priorizar execucao/faturamento antes da validade expirar.",
+                modulo,
+            ) if autorizacoes_vencendo else None,
+            _prioridade(
+                "Glosa sem justificativa registrada",
+                "alta",
+                "Registrar motivo da negativa para recurso e aprendizagem contratual.",
+                modulo,
+            ) if negadas_sem_justificativa else None,
             _prioridade(
                 "Taxa de glosa elevada",
                 "alta",
@@ -348,12 +383,17 @@ def _card_ciclo_receita(empresa, contexto="prestador"):
             "guias_sla_vencido": pendentes_sla,
             "guias_autorizadas": autorizadas,
             "guias_negadas": negadas,
+            "glosas_sem_justificativa": negadas_sem_justificativa,
+            "autorizacoes_vencidas": autorizacoes_vencidas,
+            "autorizacoes_7_dias": autorizacoes_vencendo,
             "taxa_glosa_pct": taxa_glosa,
             "valor_solicitado": round(valor_solicitado, 2),
             "valor_autorizado": round(valor_autorizado, 2),
             "valor_glosado": round(valor_glosado, 2),
             "valor_pendente": round(valor_pendente, 2),
             "valor_sla_vencido": round(valor_sla_vencido, 2),
+            "valor_autorizacao_vencida": round(valor_autorizacao_vencida, 2),
+            "valor_autorizacao_7_dias": round(valor_autorizacao_vencendo, 2),
         },
         riscos=riscos,
         proximas_acoes=[
