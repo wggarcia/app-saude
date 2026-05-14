@@ -12,6 +12,7 @@ from .maintenance import maintenance_report
 from .models import (
     AceiteLegalPublico,
     AlertaGovernamental,
+    BeneficiarioPlano,
     DepartamentoHospital,
     DispositivoAutorizado,
     DispositivoPushPublico,
@@ -19,12 +20,14 @@ from .models import (
     Empresa,
     EmpresaUsuario,
     FornecedorFarmaciaGestao,
+    GuiaAutorizacao,
     IndicadorSaudeGov,
     InternacaoHospital,
     LeitoHospital,
     MedicamentoFarmacia,
     OrcamentoSaudeGov,
     PacienteHospital,
+    PlanoSaude,
     PrescricaoMedica,
     PlanoAcaoGov,
     ProgramaSaudeGov,
@@ -724,6 +727,61 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(login.status_code, 200)
         self.assertContains(self.client.get("/rede/gestao/"), "Command Center Enterprise")
         self.assertContains(self.client.get("/plano-saude/gestao/"), "Command Center Enterprise")
+
+    def test_plano_saude_command_center_calcula_glosas_e_receita(self):
+        empresa = Empresa.objects.create(
+            nome="Operadora Glosa",
+            email="operadora-glosa@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        plano = PlanoSaude.objects.create(empresa=empresa, nome="Plano Premium", status=PlanoSaude.STATUS_ATIVO)
+        beneficiario = BeneficiarioPlano.objects.create(plano=plano, nome="Beneficiario Receita")
+        GuiaAutorizacao.objects.create(
+            plano=plano,
+            beneficiario=beneficiario,
+            tipo=GuiaAutorizacao.TIPO_EXAME,
+            descricao_procedimento="Tomografia",
+            status=GuiaAutorizacao.STATUS_AUTORIZADA,
+            valor_estimado="800.00",
+        )
+        GuiaAutorizacao.objects.create(
+            plano=plano,
+            beneficiario=beneficiario,
+            tipo=GuiaAutorizacao.TIPO_PROCEDIMENTO,
+            descricao_procedimento="Procedimento negado",
+            status=GuiaAutorizacao.STATUS_NEGADA,
+            valor_estimado="1200.00",
+        )
+        GuiaAutorizacao.objects.create(
+            plano=plano,
+            beneficiario=beneficiario,
+            tipo=GuiaAutorizacao.TIPO_CONSULTA,
+            descricao_procedimento="Consulta pendente",
+            status=GuiaAutorizacao.STATUS_SOLICITADA,
+            valor_estimado="200.00",
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": empresa.email,
+                "senha": "123456",
+                "device_id": "operadora-glosa-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        payload = self.client.get("/api/enterprise/command-center").json()
+        ciclo = next(modulo for modulo in payload["modulos"] if modulo["codigo"] == "ciclo_receita_glosas")
+        self.assertEqual(ciclo["metricas"]["guias_total"], 3)
+        self.assertEqual(ciclo["metricas"]["valor_solicitado"], 2200.0)
+        self.assertEqual(ciclo["metricas"]["valor_glosado"], 1200.0)
+        self.assertTrue(any("glosa" in risco["titulo"].lower() for risco in payload["riscos_prioritarios"]))
 
     def test_dispositivo_revogado_bloqueia_reuso_do_cookie(self):
         login = self._login("device-a")

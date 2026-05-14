@@ -1,7 +1,7 @@
 from datetime import timedelta
 import unicodedata
 
-from django.db.models import F
+from django.db.models import F, Sum
 from django.http import JsonResponse
 from django.utils import timezone
 
@@ -265,6 +265,90 @@ def _card_circuito_medicamento(empresa):
     )
 
 
+def _sum_valor(qs):
+    return float(qs.aggregate(total=Sum("valor_estimado"))["total"] or 0)
+
+
+def _card_ciclo_receita(empresa, contexto="prestador"):
+    if contexto == "operadora":
+        guias = GuiaAutorizacao.objects.filter(plano__empresa=empresa)
+        nome = "Ciclo de receita, autorizacoes e glosas"
+        modulo = "Plano de Saude"
+    else:
+        guias = GuiaAutorizacao.objects.filter(unidade__empresa=empresa)
+        nome = "Receita assistencial e glosas"
+        modulo = "Receita"
+
+    total = guias.count()
+    pendentes = guias.filter(
+        status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE]
+    ).count()
+    autorizadas_qs = guias.filter(status=GuiaAutorizacao.STATUS_AUTORIZADA)
+    negadas_qs = guias.filter(status=GuiaAutorizacao.STATUS_NEGADA)
+    autorizadas = autorizadas_qs.count()
+    negadas = negadas_qs.count()
+    valor_solicitado = _sum_valor(guias)
+    valor_autorizado = _sum_valor(autorizadas_qs)
+    valor_glosado = _sum_valor(negadas_qs)
+    valor_pendente = _sum_valor(
+        guias.filter(status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE])
+    )
+    taxa_glosa = round((negadas / total) * 100, 1) if total else 0
+
+    score = 0
+    score += 25 if total else 0
+    score += 25 if valor_solicitado > 0 else 0
+    score += 25 if total and pendentes == 0 else 0
+    score += 25 if total and taxa_glosa < 10 else 0
+    score -= min(30, pendentes * 4)
+    if taxa_glosa >= 20:
+        score -= 25
+
+    riscos = [
+        r for r in [
+            _prioridade(
+                "Guias aguardando autorizacao",
+                "media",
+                "Atacar fila para reduzir atraso de atendimento e receita parada.",
+                modulo,
+            ) if pendentes else None,
+            _prioridade(
+                "Taxa de glosa elevada",
+                "alta",
+                "Auditar motivo das negativas, documentos e regras contratuais.",
+                modulo,
+            ) if taxa_glosa >= 20 else None,
+            _prioridade(
+                "Valor glosado impactando receita",
+                "alta",
+                "Criar recurso de glosa e revisar elegibilidade antes da execucao.",
+                modulo,
+            ) if valor_glosado > 0 else None,
+        ] if r
+    ]
+
+    return _card(
+        "ciclo_receita_glosas",
+        nome,
+        score,
+        {
+            "guias_total": total,
+            "guias_pendentes": pendentes,
+            "guias_autorizadas": autorizadas,
+            "guias_negadas": negadas,
+            "taxa_glosa_pct": taxa_glosa,
+            "valor_solicitado": round(valor_solicitado, 2),
+            "valor_autorizado": round(valor_autorizado, 2),
+            "valor_glosado": round(valor_glosado, 2),
+            "valor_pendente": round(valor_pendente, 2),
+        },
+        riscos=riscos,
+        proximas_acoes=[
+            "Conectar guia, autorizacao, execucao e recurso de glosa para fechar o ciclo financeiro."
+        ] if score < 70 else [],
+    )
+
+
 def _empresa_cards(empresa):
     hoje = timezone.localdate()
     proximos_60 = hoje + timedelta(days=60)
@@ -492,6 +576,7 @@ def _farmacia_cards(empresa):
             {"pedidos_abertos": pedidos_abertos, "fornecedores": fornecedores, "estoque_critico": estoque_critico},
             proximas_acoes=["Conectar ruptura de estoque a pedidos automatizados por fornecedor."] if compras_score < 60 else [],
         ),
+        _card_ciclo_receita(empresa),
     ]
 
 
@@ -568,6 +653,7 @@ def _hospital_cards(empresa):
             proximas_acoes=["Vincular internacao, leito e prescricao para rastrear cuidado completo."] if cuidado_score < 60 else [],
         ),
         _card_circuito_medicamento(empresa),
+        _card_ciclo_receita(empresa),
     ]
 
 
@@ -734,6 +820,7 @@ def _plano_saude_cards(empresa):
             {"guias_pendentes": guias_pendentes, "guias_negadas": guias_negadas},
             riscos=[_prioridade("Guias aguardando analise", "media", "Criar fila de autorizacao com SLA.", "Plano de Saude")] if guias_pendentes else [],
         ),
+        _card_ciclo_receita(empresa, contexto="operadora"),
     ]
 
 
