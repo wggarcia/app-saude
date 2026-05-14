@@ -448,6 +448,43 @@ class AuthDeviceTests(TestCase):
 
         self.assertEqual(response.status_code, 401)
 
+    def test_enterprise_seed_operacional_farmacia_cria_fluxo_real(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Seed",
+            email="farmacia-seed@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-seed-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.post("/api/enterprise/seed-operational-demo")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["setor"], "farmacia")
+        self.assertGreater(payload["total_criado"], 0)
+        etapas = {
+            etapa["titulo"]: etapa["status"]
+            for processo in payload["suite"]["processos"]
+            for etapa in processo["etapas"]
+        }
+        self.assertEqual(etapas["Cadastrar paciente"], "feito")
+        self.assertEqual(etapas["Registrar receita"], "feito")
+        self.assertEqual(etapas["Dispensar com seguranca"], "feito")
+
     def test_enterprise_premium_suite_farmacia_mostra_capacidades_clinicas(self):
         farmacia = Empresa.objects.create(
             nome="Farmacia Suite",

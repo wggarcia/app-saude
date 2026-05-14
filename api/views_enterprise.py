@@ -4,6 +4,7 @@ import unicodedata
 from django.db.models import F, Sum
 from django.http import JsonResponse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 
 from .access_control import get_setor
 from .models import (
@@ -31,6 +32,7 @@ from .models import (
     InternacaoHospital,
     InventarioFarmacia,
     ItemFarmacia,
+    ItemInventario,
     LeitoHospital,
     LeitoHospitalar,
     LoteMedicamento,
@@ -1308,6 +1310,193 @@ def build_enterprise_premium_suite_payload(empresa):
     }
 
 
+def _seed_farmacia(empresa):
+    hoje = timezone.localdate()
+    criados = []
+    fornecedor, created = FornecedorFarmacia.objects.get_or_create(
+        empresa=empresa,
+        nome="Fornecedor Demo Enterprise",
+        defaults={"cnpj": "00.000.000/0001-91", "contato": "Central de Suprimentos", "email": "compras@demo.local", "telefone": "(11) 4000-0000"},
+    )
+    if created:
+        criados.append("fornecedor")
+    item, created = ItemFarmacia.objects.get_or_create(
+        empresa=empresa,
+        nome="Paracetamol 500mg Demo",
+        defaults={"codigo": "MED-DEMO-001", "categoria": "medicamento", "unidade_medida": "comprimido", "estoque_minimo": 20, "estoque_atual": 120, "fornecedor": fornecedor},
+    )
+    if created:
+        criados.append("item")
+    paciente, created = PacienteFarmacia.objects.get_or_create(
+        empresa=empresa,
+        cpf="000.000.000-91",
+        defaults={"nome": "Paciente Demo Farmacia", "telefone": "(11) 99999-0000", "alergias": "Sem alergias conhecidas", "condicoes_cronicas": "Hipertensao controlada"},
+    )
+    if created:
+        criados.append("paciente")
+    receita, created = ReceitaMedica.objects.get_or_create(
+        empresa=empresa,
+        numero_receita="REC-DEMO-001",
+        defaults={
+            "paciente": paciente,
+            "paciente_nome": paciente.nome,
+            "paciente_cpf": paciente.cpf,
+            "tipo": "simples",
+            "medico_nome": "Dra. Demo Clinica",
+            "medico_crm": "CRM/SP 000001",
+            "data_emissao": hoje,
+            "data_validade": hoje + timedelta(days=30),
+            "item": item,
+            "quantidade": 2,
+            "posologia": "1 comprimido a cada 8 horas se dor ou febre.",
+        },
+    )
+    if created:
+        criados.append("receita")
+    dispensacao, created = DispensacaoMedicamento.objects.get_or_create(
+        empresa=empresa,
+        item=item,
+        paciente_cpf=paciente.cpf,
+        defaults={"paciente_nome": paciente.nome, "quantidade": 2, "responsavel": "Farmaceutico Demo", "observacoes": "Dispensacao inicial de demonstracao."},
+    )
+    if created:
+        criados.append("dispensacao")
+        ReceitaMedica.objects.filter(id=receita.id).update(status="dispensada", dispensacao=dispensacao)
+    lote, created = LoteMedicamento.objects.get_or_create(
+        empresa=empresa,
+        item=item,
+        numero_lote="LOTE-DEMO-001",
+        defaults={"fabricante": "Industria Demo", "data_fabricacao": hoje - timedelta(days=45), "data_validade": hoje + timedelta(days=240), "quantidade_inicial": 120, "quantidade_atual": 118, "nota_fiscal": "NF-DEMO-001", "fornecedor": fornecedor},
+    )
+    if created:
+        criados.append("lote")
+    pedido, created = PedidoCompraFarmacia.objects.get_or_create(
+        empresa=empresa,
+        fornecedor=fornecedor,
+        observacoes="Pedido inicial de demonstracao enterprise.",
+        defaults={"status": "enviado"},
+    )
+    if created:
+        criados.append("pedido")
+    inventario, created = InventarioFarmacia.objects.get_or_create(
+        empresa=empresa,
+        descricao="Inventario inicial demo enterprise",
+        defaults={"responsavel": "Operacao Demo", "observacoes": "Snapshot inicial para ativar processo."},
+    )
+    if created:
+        criados.append("inventario")
+        ItemInventario.objects.get_or_create(
+            inventario=inventario,
+            item=item,
+            defaults={"estoque_sistema": item.estoque_atual, "estoque_contado": item.estoque_atual, "diferenca": 0},
+        )
+    return criados
+
+
+def _seed_hospital(empresa):
+    hoje = timezone.localdate()
+    agora = timezone.now()
+    criados = []
+    dep, created = DepartamentoHospital.objects.get_or_create(
+        empresa=empresa,
+        nome="Emergencia Demo",
+        defaults={"tipo": "emergencia", "capacidade_leitos": 12, "responsavel": "Coord. Demo"},
+    )
+    if created:
+        criados.append("departamento")
+    leito, created = LeitoHospitalar.objects.get_or_create(
+        empresa=empresa,
+        numero="E-DEMO-01",
+        defaults={"ala": dep.nome, "tipo": "emergencia", "status": "ocupado", "paciente_nome": "Paciente Hospital Demo", "data_internacao": hoje, "previsao_alta": hoje + timedelta(days=2)},
+    )
+    if created:
+        criados.append("leito")
+    triagem, created = TriagemManchester.objects.get_or_create(
+        empresa=empresa,
+        paciente_nome="Paciente Hospital Demo",
+        data_hora=agora,
+        defaults={"paciente_cpf": "000.000.000-92", "queixa_principal": "Dor toracica e falta de ar", "nivel": "laranja", "tempo_espera_minutos": 12, "status": "em_atendimento", "medico_responsavel": "Dr. Demo Emergencia"},
+    )
+    if created:
+        criados.append("triagem")
+    paciente, created = PacienteInternado.objects.get_or_create(
+        empresa=empresa,
+        cpf="000.000.000-92",
+        defaults={"nome": "Paciente Hospital Demo", "data_internacao": hoje, "leito": leito, "diagnostico_cid": "R07", "medico_responsavel": "Dr. Demo Emergencia", "convenio": "Plano Demo", "status": "internado"},
+    )
+    if created:
+        criados.append("internacao")
+    prescricao, created = PrescricaoHospitalar.objects.get_or_create(
+        empresa=empresa,
+        paciente=paciente,
+        data=hoje,
+        defaults={"medico_nome": "Dr. Demo Emergencia", "medico_crm": "CRM/SP 000002", "status": "ativa", "medicamentos": [{"nome": "Dipirona 1g", "dose": "1 ampola", "via": "EV", "frequencia": "6/6h"}]},
+    )
+    if created:
+        criados.append("prescricao")
+    return criados
+
+
+def _seed_empresa(empresa):
+    hoje = timezone.localdate()
+    criados = []
+    funcionario, created = FuncionarioSST.objects.get_or_create(
+        empresa=empresa,
+        cpf="000.000.000-93",
+        defaults={"nome": "Colaborador Demo SST", "cargo": "Operador Demo", "setor": "Operacao", "sexo": "O", "data_admissao": hoje - timedelta(days=120), "classe_risco": "II", "ativo": True},
+    )
+    if created:
+        criados.append("funcionario")
+    aso, created = ASOOcupacional.objects.get_or_create(
+        empresa=empresa,
+        funcionario=funcionario,
+        tipo="periodico",
+        data_emissao=hoje,
+        defaults={"data_validade": hoje + timedelta(days=365), "medico_responsavel": "Dra. Demo Ocupacional", "crm": "CRM/SP 000003", "resultado": "apto"},
+    )
+    if created:
+        criados.append("aso")
+    for tipo, titulo in (("PGR", "PGR Demo Enterprise"), ("PCMSO", "PCMSO Demo Enterprise"), ("LTCAT", "LTCAT Demo Enterprise")):
+        _, created = DocumentoSST.objects.get_or_create(
+            empresa=empresa,
+            tipo=tipo,
+            titulo=titulo,
+            defaults={"status": "vigente", "responsavel_tecnico": "Resp. Tecnico Demo", "registro_profissional": "CREA/CRM-DEMO", "data_emissao": hoje, "data_validade": hoje + timedelta(days=365)},
+        )
+        if created:
+            criados.append(tipo.lower())
+    evento, created = eSocialEventoSST.objects.get_or_create(
+        empresa=empresa,
+        tipo_evento="S-2220",
+        referencia=str(aso.id),
+        defaults={"status": "pendente", "xml_gerado": "<eSocial demo='true' evento='S-2220' />"},
+    )
+    if created:
+        criados.append("esocial")
+    treinamento, created = TreinamentoNR.objects.get_or_create(
+        empresa=empresa,
+        funcionario=funcionario,
+        nr="NR-6",
+        defaults={"titulo": "NR-6 EPI Demo", "instrutor": "Instrutor Demo", "carga_horaria": 4, "data_realizacao": hoje, "data_validade": hoje + timedelta(days=365), "status": "valido"},
+    )
+    if created:
+        criados.append("treinamento")
+    return criados
+
+
+def seed_enterprise_operational_demo(empresa):
+    setor = get_setor(empresa)
+    if setor == "farmacia":
+        criados = _seed_farmacia(empresa)
+    elif setor == "hospital":
+        criados = _seed_hospital(empresa)
+    elif setor == "empresa":
+        criados = _seed_empresa(empresa)
+    else:
+        criados = []
+    return {"setor": setor, "criados": criados, "total_criado": len(criados)}
+
+
 def api_enterprise_command_center(request):
     empresa = getattr(request, "empresa", None)
     if not empresa:
@@ -1322,3 +1511,16 @@ def api_enterprise_premium_suite(request):
         return JsonResponse({"erro": "Nao autenticado"}, status=401)
 
     return JsonResponse(build_enterprise_premium_suite_payload(empresa))
+
+
+@csrf_exempt
+def api_enterprise_seed_operational_demo(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Nao autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "Metodo nao permitido"}, status=405)
+
+    resultado = seed_enterprise_operational_demo(empresa)
+    resultado["suite"] = build_enterprise_premium_suite_payload(empresa)
+    return JsonResponse(resultado)

@@ -24,6 +24,8 @@
       </div>
     </div>
     <aside class="eps-actions">
+      <button type="button" class="eps-seed" id="epsSeedBtn">Implantacao rapida</button>
+      <small class="eps-seed-note" id="epsSeedNote">Cria dados iniciais controlados para demonstrar o fluxo completo.</small>
       <strong>Proximas automacoes</strong>
       <div id="epsActions" class="eps-action-list"></div>
     </aside>
@@ -70,6 +72,8 @@
 .eps-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .eps-chip{font-size:10px;font-weight:800;color:#a9c0d0;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);border-radius:99px;padding:4px 7px}
 .eps-actions{background:rgba(4,16,24,.66);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;align-self:start}
+.eps-seed{width:100%;min-height:38px;border:0;border-radius:9px;background:linear-gradient(135deg,#00e5b0,#00c2ff);color:#041018;font-size:12px;font-weight:950;cursor:pointer;font-family:inherit;margin-bottom:8px}
+.eps-seed:disabled{opacity:.62;cursor:wait}.eps-seed-note{display:block;color:#8fb1c9;line-height:1.35;margin-bottom:14px;font-size:11px}
 .eps-actions strong{display:block;font-size:13px;margin-bottom:10px;color:#f3fbff}
 .eps-action-list{display:grid;gap:9px}
 .eps-action{font-size:12px;line-height:1.45;color:#d7e7f1;border-left:3px solid #00c2ff;background:rgba(255,255,255,.045);border-radius:8px;padding:9px 10px}
@@ -102,7 +106,9 @@
       window[modal]();
     }
   }
+  let lastPayload = null;
   function render(payload){
+    lastPayload = payload;
     document.getElementById("epsHeadline").textContent = payload.headline || payload.diferencial || "Suite enterprise ativa.";
     document.getElementById("epsScore").textContent = `${payload.score_suite || 0}%`;
     document.getElementById("epsStatus").textContent = payload.status || "em leitura";
@@ -150,11 +156,34 @@
     if (!button) return;
     runAction(button.dataset.action || "", button.dataset.modal || "");
   });
-  fetch("/api/enterprise/premium-suite")
+  function loadSuite() {
+    return fetch("/api/enterprise/premium-suite")
     .then((res) => res.ok ? res.json() : Promise.reject())
     .then(render)
     .catch(() => {
       document.getElementById("epsCapabilities").innerHTML = '<div class="eps-empty">Nao foi possivel carregar a Suite Enterprise agora.</div>';
     });
+  }
+  document.getElementById("epsSeedBtn")?.addEventListener("click", async () => {
+    const btn = document.getElementById("epsSeedBtn");
+    const note = document.getElementById("epsSeedNote");
+    btn.disabled = true;
+    btn.textContent = "Implantando...";
+    try {
+      const res = await fetch("/api/enterprise/seed-operational-demo", {method: "POST"});
+      if (!res.ok) throw new Error("seed_failed");
+      const payload = await res.json();
+      render(payload.suite || lastPayload || {});
+      note.textContent = payload.total_criado
+        ? `Implantacao criada: ${payload.criados.join(", ")}.`
+        : "Estrutura inicial ja estava implantada.";
+      btn.textContent = "Implantacao concluida";
+    } catch (error) {
+      note.textContent = "Nao foi possivel executar a implantacao rapida agora.";
+      btn.textContent = "Tentar novamente";
+      btn.disabled = false;
+    }
+  });
+  loadSuite();
 }());
 </script>
