@@ -33,6 +33,7 @@ from .models import (
     ProgramaSaudeGov,
     RegistroSintoma,
     TriagemHospital,
+    TriagemManchester,
 )
 from . import epidemiologia
 from .epidemiologia import DISEASE_WEIGHTS
@@ -543,6 +544,44 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(circuito["metricas"]["prescricoes_ativas"], 1)
         self.assertEqual(circuito["metricas"]["itens_sem_estoque"], 1)
         self.assertTrue(any("fora do estoque" in risco["titulo"] for risco in payload["riscos_prioritarios"]))
+
+    def test_enterprise_command_center_hospital_detecta_sla_manchester_estourado(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital SLA",
+            email="hospital-sla@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        TriagemManchester.objects.create(
+            empresa=hospital,
+            data_hora=timezone.now(),
+            paciente_nome="Paciente Laranja",
+            queixa_principal="Dispneia",
+            nivel="laranja",
+            tempo_espera_minutos=25,
+            status="aguardando",
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-sla-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        payload = self.client.get("/api/enterprise/command-center").json()
+        sla = next(modulo for modulo in payload["modulos"] if modulo["codigo"] == "sla_manchester")
+        self.assertEqual(sla["metricas"]["triagens_abertas"], 1)
+        self.assertEqual(sla["metricas"]["sla_estourado"], 1)
+        self.assertEqual(sla["metricas"]["sla_critico"], 1)
+        self.assertTrue(any("manchester" in risco["titulo"].lower() for risco in payload["riscos_prioritarios"]))
 
     def test_enterprise_command_center_farmacia_detecta_estoque_critico(self):
         farmacia = Empresa.objects.create(

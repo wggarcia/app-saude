@@ -643,6 +643,31 @@ def _hospital_cards(empresa):
     cuidado_score += 20 if pacientes else 0
     cuidado_score += 10 if leitos_ocupados <= leitos_total and leitos_total else 0
 
+    triagens_abertas = TriagemManchester.objects.filter(
+        empresa=empresa,
+        status__in=["aguardando", "em_atendimento"],
+    )
+    alvos_manchester = {
+        "vermelho": 0,
+        "laranja": 10,
+        "amarelo": 60,
+        "verde": 120,
+        "azul": 240,
+    }
+    sla_estourado = 0
+    sla_critico = 0
+    for triagem in triagens_abertas.only("nivel", "tempo_espera_minutos"):
+        alvo = alvos_manchester.get(triagem.nivel, 120)
+        if triagem.tempo_espera_minutos > alvo:
+            sla_estourado += 1
+            if triagem.nivel in ["vermelho", "laranja"]:
+                sla_critico += 1
+    sla_score = 30 if triagens_abertas.exists() else 0
+    sla_score += 45 if sla_estourado == 0 and triagens_abertas.exists() else 0
+    sla_score += 25 if sla_critico == 0 and triagens_abertas.exists() else 0
+    sla_score -= min(40, sla_estourado * 8)
+    sla_score -= min(30, sla_critico * 12)
+
     return [
         _card(
             "leitos_ocupacao",
@@ -664,6 +689,29 @@ def _hospital_cards(empresa):
             cuidado_score,
             {"internacoes_ativas": internacoes_ativas, "prescricoes_ativas": prescricoes_ativas, "pacientes": pacientes},
             proximas_acoes=["Vincular internacao, leito e prescricao para rastrear cuidado completo."] if cuidado_score < 60 else [],
+        ),
+        _card(
+            "sla_manchester",
+            "SLA Manchester e fila critica",
+            sla_score,
+            {"triagens_abertas": triagens_abertas.count(), "sla_estourado": sla_estourado, "sla_critico": sla_critico},
+            riscos=[
+                r for r in [
+                    _prioridade(
+                        "SLA Manchester estourado",
+                        "alta",
+                        "Reordenar fila por risco e acionar equipe assistencial.",
+                        "Hospital",
+                    ) if sla_estourado else None,
+                    _prioridade(
+                        "Paciente vermelho/laranja acima do alvo",
+                        "alta",
+                        "Atendimento imediato e registro de justificativa clinica.",
+                        "Hospital",
+                    ) if sla_critico else None,
+                ] if r
+            ],
+            proximas_acoes=["Registrar Manchester com tempo de espera para controlar SLA clinico."] if sla_score < 45 else [],
         ),
         _card_circuito_medicamento(empresa),
         _card_ciclo_receita(empresa),
