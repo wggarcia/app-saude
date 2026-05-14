@@ -26,6 +26,7 @@ from .models import (
     LeitoHospital,
     MedicamentoFarmacia,
     OrcamentoSaudeGov,
+    PacienteFarmacia,
     PacienteHospital,
     PlanoSaude,
     PrescricaoMedica,
@@ -469,6 +470,11 @@ class AuthDeviceTests(TestCase):
         )
 
         self.assertEqual(login.status_code, 200)
+        PacienteFarmacia.objects.create(
+            empresa=farmacia,
+            nome="Paciente Jornada",
+            cpf="000.000.000-01",
+        )
         response = self.client.get("/api/enterprise/premium-suite")
 
         self.assertEqual(response.status_code, 200)
@@ -485,6 +491,9 @@ class AuthDeviceTests(TestCase):
         self.assertIn("Lotes", nomes)
         self.assertIn("Atendimento farmaceutico completo", processos)
         self.assertIn("Registrar receita", etapas)
+        primeira_etapa = payload["processos"][0]["etapas"][0]
+        self.assertEqual(primeira_etapa["status"], "feito")
+        self.assertEqual(primeira_etapa["sinais"], 1)
 
     def test_enterprise_command_center_hospital_usa_dados_do_setor(self):
         hospital = Empresa.objects.create(

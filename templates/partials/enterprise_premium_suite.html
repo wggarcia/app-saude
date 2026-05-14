@@ -48,9 +48,13 @@
 .eps-flow-head strong{font-size:13px;color:#f3fbff}.eps-flow-head p{font-size:12px;max-width:620px}
 .eps-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .eps-step{background:rgba(4,16,24,.74);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;min-width:0}
+.eps-step.feito{border-color:rgba(0,229,176,.35);background:rgba(0,229,176,.055)}
 .eps-step-num{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#00e5b0,#00c2ff);color:#041018;font-size:11px;font-weight:950;margin-bottom:8px}
+.eps-step.feito .eps-step-num{background:#00e5b0}
 .eps-step-title{font-size:12px;font-weight:900;color:#f3fbff;margin-bottom:4px}
 .eps-step p{font-size:11px;line-height:1.42;color:#8fb1c9;margin-bottom:9px}
+.eps-step-state{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:900;text-transform:uppercase;border-radius:99px;padding:4px 7px;margin-bottom:8px;background:rgba(255,179,71,.14);color:#ffcf8c}
+.eps-step-state.feito{background:rgba(0,229,176,.14);color:#00e5b0}
 .eps-step button{width:100%;min-height:32px;border:0;border-radius:8px;background:#00c2ff;color:#041018;font-size:11px;font-weight:900;cursor:pointer;font-family:inherit}
 .eps-step button:hover{filter:brightness(1.08)}
 .eps-capabilities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -112,8 +116,9 @@
         </div>
         <div class="eps-steps">
           ${(processo.etapas || []).map((step, stepIndex) => `
-            <div class="eps-step">
+            <div class="eps-step ${escapeHtml(step.status || "pendente")}">
               <div class="eps-step-num">${escapeHtml(step.ordem || stepIndex + 1)}</div>
+              <div class="eps-step-state ${escapeHtml(step.status || "pendente")}">${escapeHtml(step.status === "feito" ? "feito" : "pendente")} · ${escapeHtml(step.sinais || 0)} sinais</div>
               <div class="eps-step-title">${escapeHtml(step.titulo)}</div>
               <p>${escapeHtml(step.descricao)}</p>
               <button type="button" data-action="${escapeHtml(step.acao || "")}" data-modal="${escapeHtml(step.modal || "")}">${escapeHtml(step.acao_label || "Executar")}</button>

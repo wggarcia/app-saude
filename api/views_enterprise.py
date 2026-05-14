@@ -11,6 +11,7 @@ from .models import (
     AcaoCorporativa,
     AfastamentoSST,
     AgendamentoSST,
+    CATOcupacional,
     CheckinDiarioCorporativo,
     CheckinSemanalCorporativo,
     ColaboradorAliasCorporativo,
@@ -1035,6 +1036,91 @@ def _capacidade(chave, nome, descricao, atual, alvo, concorrentes, acao):
     }
 
 
+def _etapa_status(sinais):
+    sinais = int(sinais or 0)
+    return {"status": "feito" if sinais > 0 else "pendente", "sinais": sinais}
+
+
+def _enriquecer_processos(processos, status_map):
+    enriquecidos = []
+    for processo in processos:
+        etapas = []
+        for etapa in processo.get("etapas", []):
+            dados = dict(etapa)
+            dados.update(status_map.get(etapa.get("titulo"), _etapa_status(0)))
+            etapas.append(dados)
+        bloco = dict(processo)
+        bloco["etapas"] = etapas
+        total = len(etapas)
+        feitas = sum(1 for etapa in etapas if etapa["status"] == "feito")
+        bloco["progresso"] = round((feitas / total) * 100) if total else 0
+        bloco["status"] = "operacional" if total and feitas == total else ("em_ativacao" if feitas else "pendente")
+        enriquecidos.append(bloco)
+    return enriquecidos
+
+
+def _status_etapas_farmacia(empresa):
+    itens = ItemFarmacia.objects.filter(empresa=empresa, ativo=True).count() + MedicamentoFarmacia.objects.filter(empresa=empresa, ativo=True).count()
+    pacientes = PacienteFarmacia.objects.filter(empresa=empresa, ativo=True).count()
+    receitas = ReceitaMedica.objects.filter(empresa=empresa).count()
+    dispensacoes = Dispensacao.objects.filter(empresa=empresa).count() + DispensacaoMedicamento.objects.filter(empresa=empresa).count()
+    lotes = LoteMedicamento.objects.filter(empresa=empresa).count()
+    inventarios = InventarioFarmacia.objects.filter(empresa=empresa).count()
+    pedidos = PedidoFarmacia.objects.filter(empresa=empresa).count() + PedidoCompraFarmacia.objects.filter(empresa=empresa).count()
+    fornecedores = FornecedorFarmacia.objects.filter(empresa=empresa, ativo=True).count() + FornecedorFarmaciaGestao.objects.filter(empresa=empresa, ativo=True).count()
+    return {
+        "Cadastrar paciente": _etapa_status(pacientes),
+        "Registrar receita": _etapa_status(receitas),
+        "Dispensar com seguranca": _etapa_status(dispensacoes),
+        "Rastrear lote e reposicao": _etapa_status(lotes + inventarios + pedidos),
+        "Cadastrar item": _etapa_status(itens),
+        "Cadastrar fornecedor": _etapa_status(fornecedores),
+        "Gerar pedido": _etapa_status(pedidos),
+        "Inventariar": _etapa_status(inventarios),
+    }
+
+
+def _status_etapas_hospital(empresa):
+    leitos = LeitoHospitalar.objects.filter(empresa=empresa).count() + LeitoHospital.objects.filter(empresa=empresa).count()
+    triagens = TriagemManchester.objects.filter(empresa=empresa).count() + TriagemHospital.objects.filter(empresa=empresa).count()
+    internacoes = PacienteInternado.objects.filter(empresa=empresa).count() + InternacaoHospital.objects.filter(empresa=empresa).count()
+    prescricoes = PrescricaoHospitalar.objects.filter(empresa=empresa).count() + PrescricaoMedica.objects.filter(internacao__empresa=empresa).count()
+    departamentos = DepartamentoHospital.objects.filter(empresa=empresa).count()
+    guias = GuiaAutorizacao.objects.filter(unidade__empresa=empresa).count()
+    redes = Rede.objects.filter(empresa=empresa).count() + UnidadeRede.objects.filter(empresa=empresa).count()
+    return {
+        "Preparar leito": _etapa_status(leitos),
+        "Triar Manchester": _etapa_status(triagens),
+        "Internar paciente": _etapa_status(internacoes),
+        "Prescrever e acompanhar": _etapa_status(prescricoes),
+        "Cadastrar departamentos": _etapa_status(departamentos),
+        "Abrir planos de saude": _etapa_status(guias),
+        "Acompanhar rede": _etapa_status(redes),
+        "Gerar relatorio": _etapa_status(internacoes),
+    }
+
+
+def _status_etapas_empresa(empresa):
+    funcionarios = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).count()
+    asos = ASOOcupacional.objects.filter(empresa=empresa).count()
+    documentos = DocumentoSST.objects.filter(empresa=empresa).count()
+    esocial = eSocialEventoSST.objects.filter(empresa=empresa).count()
+    cats = CATOcupacional.objects.filter(empresa=empresa).count()
+    exames = AgendamentoSST.objects.filter(empresa=empresa).count()
+    treinamentos = TreinamentoNR.objects.filter(empresa=empresa).count()
+    afastamentos = AfastamentoSST.objects.filter(empresa=empresa).count()
+    return {
+        "Cadastrar funcionario": _etapa_status(funcionarios),
+        "Emitir ASO": _etapa_status(asos),
+        "Cadastrar PGR/PCMSO": _etapa_status(documentos),
+        "Transmitir eSocial": _etapa_status(esocial),
+        "Registrar CAT": _etapa_status(cats),
+        "Agendar exame": _etapa_status(exames),
+        "Treinar NR": _etapa_status(treinamentos),
+        "Relatorio executivo": _etapa_status(funcionarios + asos + documentos + esocial + cats + exames + treinamentos + afastamentos),
+    }
+
+
 def _suite_farmacia(empresa):
     itens = ItemFarmacia.objects.filter(empresa=empresa, ativo=True).count()
     medicamentos = MedicamentoFarmacia.objects.filter(empresa=empresa, ativo=True).count()
@@ -1175,10 +1261,13 @@ def build_enterprise_premium_suite_payload(empresa):
     setor = get_setor(empresa)
     if setor == "farmacia":
         suite = _suite_farmacia(empresa)
+        status_map = _status_etapas_farmacia(empresa)
     elif setor == "hospital":
         suite = _suite_hospital(empresa)
+        status_map = _status_etapas_hospital(empresa)
     elif setor == "empresa":
         suite = _suite_empresa(empresa)
+        status_map = _status_etapas_empresa(empresa)
     else:
         suite = {
             "headline": "Suite enterprise integrada por ambiente.",
@@ -1196,7 +1285,9 @@ def build_enterprise_premium_suite_payload(empresa):
                 _capacidade("operacao", "Operacao integrada", "Indicadores, riscos, acoes e governanca.", 1, 4, ["Philips Tasy", "TOTVS Saude", "MV"], "Alimentar dados reais do ambiente."),
             ],
         }
+        status_map = {"Abrir painel": _etapa_status(1)}
     capacidades = suite["capacidades"]
+    processos = _enriquecer_processos(suite.get("processos", []), status_map)
     score = _media([{"score": item["progresso"]} for item in capacidades])
     return {
         "empresa": {"id": empresa.id, "nome": empresa.nome},
@@ -1207,7 +1298,7 @@ def build_enterprise_premium_suite_payload(empresa):
         "score_suite": score,
         "status": _status(score),
         "capacidades": capacidades,
-        "processos": suite.get("processos", []),
+        "processos": processos,
         "proximas_acoes": [
             {"capacidade": item["nome"], "acao": item["proxima_acao"]}
             for item in capacidades
