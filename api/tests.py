@@ -442,6 +442,42 @@ class AuthDeviceTests(TestCase):
 
         self.assertEqual(response.status_code, 401)
 
+    def test_enterprise_premium_suite_exige_autenticacao(self):
+        response = self.client.get("/api/enterprise/premium-suite")
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_enterprise_premium_suite_farmacia_mostra_capacidades_clinicas(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Suite",
+            email="farmacia-suite@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-suite-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.get("/api/enterprise/premium-suite")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        nomes = " ".join(capacidade["nome"] for capacidade in payload["capacidades"])
+        self.assertEqual(payload["setor"], "farmacia")
+        self.assertIn("Servicos farmaceuticos", nomes)
+        self.assertIn("Lotes", nomes)
+
     def test_enterprise_command_center_hospital_usa_dados_do_setor(self):
         hospital = Empresa.objects.create(
             nome="Hospital Enterprise",
@@ -620,6 +656,8 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(payload["setor"], "farmacia")
         self.assertEqual(payload["modulos"][0]["metricas"]["estoque_critico"], 1)
         self.assertTrue(any("estoque critico" in risco["titulo"] for risco in payload["riscos_prioritarios"]))
+        suite = self.client.get("/api/enterprise/premium-suite").json()
+        self.assertTrue(any("Compras" in item["nome"] for item in suite["capacidades"]))
 
     def test_dashboard_farmacia_mostra_command_center_enterprise(self):
         farmacia = Empresa.objects.create(
@@ -645,6 +683,7 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(login.status_code, 200)
         self.assertContains(self.client.get("/dashboard-farmacia/"), "Command Center")
         self.assertContains(self.client.get("/farmacia/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/farmacia/gestao/"), "Suite Enterprise")
 
     def test_dashboard_hospital_mostra_command_center_enterprise(self):
         hospital = Empresa.objects.create(
@@ -670,6 +709,7 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(login.status_code, 200)
         self.assertContains(self.client.get("/dashboard-hospital/"), "Command Center")
         self.assertContains(self.client.get("/hospital/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/hospital/gestao/"), "Suite Enterprise")
 
     def test_dashboard_empresa_mostra_command_center_enterprise(self):
         empresa = Empresa.objects.create(
@@ -694,6 +734,7 @@ class AuthDeviceTests(TestCase):
 
         self.assertEqual(login.status_code, 200)
         self.assertContains(self.client.get("/dashboard-empresa/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/dashboard-empresa/"), "Suite Enterprise")
         self.assertContains(self.client.get("/gestao/"), "Command Center Enterprise")
 
     def test_governo_mostra_command_center_enterprise_e_metricas_reais(self):

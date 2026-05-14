@@ -390,6 +390,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
     <div class="alerta-strip vazio" id="alerta-strip"></div>
 
     {% include "partials/enterprise_command_center.html" %}
+    {% include "partials/enterprise_premium_suite.html" %}
 
     <!-- KPIs -->
     <div class="kpi-strip">
@@ -794,7 +795,9 @@ function renderKPIs(d){
   document.getElementById("k-afas-sub").textContent=`absenteísmo ${d.afastamentos?.absenteismo_pct??0}%`;
   const esocPend=(d.esocial?.pendentes??0)+(d.esocial?.erros??0);
   document.getElementById("k-esocial").textContent=esocPend;
-  document.getElementById("k-esocial-sub").textContent=d.esocial?.erros?`${d.esocial.erros} com erro`:"nenhum pendente";
+  document.getElementById("k-esocial-sub").textContent=d.esocial?.erros
+    ? `${d.esocial.erros} com erro`
+    : (d.esocial?.pendentes ? `${d.esocial.pendentes} aguardando transmissão` : "nenhum pendente");
 
   // sidebar badges
   const setBadge=(id,n)=>{const el=document.getElementById(id);if(el){el.textContent=n;el.style.display=n>0?"inline":"none";}};

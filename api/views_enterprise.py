@@ -1013,9 +1013,145 @@ def build_enterprise_command_center_payload(empresa):
     }
 
 
+def _capacidade(chave, nome, descricao, atual, alvo, concorrentes, acao):
+    atual = int(atual or 0)
+    alvo = int(alvo or 0)
+    progresso = min(100, round((atual / alvo) * 100)) if alvo else (100 if atual else 0)
+    if progresso >= 80:
+        status = "operacional"
+    elif progresso > 0:
+        status = "em_ativacao"
+    else:
+        status = "sem_dados"
+    return {
+        "chave": chave,
+        "nome": nome,
+        "descricao": descricao,
+        "status": status,
+        "progresso": progresso,
+        "metricas": {"atual": atual, "alvo": alvo},
+        "referencias": concorrentes,
+        "proxima_acao": acao,
+    }
+
+
+def _suite_farmacia(empresa):
+    itens = ItemFarmacia.objects.filter(empresa=empresa, ativo=True).count()
+    medicamentos = MedicamentoFarmacia.objects.filter(empresa=empresa, ativo=True).count()
+    pacientes = PacienteFarmacia.objects.filter(empresa=empresa, ativo=True).count()
+    receitas = ReceitaMedica.objects.filter(empresa=empresa).count()
+    dispensacoes = (
+        Dispensacao.objects.filter(empresa=empresa).count()
+        + DispensacaoMedicamento.objects.filter(empresa=empresa).count()
+    )
+    lotes = LoteMedicamento.objects.filter(empresa=empresa).count()
+    inventarios = InventarioFarmacia.objects.filter(empresa=empresa).count()
+    pedidos = (
+        PedidoFarmacia.objects.filter(empresa=empresa).count()
+        + PedidoCompraFarmacia.objects.filter(empresa=empresa).count()
+    )
+    fornecedores = (
+        FornecedorFarmacia.objects.filter(empresa=empresa, ativo=True).count()
+        + FornecedorFarmaciaGestao.objects.filter(empresa=empresa, ativo=True).count()
+    )
+    return {
+        "headline": "Farmacia clinica, estoque inteligente e receita assistencial em uma unica operacao.",
+        "diferencial": "Vai alem do estoque: une prontuario farmaceutico, receitas, dispensacao, lotes, compras e indicadores em tempo real.",
+        "capacidades": [
+            _capacidade("clinica", "Servicos farmaceuticos e prontuario", "Pacientes, receitas, posologia, alergias e cuidado assistido.", pacientes + receitas, 8, ["Clinicarx"], "Cadastrar pacientes, receitas e protocolos de acompanhamento."),
+            _capacidade("dispensacao", "Dispensacao segura e rastreavel", "Dispensacao conectada a estoque, paciente, responsavel e historico.", dispensacoes, 10, ["Clinicarx", "Philips Tasy"], "Registrar dispensacoes com paciente e responsavel farmaceutico."),
+            _capacidade("rastreabilidade", "Lotes, validade e qualidade", "FEFO, vencimento, descarte, inventario e rastreabilidade por lote.", lotes + inventarios, 6, ["TOTVS Saude", "Philips Tasy"], "Registrar lotes de alto giro e iniciar inventario mensal."),
+            _capacidade("suprimentos", "Compras e ruptura automatizada", "Pedidos, fornecedores e ruptura de estoque para reposicao controlada.", pedidos + fornecedores + itens + medicamentos, 12, ["TOTVS Saude", "MV"], "Conectar fornecedores e criar pedidos para itens abaixo do minimo."),
+        ],
+    }
+
+
+def _suite_hospital(empresa):
+    leitos = LeitoHospitalar.objects.filter(empresa=empresa).count() + LeitoHospital.objects.filter(empresa=empresa).count()
+    triagens = TriagemManchester.objects.filter(empresa=empresa).count() + TriagemHospital.objects.filter(empresa=empresa).count()
+    internacoes = PacienteInternado.objects.filter(empresa=empresa).count() + InternacaoHospital.objects.filter(empresa=empresa).count()
+    prescricoes = PrescricaoHospitalar.objects.filter(empresa=empresa).count() + PrescricaoMedica.objects.filter(internacao__empresa=empresa).count()
+    departamentos = DepartamentoHospital.objects.filter(empresa=empresa).count()
+    guias = GuiaAutorizacao.objects.filter(unidade__empresa=empresa).count()
+    return {
+        "headline": "HospitalOS integrado: porta de entrada, leitos, internacao, prescricao, planos e receita.",
+        "diferencial": "Liga operacao clinica e administrativa para sair do painel vazio e virar comando hospitalar ponta a ponta.",
+        "capacidades": [
+            _capacidade("porta_entrada", "Triagem Manchester e SLA", "Fila por prioridade, espera, riscos criticos e acionamento operacional.", triagens, 10, ["Philips Tasy", "TOTVS Saude"], "Registrar triagens com nivel Manchester e tempo de espera."),
+            _capacidade("leitos", "Gestao de leitos e alas", "Mapa de leitos, ocupacao, manutencao, previsao de alta e capacidade.", leitos + departamentos, 12, ["TOTVS Saude", "MV"], "Cadastrar alas, leitos e regras de ocupacao por setor."),
+            _capacidade("cuidado", "Internacao, prescricao e continuidade", "Paciente internado, diagnostico, prescricao ativa e evolucao do cuidado.", internacoes + prescricoes, 12, ["Philips Tasy", "MV"], "Vincular internacao, leito e prescricao ativa."),
+            _capacidade("receita", "Planos, autorizacoes e glosas", "Guias, autorizacoes, valor em risco e auditoria assistencial.", guias, 8, ["Benner Saude", "TOTVS Saude"], "Conectar planos e guias para fechar ciclo financeiro."),
+        ],
+    }
+
+
+def _suite_empresa(empresa):
+    funcionarios = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).count()
+    asos = ASOOcupacional.objects.filter(empresa=empresa).count()
+    documentos = DocumentoSST.objects.filter(empresa=empresa).count()
+    esocial = eSocialEventoSST.objects.filter(empresa=empresa).count()
+    treinamentos = TreinamentoNR.objects.filter(empresa=empresa).count()
+    afastamentos = AfastamentoSST.objects.filter(empresa=empresa).count()
+    apoio = PedidoApoioCorporativo.objects.filter(empresa=empresa).count()
+    return {
+        "headline": "SST enterprise com conformidade legal, eSocial, saude ocupacional e prevencao.",
+        "diferencial": "Une SOC/SST, escuta operacional, documentos legais, ASO, absenteismo e planos de acao.",
+        "capacidades": [
+            _capacidade("legal", "PGR, PCMSO, LTCAT e documentacao", "Documentos obrigatorios, validade, responsaveis e conformidade.", documentos, 6, ["SOC WebSoc"], "Completar documentos obrigatorios e responsaveis tecnicos."),
+            _capacidade("aso", "ASO, exames e prontuario ocupacional", "ASOs por funcionario, vencimentos, exames e historico ocupacional.", funcionarios + asos, 10, ["SOC WebSoc"], "Emitir ASO para funcionarios ativos e configurar exames."),
+            _capacidade("esocial", "eSocial SST auditavel", "Fila S-2210, S-2220, S-2240, XML, protocolo e erros.", esocial, 6, ["SOC WebSoc"], "Gerar e transmitir eventos pendentes com certificado configurado."),
+            _capacidade("prevencao", "Treinamentos, absenteismo e apoio", "Treinamentos NR, afastamentos, apoio psicossocial e indicadores preventivos.", treinamentos + afastamentos + apoio, 8, ["SOC WebSoc", "Benner Saude"], "Cadastrar treinamentos NR e acompanhar afastamentos/apoio."),
+        ],
+    }
+
+
+def build_enterprise_premium_suite_payload(empresa):
+    setor = get_setor(empresa)
+    if setor == "farmacia":
+        suite = _suite_farmacia(empresa)
+    elif setor == "hospital":
+        suite = _suite_hospital(empresa)
+    elif setor == "empresa":
+        suite = _suite_empresa(empresa)
+    else:
+        suite = {
+            "headline": "Suite enterprise integrada por ambiente.",
+            "diferencial": "Command Center, indicadores, riscos e automacoes setoriais em uma unica operacao.",
+            "capacidades": [
+                _capacidade("operacao", "Operacao integrada", "Indicadores, riscos, acoes e governanca.", 1, 4, ["Philips Tasy", "TOTVS Saude", "MV"], "Alimentar dados reais do ambiente."),
+            ],
+        }
+    capacidades = suite["capacidades"]
+    score = _media([{"score": item["progresso"]} for item in capacidades])
+    return {
+        "empresa": {"id": empresa.id, "nome": empresa.nome},
+        "setor": setor,
+        "setor_label": SETOR_LABELS.get(setor, setor.title()),
+        "headline": suite["headline"],
+        "diferencial": suite["diferencial"],
+        "score_suite": score,
+        "status": _status(score),
+        "capacidades": capacidades,
+        "proximas_acoes": [
+            {"capacidade": item["nome"], "acao": item["proxima_acao"]}
+            for item in capacidades
+            if item["status"] != "operacional"
+        ][:4],
+        "atualizado_em": timezone.now().isoformat(),
+    }
+
+
 def api_enterprise_command_center(request):
     empresa = getattr(request, "empresa", None)
     if not empresa:
         return JsonResponse({"erro": "Nao autenticado"}, status=401)
 
     return JsonResponse(build_enterprise_command_center_payload(empresa))
+
+
+def api_enterprise_premium_suite(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Nao autenticado"}, status=401)
+
+    return JsonResponse(build_enterprise_premium_suite_payload(empresa))

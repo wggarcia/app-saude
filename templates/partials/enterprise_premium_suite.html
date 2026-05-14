@@ -1,0 +1,92 @@
+<section class="eps" id="enterprisePremiumSuite">
+  <div class="eps-head">
+    <div>
+      <div class="eps-kicker">Suite Enterprise</div>
+      <h2>Operacao premium do ambiente</h2>
+      <p id="epsHeadline">Conectando dados reais, automacoes e diferenciais competitivos.</p>
+    </div>
+    <div class="eps-score">
+      <strong id="epsScore">--%</strong>
+      <span id="epsStatus">carregando</span>
+    </div>
+  </div>
+  <div class="eps-body">
+    <div class="eps-capabilities" id="epsCapabilities">
+      <div class="eps-empty">Carregando suite enterprise...</div>
+    </div>
+    <aside class="eps-actions">
+      <strong>Proximas automacoes</strong>
+      <div id="epsActions" class="eps-action-list"></div>
+    </aside>
+  </div>
+</section>
+
+<style>
+.eps{background:linear-gradient(180deg,rgba(0,194,255,.08),rgba(255,255,255,.035));border:1px solid rgba(0,194,255,.18);border-radius:14px;padding:18px;box-shadow:0 18px 60px rgba(0,0,0,.18)}
+.eps-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}
+.eps-kicker{font-size:10px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;color:#00e5b0;margin-bottom:5px}
+.eps h2{font-size:18px;margin:0 0 6px;color:#e8f4ff}
+.eps p{font-size:13px;line-height:1.55;color:#8fb1c9;margin:0;max-width:840px}
+.eps-score{min-width:96px;text-align:right}
+.eps-score strong{display:block;font-size:30px;line-height:1;color:#00c2ff}
+.eps-score span{font-size:11px;font-weight:800;text-transform:uppercase;color:#8fb1c9}
+.eps-body{display:grid;grid-template-columns:1fr 290px;gap:14px}
+.eps-capabilities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.eps-cap{background:rgba(4,16,24,.66);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;min-width:0}
+.eps-cap-top{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;align-items:flex-start}
+.eps-cap-title{font-size:13px;font-weight:900;color:#f3fbff}
+.eps-badge{font-size:10px;font-weight:900;text-transform:uppercase;border-radius:99px;padding:4px 8px;background:rgba(255,255,255,.08);color:#9ab6ca;white-space:nowrap}
+.eps-badge.operacional{background:rgba(0,229,176,.14);color:#00e5b0}
+.eps-badge.em_ativacao{background:rgba(255,179,71,.16);color:#ffcf8c}
+.eps-badge.sem_dados{background:rgba(255,77,109,.14);color:#ff8aa0}
+.eps-progress{height:7px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;margin:10px 0}
+.eps-progress span{display:block;height:100%;background:linear-gradient(90deg,#00e5b0,#00c2ff);border-radius:99px}
+.eps-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.eps-chip{font-size:10px;font-weight:800;color:#a9c0d0;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);border-radius:99px;padding:4px 7px}
+.eps-actions{background:rgba(4,16,24,.66);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;align-self:start}
+.eps-actions strong{display:block;font-size:13px;margin-bottom:10px;color:#f3fbff}
+.eps-action-list{display:grid;gap:9px}
+.eps-action{font-size:12px;line-height:1.45;color:#d7e7f1;border-left:3px solid #00c2ff;background:rgba(255,255,255,.045);border-radius:8px;padding:9px 10px}
+.eps-action small{display:block;color:#8fb1c9;margin-top:3px}
+.eps-empty{grid-column:1/-1;padding:18px;color:#8fb1c9}
+@media(max-width:1100px){.eps-body{grid-template-columns:1fr}.eps-actions{width:100%}}
+@media(max-width:760px){.eps-head{flex-direction:column}.eps-score{text-align:left}.eps-capabilities{grid-template-columns:1fr}}
+</style>
+
+<script>
+(function(){
+  const root = document.getElementById("enterprisePremiumSuite");
+  if (!root) return;
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[char]));
+  function render(payload){
+    document.getElementById("epsHeadline").textContent = payload.headline || payload.diferencial || "Suite enterprise ativa.";
+    document.getElementById("epsScore").textContent = `${payload.score_suite || 0}%`;
+    document.getElementById("epsStatus").textContent = payload.status || "em leitura";
+    document.getElementById("epsCapabilities").innerHTML = (payload.capacidades || []).map((cap) => `
+      <article class="eps-cap">
+        <div class="eps-cap-top">
+          <div class="eps-cap-title">${escapeHtml(cap.nome)}</div>
+          <span class="eps-badge ${escapeHtml(cap.status)}">${escapeHtml(cap.status).replace("_"," ")}</span>
+        </div>
+        <p>${escapeHtml(cap.descricao)}</p>
+        <div class="eps-progress"><span style="width:${Math.max(0, Math.min(100, Number(cap.progresso || 0)))}%"></span></div>
+        <div class="eps-meta">
+          <span class="eps-chip">${escapeHtml(cap.metricas?.atual || 0)} sinais reais</span>
+          ${(cap.referencias || []).map((ref) => `<span class="eps-chip">${escapeHtml(ref)}</span>`).join("")}
+        </div>
+      </article>
+    `).join("") || '<div class="eps-empty">Nenhuma capacidade carregada.</div>';
+    document.getElementById("epsActions").innerHTML = (payload.proximas_acoes || []).map((item) => `
+      <div class="eps-action">${escapeHtml(item.acao)}<small>${escapeHtml(item.capacidade)}</small></div>
+    `).join("") || '<div class="eps-action">Sem acao critica agora.<small>Continue alimentando dados reais.</small></div>';
+  }
+  fetch("/api/enterprise/premium-suite")
+    .then((res) => res.ok ? res.json() : Promise.reject())
+    .then(render)
+    .catch(() => {
+      document.getElementById("epsCapabilities").innerHTML = '<div class="eps-empty">Nao foi possivel carregar a Suite Enterprise agora.</div>';
+    });
+}());
+</script>
