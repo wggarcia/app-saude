@@ -1,4 +1,5 @@
 from datetime import timedelta
+import unicodedata
 
 from django.db.models import F
 from django.http import JsonResponse
@@ -109,6 +110,159 @@ def _media(cards):
     if not cards:
         return 0
     return round(sum(c["score"] for c in cards) / len(cards))
+
+
+def _normalizar_nome_medicamento(valor):
+    texto = str(valor or "").strip().lower()
+    texto = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode("ascii")
+    return " ".join(texto.replace("/", " ").replace("-", " ").split())
+
+
+def _nomes_prescritos(medicamentos):
+    nomes = []
+    if isinstance(medicamentos, dict):
+        medicamentos = [medicamentos]
+    if not isinstance(medicamentos, list):
+        return nomes
+    for item in medicamentos:
+        if isinstance(item, str):
+            nome = item
+        elif isinstance(item, dict):
+            nome = (
+                item.get("nome")
+                or item.get("medicamento")
+                or item.get("descricao")
+                or item.get("item")
+                or item.get("principio_ativo")
+            )
+        else:
+            nome = ""
+        nome = _normalizar_nome_medicamento(nome)
+        if nome:
+            nomes.append(nome)
+    return nomes
+
+
+def _catalogo_estoque_medicamentos(empresa):
+    catalogo = []
+    for med in MedicamentoFarmacia.objects.filter(empresa=empresa, ativo=True):
+        nomes = {
+            _normalizar_nome_medicamento(med.nome),
+            _normalizar_nome_medicamento(med.principio_ativo),
+        }
+        nomes.discard("")
+        catalogo.append({
+            "nomes": nomes,
+            "critico": med.quantidade_atual <= 0 or (
+                med.quantidade_minima > 0 and med.quantidade_atual <= med.quantidade_minima
+            ),
+            "especial": med.controlado or med.refrigerado,
+        })
+    for item in ItemFarmacia.objects.filter(empresa=empresa, ativo=True):
+        nome = _normalizar_nome_medicamento(item.nome)
+        if nome:
+            catalogo.append({
+                "nomes": {nome},
+                "critico": item.estoque_atual <= 0 or (
+                    item.estoque_minimo > 0 and item.estoque_atual <= item.estoque_minimo
+                ),
+                "especial": False,
+            })
+    return catalogo
+
+
+def _encontrar_no_catalogo(nome_prescrito, catalogo):
+    for item in catalogo:
+        for nome_estoque in item["nomes"]:
+            if nome_prescrito == nome_estoque or nome_prescrito in nome_estoque or nome_estoque in nome_prescrito:
+                return item
+    return None
+
+
+def _card_circuito_medicamento(empresa):
+    catalogo = _catalogo_estoque_medicamentos(empresa)
+    prescritos = []
+
+    prescricoes_hospitalares = PrescricaoHospitalar.objects.filter(
+        empresa=empresa, status="ativa"
+    ).only("medicamentos")
+    for prescricao in prescricoes_hospitalares[:120]:
+        prescritos.extend(_nomes_prescritos(prescricao.medicamentos))
+
+    prescricoes_medicas = PrescricaoMedica.objects.filter(
+        internacao__empresa=empresa, status="ativa"
+    ).only("medicamento")
+    for prescricao in prescricoes_medicas[:120]:
+        nome = _normalizar_nome_medicamento(prescricao.medicamento)
+        if nome:
+            prescritos.append(nome)
+
+    total_prescricoes = prescricoes_hospitalares.count() + prescricoes_medicas.count()
+    prescritos_unicos = sorted(set(prescritos))
+    sem_estoque = 0
+    criticos = 0
+    especiais = 0
+    encontrados = 0
+
+    for nome in prescritos_unicos:
+        item = _encontrar_no_catalogo(nome, catalogo)
+        if not item:
+            sem_estoque += 1
+            continue
+        encontrados += 1
+        if item["critico"]:
+            criticos += 1
+        if item["especial"]:
+            especiais += 1
+
+    score = 0
+    score += 25 if catalogo else 0
+    score += 25 if total_prescricoes else 0
+    score += 30 if total_prescricoes and sem_estoque == 0 else 0
+    score += 20 if total_prescricoes and criticos == 0 else 0
+    score -= min(40, sem_estoque * 12)
+    score -= min(25, criticos * 8)
+
+    riscos = [
+        r for r in [
+            _prioridade(
+                "Prescricoes com medicamento fora do estoque",
+                "alta",
+                "Vincular prescricao ao cadastro de estoque antes da dispensacao.",
+                "Circuito de Medicamento",
+            ) if sem_estoque else None,
+            _prioridade(
+                "Medicamento prescrito em estoque critico",
+                "alta",
+                "Gerar compra/transferencia e bloquear ruptura assistencial.",
+                "Circuito de Medicamento",
+            ) if criticos else None,
+            _prioridade(
+                "Medicamento controlado ou refrigerado exige dupla checagem",
+                "media",
+                "Confirmar lote, validade, armazenamento e responsavel.",
+                "Seguranca Medicamentosa",
+            ) if especiais else None,
+        ] if r
+    ]
+
+    return _card(
+        "circuito_fechado_medicamento",
+        "Circuito fechado de medicamento",
+        score,
+        {
+            "prescricoes_ativas": total_prescricoes,
+            "itens_prescritos": len(prescritos_unicos),
+            "itens_com_estoque": encontrados,
+            "itens_sem_estoque": sem_estoque,
+            "itens_criticos": criticos,
+            "controlados_ou_refrigerados": especiais,
+        },
+        riscos=riscos,
+        proximas_acoes=[
+            "Conectar prescricao, estoque, lote e dispensacao para fechar o ciclo do medicamento."
+        ] if score < 70 else [],
+    )
 
 
 def _empresa_cards(empresa):
@@ -318,6 +472,7 @@ def _farmacia_cards(empresa):
             {"pacientes": pacientes, "dispensacoes": dispensacoes, "receitas_pendentes": receitas_pendentes},
             proximas_acoes=["Ativar cadastro de pacientes, receitas e dispensacao assistida."] if assistencial_score < 45 else [],
         ),
+        _card_circuito_medicamento(empresa),
         _card(
             "rastreabilidade_qualidade",
             "Lotes, validade e qualidade",
@@ -412,6 +567,7 @@ def _hospital_cards(empresa):
             {"internacoes_ativas": internacoes_ativas, "prescricoes_ativas": prescricoes_ativas, "pacientes": pacientes},
             proximas_acoes=["Vincular internacao, leito e prescricao para rastrear cuidado completo."] if cuidado_score < 60 else [],
         ),
+        _card_circuito_medicamento(empresa),
     ]
 
 

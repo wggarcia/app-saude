@@ -20,10 +20,12 @@ from .models import (
     EmpresaUsuario,
     FornecedorFarmaciaGestao,
     IndicadorSaudeGov,
+    InternacaoHospital,
     LeitoHospital,
     MedicamentoFarmacia,
     OrcamentoSaudeGov,
     PacienteHospital,
+    PrescricaoMedica,
     PlanoAcaoGov,
     ProgramaSaudeGov,
     RegistroSintoma,
@@ -490,6 +492,54 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(payload["modulos"][0]["metricas"]["leitos_ocupados"], 1)
         self.assertNotIn("estoque_compras", [modulo["codigo"] for modulo in payload["modulos"]])
         self.assertTrue(any(risco["severidade"] == "alta" for risco in payload["riscos_prioritarios"]))
+
+    def test_enterprise_command_center_hospital_detecta_prescricao_sem_estoque(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital Circuito",
+            email="hospital-circuito@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        departamento = DepartamentoHospital.objects.create(empresa=hospital, nome="Clinica", ativo=True)
+        leito = LeitoHospital.objects.create(
+            empresa=hospital,
+            departamento=departamento,
+            numero="201",
+            status="ocupado",
+        )
+        paciente = PacienteHospital.objects.create(empresa=hospital, nome="Paciente Circuito")
+        internacao = InternacaoHospital.objects.create(
+            empresa=hospital,
+            paciente=paciente,
+            leito=leito,
+            diagnostico="Observacao",
+            status="ativa",
+        )
+        PrescricaoMedica.objects.create(
+            internacao=internacao,
+            medicamento="Dipirona 500mg",
+            status="ativa",
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-circuito-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        payload = self.client.get("/api/enterprise/command-center").json()
+        circuito = next(modulo for modulo in payload["modulos"] if modulo["codigo"] == "circuito_fechado_medicamento")
+        self.assertEqual(circuito["metricas"]["prescricoes_ativas"], 1)
+        self.assertEqual(circuito["metricas"]["itens_sem_estoque"], 1)
+        self.assertTrue(any("fora do estoque" in risco["titulo"] for risco in payload["riscos_prioritarios"]))
 
     def test_enterprise_command_center_farmacia_detecta_estoque_critico(self):
         farmacia = Empresa.objects.create(
