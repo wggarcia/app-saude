@@ -506,6 +506,7 @@
           <button class="btn" id="toggleLeftDock">Filtros</button>
           <button class="btn" id="toggleRightDock">Inteligencia</button>
           <button class="btn" id="toggleBottomSheet">Situacao</button>
+          <button class="btn" id="gotoCommandAI">Sala de Decisão IA</button>
           <button class="btn" id="exportJsonBtn">Briefing JSON</button>
           <button class="btn" id="exportCsvBtn">Briefing CSV</button>
           <button class="btn primary" id="refreshBtn">Atualizar</button>
@@ -1586,6 +1587,10 @@
     });
 
     document.getElementById("refreshBtn").addEventListener("click", loadPanorama);
+    document.getElementById("gotoCommandAI").addEventListener("click", async () => {
+      await syncScopedAuth();
+      window.location.href = "/sala-decisao-ia/";
+    });
     document.getElementById("publishGovAlertBtn").addEventListener("click", publishGovernmentAlert);
     document.getElementById("exportJsonBtn").addEventListener("click", () => {
       window.location.href = "/api/epidemiologia/briefing?format=json";
