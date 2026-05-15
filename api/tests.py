@@ -50,10 +50,17 @@ from .models import (
     ASOOcupacional,
     AfastamentoSST,
     AgendamentoSST,
+    CampanhaVacinacao,
+    ConfiguracaoSST,
     CATOcupacional,
     DocumentoSST,
+    EntregaEPI,
+    EPIItem,
     eSocialEventoSST,
     FuncionarioSST,
+    PlanoAcaoSST,
+    RegistroVacinacao,
+    RiscoOcupacional,
     TreinamentoNR,
 )
 from . import epidemiologia
@@ -138,6 +145,8 @@ class AuthDeviceTests(TestCase):
         catalogo = self.client.get("/api/sst/cids-ocupacionais")
         self.assertEqual(catalogo.status_code, 200)
         self.assertGreater(catalogo.json()["total"], 40)
+        catalogo_barra = self.client.get("/api/sst/cids-ocupacionais/")
+        self.assertEqual(catalogo_barra.status_code, 200)
 
         invalida = self.client.post(
             "/api/sst/cats",
@@ -197,6 +206,29 @@ class AuthDeviceTests(TestCase):
         afastamento = AfastamentoSST.objects.get(id=response.json()["id"])
         self.assertEqual(afastamento.cid, "Z57.5")
         self.assertEqual(afastamento.status, "retorno_programado")
+
+    def test_seed_enterprise_sst_preenche_areas_operacionais(self):
+        login = self._login("seed-sst-device")
+        self.assertEqual(login.status_code, 200)
+
+        response = self.client.post("/api/enterprise/seed-operational-demo")
+        self.assertEqual(response.status_code, 200)
+
+        self.assertTrue(ConfiguracaoSST.objects.filter(empresa=self.empresa).exists())
+        self.assertGreaterEqual(FuncionarioSST.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertGreaterEqual(ASOOcupacional.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertGreaterEqual(ExameOcupacional.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertGreaterEqual(DocumentoSST.objects.filter(empresa=self.empresa).count(), 7)
+        self.assertGreaterEqual(TreinamentoNR.objects.filter(empresa=self.empresa).count(), 7)
+        self.assertGreaterEqual(EPIItem.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertGreaterEqual(EntregaEPI.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertTrue(CATOcupacional.objects.filter(empresa=self.empresa, tipo="doenca", cid="M54.5").exists())
+        self.assertTrue(AfastamentoSST.objects.filter(empresa=self.empresa, motivo="doenca_ocupacional", cid="M54.5").exists())
+        self.assertGreaterEqual(eSocialEventoSST.objects.filter(empresa=self.empresa).count(), 4)
+        self.assertGreaterEqual(RiscoOcupacional.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertGreaterEqual(PlanoAcaoSST.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertTrue(CampanhaVacinacao.objects.filter(empresa=self.empresa).exists())
+        self.assertGreaterEqual(RegistroVacinacao.objects.filter(campanha__empresa=self.empresa).count(), 5)
 
     def test_bloqueia_dispositivo_acima_do_pacote(self):
         primeira = self._login("device-a")

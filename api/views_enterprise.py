@@ -26,7 +26,9 @@ from .models import (
     EmpresaTurno,
     EmpresaUnidade,
     EstoqueMovimento,
+    EPIItem,
     ExameOcupacional,
+    EntregaEPI,
     FornecedorFarmacia,
     FornecedorFarmaciaGestao,
     FuncionarioSST,
@@ -59,6 +61,10 @@ from .models import (
     ReceitaMedica,
     Rede,
     RegistroSintoma,
+    RegistroVacinacao,
+    RiscoOcupacional,
+    PlanoAcaoSST,
+    CampanhaVacinacao,
     TreinamentoNR,
     TriagemHospital,
     TriagemManchester,
@@ -1601,7 +1607,36 @@ def _seed_hospital(empresa):
 
 def _seed_empresa(empresa):
     hoje = timezone.localdate()
+    agora_base = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0)
     criados = []
+    config, created = ConfiguracaoSST.objects.update_or_create(
+        empresa=empresa,
+        defaults={
+            "nome_medico_coordenador": "Dra. Helena Demo Ocupacional",
+            "crm_medico": "CRM/SP 123456",
+            "especialidade_medico": "Medicina do Trabalho",
+            "nome_engenheiro": "Eng. Marcos Demo Segurança",
+            "crea_engenheiro": "CREA/SP 987654",
+            "nome_tecnico": "Téc. Camila Demo SST",
+            "registro_tecnico": "MTE 456789",
+            "nome_enfermeiro": "Enf. Roberto Demo",
+            "coren_enfermeiro": "COREN/SP 112233",
+            "alerta_aso_dias": 30,
+            "alerta_exame_dias": 30,
+            "alerta_treinamento_dias": 60,
+            "email_alertas": empresa.email,
+            "alertas_ativos": True,
+            "cnpj": "12.345.678/0001-90",
+            "cnae_principal": "86.30-5-03 - Atividade médica ambulatorial restrita a consultas",
+            "grau_risco": "3",
+            "numero_funcionarios": 6,
+            "endereco_completo": "Unidade Demo Enterprise - Avenida Saúde Ocupacional, 1000",
+            "certificado_nome": "Certificado eSocial Demo Homologação",
+            "certificado_validade": hoje + timedelta(days=330),
+            "esocial_ambiente": "homologacao",
+        },
+    )
+    criados.append("config_sst_atualizada" if not created else "config_sst")
     funcionario, created = FuncionarioSST.objects.get_or_create(
         empresa=empresa,
         cpf="000.000.000-93",
@@ -1609,6 +1644,31 @@ def _seed_empresa(empresa):
     )
     if created:
         criados.append("funcionario")
+    funcionarios = [funcionario]
+    funcionarios_demo = [
+        ("000.000.000-94", "Ana Paula Demo", "Operadora de Produção", "Produção", "F", "III", 520),
+        ("000.000.000-95", "Bruno Santos Demo", "Técnico de Manutenção", "Manutenção", "M", "IV", 410),
+        ("000.000.000-96", "Carla Lima Demo", "Analista Administrativo", "Administrativo", "F", "I", 260),
+        ("000.000.000-97", "Diego Rocha Demo", "Almoxarife", "Logística", "M", "II", 190),
+        ("000.000.000-98", "Fernanda Costa Demo", "Enfermeira do Trabalho", "Ambulatório", "F", "II", 330),
+    ]
+    for cpf, nome, cargo, setor, sexo, classe, dias in funcionarios_demo:
+        func, created = FuncionarioSST.objects.get_or_create(
+            empresa=empresa,
+            cpf=cpf,
+            defaults={
+                "nome": nome,
+                "cargo": cargo,
+                "setor": setor,
+                "sexo": sexo,
+                "data_admissao": hoje - timedelta(days=dias),
+                "classe_risco": classe,
+                "ativo": True,
+            },
+        )
+        funcionarios.append(func)
+        if created:
+            criados.append(f"funcionario_{setor.lower()}")
     aso, created = ASOOcupacional.objects.get_or_create(
         empresa=empresa,
         funcionario=funcionario,
@@ -1631,7 +1691,7 @@ def _seed_empresa(empresa):
         empresa=empresa,
         funcionario=funcionario,
         tipo="exame_periodico",
-        data_hora=timezone.now() + timedelta(days=30),
+        data_hora=agora_base + timedelta(days=30),
         defaults={"status": "agendado", "local": "Clinica Demo Ocupacional", "medico": "Dra. Demo Ocupacional", "observacoes": "Agendamento periodico demo."},
     )
     if created:
@@ -1686,6 +1746,292 @@ def _seed_empresa(empresa):
     )
     if created:
         criados.append("treinamento")
+    documentos_extra = [
+        ("laudo_insalubridade", "Laudo de Insalubridade Demo", "vigente", 360),
+        ("laudo_periculosidade", "Laudo de Periculosidade Demo", "em_revisao", 45),
+        ("PPP", "PPP Modelo por Função Demo", "vigente", 365),
+        ("CIPA", "CIPA Ata de Posse e Calendário Demo", "vigente", 250),
+    ]
+    for tipo, titulo, status, validade in documentos_extra:
+        _, created = DocumentoSST.objects.get_or_create(
+            empresa=empresa,
+            tipo=tipo,
+            titulo=titulo,
+            defaults={
+                "status": status,
+                "responsavel_tecnico": "Equipe SESMT Demo",
+                "registro_profissional": "SESMT-DEMO",
+                "data_emissao": hoje - timedelta(days=20),
+                "data_validade": hoje + timedelta(days=validade),
+                "observacoes": "Documento criado para simulação completa do SST.",
+            },
+        )
+        if created:
+            criados.append(f"documento_{tipo}")
+    exames_demo = [
+        (funcionarios[1], "acuidade_visual", "realizado", hoje - timedelta(days=25), hoje + timedelta(days=335), "Apto sem restrições"),
+        (funcionarios[2], "eletrocardiograma", "pendente", None, hoje + timedelta(days=20), "Agendado para renovação"),
+        (funcionarios[3], "laboratorial", "vencido", hoje - timedelta(days=430), hoje - timedelta(days=65), "Renovação atrasada"),
+        (funcionarios[4], "espirometria", "realizado", hoje - timedelta(days=12), hoje + timedelta(days=350), "Dentro dos parâmetros"),
+        (funcionarios[5], "psicologico", "realizado", hoje - timedelta(days=40), hoje + timedelta(days=325), "Acompanhamento preventivo"),
+    ]
+    for func, tipo_exame, status, realizacao, validade, resultado in exames_demo:
+        _, created = ExameOcupacional.objects.get_or_create(
+            empresa=empresa,
+            funcionario=func,
+            tipo_exame=tipo_exame,
+            defaults={
+                "data_realizacao": realizacao,
+                "data_validade": validade,
+                "resultado": resultado,
+                "status": status,
+                "observacoes": "Exame demo para trilha ocupacional completa.",
+            },
+        )
+        if created:
+            criados.append(f"exame_{tipo_exame}")
+    aso_demo = [
+        (funcionarios[1], "periodico", hoje - timedelta(days=20), hoje + timedelta(days=20), "apto"),
+        (funcionarios[2], "mudanca_risco", hoje - timedelta(days=40), hoje + timedelta(days=320), "apto_restricao"),
+        (funcionarios[3], "periodico", hoje - timedelta(days=390), hoje - timedelta(days=25), "apto"),
+        (funcionarios[4], "admissional", hoje - timedelta(days=170), hoje + timedelta(days=195), "apto"),
+        (funcionarios[5], "periodico", hoje - timedelta(days=80), hoje + timedelta(days=285), "apto"),
+    ]
+    for func, tipo, emissao, validade, resultado in aso_demo:
+        _, created = ASOOcupacional.objects.get_or_create(
+            empresa=empresa,
+            funcionario=func,
+            tipo=tipo,
+            data_emissao=emissao,
+            defaults={
+                "data_validade": validade,
+                "medico_responsavel": "Dra. Helena Demo Ocupacional",
+                "crm": "CRM/SP 123456",
+                "resultado": resultado,
+                "restricoes": "Evitar levantamento de carga acima de 15kg." if resultado == "apto_restricao" else "",
+            },
+        )
+        if created:
+            criados.append(f"aso_{tipo}")
+    cat_doenca, created = CATOcupacional.objects.get_or_create(
+        empresa=empresa,
+        funcionario=funcionarios[1],
+        numero_cat="CAT-DEMO-DOENCA-001",
+        defaults={
+            "tipo": "doenca",
+            "gravidade": "moderado",
+            "data_acidente": hoje - timedelta(days=18),
+            "local_acidente": "Linha de embalagem",
+            "descricao": "Caso demo de doença do trabalho por sobrecarga biomecânica e repetitividade.",
+            "parte_corpo": "Coluna lombar",
+            "cid": "M54.5",
+            "houve_afastamento": True,
+            "dias_afastamento": 12,
+            "status_esocial": "pendente",
+        },
+    )
+    if created:
+        criados.append("cat_doenca_ocupacional")
+    afast_doenca, created = AfastamentoSST.objects.get_or_create(
+        empresa=empresa,
+        funcionario=funcionarios[1],
+        cat=cat_doenca,
+        data_inicio=hoje - timedelta(days=18),
+        defaults={
+            "motivo": "doenca_ocupacional",
+            "cid": "M54.5",
+            "data_prevista_retorno": hoje + timedelta(days=7),
+            "status": "retorno_programado",
+            "observacoes": "Afastamento demo vinculado a CID de doença do trabalho.",
+        },
+    )
+    if created:
+        criados.append("afastamento_doenca_ocupacional")
+    afast_comum, created = AfastamentoSST.objects.get_or_create(
+        empresa=empresa,
+        funcionario=funcionarios[3],
+        data_inicio=hoje - timedelta(days=5),
+        defaults={
+            "motivo": "doenca_comum",
+            "cid": "J11",
+            "data_prevista_retorno": hoje + timedelta(days=2),
+            "status": "ativo",
+            "observacoes": "Afastamento comum demo para comparação de absenteísmo.",
+        },
+    )
+    if created:
+        criados.append("afastamento_comum")
+    eventos_extra = [
+        ("S-2230", str(afast_doenca.id), "pendente", "<eSocial demo='true' evento='S-2230' />"),
+        ("S-2240", "ambientes-risco-demo", "erro", "<eSocial demo='true' evento='S-2240' />"),
+    ]
+    for tipo_evento, referencia, status, xml in eventos_extra:
+        _, created = eSocialEventoSST.objects.get_or_create(
+            empresa=empresa,
+            tipo_evento=tipo_evento,
+            referencia=referencia,
+            defaults={"status": status, "xml_gerado": xml, "mensagem_erro": "Ambiente de homologação demo: revisar fator de risco." if status == "erro" else ""},
+        )
+        if created:
+            criados.append(f"esocial_{tipo_evento}")
+    treinamentos_demo = [
+        (funcionarios[1], "NR-12", "Segurança em máquinas e bloqueio", 8, hoje - timedelta(days=55), hoje + timedelta(days=310), "valido"),
+        (funcionarios[2], "NR-10", "Segurança em eletricidade", 40, hoje - timedelta(days=760), hoje - timedelta(days=30), "vencido"),
+        (funcionarios[2], "NR-35", "Trabalho em altura", 8, hoje + timedelta(days=10), hoje + timedelta(days=375), "agendado"),
+        (funcionarios[3], "NR-5", "CIPA e prevenção", 20, None, None, "pendente"),
+        (funcionarios[4], "NR-11", "Movimentação e armazenagem", 8, hoje - timedelta(days=70), hoje + timedelta(days=295), "valido"),
+        (funcionarios[5], "NR-23", "Brigada e emergência", 8, hoje - timedelta(days=30), hoje + timedelta(days=335), "valido"),
+    ]
+    for func, nr, titulo, carga, realizacao, validade, status in treinamentos_demo:
+        _, created = TreinamentoNR.objects.get_or_create(
+            empresa=empresa,
+            funcionario=func,
+            nr=nr,
+            titulo=titulo,
+            defaults={
+                "instrutor": "Instrutor SESMT Demo",
+                "carga_horaria": carga,
+                "data_realizacao": realizacao,
+                "data_validade": validade,
+                "status": status,
+                "certificado": f"CERT-{nr}-{func.id}",
+                "observacoes": "Trilha NR demo para painel enterprise.",
+            },
+        )
+        if created:
+            criados.append(f"treinamento_{nr}")
+    epis_demo = [
+        ("Protetor auricular plug CA Demo", "auditiva", "43210", 420, "3M Demo", "Controle de ruído ocupacional"),
+        ("Respirador PFF2 CA Demo", "respiratoria", "54321", 300, "Safety Demo", "Proteção contra poeiras e aerodispersoides"),
+        ("Óculos ampla visão CA Demo", "visual", "65432", 500, "Visão Demo", "Proteção contra partículas"),
+        ("Luva nitrílica CA Demo", "maos", "76543", 210, "Luva Demo", "Manipulação química leve"),
+        ("Botina com biqueira CA Demo", "pes", "87654", 390, "Calçados Demo", "Proteção mecânica"),
+        ("Cinto paraquedista CA Demo", "altura", "98765", 240, "Altura Demo", "Trabalho em altura"),
+    ]
+    epis = []
+    for nome, tipo, ca, validade, fornecedor, descricao in epis_demo:
+        epi, created = EPIItem.objects.get_or_create(
+            empresa=empresa,
+            nome=nome,
+            defaults={
+                "tipo": tipo,
+                "ca_numero": ca,
+                "validade_ca": hoje + timedelta(days=validade),
+                "fornecedor": fornecedor,
+                "descricao": descricao,
+                "ativo": True,
+            },
+        )
+        epis.append(epi)
+        if created:
+            criados.append(f"epi_{tipo}")
+    for idx, func in enumerate(funcionarios):
+        epi = epis[idx % len(epis)]
+        _, created = EntregaEPI.objects.get_or_create(
+            empresa=empresa,
+            funcionario=func,
+            epi=epi,
+            data_entrega=hoje - timedelta(days=30 + idx),
+            defaults={"quantidade": 1, "observacoes": "Ficha demo de entrega digital de EPI."},
+        )
+        if created:
+            criados.append("entrega_epi")
+    riscos_demo = [
+        ("Produção", "fisico", "Ruído contínuo acima de 85 dB(A)", "IV", 4, 4, "NR-15", "Protetor auditivo, enclausuramento parcial e dosimetria anual.", "Reavaliar engenharia de controle e mapa de ruído."),
+        ("Manutenção", "acidente", "Intervenção em máquinas energizadas", "V", 4, 5, "NR-10, NR-12", "Permissão de trabalho e bloqueio LOTO.", "Digitalizar checklist LOTO por ordem de serviço."),
+        ("Administrativo", "ergonomico", "Postura estática e mobiliário inadequado", "III", 3, 3, "NR-17", "Pausas e cadeiras ajustáveis.", "Executar AET e plano ergonômico por posto."),
+        ("Logística", "quimico", "Contato com saneantes e produtos de limpeza", "III", 3, 3, "NR-6, NR-26", "FISPQ e luvas nitrílicas.", "Implantar matriz de compatibilidade química."),
+        ("Ambulatório", "biologico", "Exposição a material biológico", "IV", 3, 4, "NR-32", "Perfurocortante, vacinação e protocolo pós-exposição.", "Auditar descarte e cobertura vacinal."),
+        ("Todos", "psicossocial", "Sobrecarga operacional e pressão de atendimento", "III", 3, 3, "NR-1", "Canal de escuta e check-in semanal.", "Criar plano de prevenção psicossocial com indicadores."),
+    ]
+    riscos = []
+    for setor, tipo, agente, nivel, prob, sev, nr_ref, existente, proposta in riscos_demo:
+        risco, created = RiscoOcupacional.objects.get_or_create(
+            empresa=empresa,
+            setor=setor,
+            agente=agente,
+            defaults={
+                "tipo_risco": tipo,
+                "descricao": f"Risco demo monitorado pelo PGR no setor {setor}.",
+                "nivel": nivel,
+                "probabilidade": prob,
+                "severidade": sev,
+                "nr_referencia": nr_ref,
+                "medida_controle_existente": existente,
+                "medida_controle_proposta": proposta,
+                "prazo": hoje + timedelta(days=60),
+                "responsavel": "Equipe SESMT Demo",
+                "status": "em_controle" if nivel in ("III", "IV") else "identificado",
+            },
+        )
+        riscos.append(risco)
+        if created:
+            criados.append(f"risco_{tipo}")
+    for risco in riscos:
+        _, created = PlanoAcaoSST.objects.get_or_create(
+            empresa=empresa,
+            risco=risco,
+            titulo=f"Plano de ação - {risco.agente[:70]}",
+            defaults={
+                "descricao": risco.medida_controle_proposta,
+                "origem": "risco",
+                "prioridade": "critica" if risco.nivel == "V" else ("alta" if risco.nivel == "IV" else "media"),
+                "responsavel": risco.responsavel,
+                "setor": risco.setor,
+                "data_prazo": hoje + timedelta(days=45),
+                "status": "em_andamento" if risco.nivel in ("IV", "V") else "aberto",
+                "observacoes": "Plano demo conectado ao inventário de riscos.",
+            },
+        )
+        if created:
+            criados.append("plano_acao_sst")
+    campanha, created = CampanhaVacinacao.objects.get_or_create(
+        empresa=empresa,
+        nome="Campanha Demo Influenza e Hepatite B",
+        vacina="Influenza / Hepatite B",
+        defaults={
+            "descricao": "Campanha demo para trabalhadores expostos e grupos prioritários.",
+            "data_inicio": hoje - timedelta(days=15),
+            "data_fim": hoje + timedelta(days=20),
+            "meta_doses": len(funcionarios),
+            "doses_aplicadas": max(1, len(funcionarios) - 1),
+            "local": "Ambulatório Ocupacional Demo",
+            "responsavel": "Enf. Roberto Demo",
+            "status": "em_andamento",
+            "observacoes": "Usada para demonstrar vacinação ocupacional integrada ao SST.",
+        },
+    )
+    if created:
+        criados.append("campanha_vacinacao")
+    for idx, func in enumerate(funcionarios[:-1]):
+        _, created = RegistroVacinacao.objects.get_or_create(
+            campanha=campanha,
+            funcionario=func,
+            dose="dose_unica",
+            defaults={
+                "data_aplicacao": hoje - timedelta(days=idx + 1),
+                "lote_vacina": f"VAC-DEMO-{idx+1:03d}",
+                "aplicador": "Enf. Roberto Demo",
+                "observacoes": "Registro demo de vacinação ocupacional.",
+            },
+        )
+        if created:
+            criados.append("registro_vacinacao")
+    agendamentos_demo = [
+        (funcionarios[2], "treinamento", "confirmado", hoje + timedelta(days=10), "Sala NR Demo", "Instrutor SESMT Demo"),
+        (funcionarios[3], "exame_periodico", "agendado", hoje + timedelta(days=14), "Clínica Ocupacional Demo", "Dra. Helena Demo"),
+        (funcionarios[4], "consulta", "agendado", hoje + timedelta(days=3), "Ambulatório Demo", "Dra. Helena Demo"),
+    ]
+    for func, tipo, status, dia, local, medico in agendamentos_demo:
+        _, created = AgendamentoSST.objects.get_or_create(
+            empresa=empresa,
+            funcionario=func,
+            tipo=tipo,
+            data_hora=agora_base + timedelta(days=(dia - hoje).days),
+            defaults={"status": status, "local": local, "medico": medico, "observacoes": "Agenda demo SST integrada."},
+        )
+        if created:
+            criados.append(f"agendamento_{tipo}")
     return criados
 
 

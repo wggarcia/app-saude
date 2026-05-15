@@ -469,6 +469,7 @@ urlpatterns = [
     path('api/sst/asos', api_asos),
     path('api/sst/cats', api_cats),
     path('api/sst/cids-ocupacionais', api_sst_cids_ocupacionais),
+    path('api/sst/cids-ocupacionais/', api_sst_cids_ocupacionais),
     path('api/sst/documentos', api_documentos_sst),
     path('api/sst/afastamentos', api_afastamentos_sst),
     path('api/sst/exames', api_exames),

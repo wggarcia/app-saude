@@ -577,22 +577,32 @@ async function confirmarRetorno() {
 
 function renderCidSelectAfastamento(){
   const sel=document.getElementById('novoCid');
+  if(!cidsSst.length){
+    sel.innerHTML='<option value="">Lista CID carregando...</option>';
+    return;
+  }
   sel.innerHTML='<option value="">Selecione o CID ocupacional...</option>'+cidsSst.map(g=>`<optgroup label="${g.grupo}">${g.itens.map(i=>`<option value="${i.codigo}">${i.codigo} — ${i.descricao}</option>`).join('')}</optgroup>`).join('');
 }
 function toggleCidAfastamento(){
   const isDoenca=document.getElementById('novoMotivo').value==='doenca_ocupacional';
   const sel=document.getElementById('novoCid');
-  sel.disabled=!isDoenca;
+  sel.disabled=!isDoenca||!cidsSst.length;
   if(!isDoenca)sel.value='';
 }
 async function carregarCidsSst(){
   try{
-    const r=await fetch('/api/sst/cids-ocupacionais',{credentials:'include'});
-    if(!r.ok)return;
+    let r=await fetch('/api/sst/cids-ocupacionais',{credentials:'include'});
+    if(!r.ok)r=await fetch('/api/sst/cids-ocupacionais/',{credentials:'include'});
+    if(!r.ok)throw new Error('cid_failed');
     const d=await r.json();
     cidsSst=d.grupos||[];
     renderCidSelectAfastamento();
-  }catch{}
+    toggleCidAfastamento();
+  }catch{
+    const sel=document.getElementById('novoCid');
+    sel.innerHTML='<option value="">Não foi possível carregar a lista CID SST</option>';
+    sel.disabled=true;
+  }
 }
 document.getElementById('novoMotivo').addEventListener('change',toggleCidAfastamento);
 

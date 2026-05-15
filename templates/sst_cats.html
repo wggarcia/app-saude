@@ -229,22 +229,34 @@ document.getElementById("modal").addEventListener("click",e=>{if(e.target===docu
 
 function renderCidSelect(){
   const sel=document.getElementById("c-cid");
+  if(!_cidsSst.length){
+    sel.innerHTML='<option value="">Lista CID carregando...</option>';
+    return;
+  }
   sel.innerHTML='<option value="">Selecione o CID ocupacional...</option>'+_cidsSst.map(g=>`<optgroup label="${g.grupo}">${g.itens.map(i=>`<option value="${i.codigo}">${i.codigo} — ${i.descricao}</option>`).join("")}</optgroup>`).join("");
 }
 function toggleCidDoenca(){
   const isDoenca=document.getElementById("c-tipo").value==="doenca";
   const sel=document.getElementById("c-cid");
-  sel.disabled=!isDoenca;
+  sel.disabled=!isDoenca||!_cidsSst.length;
   if(!isDoenca)sel.value="";
 }
 document.getElementById("c-tipo").addEventListener("change",toggleCidDoenca);
 
 async function carregarCidsSst(){
-  const r=await fetch("/api/sst/cids-ocupacionais");
-  if(!r.ok)return;
-  const d=await r.json();
-  _cidsSst=d.grupos||[];
-  renderCidSelect();
+  try{
+    let r=await fetch("/api/sst/cids-ocupacionais",{credentials:"include"});
+    if(!r.ok)r=await fetch("/api/sst/cids-ocupacionais/",{credentials:"include"});
+    if(!r.ok)throw new Error("cid_failed");
+    const d=await r.json();
+    _cidsSst=d.grupos||[];
+    renderCidSelect();
+    toggleCidDoenca();
+  }catch(e){
+    const sel=document.getElementById("c-cid");
+    sel.innerHTML='<option value="">Não foi possível carregar a lista CID SST</option>';
+    sel.disabled=true;
+  }
 }
 
 function closeXmlModal(){document.getElementById('modal-xml').classList.remove('open');_xmlEventoId=null;}
