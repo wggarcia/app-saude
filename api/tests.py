@@ -1242,6 +1242,8 @@ class AuthDeviceTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Operacao SolusCRT")
+        self.assertContains(response, "Readiness Enterprise")
+        self.assertContains(response, "Fila de Sucesso do Cliente")
 
     def test_readiness_enterprise_disponivel_para_operacao(self):
         DonoSaaS.objects.create(
@@ -1267,6 +1269,64 @@ class AuthDeviceTests(TestCase):
         payload = response.json()
         self.assertIn("score", payload)
         self.assertTrue(any(item["codigo"] == "asaas" for item in payload["checks"]))
+
+    def test_console_operacional_entrega_playbook_e_cancela_contrato(self):
+        DonoSaaS.objects.create(
+            nome="Operacao Contrato",
+            email="owner-contrato@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        empresa = Empresa.objects.create(
+            nome="Cliente Enterprise",
+            email="cliente-enterprise@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            max_dispositivos=1,
+            max_usuarios=1,
+            sessao_ativa_chave="sessao-cliente",
+            sessao_ativa_device_id="device-cliente",
+            sessao_ativa_em=timezone.now(),
+        )
+        EmpresaUsuario.objects.create(
+            empresa=empresa,
+            nome="Gestor",
+            email="gestor-enterprise@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            sessao_ativa_chave="sessao-gestor",
+            sessao_ativa_device_id="device-gestor",
+            sessao_ativa_em=timezone.now(),
+        )
+
+        login = self.client.post(
+            "/api/operacao-central/login",
+            data=json.dumps({
+                "email": "owner-contrato@teste.com",
+                "senha": "123456",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        resumo = self.client.get("/api/operacao-central/resumo")
+        self.assertEqual(resumo.status_code, 200)
+        cliente = next(item for item in resumo.json()["clientes"] if item["id"] == empresa.id)
+        self.assertIn("proxima_acao", cliente)
+        self.assertIn("playbook", cliente)
+
+        response = self.client.post(
+            "/api/operacao-central/financeiro/acao",
+            data=json.dumps({"empresa_id": empresa.id, "acao": "cancelar"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        empresa.refresh_from_db()
+        self.assertFalse(empresa.ativo)
+        self.assertIsNone(empresa.sessao_ativa_chave)
+        self.assertIsNone(EmpresaUsuario.objects.get(empresa=empresa).sessao_ativa_chave)
+        self.assertTrue(FinanceiroEventoSaaS.objects.filter(empresa=empresa, status="cancelado").exists())
 
     def test_home_publica_abre_site_principal_no_dominio_institucional(self):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/")

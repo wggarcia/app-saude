@@ -145,6 +145,44 @@ def _registrar_auditoria_dono(dono, acao, empresa=None, detalhes=""):
     )
 
 
+def _playbook_cliente(status_contrato, uso_usuarios, uso_dispositivos, dias_para_expirar, registros_24h, suspeitos_24h):
+    if status_contrato == "inadimplente":
+        return {
+            "risco": "critico",
+            "proxima_acao": "Cobrar e suspender acesso se nao houver regularizacao.",
+            "playbook": "Financeiro deve confirmar pagamento, registrar contato e reativar somente apos comprovacao.",
+        }
+    if status_contrato == "inativo":
+        return {
+            "risco": "alto",
+            "proxima_acao": "Fazer recuperacao comercial ou encerrar contrato.",
+            "playbook": "Enviar proposta de reativacao com prazo curto e revisar se o modulo contratado ainda faz sentido.",
+        }
+    if dias_para_expirar is not None and dias_para_expirar <= 7:
+        return {
+            "risco": "alto",
+            "proxima_acao": "Renovar contrato nos proximos 7 dias.",
+            "playbook": "Acionar decisor financeiro, confirmar ciclo de renovacao e registrar proxima data de vencimento.",
+        }
+    if uso_usuarios >= 90 or uso_dispositivos >= 90:
+        return {
+            "risco": "upsell",
+            "proxima_acao": "Oferecer upgrade de plano antes de travar operacao.",
+            "playbook": "Mostrar uso real, risco de limite e plano recomendado com mais usuarios/dispositivos.",
+        }
+    if registros_24h >= 500 or suspeitos_24h >= 10:
+        return {
+            "risco": "operacional",
+            "proxima_acao": "Acompanhar carga e qualidade dos dados.",
+            "playbook": "Verificar registros suspeitos, pressao de uso e necessidade de suporte tecnico preventivo.",
+        }
+    return {
+        "risco": "normal",
+        "proxima_acao": "Manter acompanhamento de sucesso do cliente.",
+        "playbook": "Revisar valor percebido, uso semanal e oportunidades de expansao sem urgencia.",
+    }
+
+
 # HTML (dashboard)
 def _render_dashboard(request, variant):
     empresa = _empresa_autenticada(request)
@@ -937,6 +975,14 @@ def api_dono_resumo(request):
         plano_normalizado = "anual" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else normalizar_ciclo(pacote_codigo_normalizado, empresa.plano)
         faturamento_estimado_cliente = pacote["anual"] if plano_normalizado == "anual" else pacote["mensal"]
         faturamento_mensal_equivalente = pacote["anual"] / 12 if plano_normalizado == "anual" else pacote["mensal"]
+        playbook = _playbook_cliente(
+            status_contrato,
+            uso_usuarios,
+            uso_dispositivos,
+            dias_para_expirar,
+            empresa_registros_24h,
+            empresa_suspeitos_24h,
+        )
 
         carteira = carteira_governo if segmento == "governo" else carteira_empresa
         carteira["clientes"] += 1
@@ -993,6 +1039,7 @@ def api_dono_resumo(request):
             "uso_dispositivos": uso_dispositivos,
             "status_contrato": status_contrato,
             "faturamento_estimado_cliente": faturamento_estimado_cliente,
+            **playbook,
         })
         comparativo_clientes.append({
             "nome": empresa.nome,
@@ -1246,6 +1293,43 @@ def api_dono_financeiro_acao(request):
             observacao="Renovação manual de 365 dias",
         )
         observacao = "Contrato renovado por 365 dias"
+    elif acao == "carencia_7":
+        base = empresa.data_expiracao if empresa.data_expiracao and empresa.data_expiracao > timezone.now() else timezone.now()
+        empresa.ativo = True
+        empresa.data_expiracao = base + timedelta(days=7)
+        empresa.save(update_fields=["ativo", "data_expiracao"])
+        FinanceiroEventoSaaS.objects.create(
+            empresa=empresa,
+            tipo_evento="carencia_operacional",
+            pacote_codigo=empresa.pacote_codigo,
+            ciclo=plano_atual,
+            valor=0,
+            status="manual",
+            observacao="Carencia operacional de 7 dias concedida pelo console",
+        )
+        observacao = "Carencia operacional de 7 dias concedida"
+    elif acao == "cancelar":
+        empresa.ativo = False
+        empresa.data_expiracao = timezone.now()
+        empresa.sessao_ativa_chave = None
+        empresa.sessao_ativa_device_id = None
+        empresa.sessao_ativa_em = None
+        empresa.save(update_fields=["ativo", "data_expiracao", "sessao_ativa_chave", "sessao_ativa_device_id", "sessao_ativa_em"])
+        EmpresaUsuario.objects.filter(empresa=empresa).update(
+            sessao_ativa_chave=None,
+            sessao_ativa_device_id=None,
+            sessao_ativa_em=None,
+        )
+        FinanceiroEventoSaaS.objects.create(
+            empresa=empresa,
+            tipo_evento="cancelamento_operacional",
+            pacote_codigo=empresa.pacote_codigo,
+            ciclo=plano_atual,
+            valor=valor,
+            status="cancelado",
+            observacao="Contrato cancelado pelo console operacional",
+        )
+        observacao = "Contrato cancelado e sessoes encerradas"
     else:
         return JsonResponse({"erro": "ação inválida"}, status=400)
 

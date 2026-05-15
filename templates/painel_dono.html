@@ -24,6 +24,8 @@
     .list{display:grid;gap:12px}.row{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
     .badge{padding:6px 10px;border-radius:999px;font-size:.74rem;font-weight:800}
     .active{background:#1dd1a1;color:#042018}.inactive{background:#ff8fa3;color:#2a0710}.warn{background:#ffd166;color:#2d1d02}.high{background:#ff9b54;color:#2a1303}
+    .critico{background:#ff5c7a;color:#2a0710}.alto{background:#ff9b54;color:#2a1303}.upsell{background:#7dd3fc;color:#041822}.operacional{background:#c4b5fd;color:#160b31}.normal{background:#1dd1a1;color:#042018}
+    .ready-ok{border-color:rgba(29,209,161,.35);background:rgba(29,209,161,.08)}.ready-bad{border-color:rgba(255,92,122,.35);background:rgba(255,92,122,.08)}
     .controls{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:12px}
     .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     select,button{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);color:#eef8ff}
@@ -58,6 +60,17 @@
     <section class="card">
       <h2>Resumo Executivo</h2>
       <div id="summaryGrid" class="grid">Carregando...</div>
+    </section>
+
+    <section class="split">
+      <section class="card">
+        <h2>Readiness Enterprise</h2>
+        <div id="readinessSummary" class="list">Carregando...</div>
+      </section>
+      <section class="card">
+        <h2>Fila de Sucesso do Cliente</h2>
+        <div id="successQueue" class="list">Carregando...</div>
+      </section>
     </section>
 
     <section class="split">
@@ -248,10 +261,12 @@
         <div class="client">
           <div class="row">
             <strong>${cliente.nome}</strong>
-            <span class="badge ${cliente.ativo ? "active" : "inactive"}">${cliente.status_contrato}</span>
+            <span class="badge ${cliente.risco_operacional || (cliente.ativo ? "active" : "inactive")}">${cliente.risco || cliente.status_contrato}</span>
           </div>
           <div class="muted">${cliente.email}</div>
           <div class="muted small">${cliente.segmento} | ${cliente.pacote_label} | ${cliente.plano || "sem ciclo"}</div>
+          <div class="muted small"><strong>Próxima ação:</strong> ${cliente.proxima_acao || "Acompanhar cliente"}</div>
+          <div class="muted small"><strong>Playbook:</strong> ${cliente.playbook || ""}</div>
           ${cliente.segmento === "governo" ? '<div class="muted small">Contrato governamental anual fechado, sem cobrança mensal simples.</div>' : ''}
           <div class="muted small">Limite contratado: ${cliente.max_usuarios} usuários | ${cliente.max_dispositivos} máquinas autorizadas</div>
           <div class="muted small">Em uso: ${cliente.usuarios_ativos}/${cliente.max_usuarios} usuários | ${cliente.dispositivos_ativos}/${cliente.max_dispositivos} dispositivos | ${cliente.registros_24h} registros em 24h</div>
@@ -273,15 +288,55 @@
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'marcar_inadimplente')">Inadimplência</button>
             ${cliente.segmento === "governo" ? "" : `<button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'renovar_30')">+30 dias</button>`}
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'renovar_365')">+365 dias</button>
+            <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'carencia_7')">Carência 7d</button>
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'reativar')">Reativar</button>
+            <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'cancelar')">Cancelar</button>
           </div>
         </div>
       `).join("") || "Sem clientes para esse filtro.";
     }
 
+    function renderReadiness(readiness) {
+      if (!readiness || readiness.erro) {
+        document.getElementById("readinessSummary").innerHTML = "Readiness indisponível.";
+        return;
+      }
+      const statusLabel = readiness.status === "pronto_enterprise" ? "Pronto enterprise" : "Precisa ajuste";
+      document.getElementById("readinessSummary").innerHTML = `
+        <div class="portfolio ${readiness.status === "pronto_enterprise" ? "ready-ok" : "ready-bad"}">
+          <div class="row"><strong>${statusLabel}</strong><span class="badge ${readiness.status === "pronto_enterprise" ? "active" : "critico"}">${readiness.score}%</span></div>
+          <div class="muted small" style="margin-top:8px;">Clientes ativos: ${readiness.metricas?.clientes_ativos || 0} | Eventos financeiros 30d: ${readiness.metricas?.eventos_financeiros_30d || 0}</div>
+        </div>
+        ${(readiness.checks || []).map((check) => `
+          <div class="event ${check.ok ? "ready-ok" : "ready-bad"}">
+            <div class="row"><strong>${check.ok ? "OK" : "Ajustar"} - ${check.titulo}</strong><span class="badge ${check.ok ? "active" : "warn"}">${check.severidade}</span></div>
+            <div class="muted small">${check.detalhe}</div>
+          </div>
+        `).join("")}
+      `;
+    }
+
+    function renderSuccessQueue(clientes) {
+      const prioridade = { critico: 5, alto: 4, upsell: 3, operacional: 2, normal: 1 };
+      const fila = [...(clientes || [])]
+        .sort((a, b) => (prioridade[b.risco] || 0) - (prioridade[a.risco] || 0) || (b.uso_dispositivos || 0) - (a.uso_dispositivos || 0))
+        .slice(0, 8);
+      document.getElementById("successQueue").innerHTML = fila.map((cliente) => `
+        <div class="alert">
+          <div class="row"><strong>${cliente.nome}</strong><span class="badge ${cliente.risco || "normal"}">${cliente.risco || "normal"}</span></div>
+          <div class="muted small">${cliente.status_contrato} | ${cliente.pacote_label} | uso disp. ${Number(cliente.uso_dispositivos || 0).toFixed(1)}%</div>
+          <div class="muted small">${cliente.proxima_acao || ""}</div>
+        </div>
+      `).join("") || "Sem ações prioritárias.";
+    }
+
     async function loadOwnerPanel() {
-      const response = await fetch("/api/operacao-central/resumo");
+      const [response, readinessResponse] = await Promise.all([
+        fetch("/api/operacao-central/resumo"),
+        fetch("/api/operacao/readiness"),
+      ]);
       const data = await response.json();
+      const readiness = await readinessResponse.json().catch(() => null);
       cachedData = data;
       const summary = data.summary || {};
       const carteiras = data.carteiras || {};
@@ -380,6 +435,8 @@
 
       renderCharts(data.historico || {});
       renderClients(data.clientes || []);
+      renderReadiness(readiness);
+      renderSuccessQueue(data.clientes || []);
     }
 
     document.getElementById("tabAll").addEventListener("click", () => setActiveTab("all"));
