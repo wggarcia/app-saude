@@ -14,27 +14,46 @@ from .models import (
     AlertaGovernamental,
     BeneficiarioPlano,
     DepartamentoHospital,
+    DescarteItemFarmacia,
+    Dispensacao,
+    DispensacaoMedicamento,
     DispositivoAutorizado,
     DispositivoPushPublico,
     DonoSaaS,
     Empresa,
     EmpresaUsuario,
+    ExameOcupacional,
+    FornecedorFarmacia,
     FornecedorFarmaciaGestao,
     GuiaAutorizacao,
     IndicadorSaudeGov,
     InternacaoHospital,
+    InventarioFarmacia,
+    ItemFarmacia,
+    ItemPedidoCompra,
     LeitoHospital,
+    LeitoHospitalar,
+    LoteMedicamento,
     MedicamentoFarmacia,
     OrcamentoSaudeGov,
     PacienteFarmacia,
     PacienteHospital,
+    PacienteInternado,
     PlanoSaude,
     PrescricaoMedica,
+    PrescricaoHospitalar,
     PlanoAcaoGov,
     ProgramaSaudeGov,
     RegistroSintoma,
     TriagemHospital,
     TriagemManchester,
+    ASOOcupacional,
+    AgendamentoSST,
+    CATOcupacional,
+    DocumentoSST,
+    eSocialEventoSST,
+    FuncionarioSST,
+    TreinamentoNR,
 )
 from . import epidemiologia
 from .epidemiologia import DISEASE_WEIGHTS
@@ -486,6 +505,92 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(etapas["Cadastrar paciente"], "feito")
         self.assertEqual(etapas["Registrar receita"], "feito")
         self.assertEqual(etapas["Dispensar com seguranca"], "feito")
+        self.assertGreaterEqual(ItemFarmacia.objects.filter(empresa=farmacia).count(), 4)
+        self.assertGreaterEqual(MedicamentoFarmacia.objects.filter(empresa=farmacia).count(), 4)
+        self.assertGreaterEqual(FornecedorFarmacia.objects.filter(empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(FornecedorFarmaciaGestao.objects.filter(empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(LoteMedicamento.objects.filter(empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(DispensacaoMedicamento.objects.filter(empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(Dispensacao.objects.filter(empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(ItemPedidoCompra.objects.filter(pedido__empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(InventarioFarmacia.objects.filter(empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(DescarteItemFarmacia.objects.filter(empresa=farmacia).count(), 1)
+
+    def test_enterprise_seed_operacional_hospital_cria_fluxo_real(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital Seed",
+            email="hospital-seed@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-seed-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.post("/api/enterprise/seed-operational-demo")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["setor"], "hospital")
+        self.assertGreater(payload["total_criado"], 0)
+        self.assertGreaterEqual(DepartamentoHospital.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(LeitoHospitalar.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(LeitoHospital.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(PacienteHospital.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(PacienteInternado.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(TriagemManchester.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(TriagemHospital.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(InternacaoHospital.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(PrescricaoHospitalar.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(PrescricaoMedica.objects.filter(internacao__empresa=hospital).count(), 1)
+
+    def test_enterprise_seed_operacional_sst_cria_fluxo_real(self):
+        empresa = Empresa.objects.create(
+            nome="SST Seed",
+            email="sst-seed@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="empresa_profissional_25",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": empresa.email,
+                "senha": "123456",
+                "device_id": "sst-seed-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.post("/api/enterprise/seed-operational-demo")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["setor"], "empresa")
+        self.assertGreater(payload["total_criado"], 0)
+        self.assertGreaterEqual(FuncionarioSST.objects.filter(empresa=empresa).count(), 1)
+        self.assertGreaterEqual(ASOOcupacional.objects.filter(empresa=empresa).count(), 1)
+        self.assertGreaterEqual(ExameOcupacional.objects.filter(empresa=empresa).count(), 1)
+        self.assertGreaterEqual(AgendamentoSST.objects.filter(empresa=empresa).count(), 1)
+        self.assertGreaterEqual(DocumentoSST.objects.filter(empresa=empresa).count(), 3)
+        self.assertGreaterEqual(eSocialEventoSST.objects.filter(empresa=empresa).count(), 2)
+        self.assertGreaterEqual(CATOcupacional.objects.filter(empresa=empresa).count(), 1)
+        self.assertGreaterEqual(TreinamentoNR.objects.filter(empresa=empresa).count(), 1)
 
     def test_enterprise_premium_suite_farmacia_mostra_capacidades_clinicas(self):
         farmacia = Empresa.objects.create(

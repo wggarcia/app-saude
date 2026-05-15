@@ -26,6 +26,7 @@ from .models import (
     EmpresaTurno,
     EmpresaUnidade,
     EstoqueMovimento,
+    ExameOcupacional,
     FornecedorFarmacia,
     FornecedorFarmaciaGestao,
     FuncionarioSST,
@@ -33,10 +34,12 @@ from .models import (
     InventarioFarmacia,
     ItemFarmacia,
     ItemInventario,
+    ItemPedidoCompra,
     LeitoHospital,
     LeitoHospitalar,
     LoteMedicamento,
     MedicamentoFarmacia,
+    MovimentoEstoque,
     PacienteFarmacia,
     PacienteHospital,
     PacienteInternado,
@@ -1115,7 +1118,7 @@ def _status_etapas_hospital(empresa):
     prescricoes = PrescricaoHospitalar.objects.filter(empresa=empresa).count() + PrescricaoMedica.objects.filter(internacao__empresa=empresa).count()
     departamentos = DepartamentoHospital.objects.filter(empresa=empresa).count()
     guias = GuiaAutorizacao.objects.filter(unidade__empresa=empresa).count()
-    redes = Rede.objects.filter(empresa=empresa).count() + UnidadeRede.objects.filter(empresa=empresa).count()
+    redes = UnidadeRede.objects.filter(empresa=empresa).count()
     return {
         "Preparar leito": _etapa_status(leitos),
         "Triar Manchester": _etapa_status(triagens),
@@ -1134,7 +1137,7 @@ def _status_etapas_empresa(empresa):
     documentos = DocumentoSST.objects.filter(empresa=empresa).count()
     esocial = eSocialEventoSST.objects.filter(empresa=empresa).count()
     cats = CATOcupacional.objects.filter(empresa=empresa).count()
-    exames = AgendamentoSST.objects.filter(empresa=empresa).count()
+    exames = AgendamentoSST.objects.filter(empresa=empresa).count() + ExameOcupacional.objects.filter(empresa=empresa).count()
     treinamentos = TreinamentoNR.objects.filter(empresa=empresa).count()
     afastamentos = AfastamentoSST.objects.filter(empresa=empresa).count()
     return {
@@ -1355,6 +1358,51 @@ def _seed_farmacia(empresa):
     )
     if created:
         criados.append("item")
+    for nome, codigo, estoque, minimo in (
+        ("Dipirona 1g Demo", "MED-DEMO-002", 80, 15),
+        ("Amoxicilina 500mg Demo", "MED-DEMO-003", 60, 12),
+        ("Losartana 50mg Demo", "MED-DEMO-004", 140, 25),
+    ):
+        _, created = ItemFarmacia.objects.get_or_create(
+            empresa=empresa,
+            nome=nome,
+            defaults={"codigo": codigo, "categoria": "medicamento", "unidade_medida": "caixa", "estoque_minimo": minimo, "estoque_atual": estoque, "fornecedor": fornecedor},
+        )
+        if created:
+            criados.append(f"item:{codigo}")
+    fornecedor_gestao, created = FornecedorFarmaciaGestao.objects.get_or_create(
+        empresa=empresa,
+        nome="Distribuidora Hospitalar Demo",
+        defaults={"cnpj": "00.000.000/0002-72", "contato": "Atendimento B2B", "email": "b2b@demo.local", "telefone": "(11) 4000-1111", "prazo_entrega_dias": 3},
+    )
+    if created:
+        criados.append("fornecedor_gestao")
+    for nome, principio, qtd, minimo, controlado, refrigerado in (
+        ("Paracetamol", "Paracetamol", 120, 20, False, False),
+        ("Amoxicilina", "Amoxicilina", 60, 12, False, False),
+        ("Insulina NPH", "Insulina humana NPH", 18, 10, False, True),
+        ("Clonazepam", "Clonazepam", 25, 8, True, False),
+    ):
+        _, created = MedicamentoFarmacia.objects.get_or_create(
+            empresa=empresa,
+            nome=nome,
+            concentracao="500mg" if nome != "Insulina NPH" else "100UI/mL",
+            defaults={
+                "principio_ativo": principio,
+                "forma_farmaceutica": "comprimido" if nome != "Insulina NPH" else "injetavel",
+                "fabricante": "Fabricante Demo",
+                "classe_terapeutica": "analgesico" if nome == "Paracetamol" else "outro",
+                "quantidade_atual": qtd,
+                "quantidade_minima": minimo,
+                "quantidade_maxima": qtd * 2,
+                "preco_custo": 8,
+                "preco_venda": 18,
+                "controlado": controlado,
+                "refrigerado": refrigerado,
+            },
+        )
+        if created:
+            criados.append(f"medicamento:{nome}")
     paciente, created = PacienteFarmacia.objects.get_or_create(
         empresa=empresa,
         cpf="000.000.000-91",
@@ -1390,6 +1438,31 @@ def _seed_farmacia(empresa):
     if created:
         criados.append("dispensacao")
         ReceitaMedica.objects.filter(id=receita.id).update(status="dispensada", dispensacao=dispensacao)
+    dispensacao_gestao, created = Dispensacao.objects.get_or_create(
+        empresa=empresa,
+        paciente_cpf=paciente.cpf,
+        prescricao_numero="REC-DEMO-001",
+        defaults={
+            "paciente_nome": paciente.nome,
+            "medico_crm": "CRM/SP 000001",
+            "medicamentos": [{"nome": item.nome, "quantidade": 2, "lote": "LOTE-DEMO-001"}],
+            "valor_total": 36,
+            "convenio": "Particular Demo",
+            "status": "dispensada",
+            "observacoes": "Dispensacao assistencial registrada no modulo gestao.",
+        },
+    )
+    if created:
+        criados.append("dispensacao_gestao")
+    mov, created = MovimentoEstoque.objects.get_or_create(
+        empresa=empresa,
+        item=item,
+        tipo="entrada",
+        motivo="Entrada inicial demo enterprise",
+        defaults={"quantidade": 120, "estoque_anterior": 0, "estoque_posterior": 120, "responsavel": "Operacao Demo"},
+    )
+    if created:
+        criados.append("movimento")
     lote, created = LoteMedicamento.objects.get_or_create(
         empresa=empresa,
         item=item,
@@ -1406,6 +1479,19 @@ def _seed_farmacia(empresa):
     )
     if created:
         criados.append("pedido")
+        ItemPedidoCompra.objects.get_or_create(
+            pedido=pedido,
+            item=item,
+            defaults={"quantidade_solicitada": 50, "quantidade_recebida": 0},
+        )
+    pedido_gestao, created = PedidoFarmacia.objects.get_or_create(
+        empresa=empresa,
+        fornecedor=fornecedor_gestao,
+        observacao="Pedido gestao demo com medicamento definitivo.",
+        defaults={"status": "enviado", "data_entrega_prevista": hoje + timedelta(days=3), "itens": [{"medicamento": "Paracetamol", "quantidade": 50, "preco_unitario": 8}], "valor_total": 400},
+    )
+    if created:
+        criados.append("pedido_gestao")
     inventario, created = InventarioFarmacia.objects.get_or_create(
         empresa=empresa,
         descricao="Inventario inicial demo enterprise",
@@ -1418,6 +1504,15 @@ def _seed_farmacia(empresa):
             item=item,
             defaults={"estoque_sistema": item.estoque_atual, "estoque_contado": item.estoque_atual, "diferenca": 0},
         )
+    descarte, created = DescarteItemFarmacia.objects.get_or_create(
+        empresa=empresa,
+        item=item,
+        motivo="avaria",
+        numero_manifesto="MTR-DEMO-001",
+        defaults={"lote": lote, "quantidade": 1, "responsavel": "Farmaceutico Demo", "empresa_descarte": "Descarte Ambiental Demo", "observacoes": "Registro demonstrativo de descarte rastreavel."},
+    )
+    if created:
+        criados.append("descarte")
     return criados
 
 
@@ -1439,6 +1534,21 @@ def _seed_hospital(empresa):
     )
     if created:
         criados.append("leito")
+    leito_classico, created = LeitoHospital.objects.get_or_create(
+        empresa=empresa,
+        departamento=dep,
+        numero="E-CL-01",
+        defaults={"tipo": "observacao", "status": "ocupado"},
+    )
+    if created:
+        criados.append("leito_classico")
+    paciente_classico, created = PacienteHospital.objects.get_or_create(
+        empresa=empresa,
+        cpf="000.000.000-94",
+        defaults={"nome": "Paciente Clinico Demo", "data_nascimento": hoje - timedelta(days=14000), "sexo": "O", "telefone": "(11) 98888-0000", "endereco": "Rua Demo, 100", "tipo_sanguineo": "O+", "alergias": "Dipirona"},
+    )
+    if created:
+        criados.append("paciente_hospital")
     triagem, created = TriagemManchester.objects.get_or_create(
         empresa=empresa,
         paciente_nome="Paciente Hospital Demo",
@@ -1447,6 +1557,14 @@ def _seed_hospital(empresa):
     )
     if created:
         criados.append("triagem")
+    triagem_classica, created = TriagemHospital.objects.get_or_create(
+        empresa=empresa,
+        paciente=paciente_classico,
+        prioridade="amarelo",
+        defaults={"queixa_principal": "Febre persistente e dor abdominal", "pressao_arterial": "130x80", "temperatura": "38.2", "saturacao": 96, "frequencia_cardiaca": 92, "responsavel": "Enf. Demo"},
+    )
+    if created:
+        criados.append("triagem_classica")
     paciente, created = PacienteInternado.objects.get_or_create(
         empresa=empresa,
         cpf="000.000.000-92",
@@ -1454,6 +1572,15 @@ def _seed_hospital(empresa):
     )
     if created:
         criados.append("internacao")
+    internacao_classica, created = InternacaoHospital.objects.get_or_create(
+        empresa=empresa,
+        paciente=paciente_classico,
+        leito=leito_classico,
+        status="ativa",
+        defaults={"diagnostico": "Observacao clinica demo com protocolo assistencial.", "medico_responsavel": "Dr. Clinico Demo"},
+    )
+    if created:
+        criados.append("internacao_classica")
     prescricao, created = PrescricaoHospitalar.objects.get_or_create(
         empresa=empresa,
         paciente=paciente,
@@ -1462,6 +1589,13 @@ def _seed_hospital(empresa):
     )
     if created:
         criados.append("prescricao")
+    prescricao_classica, created = PrescricaoMedica.objects.get_or_create(
+        internacao=internacao_classica,
+        medicamento="Amoxicilina 500mg Demo",
+        defaults={"dose": "1 capsula", "via": "oral", "frequencia": "8/8h", "duracao_dias": 7, "status": "ativa", "medico": "Dr. Clinico Demo", "observacoes": "Prescricao demo vinculada a internacao classica."},
+    )
+    if created:
+        criados.append("prescricao_classica")
     return criados
 
 
@@ -1484,6 +1618,24 @@ def _seed_empresa(empresa):
     )
     if created:
         criados.append("aso")
+    exame, created = ExameOcupacional.objects.get_or_create(
+        empresa=empresa,
+        funcionario=funcionario,
+        aso=aso,
+        tipo_exame="audiometria",
+        defaults={"data_realizacao": hoje, "data_validade": hoje + timedelta(days=365), "resultado": "Dentro dos parametros ocupacionais", "status": "realizado", "observacoes": "Exame demo vinculado ao ASO."},
+    )
+    if created:
+        criados.append("exame")
+    agendamento, created = AgendamentoSST.objects.get_or_create(
+        empresa=empresa,
+        funcionario=funcionario,
+        tipo="exame_periodico",
+        data_hora=timezone.now() + timedelta(days=30),
+        defaults={"status": "agendado", "local": "Clinica Demo Ocupacional", "medico": "Dra. Demo Ocupacional", "observacoes": "Agendamento periodico demo."},
+    )
+    if created:
+        criados.append("agendamento")
     for tipo, titulo in (("PGR", "PGR Demo Enterprise"), ("PCMSO", "PCMSO Demo Enterprise"), ("LTCAT", "LTCAT Demo Enterprise")):
         _, created = DocumentoSST.objects.get_or_create(
             empresa=empresa,
@@ -1501,6 +1653,31 @@ def _seed_empresa(empresa):
     )
     if created:
         criados.append("esocial")
+    cat, created = CATOcupacional.objects.get_or_create(
+        empresa=empresa,
+        funcionario=funcionario,
+        numero_cat="CAT-DEMO-001",
+        defaults={"tipo": "tipico", "gravidade": "leve", "data_acidente": hoje - timedelta(days=10), "local_acidente": "Unidade Demo", "descricao": "Ocorrencia leve registrada para teste completo.", "parte_corpo": "Mao", "cid": "S60", "houve_afastamento": True, "dias_afastamento": 3, "status_esocial": "pendente"},
+    )
+    if created:
+        criados.append("cat")
+    afastamento, created = AfastamentoSST.objects.get_or_create(
+        empresa=empresa,
+        funcionario=funcionario,
+        cat=cat,
+        data_inicio=hoje - timedelta(days=9),
+        defaults={"motivo": "acidente_trabalho", "cid": "S60", "data_prevista_retorno": hoje - timedelta(days=6), "data_retorno_real": hoje - timedelta(days=6), "status": "encerrado", "observacoes": "Afastamento demo encerrado."},
+    )
+    if created:
+        criados.append("afastamento")
+    evento_cat, created = eSocialEventoSST.objects.get_or_create(
+        empresa=empresa,
+        tipo_evento="S-2210",
+        referencia=str(cat.id),
+        defaults={"status": "pendente", "xml_gerado": "<eSocial demo='true' evento='S-2210' />"},
+    )
+    if created:
+        criados.append("esocial_cat")
     treinamento, created = TreinamentoNR.objects.get_or_create(
         empresa=empresa,
         funcionario=funcionario,
