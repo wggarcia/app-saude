@@ -48,6 +48,7 @@ from .models import (
     TriagemHospital,
     TriagemManchester,
     ASOOcupacional,
+    AfastamentoSST,
     AgendamentoSST,
     CATOcupacional,
     DocumentoSST,
@@ -123,6 +124,79 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(primeira.status_code, 200)
         self.assertEqual(segunda.status_code, 200)
         self.assertEqual(self.empresa.dispositivos.count(), 1)
+
+    def test_sst_cids_ocupacionais_e_cat_doenca_exigem_lista(self):
+        login = self._login("cid-sst-device")
+        self.assertEqual(login.status_code, 200)
+        funcionario = FuncionarioSST.objects.create(
+            empresa=self.empresa,
+            nome="Trabalhador CID",
+            cpf="000.000.001-10",
+            cargo="Operador",
+        )
+
+        catalogo = self.client.get("/api/sst/cids-ocupacionais")
+        self.assertEqual(catalogo.status_code, 200)
+        self.assertGreater(catalogo.json()["total"], 40)
+
+        invalida = self.client.post(
+            "/api/sst/cats",
+            data=json.dumps({
+                "funcionario_nome": funcionario.nome,
+                "tipo": "doenca",
+                "cid": "X99",
+                "data_acidente": "2026-05-15",
+                "descricao": "Teste de CID inválido.",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(invalida.status_code, 400)
+
+        valida = self.client.post(
+            "/api/sst/cats",
+            data=json.dumps({
+                "funcionario_nome": funcionario.nome,
+                "tipo": "doenca",
+                "cid": "M54.5",
+                "data_acidente": "2026-05-15",
+                "descricao": "Doença do trabalho selecionada na lista.",
+                "local_acidente": "Posto de trabalho",
+                "parte_corpo": "Coluna lombar",
+                "houve_afastamento": True,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(valida.status_code, 201)
+        cat = CATOcupacional.objects.get(id=valida.json()["id"])
+        self.assertEqual(cat.cid, "M54.5")
+        self.assertEqual(cat.parte_corpo, "Coluna lombar")
+
+    def test_sst_afastamento_doenca_ocupacional_salva_com_cid_da_lista(self):
+        login = self._login("afastamento-cid-device")
+        self.assertEqual(login.status_code, 200)
+        funcionario = FuncionarioSST.objects.create(
+            empresa=self.empresa,
+            nome="Trabalhador Afastado",
+            cpf="000.000.001-11",
+            cargo="Auxiliar",
+        )
+
+        response = self.client.post(
+            "/api/sst/afastamentos",
+            data=json.dumps({
+                "funcionario": funcionario.nome,
+                "motivo": "doenca_ocupacional",
+                "cid": "Z57.5",
+                "data_inicio": "2026-05-15",
+                "data_retorno": "2026-05-30",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        afastamento = AfastamentoSST.objects.get(id=response.json()["id"])
+        self.assertEqual(afastamento.cid, "Z57.5")
+        self.assertEqual(afastamento.status, "retorno_programado")
 
     def test_bloqueia_dispositivo_acima_do_pacote(self):
         primeira = self._login("device-a")

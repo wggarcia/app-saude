@@ -187,7 +187,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       <div class="mf"><label>Houve Afastamento?</label><select id="c-afas"><option value="">Não</option><option value="1">Sim</option></select></div>
     </div>
     <div class="mf-row">
-      <div class="mf"><label>CID (se houver)</label><input id="c-cid" type="text" placeholder="Ex: S60.0"></div>
+      <div class="mf"><label>CID da Doença do Trabalho</label><select id="c-cid" disabled><option value="">Selecione Doença Ocupacional no tipo</option></select></div>
       <div class="mf"><label>Parte do Corpo</label><input id="c-parte" type="text" placeholder="Ex: Mão direita"></div>
     </div>
     <div class="mf"><label>Local do Acidente</label><input id="c-local" type="text" placeholder="Ex: Linha de produção 3"></div>
@@ -214,7 +214,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 </div>
 
 <script>
-let _todos=[];let _filtro='todos';let _xmlEventoId=null;
+let _todos=[];let _filtro='todos';let _xmlEventoId=null;let _cidsSst=[];
 const esocialLabel={nao_enviado:'Pendente',pendente:'Pendente',transmitido:'Gerado',erro:'Erro',retificado:'Retificado'};
 const esocialCls={nao_enviado:'b-cinza',pendente:'b-amarelo',transmitido:'b-verde',erro:'b-vermelho',retificado:'b-azul'};
 const tipoLabel={tipico:'Típico',trajeto:'Trajeto',doenca:'Doença Ocup.'};
@@ -223,9 +223,29 @@ const gravCls={leve:'g-leve',moderado:'g-moderado',grave:'g-grave',fatal:'g-fata
 
 function toast(msg,tipo='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+(tipo==='ok'?'ok':'err');clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',3500);}
 
-function openModal(){document.getElementById("modal").classList.add("open");document.getElementById("c-data").value=new Date().toISOString().split("T")[0];}
+function openModal(){document.getElementById("modal").classList.add("open");document.getElementById("c-data").value=new Date().toISOString().split("T")[0];toggleCidDoenca();}
 function closeModal(){document.getElementById("modal").classList.remove("open")}
 document.getElementById("modal").addEventListener("click",e=>{if(e.target===document.getElementById("modal"))closeModal()});
+
+function renderCidSelect(){
+  const sel=document.getElementById("c-cid");
+  sel.innerHTML='<option value="">Selecione o CID ocupacional...</option>'+_cidsSst.map(g=>`<optgroup label="${g.grupo}">${g.itens.map(i=>`<option value="${i.codigo}">${i.codigo} — ${i.descricao}</option>`).join("")}</optgroup>`).join("");
+}
+function toggleCidDoenca(){
+  const isDoenca=document.getElementById("c-tipo").value==="doenca";
+  const sel=document.getElementById("c-cid");
+  sel.disabled=!isDoenca;
+  if(!isDoenca)sel.value="";
+}
+document.getElementById("c-tipo").addEventListener("change",toggleCidDoenca);
+
+async function carregarCidsSst(){
+  const r=await fetch("/api/sst/cids-ocupacionais");
+  if(!r.ok)return;
+  const d=await r.json();
+  _cidsSst=d.grupos||[];
+  renderCidSelect();
+}
 
 function closeXmlModal(){document.getElementById('modal-xml').classList.remove('open');_xmlEventoId=null;}
 document.getElementById('modal-xml').addEventListener('click',e=>{if(e.target===document.getElementById('modal-xml'))closeXmlModal();});
@@ -330,6 +350,7 @@ async function salvar(){
   btn.textContent="Registrar CAT";btn.disabled=false;
 }
 carregar();
+carregarCidsSst();
 </script>
 </body>
 </html>

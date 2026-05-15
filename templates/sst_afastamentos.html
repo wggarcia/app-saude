@@ -398,8 +398,8 @@ body{min-height:100vh;overflow-x:hidden}
       </select>
     </div>
     <div class="mf">
-      <label>CID-10</label>
-      <input type="text" id="novoCid" placeholder="Ex: Z57.5">
+      <label>CID da Doença do Trabalho</label>
+      <select id="novoCid" disabled><option value="">Selecione Doença Ocupacional no motivo</option></select>
     </div>
     <div class="mf">
       <label>Data de Início</label>
@@ -419,6 +419,7 @@ body{min-height:100vh;overflow-x:hidden}
 <script>
 let todosAfastamentos = [];
 let filtroAtivo = '';
+let cidsSst = [];
 
 function formatarData(s) {
   if (!s) return '—';
@@ -574,7 +575,28 @@ async function confirmarRetorno() {
   }
 }
 
-function abrirModalNovo() { document.getElementById('modalNovo').classList.add('open'); }
+function renderCidSelectAfastamento(){
+  const sel=document.getElementById('novoCid');
+  sel.innerHTML='<option value="">Selecione o CID ocupacional...</option>'+cidsSst.map(g=>`<optgroup label="${g.grupo}">${g.itens.map(i=>`<option value="${i.codigo}">${i.codigo} — ${i.descricao}</option>`).join('')}</optgroup>`).join('');
+}
+function toggleCidAfastamento(){
+  const isDoenca=document.getElementById('novoMotivo').value==='doenca_ocupacional';
+  const sel=document.getElementById('novoCid');
+  sel.disabled=!isDoenca;
+  if(!isDoenca)sel.value='';
+}
+async function carregarCidsSst(){
+  try{
+    const r=await fetch('/api/sst/cids-ocupacionais',{credentials:'include'});
+    if(!r.ok)return;
+    const d=await r.json();
+    cidsSst=d.grupos||[];
+    renderCidSelectAfastamento();
+  }catch{}
+}
+document.getElementById('novoMotivo').addEventListener('change',toggleCidAfastamento);
+
+function abrirModalNovo() { document.getElementById('modalNovo').classList.add('open'); toggleCidAfastamento(); }
 function fecharModalNovo() { document.getElementById('modalNovo').classList.remove('open'); }
 
 async function registrarAfastamento() {
@@ -652,6 +674,7 @@ async function carregarAfastamentos() {
 }
 
 carregarAfastamentos();
+carregarCidsSst();
 </script>
 </body>
 </html>
