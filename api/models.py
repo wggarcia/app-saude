@@ -3326,3 +3326,49 @@ class PrescricaoHospitalar(models.Model):
 
     def __str__(self):
         return f"Prescrição {self.paciente.nome} {self.data} [{self.status}]"
+
+
+class AssinaturaDocumentoSST(models.Model):
+    TIPO_CHOICES = [
+        ("aso", "ASO"),
+        ("cat", "CAT"),
+        ("prontuario", "Prontuário SST"),
+        ("documento_sst", "Documento SST"),
+    ]
+    STATUS_CHOICES = [
+        ("pendente", "Pendente"),
+        ("assinado", "Assinado"),
+        ("cancelado", "Cancelado"),
+    ]
+
+    empresa              = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="assinaturas_sst")
+    funcionario          = models.ForeignKey("FuncionarioSST", on_delete=models.SET_NULL, null=True, blank=True, related_name="assinaturas_sst")
+    tipo_documento       = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    objeto_id            = models.PositiveIntegerField()
+    titulo               = models.CharField(max_length=240)
+    token                = models.CharField(max_length=64, unique=True, default=_codigo_acesso)
+    status               = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pendente")
+    hash_documento       = models.CharField(max_length=64)
+    hash_assinatura      = models.CharField(max_length=64, blank=True, default="")
+    signatario_nome      = models.CharField(max_length=180, blank=True, default="")
+    signatario_email     = models.EmailField(blank=True, default="")
+    signatario_cpf       = models.CharField(max_length=20, blank=True, default="")
+    solicitado_por       = models.CharField(max_length=180, blank=True, default="")
+    ip_solicitacao       = models.GenericIPAddressField(null=True, blank=True)
+    ip_assinatura        = models.GenericIPAddressField(null=True, blank=True)
+    user_agent_assinatura = models.CharField(max_length=300, blank=True, default="")
+    assinado_em          = models.DateTimeField(null=True, blank=True)
+    expiracao_em         = models.DateTimeField(null=True, blank=True)
+    criado_em            = models.DateTimeField(auto_now_add=True)
+    atualizado_em        = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "tipo_documento", "objeto_id"]),
+            models.Index(fields=["token"]),
+        ]
+
+    def __str__(self):
+        return f"Assinatura {self.tipo_documento} [{self.status}] — {self.titulo}"

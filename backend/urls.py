@@ -308,6 +308,14 @@ from api.views_funcionario_portal import (
     funcionario_meu_perfil, funcionario_meus_asos,
     funcionario_meus_treinamentos, funcionario_meus_epis,
 )
+from api.views_assinatura_sst import (
+    api_sst_assinaturas,
+    api_sst_assinatura_detalhe,
+    pagina_assinatura_sst,
+    pagina_validar_assinatura,
+    api_public_validar_assinatura_sst,
+    api_public_assinar_sst,
+)
 
 
 def service_worker(request):
@@ -904,4 +912,13 @@ urlpatterns = [
     path('api/funcionario/meus-asos', funcionario_meus_asos),
     path('api/funcionario/meus-treinamentos', funcionario_meus_treinamentos),
     path('api/funcionario/meus-epis', funcionario_meus_epis),
+
+    # ── Assinatura Digital SST ────────────────────────────────────────────────
+    path('api/sst/assinaturas', api_sst_assinaturas),
+    path('api/sst/assinaturas/', api_sst_assinaturas),
+    path('api/sst/assinaturas/<str:token>', api_sst_assinatura_detalhe),
+    path('api/sst/assinar/<str:token>', pagina_assinatura_sst),
+    path('api/sst/validar/<str:token>', pagina_validar_assinatura),
+    path('api/public/sst/validar/<str:token>', api_public_validar_assinatura_sst),
+    path('api/public/sst/assinar/<str:token>', api_public_assinar_sst),
 ]
