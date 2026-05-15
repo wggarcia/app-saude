@@ -6,6 +6,7 @@ from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import connection
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils.timezone import now
@@ -62,7 +63,7 @@ def _redirect_com_empresa(destino, empresa_id):
 
 
 def _registrar_evento_financeiro(empresa, tipo_evento, status, valor=0, observacao=""):
-    FinanceiroEventoSaaS.objects.create(
+    return FinanceiroEventoSaaS.objects.create(
         empresa=empresa,
         tipo_evento=tipo_evento,
         pacote_codigo=empresa.pacote_codigo,
@@ -127,6 +128,72 @@ def _ativar_empresa(empresa):
     empresa.data_pagamento = now().date()
     empresa.data_expiracao = now() + datetime.timedelta(days=dias)
     empresa.save(update_fields=["ativo", "data_pagamento", "data_expiracao"])
+
+
+def _status_assinatura(empresa):
+    agora = now()
+    pacote_codigo = normalizar_codigo_pacote(empresa.pacote_codigo)
+    pacote = detalhes_pacote(pacote_codigo)
+    ciclo = normalizar_ciclo(pacote_codigo, empresa.plano or "mensal")
+    dias_restantes = None
+    status = "inativo"
+
+    if empresa.data_expiracao:
+        dias_restantes = (empresa.data_expiracao - agora).days
+    if empresa.ativo:
+        if empresa.data_expiracao and empresa.data_expiracao < agora:
+            status = "expirado"
+        elif dias_restantes is not None and dias_restantes <= 7:
+            status = "renovacao_urgente"
+        elif dias_restantes is not None and dias_restantes <= 30:
+            status = "renovacao_proxima"
+        else:
+            status = "ativo"
+    elif empresa.data_expiracao and empresa.data_expiracao < agora:
+        status = "expirado"
+
+    return {
+        "status": status,
+        "ativo": bool(empresa.ativo and status != "expirado"),
+        "pacote_codigo": pacote_codigo,
+        "pacote_label": pacote["label"],
+        "setor": pacote["setor"],
+        "plano": ciclo,
+        "valor_atual": preco_pacote(pacote_codigo, ciclo),
+        "max_usuarios": empresa.max_usuarios,
+        "max_dispositivos": empresa.max_dispositivos,
+        "data_pagamento": empresa.data_pagamento.isoformat() if empresa.data_pagamento else None,
+        "data_expiracao": empresa.data_expiracao.isoformat() if empresa.data_expiracao else None,
+        "dias_restantes": dias_restantes,
+    }
+
+
+def _pagamento_ja_processado(empresa, payment_id):
+    if not payment_id:
+        return False
+    return FinanceiroEventoSaaS.objects.filter(
+        empresa=empresa,
+        status="aprovado",
+        observacao__contains=f"payment_id={payment_id}",
+    ).exists()
+
+
+def _processar_pagamento_aprovado(empresa, origem, payment_id="", valor=None):
+    if _pagamento_ja_processado(empresa, payment_id):
+        return False
+    _ativar_empresa(empresa)
+    valor_evento = valor
+    if valor_evento is None:
+        valor_evento = preco_pacote(empresa.pacote_codigo or pacote_padrao(), empresa.plano or "mensal")
+    sufixo = f" payment_id={payment_id}" if payment_id else ""
+    _registrar_evento_financeiro(
+        empresa,
+        "pagamento_aprovado",
+        "aprovado",
+        valor_evento,
+        f"{origem}{sufixo}".strip(),
+    )
+    return True
 
 
 # ── ASAAS ─────────────────────────────────────────────────────────────────────
@@ -271,6 +338,7 @@ def criar_pagamento(request, empresa_id=None):
 
     payload = _payload_pagamento(request)
     pacote_codigo, plano, pacote, valor = _resolver_pacote_ciclo(payload)
+    cpf_cnpj = payload.get("cpf_cnpj") or payload.get("cpfCnpj")
 
     if empresa.tipo_conta == Empresa.TIPO_GOVERNO or pacote["setor"] == "governo":
         return JsonResponse({
@@ -281,15 +349,14 @@ def criar_pagamento(request, empresa_id=None):
     if not valor or valor <= 0:
         return JsonResponse({"erro": "Pacote sem valor de checkout configurado."}, status=400)
 
-    _atualizar_contrato_empresa(empresa, pacote_codigo, plano, pacote)
-    _registrar_evento_financeiro(empresa, "checkout_iniciado", "pendente", valor,
-                                 f"Pacote {pacote['label']} no ciclo {plano}")
-
-    cpf_cnpj = payload.get("cpf_cnpj") or payload.get("cpfCnpj")
     if not _cpf_cnpj_valido(cpf_cnpj):
         return JsonResponse({
             "erro": "Informe CPF ou CNPJ valido do responsavel financeiro (11 ou 14 digitos).",
         }, status=400)
+
+    _atualizar_contrato_empresa(empresa, pacote_codigo, plano, pacote)
+    _registrar_evento_financeiro(empresa, "checkout_iniciado", "pendente", valor,
+                                 f"Pacote {pacote['label']} no ciclo {plano}")
 
     try:
         payment_id, checkout_url = _asaas_criar_pagamento(
@@ -297,12 +364,26 @@ def criar_pagamento(request, empresa_id=None):
             f"{pacote['label']} - {plano.upper()} SolusCRT",
             cpf_cnpj,
         )
+        _registrar_evento_financeiro(
+            empresa,
+            "checkout_criado",
+            "pendente",
+            valor,
+            f"Asaas payment_id={payment_id}",
+        )
         return JsonResponse({
             "status": "ok",
             "payment_id": payment_id,
             "init_point": checkout_url,
         })
     except Exception as exc:
+        _registrar_evento_financeiro(
+            empresa,
+            "checkout_erro",
+            "erro",
+            valor,
+            f"Asaas: {str(exc)[:800]}",
+        )
         return JsonResponse({"erro": f"Asaas: {exc}"}, status=500)
 
 
@@ -323,15 +404,16 @@ def webhook(request):
     evento = str(data.get("event") or "").strip().upper()
     status_pag = str(payment.get("status") or "").strip().upper()
     empresa_id = str(payment.get("externalReference") or "").strip()
+    payment_id = str(payment.get("id") or "").strip()
 
     if empresa_id and (_asaas_status_aprovado(status_pag) or _asaas_status_aprovado(evento)):
         empresa = Empresa.objects.filter(id=empresa_id).first()
         if empresa:
-            _ativar_empresa(empresa)
-            _registrar_evento_financeiro(
-                empresa, "pagamento_aprovado", "aprovado",
-                preco_pacote(empresa.pacote_codigo or pacote_padrao(), empresa.plano or "mensal"),
+            _processar_pagamento_aprovado(
+                empresa,
                 "Webhook Asaas",
+                payment_id=payment_id,
+                valor=payment.get("value"),
             )
 
     return JsonResponse({"status": "ok"})
@@ -354,11 +436,11 @@ def sucesso(request):
             if ref and _asaas_status_aprovado(pagamento.get("status")):
                 empresa = Empresa.objects.filter(id=ref).first()
                 if empresa:
-                    _ativar_empresa(empresa)
-                    _registrar_evento_financeiro(
-                        empresa, "retorno_sucesso", "aprovado",
-                        preco_pacote(empresa.pacote_codigo or pacote_padrao(), empresa.plano or "mensal"),
+                    _processar_pagamento_aprovado(
+                        empresa,
                         "Retorno Asaas verificado",
+                        payment_id=str(pagamento.get("id") or payment_id or "").strip(),
+                        valor=pagamento.get("value"),
                     )
         except Exception:
             pass
@@ -410,3 +492,146 @@ def status_pagamento(request):
         return JsonResponse({"status": "pendente"})
     except Exception:
         return JsonResponse({"status": "erro"})
+
+
+def api_billing_status(request):
+    from .views_dashboard import _empresa_autenticada
+
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+
+    usuarios_ativos = empresa.usuarios.filter(ativo=True).count()
+    dispositivos_ativos = empresa.dispositivos.filter(ativo=True).count()
+    eventos = FinanceiroEventoSaaS.objects.filter(empresa=empresa).order_by("-criado_em")[:10]
+    assinatura = _status_assinatura(empresa)
+
+    return JsonResponse({
+        "assinatura": assinatura,
+        "uso": {
+            "usuarios_ativos": usuarios_ativos,
+            "usuarios_limite": empresa.max_usuarios,
+            "usuarios_pct": round((usuarios_ativos / max(empresa.max_usuarios, 1)) * 100, 2),
+            "dispositivos_ativos": dispositivos_ativos,
+            "dispositivos_limite": empresa.max_dispositivos,
+            "dispositivos_pct": round((dispositivos_ativos / max(empresa.max_dispositivos, 1)) * 100, 2),
+        },
+        "financeiro_recente": [
+            {
+                "tipo_evento": evento.tipo_evento,
+                "status": evento.status,
+                "valor": float(evento.valor or 0),
+                "pacote_codigo": evento.pacote_codigo,
+                "ciclo": evento.ciclo,
+                "criado_em": evento.criado_em.isoformat(),
+            }
+            for evento in eventos
+        ],
+    })
+
+
+def _readiness_item(codigo, ok, titulo, detalhe, severidade="alta"):
+    return {
+        "codigo": codigo,
+        "ok": bool(ok),
+        "titulo": titulo,
+        "detalhe": detalhe,
+        "severidade": "ok" if ok else severidade,
+    }
+
+
+def api_enterprise_readiness(request):
+    from .views_dashboard import _dono_autenticado
+
+    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+
+    secret_key = getattr(settings, "SECRET_KEY", "") or ""
+    jwt_key = getattr(settings, "JWT_SECRET_KEY", "") or ""
+    db_engine = connection.settings_dict.get("ENGINE", "")
+    allowed_hosts = [host for host in getattr(settings, "ALLOWED_HOSTS", []) if host]
+    csrf_origins = [origin for origin in getattr(settings, "CSRF_TRUSTED_ORIGINS", []) if origin]
+    email_user = (getattr(settings, "EMAIL_HOST_USER", "") or "").strip()
+    email_backend = getattr(settings, "EMAIL_BACKEND", "")
+    asaas_key = (getattr(settings, "ASAAS_API_KEY", "") or "").strip()
+    webhook_token = (getattr(settings, "ASAAS_WEBHOOK_TOKEN", "") or "").strip()
+
+    checks = [
+        _readiness_item(
+            "debug_off",
+            not settings.DEBUG,
+            "DEBUG desligado",
+            "DJANGO_DEBUG deve ficar false em producao.",
+            "critica",
+        ),
+        _readiness_item(
+            "secret_keys",
+            len(secret_key) >= 50 and len(jwt_key) >= 50 and not secret_key.startswith("dev-only-"),
+            "Chaves fortes configuradas",
+            "DJANGO_SECRET_KEY e JWT_SECRET_KEY precisam ser longas e diferentes.",
+            "critica",
+        ),
+        _readiness_item(
+            "postgres",
+            "postgresql" in db_engine,
+            "Banco PostgreSQL gerenciado",
+            f"Engine atual: {db_engine or 'nao identificada'}.",
+            "critica",
+        ),
+        _readiness_item(
+            "hosts",
+            bool(allowed_hosts and csrf_origins),
+            "Dominios e CSRF configurados",
+            "ALLOWED_HOSTS e CSRF_TRUSTED_ORIGINS devem conter dominio oficial e Render.",
+            "alta",
+        ),
+        _readiness_item(
+            "secure_cookies",
+            bool(settings.SESSION_COOKIE_SECURE and settings.CSRF_COOKIE_SECURE and settings.SECURE_SSL_REDIRECT),
+            "Cookies e HTTPS protegidos",
+            "SESSION_COOKIE_SECURE, CSRF_COOKIE_SECURE e SECURE_SSL_REDIRECT devem estar ativos.",
+            "critica",
+        ),
+        _readiness_item(
+            "asaas",
+            bool(asaas_key and webhook_token),
+            "Asaas e webhook configurados",
+            "ASAAS_API_KEY e ASAAS_WEBHOOK_TOKEN precisam estar definidos.",
+            "critica",
+        ),
+        _readiness_item(
+            "email",
+            bool(email_user or "console" in email_backend),
+            "Canal de e-mail configurado",
+            "SMTP real deve estar configurado para reset, alertas e onboarding.",
+            "media",
+        ),
+        _readiness_item(
+            "pacotes",
+            bool(pacotes_por_setor(incluir_governo=True)),
+            "Catalogo de planos disponivel",
+            "Planos comerciais precisam estar carregados.",
+            "alta",
+        ),
+    ]
+
+    total = len(checks)
+    ok_total = sum(1 for item in checks if item["ok"])
+    score = round((ok_total / max(total, 1)) * 100)
+    bloqueios = [item for item in checks if not item["ok"] and item["severidade"] == "critica"]
+    status = "pronto_enterprise" if score >= 90 and not bloqueios else "precisa_ajuste"
+
+    return JsonResponse({
+        "status": status,
+        "score": score,
+        "checks": checks,
+        "bloqueios_criticos": bloqueios,
+        "metricas": {
+            "clientes_total": Empresa.objects.count(),
+            "clientes_ativos": Empresa.objects.filter(ativo=True).count(),
+            "eventos_financeiros_30d": FinanceiroEventoSaaS.objects.filter(
+                criado_em__gte=now() - datetime.timedelta(days=30)
+            ).count(),
+        },
+    })

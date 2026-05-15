@@ -164,6 +164,7 @@ class EmpresaMiddleware:
 
         owner_paths = (
             "/console-operacional/",
+            "/api/operacao/",
             "/api/operacao-central/",
             "/financeiro/",
             "/governanca/",

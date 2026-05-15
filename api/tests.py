@@ -23,6 +23,7 @@ from .models import (
     Empresa,
     EmpresaUsuario,
     ExameOcupacional,
+    FinanceiroEventoSaaS,
     FornecedorFarmacia,
     FornecedorFarmaciaGestao,
     GuiaAutorizacao,
@@ -131,6 +132,43 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(primeira.status_code, 200)
         self.assertEqual(segunda.status_code, 200)
         self.assertEqual(self.empresa.dispositivos.count(), 1)
+
+    def test_billing_status_explica_assinatura_e_uso(self):
+        login = self._login("billing-device")
+        self.assertEqual(login.status_code, 200)
+        EmpresaUsuario.objects.create(
+            empresa=self.empresa,
+            nome="Usuario Billing",
+            email="usuario-billing@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+
+        response = self.client.get("/api/billing/status")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["assinatura"]["status"], "ativo")
+        self.assertEqual(payload["uso"]["usuarios_ativos"], 1)
+        self.assertEqual(payload["uso"]["dispositivos_ativos"], 1)
+
+    def test_checkout_com_cpf_invalido_nao_altera_pacote_nem_gera_evento(self):
+        pacote_original = self.empresa.pacote_codigo
+
+        response = self.client.post(
+            f"/api/assinatura/{self.empresa.id}/",
+            data=json.dumps({
+                "package_id": "hospital_medio",
+                "cycle": "anual",
+                "cpf_cnpj": "123",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.empresa.refresh_from_db()
+        self.assertEqual(self.empresa.pacote_codigo, pacote_original)
+        self.assertFalse(FinanceiroEventoSaaS.objects.filter(empresa=self.empresa).exists())
 
     def test_sst_cids_ocupacionais_e_cat_doenca_exigem_lista(self):
         login = self._login("cid-sst-device")
@@ -1205,6 +1243,31 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Operacao SolusCRT")
 
+    def test_readiness_enterprise_disponivel_para_operacao(self):
+        DonoSaaS.objects.create(
+            nome="Operacao Readiness",
+            email="owner-readiness@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+
+        login = self.client.post(
+            "/api/operacao-central/login",
+            data=json.dumps({
+                "email": "owner-readiness@teste.com",
+                "senha": "123456",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        response = self.client.get("/api/operacao/readiness")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("score", payload)
+        self.assertTrue(any(item["codigo"] == "asaas" for item in payload["checks"]))
+
     def test_home_publica_abre_site_principal_no_dominio_institucional(self):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/")
 
@@ -2024,3 +2087,41 @@ class WebhookMiddlewareTests(TestCase):
 
         empresa.refresh_from_db()
         self.assertTrue(empresa.ativo)
+
+    @override_settings(ASAAS_WEBHOOK_TOKEN="token-teste")
+    def test_webhook_asaas_e_idempotente_por_payment_id(self):
+        empresa = Empresa.objects.create(
+            nome="Empresa Webhook Idempotente",
+            email="empresa-webhook-idem@teste.com",
+            senha=make_password("123456"),
+            ativo=False,
+            plano="mensal",
+            pacote_codigo="empresa_starter_5",
+        )
+        payload = {
+            "event": "PAYMENT_RECEIVED",
+            "payment": {
+                "id": "pay_123",
+                "status": "RECEIVED",
+                "externalReference": str(empresa.id),
+                "value": 799.00,
+            },
+        }
+
+        for _ in range(2):
+            response = self.client.post(
+                "/api/webhook",
+                data=json.dumps(payload),
+                content_type="application/json",
+                HTTP_ASAAS_ACCESS_TOKEN="token-teste",
+            )
+            self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(
+            FinanceiroEventoSaaS.objects.filter(
+                empresa=empresa,
+                tipo_evento="pagamento_aprovado",
+                status="aprovado",
+            ).count(),
+            1,
+        )
