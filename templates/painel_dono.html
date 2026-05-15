@@ -26,6 +26,8 @@
     .active{background:#1dd1a1;color:#042018}.inactive{background:#ff8fa3;color:#2a0710}.warn{background:#ffd166;color:#2d1d02}.high{background:#ff9b54;color:#2a1303}
     .critico{background:#ff5c7a;color:#2a0710}.alto{background:#ff9b54;color:#2a1303}.upsell{background:#7dd3fc;color:#041822}.operacional{background:#c4b5fd;color:#160b31}.normal{background:#1dd1a1;color:#042018}
     .ready-ok{border-color:rgba(29,209,161,.35);background:rgba(29,209,161,.08)}.ready-bad{border-color:rgba(255,92,122,.35);background:rgba(255,92,122,.08)}
+    .onb-line{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.onb-pill{padding:5px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.08);font-size:.72rem;font-weight:800}
+    .onb-ok{background:rgba(29,209,161,.12);color:#9ff5da;border-color:rgba(29,209,161,.32)}.onb-todo{background:rgba(255,180,84,.1);color:#ffd9a0;border-color:rgba(255,180,84,.28)}
     .controls{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:12px}
     .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     select,button{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);color:#eef8ff}
@@ -71,6 +73,11 @@
         <h2>Fila de Sucesso do Cliente</h2>
         <div id="successQueue" class="list">Carregando...</div>
       </section>
+    </section>
+
+    <section class="card">
+      <h2>Implantação e Go-live</h2>
+      <div id="onboardingQueue" class="list">Carregando...</div>
     </section>
 
     <section class="split">
@@ -207,6 +214,15 @@
       loadOwnerPanel();
     }
 
+    async function executarOnboarding(empresaId, acao) {
+      await fetch("/api/operacao-central/onboarding/acao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empresa_id: empresaId, acao }),
+      });
+      loadOwnerPanel();
+    }
+
     function exportar(tipo) {
       window.open(`/api/operacao-central/exportar?tipo=${tipo}&formato=csv`, "_blank");
     }
@@ -261,12 +277,16 @@
         <div class="client">
           <div class="row">
             <strong>${cliente.nome}</strong>
-            <span class="badge ${cliente.risco_operacional || (cliente.ativo ? "active" : "inactive")}">${cliente.risco || cliente.status_contrato}</span>
+            <span class="badge ${cliente.risco || (cliente.ativo ? "active" : "inactive")}">${cliente.risco || cliente.status_contrato}</span>
           </div>
           <div class="muted">${cliente.email}</div>
           <div class="muted small">${cliente.segmento} | ${cliente.pacote_label} | ${cliente.plano || "sem ciclo"}</div>
           <div class="muted small"><strong>Próxima ação:</strong> ${cliente.proxima_acao || "Acompanhar cliente"}</div>
           <div class="muted small"><strong>Playbook:</strong> ${cliente.playbook || ""}</div>
+          <div class="muted small"><strong>Onboarding:</strong> ${(cliente.onboarding || {}).etapa || "implantacao"} · ${(cliente.onboarding || {}).score || 0}% · próxima entrega: ${(cliente.onboarding || {}).proxima_entrega || "Acompanhar operação"}</div>
+          <div class="onb-line">
+            ${((cliente.onboarding || {}).checklist || []).map((item) => `<span class="onb-pill ${item.ok ? "onb-ok" : "onb-todo"}">${item.ok ? "OK" : "Pendente"} ${item.label}</span>`).join("")}
+          </div>
           ${cliente.segmento === "governo" ? '<div class="muted small">Contrato governamental anual fechado, sem cobrança mensal simples.</div>' : ''}
           <div class="muted small">Limite contratado: ${cliente.max_usuarios} usuários | ${cliente.max_dispositivos} máquinas autorizadas</div>
           <div class="muted small">Em uso: ${cliente.usuarios_ativos}/${cliente.max_usuarios} usuários | ${cliente.dispositivos_ativos}/${cliente.max_dispositivos} dispositivos | ${cliente.registros_24h} registros em 24h</div>
@@ -291,6 +311,12 @@
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'carencia_7')">Carência 7d</button>
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'reativar')">Reativar</button>
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'cancelar')">Cancelar</button>
+          </div>
+          <div class="actions">
+            <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'kickoff')">Kickoff</button>
+            <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'treinamento')">Treinamento</button>
+            <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'validacao')">Validação</button>
+            <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'go_live')">Go-live</button>
           </div>
         </div>
       `).join("") || "Sem clientes para esse filtro.";
@@ -330,6 +356,25 @@
       `).join("") || "Sem ações prioritárias.";
     }
 
+    function renderOnboardingQueue(clientes) {
+      const fila = [...(clientes || [])]
+        .filter((cliente) => ((cliente.onboarding || {}).score || 0) < 100)
+        .sort((a, b) => (((a.onboarding || {}).score || 0) - ((b.onboarding || {}).score || 0)))
+        .slice(0, 12);
+      document.getElementById("onboardingQueue").innerHTML = fila.map((cliente) => `
+        <div class="alert">
+          <div class="row"><strong>${cliente.nome}</strong><span class="badge warn">${(cliente.onboarding || {}).score || 0}%</span></div>
+          <div class="muted small">${cliente.segmento} | etapa ${(cliente.onboarding || {}).etapa || "implantacao"} | próxima entrega: ${(cliente.onboarding || {}).proxima_entrega || "Acompanhar operação"}</div>
+          <div class="actions">
+            <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'kickoff')">Kickoff</button>
+            <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'treinamento')">Treinamento</button>
+            <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'validacao')">Validação</button>
+            <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'go_live')">Go-live</button>
+          </div>
+        </div>
+      `).join("") || "Todos os clientes estão com go-live aprovado.";
+    }
+
     async function loadOwnerPanel() {
       const [response, readinessResponse] = await Promise.all([
         fetch("/api/operacao-central/resumo"),
@@ -354,6 +399,8 @@
         ["Projeção MB/dia", summary.projecao_carga_mb_dia],
         ["Pressão capacidade", summary.nivel_pressao_capacidade],
         ["Confiança média", Number(summary.confianca_media || 0).toFixed(2)],
+        ["Onboarding pendente", summary.onboarding_pendente],
+        ["Go-live pendente", summary.go_live_pendentes],
       ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("");
 
       document.getElementById("billingSummary").innerHTML = [
@@ -437,6 +484,7 @@
       renderClients(data.clientes || []);
       renderReadiness(readiness);
       renderSuccessQueue(data.clientes || []);
+      renderOnboardingQueue(data.clientes || []);
     }
 
     document.getElementById("tabAll").addEventListener("click", () => setActiveTab("all"));

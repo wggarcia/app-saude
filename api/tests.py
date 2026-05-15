@@ -1244,6 +1244,7 @@ class AuthDeviceTests(TestCase):
         self.assertContains(response, "Operacao SolusCRT")
         self.assertContains(response, "Readiness Enterprise")
         self.assertContains(response, "Fila de Sucesso do Cliente")
+        self.assertContains(response, "Implantação e Go-live")
 
     def test_readiness_enterprise_disponivel_para_operacao(self):
         DonoSaaS.objects.create(
@@ -1327,6 +1328,74 @@ class AuthDeviceTests(TestCase):
         self.assertIsNone(empresa.sessao_ativa_chave)
         self.assertIsNone(EmpresaUsuario.objects.get(empresa=empresa).sessao_ativa_chave)
         self.assertTrue(FinanceiroEventoSaaS.objects.filter(empresa=empresa, status="cancelado").exists())
+
+    def test_onboarding_operacional_avanca_cliente_ate_go_live(self):
+        DonoSaaS.objects.create(
+            nome="Operacao Implantacao",
+            email="owner-implantacao@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        empresa = Empresa.objects.create(
+            nome="Cliente Go-live",
+            email="cliente-golive@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            max_dispositivos=3,
+            max_usuarios=5,
+            data_expiracao=timezone.now() + timedelta(days=90),
+        )
+        EmpresaUsuario.objects.create(
+            empresa=empresa,
+            nome="Gestora Implantacao",
+            email="gestora-golive@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        DispositivoAutorizado.objects.create(
+            empresa=empresa,
+            device_id="device-golive",
+            apelido="Notebook recepcao",
+        )
+
+        login = self.client.post(
+            "/api/operacao-central/login",
+            data=json.dumps({
+                "email": "owner-implantacao@teste.com",
+                "senha": "123456",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        resumo_inicial = self.client.get("/api/operacao-central/resumo")
+        self.assertEqual(resumo_inicial.status_code, 200)
+        cliente_inicial = next(item for item in resumo_inicial.json()["clientes"] if item["id"] == empresa.id)
+        self.assertIn("onboarding", cliente_inicial)
+        self.assertEqual(cliente_inicial["onboarding"]["etapa"], "treinamento")
+        self.assertLess(cliente_inicial["onboarding"]["score"], 100)
+
+        for acao in ["treinamento", "validacao", "go_live"]:
+            response = self.client.post(
+                "/api/operacao-central/onboarding/acao",
+                data=json.dumps({"empresa_id": empresa.id, "acao": acao}),
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["status"], "ok")
+
+        resumo_final = self.client.get("/api/operacao-central/resumo")
+        cliente_final = next(item for item in resumo_final.json()["clientes"] if item["id"] == empresa.id)
+        self.assertEqual(cliente_final["onboarding"]["score"], 100)
+        self.assertEqual(cliente_final["onboarding"]["etapa"], "go_live")
+        self.assertEqual(cliente_final["onboarding"]["proxima_entrega"], "Operacao acompanhada")
+        self.assertTrue(
+            FinanceiroEventoSaaS.objects.filter(
+                empresa=empresa,
+                tipo_evento="onboarding_go_live",
+                status="manual",
+            ).exists()
+        )
 
     def test_home_publica_abre_site_principal_no_dominio_institucional(self):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/")
