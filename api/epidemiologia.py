@@ -244,23 +244,7 @@ def _public_recommendation(dominant_disease, dominant_symptom, risk_level):
         "Malaria": "priorizar investigacao em areas de transmissao e encaminhamento para testagem conforme protocolo local",
         "Sarampo": "reforcar alerta para febre com tosse, isolamento orientado e verificacao de cobertura vacinal",
         "Meningite": "orientar busca imediata de atendimento diante de febre intensa, rigidez ou piora rapida",
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-        "Hantavirus": "evitar contato com roedores e areas contaminadas, nao varrer ambientes fechados sem mascara e buscar atendimento imediato ao primeiro sinal respiratorio",
-=======
         "Hantavirose": "priorizar casos com febre e sintomas respiratorios agudos, reforcar alerta para exposicao a roedores e encaminhar avaliacao urgente",
->>>>>>> theirs
-=======
-        "Hantavirose": "priorizar casos com febre e sintomas respiratorios agudos, reforcar alerta para exposicao a roedores e encaminhar avaliacao urgente",
->>>>>>> theirs
-=======
-        "Hantavirose": "priorizar casos com febre e sintomas respiratorios agudos, reforcar alerta para exposicao a roedores e encaminhar avaliacao urgente",
->>>>>>> theirs
-=======
-        "Hantavirose": "priorizar casos com febre e sintomas respiratorios agudos, reforcar alerta para exposicao a roedores e encaminhar avaliacao urgente",
->>>>>>> theirs
     }
     action = base.get(dominant_disease, f"priorizar monitoramento de {dominant_symptom.lower()} e orientacao local")
 
