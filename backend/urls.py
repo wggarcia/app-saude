@@ -895,8 +895,8 @@ urlpatterns = [
     path('api/sst/assinaturas', api_sst_assinaturas),
     path('api/sst/assinaturas/', api_sst_assinaturas),
     path('api/sst/assinaturas/<str:token>', api_sst_assinatura_detalhe),
-    path('api/sst/assinar/<str:token>', pagina_assinatura_sst),
-    path('api/sst/validar/<str:token>', pagina_validar_assinatura),
+    path('assinatura/sst/<str:token>/', pagina_assinatura_sst),
+    path('validar-assinatura/<str:token>/', pagina_validar_assinatura),
     path('api/public/sst/validar/<str:token>', api_public_validar_assinatura_sst),
     path('api/public/sst/assinar/<str:token>', api_public_assinar_sst),
 ]

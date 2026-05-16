@@ -1213,3 +1213,130 @@ class WebhookMiddlewareTests(TestCase):
 
         empresa.refresh_from_db()
         self.assertTrue(empresa.ativo)
+
+
+class AssinaturaSSTTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.empresa = Empresa.objects.create(
+            nome="Empresa SST Teste",
+            email="sst@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+        )
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({"email": "sst@teste.com", "senha": "senha123", "device_id": "dev-sst", "device_name": "Test"}),
+            content_type="application/json",
+        )
+        self.token = resp.json().get("token", "")
+        self.auth = {"HTTP_AUTHORIZATION": f"Bearer {self.token}"}
+
+        from .models import FuncionarioSST, ASOOcupacional
+        self.funcionario = FuncionarioSST.objects.create(
+            empresa=self.empresa,
+            nome="João da Silva",
+            cpf="12345678900",
+            data_nascimento="1990-01-01",
+            cargo="Operador",
+            setor="Produção",
+        )
+        self.aso = ASOOcupacional.objects.create(
+            empresa=self.empresa,
+            funcionario=self.funcionario,
+            tipo="admissional",
+            data_emissao="2026-01-01",
+            resultado="apto",
+            medico_responsavel="Dr. Teste",
+            crm="CRM-12345",
+        )
+
+    def _post_json(self, url, data):
+        return self.client.post(
+            url,
+            data=json.dumps(data),
+            content_type="application/json",
+            **self.auth,
+        )
+
+    def test_solicitar_assinatura_aso_retorna_201(self):
+        resp = self._post_json("/api/sst/assinaturas", {
+            "tipo_documento": "aso",
+            "objeto_id": self.aso.id,
+            "signatario_nome": "João da Silva",
+            "signatario_email": "joao@empresa.com",
+        })
+        self.assertEqual(resp.status_code, 201)
+        body = resp.json()
+        self.assertIn("assinatura", body)
+        self.assertEqual(body["assinatura"]["status"], "pendente")
+        self.assertIn("link_assinatura", body["assinatura"])
+
+    def test_listar_assinaturas_retorna_lista(self):
+        self._post_json("/api/sst/assinaturas", {
+            "tipo_documento": "aso",
+            "objeto_id": self.aso.id,
+        })
+        resp = self.client.get("/api/sst/assinaturas", **self.auth)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("assinaturas", resp.json())
+
+    def test_fluxo_completo_solicitar_e_assinar(self):
+        resp = self._post_json("/api/sst/assinaturas", {
+            "tipo_documento": "aso",
+            "objeto_id": self.aso.id,
+            "signatario_nome": "João da Silva",
+        })
+        self.assertEqual(resp.status_code, 201)
+        token = resp.json()["assinatura"]["token"]
+
+        resp_assinar = self.client.post(
+            f"/api/public/sst/assinar/{token}",
+            data=json.dumps({"aceite": True, "nome": "João da Silva", "cpf": "123.456.789-00"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp_assinar.status_code, 200)
+        self.assertEqual(resp_assinar.json()["assinatura"]["status"], "assinado")
+
+    def test_validar_assinatura_publica(self):
+        resp = self._post_json("/api/sst/assinaturas", {
+            "tipo_documento": "aso",
+            "objeto_id": self.aso.id,
+            "signatario_nome": "João da Silva",
+        })
+        token = resp.json()["assinatura"]["token"]
+        self.client.post(
+            f"/api/public/sst/assinar/{token}",
+            data=json.dumps({"aceite": True, "nome": "João da Silva"}),
+            content_type="application/json",
+        )
+
+        resp_valida = self.client.get(f"/api/public/sst/validar/{token}")
+        self.assertEqual(resp_valida.status_code, 200)
+        body = resp_valida.json()
+        self.assertTrue(body["valida"])
+        self.assertEqual(body["funcionario"], "João da Silva")
+
+    def test_assinar_sem_nome_retorna_400(self):
+        resp = self._post_json("/api/sst/assinaturas", {
+            "tipo_documento": "aso",
+            "objeto_id": self.aso.id,
+        })
+        token = resp.json()["assinatura"]["token"]
+        resp_assinar = self.client.post(
+            f"/api/public/sst/assinar/{token}",
+            data=json.dumps({"aceite": True}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp_assinar.status_code, 400)
+
+    def test_tipo_documento_invalido_retorna_400(self):
+        resp = self._post_json("/api/sst/assinaturas", {
+            "tipo_documento": "invalido",
+            "objeto_id": self.aso.id,
+        })
+        self.assertEqual(resp.status_code, 400)
+
+    def test_sem_autenticacao_retorna_401(self):
+        resp = Client().get("/api/sst/assinaturas")
+        self.assertEqual(resp.status_code, 401)
