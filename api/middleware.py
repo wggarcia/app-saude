@@ -131,8 +131,8 @@ class EmpresaMiddleware:
             "/api/colaborador-mobile/",
             "/api/public/",
             "/api/assinatura/",
-            "/api/sst/assinar/",   # página pública de assinatura SST (link por e-mail)
-            "/api/sst/validar/",   # página pública de validação de assinatura SST
+            "/assinatura/sst/",    # página pública de assinatura SST (link por e-mail)
+            "/validar-assinatura/", # página pública de validação de assinatura SST
             "/api/planos-publicos",
             "/api/status-pagamento",
             "/api/webhook",
