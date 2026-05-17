@@ -171,7 +171,7 @@ def api_sst_assinaturas(request):
 
         tipo_documento = data.get("tipo_documento")
         objeto_id = data.get("objeto_id")
-        if tipo_documento not in dict(AssinaturaDocumentoSST.TIPO_DOCUMENTO):
+        if tipo_documento not in dict(AssinaturaDocumentoSST.TIPO_CHOICES):
             return JsonResponse({"erro": "tipo_documento inválido"}, status=400)
         if not objeto_id:
             return JsonResponse({"erro": "objeto_id obrigatório"}, status=400)

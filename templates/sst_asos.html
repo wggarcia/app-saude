@@ -2,12 +2,12 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>SolusCRT · ASO</title>
+<title>SolusCRT · ASO & Pedidos de Exame</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2233;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.13);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7;--blue:#3b82f6;--amber:#f59e0b;--red:#ef4444;--green:#22c55e}
+:root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2233;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.13);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7;--blue:#3b82f6;--amber:#f59e0b;--red:#ef4444;--green:#22c55e;--purple:#8b5cf6}
 html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
 .topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:52px;display:flex;align-items:center;background:rgba(10,14,26,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(14px)}
 .tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:210px;border-right:1px solid var(--line);height:100%}
@@ -21,6 +21,8 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
 .btn-main{padding:6px 13px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;box-shadow:0 0 16px rgba(0,201,167,.2);transition:opacity .2s}
 .btn-main:hover{opacity:.88}
+.btn-sec{padding:6px 13px;border-radius:7px;border:1px solid rgba(0,201,167,.3);background:none;color:var(--teal);font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s}
+.btn-sec:hover{background:rgba(0,201,167,.08)}
 .app{display:flex;min-height:100vh;padding-top:52px}
 .sidebar{width:200px;flex-shrink:0;background:rgba(17,24,39,.55);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:52px;bottom:0;overflow-y:auto}
 .sb-label{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px}
@@ -29,11 +31,22 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .sb-link.active{color:var(--teal);background:rgba(0,201,167,.06);border-left-color:var(--teal);font-weight:600}
 .sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
 .main{flex:1;margin-left:200px;padding:20px;display:flex;flex-direction:column;gap:16px}
+/* Page tabs */
+.page-tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);padding-bottom:0;margin-bottom:0}
+.ptab{padding:9px 18px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;display:flex;align-items:center;gap:6px}
+.ptab:hover{color:var(--text)}
+.ptab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.ptab .tab-badge{background:rgba(0,201,167,.12);color:var(--teal);font-size:.6rem;font-weight:800;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center}
+.ptab.active .tab-badge{background:rgba(0,201,167,.2)}
+.tab-panel{display:none;flex-direction:column;gap:14px}
+.tab-panel.active{display:flex}
+/* KPI */
 .kpi-strip{display:flex;gap:10px}
 .kpi-card{flex:1;padding:14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
 .kpi-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--teal));opacity:.7}
 .kpi-label{font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .kpi-val{font-size:1.7rem;font-weight:900;line-height:1}.kpi-sub{font-size:.67rem;color:var(--muted);margin-top:5px}
+/* Toolbar */
 .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .search-box{flex:1;min-width:220px;position:relative}
 .search-box input{width:100%;padding:8px 12px 8px 36px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:.84rem;outline:none;font-family:inherit;transition:border .15s}
@@ -42,10 +55,9 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .filter-tabs{display:flex;gap:4px;flex-wrap:wrap}
 .ftab{padding:6px 13px;border-radius:7px;font-size:.74rem;font-weight:600;cursor:pointer;color:var(--muted);border:1px solid var(--line);background:none;font-family:inherit;transition:all .15s}
 .ftab.active{color:var(--teal);background:rgba(0,201,167,.08);border-color:rgba(0,201,167,.2)}
-.ftab.urgente.active{color:#f87171;background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.2)}
-.urgente-tab{color:#f87171!important}
+/* Table */
 .table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);gap:10px;flex-wrap:wrap}
 .table-header h3{font-size:.8rem;font-weight:700}.table-header span{font-size:.72rem;color:var(--muted)}
 .tbl{width:100%;border-collapse:collapse;overflow-x:auto;display:block}
 .tbl thead th{padding:10px 14px;text-align:left;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
@@ -53,8 +65,9 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .tbl tbody tr:last-child{border-bottom:none}
 .tbl tbody tr:hover{background:rgba(255,255,255,.025)}
 .tbl tbody tr.vencido{background:rgba(239,68,68,.03)}
-.tbl tbody tr.urgente{background:rgba(245,158,11,.03)}
+.tbl tbody tr.urgente-row{background:rgba(245,158,11,.03)}
 .tbl td{padding:11px 14px;font-size:.8rem;color:var(--text);vertical-align:middle;white-space:nowrap}
+/* Badges */
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:.63rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
 .b-verde{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.18)}
 .b-vermelho{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.18)}
@@ -67,19 +80,23 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .dias-atencao{background:rgba(245,158,11,.12);color:#fbbf24}
 .dias-ok{background:rgba(34,197,94,.08);color:#4ade80}
 .dias-vencido{background:rgba(239,68,68,.2);color:#f87171;text-decoration:line-through}
+/* Row actions */
 .row-actions{display:flex;gap:6px;flex-wrap:wrap}
 .btn-row{padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.7rem;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
 .btn-row:hover{border-color:var(--teal);color:var(--teal)}
 .btn-row.btn-share:hover{border-color:#8b5cf6;color:#a78bfa}
 .btn-row.btn-esocial:hover{border-color:var(--blue);color:#60a5fa}
+.btn-row.danger:hover{border-color:var(--red);color:#f87171}
 .empty-state{padding:48px 20px;text-align:center;color:var(--muted)}
 .empty-state .ei{font-size:2.5rem;margin-bottom:12px}
 .empty-state h3{font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:6px}
 .skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.07) 50%,rgba(255,255,255,.04) 75%);background-size:200%;animation:shimmer 1.8s infinite;border-radius:5px}
 @keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
-.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+/* Modals */
+.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px}
 .modal-bg.open{display:flex}
-.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:560px;max-width:95vw;margin:auto}
+.modal.modal-lg{width:720px}
 .modal h3{font-size:1rem;font-weight:800;margin-bottom:4px}
 .modal-sub{font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.5}
 .mf{margin-bottom:10px}
@@ -89,6 +106,9 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .mf select option{background:var(--surface)}
 .mf textarea{resize:vertical;min-height:70px}
 .mf-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mf-check{display:flex;align-items:center;gap:8px;padding:6px 0}
+.mf-check input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:pointer}
+.mf-check label{font-size:.82rem;color:var(--text);cursor:pointer}
 .modal-acts{display:flex;gap:8px;margin-top:16px}
 .btn-cancel{flex:1;padding:9px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:none;color:var(--muted);font-family:inherit;cursor:pointer}
 .btn-submit{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-weight:800;font-family:inherit;cursor:pointer}
@@ -96,6 +116,37 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .link-box{background:rgba(255,255,255,.04);border:1px solid rgba(0,201,167,.25);border-radius:8px;padding:10px 12px;font-family:monospace;font-size:.78rem;color:var(--teal);word-break:break-all;margin-top:8px;cursor:text;user-select:all}
 .copy-btn{width:100%;padding:8px;border-radius:7px;border:1px solid rgba(0,201,167,.3);background:rgba(0,201,167,.07);color:var(--teal);font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer;margin-top:8px;transition:all .15s}
 .copy-btn:hover{background:rgba(0,201,167,.14)}
+/* Exam catalog styles */
+.modo-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.modo-card{padding:12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;transition:all .15s;text-align:center}
+.modo-card:hover{border-color:rgba(0,201,167,.3);background:rgba(0,201,167,.04)}
+.modo-card.active{border-color:var(--teal);background:rgba(0,201,167,.07)}
+.modo-card .mc-icon{font-size:1.4rem;margin-bottom:6px}
+.modo-card .mc-title{font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:3px}
+.modo-card .mc-sub{font-size:.67rem;color:var(--muted);line-height:1.4}
+.cat-section{margin-bottom:6px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.cat-header{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(255,255,255,.03);cursor:pointer;user-select:none}
+.cat-header:hover{background:rgba(255,255,255,.05)}
+.cat-title{font-size:.74rem;font-weight:700;color:var(--text)}
+.cat-count{font-size:.65rem;color:var(--muted)}
+.cat-arrow{font-size:.7rem;color:var(--muted);transition:transform .2s;display:inline-block}
+.cat-arrow.open{transform:rotate(90deg)}
+.cat-body{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:8px 12px}
+.cat-body.collapsed{display:none}
+.exame-item{display:flex;align-items:flex-start;gap:7px;cursor:pointer;padding:3px 0}
+.exame-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--teal);cursor:pointer;flex-shrink:0;margin-top:2px}
+.exame-item label{font-size:.73rem;color:var(--text);cursor:pointer;line-height:1.35}
+.exames-busca{width:100%;padding:8px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:.82rem;outline:none;font-family:inherit;margin-bottom:8px;transition:border .15s}
+.exames-busca:focus{border-color:var(--teal)}
+.selecionados-strip{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:28px;padding:4px;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:7px}
+.sel-tag{display:flex;align-items:center;gap:4px;padding:2px 8px;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.2);border-radius:4px;font-size:.67rem;color:var(--teal);font-weight:600}
+.sel-tag button{background:none;border:none;color:var(--teal);cursor:pointer;font-size:.75rem;line-height:1;padding:0 2px}
+.aviso{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:8px;font-size:.77rem;line-height:1.5;margin-bottom:8px}
+.aviso-info{background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.15);color:var(--muted)}
+.aviso-info strong{color:#60a5fa}
+.aviso-warn{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2);color:var(--muted)}
+.aviso-warn strong{color:var(--amber)}
+/* Toast */
 .toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:12px 18px;font-size:.82rem;font-weight:600;color:var(--text);z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none;max-width:320px}
 .toast.show{transform:translateY(0);opacity:1}
 .toast.ok{border-color:rgba(34,197,94,.3);color:#4ade80}
@@ -103,10 +154,12 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+@media(max-width:768px){.main{margin-left:0;padding:12px}.sidebar{display:none}.kpi-strip{flex-wrap:wrap}.mf-row{grid-template-columns:1fr}.modo-tabs{grid-template-columns:1fr}.cat-body{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="toast" id="toast"></div>
+
 <header class="topbar">
   <div class="tb-logo"><div class="tb-icon">S</div><div><div class="tb-nome">SST</div><div class="tb-sub">Saúde Ocupacional</div></div></div>
   <nav class="tb-nav">
@@ -119,13 +172,17 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <a href="/sst/documentos/">Documentos</a>
     <a href="/sst/esocial/">eSocial</a>
   </nav>
-  <div class="tb-actions"><button class="btn-main" onclick="openModal()">+ Emitir ASO</button></div>
+  <div class="tb-actions">
+    <button class="btn-sec" onclick="abrirModalPedido()">📨 Novo Pedido</button>
+    <button class="btn-main" onclick="openModalAso()">+ Emitir ASO</button>
+  </div>
 </header>
+
 <div class="app">
   <aside class="sidebar">
     <div class="sb-label">Conformidade</div>
     <a class="sb-link" href="/dashboard-empresa/"><span class="sb-icon">📊</span><span>Painel SST</span></a>
-    <a class="sb-link active" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span></a>
+    <a class="sb-link active" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO &amp; Pedidos</span></a>
     <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🔬</span><span>Exames</span></a>
     <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
     <a class="sb-link" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
@@ -134,56 +191,113 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial</span></a>
     <div class="sb-label">Gestão</div>
     <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
+    <a class="sb-link" href="/sst/postos/"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
     <a class="sb-link" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos NR</span></a>
     <a class="sb-link" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
-    <a class="sb-link" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
-    <a class="sb-link" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação</span></a>
     <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI / EPC</span></a>
-    <a class="sb-link" href="/sst/conformidade/"><span class="sb-icon">🛡️</span><span>Conformidade</span></a>
     <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
     <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
   </aside>
+
   <main class="main">
-    <div class="kpi-strip">
-      <div class="kpi-card" style="--kc:var(--teal)"><div class="kpi-label">Total de ASOs</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub">atestados cadastrados</div></div>
-      <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Vencendo em 30d</div><div class="kpi-val" id="k-vencendo">—</div><div class="kpi-sub">requerem renovação em breve</div></div>
-      <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">Vencidos</div><div class="kpi-val" id="k-vencidos">—</div><div class="kpi-sub">ASOs fora da validade</div></div>
-      <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Aptos</div><div class="kpi-val" id="k-aptos">—</div><div class="kpi-sub">resultado apto no último ASO</div></div>
-      <div class="kpi-card" style="--kc:#8b5cf6"><div class="kpi-label">S-2220 Enviados</div><div class="kpi-val" id="k-s2220">—</div><div class="kpi-sub">transmitidos ao eSocial</div></div>
+    <!-- Page tabs -->
+    <div class="page-tabs">
+      <button class="ptab active" id="ptab-asos" onclick="switchTab('asos')">📋 Atestados (ASO) <span class="tab-badge" id="tbadge-asos">—</span></button>
+      <button class="ptab" id="ptab-pedidos" onclick="switchTab('pedidos')">📨 Pedidos de Exame <span class="tab-badge" id="tbadge-pedidos">—</span></button>
     </div>
-    <div class="toolbar">
-      <div class="search-box"><input id="busca" type="text" placeholder="Buscar por funcionário, cargo ou médico..." oninput="renderTabela()"></div>
-      <div class="filter-tabs">
-        <button class="ftab active" onclick="setFiltro('todos',this)">Todos</button>
-        <button class="ftab urgente-tab" onclick="setFiltro('vencidos',this)">Vencidos</button>
-        <button class="ftab" onclick="setFiltro('vencendo',this)">Vencendo 30d</button>
-        <button class="ftab" onclick="setFiltro('admissional',this)">Admissional</button>
-        <button class="ftab" onclick="setFiltro('periodico',this)">Periódico</button>
-        <button class="ftab" onclick="setFiltro('demissional',this)">Demissional</button>
+
+    <!-- ═══ TAB: ASOS ════════════════════════════════════════════════════════ -->
+    <div class="tab-panel active" id="panel-asos">
+      <div class="kpi-strip">
+        <div class="kpi-card" style="--kc:var(--teal)"><div class="kpi-label">Total de ASOs</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub">atestados cadastrados</div></div>
+        <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Vencendo em 30d</div><div class="kpi-val" id="k-vencendo">—</div><div class="kpi-sub">requerem renovação</div></div>
+        <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">Vencidos</div><div class="kpi-val" id="k-vencidos">—</div><div class="kpi-sub">fora da validade</div></div>
+        <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Aptos</div><div class="kpi-val" id="k-aptos">—</div><div class="kpi-sub">resultado apto</div></div>
+        <div class="kpi-card" style="--kc:#8b5cf6"><div class="kpi-label">S-2220 Enviados</div><div class="kpi-val" id="k-s2220">—</div><div class="kpi-sub">transmitidos ao eSocial</div></div>
+      </div>
+      <div class="toolbar">
+        <div class="search-box"><input id="busca" type="text" placeholder="Buscar por funcionário, cargo ou médico..." oninput="renderTabelaAso()"></div>
+        <div class="filter-tabs">
+          <button class="ftab active" onclick="setFiltroAso('todos',this)">Todos</button>
+          <button class="ftab" style="color:#f87171" onclick="setFiltroAso('vencidos',this)">Vencidos</button>
+          <button class="ftab" onclick="setFiltroAso('vencendo',this)">Vencendo 30d</button>
+          <button class="ftab" onclick="setFiltroAso('admissional',this)">Admissional</button>
+          <button class="ftab" onclick="setFiltroAso('periodico',this)">Periódico</button>
+          <button class="ftab" onclick="setFiltroAso('demissional',this)">Demissional</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><h3>Atestados de Saúde Ocupacional</h3><span id="contagem-aso">carregando...</span></div>
+        <table class="tbl">
+          <thead><tr><th>Funcionário</th><th>Tipo</th><th>Emitido em</th><th>Válido até</th><th>Validade</th><th>Resultado</th><th>Médico</th><th>eSocial</th><th>Ações</th></tr></thead>
+          <tbody id="tbody-aso">
+            <tr><td colspan="9"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+            <tr><td colspan="9"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
-    <div class="table-wrap">
-      <div class="table-header"><h3>Atestados de Saúde Ocupacional</h3><span id="contagem">carregando...</span></div>
-      <table class="tbl">
-        <thead><tr><th>Funcionário</th><th>Tipo</th><th>Emitido em</th><th>Válido até</th><th>Validade</th><th>Resultado</th><th>Médico</th><th>eSocial</th><th>Ações</th></tr></thead>
-        <tbody id="tbody">
-          <tr><td colspan="9"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
-          <tr><td colspan="9"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
-        </tbody>
-      </table>
+
+    <!-- ═══ TAB: PEDIDOS ═════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="panel-pedidos">
+      <div class="kpi-strip">
+        <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Pendentes</div><div class="kpi-val" id="k-pend">—</div><div class="kpi-sub">aguardando clínica</div></div>
+        <div class="kpi-card" style="--kc:var(--blue)"><div class="kpi-label">Agendados</div><div class="kpi-val" id="k-agend">—</div><div class="kpi-sub">com data marcada</div></div>
+        <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Realizados</div><div class="kpi-val" id="k-real">—</div><div class="kpi-sub">exames concluídos</div></div>
+        <div class="kpi-card" style="--kc:var(--muted)"><div class="kpi-label">Total</div><div class="kpi-val" id="k-ped-total">—</div><div class="kpi-sub">todos os pedidos</div></div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Pedidos de exame</h3>
+          <div class="filter-tabs">
+            <button class="ftab active" onclick="filtrarPedido('',this)">Todos</button>
+            <button class="ftab" onclick="filtrarPedido('pendente',this)">Pendentes</button>
+            <button class="ftab" onclick="filtrarPedido('agendado',this)">Agendados</button>
+            <button class="ftab" onclick="filtrarPedido('realizado',this)">Realizados</button>
+          </div>
+        </div>
+        <table class="tbl">
+          <thead><tr>
+            <th>Funcionário / Cargo</th><th>Tipo ASO</th><th>Exames</th><th>Destino</th><th>Solicitado em</th><th>Status</th><th>Ações</th>
+          </tr></thead>
+          <tbody id="tbody-ped">
+            <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </main>
 </div>
 
-<!-- Modal: Emitir ASO -->
-<div class="modal-bg" id="modal">
+<!-- ══════════════════════════════════════════════════════════════════════════
+     MODAL: Emitir ASO
+═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-aso">
   <div class="modal">
     <h3>Emitir Atestado de Saúde Ocupacional</h3>
     <div class="modal-sub">Registre o ASO com tipo, resultado, médico responsável e validade.</div>
-    <div class="mf"><label>Funcionário (nome)</label><input id="a-func" type="text" placeholder="Ex: João da Silva"></div>
+    <div class="mf"><label>Funcionário *</label>
+      <select id="a-func-id">
+        <option value="">Selecione o funcionário...</option>
+      </select>
+    </div>
     <div class="mf-row">
-      <div class="mf"><label>Tipo</label><select id="a-tipo"><option value="admissional">Admissional</option><option value="periodico">Periódico</option><option value="retorno_trabalho">Retorno ao Trabalho</option><option value="mudanca_risco">Mudança de Risco</option><option value="demissional">Demissional</option></select></div>
-      <div class="mf"><label>Resultado</label><select id="a-resultado"><option value="apto">Apto</option><option value="inapto">Inapto</option><option value="apto_restricao">Apto c/ Restrição</option></select></div>
+      <div class="mf"><label>Tipo</label>
+        <select id="a-tipo">
+          <option value="admissional">Admissional</option>
+          <option value="periodico">Periódico</option>
+          <option value="retorno_trabalho">Retorno ao Trabalho</option>
+          <option value="mudanca_risco">Mudança de Risco</option>
+          <option value="demissional">Demissional</option>
+        </select>
+      </div>
+      <div class="mf"><label>Resultado</label>
+        <select id="a-resultado" onchange="toggleCidInapto()">
+          <option value="apto">Apto</option>
+          <option value="inapto">Inapto</option>
+          <option value="apto_restricao">Apto c/ Restrição</option>
+        </select>
+      </div>
     </div>
     <div class="mf-row">
       <div class="mf"><label>Data de Emissão</label><input id="a-emissao" type="date"></div>
@@ -193,19 +307,33 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       <div class="mf"><label>Médico Responsável</label><input id="a-medico" type="text" placeholder="Dr. Nome Sobrenome"></div>
       <div class="mf"><label>CRM</label><input id="a-crm" type="text" placeholder="CRM/UF 000000"></div>
     </div>
-    <div class="mf"><label>Observações / Restrições</label><textarea id="a-obs" placeholder="Restrições, condicionamentos ou observações clínicas..."></textarea></div>
+    <!-- CID — aparece apenas para inapto ou apto com restrição -->
+    <div class="mf" id="campo-cid" style="display:none">
+      <label>CID — Diagnóstico / Patologia</label>
+      <input id="a-cid" type="text" list="a-cid-list" placeholder="Ex: M54.5 — Dorsalgia, S60 — Traumatismo do punho..." autocomplete="off">
+      <datalist id="a-cid-list"></datalist>
+    </div>
+    <div class="mf"><label>Riscos Ocupacionais</label>
+      <textarea id="a-riscos" placeholder="Ex: Ruído acima de 85 dB, calor excessivo, agentes químicos (poeira de sílica)..." style="min-height:56px"></textarea>
+    </div>
+    <div class="mf"><label>Restrições / Condicionamentos</label>
+      <textarea id="a-restricoes" placeholder="Ex: Proibido trabalho em altura, uso obrigatório de protetor auricular, restrição a esforço físico..." style="min-height:56px"></textarea>
+    </div>
+    <div class="mf"><label>Observações Clínicas</label><textarea id="a-obs" placeholder="Observações gerais, encaminhamentos, recomendações..."></textarea></div>
     <div class="modal-acts">
-      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
-      <button class="btn-submit" onclick="salvar()">Emitir ASO</button>
+      <button class="btn-cancel" onclick="closeModalAso()">Cancelar</button>
+      <button class="btn-submit" id="btn-salvar-aso" onclick="salvarAso()">Emitir ASO</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Compartilhar ASO -->
+<!-- ══════════════════════════════════════════════════════════════════════════
+     MODAL: Compartilhar ASO
+═══════════════════════════════════════════════════════════════════════════ -->
 <div class="modal-bg" id="modal-share">
   <div class="modal">
     <h3>🔗 Compartilhar ASO</h3>
-    <div class="modal-sub" id="share-sub">Gere um link seguro para que a empresa contratante acesse o ASO diretamente. O link expira automaticamente.</div>
+    <div class="modal-sub" id="share-sub">Gere um link seguro para que a empresa contratante acesse o ASO diretamente.</div>
     <div id="share-form">
       <div class="mf"><label>Empresa Destinatária</label><input id="s-nome-empresa" type="text" placeholder="Ex: Construtora XYZ Ltda"></div>
       <div class="mf-row">
@@ -234,10 +362,107 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════════════════════
+     MODAL: Novo Pedido de Exame
+═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-pedido">
+  <div class="modal modal-lg">
+    <h3>Novo Pedido de Exame Ocupacional</h3>
+    <p class="modal-sub">Selecione o funcionário, os exames necessários e como enviar à clínica.</p>
+
+    <div class="mf-row">
+      <div class="mf"><label>Funcionário *</label><select id="p-func"><option value="">Selecione...</option></select></div>
+      <div class="mf"><label>Tipo de ASO *</label>
+        <select id="p-tipo">
+          <option value="admissional">Admissional</option>
+          <option value="periodico" selected>Periódico</option>
+          <option value="retorno_trabalho">Retorno ao Trabalho</option>
+          <option value="mudanca_risco">Mudança de Risco</option>
+          <option value="demissional">Demissional</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mf">
+      <label>Exames solicitados <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">— busque ou expanda as categorias</span></label>
+      <input class="exames-busca" id="exameBusca" placeholder="Ex: audiometria, hemograma, ECG, toxicológico..." oninput="filtrarExames(this.value)">
+      <div id="selecionadosStrip" class="selecionados-strip"><span style="color:var(--muted);font-size:.7rem;padding:4px">Nenhum exame selecionado</span></div>
+      <div id="catalogoContainer" style="max-height:260px;overflow-y:auto"></div>
+    </div>
+
+    <div class="mf">
+      <label>Como enviar</label>
+      <div class="modo-tabs">
+        <div class="modo-card active" id="modo-sistema" onclick="setModo('sistema')">
+          <div class="mc-icon">🏥</div>
+          <div class="mc-title">Clínica no SolusCRT</div>
+          <div class="mc-sub">Clínica vinculada à sua empresa</div>
+        </div>
+        <div class="modo-card" id="modo-email" onclick="setModo('email')">
+          <div class="mc-icon">📧</div>
+          <div class="mc-title">Enviar por Email</div>
+          <div class="mc-sub">Clínica recebe o pedido por email</div>
+        </div>
+        <div class="modo-card" id="modo-interno" onclick="setModo('interno')">
+          <div class="mc-icon">📋</div>
+          <div class="mc-title">Pedido Interno</div>
+          <div class="mc-sub">Registro sem envio — entregue pessoalmente</div>
+        </div>
+      </div>
+
+      <div id="campos-sistema">
+        <div class="mf"><label>Clínica vinculada *</label><select id="p-clinica-sistema"><option value="">Nenhuma clínica vinculada</option></select></div>
+        <div class="aviso aviso-info" id="aviso-sem-clinica" style="display:none">
+          <span>💡</span><div><strong>Sem clínicas vinculadas.</strong> Vincule uma clínica em <a href="/gestao/plataforma/" style="color:var(--teal)">Plataforma & API</a> ou use "Enviar por Email".</div>
+        </div>
+      </div>
+      <div id="campos-email" style="display:none">
+        <div class="mf-row">
+          <div class="mf"><label>Nome da clínica *</label><input id="p-clinica-nome" placeholder="Ex: Clínica Ocupacional São Paulo"></div>
+          <div class="mf"><label>Email da clínica *</label><input type="email" id="p-clinica-email" placeholder="contato@clinica.com.br"></div>
+        </div>
+        <div class="aviso aviso-info">
+          <span>📧</span><div>A clínica receberá um email com dados do funcionário, exames e instruções. <strong>Não precisa estar no SolusCRT.</strong></div>
+        </div>
+      </div>
+      <div id="campos-interno" style="display:none">
+        <div class="aviso aviso-info">
+          <span>📋</span><div>O pedido ficará salvo no sistema. Imprima e entregue pessoalmente à clínica.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mf"><label>Observações / instruções de preparo</label><textarea id="p-obs" placeholder="Ex: Jejum de 12h, trazer RG e CTPS, não usar protetor auricular 14h antes da audiometria..."></textarea></div>
+    <div class="mf-check"><input type="checkbox" id="p-urgente"><label for="p-urgente">⚡ Urgente — sinalizar prioridade à clínica</label></div>
+
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModalPedido()">Cancelar</button>
+      <button class="btn-submit" id="btnSalvarPedido" onclick="salvarPedido()">Enviar Pedido</button>
+    </div>
+  </div>
+</div>
+
 <script>
-let _todos=[];let _filtro='todos';let _shareAsoId=null;
-const hoje=new Date();hoje.setHours(0,0,0,0);
-function diasRestantes(s){if(!s)return null;const d=new Date(s.split("/").reverse().join("-"));return Math.round((d-hoje)/(86400000));}
+// ══════════════════════════════════════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════════════════════════════════════
+let _asos = [], _pedidos = [], _catalogo = [], _clinicas = [], _funcionarios = [];
+let _filtroAso = 'todos', _filtroPed = '';
+let _modo = 'sistema';
+let _selecionados = new Set();
+let _shareAsoId = null;
+const hoje = new Date(); hoje.setHours(0,0,0,0);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Utils
+// ══════════════════════════════════════════════════════════════════════════════
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(msg,tipo='ok'){
+  const t=document.getElementById('toast');t.textContent=msg;
+  t.className='toast show '+(tipo==='ok'?'ok':'err');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',3500);
+}
+function diasRestantes(s){if(!s)return null;const d=new Date(s.split("/").reverse().join("-"));return Math.round((d-hoje)/86400000);}
 function diasBadge(dias){
   if(dias===null)return'<span class="badge b-cinza">Sem validade</span>';
   if(dias<0)return`<span class="dias-badge dias-vencido">Vencido há ${Math.abs(dias)}d</span>`;
@@ -245,18 +470,151 @@ function diasBadge(dias){
   if(dias<=30)return`<span class="dias-badge dias-atencao">${dias}d restantes</span>`;
   return`<span class="dias-badge dias-ok">${dias}d</span>`;
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tabs
+// ══════════════════════════════════════════════════════════════════════════════
+function switchTab(t){
+  ['asos','pedidos'].forEach(x=>{
+    document.getElementById('ptab-'+x).classList.toggle('active',x===t);
+    document.getElementById('panel-'+x).classList.toggle('active',x===t);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ASO — Carregar + Render
+// ══════════════════════════════════════════════════════════════════════════════
+const tipoLabel={admissional:'Admissional',periodico:'Periódico',retorno_trabalho:'Retorno',mudanca_risco:'Mudança Risco',demissional:'Demissional'};
 const resultadoCls={apto:'b-verde',inapto:'b-vermelho',apto_restricao:'b-amarelo'};
 const resultadoLabel={apto:'Apto',inapto:'Inapto',apto_restricao:'Apto c/ Restrição'};
-const tipoLabel={admissional:'Admissional',periodico:'Periódico',retorno_trabalho:'Retorno',mudanca_risco:'Mudança Risco',demissional:'Demissional'};
 const esocialCls={nao_enviado:'b-cinza',pendente:'b-amarelo',transmitido:'b-verde',erro:'b-vermelho'};
 const esocialLbl={nao_enviado:'—',pendente:'Pendente',transmitido:'S-2220 ✓',erro:'Erro'};
 
-function toast(msg,tipo='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+(tipo==='ok'?'ok':'err');clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',3500);}
+async function carregarAsos(){
+  const r=await fetch('/api/sst/asos');
+  if(!r.ok)return;
+  const d=await r.json();
+  const rm={Apto:'apto',Inapto:'inapto','Apto com Restrição':'apto_restricao'};
+  _asos=(d.asos||[]).map(a=>({...a,resultado_raw:rm[a.resultado]||'apto',tipo:Object.keys(tipoLabel).find(k=>tipoLabel[k]===a.tipo)||a.tipo,status_esocial:a.status_esocial||'nao_enviado'}));
+  renderTabelaAso();
+  document.getElementById('tbadge-asos').textContent=_asos.length;
+  const p=new URLSearchParams(location.search);
+  if(p.get('busca')){document.getElementById('busca').value=p.get('busca');renderTabelaAso();}
+  if(p.get('novo')){
+    openModalAso();
+    // Try to pre-select funcionário by name
+    const nome=p.get('novo');
+    const f=_funcionarios.find(x=>x.nome===nome||x.nome.toLowerCase().includes(nome.toLowerCase()));
+    if(f)document.getElementById('a-func-id').value=f.id;
+  }
+}
 
-function openModal(){document.getElementById("modal").classList.add("open");document.getElementById("a-emissao").value=new Date().toISOString().split("T")[0];}
-function closeModal(){document.getElementById("modal").classList.remove("open")}
-document.getElementById("modal").addEventListener("click",e=>{if(e.target===document.getElementById("modal"))closeModal()});
+function setFiltroAso(f,btn){
+  _filtroAso=f;
+  document.querySelectorAll('#panel-asos .ftab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');renderTabelaAso();
+}
 
+function renderTabelaAso(){
+  const q=(document.getElementById('busca').value||'').toLowerCase();
+  const vencendo30=a=>{const dr=diasRestantes(a.data_validade);return dr!==null&&dr>=0&&dr<=30;};
+  const vencido=a=>{const dr=diasRestantes(a.data_validade);return dr!==null&&dr<0;};
+  let lista=_asos.filter(a=>{
+    if(_filtroAso==='vencidos'&&!vencido(a))return false;
+    if(_filtroAso==='vencendo'&&!vencendo30(a))return false;
+    if(['admissional','periodico','retorno_trabalho','mudanca_risco','demissional'].includes(_filtroAso)&&a.tipo!==_filtroAso)return false;
+    if(q&&!a.funcionario.toLowerCase().includes(q)&&!(a.medico||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+  document.getElementById('k-total').textContent=_asos.length;
+  document.getElementById('k-vencendo').textContent=_asos.filter(vencendo30).length;
+  document.getElementById('k-vencidos').textContent=_asos.filter(vencido).length;
+  document.getElementById('k-aptos').textContent=_asos.filter(a=>a.resultado==='Apto').length;
+  document.getElementById('k-s2220').textContent=_asos.filter(a=>a.status_esocial==='transmitido').length;
+  document.getElementById('contagem-aso').textContent=`${lista.length} ASO(s)`;
+  const tbody=document.getElementById('tbody-aso');
+  if(!lista.length){
+    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><div class="ei">📋</div><h3>Nenhum ASO encontrado</h3><p>Emita o primeiro ASO ou ajuste os filtros.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=lista.map(a=>{
+    const dr=diasRestantes(a.data_validade);
+    const rowCls=dr!==null&&dr<0?'vencido':dr!==null&&dr<=30?'urgente-row':'';
+    const esCls=esocialCls[a.status_esocial]||'b-cinza';
+    const esLbl=esocialLbl[a.status_esocial]||'—';
+    const s2220Btn=a.status_esocial!=='transmitido'
+      ?`<button class="btn-row btn-esocial" id="btn-s2220-${a.id}" onclick="enviarS2220(${a.id},this)">📤 S-2220</button>`:'';
+    const funcId=a.funcionario_id||'';
+    return`<tr class="${rowCls}">
+      <td><strong>${esc(a.funcionario)}</strong></td>
+      <td><span class="badge b-azul">${tipoLabel[a.tipo]||a.tipo}</span></td>
+      <td style="color:var(--muted)">${a.data_emissao}</td>
+      <td style="color:var(--muted)">${a.data_validade||'—'}</td>
+      <td>${diasBadge(dr)}</td>
+      <td><span class="badge ${resultadoCls[a.resultado_raw]||'b-cinza'}">${a.resultado}</span></td>
+      <td style="color:var(--muted);font-size:.74rem">${esc(a.medico)||'—'}</td>
+      <td><span class="badge ${esCls}">${esLbl}</span></td>
+      <td><div class="row-actions">
+        <button class="btn-row" onclick="renovarAso('${funcId}')">Renovar</button>
+        <a class="btn-row" href="/api/sst/asos/${a.id}/pdf" target="_blank">📄 PDF</a>
+        <button class="btn-row btn-share" onclick="openShareModal(${a.id},'${esc(a.funcionario).replace(/'/g,"\\'")}')">🔗 Compartilhar</button>
+        ${s2220Btn}
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renovarAso(funcId){
+  openModalAso();
+  if(funcId) setTimeout(()=>{document.getElementById('a-func-id').value=funcId;},50);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Modal: Emitir ASO
+// ══════════════════════════════════════════════════════════════════════════════
+function openModalAso(){
+  document.getElementById('modal-aso').classList.add('open');
+  document.getElementById('a-emissao').value=new Date().toISOString().split('T')[0];
+  document.getElementById('a-resultado').value='apto';
+  toggleCidInapto();
+}
+function closeModalAso(){document.getElementById('modal-aso').classList.remove('open');}
+document.getElementById('modal-aso').addEventListener('click',e=>{if(e.target===document.getElementById('modal-aso'))closeModalAso();});
+
+function toggleCidInapto(){
+  const v=document.getElementById('a-resultado').value;
+  const show=v==='inapto'||v==='apto_restricao';
+  document.getElementById('campo-cid').style.display=show?'':'none';
+}
+
+async function salvarAso(){
+  const funcId=document.getElementById('a-func-id').value;
+  if(!funcId){toast('Selecione o funcionário','err');return;}
+  const btn=document.getElementById('btn-salvar-aso');
+  btn.textContent='Salvando...';btn.disabled=true;
+  const payload={
+    funcionario_id:parseInt(funcId),
+    tipo:document.getElementById('a-tipo').value,
+    resultado:document.getElementById('a-resultado').value,
+    data_emissao:document.getElementById('a-emissao').value,
+    data_validade:document.getElementById('a-validade').value,
+    medico:document.getElementById('a-medico').value.trim(),
+    crm:document.getElementById('a-crm').value.trim(),
+    cid_inapto:document.getElementById('a-cid').value.trim(),
+    riscos_ocupacionais:document.getElementById('a-riscos').value.trim(),
+    restricoes:document.getElementById('a-restricoes').value.trim(),
+    observacoes:document.getElementById('a-obs').value.trim(),
+  };
+  const r=await fetch('/api/sst/asos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const d=await r.json();
+  btn.textContent='Emitir ASO';btn.disabled=false;
+  if(r.ok){closeModalAso();toast('ASO emitido com sucesso!');carregarAsos();}
+  else toast(d.erro||'Erro ao emitir ASO','err');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Modal: Compartilhar ASO
+// ══════════════════════════════════════════════════════════════════════════════
 function openShareModal(asoId,funcNome){
   _shareAsoId=asoId;
   document.getElementById('share-sub').textContent=`Compartilhar ASO de ${funcNome} com empresa contratante via link seguro.`;
@@ -271,13 +629,8 @@ function openShareModal(asoId,funcNome){
 }
 function closeShareModal(){document.getElementById('modal-share').classList.remove('open');_shareAsoId=null;}
 document.getElementById('modal-share').addEventListener('click',e=>{if(e.target===document.getElementById('modal-share'))closeShareModal();});
-
 function novoLink(){document.getElementById('share-form').style.display='';document.getElementById('share-result').style.display='none';}
-
-function copiarLink(){
-  const url=document.getElementById('share-link-box').textContent;
-  navigator.clipboard.writeText(url).then(()=>toast('Link copiado para a área de transferência!'));
-}
+function copiarLink(){navigator.clipboard.writeText(document.getElementById('share-link-box').textContent).then(()=>toast('Link copiado!'));}
 
 async function gerarLink(){
   if(!_shareAsoId){toast('ASO não identificado','err');return;}
@@ -306,94 +659,248 @@ async function enviarS2220(asoId,btn){
   const r=await fetch(`/api/sst/asos/${asoId}/esocial/`,{method:'POST',headers:{'Content-Type':'application/json'}});
   const d=await r.json();
   btn.textContent='📤 S-2220';btn.disabled=false;
-  if(r.ok){
-    toast('Evento S-2220 gerado com sucesso! Acesse eSocial para transmitir.','ok');
-    carregar();
-  }else{
-    toast(d.erro||'Erro ao gerar S-2220','err');
+  if(r.ok){toast('Evento S-2220 gerado! Acesse eSocial para transmitir.');carregarAsos();}
+  else toast(d.erro||'Erro ao gerar S-2220','err');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Pedidos — Carregar + Render
+// ══════════════════════════════════════════════════════════════════════════════
+const SB={pendente:'b-amarelo',agendado:'b-azul',realizado:'b-verde',cancelado:'b-cinza'};
+const SL={pendente:'Pendente',agendado:'Agendado',realizado:'Realizado',cancelado:'Cancelado'};
+
+async function carregarPedidos(){
+  try{
+    const r=await fetch('/api/sst/solicitacoes-exame',{credentials:'include'});
+    const d=await r.json();
+    if(!r.ok){toast(d.erro||'Erro','err');return;}
+    _pedidos=d.solicitacoes||[];
+    _catalogo=d.catalogo||[];
+    renderKpisPedidos();
+    renderTabelaPedidos();
+    renderCatalogo(_catalogo,'');
+    document.getElementById('tbadge-pedidos').textContent=_pedidos.filter(s=>s.status==='pendente').length||_pedidos.length;
+  }catch(e){toast('Erro ao carregar pedidos','err');}
+}
+
+function filtrarPedido(f,btn){
+  _filtroPed=f;
+  document.querySelectorAll('#panel-pedidos .ftab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');renderTabelaPedidos();
+}
+
+function renderKpisPedidos(){
+  document.getElementById('k-pend').textContent=_pedidos.filter(s=>s.status==='pendente').length;
+  document.getElementById('k-agend').textContent=_pedidos.filter(s=>s.status==='agendado').length;
+  document.getElementById('k-real').textContent=_pedidos.filter(s=>s.status==='realizado').length;
+  document.getElementById('k-ped-total').textContent=_pedidos.length;
+}
+
+function renderTabelaPedidos(){
+  const lista=_filtroPed?_pedidos.filter(s=>s.status===_filtroPed):_pedidos;
+  const tbody=document.getElementById('tbody-ped');
+  if(!lista.length){
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="ei">📨</div><h3>Nenhum pedido</h3><p>Clique em "Novo Pedido" para solicitar exames à clínica.</p></div></td></tr>`;
+    return;
   }
-}
-
-function setFiltro(f,btn){_filtro=f;document.querySelectorAll(".ftab").forEach(b=>b.classList.remove("active"));btn.classList.add("active");renderTabela();}
-
-function renderTabela(){
-  const q=(document.getElementById("busca").value||"").toLowerCase();
-  const vencendo30=d=>{const dr=diasRestantes(d.data_validade);return dr!==null&&dr>=0&&dr<=30;};
-  const vencido=d=>{const dr=diasRestantes(d.data_validade);return dr!==null&&dr<0;};
-  let lista=_todos.filter(a=>{
-    if(_filtro==="vencidos"&&!vencido(a))return false;
-    if(_filtro==="vencendo"&&!vencendo30(a))return false;
-    if(["admissional","periodico","retorno_trabalho","mudanca_risco","demissional"].includes(_filtro)&&a.tipo!==_filtro)return false;
-    if(q&&!a.funcionario.toLowerCase().includes(q)&&!(a.medico||"").toLowerCase().includes(q))return false;
-    return true;
-  });
-  document.getElementById("k-total").textContent=_todos.length;
-  document.getElementById("k-vencendo").textContent=_todos.filter(vencendo30).length;
-  document.getElementById("k-vencidos").textContent=_todos.filter(vencido).length;
-  document.getElementById("k-aptos").textContent=_todos.filter(a=>a.resultado==="Apto").length;
-  document.getElementById("k-s2220").textContent=_todos.filter(a=>a.status_esocial==="transmitido").length;
-  document.getElementById("contagem").textContent=`${lista.length} ASO(s)`;
-  const tbody=document.getElementById("tbody");
-  if(!lista.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><div class="ei">📋</div><h3>Nenhum ASO encontrado</h3><p>Emita o primeiro ASO para começar o controle.</p></div></td></tr>`;return;}
-  tbody.innerHTML=lista.map(a=>{
-    const dr=diasRestantes(a.data_validade);
-    const rowCls=dr!==null&&dr<0?"vencido":dr!==null&&dr<=30?"urgente":"";
-    const esCls=esocialCls[a.status_esocial]||'b-cinza';
-    const esLbl=esocialLbl[a.status_esocial]||'—';
-    const s2220Btn=a.status_esocial!=='transmitido'
-      ?`<button class="btn-row btn-esocial" id="btn-s2220-${a.id}" onclick="enviarS2220(${a.id},this)">📤 S-2220</button>`
-      :'';
-    return`<tr class="${rowCls}">
-      <td><strong>${a.funcionario}</strong></td>
-      <td><span class="badge b-azul">${tipoLabel[a.tipo]||a.tipo}</span></td>
-      <td style="color:var(--muted)">${a.data_emissao}</td>
-      <td style="color:var(--muted)">${a.data_validade||'—'}</td>
-      <td>${diasBadge(dr)}</td>
-      <td><span class="badge ${resultadoCls[a.resultado_raw]||'b-cinza'}">${a.resultado}</span></td>
-      <td style="color:var(--muted);font-size:.74rem">${a.medico||'—'}</td>
-      <td><span class="badge ${esCls}">${esLbl}</span></td>
+  tbody.innerHTML=lista.map(s=>`
+    <tr>
+      <td><strong>${esc(s.funcionario_nome)}</strong><br><span style="color:var(--muted);font-size:.7rem">${esc(s.funcionario_cargo)}</span></td>
+      <td>${esc(s.tipo_aso_label)}${s.urgente?' <span class="badge b-vermelho">Urgente</span>':''}</td>
+      <td style="max-width:200px"><span style="font-size:.72rem;color:var(--muted)">${
+        s.exames&&s.exames.length?s.exames.slice(0,2).map(esc).join(', ')+(s.exames.length>2?` <span class="badge b-cinza">+${s.exames.length-2}</span>`:''):'<em>a definir</em>'
+      }</span></td>
+      <td>
+        ${s.clinica_id?`<span class="badge b-verde">No sistema</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span>`:''}
+        ${!s.clinica_id&&s.clinica_email_externo?`<span class="badge b-azul">Email</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span>${s.email_enviado?'<br><span style="font-size:.67rem;color:#4ade80">✓ Enviado</span>':'<br><span style="font-size:.67rem;color:var(--amber)">⏳ Pendente</span>'}` :''}
+        ${!s.clinica_id&&!s.clinica_email_externo?`<span class="badge b-cinza">Interno</span>`:''}
+      </td>
+      <td style="color:var(--muted);font-size:.77rem">${s.data_solicitacao}${s.data_agendamento?`<br><span style="color:var(--blue)">Agend: ${s.data_agendamento}</span>`:''}</td>
+      <td><span class="badge ${SB[s.status]||'b-cinza'}">${SL[s.status]||s.status}</span></td>
       <td><div class="row-actions">
-        <button class="btn-row" onclick="renovar('${a.funcionario}')">Renovar</button>
-        <a class="btn-row" href="/api/sst/asos/${a.id}/pdf" target="_blank">📄 PDF</a>
-        <button class="btn-row btn-share" onclick="openShareModal(${a.id},'${a.funcionario.replace(/'/g,"\\'")}')">🔗 Compartilhar</button>
-        ${s2220Btn}
+        ${!s.clinica_id&&s.clinica_email_externo&&!s.email_enviado?`<button class="btn-row" onclick="reenviarEmail(${s.id})">📧 Enviar</button>`:''}
+        ${s.status==='pendente'?`<button class="btn-row danger" onclick="cancelarPedido(${s.id})">Cancelar</button>`:''}
       </div></td>
-    </tr>`;
-  }).join("");
+    </tr>`).join('');
 }
-function renovar(nome){openModal();document.getElementById("a-func").value=nome;}
 
-async function carregar(){
-  const r=await fetch("/api/sst/asos");
-  if(!r.ok)return;
-  const d=await r.json();
-  _todos=(d.asos||[]).map(a=>{
-    const rm={Apto:"apto",Inapto:"inapto","Apto com Restrição":"apto_restricao"};
-    return{...a,resultado_raw:rm[a.resultado]||"apto",tipo:Object.keys(tipoLabel).find(k=>tipoLabel[k]===a.tipo)||a.tipo,status_esocial:a.status_esocial||'nao_enviado'};
+// ══════════════════════════════════════════════════════════════════════════════
+// Modal: Novo Pedido
+// ══════════════════════════════════════════════════════════════════════════════
+function abrirModalPedido(){
+  _selecionados.clear();
+  renderSelecionados();
+  document.getElementById('p-func').value='';
+  document.getElementById('p-tipo').value='periodico';
+  document.getElementById('p-obs').value='';
+  document.getElementById('p-urgente').checked=false;
+  document.getElementById('exameBusca').value='';
+  setModo('sistema');
+  renderCatalogo(_catalogo,'');
+  document.getElementById('modal-pedido').classList.add('open');
+  // Switch to pedidos tab
+  switchTab('pedidos');
+}
+function fecharModalPedido(){document.getElementById('modal-pedido').classList.remove('open');}
+document.getElementById('modal-pedido').addEventListener('click',e=>{if(e.target===document.getElementById('modal-pedido'))fecharModalPedido();});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Catálogo de exames
+// ══════════════════════════════════════════════════════════════════════════════
+function renderCatalogo(cats,busca){
+  const cont=document.getElementById('catalogoContainer');
+  const q=(busca||'').toLowerCase().trim();
+  cont.innerHTML=cats.map((cat,ci)=>{
+    const itens=cat.exames.filter(e=>!q||e.toLowerCase().includes(q));
+    if(!itens.length)return'';
+    const aberto=!!q||ci===0;
+    return`<div class="cat-section">
+      <div class="cat-header" onclick="toggleCat(${ci})">
+        <span class="cat-title">${esc(cat.categoria)}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span class="cat-count">${itens.length} exames</span>
+          <span class="cat-arrow${aberto?' open':''}" id="arr-${ci}">▶</span>
+        </span>
+      </div>
+      <div class="cat-body${aberto?'':' collapsed'}" id="cat-${ci}">
+        ${itens.map(e=>{
+          const idx=encodeURIComponent(e);
+          return`<div class="exame-item"><input type="checkbox" id="ex-${idx}" ${_selecionados.has(e)?'checked':''} onchange="toggleExame('${e.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',this.checked)"><label for="ex-${idx}">${esc(e)}</label></div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCat(ci){
+  const body=document.getElementById(`cat-${ci}`);
+  const arr=document.getElementById(`arr-${ci}`);
+  body.classList.toggle('collapsed');
+  arr.classList.toggle('open',!body.classList.contains('collapsed'));
+}
+
+function filtrarExames(q){renderCatalogo(_catalogo,q);}
+
+function toggleExame(nome,checked){
+  if(checked)_selecionados.add(nome);else _selecionados.delete(nome);
+  renderSelecionados();
+}
+
+function renderSelecionados(){
+  const strip=document.getElementById('selecionadosStrip');
+  if(!_selecionados.size){strip.innerHTML='<span style="color:var(--muted);font-size:.7rem;padding:4px">Nenhum exame selecionado</span>';return;}
+  strip.innerHTML=[..._selecionados].map(e=>
+    `<span class="sel-tag">${esc(e.length>35?e.slice(0,33)+'…':e)}<button onclick="removeExame('${e.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">×</button></span>`
+  ).join('');
+}
+
+function removeExame(nome){
+  _selecionados.delete(nome);renderSelecionados();
+  renderCatalogo(_catalogo,document.getElementById('exameBusca').value);
+}
+
+// ── Modo de envio ─────────────────────────────────────────────────────────────
+function setModo(m){
+  _modo=m;
+  ['sistema','email','interno'].forEach(x=>{
+    document.getElementById(`modo-${x}`).classList.toggle('active',x===m);
+    document.getElementById(`campos-${x}`).style.display=x===m?'block':'none';
   });
-  renderTabela();
-  const p=new URLSearchParams(location.search);
-  if(p.get("busca")){document.getElementById("busca").value=p.get("busca");renderTabela();}
-  if(p.get("novo")){openModal();document.getElementById("a-func").value=p.get("novo");}
+  const btn=document.getElementById('btnSalvarPedido');
+  btn.textContent=m==='email'?'Salvar e Enviar Email':m==='sistema'?'Enviar à Clínica':'Salvar Pedido';
 }
 
-async function salvar(){
-  const btn=document.querySelector("#modal .btn-submit");btn.textContent="Salvando...";btn.disabled=true;
-  const r=await fetch("/api/sst/asos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-    funcionario_nome:document.getElementById("a-func").value.trim(),
-    tipo:document.getElementById("a-tipo").value,
-    resultado:document.getElementById("a-resultado").value,
-    data_emissao:document.getElementById("a-emissao").value,
-    data_validade:document.getElementById("a-validade").value,
-    medico:document.getElementById("a-medico").value.trim(),
-    crm:document.getElementById("a-crm").value.trim(),
-    observacoes:document.getElementById("a-obs").value.trim(),
-  })});
-  const d=await r.json();
-  if(r.ok){closeModal();toast('ASO emitido com sucesso!');carregar();}else toast(d.erro||"Erro ao emitir ASO",'err');
-  btn.textContent="Emitir ASO";btn.disabled=false;
+async function salvarPedido(){
+  const funcId=document.getElementById('p-func').value;
+  if(!funcId){toast('Selecione o funcionário','err');return;}
+  const tipo=document.getElementById('p-tipo').value;
+  const obs=document.getElementById('p-obs').value.trim();
+  const urgente=document.getElementById('p-urgente').checked;
+  const exames=[..._selecionados];
+  const payload={funcionario_id:parseInt(funcId),tipo_aso:tipo,exames,urgente,observacoes:obs,modo:_modo};
+  if(_modo==='sistema'){
+    const cid=document.getElementById('p-clinica-sistema').value;
+    if(!cid&&_clinicas.length){toast('Selecione a clínica','err');return;}
+    if(cid)payload.clinica_id=parseInt(cid);
+  }else if(_modo==='email'){
+    const email=document.getElementById('p-clinica-email').value.trim();
+    const nome=document.getElementById('p-clinica-nome').value.trim();
+    if(!email){toast('Informe o email da clínica','err');return;}
+    payload.clinica_email=email;payload.clinica_nome=nome;
+  }
+  const btn=document.getElementById('btnSalvarPedido');
+  btn.disabled=true;btn.textContent='Enviando...';
+  try{
+    const r=await fetch('/api/sst/solicitacoes-exame',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(!r.ok){toast(d.erro||'Erro ao criar pedido','err');return;}
+    const msgs={sistema:'Pedido enviado à clínica!',email:'Pedido salvo e email enviado!',interno:'Pedido salvo!'};
+    toast(msgs[_modo]||'Pedido criado!');
+    if(d.aviso_email)toast(d.aviso_email,'err');
+    fecharModalPedido();carregarPedidos();
+  }catch(e){toast('Erro de conexão','err');}
+  finally{btn.disabled=false;setModo(_modo);}
 }
-carregar();
+
+async function cancelarPedido(id){
+  if(!confirm('Cancelar este pedido de exame?'))return;
+  try{
+    const r=await fetch(`/api/sst/solicitacoes-exame/${id}`,{method:'DELETE',credentials:'include'});
+    if(!r.ok){const d=await r.json();toast(d.erro||'Erro','err');return;}
+    toast('Pedido cancelado');carregarPedidos();
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+async function reenviarEmail(id){
+  try{
+    const r=await fetch(`/api/sst/solicitacoes-exame/${id}`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'reenviar_email'})});
+    const d=await r.json();
+    if(!r.ok){toast(d.erro||'Erro ao enviar','err');return;}
+    toast('Email reenviado!');carregarPedidos();
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Carregar funcionários e clínicas (shared between both modals)
+// ══════════════════════════════════════════════════════════════════════════════
+async function carregarFuncionarios(){
+  try{
+    const r=await fetch('/api/sst/funcionarios',{credentials:'include'});
+    const d=await r.json();
+    _funcionarios=d.funcionarios||[];
+    const opts='<option value="">Selecione o funcionário...</option>'+
+      _funcionarios.map(f=>`<option value="${f.id}">${esc(f.nome)} — ${esc(f.cargo)}</option>`).join('');
+    document.getElementById('a-func-id').innerHTML=opts;
+    document.getElementById('p-func').innerHTML=opts;
+  }catch(e){}
+}
+
+async function carregarClinicas(){
+  try{
+    const r=await fetch('/api/sst/clinicas-disponiveis',{credentials:'include'});
+    const d=await r.json();
+    _clinicas=d.clinicas||[];
+    const sel=document.getElementById('p-clinica-sistema');
+    if(_clinicas.length){
+      sel.innerHTML=_clinicas.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+      document.getElementById('aviso-sem-clinica').style.display='none';
+    }else{
+      sel.innerHTML='<option value="">Nenhuma clínica vinculada</option>';
+      document.getElementById('aviso-sem-clinica').style.display='flex';
+    }
+  }catch(e){}
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════════════════════════════════════
+carregarFuncionarios();
+carregarClinicas();
+carregarAsos();
+carregarPedidos();
+
+// Switch to pedidos tab if URL has ?tab=pedidos
+if(new URLSearchParams(location.search).get('tab')==='pedidos')switchTab('pedidos');
 </script>
 </body>
 </html>

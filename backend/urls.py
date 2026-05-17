@@ -200,6 +200,17 @@ from api.views_gestao import (
     api_acoes,
     api_acao_status,
     api_gestao_resumo,
+    api_trial_status,
+    api_trial_ativar,
+    api_onboarding_passo,
+    api_integracoes,
+    api_integracao_webhook,
+    api_integracao_status,
+    api_chaves,
+    api_chave_revogar,
+    api_uso_api,
+    api_benchmark,
+    api_dados_empresa,
 )
 from api.views_competencia import (
     competencia_corporativa,
@@ -295,6 +306,14 @@ from api.views_funcionario_portal import (
     funcionario_login, funcionario_dashboard,
     funcionario_meu_perfil, funcionario_meus_asos,
     funcionario_meus_treinamentos, funcionario_meus_epis,
+)
+from api.views_assinatura_sst import (
+    api_sst_assinaturas,
+    api_sst_assinatura_detalhe,
+    pagina_assinatura_sst,
+    pagina_validar_assinatura,
+    api_public_validar_assinatura_sst,
+    api_public_assinar_sst,
 )
 
 
@@ -882,4 +901,36 @@ urlpatterns = [
     path('api/funcionario/meus-asos', funcionario_meus_asos),
     path('api/funcionario/meus-treinamentos', funcionario_meus_treinamentos),
     path('api/funcionario/meus-epis', funcionario_meus_epis),
+
+    # ── Trial / Self-service Onboarding ──────────────────────────────────────
+    path('api/gestao/trial', api_trial_status),
+    path('api/gestao/trial/ativar', api_trial_ativar),
+    path('api/gestao/onboarding/<str:passo>', api_onboarding_passo),
+
+    # ── Integrações RH (TOTVS, ADP, Senior, SAP) ─────────────────────────────
+    path('api/gestao/integracoes', api_integracoes),
+    path('api/gestao/integracoes/', api_integracoes),
+    path('api/gestao/integracoes/<int:integracao_id>/status', api_integracao_status),
+    path('api/gestao/integracoes/webhook/<str:sistema>', api_integracao_webhook),
+
+    # ── API Keys (acesso programático / BI) ───────────────────────────────────
+    path('api/gestao/chaves', api_chaves),
+    path('api/gestao/chaves/', api_chaves),
+    path('api/gestao/chaves/<int:chave_id>/revogar', api_chave_revogar),
+    path('api/gestao/uso-api', api_uso_api),
+
+    # ── Benchmark setorial ────────────────────────────────────────────────────
+    path('api/gestao/benchmark', api_benchmark),
+
+    # ── Dados via API Key (BI / ERP externo) ─────────────────────────────────
+    path('api/v1/dados', api_dados_empresa),
+
+    # ── Assinatura Digital SST ────────────────────────────────────────────────
+    path('api/sst/assinaturas', api_sst_assinaturas),
+    path('api/sst/assinaturas/', api_sst_assinaturas),
+    path('api/sst/assinaturas/<str:token>', api_sst_assinatura_detalhe),
+    path('assinatura/sst/<str:token>/', pagina_assinatura_sst),
+    path('validar-assinatura/<str:token>/', pagina_validar_assinatura),
+    path('api/public/sst/validar/<str:token>', api_public_validar_assinatura_sst),
+    path('api/public/sst/assinar/<str:token>', api_public_assinar_sst),
 ]

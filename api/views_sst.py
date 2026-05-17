@@ -280,13 +280,22 @@ def api_asos(request):
                 {
                     "id": a.id,
                     "funcionario": a.funcionario.nome,
-                    "tipo": a.get_tipo_display(),
+                    "funcionario_id": a.funcionario_id,
+                    "tipo": a.tipo,
+                    "tipo_label": a.get_tipo_display(),
                     "data_emissao": a.data_emissao.strftime("%d/%m/%Y"),
                     "data_validade": a.data_validade.strftime("%d/%m/%Y") if a.data_validade else None,
-                    "resultado": a.get_resultado_display(),
+                    "resultado": a.resultado,
+                    "resultado_label": a.get_resultado_display(),
                     "medico": a.medico_responsavel,
+                    "crm": a.crm,
+                    "cid_inapto": a.cid_inapto,
+                    "riscos_ocupacionais": a.riscos_ocupacionais,
+                    "restricoes": a.restricoes,
+                    "observacoes": a.observacoes,
+                    "status_esocial": "nao_enviado",
                 }
-                for a in qs[:50]
+                for a in qs[:200]
             ]
         })
 
@@ -315,6 +324,9 @@ def api_asos(request):
             medico_responsavel=data.get("medico", ""),
             crm=data.get("crm", ""),
             resultado=data.get("resultado", "apto"),
+            cid_inapto=(data.get("cid_inapto") or "").strip().upper(),
+            riscos_ocupacionais=data.get("riscos_ocupacionais", ""),
+            restricoes=data.get("restricoes", ""),
             observacoes=data.get("observacoes", ""),
         )
         return JsonResponse({"id": aso.id, "ok": True}, status=201)

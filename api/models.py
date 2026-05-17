@@ -886,6 +886,8 @@ class ASOOcupacional(models.Model):
     medico_responsavel = models.CharField(max_length=200, blank=True)
     crm = models.CharField(max_length=30, blank=True)
     resultado = models.CharField(max_length=20, choices=RESULTADO, default="apto")
+    cid_inapto = models.CharField(max_length=10, blank=True, verbose_name="CID (quando inapto/restrito)")
+    riscos_ocupacionais = models.TextField(blank=True, verbose_name="Riscos ocupacionais do cargo (NR-7)")
     restricoes = models.TextField(blank=True)
     observacoes = models.TextField(blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -3326,3 +3328,170 @@ class PrescricaoHospitalar(models.Model):
 
     def __str__(self):
         return f"Prescrição {self.paciente.nome} {self.data} [{self.status}]"
+
+
+class AssinaturaDocumentoSST(models.Model):
+    TIPO_CHOICES = [
+        ("aso", "ASO"),
+        ("cat", "CAT"),
+        ("prontuario", "Prontuário SST"),
+        ("documento_sst", "Documento SST"),
+    ]
+    STATUS_CHOICES = [
+        ("pendente", "Pendente"),
+        ("assinado", "Assinado"),
+        ("cancelado", "Cancelado"),
+    ]
+
+    empresa              = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="assinaturas_sst")
+    funcionario          = models.ForeignKey("FuncionarioSST", on_delete=models.SET_NULL, null=True, blank=True, related_name="assinaturas_sst")
+    tipo_documento       = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    objeto_id            = models.PositiveIntegerField()
+    titulo               = models.CharField(max_length=240)
+    token                = models.CharField(max_length=64, unique=True, default=_codigo_acesso)
+    status               = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pendente")
+    hash_documento       = models.CharField(max_length=64)
+    hash_assinatura      = models.CharField(max_length=64, blank=True, default="")
+    signatario_nome      = models.CharField(max_length=180, blank=True, default="")
+    signatario_email     = models.EmailField(blank=True, default="")
+    signatario_cpf       = models.CharField(max_length=20, blank=True, default="")
+    solicitado_por       = models.CharField(max_length=180, blank=True, default="")
+    ip_solicitacao       = models.GenericIPAddressField(null=True, blank=True)
+    ip_assinatura        = models.GenericIPAddressField(null=True, blank=True)
+    user_agent_assinatura = models.CharField(max_length=300, blank=True, default="")
+    assinado_em          = models.DateTimeField(null=True, blank=True)
+    expiracao_em         = models.DateTimeField(null=True, blank=True)
+    criado_em            = models.DateTimeField(auto_now_add=True)
+    atualizado_em        = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "tipo_documento", "objeto_id"]),
+            models.Index(fields=["token"]),
+        ]
+
+    def __str__(self):
+        return f"Assinatura {self.tipo_documento} [{self.status}] — {self.titulo}"
+
+
+# ── CRESCIMENTO / UNICÓRNIO ───────────────────────────────────────────────────
+
+class TrialEmpresa(models.Model):
+    """Período de trial de 14 dias — self-service onboarding."""
+    empresa      = models.OneToOneField(Empresa, on_delete=models.CASCADE, related_name="trial")
+    iniciado_em  = models.DateTimeField(auto_now_add=True)
+    expira_em    = models.DateTimeField()
+    convertido   = models.BooleanField(default=False)
+    convertido_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-iniciado_em"]
+
+    def ativo(self):
+        from django.utils import timezone
+        return not self.convertido and self.expira_em > timezone.now()
+
+    def dias_restantes(self):
+        from django.utils import timezone
+        delta = self.expira_em - timezone.now()
+        return max(0, delta.days)
+
+    def __str__(self):
+        return f"Trial {self.empresa.nome} — {'ativo' if self.ativo() else 'expirado'}"
+
+
+class OnboardingPasso(models.Model):
+    """Rastreia quais passos do onboarding a empresa completou."""
+    PASSOS = [
+        ("primeiro_funcionario", "Primeiro funcionário cadastrado"),
+        ("primeiro_aso",         "Primeiro ASO emitido"),
+        ("primeiro_epi",         "Primeira ficha de EPI registrada"),
+        ("esocial_config",       "eSocial configurado"),
+        ("usuario_adicional",    "Usuário adicional criado"),
+        ("relatorio_gerado",     "Relatório gerado"),
+        ("assinatura_digital",   "Primeira assinatura digital enviada"),
+    ]
+
+    empresa      = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="onboarding_passos")
+    passo        = models.CharField(max_length=40, choices=PASSOS)
+    concluido_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("empresa", "passo")]
+        ordering = ["concluido_em"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} — {self.passo}"
+
+
+class IntegracaoRH(models.Model):
+    """Conector com sistemas de RH (TOTVS, ADP, Senior, SAP)."""
+    SISTEMAS = [
+        ("totvs",   "TOTVS Protheus / RM"),
+        ("adp",     "ADP Workforce"),
+        ("senior",  "Senior Sistemas"),
+        ("sap",     "SAP HCM"),
+        ("esocial", "eSocial Gov (direto)"),
+        ("outro",   "Outro / Custom"),
+    ]
+    STATUS = [
+        ("ativo",   "Ativo"),
+        ("inativo", "Inativo"),
+        ("erro",    "Erro na última sync"),
+    ]
+
+    empresa               = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="integracoes_rh")
+    sistema               = models.CharField(max_length=20, choices=SISTEMAS)
+    nome                  = models.CharField(max_length=120, blank=True, default="")
+    status                = models.CharField(max_length=10, choices=STATUS, default="inativo")
+    webhook_secret        = models.CharField(max_length=64, default=_codigo_acesso)
+    endpoint_destino      = models.URLField(blank=True, default="")
+    funcionarios_importados = models.PositiveIntegerField(default=0)
+    ultimo_sync_em        = models.DateTimeField(null=True, blank=True)
+    ultimo_erro           = models.TextField(blank=True, default="")
+    criado_em             = models.DateTimeField(auto_now_add=True)
+    atualizado_em         = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("empresa", "sistema")]
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} ↔ {self.get_sistema_display()} [{self.status}]"
+
+
+class ApiKeyEmpresa(models.Model):
+    """Chave de API para acesso programático aos dados da empresa."""
+    empresa    = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="api_keys")
+    nome       = models.CharField(max_length=100)
+    chave      = models.CharField(max_length=64, unique=True, default=_codigo_acesso)
+    ativa      = models.BooleanField(default=True)
+    total_chamadas = models.PositiveBigIntegerField(default=0)
+    ultimo_uso_em  = models.DateTimeField(null=True, blank=True)
+    criado_em  = models.DateTimeField(auto_now_add=True)
+    revogada_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} / {self.nome} ({'ativa' if self.ativa else 'revogada'})"
+
+
+class UsoApiEmpresa(models.Model):
+    """Uso mensal por endpoint para billing e analytics."""
+    empresa    = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="uso_api")
+    api_key    = models.ForeignKey(ApiKeyEmpresa, on_delete=models.SET_NULL, null=True, blank=True, related_name="uso")
+    ano_mes    = models.CharField(max_length=7)   # ex.: "2026-05"
+    endpoint   = models.CharField(max_length=120)
+    chamadas   = models.PositiveBigIntegerField(default=0)
+
+    class Meta:
+        unique_together = [("empresa", "api_key", "ano_mes", "endpoint")]
+        ordering = ["-ano_mes"]
+        indexes = [models.Index(fields=["empresa", "ano_mes"])]
+
+    def __str__(self):
+        return f"{self.empresa.nome} {self.ano_mes} {self.endpoint}: {self.chamadas}"
