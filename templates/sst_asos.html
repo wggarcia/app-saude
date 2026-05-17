@@ -854,13 +854,13 @@ function renderTabelaPedidos(){
       }</span></td>
       <td>
         ${s.clinica_id?`<span class="badge b-verde">No sistema</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span>`:''}
-        ${!s.clinica_id&&s.clinica_email_externo?`<span class="badge b-azul">Email</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span>${s.email_enviado?'<br><span style="font-size:.67rem;color:#4ade80">✓ Enviado</span>':'<br><span style="font-size:.67rem;color:var(--amber)">⏳ Pendente</span>'}` :''}
+        ${!s.clinica_id&&s.clinica_email_externo?`<span class="badge b-azul">Email</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span><br><span style="font-size:.67rem;color:var(--muted)">${esc(s.clinica_email_externo)}</span>${s.email_enviado?'<br><span style="font-size:.67rem;color:#4ade80">✓ Entregue ao SMTP</span>':'<br><span style="font-size:.67rem;color:var(--amber)">⏳ Não enviado</span>'}${s.resposta_clinica?`<br><span style="font-size:.65rem;color:var(--muted)">${esc(s.resposta_clinica)}</span>`:''}` :''}
         ${!s.clinica_id&&!s.clinica_email_externo?`<span class="badge b-cinza">Interno</span>`:''}
       </td>
       <td style="color:var(--muted);font-size:.77rem">${s.data_solicitacao}${s.data_agendamento?`<br><span style="color:var(--blue)">Agend: ${s.data_agendamento}</span>`:''}</td>
       <td><span class="badge ${SB[s.status]||'b-cinza'}">${SL[s.status]||s.status}</span></td>
       <td><div class="row-actions">
-        ${!s.clinica_id&&s.clinica_email_externo&&!s.email_enviado?`<button class="btn-row" onclick="reenviarEmail(${s.id})">📧 Enviar</button>`:''}
+        ${!s.clinica_id&&s.clinica_email_externo?`<button class="btn-row" onclick="reenviarEmail(${s.id})">📧 ${s.email_enviado?'Reenviar':'Enviar'}</button>`:''}
         ${s.status==='pendente'?`<button class="btn-row danger" onclick="cancelarPedido(${s.id})">Cancelar</button>`:''}
       </div></td>
     </tr>`).join('');

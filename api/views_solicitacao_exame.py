@@ -605,9 +605,13 @@ https://empresa.soluscrt.com.br
             return False, "Servidor SMTP não confirmou envio."
         sol.email_enviado = True
         sol.email_enviado_em = timezone.now()
-        sol.save(update_fields=["email_enviado", "email_enviado_em"])
+        sol.resposta_clinica = f"Email entregue ao SMTP em {timezone.localtime(sol.email_enviado_em).strftime('%d/%m/%Y %H:%M')} para {sol.clinica_email_externo}."
+        sol.save(update_fields=["email_enviado", "email_enviado_em", "resposta_clinica"])
         return True, None
     except Exception as e:
+        sol.email_enviado = False
+        sol.resposta_clinica = f"Falha no envio para {sol.clinica_email_externo}: {e}"
+        sol.save(update_fields=["email_enviado", "resposta_clinica"])
         return False, str(e)
 
 
