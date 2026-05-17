@@ -4,7 +4,8 @@ Solicitações de exames ocupacionais: empresa emite pedido → clínica recebe
 clínicas externas (recebem por email com link de acompanhamento).
 """
 import json
-from django.core.mail import send_mail
+from django.conf import settings
+from django.core.mail import EmailMessage
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.template.loader import render_to_string
@@ -547,6 +548,17 @@ def _enviar_email_solicitacao(sol):
     exames = json.loads(sol.exames) if sol.exames else []
     empresa = sol.empresa
     func = sol.funcionario
+    backend = getattr(settings, "EMAIL_BACKEND", "")
+    smtp_user = (getattr(settings, "EMAIL_HOST_USER", "") or "").strip()
+    smtp_password = (getattr(settings, "EMAIL_HOST_PASSWORD", "") or "").strip()
+    if "smtp.EmailBackend" in backend and (not smtp_user or not smtp_password):
+        return False, "SMTP não configurado no Render: preencha EMAIL_HOST_USER e EMAIL_HOST_PASSWORD."
+    from_email = (getattr(settings, "DEFAULT_FROM_EMAIL", "") or "").strip()
+    if (not from_email or "noreply@soluscrt.com.br" in from_email) and smtp_user:
+        from_email = f"SolusCRT <{smtp_user}>"
+    reply_to = []
+    if getattr(empresa, "email", ""):
+        reply_to = [empresa.email]
 
     corpo = f"""
 Olá, {sol.clinica_nome_externo or 'Clínica'},
@@ -581,13 +593,16 @@ https://empresa.soluscrt.com.br
     """.strip()
 
     try:
-        send_mail(
+        msg = EmailMessage(
             subject=f"[SolusCRT] Pedido de Exame — {func.nome} — {empresa.nome}",
-            message=corpo,
-            from_email=None,
-            recipient_list=[sol.clinica_email_externo],
-            fail_silently=False,
+            body=corpo,
+            from_email=from_email,
+            to=[sol.clinica_email_externo],
+            reply_to=reply_to,
         )
+        enviados = msg.send(fail_silently=False)
+        if enviados < 1:
+            return False, "Servidor SMTP não confirmou envio."
         sol.email_enviado = True
         sol.email_enviado_em = timezone.now()
         sol.save(update_fields=["email_enviado", "email_enviado_em"])
