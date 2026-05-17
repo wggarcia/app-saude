@@ -195,6 +195,7 @@ from api.views_prescricao import (
 )
 from api.views_gestao import (
     gestao_corporativa,
+    gestao_plataforma,
     api_apoio_fila,
     api_apoio_atualizar,
     api_programas,
@@ -414,6 +415,7 @@ urlpatterns = [
     path('colaborador-mobile/c/<str:codigo>/', app_colaborador_corporativo),
     path('competencia/', competencia_corporativa),
     path('gestao/', gestao_corporativa),
+    path('gestao/plataforma/', gestao_plataforma),
     path('api/gestao/resumo', api_gestao_resumo),
     path('api/gestao/apoio', api_apoio_fila),
     path('api/gestao/apoio/<int:pedido_id>', api_apoio_atualizar),

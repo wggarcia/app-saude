@@ -52,6 +52,14 @@ def gestao_corporativa(request):
     return render(request, "gestao_corporativa.html", {"empresa_nome": empresa.nome})
 
 
+@requer_setor("empresa")
+def gestao_plataforma(request):
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return redirect("/")
+    return render(request, "gestao_plataforma.html", {"empresa_nome": empresa.nome})
+
+
 # ── APOIO ─────────────────────────────────────────────────────────────────────
 
 @api_requer_setor("empresa")
