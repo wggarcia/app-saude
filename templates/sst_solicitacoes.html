@@ -43,17 +43,18 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .ftab{padding:5px 11px;border-radius:6px;font-size:.72rem;font-weight:600;cursor:pointer;color:var(--muted);border:1px solid var(--line);background:none;font-family:inherit;transition:all .15s}
 .ftab.active{color:var(--teal);background:rgba(0,201,167,.08);border-color:rgba(0,201,167,.2)}
 .tbl{width:100%;border-collapse:collapse}
-.tbl thead th{padding:10px 14px;text-align:left;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+.tbl thead th{padding:10px 14px;text-align:left;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap}
 .tbl tbody tr{border-bottom:1px solid var(--line)}
 .tbl tbody tr:last-child{border-bottom:none}
 .tbl tbody tr:hover{background:rgba(255,255,255,.02)}
-.tbl td{padding:10px 14px;font-size:.79rem;color:var(--text);vertical-align:middle}
+.tbl td{padding:10px 14px;font-size:.79rem;vertical-align:middle}
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:.63rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
 .b-verde{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.18)}
 .b-vermelho{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.18)}
 .b-amarelo{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.18)}
 .b-azul{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.18)}
 .b-cinza{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line)}
+.b-roxo{background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.18)}
 .row-actions{display:flex;gap:5px}
 .btn-row{padding:3px 9px;border-radius:5px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.68rem;cursor:pointer;font-family:inherit;transition:all .15s}
 .btn-row:hover{border-color:var(--teal);color:var(--teal)}
@@ -61,9 +62,10 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .empty-state{padding:40px;text-align:center;color:var(--muted)}
 .empty-state .ei{font-size:2rem;margin-bottom:10px}
 .empty-state h3{font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:5px}
-.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px}
 .modal-bg.open{display:flex}
-.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:580px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:700px;max-width:95vw;margin:auto}
 .modal h3{font-size:1rem;font-weight:800;margin-bottom:4px}
 .modal-sub{font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.5}
 .mf{margin-bottom:10px}
@@ -76,22 +78,47 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .mf-check{display:flex;align-items:center;gap:8px;padding:6px 0}
 .mf-check input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:pointer}
 .mf-check label{font-size:.82rem;color:var(--text);cursor:pointer}
-.exames-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:200px;overflow-y:auto;padding:8px;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:7px}
-.exame-item{display:flex;align-items:center;gap:7px;cursor:pointer}
-.exame-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--teal);cursor:pointer;flex-shrink:0}
-.exame-item label{font-size:.75rem;color:var(--text);cursor:pointer;line-height:1.3}
+/* Modo envio */
+.modo-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.modo-card{padding:12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;transition:all .15s;text-align:center}
+.modo-card:hover{border-color:rgba(0,201,167,.3);background:rgba(0,201,167,.04)}
+.modo-card.active{border-color:var(--teal);background:rgba(0,201,167,.07)}
+.modo-card .mc-icon{font-size:1.4rem;margin-bottom:6px}
+.modo-card .mc-title{font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:3px}
+.modo-card .mc-sub{font-size:.67rem;color:var(--muted);line-height:1.4}
+/* Exames por categoria */
+.cat-section{margin-bottom:8px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.cat-header{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(255,255,255,.03);cursor:pointer;user-select:none}
+.cat-header:hover{background:rgba(255,255,255,.05)}
+.cat-title{font-size:.74rem;font-weight:700;color:var(--text)}
+.cat-count{font-size:.65rem;color:var(--muted)}
+.cat-arrow{font-size:.7rem;color:var(--muted);transition:transform .2s}
+.cat-arrow.open{transform:rotate(90deg)}
+.cat-body{display:none;padding:8px 12px;display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.cat-body.collapsed{display:none}
+.exame-item{display:flex;align-items:flex-start;gap:7px;cursor:pointer;padding:3px 0}
+.exame-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--teal);cursor:pointer;flex-shrink:0;margin-top:2px}
+.exame-item label{font-size:.73rem;color:var(--text);cursor:pointer;line-height:1.35}
+.exames-busca{width:100%;padding:8px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:.82rem;outline:none;font-family:inherit;margin-bottom:8px}
+.exames-busca:focus{border-color:var(--teal)}
+.selecionados-strip{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:28px;padding:4px;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:7px}
+.sel-tag{display:flex;align-items:center;gap:4px;padding:2px 8px;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.2);border-radius:4px;font-size:.67rem;color:var(--teal);font-weight:600}
+.sel-tag button{background:none;border:none;color:var(--teal);cursor:pointer;font-size:.75rem;line-height:1;padding:0 2px}
 .modal-acts{display:flex;gap:8px;margin-top:16px}
 .btn-cancel{flex:1;padding:9px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:none;color:var(--muted);font-family:inherit;cursor:pointer}
 .btn-submit{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-weight:800;font-family:inherit;cursor:pointer}
-.aviso{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.15);border-radius:10px;font-size:.78rem;color:var(--muted);line-height:1.6}
-.aviso strong{color:#60a5fa;display:block;margin-bottom:2px}
+.aviso{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:8px;font-size:.77rem;line-height:1.5}
+.aviso-info{background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.15);color:var(--muted)}
+.aviso-info strong{color:#60a5fa}
+.aviso-warn{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2);color:var(--muted)}
+.aviso-warn strong{color:var(--amber)}
 .toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
 .toast{padding:10px 16px;border-radius:8px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:8px;animation:slideIn .2s ease;max-width:320px}
 .toast.ok{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#4ade80}
 .toast.err{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171}
 @keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
-@media(max-width:768px){.main{margin-left:0;padding:12px}.sidebar{display:none}.kpi-strip{grid-template-columns:1fr 1fr}.mf-row{grid-template-columns:1fr}.exames-grid{grid-template-columns:1fr}}
+@media(max-width:768px){.main{margin-left:0;padding:12px}.sidebar{display:none}.kpi-strip{grid-template-columns:1fr 1fr}.mf-row{grid-template-columns:1fr}.modo-tabs{grid-template-columns:1fr}.cat-body{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -101,9 +128,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <a href="/dashboard-empresa/">Painel</a>
     <a href="/sst/funcionarios/">Funcionários</a>
     <a href="/sst/asos/">ASO</a>
-    <a href="/sst/exames/">Exames</a>
     <a href="/sst/solicitacoes/" class="active">Pedidos de Exame</a>
-    <a href="/sst/cats/">CAT</a>
     <a href="/sst/esocial/">eSocial</a>
   </nav>
   <div class="tb-actions">
@@ -117,10 +142,9 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👤</span><span>Funcionários</span></a>
     <a class="sb-link" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span></a>
     <a class="sb-link active" href="/sst/solicitacoes/"><span class="sb-icon">📨</span><span>Pedidos de Exame</span></a>
-    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🩺</span><span>Exames</span></a>
+    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🩺</span><span>Exames Agendados</span></a>
     <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
     <a class="sb-link" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
-    <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">📂</span><span>Documentos</span></a>
     <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPIs</span></a>
     <a class="sb-link" href="/sst/postos/"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
     <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">📡</span><span>eSocial</span></a>
@@ -131,21 +155,16 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <div class="page-header">
       <div>
         <h1>Pedidos de Exame Ocupacional</h1>
-        <p>Solicite exames para seus funcionários e envie o pedido diretamente para a clínica credenciada. A clínica recebe, agenda e confirma a realização.</p>
+        <p>Solicite exames para funcionários e envie à clínica — cadastrada no SolusCRT ou por email. Mais de 90 tipos de exames para todos os ramos e funções.</p>
       </div>
       <button class="btn-main" onclick="abrirModal()">+ Novo Pedido</button>
-    </div>
-
-    <div class="aviso" id="aviso-sem-clinica" style="display:none">
-      <span>🏥</span>
-      <div><strong>Nenhuma clínica vinculada</strong>Para enviar pedidos de exame, primeiro vincule uma clínica em <a href="/gestao/plataforma/" style="color:var(--teal)">Plataforma & API → Clínicas</a>. Você também pode criar pedidos internos sem clínica selecionada.</div>
     </div>
 
     <div class="kpi-strip">
       <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Pendentes</div><div class="kpi-val" id="k-pend">—</div><div class="kpi-sub">aguardando clínica</div></div>
       <div class="kpi-card" style="--kc:var(--blue)"><div class="kpi-label">Agendados</div><div class="kpi-val" id="k-agend">—</div><div class="kpi-sub">com data marcada</div></div>
-      <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Realizados</div><div class="kpi-val" id="k-real">—</div><div class="kpi-sub">exames concluídos</div></div>
-      <div class="kpi-card" style="--kc:var(--muted)"><div class="kpi-label">Total</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub">todos os pedidos</div></div>
+      <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Realizados</div><div class="kpi-val" id="k-real">—</div><div class="kpi-sub">concluídos</div></div>
+      <div class="kpi-card" style="--kc:var(--muted)"><div class="kpi-label">Total</div><div class="kpi-val" id="k-total">—</div></div>
     </div>
 
     <div class="table-wrap">
@@ -160,28 +179,29 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       </div>
       <table class="tbl">
         <thead><tr>
-          <th>Funcionário</th><th>Cargo</th><th>Tipo ASO</th><th>Exames</th><th>Clínica</th><th>Solicitado em</th><th>Status</th><th>Ações</th>
+          <th>Funcionário / Cargo</th><th>Tipo ASO</th><th>Exames</th><th>Destino</th><th>Solicitado em</th><th>Status</th><th>Ações</th>
         </tr></thead>
         <tbody id="solBody">
-          <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Carregando...</td></tr>
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Carregando...</td></tr>
         </tbody>
       </table>
     </div>
   </main>
 </div>
 
-<!-- Modal: Novo pedido -->
+<!-- Modal Novo Pedido -->
 <div class="modal-bg" id="modal">
   <div class="modal">
     <h3>Novo Pedido de Exame</h3>
-    <p class="modal-sub">Selecione o funcionário, o tipo de ASO e os exames necessários. O pedido será enviado à clínica selecionada.</p>
+    <p class="modal-sub">Selecione o funcionário, os exames e como enviar à clínica.</p>
 
+    <!-- Passo 1: Funcionário + tipo -->
     <div class="mf-row">
-      <div class="mf"><label>Funcionário *</label><select id="s-func"><option value="">Selecione...</option></select></div>
+      <div class="mf"><label>Funcionário *</label><select id="s-func"><option value="">Carregando...</option></select></div>
       <div class="mf"><label>Tipo de ASO *</label>
         <select id="s-tipo">
           <option value="admissional">Admissional</option>
-          <option value="periodico">Periódico</option>
+          <option value="periodico" selected>Periódico</option>
           <option value="retorno_trabalho">Retorno ao Trabalho</option>
           <option value="mudanca_risco">Mudança de Risco</option>
           <option value="demissional">Demissional</option>
@@ -189,22 +209,71 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       </div>
     </div>
 
-    <div class="mf"><label>Clínica destinatária</label>
-      <select id="s-clinica"><option value="">Sem clínica (pedido interno)</option></select>
-    </div>
-
+    <!-- Passo 2: Exames -->
     <div class="mf">
-      <label>Exames solicitados</label>
-      <div class="exames-grid" id="examesGrid"></div>
+      <label>Exames solicitados <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">— busque ou expanda as categorias</span></label>
+      <input class="exames-busca" id="exameBusca" placeholder="Ex: audiometria, hemograma, ECG, toxicológico..." oninput="filtrarExames(this.value)">
+      <div id="selecionadosStrip" class="selecionados-strip"><span style="color:var(--muted);font-size:.7rem;padding:4px">Nenhum exame selecionado</span></div>
+      <div id="catalogoContainer" style="max-height:280px;overflow-y:auto"></div>
     </div>
 
-    <div class="mf"><label>Observações / instruções de preparo</label><textarea id="s-obs" placeholder="Ex: Funcionário deve fazer jejum de 12h, trazer RG e CTPS..."></textarea></div>
+    <!-- Passo 3: Destino -->
+    <div class="mf">
+      <label>Como enviar</label>
+      <div class="modo-tabs">
+        <div class="modo-card active" id="modo-sistema" onclick="setModo('sistema')">
+          <div class="mc-icon">🏥</div>
+          <div class="mc-title">Clínica no SolusCRT</div>
+          <div class="mc-sub">Clínica já cadastrada e vinculada à sua empresa</div>
+        </div>
+        <div class="modo-card" id="modo-email" onclick="setModo('email')">
+          <div class="mc-icon">📧</div>
+          <div class="mc-title">Enviar por Email</div>
+          <div class="mc-sub">Clínica recebe o pedido por email, sem precisar do sistema</div>
+        </div>
+        <div class="modo-card" id="modo-interno" onclick="setModo('interno')">
+          <div class="mc-icon">📋</div>
+          <div class="mc-title">Pedido Interno</div>
+          <div class="mc-sub">Registro interno sem envio imediato — entrega pessoalmente</div>
+        </div>
+      </div>
 
-    <div class="mf-check"><input type="checkbox" id="s-urgente"><label for="s-urgente">Urgente — prioridade de agendamento</label></div>
+      <!-- Clínica no sistema -->
+      <div id="campos-sistema">
+        <div class="mf"><label>Clínica vinculada *</label><select id="s-clinica-sistema"><option value="">Nenhuma clínica vinculada</option></select></div>
+        <div class="aviso aviso-info" id="aviso-sem-clinica" style="display:none">
+          <span>💡</span><div><strong>Sem clínicas vinculadas</strong> Vincule uma clínica em <a href="/gestao/plataforma/" style="color:var(--teal)">Plataforma & API</a> para enviar pedidos digitalmente. Ou use "Enviar por Email".</div>
+        </div>
+      </div>
+
+      <!-- Por email -->
+      <div id="campos-email" style="display:none">
+        <div class="mf-row">
+          <div class="mf"><label>Nome da clínica *</label><input id="s-clinica-nome" placeholder="Ex: Clínica Ocupacional São Paulo"></div>
+          <div class="mf"><label>Email da clínica *</label><input type="email" id="s-clinica-email" placeholder="contato@clinica.com.br"></div>
+        </div>
+        <div class="aviso aviso-info">
+          <span>📧</span><div>A clínica receberá um email com todos os dados do funcionário, exames solicitados e instruções. <strong>Ela não precisa estar cadastrada no SolusCRT.</strong></div>
+        </div>
+        <div class="aviso aviso-warn" style="margin-top:8px">
+          <span>💡</span><div><strong>Quer que a clínica use o SolusCRT?</strong> Após salvar, você pode convidá-la a criar uma conta gratuita em <a href="/gestao/plataforma/" style="color:var(--amber)">Plataforma & API → Convidar Clínica</a>.</div>
+        </div>
+      </div>
+
+      <!-- Interno -->
+      <div id="campos-interno" style="display:none">
+        <div class="aviso aviso-info">
+          <span>📋</span><div>O pedido ficará salvo no sistema. Imprima ou entregue pessoalmente à clínica. O status poderá ser atualizado manualmente.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mf"><label>Observações / instruções de preparo</label><textarea id="s-obs" placeholder="Ex: Jejum de 12h, trazer RG e CTPS, não usar protetor auricular 14h antes da audiometria..."></textarea></div>
+    <div class="mf-check"><input type="checkbox" id="s-urgente"><label for="s-urgente">⚡ Urgente — sinalizar prioridade à clínica</label></div>
 
     <div class="modal-acts">
       <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
-      <button class="btn-submit" onclick="salvar()">Enviar Pedido</button>
+      <button class="btn-submit" id="btnSalvar" onclick="salvar()">Enviar Pedido</button>
     </div>
   </div>
 </div>
@@ -212,162 +281,254 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-let _todos = [];
-let _examesPadrao = [];
-let _clinicas = [];
+let _todos = [], _catalogo = [], _clinicas = [], _funcionarios = [];
+let _modo = 'sistema';
+let _selecionados = new Set();
 let _filtro = '';
 
 function toast(msg, tipo='ok'){
-  const t=document.createElement('div');
-  t.className=`toast ${tipo}`;t.textContent=msg;
-  document.getElementById('toastContainer').appendChild(t);
-  setTimeout(()=>t.remove(),3500);
+  const t=document.createElement('div');t.className=`toast ${tipo}`;t.textContent=msg;
+  document.getElementById('toastContainer').appendChild(t);setTimeout(()=>t.remove(),4000);
 }
-
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-const STATUS_BADGE = {
-  pendente: 'b-amarelo',
-  agendado: 'b-azul',
-  realizado: 'b-verde',
-  cancelado: 'b-cinza',
-};
-const STATUS_LABEL = {
-  pendente:'Pendente', agendado:'Agendado', realizado:'Realizado', cancelado:'Cancelado'
-};
+const SB = {pendente:'b-amarelo',agendado:'b-azul',realizado:'b-verde',cancelado:'b-cinza'};
+const SL = {pendente:'Pendente',agendado:'Agendado',realizado:'Realizado',cancelado:'Cancelado'};
 
 async function carregar(){
   try{
-    const r = await fetch('/api/sst/solicitacoes-exame',{credentials:'include'});
-    const d = await r.json();
+    const r=await fetch('/api/sst/solicitacoes-exame',{credentials:'include'});
+    const d=await r.json();
     if(!r.ok){toast(d.erro||'Erro','err');return;}
-    _todos = d.solicitacoes||[];
-    _examesPadrao = d.exames_padrao||[];
-    renderKpis();
-    renderTabela();
-    renderExamesGrid();
+    _todos=d.solicitacoes||[];
+    _catalogo=d.catalogo||[];
+    renderKpis();renderTabela();renderCatalogo(_catalogo);
   }catch(e){toast('Erro de conexão','err');}
 }
 
 async function carregarClinicas(){
   try{
-    const r = await fetch('/api/sst/clinicas-disponiveis',{credentials:'include'});
-    const d = await r.json();
-    _clinicas = d.clinicas||[];
-    const sel = document.getElementById('s-clinica');
-    sel.innerHTML = '<option value="">Sem clínica (pedido interno)</option>' +
-      _clinicas.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('');
-    if(!_clinicas.length) document.getElementById('aviso-sem-clinica').style.display='flex';
+    const r=await fetch('/api/sst/clinicas-disponiveis',{credentials:'include'});
+    const d=await r.json();
+    _clinicas=d.clinicas||[];
+    const sel=document.getElementById('s-clinica-sistema');
+    if(_clinicas.length){
+      sel.innerHTML=_clinicas.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+      document.getElementById('aviso-sem-clinica').style.display='none';
+    }else{
+      sel.innerHTML='<option value="">Nenhuma clínica vinculada</option>';
+      document.getElementById('aviso-sem-clinica').style.display='flex';
+    }
   }catch(e){}
 }
 
 async function carregarFuncionarios(){
   try{
-    const r = await fetch('/api/sst/funcionarios',{credentials:'include'});
-    const d = await r.json();
-    const sel = document.getElementById('s-func');
-    sel.innerHTML = '<option value="">Selecione...</option>' +
-      (d.funcionarios||[]).map(f=>`<option value="${f.id}">${esc(f.nome)} — ${esc(f.cargo)}</option>`).join('');
+    const r=await fetch('/api/sst/funcionarios',{credentials:'include'});
+    const d=await r.json();
+    _funcionarios=d.funcionarios||[];
+    const sel=document.getElementById('s-func');
+    sel.innerHTML='<option value="">Selecione...</option>'+
+      _funcionarios.map(f=>`<option value="${f.id}">${esc(f.nome)} — ${esc(f.cargo)}</option>`).join('');
   }catch(e){}
 }
 
 function renderKpis(){
-  document.getElementById('k-pend').textContent = _todos.filter(s=>s.status==='pendente').length;
-  document.getElementById('k-agend').textContent = _todos.filter(s=>s.status==='agendado').length;
-  document.getElementById('k-real').textContent = _todos.filter(s=>s.status==='realizado').length;
-  document.getElementById('k-total').textContent = _todos.length;
+  document.getElementById('k-pend').textContent=_todos.filter(s=>s.status==='pendente').length;
+  document.getElementById('k-agend').textContent=_todos.filter(s=>s.status==='agendado').length;
+  document.getElementById('k-real').textContent=_todos.filter(s=>s.status==='realizado').length;
+  document.getElementById('k-total').textContent=_todos.length;
 }
 
-function filtrar(f, btn){
+function filtrar(f,btn){
   _filtro=f;
   document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderTabela();
+  btn.classList.add('active');renderTabela();
 }
 
 function renderTabela(){
-  const lista = _filtro ? _todos.filter(s=>s.status===_filtro) : _todos;
-  const tbody = document.getElementById('solBody');
+  const lista=_filtro?_todos.filter(s=>s.status===_filtro):_todos;
+  const tbody=document.getElementById('solBody');
   if(!lista.length){
-    tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="ei">📨</div><h3>Nenhum pedido encontrado</h3><p>Crie um novo pedido de exame para um funcionário e envie para a clínica.</p></div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="ei">📨</div><h3>Nenhum pedido</h3><p>Crie um novo pedido de exame acima.</p></div></td></tr>`;
     return;
   }
-  tbody.innerHTML = lista.map(s=>`
+  tbody.innerHTML=lista.map(s=>`
     <tr>
-      <td><strong>${esc(s.funcionario_nome)}</strong><br><span style="color:var(--muted);font-size:.7rem">${esc(s.funcionario_cpf)||'—'}</span></td>
-      <td style="color:var(--muted)">${esc(s.funcionario_cargo)}</td>
-      <td>${esc(s.tipo_aso_label)}${s.urgente?` <span class="badge b-vermelho" style="margin-left:4px">Urgente</span>`:''}</td>
-      <td style="max-width:180px">
-        ${s.exames.length
-          ? `<span style="font-size:.73rem;color:var(--muted)">${s.exames.slice(0,2).map(e=>esc(e)).join(', ')}${s.exames.length>2?` +${s.exames.length-2} mais`:''}</span>`
-          : '<span style="color:var(--muted)">—</span>'}
+      <td><strong>${esc(s.funcionario_nome)}</strong><br><span style="color:var(--muted);font-size:.7rem">${esc(s.funcionario_cargo)}</span></td>
+      <td>${esc(s.tipo_aso_label)}${s.urgente?' <span class="badge b-vermelho">Urgente</span>':''}</td>
+      <td style="max-width:200px"><span style="font-size:.72rem;color:var(--muted)">${
+        s.exames.length?s.exames.slice(0,2).map(esc).join(', ')+(s.exames.length>2?` <span class="badge b-cinza">+${s.exames.length-2}</span>`:''):'<em>a definir</em>'
+      }</span></td>
+      <td>
+        ${s.clinica_id?`<span class="badge b-verde">No sistema</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span>`:''}
+        ${!s.clinica_id&&s.clinica_email_externo?`<span class="badge b-azul">Email</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span>${s.email_enviado?'<br><span style="font-size:.67rem;color:#4ade80">✓ Enviado</span>':'<br><span style="font-size:.67rem;color:var(--amber)">⏳ Pendente</span>'}`:'' }
+        ${!s.clinica_id&&!s.clinica_email_externo?`<span class="badge b-cinza">Interno</span>`:''}
       </td>
-      <td>${esc(s.clinica_nome)}</td>
-      <td style="color:var(--muted);white-space:nowrap">${s.data_solicitacao}${s.data_agendamento?`<br><span style="color:var(--blue)">Agend: ${s.data_agendamento}</span>`:''}</td>
-      <td><span class="badge ${STATUS_BADGE[s.status]||'b-cinza'}">${STATUS_LABEL[s.status]||s.status}</span>${s.resposta_clinica?`<br><span style="font-size:.68rem;color:var(--muted)">${esc(s.resposta_clinica.slice(0,40))}${s.resposta_clinica.length>40?'...':''}</span>`:''}</td>
+      <td style="color:var(--muted);font-size:.77rem">${s.data_solicitacao}${s.data_agendamento?`<br><span style="color:var(--blue)">Agend: ${s.data_agendamento}</span>`:''}</td>
+      <td><span class="badge ${SB[s.status]||'b-cinza'}">${SL[s.status]||s.status}</span></td>
       <td>
         <div class="row-actions">
+          ${!s.clinica_id&&s.clinica_email_externo&&!s.email_enviado?`<button class="btn-row" onclick="reenviarEmail(${s.id})">📧 Enviar</button>`:'' }
           ${s.status==='pendente'?`<button class="btn-row danger" onclick="cancelar(${s.id})">Cancelar</button>`:''}
         </div>
       </td>
     </tr>`).join('');
 }
 
-function renderExamesGrid(){
-  document.getElementById('examesGrid').innerHTML = _examesPadrao.map((e,i)=>`
-    <div class="exame-item">
-      <input type="checkbox" id="ex-${i}" value="${esc(e)}">
-      <label for="ex-${i}">${esc(e)}</label>
-    </div>`).join('');
+// ── Catálogo de exames ────────────────────────────────────────────────────────
+function renderCatalogo(cats, busca=''){
+  const cont=document.getElementById('catalogoContainer');
+  const q=busca.toLowerCase().trim();
+  cont.innerHTML=cats.map((cat,ci)=>{
+    const itens=cat.exames.filter(e=>!q||e.toLowerCase().includes(q));
+    if(!itens.length) return '';
+    const aberto=!!q||ci===0;
+    return `<div class="cat-section">
+      <div class="cat-header" onclick="toggleCat(${ci})">
+        <span class="cat-title">${esc(cat.categoria)}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span class="cat-count">${itens.length} exames</span>
+          <span class="cat-arrow${aberto?' open':''}" id="arr-${ci}">▶</span>
+        </span>
+      </div>
+      <div class="cat-body${aberto?'':' collapsed'}" id="cat-${ci}">
+        ${itens.map(e=>{
+          const idx=encodeURIComponent(e);
+          const checked=_selecionados.has(e)?'checked':'';
+          return `<div class="exame-item"><input type="checkbox" id="ex-${idx}" ${checked} onchange="toggleExame('${e.replace(/'/g,"\\'")}',this.checked)"><label for="ex-${idx}">${esc(e)}</label></div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
 }
 
+function toggleCat(ci){
+  const body=document.getElementById(`cat-${ci}`);
+  const arr=document.getElementById(`arr-${ci}`);
+  if(body.classList.contains('collapsed')){body.classList.remove('collapsed');arr.classList.add('open');}
+  else{body.classList.add('collapsed');arr.classList.remove('open');}
+}
+
+function filtrarExames(q){
+  renderCatalogo(_catalogo,q);
+}
+
+function toggleExame(nome,checked){
+  if(checked) _selecionados.add(nome);
+  else _selecionados.delete(nome);
+  renderSelecionados();
+  // re-render to sync checkboxes in any other visible instance
+}
+
+function renderSelecionados(){
+  const strip=document.getElementById('selecionadosStrip');
+  if(!_selecionados.size){
+    strip.innerHTML='<span style="color:var(--muted);font-size:.7rem;padding:4px">Nenhum exame selecionado</span>';
+    return;
+  }
+  strip.innerHTML=[..._selecionados].map(e=>
+    `<span class="sel-tag">${esc(e.length>35?e.slice(0,33)+'…':e)}<button onclick="removeExame('${e.replace(/'/g,"\\'")}')">×</button></span>`
+  ).join('');
+}
+
+function removeExame(nome){
+  _selecionados.delete(nome);
+  renderSelecionados();
+  renderCatalogo(_catalogo,document.getElementById('exameBusca').value);
+}
+
+// ── Modo de envio ─────────────────────────────────────────────────────────────
+function setModo(m){
+  _modo=m;
+  ['sistema','email','interno'].forEach(x=>{
+    document.getElementById(`modo-${x}`).classList.toggle('active',x===m);
+    document.getElementById(`campos-${x}`).style.display=x===m?'block':'none';
+  });
+  const btn=document.getElementById('btnSalvar');
+  btn.textContent=m==='email'?'Salvar e Enviar Email':m==='sistema'?'Enviar à Clínica':'Salvar Pedido';
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
 function abrirModal(){
+  _selecionados.clear();
+  renderSelecionados();
+  document.getElementById('s-func').value='';
+  document.getElementById('s-tipo').value='periodico';
+  document.getElementById('s-obs').value='';
+  document.getElementById('s-urgente').checked=false;
+  document.getElementById('exameBusca').value='';
+  setModo('sistema');
+  renderCatalogo(_catalogo,'');
   document.getElementById('modal').classList.add('open');
 }
 function fecharModal(){document.getElementById('modal').classList.remove('open');}
 
 async function salvar(){
-  const funcId = document.getElementById('s-func').value;
+  const funcId=document.getElementById('s-func').value;
   if(!funcId){toast('Selecione o funcionário','err');return;}
-  const tipo = document.getElementById('s-tipo').value;
-  const clinicaId = document.getElementById('s-clinica').value;
-  const obs = document.getElementById('s-obs').value.trim();
-  const urgente = document.getElementById('s-urgente').checked;
-  const exames = [...document.querySelectorAll('#examesGrid input:checked')].map(cb=>cb.value);
+  const tipo=document.getElementById('s-tipo').value;
+  const obs=document.getElementById('s-obs').value.trim();
+  const urgente=document.getElementById('s-urgente').checked;
+  const exames=[..._selecionados];
 
+  const payload={funcionario_id:parseInt(funcId),tipo_aso:tipo,exames,urgente,observacoes:obs,modo:_modo};
+
+  if(_modo==='sistema'){
+    const cid=document.getElementById('s-clinica-sistema').value;
+    if(!cid&&_clinicas.length){toast('Selecione a clínica','err');return;}
+    if(cid) payload.clinica_id=parseInt(cid);
+  } else if(_modo==='email'){
+    const email=document.getElementById('s-clinica-email').value.trim();
+    const nome=document.getElementById('s-clinica-nome').value.trim();
+    if(!email){toast('Informe o email da clínica','err');return;}
+    payload.clinica_email=email;
+    payload.clinica_nome=nome;
+  }
+
+  const btn=document.getElementById('btnSalvar');
+  btn.disabled=true;btn.textContent='Enviando...';
   try{
-    const r = await fetch('/api/sst/solicitacoes-exame',{
+    const r=await fetch('/api/sst/solicitacoes-exame',{
       method:'POST',credentials:'include',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        funcionario_id:parseInt(funcId),
-        tipo_aso:tipo,
-        clinica_id:clinicaId?parseInt(clinicaId):null,
-        exames,
-        urgente,
-        observacoes:obs,
-      })
+      body:JSON.stringify(payload)
     });
-    const d = await r.json();
+    const d=await r.json();
     if(!r.ok){toast(d.erro||'Erro ao criar pedido','err');return;}
-    toast('Pedido enviado à clínica!');
-    fecharModal();
-    carregar();
+    const msgs={sistema:'Pedido enviado à clínica!',email:'Pedido salvo e email enviado!',interno:'Pedido salvo!'};
+    toast(msgs[_modo]||'Pedido criado!');
+    if(d.aviso_email) toast(d.aviso_email,'err');
+    fecharModal();carregar();
   }catch(e){toast('Erro de conexão','err');}
+  finally{btn.disabled=false;btn.textContent=_modo==='email'?'Salvar e Enviar Email':_modo==='sistema'?'Enviar à Clínica':'Salvar Pedido';}
 }
 
 async function cancelar(id){
   if(!confirm('Cancelar este pedido?')) return;
   try{
-    const r = await fetch(`/api/sst/solicitacoes-exame/${id}`,{method:'DELETE',credentials:'include'});
-    if(!r.ok){toast('Erro ao cancelar','err');return;}
-    toast('Pedido cancelado');
-    carregar();
+    const r=await fetch(`/api/sst/solicitacoes-exame/${id}`,{method:'DELETE',credentials:'include'});
+    if(!r.ok){const d=await r.json();toast(d.erro||'Erro','err');return;}
+    toast('Pedido cancelado');carregar();
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+async function reenviarEmail(id){
+  try{
+    const r=await fetch(`/api/sst/solicitacoes-exame/${id}`,{
+      method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({acao:'reenviar_email'})
+    });
+    const d=await r.json();
+    if(!r.ok){toast(d.erro||'Erro ao enviar','err');return;}
+    toast('Email reenviado!');carregar();
   }catch(e){toast('Erro de conexão','err');}
 }
 
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))fecharModal();});
 
+// Init
 carregar();
 carregarClinicas();
 carregarFuncionarios();
