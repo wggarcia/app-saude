@@ -886,6 +886,8 @@ class ASOOcupacional(models.Model):
     medico_responsavel = models.CharField(max_length=200, blank=True)
     crm = models.CharField(max_length=30, blank=True)
     resultado = models.CharField(max_length=20, choices=RESULTADO, default="apto")
+    cid_inapto = models.CharField(max_length=10, blank=True, verbose_name="CID (quando inapto/restrito)")
+    riscos_ocupacionais = models.TextField(blank=True, verbose_name="Riscos ocupacionais do cargo (NR-7)")
     restricoes = models.TextField(blank=True)
     observacoes = models.TextField(blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
