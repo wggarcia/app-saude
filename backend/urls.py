@@ -203,6 +203,15 @@ from api.views_clinica import (
     api_empresa_aso_recebido_acao,
     api_empresa_vinculos_clinicas,
 )
+from api.views_solicitacao_exame import (
+    sst_solicitacoes_page,
+    api_solicitacoes_exame,
+    api_solicitacao_detalhe,
+    api_clinicas_disponiveis,
+    clinica_solicitacoes_page,
+    api_clinica_solicitacoes,
+    api_clinica_solicitacao_acao,
+)
 from api.views_gestao import (
     gestao_corporativa,
     gestao_plataforma,
@@ -996,4 +1005,15 @@ urlpatterns = [
     path('api/empresa/clinicas-vinculadas', api_empresa_vinculos_clinicas),
     path('api/clinica/aceitar/<str:token>', api_aceitar_vinculo),
     path('clinica/aceitar/<str:token>/', pagina_aceitar_convite),
+    # Solicitações de exame (empresa → clínica)
+    path('sst/solicitacoes/', sst_solicitacoes_page),
+    path('api/sst/solicitacoes-exame', api_solicitacoes_exame),
+    path('api/sst/solicitacoes-exame/', api_solicitacoes_exame),
+    path('api/sst/solicitacoes-exame/<int:sol_id>', api_solicitacao_detalhe),
+    path('api/sst/clinicas-disponiveis', api_clinicas_disponiveis),
+    path('api/sst/clinicas-disponiveis/', api_clinicas_disponiveis),
+    path('clinica/solicitacoes/', clinica_solicitacoes_page),
+    path('api/clinica/solicitacoes-exame', api_clinica_solicitacoes),
+    path('api/clinica/solicitacoes-exame/', api_clinica_solicitacoes),
+    path('api/clinica/solicitacoes-exame/<int:sol_id>/acao', api_clinica_solicitacao_acao),
 ]

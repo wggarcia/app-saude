@@ -187,7 +187,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       <div class="mf"><label>Houve Afastamento?</label><select id="c-afas"><option value="">Não</option><option value="1">Sim</option></select></div>
     </div>
     <div class="mf-row">
-      <div class="mf"><label>CID da Doença do Trabalho</label><select id="c-cid" disabled><option value="">Selecione Doença Ocupacional no tipo</option></select></div>
+      <div class="mf"><label>CID do Acidente / Doença</label><input id="c-cid" type="text" list="cid-list" placeholder="Digite o código ou nome — ex: S60, M54.5, Dorsalgia" autocomplete="off"><datalist id="cid-list"></datalist></div>
       <div class="mf"><label>Parte do Corpo</label><input id="c-parte" type="text" placeholder="Ex: Mão direita"></div>
     </div>
     <div class="mf"><label>Local do Acidente</label><input id="c-local" type="text" placeholder="Ex: Linha de produção 3"></div>
@@ -228,20 +228,10 @@ function closeModal(){document.getElementById("modal").classList.remove("open")}
 document.getElementById("modal").addEventListener("click",e=>{if(e.target===document.getElementById("modal"))closeModal()});
 
 function renderCidSelect(){
-  const sel=document.getElementById("c-cid");
-  if(!_cidsSst.length){
-    sel.innerHTML='<option value="">Lista CID carregando...</option>';
-    return;
-  }
-  sel.innerHTML='<option value="">Selecione o CID ocupacional...</option>'+_cidsSst.map(g=>`<optgroup label="${g.grupo}">${g.itens.map(i=>`<option value="${i.codigo}">${i.codigo} — ${i.descricao}</option>`).join("")}</optgroup>`).join("");
+  const dl=document.getElementById("cid-list");
+  if(!_cidsSst.length) return;
+  dl.innerHTML=_cidsSst.flatMap(g=>g.itens.map(i=>`<option value="${i.codigo}">${i.codigo} — ${i.descricao}</option>`)).join("");
 }
-function toggleCidDoenca(){
-  const isDoenca=document.getElementById("c-tipo").value==="doenca";
-  const sel=document.getElementById("c-cid");
-  sel.disabled=!isDoenca||!_cidsSst.length;
-  if(!isDoenca)sel.value="";
-}
-document.getElementById("c-tipo").addEventListener("change",toggleCidDoenca);
 
 async function carregarCidsSst(){
   try{
@@ -251,11 +241,8 @@ async function carregarCidsSst(){
     const d=await r.json();
     _cidsSst=d.grupos||[];
     renderCidSelect();
-    toggleCidDoenca();
   }catch(e){
-    const sel=document.getElementById("c-cid");
-    sel.innerHTML='<option value="">Não foi possível carregar a lista CID SST</option>';
-    sel.disabled=true;
+    // silently ignore — user can still type CID manually
   }
 }
 

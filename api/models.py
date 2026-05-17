@@ -1126,6 +1126,53 @@ class ASOEnviadoClinica(models.Model):
         return f"ASO#{self.aso_id} via {self.vinculo}"
 
 
+class SolicitacaoExame(models.Model):
+    """Pedido de exame ocupacional emitido pela empresa e enviado à clínica credenciada."""
+    TIPO_ASO = [
+        ("admissional", "Admissional"),
+        ("periodico", "Periódico"),
+        ("retorno_trabalho", "Retorno ao Trabalho"),
+        ("mudanca_risco", "Mudança de Risco"),
+        ("demissional", "Demissional"),
+    ]
+    STATUS = [
+        ("pendente", "Pendente"),
+        ("agendado", "Agendado"),
+        ("realizado", "Realizado"),
+        ("cancelado", "Cancelado"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="solicitacoes_exame")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="solicitacoes_exame")
+    clinica = models.ForeignKey(
+        Empresa, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="solicitacoes_recebidas", verbose_name="Clínica destinatária",
+    )
+    vinculo = models.ForeignKey(
+        VinculoClinicaEmpresa, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="solicitacoes",
+    )
+    tipo_aso = models.CharField(max_length=30, choices=TIPO_ASO)
+    exames = models.TextField(blank=True, default="", verbose_name="Exames solicitados (JSON)")
+    urgente = models.BooleanField(default=False)
+    observacoes = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS, default="pendente")
+    data_solicitacao = models.DateTimeField(auto_now_add=True)
+    data_agendamento = models.DateField(null=True, blank=True)
+    data_realizacao = models.DateField(null=True, blank=True)
+    resposta_clinica = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-data_solicitacao"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["clinica", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Solicita ASO {self.tipo_aso} — {self.funcionario.nome}"
+
+
 class DocumentoSST(models.Model):
     TIPO = [
         ("PGR", "Programa de Gerenciamento de Riscos"),

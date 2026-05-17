@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · Pedidos de Exame</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2233;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.13);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7;--blue:#3b82f6;--amber:#f59e0b;--red:#ef4444;--green:#22c55e;--purple:#8b5cf6}
+html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:52px;display:flex;align-items:center;background:rgba(10,14,26,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(14px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:210px;border-right:1px solid var(--line);height:100%}
+.tb-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#0a0e1a;flex-shrink:0}
+.tb-nome{font-size:.8rem;font-weight:700}.tb-sub{font-size:.6rem;color:var(--muted);margin-top:1px}
+.tb-nav{display:flex;align-items:center;gap:1px;padding:0 14px;flex:1;overflow-x:auto}.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{padding:5px 11px;border-radius:6px;font-size:.75rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap}
+.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tb-nav a.active{color:var(--teal);background:rgba(0,201,167,.08)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.btn-main{padding:6px 13px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .2s}
+.btn-main:hover{opacity:.88}
+.app{display:flex;min-height:100vh;padding-top:52px}
+.sidebar{width:200px;flex-shrink:0;background:rgba(17,24,39,.55);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:52px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.77rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.06);border-left-color:var(--teal);font-weight:600}
+.sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
+.main{flex:1;margin-left:200px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.page-header h1{font-size:1.1rem;font-weight:800}
+.page-header p{font-size:.75rem;color:var(--muted);margin-top:3px;line-height:1.5}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.kpi-card{padding:14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
+.kpi-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--teal));opacity:.7}
+.kpi-label{font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi-val{font-size:1.7rem;font-weight:900;line-height:1}.kpi-sub{font-size:.67rem;color:var(--muted);margin-top:5px}
+.table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);gap:10px;flex-wrap:wrap}
+.table-header h3{font-size:.8rem;font-weight:700}
+.filter-tabs{display:flex;gap:4px}
+.ftab{padding:5px 11px;border-radius:6px;font-size:.72rem;font-weight:600;cursor:pointer;color:var(--muted);border:1px solid var(--line);background:none;font-family:inherit;transition:all .15s}
+.ftab.active{color:var(--teal);background:rgba(0,201,167,.08);border-color:rgba(0,201,167,.2)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl thead th{padding:10px 14px;text-align:left;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+.tbl tbody tr{border-bottom:1px solid var(--line)}
+.tbl tbody tr:last-child{border-bottom:none}
+.tbl tbody tr:hover{background:rgba(255,255,255,.02)}
+.tbl td{padding:10px 14px;font-size:.79rem;color:var(--text);vertical-align:middle}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:.63rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.b-verde{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.18)}
+.b-vermelho{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.18)}
+.b-amarelo{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.18)}
+.b-azul{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.18)}
+.b-cinza{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line)}
+.row-actions{display:flex;gap:5px}
+.btn-row{padding:3px 9px;border-radius:5px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.68rem;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-row:hover{border-color:var(--teal);color:var(--teal)}
+.btn-row.danger:hover{border-color:var(--red);color:var(--red)}
+.empty-state{padding:40px;text-align:center;color:var(--muted)}
+.empty-state .ei{font-size:2rem;margin-bottom:10px}
+.empty-state h3{font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:5px}
+.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:580px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:1rem;font-weight:800;margin-bottom:4px}
+.modal-sub{font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.mf{margin-bottom:10px}
+.mf label{display:block;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(226,238,255,.35);margin-bottom:5px}
+.mf input,.mf select,.mf textarea{width:100%;padding:9px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:.85rem;outline:none;font-family:inherit}
+.mf input:focus,.mf select:focus,.mf textarea:focus{border-color:var(--teal)}
+.mf select option{background:var(--surface)}
+.mf textarea{resize:vertical;min-height:60px}
+.mf-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mf-check{display:flex;align-items:center;gap:8px;padding:6px 0}
+.mf-check input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:pointer}
+.mf-check label{font-size:.82rem;color:var(--text);cursor:pointer}
+.exames-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:200px;overflow-y:auto;padding:8px;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:7px}
+.exame-item{display:flex;align-items:center;gap:7px;cursor:pointer}
+.exame-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--teal);cursor:pointer;flex-shrink:0}
+.exame-item label{font-size:.75rem;color:var(--text);cursor:pointer;line-height:1.3}
+.modal-acts{display:flex;gap:8px;margin-top:16px}
+.btn-cancel{flex:1;padding:9px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:none;color:var(--muted);font-family:inherit;cursor:pointer}
+.btn-submit{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-weight:800;font-family:inherit;cursor:pointer}
+.aviso{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.15);border-radius:10px;font-size:.78rem;color:var(--muted);line-height:1.6}
+.aviso strong{color:#60a5fa;display:block;margin-bottom:2px}
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:10px 16px;border-radius:8px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:8px;animation:slideIn .2s ease;max-width:320px}
+.toast.ok{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#4ade80}
+.toast.err{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171}
+@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+@media(max-width:768px){.main{margin-left:0;padding:12px}.sidebar{display:none}.kpi-strip{grid-template-columns:1fr 1fr}.mf-row{grid-template-columns:1fr}.exames-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="tb-logo"><div class="tb-icon">S</div><div><div class="tb-nome">SST</div><div class="tb-sub">Pedidos de Exame</div></div></div>
+  <nav class="tb-nav">
+    <a href="/dashboard-empresa/">Painel</a>
+    <a href="/sst/funcionarios/">Funcionários</a>
+    <a href="/sst/asos/">ASO</a>
+    <a href="/sst/exames/">Exames</a>
+    <a href="/sst/solicitacoes/" class="active">Pedidos de Exame</a>
+    <a href="/sst/cats/">CAT</a>
+    <a href="/sst/esocial/">eSocial</a>
+  </nav>
+  <div class="tb-actions">
+    <button class="btn-main" onclick="abrirModal()">+ Novo Pedido</button>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-label">SST</div>
+    <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👤</span><span>Funcionários</span></a>
+    <a class="sb-link" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span></a>
+    <a class="sb-link active" href="/sst/solicitacoes/"><span class="sb-icon">📨</span><span>Pedidos de Exame</span></a>
+    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🩺</span><span>Exames</span></a>
+    <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
+    <a class="sb-link" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
+    <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">📂</span><span>Documentos</span></a>
+    <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPIs</span></a>
+    <a class="sb-link" href="/sst/postos/"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
+    <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">📡</span><span>eSocial</span></a>
+    <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Pedidos de Exame Ocupacional</h1>
+        <p>Solicite exames para seus funcionários e envie o pedido diretamente para a clínica credenciada. A clínica recebe, agenda e confirma a realização.</p>
+      </div>
+      <button class="btn-main" onclick="abrirModal()">+ Novo Pedido</button>
+    </div>
+
+    <div class="aviso" id="aviso-sem-clinica" style="display:none">
+      <span>🏥</span>
+      <div><strong>Nenhuma clínica vinculada</strong>Para enviar pedidos de exame, primeiro vincule uma clínica em <a href="/gestao/plataforma/" style="color:var(--teal)">Plataforma & API → Clínicas</a>. Você também pode criar pedidos internos sem clínica selecionada.</div>
+    </div>
+
+    <div class="kpi-strip">
+      <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Pendentes</div><div class="kpi-val" id="k-pend">—</div><div class="kpi-sub">aguardando clínica</div></div>
+      <div class="kpi-card" style="--kc:var(--blue)"><div class="kpi-label">Agendados</div><div class="kpi-val" id="k-agend">—</div><div class="kpi-sub">com data marcada</div></div>
+      <div class="kpi-card" style="--kc:var(--green)"><div class="kpi-label">Realizados</div><div class="kpi-val" id="k-real">—</div><div class="kpi-sub">exames concluídos</div></div>
+      <div class="kpi-card" style="--kc:var(--muted)"><div class="kpi-label">Total</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub">todos os pedidos</div></div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-header">
+        <h3>Pedidos de exame</h3>
+        <div class="filter-tabs">
+          <button class="ftab active" onclick="filtrar('',this)">Todos</button>
+          <button class="ftab" onclick="filtrar('pendente',this)">Pendentes</button>
+          <button class="ftab" onclick="filtrar('agendado',this)">Agendados</button>
+          <button class="ftab" onclick="filtrar('realizado',this)">Realizados</button>
+        </div>
+      </div>
+      <table class="tbl">
+        <thead><tr>
+          <th>Funcionário</th><th>Cargo</th><th>Tipo ASO</th><th>Exames</th><th>Clínica</th><th>Solicitado em</th><th>Status</th><th>Ações</th>
+        </tr></thead>
+        <tbody id="solBody">
+          <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- Modal: Novo pedido -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>Novo Pedido de Exame</h3>
+    <p class="modal-sub">Selecione o funcionário, o tipo de ASO e os exames necessários. O pedido será enviado à clínica selecionada.</p>
+
+    <div class="mf-row">
+      <div class="mf"><label>Funcionário *</label><select id="s-func"><option value="">Selecione...</option></select></div>
+      <div class="mf"><label>Tipo de ASO *</label>
+        <select id="s-tipo">
+          <option value="admissional">Admissional</option>
+          <option value="periodico">Periódico</option>
+          <option value="retorno_trabalho">Retorno ao Trabalho</option>
+          <option value="mudanca_risco">Mudança de Risco</option>
+          <option value="demissional">Demissional</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mf"><label>Clínica destinatária</label>
+      <select id="s-clinica"><option value="">Sem clínica (pedido interno)</option></select>
+    </div>
+
+    <div class="mf">
+      <label>Exames solicitados</label>
+      <div class="exames-grid" id="examesGrid"></div>
+    </div>
+
+    <div class="mf"><label>Observações / instruções de preparo</label><textarea id="s-obs" placeholder="Ex: Funcionário deve fazer jejum de 12h, trazer RG e CTPS..."></textarea></div>
+
+    <div class="mf-check"><input type="checkbox" id="s-urgente"><label for="s-urgente">Urgente — prioridade de agendamento</label></div>
+
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-submit" onclick="salvar()">Enviar Pedido</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+let _todos = [];
+let _examesPadrao = [];
+let _clinicas = [];
+let _filtro = '';
+
+function toast(msg, tipo='ok'){
+  const t=document.createElement('div');
+  t.className=`toast ${tipo}`;t.textContent=msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+const STATUS_BADGE = {
+  pendente: 'b-amarelo',
+  agendado: 'b-azul',
+  realizado: 'b-verde',
+  cancelado: 'b-cinza',
+};
+const STATUS_LABEL = {
+  pendente:'Pendente', agendado:'Agendado', realizado:'Realizado', cancelado:'Cancelado'
+};
+
+async function carregar(){
+  try{
+    const r = await fetch('/api/sst/solicitacoes-exame',{credentials:'include'});
+    const d = await r.json();
+    if(!r.ok){toast(d.erro||'Erro','err');return;}
+    _todos = d.solicitacoes||[];
+    _examesPadrao = d.exames_padrao||[];
+    renderKpis();
+    renderTabela();
+    renderExamesGrid();
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+async function carregarClinicas(){
+  try{
+    const r = await fetch('/api/sst/clinicas-disponiveis',{credentials:'include'});
+    const d = await r.json();
+    _clinicas = d.clinicas||[];
+    const sel = document.getElementById('s-clinica');
+    sel.innerHTML = '<option value="">Sem clínica (pedido interno)</option>' +
+      _clinicas.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+    if(!_clinicas.length) document.getElementById('aviso-sem-clinica').style.display='flex';
+  }catch(e){}
+}
+
+async function carregarFuncionarios(){
+  try{
+    const r = await fetch('/api/sst/funcionarios',{credentials:'include'});
+    const d = await r.json();
+    const sel = document.getElementById('s-func');
+    sel.innerHTML = '<option value="">Selecione...</option>' +
+      (d.funcionarios||[]).map(f=>`<option value="${f.id}">${esc(f.nome)} — ${esc(f.cargo)}</option>`).join('');
+  }catch(e){}
+}
+
+function renderKpis(){
+  document.getElementById('k-pend').textContent = _todos.filter(s=>s.status==='pendente').length;
+  document.getElementById('k-agend').textContent = _todos.filter(s=>s.status==='agendado').length;
+  document.getElementById('k-real').textContent = _todos.filter(s=>s.status==='realizado').length;
+  document.getElementById('k-total').textContent = _todos.length;
+}
+
+function filtrar(f, btn){
+  _filtro=f;
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTabela();
+}
+
+function renderTabela(){
+  const lista = _filtro ? _todos.filter(s=>s.status===_filtro) : _todos;
+  const tbody = document.getElementById('solBody');
+  if(!lista.length){
+    tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="ei">📨</div><h3>Nenhum pedido encontrado</h3><p>Crie um novo pedido de exame para um funcionário e envie para a clínica.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = lista.map(s=>`
+    <tr>
+      <td><strong>${esc(s.funcionario_nome)}</strong><br><span style="color:var(--muted);font-size:.7rem">${esc(s.funcionario_cpf)||'—'}</span></td>
+      <td style="color:var(--muted)">${esc(s.funcionario_cargo)}</td>
+      <td>${esc(s.tipo_aso_label)}${s.urgente?` <span class="badge b-vermelho" style="margin-left:4px">Urgente</span>`:''}</td>
+      <td style="max-width:180px">
+        ${s.exames.length
+          ? `<span style="font-size:.73rem;color:var(--muted)">${s.exames.slice(0,2).map(e=>esc(e)).join(', ')}${s.exames.length>2?` +${s.exames.length-2} mais`:''}</span>`
+          : '<span style="color:var(--muted)">—</span>'}
+      </td>
+      <td>${esc(s.clinica_nome)}</td>
+      <td style="color:var(--muted);white-space:nowrap">${s.data_solicitacao}${s.data_agendamento?`<br><span style="color:var(--blue)">Agend: ${s.data_agendamento}</span>`:''}</td>
+      <td><span class="badge ${STATUS_BADGE[s.status]||'b-cinza'}">${STATUS_LABEL[s.status]||s.status}</span>${s.resposta_clinica?`<br><span style="font-size:.68rem;color:var(--muted)">${esc(s.resposta_clinica.slice(0,40))}${s.resposta_clinica.length>40?'...':''}</span>`:''}</td>
+      <td>
+        <div class="row-actions">
+          ${s.status==='pendente'?`<button class="btn-row danger" onclick="cancelar(${s.id})">Cancelar</button>`:''}
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function renderExamesGrid(){
+  document.getElementById('examesGrid').innerHTML = _examesPadrao.map((e,i)=>`
+    <div class="exame-item">
+      <input type="checkbox" id="ex-${i}" value="${esc(e)}">
+      <label for="ex-${i}">${esc(e)}</label>
+    </div>`).join('');
+}
+
+function abrirModal(){
+  document.getElementById('modal').classList.add('open');
+}
+function fecharModal(){document.getElementById('modal').classList.remove('open');}
+
+async function salvar(){
+  const funcId = document.getElementById('s-func').value;
+  if(!funcId){toast('Selecione o funcionário','err');return;}
+  const tipo = document.getElementById('s-tipo').value;
+  const clinicaId = document.getElementById('s-clinica').value;
+  const obs = document.getElementById('s-obs').value.trim();
+  const urgente = document.getElementById('s-urgente').checked;
+  const exames = [...document.querySelectorAll('#examesGrid input:checked')].map(cb=>cb.value);
+
+  try{
+    const r = await fetch('/api/sst/solicitacoes-exame',{
+      method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        funcionario_id:parseInt(funcId),
+        tipo_aso:tipo,
+        clinica_id:clinicaId?parseInt(clinicaId):null,
+        exames,
+        urgente,
+        observacoes:obs,
+      })
+    });
+    const d = await r.json();
+    if(!r.ok){toast(d.erro||'Erro ao criar pedido','err');return;}
+    toast('Pedido enviado à clínica!');
+    fecharModal();
+    carregar();
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+async function cancelar(id){
+  if(!confirm('Cancelar este pedido?')) return;
+  try{
+    const r = await fetch(`/api/sst/solicitacoes-exame/${id}`,{method:'DELETE',credentials:'include'});
+    if(!r.ok){toast('Erro ao cancelar','err');return;}
+    toast('Pedido cancelado');
+    carregar();
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))fecharModal();});
+
+carregar();
+carregarClinicas();
+carregarFuncionarios();
+</script>
+</body>
+</html>
