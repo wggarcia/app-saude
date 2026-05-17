@@ -483,28 +483,23 @@ def api_cats(request):
                     "id": c.id,
                     "funcionario": c.funcionario.nome,
                     "funcionario_cpf": c.funcionario.cpf,
-                    "tipo": c.tipo,
-                    "tipo_label": c.get_tipo_display(),
-                    "tp_cat": c.tp_cat,
-                    "tp_cat_label": c.get_tp_cat_display(),
+                    "tipo": c.get_tipo_display(),
+                    "tipo_raw": c.tipo,
+                    "tp_cat": getattr(c, "tp_cat", "1"),
                     "gravidade": c.gravidade,
-                    "gravidade_label": c.get_gravidade_display(),
                     "data_acidente": c.data_acidente.strftime("%d/%m/%Y"),
                     "hora_acidente": c.hora_acidente.strftime("%H:%M") if c.hora_acidente else None,
                     "descricao": c.descricao,
                     "cid": c.cid,
                     "local_acidente": c.local_acidente,
                     "parte_corpo": c.parte_corpo,
-                    "cod_parte_corpo": c.cod_parte_corpo,
-                    "cod_parte_corpo_label": c.get_cod_parte_corpo_display(),
-                    "lateralidade": c.lateralidade,
-                    "lateralidade_label": c.get_lateralidade_display(),
-                    "cod_agente_causador": c.cod_agente_causador,
-                    "cod_agente_causador_label": c.get_cod_agente_causador_display(),
+                    "cod_parte_corpo": getattr(c, "cod_parte_corpo", "730"),
+                    "lateralidade": getattr(c, "lateralidade", "9"),
+                    "cod_agente_causador": getattr(c, "cod_agente_causador", "0099"),
                     "houve_afastamento": c.houve_afastamento,
                     "dias_afastamento": c.dias_afastamento,
-                    "testemunha_nome": c.testemunha_nome,
-                    "testemunha_telefone": c.testemunha_telefone,
+                    "testemunha_nome": getattr(c, "testemunha_nome", ""),
+                    "testemunha_telefone": getattr(c, "testemunha_telefone", ""),
                     "status_esocial": c.status_esocial,
                     "numero_cat": c.numero_cat,
                     "protocolo_esocial": c.protocolo_esocial,
@@ -529,6 +524,15 @@ def api_cats(request):
                 return datetime.strptime(s, "%Y-%m-%d").date()
             except Exception:
                 return None
+        def _parse_hora(s):
+            if not s:
+                return None
+            try:
+                from datetime import time as dtime
+                parts = s.replace(":", "").strip()
+                return dtime(int(parts[:2]), int(parts[2:4]))
+            except Exception:
+                return None
         tipo_cat = data.get("tipo", "tipico")
         cid = (data.get("cid") or "").strip().upper()
         erro_cid = _validar_cid_doenca_trabalho(tipo_cat, cid)
@@ -541,7 +545,7 @@ def api_cats(request):
             tp_cat=data.get("tp_cat", "1"),
             gravidade=data.get("gravidade", "leve"),
             data_acidente=parse_date(data.get("data_acidente")) or date.today(),
-            hora_acidente=parse_date(data.get("hora_acidente")) if data.get("hora_acidente") else None,
+            hora_acidente=_parse_hora(data.get("hora_acidente")),
             descricao=data.get("descricao", ""),
             local_acidente=data.get("local_acidente", ""),
             parte_corpo=data.get("parte_corpo", ""),

@@ -269,10 +269,16 @@ function setFiltro(f,btn){_filtro=f;document.querySelectorAll(".ftab").forEach(b
 
 async function transmitirS2210(catId, btn){
   btn.textContent='Gerando...';btn.disabled=true;
-  const r=await fetch(`/api/sst/cats/${catId}/esocial/`,{method:'POST',headers:{'Content-Type':'application/json'}});
-  const d=await r.json();
+  let r,d;
+  try{
+    r=await fetch(`/api/sst/cats/${catId}/esocial/`,{method:'POST',headers:{'Content-Type':'application/json'}});
+    d=await r.json();
+  }catch(e){
+    btn.textContent='📤 S-2210';btn.disabled=false;
+    toast('Erro ao gerar S-2210. Tente novamente.','err');return;
+  }
   btn.textContent='📤 S-2210';btn.disabled=false;
-  if(!r.ok){toast(d.erro||'Erro ao gerar S-2210','err');return;}
+  if(!r.ok){toast((d&&d.erro)||'Erro ao gerar S-2210','err');return;}
   const eventoId=d.evento_id||d.id;
   _xmlEventoId=eventoId;
   if(d.xml){
