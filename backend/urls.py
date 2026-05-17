@@ -225,6 +225,15 @@ from api.views_gestao import (
     api_benchmark,
     api_dados_empresa,
 )
+from api.views_postos_trabalho import (
+    sst_postos_page,
+    api_postos_trabalho,
+    api_posto_detalhe,
+    api_agentes_nocivos,
+    api_agente_detalhe,
+    api_posto_funcionarios,
+    api_posto_xml_s2240,
+)
 from api.views_competencia import (
     competencia_corporativa,
     api_cargos,
@@ -502,6 +511,7 @@ urlpatterns = [
     path('sst/epis/', sst_epis_page),
     path('sst/conformidade/', sst_conformidade_page),
     path('sst/riscos/', sst_riscos_page),
+    path('sst/postos/', sst_postos_page),
     path('sst/comunicacao/grupos/', painel_grupos),
     # 🏥 SST / Saúde Ocupacional — API
     path('api/sst/dashboard', api_sst_dashboard),
@@ -536,6 +546,14 @@ urlpatterns = [
     path('api/sst/conformidade/pdf/', api_sst_conformidade_pdf),
     path('api/sst/relatorio/consolidado/pdf', api_sst_relatorio_consolidado_pdf),
     path('api/sst/relatorio/consolidado/pdf/', api_sst_relatorio_consolidado_pdf),
+    # Postos de Trabalho / S-2240
+    path('api/sst/postos', api_postos_trabalho),
+    path('api/sst/postos/', api_postos_trabalho),
+    path('api/sst/postos/<int:posto_id>', api_posto_detalhe),
+    path('api/sst/postos/<int:posto_id>/agentes', api_agentes_nocivos),
+    path('api/sst/postos/<int:posto_id>/agentes/<int:agente_id>', api_agente_detalhe),
+    path('api/sst/postos/<int:posto_id>/funcionarios', api_posto_funcionarios),
+    path('api/sst/postos/<int:posto_id>/xml-s2240', api_posto_xml_s2240),
     # Riscos ocupacionais / PGR
     path('api/sst/riscos/', api_riscos_ocupacionais),
     path('api/sst/riscos/kpis/', api_riscos_kpis),

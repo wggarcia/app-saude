@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · Postos de Trabalho — S-2240</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2233;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.13);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7;--blue:#3b82f6;--amber:#f59e0b;--red:#ef4444;--green:#22c55e;--purple:#8b5cf6}
+html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:52px;display:flex;align-items:center;background:rgba(10,14,26,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(14px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:210px;border-right:1px solid var(--line);height:100%}
+.tb-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#0a0e1a;flex-shrink:0}
+.tb-nome{font-size:.8rem;font-weight:700}.tb-sub{font-size:.6rem;color:var(--muted);margin-top:1px}
+.tb-nav{display:flex;align-items:center;gap:1px;padding:0 14px;flex:1;overflow-x:auto}.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{padding:5px 11px;border-radius:6px;font-size:.75rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap}
+.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tb-nav a.active{color:var(--teal);background:rgba(0,201,167,.08)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.btn-main{padding:6px 13px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .2s}
+.btn-main:hover{opacity:.88}
+.app{display:flex;min-height:100vh;padding-top:52px}
+.sidebar{width:200px;flex-shrink:0;background:rgba(17,24,39,.55);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:52px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.77rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.06);border-left-color:var(--teal);font-weight:600}
+.sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
+.main{flex:1;margin-left:200px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.page-header h1{font-size:1.1rem;font-weight:800}
+.page-header p{font-size:.75rem;color:var(--muted);margin-top:3px;line-height:1.5}
+.table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);gap:10px;flex-wrap:wrap}
+.table-header h3{font-size:.8rem;font-weight:700}
+.filter-tabs{display:flex;gap:4px}
+.ftab{padding:5px 11px;border-radius:6px;font-size:.72rem;font-weight:600;cursor:pointer;color:var(--muted);border:1px solid var(--line);background:none;font-family:inherit;transition:all .15s}
+.ftab.active{color:var(--teal);background:rgba(0,201,167,.08);border-color:rgba(0,201,167,.2)}
+.tbl{width:100%;border-collapse:collapse;overflow-x:auto;display:block}
+.tbl thead th{padding:10px 14px;text-align:left;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+.tbl tbody tr{border-bottom:1px solid var(--line)}
+.tbl tbody tr:last-child{border-bottom:none}
+.tbl tbody tr:hover{background:rgba(255,255,255,.02)}
+.tbl td{padding:10px 14px;font-size:.79rem;color:var(--text);vertical-align:middle;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:.63rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.b-verde{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.18)}
+.b-vermelho{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.18)}
+.b-amarelo{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.18)}
+.b-azul{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.18)}
+.b-cinza{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line)}
+.b-roxo{background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.18)}
+.row-actions{display:flex;gap:5px}
+.btn-row{padding:3px 9px;border-radius:5px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.68rem;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-row:hover{border-color:var(--teal);color:var(--teal)}
+.btn-row.danger:hover{border-color:var(--red);color:var(--red)}
+.empty-state{padding:40px;text-align:center;color:var(--muted)}
+.empty-state .ei{font-size:2rem;margin-bottom:10px}
+.empty-state h3{font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:5px}
+.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-wide{width:760px}
+.modal h3{font-size:1rem;font-weight:800;margin-bottom:4px}
+.modal-sub{font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.mf{margin-bottom:10px}
+.mf label{display:block;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(226,238,255,.35);margin-bottom:5px}
+.mf input,.mf select,.mf textarea{width:100%;padding:9px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:.85rem;outline:none;font-family:inherit}
+.mf input:focus,.mf select:focus,.mf textarea:focus{border-color:var(--teal)}
+.mf select option{background:var(--surface)}
+.mf textarea{resize:vertical;min-height:70px}
+.mf-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mf-check{display:flex;align-items:center;gap:8px;padding:8px 0}
+.mf-check input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:pointer}
+.mf-check label{font-size:.82rem;color:var(--text);cursor:pointer}
+.modal-acts{display:flex;gap:8px;margin-top:16px}
+.btn-cancel{flex:1;padding:9px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:none;color:var(--muted);font-family:inherit;cursor:pointer}
+.btn-submit{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-weight:800;font-family:inherit;cursor:pointer}
+.xml-box{background:#0d1117;border:1px solid var(--line);border-radius:8px;padding:14px;font-family:monospace;font-size:.72rem;color:#7ec8e3;white-space:pre-wrap;max-height:360px;overflow-y:auto;line-height:1.6}
+.copy-btn{padding:7px 14px;border-radius:7px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:600}
+.copy-btn:hover{border-color:var(--teal);color:var(--teal)}
+.copy-btn.copied{border-color:var(--green);color:#4ade80}
+.dl-btn{padding:7px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-size:.75rem;cursor:pointer;font-family:inherit;font-weight:800}
+.section-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.stab{padding:8px 16px;font-size:.78rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.stab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.stab-content{display:none}.stab-content.active{display:block}
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.info-card{padding:12px 14px;background:var(--surface2);border:1px solid var(--line);border-radius:8px}
+.info-card .lbl{font-size:.6rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.info-card .val{font-size:.82rem;font-weight:600;color:var(--text)}
+.aviso{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.15);border-radius:10px;font-size:.78rem;color:var(--muted);line-height:1.6;margin-bottom:12px}
+.aviso strong{color:#60a5fa;display:block;margin-bottom:2px}
+.skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.07) 50%,rgba(255,255,255,.04) 75%);background-size:200%;animation:shimmer 1.8s infinite;border-radius:5px;height:38px}
+@keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:10px 16px;border-radius:8px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:8px;animation:slideIn .2s ease;max-width:320px}
+.toast.ok{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#4ade80}
+.toast.err{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171}
+@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+@media(max-width:768px){.main{margin-left:0;padding:12px}.sidebar{display:none}.info-grid{grid-template-columns:1fr 1fr}.mf-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="tb-logo"><div class="tb-icon">S</div><div><div class="tb-nome">SST</div><div class="tb-sub">Postos de Trabalho</div></div></div>
+  <nav class="tb-nav">
+    <a href="/dashboard-empresa/">Painel</a>
+    <a href="/sst/funcionarios/">Funcionários</a>
+    <a href="/sst/asos/">ASO</a>
+    <a href="/sst/exames/">Exames</a>
+    <a href="/sst/afastamentos/">Afastamentos</a>
+    <a href="/sst/cats/">CAT</a>
+    <a href="/sst/esocial/">eSocial</a>
+    <a href="/sst/postos/" class="active">Postos</a>
+  </nav>
+  <div class="tb-actions">
+    <button class="btn-main" onclick="abrirModalPosto()">+ Novo Posto</button>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-label">SST</div>
+    <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👤</span><span>Funcionários</span></a>
+    <a class="sb-link" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span></a>
+    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🩺</span><span>Exames</span></a>
+    <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
+    <a class="sb-link" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
+    <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">📂</span><span>Documentos</span></a>
+    <a class="sb-link" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos</span></a>
+    <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPIs</span></a>
+    <a class="sb-link" href="/sst/riscos/"><span class="sb-icon">🔴</span><span>Riscos / PGR</span></a>
+    <a class="sb-link active" href="/sst/postos/"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
+    <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">📡</span><span>eSocial</span></a>
+    <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Postos de Trabalho — S-2240</h1>
+        <p>Cadastre postos/funções com exposição a agentes nocivos. Cada posto gera um evento S-2240 no eSocial com os agentes físicos, químicos ou biológicos e os EPCs/EPIs associados.</p>
+      </div>
+    </div>
+
+    <div class="aviso">
+      <span>📌</span>
+      <div><strong>Como funciona</strong>Para gerar o S-2240, cada posto precisa ter: (1) pelo menos um agente nocivo cadastrado (físico, químico ou biológico) com código eSocial (Tabela 24), e (2) pelo menos um funcionário vinculado ao posto.</div>
+    </div>
+
+    <div class="table-wrap" id="postosWrap">
+      <div class="table-header">
+        <h3>Postos cadastrados</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="filter-tabs">
+            <button class="ftab active" onclick="filtrarPostos('ativo',this)">Ativos</button>
+            <button class="ftab" onclick="filtrarPostos('todos',this)">Todos</button>
+          </div>
+          <button class="btn-main" onclick="abrirModalPosto()">+ Novo</button>
+        </div>
+      </div>
+      <table class="tbl">
+        <thead><tr>
+          <th>Nome / Função</th>
+          <th>Setor</th>
+          <th>Agentes</th>
+          <th>Funcionários</th>
+          <th>Laudo</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr></thead>
+        <tbody id="postosBody">
+          <tr><td colspan="7"><div class="skel"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- Modal: Novo/Editar Posto -->
+<div class="modal-bg" id="modalPosto">
+  <div class="modal">
+    <h3 id="modalPostoTitulo">Novo Posto de Trabalho</h3>
+    <p class="modal-sub">Preencha as informações do posto. Após criado, adicione os agentes nocivos e vincule os funcionários.</p>
+    <input type="hidden" id="postoEditId">
+    <div class="mf"><label>Nome do posto / função *</label><input id="postoNome" placeholder="Ex: Operador de solda, Auxiliar de limpeza, Atendente de enfermagem"></div>
+    <div class="mf-row">
+      <div class="mf"><label>Setor</label><input id="postoSetor" placeholder="Ex: Produção, Higienização, UTI"></div>
+      <div class="mf"><label>Data do laudo (LTCAT/PGR)</label><input type="date" id="postoDataLaudo"></div>
+    </div>
+    <div class="mf"><label>Descrição das atividades</label><textarea id="postoDescricao" placeholder="Descreva as atividades realizadas neste posto que geram exposição aos agentes"></textarea></div>
+    <div class="mf-row">
+      <div class="mf"><label>Responsável técnico</label><input id="postoRespTec" placeholder="Nome do Eng. Segurança ou Médico do Trabalho"></div>
+      <div class="mf"><label>CRM / CREA</label><input id="postoRespReg" placeholder="Ex: CRM-SP 12345"></div>
+    </div>
+    <div class="mf"><label>Início de vigência (AAAA-MM)</label><input id="postoVigencia" placeholder="Ex: 2024-01" maxlength="7"></div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModalPosto()">Cancelar</button>
+      <button class="btn-submit" onclick="salvarPosto()">Salvar Posto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhe do Posto (agentes + funcionários) -->
+<div class="modal-bg" id="modalDetalhe">
+  <div class="modal modal-wide">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <h3 id="detalhePostoNome">Posto</h3>
+      <button onclick="fecharModalDetalhe()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer">✕</button>
+    </div>
+    <p class="modal-sub" id="detalhePostoInfo"></p>
+
+    <div class="section-tabs">
+      <div class="stab active" onclick="switchTab('agentes',this)">Agentes Nocivos</div>
+      <div class="stab" onclick="switchTab('funcionarios',this)">Funcionários</div>
+      <div class="stab" onclick="switchTab('xml',this)">XML S-2240</div>
+    </div>
+
+    <!-- Agentes -->
+    <div class="stab-content active" id="tab-agentes">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="btn-main" onclick="abrirModalAgente()">+ Agente</button>
+      </div>
+      <table class="tbl" style="display:table">
+        <thead><tr>
+          <th>Tipo</th><th>Código eSocial</th><th>Agente</th><th>Intensidade</th><th>EPC</th><th>EPI</th><th></th>
+        </tr></thead>
+        <tbody id="agentesBody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Funcionários -->
+    <div class="stab-content" id="tab-funcionarios">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="btn-main" onclick="abrirModalVincular()">+ Vincular Funcionário</button>
+      </div>
+      <table class="tbl" style="display:table">
+        <thead><tr>
+          <th>Funcionário</th><th>CPF</th><th>Início</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody id="funcionariosBody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- XML -->
+    <div class="stab-content" id="tab-xml">
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px">
+        <button class="copy-btn" id="copyXmlBtn" onclick="copiarXml()">Copiar XML</button>
+        <button class="dl-btn" onclick="baixarXml()">⬇ Baixar .xml</button>
+        <button class="btn-main" onclick="gerarXml()">Gerar S-2240</button>
+      </div>
+      <div class="xml-box" id="xmlBox">Clique em "Gerar S-2240" para gerar o evento.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Agente Nocivo -->
+<div class="modal-bg" id="modalAgente">
+  <div class="modal">
+    <h3 id="modalAgenteTitulo">Adicionar Agente Nocivo</h3>
+    <p class="modal-sub">Preencha conforme o LTCAT / PGR / PPRA da empresa. Os dados são enviados ao eSocial no evento S-2240.</p>
+    <input type="hidden" id="agenteEditId">
+    <div class="mf-row">
+      <div class="mf"><label>Tipo de agente *</label>
+        <select id="agenteTipo" onchange="filtrarCodsAgente()">
+          <option value="fisico">Físico</option>
+          <option value="quimico">Químico</option>
+          <option value="biologico">Biológico</option>
+        </select>
+      </div>
+      <div class="mf"><label>Código eSocial (Tabela 24) *</label>
+        <select id="agenteCod"></select>
+      </div>
+    </div>
+    <div class="mf"><label>Descrição complementar</label><input id="agenteDsc" placeholder="Descrição adicional do agente (opcional)"></div>
+    <div class="mf"><label>Técnica de medição</label><input id="agenteTecMed" placeholder="Ex: Dosimetria de ruído (NHO-01/ACGIH)"></div>
+    <div class="mf-row">
+      <div class="mf"><label>Intensidade / concentração medida</label><input id="agenteIntens" placeholder="Ex: 87 dB(A), 2 ppm"></div>
+      <div class="mf"><label>Limite de tolerância</label><input id="agenteLimTol" placeholder="Ex: 85 dB(A), 1 ppm"></div>
+    </div>
+    <div class="mf"><label>EPC — proteção coletiva instalada</label><input id="agenteEpcDesc" placeholder="Ex: Cabine acústica, exaustores, proteção de máquinas"></div>
+    <div class="mf-check"><input type="checkbox" id="agenteEpcEficaz"><label for="agenteEpcEficaz">EPC é eficaz na neutralização da exposição</label></div>
+    <div class="mf"><label>EPI — equipamento de proteção individual</label><input id="agenteEpiDesc" placeholder="Ex: Protetor auricular tipo concha, respirador PFF2"></div>
+    <div class="mf-row">
+      <div class="mf"><label>Número CA do EPI</label><input id="agenteEpiCA" placeholder="Ex: 12345"></div>
+      <div class="mf-check" style="margin-top:24px"><input type="checkbox" id="agenteEpiEficaz"><label for="agenteEpiEficaz">EPI é eficaz na neutralização</label></div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModalAgente()">Cancelar</button>
+      <button class="btn-submit" onclick="salvarAgente()">Salvar Agente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Vincular Funcionário -->
+<div class="modal-bg" id="modalVincular">
+  <div class="modal">
+    <h3>Vincular Funcionário ao Posto</h3>
+    <p class="modal-sub">Selecione o funcionário e a data em que ele passou a ser exposto aos agentes deste posto.</p>
+    <div class="mf"><label>Funcionário *</label>
+      <select id="funcSelect"><option value="">Carregando...</option></select>
+    </div>
+    <div class="mf"><label>Data de início da exposição *</label><input type="date" id="funcDataInicio"></div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModalVincular()">Cancelar</button>
+      <button class="btn-submit" onclick="vincularFuncionario()">Vincular</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ── Estado ────────────────────────────────────────────────────────────────────
+let postos = [];
+let postoAtual = null;
+let filtroAtivo = true;
+let xmlGerado = '';
+
+// ── Agentes por tipo (eSocial Tabela 24) ────────────────────────────────────
+const AGENTES = {
+  fisico: [
+    ['01.01.001','Ruído contínuo / intermitente'],
+    ['01.01.002','Ruído de impacto'],
+    ['01.02.001','Vibração em membros superiores'],
+    ['01.02.002','Vibração em corpo inteiro'],
+    ['01.03.001','Calor (IBUTG)'],
+    ['01.04.001','Radiação ionizante'],
+    ['01.05.001','Pressão hiperbárica'],
+    ['01.06.001','Frio'],
+    ['01.07.001','Umidade'],
+  ],
+  quimico: [
+    ['02.01.001','Arsênio e compostos'],
+    ['02.01.002','Benzeno'],
+    ['02.01.003','Chumbo e compostos'],
+    ['02.01.004','Mercúrio e compostos'],
+    ['02.01.005','Sílica livre cristalizada'],
+    ['02.01.006','Asbestos / Amianto'],
+    ['02.01.007','Manganês e compostos'],
+    ['02.01.008','Cromo hexavalente'],
+    ['02.01.009','Poeiras minerais em geral'],
+    ['02.01.010','Poeiras orgânicas (madeira, couro, etc.)'],
+    ['02.01.011','Fumos metálicos'],
+    ['02.01.012','Névoas e neblinas'],
+    ['02.01.013','Gases e vapores químicos em geral'],
+  ],
+  biologico: [
+    ['03.01.001','Vírus — Hepatite B (HBV)'],
+    ['03.01.002','Vírus — HIV'],
+    ['03.01.003','Vírus — outros'],
+    ['03.02.001','Bactérias — tuberculose (Mycobacterium)'],
+    ['03.02.002','Bactérias — outras'],
+    ['03.03.001','Protozoários'],
+    ['03.04.001','Fungos'],
+    ['03.05.001','Parasitas / helmintos'],
+  ],
+};
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, tipo='ok'){
+  const t = document.createElement('div');
+  t.className = `toast ${tipo}`;
+  t.textContent = msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(()=>t.remove(), 3500);
+}
+
+// ── Carregar postos ───────────────────────────────────────────────────────────
+async function carregarPostos(){
+  const qs = filtroAtivo ? '' : '?ativo=false';
+  const url = `/api/sst/postos${qs}`;
+  try{
+    const r = await fetch(url, {credentials:'include'});
+    const d = await r.json();
+    if(!r.ok){toast(d.erro||'Erro ao carregar postos','err');return;}
+    postos = d.postos;
+    renderPostos();
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+function filtrarPostos(tipo, btn){
+  filtroAtivo = tipo === 'ativo';
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  carregarPostos();
+}
+
+function renderPostos(){
+  const tbody = document.getElementById('postosBody');
+  if(!postos.length){
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="ei">🏭</div><h3>Nenhum posto cadastrado</h3><p>Crie o primeiro posto de trabalho para registrar exposições a agentes nocivos e gerar o S-2240.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = postos.map(p=>`
+    <tr>
+      <td><strong>${esc(p.nome)}</strong></td>
+      <td>${esc(p.setor)||'—'}</td>
+      <td><span class="badge ${p.total_agentes>0?'b-roxo':'b-cinza'}">${p.total_agentes} agente${p.total_agentes!==1?'s':''}</span></td>
+      <td><span class="badge ${p.total_funcionarios>0?'b-verde':'b-cinza'}">${p.total_funcionarios} func.</span></td>
+      <td>${p.data_laudo||'—'}</td>
+      <td><span class="badge ${p.ativo?'b-verde':'b-vermelho'}">${p.ativo?'Ativo':'Inativo'}</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="btn-row" onclick="abrirDetalhe(${p.id})">Gerenciar</button>
+          <button class="btn-row" onclick="editarPosto(${p.id})">Editar</button>
+          <button class="btn-row danger" onclick="excluirPosto(${p.id})">Excluir</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── Modal Posto ───────────────────────────────────────────────────────────────
+function abrirModalPosto(){
+  document.getElementById('modalPostoTitulo').textContent = 'Novo Posto de Trabalho';
+  document.getElementById('postoEditId').value = '';
+  ['postoNome','postoSetor','postoDataLaudo','postoDescricao','postoRespTec','postoRespReg','postoVigencia']
+    .forEach(id=>document.getElementById(id).value='');
+  document.getElementById('modalPosto').classList.add('open');
+}
+
+function fecharModalPosto(){document.getElementById('modalPosto').classList.remove('open');}
+
+async function editarPosto(id){
+  const p = postos.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('modalPostoTitulo').textContent = 'Editar Posto';
+  document.getElementById('postoEditId').value = id;
+  document.getElementById('postoNome').value = p.nome;
+  document.getElementById('postoSetor').value = p.setor||'';
+  document.getElementById('postoDataLaudo').value = p.data_laudo||'';
+  document.getElementById('postoDescricao').value = p.descricao||'';
+  document.getElementById('postoRespTec').value = p.responsavel_tecnico||'';
+  document.getElementById('postoRespReg').value = p.responsavel_registro||'';
+  document.getElementById('postoVigencia').value = p.vigencia_inicio||'';
+  document.getElementById('modalPosto').classList.add('open');
+}
+
+async function salvarPosto(){
+  const editId = document.getElementById('postoEditId').value;
+  const nome = document.getElementById('postoNome').value.trim();
+  if(!nome){toast('Nome do posto é obrigatório','err');return;}
+  const payload = {
+    nome,
+    setor: document.getElementById('postoSetor').value.trim(),
+    data_laudo: document.getElementById('postoDataLaudo').value||null,
+    descricao: document.getElementById('postoDescricao').value.trim(),
+    responsavel_tecnico: document.getElementById('postoRespTec').value.trim(),
+    responsavel_registro: document.getElementById('postoRespReg').value.trim(),
+    vigencia_inicio: document.getElementById('postoVigencia').value.trim(),
+  };
+  const method = editId ? 'PUT' : 'POST';
+  const url = editId ? `/api/sst/postos/${editId}` : '/api/sst/postos';
+  try{
+    const r = await fetch(url,{method,credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d = await r.json();
+    if(!r.ok){toast(d.erro||'Erro ao salvar','err');return;}
+    toast(editId?'Posto atualizado':'Posto criado!');
+    fecharModalPosto();
+    carregarPostos();
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+async function excluirPosto(id){
+  if(!confirm('Excluir este posto? Esta ação não pode ser desfeita.')) return;
+  try{
+    const r = await fetch(`/api/sst/postos/${id}`,{method:'DELETE',credentials:'include'});
+    if(!r.ok){toast('Erro ao excluir','err');return;}
+    toast('Posto excluído');
+    carregarPostos();
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+// ── Modal Detalhe ─────────────────────────────────────────────────────────────
+async function abrirDetalhe(id){
+  postoAtual = null;
+  xmlGerado = '';
+  document.getElementById('xmlBox').textContent = 'Clique em "Gerar S-2240" para gerar o evento.';
+  document.getElementById('modalDetalhe').classList.add('open');
+  switchTab('agentes', document.querySelector('.stab'));
+  try{
+    const r = await fetch(`/api/sst/postos/${id}`,{credentials:'include'});
+    const d = await r.json();
+    if(!r.ok){toast(d.erro||'Erro','err');return;}
+    postoAtual = d;
+    document.getElementById('detalhePostoNome').textContent = d.nome;
+    document.getElementById('detalhePostoInfo').textContent = [d.setor, d.responsavel_tecnico].filter(Boolean).join(' · ') || 'Sem setor definido';
+    renderAgentes(d.agentes||[]);
+    renderFuncionariosVinculados(d.funcionarios||[]);
+    await carregarFuncionariosSelect();
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+function fecharModalDetalhe(){
+  document.getElementById('modalDetalhe').classList.remove('open');
+  postoAtual = null;
+}
+
+function switchTab(tab, el){
+  document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.stab-content').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  else document.querySelectorAll('.stab')[0].classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+}
+
+// ── Agentes Nocivos ───────────────────────────────────────────────────────────
+function renderAgentes(agentes){
+  const tbody = document.getElementById('agentesBody');
+  if(!agentes.length){
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="padding:24px"><div class="ei">☣️</div><h3>Nenhum agente cadastrado</h3><p>Adicione os agentes nocivos (físicos, químicos ou biológicos) a que os funcionários deste posto estão expostos.</p></div></td></tr>`;
+    return;
+  }
+  const tipoBadge = {fisico:'b-azul',quimico:'b-amarelo',biologico:'b-verde'};
+  tbody.innerHTML = agentes.map(a=>`
+    <tr>
+      <td><span class="badge ${tipoBadge[a.tipo_agente]||'b-cinza'}">${esc(a.tipo_agente_label)}</span></td>
+      <td><code style="font-size:.75rem;color:var(--purple)">${esc(a.cod_agente)}</code></td>
+      <td>${esc(a.cod_agente_label)}${a.dsc_agente?`<br><span style="color:var(--muted);font-size:.7rem">${esc(a.dsc_agente)}</span>`:''}
+      </td>
+      <td>${a.intensidade?`${esc(a.intensidade)}<br><span style="color:var(--muted);font-size:.7rem">LT: ${esc(a.limite_tolerancia)||'—'}</span>`:'—'}</td>
+      <td>${a.epc_descricao?`${esc(a.epc_descricao)}<br><span class="badge ${a.epc_eficaz?'b-verde':'b-vermelho'}" style="margin-top:2px">${a.epc_eficaz?'Eficaz':'Ineficaz'}</span>`:'—'}</td>
+      <td>${a.epi_descricao?`${esc(a.epi_descricao)}${a.epi_ca?` CA:${esc(a.epi_ca)}`:''}<br><span class="badge ${a.epi_eficaz?'b-verde':'b-vermelho'}" style="margin-top:2px">${a.epi_eficaz?'Eficaz':'Ineficaz'}</span>`:'—'}</td>
+      <td>
+        <div class="row-actions">
+          <button class="btn-row" onclick="editarAgente(${a.id})">Editar</button>
+          <button class="btn-row danger" onclick="excluirAgente(${a.id})">Remover</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function filtrarCodsAgente(){
+  const tipo = document.getElementById('agenteTipo').value;
+  const sel = document.getElementById('agenteCod');
+  const prev = sel.value;
+  sel.innerHTML = AGENTES[tipo].map(([v,l])=>`<option value="${v}">${v} — ${l}</option>`).join('');
+  if(AGENTES[tipo].find(([v])=>v===prev)) sel.value = prev;
+}
+
+function abrirModalAgente(agente=null){
+  document.getElementById('modalAgenteTitulo').textContent = agente ? 'Editar Agente' : 'Adicionar Agente Nocivo';
+  document.getElementById('agenteEditId').value = agente ? agente.id : '';
+  document.getElementById('agenteTipo').value = agente ? agente.tipo_agente : 'fisico';
+  filtrarCodsAgente();
+  document.getElementById('agenteCod').value = agente ? agente.cod_agente : AGENTES.fisico[0][0];
+  document.getElementById('agenteDsc').value = agente ? agente.dsc_agente||'' : '';
+  document.getElementById('agenteTecMed').value = agente ? agente.tec_medicao||'' : '';
+  document.getElementById('agenteIntens').value = agente ? agente.intensidade||'' : '';
+  document.getElementById('agenteLimTol').value = agente ? agente.limite_tolerancia||'' : '';
+  document.getElementById('agenteEpcDesc').value = agente ? agente.epc_descricao||'' : '';
+  document.getElementById('agenteEpcEficaz').checked = agente ? !!agente.epc_eficaz : false;
+  document.getElementById('agenteEpiDesc').value = agente ? agente.epi_descricao||'' : '';
+  document.getElementById('agenteEpiCA').value = agente ? agente.epi_ca||'' : '';
+  document.getElementById('agenteEpiEficaz').checked = agente ? !!agente.epi_eficaz : false;
+  document.getElementById('modalAgente').classList.add('open');
+}
+
+function editarAgente(id){
+  if(!postoAtual) return;
+  const a = postoAtual.agentes.find(x=>x.id===id);
+  if(a) abrirModalAgente(a);
+}
+
+function fecharModalAgente(){document.getElementById('modalAgente').classList.remove('open');}
+
+async function salvarAgente(){
+  if(!postoAtual) return;
+  const editId = document.getElementById('agenteEditId').value;
+  const cod = document.getElementById('agenteCod').value;
+  if(!cod){toast('Selecione o código do agente','err');return;}
+  const payload = {
+    tipo_agente: document.getElementById('agenteTipo').value,
+    cod_agente: cod,
+    dsc_agente: document.getElementById('agenteDsc').value.trim(),
+    tec_medicao: document.getElementById('agenteTecMed').value.trim(),
+    intensidade: document.getElementById('agenteIntens').value.trim(),
+    limite_tolerancia: document.getElementById('agenteLimTol').value.trim(),
+    epc_descricao: document.getElementById('agenteEpcDesc').value.trim(),
+    epc_eficaz: document.getElementById('agenteEpcEficaz').checked,
+    epi_descricao: document.getElementById('agenteEpiDesc').value.trim(),
+    epi_ca: document.getElementById('agenteEpiCA').value.trim(),
+    epi_eficaz: document.getElementById('agenteEpiEficaz').checked,
+  };
+  const method = editId ? 'PUT' : 'POST';
+  const url = editId
+    ? `/api/sst/postos/${postoAtual.id}/agentes/${editId}`
+    : `/api/sst/postos/${postoAtual.id}/agentes`;
+  try{
+    const r = await fetch(url,{method,credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d = await r.json();
+    if(!r.ok){toast(d.erro||'Erro ao salvar','err');return;}
+    toast(editId?'Agente atualizado':'Agente adicionado!');
+    fecharModalAgente();
+    await abrirDetalhe(postoAtual.id);
+    switchTab('agentes', document.querySelectorAll('.stab')[0]);
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+async function excluirAgente(id){
+  if(!postoAtual||!confirm('Remover este agente?')) return;
+  try{
+    const r = await fetch(`/api/sst/postos/${postoAtual.id}/agentes/${id}`,{method:'DELETE',credentials:'include'});
+    if(!r.ok){toast('Erro ao remover','err');return;}
+    toast('Agente removido');
+    await abrirDetalhe(postoAtual.id);
+    switchTab('agentes', document.querySelectorAll('.stab')[0]);
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+// ── Funcionários vinculados ────────────────────────────────────────────────────
+function renderFuncionariosVinculados(lista){
+  const tbody = document.getElementById('funcionariosBody');
+  if(!lista.length){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state" style="padding:24px"><div class="ei">👤</div><h3>Nenhum funcionário vinculado</h3><p>Vincule os funcionários que trabalham neste posto para compor o inventário de riscos do S-2240.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = lista.map(v=>`
+    <tr>
+      <td><strong>${esc(v.funcionario_nome)}</strong></td>
+      <td>${esc(v.funcionario_cpf)}</td>
+      <td>${v.data_inicio}</td>
+      <td><span class="badge ${v.ativo?'b-verde':'b-cinza'}">${v.ativo?'Exposto':'Encerrado'}${!v.ativo&&v.data_fim?` até ${v.data_fim}`:''}</span></td>
+      <td>${v.ativo?`<button class="btn-row danger" onclick="desvincularFuncionario(${v.id})">Desvinc.</button>`:'—'}</td>
+    </tr>`).join('');
+}
+
+async function carregarFuncionariosSelect(){
+  try{
+    const r = await fetch('/api/sst/funcionarios',{credentials:'include'});
+    const d = await r.json();
+    const sel = document.getElementById('funcSelect');
+    const vinculados = new Set((postoAtual?.funcionarios||[]).filter(f=>f.ativo).map(f=>f.funcionario_id));
+    const disponiveis = (d.funcionarios||[]).filter(f=>!vinculados.has(f.id));
+    sel.innerHTML = disponiveis.length
+      ? disponiveis.map(f=>`<option value="${f.id}">${esc(f.nome)} — ${esc(f.cpf)}</option>`).join('')
+      : '<option value="">Todos os funcionários já estão vinculados</option>';
+  }catch(e){}
+}
+
+function abrirModalVincular(){
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('funcDataInicio').value = today;
+  document.getElementById('modalVincular').classList.add('open');
+}
+
+function fecharModalVincular(){document.getElementById('modalVincular').classList.remove('open');}
+
+async function vincularFuncionario(){
+  if(!postoAtual) return;
+  const funcId = document.getElementById('funcSelect').value;
+  if(!funcId){toast('Selecione um funcionário','err');return;}
+  const dataInicio = document.getElementById('funcDataInicio').value;
+  if(!dataInicio){toast('Informe a data de início da exposição','err');return;}
+  try{
+    const r = await fetch(`/api/sst/postos/${postoAtual.id}/funcionarios`,{
+      method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({funcionario_id:parseInt(funcId),data_inicio:dataInicio})
+    });
+    const d = await r.json();
+    if(!r.ok){toast(d.erro||'Erro ao vincular','err');return;}
+    toast(d.criado?'Funcionário vinculado!':'Funcionário já estava vinculado');
+    fecharModalVincular();
+    await abrirDetalhe(postoAtual.id);
+    switchTab('funcionarios', document.querySelectorAll('.stab')[1]);
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+async function desvincularFuncionario(vinculoId){
+  if(!postoAtual||!confirm('Encerrar exposição deste funcionário ao posto?')) return;
+  try{
+    const r = await fetch(`/api/sst/postos/${postoAtual.id}/funcionarios`,{
+      method:'DELETE',credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({vinculo_id:vinculoId})
+    });
+    if(!r.ok){toast('Erro ao desvincular','err');return;}
+    toast('Vínculo encerrado');
+    await abrirDetalhe(postoAtual.id);
+    switchTab('funcionarios', document.querySelectorAll('.stab')[1]);
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+// ── XML S-2240 ────────────────────────────────────────────────────────────────
+async function gerarXml(){
+  if(!postoAtual) return;
+  document.getElementById('xmlBox').textContent = 'Gerando XML...';
+  try{
+    const hoje = new Date();
+    const periodo = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+    const r = await fetch(`/api/sst/postos/${postoAtual.id}/xml-s2240?periodo=${periodo}`,{credentials:'include'});
+    const d = await r.json();
+    if(!r.ok){document.getElementById('xmlBox').textContent = `Erro: ${d.erro||'Falha ao gerar'}`;toast(d.erro||'Erro ao gerar XML','err');return;}
+    xmlGerado = d.xml;
+    document.getElementById('xmlBox').textContent = d.xml;
+    toast('XML S-2240 gerado!');
+  }catch(e){document.getElementById('xmlBox').textContent='Erro de conexão';toast('Erro de conexão','err');}
+}
+
+async function copiarXml(){
+  if(!xmlGerado){toast('Gere o XML primeiro','err');return;}
+  await navigator.clipboard.writeText(xmlGerado);
+  const btn = document.getElementById('copyXmlBtn');
+  btn.textContent='Copiado!';btn.classList.add('copied');
+  setTimeout(()=>{btn.textContent='Copiar XML';btn.classList.remove('copied');},2000);
+}
+
+function baixarXml(){
+  if(!xmlGerado){toast('Gere o XML primeiro','err');return;}
+  const nome = postoAtual ? postoAtual.nome.replace(/\s+/g,'_').replace(/[^\w-]/g,'') : 'posto';
+  const blob = new Blob([xmlGerado],{type:'application/xml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url;a.download=`S-2240_${nome}.xml`;a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+filtrarCodsAgente();
+carregarPostos();
+</script>
+</body>
+</html>

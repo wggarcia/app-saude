@@ -2223,6 +2223,111 @@ class RiscoOcupacional(models.Model):
         return f"[{self.tipo_risco}] {self.agente} - {self.setor}"
 
 
+class PostoTrabalho(models.Model):
+    """Posto/função de trabalho com exposição a agentes nocivos — base do S-2240."""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="postos_trabalho")
+    nome = models.CharField(max_length=200, verbose_name="Nome do posto / função")
+    setor = models.CharField(max_length=150, blank=True, default="")
+    descricao = models.TextField(blank=True, default="", verbose_name="Descrição das atividades")
+    responsavel_tecnico = models.CharField(max_length=180, blank=True, default="", verbose_name="Responsável técnico (Eng. Segurança / Médico)")
+    responsavel_registro = models.CharField(max_length=30, blank=True, default="", verbose_name="CRM ou CREA do responsável")
+    data_laudo = models.DateField(null=True, blank=True, verbose_name="Data do laudo (LTCAT/PPRA/PGR)")
+    vigencia_inicio = models.CharField(max_length=7, blank=True, default="", verbose_name="Início de vigência (AAAA-MM)")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["setor", "nome"]
+        indexes = [models.Index(fields=["empresa", "ativo"])]
+
+    def __str__(self):
+        return f"{self.nome} — {self.setor or 'sem setor'}"
+
+
+class AgenteNocivoPostoTrabalho(models.Model):
+    """Agente nocivo (físico, químico ou biológico) de um posto de trabalho — eSocial Tabela 24."""
+    TIPO_AGENTE = [
+        ("fisico", "Físico"),
+        ("quimico", "Químico"),
+        ("biologico", "Biológico"),
+    ]
+    # Agentes eSocial Tabela 24 — principais
+    COD_AGENTE_CHOICES = [
+        # Físicos
+        ("01.01.001", "Ruído contínuo / intermitente"),
+        ("01.01.002", "Ruído de impacto"),
+        ("01.02.001", "Vibração em membros superiores"),
+        ("01.02.002", "Vibração em corpo inteiro"),
+        ("01.03.001", "Calor (IBUTG)"),
+        ("01.04.001", "Radiação ionizante"),
+        ("01.05.001", "Pressão hiperbárica"),
+        ("01.06.001", "Frio"),
+        ("01.07.001", "Umidade"),
+        # Químicos
+        ("02.01.001", "Arsênio e compostos"),
+        ("02.01.002", "Benzeno"),
+        ("02.01.003", "Chumbo e compostos"),
+        ("02.01.004", "Mercúrio e compostos"),
+        ("02.01.005", "Sílica livre cristalizada"),
+        ("02.01.006", "Asbestos / Amianto"),
+        ("02.01.007", "Manganês e compostos"),
+        ("02.01.008", "Cromo hexavalente"),
+        ("02.01.009", "Poeiras minerais em geral"),
+        ("02.01.010", "Poeiras orgânicas (madeira, couro, etc.)"),
+        ("02.01.011", "Fumos metálicos"),
+        ("02.01.012", "Névoas e neblinas"),
+        ("02.01.013", "Gases e vapores químicos em geral"),
+        # Biológicos
+        ("03.01.001", "Vírus — Hepatite B (HBV)"),
+        ("03.01.002", "Vírus — HIV"),
+        ("03.01.003", "Vírus — outros"),
+        ("03.02.001", "Bactérias — tuberculose (Mycobacterium)"),
+        ("03.02.002", "Bactérias — outras"),
+        ("03.03.001", "Protozoários"),
+        ("03.04.001", "Fungos"),
+        ("03.05.001", "Parasitas / helmintos"),
+    ]
+
+    posto = models.ForeignKey(PostoTrabalho, on_delete=models.CASCADE, related_name="agentes_nocivos")
+    tipo_agente = models.CharField(max_length=15, choices=TIPO_AGENTE)
+    cod_agente = models.CharField(max_length=20, choices=COD_AGENTE_CHOICES, verbose_name="Código eSocial (Tabela 24)")
+    dsc_agente = models.CharField(max_length=300, blank=True, default="", verbose_name="Descrição complementar do agente")
+    tec_medicao = models.CharField(max_length=200, blank=True, default="", verbose_name="Técnica de medição utilizada")
+    intensidade = models.CharField(max_length=50, blank=True, default="", verbose_name="Intensidade / concentração medida")
+    limite_tolerancia = models.CharField(max_length=50, blank=True, default="", verbose_name="Limite de tolerância (NR/ACGIH)")
+    epc_descricao = models.CharField(max_length=300, blank=True, default="", verbose_name="EPC instalado (proteção coletiva)")
+    epc_eficaz = models.BooleanField(default=False, verbose_name="EPC é eficaz na neutralização")
+    epi_descricao = models.CharField(max_length=300, blank=True, default="", verbose_name="EPI fornecido (proteção individual)")
+    epi_ca = models.CharField(max_length=20, blank=True, default="", verbose_name="Número CA do EPI")
+    epi_eficaz = models.BooleanField(default=False, verbose_name="EPI é eficaz na neutralização")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["tipo_agente", "cod_agente"]
+
+    def __str__(self):
+        return f"{self.get_cod_agente_display()} — {self.posto.nome}"
+
+
+class FuncionarioPostoTrabalho(models.Model):
+    """Vínculo de um funcionário a um posto de trabalho para o S-2240."""
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="postos_vinculados")
+    posto = models.ForeignKey(PostoTrabalho, on_delete=models.CASCADE, related_name="funcionarios_vinculados")
+    data_inicio = models.DateField()
+    data_fim = models.DateField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-data_inicio"]
+        indexes = [models.Index(fields=["posto", "data_fim"])]
+
+    def ativo(self):
+        return self.data_fim is None
+
+    def __str__(self):
+        return f"{self.funcionario.nome} → {self.posto.nome}"
+
+
 class PlanoAcaoSST(models.Model):
     """Plano de ação SST vinculado ou não a um risco ocupacional."""
     ORIGEM_CHOICES = [
