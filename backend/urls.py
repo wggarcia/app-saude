@@ -203,6 +203,15 @@ from api.views_clinica import (
     api_empresa_aso_recebido_acao,
     api_empresa_vinculos_clinicas,
 )
+from api.views_postos_trabalho import (
+    sst_postos_page,
+    api_postos_trabalho,
+    api_posto_detalhe,
+    api_agentes_nocivos,
+    api_agente_detalhe,
+    api_posto_funcionarios,
+    api_posto_xml_s2240,
+)
 from api.views_solicitacao_exame import (
     sst_solicitacoes_page,
     api_solicitacoes_exame,
