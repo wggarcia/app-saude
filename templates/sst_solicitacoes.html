@@ -101,6 +101,12 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .exame-item label{font-size:.73rem;color:var(--text);cursor:pointer;line-height:1.35}
 .exames-busca{width:100%;padding:8px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:.82rem;outline:none;font-family:inherit;margin-bottom:8px}
 .exames-busca:focus{border-color:var(--teal)}
+.perfil-box{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end;margin-bottom:8px}
+.perfil-box select{width:100%;padding:8px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:.82rem;outline:none;font-family:inherit}
+.perfil-box select option{background:var(--surface)}
+.perfil-btn{padding:8px 10px;border-radius:7px;border:1px solid rgba(0,201,167,.28);background:rgba(0,201,167,.08);color:var(--teal);font-size:.72rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
+.perfil-btn.sec{border-color:var(--line);background:rgba(255,255,255,.03);color:var(--muted)}
+.perfil-hint{font-size:.68rem;color:var(--muted);line-height:1.45;margin:-2px 0 8px}
 .selecionados-strip{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:28px;padding:4px;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:7px}
 .sel-tag{display:flex;align-items:center;gap:4px;padding:2px 8px;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.2);border-radius:4px;font-size:.67rem;color:var(--teal);font-weight:600}
 .sel-tag button{background:none;border:none;color:var(--teal);cursor:pointer;font-size:.75rem;line-height:1;padding:0 2px}
@@ -118,7 +124,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .toast.err{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171}
 @keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
-@media(max-width:768px){.main{margin-left:0;padding:12px}.sidebar{display:none}.kpi-strip{grid-template-columns:1fr 1fr}.mf-row{grid-template-columns:1fr}.modo-tabs{grid-template-columns:1fr}.cat-body{grid-template-columns:1fr}}
+@media(max-width:768px){.main{margin-left:0;padding:12px}.sidebar{display:none}.kpi-strip{grid-template-columns:1fr 1fr}.mf-row{grid-template-columns:1fr}.modo-tabs{grid-template-columns:1fr}.cat-body{grid-template-columns:1fr}.perfil-box{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -212,6 +218,14 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <!-- Passo 2: Exames -->
     <div class="mf">
       <label>Exames solicitados <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">— busque ou expanda as categorias</span></label>
+      <div class="perfil-box">
+        <select id="perfilFuncao">
+          <option value="">Selecionar pacote por função/cargo...</option>
+        </select>
+        <button class="perfil-btn" type="button" onclick="aplicarPerfil(false)">Adicionar sugeridos</button>
+        <button class="perfil-btn sec" type="button" onclick="aplicarPerfil(true)">Substituir</button>
+      </div>
+      <div class="perfil-hint" id="perfilHint">Ao escolher o funcionário, o sistema sugere exames por cargo/função. A empresa pode ajustar antes de enviar para a clínica.</div>
       <input class="exames-busca" id="exameBusca" placeholder="Ex: audiometria, hemograma, ECG, toxicológico..." oninput="filtrarExames(this.value)">
       <div id="selecionadosStrip" class="selecionados-strip"><span style="color:var(--muted);font-size:.7rem;padding:4px">Nenhum exame selecionado</span></div>
       <div id="catalogoContainer" style="max-height:280px;overflow-y:auto"></div>
@@ -281,7 +295,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-let _todos = [], _catalogo = [], _clinicas = [], _funcionarios = [];
+let _todos = [], _catalogo = [], _perfis = [], _clinicas = [], _funcionarios = [];
 let _modo = 'sistema';
 let _selecionados = new Set();
 let _filtro = '';
@@ -302,7 +316,8 @@ async function carregar(){
     if(!r.ok){toast(d.erro||'Erro','err');return;}
     _todos=d.solicitacoes||[];
     _catalogo=d.catalogo||[];
-    renderKpis();renderTabela();renderCatalogo(_catalogo);
+    _perfis=d.perfis_funcao||[];
+    renderKpis();renderTabela();renderPerfis();renderCatalogo(_catalogo);
   }catch(e){toast('Erro de conexão','err');}
 }
 
@@ -330,6 +345,7 @@ async function carregarFuncionarios(){
     const sel=document.getElementById('s-func');
     sel.innerHTML='<option value="">Selecione...</option>'+
       _funcionarios.map(f=>`<option value="${f.id}">${esc(f.nome)} — ${esc(f.cargo)}</option>`).join('');
+    sel.onchange=aoSelecionarFuncionario;
   }catch(e){}
 }
 
@@ -432,6 +448,49 @@ function renderSelecionados(){
   ).join('');
 }
 
+function normalizarTexto(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function renderPerfis(){
+  const sel=document.getElementById('perfilFuncao');
+  if(!sel) return;
+  sel.innerHTML='<option value="">Selecionar pacote por função/cargo...</option>'+
+    _perfis.map(p=>`<option value="${esc(p.id)}">${esc(p.nome)} (${(p.exames||[]).length} exames)</option>`).join('');
+}
+
+function sugerirPerfilParaFuncionario(func){
+  const alvo=normalizarTexto(`${func?.cargo||''} ${func?.setor||''}`);
+  if(!alvo.trim()) return null;
+  return _perfis.find(p=>(p.palavras_chave||[]).some(k=>alvo.includes(normalizarTexto(k)))) || null;
+}
+
+function aoSelecionarFuncionario(){
+  const id=parseInt(document.getElementById('s-func').value||'0');
+  const func=_funcionarios.find(f=>f.id===id);
+  const perfil=sugerirPerfilParaFuncionario(func);
+  const sel=document.getElementById('perfilFuncao');
+  const hint=document.getElementById('perfilHint');
+  if(perfil){
+    sel.value=perfil.id;
+    hint.textContent=`Sugestão para ${func.nome} — ${func.cargo}: ${perfil.nome}. Confira e ajuste os exames antes de enviar.`;
+  }else{
+    sel.value='';
+    hint.textContent=func ? `Sem pacote automático para ${func.cargo}. Selecione um pacote por função ou marque exames manualmente.` : 'Ao escolher o funcionário, o sistema sugere exames por cargo/função. A empresa pode ajustar antes de enviar para a clínica.';
+  }
+}
+
+function aplicarPerfil(substituir=false){
+  const id=document.getElementById('perfilFuncao').value;
+  const perfil=_perfis.find(p=>p.id===id);
+  if(!perfil){toast('Selecione um pacote por função/cargo','err');return;}
+  if(substituir) _selecionados.clear();
+  (perfil.exames||[]).forEach(e=>_selecionados.add(e));
+  renderSelecionados();
+  renderCatalogo(_catalogo,document.getElementById('exameBusca').value);
+  toast(`${(perfil.exames||[]).length} exame(s) adicionados para ${perfil.nome}`);
+}
+
 function removeExame(nome){
   _selecionados.delete(nome);
   renderSelecionados();
@@ -454,6 +513,8 @@ function abrirModal(){
   _selecionados.clear();
   renderSelecionados();
   document.getElementById('s-func').value='';
+  document.getElementById('perfilFuncao').value='';
+  document.getElementById('perfilHint').textContent='Ao escolher o funcionário, o sistema sugere exames por cargo/função. A empresa pode ajustar antes de enviar para a clínica.';
   document.getElementById('s-tipo').value='periodico';
   document.getElementById('s-obs').value='';
   document.getElementById('s-urgente').checked=false;
@@ -471,6 +532,7 @@ async function salvar(){
   const obs=document.getElementById('s-obs').value.trim();
   const urgente=document.getElementById('s-urgente').checked;
   const exames=[..._selecionados];
+  if(!exames.length){toast('Selecione pelo menos um exame para enviar à clínica','err');return;}
 
   const payload={funcionario_id:parseInt(funcId),tipo_aso:tipo,exames,urgente,observacoes:obs,modo:_modo};
 

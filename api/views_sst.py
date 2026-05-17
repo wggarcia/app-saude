@@ -363,6 +363,7 @@ def api_funcionarios(request):
                     "id": f.id,
                     "nome": f.nome,
                     "cargo": f.cargo,
+                    "setor": f.setor,
                     "unidade": f.unidade.nome if f.unidade else None,
                     "data_admissao": f.data_admissao.strftime("%d/%m/%Y") if f.data_admissao else None,
                     "classe_risco": f.classe_risco,
