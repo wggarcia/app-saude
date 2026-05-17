@@ -193,6 +193,16 @@ from api.views_prescricao import (
     api_atos_normativos,
     api_ato_normativo_detalhe,
 )
+from api.views_clinica import (
+    api_clinica_vinculos,
+    api_clinica_vinculo_detalhe,
+    api_clinica_enviar_aso,
+    pagina_aceitar_convite,
+    api_aceitar_vinculo,
+    api_empresa_asos_recebidos,
+    api_empresa_aso_recebido_acao,
+    api_empresa_vinculos_clinicas,
+)
 from api.views_gestao import (
     gestao_corporativa,
     gestao_plataforma,
@@ -957,4 +967,15 @@ urlpatterns = [
     path('validar-assinatura/<str:token>/', pagina_validar_assinatura),
     path('api/public/sst/validar/<str:token>', api_public_validar_assinatura_sst),
     path('api/public/sst/assinar/<str:token>', api_public_assinar_sst),
+
+    # ── Clínica ↔ Empresa: vínculo e envio de ASOs ───────────────────────────
+    path('api/clinica/vinculos', api_clinica_vinculos),
+    path('api/clinica/vinculos/', api_clinica_vinculos),
+    path('api/clinica/vinculos/<int:vinculo_id>', api_clinica_vinculo_detalhe),
+    path('api/clinica/vinculos/<int:vinculo_id>/enviar-aso/<int:aso_id>', api_clinica_enviar_aso),
+    path('api/empresa/asos-recebidos', api_empresa_asos_recebidos),
+    path('api/empresa/asos-recebidos/<int:envio_id>/acao', api_empresa_aso_recebido_acao),
+    path('api/empresa/clinicas-vinculadas', api_empresa_vinculos_clinicas),
+    path('api/clinica/aceitar/<str:token>', api_aceitar_vinculo),
+    path('clinica/aceitar/<str:token>/', pagina_aceitar_convite),
 ]

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Convite de Vínculo | SolusCRT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{min-height:100vh;font-family:"Manrope",sans-serif;background:linear-gradient(135deg,#041018,#081420);color:#ebf7ff;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{background:rgba(11,24,34,.95);border:1px solid rgba(154,193,220,.14);border-radius:28px;padding:36px;max-width:480px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.5)}
+    .logo{font-size:1rem;font-weight:800;color:#7ee1c3;margin-bottom:24px;letter-spacing:-.01em}
+    .badge{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;background:rgba(125,182,255,.12);color:#c3deff;font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px}
+    h1{font-size:1.4rem;font-weight:800;line-height:1.3;margin-bottom:8px}
+    .sub{color:#9ab9ce;font-size:.88rem;line-height:1.6;margin-bottom:24px}
+    .info-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:24px;display:grid;gap:8px}
+    .info-row{display:flex;justify-content:space-between;align-items:center;font-size:.85rem}
+    .info-label{color:#9ab9ce}
+    .info-val{font-weight:700}
+    .actions{display:flex;gap:10px}
+    .btn{flex:1;min-height:44px;border-radius:999px;border:none;font:inherit;font-size:.9rem;font-weight:800;cursor:pointer;transition:all .18s}
+    .btn-accept{background:linear-gradient(135deg,#0db794,#1f6ff2);color:#fff}
+    .btn-reject{background:rgba(255,255,255,.07);color:#9ab9ce;border:1px solid rgba(255,255,255,.1)}
+    .btn:hover{opacity:.88}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
+    .result{margin-top:20px;padding:14px;border-radius:14px;font-size:.88rem;text-align:center;display:none}
+    .result.ok{background:rgba(15,178,142,.12);color:#aef0db;display:block}
+    .result.err{background:rgba(255,130,152,.12);color:#ffc6d2;display:block}
+    .login-notice{margin-top:16px;padding:12px;border-radius:12px;background:rgba(240,191,107,.08);border:1px solid rgba(240,191,107,.2);color:#ffe4ad;font-size:.82rem;text-align:center}
+    .login-notice a{color:#f0bf6b;font-weight:800}
+    .already{text-align:center;padding:20px 0;color:#9ab9ce}
+    .already strong{color:#7ee1c3;display:block;font-size:1.1rem;margin-top:8px}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">SolusCRT</div>
+
+  {% if ja_respondido %}
+    <div class="already">
+      Este convite já foi processado.
+      <strong>Status: {{ vinculo.get_status_display }}</strong>
+    </div>
+  {% else %}
+    <div class="badge">Convite de parceria</div>
+    <h1>{{ clinica_nome }} quer enviar exames para sua empresa</h1>
+    <p class="sub">Ao aceitar, esta clínica poderá enviar ASOs (Atestados de Saúde Ocupacional) dos seus funcionários diretamente para a sua conta no SolusCRT. Você poderá importar ou rejeitar cada exame individualmente.</p>
+
+    <div class="info-box">
+      <div class="info-row"><span class="info-label">Clínica</span><span class="info-val">{{ clinica_nome }}</span></div>
+      {% if vinculo.empresa_cnpj %}<div class="info-row"><span class="info-label">Seu CNPJ informado</span><span class="info-val">{{ vinculo.empresa_cnpj }}</span></div>{% endif %}
+      <div class="info-row"><span class="info-label">Convite criado em</span><span class="info-val">{{ vinculo.criado_em|date:"d/m/Y" }}</span></div>
+    </div>
+
+    {% if empresa_logada %}
+      <div class="actions">
+        <button class="btn btn-accept" onclick="responder('aceitar')">Aceitar vínculo</button>
+        <button class="btn btn-reject" onclick="responder('recusar')">Recusar</button>
+      </div>
+      <div class="result" id="result"></div>
+    {% else %}
+      <div class="login-notice">
+        Para aceitar, faça login primeiro.<br>
+        <a href="/login-empresa/?next=/clinica/aceitar/{{ vinculo.token_convite }}/">Entrar na minha conta →</a>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+
+<script>
+async function responder(acao) {
+  document.querySelectorAll(".btn").forEach(b => b.disabled = true);
+  const r = await fetch(window.location.href, {
+    method: "POST",
+    headers: {"Content-Type":"application/json", "X-CSRFToken": getCookie("csrftoken")},
+    body: JSON.stringify({acao}),
+  });
+  const d = await r.json();
+  const el = document.getElementById("result");
+  if(r.ok) {
+    el.className = "result ok";
+    el.textContent = d.mensagem || (acao === "aceitar" ? "Vínculo aceito! A clínica já pode enviar exames para você." : "Convite recusado.");
+    document.querySelector(".actions").style.display = "none";
+  } else {
+    el.className = "result err";
+    el.textContent = d.erro || "Erro ao processar";
+    document.querySelectorAll(".btn").forEach(b => b.disabled = false);
+  }
+}
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+</script>
+</body>
+</html>

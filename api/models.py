@@ -1060,6 +1060,72 @@ class ASOCompartilhamento(models.Model):
         return f"ASO#{self.aso_id} → {self.empresa_destino_nome or 'link público'}"
 
 
+class VinculoClinicaEmpresa(models.Model):
+    """Vínculo permanente entre uma clínica (prestadora de exames) e uma empresa-cliente."""
+    STATUS = [
+        ("pendente", "Aguardando aceitação"),
+        ("ativo", "Ativo"),
+        ("suspenso", "Suspenso"),
+        ("recusado", "Recusado"),
+    ]
+
+    clinica = models.ForeignKey(
+        Empresa, on_delete=models.CASCADE, related_name="vinculos_como_clinica",
+        verbose_name="Clínica / prestadora",
+    )
+    empresa_contratante = models.ForeignKey(
+        Empresa, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="vinculos_como_empresa", verbose_name="Empresa contratante (conta SolusCRT)",
+    )
+    empresa_cnpj = models.CharField(max_length=18, blank=True, default="", verbose_name="CNPJ da empresa")
+    empresa_nome = models.CharField(max_length=200, blank=True, default="", verbose_name="Nome da empresa")
+    empresa_email_convite = models.EmailField(blank=True, default="", verbose_name="E-mail para convite")
+    token_convite = models.CharField(max_length=64, unique=True, default=_codigo_acesso)
+    status = models.CharField(max_length=20, choices=STATUS, default="pendente")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    aceito_em = models.DateTimeField(null=True, blank=True)
+    observacoes = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-criado_em"]
+        unique_together = [("clinica", "empresa_contratante")]
+        indexes = [
+            models.Index(fields=["clinica", "status"]),
+            models.Index(fields=["empresa_contratante", "status"]),
+            models.Index(fields=["token_convite"]),
+        ]
+
+    def __str__(self):
+        return f"{self.clinica.nome} → {self.empresa_nome or (self.empresa_contratante.nome if self.empresa_contratante else '?')}"
+
+
+class ASOEnviadoClinica(models.Model):
+    """Registro de um ASO enviado pela clínica diretamente para a conta da empresa no SolusCRT."""
+    STATUS = [
+        ("enviado", "Enviado"),
+        ("visualizado", "Visualizado"),
+        ("importado", "Importado ao prontuário"),
+        ("rejeitado", "Rejeitado pela empresa"),
+    ]
+
+    vinculo = models.ForeignKey(VinculoClinicaEmpresa, on_delete=models.CASCADE, related_name="asos_enviados")
+    aso = models.ForeignKey(ASOOcupacional, on_delete=models.CASCADE, related_name="envios_clinica")
+    status = models.CharField(max_length=20, choices=STATUS, default="enviado")
+    enviado_em = models.DateTimeField(auto_now_add=True)
+    visualizado_em = models.DateTimeField(null=True, blank=True)
+    importado_em = models.DateTimeField(null=True, blank=True)
+    observacao_empresa = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-enviado_em"]
+        indexes = [
+            models.Index(fields=["vinculo", "status"]),
+        ]
+
+    def __str__(self):
+        return f"ASO#{self.aso_id} via {self.vinculo}"
+
+
 class DocumentoSST(models.Model):
     TIPO = [
         ("PGR", "Programa de Gerenciamento de Riscos"),

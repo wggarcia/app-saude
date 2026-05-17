@@ -133,6 +133,7 @@ class EmpresaMiddleware:
             "/api/assinatura/",
             "/assinatura/sst/",    # página pública de assinatura SST (link por e-mail)
             "/validar-assinatura/", # página pública de validação de assinatura SST
+            "/clinica/aceitar/",    # página pública de aceitação de convite clínica-empresa
             "/api/gestao/integracoes/webhook/",  # webhook de sistemas de RH (auth própria via HMAC)
             "/api/v1/dados",        # dados via API Key (BI/ERP externo)
             "/api/planos-publicos",
