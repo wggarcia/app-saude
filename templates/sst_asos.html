@@ -525,6 +525,8 @@ async function carregarAsos(){
   const d=await r.json();
   _catalogo=d.catalogo_exames||_catalogo;
   _perfis=d.perfis_funcao||_perfis;
+  renderPerfisAso();
+  renderPerfisPedido();
   const rm={Apto:'apto',Inapto:'inapto','Apto com Restrição':'apto_restricao'};
   _asos=(d.asos||[]).map(a=>({...a,resultado_raw:rm[a.resultado]||'apto',tipo:Object.keys(tipoLabel).find(k=>tipoLabel[k]===a.tipo)||a.tipo,status_esocial:a.status_esocial||'nao_enviado'}));
   renderTabelaAso();
@@ -870,6 +872,7 @@ function renderTabelaPedidos(){
 function abrirModalPedido(){
   _selecionados.clear();
   renderSelecionados();
+  renderPerfisPedido();
   document.getElementById('p-func').value='';
   document.getElementById('p-perfil-funcao').value='';
   document.getElementById('p-perfil-hint').textContent='Escolha o funcionário para sugerir exames por cargo/função ou marque manualmente os exames feitos no ASO.';
