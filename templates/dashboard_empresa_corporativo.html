@@ -352,8 +352,8 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
       <div class="badge-dot"></div>
       <span id="tb-alertas-count">0</span> alertas
     </div>
-    <button class="btn-quick" onclick="openModal('aso')">+ Emitir ASO</button>
-    <button class="btn-quick" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 0 16px rgba(239,68,68,.2)" onclick="openModal('cat')">+ Registrar CAT</button>
+    <button class="btn-quick" onclick="window.location='/sst/asos/'">+ Emitir ASO</button>
+    <button class="btn-quick" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 0 16px rgba(239,68,68,.2)" onclick="window.location='/sst/cats/'">+ Registrar CAT</button>
   </div>
 </header>
 
@@ -519,11 +519,11 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
         <div class="bloco">
           <div class="bloco-title">Ações Rápidas</div>
           <div class="acoes-grid">
-            <button class="acao-btn" onclick="openModal('aso')">
+            <button class="acao-btn" onclick="window.location='/sst/asos/'">
               <span class="acao-icon">📋</span>
               <span class="acao-label">Emitir ASO</span>
             </button>
-            <button class="acao-btn" onclick="openModal('cat')">
+            <button class="acao-btn" onclick="window.location='/sst/cats/'">
               <span class="acao-icon">⚠️</span>
               <span class="acao-label">Registrar CAT</span>
             </button>
