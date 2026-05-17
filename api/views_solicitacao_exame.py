@@ -195,11 +195,10 @@ def api_clinicas_disponiveis(request):
 
 # ── Página clínica ─────────────────────────────────────────────────────────────
 
-@requer_setor("clinica")
 def clinica_solicitacoes_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
-        return redirect("/")
+        return redirect("/login-empresa/")
     return render(request, "clinica_solicitacoes.html", {"empresa_nome": empresa.nome})
 
 
