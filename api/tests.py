@@ -2576,4 +2576,3 @@ class AssinaturaSSTTests(TestCase):
     def test_sem_autenticacao_retorna_401(self):
         resp = Client().get("/api/sst/assinaturas")
         self.assertEqual(resp.status_code, 401)
->>>>>>> 55c7aba (Fix assinatura SST bugs + testes + métodos Flutter)
