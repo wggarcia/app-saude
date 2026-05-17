@@ -138,6 +138,12 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .exame-item label{font-size:.73rem;color:var(--text);cursor:pointer;line-height:1.35}
 .exames-busca{width:100%;padding:8px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:.82rem;outline:none;font-family:inherit;margin-bottom:8px;transition:border .15s}
 .exames-busca:focus{border-color:var(--teal)}
+.perfil-box{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end;margin-bottom:8px}
+.perfil-box select{width:100%;padding:8px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:.82rem;outline:none;font-family:inherit}
+.perfil-box select option{background:var(--surface)}
+.perfil-btn{padding:8px 10px;border-radius:7px;border:1px solid rgba(0,201,167,.28);background:rgba(0,201,167,.08);color:var(--teal);font-size:.72rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
+.perfil-btn.sec{border-color:var(--line);background:rgba(255,255,255,.03);color:var(--muted)}
+.perfil-hint{font-size:.68rem;color:var(--muted);line-height:1.45;margin:-2px 0 8px}
 .selecionados-strip{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:28px;padding:4px;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:7px}
 .sel-tag{display:flex;align-items:center;gap:4px;padding:2px 8px;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.2);border-radius:4px;font-size:.67rem;color:var(--teal);font-weight:600}
 .sel-tag button{background:none;border:none;color:var(--teal);cursor:pointer;font-size:.75rem;line-height:1;padding:0 2px}
@@ -154,7 +160,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
-@media(max-width:768px){.main{margin-left:0;padding:12px}.sidebar{display:none}.kpi-strip{flex-wrap:wrap}.mf-row{grid-template-columns:1fr}.modo-tabs{grid-template-columns:1fr}.cat-body{grid-template-columns:1fr}}
+@media(max-width:768px){.main{margin-left:0;padding:12px}.sidebar{display:none}.kpi-strip{flex-wrap:wrap}.mf-row{grid-template-columns:1fr}.modo-tabs{grid-template-columns:1fr}.cat-body{grid-template-columns:1fr}.perfil-box{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -273,7 +279,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
      MODAL: Emitir ASO
 ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="modal-bg" id="modal-aso">
-  <div class="modal">
+  <div class="modal modal-lg">
     <h3>Emitir Atestado de Saúde Ocupacional</h3>
     <div class="modal-sub">Registre o ASO com tipo, resultado, médico responsável e validade.</div>
     <div class="mf"><label>Funcionário *</label>
@@ -315,6 +321,20 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     </div>
     <div class="mf"><label>Riscos Ocupacionais</label>
       <textarea id="a-riscos" placeholder="Ex: Ruído acima de 85 dB, calor excessivo, agentes químicos (poeira de sílica)..." style="min-height:56px"></textarea>
+    </div>
+    <div class="mf">
+      <label>Exames realizados / avaliados no ASO</label>
+      <div class="perfil-box">
+        <select id="a-perfil-funcao">
+          <option value="">Selecionar pacote por função/cargo...</option>
+        </select>
+        <button class="perfil-btn" type="button" onclick="aplicarPerfilAso(false)">Adicionar sugeridos</button>
+        <button class="perfil-btn sec" type="button" onclick="aplicarPerfilAso(true)">Substituir</button>
+      </div>
+      <div class="perfil-hint" id="a-perfil-hint">Escolha o funcionário para sugerir exames por cargo/função ou marque manualmente os exames feitos no ASO.</div>
+      <input class="exames-busca" id="a-exame-busca" placeholder="Ex: audiometria, hemograma, ECG, toxicológico..." oninput="filtrarExamesAso(this.value)">
+      <div id="a-selecionados-strip" class="selecionados-strip"><span style="color:var(--muted);font-size:.7rem;padding:4px">Nenhum exame selecionado</span></div>
+      <div id="a-catalogo-container" style="max-height:220px;overflow-y:auto"></div>
     </div>
     <div class="mf"><label>Restrições / Condicionamentos</label>
       <textarea id="a-restricoes" placeholder="Ex: Proibido trabalho em altura, uso obrigatório de protetor auricular, restrição a esforço físico..." style="min-height:56px"></textarea>
@@ -446,10 +466,11 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 // ══════════════════════════════════════════════════════════════════════════════
 // State
 // ══════════════════════════════════════════════════════════════════════════════
-let _asos = [], _pedidos = [], _catalogo = [], _clinicas = [], _funcionarios = [];
+let _asos = [], _pedidos = [], _catalogo = [], _perfis = [], _clinicas = [], _funcionarios = [];
 let _filtroAso = 'todos', _filtroPed = '';
 let _modo = 'sistema';
 let _selecionados = new Set();
+let _asoExames = new Set();
 let _shareAsoId = null;
 const hoje = new Date(); hoje.setHours(0,0,0,0);
 
@@ -494,6 +515,8 @@ async function carregarAsos(){
   const r=await fetch('/api/sst/asos');
   if(!r.ok)return;
   const d=await r.json();
+  _catalogo=d.catalogo_exames||_catalogo;
+  _perfis=d.perfis_funcao||_perfis;
   const rm={Apto:'apto',Inapto:'inapto','Apto com Restrição':'apto_restricao'};
   _asos=(d.asos||[]).map(a=>({...a,resultado_raw:rm[a.resultado]||'apto',tipo:Object.keys(tipoLabel).find(k=>tipoLabel[k]===a.tipo)||a.tipo,status_esocial:a.status_esocial||'nao_enviado'}));
   renderTabelaAso();
@@ -505,7 +528,7 @@ async function carregarAsos(){
     // Try to pre-select funcionário by name
     const nome=p.get('novo');
     const f=_funcionarios.find(x=>x.nome===nome||x.nome.toLowerCase().includes(nome.toLowerCase()));
-    if(f)document.getElementById('a-func-id').value=f.id;
+    if(f){document.getElementById('a-func-id').value=f.id;aoSelecionarFuncionarioAso();}
   }
 }
 
@@ -546,7 +569,7 @@ function renderTabelaAso(){
       ?`<button class="btn-row btn-esocial" id="btn-s2220-${a.id}" onclick="enviarS2220(${a.id},this)">📤 S-2220</button>`:'';
     const funcId=a.funcionario_id||'';
     return`<tr class="${rowCls}">
-      <td><strong>${esc(a.funcionario)}</strong></td>
+      <td><strong>${esc(a.funcionario)}</strong>${a.exames&&a.exames.length?`<br><span style="color:var(--muted);font-size:.68rem">${a.exames.slice(0,2).map(esc).join(', ')}${a.exames.length>2?` +${a.exames.length-2}`:''}</span>`:''}</td>
       <td><span class="badge b-azul">${tipoLabel[a.tipo]||a.tipo}</span></td>
       <td style="color:var(--muted)">${a.data_emissao}</td>
       <td style="color:var(--muted)">${a.data_validade||'—'}</td>
@@ -573,9 +596,16 @@ function renovarAso(funcId){
 // Modal: Emitir ASO
 // ══════════════════════════════════════════════════════════════════════════════
 function openModalAso(){
+  _asoExames.clear();
   document.getElementById('modal-aso').classList.add('open');
   document.getElementById('a-emissao').value=new Date().toISOString().split('T')[0];
   document.getElementById('a-resultado').value='apto';
+  document.getElementById('a-exame-busca').value='';
+  document.getElementById('a-perfil-funcao').value='';
+  document.getElementById('a-perfil-hint').textContent='Escolha o funcionário para sugerir exames por cargo/função ou marque manualmente os exames feitos no ASO.';
+  renderPerfisAso();
+  renderSelecionadosAso();
+  renderCatalogoAso(_catalogo,'');
   toggleCidInapto();
 }
 function closeModalAso(){document.getElementById('modal-aso').classList.remove('open');}
@@ -602,6 +632,7 @@ async function salvarAso(){
     crm:document.getElementById('a-crm').value.trim(),
     cid_inapto:document.getElementById('a-cid').value.trim(),
     riscos_ocupacionais:document.getElementById('a-riscos').value.trim(),
+    exames:[..._asoExames],
     restricoes:document.getElementById('a-restricoes').value.trim(),
     observacoes:document.getElementById('a-obs').value.trim(),
   };
@@ -664,6 +695,105 @@ async function enviarS2220(asoId,btn){
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// ASO — Catálogo de exames realizados/avaliados
+// ══════════════════════════════════════════════════════════════════════════════
+function normalizarTexto(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function renderPerfisAso(){
+  const sel=document.getElementById('a-perfil-funcao');
+  if(!sel)return;
+  sel.innerHTML='<option value="">Selecionar pacote por função/cargo...</option>'+
+    _perfis.map(p=>`<option value="${esc(p.id)}">${esc(p.nome)} (${(p.exames||[]).length} exames)</option>`).join('');
+}
+
+function sugerirPerfilParaFuncionario(func){
+  const alvo=normalizarTexto(`${func?.cargo||''} ${func?.setor||''}`);
+  if(!alvo.trim())return null;
+  return _perfis.find(p=>(p.palavras_chave||[]).some(k=>alvo.includes(normalizarTexto(k))))||null;
+}
+
+function aoSelecionarFuncionarioAso(){
+  const id=parseInt(document.getElementById('a-func-id').value||'0');
+  const func=_funcionarios.find(f=>f.id===id);
+  const perfil=sugerirPerfilParaFuncionario(func);
+  const hint=document.getElementById('a-perfil-hint');
+  const sel=document.getElementById('a-perfil-funcao');
+  if(perfil){
+    sel.value=perfil.id;
+    hint.textContent=`Sugestão para ${func.nome} — ${func.cargo}: ${perfil.nome}. Confirme antes de emitir o ASO.`;
+  }else{
+    sel.value='';
+    hint.textContent=func?`Sem pacote automático para ${func.cargo}. Selecione um pacote ou marque exames manualmente.`:'Escolha o funcionário para sugerir exames por cargo/função ou marque manualmente os exames feitos no ASO.';
+  }
+}
+
+function aplicarPerfilAso(substituir=false){
+  const id=document.getElementById('a-perfil-funcao').value;
+  const perfil=_perfis.find(p=>p.id===id);
+  if(!perfil){toast('Selecione um pacote por função/cargo','err');return;}
+  if(substituir)_asoExames.clear();
+  (perfil.exames||[]).forEach(e=>_asoExames.add(e));
+  renderSelecionadosAso();
+  renderCatalogoAso(_catalogo,document.getElementById('a-exame-busca').value);
+}
+
+function renderCatalogoAso(cats,busca){
+  const cont=document.getElementById('a-catalogo-container');
+  if(!cont)return;
+  const q=(busca||'').toLowerCase().trim();
+  cont.innerHTML=(cats||[]).map((cat,ci)=>{
+    const itens=cat.exames.filter(e=>!q||e.toLowerCase().includes(q));
+    if(!itens.length)return'';
+    const aberto=!!q||ci===0;
+    return`<div class="cat-section">
+      <div class="cat-header" onclick="toggleCatAso(${ci})">
+        <span class="cat-title">${esc(cat.categoria)}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span class="cat-count">${itens.length} exames</span>
+          <span class="cat-arrow${aberto?' open':''}" id="a-arr-${ci}">▶</span>
+        </span>
+      </div>
+      <div class="cat-body${aberto?'':' collapsed'}" id="a-cat-${ci}">
+        ${itens.map(e=>{
+          const idx=encodeURIComponent(e);
+          return`<div class="exame-item"><input type="checkbox" id="a-ex-${idx}" ${_asoExames.has(e)?'checked':''} onchange="toggleExameAso('${e.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',this.checked)"><label for="a-ex-${idx}">${esc(e)}</label></div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCatAso(ci){
+  const body=document.getElementById(`a-cat-${ci}`);
+  const arr=document.getElementById(`a-arr-${ci}`);
+  body.classList.toggle('collapsed');
+  arr.classList.toggle('open',!body.classList.contains('collapsed'));
+}
+
+function filtrarExamesAso(q){renderCatalogoAso(_catalogo,q);}
+
+function toggleExameAso(nome,checked){
+  if(checked)_asoExames.add(nome);else _asoExames.delete(nome);
+  renderSelecionadosAso();
+}
+
+function renderSelecionadosAso(){
+  const strip=document.getElementById('a-selecionados-strip');
+  if(!_asoExames.size){strip.innerHTML='<span style="color:var(--muted);font-size:.7rem;padding:4px">Nenhum exame selecionado</span>';return;}
+  strip.innerHTML=[..._asoExames].map(e=>
+    `<span class="sel-tag">${esc(e.length>35?e.slice(0,33)+'…':e)}<button onclick="removeExameAso('${e.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">×</button></span>`
+  ).join('');
+}
+
+function removeExameAso(nome){
+  _asoExames.delete(nome);
+  renderSelecionadosAso();
+  renderCatalogoAso(_catalogo,document.getElementById('a-exame-busca').value);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // Pedidos — Carregar + Render
 // ══════════════════════════════════════════════════════════════════════════════
 const SB={pendente:'b-amarelo',agendado:'b-azul',realizado:'b-verde',cancelado:'b-cinza'};
@@ -676,6 +806,7 @@ async function carregarPedidos(){
     if(!r.ok){toast(d.erro||'Erro','err');return;}
     _pedidos=d.solicitacoes||[];
     _catalogo=d.catalogo||[];
+    _perfis=d.perfis_funcao||_perfis;
     renderKpisPedidos();
     renderTabelaPedidos();
     renderCatalogo(_catalogo,'');
@@ -872,6 +1003,7 @@ async function carregarFuncionarios(){
       _funcionarios.map(f=>`<option value="${f.id}">${esc(f.nome)} — ${esc(f.cargo)}</option>`).join('');
     document.getElementById('a-func-id').innerHTML=opts;
     document.getElementById('p-func').innerHTML=opts;
+    document.getElementById('a-func-id').onchange=aoSelecionarFuncionarioAso;
   }catch(e){}
 }
 

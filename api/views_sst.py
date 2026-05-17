@@ -186,6 +186,25 @@ def _buscar_funcionario(empresa, data):
     )
 
 
+def _classificar_tipo_exame(nome):
+    texto = (nome or "").lower()
+    if any(p in texto for p in ["audiometr", "ruído", "ruido", "otoac"]):
+        return "audiometria"
+    if any(p in texto for p in ["visual", "oftal", "ishihara", "campimetr", "tonometr"]):
+        return "acuidade_visual"
+    if any(p in texto for p in ["espirom", "pulmonar", "tórax", "torax", "tcar"]):
+        return "espirometria"
+    if any(p in texto for p in ["ecg", "eletrocardiograma", "cardio", "ergométrico", "ergometrico"]):
+        return "eletrocardiograma"
+    if any(p in texto for p in ["raio", "rx", "ressonância", "ressonancia", "tomografia", "ultrassom", "ultrassonografia"]):
+        return "raio_x"
+    if any(p in texto for p in ["psicol", "psiqui", "psicossocial", "phq", "gad", "burnout"]):
+        return "psicologico"
+    if any(p in texto for p in ["hemograma", "glicemia", "urina", "sorologia", "toxicol", "chumbo", "mercúrio", "mercurio", "colinesterase", "função", "funcao", "hepática", "hepatica", "renal"]):
+        return "laboratorial"
+    return "outro"
+
+
 def _empresa_sst_autenticada(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -405,7 +424,8 @@ def api_asos(request):
         return _sst_nao_autorizado()
 
     if request.method == "GET":
-        qs = ASOOcupacional.objects.filter(empresa=empresa).select_related("funcionario")
+        from .views_solicitacao_exame import CATALOGO_EXAMES, PERFIS_EXAMES_FUNCAO
+        qs = ASOOcupacional.objects.filter(empresa=empresa).select_related("funcionario").prefetch_related("exames")
         return JsonResponse({
             "asos": [
                 {
@@ -422,12 +442,18 @@ def api_asos(request):
                     "crm": a.crm,
                     "cid_inapto": a.cid_inapto,
                     "riscos_ocupacionais": a.riscos_ocupacionais,
+                    "exames": [
+                        e.observacoes or e.get_tipo_exame_display()
+                        for e in a.exames.all()
+                    ],
                     "restricoes": a.restricoes,
                     "observacoes": a.observacoes,
                     "status_esocial": "nao_enviado",
                 }
                 for a in qs[:200]
-            ]
+            ],
+            "catalogo_exames": CATALOGO_EXAMES,
+            "perfis_funcao": PERFIS_EXAMES_FUNCAO,
         })
 
     if request.method == "POST":
@@ -464,6 +490,23 @@ def api_asos(request):
             restricoes=data.get("restricoes", ""),
             observacoes=data.get("observacoes", ""),
         )
+        exames = data.get("exames") or []
+        if isinstance(exames, list):
+            for nome_exame in exames:
+                nome = str(nome_exame or "").strip()
+                if not nome:
+                    continue
+                ExameOcupacional.objects.create(
+                    empresa=empresa,
+                    funcionario=func,
+                    aso=aso,
+                    tipo_exame=_classificar_tipo_exame(nome),
+                    data_realizacao=aso.data_emissao,
+                    data_validade=aso.data_validade,
+                    resultado="Realizado / avaliado no ASO",
+                    status="realizado",
+                    observacoes=nome,
+                )
         return JsonResponse({"id": aso.id, "ok": True}, status=201)
 
     return JsonResponse({"erro": "método não permitido"}, status=405)
