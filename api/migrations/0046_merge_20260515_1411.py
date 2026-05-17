@@ -6,7 +6,6 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0037_assinatura_sst_auditavel'),
         ('api', '0045_configuracaosst_esocial_certificado'),
     ]
 
