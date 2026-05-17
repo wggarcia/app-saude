@@ -60,6 +60,19 @@ backend/app-saude/
 app_saude/app_ocupacional/
 app-saude
 app-saude-1
+.claude/
+$CODEX_HOME/
+/android/
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+/lib/
+/test/
+app_saude/linux/
+app_saude/macos/
+app_saude/windows/
 
 # Local databases, secrets and generated diagnostics
 db.sqlite3
