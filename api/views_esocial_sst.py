@@ -96,9 +96,9 @@ def _gerar_xml_s2210(cat, cfg):
     SubElement(c, "tpAcid").text = tipo_map.get(cat.tipo, "1")
     if cat.hora_acidente:
         SubElement(c, "hrAcid").text = cat.hora_acidente.strftime("%H:%M")
-    SubElement(c, "tpCat").text = "1"
+    SubElement(c, "tpCat").text = getattr(cat, "tp_cat", "1") or "1"
     SubElement(c, "indCatObito").text = "S" if cat.gravidade == "fatal" else "N"
-    SubElement(c, "dscLesao").text = cat.parte_corpo or "Não informado"
+    SubElement(c, "dscLesao").text = (cat.parte_corpo or "Não informado")[:200]
     SubElement(c, "dscCat").text = (cat.descricao or "")[:999]
     SubElement(c, "houveAfast").text = "S" if cat.houve_afastamento else "N"
 
@@ -110,14 +110,14 @@ def _gerar_xml_s2210(cat, cfg):
     SubElement(ilt, "tpInsc").text = "1"
     SubElement(ilt, "nrInsc").text = cnpj or "00000000000000"
 
-    # parteAtingida
+    # parteAtingida — usa código eSocial real do campo cod_parte_corpo
     pa = SubElement(c, "parteAtingida")
-    SubElement(pa, "codParteAting").text = "730"   # corpo inteiro / não especificado
-    SubElement(pa, "lateralidade").text = "9"       # não aplicável
+    SubElement(pa, "codParteAting").text = getattr(cat, "cod_parte_corpo", None) or "730"
+    SubElement(pa, "lateralidade").text = getattr(cat, "lateralidade", None) or "9"
 
-    # agenteCausador
+    # agenteCausador — usa código eSocial real do campo cod_agente_causador
     ag = SubElement(c, "agenteCausador")
-    SubElement(ag, "codAgntCausador").text = "0099"  # outros agentes
+    SubElement(ag, "codAgntCausador").text = getattr(cat, "cod_agente_causador", None) or "0099"
 
     # atestado
     at = SubElement(c, "atestado")
@@ -173,6 +173,11 @@ def _gerar_xml_s2220(aso, cfg):
     SubElement(aso_el, "dtAso").text = aso.data_emissao.strftime("%Y-%m-%d")
     res_map = {"apto": "1", "inapto": "2", "apto_restricao": "3"}
     SubElement(aso_el, "resAso").text = res_map.get(aso.resultado, "1")
+
+    # CID obrigatório quando inapto ou apto com restrição
+    cid_inapto = getattr(aso, "cid_inapto", "") or ""
+    if aso.resultado in ("inapto", "apto_restricao") and cid_inapto:
+        SubElement(aso_el, "codCID").text = cid_inapto[:4]
 
     med = SubElement(aso_el, "medico")
     SubElement(med, "nmMed").text = aso.medico_responsavel or (cfg.nome_medico_coordenador if cfg else "Médico")

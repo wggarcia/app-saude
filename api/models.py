@@ -886,6 +886,8 @@ class ASOOcupacional(models.Model):
     medico_responsavel = models.CharField(max_length=200, blank=True)
     crm = models.CharField(max_length=30, blank=True)
     resultado = models.CharField(max_length=20, choices=RESULTADO, default="apto")
+    cid_inapto = models.CharField(max_length=10, blank=True, verbose_name="CID (quando inapto/restrito)")
+    riscos_ocupacionais = models.TextField(blank=True, verbose_name="Riscos ocupacionais do cargo (NR-7)")
     restricoes = models.TextField(blank=True)
     observacoes = models.TextField(blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -946,20 +948,45 @@ class CATOcupacional(models.Model):
         ("retificado", "Retificado"),
     ]
     GRAVIDADE = [("leve", "Leve"), ("moderado", "Moderado"), ("grave", "Grave"), ("fatal", "Fatal")]
+    TP_CAT = [("1", "Inicial"), ("2", "Reabertura"), ("3", "Comunicação de Óbito")]
+    LATERALIDADE = [("1", "Esquerdo"), ("2", "Direito"), ("3", "Ambos"), ("9", "Não Aplicável")]
+    COD_PARTE_CORPO = [
+        ("010", "Cabeça / Crânio"), ("020", "Ouvido(s)"), ("030", "Olho(s) / Face"),
+        ("040", "Pescoço"), ("050", "Tronco / Tórax"), ("060", "Coluna Vertebral"),
+        ("070", "Abdome"), ("080", "Membro Superior Direito"), ("081", "Membro Superior Esquerdo"),
+        ("082", "Ambos os Membros Superiores"), ("090", "Membro Inferior Direito"),
+        ("091", "Membro Inferior Esquerdo"), ("092", "Ambos os Membros Inferiores"),
+        ("730", "Múltiplas Partes do Corpo"), ("800", "Sistema Nervoso"), ("900", "Órgãos Internos"),
+        ("999", "Outras Partes"),
+    ]
+    COD_AGENTE = [
+        ("0001", "Animais e insetos"), ("0002", "Choque elétrico"),
+        ("0003", "Esforço excessivo / movimento repetitivo"), ("0004", "Explosão / implosão"),
+        ("0005", "Incêndio"), ("0006", "Queda"), ("0007", "Substâncias químicas / gases / fumaças"),
+        ("0008", "Temperatura extrema (calor ou frio)"), ("0009", "Máquinas e equipamentos"),
+        ("0010", "Material cortante / perfurante"), ("0011", "Impacto por objeto / equipamento"),
+        ("0012", "Acidente de trânsito"), ("0099", "Outros agentes"),
+    ]
 
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="cats")
     funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="cats")
     tipo = models.CharField(max_length=20, choices=TIPO, default="tipico")
+    tp_cat = models.CharField(max_length=1, choices=TP_CAT, default="1", verbose_name="Tipo de CAT")
     gravidade = models.CharField(max_length=20, choices=GRAVIDADE, default="leve")
     data_acidente = models.DateField()
     hora_acidente = models.TimeField(null=True, blank=True)
     local_acidente = models.CharField(max_length=200, blank=True)
     descricao = models.TextField()
-    parte_corpo = models.CharField(max_length=100, blank=True)
+    parte_corpo = models.CharField(max_length=100, blank=True, verbose_name="Parte do corpo (descrição livre)")
+    cod_parte_corpo = models.CharField(max_length=3, choices=COD_PARTE_CORPO, default="730", verbose_name="Código parte atingida (eSocial)")
+    lateralidade = models.CharField(max_length=1, choices=LATERALIDADE, default="9", verbose_name="Lateralidade")
+    cod_agente_causador = models.CharField(max_length=4, choices=COD_AGENTE, default="0099", verbose_name="Agente causador (eSocial)")
     cid = models.CharField(max_length=10, blank=True)
     numero_cat = models.CharField(max_length=30, blank=True)
     houve_afastamento = models.BooleanField(default=False)
     dias_afastamento = models.IntegerField(default=0)
+    testemunha_nome = models.CharField(max_length=180, blank=True, verbose_name="Nome da testemunha")
+    testemunha_telefone = models.CharField(max_length=20, blank=True, verbose_name="Telefone da testemunha")
     status_esocial = models.CharField(max_length=20, choices=STATUS_ESOCIAL, default="nao_enviado")
     protocolo_esocial = models.CharField(max_length=60, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)

@@ -410,11 +410,19 @@ def api_asos(request):
                 {
                     "id": a.id,
                     "funcionario": a.funcionario.nome,
-                    "tipo": a.get_tipo_display(),
+                    "funcionario_cpf": a.funcionario.cpf,
+                    "tipo": a.tipo,
+                    "tipo_label": a.get_tipo_display(),
                     "data_emissao": a.data_emissao.strftime("%d/%m/%Y"),
                     "data_validade": a.data_validade.strftime("%d/%m/%Y") if a.data_validade else None,
-                    "resultado": a.get_resultado_display(),
+                    "resultado": a.resultado,
+                    "resultado_label": a.get_resultado_display(),
                     "medico": a.medico_responsavel,
+                    "crm": a.crm,
+                    "cid_inapto": a.cid_inapto,
+                    "riscos_ocupacionais": a.riscos_ocupacionais,
+                    "restricoes": a.restricoes,
+                    "observacoes": a.observacoes,
                 }
                 for a in qs[:50]
             ]
@@ -436,6 +444,10 @@ def api_asos(request):
                 return datetime.strptime(s, "%Y-%m-%d").date()
             except Exception:
                 return None
+        resultado = data.get("resultado", "apto")
+        cid_inapto = (data.get("cid_inapto") or "").strip().upper()
+        if resultado in ("inapto", "apto_restricao") and not cid_inapto:
+            return JsonResponse({"erro": "CID é obrigatório quando o resultado for Inapto ou Apto com Restrição."}, status=400)
         aso = ASOOcupacional.objects.create(
             empresa=empresa,
             funcionario=func,
@@ -444,7 +456,10 @@ def api_asos(request):
             data_validade=parse_date(data.get("data_validade")),
             medico_responsavel=data.get("medico", ""),
             crm=data.get("crm", ""),
-            resultado=data.get("resultado", "apto"),
+            resultado=resultado,
+            cid_inapto=cid_inapto,
+            riscos_ocupacionais=data.get("riscos_ocupacionais", ""),
+            restricoes=data.get("restricoes", ""),
             observacoes=data.get("observacoes", ""),
         )
         return JsonResponse({"id": aso.id, "ok": True}, status=201)
@@ -467,15 +482,32 @@ def api_cats(request):
                 {
                     "id": c.id,
                     "funcionario": c.funcionario.nome,
-                    "tipo": c.get_tipo_display(),
+                    "funcionario_cpf": c.funcionario.cpf,
+                    "tipo": c.tipo,
+                    "tipo_label": c.get_tipo_display(),
+                    "tp_cat": c.tp_cat,
+                    "tp_cat_label": c.get_tp_cat_display(),
                     "gravidade": c.gravidade,
+                    "gravidade_label": c.get_gravidade_display(),
                     "data_acidente": c.data_acidente.strftime("%d/%m/%Y"),
+                    "hora_acidente": c.hora_acidente.strftime("%H:%M") if c.hora_acidente else None,
+                    "descricao": c.descricao,
                     "cid": c.cid,
                     "local_acidente": c.local_acidente,
                     "parte_corpo": c.parte_corpo,
+                    "cod_parte_corpo": c.cod_parte_corpo,
+                    "cod_parte_corpo_label": c.get_cod_parte_corpo_display(),
+                    "lateralidade": c.lateralidade,
+                    "lateralidade_label": c.get_lateralidade_display(),
+                    "cod_agente_causador": c.cod_agente_causador,
+                    "cod_agente_causador_label": c.get_cod_agente_causador_display(),
                     "houve_afastamento": c.houve_afastamento,
+                    "dias_afastamento": c.dias_afastamento,
+                    "testemunha_nome": c.testemunha_nome,
+                    "testemunha_telefone": c.testemunha_telefone,
                     "status_esocial": c.status_esocial,
                     "numero_cat": c.numero_cat,
+                    "protocolo_esocial": c.protocolo_esocial,
                 }
                 for c in qs[:50]
             ]
@@ -506,13 +538,21 @@ def api_cats(request):
             empresa=empresa,
             funcionario=func,
             tipo=tipo_cat,
+            tp_cat=data.get("tp_cat", "1"),
             gravidade=data.get("gravidade", "leve"),
             data_acidente=parse_date(data.get("data_acidente")) or date.today(),
+            hora_acidente=parse_date(data.get("hora_acidente")) if data.get("hora_acidente") else None,
             descricao=data.get("descricao", ""),
             local_acidente=data.get("local_acidente", ""),
             parte_corpo=data.get("parte_corpo", ""),
+            cod_parte_corpo=data.get("cod_parte_corpo", "730"),
+            lateralidade=data.get("lateralidade", "9"),
+            cod_agente_causador=data.get("cod_agente_causador", "0099"),
             cid=cid,
             houve_afastamento=bool(data.get("houve_afastamento")),
+            dias_afastamento=int(data.get("dias_afastamento") or 0),
+            testemunha_nome=data.get("testemunha_nome", ""),
+            testemunha_telefone=data.get("testemunha_telefone", ""),
         )
         return JsonResponse({"id": cat.id, "ok": True}, status=201)
 
