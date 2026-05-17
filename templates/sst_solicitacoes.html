@@ -217,7 +217,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 
     <!-- Passo 2: Exames -->
     <div class="mf">
-      <label>Exames solicitados <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">— busque ou expanda as categorias</span></label>
+      <label>Exames realizados / avaliados no ASO</label>
       <div class="perfil-box">
         <select id="perfilFuncao">
           <option value="">Selecionar pacote por função/cargo...</option>
@@ -225,7 +225,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
         <button class="perfil-btn" type="button" onclick="aplicarPerfil(false)">Adicionar sugeridos</button>
         <button class="perfil-btn sec" type="button" onclick="aplicarPerfil(true)">Substituir</button>
       </div>
-      <div class="perfil-hint" id="perfilHint">Ao escolher o funcionário, o sistema sugere exames por cargo/função. A empresa pode ajustar antes de enviar para a clínica.</div>
+      <div class="perfil-hint" id="perfilHint">Escolha o funcionário para sugerir exames por cargo/função ou marque manualmente os exames feitos no ASO.</div>
       <input class="exames-busca" id="exameBusca" placeholder="Ex: audiometria, hemograma, ECG, toxicológico..." oninput="filtrarExames(this.value)">
       <div id="selecionadosStrip" class="selecionados-strip"><span style="color:var(--muted);font-size:.7rem;padding:4px">Nenhum exame selecionado</span></div>
       <div id="catalogoContainer" style="max-height:280px;overflow-y:auto"></div>
@@ -476,7 +476,7 @@ function aoSelecionarFuncionario(){
     hint.textContent=`Sugestão para ${func.nome} — ${func.cargo}: ${perfil.nome}. Confira e ajuste os exames antes de enviar.`;
   }else{
     sel.value='';
-    hint.textContent=func ? `Sem pacote automático para ${func.cargo}. Selecione um pacote por função ou marque exames manualmente.` : 'Ao escolher o funcionário, o sistema sugere exames por cargo/função. A empresa pode ajustar antes de enviar para a clínica.';
+    hint.textContent=func ? `Sem pacote automático para ${func.cargo}. Selecione um pacote por função ou marque exames manualmente.` : 'Escolha o funcionário para sugerir exames por cargo/função ou marque manualmente os exames feitos no ASO.';
   }
 }
 
@@ -514,7 +514,7 @@ function abrirModal(){
   renderSelecionados();
   document.getElementById('s-func').value='';
   document.getElementById('perfilFuncao').value='';
-  document.getElementById('perfilHint').textContent='Ao escolher o funcionário, o sistema sugere exames por cargo/função. A empresa pode ajustar antes de enviar para a clínica.';
+  document.getElementById('perfilHint').textContent='Escolha o funcionário para sugerir exames por cargo/função ou marque manualmente os exames feitos no ASO.';
   document.getElementById('s-tipo').value='periodico';
   document.getElementById('s-obs').value='';
   document.getElementById('s-urgente').checked=false;

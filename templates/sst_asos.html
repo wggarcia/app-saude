@@ -404,7 +404,15 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     </div>
 
     <div class="mf">
-      <label>Exames solicitados <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">— busque ou expanda as categorias</span></label>
+      <label>Exames realizados / avaliados no ASO</label>
+      <div class="perfil-box">
+        <select id="p-perfil-funcao">
+          <option value="">Selecionar pacote por função/cargo...</option>
+        </select>
+        <button class="perfil-btn" type="button" onclick="aplicarPerfilPedido(false)">Adicionar sugeridos</button>
+        <button class="perfil-btn sec" type="button" onclick="aplicarPerfilPedido(true)">Substituir</button>
+      </div>
+      <div class="perfil-hint" id="p-perfil-hint">Escolha o funcionário para sugerir exames por cargo/função ou marque manualmente os exames feitos no ASO.</div>
       <input class="exames-busca" id="exameBusca" placeholder="Ex: audiometria, hemograma, ECG, toxicológico..." oninput="filtrarExames(this.value)">
       <div id="selecionadosStrip" class="selecionados-strip"><span style="color:var(--muted);font-size:.7rem;padding:4px">Nenhum exame selecionado</span></div>
       <div id="catalogoContainer" style="max-height:260px;overflow-y:auto"></div>
@@ -807,6 +815,7 @@ async function carregarPedidos(){
     _pedidos=d.solicitacoes||[];
     _catalogo=d.catalogo||[];
     _perfis=d.perfis_funcao||_perfis;
+    renderPerfisPedido();
     renderKpisPedidos();
     renderTabelaPedidos();
     renderCatalogo(_catalogo,'');
@@ -862,6 +871,8 @@ function abrirModalPedido(){
   _selecionados.clear();
   renderSelecionados();
   document.getElementById('p-func').value='';
+  document.getElementById('p-perfil-funcao').value='';
+  document.getElementById('p-perfil-hint').textContent='Escolha o funcionário para sugerir exames por cargo/função ou marque manualmente os exames feitos no ASO.';
   document.getElementById('p-tipo').value='periodico';
   document.getElementById('p-obs').value='';
   document.getElementById('p-urgente').checked=false;
@@ -901,6 +912,38 @@ function renderCatalogo(cats,busca){
       </div>
     </div>`;
   }).join('');
+}
+
+function renderPerfisPedido(){
+  const sel=document.getElementById('p-perfil-funcao');
+  if(!sel)return;
+  sel.innerHTML='<option value="">Selecionar pacote por função/cargo...</option>'+
+    _perfis.map(p=>`<option value="${esc(p.id)}">${esc(p.nome)} (${(p.exames||[]).length} exames)</option>`).join('');
+}
+
+function aoSelecionarFuncionarioPedido(){
+  const id=parseInt(document.getElementById('p-func').value||'0');
+  const func=_funcionarios.find(f=>f.id===id);
+  const perfil=sugerirPerfilParaFuncionario(func);
+  const hint=document.getElementById('p-perfil-hint');
+  const sel=document.getElementById('p-perfil-funcao');
+  if(perfil){
+    sel.value=perfil.id;
+    hint.textContent=`Sugestão para ${func.nome} — ${func.cargo}: ${perfil.nome}. Confirme antes de enviar para a clínica.`;
+  }else{
+    sel.value='';
+    hint.textContent=func?`Sem pacote automático para ${func.cargo}. Selecione um pacote ou marque exames manualmente.`:'Escolha o funcionário para sugerir exames por cargo/função ou marque manualmente os exames feitos no ASO.';
+  }
+}
+
+function aplicarPerfilPedido(substituir=false){
+  const id=document.getElementById('p-perfil-funcao').value;
+  const perfil=_perfis.find(p=>p.id===id);
+  if(!perfil){toast('Selecione um pacote por função/cargo','err');return;}
+  if(substituir)_selecionados.clear();
+  (perfil.exames||[]).forEach(e=>_selecionados.add(e));
+  renderSelecionados();
+  renderCatalogo(_catalogo,document.getElementById('exameBusca').value);
 }
 
 function toggleCat(ci){
@@ -1004,6 +1047,7 @@ async function carregarFuncionarios(){
     document.getElementById('a-func-id').innerHTML=opts;
     document.getElementById('p-func').innerHTML=opts;
     document.getElementById('a-func-id').onchange=aoSelecionarFuncionarioAso;
+    document.getElementById('p-func').onchange=aoSelecionarFuncionarioPedido;
   }catch(e){}
 }
 
