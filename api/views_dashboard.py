@@ -145,6 +145,128 @@ def _registrar_auditoria_dono(dono, acao, empresa=None, detalhes=""):
     )
 
 
+def _playbook_cliente(status_contrato, uso_usuarios, uso_dispositivos, dias_para_expirar, registros_24h, suspeitos_24h):
+    if status_contrato == "inadimplente":
+        return {
+            "risco": "critico",
+            "proxima_acao": "Cobrar e suspender acesso se nao houver regularizacao.",
+            "playbook": "Financeiro deve confirmar pagamento, registrar contato e reativar somente apos comprovacao.",
+        }
+    if status_contrato == "inativo":
+        return {
+            "risco": "alto",
+            "proxima_acao": "Fazer recuperacao comercial ou encerrar contrato.",
+            "playbook": "Enviar proposta de reativacao com prazo curto e revisar se o modulo contratado ainda faz sentido.",
+        }
+    if dias_para_expirar is not None and dias_para_expirar <= 7:
+        return {
+            "risco": "alto",
+            "proxima_acao": "Renovar contrato nos proximos 7 dias.",
+            "playbook": "Acionar decisor financeiro, confirmar ciclo de renovacao e registrar proxima data de vencimento.",
+        }
+    if uso_usuarios >= 90 or uso_dispositivos >= 90:
+        return {
+            "risco": "upsell",
+            "proxima_acao": "Oferecer upgrade de plano antes de travar operacao.",
+            "playbook": "Mostrar uso real, risco de limite e plano recomendado com mais usuarios/dispositivos.",
+        }
+    if registros_24h >= 500 or suspeitos_24h >= 10:
+        return {
+            "risco": "operacional",
+            "proxima_acao": "Acompanhar carga e qualidade dos dados.",
+            "playbook": "Verificar registros suspeitos, pressao de uso e necessidade de suporte tecnico preventivo.",
+        }
+    return {
+        "risco": "normal",
+        "proxima_acao": "Manter acompanhamento de sucesso do cliente.",
+        "playbook": "Revisar valor percebido, uso semanal e oportunidades de expansao sem urgencia.",
+    }
+
+
+def _onboarding_eventos(empresa):
+    eventos = FinanceiroEventoSaaS.objects.filter(
+        empresa=empresa,
+        tipo_evento__startswith="onboarding_",
+    ).order_by("-criado_em")
+    eventos_por_tipo = {}
+    for evento in eventos:
+        eventos_por_tipo.setdefault(evento.tipo_evento, evento)
+    return eventos_por_tipo
+
+
+def _onboarding_cliente(empresa, usuarios_ativos, dispositivos_ativos, registros_24h):
+    eventos = _onboarding_eventos(empresa)
+    checklist = [
+        {
+            "codigo": "contrato",
+            "label": "Contrato/assinatura ativa",
+            "ok": bool(empresa.ativo),
+        },
+        {
+            "codigo": "pacote",
+            "label": "Pacote e limites definidos",
+            "ok": bool(empresa.pacote_codigo and empresa.max_usuarios and empresa.max_dispositivos),
+        },
+        {
+            "codigo": "validade",
+            "label": "Vigencia definida",
+            "ok": bool(empresa.data_expiracao),
+        },
+        {
+            "codigo": "usuarios",
+            "label": "Usuarios operacionais",
+            "ok": usuarios_ativos > 0,
+        },
+        {
+            "codigo": "dispositivos",
+            "label": "Dispositivo autorizado",
+            "ok": dispositivos_ativos > 0,
+        },
+        {
+            "codigo": "treinamento",
+            "label": "Treinamento realizado",
+            "ok": "onboarding_treinamento" in eventos,
+        },
+        {
+            "codigo": "validacao",
+            "label": "Validacao com dados reais",
+            "ok": registros_24h > 0 or "onboarding_validacao" in eventos,
+        },
+        {
+            "codigo": "go_live",
+            "label": "Go-live aprovado",
+            "ok": "onboarding_go_live" in eventos,
+        },
+    ]
+    concluidos = sum(1 for item in checklist if item["ok"])
+    score = round((concluidos / len(checklist)) * 100)
+    etapa = "implantacao"
+    if score >= 100:
+        etapa = "go_live"
+    elif score >= 75:
+        etapa = "validacao"
+    elif score >= 45:
+        etapa = "treinamento"
+    elif score <= 25:
+        etapa = "kickoff"
+    proxima = next((item["label"] for item in checklist if not item["ok"]), "Operacao acompanhada")
+    return {
+        "score": score,
+        "etapa": etapa,
+        "proxima_entrega": proxima,
+        "checklist": checklist,
+        "eventos": [
+            {
+                "tipo_evento": evento.tipo_evento,
+                "status": evento.status,
+                "observacao": evento.observacao or "",
+                "criado_em": evento.criado_em.isoformat(),
+            }
+            for evento in eventos.values()
+        ],
+    }
+
+
 # HTML (dashboard)
 def _render_dashboard(request, variant):
     empresa = _empresa_autenticada(request)
@@ -937,6 +1059,20 @@ def api_dono_resumo(request):
         plano_normalizado = "anual" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else normalizar_ciclo(pacote_codigo_normalizado, empresa.plano)
         faturamento_estimado_cliente = pacote["anual"] if plano_normalizado == "anual" else pacote["mensal"]
         faturamento_mensal_equivalente = pacote["anual"] / 12 if plano_normalizado == "anual" else pacote["mensal"]
+        playbook = _playbook_cliente(
+            status_contrato,
+            uso_usuarios,
+            uso_dispositivos,
+            dias_para_expirar,
+            empresa_registros_24h,
+            empresa_suspeitos_24h,
+        )
+        onboarding = _onboarding_cliente(
+            empresa,
+            usuarios_ativos_empresa,
+            dispositivos_ativos_empresa,
+            empresa_registros_24h,
+        )
 
         carteira = carteira_governo if segmento == "governo" else carteira_empresa
         carteira["clientes"] += 1
@@ -993,6 +1129,8 @@ def api_dono_resumo(request):
             "uso_dispositivos": uso_dispositivos,
             "status_contrato": status_contrato,
             "faturamento_estimado_cliente": faturamento_estimado_cliente,
+            "onboarding": onboarding,
+            **playbook,
         })
         comparativo_clientes.append({
             "nome": empresa.nome,
@@ -1002,6 +1140,8 @@ def api_dono_resumo(request):
             "faturamento_estimado_cliente": faturamento_estimado_cliente,
             "uso_combinado": round((uso_usuarios + uso_dispositivos) / 2, 2),
             "status_contrato": status_contrato,
+            "onboarding_score": onboarding["score"],
+            "onboarding_etapa": onboarding["etapa"],
         })
 
     capacidade_alertas.sort(key=lambda item: (len(item["mensagens"]), item["registros_24h"], item["uso_dispositivos"]), reverse=True)
@@ -1012,6 +1152,8 @@ def api_dono_resumo(request):
     inadimplentes = sum(1 for item in clientes_payload if item["status_contrato"] == "inadimplente")
     inativos = sum(1 for item in clientes_payload if item["status_contrato"] == "inativo")
     cobranca_ativa = vencendo_7 + inadimplentes
+    onboarding_pendente = sum(1 for item in clientes_payload if item["onboarding"]["score"] < 100)
+    go_live_pendentes = sum(1 for item in clientes_payload if item["onboarding"]["etapa"] != "go_live")
     comparativo_uso = sorted(comparativo_clientes, key=lambda item: (item["uso_combinado"], item["registros_24h"]), reverse=True)[:8]
     comparativo_receita = sorted(comparativo_clientes, key=lambda item: item["faturamento_estimado_cliente"], reverse=True)[:8]
 
@@ -1044,6 +1186,8 @@ def api_dono_resumo(request):
             "inadimplentes": inadimplentes,
             "inativos": inativos,
             "cobranca_ativa": cobranca_ativa,
+            "onboarding_pendente": onboarding_pendente,
+            "go_live_pendentes": go_live_pendentes,
         },
         "pacotes": por_pacote,
         "alertas_capacidade": capacidade_alertas[:12],
@@ -1246,6 +1390,43 @@ def api_dono_financeiro_acao(request):
             observacao="Renovação manual de 365 dias",
         )
         observacao = "Contrato renovado por 365 dias"
+    elif acao == "carencia_7":
+        base = empresa.data_expiracao if empresa.data_expiracao and empresa.data_expiracao > timezone.now() else timezone.now()
+        empresa.ativo = True
+        empresa.data_expiracao = base + timedelta(days=7)
+        empresa.save(update_fields=["ativo", "data_expiracao"])
+        FinanceiroEventoSaaS.objects.create(
+            empresa=empresa,
+            tipo_evento="carencia_operacional",
+            pacote_codigo=empresa.pacote_codigo,
+            ciclo=plano_atual,
+            valor=0,
+            status="manual",
+            observacao="Carencia operacional de 7 dias concedida pelo console",
+        )
+        observacao = "Carencia operacional de 7 dias concedida"
+    elif acao == "cancelar":
+        empresa.ativo = False
+        empresa.data_expiracao = timezone.now()
+        empresa.sessao_ativa_chave = None
+        empresa.sessao_ativa_device_id = None
+        empresa.sessao_ativa_em = None
+        empresa.save(update_fields=["ativo", "data_expiracao", "sessao_ativa_chave", "sessao_ativa_device_id", "sessao_ativa_em"])
+        EmpresaUsuario.objects.filter(empresa=empresa).update(
+            sessao_ativa_chave=None,
+            sessao_ativa_device_id=None,
+            sessao_ativa_em=None,
+        )
+        FinanceiroEventoSaaS.objects.create(
+            empresa=empresa,
+            tipo_evento="cancelamento_operacional",
+            pacote_codigo=empresa.pacote_codigo,
+            ciclo=plano_atual,
+            valor=valor,
+            status="cancelado",
+            observacao="Contrato cancelado pelo console operacional",
+        )
+        observacao = "Contrato cancelado e sessoes encerradas"
     else:
         return JsonResponse({"erro": "ação inválida"}, status=400)
 
@@ -1256,6 +1437,68 @@ def api_dono_financeiro_acao(request):
         detalhes=observacao,
     )
     return JsonResponse({"status": "ok", "observacao": observacao})
+
+
+@csrf_exempt
+def api_dono_onboarding_acao(request):
+    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    empresa = Empresa.objects.filter(id=dados.get("empresa_id")).first()
+    if not empresa:
+        return JsonResponse({"erro": "cliente não encontrado"}, status=404)
+
+    acoes = {
+        "kickoff": ("onboarding_kickoff", "Kickoff de implantacao registrado"),
+        "treinamento": ("onboarding_treinamento", "Treinamento operacional realizado"),
+        "validacao": ("onboarding_validacao", "Validacao com dados reais concluida"),
+        "go_live": ("onboarding_go_live", "Go-live aprovado pelo console operacional"),
+    }
+    acao = (dados.get("acao") or "").strip()
+    if acao not in acoes:
+        return JsonResponse({"erro": "ação inválida"}, status=400)
+
+    tipo_evento, observacao = acoes[acao]
+    detalhe_extra = (dados.get("observacao") or "").strip()[:240]
+    observacao_final = observacao if not detalhe_extra else f"{observacao}. {detalhe_extra}"
+    plano_atual = "anual" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else normalizar_ciclo(empresa.pacote_codigo, empresa.plano)
+
+    FinanceiroEventoSaaS.objects.create(
+        empresa=empresa,
+        tipo_evento=tipo_evento,
+        pacote_codigo=empresa.pacote_codigo,
+        ciclo=plano_atual,
+        valor=0,
+        status="manual",
+        observacao=observacao_final,
+    )
+    _registrar_auditoria_dono(
+        dono,
+        f"onboarding_{acao}",
+        empresa=empresa,
+        detalhes=observacao_final,
+    )
+
+    usuarios_ativos = EmpresaUsuario.objects.filter(empresa=empresa, ativo=True).count()
+    dispositivos_ativos = DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True).count()
+    registros_24h = RegistroSintoma.objects.filter(
+        empresa=empresa,
+        data_registro__gte=timezone.now() - timedelta(hours=24),
+    ).count()
+
+    return JsonResponse({
+        "status": "ok",
+        "observacao": observacao_final,
+        "onboarding": _onboarding_cliente(empresa, usuarios_ativos, dispositivos_ativos, registros_24h),
+    })
 
 
 def api_dono_exportar(request):

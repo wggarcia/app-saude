@@ -506,6 +506,7 @@
           <button class="btn" id="toggleLeftDock">Filtros</button>
           <button class="btn" id="toggleRightDock">Inteligencia</button>
           <button class="btn" id="toggleBottomSheet">Situacao</button>
+          <button class="btn" id="gotoCommandAI">Sala de Decisão IA</button>
           <button class="btn" id="exportJsonBtn">Briefing JSON</button>
           <button class="btn" id="exportCsvBtn">Briefing CSV</button>
           <button class="btn primary" id="refreshBtn">Atualizar</button>
@@ -521,6 +522,8 @@
     </div>
 
     <a href="/governo/gestao/" style="position:fixed;bottom:24px;right:24px;z-index:900;background:#00c2ff;color:#041018;font-family:Manrope,sans-serif;font-weight:700;font-size:13px;padding:11px 20px;border-radius:50px;text-decoration:none;box-shadow:0 4px 20px rgba(0,194,255,.4);display:flex;align-items:center;gap:8px">🏛️ Gestão Governamental</a>
+    <a href="/governo/gestao/" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:900;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-family:Manrope,sans-serif;font-weight:700;font-size:12px;padding:9px 18px;border-radius:50px;text-decoration:none;box-shadow:0 4px 20px rgba(99,102,241,.4);display:flex;align-items:center;gap:6px">Command Center</a>
+    <a href="/sala-decisao-ia/" style="position:fixed;bottom:24px;left:24px;z-index:900;background:linear-gradient(135deg,#00e5b0,#00c2ff);color:#041018;font-family:Manrope,sans-serif;font-weight:800;font-size:13px;padding:11px 20px;border-radius:50px;text-decoration:none;box-shadow:0 4px 20px rgba(0,229,176,.35);display:flex;align-items:center;gap:8px">Sala de Decisão IA</a>
     <button class="floating-button toggle-left shifted" id="leftHandle">›</button>
     <button class="floating-button toggle-right shifted" id="rightHandle">‹</button>
     <button class="floating-button toggle-bottom shifted" id="bottomHandle">▲</button>
@@ -716,6 +719,14 @@
       const payload = await response.json();
       sessionStorage.setItem("empresa_id", String(payload.empresa_id || ""));
       sessionStorage.setItem("tipo_conta", payload.tipo_conta || "governo");
+      if (payload.tab_key) {
+        sessionStorage.setItem("tab_session_key", payload.tab_key);
+        const url = new URL(window.location.href);
+        if (url.searchParams.get("tab") !== payload.tab_key) {
+          url.searchParams.set("tab", payload.tab_key);
+          window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        }
+      }
       return payload;
     }
 
@@ -1577,6 +1588,10 @@
     });
 
     document.getElementById("refreshBtn").addEventListener("click", loadPanorama);
+    document.getElementById("gotoCommandAI").addEventListener("click", async () => {
+      await syncScopedAuth();
+      window.location.href = "/sala-decisao-ia/";
+    });
     document.getElementById("publishGovAlertBtn").addEventListener("click", publishGovernmentAlert);
     document.getElementById("exportJsonBtn").addEventListener("click", () => {
       window.location.href = "/api/epidemiologia/briefing?format=json";

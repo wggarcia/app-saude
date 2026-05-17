@@ -948,20 +948,45 @@ class CATOcupacional(models.Model):
         ("retificado", "Retificado"),
     ]
     GRAVIDADE = [("leve", "Leve"), ("moderado", "Moderado"), ("grave", "Grave"), ("fatal", "Fatal")]
+    TP_CAT = [("1", "Inicial"), ("2", "Reabertura"), ("3", "Comunicação de Óbito")]
+    LATERALIDADE = [("1", "Esquerdo"), ("2", "Direito"), ("3", "Ambos"), ("9", "Não Aplicável")]
+    COD_PARTE_CORPO = [
+        ("010", "Cabeça / Crânio"), ("020", "Ouvido(s)"), ("030", "Olho(s) / Face"),
+        ("040", "Pescoço"), ("050", "Tronco / Tórax"), ("060", "Coluna Vertebral"),
+        ("070", "Abdome"), ("080", "Membro Superior Direito"), ("081", "Membro Superior Esquerdo"),
+        ("082", "Ambos os Membros Superiores"), ("090", "Membro Inferior Direito"),
+        ("091", "Membro Inferior Esquerdo"), ("092", "Ambos os Membros Inferiores"),
+        ("730", "Múltiplas Partes do Corpo"), ("800", "Sistema Nervoso"), ("900", "Órgãos Internos"),
+        ("999", "Outras Partes"),
+    ]
+    COD_AGENTE = [
+        ("0001", "Animais e insetos"), ("0002", "Choque elétrico"),
+        ("0003", "Esforço excessivo / movimento repetitivo"), ("0004", "Explosão / implosão"),
+        ("0005", "Incêndio"), ("0006", "Queda"), ("0007", "Substâncias químicas / gases / fumaças"),
+        ("0008", "Temperatura extrema (calor ou frio)"), ("0009", "Máquinas e equipamentos"),
+        ("0010", "Material cortante / perfurante"), ("0011", "Impacto por objeto / equipamento"),
+        ("0012", "Acidente de trânsito"), ("0099", "Outros agentes"),
+    ]
 
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="cats")
     funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="cats")
     tipo = models.CharField(max_length=20, choices=TIPO, default="tipico")
+    tp_cat = models.CharField(max_length=1, choices=TP_CAT, default="1", verbose_name="Tipo de CAT")
     gravidade = models.CharField(max_length=20, choices=GRAVIDADE, default="leve")
     data_acidente = models.DateField()
     hora_acidente = models.TimeField(null=True, blank=True)
     local_acidente = models.CharField(max_length=200, blank=True)
     descricao = models.TextField()
-    parte_corpo = models.CharField(max_length=100, blank=True)
+    parte_corpo = models.CharField(max_length=100, blank=True, verbose_name="Parte do corpo (descrição livre)")
+    cod_parte_corpo = models.CharField(max_length=3, choices=COD_PARTE_CORPO, default="730", verbose_name="Código parte atingida (eSocial)")
+    lateralidade = models.CharField(max_length=1, choices=LATERALIDADE, default="9", verbose_name="Lateralidade")
+    cod_agente_causador = models.CharField(max_length=4, choices=COD_AGENTE, default="0099", verbose_name="Agente causador (eSocial)")
     cid = models.CharField(max_length=10, blank=True)
     numero_cat = models.CharField(max_length=30, blank=True)
     houve_afastamento = models.BooleanField(default=False)
     dias_afastamento = models.IntegerField(default=0)
+    testemunha_nome = models.CharField(max_length=180, blank=True, verbose_name="Nome da testemunha")
+    testemunha_telefone = models.CharField(max_length=20, blank=True, verbose_name="Telefone da testemunha")
     status_esocial = models.CharField(max_length=20, choices=STATUS_ESOCIAL, default="nao_enviado")
     protocolo_esocial = models.CharField(max_length=60, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -1033,6 +1058,124 @@ class ASOCompartilhamento(models.Model):
 
     def __str__(self):
         return f"ASO#{self.aso_id} → {self.empresa_destino_nome or 'link público'}"
+
+
+class VinculoClinicaEmpresa(models.Model):
+    """Vínculo permanente entre uma clínica (prestadora de exames) e uma empresa-cliente."""
+    STATUS = [
+        ("pendente", "Aguardando aceitação"),
+        ("ativo", "Ativo"),
+        ("suspenso", "Suspenso"),
+        ("recusado", "Recusado"),
+    ]
+
+    clinica = models.ForeignKey(
+        Empresa, on_delete=models.CASCADE, related_name="vinculos_como_clinica",
+        verbose_name="Clínica / prestadora",
+    )
+    empresa_contratante = models.ForeignKey(
+        Empresa, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="vinculos_como_empresa", verbose_name="Empresa contratante (conta SolusCRT)",
+    )
+    empresa_cnpj = models.CharField(max_length=18, blank=True, default="", verbose_name="CNPJ da empresa")
+    empresa_nome = models.CharField(max_length=200, blank=True, default="", verbose_name="Nome da empresa")
+    empresa_email_convite = models.EmailField(blank=True, default="", verbose_name="E-mail para convite")
+    token_convite = models.CharField(max_length=64, unique=True, default=_codigo_acesso)
+    status = models.CharField(max_length=20, choices=STATUS, default="pendente")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    aceito_em = models.DateTimeField(null=True, blank=True)
+    observacoes = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-criado_em"]
+        unique_together = [("clinica", "empresa_contratante")]
+        indexes = [
+            models.Index(fields=["clinica", "status"]),
+            models.Index(fields=["empresa_contratante", "status"]),
+            models.Index(fields=["token_convite"]),
+        ]
+
+    def __str__(self):
+        return f"{self.clinica.nome} → {self.empresa_nome or (self.empresa_contratante.nome if self.empresa_contratante else '?')}"
+
+
+class ASOEnviadoClinica(models.Model):
+    """Registro de um ASO enviado pela clínica diretamente para a conta da empresa no SolusCRT."""
+    STATUS = [
+        ("enviado", "Enviado"),
+        ("visualizado", "Visualizado"),
+        ("importado", "Importado ao prontuário"),
+        ("rejeitado", "Rejeitado pela empresa"),
+    ]
+
+    vinculo = models.ForeignKey(VinculoClinicaEmpresa, on_delete=models.CASCADE, related_name="asos_enviados")
+    aso = models.ForeignKey(ASOOcupacional, on_delete=models.CASCADE, related_name="envios_clinica")
+    status = models.CharField(max_length=20, choices=STATUS, default="enviado")
+    enviado_em = models.DateTimeField(auto_now_add=True)
+    visualizado_em = models.DateTimeField(null=True, blank=True)
+    importado_em = models.DateTimeField(null=True, blank=True)
+    observacao_empresa = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-enviado_em"]
+        indexes = [
+            models.Index(fields=["vinculo", "status"]),
+        ]
+
+    def __str__(self):
+        return f"ASO#{self.aso_id} via {self.vinculo}"
+
+
+class SolicitacaoExame(models.Model):
+    """Pedido de exame ocupacional emitido pela empresa e enviado à clínica credenciada."""
+    TIPO_ASO = [
+        ("admissional", "Admissional"),
+        ("periodico", "Periódico"),
+        ("retorno_trabalho", "Retorno ao Trabalho"),
+        ("mudanca_risco", "Mudança de Risco"),
+        ("demissional", "Demissional"),
+    ]
+    STATUS = [
+        ("pendente", "Pendente"),
+        ("agendado", "Agendado"),
+        ("realizado", "Realizado"),
+        ("cancelado", "Cancelado"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="solicitacoes_exame")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="solicitacoes_exame")
+    clinica = models.ForeignKey(
+        Empresa, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="solicitacoes_recebidas", verbose_name="Clínica destinatária",
+    )
+    vinculo = models.ForeignKey(
+        VinculoClinicaEmpresa, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="solicitacoes",
+    )
+    tipo_aso = models.CharField(max_length=30, choices=TIPO_ASO)
+    exames = models.TextField(blank=True, default="", verbose_name="Exames solicitados (JSON)")
+    urgente = models.BooleanField(default=False)
+    observacoes = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS, default="pendente")
+    # Clínica externa (não cadastrada no SolusCRT)
+    clinica_nome_externo = models.CharField(max_length=200, blank=True, default="")
+    clinica_email_externo = models.EmailField(blank=True, default="")
+    email_enviado = models.BooleanField(default=False)
+    email_enviado_em = models.DateTimeField(null=True, blank=True)
+    data_solicitacao = models.DateTimeField(auto_now_add=True)
+    data_agendamento = models.DateField(null=True, blank=True)
+    data_realizacao = models.DateField(null=True, blank=True)
+    resposta_clinica = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-data_solicitacao"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["clinica", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Solicita ASO {self.tipo_aso} — {self.funcionario.nome}"
 
 
 class DocumentoSST(models.Model):
@@ -2130,6 +2273,111 @@ class RiscoOcupacional(models.Model):
 
     def __str__(self):
         return f"[{self.tipo_risco}] {self.agente} - {self.setor}"
+
+
+class PostoTrabalho(models.Model):
+    """Posto/função de trabalho com exposição a agentes nocivos — base do S-2240."""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="postos_trabalho")
+    nome = models.CharField(max_length=200, verbose_name="Nome do posto / função")
+    setor = models.CharField(max_length=150, blank=True, default="")
+    descricao = models.TextField(blank=True, default="", verbose_name="Descrição das atividades")
+    responsavel_tecnico = models.CharField(max_length=180, blank=True, default="", verbose_name="Responsável técnico (Eng. Segurança / Médico)")
+    responsavel_registro = models.CharField(max_length=30, blank=True, default="", verbose_name="CRM ou CREA do responsável")
+    data_laudo = models.DateField(null=True, blank=True, verbose_name="Data do laudo (LTCAT/PPRA/PGR)")
+    vigencia_inicio = models.CharField(max_length=7, blank=True, default="", verbose_name="Início de vigência (AAAA-MM)")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["setor", "nome"]
+        indexes = [models.Index(fields=["empresa", "ativo"])]
+
+    def __str__(self):
+        return f"{self.nome} — {self.setor or 'sem setor'}"
+
+
+class AgenteNocivoPostoTrabalho(models.Model):
+    """Agente nocivo (físico, químico ou biológico) de um posto de trabalho — eSocial Tabela 24."""
+    TIPO_AGENTE = [
+        ("fisico", "Físico"),
+        ("quimico", "Químico"),
+        ("biologico", "Biológico"),
+    ]
+    # Agentes eSocial Tabela 24 — principais
+    COD_AGENTE_CHOICES = [
+        # Físicos
+        ("01.01.001", "Ruído contínuo / intermitente"),
+        ("01.01.002", "Ruído de impacto"),
+        ("01.02.001", "Vibração em membros superiores"),
+        ("01.02.002", "Vibração em corpo inteiro"),
+        ("01.03.001", "Calor (IBUTG)"),
+        ("01.04.001", "Radiação ionizante"),
+        ("01.05.001", "Pressão hiperbárica"),
+        ("01.06.001", "Frio"),
+        ("01.07.001", "Umidade"),
+        # Químicos
+        ("02.01.001", "Arsênio e compostos"),
+        ("02.01.002", "Benzeno"),
+        ("02.01.003", "Chumbo e compostos"),
+        ("02.01.004", "Mercúrio e compostos"),
+        ("02.01.005", "Sílica livre cristalizada"),
+        ("02.01.006", "Asbestos / Amianto"),
+        ("02.01.007", "Manganês e compostos"),
+        ("02.01.008", "Cromo hexavalente"),
+        ("02.01.009", "Poeiras minerais em geral"),
+        ("02.01.010", "Poeiras orgânicas (madeira, couro, etc.)"),
+        ("02.01.011", "Fumos metálicos"),
+        ("02.01.012", "Névoas e neblinas"),
+        ("02.01.013", "Gases e vapores químicos em geral"),
+        # Biológicos
+        ("03.01.001", "Vírus — Hepatite B (HBV)"),
+        ("03.01.002", "Vírus — HIV"),
+        ("03.01.003", "Vírus — outros"),
+        ("03.02.001", "Bactérias — tuberculose (Mycobacterium)"),
+        ("03.02.002", "Bactérias — outras"),
+        ("03.03.001", "Protozoários"),
+        ("03.04.001", "Fungos"),
+        ("03.05.001", "Parasitas / helmintos"),
+    ]
+
+    posto = models.ForeignKey(PostoTrabalho, on_delete=models.CASCADE, related_name="agentes_nocivos")
+    tipo_agente = models.CharField(max_length=15, choices=TIPO_AGENTE)
+    cod_agente = models.CharField(max_length=20, choices=COD_AGENTE_CHOICES, verbose_name="Código eSocial (Tabela 24)")
+    dsc_agente = models.CharField(max_length=300, blank=True, default="", verbose_name="Descrição complementar do agente")
+    tec_medicao = models.CharField(max_length=200, blank=True, default="", verbose_name="Técnica de medição utilizada")
+    intensidade = models.CharField(max_length=50, blank=True, default="", verbose_name="Intensidade / concentração medida")
+    limite_tolerancia = models.CharField(max_length=50, blank=True, default="", verbose_name="Limite de tolerância (NR/ACGIH)")
+    epc_descricao = models.CharField(max_length=300, blank=True, default="", verbose_name="EPC instalado (proteção coletiva)")
+    epc_eficaz = models.BooleanField(default=False, verbose_name="EPC é eficaz na neutralização")
+    epi_descricao = models.CharField(max_length=300, blank=True, default="", verbose_name="EPI fornecido (proteção individual)")
+    epi_ca = models.CharField(max_length=20, blank=True, default="", verbose_name="Número CA do EPI")
+    epi_eficaz = models.BooleanField(default=False, verbose_name="EPI é eficaz na neutralização")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["tipo_agente", "cod_agente"]
+
+    def __str__(self):
+        return f"{self.get_cod_agente_display()} — {self.posto.nome}"
+
+
+class FuncionarioPostoTrabalho(models.Model):
+    """Vínculo de um funcionário a um posto de trabalho para o S-2240."""
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="postos_vinculados")
+    posto = models.ForeignKey(PostoTrabalho, on_delete=models.CASCADE, related_name="funcionarios_vinculados")
+    data_inicio = models.DateField()
+    data_fim = models.DateField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-data_inicio"]
+        indexes = [models.Index(fields=["posto", "data_fim"])]
+
+    def ativo(self):
+        return self.data_fim is None
+
+    def __str__(self):
+        return f"{self.funcionario.nome} → {self.posto.nome}"
 
 
 class PlanoAcaoSST(models.Model):

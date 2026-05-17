@@ -9,6 +9,7 @@ from .corporativo_ai import build_empresa_corporativo_payload
 from .epidemiologia import build_panorama_payload
 from .models import AuditoriaInstitucional, Empresa
 from .planos import detalhes_pacote, normalizar_codigo_pacote
+from .views_enterprise import build_enterprise_command_center_payload
 
 
 PRODUCT_NAME = "Sala de Decisão IA"
@@ -812,7 +813,9 @@ def build_command_ai_payload(empresa, limit=6):
     pacote_codigo = normalizar_codigo_pacote(empresa.pacote_codigo)
     pacote = detalhes_pacote(pacote_codigo)
     if setor == "empresa":
-        return _build_company_command_ai_payload(empresa, pacote_codigo, pacote, limit=limit)
+        payload = _build_company_command_ai_payload(empresa, pacote_codigo, pacote, limit=limit)
+        payload["enterprise_command_center"] = build_enterprise_command_center_payload(empresa)
+        return payload
     panorama = build_panorama_payload()
     overview = panorama.get("overview", {})
     layers = panorama.get("layers", {})
@@ -835,6 +838,7 @@ def build_command_ai_payload(empresa, limit=6):
         "summary": _build_summary(empresa, setor, config, overview, recommendations),
         "recommendations": recommendations,
         "executive_cards": _executive_cards(setor, overview, data_quality, recommendations),
+        "enterprise_command_center": build_enterprise_command_center_payload(empresa),
         "learning": _learning_block(empresa),
         "safeguards": [
             "Não usa dado individual para propaganda ou targeting comercial.",

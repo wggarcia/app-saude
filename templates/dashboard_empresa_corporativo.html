@@ -352,8 +352,8 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
       <div class="badge-dot"></div>
       <span id="tb-alertas-count">0</span> alertas
     </div>
-    <button class="btn-quick" onclick="openModal('aso')">+ Emitir ASO</button>
-    <button class="btn-quick" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 0 16px rgba(239,68,68,.2)" onclick="openModal('cat')">+ Registrar CAT</button>
+    <button class="btn-quick" onclick="window.location='/sst/asos/'">+ Emitir ASO</button>
+    <button class="btn-quick" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 0 16px rgba(239,68,68,.2)" onclick="window.location='/sst/cats/'">+ Registrar CAT</button>
   </div>
 </header>
 
@@ -376,8 +376,11 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
     <a class="sb-link" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
     <a class="sb-link" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação</span></a>
     <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI / EPC</span></a>
+    <a class="sb-link" href="/sst/solicitacoes/"><span class="sb-icon">📨</span><span>Pedidos de Exame</span></a>
+    <a class="sb-link" href="/sst/postos/"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
     <a class="sb-link" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
     <div class="sb-label">Conta</div>
+    <a class="sb-link" href="/gestao/plataforma/"><span class="sb-icon">🔑</span><span>Plataforma & API</span></a>
     <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Config. SST</span></a>
     <a class="sb-link" href="/usuarios/"><span class="sb-icon">👤</span><span>Usuários</span></a>
     <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
@@ -388,6 +391,9 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 
     <!-- ALERTAS -->
     <div class="alerta-strip vazio" id="alerta-strip"></div>
+
+    {% include "partials/enterprise_command_center.html" %}
+    {% include "partials/enterprise_premium_suite.html" %}
 
     <!-- KPIs -->
     <div class="kpi-strip">
@@ -513,11 +519,11 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
         <div class="bloco">
           <div class="bloco-title">Ações Rápidas</div>
           <div class="acoes-grid">
-            <button class="acao-btn" onclick="openModal('aso')">
+            <button class="acao-btn" onclick="window.location='/sst/asos/'">
               <span class="acao-icon">📋</span>
               <span class="acao-label">Emitir ASO</span>
             </button>
-            <button class="acao-btn" onclick="openModal('cat')">
+            <button class="acao-btn" onclick="window.location='/sst/cats/'">
               <span class="acao-icon">⚠️</span>
               <span class="acao-label">Registrar CAT</span>
             </button>
@@ -792,7 +798,9 @@ function renderKPIs(d){
   document.getElementById("k-afas-sub").textContent=`absenteísmo ${d.afastamentos?.absenteismo_pct??0}%`;
   const esocPend=(d.esocial?.pendentes??0)+(d.esocial?.erros??0);
   document.getElementById("k-esocial").textContent=esocPend;
-  document.getElementById("k-esocial-sub").textContent=d.esocial?.erros?`${d.esocial.erros} com erro`:"nenhum pendente";
+  document.getElementById("k-esocial-sub").textContent=d.esocial?.erros
+    ? `${d.esocial.erros} com erro`
+    : (d.esocial?.pendentes ? `${d.esocial.pendentes} aguardando transmissão` : "nenhum pendente");
 
   // sidebar badges
   const setBadge=(id,n)=>{const el=document.getElementById(id);if(el){el.textContent=n;el.style.display=n>0?"inline":"none";}};

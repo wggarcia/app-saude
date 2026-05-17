@@ -230,6 +230,7 @@
     <button class="tab-btn" data-tab="programas">Programas</button>
   </nav>
   <div class="topbar-actions">
+    <a class="btn sm" href="/gestao/plataforma/">Plataforma & API</a>
     <a class="btn sm" href="/competencia/">Competência</a>
     <a class="btn sm" href="/dashboard-empresa/">← Painel</a>
     <a class="btn sm warn" href="/logout/">Sair</a>
@@ -237,6 +238,7 @@
 </header>
 
 <main class="shell">
+  {% include "partials/enterprise_command_center.html" %}
 
   <!-- ══ AÇÕES ══════════════════════════════════════════════════════════════ -->
   <section id="panel-acoes" class="panel active">

@@ -27,7 +27,8 @@ from api.views import (
 )
 
 from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba
-from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page, rede_gestao_page, plano_saude_gestao_page
+from api.views_enterprise import api_enterprise_command_center, api_enterprise_premium_suite, api_enterprise_seed_operational_demo
+from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_onboarding_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page, rede_gestao_page, plano_saude_gestao_page
 from api.views_corporativo import (
     dashboard_empresa_corporativo,
     api_empresa_corporativo_resumo,
@@ -43,6 +44,7 @@ from api.views_sst import (
     api_funcionarios,
     api_asos,
     api_cats,
+    api_sst_cids_ocupacionais,
     api_documentos_sst,
     api_afastamentos_sst,
     api_exames,
@@ -191,8 +193,28 @@ from api.views_prescricao import (
     api_atos_normativos,
     api_ato_normativo_detalhe,
 )
+from api.views_clinica import (
+    api_clinica_vinculos,
+    api_clinica_vinculo_detalhe,
+    api_clinica_enviar_aso,
+    pagina_aceitar_convite,
+    api_aceitar_vinculo,
+    api_empresa_asos_recebidos,
+    api_empresa_aso_recebido_acao,
+    api_empresa_vinculos_clinicas,
+)
+from api.views_solicitacao_exame import (
+    sst_solicitacoes_page,
+    api_solicitacoes_exame,
+    api_solicitacao_detalhe,
+    api_clinicas_disponiveis,
+    clinica_solicitacoes_page,
+    api_clinica_solicitacoes,
+    api_clinica_solicitacao_acao,
+)
 from api.views_gestao import (
     gestao_corporativa,
+    gestao_plataforma,
     api_apoio_fila,
     api_apoio_atualizar,
     api_programas,
@@ -294,7 +316,17 @@ from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
 from api.governanca import api_auditoria_institucional, api_matriz_decisao, api_metodologia_epidemiologica
 
 # 🔥 IMPORT CORRETO (APENAS UM)
-from api.views_pagamento import criar_pagamento, webhook, sucesso, erro, pendente, status_pagamento, planos_publicos
+from api.views_pagamento import (
+    api_billing_status,
+    api_enterprise_readiness,
+    criar_pagamento,
+    webhook,
+    sucesso,
+    erro,
+    pendente,
+    status_pagamento,
+    planos_publicos,
+)
 from api.views_relatorios import (
     relatorio_pdf_funcionarios,
     relatorio_pdf_asos,
@@ -402,6 +434,7 @@ urlpatterns = [
     path('colaborador-mobile/c/<str:codigo>/', app_colaborador_corporativo),
     path('competencia/', competencia_corporativa),
     path('gestao/', gestao_corporativa),
+    path('gestao/plataforma/', gestao_plataforma),
     path('api/gestao/resumo', api_gestao_resumo),
     path('api/gestao/apoio', api_apoio_fila),
     path('api/gestao/apoio/<int:pedido_id>', api_apoio_atualizar),
@@ -478,6 +511,7 @@ urlpatterns = [
     path('sst/epis/', sst_epis_page),
     path('sst/conformidade/', sst_conformidade_page),
     path('sst/riscos/', sst_riscos_page),
+    path('sst/postos/', sst_postos_page),
     path('sst/comunicacao/grupos/', painel_grupos),
     # 🏥 SST / Saúde Ocupacional — API
     path('api/sst/dashboard', api_sst_dashboard),
@@ -485,6 +519,8 @@ urlpatterns = [
     path('api/sst/funcionarios/', api_funcionarios),
     path('api/sst/asos', api_asos),
     path('api/sst/cats', api_cats),
+    path('api/sst/cids-ocupacionais', api_sst_cids_ocupacionais),
+    path('api/sst/cids-ocupacionais/', api_sst_cids_ocupacionais),
     path('api/sst/documentos', api_documentos_sst),
     path('api/sst/afastamentos', api_afastamentos_sst),
     path('api/sst/exames', api_exames),
@@ -510,6 +546,14 @@ urlpatterns = [
     path('api/sst/conformidade/pdf/', api_sst_conformidade_pdf),
     path('api/sst/relatorio/consolidado/pdf', api_sst_relatorio_consolidado_pdf),
     path('api/sst/relatorio/consolidado/pdf/', api_sst_relatorio_consolidado_pdf),
+    # Postos de Trabalho / S-2240
+    path('api/sst/postos', api_postos_trabalho),
+    path('api/sst/postos/', api_postos_trabalho),
+    path('api/sst/postos/<int:posto_id>', api_posto_detalhe),
+    path('api/sst/postos/<int:posto_id>/agentes', api_agentes_nocivos),
+    path('api/sst/postos/<int:posto_id>/agentes/<int:agente_id>', api_agente_detalhe),
+    path('api/sst/postos/<int:posto_id>/funcionarios', api_posto_funcionarios),
+    path('api/sst/postos/<int:posto_id>/xml-s2240', api_posto_xml_s2240),
     # Riscos ocupacionais / PGR
     path('api/sst/riscos/', api_riscos_ocupacionais),
     path('api/sst/riscos/kpis/', api_riscos_kpis),
@@ -611,6 +655,7 @@ urlpatterns = [
     path('api/operacao-central/resumo', api_dono_resumo),
     path('api/operacao-central/cliente/atualizar', api_dono_atualizar_cliente),
     path('api/operacao-central/financeiro/acao', api_dono_financeiro_acao),
+    path('api/operacao-central/onboarding/acao', api_dono_onboarding_acao),
     path('api/operacao-central/exportar', api_dono_exportar),
     path('api/farmacia/painel', api_farmacia_painel),
     # ── Farmácia Gestão (módulo completo) ────────────────────────
@@ -749,6 +794,8 @@ urlpatterns = [
 
     # 💳 PAGAMENTO (FUNCIONAL)
     path('api/assinatura/<int:empresa_id>/', criar_pagamento),
+    path('api/billing/status', api_billing_status),
+    path('api/operacao/readiness', api_enterprise_readiness),
     path('api/planos-publicos', planos_publicos),
     path('api/webhook', webhook),
     
@@ -849,6 +896,12 @@ urlpatterns = [
     # Hub Enterprise — filtrado por setor, isolamento total entre ambientes
     path('hub/', hub_view),
     path('plataforma/', hub_view),
+    path('api/enterprise/command-center', api_enterprise_command_center),
+    path('api/enterprise/command-center/', api_enterprise_command_center),
+    path('api/enterprise/premium-suite', api_enterprise_premium_suite),
+    path('api/enterprise/premium-suite/', api_enterprise_premium_suite),
+    path('api/enterprise/seed-operational-demo', api_enterprise_seed_operational_demo),
+    path('api/enterprise/seed-operational-demo/', api_enterprise_seed_operational_demo),
 
     # API Infra (versioning, rate limit, circuit breaker)
     path('api/infra/circuit-breaker', api_circuit_breaker_status),

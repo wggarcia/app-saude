@@ -102,10 +102,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="page-sub">Programas, indicadores, orçamento e planos de ação</div>
     </div>
     <div style="display:flex;gap:8px">
+      <a href="/sala-decisao-ia/" class="btn btn-primary">Sala de Decisão IA</a>
       <a href="/api/governo/pdf/relatorio/" target="_blank" class="btn btn-ghost">📄 Exportar Relatório PDF</a>
       <a href="/governo/" class="btn btn-ghost">🚨 Ver Alertas e Monitoramento</a>
     </div>
   </div>
+
+  {% include "partials/enterprise_command_center.html" %}
 
   <!-- KPIs -->
   <div class="kpi-row" id="kpiRow">

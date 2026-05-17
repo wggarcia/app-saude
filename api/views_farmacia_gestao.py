@@ -18,6 +18,7 @@ from .models import (
     MedicamentoFarmacia,
     PedidoFarmacia,
 )
+from .access_control import api_requer_setor
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -144,6 +145,7 @@ def _pedido_to_dict(pedido):
 # ─── Dashboard ────────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("farmacia")
 def api_farmacia_dashboard(request):
     """KPIs e alertas do módulo de farmácia."""
     empresa = _get_empresa(request)
@@ -203,6 +205,7 @@ def api_farmacia_dashboard(request):
 # ─── Estoque ──────────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("farmacia")
 def api_farmacia_estoque(request):
     """Lista e cadastra medicamentos no estoque."""
     empresa = _get_empresa(request)
@@ -289,6 +292,7 @@ def api_farmacia_estoque(request):
 # ─── Dispensações ─────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("farmacia")
 def api_farmacia_dispensacao(request):
     """Lista e registra dispensações de medicamentos."""
     empresa = _get_empresa(request)
@@ -360,6 +364,7 @@ def api_farmacia_dispensacao(request):
 # ─── Movimentos de Estoque ────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("farmacia")
 def api_farmacia_movimentos(request):
     """Lista e registra movimentos de estoque."""
     empresa = _get_empresa(request)
@@ -462,6 +467,7 @@ def api_farmacia_movimentos(request):
 # ─── Fornecedores ─────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("farmacia")
 def api_farmacia_fornecedores(request):
     """Lista e cadastra fornecedores de medicamentos."""
     empresa = _get_empresa(request)
@@ -517,6 +523,7 @@ def api_farmacia_fornecedores(request):
 # ─── Pedidos ──────────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("farmacia")
 def api_farmacia_pedidos(request):
     """Lista e cadastra pedidos de compra de medicamentos."""
     empresa = _get_empresa(request)

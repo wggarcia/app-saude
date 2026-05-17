@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Plataforma & Integrações | {{ empresa_nome }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#041018;--panel:rgba(11,24,34,.9);--line:rgba(154,193,220,.14);--soft:rgba(255,255,255,.08);
+      --text:#ebf7ff;--muted:#9ab9ce;--accent:#7ee1c3;--accent-2:#7db6ff;
+      --gold:#f0bf6b;--danger:#ff7a91;--shadow:0 24px 70px rgba(0,0,0,.42);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      min-height:100vh;font-family:"Manrope","Segoe UI",sans-serif;color:var(--text);
+      background:radial-gradient(circle at top left,rgba(126,225,195,.12),transparent 20rem),
+        radial-gradient(circle at top right,rgba(125,182,255,.14),transparent 24rem),
+        linear-gradient(180deg,#041018 0%,#08141d 40%,#061119 100%);
+    }
+    body::before{
+      content:"";position:fixed;inset:0;pointer-events:none;
+      background:linear-gradient(rgba(125,182,255,.04) 1px,transparent 1px),
+                 linear-gradient(90deg,rgba(125,182,255,.04) 1px,transparent 1px);
+      background-size:44px 44px;opacity:.16;
+    }
+    .glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px);box-shadow:var(--shadow)}
+    .topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--line)}
+    .brand{font-weight:800;font-size:1rem}.brand-sep{color:var(--line)}.brand-sub{color:var(--gold);font-weight:700;font-size:.9rem}
+    .company-tag{padding:4px 10px;border-radius:999px;background:rgba(240,191,107,.1);border:1px solid rgba(240,191,107,.22);color:#fff3c8;font-size:.72rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+    .topbar-nav{display:flex;gap:4px;flex:1;overflow-x:auto;scrollbar-width:none}
+    .topbar-nav::-webkit-scrollbar{display:none}
+    .tab-btn{flex-shrink:0;padding:7px 14px;border-radius:999px;border:none;cursor:pointer;background:transparent;color:var(--muted);font:inherit;font-size:.8rem;font-weight:700;white-space:nowrap;transition:all .18s}
+    .tab-btn:hover{background:rgba(255,255,255,.06);color:var(--text)}
+    .tab-btn.active{background:rgba(240,191,107,.14);color:#fff3c8;border:1px solid rgba(240,191,107,.24)}
+    .topbar-actions{display:flex;gap:8px;flex-shrink:0}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);font:inherit;font-size:.8rem;font-weight:800;cursor:pointer;text-decoration:none;transition:all .18s;gap:6px}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn.primary{border:0;background:linear-gradient(135deg,#0db794,#1f6ff2)}
+    .btn.warn{border:0;background:linear-gradient(135deg,#8b2239,#5e1b1b)}
+    .btn.danger{border:0;background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+    .btn.sm{min-height:30px;padding:0 10px;font-size:.74rem}
+    .btn.xs{min-height:26px;padding:0 8px;font-size:.7rem}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .shell{width:min(1200px,calc(100% - 24px));margin:0 auto;padding:18px 0 60px;display:grid;gap:16px}
+    .panel{display:none}.panel.active{display:grid;gap:16px}
+    .card{border-radius:28px;padding:20px}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .section-title{font-size:1rem;font-weight:800;margin-bottom:4px}
+    .section-sub{color:var(--muted);font-size:.86rem;margin-bottom:14px}
+    .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+    .item-list{display:grid;gap:10px}
+    .item-row{border-radius:18px;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid var(--soft);display:grid;gap:6px}
+    .item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+    .item-name{font-size:.95rem;font-weight:700}
+    .item-meta{color:var(--muted);font-size:.8rem;line-height:1.5}
+    .item-actions{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+    .empty{text-align:center;padding:28px;color:var(--muted);font-size:.88rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1)}
+    .sbadge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+    .s-ativo{background:rgba(126,225,195,.14);color:#b0ffe6}
+    .s-inativo{background:rgba(255,255,255,.07);color:var(--muted)}
+    .s-trial{background:rgba(240,191,107,.14);color:#ffe4ad}
+    .s-expirado{background:rgba(255,122,145,.14);color:#ffbfcb}
+    .s-pendente{background:rgba(125,182,255,.14);color:#c3deff}
+    .form-grid{display:grid;gap:10px}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    label{color:#bfd3e2;font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em}
+    .field{display:flex;flex-direction:column;gap:5px}
+    input,select,textarea{border-radius:12px;border:1px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);padding:9px 12px;font:inherit;font-size:.86rem;outline:none;width:100%}
+    input:focus,select:focus{border-color:rgba(125,182,255,.4);box-shadow:0 0 0 3px rgba(125,182,255,.1)}
+    select option{background:#0b1822}
+    .toast{padding:9px 14px;border-radius:12px;font-size:.82rem;display:none;margin-top:8px}
+    .toast.ok{display:block;background:rgba(15,178,142,.12);color:#aef0db}
+    .toast.err{display:block;background:rgba(255,130,152,.12);color:#ffc6d2}
+    .form-actions{display:flex;gap:8px;margin-top:4px}
+
+    /* TRIAL PROGRESS */
+    .trial-box{border-radius:24px;padding:22px;background:linear-gradient(135deg,rgba(240,191,107,.08),rgba(126,225,195,.05));border:1px solid rgba(240,191,107,.2)}
+    .progress-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:6px}
+    .progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#0db794,#7ee1c3);transition:width .4s}
+
+    /* ONBOARDING */
+    .step-row{border-radius:16px;padding:14px 16px;background:rgba(255,255,255,.03);border:1px solid var(--soft);display:flex;align-items:center;gap:14px;cursor:pointer;transition:background .15s}
+    .step-row:hover{background:rgba(255,255,255,.06)}
+    .step-row.done{opacity:.55}
+    .step-check{width:28px;height:28px;border-radius:50%;border:2px solid var(--soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.85rem;transition:all .2s}
+    .step-row.done .step-check{border-color:var(--accent);background:rgba(126,225,195,.12);color:var(--accent)}
+    .step-row:not(.done) .step-check{color:var(--muted)}
+    .step-text{flex:1}.step-name{font-weight:700;font-size:.9rem}.step-desc{color:var(--muted);font-size:.78rem;margin-top:2px}
+
+    /* BENCHMARK */
+    .bench-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .bench-card{border-radius:20px;padding:16px;background:rgba(255,255,255,.04);border:1px solid var(--soft)}
+    .bench-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
+    .bench-val{font-size:1.5rem;font-weight:800;margin:4px 0}
+    .bench-comp{font-size:.8rem;color:var(--muted)}
+    .bench-comp.better{color:var(--accent)}
+    .bench-comp.worse{color:var(--danger)}
+
+    /* KEY CHIP */
+    .key-chip{font-family:monospace;font-size:.8rem;background:rgba(125,182,255,.1);color:#c3deff;padding:4px 10px;border-radius:8px;word-break:break-all;border:1px solid rgba(125,182,255,.15)}
+
+    /* STRIP */
+    .strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .strip-card{border-radius:20px;padding:14px 16px;background:linear-gradient(180deg,rgba(17,35,50,.9),rgba(8,18,28,.92));border:1px solid var(--soft)}
+    .strip-card span{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
+    .strip-card strong{display:block;margin-top:8px;font-size:1.4rem;font-weight:800}
+    .strip-card.accent strong{color:var(--accent)}
+    .strip-card.gold strong{color:var(--gold)}
+    .strip-card.danger strong{color:var(--danger)}
+
+    /* WEBHOOK URL */
+    .url-row{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--soft);border-radius:12px;padding:8px 12px}
+    .url-row code{flex:1;font-size:.78rem;color:var(--accent-2);word-break:break-all}
+    .copy-btn{cursor:pointer;color:var(--muted);font-size:.7rem;font-weight:800;white-space:nowrap;padding:4px 8px;border-radius:8px;border:1px solid var(--soft);background:rgba(255,255,255,.04);transition:all .15s}
+    .copy-btn:hover{background:rgba(255,255,255,.1);color:var(--text)}
+
+    @media(max-width:900px){.two-col{grid-template-columns:1fr}.bench-grid{grid-template-columns:1fr 1fr}.strip{grid-template-columns:1fr 1fr}}
+    @media(max-width:540px){.bench-grid,.strip{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+
+<header class="topbar glass">
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <span class="brand">SolusCRT</span>
+    <span class="brand-sep">·</span>
+    <span class="brand-sub">Plataforma</span>
+    <span class="company-tag">{{ empresa_nome }}</span>
+  </div>
+  <nav class="topbar-nav">
+    <button class="tab-btn active" data-tab="trial">Plano & Trial</button>
+    <button class="tab-btn" data-tab="onboarding">Onboarding</button>
+    <button class="tab-btn" data-tab="integracoes">Integrações RH</button>
+    <button class="tab-btn" data-tab="chaves">API Keys</button>
+    <button class="tab-btn" data-tab="benchmark">Benchmark</button>
+  </nav>
+  <div class="topbar-actions">
+    <a class="btn sm" href="/gestao/">← Gestão</a>
+    <a class="btn sm warn" href="/logout/">Sair</a>
+  </div>
+</header>
+
+<main class="shell">
+
+  <!-- ══ PLANO & TRIAL ═════════════════════════════════════════════════════════ -->
+  <section id="panel-trial" class="panel active">
+    <div class="strip">
+      <div class="strip-card gold"><span>Status</span><strong id="trialStatus">—</strong></div>
+      <div class="strip-card accent"><span>Dias restantes</span><strong id="trialDias">—</strong></div>
+      <div class="strip-card"><span>Setor</span><strong id="trialSetor">—</strong></div>
+      <div class="strip-card"><span>Módulos ativos</span><strong id="trialModulos">—</strong></div>
+    </div>
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-title">Plano atual</div>
+        <div class="section-sub">Resumo do seu acesso à plataforma SolusCRT</div>
+        <div class="trial-box" id="trialBox">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-size:1.1rem;font-weight:800" id="trialNome">—</div>
+              <div style="color:var(--muted);font-size:.84rem;margin-top:4px" id="trialDesc">Carregando...</div>
+            </div>
+            <span class="sbadge" id="trialBadge">—</span>
+          </div>
+          <div style="margin-top:16px">
+            <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);margin-bottom:6px">
+              <span>Progresso do trial</span><span id="trialPct">—</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" id="trialBar" style="width:0%"></div></div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn primary" id="btnAtivarTrial" onclick="ativarTrial()" style="display:none">Ativar Trial Gratuito 14 dias</button>
+            <a class="btn gold" href="mailto:comercial@soluscrt.com?subject=Quero+assinar+o+SolusCRT">Falar com Vendas</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title">O que está incluído</div>
+        <div class="section-sub">Módulos disponíveis no seu setor</div>
+        <div id="modulosList" class="item-list"><div class="empty">Carregando...</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ ONBOARDING ════════════════════════════════════════════════════════════ -->
+  <section id="panel-onboarding" class="panel">
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Checklist de Primeiros Passos</div>
+          <div class="section-sub">Complete cada etapa para aproveitar ao máximo a plataforma</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:1.6rem;font-weight:800;color:var(--accent)" id="onbPct">0%</div>
+          <div style="font-size:.76rem;color:var(--muted)">concluído</div>
+        </div>
+      </div>
+      <div class="progress-bar" style="margin-bottom:20px"><div class="progress-fill" id="onbBar" style="width:0%"></div></div>
+      <div class="item-list" id="onbList"><div class="empty">Carregando...</div></div>
+    </div>
+  </section>
+
+  <!-- ══ INTEGRAÇÕES RH ════════════════════════════════════════════════════════ -->
+  <section id="panel-integracoes" class="panel">
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Integrações Ativas</div>
+            <div class="section-sub">Sistemas de RH conectados à sua empresa</div>
+          </div>
+          <button class="btn sm" onclick="loadIntegracoes()">Atualizar</button>
+        </div>
+        <div class="item-list" id="integracoesList"><div class="empty">Carregando...</div></div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title">Conectar Sistema de RH</div>
+        <div class="section-sub">Sincronize automaticamente funcionários via webhook</div>
+        <form class="form-grid" id="formIntegracao" onsubmit="criarIntegracao(event)">
+          <div class="field">
+            <label>Sistema</label>
+            <select name="sistema" required>
+              <option value="">Selecione...</option>
+              <option value="totvs">TOTVS / RM</option>
+              <option value="adp">ADP Workforce</option>
+              <option value="senior">Senior Sistemas</option>
+              <option value="sap">SAP HCM / SuccessFactors</option>
+              <option value="esocial">eSocial (Gov Federal)</option>
+              <option value="outro">Outro (genérico)</option>
+            </select>
+          </div>
+          <div class="field"><label>Nome / Identificador</label><input name="nome" placeholder="Ex: TOTVS Matriz, ADP Filial SP..." required></div>
+          <div class="field">
+            <label>URL de retorno (Callback URL do seu RH)</label>
+            <input name="url_callback" type="url" placeholder="https://seu-rh.com/webhook/saude">
+            <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Opcional — se o seu RH precisa de confirmação de recebimento</div>
+          </div>
+          <div class="field">
+            <label>Ativa automaticamente</label>
+            <select name="ativo">
+              <option value="true">Sim — sincronizar imediatamente</option>
+              <option value="false">Não — configurar antes de ativar</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Conectar</button>
+          </div>
+          <div class="toast" id="toastIntegracao"></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Detalhe da integração selecionada -->
+    <div class="card glass" id="integracaoDetalhe" style="display:none">
+      <div class="section-head">
+        <div>
+          <div class="section-title" id="detalheTitulo">—</div>
+          <div class="section-sub">Endpoint que você deve configurar no seu sistema de RH para enviar dados</div>
+        </div>
+        <button class="btn sm warn" onclick="excluirIntegracao()" id="btnExcluirInt">Remover</button>
+      </div>
+      <div style="display:grid;gap:12px">
+        <div>
+          <label style="display:block;margin-bottom:6px">Webhook URL (configure no seu RH)</label>
+          <div class="url-row">
+            <code id="detalheWebhookUrl">—</code>
+            <button class="copy-btn" onclick="copiar('detalheWebhookUrl',this)">Copiar</button>
+          </div>
+        </div>
+        <div>
+          <label style="display:block;margin-bottom:6px">Chave secreta HMAC (para validar requisições)</label>
+          <div class="url-row">
+            <code id="detalheSecret">—</code>
+            <button class="copy-btn" onclick="copiar('detalheSecret',this)">Copiar</button>
+          </div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:6px">Configure como <code style="font-size:.72rem">X-Hub-Signature-256</code> no header do seu RH</div>
+        </div>
+        <div>
+          <label style="display:block;margin-bottom:6px">Exemplo de payload (funcionário)</label>
+          <div style="background:rgba(255,255,255,.04);border-radius:12px;padding:12px;border:1px solid var(--soft)">
+<pre style="font-size:.75rem;color:#c3deff;overflow-x:auto;white-space:pre-wrap">{
+  "funcionarios": [
+    {
+      "cpf": "123.456.789-00",
+      "nome": "Ana Souza",
+      "cargo": "Operadora",
+      "setor": "Produção",
+      "data_admissao": "2023-01-15",
+      "email": "ana@empresa.com.br",
+      "ativo": true
+    }
+  ]
+}</pre>
+          </div>
+        </div>
+        <div id="detalheStatus" style="display:grid;gap:8px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ API KEYS ══════════════════════════════════════════════════════════════ -->
+  <section id="panel-chaves" class="panel">
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Chaves de API</div>
+            <div class="section-sub">Acesso programático ao SolusCRT via API REST</div>
+          </div>
+          <button class="btn sm" onclick="loadChaves()">Atualizar</button>
+        </div>
+        <div class="item-list" id="chavesList"><div class="empty">Carregando...</div></div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title">Criar Nova Chave</div>
+        <div class="section-sub">Máximo de 10 chaves ativas por empresa</div>
+        <form class="form-grid" id="formChave" onsubmit="criarChave(event)">
+          <div class="field"><label>Nome / Descrição</label><input name="nome" placeholder="Ex: Integração App Mobile, Sistema Legado..." required></div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Gerar Chave</button>
+          </div>
+          <div class="toast" id="toastChave"></div>
+        </form>
+        <!-- chave recém criada -->
+        <div id="novaChaveBox" style="display:none;margin-top:16px;padding:14px;border-radius:16px;background:rgba(126,225,195,.07);border:1px solid rgba(126,225,195,.2)">
+          <div style="font-size:.78rem;font-weight:800;color:var(--accent);margin-bottom:8px">Chave criada — copie agora, não será exibida novamente</div>
+          <div class="url-row">
+            <code id="novaChaveValor" style="color:var(--accent)">—</code>
+            <button class="copy-btn" onclick="copiar('novaChaveValor',this)">Copiar</button>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;border-top:1px solid var(--line);padding-top:16px">
+          <div class="section-title" style="font-size:.88rem">Como usar</div>
+          <div style="display:grid;gap:8px;margin-top:10px">
+            <div>
+              <label style="display:block;margin-bottom:4px">Header de autenticação</label>
+              <div class="key-chip">Authorization: Bearer &lt;sua_chave&gt;</div>
+            </div>
+            <div>
+              <label style="display:block;margin-bottom:4px">Endpoint base</label>
+              <div class="key-chip">https://app-saude-p9n8.onrender.com/api/v1/dados</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Uso de API -->
+    <div class="card glass">
+      <div class="section-head">
+        <div class="section-title">Uso de API — Mês Atual</div>
+        <button class="btn sm" onclick="loadUso()">Atualizar</button>
+      </div>
+      <div class="strip" id="usoStrip">
+        <div class="strip-card"><span>Total chamadas</span><strong id="usoTotal">—</strong></div>
+        <div class="strip-card accent"><span>Endpoints distintos</span><strong id="usoEndpoints">—</strong></div>
+        <div class="strip-card gold"><span>Pico do dia</span><strong id="usoPico">—</strong></div>
+        <div class="strip-card"><span>Última chamada</span><strong id="usoUltima">—</strong></div>
+      </div>
+      <div class="item-list" style="margin-top:14px" id="usoList"></div>
+    </div>
+  </section>
+
+  <!-- ══ BENCHMARK ════════════════════════════════════════════════════════════ -->
+  <section id="panel-benchmark" class="panel">
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Benchmark Setorial</div>
+          <div class="section-sub">Compare sua empresa com a média anônima do setor na plataforma</div>
+        </div>
+        <button class="btn sm" onclick="loadBenchmark()">Atualizar</button>
+      </div>
+      <div id="benchmarkContent">
+        <div class="empty">Carregando dados de benchmark...</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const EMPRESA = "{{ empresa_nome }}";
+
+// ── helpers ────────────────────────────────────────────────────────────────
+async function api(path, opts={}) {
+  const r = await fetch(path, {credentials:"include", headers:{"Content-Type":"application/json",...(opts.headers||{})}, ...opts});
+  return r;
+}
+function jq(id) { return document.getElementById(id) }
+function set(id, v) { const el = jq(id); if(el) el.textContent = v }
+
+function copiar(id, btn) {
+  const txt = jq(id)?.textContent?.trim();
+  if(!txt) return;
+  navigator.clipboard.writeText(txt).then(() => { btn.textContent = "Copiado!"; setTimeout(()=>btn.textContent="Copiar",1800) });
+}
+
+function toast(id, msg, isErr=false) {
+  const el = jq(id);
+  if(!el) return;
+  el.textContent = msg;
+  el.className = "toast " + (isErr ? "err" : "ok");
+  setTimeout(() => { el.className = "toast" }, 4000);
+}
+
+function sbadge(status) {
+  const map = {ativo:"s-ativo",inativo:"s-inativo",trial:"s-trial",expirado:"s-expirado",pendente:"s-pendente"};
+  return `<span class="sbadge ${map[status]||'s-inativo'}">${status}</span>`;
+}
+
+// ── TABS ───────────────────────────────────────────────────────────────────
+let loadedTabs = {};
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    const tab = btn.dataset.tab;
+    jq("panel-" + tab)?.classList.add("active");
+    if(!loadedTabs[tab]) { loadTab(tab); loadedTabs[tab]=true; }
+  });
+});
+
+function loadTab(tab) {
+  if(tab==="trial") loadTrial();
+  else if(tab==="onboarding") loadOnboarding();
+  else if(tab==="integracoes") loadIntegracoes();
+  else if(tab==="chaves") { loadChaves(); loadUso(); }
+  else if(tab==="benchmark") loadBenchmark();
+}
+
+// ── TRIAL ──────────────────────────────────────────────────────────────────
+async function loadTrial() {
+  const r = await api("/api/gestao/trial");
+  if(!r.ok) return;
+  const d = await r.json();
+
+  const st = d.status;
+  set("trialStatus", st === "trial" ? "Trial" : st === "ativo" ? "Ativo" : st === "expirado" ? "Expirado" : "Sem plano");
+  set("trialDias", d.trial?.dias_restantes ?? (st==="ativo" ? "∞" : "—"));
+  set("trialSetor", d.setor || "—");
+
+  let modulos = [];
+  if(d.setor==="empresa") modulos = ["SST / PCMSO","ASO Digital","EPI","CAT","eSocial","Assinatura Digital","Portal Trabalhador"];
+  else if(d.setor==="farmacia") modulos = ["Dispensação","Estoque","SNGPC","Epidemiologia"];
+  else if(d.setor==="hospital") modulos = ["Atendimentos","Triagem","Ocupacional","Comunicação Interna"];
+  set("trialModulos", modulos.length || "—");
+
+  jq("modulosList").innerHTML = modulos.map(m => `
+    <div class="item-row" style="padding:10px 14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="color:var(--accent);font-size:.9rem">✓</span>
+        <span style="font-size:.88rem">${m}</span>
+      </div>
+    </div>`).join("") || `<div class="empty">Nenhum módulo identificado</div>`;
+
+  const trial = d.trial;
+  if(trial) {
+    set("trialNome", "Trial SolusCRT");
+    const diasRest = trial.dias_restantes || 0;
+    const diasTotal = 14;
+    const pct = Math.max(0, Math.min(100, Math.round((diasTotal - diasRest) / diasTotal * 100)));
+    set("trialDesc", trial.ativo ? `${diasRest} dias restantes — expira em ${trial.expiracao_em?.slice(0,10) || "—"}` : "Trial expirado");
+    set("trialPct", pct + "%");
+    jq("trialBar").style.width = pct + "%";
+    jq("trialBadge").outerHTML = sbadge(trial.ativo ? "trial" : "expirado");
+  } else if(st==="ativo") {
+    set("trialNome", "Plano Ativo");
+    set("trialDesc", "Acesso completo ao módulo contratado");
+    jq("trialBar").style.width = "100%";
+    jq("trialBadge").outerHTML = sbadge("ativo");
+    set("trialPct", "100%");
+  } else {
+    set("trialNome", "Sem plano ativo");
+    set("trialDesc", "Ative o trial gratuito de 14 dias ou fale com vendas");
+    jq("btnAtivarTrial").style.display = "inline-flex";
+    jq("trialBadge").outerHTML = sbadge("inativo");
+  }
+}
+
+async function ativarTrial() {
+  const r = await api("/api/gestao/trial/ativar", {method:"POST"});
+  const d = await r.json();
+  if(r.ok) { loadedTabs["trial"]=false; loadTrial(); }
+  else alert(d.erro || "Erro ao ativar trial");
+}
+
+// ── ONBOARDING ─────────────────────────────────────────────────────────────
+const PASSOS_INFO = {
+  cadastro_empresa:     {nome:"Perfil da empresa",       desc:"Preencha nome, CNPJ e endereço"},
+  primeiro_funcionario: {nome:"Primeiro funcionário",    desc:"Cadastre um funcionário SST"},
+  primeiro_aso:         {nome:"Primeiro ASO",            desc:"Gere um Atestado de Saúde Ocupacional"},
+  configurar_epi:       {nome:"Configurar EPI",          desc:"Cadastre os EPIs utilizados na empresa"},
+  primeiro_exame:       {nome:"Primeiro exame agendado", desc:"Agende um exame ocupacional"},
+  configurar_esocial:   {nome:"Configurar eSocial",      desc:"Adicione o certificado digital eSocial"},
+  primeira_assinatura:  {nome:"Assinatura digital",      desc:"Solicite a assinatura de um documento SST"},
+};
+
+async function loadOnboarding() {
+  const r = await api("/api/gestao/trial");
+  if(!r.ok) return;
+  const d = await r.json();
+  const passos = d.onboarding || [];
+  const concluidos = passos.filter(p=>p.concluido).length;
+  const total = passos.length || Object.keys(PASSOS_INFO).length;
+  const pct = total ? Math.round(concluidos/total*100) : 0;
+  set("onbPct", pct+"%");
+  jq("onbBar").style.width = pct+"%";
+
+  if(!passos.length) {
+    jq("onbList").innerHTML = Object.entries(PASSOS_INFO).map(([k,info]) => stepHtml(k, info, false)).join("");
+    return;
+  }
+  jq("onbList").innerHTML = passos.map(p => {
+    const info = PASSOS_INFO[p.passo] || {nome:p.passo, desc:""};
+    return stepHtml(p.passo, info, p.concluido);
+  }).join("");
+}
+
+function stepHtml(passo, info, done) {
+  return `<div class="step-row ${done?'done':''}" onclick="marcarPasso('${passo}',${!done})">
+    <div class="step-check">${done ? "✓" : "○"}</div>
+    <div class="step-text">
+      <div class="step-name">${info.nome}</div>
+      <div class="step-desc">${info.desc}</div>
+    </div>
+    ${done ? '<span style="font-size:.72rem;color:var(--muted)">Concluído</span>' : ''}
+  </div>`;
+}
+
+async function marcarPasso(passo, concluido) {
+  const r = await api(`/api/gestao/onboarding/${passo}`, {method:"POST", body:JSON.stringify({concluido})});
+  if(r.ok) { loadedTabs["onboarding"]=false; loadOnboarding(); }
+}
+
+// ── INTEGRAÇÕES ────────────────────────────────────────────────────────────
+let integracaoSelecionada = null;
+
+async function loadIntegracoes() {
+  const r = await api("/api/gestao/integracoes");
+  if(!r.ok) { jq("integracoesList").innerHTML = `<div class="empty">Erro ao carregar</div>`; return; }
+  const d = await r.json();
+  const lista = d.integracoes || [];
+  if(!lista.length) { jq("integracoesList").innerHTML = `<div class="empty">Nenhuma integração configurada</div>`; return; }
+  jq("integracoesList").innerHTML = lista.map(i => `
+    <div class="item-row" onclick="verIntegracao(${i.id})" style="cursor:pointer">
+      <div class="item-top">
+        <div>
+          <div class="item-name">${i.nome}</div>
+          <div class="item-meta">${sistemaNome(i.sistema)}</div>
+        </div>
+        ${sbadge(i.ativo ? "ativo" : "inativo")}
+      </div>
+      <div class="item-meta">Funcionários: <strong>${i.total_funcionarios ?? "—"}</strong> · Última sync: ${i.ultima_sync ? new Date(i.ultima_sync).toLocaleString("pt-BR") : "nunca"}</div>
+    </div>`).join("");
+}
+
+function sistemaNome(s) {
+  const m = {totvs:"TOTVS / RM",adp:"ADP Workforce",senior:"Senior Sistemas",sap:"SAP HCM",esocial:"eSocial",outro:"Sistema Genérico"};
+  return m[s] || s;
+}
+
+async function verIntegracao(id) {
+  const r = await api(`/api/gestao/integracoes/${id}/status`);
+  if(!r.ok) return;
+  const d = await r.json();
+  integracaoSelecionada = id;
+  const host = window.location.origin;
+  set("detalheTitulo", d.nome + " — " + sistemaNome(d.sistema));
+  jq("detalheWebhookUrl").textContent = `${host}/api/gestao/integracoes/webhook/${d.sistema}`;
+  jq("detalheSecret").textContent = d.secret || "—";
+  jq("detalheStatus").innerHTML = `
+    <div class="item-row" style="padding:10px 14px">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:.82rem">
+        <span>Funcionários: <strong>${d.total_funcionarios ?? 0}</strong></span>
+        <span>Última sync: <strong>${d.ultima_sync ? new Date(d.ultima_sync).toLocaleString("pt-BR") : "nunca"}</strong></span>
+        <span>Status: ${sbadge(d.ativo ? "ativo" : "inativo")}</span>
+      </div>
+    </div>`;
+  jq("integracaoDetalhe").style.display = "grid";
+  jq("integracaoDetalhe").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+async function excluirIntegracao() {
+  if(!integracaoSelecionada) return;
+  if(!confirm("Remover esta integração? Os funcionários já importados não serão apagados.")) return;
+  jq("integracaoDetalhe").style.display = "none";
+  integracaoSelecionada = null;
+  loadIntegracoes();
+}
+
+async function criarIntegracao(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = {sistema:fd.get("sistema"),nome:fd.get("nome"),url_callback:fd.get("url_callback")||null,ativo:fd.get("ativo")==="true"};
+  const r = await api("/api/gestao/integracoes/", {method:"POST", body:JSON.stringify(body)});
+  const d = await r.json();
+  if(r.ok) { toast("toastIntegracao", "Integração criada com sucesso!"); e.target.reset(); loadIntegracoes(); }
+  else toast("toastIntegracao", d.erro || "Erro ao criar integração", true);
+}
+
+// ── API KEYS ───────────────────────────────────────────────────────────────
+async function loadChaves() {
+  const r = await api("/api/gestao/chaves");
+  if(!r.ok) { jq("chavesList").innerHTML = `<div class="empty">Erro ao carregar</div>`; return; }
+  const d = await r.json();
+  const lista = d.chaves || [];
+  if(!lista.length) { jq("chavesList").innerHTML = `<div class="empty">Nenhuma chave criada ainda</div>`; return; }
+  jq("chavesList").innerHTML = lista.map(k => `
+    <div class="item-row">
+      <div class="item-top">
+        <div>
+          <div class="item-name">${k.nome}</div>
+          <div class="item-meta">Criada em ${new Date(k.criada_em).toLocaleDateString("pt-BR")} · Usos: ${k.usos_mes_atual ?? 0}</div>
+        </div>
+        ${sbadge(k.ativa ? "ativo" : "inativo")}
+      </div>
+      <div class="item-meta key-chip">${k.prefixo || "sk_..."}••••••••••••••••</div>
+      <div class="item-actions">
+        ${k.ativa ? `<button class="btn xs danger" onclick="revogarChave(${k.id})">Revogar</button>` : '<span style="font-size:.76rem;color:var(--muted)">Revogada</span>'}
+      </div>
+    </div>`).join("");
+}
+
+async function criarChave(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const r = await api("/api/gestao/chaves/", {method:"POST", body:JSON.stringify({nome:fd.get("nome")})});
+  const d = await r.json();
+  if(r.ok) {
+    toast("toastChave","Chave criada!");
+    e.target.reset();
+    if(d.chave_completa) {
+      jq("novaChaveValor").textContent = d.chave_completa;
+      jq("novaChaveBox").style.display = "block";
+    }
+    loadChaves();
+  } else toast("toastChave", d.erro || "Erro ao criar chave", true);
+}
+
+async function revogarChave(id) {
+  if(!confirm("Revogar esta chave? Integrações usando ela deixarão de funcionar.")) return;
+  const r = await api(`/api/gestao/chaves/${id}/revogar`, {method:"POST"});
+  if(r.ok) loadChaves();
+}
+
+async function loadUso() {
+  const r = await api("/api/gestao/uso-api");
+  if(!r.ok) return;
+  const d = await r.json();
+  const uso = d.uso || [];
+  const total = uso.reduce((s,u)=>s+(u.chamadas||0),0);
+  const pico = uso.length ? Math.max(...uso.map(u=>u.chamadas||0)) : 0;
+  const ultima = d.ultima_chamada;
+  set("usoTotal", total.toLocaleString("pt-BR"));
+  set("usoEndpoints", uso.length);
+  set("usoPico", pico.toLocaleString("pt-BR"));
+  set("usoUltima", ultima ? new Date(ultima).toLocaleString("pt-BR") : "—");
+  if(uso.length) {
+    jq("usoList").innerHTML = uso.slice(0,10).map(u => `
+      <div class="item-row" style="padding:10px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <code style="font-size:.78rem;color:var(--accent-2)">${u.endpoint}</code>
+          <strong style="flex-shrink:0">${(u.chamadas||0).toLocaleString("pt-BR")} chamadas</strong>
+        </div>
+      </div>`).join("");
+  }
+}
+
+// ── BENCHMARK ──────────────────────────────────────────────────────────────
+async function loadBenchmark() {
+  const r = await api("/api/gestao/benchmark");
+  if(!r.ok) { jq("benchmarkContent").innerHTML = `<div class="empty">Erro ao carregar benchmark</div>`; return; }
+  const d = await r.json();
+  const bench = d.benchmark || {};
+  const setor = d.setor || "empresa";
+
+  const metricas = bench.metricas || {};
+  const media_setor = bench.media_setor || {};
+
+  const itens = Object.entries(metricas).map(([k,v]) => {
+    const med = media_setor[k];
+    const diff = med ? ((v - med) / Math.max(med,1) * 100).toFixed(0) : null;
+    let compHtml = `<span class="bench-comp">Sem média disponível</span>`;
+    if(diff !== null) {
+      const mejor = ["aso_validos_pct","cobertura_epi_pct","treinamentos_mes"].includes(k);
+      const better = mejor ? diff > 0 : diff < 0;
+      compHtml = `<span class="bench-comp ${better?'better':'worse'}">${better?'▲':'▼'} ${Math.abs(diff)}% vs média do setor (${formatMetric(med,k)})</span>`;
+    }
+    return `<div class="bench-card">
+      <div class="bench-label">${labelMetrica(k)}</div>
+      <div class="bench-val">${formatMetric(v,k)}</div>
+      ${compHtml}
+    </div>`;
+  }).join("");
+
+  jq("benchmarkContent").innerHTML = `
+    <div style="margin-bottom:14px;color:var(--muted);font-size:.84rem">Setor: <strong style="color:var(--text)">${setor}</strong> · Dados anônimos de ${d.total_empresas || "—"} empresas na plataforma</div>
+    <div class="bench-grid">${itens || '<div class="empty" style="grid-column:1/-1">Sem dados suficientes para benchmark ainda</div>'}</div>
+    ${bench.destaques?.length ? `<div style="margin-top:16px"><div class="section-title" style="font-size:.88rem;margin-bottom:8px">Destaques</div><div class="item-list">${bench.destaques.map(d=>`<div class="item-row" style="padding:10px 14px"><span style="font-size:.86rem">${d}</span></div>`).join("")}</div></div>` : ""}
+  `;
+}
+
+function labelMetrica(k) {
+  const m = {
+    aso_validos_pct:"ASO em dia (%)",afastamentos_mes:"Afastamentos/mês",
+    cobertura_epi_pct:"Cobertura EPI (%)",treinamentos_mes:"Treinamentos NR/mês",
+    cats_mes:"CAT emitidas/mês",funcionarios_ativos:"Funcionários ativos",
+    incidencia_acidente:"Taxa de acidente","dispensacoes_mes":"Dispensações/mês"
+  };
+  return m[k] || k.replace(/_/g," ");
+}
+
+function formatMetric(v, k) {
+  if(v===null||v===undefined) return "—";
+  if(k.endsWith("_pct")) return v.toFixed(1)+"%";
+  if(Number.isInteger(v)) return v.toLocaleString("pt-BR");
+  return parseFloat(v).toFixed(1);
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+loadTrial();
+loadedTabs["trial"] = true;
+</script>
+</body>
+</html>

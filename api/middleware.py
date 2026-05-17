@@ -1,5 +1,6 @@
 import jwt
 import logging
+import sys
 import time
 from datetime import timedelta
 from django.core.cache import cache
@@ -12,6 +13,7 @@ from .models import Empresa, EmpresaUsuario, DonoSaaS, DispositivoAutorizado
 logger = logging.getLogger(__name__)
 SESSION_IDLE_TIMEOUT = timedelta(minutes=15) if settings.DEBUG else timedelta(hours=8)
 SESSION_TOUCH_INTERVAL = timedelta(minutes=1)
+COOKIE_MAX_AGE = 7 * 24 * 60 * 60
 
 # Rate limiting: max tentativas de login por IP
 _LOGIN_MAX_ATTEMPTS = 10
@@ -63,7 +65,7 @@ def _client_ip(request):
 def _rate_limit_login(request):
     """Retorna True se o IP estiver bloqueado, False se ainda pode tentar."""
     from django.conf import settings
-    if getattr(settings, "DJANGO_ENV", "") == "test":
+    if getattr(settings, "DJANGO_ENV", "") == "test" or "test" in sys.argv:
         return False
     ip = _client_ip(request)
     cache_key = f"login_attempts:{ip}"
@@ -166,6 +168,7 @@ class EmpresaMiddleware:
 
         owner_paths = (
             "/console-operacional/",
+            "/api/operacao/",
             "/api/operacao-central/",
             "/financeiro/",
             "/governanca/",
@@ -202,10 +205,18 @@ class EmpresaMiddleware:
         # 🔐 AUTENTICAÇÃO JWT
         auth = request.headers.get("Authorization")
         token = None
+        token_from_tab = False
 
-        if auth and "Bearer" in auth:
+        tab_key = (request.GET.get("tab") or "").strip()
+        if tab_key:
+            cached_token = cache.get(f"tab_auth:{tab_key}")
+            if cached_token:
+                token = cached_token
+                token_from_tab = True
+
+        if not token and auth and "Bearer" in auth:
             token = auth.split(" ")[1]
-        else:
+        elif not token:
             token = request.COOKIES.get("auth_token")
 
         if not token:
@@ -247,6 +258,8 @@ class EmpresaMiddleware:
             _touch_sessao_principal(principal)
             request.empresa = empresa
             request.principal = principal
+            if token_from_tab:
+                request._tab_auth_token = token
 
         except Exception as e:
             logger.warning("Token invalido no middleware: %s", e)
@@ -265,4 +278,28 @@ class EmpresaMiddleware:
                 return redirect("/contrato-governo/")
             return redirect("/pagamento/")
 
-        return self.get_response(request)
+        response = self.get_response(request)
+        if getattr(request, "_tab_auth_token", None):
+            response.set_cookie(
+                "auth_token",
+                request._tab_auth_token,
+                httponly=True,
+                samesite="Lax",
+                max_age=COOKIE_MAX_AGE,
+                secure=not settings.DEBUG,
+            )
+            response.set_cookie(
+                "empresa_id",
+                str(empresa.id),
+                samesite="Lax",
+                max_age=COOKIE_MAX_AGE,
+                secure=not settings.DEBUG,
+            )
+            response.set_cookie(
+                "tipo_conta",
+                empresa.tipo_conta,
+                samesite="Lax",
+                max_age=COOKIE_MAX_AGE,
+                secure=not settings.DEBUG,
+            )
+        return response

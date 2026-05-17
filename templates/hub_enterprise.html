@@ -38,6 +38,27 @@
     .badge-live{background:#052e16;color:#10b981;border:1px solid #166534}
     .badge-novo{background:#1e1b4b;color:#818cf8;border:1px solid #3730a3}
     .badge-ia{background:#130026;color:#a855f7;border:1px solid #7e22ce}
+    .command{display:grid;grid-template-columns:280px 1fr;gap:16px;margin-bottom:34px}
+    .score-panel,.risk-panel{background:#111827;border:1px solid #1e293b;border-radius:8px;padding:18px}
+    .score-label{font-size:.7rem;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+    .score-value{font-size:3rem;font-weight:900;color:#f8fafc;line-height:1;margin:10px 0 8px}
+    .score-status{display:inline-flex;font-size:.72rem;font-weight:800;border-radius:999px;padding:4px 9px;border:1px solid #334155;color:#94a3b8}
+    .risk-title{font-size:.82rem;color:#f8fafc;font-weight:800;margin-bottom:12px}
+    .risk-list{display:grid;gap:8px}
+    .risk-item{border:1px solid #1e293b;border-radius:8px;padding:10px;background:#0f172a}
+    .risk-line{display:flex;gap:8px;align-items:center;margin-bottom:4px}
+    .risk-sev{font-size:.66rem;font-weight:900;text-transform:uppercase;border-radius:999px;padding:2px 7px;background:#1e293b;color:#94a3b8}
+    .risk-sev.alta{background:#4c0519;color:#fb7185}
+    .risk-sev.media{background:#451a03;color:#fbbf24}
+    .risk-name{font-size:.78rem;color:#e2e8f0;font-weight:700}
+    .risk-action{font-size:.72rem;color:#64748b;line-height:1.4}
+    .module-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:34px}
+    .module-health{background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:12px}
+    .module-health b{display:block;font-size:.78rem;color:#e2e8f0;margin-bottom:7px}
+    .health-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .health-status{font-size:.68rem;color:#64748b;text-transform:uppercase;font-weight:800}
+    .health-score{font-size:.9rem;color:#f8fafc;font-weight:900}
+    @media(max-width:860px){.command{grid-template-columns:1fr}}
     @media(max-width:640px){.grid{grid-template-columns:1fr 1fr}.hero h1{font-size:1.4rem}}
   </style>
 </head>
@@ -74,6 +95,21 @@
     </div>
     <span style="margin-left:auto;font-size:.72rem;color:#475569" id="svTs"></span>
   </div>
+
+  <div class="command">
+    <div class="score-panel">
+      <div class="score-label">Maturidade Operacional</div>
+      <div class="score-value" id="enterpriseScore">--</div>
+      <span class="score-status" id="enterpriseStatus">Carregando</span>
+    </div>
+    <div class="risk-panel">
+      <div class="risk-title">Riscos e proximas acoes</div>
+      <div class="risk-list" id="enterpriseRisks">
+        <div class="risk-item"><div class="risk-action">Analisando dados reais do ambiente...</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="module-strip" id="enterpriseModules"></div>
 
   {% for cat_nome, modulos in categorias %}
   <div class="categoria">
@@ -147,6 +183,51 @@ async function carregarStatus() {
 }
 carregarStatus();
 setInterval(carregarStatus, 60000);
+
+async function carregarEnterprise() {
+  try {
+    const data = await fetch('/api/enterprise/command-center', {credentials: 'same-origin'}).then(r => r.json());
+    const mat = data.maturidade_operacional || {};
+    document.getElementById('enterpriseScore').textContent = (mat.score ?? 0) + '%';
+    document.getElementById('enterpriseStatus').textContent = (mat.status || 'sem_dados').replace('_', ' ');
+
+    const modules = document.getElementById('enterpriseModules');
+    modules.innerHTML = (data.modulos || []).map(m => `
+      <div class="module-health">
+        <b>${m.nome}</b>
+        <div class="health-row">
+          <span class="health-status">${String(m.status || '').replace('_', ' ')}</span>
+          <span class="health-score">${m.score}%</span>
+        </div>
+      </div>
+    `).join('');
+
+    const riscos = (data.riscos_prioritarios || []).slice(0, 5);
+    const acoes = (data.proximas_acoes || []).slice(0, 5);
+    const riskBox = document.getElementById('enterpriseRisks');
+    if (!riscos.length && !acoes.length) {
+      riskBox.innerHTML = '<div class="risk-item"><div class="risk-action">Ambiente sem riscos criticos detectados neste momento.</div></div>';
+      return;
+    }
+    riskBox.innerHTML = [
+      ...riscos.map(r => `
+        <div class="risk-item">
+          <div class="risk-line"><span class="risk-sev ${r.severidade}">${r.severidade}</span><span class="risk-name">${r.titulo}</span></div>
+          <div class="risk-action">${r.acao || ''}</div>
+        </div>
+      `),
+      ...acoes.map(a => `
+        <div class="risk-item">
+          <div class="risk-line"><span class="risk-sev">acao</span><span class="risk-name">${a.modulo}</span></div>
+          <div class="risk-action">${a.acao}</div>
+        </div>
+      `)
+    ].join('');
+  } catch(e) {
+    document.getElementById('enterpriseStatus').textContent = 'offline';
+  }
+}
+carregarEnterprise();
 </script>
 </body>
 </html>

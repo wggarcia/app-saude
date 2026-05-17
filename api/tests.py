@@ -9,7 +9,61 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .maintenance import maintenance_report
-from .models import AceiteLegalPublico, AlertaGovernamental, DispositivoAutorizado, DispositivoPushPublico, DonoSaaS, Empresa, EmpresaUsuario, RegistroSintoma
+from .models import (
+    AceiteLegalPublico,
+    AlertaGovernamental,
+    BeneficiarioPlano,
+    DepartamentoHospital,
+    DescarteItemFarmacia,
+    Dispensacao,
+    DispensacaoMedicamento,
+    DispositivoAutorizado,
+    DispositivoPushPublico,
+    DonoSaaS,
+    Empresa,
+    EmpresaUsuario,
+    ExameOcupacional,
+    FinanceiroEventoSaaS,
+    FornecedorFarmacia,
+    FornecedorFarmaciaGestao,
+    GuiaAutorizacao,
+    IndicadorSaudeGov,
+    InternacaoHospital,
+    InventarioFarmacia,
+    ItemFarmacia,
+    ItemPedidoCompra,
+    LeitoHospital,
+    LeitoHospitalar,
+    LoteMedicamento,
+    MedicamentoFarmacia,
+    OrcamentoSaudeGov,
+    PacienteFarmacia,
+    PacienteHospital,
+    PacienteInternado,
+    PlanoSaude,
+    PrescricaoMedica,
+    PrescricaoHospitalar,
+    PlanoAcaoGov,
+    ProgramaSaudeGov,
+    RegistroSintoma,
+    TriagemHospital,
+    TriagemManchester,
+    ASOOcupacional,
+    AfastamentoSST,
+    AgendamentoSST,
+    CampanhaVacinacao,
+    ConfiguracaoSST,
+    CATOcupacional,
+    DocumentoSST,
+    EntregaEPI,
+    EPIItem,
+    eSocialEventoSST,
+    FuncionarioSST,
+    PlanoAcaoSST,
+    RegistroVacinacao,
+    RiscoOcupacional,
+    TreinamentoNR,
+)
 from . import epidemiologia
 from .epidemiologia import DISEASE_WEIGHTS
 from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_codigo_pacote, pacotes_por_setor
@@ -78,6 +132,141 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(primeira.status_code, 200)
         self.assertEqual(segunda.status_code, 200)
         self.assertEqual(self.empresa.dispositivos.count(), 1)
+
+    def test_billing_status_explica_assinatura_e_uso(self):
+        login = self._login("billing-device")
+        self.assertEqual(login.status_code, 200)
+        EmpresaUsuario.objects.create(
+            empresa=self.empresa,
+            nome="Usuario Billing",
+            email="usuario-billing@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+
+        response = self.client.get("/api/billing/status")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["assinatura"]["status"], "ativo")
+        self.assertEqual(payload["uso"]["usuarios_ativos"], 1)
+        self.assertEqual(payload["uso"]["dispositivos_ativos"], 1)
+
+    def test_checkout_com_cpf_invalido_nao_altera_pacote_nem_gera_evento(self):
+        pacote_original = self.empresa.pacote_codigo
+
+        response = self.client.post(
+            f"/api/assinatura/{self.empresa.id}/",
+            data=json.dumps({
+                "package_id": "hospital_medio",
+                "cycle": "anual",
+                "cpf_cnpj": "123",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.empresa.refresh_from_db()
+        self.assertEqual(self.empresa.pacote_codigo, pacote_original)
+        self.assertFalse(FinanceiroEventoSaaS.objects.filter(empresa=self.empresa).exists())
+
+    def test_sst_cids_ocupacionais_e_cat_doenca_exigem_lista(self):
+        login = self._login("cid-sst-device")
+        self.assertEqual(login.status_code, 200)
+        funcionario = FuncionarioSST.objects.create(
+            empresa=self.empresa,
+            nome="Trabalhador CID",
+            cpf="000.000.001-10",
+            cargo="Operador",
+        )
+
+        catalogo = self.client.get("/api/sst/cids-ocupacionais")
+        self.assertEqual(catalogo.status_code, 200)
+        self.assertGreater(catalogo.json()["total"], 40)
+        catalogo_barra = self.client.get("/api/sst/cids-ocupacionais/")
+        self.assertEqual(catalogo_barra.status_code, 200)
+
+        invalida = self.client.post(
+            "/api/sst/cats",
+            data=json.dumps({
+                "funcionario_nome": funcionario.nome,
+                "tipo": "doenca",
+                "cid": "X99",
+                "data_acidente": "2026-05-15",
+                "descricao": "Teste de CID inválido.",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(invalida.status_code, 400)
+
+        valida = self.client.post(
+            "/api/sst/cats",
+            data=json.dumps({
+                "funcionario_nome": funcionario.nome,
+                "tipo": "doenca",
+                "cid": "M54.5",
+                "data_acidente": "2026-05-15",
+                "descricao": "Doença do trabalho selecionada na lista.",
+                "local_acidente": "Posto de trabalho",
+                "parte_corpo": "Coluna lombar",
+                "houve_afastamento": True,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(valida.status_code, 201)
+        cat = CATOcupacional.objects.get(id=valida.json()["id"])
+        self.assertEqual(cat.cid, "M54.5")
+        self.assertEqual(cat.parte_corpo, "Coluna lombar")
+
+    def test_sst_afastamento_doenca_ocupacional_salva_com_cid_da_lista(self):
+        login = self._login("afastamento-cid-device")
+        self.assertEqual(login.status_code, 200)
+        funcionario = FuncionarioSST.objects.create(
+            empresa=self.empresa,
+            nome="Trabalhador Afastado",
+            cpf="000.000.001-11",
+            cargo="Auxiliar",
+        )
+
+        response = self.client.post(
+            "/api/sst/afastamentos",
+            data=json.dumps({
+                "funcionario": funcionario.nome,
+                "motivo": "doenca_ocupacional",
+                "cid": "Z57.5",
+                "data_inicio": "2026-05-15",
+                "data_retorno": "2026-05-30",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        afastamento = AfastamentoSST.objects.get(id=response.json()["id"])
+        self.assertEqual(afastamento.cid, "Z57.5")
+        self.assertEqual(afastamento.status, "retorno_programado")
+
+    def test_seed_enterprise_sst_preenche_areas_operacionais(self):
+        login = self._login("seed-sst-device")
+        self.assertEqual(login.status_code, 200)
+
+        response = self.client.post("/api/enterprise/seed-operational-demo")
+        self.assertEqual(response.status_code, 200)
+
+        self.assertTrue(ConfiguracaoSST.objects.filter(empresa=self.empresa).exists())
+        self.assertGreaterEqual(FuncionarioSST.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertGreaterEqual(ASOOcupacional.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertGreaterEqual(ExameOcupacional.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertGreaterEqual(DocumentoSST.objects.filter(empresa=self.empresa).count(), 7)
+        self.assertGreaterEqual(TreinamentoNR.objects.filter(empresa=self.empresa).count(), 7)
+        self.assertGreaterEqual(EPIItem.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertGreaterEqual(EntregaEPI.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertTrue(CATOcupacional.objects.filter(empresa=self.empresa, tipo="doenca", cid="M54.5").exists())
+        self.assertTrue(AfastamentoSST.objects.filter(empresa=self.empresa, motivo="doenca_ocupacional", cid="M54.5").exists())
+        self.assertGreaterEqual(eSocialEventoSST.objects.filter(empresa=self.empresa).count(), 4)
+        self.assertGreaterEqual(RiscoOcupacional.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertGreaterEqual(PlanoAcaoSST.objects.filter(empresa=self.empresa).count(), 6)
+        self.assertTrue(CampanhaVacinacao.objects.filter(empresa=self.empresa).exists())
+        self.assertGreaterEqual(RegistroVacinacao.objects.filter(campanha__empresa=self.empresa).count(), 5)
 
     def test_bloqueia_dispositivo_acima_do_pacote(self):
         primeira = self._login("device-a")
@@ -336,7 +525,667 @@ class AuthDeviceTests(TestCase):
 
         self.assertEqual(switch.status_code, 200)
         self.assertEqual(switch.json()["destination"], "/dashboard-farmacia/")
+        self.assertTrue(switch.json()["tab_key"])
         self.assertEqual(self.client.get("/dashboard/")["Location"], "/dashboard-farmacia/")
+
+    def test_tab_key_preserva_dashboard_mesmo_com_cookie_de_outro_ambiente(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Aba",
+            email="farmacia-aba@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        hospital = Empresa.objects.create(
+            nome="Hospital Aba",
+            email="hospital-aba@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login_farmacia = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-aba-device",
+            }),
+            content_type="application/json",
+        )
+        tab = self.client.post(
+            "/api/sessao/aba",
+            HTTP_AUTHORIZATION=f"Bearer {login_farmacia.json()['token']}",
+        ).json()["tab_key"]
+
+        login_hospital = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-aba-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login_hospital.status_code, 200)
+        self.assertEqual(self.client.get("/dashboard/")["Location"], "/dashboard-hospital/")
+        self.assertEqual(self.client.get(f"/dashboard/?tab={tab}")["Location"], "/dashboard-farmacia/")
+
+    def test_apis_de_gestao_bloqueiam_setor_errado(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital API",
+            email="hospital-api@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-api-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertEqual(self.client.get("/api/farmacia/dashboard").status_code, 403)
+        self.assertEqual(self.client.get("/api/gestao/resumo").status_code, 403)
+
+    def test_enterprise_command_center_exige_autenticacao(self):
+        response = self.client.get("/api/enterprise/command-center")
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_enterprise_premium_suite_exige_autenticacao(self):
+        response = self.client.get("/api/enterprise/premium-suite")
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_enterprise_seed_operacional_farmacia_cria_fluxo_real(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Seed",
+            email="farmacia-seed@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-seed-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.post("/api/enterprise/seed-operational-demo")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["setor"], "farmacia")
+        self.assertGreater(payload["total_criado"], 0)
+        self.assertGreater(payload["suite"]["crescimento"]["progresso"], 0)
+        self.assertTrue(payload["suite"]["crescimento"]["pronto_demo"])
+        etapas = {
+            etapa["titulo"]: etapa["status"]
+            for processo in payload["suite"]["processos"]
+            for etapa in processo["etapas"]
+        }
+        self.assertEqual(etapas["Cadastrar paciente"], "feito")
+        self.assertEqual(etapas["Registrar receita"], "feito")
+        self.assertEqual(etapas["Dispensar com seguranca"], "feito")
+        self.assertGreaterEqual(ItemFarmacia.objects.filter(empresa=farmacia).count(), 4)
+        self.assertGreaterEqual(MedicamentoFarmacia.objects.filter(empresa=farmacia).count(), 4)
+        self.assertGreaterEqual(FornecedorFarmacia.objects.filter(empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(FornecedorFarmaciaGestao.objects.filter(empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(LoteMedicamento.objects.filter(empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(DispensacaoMedicamento.objects.filter(empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(Dispensacao.objects.filter(empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(ItemPedidoCompra.objects.filter(pedido__empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(InventarioFarmacia.objects.filter(empresa=farmacia).count(), 1)
+        self.assertGreaterEqual(DescarteItemFarmacia.objects.filter(empresa=farmacia).count(), 1)
+
+    def test_enterprise_seed_operacional_hospital_cria_fluxo_real(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital Seed",
+            email="hospital-seed@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-seed-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.post("/api/enterprise/seed-operational-demo")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["setor"], "hospital")
+        self.assertGreater(payload["total_criado"], 0)
+        self.assertGreaterEqual(DepartamentoHospital.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(LeitoHospitalar.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(LeitoHospital.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(PacienteHospital.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(PacienteInternado.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(TriagemManchester.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(TriagemHospital.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(InternacaoHospital.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(PrescricaoHospitalar.objects.filter(empresa=hospital).count(), 1)
+        self.assertGreaterEqual(PrescricaoMedica.objects.filter(internacao__empresa=hospital).count(), 1)
+
+    def test_enterprise_seed_operacional_sst_cria_fluxo_real(self):
+        empresa = Empresa.objects.create(
+            nome="SST Seed",
+            email="sst-seed@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="empresa_profissional_25",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": empresa.email,
+                "senha": "123456",
+                "device_id": "sst-seed-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.post("/api/enterprise/seed-operational-demo")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["setor"], "empresa")
+        self.assertGreater(payload["total_criado"], 0)
+        self.assertGreaterEqual(FuncionarioSST.objects.filter(empresa=empresa).count(), 1)
+        self.assertGreaterEqual(ASOOcupacional.objects.filter(empresa=empresa).count(), 1)
+        self.assertGreaterEqual(ExameOcupacional.objects.filter(empresa=empresa).count(), 1)
+        self.assertGreaterEqual(AgendamentoSST.objects.filter(empresa=empresa).count(), 1)
+        self.assertGreaterEqual(DocumentoSST.objects.filter(empresa=empresa).count(), 3)
+        self.assertGreaterEqual(eSocialEventoSST.objects.filter(empresa=empresa).count(), 2)
+        self.assertGreaterEqual(CATOcupacional.objects.filter(empresa=empresa).count(), 1)
+        self.assertGreaterEqual(TreinamentoNR.objects.filter(empresa=empresa).count(), 1)
+
+    def test_enterprise_premium_suite_farmacia_mostra_capacidades_clinicas(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Suite",
+            email="farmacia-suite@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-suite-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        PacienteFarmacia.objects.create(
+            empresa=farmacia,
+            nome="Paciente Jornada",
+            cpf="000.000.000-01",
+        )
+        response = self.client.get("/api/enterprise/premium-suite")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        nomes = " ".join(capacidade["nome"] for capacidade in payload["capacidades"])
+        processos = " ".join(processo["nome"] for processo in payload["processos"])
+        etapas = " ".join(
+            etapa["titulo"]
+            for processo in payload["processos"]
+            for etapa in processo["etapas"]
+        )
+        self.assertEqual(payload["setor"], "farmacia")
+        self.assertIn("Servicos farmaceuticos", nomes)
+        self.assertIn("Lotes", nomes)
+        self.assertIn("Atendimento farmaceutico completo", processos)
+        self.assertIn("Registrar receita", etapas)
+        self.assertEqual(payload["crescimento"]["etapas_feitas"], 1)
+        self.assertEqual(payload["crescimento"]["etapas_pendentes"], 7)
+        primeira_etapa = payload["processos"][0]["etapas"][0]
+        self.assertEqual(primeira_etapa["status"], "feito")
+        self.assertEqual(primeira_etapa["sinais"], 1)
+
+    def test_enterprise_command_center_hospital_usa_dados_do_setor(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital Enterprise",
+            email="hospital-enterprise@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        departamento = DepartamentoHospital.objects.create(
+            empresa=hospital,
+            nome="UTI",
+            tipo="uti",
+            capacidade_leitos=2,
+            ativo=True,
+        )
+        LeitoHospital.objects.create(
+            empresa=hospital,
+            departamento=departamento,
+            numero="101",
+            status="ocupado",
+        )
+        PacienteHospital.objects.create(
+            empresa=hospital,
+            nome="Paciente Enterprise",
+        )
+        TriagemHospital.objects.create(
+            empresa=hospital,
+            paciente=PacienteHospital.objects.get(empresa=hospital),
+            prioridade="vermelho",
+            queixa_principal="Dor intensa",
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-enterprise-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.get("/api/enterprise/command-center")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["setor"], "hospital")
+        self.assertEqual(payload["modulos"][0]["codigo"], "leitos_ocupacao")
+        self.assertEqual(payload["modulos"][0]["metricas"]["leitos_ocupados"], 1)
+        self.assertNotIn("estoque_compras", [modulo["codigo"] for modulo in payload["modulos"]])
+        self.assertTrue(any(risco["severidade"] == "alta" for risco in payload["riscos_prioritarios"]))
+
+    def test_enterprise_command_center_hospital_detecta_prescricao_sem_estoque(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital Circuito",
+            email="hospital-circuito@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        departamento = DepartamentoHospital.objects.create(empresa=hospital, nome="Clinica", ativo=True)
+        leito = LeitoHospital.objects.create(
+            empresa=hospital,
+            departamento=departamento,
+            numero="201",
+            status="ocupado",
+        )
+        paciente = PacienteHospital.objects.create(empresa=hospital, nome="Paciente Circuito")
+        internacao = InternacaoHospital.objects.create(
+            empresa=hospital,
+            paciente=paciente,
+            leito=leito,
+            diagnostico="Observacao",
+            status="ativa",
+        )
+        PrescricaoMedica.objects.create(
+            internacao=internacao,
+            medicamento="Dipirona 500mg",
+            status="ativa",
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-circuito-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        payload = self.client.get("/api/enterprise/command-center").json()
+        circuito = next(modulo for modulo in payload["modulos"] if modulo["codigo"] == "circuito_fechado_medicamento")
+        self.assertEqual(circuito["metricas"]["prescricoes_ativas"], 1)
+        self.assertEqual(circuito["metricas"]["itens_sem_estoque"], 1)
+        self.assertTrue(any("fora do estoque" in risco["titulo"] for risco in payload["riscos_prioritarios"]))
+
+    def test_enterprise_command_center_hospital_detecta_sla_manchester_estourado(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital SLA",
+            email="hospital-sla@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        TriagemManchester.objects.create(
+            empresa=hospital,
+            data_hora=timezone.now(),
+            paciente_nome="Paciente Laranja",
+            queixa_principal="Dispneia",
+            nivel="laranja",
+            tempo_espera_minutos=25,
+            status="aguardando",
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-sla-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        payload = self.client.get("/api/enterprise/command-center").json()
+        sla = next(modulo for modulo in payload["modulos"] if modulo["codigo"] == "sla_manchester")
+        self.assertEqual(sla["metricas"]["triagens_abertas"], 1)
+        self.assertEqual(sla["metricas"]["sla_estourado"], 1)
+        self.assertEqual(sla["metricas"]["sla_critico"], 1)
+        self.assertTrue(any("manchester" in risco["titulo"].lower() for risco in payload["riscos_prioritarios"]))
+
+    def test_enterprise_command_center_farmacia_detecta_estoque_critico(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Enterprise",
+            email="farmacia-enterprise@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        FornecedorFarmaciaGestao.objects.create(empresa=farmacia, nome="Fornecedor A", ativo=True)
+        MedicamentoFarmacia.objects.create(
+            empresa=farmacia,
+            nome="Medicamento Critico",
+            quantidade_atual="1",
+            quantidade_minima="5",
+            ativo=True,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-enterprise-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.get("/api/enterprise/command-center")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["setor"], "farmacia")
+        self.assertEqual(payload["modulos"][0]["metricas"]["estoque_critico"], 1)
+        self.assertTrue(any("estoque critico" in risco["titulo"] for risco in payload["riscos_prioritarios"]))
+        suite = self.client.get("/api/enterprise/premium-suite").json()
+        self.assertTrue(any("Compras" in item["nome"] for item in suite["capacidades"]))
+
+    def test_dashboard_farmacia_mostra_command_center_enterprise(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Visual",
+            email="farmacia-visual@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-visual-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertContains(self.client.get("/dashboard-farmacia/"), "Command Center")
+        self.assertContains(self.client.get("/farmacia/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/farmacia/gestao/"), "Suite Enterprise")
+        self.assertContains(self.client.get("/farmacia/gestao/"), "Processo guiado")
+        self.assertContains(self.client.get("/farmacia/gestao/"), "Crescimento Enterprise")
+
+    def test_dashboard_hospital_mostra_command_center_enterprise(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital Visual",
+            email="hospital-visual@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-visual-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertContains(self.client.get("/dashboard-hospital/"), "Command Center")
+        self.assertContains(self.client.get("/hospital/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/hospital/gestao/"), "Suite Enterprise")
+        self.assertContains(self.client.get("/hospital/gestao/"), "Processo guiado")
+
+    def test_dashboard_empresa_mostra_command_center_enterprise(self):
+        empresa = Empresa.objects.create(
+            nome="Empresa Visual",
+            email="empresa-visual@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="empresa_profissional_25",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": empresa.email,
+                "senha": "123456",
+                "device_id": "empresa-visual-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertContains(self.client.get("/dashboard-empresa/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/dashboard-empresa/"), "Suite Enterprise")
+        self.assertContains(self.client.get("/dashboard-empresa/"), "Processo guiado")
+        self.assertContains(self.client.get("/gestao/"), "Command Center Enterprise")
+
+    def test_governo_mostra_command_center_enterprise_e_metricas_reais(self):
+        governo = Empresa.objects.create(
+            nome="Governo Visual",
+            email="governo-visual@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_pequeno",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        programa = ProgramaSaudeGov.objects.create(empresa=governo, nome="Imunizacao", status="ativo")
+        IndicadorSaudeGov.objects.create(
+            empresa=governo,
+            programa=programa,
+            nome="Cobertura vacinal",
+            meta="80",
+            valor_atual="82",
+        )
+        OrcamentoSaudeGov.objects.create(
+            empresa=governo,
+            ano=timezone.localdate().year,
+            total_previsto="100000.00",
+            total_executado="50000.00",
+        )
+        PlanoAcaoGov.objects.create(empresa=governo, programa=programa, titulo="Busca ativa", status="em_andamento")
+
+        login = self.client.post(
+            "/api/login-governo",
+            data=json.dumps({
+                "email": governo.email,
+                "senha": "123456",
+                "device_id": "governo-visual-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertContains(self.client.get("/dashboard-governo/"), "Command Center")
+        self.assertContains(self.client.get("/dashboard-governo/"), "Sala de Decisão IA")
+        self.assertContains(self.client.get("/governo/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/governo/gestao/"), "Sala de Decisão IA")
+        payload = self.client.get("/api/enterprise/command-center").json()
+        self.assertEqual(payload["setor"], "governo")
+        self.assertEqual(payload["modulos"][0]["codigo"], "programas_indicadores")
+        self.assertEqual(payload["modulos"][0]["metricas"]["metas_atingidas"], 1)
+
+    def test_rede_e_plano_saude_mostram_command_center_enterprise(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Rede Visual",
+            email="farmacia-rede-visual@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-rede-visual-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        self.assertContains(self.client.get("/rede/gestao/"), "Command Center Enterprise")
+        self.assertContains(self.client.get("/plano-saude/gestao/"), "Command Center Enterprise")
+
+    def test_plano_saude_command_center_calcula_glosas_e_receita(self):
+        empresa = Empresa.objects.create(
+            nome="Operadora Glosa",
+            email="operadora-glosa@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        plano = PlanoSaude.objects.create(empresa=empresa, nome="Plano Premium", status=PlanoSaude.STATUS_ATIVO)
+        beneficiario = BeneficiarioPlano.objects.create(plano=plano, nome="Beneficiario Receita")
+        GuiaAutorizacao.objects.create(
+            plano=plano,
+            beneficiario=beneficiario,
+            tipo=GuiaAutorizacao.TIPO_EXAME,
+            descricao_procedimento="Tomografia",
+            status=GuiaAutorizacao.STATUS_AUTORIZADA,
+            valor_estimado="800.00",
+            validade_autorizacao=timezone.localdate() - timedelta(days=1),
+        )
+        GuiaAutorizacao.objects.create(
+            plano=plano,
+            beneficiario=beneficiario,
+            tipo=GuiaAutorizacao.TIPO_PROCEDIMENTO,
+            descricao_procedimento="Procedimento negado",
+            status=GuiaAutorizacao.STATUS_NEGADA,
+            valor_estimado="1200.00",
+        )
+        guia_pendente = GuiaAutorizacao.objects.create(
+            plano=plano,
+            beneficiario=beneficiario,
+            tipo=GuiaAutorizacao.TIPO_CONSULTA,
+            descricao_procedimento="Consulta pendente",
+            status=GuiaAutorizacao.STATUS_SOLICITADA,
+            valor_estimado="200.00",
+        )
+        GuiaAutorizacao.objects.filter(id=guia_pendente.id).update(
+            solicitada_em=timezone.now() - timedelta(days=4)
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": empresa.email,
+                "senha": "123456",
+                "device_id": "operadora-glosa-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        payload = self.client.get("/api/enterprise/command-center").json()
+        ciclo = next(modulo for modulo in payload["modulos"] if modulo["codigo"] == "ciclo_receita_glosas")
+        self.assertEqual(ciclo["metricas"]["guias_total"], 3)
+        self.assertEqual(ciclo["metricas"]["guias_sla_vencido"], 1)
+        self.assertEqual(ciclo["metricas"]["autorizacoes_vencidas"], 1)
+        self.assertEqual(ciclo["metricas"]["glosas_sem_justificativa"], 1)
+        self.assertEqual(ciclo["metricas"]["valor_solicitado"], 2200.0)
+        self.assertEqual(ciclo["metricas"]["valor_glosado"], 1200.0)
+        self.assertEqual(ciclo["metricas"]["valor_sla_vencido"], 200.0)
+        self.assertEqual(ciclo["metricas"]["valor_autorizacao_vencida"], 800.0)
+        self.assertTrue(any("sla" in risco["titulo"].lower() for risco in payload["riscos_prioritarios"]))
+        self.assertTrue(any("glosa" in risco["titulo"].lower() for risco in payload["riscos_prioritarios"]))
+        self.assertTrue(any("autorizacao vencida" in risco["titulo"].lower() for risco in payload["riscos_prioritarios"]))
 
     def test_dispositivo_revogado_bloqueia_reuso_do_cookie(self):
         login = self._login("device-a")
@@ -393,6 +1242,160 @@ class AuthDeviceTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Operacao SolusCRT")
+        self.assertContains(response, "Readiness Enterprise")
+        self.assertContains(response, "Fila de Sucesso do Cliente")
+        self.assertContains(response, "Implantação e Go-live")
+
+    def test_readiness_enterprise_disponivel_para_operacao(self):
+        DonoSaaS.objects.create(
+            nome="Operacao Readiness",
+            email="owner-readiness@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+
+        login = self.client.post(
+            "/api/operacao-central/login",
+            data=json.dumps({
+                "email": "owner-readiness@teste.com",
+                "senha": "123456",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        response = self.client.get("/api/operacao/readiness")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("score", payload)
+        self.assertTrue(any(item["codigo"] == "asaas" for item in payload["checks"]))
+
+    def test_console_operacional_entrega_playbook_e_cancela_contrato(self):
+        DonoSaaS.objects.create(
+            nome="Operacao Contrato",
+            email="owner-contrato@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        empresa = Empresa.objects.create(
+            nome="Cliente Enterprise",
+            email="cliente-enterprise@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            max_dispositivos=1,
+            max_usuarios=1,
+            sessao_ativa_chave="sessao-cliente",
+            sessao_ativa_device_id="device-cliente",
+            sessao_ativa_em=timezone.now(),
+        )
+        EmpresaUsuario.objects.create(
+            empresa=empresa,
+            nome="Gestor",
+            email="gestor-enterprise@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            sessao_ativa_chave="sessao-gestor",
+            sessao_ativa_device_id="device-gestor",
+            sessao_ativa_em=timezone.now(),
+        )
+
+        login = self.client.post(
+            "/api/operacao-central/login",
+            data=json.dumps({
+                "email": "owner-contrato@teste.com",
+                "senha": "123456",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        resumo = self.client.get("/api/operacao-central/resumo")
+        self.assertEqual(resumo.status_code, 200)
+        cliente = next(item for item in resumo.json()["clientes"] if item["id"] == empresa.id)
+        self.assertIn("proxima_acao", cliente)
+        self.assertIn("playbook", cliente)
+
+        response = self.client.post(
+            "/api/operacao-central/financeiro/acao",
+            data=json.dumps({"empresa_id": empresa.id, "acao": "cancelar"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        empresa.refresh_from_db()
+        self.assertFalse(empresa.ativo)
+        self.assertIsNone(empresa.sessao_ativa_chave)
+        self.assertIsNone(EmpresaUsuario.objects.get(empresa=empresa).sessao_ativa_chave)
+        self.assertTrue(FinanceiroEventoSaaS.objects.filter(empresa=empresa, status="cancelado").exists())
+
+    def test_onboarding_operacional_avanca_cliente_ate_go_live(self):
+        DonoSaaS.objects.create(
+            nome="Operacao Implantacao",
+            email="owner-implantacao@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        empresa = Empresa.objects.create(
+            nome="Cliente Go-live",
+            email="cliente-golive@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            max_dispositivos=3,
+            max_usuarios=5,
+            data_expiracao=timezone.now() + timedelta(days=90),
+        )
+        EmpresaUsuario.objects.create(
+            empresa=empresa,
+            nome="Gestora Implantacao",
+            email="gestora-golive@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        DispositivoAutorizado.objects.create(
+            empresa=empresa,
+            device_id="device-golive",
+            apelido="Notebook recepcao",
+        )
+
+        login = self.client.post(
+            "/api/operacao-central/login",
+            data=json.dumps({
+                "email": "owner-implantacao@teste.com",
+                "senha": "123456",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        resumo_inicial = self.client.get("/api/operacao-central/resumo")
+        self.assertEqual(resumo_inicial.status_code, 200)
+        cliente_inicial = next(item for item in resumo_inicial.json()["clientes"] if item["id"] == empresa.id)
+        self.assertIn("onboarding", cliente_inicial)
+        self.assertEqual(cliente_inicial["onboarding"]["etapa"], "treinamento")
+        self.assertLess(cliente_inicial["onboarding"]["score"], 100)
+
+        for acao in ["treinamento", "validacao", "go_live"]:
+            response = self.client.post(
+                "/api/operacao-central/onboarding/acao",
+                data=json.dumps({"empresa_id": empresa.id, "acao": acao}),
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["status"], "ok")
+
+        resumo_final = self.client.get("/api/operacao-central/resumo")
+        cliente_final = next(item for item in resumo_final.json()["clientes"] if item["id"] == empresa.id)
+        self.assertEqual(cliente_final["onboarding"]["score"], 100)
+        self.assertEqual(cliente_final["onboarding"]["etapa"], "go_live")
+        self.assertEqual(cliente_final["onboarding"]["proxima_entrega"], "Operacao acompanhada")
+        self.assertTrue(
+            FinanceiroEventoSaaS.objects.filter(
+                empresa=empresa,
+                tipo_evento="onboarding_go_live",
+                status="manual",
+            ).exists()
+        )
 
     def test_home_publica_abre_site_principal_no_dominio_institucional(self):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/")

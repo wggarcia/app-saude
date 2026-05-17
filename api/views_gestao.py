@@ -24,6 +24,7 @@ from .models import (
     TrialEmpresa,
     UsoApiEmpresa,
 )
+from .access_control import api_requer_setor, requer_setor
 from .views_dashboard import _empresa_autenticada, _setor_conta
 
 
@@ -43,6 +44,7 @@ def _parse_json(request):
         return None
 
 
+@requer_setor("empresa")
 def gestao_corporativa(request):
     empresa = _empresa_gestao(request)
     if not empresa:
@@ -50,8 +52,17 @@ def gestao_corporativa(request):
     return render(request, "gestao_corporativa.html", {"empresa_nome": empresa.nome})
 
 
+@requer_setor("empresa")
+def gestao_plataforma(request):
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return redirect("/")
+    return render(request, "gestao_plataforma.html", {"empresa_nome": empresa.nome})
+
+
 # ── APOIO ─────────────────────────────────────────────────────────────────────
 
+@api_requer_setor("empresa")
 def api_apoio_fila(request):
     empresa = _empresa_gestao(request)
     if not empresa:
@@ -88,6 +99,7 @@ def api_apoio_fila(request):
 
 
 @csrf_exempt
+@api_requer_setor("empresa")
 def api_apoio_atualizar(request, pedido_id):
     empresa = _empresa_gestao(request)
     if not empresa:
@@ -134,6 +146,7 @@ def api_apoio_atualizar(request, pedido_id):
 # ── PROGRAMAS ─────────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("empresa")
 def api_programas(request):
     empresa = _empresa_gestao(request)
     if not empresa:
@@ -208,6 +221,7 @@ def api_programas(request):
 
 
 @csrf_exempt
+@api_requer_setor("empresa")
 def api_programa_status(request, programa_id):
     empresa = _empresa_gestao(request)
     if not empresa:
@@ -244,6 +258,7 @@ def api_programa_status(request, programa_id):
 # ── AÇÕES ─────────────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("empresa")
 def api_acoes(request):
     empresa = _empresa_gestao(request)
     if not empresa:
@@ -322,6 +337,7 @@ def api_acoes(request):
 
 
 @csrf_exempt
+@api_requer_setor("empresa")
 def api_acao_status(request, acao_id):
     empresa = _empresa_gestao(request)
     if not empresa:
@@ -360,6 +376,7 @@ def api_acao_status(request, acao_id):
 
 # ── RESUMO DA FILA (para o dashboard) ────────────────────────────────────────
 
+@api_requer_setor("empresa")
 def api_gestao_resumo(request):
     empresa = _empresa_gestao(request)
     if not empresa:

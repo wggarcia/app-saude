@@ -40,6 +40,136 @@ from .models import (
 from .views_dashboard import _empresa_autenticada
 
 
+CID_SST_DOENCA_TRABALHO = [
+    {
+        "grupo": "Transtornos mentais relacionados ao trabalho",
+        "itens": [
+            ("F32", "Episodio depressivo"),
+            ("F33", "Transtorno depressivo recorrente"),
+            ("F41.1", "Ansiedade generalizada"),
+            ("F43.0", "Reacao aguda ao estresse"),
+            ("F43.1", "Estado de estresse pos-traumatico"),
+            ("F43.2", "Transtornos de adaptacao"),
+            ("F48.0", "Neurastenia / esgotamento"),
+        ],
+    },
+    {
+        "grupo": "LER/DORT e sistema osteomuscular",
+        "itens": [
+            ("G56.0", "Sindrome do tunel do carpo"),
+            ("G56.2", "Lesao do nervo cubital"),
+            ("M50", "Transtornos dos discos cervicais"),
+            ("M51", "Transtornos de discos intervertebrais"),
+            ("M53", "Dorsopatias nao classificadas em outra parte"),
+            ("M54.2", "Cervicalgia"),
+            ("M54.5", "Dor lombar baixa"),
+            ("M65", "Sinovite e tenossinovite"),
+            ("M65.4", "Tenossinovite estiloide radial de De Quervain"),
+            ("M70", "Transtornos dos tecidos moles relacionados ao uso"),
+            ("M75", "Lesoes do ombro"),
+            ("M77", "Outras entesopatias"),
+        ],
+    },
+    {
+        "grupo": "Audicao, ruido e vibracao",
+        "itens": [
+            ("H83.3", "Efeitos do ruido sobre o ouvido interno"),
+            ("H90.3", "Perda de audicao neurossensorial bilateral"),
+            ("H91.9", "Perda de audicao nao especificada"),
+            ("T75.2", "Efeitos da vibracao"),
+            ("I73.0", "Sindrome de Raynaud"),
+        ],
+    },
+    {
+        "grupo": "Pneumoconioses e doencas respiratorias ocupacionais",
+        "itens": [
+            ("J60", "Pneumoconiose dos mineiros de carvao"),
+            ("J61", "Pneumoconiose devida a amianto e outras fibras minerais"),
+            ("J62", "Pneumoconiose devida a poeira contendo silica"),
+            ("J63", "Pneumoconiose devida a outras poeiras inorganicas"),
+            ("J64", "Pneumoconiose nao especificada"),
+            ("J65", "Pneumoconiose associada a tuberculose"),
+            ("J66", "Doencas das vias aereas devidas a poeiras organicas"),
+            ("J67", "Pneumonite de hipersensibilidade devida a poeiras organicas"),
+            ("J68", "Afeccoes respiratorias por inalacao de produtos quimicos"),
+            ("J69", "Pneumonite devida a solidos e liquidos"),
+            ("J70", "Afeccoes respiratorias por outros agentes externos"),
+            ("J45", "Asma"),
+        ],
+    },
+    {
+        "grupo": "Dermatoses ocupacionais",
+        "itens": [
+            ("L23", "Dermatite alergica de contato"),
+            ("L24", "Dermatite irritativa de contato"),
+            ("L25", "Dermatite de contato nao especificada"),
+            ("L56", "Outras alteracoes agudas da pele devidas a radiacao ultravioleta"),
+            ("L57", "Alteracoes da pele devidas a exposicao cronica a radiacao nao ionizante"),
+        ],
+    },
+    {
+        "grupo": "Infeccoes e exposicoes biologicas ocupacionais",
+        "itens": [
+            ("A15", "Tuberculose respiratoria confirmada"),
+            ("A16", "Tuberculose respiratoria sem confirmacao bacteriologica"),
+            ("A18", "Tuberculose de outros orgaos"),
+            ("B18", "Hepatite viral cronica"),
+            ("B20", "Doenca pelo HIV resultando em doencas infecciosas"),
+            ("Z20.5", "Contato e exposicao a hepatite viral"),
+            ("Z20.6", "Contato e exposicao ao HIV"),
+        ],
+    },
+    {
+        "grupo": "Intoxicacoes, agentes quimicos e metais",
+        "itens": [
+            ("T51", "Efeito toxico do alcool"),
+            ("T52", "Efeito toxico de solventes organicos"),
+            ("T53", "Efeito toxico de derivados halogenados"),
+            ("T54", "Efeito toxico de substancias corrosivas"),
+            ("T56", "Efeito toxico de metais"),
+            ("T57", "Efeito toxico de substancias inorganicas"),
+            ("T59", "Efeito toxico de gases, fumacas e vapores"),
+            ("T60", "Efeito toxico de pesticidas"),
+            ("T65", "Efeito toxico de outras substancias"),
+        ],
+    },
+    {
+        "grupo": "Exposicoes ocupacionais e fatores de risco",
+        "itens": [
+            ("Z57.0", "Exposicao ocupacional ao ruido"),
+            ("Z57.1", "Exposicao ocupacional a radiacao"),
+            ("Z57.2", "Exposicao ocupacional a poeira"),
+            ("Z57.3", "Exposicao ocupacional a contaminantes do ar"),
+            ("Z57.4", "Exposicao ocupacional a agentes toxicos na agricultura"),
+            ("Z57.5", "Exposicao ocupacional a agentes toxicos em outras industrias"),
+            ("Z57.6", "Exposicao ocupacional a temperaturas extremas"),
+            ("Z57.7", "Exposicao ocupacional a vibracao"),
+            ("Z57.8", "Exposicao ocupacional a outros fatores de risco"),
+            ("Z57.9", "Exposicao ocupacional a fator de risco nao especificado"),
+        ],
+    },
+]
+
+
+def _cid_sst_codigos():
+    return {
+        codigo.upper()
+        for grupo in CID_SST_DOENCA_TRABALHO
+        for codigo, _descricao in grupo["itens"]
+    }
+
+
+def _validar_cid_doenca_trabalho(tipo, cid):
+    if tipo not in ("doenca", "doenca_ocupacional"):
+        return None
+    codigo = (cid or "").strip().upper()
+    if not codigo:
+        return "Selecione um CID de doença relacionada ao trabalho."
+    if codigo not in _cid_sst_codigos():
+        return "CID não permitido para doença do trabalho nesta lista SST."
+    return None
+
+
 def _buscar_funcionario(empresa, data):
     """Resolve funcionário por ID ou por nome parcial (case-insensitive)."""
     fid = data.get("funcionario_id")
@@ -315,6 +445,10 @@ def api_asos(request):
                 return datetime.strptime(s, "%Y-%m-%d").date()
             except Exception:
                 return None
+        resultado = data.get("resultado", "apto")
+        cid_inapto = (data.get("cid_inapto") or "").strip().upper()
+        if resultado in ("inapto", "apto_restricao") and not cid_inapto:
+            return JsonResponse({"erro": "CID é obrigatório quando o resultado for Inapto ou Apto com Restrição."}, status=400)
         aso = ASOOcupacional.objects.create(
             empresa=empresa,
             funcionario=func,
@@ -349,11 +483,27 @@ def api_cats(request):
                 {
                     "id": c.id,
                     "funcionario": c.funcionario.nome,
+                    "funcionario_cpf": c.funcionario.cpf,
                     "tipo": c.get_tipo_display(),
+                    "tipo_raw": c.tipo,
+                    "tp_cat": getattr(c, "tp_cat", "1"),
                     "gravidade": c.gravidade,
                     "data_acidente": c.data_acidente.strftime("%d/%m/%Y"),
+                    "hora_acidente": c.hora_acidente.strftime("%H:%M") if c.hora_acidente else None,
+                    "descricao": c.descricao,
+                    "cid": c.cid,
+                    "local_acidente": c.local_acidente,
+                    "parte_corpo": c.parte_corpo,
+                    "cod_parte_corpo": getattr(c, "cod_parte_corpo", "730"),
+                    "lateralidade": getattr(c, "lateralidade", "9"),
+                    "cod_agente_causador": getattr(c, "cod_agente_causador", "0099"),
+                    "houve_afastamento": c.houve_afastamento,
+                    "dias_afastamento": c.dias_afastamento,
+                    "testemunha_nome": getattr(c, "testemunha_nome", ""),
+                    "testemunha_telefone": getattr(c, "testemunha_telefone", ""),
                     "status_esocial": c.status_esocial,
                     "numero_cat": c.numero_cat,
+                    "protocolo_esocial": c.protocolo_esocial,
                 }
                 for c in qs[:50]
             ]
@@ -375,19 +525,63 @@ def api_cats(request):
                 return datetime.strptime(s, "%Y-%m-%d").date()
             except Exception:
                 return None
+        def _parse_hora(s):
+            if not s:
+                return None
+            try:
+                from datetime import time as dtime
+                parts = s.replace(":", "").strip()
+                return dtime(int(parts[:2]), int(parts[2:4]))
+            except Exception:
+                return None
+        tipo_cat = data.get("tipo", "tipico")
+        cid = (data.get("cid") or "").strip().upper()
+        erro_cid = _validar_cid_doenca_trabalho(tipo_cat, cid)
+        if erro_cid:
+            return JsonResponse({"erro": erro_cid}, status=400)
         cat = CATOcupacional.objects.create(
             empresa=empresa,
             funcionario=func,
-            tipo=data.get("tipo", "tipico"),
+            tipo=tipo_cat,
+            tp_cat=data.get("tp_cat", "1"),
             gravidade=data.get("gravidade", "leve"),
             data_acidente=parse_date(data.get("data_acidente")) or date.today(),
+            hora_acidente=_parse_hora(data.get("hora_acidente")),
             descricao=data.get("descricao", ""),
-            cid=data.get("cid", ""),
+            local_acidente=data.get("local_acidente", ""),
+            parte_corpo=data.get("parte_corpo", ""),
+            cod_parte_corpo=data.get("cod_parte_corpo", "730"),
+            lateralidade=data.get("lateralidade", "9"),
+            cod_agente_causador=data.get("cod_agente_causador", "0099"),
+            cid=cid,
             houve_afastamento=bool(data.get("houve_afastamento")),
+            dias_afastamento=int(data.get("dias_afastamento") or 0),
+            testemunha_nome=data.get("testemunha_nome", ""),
+            testemunha_telefone=data.get("testemunha_telefone", ""),
         )
         return JsonResponse({"id": cat.id, "ok": True}, status=201)
 
     return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+def api_sst_cids_ocupacionais(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+    return JsonResponse({
+        "grupos": [
+            {
+                "grupo": grupo["grupo"],
+                "itens": [
+                    {"codigo": codigo, "descricao": descricao}
+                    for codigo, descricao in grupo["itens"]
+                ],
+            }
+            for grupo in CID_SST_DOENCA_TRABALHO
+        ],
+        "total": sum(len(grupo["itens"]) for grupo in CID_SST_DOENCA_TRABALHO),
+        "uso": "Selecionar quando o registro for doença ocupacional/doença do trabalho.",
+    })
 
 
 # ── Documentos SST ────────────────────────────────────────────────────────────
@@ -467,6 +661,44 @@ def api_afastamentos_sst(request):
                 for a in qs[:50]
             ]
         })
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        func = _buscar_funcionario(empresa, {
+            "funcionario_nome": data.get("funcionario") or data.get("funcionario_nome"),
+            "funcionario_id": data.get("funcionario_id"),
+        })
+        if not func:
+            return JsonResponse({"erro": "Funcionário não encontrado. Cadastre-o primeiro em Funcionários."}, status=404)
+        from datetime import datetime
+        def parse_date(s):
+            if not s:
+                return None
+            try:
+                return datetime.strptime(s, "%Y-%m-%d").date()
+            except Exception:
+                return None
+        motivo = data.get("motivo") or "doenca_comum"
+        cid = (data.get("cid") or "").strip().upper()
+        erro_cid = _validar_cid_doenca_trabalho(motivo, cid)
+        if erro_cid:
+            return JsonResponse({"erro": erro_cid}, status=400)
+        inicio = parse_date(data.get("data_inicio")) or date.today()
+        retorno = parse_date(data.get("data_retorno") or data.get("data_prevista_retorno"))
+        afastamento = AfastamentoSST.objects.create(
+            empresa=empresa,
+            funcionario=func,
+            motivo=motivo,
+            cid=cid,
+            data_inicio=inicio,
+            data_prevista_retorno=retorno,
+            status="retorno_programado" if retorno else "ativo",
+            observacoes=data.get("observacoes", ""),
+        )
+        return JsonResponse({"id": afastamento.id, "ok": True}, status=201)
 
     return JsonResponse({"erro": "método não permitido"}, status=405)
 

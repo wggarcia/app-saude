@@ -29,12 +29,15 @@ migrate_working_dir/
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
-/coverage/
+**/.dart_tool/
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/build/
+**/coverage/
+**/*.iml
+**/android/local.properties
+**/ios/Pods/
 
 # Symbolication related
 app.*.symbols
@@ -48,8 +51,15 @@ app.*.map.json
 /android/app/release
 staticfiles/
 app_saude/build/
+app_ocupacional/build/
 app_saude/android/app/google-services.json
 app_saude/ios/Runner/GoogleService-Info.plist
+
+# Cópias acidentais de workspace dentro do backend
+backend/app-saude/
+app_saude/app_ocupacional/
+app-saude
+app-saude-1
 
 # Local databases, secrets and generated diagnostics
 db.sqlite3

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'servicos/push_service.dart';
-import 'telas/empresa/tela_login_empresa.dart';
-import 'telas/funcionario/tela_login_funcionario.dart';
 import 'telas/home/tela_home.dart';
 import 'telas/legal/tela_aceite_legal.dart';
 
@@ -48,10 +46,6 @@ class SolusCrtAppSaude extends StatelessWidget {
         ),
       ),
       home: const LegalGate(child: TelaHome()),
-      routes: {
-        '/empresa': (ctx) => const TelaLoginEmpresa(),
-        '/funcionario': (ctx) => const TelaLoginFuncionario(),
-      },
     );
   }
 }

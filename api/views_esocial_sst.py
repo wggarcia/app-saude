@@ -26,6 +26,7 @@ from django.utils import timezone
 from .models import (
     ASOOcupacional, CATOcupacional, AfastamentoSST, FuncionarioSST,
     eSocialEventoSST, ASOCompartilhamento, ConfiguracaoSST, Empresa,
+    PostoTrabalho, AgenteNocivoPostoTrabalho, FuncionarioPostoTrabalho,
 )
 from .views_dashboard import _empresa_autenticada
 
@@ -96,9 +97,9 @@ def _gerar_xml_s2210(cat, cfg):
     SubElement(c, "tpAcid").text = tipo_map.get(cat.tipo, "1")
     if cat.hora_acidente:
         SubElement(c, "hrAcid").text = cat.hora_acidente.strftime("%H:%M")
-    SubElement(c, "tpCat").text = "1"
+    SubElement(c, "tpCat").text = getattr(cat, "tp_cat", "1") or "1"
     SubElement(c, "indCatObito").text = "S" if cat.gravidade == "fatal" else "N"
-    SubElement(c, "dscLesao").text = cat.parte_corpo or "Não informado"
+    SubElement(c, "dscLesao").text = (cat.parte_corpo or "Não informado")[:200]
     SubElement(c, "dscCat").text = (cat.descricao or "")[:999]
     SubElement(c, "houveAfast").text = "S" if cat.houve_afastamento else "N"
 
@@ -110,14 +111,14 @@ def _gerar_xml_s2210(cat, cfg):
     SubElement(ilt, "tpInsc").text = "1"
     SubElement(ilt, "nrInsc").text = cnpj or "00000000000000"
 
-    # parteAtingida
+    # parteAtingida — usa código eSocial real do campo cod_parte_corpo
     pa = SubElement(c, "parteAtingida")
-    SubElement(pa, "codParteAting").text = "730"   # corpo inteiro / não especificado
-    SubElement(pa, "lateralidade").text = "9"       # não aplicável
+    SubElement(pa, "codParteAting").text = getattr(cat, "cod_parte_corpo", None) or "730"
+    SubElement(pa, "lateralidade").text = getattr(cat, "lateralidade", None) or "9"
 
-    # agenteCausador
+    # agenteCausador — usa código eSocial real do campo cod_agente_causador
     ag = SubElement(c, "agenteCausador")
-    SubElement(ag, "codAgntCausador").text = "0099"  # outros agentes
+    SubElement(ag, "codAgntCausador").text = getattr(cat, "cod_agente_causador", None) or "0099"
 
     # atestado
     at = SubElement(c, "atestado")
@@ -173,6 +174,11 @@ def _gerar_xml_s2220(aso, cfg):
     SubElement(aso_el, "dtAso").text = aso.data_emissao.strftime("%Y-%m-%d")
     res_map = {"apto": "1", "inapto": "2", "apto_restricao": "3"}
     SubElement(aso_el, "resAso").text = res_map.get(aso.resultado, "1")
+
+    # CID obrigatório quando inapto ou apto com restrição
+    cid_inapto = getattr(aso, "cid_inapto", "") or ""
+    if aso.resultado in ("inapto", "apto_restricao") and cid_inapto:
+        SubElement(aso_el, "codCID").text = cid_inapto[:4]
 
     med = SubElement(aso_el, "medico")
     SubElement(med, "nmMed").text = aso.medico_responsavel or (cfg.nome_medico_coordenador if cfg else "Médico")
@@ -235,9 +241,14 @@ def _gerar_xml_s2230(afastamento, cfg):
 
 # ─── S-2240 — Condições Ambientais ────────────────────────────────────────────
 
-def _gerar_xml_s2240(empresa, cfg, periodo="2024-01"):
+def _gerar_xml_s2240(empresa, cfg, periodo=None, posto=None):
+    """Gera S-2240 para um posto de trabalho específico com agentes nocivos reais."""
+    from django.utils import timezone
+    if not periodo:
+        periodo = timezone.now().strftime("%Y-%m")
+
     cnpj = _cnpj_limpo(cfg.cnpj if cfg else "")
-    seq  = 1
+    seq  = posto.pk if posto else 1
 
     NS = "http://www.esocial.gov.br/schema/evt/evtCondicAmb/v_S_01_03_00"
     root = Element("eSocial", xmlns=NS)
@@ -246,25 +257,73 @@ def _gerar_xml_s2240(empresa, cfg, periodo="2024-01"):
 
     ide = SubElement(evt, "ideEvento")
     SubElement(ide, "indRetif").text = "1"
-    SubElement(ide, "tpAmb").text = "1"
+    SubElement(ide, "tpAmb").text = "2"   # 2 = homologação | trocar para "1" em produção real
     SubElement(ide, "procEmi").text = "1"
     SubElement(ide, "verProc").text = "SolusCRT_1.0"
-    SubElement(ide, "perApur").text = periodo  # AAAA-MM
+    SubElement(ide, "perApur").text = periodo
 
     emp = SubElement(evt, "ideEmpregador")
     SubElement(emp, "tpInsc").text = "1"
     SubElement(emp, "nrInsc").text = cnpj or "00000000000000"
 
     amb = SubElement(evt, "infoCondicAmb")
-    SubElement(amb, "tpAmb").text = "1"    # ambiente de trabalho do empregador
-    SubElement(amb, "localAmb").text = "1" # estabelecimento do próprio empregador
+    SubElement(amb, "tpAmb").text = "1"
+    SubElement(amb, "localAmb").text = "1"
 
-    loc = SubElement(amb, "novaValidade")
-    SubElement(loc, "iniValid").text = periodo
+    validade = SubElement(amb, "novaValidade")
+    vigencia = (posto.vigencia_inicio or periodo) if posto else periodo
+    SubElement(validade, "iniValid").text = vigencia
 
-    # setor padrão
     set_el = SubElement(amb, "setor")
-    SubElement(set_el, "dscSetor").text = cfg.cnae_principal or "Atividades gerais" if cfg else "Atividades gerais"
+    setor_nome = (posto.setor or cfg.cnae_principal or "Atividades gerais") if posto else (cfg.cnae_principal if cfg else "Atividades gerais")
+    SubElement(set_el, "dscSetor").text = setor_nome[:999]
+
+    if posto:
+        # Responsável técnico
+        resp = SubElement(amb, "responsavel")
+        SubElement(resp, "nmResp").text = (posto.responsavel_tecnico or (cfg.nome_medico_coordenador if cfg else "Responsável SST"))[:70]
+        SubElement(resp, "cpfResp").text = "00000000000"  # CPF do responsável — campo a ser adicionado futuramente
+        SubElement(resp, "ideOC").text = posto.responsavel_registro or "000000"
+
+        # Trabalhadores expostos
+        vinculos_ativos = FuncionarioPostoTrabalho.objects.filter(
+            posto=posto, data_fim__isnull=True
+        ).select_related("funcionario")
+
+        agentes = list(AgenteNocivoPostoTrabalho.objects.filter(posto=posto))
+
+        for vinculo in vinculos_ativos:
+            func = vinculo.funcionario
+            trab = SubElement(amb, "trabExposto")
+            vin_el = SubElement(trab, "ideVinculo")
+            SubElement(vin_el, "cpfTrab").text = _cpf_limpo(func.cpf) or "00000000000"
+            if func.matricula:
+                SubElement(vin_el, "matricula").text = func.matricula
+
+            for ag in agentes:
+                ag_el = SubElement(trab, "agentesNocivos")
+                SubElement(ag_el, "codAgente").text = ag.cod_agente
+                dsc = ag.dsc_agente or ag.get_cod_agente_display()
+                SubElement(ag_el, "dscAgente").text = dsc[:300]
+
+                if ag.tec_medicao:
+                    SubElement(ag_el, "tecMedicao").text = ag.tec_medicao[:200]
+                if ag.intensidade:
+                    SubElement(ag_el, "intConc").text = ag.intensidade[:20]
+                if ag.limite_tolerancia:
+                    SubElement(ag_el, "limTol").text = ag.limite_tolerancia[:20]
+
+                if ag.epc_descricao:
+                    epc_el = SubElement(ag_el, "epc")
+                    SubElement(epc_el, "dscEpc").text = ag.epc_descricao[:300]
+                    SubElement(epc_el, "eficEpc").text = "S" if ag.epc_eficaz else "N"
+
+                if ag.epi_descricao:
+                    epi_el = SubElement(ag_el, "epi")
+                    SubElement(epi_el, "dscEpi").text = ag.epi_descricao[:300]
+                    if ag.epi_ca:
+                        SubElement(epi_el, "nrCA").text = ag.epi_ca[:20]
+                    SubElement(epi_el, "eficEpi").text = "S" if ag.epi_eficaz else "N"
 
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + _xml_str(root)
 

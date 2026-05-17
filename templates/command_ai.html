@@ -24,6 +24,7 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
 .sector-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.sector-metric{padding:13px;border-radius:18px;background:rgba(4,8,12,.55);border:1px solid rgba(255,255,255,.09)}.sector-metric span{display:block;color:#8f9eaa;font-size:.76rem;text-transform:uppercase;font-weight:800}.sector-metric b{display:block;margin-top:5px;font-size:1rem;line-height:1.25}.sector-metric small{display:block;color:#9fb0bd;line-height:1.35;margin-top:7px}.priority-items{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.playbook{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.playbook-section{padding:14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}.playbook-section strong{display:block;margin-bottom:9px}.playbook-section li{list-style:none;color:#d9e4ec;line-height:1.42;margin-top:7px;font-size:.92rem}
 .steps{display:grid;gap:8px;margin-top:14px}.steps li{list-style:none;padding:11px 13px;border-radius:16px;background:rgba(255,255,255,.05);color:#d9e4ec;line-height:1.45}.evidence{margin-top:14px;display:grid;gap:7px}.evidence small{color:#9fb0bd;line-height:1.45}.feedback{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}.feedback .btn{min-height:36px;font-size:.82rem}
 .side{display:grid;gap:14px;align-content:start}.side-card{padding:20px;border-radius:26px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.052)}.side-card ul{display:grid;gap:10px;margin-top:12px}.side-card li{list-style:none;color:#c4d0da;line-height:1.5}.empty{padding:22px;border-radius:24px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:#cbd6df}.loading{min-height:320px;display:grid;place-items:center;color:#b8c6d0}.toast{position:fixed;right:18px;bottom:18px;max-width:360px;padding:14px 16px;border-radius:18px;background:#07131c;border:1px solid rgba(69,234,217,.28);color:#dff;box-shadow:var(--shadow);display:none;z-index:20}
+.ecosystem{display:grid;gap:12px}.ecosystem-score{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}.score-ring{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--cyan) var(--score,0%),rgba(255,255,255,.12) 0);color:#061011;font-weight:950;position:relative}.score-ring:after{content:"";position:absolute;inset:6px;border-radius:50%;background:#07131c}.score-ring span{position:relative;z-index:1;color:var(--ink)}.ecosystem-list{display:grid;gap:8px}.ecosystem-item{padding:11px 12px;border-radius:16px;background:rgba(4,8,12,.55);border:1px solid rgba(255,255,255,.09);color:#dce7ef;line-height:1.4;font-size:.9rem}.ecosystem-item small{display:block;color:#96a6b3;margin-top:4px}.radar-item strong{color:#f4d991}
 @media(max-width:940px){.hero,.grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.metric.full{grid-column:auto}.impact,.sector-metrics,.playbook{grid-template-columns:1fr}.nav{border-radius:24px;align-items:flex-start}.nav,.nav-actions{flex-direction:column}.nav-actions{width:100%}.btn{width:100%}h1{font-size:3rem}}
 </style>
 </head>
@@ -66,6 +67,12 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
       <div class="loading">Carregando recomendações da IA...</div>
     </div>
     <aside class="side">
+      <div class="side-card">
+        <h2>Ecossistema operacional</h2>
+        <div id="enterpriseEcosystem" class="ecosystem">
+          <p>Aguardando Command Center Enterprise.</p>
+        </div>
+      </div>
       <div class="side-card">
         <h2>{% if setor_conta == "empresa" %}Aprendizado corporativo{% else %}Aprendizado supervisionado{% endif %}</h2>
         <p id="learningText">Aguardando leitura do motor.</p>
@@ -238,6 +245,49 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
     `;
   }
 
+  function renderEnterpriseEcosystem(data) {
+    const target = document.getElementById("enterpriseEcosystem");
+    if (!target) return;
+    if (!data || !data.maturidade_operacional) {
+      target.innerHTML = "<p>Command Center Enterprise ainda sem leitura para este ambiente.</p>";
+      return;
+    }
+    const maturity = data.maturidade_operacional || {};
+    const score = Number(maturity.score || 0);
+    const risks = (data.riscos_prioritarios || []).slice(0, 3).map((risk) => `
+      <div class="ecosystem-item">
+        ${escapeHtml(risk.titulo || risk.nome || "Risco operacional")}
+        <small>${escapeHtml(risk.acao || risk.descricao || risk.severidade || "")}</small>
+      </div>
+    `).join("");
+    const actions = (data.proximas_acoes || []).slice(0, 3).map((item) => `
+      <div class="ecosystem-item">
+        ${escapeHtml(item.acao || item)}
+        <small>${escapeHtml(item.modulo || "Automacao recomendada")}</small>
+      </div>
+    `).join("");
+    const radar = (data.radar_concorrencial || []).slice(0, 3).map((item) => `
+      <div class="ecosystem-item radar-item">
+        <strong>${escapeHtml(item.referencia)}</strong>
+        <small>${escapeHtml(item.forca_mercado)}</small>
+        <small>${escapeHtml(item.resposta_solus)}</small>
+      </div>
+    `).join("");
+    target.innerHTML = `
+      <div class="ecosystem-score">
+        <div class="score-ring" style="--score:${Math.max(0, Math.min(100, score))}%"><span>${score}</span></div>
+        <div>
+          <strong>${escapeHtml(data.setor_label || "Ambiente")}</strong>
+          <p>${escapeHtml(maturity.status || "em leitura")} · ${escapeHtml(maturity.leitura || "gestao assistida")}</p>
+        </div>
+      </div>
+      <div class="ecosystem-list">${risks || '<div class="ecosystem-item">Sem risco prioritario aberto.<small>Ambiente pronto para ampliar automacoes.</small></div>'}</div>
+      <div class="ecosystem-list">${actions || '<div class="ecosystem-item">Sem pendencias criticas.<small>Continue alimentando dados reais do ambiente.</small></div>'}</div>
+      <h2>Radar concorrencial</h2>
+      <div class="ecosystem-list">${radar}</div>
+    `;
+  }
+
   async function sendFeedback(insightId, feedback) {
     syncScopedAuth();
     const response = await fetch("/api/command-ai/feedback", {
@@ -272,6 +322,7 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
       document.getElementById("modeMetric").textContent = "Saúde ocupacional assistida";
     }
     document.getElementById("learningText").textContent = payload.learning?.message || "";
+    renderEnterpriseEcosystem(payload.enterprise_command_center);
     const cards = payload.executive_cards || [];
     document.getElementById("executiveCards").innerHTML = cards.map((card) => `
       <div class="metric"><span>${escapeHtml(card.label)}</span><b>${escapeHtml(card.value)}</b><p>${escapeHtml(card.detail)}</p></div>
