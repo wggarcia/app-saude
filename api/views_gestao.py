@@ -1,5 +1,11 @@
+import hashlib
+import hmac
 import json
+import secrets
+from datetime import timedelta
 
+from django.db import transaction
+from django.db.models import F as models_F
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -7,10 +13,16 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import (
     AcaoCorporativa,
+    ApiKeyEmpresa,
     EmpresaSetor,
     EmpresaUnidade,
+    FuncionarioSST,
+    IntegracaoRH,
+    OnboardingPasso,
     PedidoApoioCorporativo,
     ProgramaCorporativo,
+    TrialEmpresa,
+    UsoApiEmpresa,
 )
 from .views_dashboard import _empresa_autenticada, _setor_conta
 
@@ -372,4 +384,437 @@ def api_gestao_resumo(request):
         "acoes_abertas": acoes_abertas,
         "programas_ativos": programas_ativos,
         "total_atencao": apoio_aberto + acoes_abertas,
+    })
+
+
+# ── TRIAL / SELF-SERVICE ONBOARDING ──────────────────────────────────────────
+
+_PASSOS_ORDENADOS = [p[0] for p in OnboardingPasso.PASSOS]
+
+
+def _trial_dict(trial):
+    return {
+        "ativo": trial.ativo(),
+        "dias_restantes": trial.dias_restantes(),
+        "expira_em": trial.expira_em.strftime("%d/%m/%Y"),
+        "convertido": trial.convertido,
+    }
+
+
+def _onboarding_dict(empresa):
+    concluidos = set(
+        OnboardingPasso.objects.filter(empresa=empresa).values_list("passo", flat=True)
+    )
+    passos = []
+    for codigo, label in OnboardingPasso.PASSOS:
+        passos.append({
+            "passo": codigo,
+            "label": label,
+            "concluido": codigo in concluidos,
+        })
+    total = len(passos)
+    feitos = len(concluidos)
+    return {
+        "passos": passos,
+        "percentual": round(feitos / total * 100) if total else 0,
+        "completo": feitos == total,
+    }
+
+
+def api_trial_status(request):
+    """GET — situação do trial e checklist de onboarding."""
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+
+    trial = TrialEmpresa.objects.filter(empresa=empresa).first()
+    return JsonResponse({
+        "trial": _trial_dict(trial) if trial else None,
+        "onboarding": _onboarding_dict(empresa),
+    })
+
+
+@csrf_exempt
+def api_trial_ativar(request):
+    """POST — inicia trial de 14 dias (self-service). Idempotente."""
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    trial, criado = TrialEmpresa.objects.get_or_create(
+        empresa=empresa,
+        defaults={"expira_em": timezone.now() + timedelta(days=14)},
+    )
+    return JsonResponse({"trial": _trial_dict(trial), "novo": criado}, status=201 if criado else 200)
+
+
+@csrf_exempt
+def api_onboarding_passo(request, passo):
+    """POST — marca um passo do onboarding como concluído."""
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    codigos_validos = {p[0] for p in OnboardingPasso.PASSOS}
+    if passo not in codigos_validos:
+        return JsonResponse({"erro": "passo inválido"}, status=400)
+
+    obj, criado = OnboardingPasso.objects.get_or_create(empresa=empresa, passo=passo)
+    return JsonResponse({"passo": passo, "novo": criado, "onboarding": _onboarding_dict(empresa)})
+
+
+# ── INTEGRAÇÕES RH ────────────────────────────────────────────────────────────
+
+def _integracao_dict(i):
+    return {
+        "id": i.id,
+        "sistema": i.sistema,
+        "sistema_label": i.get_sistema_display(),
+        "nome": i.nome,
+        "status": i.status,
+        "webhook_secret": i.webhook_secret,
+        "endpoint_destino": i.endpoint_destino,
+        "funcionarios_importados": i.funcionarios_importados,
+        "ultimo_sync_em": i.ultimo_sync_em.strftime("%d/%m/%Y %H:%M") if i.ultimo_sync_em else None,
+        "ultimo_erro": i.ultimo_erro,
+        "criado_em": i.criado_em.strftime("%d/%m/%Y"),
+    }
+
+
+@csrf_exempt
+def api_integracoes(request):
+    """GET lista / POST cria integração com sistema de RH."""
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+
+    if request.method == "GET":
+        qs = IntegracaoRH.objects.filter(empresa=empresa)
+        return JsonResponse({"integracoes": [_integracao_dict(i) for i in qs]})
+
+    if request.method == "POST":
+        dados = _parse_json(request)
+        if dados is None:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+        sistema = dados.get("sistema", "")
+        sistemas_validos = {s[0] for s in IntegracaoRH.SISTEMAS}
+        if sistema not in sistemas_validos:
+            return JsonResponse({"erro": "sistema inválido", "opcoes": list(sistemas_validos)}, status=400)
+
+        integracao, criada = IntegracaoRH.objects.get_or_create(
+            empresa=empresa,
+            sistema=sistema,
+            defaults={
+                "nome": dados.get("nome") or f"Integração {sistema.upper()}",
+                "endpoint_destino": dados.get("endpoint_destino", ""),
+                "status": "inativo",
+            },
+        )
+        if not criada:
+            if "nome" in dados:
+                integracao.nome = dados["nome"]
+            if "endpoint_destino" in dados:
+                integracao.endpoint_destino = dados["endpoint_destino"]
+            integracao.save(update_fields=["nome", "endpoint_destino", "atualizado_em"])
+
+        return JsonResponse({"integracao": _integracao_dict(integracao)}, status=201 if criada else 200)
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+@csrf_exempt
+def api_integracao_webhook(request, sistema):
+    """POST — recebe payload do sistema de RH e importa funcionários."""
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    # Localiza integração pela empresa via header X-Empresa-Id
+    empresa_id = request.headers.get("X-Empresa-Id") or request.GET.get("empresa_id")
+    if not empresa_id:
+        return JsonResponse({"erro": "X-Empresa-Id obrigatório"}, status=400)
+
+    integracao = IntegracaoRH.objects.filter(
+        empresa_id=empresa_id, sistema=sistema
+    ).select_related("empresa").first()
+    if not integracao:
+        return JsonResponse({"erro": "integração não encontrada"}, status=404)
+
+    # Valida assinatura HMAC
+    secret = integracao.webhook_secret.encode()
+    sig_header = request.headers.get("X-Signature", "")
+    body = request.body
+    expected = "sha256=" + hmac.new(secret, body, hashlib.sha256).hexdigest()
+    if sig_header and not hmac.compare_digest(sig_header, expected):
+        return JsonResponse({"erro": "assinatura inválida"}, status=401)
+
+    try:
+        payload = json.loads(body.decode("utf-8") or "[]")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    funcionarios = payload if isinstance(payload, list) else payload.get("funcionarios", [])
+
+    importados = 0
+    erros = []
+    with transaction.atomic():
+        for item in funcionarios[:500]:
+            cpf = (item.get("cpf") or "").replace(".", "").replace("-", "").strip()
+            nome = (item.get("nome") or "").strip()
+            if not cpf or not nome:
+                erros.append({"item": item, "erro": "cpf e nome obrigatórios"})
+                continue
+            _, criado = FuncionarioSST.objects.get_or_create(
+                empresa=integracao.empresa,
+                cpf=cpf,
+                defaults={
+                    "nome": nome,
+                    "cargo": item.get("cargo", ""),
+                    "setor": item.get("setor", ""),
+                    "data_admissao": item.get("data_admissao") or None,
+                },
+            )
+            if not criado:
+                FuncionarioSST.objects.filter(empresa=integracao.empresa, cpf=cpf).update(
+                    nome=nome,
+                    cargo=item.get("cargo", ""),
+                    setor=item.get("setor", ""),
+                )
+            importados += 1
+
+    integracao.funcionarios_importados += importados
+    integracao.ultimo_sync_em = timezone.now()
+    integracao.status = "ativo"
+    integracao.ultimo_erro = ""
+    integracao.save(update_fields=["funcionarios_importados", "ultimo_sync_em", "status", "ultimo_erro", "atualizado_em"])
+
+    # Marca onboarding se for o primeiro import
+    if importados > 0:
+        OnboardingPasso.objects.get_or_create(empresa=integracao.empresa, passo="primeiro_funcionario")
+
+    return JsonResponse({"importados": importados, "erros": erros[:20]})
+
+
+@csrf_exempt
+def api_integracao_status(request, integracao_id):
+    """POST — ativa, desativa ou reseta uma integração."""
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    integracao = IntegracaoRH.objects.filter(id=integracao_id, empresa=empresa).first()
+    if not integracao:
+        return JsonResponse({"erro": "integração não encontrada"}, status=404)
+
+    dados = _parse_json(request) or {}
+    novo_status = dados.get("status")
+    if novo_status not in {s[0] for s in IntegracaoRH.STATUS}:
+        return JsonResponse({"erro": "status inválido"}, status=400)
+
+    integracao.status = novo_status
+    if novo_status == "inativo":
+        integracao.ultimo_erro = ""
+    integracao.save(update_fields=["status", "ultimo_erro", "atualizado_em"])
+    return JsonResponse({"ok": True, "integracao": _integracao_dict(integracao)})
+
+
+# ── API KEYS (acesso programático) ────────────────────────────────────────────
+
+def _key_dict(k, mostrar_chave=False):
+    return {
+        "id": k.id,
+        "nome": k.nome,
+        "chave": k.chave if mostrar_chave else k.chave[:8] + "…",
+        "ativa": k.ativa,
+        "total_chamadas": k.total_chamadas,
+        "ultimo_uso_em": k.ultimo_uso_em.strftime("%d/%m/%Y %H:%M") if k.ultimo_uso_em else None,
+        "criado_em": k.criado_em.strftime("%d/%m/%Y"),
+    }
+
+
+@csrf_exempt
+def api_chaves(request):
+    """GET lista / POST cria API key para a empresa."""
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+
+    if request.method == "GET":
+        qs = ApiKeyEmpresa.objects.filter(empresa=empresa, ativa=True)
+        return JsonResponse({"chaves": [_key_dict(k) for k in qs]})
+
+    if request.method == "POST":
+        dados = _parse_json(request) or {}
+        nome = (dados.get("nome") or "").strip()
+        if not nome:
+            return JsonResponse({"erro": "nome obrigatório"}, status=400)
+        if ApiKeyEmpresa.objects.filter(empresa=empresa, ativa=True).count() >= 10:
+            return JsonResponse({"erro": "limite de 10 chaves ativas atingido"}, status=400)
+
+        chave = secrets.token_hex(32)
+        key = ApiKeyEmpresa.objects.create(empresa=empresa, nome=nome, chave=chave)
+        return JsonResponse({"chave": _key_dict(key, mostrar_chave=True)}, status=201)
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+@csrf_exempt
+def api_chave_revogar(request, chave_id):
+    """POST — revoga (desativa permanentemente) uma API key."""
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    key = ApiKeyEmpresa.objects.filter(id=chave_id, empresa=empresa, ativa=True).first()
+    if not key:
+        return JsonResponse({"erro": "chave não encontrada"}, status=404)
+
+    key.ativa = False
+    key.revogada_em = timezone.now()
+    key.save(update_fields=["ativa", "revogada_em"])
+    return JsonResponse({"ok": True})
+
+
+def api_uso_api(request):
+    """GET — consumo mensal de API por endpoint."""
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+
+    ano_mes = request.GET.get("ano_mes") or timezone.now().strftime("%Y-%m")
+    qs = UsoApiEmpresa.objects.filter(empresa=empresa, ano_mes=ano_mes).order_by("-chamadas")
+
+    total = sum(u.chamadas for u in qs)
+    return JsonResponse({
+        "ano_mes": ano_mes,
+        "total_chamadas": total,
+        "por_endpoint": [
+            {"endpoint": u.endpoint, "chamadas": u.chamadas}
+            for u in qs
+        ],
+    })
+
+
+# ── BENCHMARK SETORIAL ────────────────────────────────────────────────────────
+
+def api_benchmark(request):
+    """GET — compara métricas da empresa com médias do setor."""
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+
+    from .models import (
+        ASOOcupacional, CATOcupacional, FuncionarioSST,
+        AfastamentoSST, TreinamentoNR, Empresa,
+    )
+
+    total_func = FuncionarioSST.objects.filter(empresa=empresa).count()
+    total_asos = ASOOcupacional.objects.filter(empresa=empresa).count()
+    total_cats = CATOcupacional.objects.filter(empresa=empresa).count()
+    total_afastamentos = AfastamentoSST.objects.filter(empresa=empresa).count()
+    total_treinamentos = TreinamentoNR.objects.filter(empresa=empresa).count()
+
+    # Médias gerais (todas as empresas do setor empresa)
+    empresas_setor = Empresa.objects.filter(tipo_conta=Empresa.TIPO_EMPRESA, ativo=True)
+    n_empresas = empresas_setor.count() or 1
+
+    media_func = FuncionarioSST.objects.filter(empresa__in=empresas_setor).count() / n_empresas
+    media_asos = ASOOcupacional.objects.filter(empresa__in=empresas_setor).count() / n_empresas
+    media_cats = CATOcupacional.objects.filter(empresa__in=empresas_setor).count() / n_empresas
+    media_afastamentos = AfastamentoSST.objects.filter(empresa__in=empresas_setor).count() / n_empresas
+    media_treinamentos = TreinamentoNR.objects.filter(empresa__in=empresas_setor).count() / n_empresas
+
+    def _pct(empresa_val, media_val):
+        if media_val == 0:
+            return None
+        return round((empresa_val - media_val) / media_val * 100, 1)
+
+    return JsonResponse({
+        "empresa": {
+            "funcionarios": total_func,
+            "asos": total_asos,
+            "cats": total_cats,
+            "afastamentos": total_afastamentos,
+            "treinamentos": total_treinamentos,
+        },
+        "media_setor": {
+            "funcionarios": round(media_func, 1),
+            "asos": round(media_asos, 1),
+            "cats": round(media_cats, 1),
+            "afastamentos": round(media_afastamentos, 1),
+            "treinamentos": round(media_treinamentos, 1),
+        },
+        "vs_setor_pct": {
+            "funcionarios": _pct(total_func, media_func),
+            "asos": _pct(total_asos, media_asos),
+            "cats": _pct(total_cats, media_cats),
+            "afastamentos": _pct(total_afastamentos, media_afastamentos),
+            "treinamentos": _pct(total_treinamentos, media_treinamentos),
+        },
+        "nota": f"Comparado com {n_empresas} empresa(s) ativa(s) na plataforma.",
+    })
+
+
+# ── AUTENTICAÇÃO VIA API KEY (helper para endpoints públicos) ─────────────────
+
+def _empresa_por_api_key(request):
+    """Autentica via header Authorization: ApiKey <chave> e registra uso."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("ApiKey "):
+        return None, None
+    chave = auth[7:].strip()
+    key = ApiKeyEmpresa.objects.filter(chave=chave, ativa=True).select_related("empresa").first()
+    if not key:
+        return None, None
+
+    now = timezone.now()
+    key.total_chamadas += 1
+    key.ultimo_uso_em = now
+    key.save(update_fields=["total_chamadas", "ultimo_uso_em"])
+
+    ano_mes = now.strftime("%Y-%m")
+    endpoint = request.path[:120]
+    UsoApiEmpresa.objects.update_or_create(
+        empresa=key.empresa, api_key=key, ano_mes=ano_mes, endpoint=endpoint,
+        defaults={"chamadas": 0},
+    )
+    UsoApiEmpresa.objects.filter(
+        empresa=key.empresa, api_key=key, ano_mes=ano_mes, endpoint=endpoint
+    ).update(chamadas=models_F("chamadas") + 1)
+
+    return key.empresa, key
+
+
+def api_dados_empresa(request):
+    """GET — exporta dados SST da empresa via API Key (para BI, TOTVS, etc.)."""
+    empresa, key = _empresa_por_api_key(request)
+    if not empresa:
+        return JsonResponse({"erro": "Authorization: ApiKey <chave> inválida"}, status=401)
+
+    from .models import ASOOcupacional, FuncionarioSST
+
+    funcionarios = list(
+        FuncionarioSST.objects.filter(empresa=empresa).values(
+            "id", "nome", "cpf", "cargo", "setor", "data_admissao", "ativo"
+        )[:1000]
+    )
+    asos_recentes = list(
+        ASOOcupacional.objects.filter(empresa=empresa)
+        .order_by("-data_emissao")
+        .values("id", "funcionario_id", "tipo", "resultado", "data_emissao", "data_validade")[:500]
+    )
+
+    return JsonResponse({
+        "empresa": empresa.nome,
+        "funcionarios": funcionarios,
+        "asos_recentes": asos_recentes,
+        "gerado_em": timezone.now().isoformat(),
     })

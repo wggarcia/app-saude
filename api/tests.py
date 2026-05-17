@@ -1215,6 +1215,201 @@ class WebhookMiddlewareTests(TestCase):
         self.assertTrue(empresa.ativo)
 
 
+@override_settings(DJANGO_ENV="test")
+class GestaoTrialTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.empresa = Empresa.objects.create(
+            nome="Empresa Trial",
+            email="trial@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+        )
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({"email": "trial@teste.com", "senha": "senha123", "device_id": "dev-trial", "device_name": "T"}),
+            content_type="application/json",
+        )
+        self.token = resp.json().get("token", "")
+        self.auth = {"HTTP_AUTHORIZATION": f"Bearer {self.token}"}
+
+    def _post(self, url, data=None):
+        return self.client.post(url, data=json.dumps(data or {}), content_type="application/json", **self.auth)
+
+    def test_trial_status_sem_trial_retorna_none(self):
+        resp = self.client.get("/api/gestao/trial", **self.auth)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(resp.json()["trial"])
+
+    def test_ativar_trial_cria_periodo_14_dias(self):
+        resp = self._post("/api/gestao/trial/ativar")
+        self.assertEqual(resp.status_code, 201)
+        body = resp.json()
+        self.assertTrue(body["trial"]["ativo"])
+        self.assertEqual(body["trial"]["dias_restantes"], 13)  # 13-14 por arredondamento
+
+    def test_ativar_trial_e_idempotente(self):
+        self._post("/api/gestao/trial/ativar")
+        resp = self._post("/api/gestao/trial/ativar")
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.json()["novo"])
+
+    def test_onboarding_passo_invalido_retorna_400(self):
+        resp = self._post("/api/gestao/onboarding/passo_inexistente")
+        self.assertEqual(resp.status_code, 400)
+
+    def test_onboarding_marca_passo_e_retorna_percentual(self):
+        resp = self._post("/api/gestao/onboarding/primeiro_funcionario")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertTrue(body["novo"])
+        self.assertGreater(body["onboarding"]["percentual"], 0)
+
+    def test_onboarding_passo_idempotente(self):
+        self._post("/api/gestao/onboarding/primeiro_aso")
+        resp = self._post("/api/gestao/onboarding/primeiro_aso")
+        self.assertFalse(resp.json()["novo"])
+
+
+@override_settings(DJANGO_ENV="test")
+class GestaoIntegracaoTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.empresa = Empresa.objects.create(
+            nome="Empresa Integracao",
+            email="integracao@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+        )
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({"email": "integracao@teste.com", "senha": "senha123", "device_id": "dev-int", "device_name": "T"}),
+            content_type="application/json",
+        )
+        self.token = resp.json().get("token", "")
+        self.auth = {"HTTP_AUTHORIZATION": f"Bearer {self.token}"}
+
+    def _post(self, url, data=None):
+        return self.client.post(url, data=json.dumps(data or {}), content_type="application/json", **self.auth)
+
+    def test_criar_integracao_totvs(self):
+        resp = self._post("/api/gestao/integracoes", {"sistema": "totvs", "nome": "TOTVS Matriz"})
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()["integracao"]["sistema"], "totvs")
+
+    def test_sistema_invalido_retorna_400(self):
+        resp = self._post("/api/gestao/integracoes", {"sistema": "sap_xyz"})
+        self.assertEqual(resp.status_code, 400)
+
+    def test_listar_integracoes(self):
+        self._post("/api/gestao/integracoes", {"sistema": "adp"})
+        resp = self.client.get("/api/gestao/integracoes", **self.auth)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()["integracoes"]), 1)
+
+    def test_webhook_importa_funcionarios(self):
+        from api.models import IntegracaoRH
+        integracao = IntegracaoRH.objects.create(
+            empresa=self.empresa,
+            sistema="totvs",
+            status="inativo",
+        )
+        payload = json.dumps([
+            {"cpf": "111.222.333-44", "nome": "Maria Silva", "cargo": "Operadora", "setor": "Produção"},
+            {"cpf": "555.666.777-88", "nome": "João Souza", "cargo": "Técnico", "setor": "TI"},
+        ])
+        resp = self.client.post(
+            "/api/gestao/integracoes/webhook/totvs",
+            data=payload,
+            content_type="application/json",
+            HTTP_X_EMPRESA_ID=str(self.empresa.id),
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["importados"], 2)
+
+        from api.models import FuncionarioSST
+        self.assertEqual(FuncionarioSST.objects.filter(empresa=self.empresa).count(), 2)
+
+    def test_webhook_sem_empresa_id_retorna_400(self):
+        resp = self.client.post(
+            "/api/gestao/integracoes/webhook/totvs",
+            data="[]",
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+
+@override_settings(DJANGO_ENV="test")
+class GestaoApiKeyTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.empresa = Empresa.objects.create(
+            nome="Empresa ApiKey",
+            email="apikey@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+        )
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({"email": "apikey@teste.com", "senha": "senha123", "device_id": "dev-key", "device_name": "T"}),
+            content_type="application/json",
+        )
+        self.token = resp.json().get("token", "")
+        self.auth = {"HTTP_AUTHORIZATION": f"Bearer {self.token}"}
+
+    def _post(self, url, data=None):
+        return self.client.post(url, data=json.dumps(data or {}), content_type="application/json", **self.auth)
+
+    def test_criar_api_key(self):
+        resp = self._post("/api/gestao/chaves", {"nome": "Integração BI"})
+        self.assertEqual(resp.status_code, 201)
+        body = resp.json()
+        self.assertIn("chave", body)
+        self.assertTrue(body["chave"]["ativa"])
+        self.assertNotIn("…", body["chave"]["chave"])  # chave completa na criação
+
+    def test_nome_obrigatorio(self):
+        resp = self._post("/api/gestao/chaves", {})
+        self.assertEqual(resp.status_code, 400)
+
+    def test_listar_chaves_esconde_valor(self):
+        self._post("/api/gestao/chaves", {"nome": "BI"})
+        resp = self.client.get("/api/gestao/chaves", **self.auth)
+        self.assertEqual(resp.status_code, 200)
+        chave_str = resp.json()["chaves"][0]["chave"]
+        self.assertIn("…", chave_str)  # truncada na listagem
+
+    def test_revogar_chave(self):
+        resp = self._post("/api/gestao/chaves", {"nome": "Para revogar"})
+        chave_id = resp.json()["chave"]["id"]
+        resp_rev = self._post(f"/api/gestao/chaves/{chave_id}/revogar")
+        self.assertEqual(resp_rev.status_code, 200)
+        from api.models import ApiKeyEmpresa
+        self.assertFalse(ApiKeyEmpresa.objects.get(id=chave_id).ativa)
+
+    def test_acesso_dados_via_api_key(self):
+        resp = self._post("/api/gestao/chaves", {"nome": "BI externo"})
+        chave = resp.json()["chave"]["chave"]
+        resp_dados = self.client.get(
+            "/api/v1/dados",
+            HTTP_AUTHORIZATION=f"ApiKey {chave}",
+        )
+        self.assertEqual(resp_dados.status_code, 200)
+        self.assertIn("funcionarios", resp_dados.json())
+
+    def test_acesso_dados_chave_invalida_retorna_401(self):
+        resp = self.client.get("/api/v1/dados", HTTP_AUTHORIZATION="ApiKey chave-falsa-xyz")
+        self.assertEqual(resp.status_code, 401)
+
+    def test_benchmark_retorna_comparacao(self):
+        resp = self.client.get("/api/gestao/benchmark", **self.auth)
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertIn("empresa", body)
+        self.assertIn("media_setor", body)
+        self.assertIn("vs_setor_pct", body)
+
+
 class AssinaturaSSTTests(TestCase):
     def setUp(self):
         self.client = Client()
