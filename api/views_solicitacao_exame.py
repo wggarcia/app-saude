@@ -4,6 +4,8 @@ Solicitações de exames ocupacionais: empresa emite pedido → clínica recebe
 clínicas externas (recebem por email com link de acompanhamento).
 """
 import json
+import logging
+
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.http import JsonResponse
@@ -17,6 +19,8 @@ from .models import (
 )
 from .views_dashboard import _empresa_autenticada
 from .access_control import requer_setor
+
+logger = logging.getLogger(__name__)
 
 
 # ── Catálogo de exames por categoria ──────────────────────────────────────────
@@ -592,6 +596,7 @@ SolusCRT · Sistema de Gestão SST
 https://empresa.soluscrt.com.br
     """.strip()
 
+    agora = timezone.now()
     try:
         msg = EmailMessage(
             subject=f"[SolusCRT] Pedido de Exame — {func.nome} — {empresa.nome}",
@@ -602,16 +607,39 @@ https://empresa.soluscrt.com.br
         )
         enviados = msg.send(fail_silently=False)
         if enviados < 1:
-            return False, "Servidor SMTP não confirmou envio."
+            sol.email_enviado = False
+            sol.resposta_clinica = f"Servidor SMTP nao confirmou envio para {sol.clinica_email_externo}."
+            sol.save(update_fields=["email_enviado", "resposta_clinica"])
+            logger.warning(
+                "SolicitacaoExame %s nao teve envio confirmado pelo backend SMTP para %s",
+                sol.pk,
+                sol.clinica_email_externo,
+            )
+            return False, "Servidor SMTP nao confirmou envio."
+
         sol.email_enviado = True
-        sol.email_enviado_em = timezone.now()
-        sol.resposta_clinica = f"Email entregue ao SMTP em {timezone.localtime(sol.email_enviado_em).strftime('%d/%m/%Y %H:%M')} para {sol.clinica_email_externo}."
+        sol.email_enviado_em = agora
+        sol.resposta_clinica = (
+            f"Email entregue ao SMTP em "
+            f"{timezone.localtime(sol.email_enviado_em).strftime('%d/%m/%Y %H:%M')} "
+            f"para {sol.clinica_email_externo}."
+        )
         sol.save(update_fields=["email_enviado", "email_enviado_em", "resposta_clinica"])
+        logger.info(
+            "SolicitacaoExame %s entregue ao SMTP para %s",
+            sol.pk,
+            sol.clinica_email_externo,
+        )
         return True, None
     except Exception as e:
         sol.email_enviado = False
         sol.resposta_clinica = f"Falha no envio para {sol.clinica_email_externo}: {e}"
         sol.save(update_fields=["email_enviado", "resposta_clinica"])
+        logger.exception(
+            "Falha ao enviar SolicitacaoExame %s para %s",
+            sol.pk,
+            sol.clinica_email_externo,
+        )
         return False, str(e)
 
 
@@ -709,7 +737,7 @@ def api_solicitacoes_exame(request):
         resp = _sol_dict(sol)
         resp["modo"] = modo
         if email_erro:
-            resp["aviso_email"] = f"Pedido salvo, mas falha ao enviar email: {email_erro}"
+            resp["aviso_email"] = f"Pedido salvo, mas o email nao foi confirmado: {email_erro}"
         return JsonResponse(resp, status=201)
 
     return JsonResponse({"erro": "método não permitido"}, status=405)
@@ -742,7 +770,7 @@ def api_solicitacao_detalhe(request, sol_id):
             ok, err_msg = _enviar_email_solicitacao(sol)
             if not ok:
                 return JsonResponse({"erro": err_msg}, status=500)
-            return JsonResponse({"ok": True, "mensagem": "Email reenviado"})
+            return JsonResponse({"ok": True, "mensagem": "Email reenviado e aceito para envio"})
         return JsonResponse({"erro": "Ação inválida"}, status=400)
 
     if request.method == "DELETE":

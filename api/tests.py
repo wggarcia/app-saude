@@ -1,7 +1,10 @@
 import json
 from datetime import timedelta
 from io import StringIO
+from unittest.mock import patch
 
+import jwt
+from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.core.management import call_command
 from django.test import Client, TestCase, override_settings
@@ -62,6 +65,7 @@ from .models import (
     PlanoAcaoSST,
     RegistroVacinacao,
     RiscoOcupacional,
+    SolicitacaoExame,
     TreinamentoNR,
 )
 from . import epidemiologia
@@ -2538,3 +2542,90 @@ class AssinaturaSSTTests(TestCase):
     def test_sem_autenticacao_retorna_401(self):
         resp = Client().get("/api/sst/assinaturas")
         self.assertEqual(resp.status_code, 401)
+
+
+class SolicitacaoExameEmailTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.empresa = Empresa.objects.create(
+            nome="Empresa SST",
+            email="sst@example.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="empresa_profissional_25",
+            sessao_ativa_chave="sessao-solicitacao-email",
+        )
+        self.funcionario = FuncionarioSST.objects.create(
+            empresa=self.empresa,
+            nome="Bruno Santos Demo",
+            cpf="000.000.000-11",
+            cargo="Tecnico de Manutencao",
+        )
+        payload = {
+            "empresa_id": self.empresa.id,
+            "principal_kind": "empresa",
+            "principal_id": self.empresa.id,
+            "session_key": self.empresa.sessao_ativa_chave,
+            "exp": timezone.now() + timedelta(hours=1),
+        }
+        self.client.cookies["auth_token"] = jwt.encode(
+            payload, settings.JWT_SECRET_KEY, algorithm="HS256"
+        )
+
+    def _pedido_email_payload(self):
+        return {
+            "funcionario_id": self.funcionario.id,
+            "tipo_aso": "periodico",
+            "modo": "email",
+            "clinica_nome": "ABC Clinica",
+            "clinica_email": "contato@abc-clinica.com.br",
+            "exames": [
+                "Avaliacao clinica geral (anamnese + exame fisico)",
+                "Hemograma completo (serie vermelha e branca)",
+            ],
+            "urgente": True,
+        }
+
+    @patch("api.views_solicitacao_exame.EmailMessage.send", return_value=0)
+    def test_email_externo_nao_marca_enviado_sem_confirmacao_do_backend(self, send_mock):
+        resp = self.client.post(
+            "/api/sst/solicitacoes-exame",
+            data=json.dumps(self._pedido_email_payload()),
+            content_type="application/json",
+        )
+
+        self.assertEqual(resp.status_code, 201)
+        body = resp.json()
+        self.assertFalse(body["email_enviado"])
+        self.assertIn("nao foi confirmado", body["aviso_email"])
+
+        solicitacao = SolicitacaoExame.objects.get(funcionario=self.funcionario)
+        self.assertFalse(solicitacao.email_enviado)
+        self.assertIsNone(solicitacao.email_enviado_em)
+        self.assertIn("SMTP nao confirmou", solicitacao.resposta_clinica)
+        send_mock.assert_called_once()
+
+    @patch("api.views_solicitacao_exame.EmailMessage.send", side_effect=[0, 1])
+    def test_reenviar_email_recupera_solicitacao_pendente(self, send_mock):
+        resp = self.client.post(
+            "/api/sst/solicitacoes-exame",
+            data=json.dumps(self._pedido_email_payload()),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 201)
+
+        solicitacao = SolicitacaoExame.objects.get(funcionario=self.funcionario)
+        self.assertFalse(solicitacao.email_enviado)
+
+        resp_reenvio = self.client.post(
+            f"/api/sst/solicitacoes-exame/{solicitacao.id}",
+            data=json.dumps({"acao": "reenviar_email"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(resp_reenvio.status_code, 200)
+        solicitacao.refresh_from_db()
+        self.assertTrue(solicitacao.email_enviado)
+        self.assertIsNotNone(solicitacao.email_enviado_em)
+        self.assertIn("SMTP", solicitacao.resposta_clinica)
+        self.assertEqual(send_mock.call_count, 2)
