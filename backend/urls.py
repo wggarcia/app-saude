@@ -355,6 +355,16 @@ from api.views_governo_ops import (
     api_orcamentos_gov, api_planos_acao_gov, api_plano_acao_gov_detalhe,
     api_governo_ops_kpis, api_governo_pdf_relatorio,
 )
+from api.views_governo_fase2 import (
+    api_unidades_saude, api_unidade_saude_detalhe, api_equipes_saude,
+    api_notificacoes, api_surtos, api_surto_detalhe, api_vigilancia_dashboard,
+    api_regulacao_leitos, api_regulacao_detalhe, api_regulacao_dashboard,
+    api_producao_ambulatorial, api_producao_dashboard,
+    api_metas_previne, api_previne_dashboard,
+    api_contratos_gestao, api_contrato_detalhe,
+    api_atendimentos_urgencia, api_urgencia_dashboard,
+    api_governo_fase2_dashboard,
+)
 from api.views_rede import (
     api_redes, api_rede_convidar, api_rede_estoque, api_rede_item_disponibilidade,
     api_transferencias, api_transferencia_detalhe,
@@ -862,6 +872,34 @@ urlpatterns = [
     path('api/governo/alertas/criar', api_criar_alerta_governo),
     path('api/governo/alertas/toggle', api_toggle_alerta_governo),
     path('api/governo/alertas/fluxo', api_fluxo_alerta_governo),
+
+    # ── Governo Fase 2 ───────────────────────────────────────────
+    path('api/governo/dashboard/fase2/', api_governo_fase2_dashboard),
+    # Rede de Saúde
+    path('api/governo/unidades/', api_unidades_saude),
+    path('api/governo/unidades/<int:unidade_id>/', api_unidade_saude_detalhe),
+    path('api/governo/unidades/<int:unidade_id>/equipes/', api_equipes_saude),
+    # Vigilância Epidemiológica
+    path('api/governo/vigilancia/notificacoes/', api_notificacoes),
+    path('api/governo/vigilancia/surtos/', api_surtos),
+    path('api/governo/vigilancia/surtos/<int:surto_id>/', api_surto_detalhe),
+    path('api/governo/vigilancia/dashboard/', api_vigilancia_dashboard),
+    # Regulação de Leitos
+    path('api/governo/regulacao/', api_regulacao_leitos),
+    path('api/governo/regulacao/<int:regulacao_id>/', api_regulacao_detalhe),
+    path('api/governo/regulacao/dashboard/', api_regulacao_dashboard),
+    # Produção Ambulatorial
+    path('api/governo/producao/', api_producao_ambulatorial),
+    path('api/governo/producao/dashboard/', api_producao_dashboard),
+    # Previne Brasil
+    path('api/governo/previne/', api_metas_previne),
+    path('api/governo/previne/dashboard/', api_previne_dashboard),
+    # Contratos de Gestão
+    path('api/governo/contratos/', api_contratos_gestao),
+    path('api/governo/contratos/<int:contrato_id>/', api_contrato_detalhe),
+    # Urgência e Emergência
+    path('api/governo/urgencia/', api_atendimentos_urgencia),
+    path('api/governo/urgencia/dashboard/', api_urgencia_dashboard),
     path('api/governanca/metodologia', api_metodologia_epidemiologica),
     path('api/governanca/matriz-decisao', api_matriz_decisao),
     path('api/governanca/auditoria', api_auditoria_institucional),

@@ -2084,6 +2084,326 @@ class AtoNormativoGov(models.Model):
         return f"{self.get_tipo_display()} {self.numero} — {self.titulo[:60]}"
 
 
+# ─── Governo — Fase 2: Rede, Vigilância, Regulação, Produção, Contratos ──────
+
+UF_CHOICES = [
+    ("AC","Acre"),("AL","Alagoas"),("AP","Amapá"),("AM","Amazonas"),
+    ("BA","Bahia"),("CE","Ceará"),("DF","Distrito Federal"),("ES","Espírito Santo"),
+    ("GO","Goiás"),("MA","Maranhão"),("MT","Mato Grosso"),("MS","Mato Grosso do Sul"),
+    ("MG","Minas Gerais"),("PA","Pará"),("PB","Paraíba"),("PR","Paraná"),
+    ("PE","Pernambuco"),("PI","Piauí"),("RJ","Rio de Janeiro"),("RN","Rio Grande do Norte"),
+    ("RS","Rio Grande do Sul"),("RO","Rondônia"),("RR","Roraima"),("SC","Santa Catarina"),
+    ("SP","São Paulo"),("SE","Sergipe"),("TO","Tocantins"),
+]
+
+
+class UnidadeSaude(models.Model):
+    TIPO_CHOICES = [
+        ("ubs","UBS — Unidade Básica de Saúde"),("upa","UPA 24h"),
+        ("caps_i","CAPS I"),("caps_ii","CAPS II"),("caps_iii","CAPS III — 24h"),
+        ("caps_ad","CAPS AD"),("caps_inf","CAPS Infantil"),("hospital","Hospital"),
+        ("amb","Ambulatório Especializado"),("ceo","CEO — Centro Odontológico"),
+        ("policlinica","Policlínica"),("cerest","CEREST"),("laboratorio","Laboratório Público"),
+        ("cco","CCO — Central de Regulação"),("outro","Outro"),
+    ]
+    STATUS_CHOICES = [
+        ("ativa","Ativa"),("inativa","Inativa"),("obras","Em Obras"),("interditada","Interditada"),
+    ]
+    empresa         = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="unidades_saude")
+    cnes            = models.CharField(max_length=7, blank=True, default="")
+    nome            = models.CharField(max_length=200)
+    tipo            = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    status          = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ativa")
+    municipio       = models.CharField(max_length=100)
+    uf              = models.CharField(max_length=2, choices=UF_CHOICES)
+    bairro          = models.CharField(max_length=100, blank=True, default="")
+    endereco        = models.CharField(max_length=300, blank=True, default="")
+    telefone        = models.CharField(max_length=20, blank=True, default="")
+    latitude        = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
+    longitude       = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
+    populacao_referenciada = models.PositiveIntegerField(default=0)
+    leitos_sus      = models.PositiveSmallIntegerField(default=0)
+    leitos_uti      = models.PositiveSmallIntegerField(default=0)
+    diretor         = models.CharField(max_length=200, blank=True, default="")
+    criado_em       = models.DateTimeField(auto_now_add=True)
+    atualizado_em   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["municipio","nome"]
+        indexes = [
+            models.Index(fields=["empresa","tipo"]),
+            models.Index(fields=["empresa","municipio"]),
+        ]
+
+    def __str__(self):
+        return f"{self.nome} ({self.get_tipo_display()}) — {self.municipio}/{self.uf}"
+
+
+class EquipeSaude(models.Model):
+    TIPO_CHOICES = [
+        ("esf","eSF — Saúde da Família"),("esb","eSB — Saúde Bucal"),
+        ("nasf","NASF-AB"),("acs","ACS — Agentes"),("outro","Outro"),
+    ]
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="equipes_saude")
+    unidade          = models.ForeignKey(UnidadeSaude, on_delete=models.CASCADE, related_name="equipes")
+    nome             = models.CharField(max_length=200)
+    tipo             = models.CharField(max_length=10, choices=TIPO_CHOICES, default="esf")
+    ine              = models.CharField(max_length=10, blank=True, default="")
+    area_codigo      = models.CharField(max_length=10, blank=True, default="")
+    populacao_cadastrada = models.PositiveIntegerField(default=0)
+    ativa            = models.BooleanField(default=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["unidade","nome"]
+
+    def __str__(self):
+        return f"{self.nome} ({self.get_tipo_display()}) — {self.unidade.nome}"
+
+
+class SurtoEpidemiologico(models.Model):
+    STATUS_CHOICES = [
+        ("ativo","Ativo — Investigação em Curso"),("controlado","Controlado"),("encerrado","Encerrado"),
+    ]
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="surtos_epidemiologicos")
+    doenca           = models.CharField(max_length=100)
+    municipio        = models.CharField(max_length=100)
+    uf               = models.CharField(max_length=2)
+    bairro           = models.CharField(max_length=100, blank=True, default="")
+    data_inicio      = models.DateField()
+    data_encerramento = models.DateField(null=True, blank=True)
+    total_casos      = models.PositiveIntegerField(default=0)
+    total_obitos     = models.PositiveIntegerField(default=0)
+    status           = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ativo")
+    nivel_alerta     = models.CharField(max_length=10, choices=[
+        ("verde","Verde"),("amarelo","Amarelo"),("laranja","Laranja"),("vermelho","Vermelho"),
+    ], default="amarelo")
+    acoes_resposta   = models.TextField(blank=True, default="")
+    responsavel_investigacao = models.CharField(max_length=200, blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_inicio"]
+
+    def __str__(self):
+        return f"Surto {self.doenca} — {self.municipio}/{self.uf}"
+
+
+class NotificacaoCompulsoria(models.Model):
+    DOENCA_CHOICES = [
+        ("dengue","Dengue"),("zika","Zika Vírus"),("chikungunya","Chikungunya"),
+        ("malaria","Malária"),("febre_amarela","Febre Amarela"),
+        ("leishmaniose_visceral","Leishmaniose Visceral"),("leishmaniose_tegumentar","Leishmaniose Tegumentar"),
+        ("leptospirose","Leptospirose"),("esquistossomose","Esquistossomose"),
+        ("doenca_chagas","Doença de Chagas"),("tuberculose","Tuberculose"),
+        ("hanseniase","Hanseníase"),("hiv_aids","HIV/AIDS"),("sifilis","Sífilis"),
+        ("sifilis_congenita","Sífilis Congênita"),("hepatite_a","Hepatite A"),
+        ("hepatite_b","Hepatite B"),("hepatite_c","Hepatite C"),
+        ("meningite","Meningite"),("sarampo","Sarampo"),("rubeola","Rubéola"),
+        ("coqueluche","Coqueluche"),("difteria","Difteria"),("tetano","Tétano"),
+        ("raiva","Raiva"),("antraz","Antraz/Carbúnculo"),
+        ("influenza_grave","Influenza Grave"),("covid19","COVID-19"),
+        ("mpox","Mpox"),("botulismo","Botulismo"),("colera","Cólera"),
+        ("plague","Peste"),("variola","Varíola"),("ebola","Ebola"),
+        ("intoxicacao","Intoxicação Exógena"),("acidente_trabalho","Acidente de Trabalho Grave"),
+        ("violencia","Violência Interpessoal/Autoprovocada"),("outro","Outro"),
+    ]
+    EVOLUCAO_CHOICES = [
+        ("ativo","Em Acompanhamento"),("curado","Curado"),("obito","Óbito"),("ignorado","Ignorado/Inconclusivo"),
+    ]
+    empresa               = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="notificacoes_compulsorias")
+    doenca                = models.CharField(max_length=30, choices=DOENCA_CHOICES)
+    data_notificacao      = models.DateField()
+    data_inicio_sintomas  = models.DateField(null=True, blank=True)
+    municipio_notificacao = models.CharField(max_length=100)
+    uf_notificacao        = models.CharField(max_length=2)
+    unidade_notificante   = models.ForeignKey(UnidadeSaude, on_delete=models.SET_NULL, null=True, blank=True, related_name="notificacoes")
+    idade_paciente        = models.PositiveSmallIntegerField(null=True, blank=True)
+    sexo                  = models.CharField(max_length=1, choices=[("M","Masculino"),("F","Feminino"),("I","Ignorado")], default="I")
+    zona                  = models.CharField(max_length=10, choices=[("urbana","Urbana"),("rural","Rural"),("periurbana","Periurbana")], default="urbana")
+    status_investigacao   = models.CharField(max_length=20, choices=[("aberto","Aberto"),("em_investigacao","Em Investigação"),("encerrado","Encerrado")], default="aberto")
+    evolucao              = models.CharField(max_length=20, choices=EVOLUCAO_CHOICES, default="ativo")
+    surto                 = models.ForeignKey(SurtoEpidemiologico, on_delete=models.SET_NULL, null=True, blank=True, related_name="notificacoes")
+    observacoes           = models.TextField(blank=True, default="")
+    criado_em             = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_notificacao"]
+        indexes = [
+            models.Index(fields=["empresa","doenca"]),
+            models.Index(fields=["empresa","data_notificacao"]),
+            models.Index(fields=["empresa","municipio_notificacao"]),
+        ]
+
+    def __str__(self):
+        return f"Notif. {self.get_doenca_display()} — {self.data_notificacao}"
+
+
+class RegulacaoLeito(models.Model):
+    TIPO_LEITO_CHOICES = [
+        ("uti_adulto","UTI Adulto"),("uti_neo","UTI Neonatal"),("uti_ped","UTI Pediátrica"),
+        ("clinico","Clínico"),("cirurgico","Cirúrgico"),("obstetricia","Obstetrícia"),
+        ("psiquiatria","Psiquiatria"),("queimados","Queimados"),("outro","Outro"),
+    ]
+    PRIORIDADE_CHOICES = [
+        ("emergencia","Emergência"),("urgencia","Urgência"),("eletivo","Eletivo"),
+    ]
+    STATUS_CHOICES = [
+        ("solicitado","Solicitado"),("regulado","Regulado — Aguardando Vaga"),
+        ("internado","Internado"),("cancelado","Cancelado"),("obito_espera","Óbito na Fila"),
+    ]
+    empresa             = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="regulacoes_leito")
+    numero_solicitacao  = models.CharField(max_length=20, unique=True)
+    unidade_origem      = models.ForeignKey(UnidadeSaude, on_delete=models.SET_NULL, null=True, blank=True, related_name="solicitacoes_regulacao")
+    unidade_destino     = models.ForeignKey(UnidadeSaude, on_delete=models.SET_NULL, null=True, blank=True, related_name="vagas_regulacao")
+    tipo_leito          = models.CharField(max_length=20, choices=TIPO_LEITO_CHOICES)
+    prioridade          = models.CharField(max_length=20, choices=PRIORIDADE_CHOICES, default="urgencia")
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="solicitado")
+    cid_principal       = models.CharField(max_length=10, blank=True, default="")
+    diagnostico         = models.CharField(max_length=300, blank=True, default="")
+    idade_paciente      = models.PositiveSmallIntegerField(null=True, blank=True)
+    municipio_origem    = models.CharField(max_length=100, blank=True, default="")
+    medico_solicitante  = models.CharField(max_length=200, blank=True, default="")
+    data_solicitacao    = models.DateTimeField(auto_now_add=True)
+    data_regulacao      = models.DateTimeField(null=True, blank=True)
+    data_internacao     = models.DateTimeField(null=True, blank=True)
+    tempo_espera_horas  = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    observacoes         = models.TextField(blank=True, default="")
+    criado_em           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_solicitacao"]
+        indexes = [
+            models.Index(fields=["empresa","status"]),
+            models.Index(fields=["empresa","tipo_leito"]),
+        ]
+
+    def __str__(self):
+        return f"Reg. {self.numero_solicitacao} — {self.get_tipo_leito_display()}"
+
+
+class ProducaoAmbulatorial(models.Model):
+    empresa                   = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="producoes_ambulatoriais")
+    unidade                   = models.ForeignKey(UnidadeSaude, on_delete=models.CASCADE, related_name="producoes")
+    competencia               = models.CharField(max_length=7)  # YYYY-MM
+    consultas_basicas         = models.PositiveIntegerField(default=0)
+    consultas_especializadas  = models.PositiveIntegerField(default=0)
+    procedimentos_basicos     = models.PositiveIntegerField(default=0)
+    procedimentos_especializados = models.PositiveIntegerField(default=0)
+    exames_realizados         = models.PositiveIntegerField(default=0)
+    visitas_domiciliares      = models.PositiveIntegerField(default=0)
+    acolhimentos              = models.PositiveIntegerField(default=0)
+    criado_em                 = models.DateTimeField(auto_now_add=True)
+    atualizado_em             = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("empresa","unidade","competencia")]
+        ordering = ["-competencia"]
+
+    def __str__(self):
+        return f"Produção {self.unidade.nome} — {self.competencia}"
+
+
+class MetaPrevine(models.Model):
+    INDICADOR_CHOICES = [
+        ("prenatal_6","Pré-natal — ≥6 consultas + 1º trim."),
+        ("prenatal_sifilis_hiv","Pré-natal — Sífilis e HIV"),
+        ("gestante_odonto","Gestantes com atendimento odontológico"),
+        ("consumo_alcool","Usuários de álcool/drogas com avaliação"),
+        ("hipertensos","Hipertensos com PA aferida"),
+        ("diabeticos","Diabéticos com HbA1c solicitada"),
+        ("criancas_obesidade","Crianças <5 anos com avaliação nutricional"),
+        ("saude_bucal_ab","Saúde bucal — procedimentos clínicos"),
+        ("visita_puerpera","Puérperas com visita na 1ª semana"),
+    ]
+    empresa              = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="metas_previne")
+    indicador            = models.CharField(max_length=30, choices=INDICADOR_CHOICES)
+    competencia          = models.CharField(max_length=7)  # YYYY-MM
+    municipio            = models.CharField(max_length=100, blank=True, default="")
+    denominador          = models.PositiveIntegerField(default=0)
+    numerador            = models.PositiveIntegerField(default=0)
+    meta_percentual      = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    resultado_percentual = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    atingiu_meta         = models.BooleanField(default=False)
+    criado_em            = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("empresa","indicador","competencia","municipio")]
+        ordering = ["-competencia","indicador"]
+
+    def __str__(self):
+        return f"Previne {self.get_indicador_display()} — {self.competencia}"
+
+
+class ContratoGestao(models.Model):
+    TIPO_CHOICES = [
+        ("hospital","Hospital Contratado"),("clinica","Clínica/AMB"),("laboratorio","Laboratório"),
+        ("imagem","Imagem/Diagnóstico"),("sadt","SADT"),("oss","OSS"),
+        ("convenio_federal","Convênio Federal"),("convenio_estadual","Convênio Estadual"),("outro","Outro"),
+    ]
+    STATUS_CHOICES = [
+        ("vigente","Vigente"),("vencido","Vencido"),("suspenso","Suspenso"),("rescindido","Rescindido"),
+    ]
+    empresa             = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="contratos_gestao")
+    numero_contrato     = models.CharField(max_length=50)
+    fornecedor_nome     = models.CharField(max_length=300)
+    fornecedor_cnpj     = models.CharField(max_length=18, blank=True, default="")
+    tipo                = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="vigente")
+    objeto              = models.TextField()
+    valor_total         = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    valor_mensal        = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    data_inicio         = models.DateField()
+    data_fim            = models.DateField()
+    gestor_contrato     = models.CharField(max_length=200, blank=True, default="")
+    producao_prevista   = models.JSONField(default=dict)
+    producao_realizada  = models.JSONField(default=dict)
+    observacoes         = models.TextField(blank=True, default="")
+    criado_em           = models.DateTimeField(auto_now_add=True)
+    atualizado_em       = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_inicio"]
+        indexes = [
+            models.Index(fields=["empresa","status"]),
+            models.Index(fields=["empresa","tipo"]),
+        ]
+
+    def __str__(self):
+        return f"Contrato {self.numero_contrato} — {self.fornecedor_nome[:40]}"
+
+
+class AtendimentoUrgencia(models.Model):
+    TIPO_UNIDADE_CHOICES = [
+        ("samu","SAMU 192"),("upa","UPA 24h"),("pronto_socorro","Pronto-Socorro"),("cco","CCO"),
+    ]
+    DESFECHO_CHOICES = [
+        ("alta","Alta"),("internado","Internado"),("transferido","Transferido"),
+        ("obito","Óbito"),("evasao","Evasão"),
+    ]
+    empresa                  = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="atendimentos_urgencia")
+    unidade                  = models.ForeignKey(UnidadeSaude, on_delete=models.SET_NULL, null=True, blank=True, related_name="atendimentos_urgencia")
+    tipo_unidade             = models.CharField(max_length=20, choices=TIPO_UNIDADE_CHOICES)
+    data_atendimento         = models.DateField()
+    total_atendimentos       = models.PositiveIntegerField(default=0)
+    vermelho                 = models.PositiveIntegerField(default=0)
+    laranja                  = models.PositiveIntegerField(default=0)
+    amarelo                  = models.PositiveIntegerField(default=0)
+    verde                    = models.PositiveIntegerField(default=0)
+    azul                     = models.PositiveIntegerField(default=0)
+    obitos                   = models.PositiveIntegerField(default=0)
+    tempo_espera_medio_min   = models.PositiveSmallIntegerField(default=0)
+    criado_em                = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_atendimento"]
+        unique_together = [("empresa","unidade","data_atendimento")]
+
+    def __str__(self):
+        return f"Urgência {self.get_tipo_unidade_display()} — {self.data_atendimento}"
+
+
 # ── Aliases para retrocompatibilidade com código de conformidade ──────────────
 ExameMedico = ExameOcupacional
 ASOSSE = ASOOcupacional

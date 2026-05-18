@@ -146,12 +146,20 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
   <!-- Tabs -->
   <div>
-    <div class="tabs">
+    <div class="tabs" style="flex-wrap:wrap">
       <button class="tab-btn active" onclick="setTab('programas')">📋 Programas</button>
       <button class="tab-btn" onclick="setTab('indicadores')">📈 Indicadores</button>
       <button class="tab-btn" onclick="setTab('planos')">✅ Planos de Ação</button>
       <button class="tab-btn" onclick="setTab('orcamento')">💰 Orçamento</button>
       <button class="tab-btn" onclick="setTab('atos')">📜 Atos Normativos</button>
+      <button class="tab-btn" onclick="setTab('rede')">🏥 Rede de Saúde</button>
+      <button class="tab-btn" onclick="setTab('vigilancia')">🦠 Vigilância</button>
+      <button class="tab-btn" onclick="setTab('regulacao')">🏨 Regulação</button>
+      <button class="tab-btn" onclick="setTab('producao')">📋 Produção</button>
+      <button class="tab-btn" onclick="setTab('previne')">🎯 Previne Brasil</button>
+      <button class="tab-btn" onclick="setTab('contratos')">📑 Contratos</button>
+      <button class="tab-btn" onclick="setTab('urgencia')">🚑 Urgência/SAMU</button>
+      <button class="tab-btn" onclick="setTab('fase2dash')">📊 Painel F2</button>
     </div>
 
     <!-- Programas -->
@@ -245,6 +253,288 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </table>
       </div>
     </div>
+
+    <!-- ══ REDE DE SAÚDE ══════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-rede" style="margin-top:16px">
+      <div class="kpi-row" id="redeKpis" style="margin-bottom:16px">
+        <div class="kpi"><div class="kpi-val" id="redeUnidadesAtivas">—</div><div class="kpi-lbl">Unidades Ativas</div></div>
+        <div class="kpi ok"><div class="kpi-val" id="redeEquipesESF">—</div><div class="kpi-lbl">Equipes ESF Ativas</div></div>
+        <div class="kpi teal"><div class="kpi-val" id="redePopCoberta">—</div><div class="kpi-lbl">População Coberta ESF</div></div>
+        <div class="kpi info"><div class="kpi-val" id="redeUnidadesTotal">—</div><div class="kpi-lbl">Total de Unidades</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Unidades de Saúde</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="filtroRedeTipo" onchange="carregarRede()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+              <option value="">Todos os tipos</option>
+              <option value="ubs">UBS</option><option value="upa">UPA 24h</option>
+              <option value="caps_i">CAPS I</option><option value="caps_ii">CAPS II</option>
+              <option value="caps_iii">CAPS III 24h</option><option value="caps_ad">CAPS AD</option>
+              <option value="hospital">Hospital</option><option value="amb">Ambulatório</option>
+              <option value="ceo">CEO</option><option value="policlinica">Policlínica</option>
+              <option value="cerest">CEREST</option><option value="laboratorio">Laboratório</option>
+              <option value="cco">CCO</option><option value="outro">Outro</option>
+            </select>
+            <select id="filtroRedeStatus" onchange="carregarRede()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+              <option value="">Todos os status</option>
+              <option value="ativa">Ativa</option><option value="inativa">Inativa</option>
+              <option value="obras">Em Obras</option><option value="interditada">Interditada</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalUnidade()">+ Nova Unidade</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>CNES</th><th>Nome</th><th>Tipo</th><th>Município/UF</th><th>Status</th><th>Leitos SUS</th><th>Leitos UTI</th><th>Diretor</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyRede"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ VIGILÂNCIA EPIDEMIOLÓGICA ══════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-vigilancia" style="margin-top:16px">
+      <div class="kpi-row" id="vigilKpis" style="margin-bottom:16px">
+        <div class="kpi warn"><div class="kpi-val" id="vigilNotif30d">—</div><div class="kpi-lbl">Notificações (30 dias)</div></div>
+        <div class="kpi danger"><div class="kpi-val" id="vigilSurtosAtivos">—</div><div class="kpi-lbl">Surtos em Curso</div></div>
+        <div class="kpi"><div class="kpi-val" id="vigilSurtosVermelho">—</div><div class="kpi-lbl">Alerta Vermelho</div></div>
+        <div class="kpi info"><div class="kpi-val" id="vigilObitos">—</div><div class="kpi-lbl">Óbitos Notificados</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">🦠 Surtos Epidemiológicos Ativos</span>
+            <button class="btn btn-primary" onclick="abrirModalSurto()">+ Registrar Surto</button>
+          </div>
+          <table>
+            <thead><tr><th>Doença</th><th>Município/UF</th><th>Casos</th><th>Óbitos</th><th>Alerta</th><th>Ações</th></tr></thead>
+            <tbody id="tbodySurtos"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Top 10 Doenças (30 dias)</span></div>
+          <div id="doencasChart" style="padding:12px;display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Notificações Compulsórias</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="filtroVigilDoenca" onchange="carregarNotificacoes()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+              <option value="">Todas as doenças</option>
+              <option value="dengue">Dengue</option><option value="covid19">COVID-19</option>
+              <option value="tuberculose">Tuberculose</option><option value="sifilis">Sífilis</option>
+              <option value="meningite">Meningite</option><option value="sarampo">Sarampo</option>
+              <option value="mpox">Mpox</option><option value="hiv_aids">HIV/AIDS</option>
+              <option value="hanseniase">Hanseníase</option><option value="leptospirose">Leptospirose</option>
+            </select>
+            <select id="filtroVigilStatus" onchange="carregarNotificacoes()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+              <option value="">Todos os status</option>
+              <option value="aberto">Aberto</option><option value="em_investigacao">Em Investigação</option><option value="encerrado">Encerrado</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalNotificacao()">+ Registrar Notificação</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Data</th><th>Doença</th><th>Município/UF</th><th>Sexo</th><th>Idade</th><th>Zona</th><th>Status Invest.</th><th>Evolução</th></tr></thead>
+          <tbody id="tbodyNotif"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ REGULAÇÃO DE LEITOS ═════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-regulacao" style="margin-top:16px">
+      <div class="kpi-row" id="regKpis" style="margin-bottom:16px">
+        <div class="kpi warn"><div class="kpi-val" id="regSolicitados">—</div><div class="kpi-lbl">Aguardando Vaga</div></div>
+        <div class="kpi ok"><div class="kpi-val" id="regInternados">—</div><div class="kpi-lbl">Internados</div></div>
+        <div class="kpi danger"><div class="kpi-val" id="regObitosFila">—</div><div class="kpi-lbl">Óbitos na Fila</div></div>
+        <div class="kpi info"><div class="kpi-val" id="regTempoMedio">—</div><div class="kpi-lbl">Tempo Médio Espera (h)</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Solicitações de Regulação de Leitos</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="filtroRegStatus" onchange="carregarRegulacao()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+              <option value="">Todos os status</option>
+              <option value="solicitado">Solicitado</option><option value="regulado">Regulado</option>
+              <option value="internado">Internado</option><option value="cancelado">Cancelado</option>
+            </select>
+            <select id="filtroRegTipo" onchange="carregarRegulacao()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+              <option value="">Todos os leitos</option>
+              <option value="uti_adulto">UTI Adulto</option><option value="uti_neo">UTI Neonatal</option>
+              <option value="uti_ped">UTI Pediátrica</option><option value="clinico">Clínico</option>
+              <option value="cirurgico">Cirúrgico</option><option value="obstetricia">Obstetrícia</option>
+              <option value="psiquiatria">Psiquiatria</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalRegulacao()">+ Nova Solicitação</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Nº Solicitação</th><th>Tipo Leito</th><th>Prioridade</th><th>Diagnóstico</th><th>Origem</th><th>Destino</th><th>Status</th><th>Data</th><th>Espera (h)</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyReg"><tr><td colspan="10" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ PRODUÇÃO AMBULATORIAL ═══════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-producao" style="margin-top:16px">
+      <div class="kpi-row" id="prodKpis" style="margin-bottom:16px">
+        <div class="kpi"><div class="kpi-val" id="prodConsultas">—</div><div class="kpi-lbl">Consultas Básicas (total)</div></div>
+        <div class="kpi ok"><div class="kpi-val" id="prodEspecializadas">—</div><div class="kpi-lbl">Consultas Especializadas</div></div>
+        <div class="kpi teal"><div class="kpi-val" id="prodExames">—</div><div class="kpi-lbl">Exames Realizados</div></div>
+        <div class="kpi info"><div class="kpi-val" id="prodVisitas">—</div><div class="kpi-lbl">Visitas Domiciliares</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Produção por Unidade</span>
+          <div style="display:flex;gap:8px">
+            <input id="filtroProdComp" type="month" onchange="carregarProducao()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+            <button class="btn btn-primary" onclick="abrirModalProducao()">+ Registrar Produção</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Unidade</th><th>Competência</th><th>Consultas Básicas</th><th>Especializadas</th><th>Procedimentos</th><th>Exames</th><th>Visitas Dom.</th><th>Acolhimentos</th></tr></thead>
+          <tbody id="tbodyProd"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ PREVINE BRASIL ══════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-previne" style="margin-top:16px">
+      <div class="kpi-row" id="previneKpis" style="margin-bottom:16px">
+        <div class="kpi ok"><div class="kpi-val" id="previneScore">—</div><div class="kpi-lbl">Score Geral (%)</div></div>
+        <div class="kpi"><div class="kpi-val" id="previneTotal">—</div><div class="kpi-lbl">Total de Metas</div></div>
+        <div class="kpi teal"><div class="kpi-val" id="previneAting">—</div><div class="kpi-lbl">Metas Atingidas</div></div>
+        <div class="kpi info"><div class="kpi-val" id="previneComp">—</div><div class="kpi-lbl">Competência</div></div>
+      </div>
+      <div class="ind-grid" id="previneGrid" style="margin-bottom:16px"><div class="empty">Carregando…</div></div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Metas Previne Brasil</span>
+          <div style="display:flex;gap:8px">
+            <input id="filtroPrevineComp" type="month" onchange="carregarPrevineLista()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+            <button class="btn btn-primary" onclick="abrirModalMeta()">+ Registrar Meta</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Indicador</th><th>Competência</th><th>Município</th><th>Denominador</th><th>Numerador</th><th>Meta %</th><th>Resultado %</th><th>Atingiu</th></tr></thead>
+          <tbody id="tbodyPrevine"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ CONTRATOS DE GESTÃO ════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-contratos" style="margin-top:16px">
+      <div class="kpi-row" id="contratosKpis" style="margin-bottom:16px">
+        <div class="kpi ok"><div class="kpi-val" id="contratosVigentes">—</div><div class="kpi-lbl">Contratos Vigentes</div></div>
+        <div class="kpi warn"><div class="kpi-val" id="contratosVencendo">—</div><div class="kpi-lbl">Vencendo em 30 dias</div></div>
+        <div class="kpi"><div class="kpi-val" id="contratosValorTotal">—</div><div class="kpi-lbl">Valor Total Vigentes</div></div>
+        <div class="kpi danger"><div class="kpi-val" id="contratosVencidos">—</div><div class="kpi-lbl">Vencidos</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Contratos de Gestão em Saúde</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="filtroContStatus" onchange="carregarContratos()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+              <option value="">Todos</option><option value="vigente">Vigente</option>
+              <option value="vencido">Vencido</option><option value="suspenso">Suspenso</option>
+            </select>
+            <select id="filtroContTipo" onchange="carregarContratos()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+              <option value="">Todos os tipos</option>
+              <option value="hospital">Hospital</option><option value="clinica">Clínica/AMB</option>
+              <option value="laboratorio">Laboratório</option><option value="oss">OSS</option>
+              <option value="convenio_federal">Convênio Federal</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalContrato()">+ Novo Contrato</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Nº Contrato</th><th>Fornecedor</th><th>Tipo</th><th>Valor Total</th><th>Valor Mensal</th><th>Início</th><th>Fim</th><th>Status</th><th>Gestor</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyCont"><tr><td colspan="10" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ URGÊNCIA E EMERGÊNCIA ═══════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-urgencia" style="margin-top:16px">
+      <div class="kpi-row" id="urgKpis" style="margin-bottom:16px">
+        <div class="kpi"><div class="kpi-val" id="urgTotal">—</div><div class="kpi-lbl">Atendimentos (7 dias)</div></div>
+        <div class="kpi danger"><div class="kpi-val" id="urgVermelho">—</div><div class="kpi-lbl">Classificação Vermelha</div></div>
+        <div class="kpi warn"><div class="kpi-val" id="urgObitos">—</div><div class="kpi-lbl">Óbitos (7 dias)</div></div>
+        <div class="kpi info"><div class="kpi-val" id="urgTempoMedio">—</div><div class="kpi-lbl">Tempo Médio Espera (min)</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Manchester — Distribuição por Cor (7 dias)</span></div>
+          <div id="manchesterChart" style="padding:16px;display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Por Tipo de Unidade (7 dias)</span></div>
+          <div id="urgTipoChart" style="padding:16px;display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Registros de Atendimento</span>
+          <div style="display:flex;gap:8px">
+            <select id="filtroUrgTipo" onchange="carregarUrgencia()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+              <option value="">Todos</option><option value="samu">SAMU 192</option>
+              <option value="upa">UPA 24h</option><option value="pronto_socorro">Pronto-Socorro</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalUrgencia()">+ Registrar Atendimento</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Data</th><th>Unidade</th><th>Tipo</th><th>Total</th><th style="color:#ff4d6d">Verm.</th><th style="color:#ff8c00">Lar.</th><th style="color:#ffd700">Amar.</th><th style="color:#00c2ff">Verde</th><th>Azul</th><th>Óbitos</th><th>Espera (min)</th></tr></thead>
+          <tbody id="tbodyUrg"><tr><td colspan="11" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ PAINEL GERAL FASE 2 ════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-fase2dash" style="margin-top:16px">
+      <div id="fase2DashContent">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">
+          <div class="budget-card">
+            <div class="budget-title">🏥 REDE DE SAÚDE</div>
+            <div style="display:flex;flex-direction:column;gap:10px" id="fase2Rede">
+              <div class="empty">Carregando…</div>
+            </div>
+          </div>
+          <div class="budget-card">
+            <div class="budget-title">🦠 VIGILÂNCIA EPIDEMIOLÓGICA</div>
+            <div style="display:flex;flex-direction:column;gap:10px" id="fase2Vigil">
+              <div class="empty">Carregando…</div>
+            </div>
+          </div>
+          <div class="budget-card">
+            <div class="budget-title">🏨 REGULAÇÃO DE LEITOS</div>
+            <div style="display:flex;flex-direction:column;gap:10px" id="fase2Reg">
+              <div class="empty">Carregando…</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+          <div class="budget-card">
+            <div class="budget-title">🎯 PREVINE BRASIL</div>
+            <div style="display:flex;flex-direction:column;gap:10px" id="fase2Previne">
+              <div class="empty">Carregando…</div>
+            </div>
+          </div>
+          <div class="budget-card">
+            <div class="budget-title">📑 CONTRATOS DE GESTÃO</div>
+            <div style="display:flex;flex-direction:column;gap:10px" id="fase2Contr">
+              <div class="empty">Carregando…</div>
+            </div>
+          </div>
+          <div class="budget-card">
+            <div class="budget-title">🚑 URGÊNCIA/SAMU (7 dias)</div>
+            <div style="display:flex;flex-direction:column;gap:10px" id="fase2Urg">
+              <div class="empty">Carregando…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </main>
 
@@ -734,7 +1024,7 @@ function fecharModal(id) { document.getElementById(id).classList.remove('open');
 let _currentTab = 'programas';
 function setTab(tab) {
   _currentTab = tab;
-  const tabs = ['programas','indicadores','planos','orcamento','atos'];
+  const tabs = ['programas','indicadores','planos','orcamento','atos','rede','vigilancia','regulacao','producao','previne','contratos','urgencia','fase2dash'];
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===tab));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
@@ -743,6 +1033,14 @@ function setTab(tab) {
   else if (tab==='planos') { popularSelectProgramas('planoProg'); carregarPlanos(); }
   else if (tab==='orcamento') carregarOrcamentos();
   else if (tab==='atos') carregarAtos();
+  else if (tab==='rede') { carregarRede(); carregarRedeKpis(); }
+  else if (tab==='vigilancia') { carregarVigilDash(); carregarNotificacoes(); carregarSurtos(); }
+  else if (tab==='regulacao') { carregarRegDash(); carregarRegulacao(); }
+  else if (tab==='producao') { carregarProdDash(); carregarProducao(); }
+  else if (tab==='previne') { carregarPrevineDash(); carregarPrevineLista(); }
+  else if (tab==='contratos') { carregarContratosDash(); carregarContratos(); }
+  else if (tab==='urgencia') { carregarUrgDash(); carregarUrgencia(); }
+  else if (tab==='fase2dash') carregarFase2Dash();
 }
 
 // ── Atos Normativos ────────────────────────────────────────────
@@ -823,6 +1121,625 @@ async function deletarAto(id) {
   carregarAtos();
 }
 
+// ══════════════════════════════════════════════════════════════════
+// FASE 2 — REDE DE SAÚDE
+// ══════════════════════════════════════════════════════════════════
+let _unidades = [];
+const _fmtNum = n => (n||0).toLocaleString('pt-BR');
+const _fmtR   = n => 'R$ ' + parseFloat(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+const _badgeS  = s => ({ativa:'<span class="badge badge-ok">Ativa</span>',inativa:'<span class="badge badge-warn">Inativa</span>',obras:'<span class="badge badge-info">Em Obras</span>',interditada:'<span class="badge badge-danger">Interditada</span>'}[s]||s);
+const _badgeAl = n => ({verde:'<span class="badge badge-ok">Verde</span>',amarelo:'<span class="badge badge-warn">Amarelo</span>',laranja:'<span style="background:rgba(255,140,0,.15);color:#ff8c00;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">Laranja</span>',vermelho:'<span class="badge badge-danger">Vermelho</span>'}[n]||n);
+
+async function carregarRedeKpis() {
+  const d = await api('/api/governo/dashboard/fase2/');
+  const r = d.rede||{};
+  document.getElementById('redeUnidadesAtivas').textContent = _fmtNum(r.unidades_ativas);
+  document.getElementById('redeEquipesESF').textContent = _fmtNum(r.equipes_esf);
+  document.getElementById('redePopCoberta').textContent = _fmtNum(r.populacao_coberta_esf);
+  document.getElementById('redeUnidadesTotal').textContent = _fmtNum(r.unidades_total);
+}
+
+async function carregarRede() {
+  const tipo = document.getElementById('filtroRedeTipo')?.value||'';
+  const status = document.getElementById('filtroRedeStatus')?.value||'';
+  let url = '/api/governo/unidades/?';
+  if (tipo) url += 'tipo='+tipo+'&';
+  if (status) url += 'status='+status;
+  const d = await api(url);
+  _unidades = d.unidades||[];
+  const tb = document.getElementById('tbodyRede');
+  if (!_unidades.length) { tb.innerHTML='<tr><td colspan="9" class="empty">Nenhuma unidade cadastrada</td></tr>'; return; }
+  tb.innerHTML = _unidades.map(u=>`<tr>
+    <td><code style="font-size:11px">${u.cnes||'—'}</code></td>
+    <td><strong>${u.nome}</strong><div style="font-size:11px;color:var(--muted)">${u.bairro||''}</div></td>
+    <td>${u.tipo_label}</td>
+    <td>${u.municipio}/${u.uf}</td>
+    <td>${_badgeS(u.status)}</td>
+    <td>${_fmtNum(u.leitos_sus)}</td>
+    <td>${_fmtNum(u.leitos_uti)}</td>
+    <td>${u.diretor||'—'}</td>
+    <td>
+      <button class="btn btn-ghost btn-sm" onclick="editarUnidade(${u.id})">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deletarUnidade(${u.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+function abrirModalUnidade() {
+  document.getElementById('unidId').value='';
+  ['unidCnes','unidNome','unidMunicipio','unidBairro','unidEndereco','unidTelefone','unidDiretor'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['unidLeitusSus','unidLeitosUti','unidPopRef'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='0';});
+  document.getElementById('unidTipo').value='ubs';
+  document.getElementById('unidStatus').value='ativa';
+  document.getElementById('unidUF').value='';
+  abrirModal('modalUnidade');
+}
+
+function editarUnidade(id) {
+  const u = _unidades.find(x=>x.id===id); if(!u) return;
+  document.getElementById('unidId').value=u.id;
+  document.getElementById('unidCnes').value=u.cnes||'';
+  document.getElementById('unidNome').value=u.nome;
+  document.getElementById('unidTipo').value=u.tipo;
+  document.getElementById('unidStatus').value=u.status;
+  document.getElementById('unidMunicipio').value=u.municipio;
+  document.getElementById('unidUF').value=u.uf;
+  document.getElementById('unidBairro').value=u.bairro||'';
+  document.getElementById('unidEndereco').value=u.endereco||'';
+  document.getElementById('unidTelefone').value=u.telefone||'';
+  document.getElementById('unidLeitusSus').value=u.leitos_sus||0;
+  document.getElementById('unidLeitosUti').value=u.leitos_uti||0;
+  document.getElementById('unidPopRef').value=u.populacao_referenciada||0;
+  document.getElementById('unidDiretor').value=u.diretor||'';
+  abrirModal('modalUnidade');
+}
+
+async function salvarUnidade() {
+  const id = document.getElementById('unidId').value;
+  const body = {
+    cnes:v('unidCnes'), nome:v('unidNome'), tipo:v('unidTipo'), status:v('unidStatus'),
+    municipio:v('unidMunicipio'), uf:v('unidUF'), bairro:v('unidBairro'),
+    endereco:v('unidEndereco'), telefone:v('unidTelefone'),
+    leitos_sus:parseInt(v('unidLeitusSus'))||0, leitos_uti:parseInt(v('unidLeitosUti'))||0,
+    populacao_referenciada:parseInt(v('unidPopRef'))||0, diretor:v('unidDiretor'),
+  };
+  if (!body.nome || !body.tipo || !body.municipio) return alert('Nome, tipo e município são obrigatórios');
+  const url = id ? `/api/governo/unidades/${id}/` : '/api/governo/unidades/';
+  const method = id ? 'PUT' : 'POST';
+  await api(url, {method, body:JSON.stringify(body)});
+  fecharModal('modalUnidade');
+  carregarRede(); carregarRedeKpis();
+}
+
+async function deletarUnidade(id) {
+  if (!confirm('Excluir esta unidade de saúde?')) return;
+  await api(`/api/governo/unidades/${id}/`, {method:'DELETE'});
+  carregarRede(); carregarRedeKpis();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FASE 2 — VIGILÂNCIA EPIDEMIOLÓGICA
+// ══════════════════════════════════════════════════════════════════
+let _surtos = [], _notificacoes = [];
+
+async function carregarVigilDash() {
+  const d = await api('/api/governo/vigilancia/dashboard/');
+  document.getElementById('vigilNotif30d').textContent = _fmtNum(d.total_notificacoes_30d);
+  document.getElementById('vigilSurtosAtivos').textContent = _fmtNum(d.surtos_ativos);
+  document.getElementById('vigilSurtosVermelho').textContent = _fmtNum(d.surtos_vermelho);
+  document.getElementById('vigilObitos').textContent = _fmtNum(d.total_obitos_notificacoes);
+  // Top doenças chart
+  const chart = document.getElementById('doencasChart');
+  const top = (d.por_doenca||[]).slice(0,10);
+  const max = top[0]?.total||1;
+  chart.innerHTML = top.map(item=>`
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:130px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.doenca_label}</div>
+      <div class="prog-bar" style="flex:1"><div class="prog-fill" style="width:${Math.round(item.total/max*100)}%;background:var(--warn)"></div></div>
+      <div style="font-size:12px;font-weight:700;width:36px;text-align:right">${item.total}</div>
+    </div>`).join('') || '<div class="empty">Sem dados</div>';
+}
+
+async function carregarSurtos() {
+  const status = document.getElementById('filtroVigilStatus')?.value||'';
+  const d = await api('/api/governo/vigilancia/surtos/'+(status?'?status='+status:''));
+  _surtos = d.surtos||[];
+  const tb = document.getElementById('tbodySurtos');
+  if (!_surtos.length) { tb.innerHTML='<tr><td colspan="6" class="empty">Nenhum surto registrado</td></tr>'; return; }
+  tb.innerHTML = _surtos.map(s=>`<tr>
+    <td><strong>${s.doenca}</strong></td>
+    <td>${s.municipio}/${s.uf}</td>
+    <td style="color:var(--warn)">${_fmtNum(s.total_casos)}</td>
+    <td style="color:var(--danger)">${_fmtNum(s.total_obitos)}</td>
+    <td>${_badgeAl(s.nivel_alerta)}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="editarSurto(${s.id})">✏️</button></td>
+  </tr>`).join('');
+}
+
+async function carregarNotificacoes() {
+  const doenca = document.getElementById('filtroVigilDoenca')?.value||'';
+  const status = document.getElementById('filtroVigilStatus')?.value||'';
+  let url = '/api/governo/vigilancia/notificacoes/?';
+  if (doenca) url += 'doenca='+doenca+'&';
+  if (status) url += 'status_investigacao='+status;
+  const d = await api(url);
+  _notificacoes = d.notificacoes||[];
+  const tb = document.getElementById('tbodyNotif');
+  if (!_notificacoes.length) { tb.innerHTML='<tr><td colspan="8" class="empty">Nenhuma notificação registrada</td></tr>'; return; }
+  const SINV={aberto:'<span class="badge badge-warn">Aberto</span>',em_investigacao:'<span class="badge badge-info">Investigando</span>',encerrado:'<span class="badge badge-ok">Encerrado</span>'};
+  const SEVO={ativo:'Em Acomp.',curado:'<span style="color:var(--ok)">Curado</span>',obito:'<span style="color:var(--danger)">Óbito</span>',ignorado:'Ignorado'};
+  tb.innerHTML = _notificacoes.slice(0,100).map(n=>`<tr>
+    <td>${n.data_notificacao}</td>
+    <td><strong>${n.doenca_label}</strong></td>
+    <td>${n.municipio_notificacao}/${n.uf_notificacao}</td>
+    <td>${{M:'Masculino',F:'Feminino',I:'Ignorado'}[n.sexo]||n.sexo}</td>
+    <td>${n.idade_paciente??'—'}</td>
+    <td>${n.zona}</td>
+    <td>${SINV[n.status_investigacao]||n.status_investigacao}</td>
+    <td>${SEVO[n.evolucao]||n.evolucao}</td>
+  </tr>`).join('');
+}
+
+function abrirModalNotificacao() {
+  document.getElementById('notifId').value='';
+  ['notifData','notifMunicipio','notifUF','notifIdade'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('notifDoenca').value='dengue';
+  document.getElementById('notifStatus').value='aberto';
+  document.getElementById('notifEvolucao').value='ativo';
+  document.getElementById('notifSexo').value='I';
+  abrirModal('modalNotif');
+}
+
+async function salvarNotificacao() {
+  const body = {
+    doenca:v('notifDoenca'), data_notificacao:v('notifData'),
+    municipio_notificacao:v('notifMunicipio'), uf_notificacao:v('notifUF'),
+    idade_paciente:v('notifIdade')||null, sexo:v('notifSexo'),
+    status_investigacao:v('notifStatus'), evolucao:v('notifEvolucao'),
+  };
+  if (!body.doenca || !body.data_notificacao || !body.municipio_notificacao) return alert('Preencha os campos obrigatórios');
+  await api('/api/governo/vigilancia/notificacoes/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalNotif');
+  carregarNotificacoes(); carregarVigilDash();
+}
+
+function abrirModalSurto() {
+  document.getElementById('surtoId').value='';
+  ['surtoDireto','surtoMunicipio','surtoUF','surtoBairro','surtoDataInicio','surtoCasos','surtoObitos','surtoResponsavel'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('surtoStatus').value='ativo';
+  document.getElementById('surtoAlerta').value='amarelo';
+  abrirModal('modalSurto');
+}
+
+function editarSurto(id) {
+  const s = _surtos.find(x=>x.id===id); if(!s) return;
+  document.getElementById('surtoId').value=s.id;
+  document.getElementById('surtoDireto').value=s.doenca;
+  document.getElementById('surtoMunicipio').value=s.municipio;
+  document.getElementById('surtoUF').value=s.uf;
+  document.getElementById('surtoBairro').value=s.bairro||'';
+  document.getElementById('surtoDataInicio').value=s.data_inicio;
+  document.getElementById('surtoCasos').value=s.total_casos;
+  document.getElementById('surtoObitos').value=s.total_obitos;
+  document.getElementById('surtoStatus').value=s.status;
+  document.getElementById('surtoAlerta').value=s.nivel_alerta;
+  document.getElementById('surtoResponsavel').value=s.responsavel_investigacao||'';
+  abrirModal('modalSurto');
+}
+
+async function salvarSurto() {
+  const id = document.getElementById('surtoId').value;
+  const body = {
+    doenca:v('surtoDireto'), municipio:v('surtoMunicipio'), uf:v('surtoUF'),
+    bairro:v('surtoBairro'), data_inicio:v('surtoDataInicio'),
+    total_casos:parseInt(v('surtoCasos'))||0, total_obitos:parseInt(v('surtoObitos'))||0,
+    status:v('surtoStatus'), nivel_alerta:v('surtoAlerta'),
+    responsavel_investigacao:v('surtoResponsavel'),
+  };
+  if (!body.doenca || !body.municipio || !body.data_inicio) return alert('Doença, município e data de início são obrigatórios');
+  const url = id ? `/api/governo/vigilancia/surtos/${id}/` : '/api/governo/vigilancia/surtos/';
+  const method = id ? 'PUT' : 'POST';
+  await api(url, {method, body:JSON.stringify(body)});
+  fecharModal('modalSurto');
+  carregarSurtos(); carregarVigilDash();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FASE 2 — REGULAÇÃO DE LEITOS
+// ══════════════════════════════════════════════════════════════════
+let _regulacoes = [];
+
+async function carregarRegDash() {
+  const d = await api('/api/governo/regulacao/dashboard/');
+  document.getElementById('regSolicitados').textContent = _fmtNum(d.aguardando_vaga);
+  document.getElementById('regInternados').textContent = _fmtNum(d.internados_hoje);
+  document.getElementById('regObitosFila').textContent = _fmtNum(d.obitos_fila);
+  document.getElementById('regTempoMedio').textContent = (d.tempo_medio_espera_horas||0).toFixed(1);
+}
+
+async function carregarRegulacao() {
+  const status = document.getElementById('filtroRegStatus')?.value||'';
+  const tipo = document.getElementById('filtroRegTipo')?.value||'';
+  let url = '/api/governo/regulacao/?';
+  if (status) url += 'status='+status+'&';
+  if (tipo) url += 'tipo_leito='+tipo;
+  const d = await api(url);
+  _regulacoes = d.regulacoes||[];
+  const tb = document.getElementById('tbodyReg');
+  if (!_regulacoes.length) { tb.innerHTML='<tr><td colspan="10" class="empty">Nenhuma solicitação de regulação</td></tr>'; return; }
+  const SMAP={solicitado:'<span class="badge badge-warn">Solicitado</span>',regulado:'<span class="badge badge-info">Regulado</span>',internado:'<span class="badge badge-ok">Internado</span>',cancelado:'<span class="badge" style="color:var(--muted)">Cancelado</span>',obito_espera:'<span class="badge badge-danger">Óbito Fila</span>'};
+  const PMAP={emergencia:'<span style="color:var(--danger);font-weight:700">Emergência</span>',urgencia:'<span style="color:var(--warn);font-weight:700">Urgência</span>',eletivo:'<span style="color:var(--muted)">Eletivo</span>'};
+  tb.innerHTML = _regulacoes.map(r=>`<tr>
+    <td><code style="font-size:11px">${r.numero_solicitacao}</code></td>
+    <td>${r.tipo_leito_label}</td>
+    <td>${PMAP[r.prioridade]||r.prioridade}</td>
+    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.diagnostico||r.cid_principal||'—'}</td>
+    <td>${r.unidade_origem_nome||r.municipio_origem||'—'}</td>
+    <td>${r.unidade_destino_nome||'—'}</td>
+    <td>${SMAP[r.status]||r.status}</td>
+    <td style="font-size:12px">${r.data_solicitacao?.slice(0,10)||''}</td>
+    <td>${r.tempo_espera_horas||'—'}</td>
+    <td>
+      <button class="btn btn-ghost btn-sm" onclick="atualizarStatusReg(${r.id}, '${r.status}')">⚡ Status</button>
+    </td>
+  </tr>`).join('');
+}
+
+function abrirModalRegulacao() {
+  document.getElementById('regId').value='';
+  ['regDiagnostico','regCid','regIdade','regMunicipioOrigem','regMedico','regObs'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('regTipoLeito').value='clinico';
+  document.getElementById('regPrioridade').value='urgencia';
+  abrirModal('modalRegulacao');
+}
+
+async function salvarRegulacao() {
+  const body = {
+    tipo_leito:v('regTipoLeito'), prioridade:v('regPrioridade'),
+    cid_principal:v('regCid'), diagnostico:v('regDiagnostico'),
+    idade_paciente:v('regIdade')||null, municipio_origem:v('regMunicipioOrigem'),
+    medico_solicitante:v('regMedico'), observacoes:v('regObs'),
+  };
+  if (!body.tipo_leito) return alert('Tipo de leito é obrigatório');
+  await api('/api/governo/regulacao/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalRegulacao');
+  carregarRegulacao(); carregarRegDash();
+}
+
+async function atualizarStatusReg(id, statusAtual) {
+  const opts = ['solicitado','regulado','internado','cancelado'];
+  const novoStatus = prompt('Novo status: solicitado / regulado / internado / cancelado', statusAtual);
+  if (!novoStatus || !opts.includes(novoStatus)) return;
+  await api(`/api/governo/regulacao/${id}/`, {method:'PATCH', body:JSON.stringify({status:novoStatus})});
+  carregarRegulacao(); carregarRegDash();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FASE 2 — PRODUÇÃO AMBULATORIAL
+// ══════════════════════════════════════════════════════════════════
+async function carregarProdDash() {
+  const d = await api('/api/governo/producao/dashboard/');
+  const t = d.totais_gerais||{};
+  document.getElementById('prodConsultas').textContent = _fmtNum(t.total_consultas);
+  document.getElementById('prodEspecializadas').textContent = _fmtNum(t.total_consultas_esp);
+  document.getElementById('prodExames').textContent = _fmtNum(t.total_exames);
+  document.getElementById('prodVisitas').textContent = _fmtNum(t.total_visitas);
+}
+
+async function carregarProducao() {
+  const comp = document.getElementById('filtroProdComp')?.value||'';
+  let url = '/api/governo/producao/';
+  if (comp) url += '?competencia='+comp;
+  const d = await api(url);
+  const list = d.producoes||[];
+  const tb = document.getElementById('tbodyProd');
+  if (!list.length) { tb.innerHTML='<tr><td colspan="8" class="empty">Nenhum registro de produção</td></tr>'; return; }
+  tb.innerHTML = list.map(p=>`<tr>
+    <td><strong>${p.unidade_nome}</strong></td>
+    <td>${p.competencia}</td>
+    <td>${_fmtNum(p.consultas_basicas)}</td>
+    <td>${_fmtNum(p.consultas_especializadas)}</td>
+    <td>${_fmtNum(p.procedimentos_basicos+p.procedimentos_especializados)}</td>
+    <td>${_fmtNum(p.exames_realizados)}</td>
+    <td>${_fmtNum(p.visitas_domiciliares)}</td>
+    <td>${_fmtNum(p.acolhimentos)}</td>
+  </tr>`).join('');
+}
+
+function abrirModalProducao() {
+  ['prodUnidId','prodComp','prodConsBas','prodConsEsp','prodProcBas','prodProcEsp','prodExames2','prodVisitas2','prodAcolhim'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  // Populate unidades select
+  const sel = document.getElementById('prodUnidId');
+  if (sel) {
+    sel.innerHTML = '<option value="">— Selecione a unidade —</option>' + _unidades.map(u=>`<option value="${u.id}">${u.nome} — ${u.municipio}</option>`).join('');
+  }
+  abrirModal('modalProducao');
+}
+
+async function salvarProducao() {
+  const body = {
+    unidade_id:v('prodUnidId'), competencia:v('prodComp'),
+    consultas_basicas:parseInt(v('prodConsBas'))||0,
+    consultas_especializadas:parseInt(v('prodConsEsp'))||0,
+    procedimentos_basicos:parseInt(v('prodProcBas'))||0,
+    procedimentos_especializados:parseInt(v('prodProcEsp'))||0,
+    exames_realizados:parseInt(v('prodExames2'))||0,
+    visitas_domiciliares:parseInt(v('prodVisitas2'))||0,
+    acolhimentos:parseInt(v('prodAcolhim'))||0,
+  };
+  if (!body.unidade_id || !body.competencia) return alert('Unidade e competência são obrigatórios');
+  await api('/api/governo/producao/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalProducao');
+  carregarProducao(); carregarProdDash();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FASE 2 — PREVINE BRASIL
+// ══════════════════════════════════════════════════════════════════
+async function carregarPrevineDash() {
+  const d = await api('/api/governo/previne/dashboard/');
+  document.getElementById('previneScore').textContent = (d.score_geral||0).toFixed(1)+'%';
+  document.getElementById('previneTotal').textContent = _fmtNum(d.total_metas);
+  document.getElementById('previneAting').textContent = _fmtNum(d.total_atingidas);
+  document.getElementById('previneComp').textContent = d.competencia||'—';
+  const grid = document.getElementById('previneGrid');
+  grid.innerHTML = (d.por_indicador||[]).map(ind=>{
+    const pct = ind.media_resultado||0;
+    const meta = ind.media_meta||0;
+    const ok = pct >= meta;
+    return `<div class="ind-card">
+      <div class="ind-name">${ind.label}</div>
+      <div class="ind-vals">
+        <span>Resultado: <strong style="color:${ok?'var(--ok)':'var(--warn)'}">${pct.toFixed(1)}%</strong></span>
+        <span>Meta: ${meta.toFixed(1)}%</span>
+      </div>
+      <div class="ind-bar"><div class="ind-bar-fill ${ok?'atingiu':''}" style="width:${Math.min(100,pct/Math.max(meta,1)*100)}%"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">${ind.atingiram_meta}/${ind.total_municipios} municípios atingiram a meta</div>
+    </div>`;
+  }).join('') || '<div class="empty">Sem dados para esta competência</div>';
+}
+
+async function carregarPrevineLista() {
+  const comp = document.getElementById('filtroPrevineComp')?.value||'';
+  let url = '/api/governo/previne/';
+  if (comp) url += '?competencia='+comp;
+  const d = await api(url);
+  const list = d.metas||[];
+  const tb = document.getElementById('tbodyPrevine');
+  if (!list.length) { tb.innerHTML='<tr><td colspan="8" class="empty">Nenhuma meta registrada</td></tr>'; return; }
+  tb.innerHTML = list.map(m=>`<tr>
+    <td style="max-width:200px;font-size:12px">${m.indicador_label}</td>
+    <td>${m.competencia}</td>
+    <td>${m.municipio||'—'}</td>
+    <td>${_fmtNum(m.denominador)}</td>
+    <td>${_fmtNum(m.numerador)}</td>
+    <td>${parseFloat(m.meta_percentual).toFixed(1)}%</td>
+    <td><strong style="color:${m.atingiu_meta?'var(--ok)':'var(--warn)'}">${parseFloat(m.resultado_percentual).toFixed(1)}%</strong></td>
+    <td>${m.atingiu_meta?'<span class="badge badge-ok">✓ Sim</span>':'<span class="badge badge-warn">✗ Não</span>'}</td>
+  </tr>`).join('');
+}
+
+function abrirModalMeta() {
+  ['metaIndicador','metaComp','metaMunicipio','metaDenom','metaNumer','metaPctMeta'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('metaIndicador').value='prenatal_6';
+  abrirModal('modalMeta');
+}
+
+async function salvarMeta() {
+  const body = {
+    indicador:v('metaIndicador'), competencia:v('metaComp'),
+    municipio:v('metaMunicipio'),
+    denominador:parseInt(v('metaDenom'))||0,
+    numerador:parseInt(v('metaNumer'))||0,
+    meta_percentual:parseFloat(v('metaPctMeta'))||0,
+  };
+  if (!body.indicador || !body.competencia) return alert('Indicador e competência são obrigatórios');
+  await api('/api/governo/previne/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalMeta');
+  carregarPrevineLista(); carregarPrevineDash();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FASE 2 — CONTRATOS DE GESTÃO
+// ══════════════════════════════════════════════════════════════════
+let _contratos2 = [];
+
+async function carregarContratosDash() {
+  const d = await api('/api/governo/dashboard/fase2/');
+  const c = d.contratos||{};
+  document.getElementById('contratosVigentes').textContent = _fmtNum(c.vigentes);
+  document.getElementById('contratosVencendo').textContent = _fmtNum(c.vencendo_30d);
+  // Totais calculados client-side
+  const total = _contratos2.filter(x=>x.status==='vigente').reduce((s,x)=>s+parseFloat(x.valor_total||0),0);
+  document.getElementById('contratosValorTotal').textContent = 'R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('contratosVencidos').textContent = _contratos2.filter(x=>x.status==='vencido').length;
+}
+
+async function carregarContratos() {
+  const status = document.getElementById('filtroContStatus')?.value||'';
+  const tipo = document.getElementById('filtroContTipo')?.value||'';
+  let url = '/api/governo/contratos/?';
+  if (status) url += 'status='+status+'&';
+  if (tipo) url += 'tipo='+tipo;
+  const d = await api(url);
+  _contratos2 = d.contratos||[];
+  const tb = document.getElementById('tbodyCont');
+  if (!_contratos2.length) { tb.innerHTML='<tr><td colspan="10" class="empty">Nenhum contrato cadastrado</td></tr>'; return; }
+  const SMAP={vigente:'<span class="badge badge-ok">Vigente</span>',vencido:'<span class="badge badge-danger">Vencido</span>',suspenso:'<span class="badge badge-warn">Suspenso</span>',rescindido:'<span class="badge" style="color:var(--muted)">Rescindido</span>'};
+  tb.innerHTML = _contratos2.map(c=>`<tr>
+    <td><code style="font-size:11px">${c.numero_contrato}</code></td>
+    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${c.fornecedor_nome}</strong></td>
+    <td>${c.tipo_label}</td>
+    <td>${_fmtR(c.valor_total)}</td>
+    <td>${_fmtR(c.valor_mensal)}</td>
+    <td style="font-size:12px">${c.data_inicio}</td>
+    <td style="font-size:12px;color:${c.dias_para_vencer<30?'var(--danger)':c.dias_para_vencer<90?'var(--warn)':'var(--text)'}">${c.data_fim}</td>
+    <td>${SMAP[c.status]||c.status}</td>
+    <td>${c.gestor_contrato||'—'}</td>
+    <td>
+      <button class="btn btn-ghost btn-sm" onclick="editarContrato(${c.id})">✏️</button>
+    </td>
+  </tr>`).join('');
+}
+
+function abrirModalContrato() {
+  document.getElementById('contId').value='';
+  ['contNumero','contFornecedor','contCnpj','contObjeto','contValorTotal','contValorMensal','contInicio','contFim','contGestor'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('contTipo').value='hospital';
+  document.getElementById('contStatus').value='vigente';
+  abrirModal('modalContrato');
+}
+
+function editarContrato(id) {
+  const c = _contratos2.find(x=>x.id===id); if(!c) return;
+  document.getElementById('contId').value=c.id;
+  document.getElementById('contNumero').value=c.numero_contrato;
+  document.getElementById('contFornecedor').value=c.fornecedor_nome;
+  document.getElementById('contCnpj').value=c.fornecedor_cnpj||'';
+  document.getElementById('contTipo').value=c.tipo;
+  document.getElementById('contStatus').value=c.status;
+  document.getElementById('contObjeto').value=c.objeto;
+  document.getElementById('contValorTotal').value=c.valor_total||0;
+  document.getElementById('contValorMensal').value=c.valor_mensal||0;
+  document.getElementById('contInicio').value=c.data_inicio;
+  document.getElementById('contFim').value=c.data_fim;
+  document.getElementById('contGestor').value=c.gestor_contrato||'';
+  abrirModal('modalContrato');
+}
+
+async function salvarContrato() {
+  const id = document.getElementById('contId').value;
+  const body = {
+    numero_contrato:v('contNumero'), fornecedor_nome:v('contFornecedor'),
+    fornecedor_cnpj:v('contCnpj'), tipo:v('contTipo'), status:v('contStatus'),
+    objeto:v('contObjeto'), valor_total:parseFloat(v('contValorTotal'))||0,
+    valor_mensal:parseFloat(v('contValorMensal'))||0,
+    data_inicio:v('contInicio'), data_fim:v('contFim'), gestor_contrato:v('contGestor'),
+  };
+  const req = ['numero_contrato','fornecedor_nome','tipo','objeto','data_inicio','data_fim'];
+  for (const f of req) { if (!body[f]) return alert(f+' é obrigatório'); }
+  const url = id ? `/api/governo/contratos/${id}/` : '/api/governo/contratos/';
+  const method = id ? 'PUT' : 'POST';
+  await api(url, {method, body:JSON.stringify(body)});
+  fecharModal('modalContrato');
+  carregarContratos(); carregarContratosDash();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FASE 2 — URGÊNCIA E EMERGÊNCIA
+// ══════════════════════════════════════════════════════════════════
+let _urgencias = [];
+
+async function carregarUrgDash() {
+  const d = await api('/api/governo/urgencia/dashboard/');
+  const sa = d.semana_atual||{};
+  document.getElementById('urgTotal').textContent = _fmtNum(sa.total);
+  document.getElementById('urgVermelho').textContent = _fmtNum(sa.vermelho);
+  document.getElementById('urgObitos').textContent = _fmtNum(sa.obitos);
+  document.getElementById('urgTempoMedio').textContent = Math.round(sa.tempo_medio||0);
+  // Manchester chart
+  const mc = document.getElementById('manchesterChart');
+  const cores = [
+    {cor:'vermelho',label:'Vermelho',bg:'#ff4d6d',val:sa.vermelho||0},
+    {cor:'laranja',label:'Laranja',bg:'#ff8c00',val:sa.laranja||0},
+    {cor:'amarelo',label:'Amarelo',bg:'#ffd700',val:sa.amarelo||0},
+    {cor:'verde',label:'Verde',bg:'#00e5b0',val:sa.verde||0},
+    {cor:'azul',label:'Azul',bg:'#00c2ff',val:sa.azul||0},
+  ];
+  const maxVal = Math.max(...cores.map(c=>c.val),1);
+  mc.innerHTML = cores.map(c=>`<div style="display:flex;align-items:center;gap:8px">
+    <div style="width:70px;font-size:12px;color:${c.bg};font-weight:700">${c.label}</div>
+    <div class="prog-bar" style="flex:1"><div class="prog-fill" style="width:${Math.round(c.val/maxVal*100)}%;background:${c.bg}"></div></div>
+    <div style="font-size:12px;font-weight:700;width:50px;text-align:right;color:${c.bg}">${_fmtNum(c.val)}</div>
+  </div>`).join('');
+  // Tipo chart
+  const tc = document.getElementById('urgTipoChart');
+  const tipos = Object.entries(d.por_tipo_unidade||{});
+  const maxT = Math.max(...tipos.map(([,v])=>v.total),1);
+  tc.innerHTML = tipos.map(([key,t])=>`<div style="display:flex;align-items:center;gap:8px">
+    <div style="width:110px;font-size:12px;color:var(--muted)">${t.label}</div>
+    <div class="prog-bar" style="flex:1"><div class="prog-fill" style="width:${Math.round(t.total/maxT*100)}%"></div></div>
+    <div style="font-size:12px;font-weight:700;width:50px;text-align:right">${_fmtNum(t.total)}</div>
+  </div>`).join('') || '<div class="empty">Sem dados</div>';
+}
+
+async function carregarUrgencia() {
+  const tipo = document.getElementById('filtroUrgTipo')?.value||'';
+  let url = '/api/governo/urgencia/';
+  if (tipo) url += '?tipo_unidade='+tipo;
+  const d = await api(url);
+  _urgencias = d.atendimentos||[];
+  const tb = document.getElementById('tbodyUrg');
+  if (!_urgencias.length) { tb.innerHTML='<tr><td colspan="11" class="empty">Nenhum registro de atendimento</td></tr>'; return; }
+  tb.innerHTML = _urgencias.slice(0,100).map(a=>`<tr>
+    <td>${a.data_atendimento}</td>
+    <td>${a.unidade_nome||'—'}</td>
+    <td>${a.tipo_unidade_label}</td>
+    <td><strong>${_fmtNum(a.total_atendimentos)}</strong></td>
+    <td style="color:#ff4d6d">${_fmtNum(a.vermelho)}</td>
+    <td style="color:#ff8c00">${_fmtNum(a.laranja)}</td>
+    <td style="color:#ffd700">${_fmtNum(a.amarelo)}</td>
+    <td style="color:#00e5b0">${_fmtNum(a.verde)}</td>
+    <td style="color:#00c2ff">${_fmtNum(a.azul)}</td>
+    <td style="color:var(--danger)">${_fmtNum(a.obitos)}</td>
+    <td>${_fmtNum(a.tempo_espera_medio_min)}</td>
+  </tr>`).join('');
+}
+
+function abrirModalUrgencia() {
+  ['urgData','urgTotal2','urgVerm','urgLar','urgAmar','urgVerde','urgAzul','urgObitos2','urgTempoE'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('urgTipoU').value='upa';
+  const sel = document.getElementById('urgUnidId');
+  if (sel) sel.innerHTML='<option value="">— Sem unidade específica —</option>'+_unidades.filter(u=>['upa','hospital','pronto_socorro'].includes(u.tipo)).map(u=>`<option value="${u.id}">${u.nome}</option>`).join('');
+  abrirModal('modalUrgencia');
+}
+
+async function salvarUrgencia() {
+  const body = {
+    tipo_unidade:v('urgTipoU'),
+    unidade_id:v('urgUnidId')||null,
+    data_atendimento:v('urgData'),
+    total_atendimentos:parseInt(v('urgTotal2'))||0,
+    vermelho:parseInt(v('urgVerm'))||0, laranja:parseInt(v('urgLar'))||0,
+    amarelo:parseInt(v('urgAmar'))||0, verde:parseInt(v('urgVerde'))||0,
+    azul:parseInt(v('urgAzul'))||0, obitos:parseInt(v('urgObitos2'))||0,
+    tempo_espera_medio_min:parseInt(v('urgTempoE'))||0,
+  };
+  if (!body.tipo_unidade || !body.data_atendimento) return alert('Tipo de unidade e data são obrigatórios');
+  await api('/api/governo/urgencia/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalUrgencia');
+  carregarUrgencia(); carregarUrgDash();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FASE 2 — PAINEL GERAL
+// ══════════════════════════════════════════════════════════════════
+async function carregarFase2Dash() {
+  const d = await api('/api/governo/dashboard/fase2/');
+  const r=d.rede||{}, v2=d.vigilancia||{}, reg=d.regulacao||{}, p=d.previne||{}, c=d.contratos||{}, u=d.urgencia_7d||{};
+  const item=(label,val,cor)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:13px;color:var(--muted)">${label}</span><span style="font-size:16px;font-weight:700;color:${cor||'var(--text)'}">${val}</span></div>`;
+  document.getElementById('fase2Rede').innerHTML =
+    item('Unidades Ativas',_fmtNum(r.unidades_ativas),'var(--ok)')+
+    item('Total de Unidades',_fmtNum(r.unidades_total))+
+    item('Equipes ESF Ativas',_fmtNum(r.equipes_esf),'var(--accent)')+
+    item('Pop. Coberta ESF',_fmtNum(r.populacao_coberta_esf),'var(--teal)');
+  document.getElementById('fase2Vigil').innerHTML =
+    item('Surtos Ativos',_fmtNum(v2.surtos_ativos),'var(--danger)')+
+    item('Notificações (30d)',_fmtNum(v2.notificacoes_30d),'var(--warn)');
+  document.getElementById('fase2Reg').innerHTML =
+    item('Aguardando Vaga',_fmtNum(reg.leitos_aguardando),'var(--warn)')+
+    item('Tempo Médio Espera',(reg.tempo_medio_espera_horas||0).toFixed(1)+'h','var(--info)');
+  document.getElementById('fase2Previne').innerHTML =
+    item('Competência',p.competencia||'—')+
+    item('Score Geral',(p.score_percentual||0).toFixed(1)+'%',p.score_percentual>=70?'var(--ok)':'var(--warn)');
+  document.getElementById('fase2Contr').innerHTML =
+    item('Vigentes',_fmtNum(c.vigentes),'var(--ok)')+
+    item('Vencendo em 30d',_fmtNum(c.vencendo_30d),'var(--danger)');
+  document.getElementById('fase2Urg').innerHTML =
+    item('Atendimentos',_fmtNum(u.total_atendimentos))+
+    item('Óbitos',_fmtNum(u.obitos),'var(--danger)');
+}
+
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
 
 // Init
@@ -830,6 +1747,329 @@ carregarKpis();
 carregarProgramas();
 carregarOrcamentos();
 </script>
+<!-- ═══ Modal: Unidade de Saúde ═══════════════════════════════════════════════ -->
+<div class="modal-bg" id="modalUnidade">
+  <div class="modal" style="max-width:680px">
+    <h3>🏥 Unidade de Saúde</h3>
+    <input type="hidden" id="unidId">
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="unidNome" placeholder="Nome da unidade"></div>
+      <div class="form-group"><label>CNES</label><input id="unidCnes" placeholder="0000000" maxlength="7"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo *</label>
+        <select id="unidTipo">
+          <option value="ubs">UBS</option><option value="upa">UPA 24h</option>
+          <option value="caps_i">CAPS I</option><option value="caps_ii">CAPS II</option>
+          <option value="caps_iii">CAPS III 24h</option><option value="caps_ad">CAPS AD</option>
+          <option value="caps_inf">CAPS Infantil</option><option value="hospital">Hospital</option>
+          <option value="amb">Ambulatório</option><option value="ceo">CEO</option>
+          <option value="policlinica">Policlínica</option><option value="cerest">CEREST</option>
+          <option value="laboratorio">Laboratório</option><option value="cco">CCO</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select id="unidStatus">
+          <option value="ativa">Ativa</option><option value="inativa">Inativa</option>
+          <option value="obras">Em Obras</option><option value="interditada">Interditada</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Município *</label><input id="unidMunicipio" placeholder="Nome do município"></div>
+      <div class="form-group"><label>UF</label>
+        <select id="unidUF">
+          <option value="">— selecione —</option>
+          <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option>
+          <option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option>
+          <option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option>
+          <option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+          <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option>
+          <option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option>
+          <option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option>
+          <option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option>
+          <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Bairro</label><input id="unidBairro" placeholder="Bairro"></div>
+      <div class="form-group"><label>Telefone</label><input id="unidTelefone" placeholder="(00) 0000-0000"></div>
+    </div>
+    <div class="form-group"><label>Endereço</label><input id="unidEndereco" placeholder="Endereço completo"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Leitos SUS</label><input id="unidLeitusSus" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Leitos UTI</label><input id="unidLeitosUti" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Pop. Referenciada</label><input id="unidPopRef" type="number" min="0" value="0"></div>
+    </div>
+    <div class="form-group"><label>Diretor(a)</label><input id="unidDiretor" placeholder="Nome do diretor"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalUnidade')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarUnidade()">💾 Salvar Unidade</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Notificação Compulsória ═══════════════════════════════════════ -->
+<div class="modal-bg" id="modalNotif">
+  <div class="modal">
+    <h3>🦠 Notificação Compulsória</h3>
+    <input type="hidden" id="notifId">
+    <div class="form-row">
+      <div class="form-group"><label>Doença *</label>
+        <select id="notifDoenca">
+          <option value="dengue">Dengue</option><option value="zika">Zika Vírus</option>
+          <option value="chikungunya">Chikungunya</option><option value="malaria">Malária</option>
+          <option value="febre_amarela">Febre Amarela</option><option value="tuberculose">Tuberculose</option>
+          <option value="hanseniase">Hanseníase</option><option value="hiv_aids">HIV/AIDS</option>
+          <option value="sifilis">Sífilis</option><option value="sifilis_congenita">Sífilis Congênita</option>
+          <option value="hepatite_a">Hepatite A</option><option value="hepatite_b">Hepatite B</option>
+          <option value="meningite">Meningite</option><option value="sarampo">Sarampo</option>
+          <option value="coqueluche">Coqueluche</option><option value="leptospirose">Leptospirose</option>
+          <option value="covid19">COVID-19</option><option value="mpox">Mpox</option>
+          <option value="influenza_grave">Influenza Grave</option>
+          <option value="leishmaniose_visceral">Leishmaniose Visceral</option>
+          <option value="doenca_chagas">Doença de Chagas</option>
+          <option value="intoxicacao">Intoxicação Exógena</option>
+          <option value="acidente_trabalho">Acidente de Trabalho Grave</option>
+          <option value="violencia">Violência Interpessoal</option><option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Data Notificação *</label><input id="notifData" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Município *</label><input id="notifMunicipio" placeholder="Município de notificação"></div>
+      <div class="form-group"><label>UF</label><input id="notifUF" maxlength="2" placeholder="SP"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Sexo</label>
+        <select id="notifSexo"><option value="M">Masculino</option><option value="F">Feminino</option><option value="I">Ignorado</option></select>
+      </div>
+      <div class="form-group"><label>Idade</label><input id="notifIdade" type="number" min="0" max="130" placeholder="anos"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Status Investigação</label>
+        <select id="notifStatus"><option value="aberto">Aberto</option><option value="em_investigacao">Em Investigação</option><option value="encerrado">Encerrado</option></select>
+      </div>
+      <div class="form-group"><label>Evolução</label>
+        <select id="notifEvolucao"><option value="ativo">Em Acompanhamento</option><option value="curado">Curado</option><option value="obito">Óbito</option><option value="ignorado">Ignorado</option></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalNotif')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNotificacao()">💾 Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Surto Epidemiológico ══════════════════════════════════════════ -->
+<div class="modal-bg" id="modalSurto">
+  <div class="modal">
+    <h3>🚨 Surto Epidemiológico</h3>
+    <input type="hidden" id="surtoId">
+    <div class="form-row">
+      <div class="form-group"><label>Doença *</label><input id="surtoDireto" placeholder="Ex: Dengue, Meningite…"></div>
+      <div class="form-group"><label>Data Início *</label><input id="surtoDataInicio" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Município *</label><input id="surtoMunicipio" placeholder="Município"></div>
+      <div class="form-group"><label>UF</label><input id="surtoUF" maxlength="2" placeholder="SP"></div>
+    </div>
+    <div class="form-group"><label>Bairro</label><input id="surtoBairro" placeholder="Bairro (opcional)"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Total de Casos</label><input id="surtoCasos" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Total de Óbitos</label><input id="surtoObitos" type="number" min="0" value="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Status</label>
+        <select id="surtoStatus"><option value="ativo">Ativo</option><option value="controlado">Controlado</option><option value="encerrado">Encerrado</option></select>
+      </div>
+      <div class="form-group"><label>Nível de Alerta</label>
+        <select id="surtoAlerta"><option value="verde">Verde</option><option value="amarelo">Amarelo</option><option value="laranja">Laranja</option><option value="vermelho">Vermelho</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Responsável pela Investigação</label><input id="surtoResponsavel" placeholder="Nome / equipe responsável"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalSurto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarSurto()">💾 Salvar Surto</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Regulação de Leito ════════════════════════════════════════════ -->
+<div class="modal-bg" id="modalRegulacao">
+  <div class="modal">
+    <h3>🏨 Solicitação de Regulação de Leito</h3>
+    <input type="hidden" id="regId">
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Leito *</label>
+        <select id="regTipoLeito">
+          <option value="uti_adulto">UTI Adulto</option><option value="uti_neo">UTI Neonatal</option>
+          <option value="uti_ped">UTI Pediátrica</option><option value="clinico">Clínico</option>
+          <option value="cirurgico">Cirúrgico</option><option value="obstetricia">Obstetrícia</option>
+          <option value="psiquiatria">Psiquiatria</option><option value="queimados">Queimados</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Prioridade</label>
+        <select id="regPrioridade"><option value="emergencia">Emergência</option><option value="urgencia">Urgência</option><option value="eletivo">Eletivo</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CID Principal</label><input id="regCid" placeholder="Ex: J18.9" maxlength="10"></div>
+      <div class="form-group"><label>Idade do Paciente</label><input id="regIdade" type="number" min="0" max="130" placeholder="anos"></div>
+    </div>
+    <div class="form-group"><label>Diagnóstico / Hipótese</label><input id="regDiagnostico" placeholder="Descrição clínica"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Município de Origem</label><input id="regMunicipioOrigem" placeholder="Município solicitante"></div>
+      <div class="form-group"><label>Médico Solicitante</label><input id="regMedico" placeholder="Nome do médico"></div>
+    </div>
+    <div class="form-group"><label>Observações</label><textarea id="regObs" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalRegulacao')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarRegulacao()">💾 Solicitar Regulação</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Produção Ambulatorial ═════════════════════════════════════════ -->
+<div class="modal-bg" id="modalProducao">
+  <div class="modal">
+    <h3>📋 Produção Ambulatorial</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Unidade *</label><select id="prodUnidId"><option value="">— selecione —</option></select></div>
+      <div class="form-group"><label>Competência * (AAAA-MM)</label><input id="prodComp" type="month"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Consultas Básicas</label><input id="prodConsBas" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Consultas Especializadas</label><input id="prodConsEsp" type="number" min="0" value="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Procedimentos Básicos</label><input id="prodProcBas" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Procedimentos Especializados</label><input id="prodProcEsp" type="number" min="0" value="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Exames Realizados</label><input id="prodExames2" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Visitas Domiciliares</label><input id="prodVisitas2" type="number" min="0" value="0"></div>
+    </div>
+    <div class="form-group"><label>Acolhimentos</label><input id="prodAcolhim" type="number" min="0" value="0"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalProducao')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarProducao()">💾 Salvar Produção</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Meta Previne Brasil ═══════════════════════════════════════════ -->
+<div class="modal-bg" id="modalMeta">
+  <div class="modal">
+    <h3>🎯 Meta Previne Brasil</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Indicador *</label>
+        <select id="metaIndicador">
+          <option value="prenatal_6">Pré-natal ≥6 consultas</option>
+          <option value="prenatal_sifilis_hiv">Pré-natal Sífilis e HIV</option>
+          <option value="gestante_odonto">Gestantes — Odontologia</option>
+          <option value="consumo_alcool">Álcool/drogas — Avaliação</option>
+          <option value="hipertensos">Hipertensos — PA aferida</option>
+          <option value="diabeticos">Diabéticos — HbA1c</option>
+          <option value="criancas_obesidade">Crianças &lt;5a — Nutrição</option>
+          <option value="saude_bucal_ab">Saúde Bucal — Procedimentos</option>
+          <option value="visita_puerpera">Puérperas — Visita 1ª semana</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Competência *</label><input id="metaComp" type="month"></div>
+    </div>
+    <div class="form-group"><label>Município (deixe em branco para consolidado)</label><input id="metaMunicipio" placeholder="Município (opcional)"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Denominador (pop. elegível)</label><input id="metaDenom" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Numerador (atingiram critério)</label><input id="metaNumer" type="number" min="0" value="0"></div>
+    </div>
+    <div class="form-group"><label>Meta (%)</label><input id="metaPctMeta" type="number" min="0" max="100" step="0.1" placeholder="Ex: 60.0"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalMeta')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarMeta()">💾 Salvar Meta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Contrato de Gestão ════════════════════════════════════════════ -->
+<div class="modal-bg" id="modalContrato">
+  <div class="modal" style="max-width:680px">
+    <h3>📑 Contrato de Gestão em Saúde</h3>
+    <input type="hidden" id="contId">
+    <div class="form-row">
+      <div class="form-group"><label>Nº Contrato *</label><input id="contNumero" placeholder="Ex: 001/2026"></div>
+      <div class="form-group"><label>Tipo *</label>
+        <select id="contTipo">
+          <option value="hospital">Hospital Contratado</option><option value="clinica">Clínica/AMB</option>
+          <option value="laboratorio">Laboratório</option><option value="imagem">Imagem/Diagnóstico</option>
+          <option value="sadt">SADT</option><option value="oss">OSS</option>
+          <option value="convenio_federal">Convênio Federal</option>
+          <option value="convenio_estadual">Convênio Estadual</option><option value="outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Fornecedor / Contratado *</label><input id="contFornecedor" placeholder="Razão social"></div>
+      <div class="form-group"><label>CNPJ</label><input id="contCnpj" placeholder="00.000.000/0000-00" maxlength="18"></div>
+    </div>
+    <div class="form-group"><label>Objeto *</label><textarea id="contObjeto" rows="2" placeholder="Descrição do objeto do contrato"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor Total (R$)</label><input id="contValorTotal" type="number" min="0" step="0.01" value="0"></div>
+      <div class="form-group"><label>Valor Mensal (R$)</label><input id="contValorMensal" type="number" min="0" step="0.01" value="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Início *</label><input id="contInicio" type="date"></div>
+      <div class="form-group"><label>Término *</label><input id="contFim" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Status</label>
+        <select id="contStatus"><option value="vigente">Vigente</option><option value="vencido">Vencido</option><option value="suspenso">Suspenso</option><option value="rescindido">Rescindido</option></select>
+      </div>
+      <div class="form-group"><label>Gestor do Contrato</label><input id="contGestor" placeholder="Nome do gestor responsável"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalContrato')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarContrato()">💾 Salvar Contrato</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Atendimento de Urgência ═══════════════════════════════════════ -->
+<div class="modal-bg" id="modalUrgencia">
+  <div class="modal">
+    <h3>🚑 Registro de Atendimento — Urgência/Emergência</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Unidade *</label>
+        <select id="urgTipoU"><option value="samu">SAMU 192</option><option value="upa">UPA 24h</option><option value="pronto_socorro">Pronto-Socorro</option><option value="cco">CCO</option></select>
+      </div>
+      <div class="form-group"><label>Data de Atendimento *</label><input id="urgData" type="date"></div>
+    </div>
+    <div class="form-group"><label>Unidade (opcional)</label><select id="urgUnidId"><option value="">— sem unidade específica —</option></select></div>
+    <div class="form-row">
+      <div class="form-group"><label>Total de Atendimentos</label><input id="urgTotal2" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Tempo Médio Espera (min)</label><input id="urgTempoE" type="number" min="0" value="0"></div>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Classificação Manchester</div>
+    <div class="form-row">
+      <div class="form-group"><label style="color:#ff4d6d">Vermelho</label><input id="urgVerm" type="number" min="0" value="0"></div>
+      <div class="form-group"><label style="color:#ff8c00">Laranja</label><input id="urgLar" type="number" min="0" value="0"></div>
+      <div class="form-group"><label style="color:#ffd700">Amarelo</label><input id="urgAmar" type="number" min="0" value="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label style="color:#00e5b0">Verde</label><input id="urgVerde" type="number" min="0" value="0"></div>
+      <div class="form-group"><label style="color:#00c2ff">Azul</label><input id="urgAzul" type="number" min="0" value="0"></div>
+      <div class="form-group"><label style="color:var(--danger)">Óbitos</label><input id="urgObitos2" type="number" min="0" value="0"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalUrgencia')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarUrgencia()">💾 Registrar</button>
+    </div>
+  </div>
+</div>
+
 <script>(function tabGuard(){function cookieVal(n){var m=document.cookie.match("(^|;)\\s*"+n+"\\s*=\\s*([^;]+)");return m?m.pop():""}var rk="_tab_sync_gov";async function syncTab(){var ssId=sessionStorage.getItem("empresa_id");var ckId=cookieVal("empresa_id");if(!ssId||ssId===ckId)return;var token=sessionStorage.getItem("auth_token")||sessionStorage.getItem("token");if(!token)return;try{var res=await fetch("/api/sessao/aba",{method:"POST",headers:{Authorization:"Bearer "+token},credentials:"same-origin"});if(!res.ok)return;var p=await res.json();if(sessionStorage.getItem(rk)==="1"){sessionStorage.removeItem(rk);return}sessionStorage.setItem(rk,"1");window.location.replace(p.destination||"/")}catch(e){}}syncTab();window.addEventListener("focus",syncTab);document.addEventListener("visibilitychange",function(){if(!document.hidden)syncTab()})}());</script>
 </body>
 </html>
