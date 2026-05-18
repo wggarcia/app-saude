@@ -169,7 +169,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       <div class="mf"><label>Matrícula</label><input id="fn-mat" type="text" placeholder="Ex: 00123"></div>
     </div>
     <div class="mf-row">
-      <div class="mf"><label>Data de Nascimento</label><input id="fn-nasc" type="date"></div>
+      <div class="mf"><label>Data de Nascimento (dd/mm/aaaa)</label><input id="fn-nasc" type="text" placeholder="14/05/1980" maxlength="10"></div>
       <div class="mf"><label>Sexo</label>
         <select id="fn-sexo">
           <option value="">— selecione —</option>
@@ -186,7 +186,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 
     <div class="section-label">Contrato & Risco</div>
     <div class="mf-row">
-      <div class="mf"><label>Data de Admissão</label><input id="fn-admissao" type="date"></div>
+      <div class="mf"><label>Data de Admissão (dd/mm/aaaa)</label><input id="fn-admissao" type="text" placeholder="01/03/2024" maxlength="10"></div>
       <div class="mf"><label>Grau de Risco</label>
         <select id="fn-risco">
           <option value="I">Grau I — Mínimo</option>
@@ -225,6 +225,10 @@ let _filtroRisco = 'todos';
 let _editId = null;
 let _deleteId = null;
 
+function isoParaBr(iso){if(!iso)return '';const[y,m,d]=iso.split('-');return`${d}/${m}/${y}`;}
+function brParaIso(br){if(!br||br.length<8)return null;const p=br.replace(/\D/g,'');if(p.length<8)return null;return`${p.slice(4,8)}-${p.slice(2,4)}-${p.slice(0,2)}`;}
+function mascaraData(el){el.addEventListener('input',()=>{let v=el.value.replace(/\D/g,'');if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);if(v.length>5)v=v.slice(0,5)+'/'+v.slice(5,9);el.value=v;});}
+
 const riscoCls = {I:'b-verde',II:'b-azul',III:'b-amarelo',IV:'b-vermelho'};
 const riscoLabel = {I:'Grau I',II:'Grau II',III:'Grau III',IV:'Grau IV'};
 
@@ -238,17 +242,18 @@ function openModal(func=null){
   _editId = func ? func.id : null;
   document.getElementById('modal-titulo').textContent = func ? 'Editar Funcionário' : 'Cadastrar Funcionário';
   document.getElementById('btn-salvar').textContent = func ? 'Salvar Alterações' : 'Cadastrar Funcionário';
-  // preenche campos
   document.getElementById('fn-nome').value = func?.nome || '';
   document.getElementById('fn-cpf').value = func?.cpf || '';
   document.getElementById('fn-mat').value = func?.matricula || '';
-  document.getElementById('fn-nasc').value = func?.data_nascimento_iso || '';
+  document.getElementById('fn-nasc').value = isoParaBr(func?.data_nascimento_iso || '');
   document.getElementById('fn-sexo').value = func?.sexo || '';
   document.getElementById('fn-cargo').value = func?.cargo || '';
   document.getElementById('fn-setor').value = func?.setor || '';
-  document.getElementById('fn-admissao').value = func?.data_admissao_iso || '';
+  document.getElementById('fn-admissao').value = isoParaBr(func?.data_admissao_iso || '');
   document.getElementById('fn-risco').value = func?.classe_risco || 'II';
   document.getElementById('modal').classList.add('open');
+  mascaraData(document.getElementById('fn-nasc'));
+  mascaraData(document.getElementById('fn-admissao'));
 }
 function closeModal(){document.getElementById('modal').classList.remove('open'); _editId=null;}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal()});
@@ -331,10 +336,10 @@ async function salvar(){
     nome, cargo,
     cpf:document.getElementById('fn-cpf').value.trim(),
     matricula:document.getElementById('fn-mat').value.trim(),
-    data_nascimento:document.getElementById('fn-nasc').value||null,
+    data_nascimento:brParaIso(document.getElementById('fn-nasc').value),
     sexo:document.getElementById('fn-sexo').value,
     setor:document.getElementById('fn-setor').value.trim(),
-    data_admissao:document.getElementById('fn-admissao').value||null,
+    data_admissao:brParaIso(document.getElementById('fn-admissao').value),
     classe_risco:document.getElementById('fn-risco').value,
   };
 
