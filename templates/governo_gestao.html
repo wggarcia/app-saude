@@ -9,7 +9,10 @@
 :root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
-.sidebar{width:240px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.tab-btn-side{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-radius:8px;margin:2px 8px;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif;text-align:left;width:calc(100% - 16px);white-space:nowrap}
+.tab-btn-side:hover{background:rgba(0,194,255,.1);color:var(--accent)}
+.tab-btn-side.active{background:rgba(0,194,255,.1);color:var(--accent)}
 .logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
 .nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
 .nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
@@ -93,6 +96,20 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <a class="nav-link" href="/governo/"><span>📊</span> Alertas e Monitoramento</a>
   <a class="nav-link active" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
   <a class="nav-link" href="/logout-governo/"><span>🚪</span> Sair</a>
+  <div class="nav-section" style="margin-top:8px">Módulos</div>
+  <button class="tab-btn-side active" onclick="setTab('programas')"><span>📋</span> Programas</button>
+  <button class="tab-btn-side" onclick="setTab('indicadores')"><span>📈</span> Indicadores</button>
+  <button class="tab-btn-side" onclick="setTab('planos')"><span>✅</span> Planos de Ação</button>
+  <button class="tab-btn-side" onclick="setTab('orcamento')"><span>💰</span> Orçamento</button>
+  <button class="tab-btn-side" onclick="setTab('atos')"><span>📜</span> Atos Normativos</button>
+  <button class="tab-btn-side" onclick="setTab('rede')"><span>🏥</span> Rede de Saúde</button>
+  <button class="tab-btn-side" onclick="setTab('vigilancia')"><span>🦠</span> Vigilância</button>
+  <button class="tab-btn-side" onclick="setTab('regulacao')"><span>🏨</span> Regulação</button>
+  <button class="tab-btn-side" onclick="setTab('producao')"><span>📋</span> Produção</button>
+  <button class="tab-btn-side" onclick="setTab('previne')"><span>🎯</span> Previne Brasil</button>
+  <button class="tab-btn-side" onclick="setTab('contratos')"><span>📑</span> Contratos</button>
+  <button class="tab-btn-side" onclick="setTab('urgencia')"><span>🚑</span> Urgência/SAMU</button>
+  <button class="tab-btn-side" onclick="setTab('fase2dash')"><span>📊</span> Painel F2</button>
 </aside>
 
 <main class="main">
@@ -144,23 +161,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
   </div>
 
-  <!-- Tabs -->
+  <!-- Tab panels -->
   <div>
-    <div class="tabs" style="flex-wrap:wrap">
-      <button class="tab-btn active" onclick="setTab('programas')">📋 Programas</button>
-      <button class="tab-btn" onclick="setTab('indicadores')">📈 Indicadores</button>
-      <button class="tab-btn" onclick="setTab('planos')">✅ Planos de Ação</button>
-      <button class="tab-btn" onclick="setTab('orcamento')">💰 Orçamento</button>
-      <button class="tab-btn" onclick="setTab('atos')">📜 Atos Normativos</button>
-      <button class="tab-btn" onclick="setTab('rede')">🏥 Rede de Saúde</button>
-      <button class="tab-btn" onclick="setTab('vigilancia')">🦠 Vigilância</button>
-      <button class="tab-btn" onclick="setTab('regulacao')">🏨 Regulação</button>
-      <button class="tab-btn" onclick="setTab('producao')">📋 Produção</button>
-      <button class="tab-btn" onclick="setTab('previne')">🎯 Previne Brasil</button>
-      <button class="tab-btn" onclick="setTab('contratos')">📑 Contratos</button>
-      <button class="tab-btn" onclick="setTab('urgencia')">🚑 Urgência/SAMU</button>
-      <button class="tab-btn" onclick="setTab('fase2dash')">📊 Painel F2</button>
-    </div>
 
     <!-- Programas -->
     <div class="tab-panel active" id="tab-programas" style="margin-top:16px">
@@ -689,8 +691,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
 let _programas = [];
 
 async function api(url, opts={}) {
-  const r = await fetch(url, {headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},...opts});
-  return r.json();
+  try {
+    const r = await fetch(url, {headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},...opts});
+    if (!r.ok) return {};
+    return await r.json();
+  } catch(e) { return {}; }
 }
 function getCsrf() {
   return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1]||'';
@@ -1024,10 +1029,13 @@ function fecharModal(id) { document.getElementById(id).classList.remove('open');
 let _currentTab = 'programas';
 function setTab(tab) {
   _currentTab = tab;
-  const tabs = ['programas','indicadores','planos','orcamento','atos','rede','vigilancia','regulacao','producao','previne','contratos','urgencia','fase2dash'];
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===tab));
+  document.querySelectorAll('.tab-btn-side').forEach(b => {
+    const m = b.getAttribute('onclick')?.match(/setTab\('(\w+)'\)/);
+    b.classList.toggle('active', !!(m && m[1] === tab));
+  });
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('tab-'+tab).classList.add('active');
+  const panel = document.getElementById('tab-'+tab);
+  if (panel) panel.classList.add('active');
   if (tab==='programas') carregarProgramas();
   else if (tab==='indicadores') carregarIndicadores();
   else if (tab==='planos') { popularSelectProgramas('planoProg'); carregarPlanos(); }
