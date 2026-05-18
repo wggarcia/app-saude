@@ -374,6 +374,9 @@ tr:hover td{background:rgba(255,255,255,.018)}
         <button class="tab-btn" id="tabBtn-pacientes" onclick="setTab('pacientes')">👤 Pacientes</button>
         <button class="tab-btn" id="tabBtn-departamentos" onclick="setTab('departamentos')">🏢 Departamentos</button>
         <button class="tab-btn" id="tabBtn-prescricoes" onclick="setTab('prescricoes')">💊 Prescrições</button>
+        <button class="tab-btn" id="tabBtn-uti" onclick="setTab('uti')">🔴 UTI</button>
+        <button class="tab-btn" id="tabBtn-cirurgias" onclick="setTab('cirurgias')">🔪 C. Cirúrgico</button>
+        <button class="tab-btn" id="tabBtn-alta" onclick="setTab('alta')">📄 Alta Hospitalar</button>
       </div>
 
       <!-- ══════ TAB: LEITOS ══════ -->
@@ -530,10 +533,215 @@ tr:hover td{background:rgba(255,255,255,.018)}
         </div>
       </div>
 
+      <!-- ══════ TAB: UTI ══════ -->
+      <div class="tab-panel" id="tab-uti">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <div class="kpi-card"><div class="kpi-val" id="utiTotal">—</div><div class="kpi-lbl">🛏 Pacientes UTI</div></div>
+          <div class="kpi-card"><div class="kpi-val danger" id="utiVent">—</div><div class="kpi-lbl">💨 Ventilação Mecânica</div></div>
+          <div class="kpi-card"><div class="kpi-val warn" id="utiVaso">—</div><div class="kpi-lbl">💉 Drogas Vasoativas</div></div>
+          <div class="kpi-card"><div class="kpi-val danger" id="utiSofa">—</div><div class="kpi-lbl">⚠️ SOFA ≥ 8 (alto risco)</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Monitoramento UTI em Tempo Real</span>
+            <button class="btn btn-outline" onclick="carregarUTI()">↻ Atualizar</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr>
+                <th>Paciente</th><th>Leito</th><th>Dias UTI</th>
+                <th>PA</th><th>SpO₂</th><th>Glasgow</th><th>SOFA</th>
+                <th>VM</th><th>Vasoativo</th><th>Isolamento</th><th>Último Reg.</th><th>Ações</th>
+              </tr></thead>
+              <tbody id="tbodyUTI"><tr><td colspan="12" class="empty">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ TAB: CENTRO CIRÚRGICO ══════ -->
+      <div class="tab-panel" id="tab-cirurgias">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🔪 Agenda Cirúrgica</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <select id="filtroCC" onchange="carregarCirurgias()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px">
+                <option value="">Todos os status</option>
+                <option value="agendado" selected>Agendados</option>
+                <option value="em_andamento">Em Andamento</option>
+                <option value="concluido">Concluídos</option>
+                <option value="cancelado">Cancelados</option>
+              </select>
+              <input type="date" id="ccDataIni" onchange="carregarCirurgias()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px">
+              <button class="btn btn-primary" onclick="abrirModalCirurgia()">+ Agendar Cirurgia</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr>
+                <th>Data/Hora</th><th>Paciente</th><th>Procedimento</th><th>Sala</th>
+                <th>Porte</th><th>Cirurgião</th><th>Anestesia</th><th>Status</th><th>Ações</th>
+              </tr></thead>
+              <tbody id="tbodyCC"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ TAB: ALTA HOSPITALAR ══════ -->
+      <div class="tab-panel" id="tab-alta">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📄 Sumários de Alta</span>
+            <p style="font-size:12px;color:var(--muted);margin:0">Selecione um paciente internado para emitir o sumário de alta.</p>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <select id="altaPacienteSelect" style="flex:1;min-width:220px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px">
+              <option value="">— selecione o paciente internado —</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalAlta()">Emitir Sumário de Alta</button>
+          </div>
+          <p style="font-size:13px;color:var(--muted)">O sumário de alta libera o leito automaticamente e registra as orientações ao paciente, receituário de saída e encaminhamentos.</p>
+        </div>
+      </div>
+
     </div><!-- end tabs wrapper -->
   </div><!-- end .content -->
 </main>
 </div><!-- end .layout -->
+
+<!-- ══════ MODALS FASE 1 ══════ -->
+
+<!-- Modal: Agendar Cirurgia -->
+<div class="modal-bg" id="modalCirurgia">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header"><span class="modal-title">🔪 Agendar Cirurgia</span>
+      <button class="btn-icon" onclick="fecharModal('modalCirurgia')">✕</button></div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="mf" style="grid-column:1/-1">
+        <label>Paciente Internado</label>
+        <select id="ccPaciente" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)"></select>
+      </div>
+      <div class="mf" style="grid-column:1/-1">
+        <label>Procedimento *</label>
+        <input id="ccProcedimento" type="text" placeholder="Ex: Apendicectomia laparoscópica">
+      </div>
+      <div class="mf"><label>Código TUSS</label><input id="ccTUSS" type="text" placeholder="Ex: 31005020"></div>
+      <div class="mf"><label>Sala</label><input id="ccSala" type="text" placeholder="Ex: Sala 1, CC-A"></div>
+      <div class="mf"><label>Data/Hora Prevista *</label><input id="ccDataHora" type="datetime-local"></div>
+      <div class="mf"><label>Porte</label>
+        <select id="ccPorte" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)">
+          <option value="pequeno">Pequeno Porte</option>
+          <option value="medio" selected>Médio Porte</option>
+          <option value="grande">Grande Porte</option>
+          <option value="especial">Especial</option>
+        </select>
+      </div>
+      <div class="mf"><label>Cirurgião Principal</label><input id="ccCirurgiao" type="text" placeholder="Nome do cirurgião"></div>
+      <div class="mf"><label>CRM Cirurgião</label><input id="ccCRM" type="text" placeholder="Ex: 12345/SP"></div>
+      <div class="mf"><label>Anestesiologista</label><input id="ccAnestesio" type="text" placeholder="Nome"></div>
+      <div class="mf"><label>Tipo de Anestesia</label><input id="ccAnestesia" type="text" placeholder="Geral, Raqui, Peridural..."></div>
+      <div class="mf"><label>CID Indicação</label><input id="ccCID" type="text" placeholder="Ex: K37"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalCirurgia')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCirurgia()">Agendar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Sumário de Alta -->
+<div class="modal-bg" id="modalSumarioAlta">
+  <div class="modal" style="max-width:600px;max-height:90vh;overflow-y:auto">
+    <div class="modal-header"><span class="modal-title">📄 Sumário de Alta</span>
+      <button class="btn-icon" onclick="fecharModal('modalSumarioAlta')">✕</button></div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="mf"><label>Tipo de Alta *</label>
+        <select id="altaTipo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)">
+          <option value="alta_medica" selected>Alta Médica</option>
+          <option value="alta_voluntaria">Alta a Pedido</option>
+          <option value="transferencia">Transferência</option>
+          <option value="obito">Óbito</option>
+          <option value="evasao">Evasão</option>
+        </select>
+      </div>
+      <div class="mf"><label>Data/Hora da Alta *</label><input id="altaDataHora" type="datetime-local"></div>
+      <div class="mf"><label>Médico Responsável</label><input id="altaMedico" type="text" placeholder="Nome do médico"></div>
+      <div class="mf"><label>CRM</label><input id="altaCRM" type="text" placeholder="Ex: 12345/SP"></div>
+      <div class="mf"><label>CID Principal</label><input id="altaCID" type="text" placeholder="Ex: J18.9"></div>
+      <div class="mf"><label>Condição de Alta</label>
+        <select id="altaCondicao" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)">
+          <option value="curado">Curado</option>
+          <option value="melhorado" selected>Melhorado</option>
+          <option value="inalterado">Inalterado</option>
+          <option value="piorado">Piorado</option>
+          <option value="obito">Óbito</option>
+        </select>
+      </div>
+      <div class="mf" style="grid-column:1/-1"><label>Diagnóstico Final</label>
+        <textarea id="altaDiagnostico" rows="2" placeholder="Descrição do diagnóstico final..."></textarea></div>
+      <div class="mf" style="grid-column:1/-1"><label>Resumo da Internação</label>
+        <textarea id="altaResumo" rows="3" placeholder="Resumo do curso clínico..."></textarea></div>
+      <div class="mf" style="grid-column:1/-1"><label>Procedimentos Realizados</label>
+        <textarea id="altaProcedimentos" rows="2" placeholder="Ex: Apendicectomia videolaparoscópica..."></textarea></div>
+      <div class="mf" style="grid-column:1/-1"><label>Orientações ao Paciente</label>
+        <textarea id="altaOrientacoes" rows="2" placeholder="Orientações de alta, cuidados em casa..."></textarea></div>
+      <div class="mf" style="grid-column:1/-1"><label>Restrições de Atividade</label>
+        <textarea id="altaRestricoes" rows="2" placeholder="Ex: Repouso relativo por 7 dias..."></textarea></div>
+      <div class="mf" style="grid-column:1/-1"><label>Encaminhamentos</label>
+        <textarea id="altaEncaminhamentos" rows="2" placeholder="Ex: Retorno ambulatorial cardiologia em 15 dias..."></textarea></div>
+      <div class="mf"><label>Data de Retorno Prevista</label><input id="altaRetorno" type="date"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalSumarioAlta')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAlta()">Emitir Alta e Liberar Leito</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Monitoramento UTI -->
+<div class="modal-bg" id="modalUTI">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header"><span class="modal-title" id="utiModalTitulo">Registrar Monitoramento UTI</span>
+      <button class="btn-icon" onclick="fecharModal('modalUTI')">✕</button></div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div class="mf"><label>PA (mmHg)</label><input id="utiPA" type="text" placeholder="120/80"></div>
+      <div class="mf"><label>PAM</label><input id="utiPAM" type="number" placeholder="mmHg"></div>
+      <div class="mf"><label>FC (bpm)</label><input id="utiFC" type="number"></div>
+      <div class="mf"><label>FR (irpm)</label><input id="utiFR" type="number"></div>
+      <div class="mf"><label>Temp (°C)</label><input id="utiTemp" type="number" step="0.1" placeholder="36.5"></div>
+      <div class="mf"><label>SpO₂ (%)</label><input id="utiSPO2" type="number" max="100"></div>
+      <div class="mf"><label>Diurese (mL)</label><input id="utiDiurese" type="number"></div>
+      <div class="mf" style="grid-column:1/-1"><strong style="font-size:12px;color:var(--muted)">GLASGOW</strong></div>
+      <div class="mf"><label>Ocular (1-4)</label><input id="utiGO" type="number" min="1" max="4"></div>
+      <div class="mf"><label>Verbal (1-5)</label><input id="utiGV" type="number" min="1" max="5"></div>
+      <div class="mf"><label>Motor (1-6)</label><input id="utiGM" type="number" min="1" max="6"></div>
+      <div class="mf" style="grid-column:1/-1"><strong style="font-size:12px;color:var(--muted)">SOFA</strong></div>
+      <div class="mf"><label>Resp.</label><input id="utiSR" type="number" min="0" max="4"></div>
+      <div class="mf"><label>Coag.</label><input id="utiSC" type="number" min="0" max="4"></div>
+      <div class="mf"><label>Hepát.</label><input id="utiSH" type="number" min="0" max="4"></div>
+      <div class="mf"><label>Cardio.</label><input id="utiSCV" type="number" min="0" max="4"></div>
+      <div class="mf"><label>Neurol.</label><input id="utiSN" type="number" min="0" max="4"></div>
+      <div class="mf"><label>Renal</label><input id="utiSRn" type="number" min="0" max="4"></div>
+      <div class="mf" style="grid-column:1/-1"><strong style="font-size:12px;color:var(--muted)">VENTILAÇÃO</strong></div>
+      <div class="mf" style="display:flex;align-items:center;gap:8px;grid-column:1/-1">
+        <input type="checkbox" id="utiVM"> <label for="utiVM">Ventilação Mecânica</label>
+        <input type="checkbox" id="utiVaso"> <label for="utiVaso">Drogas Vasoativas</label>
+      </div>
+      <div class="mf"><label>Modo Vent.</label><input id="utiModo" type="text" placeholder="VCV, PSV..."></div>
+      <div class="mf"><label>FiO₂ (%)</label><input id="utiFIO2" type="number" max="100"></div>
+      <div class="mf"><label>PEEP</label><input id="utiPEEP" type="number"></div>
+      <div class="mf"><label>VC (mL)</label><input id="utiVC" type="number"></div>
+      <div class="mf" style="grid-column:2/-1"><label>Droga Vasoativa</label><input id="utiDrogaDesc" type="text" placeholder="Noradrenalina 0,1mcg/kg/min..."></div>
+      <div class="mf" style="grid-column:1/-1"><label>Responsável</label><input id="utiResp" type="text" placeholder="Nome / COREN / CRM"></div>
+      <div class="mf" style="grid-column:1/-1"><label>Observações</label><textarea id="utiObs" rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalUTI')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarMonitoramento()">Registrar</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════ MODALS ══════ -->
 
@@ -1569,7 +1777,7 @@ function popularSelectDeps(sid) {
 // ══════════════════════════════════════════════════════════════
 // TAB NAVIGATION
 // ══════════════════════════════════════════════════════════════
-const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes'];
+const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes','uti','cirurgias','alta'];
 
 function setTab(tab) {
   _currentTab = tab;
@@ -1587,6 +1795,9 @@ function setTab(tab) {
   else if (tab==='pacientes') carregarPacientes();
   else if (tab==='departamentos') carregarDepartamentos();
   else if (tab==='prescricoes') carregarPrescricoes();
+  else if (tab==='uti') carregarUTI();
+  else if (tab==='cirurgias') carregarCirurgias();
+  else if (tab==='alta') carregarAltaTab();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1672,6 +1883,207 @@ async function init() {
 }
 
 init();
+
+// ══════════════════════════════════════════════════════════════
+// FASE 1 — UTI / CENTRO CIRÚRGICO / ALTA HOSPITALAR
+// ══════════════════════════════════════════════════════════════
+
+// ── UTI ───────────────────────────────────────────────────────
+let _utiPacAtual = null;
+
+async function carregarUTI() {
+  const d = await api('/api/hospital/uti/dashboard/');
+  if (!d) return;
+  document.getElementById('utiTotal').textContent = d.total_uti ?? '—';
+  document.getElementById('utiVent').textContent  = d.em_ventilacao_mecanica ?? '—';
+  document.getElementById('utiVaso').textContent  = d.em_drogas_vasoativas ?? '—';
+  document.getElementById('utiSofa').textContent  = d.sofa_alto_risco ?? '—';
+
+  const corSofa = s => s == null ? '' : s >= 11 ? 'color:var(--danger);font-weight:700' : s >= 8 ? 'color:var(--warn);font-weight:700' : 'color:var(--ok)';
+  const corGlas = g => g == null ? '' : g <= 8 ? 'color:var(--danger);font-weight:700' : g <= 12 ? 'color:var(--warn)' : 'color:var(--ok)';
+  const isolBadge = t => t && t !== 'nenhum' ? `<span style="background:var(--warn);color:#000;padding:1px 6px;border-radius:4px;font-size:10px">${t}</span>` : '—';
+
+  const tb = document.getElementById('tbodyUTI');
+  if (!d.pacientes?.length) { tb.innerHTML = '<tr><td colspan="12" class="empty">Nenhum paciente em UTI</td></tr>'; return; }
+  tb.innerHTML = d.pacientes.map(p => `<tr>
+    <td><strong>${p.nome}</strong></td>
+    <td>${p.leito || '—'}</td>
+    <td>${p.dias_uti}d</td>
+    <td style="font-size:12px">${p.pa || '—'}</td>
+    <td>${p.saturacao_o2 != null ? p.saturacao_o2 + '%' : '—'}</td>
+    <td style="${corGlas(p.glasgow_total)}">${p.glasgow_total ?? '—'}</td>
+    <td style="${corSofa(p.sofa_total)}">${p.sofa_total ?? '—'}</td>
+    <td>${p.ventilacao_mecanica ? '<span style="color:var(--danger)">💨 Sim</span>' : '—'}</td>
+    <td>${p.drogas_vasoativas ? '<span style="color:var(--warn)">💉 Sim</span>' : '—'}</td>
+    <td>${isolBadge(p.tipo_isolamento)}</td>
+    <td style="font-size:11px;color:var(--muted)">${p.ultimo_registro || '—'}</td>
+    <td>
+      <button class="btn btn-outline" style="font-size:11px;padding:3px 8px" onclick="abrirModalUTI(${p.id},'${p.nome.replace(/'/g,"\\'")}')">+ Registro</button>
+    </td>
+  </tr>`).join('');
+}
+
+function abrirModalUTI(pacId, nome) {
+  _utiPacAtual = pacId;
+  document.getElementById('utiModalTitulo').textContent = `Registrar UTI — ${nome}`;
+  ['utiPA','utiPAM','utiFC','utiFR','utiTemp','utiSPO2','utiDiurese',
+   'utiGO','utiGV','utiGM','utiSR','utiSC','utiSH','utiSCV','utiSN','utiSRn',
+   'utiModo','utiFIO2','utiPEEP','utiVC','utiDrogaDesc','utiResp','utiObs'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('utiVM').checked = false;
+  document.getElementById('utiVaso').checked = false;
+  abrirModal('modalUTI');
+}
+
+async function salvarMonitoramento() {
+  if (!_utiPacAtual) return;
+  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const body = {
+    pressao_arterial: g('utiPA'), pressao_arterial_media: g('utiPAM') || null,
+    frequencia_cardiaca: g('utiFC') || null, frequencia_respiratoria: g('utiFR') || null,
+    temperatura: g('utiTemp') || null, saturacao_o2: g('utiSPO2') || null,
+    diurese_ml: g('utiDiurese') || null,
+    glasgow_ocular: g('utiGO') || null, glasgow_verbal: g('utiGV') || null, glasgow_motor: g('utiGM') || null,
+    sofa_respiratorio: g('utiSR') || null, sofa_coagulacao: g('utiSC') || null,
+    sofa_hepatico: g('utiSH') || null, sofa_cardiovascular: g('utiSCV') || null,
+    sofa_neurologico: g('utiSN') || null, sofa_renal: g('utiSRn') || null,
+    ventilacao_mecanica: document.getElementById('utiVM').checked,
+    drogas_vasoativas: document.getElementById('utiVaso').checked,
+    modo_ventilatorio: g('utiModo'), fio2_pct: g('utiFIO2') || null,
+    peep: g('utiPEEP') || null, volume_corrente_ml: g('utiVC') || null,
+    droga_vasoativa_desc: g('utiDrogaDesc'), responsavel: g('utiResp'), observacoes: g('utiObs'),
+  };
+  const d = await api(`/api/hospital/pacientes/${_utiPacAtual}/monitoramento-uti/`, { method:'POST', body: JSON.stringify(body) });
+  if (d?.ok) { fecharModal('modalUTI'); carregarUTI(); }
+}
+
+// ── Centro Cirúrgico ───────────────────────────────────────────
+async function carregarCirurgias() {
+  const status = document.getElementById('filtroCC')?.value || '';
+  const dataIni = document.getElementById('ccDataIni')?.value || '';
+  let url = '/api/hospital/centro-cirurgico/?';
+  if (status) url += `status=${status}&`;
+  if (dataIni) url += `data_inicio=${dataIni}`;
+  const d = await api(url);
+  const tb = document.getElementById('tbodyCC');
+  if (!d?.cirurgias?.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma cirurgia encontrada</td></tr>'; return; }
+
+  const corStatus = { agendado:'var(--accent)', em_andamento:'var(--warn)', concluido:'var(--ok)', cancelado:'var(--muted)', suspenso:'var(--danger)' };
+  tb.innerHTML = d.cirurgias.map(c => `<tr>
+    <td style="font-size:12px;white-space:nowrap">${c.data_hora_prevista}</td>
+    <td>${c.paciente_nome || '—'}</td>
+    <td><strong>${c.procedimento}</strong><br><small style="color:var(--muted)">${c.codigo_tuss || ''}</small></td>
+    <td>${c.sala || '—'}</td>
+    <td style="font-size:12px">${c.porte}</td>
+    <td style="font-size:12px">${c.cirurgiao_principal || '—'}</td>
+    <td style="font-size:12px">${c.tipo_anestesia || '—'}</td>
+    <td><span style="background:${corStatus[c.status]||'var(--muted)'};color:#000;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">${c.status}</span></td>
+    <td style="white-space:nowrap">
+      ${c.status==='agendado' ? `<button class="btn btn-outline" style="font-size:11px;padding:3px 8px" onclick="iniciarCirurgia(${c.id})">▶ Iniciar</button>` : ''}
+      ${c.status==='em_andamento' ? `<button class="btn btn-outline" style="font-size:11px;padding:3px 8px" onclick="concluirCirurgia(${c.id})">✓ Concluir</button>` : ''}
+    </td>
+  </tr>`).join('');
+}
+
+async function abrirModalCirurgia() {
+  // Popular select de pacientes internados
+  const sel = document.getElementById('ccPaciente');
+  if (_pacientes?.length) {
+    sel.innerHTML = '<option value="">— sem paciente vinculado —</option>' +
+      _pacientes.filter(p => p.status === 'internado').map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+  }
+  ['ccProcedimento','ccTUSS','ccSala','ccDataHora','ccCirurgiao','ccCRM','ccAnestesio','ccAnestesia','ccCID'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('ccPorte').value = 'medio';
+  abrirModal('modalCirurgia');
+}
+
+async function salvarCirurgia() {
+  const g = id => document.getElementById(id)?.value || '';
+  const procedimento = g('ccProcedimento');
+  const dataHora = g('ccDataHora');
+  if (!procedimento || !dataHora) { alert('Procedimento e data/hora são obrigatórios.'); return; }
+  const body = {
+    paciente_id: g('ccPaciente') ? parseInt(g('ccPaciente')) : null,
+    procedimento, data_hora_prevista: dataHora,
+    codigo_tuss: g('ccTUSS'), sala: g('ccSala'), porte: g('ccPorte'),
+    cirurgiao_principal: g('ccCirurgiao'), cirurgiao_crm: g('ccCRM'),
+    anestesiologista: g('ccAnestesio'), tipo_anestesia: g('ccAnestesia'),
+    cid_indicacao: g('ccCID'),
+  };
+  const d = await api('/api/hospital/centro-cirurgico/', { method:'POST', body: JSON.stringify(body) });
+  if (d?.ok) { fecharModal('modalCirurgia'); carregarCirurgias(); }
+}
+
+async function iniciarCirurgia(id) {
+  const now = new Date().toISOString().slice(0,16);
+  await api(`/api/hospital/centro-cirurgico/${id}/`, { method:'PATCH', body: JSON.stringify({ status:'em_andamento', data_hora_inicio: now }) });
+  carregarCirurgias();
+}
+
+async function concluirCirurgia(id) {
+  const now = new Date().toISOString().slice(0,16);
+  const relatorio = prompt('Relatório cirúrgico (breve descrição):') || '';
+  await api(`/api/hospital/centro-cirurgico/${id}/`, { method:'PATCH', body: JSON.stringify({ status:'concluido', data_hora_fim: now, relatorio_cirurgico: relatorio }) });
+  carregarCirurgias();
+}
+
+// ── Alta Hospitalar ────────────────────────────────────────────
+async function carregarAltaTab() {
+  // Popular select de pacientes internados
+  const sel = document.getElementById('altaPacienteSelect');
+  if (!_pacientes?.length) await carregarPacientes();
+  sel.innerHTML = '<option value="">— selecione o paciente —</option>' +
+    (_pacientes || []).filter(p => p.status === 'internado').map(p => `<option value="${p.id}">${p.nome} — Leito ${p.leito || '?'}</option>`).join('');
+}
+
+function abrirModalAlta() {
+  const sel = document.getElementById('altaPacienteSelect');
+  if (!sel.value) { alert('Selecione um paciente internado.'); return; }
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  document.getElementById('altaDataHora').value = now.toISOString().slice(0,16);
+  ['altaMedico','altaCRM','altaCID','altaDiagnostico','altaResumo',
+   'altaProcedimentos','altaOrientacoes','altaRestricoes','altaEncaminhamentos','altaRetorno'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('altaTipo').value = 'alta_medica';
+  document.getElementById('altaCondicao').value = 'melhorado';
+  abrirModal('modalSumarioAlta');
+}
+
+async function salvarAlta() {
+  const pacId = document.getElementById('altaPacienteSelect').value;
+  if (!pacId) { alert('Selecione um paciente.'); return; }
+  const g = id => document.getElementById(id)?.value || '';
+  const body = {
+    tipo_alta: g('altaTipo'),
+    data_alta: g('altaDataHora'),
+    medico_responsavel: g('altaMedico'),
+    medico_crm: g('altaCRM'),
+    cid_principal: g('altaCID'),
+    condicao_alta: g('altaCondicao'),
+    diagnostico_final: g('altaDiagnostico'),
+    resumo_internacao: g('altaResumo'),
+    procedimentos_realizados: g('altaProcedimentos'),
+    orientacoes_paciente: g('altaOrientacoes'),
+    restricoes_atividade: g('altaRestricoes'),
+    encaminhamentos: g('altaEncaminhamentos'),
+    retorno_previsao: g('altaRetorno') || null,
+    dar_alta: true,
+  };
+  if (!body.data_alta) { alert('Data/hora da alta é obrigatória.'); return; }
+  const d = await api(`/api/hospital/pacientes/${pacId}/sumario-alta/`, { method:'POST', body: JSON.stringify(body) });
+  if (d?.ok) {
+    fecharModal('modalSumarioAlta');
+    alert('Alta emitida com sucesso! Leito liberado.');
+    await Promise.all([carregarLeitos(), carregarPacientes(), carregarKpis()]);
+    carregarAltaTab();
+  }
+}
 </script>
 <script>(function tabGuard(){function cookieVal(n){var m=document.cookie.match("(^|;)\\s*"+n+"\\s*=\\s*([^;]+)");return m?m.pop():""}var rk="_tab_sync_hosp";async function syncTab(){var ssId=sessionStorage.getItem("empresa_id");var ckId=cookieVal("empresa_id");if(!ssId||ssId===ckId)return;var token=sessionStorage.getItem("auth_token")||sessionStorage.getItem("token");if(!token)return;try{var res=await fetch("/api/sessao/aba",{method:"POST",headers:{Authorization:"Bearer "+token},credentials:"same-origin"});if(!res.ok)return;var p=await res.json();if(sessionStorage.getItem(rk)==="1"){sessionStorage.removeItem(rk);return}sessionStorage.setItem(rk,"1");window.location.replace(p.destination||"/")}catch(e){}}syncTab();window.addEventListener("focus",syncTab);document.addEventListener("visibilitychange",function(){if(!document.hidden)syncTab()})}());</script>
 </body>

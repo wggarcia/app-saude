@@ -317,6 +317,15 @@ from api.views_farmacia_ops import (
     api_pedidos_compra_farmacia, api_pedido_compra_status,
     api_farmacia_ops_kpis, api_farmacia_pdf_estoque, api_farmacia_pdf_dispensacoes,
 )
+from api.views_hospital_fase1 import (
+    api_evolucoes_paciente,
+    api_monitoramento_uti,
+    api_sumario_alta,
+    api_centro_cirurgico,
+    api_centro_cirurgico_detalhe,
+    api_hospital_uti_dashboard,
+    api_isolamento_paciente,
+)
 from api.views_hospital_ops import (
     api_departamentos_hospital, api_departamento_hospital_detalhe,
     api_leitos_hospital, api_leito_status,
@@ -790,6 +799,14 @@ urlpatterns = [
     path('api/hospital/prescricoes/<int:prescricao_id>/status/', api_prescricao_status),
     path('api/hospital/pdf/internacoes/', api_hospital_pdf_internacoes),
     path('api/hospital/pdf/internacao/<int:internacao_id>/', api_hospital_pdf_ficha_internacao),
+    # ── Hospital Fase 1: Alta, UTI, Centro Cirúrgico, Isolamento ────────────
+    path('api/hospital/pacientes/<int:pac_id>/evolucoes/', api_evolucoes_paciente),
+    path('api/hospital/pacientes/<int:pac_id>/monitoramento-uti/', api_monitoramento_uti),
+    path('api/hospital/pacientes/<int:pac_id>/sumario-alta/', api_sumario_alta),
+    path('api/hospital/pacientes/<int:pac_id>/isolamento/', api_isolamento_paciente),
+    path('api/hospital/centro-cirurgico/', api_centro_cirurgico),
+    path('api/hospital/centro-cirurgico/<int:cc_id>/', api_centro_cirurgico_detalhe),
+    path('api/hospital/uti/dashboard/', api_hospital_uti_dashboard),
     # ── Rede / Network ───────────────────────────────────────────
     path('api/rede/', api_redes),
     path('api/rede/convidar/', api_rede_convidar),

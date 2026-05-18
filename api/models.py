@@ -3661,6 +3661,13 @@ class PacienteInternado(models.Model):
         ("transferido", "Transferido"),
         ("obito", "Óbito"),
     ]
+    ISOLAMENTO_CHOICES = [
+        ("nenhum",    "Sem isolamento"),
+        ("contato",   "Precaução de contato"),
+        ("gotículas", "Precaução por gotículas"),
+        ("aerossol",  "Precaução por aerossol"),
+        ("protetor",  "Isolamento protetor"),
+    ]
 
     empresa             = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="pacientes_internados")
     nome                = models.CharField(max_length=200)
@@ -3669,8 +3676,17 @@ class PacienteInternado(models.Model):
     data_internacao     = models.DateField()
     leito               = models.ForeignKey(LeitoHospitalar, on_delete=models.SET_NULL, null=True, blank=True, related_name="pacientes_internados")
     diagnostico_cid     = models.CharField(max_length=20, blank=True, default="")
+    diagnostico_descricao = models.TextField(blank=True, default="")
     medico_responsavel  = models.CharField(max_length=200, blank=True, default="")
+    medico_crm          = models.CharField(max_length=30, blank=True, default="")
     convenio            = models.CharField(max_length=200, blank=True, default="")
+    numero_prontuario   = models.CharField(max_length=50, blank=True, default="")
+    tipo_sanguineo      = models.CharField(max_length=5, blank=True, default="")
+    alergias            = models.TextField(blank=True, default="")
+    peso_kg             = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    altura_cm           = models.PositiveSmallIntegerField(null=True, blank=True)
+    tipo_isolamento     = models.CharField(max_length=20, choices=ISOLAMENTO_CHOICES, default="nenhum")
+    motivo_isolamento   = models.TextField(blank=True, default="")
     status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="internado")
     prescricao_atual    = models.JSONField(default=dict)
     evolucao            = models.JSONField(default=list)
@@ -3707,6 +3723,180 @@ class PrescricaoHospitalar(models.Model):
 
     def __str__(self):
         return f"Prescrição {self.paciente.nome} {self.data} [{self.status}]"
+
+
+class EvolucaoClinicaInternado(models.Model):
+    """Evolução clínica estruturada vinculada a PacienteInternado (modelo moderno)."""
+    TIPO_CHOICES = [
+        ("medica",      "Evolução Médica"),
+        ("enfermagem",  "Evolução de Enfermagem"),
+        ("fisio",       "Fisioterapia"),
+        ("nutricao",    "Nutrição"),
+        ("psicologia",  "Psicologia"),
+        ("social",      "Serviço Social"),
+        ("farmacia",    "Farmácia Clínica"),
+        ("outro",       "Outro"),
+    ]
+
+    paciente        = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="evolucoes_estruturadas")
+    tipo            = models.CharField(max_length=20, choices=TIPO_CHOICES, default="medica")
+    descricao       = models.TextField()
+    responsavel     = models.CharField(max_length=200, blank=True, default="")
+    crm_coren       = models.CharField(max_length=30, blank=True, default="")
+    sinais_vitais   = models.JSONField(default=dict, help_text='{"pa":"120/80","temp":36.5,"spo2":98,"fc":72,"fr":16}')
+    registrado_em   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-registrado_em"]
+
+    def __str__(self):
+        return f"Evolução {self.tipo} — {self.paciente.nome} {self.registrado_em.date()}"
+
+
+class MonitoramentoUTI(models.Model):
+    """Registro horário de monitoramento intensivo (UTI/Semi-intensivo)."""
+
+    paciente            = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="monitoramentos_uti")
+    registrado_em       = models.DateTimeField(auto_now_add=True)
+    # Sinais vitais
+    pressao_arterial    = models.CharField(max_length=20, blank=True, default="")
+    pressao_arterial_media = models.PositiveSmallIntegerField(null=True, blank=True, help_text="PAM em mmHg")
+    frequencia_cardiaca = models.PositiveSmallIntegerField(null=True, blank=True)
+    frequencia_respiratoria = models.PositiveSmallIntegerField(null=True, blank=True)
+    temperatura         = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    saturacao_o2        = models.PositiveSmallIntegerField(null=True, blank=True)
+    diurese_ml          = models.PositiveSmallIntegerField(null=True, blank=True)
+    # Escores
+    glasgow_ocular      = models.PositiveSmallIntegerField(null=True, blank=True, help_text="1-4")
+    glasgow_verbal      = models.PositiveSmallIntegerField(null=True, blank=True, help_text="1-5")
+    glasgow_motor       = models.PositiveSmallIntegerField(null=True, blank=True, help_text="1-6")
+    sofa_respiratorio   = models.PositiveSmallIntegerField(null=True, blank=True, help_text="0-4")
+    sofa_coagulacao     = models.PositiveSmallIntegerField(null=True, blank=True, help_text="0-4")
+    sofa_hepatico       = models.PositiveSmallIntegerField(null=True, blank=True, help_text="0-4")
+    sofa_cardiovascular = models.PositiveSmallIntegerField(null=True, blank=True, help_text="0-4")
+    sofa_neurologico    = models.PositiveSmallIntegerField(null=True, blank=True, help_text="0-4")
+    sofa_renal          = models.PositiveSmallIntegerField(null=True, blank=True, help_text="0-4")
+    # Ventilação mecânica
+    ventilacao_mecanica = models.BooleanField(default=False)
+    modo_ventilatorio   = models.CharField(max_length=50, blank=True, default="", help_text="Ex: VCV, PCV, SIMV, PSV")
+    fio2_pct            = models.PositiveSmallIntegerField(null=True, blank=True, help_text="FiO2 em %")
+    peep                = models.PositiveSmallIntegerField(null=True, blank=True, help_text="PEEP em cmH2O")
+    volume_corrente_ml  = models.PositiveSmallIntegerField(null=True, blank=True)
+    # Drenos e acessos
+    drogas_vasoativas   = models.BooleanField(default=False)
+    droga_vasoativa_desc = models.CharField(max_length=200, blank=True, default="")
+    responsavel         = models.CharField(max_length=200, blank=True, default="")
+    observacoes         = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-registrado_em"]
+        indexes = [models.Index(fields=["paciente", "registrado_em"], name="mon_uti_pac_dt_idx")]
+
+    @property
+    def glasgow_total(self):
+        vals = [self.glasgow_ocular, self.glasgow_verbal, self.glasgow_motor]
+        if all(v is not None for v in vals):
+            return sum(vals)
+        return None
+
+    @property
+    def sofa_total(self):
+        vals = [self.sofa_respiratorio, self.sofa_coagulacao, self.sofa_hepatico,
+                self.sofa_cardiovascular, self.sofa_neurologico, self.sofa_renal]
+        if all(v is not None for v in vals):
+            return sum(vals)
+        return None
+
+    def __str__(self):
+        return f"UTI {self.paciente.nome} {self.registrado_em.strftime('%d/%m %H:%M')}"
+
+
+class SumarioAlta(models.Model):
+    """Sumário de alta hospitalar formal com receituário e orientações."""
+    TIPO_ALTA_CHOICES = [
+        ("alta_medica",     "Alta Médica"),
+        ("alta_voluntaria", "Alta a Pedido"),
+        ("transferencia",   "Transferência"),
+        ("obito",           "Óbito"),
+        ("evasao",          "Evasão"),
+    ]
+
+    paciente            = models.OneToOneField(PacienteInternado, on_delete=models.CASCADE, related_name="sumario_alta")
+    tipo_alta           = models.CharField(max_length=20, choices=TIPO_ALTA_CHOICES, default="alta_medica")
+    data_alta           = models.DateTimeField()
+    medico_responsavel  = models.CharField(max_length=200, blank=True, default="")
+    medico_crm          = models.CharField(max_length=30, blank=True, default="")
+    diagnostico_final   = models.TextField(blank=True, default="")
+    cid_principal       = models.CharField(max_length=20, blank=True, default="")
+    cid_secundarios     = models.JSONField(default=list, help_text='["J18.9", "E11"]')
+    resumo_internacao   = models.TextField(blank=True, default="")
+    procedimentos_realizados = models.TextField(blank=True, default="")
+    medicamentos_alta   = models.JSONField(default=list, help_text='[{nome, dose, via, frequencia, duracao}]')
+    orientacoes_paciente = models.TextField(blank=True, default="")
+    retorno_previsao    = models.DateField(null=True, blank=True)
+    restricoes_atividade = models.TextField(blank=True, default="")
+    encaminhamentos     = models.TextField(blank=True, default="")
+    condicao_alta       = models.CharField(max_length=20, choices=[
+        ("curado","Curado"), ("melhorado","Melhorado"), ("inalterado","Inalterado"),
+        ("piorado","Piorado"), ("obito","Óbito"),
+    ], default="melhorado")
+    criado_em           = models.DateTimeField(auto_now_add=True)
+    atualizado_em       = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_alta"]
+
+    def __str__(self):
+        return f"Alta {self.paciente.nome} {self.data_alta.date()}"
+
+
+class CentroCirurgico(models.Model):
+    """Agendamento e registro de procedimentos cirúrgicos."""
+    STATUS_CHOICES = [
+        ("agendado",    "Agendado"),
+        ("em_andamento","Em Andamento"),
+        ("concluido",   "Concluído"),
+        ("cancelado",   "Cancelado"),
+        ("suspenso",    "Suspenso"),
+    ]
+    PORTE_CHOICES = [
+        ("pequeno",  "Pequeno Porte"),
+        ("medio",    "Médio Porte"),
+        ("grande",   "Grande Porte"),
+        ("especial", "Especial"),
+    ]
+
+    empresa             = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="cirurgias")
+    paciente            = models.ForeignKey(PacienteInternado, on_delete=models.SET_NULL, null=True, blank=True, related_name="cirurgias")
+    data_hora_prevista  = models.DateTimeField()
+    data_hora_inicio    = models.DateTimeField(null=True, blank=True)
+    data_hora_fim       = models.DateTimeField(null=True, blank=True)
+    sala                = models.CharField(max_length=50, blank=True, default="", help_text="Ex: Sala 1, CC-A")
+    procedimento        = models.CharField(max_length=300)
+    codigo_tuss         = models.CharField(max_length=20, blank=True, default="")
+    porte               = models.CharField(max_length=20, choices=PORTE_CHOICES, default="medio")
+    cirurgiao_principal = models.CharField(max_length=200, blank=True, default="")
+    cirurgiao_crm       = models.CharField(max_length=30, blank=True, default="")
+    anestesiologista    = models.CharField(max_length=200, blank=True, default="")
+    tipo_anestesia      = models.CharField(max_length=50, blank=True, default="", help_text="Geral, Raqui, Peridural, Local")
+    equipe              = models.JSONField(default=list, help_text='[{nome, funcao}]')
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="agendado")
+    cid_indicacao       = models.CharField(max_length=20, blank=True, default="")
+    relatorio_cirurgico = models.TextField(blank=True, default="")
+    intercorrencias     = models.TextField(blank=True, default="")
+    sangramento_ml      = models.PositiveIntegerField(null=True, blank=True)
+    criado_em           = models.DateTimeField(auto_now_add=True)
+    atualizado_em       = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["data_hora_prevista"]
+        indexes = [
+            models.Index(fields=["empresa", "status"], name="cc_emp_status_idx"),
+            models.Index(fields=["empresa", "data_hora_prevista"], name="cc_emp_dt_idx"),
+        ]
+
+    def __str__(self):
+        return f"Cirurgia #{self.id} — {self.procedimento} ({self.status})"
 
 
 class AssinaturaDocumentoSST(models.Model):
