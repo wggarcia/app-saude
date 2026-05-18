@@ -1,4 +1,3 @@
-import jwt
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect
@@ -16,6 +15,7 @@ from .push_service import enviar_alerta_governamental, push_disponivel
 from .governanca import registrar_auditoria_institucional
 from .command_ai import build_command_ai_payload
 from .access_control import requer_setor
+from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
 import csv
 
 
@@ -31,54 +31,11 @@ def dados_dashboard(request):
 
 
 def _empresa_autenticada(request):
-    empresa_request = getattr(request, "empresa", None)
-    if empresa_request:
-        return empresa_request
-
-    token = request.COOKIES.get("auth_token")
-
-    if not token:
-        return None
-
-    try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
-        empresa = Empresa.objects.filter(id=payload["empresa_id"]).first()
-        if not empresa:
-            return None
-        principal_kind = payload.get("principal_kind")
-        principal_id = payload.get("principal_id")
-        principal = None
-        if principal_kind == "usuario_empresa":
-            principal = EmpresaUsuario.objects.filter(id=principal_id, empresa=empresa, ativo=True).first()
-        else:
-            principal = empresa
-        if not principal:
-            return None
-        if principal.sessao_ativa_chave and payload.get("session_key") != principal.sessao_ativa_chave:
-            return None
-        return empresa
-    except Exception:
-        return None
+    return empresa_autenticada_from_request(request)
 
 
 def _dono_autenticado(request):
-    dono_request = getattr(request, "dono_saas", None)
-    if dono_request:
-        return dono_request
-
-    token = request.COOKIES.get("owner_token")
-    if not token:
-        return None
-    try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
-        dono = DonoSaaS.objects.filter(id=payload["owner_id"], ativo=True).first()
-        if not dono:
-            return None
-        if dono.sessao_ativa_chave and payload.get("session_key") != dono.sessao_ativa_chave:
-            return None
-        return dono
-    except Exception:
-        return None
+    return dono_autenticado_from_request(request)
 
 
 def _principal_label(request):

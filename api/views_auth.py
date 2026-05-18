@@ -1,231 +1,28 @@
-from django.conf import settings
-from django.core.cache import cache
 from django.views.decorators.csrf import csrf_exempt
 import json
-import hashlib
-import jwt
 import os
-from django.db import OperationalError
 from django.http import JsonResponse
 from django.contrib.auth.hashers import check_password, make_password
-from .models import Empresa, DispositivoAutorizado, EmpresaUsuario, DonoSaaS
-from django.conf import settings
-from django.db import IntegrityError
-from datetime import datetime, timedelta
-import secrets
+from .models import Empresa, EmpresaUsuario, DonoSaaS
 from django.shortcuts import redirect
-from django.utils import timezone
 from .planos import pacote_padrao, detalhes_pacote, normalizar_codigo_pacote
-
-
-COOKIE_MAX_AGE = 7 * 24 * 60 * 60
-TAB_SESSION_MAX_AGE = 8 * 60 * 60
-SESSION_IDLE_TIMEOUT = timedelta(minutes=15) if settings.DEBUG else timedelta(hours=8)
-_COOKIE_SECURE = not settings.DEBUG
-DEVICE_IDLE_TIMEOUT = SESSION_IDLE_TIMEOUT
-
-
-def _destino_conta(empresa):
-    if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
-        if empresa.ativo and empresa.acesso_governo:
-            return "/dashboard-governo/"
-        return "/contrato-governo/"
-
-    if empresa.ativo:
-        setor = detalhes_pacote(empresa.pacote_codigo).get("setor")
-        if setor == "farmacia":
-            return "/dashboard-farmacia/"
-        if setor == "hospital":
-            return "/dashboard-hospital/"
-        return "/dashboard-empresa/"
-    return "/pagamento/"
-
-
-def _payload_resposta(empresa, token, device_id, dispositivos_em_uso, principal_kind, principal_id, principal_nome):
-    return {
-        "status": "ok",
-        "token": token,
-        "empresa_id": empresa.id,
-        "empresa_nome": empresa.nome,
-        "acesso_governo": empresa.acesso_governo,
-        "tipo_conta": empresa.tipo_conta,
-        "ativo": empresa.ativo,
-        "device_id": device_id,
-        "max_dispositivos": empresa.max_dispositivos,
-        "max_usuarios": empresa.max_usuarios,
-        "dispositivos_em_uso": dispositivos_em_uso,
-        "pacote_codigo": empresa.pacote_codigo,
-        "principal_kind": principal_kind,
-        "principal_id": principal_id,
-        "principal_nome": principal_nome,
-        "destination": _destino_conta(empresa),
-    }
-
-
-def _client_ip(request):
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR")
-
-
-def _resolver_device_id(request, dados):
-    explicit_device_id = (dados or {}).get("device_id") or request.headers.get("X-Device-Id")
-    if explicit_device_id:
-        return str(explicit_device_id).strip()[:120]
-
-    base = "|".join([
-        str(_client_ip(request) or ""),
-        str(request.META.get("HTTP_USER_AGENT") or ""),
-    ])
-    return "legacy-" + hashlib.sha256(base.encode("utf-8")).hexdigest()[:32]
-
-
-def _liberar_dispositivos_ociosos(empresa):
-    limite = timezone.now() - DEVICE_IDLE_TIMEOUT
-    DispositivoAutorizado.objects.filter(
-        empresa=empresa,
-        ativo=True,
-        ultimo_acesso__lt=limite,
-    ).update(ativo=False)
-
-
-def _registrar_dispositivo_login(empresa, request, dados):
-    device_id = _resolver_device_id(request, dados)
-    _liberar_dispositivos_ociosos(empresa)
-    dispositivos_ativos = DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True)
-    existente = DispositivoAutorizado.objects.filter(empresa=empresa, device_id=device_id).first()
-
-    if existente:
-        existente.user_agent = request.META.get("HTTP_USER_AGENT", "")[:1000]
-        existente.ip = _client_ip(request)
-        existente.ativo = True
-        if dados and dados.get("device_name") and not existente.apelido:
-            existente.apelido = dados.get("device_name", "")[:120]
-        try:
-            existente.save(update_fields=["user_agent", "ip", "ativo", "apelido", "ultimo_acesso"])
-        except OperationalError:
-            pass
-        return True, device_id, DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True).count(), None
-
-    if dispositivos_ativos.count() >= empresa.max_dispositivos:
-        if dados and dados.get("force_login") is True:
-            antigo = dispositivos_ativos.order_by("ultimo_acesso").first()
-            if antigo:
-                antigo.ativo = False
-                antigo.save(update_fields=["ativo"])
-                dispositivos_ativos = DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True)
-        if dispositivos_ativos.count() < empresa.max_dispositivos:
-            return _registrar_dispositivo_login(empresa, request, {**(dados or {}), "force_login": False})
-        return False, device_id, dispositivos_ativos.count(), (
-            f"Limite de dispositivos atingido para este contrato. "
-            f"Plano atual permite {empresa.max_dispositivos} dispositivo(s)."
-        )
-
-    try:
-        DispositivoAutorizado.objects.create(
-            empresa=empresa,
-            device_id=device_id,
-            apelido=(dados or {}).get("device_name", "")[:120],
-            user_agent=request.META.get("HTTP_USER_AGENT", "")[:1000],
-            ip=_client_ip(request),
-        )
-        return True, device_id, dispositivos_ativos.count() + 1, None
-    except IntegrityError:
-        existente = DispositivoAutorizado.objects.filter(empresa=empresa, device_id=device_id).first()
-        if existente:
-            existente.ativo = True
-            existente.user_agent = request.META.get("HTTP_USER_AGENT", "")[:1000]
-            existente.ip = _client_ip(request)
-            existente.save(update_fields=["ativo", "user_agent", "ip", "ultimo_acesso"])
-            return True, device_id, DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True).count(), None
-        return False, device_id, dispositivos_ativos.count(), "Nao foi possivel autorizar este dispositivo agora. Tente novamente."
-    except OperationalError:
-        return True, device_id, dispositivos_ativos.count(), None
-
-
-def _validar_sessao_unica(empresa, device_id):
-    if empresa.sessao_ativa_chave and empresa.sessao_ativa_device_id and empresa.sessao_ativa_device_id != device_id:
-        if empresa.sessao_ativa_em and timezone.now() - empresa.sessao_ativa_em > SESSION_IDLE_TIMEOUT:
-            _limpar_sessao_principal(empresa)
-            return True, None
-        return False, (
-            "Esta conta já está em uso em outro computador. "
-            "Faça logout na máquina atual antes de entrar em uma nova."
-        )
-    return True, None
-
-
-def _validar_sessao_principal(principal, device_id):
-    if principal.sessao_ativa_chave and principal.sessao_ativa_device_id and principal.sessao_ativa_device_id != device_id:
-        if principal.sessao_ativa_em and timezone.now() - principal.sessao_ativa_em > SESSION_IDLE_TIMEOUT:
-            _limpar_sessao_principal(principal)
-            return True, None
-        return False, (
-            "Este usuário já está em uso em outro computador. "
-            "Faça logout na máquina atual antes de entrar em uma nova."
-        )
-    return True, None
-
-
-def _ativar_sessao(principal, device_id):
-    session_key = secrets.token_urlsafe(24)
-    principal.sessao_ativa_chave = session_key
-    principal.sessao_ativa_device_id = device_id
-    principal.sessao_ativa_em = timezone.now()
-    principal.save(update_fields=["sessao_ativa_chave", "sessao_ativa_device_id", "sessao_ativa_em"])
-    return session_key
-
-
-def _jwt_claim_times():
-    issued_at = datetime.utcnow()
-    expires_at = issued_at + timedelta(hours=settings.JWT_EXP_HOURS)
-    return issued_at, expires_at
-
-
-def _criar_token(empresa, session_key, principal_kind, principal_id, device_id=None):
-    issued_at, expires_at = _jwt_claim_times()
-    return jwt.encode({
-        "empresa_id": empresa.id,
-        "acesso_governo": empresa.acesso_governo,
-        "tipo_conta": empresa.tipo_conta,
-        "max_dispositivos": empresa.max_dispositivos,
-        "max_usuarios": empresa.max_usuarios,
-        "pacote_codigo": empresa.pacote_codigo,
-        "principal_kind": principal_kind,
-        "principal_id": principal_id,
-        "device_id": device_id,
-        "session_key": session_key,
-        "iat": issued_at,
-        "exp": expires_at,
-    }, settings.JWT_SECRET_KEY, algorithm="HS256")
-
-
-def _aplicar_cookies_autenticacao(response, empresa, token):
-    response.set_cookie("empresa_id", str(empresa.id), samesite="Lax", max_age=COOKIE_MAX_AGE, secure=_COOKIE_SECURE)
-    response.set_cookie("tipo_conta", empresa.tipo_conta, samesite="Lax", max_age=COOKIE_MAX_AGE, secure=_COOKIE_SECURE)
-    response.set_cookie(
-        "auth_token",
-        token,
-        httponly=True,
-        samesite="Lax",
-        max_age=COOKIE_MAX_AGE,
-        secure=_COOKIE_SECURE,
-    )
-    return response
-
-
-def _registrar_sessao_aba(token):
-    tab_key = secrets.token_urlsafe(24)
-    cache.set(f"tab_auth:{tab_key}", token, TAB_SESSION_MAX_AGE)
-    return tab_key
-
-
-def _limpar_sessao_principal(principal):
-    principal.sessao_ativa_chave = None
-    principal.sessao_ativa_device_id = None
-    principal.sessao_ativa_em = None
-    principal.save(update_fields=["sessao_ativa_chave", "sessao_ativa_device_id", "sessao_ativa_em"])
+from .services.auth_session import (
+    COOKIE_MAX_AGE,
+    aplicar_cookie_owner,
+    aplicar_cookies_autenticacao as _aplicar_cookies_autenticacao,
+    criar_owner_token,
+    criar_token as _criar_token,
+    destino_conta as _destino_conta,
+    limpar_sessao_empresa_por_token,
+    limpar_sessao_owner_por_token,
+    limpar_sessao_principal as _limpar_sessao_principal,
+    payload_resposta as _payload_resposta,
+    registrar_dispositivo_login as _registrar_dispositivo_login,
+    registrar_sessao_aba as _registrar_sessao_aba,
+    resolver_sessao_empresa_por_token,
+    validar_sessao_principal as _validar_sessao_principal,
+    ativar_sessao as _ativar_sessao,
+)
 
 
 def _provisionar_dono_por_ambiente(email, senha):
@@ -439,18 +236,7 @@ def login_dono_saas(request):
     if not check_password(senha, dono.senha):
         return JsonResponse({"status": "erro", "mensagem": "Senha incorreta"}, status=401)
 
-    session_key = secrets.token_urlsafe(24)
-    dono.sessao_ativa_chave = session_key
-    dono.sessao_ativa_em = timezone.now()
-    dono.save(update_fields=["sessao_ativa_chave", "sessao_ativa_em"])
-
-    issued_at, expires_at = _jwt_claim_times()
-    token = jwt.encode({
-        "owner_id": dono.id,
-        "session_key": session_key,
-        "iat": issued_at,
-        "exp": expires_at,
-    }, settings.JWT_SECRET_KEY, algorithm="HS256")
+    token = criar_owner_token(dono)
 
     response = JsonResponse({
         "status": "ok",
@@ -458,8 +244,7 @@ def login_dono_saas(request):
         "owner_nome": dono.nome,
         "destination": "/console-operacional/",
     })
-    response.set_cookie("owner_token", token, httponly=True, samesite="Lax", max_age=COOKIE_MAX_AGE, secure=_COOKIE_SECURE)
-    return response
+    return aplicar_cookie_owner(response, token)
 
 
 @csrf_exempt
@@ -477,18 +262,9 @@ def ativar_sessao_aba(request):
     # request.empresa (middleware cookie), which may already point to a different
     # account if the user is logged into another tab.
     try:
-        data = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
-        empresa = Empresa.objects.get(id=data["empresa_id"], ativo=True)
-        principal_kind = data.get("principal_kind")
-        principal_id = data.get("principal_id")
-        if principal_kind == "usuario_empresa":
-            principal = EmpresaUsuario.objects.get(id=principal_id, empresa=empresa, ativo=True)
-        else:
-            principal = empresa
-
+        data, empresa, principal = resolver_sessao_empresa_por_token(token, require_active_empresa=True)
         if principal.sessao_ativa_chave and data.get("session_key") != principal.sessao_ativa_chave:
             return JsonResponse({"erro": "sessão encerrada"}, status=401)
-
     except Exception:
         return JsonResponse({"erro": "token inválido"}, status=401)
 
@@ -518,39 +294,11 @@ def logout_operacao(request):
 def _logout(request, redirect_to="/"):
     token = request.COOKIES.get("auth_token")
     if token:
-        try:
-            payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
-            principal_kind = payload.get("principal_kind")
-            principal_id = payload.get("principal_id")
-            empresa_id = payload.get("empresa_id")
-            device_id = payload.get("device_id")
-            if principal_kind == "usuario_empresa":
-                principal = EmpresaUsuario.objects.filter(id=principal_id).first()
-            else:
-                principal = Empresa.objects.filter(id=empresa_id).first()
-
-            if principal and payload.get("session_key") == principal.sessao_ativa_chave:
-                _limpar_sessao_principal(principal)
-            if empresa_id and device_id:
-                DispositivoAutorizado.objects.filter(
-                    empresa_id=empresa_id,
-                    device_id=device_id,
-                    ativo=True,
-                ).update(ativo=False)
-        except Exception:
-            pass
+        limpar_sessao_empresa_por_token(token)
 
     owner_token = request.COOKIES.get("owner_token")
     if owner_token:
-        try:
-            payload = jwt.decode(owner_token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
-            dono = DonoSaaS.objects.filter(id=payload.get("owner_id")).first()
-            if dono and payload.get("session_key") == dono.sessao_ativa_chave:
-                dono.sessao_ativa_chave = None
-                dono.sessao_ativa_em = None
-                dono.save(update_fields=["sessao_ativa_chave", "sessao_ativa_em"])
-        except Exception:
-            pass
+        limpar_sessao_owner_por_token(owner_token)
 
     response = redirect(redirect_to)
     response.delete_cookie("empresa_id")
