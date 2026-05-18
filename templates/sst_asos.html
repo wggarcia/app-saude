@@ -1020,7 +1020,7 @@ async function salvarPedido(){
     if(!r.ok){toast(d.erro||'Erro ao criar pedido','err');return;}
     if(d.aviso_email)toast(d.aviso_email,'err');
     else{
-      const msgs={sistema:'Pedido enviado à clínica!',email:'Pedido salvo. Email aceito para envio.',interno:'Pedido salvo!'};
+      const msgs={sistema:'Pedido enviado à clínica!',email:'Pedido salvo. Servidor SMTP aceitou o envio.',interno:'Pedido salvo!'};
       toast(msgs[_modo]||'Pedido criado!');
     }
     fecharModalPedido();carregarPedidos();

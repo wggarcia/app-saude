@@ -558,7 +558,11 @@ def _enviar_email_solicitacao(sol):
     if "smtp.EmailBackend" in backend and (not smtp_user or not smtp_password):
         return False, "SMTP não configurado no Render: preencha EMAIL_HOST_USER e EMAIL_HOST_PASSWORD."
     from_email = (getattr(settings, "DEFAULT_FROM_EMAIL", "") or "").strip()
-    if (not from_email or "noreply@soluscrt.com.br" in from_email) and smtp_user:
+    # Para SMTP autenticado, use sempre o remetente real da conta autenticada
+    # para evitar rejeições silenciosas por SPF/DMARC no destino.
+    if "smtp.EmailBackend" in backend and smtp_user:
+        from_email = f"SolusCRT <{smtp_user}>"
+    elif (not from_email or "noreply@soluscrt.com.br" in from_email) and smtp_user:
         from_email = f"SolusCRT <{smtp_user}>"
     reply_to = []
     if getattr(empresa, "email", ""):

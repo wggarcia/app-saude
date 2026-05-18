@@ -30,6 +30,18 @@ services:
         value: asaas
       - key: SKIP_BUILD_MIGRATIONS
         value: "true"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "true"
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
       - key: DJANGO_SECRET_KEY
         sync: false
       - key: JWT_SECRET_KEY

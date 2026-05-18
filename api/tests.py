@@ -2629,3 +2629,23 @@ class SolicitacaoExameEmailTests(TestCase):
         self.assertIsNotNone(solicitacao.email_enviado_em)
         self.assertIn("SMTP", solicitacao.resposta_clinica)
         self.assertEqual(send_mock.call_count, 2)
+
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
+        EMAIL_HOST_USER="mailer@soluscrt.com.br",
+        EMAIL_HOST_PASSWORD="segredo-smtp",
+        DEFAULT_FROM_EMAIL="SolusCRT <noreply@soluscrt.com.br>",
+    )
+    @patch("api.views_solicitacao_exame.EmailMessage")
+    def test_envio_email_usa_remetente_da_conta_smtp(self, email_message_mock):
+        email_message_mock.return_value.send.return_value = 1
+
+        resp = self.client.post(
+            "/api/sst/solicitacoes-exame",
+            data=json.dumps(self._pedido_email_payload()),
+            content_type="application/json",
+        )
+
+        self.assertEqual(resp.status_code, 201)
+        _, kwargs = email_message_mock.call_args
+        self.assertEqual(kwargs["from_email"], "SolusCRT <mailer@soluscrt.com.br>")
