@@ -450,16 +450,16 @@ def api_funcionario_detalhe(request, funcionario_id):
             func.sexo = data["sexo"]
         if "classe_risco" in data:
             func.classe_risco = data["classe_risco"]
-        if "data_nascimento" in data:
+        if data.get("data_nascimento"):
             from datetime import date as _date
             try:
-                func.data_nascimento = _date.fromisoformat(data["data_nascimento"]) if data["data_nascimento"] else None
+                func.data_nascimento = _date.fromisoformat(data["data_nascimento"])
             except ValueError:
                 pass
-        if "data_admissao" in data:
+        if data.get("data_admissao"):
             from datetime import date as _date
             try:
-                func.data_admissao = _date.fromisoformat(data["data_admissao"]) if data["data_admissao"] else None
+                func.data_admissao = _date.fromisoformat(data["data_admissao"])
             except ValueError:
                 pass
         func.save()
