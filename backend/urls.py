@@ -279,7 +279,6 @@ from api.views_farmacia_gestao import (
     api_farmacia_dashboard,
     api_farmacia_estoque,
     api_farmacia_dispensacao,
-    api_farmacia_movimentos,
     api_farmacia_fornecedores,
     api_farmacia_pedidos,
 )
@@ -646,8 +645,6 @@ urlpatterns = [
     path('api/sst/agendamentos/<int:ag_id>/', api_agendamento_sst_detalhe),
     path('api/sst/agendamentos/<int:ag_id>', api_agendamento_sst_detalhe),
     # Solicitações de exames ocupacionais para clínicas
-    path('sst/solicitacoes/', sst_solicitacoes_page),
-    path('clinica/solicitacoes/', clinica_solicitacoes_page),
     path('api/sst/solicitacoes-exame/', api_solicitacoes_exame),
     path('api/sst/solicitacoes-exame', api_solicitacoes_exame),
     path('api/sst/solicitacoes-exame/<int:sol_id>/', api_solicitacao_detalhe),
@@ -675,7 +672,6 @@ urlpatterns = [
     path('api/sst/asos/<int:aso_id>/pdf', api_aso_pdf),
     path('api/sst/cats/<int:cat_id>/pdf', api_cat_pdf),
     path('api/sst/funcionarios/<int:funcionario_id>/prontuario/pdf', api_prontuario_pdf),
-    path('clinica/solicitacoes/', clinica_solicitacoes_page),
     path('api/clinica/solicitacoes-exame', api_clinica_solicitacoes),
     path('api/clinica/solicitacoes-exame/', api_clinica_solicitacoes),
     path('api/clinica/solicitacoes-exame/<int:sol_id>/acao', api_clinica_solicitacao_acao),
@@ -1052,10 +1048,6 @@ urlpatterns = [
     path('api/sst/relatorio/asos.pdf', relatorio_pdf_asos),
     path('api/sst/relatorio/cats.pdf', relatorio_pdf_cats),
     path('api/sst/relatorio/treinamentos.pdf', relatorio_pdf_treinamentos),
-
-    # ── Plataforma — SLA, Status ──────────────────────────────────────────────
-    path('sla/', sla_page),
-    path('status/', status_page),
 
     # ── Portal do Funcionário (app mobile trabalhador SST) ────────────────────
     path('api/funcionario/login', funcionario_login),

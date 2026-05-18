@@ -66,7 +66,7 @@ def _table_style():
 
 
 def _header(story, s, title, empresa_nome, subtitulo=""):
-    story.append(Paragraph(f"<font color='#{hex(ACCENT.hexval())[2:].zfill(6)}'>■</font> {title}", s["title"]))
+    story.append(Paragraph(f"<font color='#{ACCENT.hexval()[2:].zfill(6)}'>■</font> {title}", s["title"]))
     story.append(Paragraph(empresa_nome, s["sub"]))
     if subtitulo:
         story.append(Paragraph(subtitulo, s["sub"]))

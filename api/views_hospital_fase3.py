@@ -312,8 +312,8 @@ def api_hospital_analytics(request):
         return empresa
 
     # ── Ocupação atual ─────────────────────────────────────────────────────
-    leitos_totais   = LeitoHospitalar.objects.filter(empresa=empresa, ativo=True).count()
-    leitos_ocupados = LeitoHospitalar.objects.filter(empresa=empresa, ativo=True, status="ocupado").count()
+    leitos_totais   = LeitoHospitalar.objects.filter(empresa=empresa).count()
+    leitos_ocupados = LeitoHospitalar.objects.filter(empresa=empresa, status="ocupado").count()
     taxa_ocupacao   = round(leitos_ocupados / leitos_totais * 100, 1) if leitos_totais else 0
 
     # ── Altas + ALOS ──────────────────────────────────────────────────────

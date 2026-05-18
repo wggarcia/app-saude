@@ -206,19 +206,19 @@ def _relatorio_farmacia(empresa, ini, fim):
 
 def _relatorio_hospital(empresa, ini, fim):
     try:
-        from .models import LeitoHospitalar, InternacaoHospitalar
+        from .models import LeitoHospitalar, InternacaoHospital
         from django.db.models import Avg, Count
 
         leitos = LeitoHospitalar.objects.filter(empresa=empresa)
         ocupados = leitos.filter(status="ocupado").count()
         total_leitos = leitos.count()
 
-        internacoes = InternacaoHospitalar.objects.filter(
+        internacoes = InternacaoHospital.objects.filter(
             empresa=empresa,
-            data_internacao__gte=ini, data_internacao__lte=fim,
+            data_entrada__gte=ini, data_entrada__lte=fim,
         )
         total_int = internacoes.count()
-        altas = internacoes.filter(data_alta__isnull=False).count()
+        altas = internacoes.filter(data_saida__isnull=False).count()
 
         taxa_ocupacao = round(ocupados / total_leitos * 100) if total_leitos > 0 else 0
 
