@@ -376,6 +376,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
         <button class="tab-btn" id="tabBtn-prescricoes" onclick="setTab('prescricoes')">💊 Prescrições</button>
         <button class="tab-btn" id="tabBtn-uti" onclick="setTab('uti')">🔴 UTI</button>
         <button class="tab-btn" id="tabBtn-cirurgias" onclick="setTab('cirurgias')">🔪 C. Cirúrgico</button>
+        <button class="tab-btn" id="tabBtn-exames" onclick="setTab('exames')">🧪 Exames</button>
         <button class="tab-btn" id="tabBtn-alta" onclick="setTab('alta')">📄 Alta Hospitalar</button>
       </div>
 
@@ -588,6 +589,52 @@ tr:hover td{background:rgba(255,255,255,.018)}
         </div>
       </div>
 
+      <!-- ══════ TAB: EXAMES ══════ -->
+      <div class="tab-panel" id="tab-exames">
+        <!-- KPIs -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <div class="kpi-card"><div class="kpi-val" id="exPend">—</div><div class="kpi-lbl">🧪 Pedidos Pendentes</div></div>
+          <div class="kpi-card"><div class="kpi-val warn" id="exColet">—</div><div class="kpi-lbl">⏳ Em Análise</div></div>
+          <div class="kpi-card"><div class="kpi-val danger" id="exUrg">—</div><div class="kpi-lbl">⚡ Urgentes/Emergência</div></div>
+          <div class="kpi-card"><div class="kpi-val danger" id="exCrit">—</div><div class="kpi-lbl">🚨 Resultados Críticos</div></div>
+        </div>
+
+        <!-- Alertas críticos -->
+        <div id="boxCriticos" style="display:none;margin-bottom:16px"></div>
+
+        <!-- Lista de pedidos -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📋 Pedidos de Exame</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <select id="filtroExStatus" onchange="carregarExames()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px">
+                <option value="">Todos</option>
+                <option value="solicitado" selected>Solicitados</option>
+                <option value="coletado">Em análise</option>
+                <option value="concluido">Concluídos</option>
+              </select>
+              <select id="filtroExTipo" onchange="carregarExames()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px">
+                <option value="">Todos os tipos</option>
+                <option value="laboratorial">Laboratorial</option>
+                <option value="imagem">Imagem</option>
+                <option value="ecg">ECG</option>
+                <option value="endoscopia">Endoscopia</option>
+              </select>
+              <button class="btn btn-primary" onclick="abrirModalExame()">+ Solicitar Exame</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr>
+                <th>Paciente</th><th>Tipo</th><th>Exames Solicitados</th><th>Prioridade</th>
+                <th>Solicitante</th><th>Data</th><th>Status</th><th>Ações</th>
+              </tr></thead>
+              <tbody id="tbodyExames"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- ══════ TAB: ALTA HOSPITALAR ══════ -->
       <div class="tab-panel" id="tab-alta">
         <div class="card">
@@ -609,6 +656,92 @@ tr:hover td{background:rgba(255,255,255,.018)}
   </div><!-- end .content -->
 </main>
 </div><!-- end .layout -->
+
+<!-- Modal: Solicitar Exame -->
+<div class="modal-bg" id="modalExame">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><span class="modal-title">🧪 Solicitar Exame</span>
+      <button class="btn-icon" onclick="fecharModal('modalExame')">✕</button></div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="mf" style="grid-column:1/-1">
+        <label>Paciente *</label>
+        <select id="exPaciente" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)"></select>
+      </div>
+      <div class="mf"><label>Tipo *</label>
+        <select id="exTipo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)">
+          <option value="laboratorial">Laboratorial</option>
+          <option value="imagem">Imagem (Rx/TC/RM/US)</option>
+          <option value="ecg">ECG</option>
+          <option value="endoscopia">Endoscopia</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="mf"><label>Prioridade</label>
+        <select id="exPrioridade" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)">
+          <option value="rotina">Rotina</option>
+          <option value="urgente">Urgente</option>
+          <option value="emergencia">Emergência</option>
+        </select>
+      </div>
+      <div class="mf" style="grid-column:1/-1">
+        <label>Exames (um por linha) *</label>
+        <textarea id="exExames" rows="4" placeholder="Hemograma completo&#10;PCR&#10;Glicose de jejum&#10;Creatinina"></textarea>
+      </div>
+      <div class="mf" style="grid-column:1/-1">
+        <label>Contexto clínico / hipótese diagnóstica</label>
+        <textarea id="exObsClincias" rows="2" placeholder="Ex: Investigação de sepse em paciente internado por pneumonia"></textarea>
+      </div>
+      <div class="mf"><label>Material</label><input id="exMaterial" type="text" placeholder="Ex: Sangue venoso, urina 24h"></div>
+      <div class="mf"><label>Jejum (horas)</label><input id="exJejum" type="number" min="0" max="24" placeholder="0"></div>
+      <div class="mf"><label>Solicitante</label><input id="exSolicitante" type="text" placeholder="Nome do médico"></div>
+      <div class="mf"><label>CRM</label><input id="exSolicitanteCRM" type="text" placeholder="Ex: 12345/SP"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalExame')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarExame()">Solicitar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhe Pedido + Lançar Resultado -->
+<div class="modal-bg" id="modalResultado">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header"><span class="modal-title">📊 Pedido de Exame</span>
+      <button class="btn-icon" onclick="fecharModal('modalResultado')">✕</button></div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+      <div id="resultadoPedidoInfo" style="background:rgba(255,255,255,.05);border-radius:8px;padding:10px;font-size:13px;color:var(--text-muted)"></div>
+      <button id="btnMarcarColetado" class="btn btn-sm" style="align-self:flex-start">Marcar como Coletado</button>
+      <div id="listaResultados" style="max-height:180px;overflow-y:auto"></div>
+      <hr style="border-color:var(--border);margin:4px 0">
+      <p style="font-weight:600;margin:0">Lançar novo resultado</p>
+      <div class="mf">
+        <label>Interpretação *</label>
+        <select id="resInterpretacao" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)">
+          <option value="normal">Normal / Dentro do esperado</option>
+          <option value="alterado">Alterado</option>
+          <option value="critico">Crítico — requer ação imediata</option>
+          <option value="pendente">Pendente de laudo</option>
+        </select>
+      </div>
+      <div class="mf"><label>Laudo / Descrição</label>
+        <textarea id="resLaudo" rows="3" placeholder="Descreva os resultados e conclusão..."></textarea>
+      </div>
+      <div class="mf"><label>Valores (JSON ou texto livre)</label>
+        <textarea id="resResultadoJSON" rows="2" placeholder='[{"exame":"Hemoglobina","valor":"12.3","unidade":"g/dL"}]'></textarea>
+      </div>
+      <div class="mf"><label>URL do Laudo / DICOM (opcional)</label>
+        <input id="resUrlImagem" type="url" placeholder="https://..."></div>
+      <div class="mf"><label>Responsável pelo laudo</label>
+        <input id="resResponsavel" type="text" placeholder="Nome do médico/bioquímico"></div>
+      <div class="mf"><label>CRM</label>
+        <input id="resCRM" type="text" placeholder="Ex: 12345/SP"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalResultado')">Fechar</button>
+      <button class="btn btn-primary" onclick="salvarResultado()">Lançar Resultado</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════ MODALS FASE 1 ══════ -->
 
@@ -1777,7 +1910,7 @@ function popularSelectDeps(sid) {
 // ══════════════════════════════════════════════════════════════
 // TAB NAVIGATION
 // ══════════════════════════════════════════════════════════════
-const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes','uti','cirurgias','alta'];
+const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes','uti','cirurgias','exames','alta'];
 
 function setTab(tab) {
   _currentTab = tab;
@@ -1797,6 +1930,7 @@ function setTab(tab) {
   else if (tab==='prescricoes') carregarPrescricoes();
   else if (tab==='uti') carregarUTI();
   else if (tab==='cirurgias') carregarCirurgias();
+  else if (tab==='exames') carregarExames();
   else if (tab==='alta') carregarAltaTab();
 }
 
@@ -2082,6 +2216,186 @@ async function salvarAlta() {
     alert('Alta emitida com sucesso! Leito liberado.');
     await Promise.all([carregarLeitos(), carregarPacientes(), carregarKpis()]);
     carregarAltaTab();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// FASE 2 — EXAMES (Pedidos + Resultados + Administração)
+// ══════════════════════════════════════════════════════════════
+
+// ── Pedidos de Exame ──────────────────────────────────────────
+let _exPedidoAtual = null;
+
+async function carregarExames() {
+  const status   = document.getElementById('filtroExStatus')?.value || '';
+  const tipo     = document.getElementById('filtroExTipo')?.value   || '';
+  let url = '/api/hospital/exames/?';
+  if (status) url += `status=${status}&`;
+  if (tipo)   url += `tipo=${tipo}&`;
+
+  const [dash, ped] = await Promise.all([
+    api('/api/hospital/exames/dashboard/'),
+    api(url),
+  ]);
+
+  // KPIs
+  if (dash) {
+    const s = id => document.getElementById(id);
+    if (s('exPend')) s('exPend').textContent = dash.pedidos_pendentes ?? 0;
+    if (s('exColet')) s('exColet').textContent = dash.pedidos_coletados ?? 0;
+    if (s('exUrg'))  s('exUrg').textContent  = dash.pedidos_urgentes   ?? 0;
+    if (s('exCrit')) s('exCrit').textContent  = dash.resultados_criticos_nao_vistos ?? 0;
+
+    // Alertas críticos
+    const alertBox = s('boxCriticos');
+    if (alertBox) {
+      if ((dash.alertas_criticos || []).length === 0) {
+        alertBox.style.display = 'none';
+        alertBox.innerHTML = '';
+      } else {
+        alertBox.style.display = '';
+        alertBox.innerHTML = dash.alertas_criticos.map(a => `
+          <div style="background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.4);border-radius:8px;padding:10px 14px;margin-bottom:8px">
+            <span style="color:#f87171;font-weight:600">🔴 CRÍTICO</span>
+            <span style="margin-left:10px;font-weight:600">${a.paciente_nome}</span>
+            <span style="margin-left:8px;color:var(--text-muted)">${a.tipo_exame} · ${a.data_resultado}</span>
+            <div style="margin-top:4px;font-size:13px">${a.laudo}</div>
+            <button class="btn btn-sm" style="margin-top:6px;font-size:12px;padding:3px 10px"
+              onclick="marcarVisualizado(${a.resultado_id})">Marcar como visto</button>
+          </div>`).join('');
+      }
+    }
+  }
+
+  // Tabela de pedidos
+  const tbody = document.getElementById('tbodyExames');
+  if (!tbody || !ped?.pedidos) return;
+  if (ped.pedidos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">Nenhum pedido encontrado</td></tr>';
+    return;
+  }
+  const prioLabel = { rotina:'Rotina', urgente:'Urgente', emergencia:'Emergência' };
+  const stLabel   = { solicitado:'Solicitado', coletado:'Coletado', concluido:'Concluído', cancelado:'Cancelado' };
+  const stColor   = { solicitado:'var(--warning)', coletado:'#60a5fa', concluido:'var(--success)', cancelado:'var(--text-muted)' };
+  tbody.innerHTML = ped.pedidos.map(p => `
+    <tr>
+      <td>${p.paciente_nome}</td>
+      <td>${p.tipo}</td>
+      <td style="max-width:180px;white-space:normal">${(p.exames||[]).join(', ')}</td>
+      <td><span style="color:${p.prioridade==='rotina'?'var(--text-muted)':p.prioridade==='urgente'?'var(--warning)':'var(--danger)'}">${prioLabel[p.prioridade]||p.prioridade}</span></td>
+      <td>${p.solicitante || '—'}</td>
+      <td>${p.data_solicitacao}</td>
+      <td><span style="color:${stColor[p.status]||'var(--text)'}">${stLabel[p.status]||p.status}</span>${p.tem_critico?' 🔴':''}</td>
+      <td><button class="btn btn-sm" onclick="abrirDetalhePedido(${p.id})">Ver / Resultado</button></td>
+    </tr>`).join('');
+}
+
+async function marcarVisualizado(resultadoId) {
+  await api(`/api/hospital/exames/resultados/${resultadoId}/visualizar/`, { method:'PATCH', body:'{}' });
+  carregarExames();
+}
+
+async function abrirDetalhePedido(pedidoId) {
+  const d = await api(`/api/hospital/exames/${pedidoId}/`);
+  if (!d?.pedido) return;
+  const p = d.pedido;
+  _exPedidoAtual = p;
+
+  // Reutiliza modalResultado como painel de detalhe
+  document.getElementById('resultadoPedidoInfo').textContent =
+    `Pedido #${p.id} · ${p.paciente_nome} · ${p.tipo} · ${(p.exames||[]).join(', ')}`;
+
+  // Lista resultados existentes
+  const lista = document.getElementById('listaResultados');
+  if (lista) {
+    lista.innerHTML = (p.resultados||[]).length === 0
+      ? '<p style="color:var(--text-muted);font-size:13px">Nenhum resultado lançado.</p>'
+      : (p.resultados||[]).map(r => `
+        <div style="background:rgba(255,255,255,.05);border-radius:8px;padding:10px;margin-bottom:8px">
+          <div style="font-weight:600">${r.responsavel_laudo || 'Sem responsável'} — <span style="color:${r.interpretacao==='critico'?'var(--danger)':r.interpretacao==='normal'?'var(--success)':'var(--warning)'}">${r.interpretacao}</span></div>
+          <div style="font-size:13px;margin-top:4px">${r.laudo || '—'}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${r.data_resultado}${r.visualizado_por?' · Visto por '+r.visualizado_por:''}</div>
+        </div>`).join('');
+  }
+
+  // Botão de coletar se ainda solicitado
+  const btnColetar = document.getElementById('btnMarcarColetado');
+  if (btnColetar) {
+    btnColetar.style.display = p.status === 'solicitado' ? '' : 'none';
+    btnColetar.onclick = () => marcarColetado(p.id);
+  }
+
+  abrirModal('modalResultado');
+}
+
+async function marcarColetado(pedidoId) {
+  const d = await api(`/api/hospital/exames/${pedidoId}/`, {
+    method:'PATCH', body: JSON.stringify({ status:'coletado' })
+  });
+  if (d?.ok) {
+    alert('Pedido marcado como coletado.');
+    fecharModal('modalResultado');
+    carregarExames();
+  }
+}
+
+async function abrirModalExame() {
+  const sel = document.getElementById('exPaciente');
+  if (sel) {
+    // Reuse already-loaded list or fetch fresh
+    const lista = _internacoesList.length ? _internacoesList : (await api('/api/hospital/internacoes/?status=internado'))?.internacoes || [];
+    sel.innerHTML = '<option value="">Selecione o paciente</option>' +
+      lista.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+  }
+  abrirModal('modalExame');
+}
+
+async function salvarExame() {
+  const examesRaw = (document.getElementById('exExames')?.value || '').trim();
+  const exames = examesRaw.split('\n').map(s=>s.trim()).filter(Boolean);
+  const body = {
+    paciente_id:        parseInt(document.getElementById('exPaciente')?.value),
+    tipo:               document.getElementById('exTipo')?.value,
+    exames,
+    prioridade:         document.getElementById('exPrioridade')?.value,
+    solicitante:        document.getElementById('exSolicitante')?.value || '',
+    solicitante_crm:    document.getElementById('exSolicitanteCRM')?.value || '',
+    observacoes_clinicas: document.getElementById('exObsClincias')?.value || '',
+    jejum_horas:        parseInt(document.getElementById('exJejum')?.value) || null,
+    material:           document.getElementById('exMaterial')?.value || '',
+  };
+  if (!body.paciente_id || !body.tipo || exames.length === 0) {
+    alert('Paciente, tipo e ao menos um exame são obrigatórios.');
+    return;
+  }
+  const d = await api('/api/hospital/exames/', { method:'POST', body: JSON.stringify(body) });
+  if (d?.ok) {
+    fecharModal('modalExame');
+    carregarExames();
+  }
+}
+
+async function salvarResultado() {
+  if (!_exPedidoAtual) return;
+  const resultadosRaw = (document.getElementById('resResultadoJSON')?.value || '').trim();
+  let resultados_json = [];
+  try { resultados_json = JSON.parse(resultadosRaw); } catch { resultados_json = [{ texto: resultadosRaw }]; }
+
+  const body = {
+    laudo:             document.getElementById('resLaudo')?.value || '',
+    interpretacao:     document.getElementById('resInterpretacao')?.value || 'pendente',
+    responsavel_laudo: document.getElementById('resResponsavel')?.value || '',
+    crm_responsavel:   document.getElementById('resCRM')?.value || '',
+    url_imagem:        document.getElementById('resUrlImagem')?.value || '',
+    resultados_json,
+  };
+  const d = await api(`/api/hospital/exames/${_exPedidoAtual.id}/resultados/`, {
+    method:'POST', body: JSON.stringify(body)
+  });
+  if (d?.ok) {
+    fecharModal('modalResultado');
+    carregarExames();
+    alert('Resultado lançado com sucesso!');
   }
 }
 </script>

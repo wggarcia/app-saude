@@ -3725,6 +3725,115 @@ class PrescricaoHospitalar(models.Model):
         return f"Prescrição {self.paciente.nome} {self.data} [{self.status}]"
 
 
+class PedidoExame(models.Model):
+    """Pedido de exame laboratorial ou de imagem solicitado durante internação."""
+    TIPO_CHOICES = [
+        ("laboratorial", "Laboratorial"),
+        ("imagem",       "Imagem (Rx/TC/RM/US)"),
+        ("ecg",          "ECG / Eletrocardiograma"),
+        ("endoscopia",   "Endoscopia"),
+        ("outro",        "Outro"),
+    ]
+    PRIORIDADE_CHOICES = [
+        ("rotina",   "Rotina"),
+        ("urgente",  "Urgente"),
+        ("emergencia", "Emergência"),
+    ]
+    STATUS_CHOICES = [
+        ("solicitado",  "Solicitado"),
+        ("coletado",    "Coletado / Em análise"),
+        ("concluido",   "Concluído"),
+        ("cancelado",   "Cancelado"),
+    ]
+
+    empresa             = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="pedidos_exame_hosp")
+    paciente            = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="pedidos_exame")
+    prescricao          = models.ForeignKey(PrescricaoHospitalar, on_delete=models.SET_NULL, null=True, blank=True, related_name="pedidos_exame")
+    tipo                = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    exames              = models.JSONField(default=list, help_text='[{nome, codigo_tuss, instrucoes}]')
+    prioridade          = models.CharField(max_length=20, choices=PRIORIDADE_CHOICES, default="rotina")
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="solicitado")
+    solicitante         = models.CharField(max_length=200, blank=True, default="")
+    solicitante_crm     = models.CharField(max_length=30, blank=True, default="")
+    observacoes_clinicas = models.TextField(blank=True, default="", help_text="Hipótese diagnóstica / contexto clínico")
+    jejum_horas         = models.PositiveSmallIntegerField(null=True, blank=True)
+    material            = models.CharField(max_length=100, blank=True, default="", help_text="Ex: sangue venoso, urina 24h")
+    data_solicitacao    = models.DateTimeField(auto_now_add=True)
+    data_coleta         = models.DateTimeField(null=True, blank=True)
+    atualizado_em       = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_solicitacao"]
+        indexes = [
+            models.Index(fields=["empresa", "status"], name="pedexame_emp_status_idx"),
+            models.Index(fields=["paciente", "status"], name="pedexame_pac_status_idx"),
+        ]
+
+    def __str__(self):
+        return f"Pedido #{self.id} {self.tipo} — {self.paciente.nome} ({self.status})"
+
+
+class ResultadoExame(models.Model):
+    """Resultado de exame vinculado ao pedido."""
+    INTERPRETACAO_CHOICES = [
+        ("normal",   "Normal / Dentro do esperado"),
+        ("alterado", "Alterado"),
+        ("critico",  "Crítico — requer ação imediata"),
+        ("pendente", "Pendente de laudo"),
+    ]
+
+    pedido              = models.ForeignKey(PedidoExame, on_delete=models.CASCADE, related_name="resultados")
+    paciente            = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="resultados_exame")
+    data_resultado      = models.DateTimeField(auto_now_add=True)
+    resultados_json     = models.JSONField(default=list, help_text='[{exame, valor, unidade, referencia, status}]')
+    laudo               = models.TextField(blank=True, default="")
+    interpretacao       = models.CharField(max_length=20, choices=INTERPRETACAO_CHOICES, default="pendente")
+    responsavel_laudo   = models.CharField(max_length=200, blank=True, default="")
+    crm_responsavel     = models.CharField(max_length=30, blank=True, default="")
+    url_imagem          = models.URLField(blank=True, default="", help_text="Link do DICOM / PDF do laudo")
+    visualizado_por     = models.CharField(max_length=200, blank=True, default="")
+    visualizado_em      = models.DateTimeField(null=True, blank=True)
+    criado_em           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_resultado"]
+
+    def __str__(self):
+        return f"Resultado #{self.id} — {self.pedido} [{self.interpretacao}]"
+
+
+class AdministracaoMedicamento(models.Model):
+    """Registro de administração de medicamento prescrito (5 certos)."""
+    STATUS_CHOICES = [
+        ("administrado", "Administrado"),
+        ("recusado",     "Recusado pelo paciente"),
+        ("omitido",      "Omitido"),
+        ("suspenso",     "Suspenso"),
+    ]
+
+    prescricao          = models.ForeignKey(PrescricaoHospitalar, on_delete=models.CASCADE, related_name="administracoes")
+    paciente            = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="administracoes")
+    nome_medicamento    = models.CharField(max_length=200)
+    dose                = models.CharField(max_length=100, blank=True, default="")
+    via                 = models.CharField(max_length=50, blank=True, default="")
+    horario_prescrito   = models.TimeField()
+    horario_administrado = models.DateTimeField(null=True, blank=True)
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="administrado")
+    responsavel         = models.CharField(max_length=200, blank=True, default="")
+    coren               = models.CharField(max_length=30, blank=True, default="")
+    observacao          = models.TextField(blank=True, default="")
+    criado_em           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["prescricao", "status"], name="adminmed_presc_status_idx"),
+        ]
+
+    def __str__(self):
+        return f"Adm {self.nome_medicamento} — {self.paciente.nome} {self.status}"
+
+
 class EvolucaoClinicaInternado(models.Model):
     """Evolução clínica estruturada vinculada a PacienteInternado (modelo moderno)."""
     TIPO_CHOICES = [

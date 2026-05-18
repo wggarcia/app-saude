@@ -317,6 +317,14 @@ from api.views_farmacia_ops import (
     api_pedidos_compra_farmacia, api_pedido_compra_status,
     api_farmacia_ops_kpis, api_farmacia_pdf_estoque, api_farmacia_pdf_dispensacoes,
 )
+from api.views_hospital_fase2 import (
+    api_pedidos_exame,
+    api_pedido_exame_detalhe,
+    api_resultados_exame,
+    api_resultado_visualizar,
+    api_administracoes,
+    api_exames_dashboard,
+)
 from api.views_hospital_fase1 import (
     api_evolucoes_paciente,
     api_monitoramento_uti,
@@ -807,6 +815,13 @@ urlpatterns = [
     path('api/hospital/centro-cirurgico/', api_centro_cirurgico),
     path('api/hospital/centro-cirurgico/<int:cc_id>/', api_centro_cirurgico_detalhe),
     path('api/hospital/uti/dashboard/', api_hospital_uti_dashboard),
+    # ── Hospital Fase 2: Exames + Resultados + Administração ────────────────
+    path('api/hospital/exames/dashboard/', api_exames_dashboard),
+    path('api/hospital/exames/', api_pedidos_exame),
+    path('api/hospital/exames/<int:pedido_id>/', api_pedido_exame_detalhe),
+    path('api/hospital/exames/<int:pedido_id>/resultados/', api_resultados_exame),
+    path('api/hospital/exames/resultados/<int:resultado_id>/visualizar/', api_resultado_visualizar),
+    path('api/hospital/prescricoes/<int:presc_id>/administracoes/', api_administracoes),
     # ── Rede / Network ───────────────────────────────────────────
     path('api/rede/', api_redes),
     path('api/rede/convidar/', api_rede_convidar),
