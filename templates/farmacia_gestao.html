@@ -1873,7 +1873,7 @@ async function carregarRedeEstoque() {
         <div style="text-align:center"><strong style="color:var(--warn)">${u.lotes_vencendo}</strong><br><small style="color:var(--muted)">Vencendo 30d</small></div>
         <div style="text-align:center"><strong style="color:var(--danger)">${u.lotes_vencidos}</strong><br><small style="color:var(--muted)">Vencidos</small></div>
       </div>
-      ${!u.eh_minha ? `<button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onclick="solicitarDaUnidade(${u.empresa_id}, '${u.unidade_nome.replace(/'/g,'\\'')}')">🔄 Solicitar transferência desta unidade</button>` : ''}
+      ${!u.eh_minha ? `<button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onclick='solicitarDaUnidade(${u.empresa_id}, ${JSON.stringify(u.unidade_nome)})'>🔄 Solicitar transferência desta unidade</button>` : ''}
     </div>
   `).join('');
 }
