@@ -289,6 +289,13 @@ from api.views_farmacia_fase1 import (
     api_farmacia_auditoria,
     api_farmacia_conformidade,
 )
+from api.views_farmacia_fase2 import (
+    api_rede_farmacia_estoque,
+    api_rede_farmacia_disponibilidade,
+    api_rede_farmacia_transferencias,
+    api_rede_farmacia_transferencia_acao,
+    api_rede_farmacia_kpis,
+)
 from api.views_hospital import api_hospital_painel
 from api.views_hospital_dashboard import (
     api_hospital_dashboard,
@@ -744,6 +751,12 @@ urlpatterns = [
     path('api/farmacia/lotes/bloqueio/', api_lotes_bloqueio),
     path('api/farmacia/auditoria/', api_farmacia_auditoria),
     path('api/farmacia/conformidade/', api_farmacia_conformidade),
+    # ── Fase 2: Multi-unidade & Rede ─────────────────────────────
+    path('api/farmacia/rede/estoque/', api_rede_farmacia_estoque),
+    path('api/farmacia/rede/disponibilidade/<str:nome_med>/', api_rede_farmacia_disponibilidade),
+    path('api/farmacia/rede/transferencias/', api_rede_farmacia_transferencias),
+    path('api/farmacia/rede/transferencias/<int:transf_id>/acao/', api_rede_farmacia_transferencia_acao),
+    path('api/farmacia/rede/kpis/', api_rede_farmacia_kpis),
     path('api/hospital/painel', api_hospital_painel),
     # ── Hospital Gestão (Manchester / KPIs) ─────────────────
     path('api/hospital/dashboard', api_hospital_dashboard),

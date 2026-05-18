@@ -138,6 +138,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="tab-btn" onclick="setTab('relatorios')">📊 Relatórios</button>
       <button class="tab-btn" onclick="setTab('conformidade')">🛡️ Conformidade</button>
       <button class="tab-btn" onclick="setTab('auditoria')">📝 Auditoria</button>
+      <button class="tab-btn" onclick="setTab('rede')">🌐 Rede</button>
     </div>
 
     <!-- Estoque -->
@@ -345,6 +346,86 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <thead><tr><th>Medicamento</th><th>Lote</th><th>Motivo</th><th>Quantidade</th><th>Responsável</th><th>Empresa Descarte</th><th>Manifesto</th><th>Data</th></tr></thead>
           <tbody id="tbodyDescartes"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Rede (Fase 2) -->
+    <div class="tab-panel" id="tab-rede" style="margin-top:16px">
+      <!-- KPIs de rede -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+        <div class="kpi"><div class="kpi-value" id="rkUnidades">—</div><div class="kpi-label">🏪 Unidades na Rede</div></div>
+        <div class="kpi"><div class="kpi-value" id="rkCriticos" style="color:var(--danger)">—</div><div class="kpi-label">🔴 Itens Críticos (rede)</div></div>
+        <div class="kpi"><div class="kpi-value" id="rkVencendo" style="color:var(--warn)">—</div><div class="kpi-label">⚠️ Lotes Vencendo 30d</div></div>
+        <div class="kpi"><div class="kpi-value" id="rkTransfPend" style="color:var(--accent)">—</div><div class="kpi-label">🔄 Transferências Pendentes</div></div>
+      </div>
+
+      <!-- Estoque consolidado -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <span class="card-title">📊 Estoque Consolidado da Rede</span>
+          <button class="btn btn-ghost" onclick="carregarRedeEstoque()">↻ Atualizar</button>
+        </div>
+        <div id="redeEstoqueContainer">
+          <div class="empty" style="padding:32px">Carregando dados da rede…</div>
+        </div>
+      </div>
+
+      <!-- Transferências -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🔄 Transferências entre Unidades</span>
+          <div style="display:flex;gap:8px">
+            <select id="filtroTransfRede" onchange="carregarTransferencias()" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px">
+              <option value="todas">Todas</option>
+              <option value="enviadas">Solicitadas por mim</option>
+              <option value="recebidas">Recebidas de mim</option>
+              <option value="pendentes">Pendentes</option>
+            </select>
+            <button class="btn btn-primary" onclick="abrirModalTransferencia()">+ Solicitar Transferência</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="table">
+            <thead><tr><th>ID</th><th>Medicamento</th><th>Qtd Solic.</th><th>Qtd Aprov.</th><th>De</th><th>Para</th><th>Status</th><th>Urgente</th><th>Data</th><th>Ações</th></tr></thead>
+            <tbody id="tbodyTransferencias"><tr><td colspan="10" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal nova transferência -->
+    <div class="modal-bg" id="modalTransferencia">
+      <div class="modal" style="max-width:480px">
+        <div class="modal-header">
+          <span class="modal-title">Solicitar Transferência</span>
+          <button class="btn btn-ghost" onclick="document.getElementById('modalTransferencia').classList.remove('open')">✕</button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+          <div class="mf">
+            <label>Medicamento (do seu estoque)</label>
+            <select id="tMedicamento" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text)"></select>
+          </div>
+          <div class="mf">
+            <label>Unidade Fornecedora</label>
+            <select id="tFornecedora" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text)"></select>
+          </div>
+          <div class="mf">
+            <label>Quantidade Solicitada</label>
+            <input id="tQuantidade" type="number" min="0.001" step="0.001" placeholder="0" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text)">
+          </div>
+          <div class="mf">
+            <label>Motivo / Justificativa</label>
+            <textarea id="tMotivo" rows="2" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);resize:vertical"></textarea>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="tUrgente">
+            <label for="tUrgente" style="font-size:13px;color:var(--danger);font-weight:600">⚡ Urgente</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="document.getElementById('modalTransferencia').classList.remove('open')">Cancelar</button>
+          <button class="btn btn-primary" onclick="salvarTransferencia()">Solicitar</button>
+        </div>
       </div>
     </div>
 
@@ -1379,7 +1460,7 @@ function fmtData(s) {
 let _currentTab = 'estoque';
 function setTab(tab) {
   _currentTab = tab;
-  const tabs = ['estoque','dispensacoes','movimentos','fornecedores','pedidos','lotes','pacientes','receitas','inventario','descarte','relatorios','conformidade','auditoria'];
+  const tabs = ['estoque','dispensacoes','movimentos','fornecedores','pedidos','lotes','pacientes','receitas','inventario','descarte','relatorios','conformidade','auditoria','rede'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', tabs[i] === tab));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
@@ -1395,6 +1476,7 @@ function setTab(tab) {
   else if (tab === 'descarte') carregarDescartes();
   else if (tab === 'conformidade') carregarConformidade();
   else if (tab === 'auditoria') carregarAuditoria();
+  else if (tab === 'rede') carregarRede();
 }
 
 // ── Lotes ─────────────────────────────────────────────────────
@@ -1477,6 +1559,149 @@ async function deletarLote(id) {
 
 // Fechar modal ao clicar fora
 document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+// ── Rede (Fase 2) ───────────────────────────────────────────────
+let _redeUnidades = [];
+
+async function carregarRede() {
+  await Promise.all([carregarRedeKpis(), carregarRedeEstoque(), carregarTransferencias()]);
+}
+
+async function carregarRedeKpis() {
+  const d = await api('/api/farmacia/rede/kpis/');
+  if (!d || d.aviso) return;
+  document.getElementById('rkUnidades').textContent    = d.total_unidades ?? '—';
+  document.getElementById('rkCriticos').textContent    = d.medicamentos_criticos ?? '—';
+  document.getElementById('rkVencendo').textContent    = d.lotes_vencendo_30d ?? '—';
+  document.getElementById('rkTransfPend').textContent  = d.transferencias_pendentes ?? '—';
+}
+
+async function carregarRedeEstoque() {
+  const d = await api('/api/farmacia/rede/estoque/');
+  const box = document.getElementById('redeEstoqueContainer');
+  if (!d || d.aviso) {
+    box.innerHTML = `<div class="empty" style="padding:32px">Esta empresa não pertence a uma rede ainda.<br><small style="color:var(--muted)">Configure uma rede em Rede & Comunicação.</small></div>`;
+    return;
+  }
+  _redeUnidades = d.unidades || [];
+  box.innerHTML = d.unidades.map(u => `
+    <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px${u.eh_minha ? ';border-color:var(--accent)' : ''}">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <strong style="font-size:15px">${u.unidade_nome}</strong>
+        ${u.eh_minha ? '<span style="background:var(--accent);color:#000;padding:2px 8px;border-radius:4px;font-size:11px">Minha Unidade</span>' : ''}
+        <span style="font-size:12px;color:var(--muted)">${u.cidade}${u.estado ? ' / ' + u.estado : ''}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px">
+        <div style="text-align:center"><strong>${u.total_medicamentos}</strong><br><small style="color:var(--muted)">Medicamentos</small></div>
+        <div style="text-align:center"><strong style="color:var(--danger)">${u.criticos}</strong><br><small style="color:var(--muted)">Críticos</small></div>
+        <div style="text-align:center"><strong style="color:var(--warn)">${u.baixos}</strong><br><small style="color:var(--muted)">Baixo estoque</small></div>
+        <div style="text-align:center"><strong style="color:var(--warn)">${u.lotes_vencendo}</strong><br><small style="color:var(--muted)">Vencendo 30d</small></div>
+        <div style="text-align:center"><strong style="color:var(--danger)">${u.lotes_vencidos}</strong><br><small style="color:var(--muted)">Vencidos</small></div>
+      </div>
+      ${!u.eh_minha ? `<button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onclick="solicitarDaUnidade(${u.empresa_id}, '${u.unidade_nome.replace(/'/g,'\\'')}')">🔄 Solicitar transferência desta unidade</button>` : ''}
+    </div>
+  `).join('');
+}
+
+async function carregarTransferencias() {
+  const filtro = document.getElementById('filtroTransfRede')?.value || 'todas';
+  const d = await api(`/api/farmacia/rede/transferencias/?filtro=${filtro}`);
+  const tb = document.getElementById('tbodyTransferencias');
+  if (!d?.transferencias?.length) {
+    tb.innerHTML = '<tr><td colspan="10" class="empty">Nenhuma transferência encontrada</td></tr>';
+    return;
+  }
+  const corStatus = {pendente:'var(--warn)',aprovada:'var(--ok)',enviada:'var(--accent)',recebida:'var(--ok)',cancelada:'var(--muted)',rejeitada:'var(--danger)'};
+  tb.innerHTML = d.transferencias.map(t => {
+    const acoes = [];
+    if (t.status === 'pendente') {
+      acoes.push(`<button class="btn btn-ghost" style="font-size:11px;padding:3px 7px" onclick="acaoTransferencia(${t.id},'aprovar')">✅ Aprovar</button>`);
+      acoes.push(`<button class="btn btn-ghost" style="font-size:11px;padding:3px 7px;color:var(--danger)" onclick="acaoTransferencia(${t.id},'rejeitar')">✗ Rejeitar</button>`);
+    }
+    if (t.status === 'aprovada') acoes.push(`<button class="btn btn-ghost" style="font-size:11px;padding:3px 7px" onclick="acaoTransferencia(${t.id},'enviar')">📦 Enviar</button>`);
+    if (t.status === 'enviada') acoes.push(`<button class="btn btn-ghost" style="font-size:11px;padding:3px 7px" onclick="acaoTransferencia(${t.id},'receber')">📥 Receber</button>`);
+    if (['pendente','aprovada'].includes(t.status)) acoes.push(`<button class="btn btn-ghost" style="font-size:11px;padding:3px 7px;color:var(--muted)" onclick="acaoTransferencia(${t.id},'cancelar')">✕</button>`);
+    return `<tr>
+      <td>#${t.id}</td>
+      <td>${t.medicamento_nome}</td>
+      <td>${t.quantidade_solicitada}</td>
+      <td>${t.quantidade_aprovada ?? '—'}</td>
+      <td style="font-size:12px">${t.solicitante_nome}</td>
+      <td style="font-size:12px">${t.fornecedora_nome}</td>
+      <td><span style="background:${corStatus[t.status]||'var(--muted)'};color:#000;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700">${t.status}</span></td>
+      <td>${t.urgente ? '⚡ Sim' : '—'}</td>
+      <td style="font-size:12px">${t.solicitado_em}</td>
+      <td style="white-space:nowrap;display:flex;gap:4px">${acoes.join('')}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function acaoTransferencia(id, acao) {
+  const body = { acao };
+  if (acao === 'aprovar') {
+    const qtd = prompt('Quantidade aprovada (deixe vazio para aprovar total solicitado):');
+    if (qtd !== null && qtd.trim()) body.quantidade_aprovada = parseFloat(qtd);
+  }
+  if (acao === 'rejeitar' || acao === 'cancelar') {
+    if (!confirm(`Confirmar ${acao}?`)) return;
+  }
+  const d = await api(`/api/farmacia/rede/transferencias/${id}/acao/`, { method:'POST', body: JSON.stringify(body) });
+  if (d?.ok) carregarTransferencias();
+}
+
+let _medsFarmacia = [];
+async function abrirModalTransferencia(empresaFornId, fornNome) {
+  // Carregar medicamentos do próprio estoque
+  if (!_medsFarmacia.length) {
+    const d = await api('/api/farmacia/estoque');
+    _medsFarmacia = d?.medicamentos || d?.itens || [];
+  }
+  const selMed = document.getElementById('tMedicamento');
+  selMed.innerHTML = '<option value="">— selecione —</option>' +
+    _medsFarmacia.map(m => `<option value="${m.id}">${m.nome} (estoque: ${m.quantidade_atual})</option>`).join('');
+
+  // Carregar unidades da rede para o select de fornecedora
+  const selForn = document.getElementById('tFornecedora');
+  const outras = _redeUnidades.filter(u => !u.eh_minha);
+  selForn.innerHTML = '<option value="">— selecione —</option>' +
+    outras.map(u => `<option value="${u.empresa_id}">${u.unidade_nome}</option>`).join('');
+
+  if (empresaFornId) {
+    selForn.value = empresaFornId;
+    selForn.disabled = true;
+  } else {
+    selForn.disabled = false;
+  }
+
+  document.getElementById('tQuantidade').value = '';
+  document.getElementById('tMotivo').value = '';
+  document.getElementById('tUrgente').checked = false;
+  document.getElementById('modalTransferencia').classList.add('open');
+}
+
+function solicitarDaUnidade(empresaId, nome) {
+  abrirModalTransferencia(empresaId, nome);
+}
+
+async function salvarTransferencia() {
+  const medId = document.getElementById('tMedicamento').value;
+  const fornId = document.getElementById('tFornecedora').value;
+  const qtd = document.getElementById('tQuantidade').value;
+  if (!medId || !fornId || !qtd) { alert('Preencha medicamento, unidade fornecedora e quantidade.'); return; }
+  const body = {
+    medicamento_id: parseInt(medId),
+    empresa_fornecedora_id: parseInt(fornId),
+    quantidade_solicitada: parseFloat(qtd),
+    motivo: document.getElementById('tMotivo').value,
+    urgente: document.getElementById('tUrgente').checked,
+  };
+  const d = await api('/api/farmacia/rede/transferencias/', { method:'POST', body: JSON.stringify(body) });
+  if (d?.ok) {
+    document.getElementById('modalTransferencia').classList.remove('open');
+    carregarTransferencias();
+    carregarRedeKpis();
+  }
+}
 
 // ── Conformidade & Segurança ────────────────────────────────────
 async function carregarConformidade() {

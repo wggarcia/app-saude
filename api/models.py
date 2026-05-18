@@ -3469,6 +3469,45 @@ class PedidoFarmacia(models.Model):
         return f"Pedido #{self.pk} — {self.fornecedor.nome if self.fornecedor else 'sem fornecedor'} ({self.status})"
 
 
+class TransferenciaFarmaciaMed(models.Model):
+    """Transferência de MedicamentoFarmacia entre unidades de uma mesma Rede."""
+
+    STATUS_CHOICES = [
+        ("pendente",   "Pendente"),
+        ("aprovada",   "Aprovada"),
+        ("enviada",    "Enviada"),
+        ("recebida",   "Recebida"),
+        ("cancelada",  "Cancelada"),
+        ("rejeitada",  "Rejeitada"),
+    ]
+
+    rede                = models.ForeignKey("Rede", on_delete=models.CASCADE, related_name="transferencias_farmacia")
+    empresa_solicitante = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="transf_farm_solicitadas")
+    empresa_fornecedora = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="transf_farm_fornecidas")
+    medicamento         = models.ForeignKey(MedicamentoFarmacia, on_delete=models.PROTECT, related_name="transferencias_rede")
+    lote                = models.ForeignKey(LoteMedicamento, on_delete=models.SET_NULL, null=True, blank=True, related_name="transferencias_rede")
+    quantidade_solicitada = models.DecimalField(max_digits=12, decimal_places=3)
+    quantidade_aprovada   = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pendente")
+    urgente             = models.BooleanField(default=False)
+    motivo              = models.TextField(blank=True, default="")
+    observacoes         = models.TextField(blank=True, default="")
+    solicitado_por      = models.CharField(max_length=150, blank=True, default="")
+    aprovado_por        = models.CharField(max_length=150, blank=True, default="")
+    solicitado_em       = models.DateTimeField(auto_now_add=True)
+    atualizado_em       = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-solicitado_em"]
+        indexes = [
+            models.Index(fields=["rede", "status"], name="transf_farm_rede_status_idx"),
+            models.Index(fields=["empresa_solicitante", "status"], name="transf_farm_sol_status_idx"),
+        ]
+
+    def __str__(self):
+        return f"Transf #{self.id} — {self.medicamento.nome} ({self.status})"
+
+
 class LivroRegistroControlado(models.Model):
     """Livro de registro obrigatório para dispensação de controlados (Portaria 344 ANVISA)."""
 
