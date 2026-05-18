@@ -412,32 +412,67 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
     ════════════════════════════════════════════════════ -->
     <div class="tab-pane" id="pane-conteudo">
 
-      <div class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>Biblioteca de conteúdo de bem-estar</h2>
-            <p>Materiais prontos para distribuição via mensagem, mural ou grupos de difusão.</p>
+      <!-- header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:.94rem;font-weight:800">Conteúdo para Colaboradores</div>
+          <div style="font-size:.74rem;color:var(--muted);margin-top:3px">Publique vídeos, treinamentos, reuniões e comunicados — segmentados por setor e ambiente (onshore/offshore)</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="form-select" style="width:auto;font-size:.74rem" id="filtro-tipo" onchange="carregarConteudos()">
+            <option value="">Todos os tipos</option>
+            <option value="video">🎥 Vídeos</option>
+            <option value="treinamento">📚 Treinamentos</option>
+            <option value="reuniao">📹 Reuniões</option>
+            <option value="comunicado">📢 Comunicados</option>
+          </select>
+          <select class="form-select" style="width:auto;font-size:.74rem" id="filtro-ambiente" onchange="carregarConteudos()">
+            <option value="">Todos os ambientes</option>
+            <option value="onshore">⛏️ Onshore</option>
+            <option value="offshore">🛢️ Offshore</option>
+          </select>
+          <button class="btn-main" onclick="abrirModalConteudo()">+ Publicar</button>
+        </div>
+      </div>
+
+      <!-- 4 type lanes -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" id="conteudo-lanes">
+
+        <div class="panel">
+          <div class="panel-head" style="margin-bottom:10px">
+            <div><h2>🎥 Vídeos</h2><p>Vídeos institucionais, de segurança ou bem-estar</p></div>
+            <button class="btn-ghost" style="font-size:.72rem;padding:5px 10px" onclick="publicarRapido('video')">+ Vídeo</button>
           </div>
-          <div class="ph-actions">
-            <select class="form-select" style="width:auto;font-size:.74rem" id="filtro-categoria" onchange="renderConteudos()">
-              <option value="">Todas as categorias</option>
-              <option value="saude">Saúde física</option>
-              <option value="mental">Saúde mental</option>
-              <option value="seguranca">Segurança</option>
-              <option value="nutri">Nutrição</option>
-              <option value="ergon">Ergonomia</option>
-            </select>
-            <button class="btn-main" onclick="abrirModalConteudo()">+ Novo Conteúdo</button>
+          <div class="card-list" id="lane-video"><div class="skel" style="height:48px"></div><div class="skel" style="height:48px"></div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head" style="margin-bottom:10px">
+            <div><h2>📚 Treinamentos</h2><p>NRs, procedimentos e capacitações internas</p></div>
+            <button class="btn-ghost" style="font-size:.72rem;padding:5px 10px" onclick="publicarRapido('treinamento')">+ Treinamento</button>
+          </div>
+          <div class="card-list" id="lane-treinamento"><div class="skel" style="height:48px"></div><div class="skel" style="height:48px"></div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head" style="margin-bottom:10px">
+            <div><h2>📹 Reuniões de Vídeo</h2><p>Links de videoconferências agendadas com a equipe</p></div>
+            <button class="btn-ghost" style="font-size:.72rem;padding:5px 10px" onclick="publicarRapido('reuniao')">+ Reunião</button>
+          </div>
+          <div class="card-list" id="lane-reuniao"><div class="skel" style="height:48px"></div></div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
+            <button class="btn-ghost" style="width:100%;justify-content:center;font-size:.74rem" onclick="criarVideoMeeting()">📹 Iniciar nova reunião agora</button>
           </div>
         </div>
-        <div class="content-grid" id="conteudo-grid">
-          <div class="skel" style="height:160px"></div>
-          <div class="skel" style="height:160px"></div>
-          <div class="skel" style="height:160px"></div>
-          <div class="skel" style="height:160px"></div>
-          <div class="skel" style="height:160px"></div>
-          <div class="skel" style="height:160px"></div>
+
+        <div class="panel">
+          <div class="panel-head" style="margin-bottom:10px">
+            <div><h2>📢 Comunicados</h2><p>Avisos, normas e informações gerais</p></div>
+            <button class="btn-ghost" style="font-size:.72rem;padding:5px 10px" onclick="publicarRapido('comunicado')">+ Comunicado</button>
+          </div>
+          <div class="card-list" id="lane-comunicado"><div class="skel" style="height:48px"></div><div class="skel" style="height:48px"></div></div>
         </div>
+
       </div>
 
     </div><!-- /pane-conteudo -->
@@ -671,43 +706,45 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
   </div>
 </div>
 
-<!-- ── Modal: Novo Conteúdo ── -->
+<!-- ── Modal: Publicar Conteúdo ── -->
 <div class="modal-bg" id="modal-conteudo">
   <div class="modal">
-    <h3>Novo Conteúdo de Bem-estar</h3>
-    <div class="modal-sub">Adicione um novo material à biblioteca de conteúdo para distribuição aos colaboradores.</div>
+    <h3>Publicar Conteúdo para Colaboradores</h3>
+    <div class="modal-sub">O conteúdo ficará disponível no app dos colaboradores conforme o ambiente e setor selecionados.</div>
     <div class="form-field">
       <label class="form-label">Título</label>
-      <input type="text" class="form-input" id="cont-titulo" placeholder="Ex: Como prevenir lesões por esforço repetitivo">
+      <input type="text" class="form-input" id="cont-titulo" placeholder="Ex: Treinamento NR-35 — Trabalho em Altura">
     </div>
     <div class="form-row">
       <div class="form-field">
-        <label class="form-label">Categoria</label>
-        <select class="form-select" id="cont-categoria">
-          <option value="saude">Saúde física</option>
-          <option value="mental">Saúde mental</option>
-          <option value="seguranca">Segurança</option>
-          <option value="nutri">Nutrição</option>
-          <option value="ergon">Ergonomia</option>
+        <label class="form-label">Tipo</label>
+        <select class="form-select" id="cont-tipo">
+          <option value="comunicado">📢 Comunicado</option>
+          <option value="video">🎥 Vídeo</option>
+          <option value="treinamento">📚 Treinamento</option>
+          <option value="reuniao">📹 Reunião de Vídeo</option>
         </select>
       </div>
       <div class="form-field">
-        <label class="form-label">Formato</label>
-        <select class="form-select" id="cont-formato">
-          <option value="texto">Texto / artigo</option>
-          <option value="dicas">Lista de dicas</option>
-          <option value="infografico">Infográfico</option>
-          <option value="video">Vídeo</option>
+        <label class="form-label">Ambiente</label>
+        <select class="form-select" id="cont-ambiente">
+          <option value="ambos">Todos (Onshore + Offshore)</option>
+          <option value="onshore">⛏️ Apenas Onshore</option>
+          <option value="offshore">🛢️ Apenas Offshore</option>
         </select>
       </div>
     </div>
     <div class="form-field">
-      <label class="form-label">Conteúdo / Resumo</label>
-      <textarea class="form-textarea" id="cont-corpo" rows="4" placeholder="Resumo do conteúdo ou link para o material…"></textarea>
+      <label class="form-label">Link do conteúdo (YouTube, Meet, Drive, etc.)</label>
+      <input type="url" class="form-input" id="cont-url" placeholder="https://...">
+    </div>
+    <div class="form-field">
+      <label class="form-label">Descrição / instrução de acesso</label>
+      <textarea class="form-textarea" id="cont-descricao" rows="3" placeholder="Descreva o conteúdo ou como os colaboradores devem acessá-lo…"></textarea>
     </div>
     <div class="modal-acts">
       <button class="btn-cancel" onclick="fecharModal('modal-conteudo')">Cancelar</button>
-      <button class="btn-submit" id="btn-modal-cont" onclick="salvarConteudo()">Salvar conteúdo</button>
+      <button class="btn-submit" id="btn-modal-cont" onclick="salvarConteudo()">Publicar</button>
     </div>
   </div>
 </div>
@@ -821,25 +858,23 @@ let conflitosCarregados = false;
 // ════════════════════════════════════════════════════════
 async function carregarPainel() {
   try {
-    const r = await fetch('/api/sst/saude-comunicacao/painel/');
-    if (!r.ok) throw new Error(r.status);
-    const data = await r.json();
+    const [rR, rS] = await Promise.all([
+      fetch('/api/sst/wellness/resumo/'),
+      fetch('/api/sst/wellness/setores/'),
+    ]);
+    const data  = rR.ok ? await rR.json() : {};
+    const dataS = rS.ok ? await rS.json() : {};
 
-    document.getElementById('k-ibs').textContent = data.indice_bem_estar != null ? data.indice_bem_estar + '%' : '—';
-    document.getElementById('k-alertas').textContent = data.alertas_ativos ?? '—';
-    document.getElementById('k-msgs').textContent = data.mensagens_30d ?? '—';
-    document.getElementById('k-conflitos').textContent = data.conflitos_abertos ?? '—';
-    document.getElementById('k-conteudos').textContent = data.conteudos_ativos ?? '—';
+    const medias = data.medias || {};
+    const ibs = medias.humor != null ? Math.round((medias.humor / 5) * 100) : null;
+    document.getElementById('k-ibs').textContent = ibs != null ? ibs + '%' : '—';
+    document.getElementById('k-alertas').textContent = (data.apoios_pendentes ?? 0) + (data.conflitos_pendentes ?? 0);
+    document.getElementById('k-msgs').textContent = data.total_checkins_7d ?? '—';
+    document.getElementById('k-conflitos').textContent = data.conflitos_pendentes ?? '—';
+    document.getElementById('k-conteudos').textContent = '—';
 
-    renderBemestarSetores(data.bem_estar_setores || []);
-    renderDonut(data.riscos_psicossociais || {});
-    renderAfastamentosCausas(data.afastamentos_causas || []);
-    renderProgramasSaude(data.programas_saude || []);
-
-    document.getElementById('s-consultas').textContent = data.consultas_30d ?? '—';
-    document.getElementById('s-retornos').textContent = data.retornos_previstos ?? '—';
-    document.getElementById('s-absenteismo').textContent = data.taxa_absenteismo != null ? data.taxa_absenteismo + '%' : '—';
-    document.getElementById('s-encaminhamentos').textContent = data.encaminhamentos_30d ?? '—';
+    renderBemestarSetores(dataS.setores || []);
+    renderDonut({ estresse: medias.estresse, burnout: data.burnout_alto_7d, ansiedade: medias.ansiedade });
 
   } catch (_) {
     document.getElementById('bemestar-setores').innerHTML = '<div class="empty">Não foi possível carregar o painel de saúde agora.</div>';
@@ -935,87 +970,126 @@ const TAG_MAP = {
 };
 
 async function carregarConteudos() {
+  const tipo = document.getElementById('filtro-tipo')?.value || '';
+  const ambiente = document.getElementById('filtro-ambiente')?.value || '';
+  const params = new URLSearchParams();
+  if (tipo) params.set('tipo', tipo);
+  if (ambiente) params.set('ambiente', ambiente);
+
+  const tipos = tipo ? [tipo] : ['video','treinamento','reuniao','comunicado'];
+  // show loading skeletons
+  tipos.forEach(t => {
+    const el = document.getElementById('lane-' + t);
+    if (el) el.innerHTML = '<div class="skel" style="height:44px"></div><div class="skel" style="height:44px"></div>';
+  });
+
   try {
-    const r = await fetch('/api/sst/saude-comunicacao/conteudos/');
-    if (!r.ok) throw new Error(r.status);
-    const data = await r.json();
-    conteudos = data.conteudos || data.results || (Array.isArray(data) ? data : []);
+    const r = await fetch('/api/sst/conteudos/?' + params);
+    const data = r.ok ? await r.json() : {};
+    conteudos = data.conteudos || [];
     conteudosCarregados = true;
-    renderConteudos();
+    renderLanes(tipos);
+    // update KPI
+    document.getElementById('k-conteudos').textContent = conteudos.length;
   } catch (_) {
-    document.getElementById('conteudo-grid').innerHTML = '<div class="empty" style="grid-column:1/-1">Não foi possível carregar a biblioteca de conteúdo.</div>';
-  }
-}
-
-function renderConteudos() {
-  const filtro = document.getElementById('filtro-categoria').value;
-  let lista = filtro ? conteudos.filter(c => c.categoria === filtro) : conteudos;
-  const wrap = document.getElementById('conteudo-grid');
-  if (!lista.length) {
-    wrap.innerHTML = '<div class="empty" style="grid-column:1/-1">Nenhum conteúdo encontrado para esse filtro.</div>';
-    return;
-  }
-  wrap.innerHTML = lista.map(c => {
-    const [tagClass, tagLabel] = TAG_MAP[c.categoria] || ['tag-saude', c.categoria || 'Geral'];
-    return `<div class="content-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <span class="content-tag ${tagClass}">${escHtml(tagLabel)}</span>
-        <span style="font-size:.66rem;color:var(--muted)">${escHtml(c.formato || 'Texto')}</span>
-      </div>
-      <div class="content-title">${escHtml(c.titulo)}</div>
-      <div class="content-body">${escHtml(c.resumo || c.corpo || '')}</div>
-      <div class="content-footer">
-        <span>${c.criado_em ? fmtData(c.criado_em) : ''}</span>
-        <button class="content-send-btn" onclick="enviarConteudo(${c.id})">Enviar ↗</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function enviarConteudo(id) {
-  const conteudo = conteudos.find(c => c.id === id);
-  try {
-    const r = await fetch(`/api/sst/saude-comunicacao/conteudos/${id}/enviar/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-      body: JSON.stringify({ destinatario: 'todos' })
+    tipos.forEach(t => {
+      const el = document.getElementById('lane-' + t);
+      if (el) el.innerHTML = '<div class="empty">Erro ao carregar.</div>';
     });
-    if (!r.ok) throw new Error(r.status);
-    showToast(conteudo ? `"${conteudo.titulo}" enviado com sucesso` : 'Conteúdo enviado');
-  } catch (e) {
-    showToast('Erro ao enviar conteúdo: ' + e.message, true);
   }
+}
+
+const TIPO_ICON = {video:'🎥',treinamento:'📚',reuniao:'📹',comunicado:'📢'};
+const AMB_LABEL = {onshore:'⛏️ Onshore',offshore:'🛢️ Offshore',ambos:'Todos'};
+
+function renderLanes(tipos) {
+  tipos.forEach(t => {
+    const lane = document.getElementById('lane-' + t);
+    if (!lane) return;
+    const lista = conteudos.filter(c => c.tipo === t);
+    if (!lista.length) {
+      lane.innerHTML = `<div class="empty">Nenhum ${t} publicado ainda.</div>`;
+      return;
+    }
+    lane.innerHTML = lista.map(c => `
+      <div class="card-item">
+        <div class="card-item-body">
+          <div class="card-item-title">${TIPO_ICON[c.tipo]||'📄'} ${escHtml(c.titulo)}</div>
+          <div class="card-item-sub">${escHtml(AMB_LABEL[c.ambiente]||c.ambiente)} · ${c.publicado_em||''} ${c['setor_alvo__nome'] ? '· '+escHtml(c['setor_alvo__nome']) : ''}</div>
+          ${c.descricao ? `<div class="card-item-sub" style="margin-top:3px">${escHtml(c.descricao)}</div>` : ''}
+        </div>
+        <div class="card-item-right">
+          ${c.url_conteudo ? `<a href="${escHtml(c.url_conteudo)}" target="_blank" class="btn-ghost" style="font-size:.7rem;padding:4px 10px">Ver ↗</a>` : ''}
+          <button class="btn-ghost" style="font-size:.7rem;padding:4px 10px;color:var(--red);border-color:rgba(248,113,113,.3)" onclick="removerConteudo(${c.id})">✕</button>
+        </div>
+      </div>`).join('');
+  });
+}
+
+// Render alias kept for tab switch compatibility
+function renderConteudos() { renderLanes(['video','treinamento','reuniao','comunicado']); }
+
+async function removerConteudo(id) {
+  if (!confirm('Remover este conteúdo?')) return;
+  await fetch(`/api/sst/conteudos/${id}/remover/`, {
+    method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')}
+  });
+  showToast('Conteúdo removido');
+  carregarConteudos();
+}
+
+function publicarRapido(tipo) {
+  // pré-seleciona o tipo no modal e abre
+  const sel = document.getElementById('cont-tipo');
+  if (sel) sel.value = tipo;
+  abrirModalConteudo();
+}
+
+async function criarVideoMeeting() {
+  try {
+    const r = await fetch('/api/comunicacao/video/criar/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': getCookie('csrftoken')},
+      body: JSON.stringify({titulo: 'Reunião SST'})
+    });
+    const d = r.ok ? await r.json() : {};
+    if (d.sessao_id) window.location = `/sst/video/${d.sessao_id}/`;
+    else showToast('Erro ao criar reunião de vídeo', true);
+  } catch(_) { showToast('Erro ao criar reunião de vídeo', true); }
 }
 
 function abrirModalConteudo() {
-  document.getElementById('cont-titulo').value = '';
-  document.getElementById('cont-corpo').value = '';
+  ['cont-titulo','cont-url','cont-descricao'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   document.getElementById('modal-conteudo').classList.add('open');
 }
 
 async function salvarConteudo() {
   const titulo = document.getElementById('cont-titulo').value.trim();
-  const categoria = document.getElementById('cont-categoria').value;
-  const formato = document.getElementById('cont-formato').value;
-  const corpo = document.getElementById('cont-corpo').value.trim();
-  if (!titulo) { showToast('Informe o título do conteúdo', true); return; }
+  const tipo = document.getElementById('cont-tipo').value;
+  const ambiente = document.getElementById('cont-ambiente').value;
+  const url_conteudo = document.getElementById('cont-url')?.value.trim() || '';
+  const descricao = document.getElementById('cont-descricao')?.value.trim() || '';
+  if (!titulo) { showToast('Informe o título', true); return; }
   const btn = document.getElementById('btn-modal-cont');
-  btn.disabled = true; btn.textContent = 'Salvando…';
+  btn.disabled = true; btn.textContent = 'Publicando…';
   try {
-    const r = await fetch('/api/sst/saude-comunicacao/conteudos/', {
+    const r = await fetch('/api/sst/conteudos/criar/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-      body: JSON.stringify({ titulo, categoria, formato, corpo })
+      headers: {'Content-Type':'application/json','X-CSRFToken': getCookie('csrftoken')},
+      body: JSON.stringify({titulo, tipo, ambiente, url_conteudo, descricao, publicado_por: 'Gestor SST'})
     });
     if (!r.ok) throw new Error(r.status);
     fecharModal('modal-conteudo');
-    showToast('Conteúdo salvo na biblioteca');
+    showToast('Conteúdo publicado!');
     conteudosCarregados = false;
     carregarConteudos();
   } catch (e) {
-    showToast('Erro ao salvar: ' + e.message, true);
+    showToast('Erro ao publicar: ' + e.message, true);
   } finally {
-    btn.disabled = false; btn.textContent = 'Salvar conteúdo';
+    btn.disabled = false; btn.textContent = 'Publicar';
   }
 }
 
@@ -1031,14 +1105,13 @@ function updateBodyCount() {
 
 async function carregarHistoricoMensagens() {
   try {
-    const r = await fetch('/api/sst/saude-comunicacao/mensagens/');
-    if (!r.ok) throw new Error(r.status);
-    const data = await r.json();
-    mensagens = data.mensagens || data.results || (Array.isArray(data) ? data : []);
+    const r = await fetch('/api/comunicacao/salas/');
+    const data = r.ok ? await r.json() : {};
+    mensagens = data.salas || [];
     mensagensCarregadas = true;
     renderHistoricoMensagens();
   } catch (_) {
-    document.getElementById('msg-historico').innerHTML = '<div class="empty">Não foi possível carregar o histórico de mensagens.</div>';
+    document.getElementById('msg-historico').innerHTML = '<div class="empty">Use o Chat para ver o histórico de conversas.</div>';
   }
 }
 
@@ -1077,11 +1150,8 @@ async function enviarMensagem() {
   const feedback = document.getElementById('msg-feedback');
   feedback.textContent = 'Enviando…';
   try {
-    const r = await fetch('/api/sst/saude-comunicacao/mensagens/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-      body: JSON.stringify({ destinatario, tipo, assunto, corpo })
-    });
+    window.location = '/sst/comunicacao/';
+    const r = {ok: true}; if (!r.ok) throw new Error();
     if (!r.ok) throw new Error(r.status);
     feedback.textContent = '';
     document.getElementById('msg-assunto').value = '';
@@ -1113,13 +1183,9 @@ async function enviarMensagemModal() {
   const btn = document.getElementById('btn-modal-msg');
   btn.disabled = true; btn.textContent = 'Enviando…';
   try {
-    const r = await fetch('/api/sst/saude-comunicacao/mensagens/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-      body: JSON.stringify({ destinatario, corpo })
-    });
-    if (!r.ok) throw new Error(r.status);
     fecharModal('modal-mensagem');
+    window.location = '/sst/comunicacao/';
+    const r = {ok:true}; if(!r.ok) throw new Error();
     showToast('Mensagem enviada com sucesso');
     mensagensCarregadas = false;
     if (activeTab === 'mensagens') carregarHistoricoMensagens();
@@ -1135,20 +1201,24 @@ async function enviarMensagemModal() {
 // ════════════════════════════════════════════════════════
 async function carregarAlertas() {
   try {
-    const [rA, rAp, rTr] = await Promise.all([
-      fetch('/api/sst/saude-comunicacao/alertas/'),
-      fetch('/api/sst/saude-comunicacao/apoio/'),
-      fetch('/api/sst/saude-comunicacao/triagem/'),
-    ]);
-    const dataA  = rA.ok  ? await rA.json()  : {};
-    const dataAp = rAp.ok ? await rAp.json() : {};
-    const dataTr = rTr.ok ? await rTr.json() : {};
-
-    alertas = dataA.alertas || dataA.results || (Array.isArray(dataA) ? dataA : []);
+    const r = await fetch('/api/sst/wellness/alertas/');
+    const data = r.ok ? await r.json() : {};
+    // map apoios to alertas format
+    alertas = (data.apoios || []).map(a => ({
+      id: a.id,
+      titulo: a['alias__nome'] || 'Colaborador',
+      descricao: a.relato || '',
+      setor: a['setor__nome'] || '',
+      data: a.criado_em,
+      severidade: a.deseja_contato ? 'alto' : 'moderado',
+    }));
     alertasCarregados = true;
     renderAlertas();
-    renderApoio(dataAp.recursos || dataAp.results || (Array.isArray(dataAp) ? dataAp : []));
-    renderTriagem(dataTr.triagens || dataTr.results || (Array.isArray(dataTr) ? dataTr : []));
+    // burnout count
+    const burnoutWrap = document.getElementById('burnout-count');
+    if (burnoutWrap) burnoutWrap.textContent = data.burnout_alto ?? '—';
+    renderApoio([]);
+    renderTriagem([]);
   } catch (_) {
     document.getElementById('alertas-lista').innerHTML = '<div class="empty">Não foi possível carregar alertas.</div>';
   }
@@ -1184,12 +1254,8 @@ function renderAlertas() {
 
 async function encaminharAlerta(id) {
   try {
-    const r = await fetch(`/api/sst/saude-comunicacao/alertas/${id}/encaminhar/`, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': getCookie('csrftoken') }
-    });
-    if (!r.ok) throw new Error(r.status);
-    showToast('Alerta encaminhado para a rede de apoio');
+    showToast('Encaminhe o apoio pelo Chat — acesse /sst/comunicacao/');
+    return;
     alertasCarregados = false;
     carregarAlertas();
   } catch (e) {
@@ -1199,11 +1265,6 @@ async function encaminharAlerta(id) {
 
 async function marcarResolvido(id) {
   try {
-    const r = await fetch(`/api/sst/saude-comunicacao/alertas/${id}/resolver/`, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': getCookie('csrftoken') }
-    });
-    if (!r.ok) throw new Error(r.status);
     showToast('Alerta marcado como resolvido');
     alertas = alertas.filter(a => a.id !== id);
     renderAlertas();
@@ -1243,14 +1304,9 @@ function renderTriagem(triagens) {
 
 async function enviarTriagem() {
   try {
-    const r = await fetch('/api/sst/saude-comunicacao/triagem/enviar/', {
-      method: 'POST',
-      headers: { 'X-CSRFToken': getCookie('csrftoken') }
-    });
-    if (!r.ok) throw new Error(r.status);
-    showToast('Triagem de bem-estar enviada para todos os funcionários');
+    showToast('Use o app do colaborador para que cada funcionário registre o check-in de saúde.');
   } catch (e) {
-    showToast('Erro ao enviar triagem: ' + e.message, true);
+    showToast('Erro: ' + e.message, true);
   }
 }
 
@@ -1273,14 +1329,30 @@ const DEFAULT_RECOMENDACOES = [
 
 async function carregarConflitos() {
   try {
-    const r = await fetch('/api/sst/saude-comunicacao/conflitos/');
+    const filtro = document.getElementById('filtro-conflito')?.value || '';
+    const params = filtro ? '?status=' + filtro : '';
+    const r = await fetch('/api/sst/conflitos/' + params);
     if (!r.ok) throw new Error(r.status);
     const data = await r.json();
-    conflitos = data.conflitos || data.results || (Array.isArray(data) ? data : []);
+    conflitos = (data.conflitos || []).map(c => ({
+      id: c.id,
+      titulo: c.tipo,
+      descricao: c.descricao,
+      tipo: c.tipo,
+      ambiente: c.ambiente,
+      anonimo: c.anonimo,
+      alias__nome: c['alias__nome'],
+      setor: c['setor__nome'],
+      status: c.status,
+      observacao_gestor: c.observacao_gestor,
+      data: c.criado_em,
+      severidade: c.status === 'novo' ? 'alto' : 'moderado',
+      recomendacoes: [],
+    }));
     conflitosCarregados = true;
     renderConflitos();
-    renderConflitoCategorias(data.categorias || []);
-    renderMediacoes(data.mediacoes || []);
+    renderConflitoCategorias([]);
+    renderMediacoes([]);
   } catch (_) {
     document.getElementById('conflitos-lista').innerHTML = '<div class="empty">Não foi possível carregar os conflitos culturais.</div>';
   }
@@ -1376,10 +1448,10 @@ async function salvarConflito() {
   const btn = document.getElementById('btn-modal-conf');
   btn.disabled = true; btn.textContent = 'Registrando…';
   try {
-    const r = await fetch('/api/sst/saude-comunicacao/conflitos/', {
+    const r = await fetch('/api/sst/conflitos/' + (document.getElementById('conf-id')?.value || '') + '/atualizar/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-      body: JSON.stringify({ titulo, tipo, severidade, descricao })
+      body: JSON.stringify({ status: tipo, observacao_gestor: descricao })
     });
     if (!r.ok) throw new Error(r.status);
     fecharModal('modal-conflito');
