@@ -33,10 +33,13 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .kpi.ok .kpi-val{color:var(--ok)}
 .kpi.info .kpi-val{color:#a78bfa}
 .kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
-/* Tabs */
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);padding-bottom:0}
-.tab-btn{padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif}
-.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+/* Tab layout — inner sidebar */
+.tabs-layout{display:flex;align-items:flex-start;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.tabs{display:flex;flex-direction:column;width:196px;flex-shrink:0;border-right:1px solid var(--border);padding:8px 0;align-self:stretch;background:rgba(255,255,255,.02)}
+.tab-btn{display:flex;align-items:center;gap:9px;padding:10px 16px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-right:3px solid transparent;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif;text-align:left;width:100%;white-space:nowrap}
+.tab-btn:hover{background:rgba(0,194,255,.06);color:var(--text)}
+.tab-btn.active{color:var(--accent);border-right-color:var(--accent);background:rgba(0,194,255,.1)}
+.tab-content{flex:1;min-width:0;padding:20px}
 .tab-panel{display:none}.tab-panel.active{display:block}
 /* Table */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
@@ -123,27 +126,28 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 
   <!-- Tabs -->
-  <div>
-    <div class="tabs">
-      <button class="tab-btn active" onclick="setTab('estoque')">📦 Estoque</button>
-      <button class="tab-btn" onclick="setTab('dispensacoes')">💊 Dispensações</button>
-      <button class="tab-btn" onclick="setTab('movimentos')">↕️ Movimentos</button>
-      <button class="tab-btn" onclick="setTab('fornecedores')">🏭 Fornecedores</button>
-      <button class="tab-btn" onclick="setTab('pedidos')">🛒 Pedidos de Compra</button>
-      <button class="tab-btn" onclick="setTab('lotes')">🏷️ Lotes / Validade</button>
-      <button class="tab-btn" onclick="setTab('pacientes')">👥 Pacientes</button>
-      <button class="tab-btn" onclick="setTab('receitas')">📋 Receitas</button>
-      <button class="tab-btn" onclick="setTab('inventario')">🔍 Inventário</button>
-      <button class="tab-btn" onclick="setTab('descarte')">🗑️ Descarte</button>
-      <button class="tab-btn" onclick="setTab('relatorios')">📊 Relatórios</button>
-      <button class="tab-btn" onclick="setTab('conformidade')">🛡️ Conformidade</button>
-      <button class="tab-btn" onclick="setTab('auditoria')">📝 Auditoria</button>
-      <button class="tab-btn" onclick="setTab('rede')">🌐 Rede</button>
-      <button class="tab-btn" onclick="setTab('ia')">🤖 IA & Analytics</button>
-    </div>
+  <div class="tabs-layout">
+    <nav class="tabs">
+      <button class="tab-btn active" onclick="setTab('estoque')"><span>📦</span> Estoque</button>
+      <button class="tab-btn" onclick="setTab('dispensacoes')"><span>💊</span> Dispensações</button>
+      <button class="tab-btn" onclick="setTab('movimentos')"><span>↕️</span> Movimentos</button>
+      <button class="tab-btn" onclick="setTab('fornecedores')"><span>🏭</span> Fornecedores</button>
+      <button class="tab-btn" onclick="setTab('pedidos')"><span>🛒</span> Pedidos de Compra</button>
+      <button class="tab-btn" onclick="setTab('lotes')"><span>🏷️</span> Lotes / Validade</button>
+      <button class="tab-btn" onclick="setTab('pacientes')"><span>👥</span> Pacientes</button>
+      <button class="tab-btn" onclick="setTab('receitas')"><span>📋</span> Receitas</button>
+      <button class="tab-btn" onclick="setTab('inventario')"><span>🔍</span> Inventário</button>
+      <button class="tab-btn" onclick="setTab('descarte')"><span>🗑️</span> Descarte</button>
+      <button class="tab-btn" onclick="setTab('relatorios')"><span>📊</span> Relatórios</button>
+      <button class="tab-btn" onclick="setTab('conformidade')"><span>🛡️</span> Conformidade</button>
+      <button class="tab-btn" onclick="setTab('auditoria')"><span>📝</span> Auditoria</button>
+      <button class="tab-btn" onclick="setTab('rede')"><span>🌐</span> Rede</button>
+      <button class="tab-btn" onclick="setTab('ia')"><span>🤖</span> IA & Analytics</button>
+    </nav>
+    <div class="tab-content">
 
     <!-- Estoque -->
-    <div class="tab-panel active" id="tab-estoque" style="margin-top:16px">
+    <div class="tab-panel active" id="tab-estoque">
       <div class="card">
         <div class="card-header">
           <span class="card-title">Itens em Estoque</span>
@@ -643,7 +647,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
     </div>
 
-  </div>
+    </div><!-- end .tab-content -->
+  </div><!-- end .tabs-layout -->
 </main>
 
 <!-- Modal: Novo Item -->
