@@ -652,8 +652,6 @@ urlpatterns = [
     path('api/sst/solicitacoes-exame', api_solicitacoes_exame),
     path('api/sst/solicitacoes-exame/<int:sol_id>/', api_solicitacao_detalhe),
     path('api/sst/solicitacoes-exame/<int:sol_id>', api_solicitacao_detalhe),
-    path('api/sst/clinicas-disponiveis/', api_clinicas_disponiveis),
-    path('api/sst/clinicas-disponiveis', api_clinicas_disponiveis),
     path('api/clinica/solicitacoes/', api_clinica_solicitacoes),
     path('api/clinica/solicitacoes', api_clinica_solicitacoes),
     path('api/clinica/solicitacoes/<int:sol_id>/', api_clinica_solicitacao_acao),
@@ -714,7 +712,6 @@ urlpatterns = [
     path('api/colaborador-mobile/<str:codigo>/checkin-diario', api_corporativo_checkin_diario),
     path('api/colaborador-mobile/<str:codigo>/checkin-semanal', api_corporativo_checkin_semanal),
     path('api/colaborador-mobile/<str:codigo>/trilhas', api_colaborador_trilhas),
-    path('api/alertas', alertas),
     path('api/public/resumo', app_resumo_publico),
     path('api/public/radar-local', app_radar_local),
     path('api/public/mapa', app_mapa_publico),
@@ -743,8 +740,6 @@ urlpatterns = [
     path('api/farmacia/estoque/', api_farmacia_estoque),
     path('api/farmacia/dispensacao', api_farmacia_dispensacao),
     path('api/farmacia/dispensacao/', api_farmacia_dispensacao),
-    path('api/farmacia/movimentos', api_farmacia_movimentos),
-    path('api/farmacia/movimentos/', api_farmacia_movimentos),
     path('api/farmacia/fornecedores-gestao', api_farmacia_fornecedores),
     path('api/farmacia/fornecedores-gestao/', api_farmacia_fornecedores),
     path('api/farmacia/pedidos-gestao', api_farmacia_pedidos),
@@ -1061,7 +1056,6 @@ urlpatterns = [
     # ── Plataforma — SLA, Status ──────────────────────────────────────────────
     path('sla/', sla_page),
     path('status/', status_page),
-    path('api/platform/status', platform_status),
 
     # ── Portal do Funcionário (app mobile trabalhador SST) ────────────────────
     path('api/funcionario/login', funcionario_login),
