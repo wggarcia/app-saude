@@ -20,14 +20,15 @@ from .models import (
     PedidoApoioCorporativo,
     TrilhaCompetenciaCorporativa,
 )
-from .views_dashboard import _empresa_autenticada, _setor_conta
+from .services.dashboard_core import setor_conta
+from .views_dashboard import _empresa_autenticada
 
 
 def _empresa_corporativa_autenticada(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return None
-    setor = _setor_conta(empresa)
+    setor = setor_conta(empresa)
     if setor != "empresa" or empresa.tipo_conta != Empresa.TIPO_EMPRESA:
         return None
     return empresa
@@ -35,7 +36,7 @@ def _empresa_corporativa_autenticada(request):
 
 def _resolver_empresa_por_codigo(codigo):
     empresa = get_object_or_404(Empresa, codigo_acesso_corporativo=codigo, ativo=True)
-    if _setor_conta(empresa) != "empresa":
+    if setor_conta(empresa) != "empresa":
         raise ValueError("codigo indisponivel para setor nao corporativo")
     return empresa
 
@@ -77,7 +78,7 @@ def dashboard_empresa_corporativo(request):
     if not empresa:
         return redirect("/")
 
-    setor = _setor_conta(empresa)
+    setor = setor_conta(empresa)
     if setor == "farmacia":
         return redirect("/dashboard-farmacia/")
     if setor == "hospital":

@@ -24,6 +24,33 @@ class Command(BaseCommand):
             env_prefix="SOLUSCRT_BOOTSTRAP_EMPRESA",
             tipo_conta=Empresa.TIPO_EMPRESA,
             acesso_governo=False,
+            pacote_default=pacote_padrao(),
+            nome_default="Empresa Piloto SolusCRT",
+            plano_default="mensal",
+            reset_passwords=reset_passwords,
+            criados=criados,
+            atualizados=atualizados,
+            ignorados=ignorados,
+        )
+        self._bootstrap_empresa(
+            env_prefix="SOLUSCRT_BOOTSTRAP_FARMACIA",
+            tipo_conta=Empresa.TIPO_EMPRESA,
+            acesso_governo=False,
+            pacote_default="farmacia_rede_regional",
+            nome_default="Farmacia Piloto SolusCRT",
+            plano_default="mensal",
+            reset_passwords=reset_passwords,
+            criados=criados,
+            atualizados=atualizados,
+            ignorados=ignorados,
+        )
+        self._bootstrap_empresa(
+            env_prefix="SOLUSCRT_BOOTSTRAP_HOSPITAL",
+            tipo_conta=Empresa.TIPO_EMPRESA,
+            acesso_governo=False,
+            pacote_default="hospital_medio",
+            nome_default="Hospital Piloto SolusCRT",
+            plano_default="mensal",
             reset_passwords=reset_passwords,
             criados=criados,
             atualizados=atualizados,
@@ -33,6 +60,9 @@ class Command(BaseCommand):
             env_prefix="SOLUSCRT_BOOTSTRAP_GOVERNO",
             tipo_conta=Empresa.TIPO_GOVERNO,
             acesso_governo=True,
+            pacote_default=pacote_governo_padrao(),
+            nome_default="Governo SolusCRT",
+            plano_default="anual",
             reset_passwords=reset_passwords,
             criados=criados,
             atualizados=atualizados,
@@ -54,12 +84,24 @@ class Command(BaseCommand):
         if not criados and not atualizados and not ignorados:
             self.stdout.write("Nenhum bootstrap configurado.")
 
-    def _bootstrap_empresa(self, env_prefix, tipo_conta, acesso_governo, reset_passwords, criados, atualizados, ignorados):
+    def _bootstrap_empresa(
+        self,
+        env_prefix,
+        tipo_conta,
+        acesso_governo,
+        pacote_default,
+        nome_default,
+        plano_default,
+        reset_passwords,
+        criados,
+        atualizados,
+        ignorados,
+    ):
         email = _env(f"{env_prefix}_EMAIL").lower()
         senha = _env(f"{env_prefix}_PASSWORD")
-        nome = _env(f"{env_prefix}_NOME", "SolusCRT")
+        nome = _env(f"{env_prefix}_NOME", nome_default)
         pacote_codigo = normalizar_codigo_pacote(
-            _env(f"{env_prefix}_PACOTE", pacote_governo_padrao() if acesso_governo else pacote_padrao())
+            _env(f"{env_prefix}_PACOTE", pacote_default)
         )
 
         if not email or not senha:
@@ -76,7 +118,7 @@ class Command(BaseCommand):
                 "tipo_conta": tipo_conta,
                 "acesso_governo": acesso_governo,
                 "pacote_codigo": pacote_codigo,
-                "plano": "anual" if acesso_governo else "mensal",
+                "plano": plano_default,
                 "max_dispositivos": pacote["dispositivos"],
                 "max_usuarios": pacote["usuarios"],
             },
@@ -89,7 +131,7 @@ class Command(BaseCommand):
             "tipo_conta": tipo_conta,
             "acesso_governo": acesso_governo,
             "pacote_codigo": pacote_codigo,
-            "plano": "anual" if acesso_governo else (empresa.plano or "mensal"),
+            "plano": plano_default if acesso_governo else (empresa.plano or plano_default),
             "max_dispositivos": pacote["dispositivos"],
             "max_usuarios": pacote["usuarios"],
             "sessao_ativa_chave": None,

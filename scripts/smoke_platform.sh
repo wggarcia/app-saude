@@ -4,6 +4,7 @@ set -euo pipefail
 BASE_URL="${SMOKE_BASE_URL:-${BASE_URL:-}}"
 TIMEOUT="${SMOKE_TIMEOUT_SECONDS:-20}"
 FORCE_LOGIN="${SMOKE_FORCE_LOGIN:-true}"
+STRICT_AUTH="${SMOKE_STRICT_AUTH:-false}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 if [ -z "$BASE_URL" ]; then
@@ -128,7 +129,11 @@ verify_empresa_like_login() {
   local expected_dashboard="$5"
 
   if [ -z "$email" ] || [ -z "$senha" ]; then
-    warn "$label sem credenciais; smoke autenticado pulado"
+    if [ "$STRICT_AUTH" = "true" ]; then
+      fail "$label sem credenciais; defina variaveis SMOKE_* para validar o fluxo autenticado"
+    else
+      warn "$label sem credenciais; smoke autenticado pulado"
+    fi
     return
   fi
 
@@ -211,7 +216,11 @@ verify_operacao_login() {
   local email="$1"
   local senha="$2"
   if [ -z "$email" ] || [ -z "$senha" ]; then
-    warn "Operação sem credenciais; smoke autenticado pulado"
+    if [ "$STRICT_AUTH" = "true" ]; then
+      fail "Operação sem credenciais; defina variaveis SMOKE_OPERACAO_* para validar o console"
+    else
+      warn "Operação sem credenciais; smoke autenticado pulado"
+    fi
     return
   fi
 
@@ -265,6 +274,7 @@ EOF
 
 echo "=== SolusCRT • Remote Smoke Test ==="
 echo "BASE_URL: $BASE_URL"
+echo "STRICT_AUTH: $STRICT_AUTH"
 
 run_public_smoke
 verify_empresa_like_login "Farmacia" "/api/login-empresa" "${SMOKE_FARMACIA_EMAIL:-}" "${SMOKE_FARMACIA_PASSWORD:-}" "/dashboard-farmacia/"

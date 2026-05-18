@@ -1,0 +1,42 @@
+name: Staging Smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: Smoke remoto em staging
+    runs-on: ubuntu-latest
+    env:
+      SMOKE_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+      SMOKE_STRICT_AUTH: "true"
+      SMOKE_FORCE_LOGIN: "true"
+      SMOKE_FARMACIA_EMAIL: ${{ secrets.STAGING_SMOKE_FARMACIA_EMAIL }}
+      SMOKE_FARMACIA_PASSWORD: ${{ secrets.STAGING_SMOKE_FARMACIA_PASSWORD }}
+      SMOKE_HOSPITAL_EMAIL: ${{ secrets.STAGING_SMOKE_HOSPITAL_EMAIL }}
+      SMOKE_HOSPITAL_PASSWORD: ${{ secrets.STAGING_SMOKE_HOSPITAL_PASSWORD }}
+      SMOKE_EMPRESA_EMAIL: ${{ secrets.STAGING_SMOKE_EMPRESA_EMAIL }}
+      SMOKE_EMPRESA_PASSWORD: ${{ secrets.STAGING_SMOKE_EMPRESA_PASSWORD }}
+      SMOKE_GOVERNO_EMAIL: ${{ secrets.STAGING_SMOKE_GOVERNO_EMAIL }}
+      SMOKE_GOVERNO_PASSWORD: ${{ secrets.STAGING_SMOKE_GOVERNO_PASSWORD }}
+      SMOKE_OPERACAO_EMAIL: ${{ secrets.STAGING_SMOKE_OPERACAO_EMAIL }}
+      SMOKE_OPERACAO_PASSWORD: ${{ secrets.STAGING_SMOKE_OPERACAO_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validar configuração mínima
+        run: |
+          test -n "$SMOKE_BASE_URL" || {
+            echo "Defina o secret STAGING_BASE_URL antes de rodar o workflow."
+            exit 1
+          }
+
+      - name: Rodar smoke de staging
+        run: ./scripts/smoke_platform.sh

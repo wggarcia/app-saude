@@ -29,6 +29,12 @@ Fluxo sugerido no Render:
    - `CSRF_TRUSTED_ORIGINS`
    - `CORS_ALLOWED_ORIGINS`
    - `PUBLIC_BASE_URL`
+5. Preencher os bootstraps setoriais para o smoke autenticado nascer pronto:
+   - `SOLUSCRT_BOOTSTRAP_FARMACIA_*`
+   - `SOLUSCRT_BOOTSTRAP_HOSPITAL_*`
+   - `SOLUSCRT_BOOTSTRAP_EMPRESA_*`
+   - `SOLUSCRT_BOOTSTRAP_GOVERNO_*`
+   - `SOLUSCRT_BOOTSTRAP_OWNER_*`
 
 ## 3. Credenciais de smoke
 
@@ -53,6 +59,16 @@ export SMOKE_OPERACAO_EMAIL="operacao-staging@soluscrt.com.br"
 export SMOKE_OPERACAO_PASSWORD="..."
 ```
 
+O comando `bootstrap_acessos` agora suporta criar contas piloto de:
+
+- empresa
+- farmacia
+- hospital
+- governo
+- operacao
+
+Isso evita staging "verde pela metade", em que o smoke exige perfis que o bootstrap nao provisiona.
+
 ## 4. Rodar smoke remoto
 
 ```bash
@@ -75,8 +91,31 @@ O script valida:
 - `/api/operacao-central/resumo` para operacao
 
 Se alguma credencial nao estiver definida, o script marca `WARN` e continua.
+Se `SMOKE_STRICT_AUTH=true`, credenciais ausentes viram `FAIL`.
 
-## 5. Quando bloquear deploy
+## 5. Workflow manual no GitHub
+
+Arquivo relacionado:
+
+- [.github/workflows/staging-smoke.yml](/Users/angelica/backend/.github/workflows/staging-smoke.yml)
+
+Secrets esperados:
+
+- `STAGING_BASE_URL`
+- `STAGING_SMOKE_FARMACIA_EMAIL`
+- `STAGING_SMOKE_FARMACIA_PASSWORD`
+- `STAGING_SMOKE_HOSPITAL_EMAIL`
+- `STAGING_SMOKE_HOSPITAL_PASSWORD`
+- `STAGING_SMOKE_EMPRESA_EMAIL`
+- `STAGING_SMOKE_EMPRESA_PASSWORD`
+- `STAGING_SMOKE_GOVERNO_EMAIL`
+- `STAGING_SMOKE_GOVERNO_PASSWORD`
+- `STAGING_SMOKE_OPERACAO_EMAIL`
+- `STAGING_SMOKE_OPERACAO_PASSWORD`
+
+O workflow foi pensado para rodar manualmente depois de um deploy em staging e falhar se faltar URL base ou credencial autenticada.
+
+## 6. Quando bloquear deploy
 
 Nao publique em producao se qualquer item abaixo falhar:
 
@@ -86,7 +125,7 @@ Nao publique em producao se qualquer item abaixo falhar:
 - console operacional
 - endpoints publicos basicos
 
-## 6. Proximo passo ideal
+## 7. Proximo passo ideal
 
 Depois de validar o script manualmente, plugue o smoke remoto no pipeline de staging com:
 

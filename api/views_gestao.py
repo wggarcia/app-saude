@@ -25,14 +25,15 @@ from .models import (
     UsoApiEmpresa,
 )
 from .access_control import api_requer_setor, requer_setor
-from .views_dashboard import _empresa_autenticada, _setor_conta
+from .services.dashboard_core import setor_conta
+from .views_dashboard import _empresa_autenticada
 
 
 def _empresa_gestao(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return None
-    if _setor_conta(empresa) != "empresa":
+    if setor_conta(empresa) != "empresa":
         return None
     return empresa
 

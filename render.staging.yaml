@@ -20,6 +20,8 @@ services:
         value: "false"
       - key: PAYMENT_PROVIDER
         value: asaas
+      - key: SENTRY_DSN
+        sync: false
       - key: SKIP_BUILD_MIGRATIONS
         value: "true"
       - key: EMAIL_HOST
@@ -74,11 +76,31 @@ services:
         sync: false
       - key: SOLUSCRT_BOOTSTRAP_EMPRESA_NOME
         sync: false
+      - key: SOLUSCRT_BOOTSTRAP_EMPRESA_PACOTE
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_FARMACIA_EMAIL
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_FARMACIA_PASSWORD
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_FARMACIA_NOME
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_FARMACIA_PACOTE
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_HOSPITAL_EMAIL
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_HOSPITAL_PASSWORD
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_HOSPITAL_NOME
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_HOSPITAL_PACOTE
+        sync: false
       - key: SOLUSCRT_BOOTSTRAP_GOVERNO_EMAIL
         sync: false
       - key: SOLUSCRT_BOOTSTRAP_GOVERNO_PASSWORD
         sync: false
       - key: SOLUSCRT_BOOTSTRAP_GOVERNO_NOME
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_GOVERNO_PACOTE
         sync: false
       - key: SOLUSCRT_BOOTSTRAP_OWNER_EMAIL
         sync: false

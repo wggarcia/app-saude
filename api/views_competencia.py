@@ -17,15 +17,16 @@ from .models import (
     TrilhaCompetenciaCorporativa,
     ValidacaoCompetenciaCorporativa,
 )
+from .services.dashboard_core import setor_conta
 from .views_corporativo import _resolver_empresa_por_codigo
-from .views_dashboard import _empresa_autenticada, _setor_conta
+from .views_dashboard import _empresa_autenticada
 
 
 def _empresa_competencia(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return None
-    if _setor_conta(empresa) != "empresa":
+    if setor_conta(empresa) != "empresa":
         return None
     return empresa
 
