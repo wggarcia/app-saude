@@ -381,10 +381,15 @@ def api_funcionarios(request):
                 {
                     "id": f.id,
                     "nome": f.nome,
+                    "cpf": f.cpf,
+                    "matricula": f.matricula,
                     "cargo": f.cargo,
                     "setor": f.setor,
+                    "sexo": f.sexo,
                     "unidade": f.unidade.nome if f.unidade else None,
                     "data_admissao": f.data_admissao.strftime("%d/%m/%Y") if f.data_admissao else None,
+                    "data_admissao_iso": str(f.data_admissao) if f.data_admissao else "",
+                    "data_nascimento_iso": str(f.data_nascimento) if f.data_nascimento else "",
                     "classe_risco": f.classe_risco,
                 }
                 for f in page
@@ -411,6 +416,59 @@ def api_funcionarios(request):
             classe_risco=data.get("classe_risco", "II"),
         )
         return JsonResponse({"id": f.id, "nome": f.nome}, status=201)
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+@csrf_exempt
+def api_funcionario_detalhe(request, funcionario_id):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    func = FuncionarioSST.objects.filter(id=funcionario_id, empresa=empresa).first()
+    if not func:
+        return JsonResponse({"erro": "funcionário não encontrado"}, status=404)
+
+    if request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+        if "nome" in data:
+            func.nome = data["nome"].strip()[:200]
+        if "cpf" in data:
+            func.cpf = data["cpf"].strip()[:14]
+        if "matricula" in data:
+            func.matricula = data["matricula"].strip()[:40]
+        if "cargo" in data:
+            func.cargo = data["cargo"].strip()[:120]
+        if "setor" in data:
+            func.setor = data["setor"].strip()[:120]
+        if "sexo" in data:
+            func.sexo = data["sexo"]
+        if "classe_risco" in data:
+            func.classe_risco = data["classe_risco"]
+        if "data_nascimento" in data:
+            from datetime import date as _date
+            try:
+                func.data_nascimento = _date.fromisoformat(data["data_nascimento"]) if data["data_nascimento"] else None
+            except ValueError:
+                pass
+        if "data_admissao" in data:
+            from datetime import date as _date
+            try:
+                func.data_admissao = _date.fromisoformat(data["data_admissao"]) if data["data_admissao"] else None
+            except ValueError:
+                pass
+        func.save()
+        return JsonResponse({"ok": True, "id": func.id, "nome": func.nome})
+
+    if request.method == "DELETE":
+        func.ativo = False
+        func.save(update_fields=["ativo"])
+        return JsonResponse({"ok": True})
 
     return JsonResponse({"erro": "método não permitido"}, status=405)
 

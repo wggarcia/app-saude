@@ -72,7 +72,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 /* Modal */
 .modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
-.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:24px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto}
 .modal h3{font-size:1rem;font-weight:800;margin-bottom:4px}
 .modal-sub{font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.5}
 .mf{margin-bottom:10px}
@@ -81,11 +81,26 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .mf input:focus,.mf select:focus{border-color:var(--teal)}
 .mf select option{background:var(--surface)}
 .mf-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mf-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.section-label{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid rgba(0,201,167,.15)}
 .modal-acts{display:flex;gap:8px;margin-top:16px}
 .btn-cancel{flex:1;padding:9px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:none;color:var(--muted);font-family:inherit;cursor:pointer}
 .btn-cancel:hover{border-color:var(--line2);color:var(--text)}
 .btn-submit{flex:2;padding:9px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--teal),#0077ff);color:#0a0e1a;font-weight:800;font-family:inherit;cursor:pointer}
 .btn-submit:hover{opacity:.88}
+.btn-danger-outline{padding:9px 14px;border-radius:7px;border:1px solid rgba(239,68,68,.3);background:none;color:#f87171;font-family:inherit;cursor:pointer;font-size:.82rem;transition:all .15s}
+.btn-danger-outline:hover{background:rgba(239,68,68,.1);border-color:var(--red)}
+/* Confirm modal */
+.confirm-modal{background:var(--surface);border:1px solid rgba(239,68,68,.25);border-radius:14px;padding:24px;width:380px;max-width:95vw;text-align:center}
+.confirm-modal .ci{font-size:2.4rem;margin-bottom:12px}
+.confirm-modal h3{font-size:.95rem;font-weight:800;margin-bottom:8px}
+.confirm-modal p{font-size:.8rem;color:var(--muted);line-height:1.6;margin-bottom:18px}
+.confirm-acts{display:flex;gap:8px}
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;z-index:999;padding:10px 16px;border-radius:9px;font-size:.82rem;font-weight:600;color:#0a0e1a;box-shadow:0 4px 24px rgba(0,0,0,.4);transform:translateY(60px);opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{background:var(--teal)}
+.toast.err{background:var(--red);color:#fff}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
@@ -141,112 +156,212 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
   </main>
 </div>
 
-<!-- MODAL -->
+<!-- MODAL CADASTRO / EDIÇÃO -->
 <div class="modal-bg" id="modal">
   <div class="modal">
-    <h3>Cadastrar Funcionário</h3>
-    <div class="modal-sub">Dados para prontuário SST e controle de exames e ASOs.</div>
-    <div class="mf"><label>Nome Completo</label><input id="fn-nome" type="text" placeholder="Nome Sobrenome"></div>
+    <h3 id="modal-titulo">Cadastrar Funcionário</h3>
+    <div class="modal-sub">Dados para prontuário SST, controle de exames e ASOs.</div>
+
+    <div class="section-label">Identificação</div>
+    <div class="mf"><label>Nome Completo *</label><input id="fn-nome" type="text" placeholder="Nome Sobrenome"></div>
     <div class="mf-row">
       <div class="mf"><label>CPF</label><input id="fn-cpf" type="text" placeholder="000.000.000-00"></div>
       <div class="mf"><label>Matrícula</label><input id="fn-mat" type="text" placeholder="Ex: 00123"></div>
     </div>
-    <div class="mf"><label>Cargo / Função</label><input id="fn-cargo" type="text" placeholder="Ex: Operador de Produção"></div>
+    <div class="mf-row">
+      <div class="mf"><label>Data de Nascimento</label><input id="fn-nasc" type="date"></div>
+      <div class="mf"><label>Sexo</label>
+        <select id="fn-sexo">
+          <option value="">— selecione —</option>
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+          <option value="O">Outro</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-label">Cargo & Setor</div>
+    <div class="mf"><label>Cargo / Função *</label><input id="fn-cargo" type="text" placeholder="Ex: Operador de Produção"></div>
     <div class="mf"><label>Setor</label><input id="fn-setor" type="text" placeholder="Ex: Linha 3 — Embalagem"></div>
+
+    <div class="section-label">Contrato & Risco</div>
     <div class="mf-row">
       <div class="mf"><label>Data de Admissão</label><input id="fn-admissao" type="date"></div>
       <div class="mf"><label>Grau de Risco</label>
-        <select id="fn-risco"><option value="I">Grau I — Mínimo</option><option value="II" selected>Grau II — Baixo</option><option value="III">Grau III — Médio</option><option value="IV">Grau IV — Alto</option></select>
+        <select id="fn-risco">
+          <option value="I">Grau I — Mínimo</option>
+          <option value="II" selected>Grau II — Baixo</option>
+          <option value="III">Grau III — Médio</option>
+          <option value="IV">Grau IV — Alto</option>
+        </select>
       </div>
     </div>
+
     <div class="modal-acts">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
-      <button class="btn-submit" onclick="salvar()">Cadastrar Funcionário</button>
+      <button class="btn-submit" id="btn-salvar" onclick="salvar()">Cadastrar Funcionário</button>
     </div>
   </div>
 </div>
 
+<!-- MODAL CONFIRMAÇÃO EXCLUSÃO -->
+<div class="modal-bg" id="modal-confirm">
+  <div class="confirm-modal">
+    <div class="ci">⚠️</div>
+    <h3>Excluir funcionário?</h3>
+    <p id="confirm-msg">Esta ação desativa o cadastro do funcionário. Os registros históricos (ASO, exames, CATs) são preservados.</p>
+    <div class="confirm-acts">
+      <button class="btn-cancel" style="flex:1" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn-danger-outline" style="flex:1" onclick="confirmarExclusao()">Sim, excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
 let _todos = [];
 let _filtroRisco = 'todos';
+let _editId = null;
+let _deleteId = null;
 
 const riscoCls = {I:'b-verde',II:'b-azul',III:'b-amarelo',IV:'b-vermelho'};
 const riscoLabel = {I:'Grau I',II:'Grau II',III:'Grau III',IV:'Grau IV'};
 
-function openModal(){document.getElementById("modal").classList.add("open")}
-function closeModal(){document.getElementById("modal").classList.remove("open")}
-document.getElementById("modal").addEventListener("click",e=>{if(e.target===document.getElementById("modal"))closeModal()});
+function toast(msg, tipo='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+(tipo==='err'?'err':'ok');
+  setTimeout(()=>t.className='toast',2800);
+}
+
+function openModal(func=null){
+  _editId = func ? func.id : null;
+  document.getElementById('modal-titulo').textContent = func ? 'Editar Funcionário' : 'Cadastrar Funcionário';
+  document.getElementById('btn-salvar').textContent = func ? 'Salvar Alterações' : 'Cadastrar Funcionário';
+  // preenche campos
+  document.getElementById('fn-nome').value = func?.nome || '';
+  document.getElementById('fn-cpf').value = func?.cpf || '';
+  document.getElementById('fn-mat').value = func?.matricula || '';
+  document.getElementById('fn-nasc').value = func?.data_nascimento_iso || '';
+  document.getElementById('fn-sexo').value = func?.sexo || '';
+  document.getElementById('fn-cargo').value = func?.cargo || '';
+  document.getElementById('fn-setor').value = func?.setor || '';
+  document.getElementById('fn-admissao').value = func?.data_admissao_iso || '';
+  document.getElementById('fn-risco').value = func?.classe_risco || 'II';
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open'); _editId=null;}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal()});
+
+function openConfirm(id, nome){
+  _deleteId = id;
+  document.getElementById('confirm-msg').textContent=`"${nome}" será desativado. Os registros históricos (ASO, exames, CATs) são preservados.`;
+  document.getElementById('modal-confirm').classList.add('open');
+}
+function closeConfirm(){document.getElementById('modal-confirm').classList.remove('open'); _deleteId=null;}
+document.getElementById('modal-confirm').addEventListener('click',e=>{if(e.target===document.getElementById('modal-confirm'))closeConfirm()});
 
 function setFiltro(r,btn){
   _filtroRisco=r;
-  document.querySelectorAll(".ftab").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
   renderTabela();
 }
-
 function filtrar(){renderTabela()}
 
 function renderTabela(){
-  const q=(document.getElementById("busca").value||"").toLowerCase();
+  const q=(document.getElementById('busca').value||'').toLowerCase();
   const lista=_todos.filter(f=>{
-    if(_filtroRisco!=="todos"&&f.classe_risco!==_filtroRisco)return false;
-    if(q&&!f.nome.toLowerCase().includes(q)&&!f.cargo.toLowerCase().includes(q))return false;
+    if(_filtroRisco!=='todos'&&f.classe_risco!==_filtroRisco)return false;
+    if(q&&!f.nome.toLowerCase().includes(q)&&!(f.cargo||'').toLowerCase().includes(q)&&!(f.setor||'').toLowerCase().includes(q))return false;
     return true;
   });
-  document.getElementById("contagem").textContent=`${lista.length} funcionário(s)`;
-  const kBaixo=_todos.filter(f=>["I","II"].includes(f.classe_risco)).length;
-  const kAlto=_todos.filter(f=>["III","IV"].includes(f.classe_risco)).length;
-  document.getElementById("k-total").textContent=_todos.length;
-  document.getElementById("k-baixo").textContent=kBaixo;
-  document.getElementById("k-alto").textContent=kAlto;
+  document.getElementById('contagem').textContent=`${lista.length} funcionário(s)`;
+  document.getElementById('k-total').textContent=_todos.length;
+  document.getElementById('k-baixo').textContent=_todos.filter(f=>['I','II'].includes(f.classe_risco)).length;
+  document.getElementById('k-alto').textContent=_todos.filter(f=>['III','IV'].includes(f.classe_risco)).length;
 
-  const tbody=document.getElementById("tbody");
+  const tbody=document.getElementById('tbody');
   if(!lista.length){
     tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="ei">👥</div><h3>Nenhum funcionário encontrado</h3><p>Cadastre funcionários para controlar ASOs, exames e afastamentos.</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML=lista.map(f=>`
     <tr>
-      <td><strong>${f.nome}</strong></td>
-      <td style="color:var(--muted)">${f.cargo}</td>
-      <td style="color:var(--muted)">${f.unidade||'—'}</td>
+      <td><strong>${f.nome}</strong>${f.cpf?`<br><span style="font-size:.68rem;color:var(--muted)">${f.cpf}</span>`:''}</td>
+      <td style="color:var(--muted)">${f.cargo||'—'}</td>
+      <td style="color:var(--muted)">${f.setor||f.unidade||'—'}</td>
       <td style="color:var(--muted)">${f.data_admissao||'—'}</td>
       <td><span class="badge ${riscoCls[f.classe_risco]||'b-cinza'}">${riscoLabel[f.classe_risco]||f.classe_risco}</span></td>
       <td><span class="badge b-verde">Ativo</span></td>
       <td><div class="row-actions">
         <button class="btn-row" onclick="window.location.href='/sst/funcionarios/${f.id}/'">Prontuário</button>
-        <button class="btn-row" onclick="irASO('${f.nome}')">Ver ASOs</button>
-        <button class="btn-row" onclick="emitirASO('${f.nome}')">Emitir ASO</button>
+        <button class="btn-row" onclick="editarFunc(${f.id})">✏️ Editar</button>
+        <button class="btn-row danger" onclick="openConfirm(${f.id},'${f.nome.replace(/'/g,"\\'")}')">🗑 Excluir</button>
       </div></td>
-    </tr>`).join("");
+    </tr>`).join('');
 }
 
-function irASO(nome){window.location.href=`/sst/asos/?busca=${encodeURIComponent(nome)}`}
-function emitirASO(nome){window.location.href=`/sst/asos/?novo=${encodeURIComponent(nome)}`}
+function editarFunc(id){
+  const f=_todos.find(x=>x.id===id);
+  if(f) openModal(f);
+}
 
 async function carregar(){
-  const r=await fetch("/api/sst/funcionarios");
+  const r=await fetch('/api/sst/funcionarios');
   if(!r.ok)return;
   const d=await r.json();
-  _todos=d.funcionarios||[];
+  _todos=(d.funcionarios||[]).map(f=>({
+    ...f,
+    data_nascimento_iso: f.data_nascimento_iso||'',
+    data_admissao_iso: f.data_admissao_iso||'',
+  }));
   renderTabela();
 }
 
 async function salvar(){
-  const btn=document.querySelector(".btn-submit");
-  btn.textContent="Salvando...";btn.disabled=true;
-  const r=await fetch("/api/sst/funcionarios",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-    nome:document.getElementById("fn-nome").value.trim(),
-    cpf:document.getElementById("fn-cpf").value.trim(),
-    matricula:document.getElementById("fn-mat").value.trim(),
-    cargo:document.getElementById("fn-cargo").value.trim(),
-    setor:document.getElementById("fn-setor").value.trim(),
-    classe_risco:document.getElementById("fn-risco").value,
-  })});
+  const nome=document.getElementById('fn-nome').value.trim();
+  const cargo=document.getElementById('fn-cargo').value.trim();
+  if(!nome||!cargo){toast('Nome e cargo são obrigatórios','err');return;}
+
+  const btn=document.getElementById('btn-salvar');
+  btn.textContent='Salvando...';btn.disabled=true;
+
+  const payload={
+    nome, cargo,
+    cpf:document.getElementById('fn-cpf').value.trim(),
+    matricula:document.getElementById('fn-mat').value.trim(),
+    data_nascimento:document.getElementById('fn-nasc').value||null,
+    sexo:document.getElementById('fn-sexo').value,
+    setor:document.getElementById('fn-setor').value.trim(),
+    data_admissao:document.getElementById('fn-admissao').value||null,
+    classe_risco:document.getElementById('fn-risco').value,
+  };
+
+  let r;
+  if(_editId){
+    r=await fetch(`/api/sst/funcionarios/${_editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  } else {
+    r=await fetch('/api/sst/funcionarios',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  }
   const d=await r.json();
-  if(r.ok){closeModal();["fn-nome","fn-cpf","fn-mat","fn-cargo","fn-setor"].forEach(id=>document.getElementById(id).value="");carregar();}
-  else alert(d.erro||"Erro ao cadastrar");
-  btn.textContent="Cadastrar Funcionário";btn.disabled=false;
+  if(r.ok){
+    closeModal();
+    toast(_editId?'Funcionário atualizado com sucesso!':'Funcionário cadastrado com sucesso!');
+    carregar();
+  } else {
+    toast(d.erro||'Erro ao salvar','err');
+  }
+  btn.textContent=_editId?'Salvar Alterações':'Cadastrar Funcionário';
+  btn.disabled=false;
+}
+
+async function confirmarExclusao(){
+  if(!_deleteId)return;
+  const r=await fetch(`/api/sst/funcionarios/${_deleteId}`,{method:'DELETE'});
+  closeConfirm();
+  if(r.ok){toast('Funcionário excluído.');carregar();}
+  else toast('Erro ao excluir funcionário','err');
 }
 
 carregar();

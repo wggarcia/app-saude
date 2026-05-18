@@ -41,7 +41,7 @@ from api.views_corporativo import (
 )
 from api.views_sst import (
     api_sst_dashboard,
-    api_funcionarios,
+    api_funcionarios, api_funcionario_detalhe,
     api_asos,
     api_cats,
     api_sst_cids_ocupacionais,
@@ -605,6 +605,8 @@ urlpatterns = [
     path('api/sst/dashboard', api_sst_dashboard),
     path('api/sst/funcionarios', api_funcionarios),
     path('api/sst/funcionarios/', api_funcionarios),
+    path('api/sst/funcionarios/<int:funcionario_id>', api_funcionario_detalhe),
+    path('api/sst/funcionarios/<int:funcionario_id>/', api_funcionario_detalhe),
     path('api/sst/asos', api_asos),
     path('api/sst/solicitacoes-exame', api_solicitacoes_exame),
     path('api/sst/solicitacoes-exame/', api_solicitacoes_exame),
