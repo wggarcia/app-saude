@@ -317,6 +317,14 @@ from api.views_farmacia_ops import (
     api_pedidos_compra_farmacia, api_pedido_compra_status,
     api_farmacia_ops_kpis, api_farmacia_pdf_estoque, api_farmacia_pdf_dispensacoes,
 )
+from api.views_hospital_fase3 import (
+    api_fatura_paciente,
+    api_fatura_acao,
+    api_itens_faturamento,
+    api_item_faturamento_detalhe,
+    api_faturamento_dashboard,
+    api_hospital_analytics,
+)
 from api.views_hospital_fase2 import (
     api_pedidos_exame,
     api_pedido_exame_detalhe,
@@ -822,6 +830,13 @@ urlpatterns = [
     path('api/hospital/exames/<int:pedido_id>/resultados/', api_resultados_exame),
     path('api/hospital/exames/resultados/<int:resultado_id>/visualizar/', api_resultado_visualizar),
     path('api/hospital/prescricoes/<int:presc_id>/administracoes/', api_administracoes),
+    # ── Hospital Fase 3: Faturamento + Analytics ─────────────────
+    path('api/hospital/analytics/', api_hospital_analytics),
+    path('api/hospital/faturamento/dashboard/', api_faturamento_dashboard),
+    path('api/hospital/pacientes/<int:pac_id>/fatura/', api_fatura_paciente),
+    path('api/hospital/pacientes/<int:pac_id>/fatura/acao/', api_fatura_acao),
+    path('api/hospital/pacientes/<int:pac_id>/fatura/itens/', api_itens_faturamento),
+    path('api/hospital/faturamento/itens/<int:item_id>/', api_item_faturamento_detalhe),
     # ── Rede / Network ───────────────────────────────────────────
     path('api/rede/', api_redes),
     path('api/rede/convidar/', api_rede_convidar),

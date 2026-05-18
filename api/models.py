@@ -4008,6 +4008,95 @@ class CentroCirurgico(models.Model):
         return f"Cirurgia #{self.id} — {self.procedimento} ({self.status})"
 
 
+class FaturaHospitalar(models.Model):
+    """Fatura consolidada de uma internação — convênio, SUS ou particular."""
+    STATUS_CHOICES = [
+        ("rascunho",  "Rascunho"),
+        ("fechada",   "Fechada / Aguardando envio"),
+        ("enviada",   "Enviada ao Convênio"),
+        ("paga",      "Paga"),
+        ("glosada",   "Glosada (parcial ou total)"),
+        ("cancelada", "Cancelada"),
+    ]
+    CONVENIO_CHOICES = [
+        ("sus",        "SUS"),
+        ("convenio",   "Convênio / Plano de Saúde"),
+        ("particular", "Particular"),
+    ]
+
+    empresa             = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="faturas_hosp")
+    paciente            = models.OneToOneField(PacienteInternado, on_delete=models.CASCADE, related_name="fatura")
+    numero_guia         = models.CharField(max_length=50, blank=True, default="")
+    convenio            = models.CharField(max_length=20, choices=CONVENIO_CHOICES, default="particular")
+    nome_convenio       = models.CharField(max_length=200, blank=True, default="")
+    numero_carteirinha  = models.CharField(max_length=50, blank=True, default="")
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="rascunho")
+    valor_total         = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_glosa         = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_pago          = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    observacoes         = models.TextField(blank=True, default="")
+    data_envio          = models.DateTimeField(null=True, blank=True)
+    data_pagamento      = models.DateTimeField(null=True, blank=True)
+    criado_em           = models.DateTimeField(auto_now_add=True)
+    atualizado_em       = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "status"], name="fatura_hosp_emp_status_idx"),
+        ]
+
+    def recalcular_total(self):
+        from django.db.models import Sum
+        total = self.itens.aggregate(t=Sum("valor_total"))["t"] or 0
+        self.valor_total = total
+        self.save(update_fields=["valor_total", "atualizado_em"])
+
+    def __str__(self):
+        return f"Fatura #{self.id} — {self.paciente.nome}"
+
+
+class ItemFaturamento(models.Model):
+    """Linha de cobrança com código TUSS/CBhpm."""
+    TIPO_CHOICES = [
+        ("diaria",       "Diária / Acomodação"),
+        ("procedimento", "Procedimento"),
+        ("exame",        "Exame / Diagnóstico"),
+        ("medicamento",  "Medicamento"),
+        ("material",     "Material / OPME"),
+        ("honorario",    "Honorário Médico"),
+        ("taxa",         "Taxa / Pacote"),
+        ("outro",        "Outro"),
+    ]
+
+    empresa             = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="itens_faturamento_hosp")
+    paciente            = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="itens_faturamento")
+    fatura              = models.ForeignKey(FaturaHospitalar, on_delete=models.SET_NULL, null=True, blank=True, related_name="itens")
+    tipo                = models.CharField(max_length=20, choices=TIPO_CHOICES, default="procedimento")
+    codigo_tuss         = models.CharField(max_length=20, blank=True, default="")
+    codigo_cbhpm        = models.CharField(max_length=20, blank=True, default="")
+    descricao           = models.CharField(max_length=300)
+    quantidade          = models.DecimalField(max_digits=8, decimal_places=2, default=1)
+    valor_unitario      = models.DecimalField(max_digits=10, decimal_places=2)
+    valor_total         = models.DecimalField(max_digits=12, decimal_places=2)
+    data_competencia    = models.DateField(auto_now_add=True)
+    observacao          = models.TextField(blank=True, default="")
+    criado_em           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "paciente"], name="itemfat_emp_pac_idx"),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.valor_total = self.quantidade * self.valor_unitario
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.descricao} × {self.quantidade} = R$ {self.valor_total}"
+
+
 class AssinaturaDocumentoSST(models.Model):
     TIPO_CHOICES = [
         ("aso", "ASO"),

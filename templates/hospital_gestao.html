@@ -378,6 +378,8 @@ tr:hover td{background:rgba(255,255,255,.018)}
         <button class="tab-btn" id="tabBtn-cirurgias" onclick="setTab('cirurgias')">🔪 C. Cirúrgico</button>
         <button class="tab-btn" id="tabBtn-exames" onclick="setTab('exames')">🧪 Exames</button>
         <button class="tab-btn" id="tabBtn-alta" onclick="setTab('alta')">📄 Alta Hospitalar</button>
+        <button class="tab-btn" id="tabBtn-faturamento" onclick="setTab('faturamento')">💰 Faturamento</button>
+        <button class="tab-btn" id="tabBtn-analytics" onclick="setTab('analytics')">📊 Analytics</button>
       </div>
 
       <!-- ══════ TAB: LEITOS ══════ -->
@@ -652,6 +654,88 @@ tr:hover td{background:rgba(255,255,255,.018)}
         </div>
       </div>
 
+      <!-- ══════ TAB: FATURAMENTO ══════ -->
+      <div class="tab-panel" id="tab-faturamento">
+        <!-- KPIs -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <div class="kpi-card"><div class="kpi-val" id="fatKpiTotal">—</div><div class="kpi-lbl">💰 Total Faturado</div></div>
+          <div class="kpi-card"><div class="kpi-val warn" id="fatKpiGlosa">—</div><div class="kpi-lbl">⚠️ Glosas</div></div>
+          <div class="kpi-card"><div class="kpi-val success" id="fatKpiPago">—</div><div class="kpi-lbl">✅ Total Recebido</div></div>
+          <div class="kpi-card"><div class="kpi-val danger" id="fatKpiPendentes">—</div><div class="kpi-lbl">📤 Enviadas Pendentes</div></div>
+        </div>
+        <!-- Faturamento mensal sparkline -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><span class="card-title">📈 Faturamento Mensal</span></div>
+          <div id="fatMensalChart" style="display:flex;align-items:flex-end;gap:8px;height:80px;padding:8px 0"></div>
+        </div>
+        <!-- Lista de faturas -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📋 Faturas</span>
+            <div style="display:flex;gap:8px">
+              <select id="fatFiltroStatus" onchange="carregarFaturamento()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px">
+                <option value="">Todos os status</option>
+                <option value="rascunho">Rascunho</option>
+                <option value="fechada">Fechada</option>
+                <option value="enviada">Enviada</option>
+                <option value="paga">Paga</option>
+                <option value="glosada">Glosada</option>
+              </select>
+              <button class="btn btn-primary" onclick="abrirModalFatura()">+ Nova Fatura</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr>
+                <th>Paciente</th><th>Convênio</th><th>Total (R$)</th><th>Glosa (R$)</th><th>Pago (R$)</th><th>Status</th><th>Data</th><th>Ações</th>
+              </tr></thead>
+              <tbody id="tbodyFaturas"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ TAB: ANALYTICS ══════ -->
+      <div class="tab-panel" id="tab-analytics">
+        <!-- KPIs linha 1 -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
+          <div class="kpi-card"><div class="kpi-val" id="anaAlos">—</div><div class="kpi-lbl">📅 ALOS (dias)</div></div>
+          <div class="kpi-card"><div class="kpi-val success" id="anaOcupacao">—%</div><div class="kpi-lbl">🛏️ Taxa Ocupação</div></div>
+          <div class="kpi-card"><div class="kpi-val danger" id="anaMortalidade">—%</div><div class="kpi-lbl">💔 Mortalidade</div></div>
+          <div class="kpi-card"><div class="kpi-val warn" id="anaReadmissao">—%</div><div class="kpi-lbl">🔁 Readmissão 30d</div></div>
+        </div>
+        <!-- KPIs linha 2 -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+          <div class="kpi-card"><div class="kpi-val" id="anaAltas">—</div><div class="kpi-lbl">📄 Total de Altas</div></div>
+          <div class="kpi-card"><div class="kpi-val" id="anaCirurgias">—</div><div class="kpi-lbl">🔪 Cirurgias Concluídas</div></div>
+          <div class="kpi-card"><div class="kpi-val success" id="anaTicket">—</div><div class="kpi-lbl">💵 Ticket Médio Fatura</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <!-- Top CIDs -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">🩺 Top CIDs</span></div>
+            <div id="anaTopCids" style="font-size:13px"></div>
+          </div>
+          <!-- Internações mensais -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">📈 Internações Mensais</span></div>
+            <div id="anaInternMensal" style="display:flex;align-items:flex-end;gap:8px;height:80px;padding:8px 0"></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <!-- Cirurgias por porte -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">🔪 Cirurgias por Porte</span></div>
+            <div id="anaCirurgiaPorte" style="font-size:13px"></div>
+          </div>
+          <!-- Exames por tipo -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">🧪 Exames por Tipo</span></div>
+            <div id="anaExamesTipo" style="font-size:13px"></div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- end tabs wrapper -->
   </div><!-- end .content -->
 </main>
@@ -739,6 +823,78 @@ tr:hover td{background:rgba(255,255,255,.018)}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="fecharModal('modalResultado')">Fechar</button>
       <button class="btn btn-primary" onclick="salvarResultado()">Lançar Resultado</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL FASE 3: FATURA ══════ -->
+<div class="modal-bg" id="modalFatura">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><span class="modal-title">💰 Nova Fatura</span>
+      <button class="btn-icon" onclick="fecharModal('modalFatura')">✕</button></div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="mf" style="grid-column:1/-1"><label>Paciente *</label>
+        <select id="fatPaciente" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)"></select>
+      </div>
+      <div class="mf"><label>Tipo de Cobertura *</label>
+        <select id="fatConvenio" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)">
+          <option value="particular">Particular</option>
+          <option value="convenio">Convênio / Plano</option>
+          <option value="sus">SUS</option>
+        </select>
+      </div>
+      <div class="mf"><label>Nome do Convênio</label>
+        <input id="fatNomeConvenio" type="text" placeholder="Ex: Unimed, Bradesco Saúde"></div>
+      <div class="mf"><label>Nº Carteirinha</label>
+        <input id="fatCarteirinha" type="text" placeholder="Número da carteirinha"></div>
+      <div class="mf"><label>Nº Guia ANS</label>
+        <input id="fatGuia" type="text" placeholder="Número da guia"></div>
+      <div class="mf" style="grid-column:1/-1"><label>Observações</label>
+        <textarea id="fatObs" rows="2" placeholder="Observações sobre a fatura..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalFatura')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarFatura()">Criar Fatura</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Adicionar Item de Faturamento -->
+<div class="modal-bg" id="modalItemFat">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <span class="modal-title">➕ Adicionar Item</span>
+      <button class="btn-icon" onclick="fecharModal('modalItemFat')">✕</button></div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="mf" style="grid-column:1/-1"><label>Descrição *</label>
+        <input id="itemDesc" type="text" placeholder="Ex: Hemograma completo, Diária UTI..."></div>
+      <div class="mf"><label>Tipo</label>
+        <select id="itemTipo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:var(--text)">
+          <option value="diaria">Diária / Acomodação</option>
+          <option value="procedimento">Procedimento</option>
+          <option value="exame">Exame / Diagnóstico</option>
+          <option value="medicamento">Medicamento</option>
+          <option value="material">Material / OPME</option>
+          <option value="honorario">Honorário Médico</option>
+          <option value="taxa">Taxa / Pacote</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="mf"><label>Qtd</label>
+        <input id="itemQtd" type="number" value="1" min="0.01" step="0.01"></div>
+      <div class="mf"><label>Valor Unit. (R$) *</label>
+        <input id="itemValorUnit" type="number" min="0" step="0.01" placeholder="0,00"></div>
+      <div class="mf"><label>Cód. TUSS</label>
+        <input id="itemTUSS" type="text" placeholder="Ex: 31309051"></div>
+      <div class="mf"><label>Cód. CBhpm</label>
+        <input id="itemCBHPM" type="text" placeholder="Ex: 3.01.02.04-0"></div>
+      <div class="mf" style="grid-column:1/-1"><label>Observação</label>
+        <input id="itemObs" type="text" placeholder="Opcional"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalItemFat')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarItemFat()">Adicionar Item</button>
     </div>
   </div>
 </div>
@@ -1910,7 +2066,7 @@ function popularSelectDeps(sid) {
 // ══════════════════════════════════════════════════════════════
 // TAB NAVIGATION
 // ══════════════════════════════════════════════════════════════
-const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes','uti','cirurgias','exames','alta'];
+const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes','uti','cirurgias','exames','alta','faturamento','analytics'];
 
 function setTab(tab) {
   _currentTab = tab;
@@ -1932,6 +2088,8 @@ function setTab(tab) {
   else if (tab==='cirurgias') carregarCirurgias();
   else if (tab==='exames') carregarExames();
   else if (tab==='alta') carregarAltaTab();
+  else if (tab==='faturamento') carregarFaturamento();
+  else if (tab==='analytics') carregarAnalytics();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2216,6 +2374,204 @@ async function salvarAlta() {
     alert('Alta emitida com sucesso! Leito liberado.');
     await Promise.all([carregarLeitos(), carregarPacientes(), carregarKpis()]);
     carregarAltaTab();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// FASE 3 — FATURAMENTO TUSS/CBhpm
+// ══════════════════════════════════════════════════════════════
+
+let _fatPacAtual = null;
+
+function _brl(v) {
+  return 'R$ ' + Number(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function _barChart(containerId, data, labelKey, valueKey) {
+  const el = document.getElementById(containerId);
+  if (!el || !data.length) return;
+  const max = Math.max(...data.map(d => d[valueKey])) || 1;
+  el.innerHTML = data.map(d => `
+    <div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px">
+      <span style="font-size:11px;color:var(--text-muted)">${typeof d[valueKey]==='number'&&d[valueKey]>999?_brl(d[valueKey]):d[valueKey]}</span>
+      <div style="width:100%;background:var(--primary);border-radius:4px 4px 0 0;height:${Math.max(4,Math.round(d[valueKey]/max*64))}px"></div>
+      <span style="font-size:10px;color:var(--text-muted);text-align:center;line-height:1.2">${d[labelKey]}</span>
+    </div>`).join('');
+}
+
+async function carregarFaturamento() {
+  const statusF = document.getElementById('fatFiltroStatus')?.value || '';
+  const [dash] = await Promise.all([api('/api/hospital/faturamento/dashboard/')]);
+  if (!dash) return;
+
+  const s = id => document.getElementById(id);
+  if (s('fatKpiTotal'))     s('fatKpiTotal').textContent     = _brl(dash.total_faturado);
+  if (s('fatKpiGlosa'))     s('fatKpiGlosa').textContent     = _brl(dash.total_glosa);
+  if (s('fatKpiPago'))      s('fatKpiPago').textContent      = _brl(dash.total_pago);
+  if (s('fatKpiPendentes')) s('fatKpiPendentes').textContent = dash.enviadas ?? 0;
+
+  _barChart('fatMensalChart', dash.faturamento_mensal || [], 'mes', 'total');
+
+  const stColor = { rascunho:'var(--text-muted)', fechada:'var(--warning)', enviada:'#60a5fa', paga:'var(--success)', glosada:'var(--danger)', cancelada:'var(--text-muted)' };
+  const stLabel = { rascunho:'Rascunho', fechada:'Fechada', enviada:'Enviada', paga:'Paga', glosada:'Glosada', cancelada:'Cancelada' };
+
+  let faturas = dash.ultimas_faturas || [];
+  if (statusF) faturas = faturas.filter(f => f.status === statusF);
+
+  const tbody = s('tbodyFaturas');
+  if (!tbody) return;
+  if (!faturas.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">Nenhuma fatura encontrada</td></tr>';
+    return;
+  }
+  tbody.innerHTML = faturas.map(f => `
+    <tr>
+      <td>${f.paciente_nome}</td>
+      <td>${f.nome_convenio || f.convenio}</td>
+      <td>${_brl(f.valor_total)}</td>
+      <td style="color:${f.valor_glosa>0?'var(--danger)':'var(--text-muted)'}">${_brl(f.valor_glosa)}</td>
+      <td style="color:var(--success)">${_brl(f.valor_pago)}</td>
+      <td><span style="color:${stColor[f.status]||'var(--text)'}">${stLabel[f.status]||f.status}</span></td>
+      <td>${f.criado_em}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-sm" onclick="abrirDetalheFatura(${f.paciente_id})">Ver</button>
+        ${f.status==='rascunho'?`<button class="btn btn-sm" onclick="acaoFatura(${f.paciente_id},'fechar')">Fechar</button>`:''}
+        ${f.status==='fechada'?`<button class="btn btn-sm" onclick="acaoFatura(${f.paciente_id},'enviar')">Enviar</button>`:''}
+        ${f.status==='enviada'?`<button class="btn btn-sm" onclick="acaoFatura(${f.paciente_id},'pagar')">Marcar Paga</button>`:''}
+      </td>
+    </tr>`).join('');
+}
+
+async function abrirModalFatura() {
+  const sel = document.getElementById('fatPaciente');
+  if (sel) {
+    const lista = _internacoesList.length ? _internacoesList : (await api('/api/hospital/internacoes/?status=internado'))?.internacoes || [];
+    sel.innerHTML = '<option value="">Selecione o paciente</option>' +
+      lista.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+  }
+  abrirModal('modalFatura');
+}
+
+async function salvarFatura() {
+  const pacId = parseInt(document.getElementById('fatPaciente')?.value);
+  if (!pacId) { alert('Selecione um paciente.'); return; }
+  const body = {
+    convenio:           document.getElementById('fatConvenio')?.value || 'particular',
+    nome_convenio:      document.getElementById('fatNomeConvenio')?.value || '',
+    numero_carteirinha: document.getElementById('fatCarteirinha')?.value || '',
+    numero_guia:        document.getElementById('fatGuia')?.value || '',
+    observacoes:        document.getElementById('fatObs')?.value || '',
+  };
+  const d = await api(`/api/hospital/pacientes/${pacId}/fatura/`, { method:'POST', body: JSON.stringify(body) });
+  if (d?.ok) {
+    fecharModal('modalFatura');
+    carregarFaturamento();
+    alert('Fatura criada! Agora adicione os itens na visualização detalhada.');
+  }
+}
+
+async function acaoFatura(pacId, acao, extra={}) {
+  const body = { acao, ...extra };
+  const d = await api(`/api/hospital/pacientes/${pacId}/fatura/acao/`, { method:'POST', body: JSON.stringify(body) });
+  if (d?.ok) carregarFaturamento();
+}
+
+async function abrirDetalheFatura(pacId) {
+  _fatPacAtual = pacId;
+  const d = await api(`/api/hospital/pacientes/${pacId}/fatura/`);
+  if (!d?.fatura) { alert('Fatura não encontrada. Crie uma primeiro.'); return; }
+  const f = d.fatura;
+
+  // Reutiliza modalItemFat como painel de itens — abre direto com contexto
+  document.getElementById('itemDesc').value = '';
+  document.getElementById('itemValorUnit').value = '';
+  document.getElementById('itemQtd').value = 1;
+  document.getElementById('itemTUSS').value = '';
+  document.getElementById('itemCBHPM').value = '';
+  document.getElementById('itemObs').value = '';
+  abrirModal('modalItemFat');
+}
+
+async function salvarItemFat() {
+  if (!_fatPacAtual) return;
+  const desc = document.getElementById('itemDesc')?.value?.trim();
+  const valor = parseFloat(document.getElementById('itemValorUnit')?.value);
+  if (!desc || isNaN(valor)) { alert('Descrição e valor são obrigatórios.'); return; }
+  const body = {
+    tipo:          document.getElementById('itemTipo')?.value || 'procedimento',
+    descricao:     desc,
+    quantidade:    parseFloat(document.getElementById('itemQtd')?.value) || 1,
+    valor_unitario: valor,
+    codigo_tuss:   document.getElementById('itemTUSS')?.value || '',
+    codigo_cbhpm:  document.getElementById('itemCBHPM')?.value || '',
+    observacao:    document.getElementById('itemObs')?.value || '',
+  };
+  const d = await api(`/api/hospital/pacientes/${_fatPacAtual}/fatura/itens/`, { method:'POST', body: JSON.stringify(body) });
+  if (d?.ok) {
+    fecharModal('modalItemFat');
+    carregarFaturamento();
+    alert(`Item adicionado: ${desc} — ${_brl(body.quantidade * body.valor_unitario)}`);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// FASE 3 — ANALYTICS HOSPITALAR
+// ══════════════════════════════════════════════════════════════
+
+async function carregarAnalytics() {
+  const d = await api('/api/hospital/analytics/');
+  if (!d) return;
+
+  const s = id => document.getElementById(id);
+  if (s('anaAlos'))       s('anaAlos').textContent       = d.alos_dias != null ? `${d.alos_dias}d` : '—';
+  if (s('anaOcupacao'))   s('anaOcupacao').textContent   = `${d.taxa_ocupacao ?? '—'}%`;
+  if (s('anaMortalidade')) s('anaMortalidade').textContent = `${d.taxa_mortalidade ?? '—'}%`;
+  if (s('anaReadmissao')) s('anaReadmissao').textContent  = `${d.taxa_readmissao_30d ?? '—'}%`;
+  if (s('anaAltas'))      s('anaAltas').textContent       = d.total_altas ?? 0;
+  if (s('anaTicket'))     s('anaTicket').textContent      = _brl(d.ticket_medio_fatura);
+
+  const totalCirc = (d.cirurgias_por_porte||[]).reduce((acc,r)=>acc+r.n,0);
+  if (s('anaCirurgias')) s('anaCirurgias').textContent = totalCirc;
+
+  // Internações mensais sparkline
+  _barChart('anaInternMensal', d.internacoes_mensal||[], 'mes', 'n');
+
+  // Top CIDs
+  const cidEl = s('anaTopCids');
+  if (cidEl) {
+    cidEl.innerHTML = (d.top_cids||[]).length === 0
+      ? '<p style="color:var(--text-muted);font-size:13px;padding:12px">Sem dados de CID ainda.</p>'
+      : (d.top_cids||[]).map((c,i) => `
+        <div style="display:flex;justify-content:space-between;padding:6px 12px;${i%2===0?'background:rgba(255,255,255,.03)':''}">
+          <span style="font-weight:600">${c.cid}</span>
+          <span style="color:var(--text-muted)">${c.n} caso${c.n!==1?'s':''}</span>
+        </div>`).join('');
+  }
+
+  // Cirurgias por porte
+  const porteLabel = { pequeno:'Pequeno', medio:'Médio', grande:'Grande', especial:'Especial' };
+  const porteEl = s('anaCirurgiaPorte');
+  if (porteEl) {
+    porteEl.innerHTML = (d.cirurgias_por_porte||[]).length === 0
+      ? '<p style="color:var(--text-muted);font-size:13px;padding:12px">Sem cirurgias concluídas ainda.</p>'
+      : (d.cirurgias_por_porte||[]).map((r,i) => `
+        <div style="display:flex;justify-content:space-between;padding:6px 12px;${i%2===0?'background:rgba(255,255,255,.03)':''}">
+          <span>${porteLabel[r.porte]||r.porte}</span>
+          <span style="color:var(--text-muted)">${r.n}</span>
+        </div>`).join('');
+  }
+
+  // Exames por tipo
+  const tipoLabel = { laboratorial:'Laboratorial', imagem:'Imagem', ecg:'ECG', endoscopia:'Endoscopia', outro:'Outro' };
+  const exEl = s('anaExamesTipo');
+  if (exEl) {
+    exEl.innerHTML = (d.exames_por_tipo||[]).length === 0
+      ? '<p style="color:var(--text-muted);font-size:13px;padding:12px">Sem exames ainda.</p>'
+      : (d.exames_por_tipo||[]).map((r,i) => `
+        <div style="display:flex;justify-content:space-between;padding:6px 12px;${i%2===0?'background:rgba(255,255,255,.03)':''}">
+          <span>${tipoLabel[r.tipo]||r.tipo}</span>
+          <span style="color:var(--text-muted)">${r.n}</span>
+        </div>`).join('');
   }
 }
 
