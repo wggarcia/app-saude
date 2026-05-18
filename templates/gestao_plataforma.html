@@ -1,150 +1,318 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Plataforma & Integrações | {{ empresa_nome }}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --bg:#041018;--panel:rgba(11,24,34,.9);--line:rgba(154,193,220,.14);--soft:rgba(255,255,255,.08);
-      --text:#ebf7ff;--muted:#9ab9ce;--accent:#7ee1c3;--accent-2:#7db6ff;
-      --gold:#f0bf6b;--danger:#ff7a91;--shadow:0 24px 70px rgba(0,0,0,.42);
-    }
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      min-height:100vh;font-family:"Manrope","Segoe UI",sans-serif;color:var(--text);
-      background:radial-gradient(circle at top left,rgba(126,225,195,.12),transparent 20rem),
-        radial-gradient(circle at top right,rgba(125,182,255,.14),transparent 24rem),
-        linear-gradient(180deg,#041018 0%,#08141d 40%,#061119 100%);
-    }
-    body::before{
-      content:"";position:fixed;inset:0;pointer-events:none;
-      background:linear-gradient(rgba(125,182,255,.04) 1px,transparent 1px),
-                 linear-gradient(90deg,rgba(125,182,255,.04) 1px,transparent 1px);
-      background-size:44px 44px;opacity:.16;
-    }
-    .glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px);box-shadow:var(--shadow)}
-    .topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--line)}
-    .brand{font-weight:800;font-size:1rem}.brand-sep{color:var(--line)}.brand-sub{color:var(--gold);font-weight:700;font-size:.9rem}
-    .company-tag{padding:4px 10px;border-radius:999px;background:rgba(240,191,107,.1);border:1px solid rgba(240,191,107,.22);color:#fff3c8;font-size:.72rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
-    .topbar-nav{display:flex;gap:4px;flex:1;overflow-x:auto;scrollbar-width:none}
-    .topbar-nav::-webkit-scrollbar{display:none}
-    .tab-btn{flex-shrink:0;padding:7px 14px;border-radius:999px;border:none;cursor:pointer;background:transparent;color:var(--muted);font:inherit;font-size:.8rem;font-weight:700;white-space:nowrap;transition:all .18s}
-    .tab-btn:hover{background:rgba(255,255,255,.06);color:var(--text)}
-    .tab-btn.active{background:rgba(240,191,107,.14);color:#fff3c8;border:1px solid rgba(240,191,107,.24)}
-    .topbar-actions{display:flex;gap:8px;flex-shrink:0}
-    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);font:inherit;font-size:.8rem;font-weight:800;cursor:pointer;text-decoration:none;transition:all .18s;gap:6px}
-    .btn:hover{background:rgba(255,255,255,.1)}
-    .btn.primary{border:0;background:linear-gradient(135deg,#0db794,#1f6ff2)}
-    .btn.warn{border:0;background:linear-gradient(135deg,#8b2239,#5e1b1b)}
-    .btn.danger{border:0;background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
-    .btn.sm{min-height:30px;padding:0 10px;font-size:.74rem}
-    .btn.xs{min-height:26px;padding:0 8px;font-size:.7rem}
-    .btn:disabled{opacity:.45;cursor:not-allowed}
-    .shell{width:min(1200px,calc(100% - 24px));margin:0 auto;padding:18px 0 60px;display:grid;gap:16px}
-    .panel{display:none}.panel.active{display:grid;gap:16px}
-    .card{border-radius:28px;padding:20px}
-    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
-    .section-title{font-size:1rem;font-weight:800;margin-bottom:4px}
-    .section-sub{color:var(--muted);font-size:.86rem;margin-bottom:14px}
-    .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
-    .item-list{display:grid;gap:10px}
-    .item-row{border-radius:18px;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid var(--soft);display:grid;gap:6px}
-    .item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-    .item-name{font-size:.95rem;font-weight:700}
-    .item-meta{color:var(--muted);font-size:.8rem;line-height:1.5}
-    .item-actions{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
-    .empty{text-align:center;padding:28px;color:var(--muted);font-size:.88rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1)}
-    .sbadge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
-    .s-ativo{background:rgba(126,225,195,.14);color:#b0ffe6}
-    .s-inativo{background:rgba(255,255,255,.07);color:var(--muted)}
-    .s-trial{background:rgba(240,191,107,.14);color:#ffe4ad}
-    .s-expirado{background:rgba(255,122,145,.14);color:#ffbfcb}
-    .s-pendente{background:rgba(125,182,255,.14);color:#c3deff}
-    .form-grid{display:grid;gap:10px}
-    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    label{color:#bfd3e2;font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em}
-    .field{display:flex;flex-direction:column;gap:5px}
-    input,select,textarea{border-radius:12px;border:1px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);padding:9px 12px;font:inherit;font-size:.86rem;outline:none;width:100%}
-    input:focus,select:focus{border-color:rgba(125,182,255,.4);box-shadow:0 0 0 3px rgba(125,182,255,.1)}
-    select option{background:#0b1822}
-    .toast{padding:9px 14px;border-radius:12px;font-size:.82rem;display:none;margin-top:8px}
-    .toast.ok{display:block;background:rgba(15,178,142,.12);color:#aef0db}
-    .toast.err{display:block;background:rgba(255,130,152,.12);color:#ffc6d2}
-    .form-actions{display:flex;gap:8px;margin-top:4px}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plataforma TI | {{ empresa_nome }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#041018;--surface:#072030;--surface2:#0a2d45;
+  --accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;
+  --text:#e8f4ff;--muted:#7a9bb5;--radius:12px;
+  --card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07);
+  --panel:rgba(11,24,34,.9);--line:rgba(154,193,220,.14);--soft:rgba(255,255,255,.08);
+  --gold:#f0bf6b;--danger2:#ff7a91;--shadow:0 24px 70px rgba(0,0,0,.42);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:Manrope,sans-serif;color:var(--text);min-height:100vh;display:flex;
+  background:radial-gradient(circle at top left,rgba(0,194,255,.10),transparent 22rem),
+             radial-gradient(circle at top right,rgba(0,229,176,.10),transparent 26rem),
+             linear-gradient(180deg,#041018 0%,#08141d 40%,#061119 100%);
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;
+  background:linear-gradient(rgba(0,194,255,.04) 1px,transparent 1px),
+             linear-gradient(90deg,rgba(0,194,255,.04) 1px,transparent 1px);
+  background-size:44px 44px;opacity:.18;
+}
 
-    /* TRIAL PROGRESS */
-    .trial-box{border-radius:24px;padding:22px;background:linear-gradient(135deg,rgba(240,191,107,.08),rgba(126,225,195,.05));border:1px solid rgba(240,191,107,.2)}
-    .progress-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:6px}
-    .progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#0db794,#7ee1c3);transition:width .4s}
+/* ── SIDEBAR ── */
+.sidebar{
+  width:240px;min-height:100vh;height:100vh;overflow-y:auto;
+  background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;position:sticky;top:0;
+}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(0,194,255,.2);border-radius:4px}
+.logo{padding:0 20px 20px;font-size:17px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.tab-btn-side{
+  display:flex;align-items:center;gap:10px;padding:10px 20px;
+  font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;
+  border-radius:8px;margin:2px 8px;cursor:pointer;transition:.15s;
+  font-family:Manrope,sans-serif;text-align:left;width:calc(100% - 16px);white-space:nowrap;
+}
+.tab-btn-side:hover{background:rgba(0,194,255,.1);color:var(--accent)}
+.tab-btn-side.active{background:rgba(0,194,255,.12);color:var(--accent);font-weight:700}
 
-    /* ONBOARDING */
-    .step-row{border-radius:16px;padding:14px 16px;background:rgba(255,255,255,.03);border:1px solid var(--soft);display:flex;align-items:center;gap:14px;cursor:pointer;transition:background .15s}
-    .step-row:hover{background:rgba(255,255,255,.06)}
-    .step-row.done{opacity:.55}
-    .step-check{width:28px;height:28px;border-radius:50%;border:2px solid var(--soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.85rem;transition:all .2s}
-    .step-row.done .step-check{border-color:var(--accent);background:rgba(126,225,195,.12);color:var(--accent)}
-    .step-row:not(.done) .step-check{color:var(--muted)}
-    .step-text{flex:1}.step-name{font-weight:700;font-size:.9rem}.step-desc{color:var(--muted);font-size:.78rem;margin-top:2px}
+/* ── MAIN ── */
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
 
-    /* BENCHMARK */
-    .bench-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .bench-card{border-radius:20px;padding:16px;background:rgba(255,255,255,.04);border:1px solid var(--soft)}
-    .bench-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
-    .bench-val{font-size:1.5rem;font-weight:800;margin:4px 0}
-    .bench-comp{font-size:.8rem;color:var(--muted)}
-    .bench-comp.better{color:var(--accent)}
-    .bench-comp.worse{color:var(--danger)}
+/* ── TABS ── */
+.tab-panel{display:none}.tab-panel.active{display:flex;flex-direction:column;gap:20px}
 
-    /* KEY CHIP */
-    .key-chip{font-family:monospace;font-size:.8rem;background:rgba(125,182,255,.1);color:#c3deff;padding:4px 10px;border-radius:8px;word-break:break-all;border:1px solid rgba(125,182,255,.15)}
+/* ── GLASS CARD ── */
+.glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px);box-shadow:var(--shadow)}
+.card{border-radius:24px;padding:22px}
 
-    /* STRIP */
-    .strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-    .strip-card{border-radius:20px;padding:14px 16px;background:linear-gradient(180deg,rgba(17,35,50,.9),rgba(8,18,28,.92));border:1px solid var(--soft)}
-    .strip-card span{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
-    .strip-card strong{display:block;margin-top:8px;font-size:1.4rem;font-weight:800}
-    .strip-card.accent strong{color:var(--accent)}
-    .strip-card.gold strong{color:var(--gold)}
-    .strip-card.danger strong{color:var(--danger)}
+/* ── GRID LAYOUTS ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.four-col{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 
-    /* WEBHOOK URL */
-    .url-row{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--soft);border-radius:12px;padding:8px 12px}
-    .url-row code{flex:1;font-size:.78rem;color:var(--accent-2);word-break:break-all}
-    .copy-btn{cursor:pointer;color:var(--muted);font-size:.7rem;font-weight:800;white-space:nowrap;padding:4px 8px;border-radius:8px;border:1px solid var(--soft);background:rgba(255,255,255,.04);transition:all .15s}
-    .copy-btn:hover{background:rgba(255,255,255,.1);color:var(--text)}
+/* ── SECTION HEADERS ── */
+.section-title{font-size:1rem;font-weight:800;margin-bottom:4px}
+.section-sub{color:var(--muted);font-size:.86rem;margin-bottom:14px}
+.section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
 
-    @media(max-width:900px){.two-col{grid-template-columns:1fr}.bench-grid{grid-template-columns:1fr 1fr}.strip{grid-template-columns:1fr 1fr}}
-    @media(max-width:540px){.bench-grid,.strip{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}}
-  </style>
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:999px;border:1px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);font:inherit;font-size:.8rem;font-weight:800;cursor:pointer;text-decoration:none;transition:all .18s}
+.btn:hover{background:rgba(255,255,255,.12)}
+.btn.primary{border:0;background:linear-gradient(135deg,#00c2ff,#00e5b0);color:#041018}
+.btn.danger{background:rgba(255,77,109,.15);color:#ff8fa3;border:1px solid rgba(255,77,109,.3)}
+.btn.warn{border:0;background:rgba(255,179,71,.15);color:#ffd080;border:1px solid rgba(255,179,71,.3)}
+.btn.sm{padding:5px 12px;font-size:.76rem;min-height:28px}
+.btn.xs{padding:3px 8px;font-size:.7rem;min-height:24px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+.badge-ok{background:rgba(0,229,176,.14);color:#b0ffe6}
+.badge-warn{background:rgba(255,179,71,.14);color:#ffd080}
+.badge-danger{background:rgba(255,77,109,.14);color:#ffb3be}
+.badge-info{background:rgba(0,194,255,.14);color:#a0dfff}
+.badge-muted{background:rgba(255,255,255,.07);color:var(--muted)}
+.badge-purple{background:rgba(167,139,250,.14);color:#c4b5fd}
+.badge-gold{background:rgba(240,191,107,.14);color:#ffe4ad}
+
+/* ── SBADGE (legacy compat) ── */
+.sbadge{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+.s-ativo{background:rgba(0,229,176,.14);color:#b0ffe6}
+.s-inativo{background:rgba(255,255,255,.07);color:var(--muted)}
+.s-trial{background:rgba(240,191,107,.14);color:#ffe4ad}
+.s-expirado{background:rgba(255,77,109,.14);color:#ffb3be}
+.s-pendente{background:rgba(0,194,255,.14);color:#a0dfff}
+
+/* ── STRIP (KPI row) ── */
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.strip-card{border-radius:20px;padding:14px 16px;background:linear-gradient(180deg,rgba(17,35,50,.92),rgba(8,18,28,.94));border:1px solid var(--soft)}
+.strip-card span{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
+.strip-card strong{display:block;margin-top:8px;font-size:1.4rem;font-weight:800}
+.strip-card.accent strong{color:var(--accent)}
+.strip-card.ok strong{color:var(--ok)}
+.strip-card.warn strong{color:var(--warn)}
+.strip-card.danger strong{color:var(--danger)}
+.strip-card.gold strong{color:var(--gold)}
+
+/* ── INTEGRATION CARDS ── */
+.int-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.int-card{border-radius:18px;padding:18px;background:rgba(255,255,255,.04);border:1px solid var(--soft);display:flex;flex-direction:column;gap:10px;transition:border-color .2s}
+.int-card:hover{border-color:rgba(0,194,255,.3)}
+.int-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.int-name{font-size:.95rem;font-weight:800}
+.int-desc{color:var(--muted);font-size:.8rem;line-height:1.5;flex:1}
+.int-card-bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px}
+.int-card.connected{border-color:rgba(0,229,176,.25);background:rgba(0,229,176,.04)}
+.int-card.configuring{border-color:rgba(255,179,71,.25);background:rgba(255,179,71,.04)}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;border-radius:16px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 14px;text-align:left;font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;background:rgba(255,255,255,.02);white-space:nowrap}
+td{padding:11px 14px;font-size:.84rem;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+/* ── FORMS ── */
+.form-grid{display:grid;gap:11px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.field{display:flex;flex-direction:column;gap:5px}
+label{color:#bfd3e2;font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em}
+input,select,textarea{border-radius:11px;border:1px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);padding:9px 12px;font:inherit;font-size:.86rem;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:rgba(0,194,255,.4);box-shadow:0 0 0 3px rgba(0,194,255,.1)}
+select option{background:#0b1822}
+.form-actions{display:flex;gap:8px;margin-top:4px}
+.checkbox-group{display:flex;flex-direction:column;gap:6px}
+.chk-row{display:flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer}
+.chk-row input[type=checkbox]{width:auto;cursor:pointer}
+
+/* ── TOAST ── */
+.toast{padding:9px 14px;border-radius:11px;font-size:.82rem;display:none;margin-top:8px}
+.toast.ok{display:block;background:rgba(0,229,176,.12);color:#aef0db}
+.toast.err{display:block;background:rgba(255,122,145,.12);color:#ffc6d2}
+
+/* ── PROGRESS BAR ── */
+.prog-bar,.progress-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:6px}
+.prog-fill,.progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--ok));transition:width .5s}
+.prog-fill.danger{background:linear-gradient(90deg,#ff4d6d,#ff7a91)}
+.prog-fill.warn{background:linear-gradient(90deg,#ffb347,#ffd080)}
+
+/* ── KEY CHIP ── */
+.key-chip{font-family:monospace;font-size:.8rem;background:rgba(0,194,255,.1);color:#a0dfff;padding:5px 10px;border-radius:8px;word-break:break-all;border:1px solid rgba(0,194,255,.15)}
+.url-row{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--soft);border-radius:11px;padding:8px 12px}
+.url-row code{flex:1;font-size:.78rem;color:var(--accent);word-break:break-all}
+.copy-btn{cursor:pointer;color:var(--muted);font-size:.7rem;font-weight:800;white-space:nowrap;padding:4px 8px;border-radius:7px;border:1px solid var(--soft);background:rgba(255,255,255,.04);transition:all .15s}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:var(--text)}
+
+/* ── LGPD CHECKLIST ── */
+.chk-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid var(--soft);font-size:.88rem}
+.chk-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.9rem}
+.chk-icon.ok{background:rgba(0,229,176,.15);color:var(--ok)}
+.chk-icon.pending{background:rgba(255,179,71,.12);color:var(--warn)}
+
+/* ── COMPLIANCE CARD ── */
+.comp-card{border-radius:18px;padding:18px;background:rgba(255,255,255,.04);border:1px solid var(--soft)}
+.comp-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px}
+.comp-name{font-size:.92rem;font-weight:800}
+.comp-law{font-size:.75rem;color:var(--muted);margin-top:2px}
+.comp-score{font-size:1.5rem;font-weight:800;color:var(--accent)}
+.comp-meta{font-size:.75rem;color:var(--muted);margin-top:8px;display:flex;justify-content:space-between}
+
+/* ── AUDIT LOG ── */
+.log-row{display:flex;align-items:flex-start;gap:12px;padding:11px 14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--soft);font-size:.83rem}
+.log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.log-dot.ok{background:var(--ok)}
+.log-dot.warn{background:var(--warn)}
+.log-dot.danger{background:var(--danger)}
+.log-dot.info{background:var(--accent)}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:32px;color:var(--muted);font-size:.88rem;border-radius:14px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1)}
+
+/* ── PAGE HEADER ── */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:3px}
+
+/* ── SESSION CARD ── */
+.session-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid var(--soft)}
+.session-info{flex:1}
+.session-device{font-size:.88rem;font-weight:700}
+.session-meta{font-size:.76rem;color:var(--muted);margin-top:3px}
+
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.filter-bar .field{flex:1;min-width:140px}
+
+/* ── PAGINATION ── */
+.pagination{display:flex;gap:6px;justify-content:center;margin-top:14px}
+.page-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--soft);background:rgba(255,255,255,.05);color:var(--muted);cursor:pointer;font:inherit;font-size:.82rem;font-weight:700;transition:.15s}
+.page-btn:hover,.page-btn.active{background:rgba(0,194,255,.15);color:var(--accent);border-color:rgba(0,194,255,.3)}
+
+/* ── ONBOARDING ── */
+.step-row{border-radius:16px;padding:14px 16px;background:rgba(255,255,255,.03);border:1px solid var(--soft);display:flex;align-items:center;gap:14px;cursor:pointer;transition:background .15s}
+.step-row:hover{background:rgba(255,255,255,.06)}
+.step-row.done{opacity:.55}
+.step-check{width:28px;height:28px;border-radius:50%;border:2px solid var(--soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.85rem;transition:all .2s}
+.step-row.done .step-check{border-color:var(--accent);background:rgba(0,194,255,.12);color:var(--accent)}
+.step-row:not(.done) .step-check{color:var(--muted)}
+.step-text{flex:1}.step-name{font-weight:700;font-size:.9rem}.step-desc{color:var(--muted);font-size:.78rem;margin-top:2px}
+
+/* ── TRIAL BOX ── */
+.trial-box{border-radius:20px;padding:20px;background:linear-gradient(135deg,rgba(240,191,107,.08),rgba(0,194,255,.05));border:1px solid rgba(240,191,107,.2)}
+
+/* ── ITEM LIST ── */
+.item-list{display:grid;gap:10px}
+.item-row{border-radius:18px;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid var(--soft);display:grid;gap:6px}
+.item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.item-name{font-size:.95rem;font-weight:700}
+.item-meta{color:var(--muted);font-size:.8rem;line-height:1.5}
+.item-actions{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+.quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.quick-link{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:18px;border:1px solid var(--soft);background:rgba(255,255,255,.04);color:var(--text);text-decoration:none;transition:all .18s}
+.quick-link:hover{border-color:rgba(0,194,255,.28);background:rgba(0,194,255,.08);transform:translateY(-1px)}
+.quick-link strong{font-size:.9rem}
+.quick-link span{font-size:.78rem;color:var(--muted);line-height:1.45}
+.pill-list{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--soft);font-size:.74rem;color:#d6e9f7}
+.timeline{display:grid;gap:10px}
+.timeline-row{display:grid;grid-template-columns:36px 1fr;gap:12px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid var(--soft)}
+.timeline-dot{width:36px;height:36px;border-radius:12px;background:rgba(0,194,255,.12);border:1px solid rgba(0,194,255,.2);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:var(--accent);font-weight:800}
+.timeline-row strong{font-size:.9rem}
+.timeline-row p{font-size:.8rem;color:var(--muted);line-height:1.5;margin-top:4px}
+.metric-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.metric-box{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--soft)}
+.metric-box span{display:block;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.metric-box strong{display:block;margin-top:8px;font-size:1.25rem}
+
+/* ── BENCHMARK ── */
+.bench-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.bench-card{border-radius:20px;padding:16px;background:rgba(255,255,255,.04);border:1px solid var(--soft)}
+.bench-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
+.bench-val{font-size:1.5rem;font-weight:800;margin:4px 0}
+.bench-comp{font-size:.8rem;color:var(--muted)}
+.bench-comp.better{color:var(--ok)}
+.bench-comp.worse{color:var(--danger)}
+
+@media(max-width:1100px){
+  .int-grid{grid-template-columns:repeat(2,1fr)}
+  .three-col{grid-template-columns:repeat(2,1fr)}
+  .four-col{grid-template-columns:repeat(2,1fr)}
+  .quick-grid{grid-template-columns:repeat(2,1fr)}
+  .bench-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:800px){
+  .sidebar{width:200px}
+  .main{padding:20px 16px}
+  .two-col,.int-grid,.three-col,.four-col,.strip,.bench-grid,.quick-grid,.metric-pair{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .sidebar{display:none}
+  .form-row{grid-template-columns:1fr}
+}
+</style>
 </head>
 <body>
 
-<header class="topbar glass">
-  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-    <span class="brand">SolusCRT</span>
-    <span class="brand-sep">·</span>
-    <span class="brand-sub">Plataforma</span>
-    <span class="company-tag">{{ empresa_nome }}</span>
-  </div>
-  <nav class="topbar-nav">
-    <button class="tab-btn active" data-tab="trial">Plano & Trial</button>
-    <button class="tab-btn" data-tab="onboarding">Onboarding</button>
-    <button class="tab-btn" data-tab="integracoes">Integrações RH</button>
-    <button class="tab-btn" data-tab="chaves">API Keys</button>
-    <button class="tab-btn" data-tab="benchmark">Benchmark</button>
-  </nav>
-  <div class="topbar-actions">
-    <a class="btn sm" href="/gestao/">← Gestão</a>
-    <a class="btn sm warn" href="/logout/">Sair</a>
-  </div>
-</header>
+<!-- ══ SIDEBAR ══════════════════════════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="logo">🖥️ Plataforma TI</div>
 
-<main class="shell">
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/gestao/"><span>📊</span> Gestão</a>
+  <a class="nav-link" href="/sst/"><span>🏥</span> SST</a>
+  <a class="nav-link" href="/logout/"><span>🚪</span> Sair</a>
 
-  <!-- ══ PLANO & TRIAL ═════════════════════════════════════════════════════════ -->
-  <section id="panel-trial" class="panel active">
+  <div class="nav-section" style="margin-top:8px">Operação SST</div>
+  <button class="tab-btn-side active" onclick="setTab('plano')"><span>📦</span> Plano &amp; Trial</button>
+  <button class="tab-btn-side" onclick="setTab('onboarding')"><span>🚀</span> Implantação</button>
+  <button class="tab-btn-side" onclick="setTab('jornada')"><span>🩺</span> Jornada Ocupacional</button>
+  <button class="tab-btn-side" onclick="setTab('esocial')"><span>📡</span> eSocial &amp; Riscos</button>
+  <button class="tab-btn-side" onclick="setTab('rede')"><span>🏥</span> Clínicas &amp; Rede</button>
+
+  <div class="nav-section" style="margin-top:8px">Tecnologia</div>
+  <button class="tab-btn-side" onclick="setTab('integracoes')"><span>🔗</span> Integrações SST</button>
+  <button class="tab-btn-side" onclick="setTab('apikeys')"><span>🔑</span> API Keys</button>
+  <button class="tab-btn-side" onclick="setTab('webhooks')"><span>📡</span> Webhooks</button>
+
+  <div class="nav-section" style="margin-top:8px">Governança</div>
+  <button class="tab-btn-side" onclick="setTab('seguranca')"><span>🛡️</span> Segurança &amp; LGPD</button>
+  <button class="tab-btn-side" onclick="setTab('conformidade')"><span>📋</span> Conformidade</button>
+  <button class="tab-btn-side" onclick="setTab('logs')"><span>📊</span> Logs</button>
+</aside>
+
+<!-- ══ MAIN ══════════════════════════════════════════════════════════════════════ -->
+<main class="main">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Plataforma TI — {{ empresa_nome }}</div>
+      <div class="page-sub">Hub técnico de saúde ocupacional para operação SST, rede clínica, eSocial e governança de dados sensíveis</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn sm" href="/gestao/">← Gestão</a>
+      <a class="btn sm" href="/sst/">🏥 Painel SST</a>
+      <a class="btn sm" href="/sst/relatorios/">📈 Relatórios</a>
+    </div>
+  </div>
+
+  <!-- ══ TAB: PLANO & TRIAL ═══════════════════════════════════════════════════ -->
+  <section id="tab-plano" class="tab-panel active">
+
     <div class="strip">
       <div class="strip-card gold"><span>Status</span><strong id="trialStatus">—</strong></div>
       <div class="strip-card accent"><span>Dias restantes</span><strong id="trialDias">—</strong></div>
@@ -172,7 +340,7 @@
           </div>
           <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
             <button class="btn primary" id="btnAtivarTrial" onclick="ativarTrial()" style="display:none">Ativar Trial Gratuito 14 dias</button>
-            <a class="btn gold" href="mailto:comercial@soluscrt.com?subject=Quero+assinar+o+SolusCRT">Falar com Vendas</a>
+            <a class="btn" style="border-color:rgba(240,191,107,.3);color:var(--gold)" href="mailto:comercial@soluscrt.com?subject=Quero+assinar+o+SolusCRT">Falar com Vendas</a>
           </div>
         </div>
       </div>
@@ -183,10 +351,31 @@
         <div id="modulosList" class="item-list"><div class="empty">Carregando...</div></div>
       </div>
     </div>
+
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Torres ativas da saúde ocupacional</div>
+          <div class="section-sub">Acesse rapidamente os fluxos que mais pesam na rotina do SST corporativo</div>
+        </div>
+      </div>
+      <div class="quick-grid">
+        <a class="quick-link" href="/sst/asos/"><strong>ASO &amp; Pedidos</strong><span>Emissão, compartilhamento, assinatura e controle periódico dos atestados.</span></a>
+        <a class="quick-link" href="/sst/exames/"><strong>Exames</strong><span>Fila de exames ocupacionais, conclusões pendentes e histórico por colaborador.</span></a>
+        <a class="quick-link" href="/sst/solicitacoes/"><strong>Solicitações</strong><span>Pedidos para clínicas parceiras com trilha de envio e confirmação.</span></a>
+        <a class="quick-link" href="/sst/afastamentos/"><strong>Afastamentos</strong><span>Retornos ao trabalho, controle de CID e integração com afastamentos previdenciários.</span></a>
+        <a class="quick-link" href="/sst/cats/"><strong>CATs</strong><span>Registro de acidentes, classificação, PDFs e status de transmissão governamental.</span></a>
+        <a class="quick-link" href="/sst/documentos/"><strong>PGR · PCMSO</strong><span>Documentos mandatórios, vigências, evidências e pacotes por unidade.</span></a>
+        <a class="quick-link" href="/sst/epis/"><strong>EPI / EPC</strong><span>Catálogo, fichas de entrega, CA e cobertura por posto de trabalho.</span></a>
+        <a class="quick-link" href="/sst/esocial/"><strong>eSocial SST</strong><span>Fila oficial dos eventos S-2210, S-2220, S-2230 e S-2240 com protocolos.</span></a>
+      </div>
+    </div>
+
   </section>
 
-  <!-- ══ ONBOARDING ════════════════════════════════════════════════════════════ -->
-  <section id="panel-onboarding" class="panel">
+  <!-- ══ TAB: ONBOARDING ══════════════════════════════════════════════════════ -->
+  <section id="tab-onboarding" class="tab-panel">
+
     <div class="card glass">
       <div class="section-head">
         <div>
@@ -201,57 +390,586 @@
       <div class="progress-bar" style="margin-bottom:20px"><div class="progress-fill" id="onbBar" style="width:0%"></div></div>
       <div class="item-list" id="onbList"><div class="empty">Carregando...</div></div>
     </div>
+
   </section>
 
-  <!-- ══ INTEGRAÇÕES RH ════════════════════════════════════════════════════════ -->
-  <section id="panel-integracoes" class="panel">
+  <!-- ══ TAB: JORNADA OCUPACIONAL ═════════════════════════════════════════════ -->
+  <section id="tab-jornada" class="tab-panel">
+
+    <div class="strip">
+      <div class="strip-card accent"><span>Entrada</span><strong>Admissional</strong></div>
+      <div class="strip-card ok"><span>Rotina</span><strong>Periódicos &amp; EPI</strong></div>
+      <div class="strip-card warn"><span>Exceção</span><strong>CAT &amp; Afastamento</strong></div>
+      <div class="strip-card gold"><span>Saída</span><strong>Demissional</strong></div>
+    </div>
+
+    <div class="three-col">
+      <div class="int-card">
+        <div class="int-card-top">
+          <div>
+            <div class="int-name">Admissão e aptidão</div>
+            <div style="font-size:.75rem;color:var(--muted)">Entrada do colaborador</div>
+          </div>
+          <span class="badge badge-info">Core</span>
+        </div>
+        <div class="int-desc">Cadastre o colaborador, gere o ASO admissional e mantenha vínculo com exames e posto de trabalho.</div>
+        <div class="pill-list">
+          <span class="pill">👥 Funcionário</span>
+          <span class="pill">📋 ASO</span>
+          <span class="pill">🏭 Posto</span>
+        </div>
+        <div class="int-card-bottom">
+          <a class="btn sm" href="/sst/funcionarios/">Funcionários</a>
+          <a class="btn sm" href="/sst/asos/">ASOs</a>
+        </div>
+      </div>
+
+      <div class="int-card">
+        <div class="int-card-top">
+          <div>
+            <div class="int-name">Exames e agenda</div>
+            <div style="font-size:.75rem;color:var(--muted)">Clínica e logística</div>
+          </div>
+          <span class="badge badge-ok">Operação</span>
+        </div>
+        <div class="int-desc">Controle agendamentos, pedidos, retorno de resultados e pendências por clínica credenciada.</div>
+        <div class="pill-list">
+          <span class="pill">🔬 Exames</span>
+          <span class="pill">📨 Solicitações</span>
+          <span class="pill">📅 Agenda</span>
+        </div>
+        <div class="int-card-bottom">
+          <a class="btn sm" href="/sst/solicitacoes/">Solicitações</a>
+          <a class="btn sm" href="/sst/exames/agendar/">Agendar</a>
+        </div>
+      </div>
+
+      <div class="int-card">
+        <div class="int-card-top">
+          <div>
+            <div class="int-name">Risco e proteção</div>
+            <div style="font-size:.75rem;color:var(--muted)">Campo e prevenção</div>
+          </div>
+          <span class="badge badge-warn">Contínuo</span>
+        </div>
+        <div class="int-desc">Conecte riscos ocupacionais, entrega de EPI/EPC e treinamentos normativos ao posto real de exposição.</div>
+        <div class="pill-list">
+          <span class="pill">🦺 EPI</span>
+          <span class="pill">🎓 NR</span>
+          <span class="pill">🔴 PGR</span>
+        </div>
+        <div class="int-card-bottom">
+          <a class="btn sm" href="/sst/epis/">EPI / EPC</a>
+          <a class="btn sm" href="/sst/treinamentos/">Treinamentos</a>
+        </div>
+      </div>
+
+      <div class="int-card">
+        <div class="int-card-top">
+          <div>
+            <div class="int-name">Eventos críticos</div>
+            <div style="font-size:.75rem;color:var(--muted)">Acidentes e saúde</div>
+          </div>
+          <span class="badge badge-danger">Atenção</span>
+        </div>
+        <div class="int-desc">Quando há acidente, doença ocupacional ou afastamento, a trilha documental e legal precisa sair inteira.</div>
+        <div class="pill-list">
+          <span class="pill">⚠️ CAT</span>
+          <span class="pill">🏥 Afastamento</span>
+          <span class="pill">📡 eSocial</span>
+        </div>
+        <div class="int-card-bottom">
+          <a class="btn sm" href="/sst/cats/">CATs</a>
+          <a class="btn sm" href="/sst/afastamentos/">Afastamentos</a>
+        </div>
+      </div>
+
+      <div class="int-card">
+        <div class="int-card-top">
+          <div>
+            <div class="int-name">Documentação mandatória</div>
+            <div style="font-size:.75rem;color:var(--muted)">Base regulatória</div>
+          </div>
+          <span class="badge badge-purple">Compliance</span>
+        </div>
+        <div class="int-desc">PGR, PCMSO, LTCAT, evidências e revisões periódicas sustentam os eventos operacionais e a defesa técnica.</div>
+        <div class="pill-list">
+          <span class="pill">📁 PGR</span>
+          <span class="pill">🩺 PCMSO</span>
+          <span class="pill">📚 NR</span>
+        </div>
+        <div class="int-card-bottom">
+          <a class="btn sm" href="/sst/documentos/">Documentos</a>
+          <a class="btn sm" href="/sst/normas/">Normas NR</a>
+        </div>
+      </div>
+
+      <div class="int-card">
+        <div class="int-card-top">
+          <div>
+            <div class="int-name">Prontuário e histórico</div>
+            <div style="font-size:.75rem;color:var(--muted)">Visão longitudinal</div>
+          </div>
+          <span class="badge badge-gold">Estratégico</span>
+        </div>
+        <div class="int-desc">Centralize histórico ocupacional por colaborador para auditar aptidão, riscos, treinamentos e recorrências clínicas.</div>
+        <div class="pill-list">
+          <span class="pill">🧾 Histórico</span>
+          <span class="pill">🔎 Auditoria</span>
+          <span class="pill">📈 Tendência</span>
+        </div>
+        <div class="int-card-bottom">
+          <a class="btn sm" href="/sst/funcionarios/">Prontuários</a>
+          <a class="btn sm" href="/sst/relatorios/">Relatórios</a>
+        </div>
+      </div>
+    </div>
+
     <div class="two-col">
       <div class="card glass">
-        <div class="section-head">
-          <div>
-            <div class="section-title">Integrações Ativas</div>
-            <div class="section-sub">Sistemas de RH conectados à sua empresa</div>
+        <div class="section-title">Fluxo ocupacional recomendado</div>
+        <div class="section-sub">A operação fica mais estável quando cada etapa já nasce preparada para gerar a próxima evidência</div>
+        <div class="timeline">
+          <div class="timeline-row">
+            <div class="timeline-dot">1</div>
+            <div><strong>Admissão com posto e risco definidos</strong><p>Colaborador entra com unidade, função, posto S-2240 e plano de exames vinculados desde o primeiro dia.</p></div>
           </div>
-          <button class="btn sm" onclick="loadIntegracoes()">Atualizar</button>
+          <div class="timeline-row">
+            <div class="timeline-dot">2</div>
+            <div><strong>Pedido e agendamento para clínica</strong><p>Solicitação sai da empresa com exames corretos, clínica destinatária e retorno esperado para o prontuário.</p></div>
+          </div>
+          <div class="timeline-row">
+            <div class="timeline-dot">3</div>
+            <div><strong>Resultado, ASO e ciência</strong><p>Resultado clínico alimenta o ASO, atualiza aptidão e dispara compartilhamento com áreas que precisam agir.</p></div>
+          </div>
+          <div class="timeline-row">
+            <div class="timeline-dot">4</div>
+            <div><strong>Evento legal e evidência</strong><p>Quando necessário, CAT, afastamento, documentos e eSocial seguem juntos para evitar retrabalho regulatório.</p></div>
+          </div>
         </div>
-        <div class="item-list" id="integracoesList"><div class="empty">Carregando...</div></div>
       </div>
 
       <div class="card glass">
-        <div class="section-title">Conectar Sistema de RH</div>
-        <div class="section-sub">Sincronize automaticamente funcionários via webhook</div>
-        <form class="form-grid" id="formIntegracao" onsubmit="criarIntegracao(event)">
-          <div class="field">
-            <label>Sistema</label>
-            <select name="sistema" required>
-              <option value="">Selecione...</option>
-              <option value="totvs">TOTVS / RM</option>
-              <option value="adp">ADP Workforce</option>
-              <option value="senior">Senior Sistemas</option>
-              <option value="sap">SAP HCM / SuccessFactors</option>
-              <option value="esocial">eSocial (Gov Federal)</option>
-              <option value="outro">Outro (genérico)</option>
-            </select>
-          </div>
-          <div class="field"><label>Nome / Identificador</label><input name="nome" placeholder="Ex: TOTVS Matriz, ADP Filial SP..." required></div>
-          <div class="field">
-            <label>URL de retorno (Callback URL do seu RH)</label>
-            <input name="url_callback" type="url" placeholder="https://seu-rh.com/webhook/saude">
-            <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Opcional — se o seu RH precisa de confirmação de recebimento</div>
-          </div>
-          <div class="field">
-            <label>Ativa automaticamente</label>
-            <select name="ativo">
-              <option value="true">Sim — sincronizar imediatamente</option>
-              <option value="false">Não — configurar antes de ativar</option>
-            </select>
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="btn primary">Conectar</button>
-          </div>
-          <div class="toast" id="toastIntegracao"></div>
-        </form>
+        <div class="section-title">Dados que precisam andar juntos</div>
+        <div class="section-sub">Quando esses blocos se quebram, surgem retrabalho, lacunas regulatórias e perda de rastreabilidade</div>
+        <div class="item-list">
+          <div class="item-row"><div class="item-name">Colaborador + unidade + função</div><div class="item-meta">Base para exames, treinamentos NR e exposição ocupacional correta.</div></div>
+          <div class="item-row"><div class="item-name">Posto + risco + agente nocivo</div><div class="item-meta">Sustenta PGR, LTCAT, S-2240 e leitura de insalubridade/periculosidade.</div></div>
+          <div class="item-row"><div class="item-name">Exame + clínica + laudo</div><div class="item-meta">Garante retorno consistente entre solicitação, agenda, resultado e ASO final.</div></div>
+          <div class="item-row"><div class="item-name">CAT + afastamento + protocolo</div><div class="item-meta">Evita evento isolado sem lastro para previdência, eSocial ou auditoria interna.</div></div>
+        </div>
       </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: ESOCIAL & RISCOS ════════════════════════════════════════════════ -->
+  <section id="tab-esocial" class="tab-panel">
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-title">Pipeline oficial do eSocial SST</div>
+        <div class="section-sub">A plataforma precisa converter a operação ocupacional em eventos oficiais com consistência de dados</div>
+        <div class="timeline">
+          <div class="timeline-row">
+            <div class="timeline-dot">A</div>
+            <div><strong>S-2210</strong><p>Acidente de trabalho e CAT exigem resposta rápida, vínculo com CID, data/hora do evento e responsáveis.</p></div>
+          </div>
+          <div class="timeline-row">
+            <div class="timeline-dot">B</div>
+            <div><strong>S-2220</strong><p>Monitoramento da saúde nasce de exame realizado, ASO emitido e histórico clínico estruturado.</p></div>
+          </div>
+          <div class="timeline-row">
+            <div class="timeline-dot">C</div>
+            <div><strong>S-2230</strong><p>Afastamentos temporários precisam refletir causa, período e retorno com integridade cronológica.</p></div>
+          </div>
+          <div class="timeline-row">
+            <div class="timeline-dot">D</div>
+            <div><strong>S-2240</strong><p>Condições ambientais dependem de posto, inventário de riscos, agentes e medidas de controle atualizadas.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title">Dados-mestre que destravam o envio</div>
+        <div class="section-sub">Sem esses blocos amarrados, o gargalo do eSocial quase sempre aparece tarde demais</div>
+        <div class="pill-list" style="margin-bottom:14px">
+          <span class="pill">🏭 Postos S-2240</span>
+          <span class="pill">🔴 Inventário de riscos</span>
+          <span class="pill">📁 PGR / LTCAT</span>
+          <span class="pill">🩺 PCMSO e exames</span>
+          <span class="pill">👥 Cadastro limpo</span>
+          <span class="pill">🔐 Certificado digital</span>
+        </div>
+        <div class="metric-pair">
+          <div class="metric-box"><span>dependência crítica</span><strong>posto + risco</strong></div>
+          <div class="metric-box"><span>evidência mínima</span><strong>laudo + protocolo</strong></div>
+          <div class="metric-box"><span>origem mais sensível</span><strong>clínica parceira</strong></div>
+          <div class="metric-box"><span>ponto de falha comum</span><strong>cadastro incompleto</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="four-col">
+      <div class="int-card">
+        <div class="int-name">S-2210 CAT</div>
+        <div class="int-desc">Acidente, doença e comunicação imediata para reduzir passivo e atraso regulatório.</div>
+        <div class="int-card-bottom">
+          <span style="font-size:.72rem;color:var(--muted)">Urgência alta</span>
+          <a class="btn sm" href="/sst/cats/">Abrir CAT</a>
+        </div>
+      </div>
+      <div class="int-card">
+        <div class="int-name">S-2220 Monitoramento</div>
+        <div class="int-desc">Exames ocupacionais e ASOs atualizam aptidão e trilha clínica do colaborador.</div>
+        <div class="int-card-bottom">
+          <span style="font-size:.72rem;color:var(--muted)">Clínica + ASO</span>
+          <a class="btn sm" href="/sst/asos/">Gerir ASOs</a>
+        </div>
+      </div>
+      <div class="int-card">
+        <div class="int-name">S-2230 Afastamento</div>
+        <div class="int-desc">Períodos de afastamento, motivo, retorno e histórico previdenciário precisam fechar sem lacunas.</div>
+        <div class="int-card-bottom">
+          <span style="font-size:.72rem;color:var(--muted)">Tempo sensível</span>
+          <a class="btn sm" href="/sst/afastamentos/">Controlar</a>
+        </div>
+      </div>
+      <div class="int-card">
+        <div class="int-name">S-2240 Condições ambientais</div>
+        <div class="int-desc">Amarra posto, agentes nocivos, EPC/EPI e medidas administrativas com o inventário de riscos.</div>
+        <div class="int-card-bottom">
+          <span style="font-size:.72rem;color:var(--muted)">Base documental</span>
+          <a class="btn sm" href="/sst/postos/">Abrir postos</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card glass">
+      <div class="section-title">Rotas críticas de sustentação</div>
+      <div class="section-sub">Esses módulos dão lastro para os eventos governamentais e evitam “envio cego”</div>
+      <div class="quick-grid">
+        <a class="quick-link" href="/sst/esocial/"><strong>Fila eSocial</strong><span>Eventos, XMLs, protocolos e retransmissões.</span></a>
+        <a class="quick-link" href="/sst/postos/"><strong>Postos S-2240</strong><span>Mapeamento de exposição por função, setor e unidade.</span></a>
+        <a class="quick-link" href="/sst/riscos/"><strong>Riscos / PGR</strong><span>Inventário, planos de ação e priorização preventiva.</span></a>
+        <a class="quick-link" href="/sst/configuracoes/"><strong>Configurações</strong><span>Certificado, parâmetros SST e governança do ambiente.</span></a>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: CLÍNICAS & REDE ═════════════════════════════════════════════════ -->
+  <section id="tab-rede" class="tab-panel">
+
+    <div class="three-col">
+      <div class="int-card">
+        <div class="int-card-top">
+          <div>
+            <div class="int-name">Solicitação até resultado</div>
+            <div style="font-size:.75rem;color:var(--muted)">Rede assistencial</div>
+          </div>
+          <span class="badge badge-ok">SLA</span>
+        </div>
+        <div class="int-desc">Padronize o caminho entre empresa, clínica, colaborador e retorno técnico do exame ocupacional.</div>
+        <div class="pill-list">
+          <span class="pill">📨 Pedido</span>
+          <span class="pill">📅 Agenda</span>
+          <span class="pill">🧪 Resultado</span>
+        </div>
+        <div class="int-card-bottom">
+          <a class="btn sm" href="/sst/solicitacoes/">Pedidos</a>
+          <a class="btn sm" href="/sst/exames/">Resultados</a>
+        </div>
+      </div>
+
+      <div class="int-card">
+        <div class="int-card-top">
+          <div>
+            <div class="int-name">Clínicas, laboratórios e parceiros</div>
+            <div style="font-size:.75rem;color:var(--muted)">Orquestração externa</div>
+          </div>
+          <span class="badge badge-info">Rede</span>
+        </div>
+        <div class="int-desc">Centralize integrações com clínicas parceiras, SESI, laboratórios e provedores ocupacionais regionais.</div>
+        <div class="pill-list">
+          <span class="pill">🏥 Clínicas</span>
+          <span class="pill">🧬 Laboratórios</span>
+          <span class="pill">🤝 SESI</span>
+        </div>
+        <div class="int-card-bottom">
+          <button class="btn sm" onclick="setTab('integracoes')">Configurar</button>
+          <a class="btn sm" href="/sst/comunicacao/">Comunicação</a>
+        </div>
+      </div>
+
+      <div class="int-card">
+        <div class="int-card-top">
+          <div>
+            <div class="int-name">Compartilhamento e ciência</div>
+            <div style="font-size:.75rem;color:var(--muted)">Entrega controlada</div>
+          </div>
+          <span class="badge badge-purple">Rastreável</span>
+        </div>
+        <div class="int-desc">ASOs, documentos e confirmações precisam sair com histórico de acesso, assinatura e recebimento.</div>
+        <div class="pill-list">
+          <span class="pill">✍️ Assinatura</span>
+          <span class="pill">📤 Compartilhar</span>
+          <span class="pill">🔒 Log</span>
+        </div>
+        <div class="int-card-bottom">
+          <a class="btn sm" href="/sst/asos/">Compartilhar ASO</a>
+          <a class="btn sm" href="/sst/documentos/">Documentos</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-title">Protocolos de encaminhamento</div>
+        <div class="section-sub">Boas práticas para manter a rede assistencial funcionando sem ruptura de informação</div>
+        <div class="item-list">
+          <div class="item-row"><div class="item-name">Pedido sai com tipo de exame e contexto ocupacional</div><div class="item-meta">Evita retorno clínico genérico e reduz reenvios manuais.</div></div>
+          <div class="item-row"><div class="item-name">Agenda vinculada ao colaborador correto</div><div class="item-meta">Data, clínica e unidade precisam fechar com o cadastro corporativo.</div></div>
+          <div class="item-row"><div class="item-name">Resultado volta para ASO ou prontuário</div><div class="item-meta">O laudo não pode ficar “solto” fora da trilha legal e assistencial.</div></div>
+          <div class="item-row"><div class="item-name">Pendência vira alerta operacional</div><div class="item-meta">Sem retorno de clínica, o time SST precisa enxergar SLA e próximos passos.</div></div>
+        </div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title">Backoffice da rede</div>
+        <div class="section-sub">Atalhos para os times que fazem a ponte entre operação, clínica e compliance</div>
+        <div class="quick-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+          <a class="quick-link" href="/sst/exames/agendar/"><strong>Agendamento</strong><span>Monte agendas e confirme slots com as clínicas.</span></a>
+          <a class="quick-link" href="/sst/comunicacao/"><strong>Comunicação</strong><span>Canal com colaboradores, times internos e parceiros.</span></a>
+          <a class="quick-link" href="/sst/relatorios/"><strong>Relatórios</strong><span>Consolide fila, vencimentos e evidências executivas.</span></a>
+          <a class="quick-link" href="/sst/conformidade/"><strong>Conformidade SST</strong><span>Veja o impacto regulatório das pendências operacionais.</span></a>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: INTEGRAÇÕES RH ══════════════════════════════════════════════════ -->
+  <section id="tab-integracoes" class="tab-panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Sistemas corporativos, clínicas e eSocial</div>
+          <div class="section-sub">Conecte o SolusCRT a ERPs, RH, medicina do trabalho, parceiros clínicos e fluxos oficiais de SST</div>
+        </div>
+        <button class="btn sm" onclick="loadIntegracoes()">🔄 Atualizar</button>
+      </div>
+      <div class="int-grid" id="integracoesGrid">
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">TOTVS / RM</div>
+              <div style="font-size:.75rem;color:var(--muted)">ERP</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">ERP líder no Brasil — sincronize funcionários e folha automaticamente</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">Webhook · REST</span>
+            <button class="btn sm" onclick="abrirConfigurarInt('totvs','TOTVS / RM')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">ADP Workforce</div>
+              <div style="font-size:.75rem;color:var(--muted)">RH Global</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Plataforma global de RH e folha de pagamento</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">REST · OAuth2</span>
+            <button class="btn sm" onclick="abrirConfigurarInt('adp','ADP Workforce')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">Senior Sistemas</div>
+              <div style="font-size:.75rem;color:var(--muted)">RH Nacional</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">RH e gestão de pessoas com foco em médias empresas</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">Webhook · API</span>
+            <button class="btn sm" onclick="abrirConfigurarInt('senior','Senior Sistemas')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">SAP HCM</div>
+              <div style="font-size:.75rem;color:var(--muted)">Enterprise</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">SAP SuccessFactors e HCM — integração enterprise</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">OData · SOAP</span>
+            <button class="btn sm" onclick="abrirConfigurarInt('sap','SAP HCM')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">eSocial</div>
+              <div style="font-size:.75rem;color:var(--muted)">Gov Federal</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Obrigação federal — sincronize eventos S-2220 (saúde) e S-2240 (risco)</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">WebService · XML</span>
+            <button class="btn sm" onclick="abrirConfigurarInt('esocial','eSocial')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">SESI</div>
+              <div style="font-size:.75rem;color:var(--muted)">Saúde Industrial</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Serviço Social da Indústria — laudos, exames e PPRA/PCMSO</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">REST · API</span>
+            <button class="btn sm" onclick="abrirConfigurarInt('sesi','SESI')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">ANS / Plano de Saúde</div>
+              <div style="font-size:.75rem;color:var(--muted)">Saúde Corporativa</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Conecte o plano de saúde corporativo — sinistros e coberturas</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">TISS · XML</span>
+            <button class="btn sm" onclick="abrirConfigurarInt('ans','ANS/Plano de Saúde')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">Clínica Parceira</div>
+              <div style="font-size:.75rem;color:var(--muted)">Exames Ocupacionais</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Vincule clínicas para envio digital de pedidos de exame</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">REST · Webhook</span>
+            <button class="btn sm" onclick="abrirConfigurarInt('clinica','Clínica Parceira')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">eSocial Saúde (S-2220)</div>
+              <div style="font-size:.75rem;color:var(--muted)">Monitoramento</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Monitoramento de saúde — ASO, exames admissionais e demissionais</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">XML · Gov.br</span>
+            <button class="btn sm" onclick="abrirConfigurarInt('esocial_saude','eSocial Saúde S-2220')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">Outro (Genérico)</div>
+              <div style="font-size:.75rem;color:var(--muted)">Personalizado</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Sistema proprietário via webhook genérico</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">Webhook · JSON</span>
+            <button class="btn sm" onclick="abrirConfigurarInt('outro','Sistema Genérico')">Configurar</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Integrações ativas (lista dinâmica) -->
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Integrações Ativas</div>
+          <div class="section-sub">Sistemas de RH conectados à sua empresa</div>
+        </div>
+      </div>
+      <div class="item-list" id="integracoesList"><div class="empty">Carregando...</div></div>
+    </div>
+
+    <!-- Conectar novo sistema -->
+    <div class="card glass" id="formIntegracaoCard" style="display:none">
+      <div class="section-head">
+        <div>
+          <div class="section-title" id="formIntegracaoTitulo">Conectar Sistema de RH</div>
+          <div class="section-sub">Sincronize automaticamente funcionários via webhook</div>
+        </div>
+        <button class="btn sm" onclick="fecharConfigurarInt()">✕ Fechar</button>
+      </div>
+      <form class="form-grid" id="formIntegracao" onsubmit="criarIntegracao(event)" style="max-width:680px">
+        <div class="field">
+          <label>Sistema</label>
+          <select name="sistema" id="formIntegracaoSistema" required>
+            <option value="">Selecione...</option>
+            <option value="totvs">TOTVS / RM</option>
+            <option value="adp">ADP Workforce</option>
+            <option value="senior">Senior Sistemas</option>
+            <option value="sap">SAP HCM / SuccessFactors</option>
+            <option value="esocial">eSocial (Gov Federal)</option>
+            <option value="sesi">SESI</option>
+            <option value="ans">ANS / Plano de Saúde</option>
+            <option value="clinica">Clínica Parceira</option>
+            <option value="esocial_saude">eSocial Saúde (S-2220)</option>
+            <option value="outro">Outro (genérico)</option>
+          </select>
+        </div>
+        <div class="field"><label>Nome / Identificador</label><input name="nome" placeholder="Ex: TOTVS Matriz, ADP Filial SP..." required></div>
+        <div class="field">
+          <label>URL de retorno (Callback URL do seu RH)</label>
+          <input name="url_callback" type="url" placeholder="https://seu-rh.com/webhook/saude">
+          <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Opcional — se o seu RH precisa de confirmação de recebimento</div>
+        </div>
+        <div class="field">
+          <label>Ativa automaticamente</label>
+          <select name="ativo">
+            <option value="true">Sim — sincronizar imediatamente</option>
+            <option value="false">Não — configurar antes de ativar</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn primary">Conectar</button>
+        </div>
+        <div class="toast" id="toastIntegracao"></div>
+      </form>
     </div>
 
     <!-- Detalhe da integração selecionada -->
@@ -261,7 +979,7 @@
           <div class="section-title" id="detalheTitulo">—</div>
           <div class="section-sub">Endpoint que você deve configurar no seu sistema de RH para enviar dados</div>
         </div>
-        <button class="btn sm warn" onclick="excluirIntegracao()" id="btnExcluirInt">Remover</button>
+        <button class="btn sm danger" onclick="excluirIntegracao()" id="btnExcluirInt">Remover</button>
       </div>
       <div style="display:grid;gap:12px">
         <div>
@@ -282,7 +1000,7 @@
         <div>
           <label style="display:block;margin-bottom:6px">Exemplo de payload (funcionário)</label>
           <div style="background:rgba(255,255,255,.04);border-radius:12px;padding:12px;border:1px solid var(--soft)">
-<pre style="font-size:.75rem;color:#c3deff;overflow-x:auto;white-space:pre-wrap">{
+<pre style="font-size:.75rem;color:#a0dfff;overflow-x:auto;white-space:pre-wrap">{
   "funcionarios": [
     {
       "cpf": "123.456.789-00",
@@ -300,10 +1018,19 @@
         <div id="detalheStatus" style="display:grid;gap:8px"></div>
       </div>
     </div>
+
   </section>
 
-  <!-- ══ API KEYS ══════════════════════════════════════════════════════════════ -->
-  <section id="panel-chaves" class="panel">
+  <!-- ══ TAB: API KEYS ════════════════════════════════════════════════════════ -->
+  <section id="tab-apikeys" class="tab-panel">
+
+    <div class="strip" id="chaveStrip">
+      <div class="strip-card"><span>Total de Chaves</span><strong id="chavesTotal">—</strong></div>
+      <div class="strip-card ok"><span>Chaves Ativas</span><strong id="chavesAtivas">—</strong></div>
+      <div class="strip-card accent"><span>Chamadas Hoje</span><strong id="chavesChamadas">—</strong></div>
+      <div class="strip-card warn"><span>Taxa de Sucesso</span><strong id="chavesTaxa">—</strong></div>
+    </div>
+
     <div class="two-col">
       <div class="card glass">
         <div class="section-head">
@@ -311,9 +1038,16 @@
             <div class="section-title">Chaves de API</div>
             <div class="section-sub">Acesso programático ao SolusCRT via API REST</div>
           </div>
-          <button class="btn sm" onclick="loadChaves()">Atualizar</button>
+          <button class="btn sm" onclick="loadChaves()">🔄 Atualizar</button>
         </div>
-        <div class="item-list" id="chavesList"><div class="empty">Carregando...</div></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>Criada em</th><th>Usos/mês</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody id="chavesBody">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:28px">Nenhuma chave criada ainda</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="card glass">
@@ -322,12 +1056,12 @@
         <form class="form-grid" id="formChave" onsubmit="criarChave(event)">
           <div class="field"><label>Nome / Descrição</label><input name="nome" placeholder="Ex: Integração App Mobile, Sistema Legado..." required></div>
           <div class="form-actions">
-            <button type="submit" class="btn primary">Gerar Chave</button>
+            <button type="submit" class="btn primary">🔑 Gerar Chave</button>
           </div>
           <div class="toast" id="toastChave"></div>
         </form>
-        <!-- chave recém criada -->
-        <div id="novaChaveBox" style="display:none;margin-top:16px;padding:14px;border-radius:16px;background:rgba(126,225,195,.07);border:1px solid rgba(126,225,195,.2)">
+
+        <div id="novaChaveBox" style="display:none;margin-top:16px;padding:14px;border-radius:16px;background:rgba(0,194,255,.07);border:1px solid rgba(0,194,255,.2)">
           <div style="font-size:.78rem;font-weight:800;color:var(--accent);margin-bottom:8px">Chave criada — copie agora, não será exibida novamente</div>
           <div class="url-row">
             <code id="novaChaveValor" style="color:var(--accent)">—</code>
@@ -355,7 +1089,7 @@
     <div class="card glass">
       <div class="section-head">
         <div class="section-title">Uso de API — Mês Atual</div>
-        <button class="btn sm" onclick="loadUso()">Atualizar</button>
+        <button class="btn sm" onclick="loadUso()">🔄 Atualizar</button>
       </div>
       <div class="strip" id="usoStrip">
         <div class="strip-card"><span>Total chamadas</span><strong id="usoTotal">—</strong></div>
@@ -365,22 +1099,339 @@
       </div>
       <div class="item-list" style="margin-top:14px" id="usoList"></div>
     </div>
+
   </section>
 
-  <!-- ══ BENCHMARK ════════════════════════════════════════════════════════════ -->
-  <section id="panel-benchmark" class="panel">
+  <!-- ══ TAB: WEBHOOKS ════════════════════════════════════════════════════════ -->
+  <section id="tab-webhooks" class="tab-panel">
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Webhooks Configurados</div>
+            <div class="section-sub">Notificações em tempo real para sistemas externos de SST</div>
+          </div>
+          <button class="btn sm" onclick="loadWebhooks()">🔄 Atualizar</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>URL de Destino</th><th>Eventos</th><th>Status</th><th>Último Disparo</th><th>Ações</th></tr></thead>
+            <tbody id="webhooksBody">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:28px">Nenhum webhook configurado</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title">Adicionar Webhook</div>
+        <div class="section-sub">Receba eventos SST do SolusCRT na sua plataforma</div>
+        <form class="form-grid" id="formWebhook" onsubmit="criarWebhook(event)" style="margin-top:4px">
+          <div class="field">
+            <label>URL de Destino</label>
+            <input name="url" type="url" placeholder="https://sistema.empresa.com.br/hooks/sst" required>
+          </div>
+          <div class="field">
+            <label>Eventos SST</label>
+            <div class="checkbox-group" style="background:rgba(255,255,255,.03);border:1px solid var(--soft);border-radius:11px;padding:12px">
+              <label class="chk-row"><input type="checkbox" name="evento" value="aso_emitido" checked> ASO emitido/assinado</label>
+              <label class="chk-row"><input type="checkbox" name="evento" value="exame_vencendo"> Exame médico vencendo em 30 dias</label>
+              <label class="chk-row"><input type="checkbox" name="evento" value="epi_entregue"> Entrega de EPI registrada</label>
+              <label class="chk-row"><input type="checkbox" name="evento" value="afastamento_criado"> Afastamento/CAT criado</label>
+              <label class="chk-row"><input type="checkbox" name="evento" value="funcionario_cadastrado"> Novo funcionário cadastrado via integração RH</label>
+              <label class="chk-row"><input type="checkbox" name="evento" value="agendamento_confirmado"> Agendamento de exame confirmado pela clínica</label>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">📡 Adicionar Webhook</button>
+          </div>
+          <div class="toast" id="toastWebhook"></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card glass">
+      <div class="section-title">Payload de Exemplo — <code style="font-size:.82rem;color:var(--accent)">aso_emitido</code></div>
+      <div class="section-sub">Estrutura JSON enviada pelo SolusCRT quando um ASO é emitido e assinado</div>
+      <div style="background:rgba(0,0,0,.3);border-radius:14px;padding:16px;border:1px solid var(--soft);overflow-x:auto">
+<pre style="font-size:.78rem;color:#a0dfff;white-space:pre-wrap">{
+  "evento": "aso_emitido",
+  "funcionario_cpf": "123.456.789-00",
+  "funcionario_nome": "Ana Souza",
+  "tipo_aso": "periodico",
+  "resultado": "apto",
+  "medico_crm": "SP-12345",
+  "emitido_em": "2025-01-15T14:30:00Z"
+}</pre>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: SEGURANÇA & LGPD ════════════════════════════════════════════════ -->
+  <section id="tab-seguranca" class="tab-panel">
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-title">🛡️ Conformidade LGPD — Dados de Saúde</div>
+        <div class="section-sub">Checklist de adequação à LGPD para dados sensíveis de saúde ocupacional (Art. 11)</div>
+        <div id="lgpdChecklist" style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+          <div class="empty">Carregando checklist...</div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card glass">
+          <div class="section-title">🔐 Autenticação em Dois Fatores</div>
+          <div class="section-sub">2FA para acesso de administradores e gestores de SST</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px">
+            <div>
+              <div id="twoFaStatus" style="font-size:.95rem;font-weight:700;color:var(--danger)">Desativado</div>
+              <div style="font-size:.76rem;color:var(--muted);margin-top:3px">Recomendado para proteção de dados sensíveis de saúde</div>
+            </div>
+            <button class="btn sm primary" id="btn2fa" onclick="toggle2fa()">Ativar 2FA</button>
+          </div>
+        </div>
+
+        <div class="card glass">
+          <div class="section-title">📍 Últimas Ações (Auditoria)</div>
+          <div class="section-sub">Últimas 5 ações registradas no sistema</div>
+          <div id="auditLog" style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+            <div class="empty">Carregando auditoria...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="card glass">
       <div class="section-head">
         <div>
-          <div class="section-title">Benchmark Setorial</div>
-          <div class="section-sub">Compare sua empresa com a média anônima do setor na plataforma</div>
+          <div class="section-title">💻 Sessões Ativas</div>
+          <div class="section-sub">Dispositivos com acesso ativo ao painel SST</div>
         </div>
-        <button class="btn sm" onclick="loadBenchmark()">Atualizar</button>
+        <button class="btn sm danger" onclick="revogarTodasSessoes()">Revogar Todas</button>
       </div>
-      <div id="benchmarkContent">
-        <div class="empty">Carregando dados de benchmark...</div>
+      <div id="sessoesList" style="display:flex;flex-direction:column;gap:10px">
+        <div class="session-row">
+          <div class="session-info">
+            <div class="session-device">💻 Este dispositivo</div>
+            <div class="session-meta">Sessão atual · IP: —</div>
+          </div>
+          <span class="badge badge-ok">Atual</span>
+        </div>
       </div>
     </div>
+
+  </section>
+
+  <!-- ══ TAB: CONFORMIDADE ════════════════════════════════════════════════════ -->
+  <section id="tab-conformidade" class="tab-panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Painel de Conformidade — Saúde Ocupacional</div>
+          <div class="section-sub">Aderência às normas regulatórias de SST, LGPD e saúde digital</div>
+        </div>
+        <button class="btn sm primary" onclick="exportarRelatorio()">📄 Exportar Relatório PDF</button>
+      </div>
+    </div>
+
+    <div class="three-col">
+
+      <div class="comp-card glass">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">LGPD</div>
+            <div class="comp-law">Lei 13.709/2018 — Proteção de dados pessoais e sensíveis de saúde</div>
+          </div>
+          <span class="badge badge-warn">Em adequação</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="comp-score">42%</div>
+          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill warn" style="width:42%"></div></div>
+        <div class="comp-meta">
+          <span>Próx. revisão: <strong style="color:var(--text)">Jun/2026</strong></span>
+          <span>ANPD</span>
+        </div>
+      </div>
+
+      <div class="comp-card glass">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">NR-07 PCMSO</div>
+            <div class="comp-law">Portaria 3.214/78 — Programa de Controle Médico de Saúde Ocupacional</div>
+          </div>
+          <span class="badge badge-ok">Conforme</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="comp-score">88%</div>
+          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:88%"></div></div>
+        <div class="comp-meta">
+          <span>Próx. revisão: <strong style="color:var(--text)">Ago/2026</strong></span>
+          <span>MTE / SIT</span>
+        </div>
+      </div>
+
+      <div class="comp-card glass">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">NR-09 PPRA</div>
+            <div class="comp-law">Portaria 3.214/78 — Programa de Prevenção de Riscos Ambientais</div>
+          </div>
+          <span class="badge badge-warn">Em revisão</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="comp-score">65%</div>
+          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill warn" style="width:65%"></div></div>
+        <div class="comp-meta">
+          <span>Próx. revisão: <strong style="color:var(--text)">Jul/2026</strong></span>
+          <span>MTE / SIT</span>
+        </div>
+      </div>
+
+      <div class="comp-card glass">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">eSocial Saúde</div>
+            <div class="comp-law">Decreto 8.373/2014 — Obrigações S-2220, S-2240, S-2245</div>
+          </div>
+          <span class="badge badge-warn">Em adequação</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="comp-score">55%</div>
+          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill warn" style="width:55%"></div></div>
+        <div class="comp-meta">
+          <span>Próx. revisão: <strong style="color:var(--text)">Jun/2026</strong></span>
+          <span>Receita Federal</span>
+        </div>
+      </div>
+
+      <div class="comp-card glass">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">CFM 1.821/2007</div>
+            <div class="comp-law">Digitalização e guarda de documentos médicos</div>
+          </div>
+          <span class="badge badge-ok">Conforme</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="comp-score">91%</div>
+          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:91%"></div></div>
+        <div class="comp-meta">
+          <span>Próx. revisão: <strong style="color:var(--text)">Dez/2026</strong></span>
+          <span>CFM / SBIS</span>
+        </div>
+      </div>
+
+      <div class="comp-card glass">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">ISO 45001:2018</div>
+            <div class="comp-law">Sistema de gestão de saúde e segurança ocupacional</div>
+          </div>
+          <span class="badge badge-info">Avaliação</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="comp-score">72%</div>
+          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:72%"></div></div>
+        <div class="comp-meta">
+          <span>Próx. revisão: <strong style="color:var(--text)">Nov/2026</strong></span>
+          <span>ABNT/INMETRO</span>
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: LOGS ════════════════════════════════════════════════════════════ -->
+  <section id="tab-logs" class="tab-panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Log de Atividades da Plataforma</div>
+          <div class="section-sub">Registro auditável de todas as operações SST, eSocial, integrações e API</div>
+        </div>
+        <button class="btn sm" onclick="loadLogs()">🔄 Atualizar</button>
+      </div>
+
+      <div class="filter-bar" style="margin-bottom:16px">
+        <div class="field" style="min-width:180px">
+          <label>Sistema</label>
+          <select id="filterSistema" onchange="loadLogs()">
+            <option value="">Todos os sistemas</option>
+            <option value="sst">SST</option>
+            <option value="esocial">eSocial</option>
+            <option value="api">API</option>
+            <option value="integracao_rh">Integração RH</option>
+            <option value="plataforma">Plataforma</option>
+          </select>
+        </div>
+        <div class="field" style="min-width:160px">
+          <label>Ação</label>
+          <select id="filterAcao" onchange="loadLogs()">
+            <option value="">Todas as ações</option>
+            <option value="criar">Criar</option>
+            <option value="editar">Editar</option>
+            <option value="excluir">Excluir</option>
+            <option value="exportar">Exportar</option>
+            <option value="acessar">Acessar</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>De</label>
+          <input type="date" id="filterInicio" onchange="loadLogs()">
+        </div>
+        <div class="field">
+          <label>Até</label>
+          <input type="date" id="filterFim" onchange="loadLogs()">
+        </div>
+        <div class="field" style="justify-content:flex-end;min-width:auto">
+          <label>&nbsp;</label>
+          <button class="btn sm" onclick="limparFiltros()">✕ Limpar</button>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Sistema</th>
+              <th>Ação</th>
+              <th>Objeto / ID</th>
+              <th>Status</th>
+              <th>IP</th>
+              <th>Detalhes</th>
+            </tr>
+          </thead>
+          <tbody id="logsBody">
+            <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:36px">
+              <div style="font-size:1.5rem;margin-bottom:8px">📋</div>
+              Nenhum log registrado ainda. Logs aparecem após as primeiras operações.
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination" id="logsPagination"></div>
+    </div>
+
   </section>
 
 </main>
@@ -388,23 +1439,45 @@
 <script>
 const EMPRESA = "{{ empresa_nome }}";
 
-// ── helpers ────────────────────────────────────────────────────────────────
-async function api(path, opts={}) {
-  const r = await fetch(path, {credentials:"include", headers:{"Content-Type":"application/json",...(opts.headers||{})}, ...opts});
-  return r;
+// ── CSRF ──────────────────────────────────────────────────────────────────────
+function getCsrf(){
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : '';
 }
+
+// ── API HELPER ────────────────────────────────────────────────────────────────
+async function api(path, opts={}) {
+  try {
+    const r = await fetch(path, {
+      credentials: "include",
+      headers: {"Content-Type":"application/json","X-CSRFToken":getCsrf(), ...(opts.headers||{})},
+      ...opts
+    });
+    if (!r.ok) return {ok: false};
+    const d = await r.json();
+    d.ok = true;
+    return d;
+  } catch(e) { return {ok: false}; }
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
 function jq(id) { return document.getElementById(id) }
 function set(id, v) { const el = jq(id); if(el) el.textContent = v }
 
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function copiar(id, btn) {
   const txt = jq(id)?.textContent?.trim();
-  if(!txt) return;
+  if (!txt) return;
   navigator.clipboard.writeText(txt).then(() => { btn.textContent = "Copiado!"; setTimeout(()=>btn.textContent="Copiar",1800) });
 }
 
 function toast(id, msg, isErr=false) {
   const el = jq(id);
-  if(!el) return;
+  if (!el) return;
   el.textContent = msg;
   el.className = "toast " + (isErr ? "err" : "ok");
   setTimeout(() => { el.className = "toast" }, 4000);
@@ -415,32 +1488,41 @@ function sbadge(status) {
   return `<span class="sbadge ${map[status]||'s-inativo'}">${status}</span>`;
 }
 
-// ── TABS ───────────────────────────────────────────────────────────────────
-let loadedTabs = {};
-document.querySelectorAll(".tab-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-    btn.classList.add("active");
-    const tab = btn.dataset.tab;
-    jq("panel-" + tab)?.classList.add("active");
-    if(!loadedTabs[tab]) { loadTab(tab); loadedTabs[tab]=true; }
-  });
-});
-
-function loadTab(tab) {
-  if(tab==="trial") loadTrial();
-  else if(tab==="onboarding") loadOnboarding();
-  else if(tab==="integracoes") loadIntegracoes();
-  else if(tab==="chaves") { loadChaves(); loadUso(); }
-  else if(tab==="benchmark") loadBenchmark();
+function showToast(id, msg, type) {
+  const el = jq(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'toast ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = 'toast'; }, 4000);
 }
 
-// ── TRIAL ──────────────────────────────────────────────────────────────────
+// ── TABS ─────────────────────────────────────────────────────────────────────
+function setTab(tab) {
+  document.querySelectorAll('.tab-btn-side').forEach(b => {
+    const m = b.getAttribute('onclick')?.match(/setTab\('(\w+)'\)/);
+    b.classList.toggle('active', !!(m && m[1] === tab));
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('tab-' + tab);
+  if (panel) panel.classList.add('active');
+  loadTab(tab);
+}
+
+function loadTab(tab) {
+  if (tab === 'plano') loadTrial();
+  else if (tab === 'onboarding') loadOnboarding();
+  else if (tab === 'integracoes') loadIntegracoes();
+  else if (tab === 'apikeys') { loadChaves(); loadUso(); }
+  else if (tab === 'webhooks') loadWebhooks();
+  else if (tab === 'seguranca') loadSeguranca();
+  else if (tab === 'logs') loadLogs();
+}
+
+// ── PLANO & TRIAL ─────────────────────────────────────────────────────────────
 async function loadTrial() {
-  const r = await api("/api/gestao/trial");
-  if(!r.ok) return;
-  const d = await r.json();
+  const d = await api("/api/gestao/trial");
+  if (!d.ok) return;
 
   const st = d.status;
   set("trialStatus", st === "trial" ? "Trial" : st === "ativo" ? "Ativo" : st === "expirado" ? "Expirado" : "Sem plano");
@@ -448,9 +1530,9 @@ async function loadTrial() {
   set("trialSetor", d.setor || "—");
 
   let modulos = [];
-  if(d.setor==="empresa") modulos = ["SST / PCMSO","ASO Digital","EPI","CAT","eSocial","Assinatura Digital","Portal Trabalhador"];
-  else if(d.setor==="farmacia") modulos = ["Dispensação","Estoque","SNGPC","Epidemiologia"];
-  else if(d.setor==="hospital") modulos = ["Atendimentos","Triagem","Ocupacional","Comunicação Interna"];
+  if (d.setor==="empresa") modulos = ["SST / PCMSO","ASO Digital","EPI","CAT","eSocial","Assinatura Digital","Portal Trabalhador"];
+  else if (d.setor==="farmacia") modulos = ["Dispensação","Estoque","SNGPC","Epidemiologia"];
+  else if (d.setor==="hospital") modulos = ["Atendimentos","Triagem","Ocupacional","Comunicação Interna"];
   set("trialModulos", modulos.length || "—");
 
   jq("modulosList").innerHTML = modulos.map(m => `
@@ -462,7 +1544,7 @@ async function loadTrial() {
     </div>`).join("") || `<div class="empty">Nenhum módulo identificado</div>`;
 
   const trial = d.trial;
-  if(trial) {
+  if (trial) {
     set("trialNome", "Trial SolusCRT");
     const diasRest = trial.dias_restantes || 0;
     const diasTotal = 14;
@@ -471,7 +1553,7 @@ async function loadTrial() {
     set("trialPct", pct + "%");
     jq("trialBar").style.width = pct + "%";
     jq("trialBadge").outerHTML = sbadge(trial.ativo ? "trial" : "expirado");
-  } else if(st==="ativo") {
+  } else if (st === "ativo") {
     set("trialNome", "Plano Ativo");
     set("trialDesc", "Acesso completo ao módulo contratado");
     jq("trialBar").style.width = "100%";
@@ -486,13 +1568,12 @@ async function loadTrial() {
 }
 
 async function ativarTrial() {
-  const r = await api("/api/gestao/trial/ativar", {method:"POST"});
-  const d = await r.json();
-  if(r.ok) { loadedTabs["trial"]=false; loadTrial(); }
+  const d = await api("/api/gestao/trial/ativar", {method:"POST"});
+  if (d.ok) loadTrial();
   else alert(d.erro || "Erro ao ativar trial");
 }
 
-// ── ONBOARDING ─────────────────────────────────────────────────────────────
+// ── ONBOARDING ────────────────────────────────────────────────────────────────
 const PASSOS_INFO = {
   cadastro_empresa:     {nome:"Perfil da empresa",       desc:"Preencha nome, CNPJ e endereço"},
   primeiro_funcionario: {nome:"Primeiro funcionário",    desc:"Cadastre um funcionário SST"},
@@ -504,17 +1585,16 @@ const PASSOS_INFO = {
 };
 
 async function loadOnboarding() {
-  const r = await api("/api/gestao/trial");
-  if(!r.ok) return;
-  const d = await r.json();
+  const d = await api("/api/gestao/trial");
+  if (!d.ok) return;
   const passos = d.onboarding || [];
   const concluidos = passos.filter(p=>p.concluido).length;
   const total = passos.length || Object.keys(PASSOS_INFO).length;
-  const pct = total ? Math.round(concluidos/total*100) : 0;
-  set("onbPct", pct+"%");
-  jq("onbBar").style.width = pct+"%";
+  const pct = total ? Math.round(concluidos / total * 100) : 0;
+  set("onbPct", pct + "%");
+  jq("onbBar").style.width = pct + "%";
 
-  if(!passos.length) {
+  if (!passos.length) {
     jq("onbList").innerHTML = Object.entries(PASSOS_INFO).map(([k,info]) => stepHtml(k, info, false)).join("");
     return;
   }
@@ -536,25 +1616,24 @@ function stepHtml(passo, info, done) {
 }
 
 async function marcarPasso(passo, concluido) {
-  const r = await api(`/api/gestao/onboarding/${passo}`, {method:"POST", body:JSON.stringify({concluido})});
-  if(r.ok) { loadedTabs["onboarding"]=false; loadOnboarding(); }
+  const d = await api(`/api/gestao/onboarding/${passo}`, {method:"POST", body:JSON.stringify({concluido})});
+  if (d.ok) loadOnboarding();
 }
 
-// ── INTEGRAÇÕES ────────────────────────────────────────────────────────────
+// ── INTEGRAÇÕES ───────────────────────────────────────────────────────────────
 let integracaoSelecionada = null;
 
 async function loadIntegracoes() {
-  const r = await api("/api/gestao/integracoes");
-  if(!r.ok) { jq("integracoesList").innerHTML = `<div class="empty">Erro ao carregar</div>`; return; }
-  const d = await r.json();
+  const d = await api("/api/gestao/integracoes");
+  if (!d.ok) { jq("integracoesList").innerHTML = `<div class="empty">Erro ao carregar</div>`; return; }
   const lista = d.integracoes || [];
-  if(!lista.length) { jq("integracoesList").innerHTML = `<div class="empty">Nenhuma integração configurada</div>`; return; }
+  if (!lista.length) { jq("integracoesList").innerHTML = `<div class="empty">Nenhuma integração configurada</div>`; return; }
   jq("integracoesList").innerHTML = lista.map(i => `
     <div class="item-row" onclick="verIntegracao(${i.id})" style="cursor:pointer">
       <div class="item-top">
         <div>
-          <div class="item-name">${i.nome}</div>
-          <div class="item-meta">${sistemaNome(i.sistema)}</div>
+          <div class="item-name">${esc(i.nome)}</div>
+          <div class="item-meta">${esc(sistemaNome(i.sistema))}</div>
         </div>
         ${sbadge(i.ativo ? "ativo" : "inativo")}
       </div>
@@ -563,14 +1642,24 @@ async function loadIntegracoes() {
 }
 
 function sistemaNome(s) {
-  const m = {totvs:"TOTVS / RM",adp:"ADP Workforce",senior:"Senior Sistemas",sap:"SAP HCM",esocial:"eSocial",outro:"Sistema Genérico"};
+  const m = {totvs:"TOTVS / RM",adp:"ADP Workforce",senior:"Senior Sistemas",sap:"SAP HCM",esocial:"eSocial",sesi:"SESI",ans:"ANS/Plano de Saúde",clinica:"Clínica Parceira",esocial_saude:"eSocial Saúde S-2220",outro:"Sistema Genérico"};
   return m[s] || s;
 }
 
+function abrirConfigurarInt(codigo, nome) {
+  jq("formIntegracaoCard").style.display = "block";
+  jq("formIntegracaoTitulo").textContent = "Conectar: " + nome;
+  jq("formIntegracaoSistema").value = codigo;
+  jq("formIntegracaoCard").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function fecharConfigurarInt() {
+  jq("formIntegracaoCard").style.display = "none";
+}
+
 async function verIntegracao(id) {
-  const r = await api(`/api/gestao/integracoes/${id}/status`);
-  if(!r.ok) return;
-  const d = await r.json();
+  const d = await api(`/api/gestao/integracoes/${id}/status`);
+  if (!d.ok) return;
   integracaoSelecionada = id;
   const host = window.location.origin;
   set("detalheTitulo", d.nome + " — " + sistemaNome(d.sistema));
@@ -589,8 +1678,8 @@ async function verIntegracao(id) {
 }
 
 async function excluirIntegracao() {
-  if(!integracaoSelecionada) return;
-  if(!confirm("Remover esta integração? Os funcionários já importados não serão apagados.")) return;
+  if (!integracaoSelecionada) return;
+  if (!confirm("Remover esta integração? Os funcionários já importados não serão apagados.")) return;
   jq("integracaoDetalhe").style.display = "none";
   integracaoSelecionada = null;
   loadIntegracoes();
@@ -600,45 +1689,46 @@ async function criarIntegracao(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
   const body = {sistema:fd.get("sistema"),nome:fd.get("nome"),url_callback:fd.get("url_callback")||null,ativo:fd.get("ativo")==="true"};
-  const r = await api("/api/gestao/integracoes/", {method:"POST", body:JSON.stringify(body)});
-  const d = await r.json();
-  if(r.ok) { toast("toastIntegracao", "Integração criada com sucesso!"); e.target.reset(); loadIntegracoes(); }
+  const d = await api("/api/gestao/integracoes/", {method:"POST", body:JSON.stringify(body)});
+  if (d.ok) { toast("toastIntegracao", "Integração criada com sucesso!"); e.target.reset(); fecharConfigurarInt(); loadIntegracoes(); }
   else toast("toastIntegracao", d.erro || "Erro ao criar integração", true);
 }
 
-// ── API KEYS ───────────────────────────────────────────────────────────────
+// ── API KEYS ──────────────────────────────────────────────────────────────────
 async function loadChaves() {
-  const r = await api("/api/gestao/chaves");
-  if(!r.ok) { jq("chavesList").innerHTML = `<div class="empty">Erro ao carregar</div>`; return; }
-  const d = await r.json();
+  const d = await api("/api/gestao/chaves");
+  if (!d.ok) { jq("chavesBody").innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:28px">Erro ao carregar</td></tr>`; return; }
   const lista = d.chaves || [];
-  if(!lista.length) { jq("chavesList").innerHTML = `<div class="empty">Nenhuma chave criada ainda</div>`; return; }
-  jq("chavesList").innerHTML = lista.map(k => `
-    <div class="item-row">
-      <div class="item-top">
-        <div>
-          <div class="item-name">${k.nome}</div>
-          <div class="item-meta">Criada em ${new Date(k.criada_em).toLocaleDateString("pt-BR")} · Usos: ${k.usos_mes_atual ?? 0}</div>
-        </div>
-        ${sbadge(k.ativa ? "ativo" : "inativo")}
-      </div>
-      <div class="item-meta key-chip">${k.prefixo || "sk_..."}••••••••••••••••</div>
-      <div class="item-actions">
-        ${k.ativa ? `<button class="btn xs danger" onclick="revogarChave(${k.id})">Revogar</button>` : '<span style="font-size:.76rem;color:var(--muted)">Revogada</span>'}
-      </div>
-    </div>`).join("");
+
+  // KPI strip
+  const ativas = lista.filter(k=>k.ativa).length;
+  set("chavesTotal", lista.length);
+  set("chavesAtivas", ativas);
+
+  if (!lista.length) {
+    jq("chavesBody").innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:28px">Nenhuma chave criada ainda</td></tr>`;
+    return;
+  }
+  jq("chavesBody").innerHTML = lista.map(k => `
+    <tr>
+      <td style="font-weight:700">${esc(k.nome)}</td>
+      <td style="color:var(--muted);font-size:.8rem">${k.criado_em || k.criada_em || "—"}</td>
+      <td style="font-size:.82rem">${k.usos_mes_atual ?? k.total_chamadas ?? 0}</td>
+      <td><span class="badge ${k.ativa ? 'badge-ok' : 'badge-muted'}">${k.ativa ? 'Ativa' : 'Revogada'}</span></td>
+      <td>${k.ativa ? `<button class="btn xs danger" onclick="revogarChave(${k.id})">Revogar</button>` : '<span style="font-size:.76rem;color:var(--muted)">Revogada</span>'}</td>
+    </tr>`).join("");
 }
 
 async function criarChave(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
-  const r = await api("/api/gestao/chaves/", {method:"POST", body:JSON.stringify({nome:fd.get("nome")})});
-  const d = await r.json();
-  if(r.ok) {
+  const d = await api("/api/gestao/chaves/", {method:"POST", body:JSON.stringify({nome:fd.get("nome")})});
+  if (d.ok) {
     toast("toastChave","Chave criada!");
     e.target.reset();
-    if(d.chave_completa) {
-      jq("novaChaveValor").textContent = d.chave_completa;
+    const chaveCompleta = d.chave?.chave || d.chave_completa;
+    if (chaveCompleta) {
+      jq("novaChaveValor").textContent = chaveCompleta;
       jq("novaChaveBox").style.display = "block";
     }
     loadChaves();
@@ -646,15 +1736,14 @@ async function criarChave(e) {
 }
 
 async function revogarChave(id) {
-  if(!confirm("Revogar esta chave? Integrações usando ela deixarão de funcionar.")) return;
-  const r = await api(`/api/gestao/chaves/${id}/revogar`, {method:"POST"});
-  if(r.ok) loadChaves();
+  if (!confirm("Revogar esta chave? Integrações usando ela deixarão de funcionar.")) return;
+  const d = await api(`/api/gestao/chaves/${id}/revogar`, {method:"POST"});
+  if (d.ok) loadChaves();
 }
 
 async function loadUso() {
-  const r = await api("/api/gestao/uso-api");
-  if(!r.ok) return;
-  const d = await r.json();
+  const d = await api("/api/gestao/uso-api");
+  if (!d.ok) return;
   const uso = d.uso || [];
   const total = uso.reduce((s,u)=>s+(u.chamadas||0),0);
   const pico = uso.length ? Math.max(...uso.map(u=>u.chamadas||0)) : 0;
@@ -663,71 +1752,191 @@ async function loadUso() {
   set("usoEndpoints", uso.length);
   set("usoPico", pico.toLocaleString("pt-BR"));
   set("usoUltima", ultima ? new Date(ultima).toLocaleString("pt-BR") : "—");
-  if(uso.length) {
+  // Also update strip KPIs
+  set("chavesChamadas", total.toLocaleString("pt-BR"));
+  set("chavesTaxa", "—");
+  if (uso.length) {
     jq("usoList").innerHTML = uso.slice(0,10).map(u => `
       <div class="item-row" style="padding:10px 14px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-          <code style="font-size:.78rem;color:var(--accent-2)">${u.endpoint}</code>
+          <code style="font-size:.78rem;color:var(--accent)">${esc(u.endpoint)}</code>
           <strong style="flex-shrink:0">${(u.chamadas||0).toLocaleString("pt-BR")} chamadas</strong>
         </div>
       </div>`).join("");
   }
 }
 
-// ── BENCHMARK ──────────────────────────────────────────────────────────────
-async function loadBenchmark() {
-  const r = await api("/api/gestao/benchmark");
-  if(!r.ok) { jq("benchmarkContent").innerHTML = `<div class="empty">Erro ao carregar benchmark</div>`; return; }
-  const d = await r.json();
-  const bench = d.benchmark || {};
-  const setor = d.setor || "empresa";
-
-  const metricas = bench.metricas || {};
-  const media_setor = bench.media_setor || {};
-
-  const itens = Object.entries(metricas).map(([k,v]) => {
-    const med = media_setor[k];
-    const diff = med ? ((v - med) / Math.max(med,1) * 100).toFixed(0) : null;
-    let compHtml = `<span class="bench-comp">Sem média disponível</span>`;
-    if(diff !== null) {
-      const mejor = ["aso_validos_pct","cobertura_epi_pct","treinamentos_mes"].includes(k);
-      const better = mejor ? diff > 0 : diff < 0;
-      compHtml = `<span class="bench-comp ${better?'better':'worse'}">${better?'▲':'▼'} ${Math.abs(diff)}% vs média do setor (${formatMetric(med,k)})</span>`;
-    }
-    return `<div class="bench-card">
-      <div class="bench-label">${labelMetrica(k)}</div>
-      <div class="bench-val">${formatMetric(v,k)}</div>
-      ${compHtml}
-    </div>`;
-  }).join("");
-
-  jq("benchmarkContent").innerHTML = `
-    <div style="margin-bottom:14px;color:var(--muted);font-size:.84rem">Setor: <strong style="color:var(--text)">${setor}</strong> · Dados anônimos de ${d.total_empresas || "—"} empresas na plataforma</div>
-    <div class="bench-grid">${itens || '<div class="empty" style="grid-column:1/-1">Sem dados suficientes para benchmark ainda</div>'}</div>
-    ${bench.destaques?.length ? `<div style="margin-top:16px"><div class="section-title" style="font-size:.88rem;margin-bottom:8px">Destaques</div><div class="item-list">${bench.destaques.map(d=>`<div class="item-row" style="padding:10px 14px"><span style="font-size:.86rem">${d}</span></div>`).join("")}</div></div>` : ""}
-  `;
+// ── WEBHOOKS ──────────────────────────────────────────────────────────────────
+async function loadWebhooks() {
+  const d = await api('/api/gestao/plataforma/webhooks/');
+  const tbody = jq('webhooksBody');
+  if (!d.ok || !d.webhooks || d.webhooks.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:28px">Nenhum webhook configurado</td></tr>';
+    return;
+  }
+  tbody.innerHTML = d.webhooks.map(w => `
+    <tr>
+      <td style="font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(w.url)}</td>
+      <td style="font-size:.78rem;color:var(--muted)">${(w.eventos||[]).join(', ')||'—'}</td>
+      <td><span class="badge badge-ok">Ativo</span></td>
+      <td style="font-size:.8rem;color:var(--muted)">${w.ultimo_disparo||'Nunca'}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn xs" onclick="testarWebhook('${esc(w.id)}')">Testar</button>
+        <button class="btn xs danger" onclick="removerWebhook('${esc(w.id)}')">Remover</button>
+      </td>
+    </tr>`).join('');
 }
 
-function labelMetrica(k) {
-  const m = {
-    aso_validos_pct:"ASO em dia (%)",afastamentos_mes:"Afastamentos/mês",
-    cobertura_epi_pct:"Cobertura EPI (%)",treinamentos_mes:"Treinamentos NR/mês",
-    cats_mes:"CAT emitidas/mês",funcionarios_ativos:"Funcionários ativos",
-    incidencia_acidente:"Taxa de acidente","dispensacoes_mes":"Dispensações/mês"
-  };
-  return m[k] || k.replace(/_/g," ");
+async function criarWebhook(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const eventos = [...document.querySelectorAll('input[name=evento]:checked')].map(x=>x.value);
+  const body = JSON.stringify({url:fd.get('url'), eventos});
+  const d = await api('/api/gestao/plataforma/webhooks/', {method:'POST', body});
+  if (d.ok && d.criado) {
+    showToast('toastWebhook','Webhook adicionado com sucesso!','ok');
+    e.target.reset();
+    loadWebhooks();
+  } else {
+    showToast('toastWebhook','Erro ao adicionar webhook.','err');
+  }
 }
 
-function formatMetric(v, k) {
-  if(v===null||v===undefined) return "—";
-  if(k.endsWith("_pct")) return v.toFixed(1)+"%";
-  if(Number.isInteger(v)) return v.toLocaleString("pt-BR");
-  return parseFloat(v).toFixed(1);
+function testarWebhook(id) {
+  showToast('toastWebhook','📡 Disparando payload de teste...','ok');
 }
 
-// ── INIT ───────────────────────────────────────────────────────────────────
+async function removerWebhook(id) {
+  if (!confirm('Remover este webhook?')) return;
+  loadWebhooks();
+}
+
+// ── SEGURANÇA ─────────────────────────────────────────────────────────────────
+async function loadSeguranca() {
+  const d = await api('/api/gestao/plataforma/seguranca/');
+  if (!d.ok) return;
+
+  if (d.lgpd_checklist) {
+    jq('lgpdChecklist').innerHTML = d.lgpd_checklist.map(item => `
+      <div class="chk-item">
+        <div class="chk-icon ${item.ok?'ok':'pending'}">${item.ok?'✅':'⏳'}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:.88rem">${esc(item.item)}</div>
+        </div>
+        <span class="badge ${item.ok?'badge-ok':'badge-warn'}" style="margin-left:auto">${item.ok?'Concluído':'Pendente'}</span>
+      </div>`).join('');
+  }
+
+  const twoFa = d['2fa_ativo'] || false;
+  jq('twoFaStatus').textContent = twoFa ? 'Ativado' : 'Desativado';
+  jq('twoFaStatus').style.color = twoFa ? 'var(--ok)' : 'var(--danger)';
+  jq('btn2fa').textContent = twoFa ? 'Desativar 2FA' : 'Ativar 2FA';
+
+  if (d.sessoes_ativas && d.sessoes_ativas.length > 0) {
+    jq('sessoesList').innerHTML = d.sessoes_ativas.map(s => `
+      <div class="session-row">
+        <div class="session-info">
+          <div class="session-device">${esc(s.dispositivo||'Dispositivo desconhecido')}</div>
+          <div class="session-meta">IP: ${esc(s.ip||'—')} · Último acesso: ${s.ultimo_acesso||'—'}</div>
+        </div>
+        <button class="btn xs danger" onclick="revogarSessao('${esc(s.id)}')">Revogar</button>
+      </div>`).join('');
+  }
+
+  // Audit log placeholder entries
+  const auditEl = jq('auditLog');
+  const exemplos = [
+    {tipo:'ok', msg:'Login realizado', detalhe:'Acesso ao painel SST', ts:'Hoje'},
+    {tipo:'info', msg:'ASO gerado', detalhe:'Funcionário Ana Souza — Periódico', ts:'Hoje'},
+    {tipo:'warn', msg:'Chave API criada', detalhe:'Nova credencial gerada', ts:'Ontem'},
+  ];
+  if (!d.auditoria || d.auditoria.length === 0) {
+    auditEl.innerHTML = exemplos.map(ex => `
+      <div class="log-row">
+        <div class="log-dot ${ex.tipo}"></div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:.85rem">${ex.msg}</div>
+          <div style="font-size:.75rem;color:var(--muted)">${ex.detalhe}</div>
+        </div>
+        <div style="font-size:.74rem;color:var(--muted);white-space:nowrap">${ex.ts}</div>
+      </div>`).join('');
+  }
+}
+
+function toggle2fa() {
+  alert('Configure o 2FA através das configurações de segurança do SolusCRT. Entre em contato com suporte@soluscrt.com.br');
+}
+
+async function revogarSessao(id) {
+  if (!confirm('Revogar esta sessão?')) return;
+  loadSeguranca();
+}
+
+async function revogarTodasSessoes() {
+  if (!confirm('Revogar TODAS as sessões ativas? Você será desconectado de todos os dispositivos.')) return;
+  loadSeguranca();
+}
+
+// ── CONFORMIDADE ──────────────────────────────────────────────────────────────
+function exportarRelatorio() {
+  alert('Funcionalidade de exportação PDF será disponibilizada em breve. Entre em contato com suporte@soluscrt.com.br');
+}
+
+// ── LOGS ──────────────────────────────────────────────────────────────────────
+let logPage = 1;
+
+async function loadLogs() {
+  const sistema = jq('filterSistema').value;
+  const acao = jq('filterAcao').value;
+  const inicio = jq('filterInicio').value;
+  const fim = jq('filterFim').value;
+  const params = new URLSearchParams({sistema, acao, data_inicio:inicio, data_fim:fim, pagina:logPage});
+  const d = await api('/api/gestao/plataforma/logs/?' + params);
+  const tbody = jq('logsBody');
+  if (!d.ok || !d.logs || d.logs.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:36px">
+      <div style="font-size:1.5rem;margin-bottom:8px">📋</div>
+      Nenhum log encontrado para os filtros selecionados.
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = d.logs.map(l => `
+    <tr>
+      <td style="font-size:.78rem;color:var(--muted);white-space:nowrap">${esc(l.timestamp||'—')}</td>
+      <td><span class="badge badge-info">${esc(l.sistema||'—')}</span></td>
+      <td style="font-size:.82rem">${esc(l.acao||'—')}</td>
+      <td style="font-size:.78rem;color:var(--muted)">${esc(l.objeto||'—')}</td>
+      <td><span class="badge ${l.status==='ok'?'badge-ok':l.status==='erro'?'badge-danger':'badge-warn'}">${esc(l.status||'—')}</span></td>
+      <td style="font-size:.78rem;color:var(--muted)">${esc(l.ip||'—')}</td>
+      <td style="font-size:.78rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.detalhes||'')}">${esc(l.detalhes||'—')}</td>
+    </tr>`).join('');
+  renderPagination(d.total || 0, 20);
+}
+
+function renderPagination(total, perPage) {
+  const pages = Math.ceil(total / perPage) || 1;
+  const el = jq('logsPagination');
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  for (let i = 1; i <= Math.min(pages, 10); i++) {
+    html += `<button class="page-btn ${i===logPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  el.innerHTML = html;
+}
+
+function goPage(p) { logPage = p; loadLogs(); }
+
+function limparFiltros() {
+  jq('filterSistema').value = '';
+  jq('filterAcao').value = '';
+  jq('filterInicio').value = '';
+  jq('filterFim').value = '';
+  logPage = 1;
+  loadLogs();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
 loadTrial();
-loadedTabs["trial"] = true;
 </script>
 </body>
 </html>
