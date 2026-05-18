@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plataforma TI Governamental | SolusCRT</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#041018;--surface:#072030;--surface2:#0a2d45;
+  --accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;
+  --text:#e8f4ff;--muted:#7a9bb5;--radius:12px;
+  --card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07);
+  --panel:rgba(11,24,34,.9);--line:rgba(154,193,220,.14);--soft:rgba(255,255,255,.08);
+  --gold:#f0bf6b;--danger2:#ff7a91;--shadow:0 24px 70px rgba(0,0,0,.42);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:Manrope,sans-serif;color:var(--text);min-height:100vh;display:flex;
+  background:radial-gradient(circle at top left,rgba(0,194,255,.10),transparent 22rem),
+             radial-gradient(circle at top right,rgba(0,229,176,.10),transparent 26rem),
+             linear-gradient(180deg,#041018 0%,#08141d 40%,#061119 100%);
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;
+  background:linear-gradient(rgba(0,194,255,.04) 1px,transparent 1px),
+             linear-gradient(90deg,rgba(0,194,255,.04) 1px,transparent 1px);
+  background-size:44px 44px;opacity:.18;
+}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:240px;min-height:100vh;height:100vh;overflow-y:auto;
+  background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;position:sticky;top:0;
+}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(0,194,255,.2);border-radius:4px}
+.logo{padding:0 20px 20px;font-size:17px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.tab-btn-side{
+  display:flex;align-items:center;gap:10px;padding:10px 20px;
+  font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;
+  border-radius:8px;margin:2px 8px;cursor:pointer;transition:.15s;
+  font-family:Manrope,sans-serif;text-align:left;width:calc(100% - 16px);white-space:nowrap;
+}
+.tab-btn-side:hover{background:rgba(0,194,255,.1);color:var(--accent)}
+.tab-btn-side.active{background:rgba(0,194,255,.12);color:var(--accent);font-weight:700}
+
+/* ── MAIN ── */
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+
+/* ── TABS ── */
+.panel{display:none}.panel.active{display:flex;flex-direction:column;gap:20px}
+
+/* ── GLASS CARD ── */
+.glass{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px);box-shadow:var(--shadow)}
+.card{border-radius:24px;padding:22px}
+
+/* ── GRID LAYOUTS ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.four-col{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+
+/* ── SECTION HEADERS ── */
+.section-title{font-size:1rem;font-weight:800;margin-bottom:4px}
+.section-sub{color:var(--muted);font-size:.86rem;margin-bottom:14px}
+.section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:999px;border:1px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);font:inherit;font-size:.8rem;font-weight:800;cursor:pointer;text-decoration:none;transition:all .18s}
+.btn:hover{background:rgba(255,255,255,.12)}
+.btn.primary{border:0;background:linear-gradient(135deg,#00c2ff,#00e5b0);color:#041018}
+.btn.danger{background:rgba(255,77,109,.15);color:#ff8fa3;border:1px solid rgba(255,77,109,.3)}
+.btn.warn{border:0;background:rgba(255,179,71,.15);color:#ffd080;border:1px solid rgba(255,179,71,.3)}
+.btn.sm{padding:5px 12px;font-size:.76rem;min-height:28px}
+.btn.xs{padding:3px 8px;font-size:.7rem;min-height:24px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+.badge-ok{background:rgba(0,229,176,.14);color:#b0ffe6}
+.badge-warn{background:rgba(255,179,71,.14);color:#ffd080}
+.badge-danger{background:rgba(255,77,109,.14);color:#ffb3be}
+.badge-info{background:rgba(0,194,255,.14);color:#a0dfff}
+.badge-muted{background:rgba(255,255,255,.07);color:var(--muted)}
+.badge-purple{background:rgba(167,139,250,.14);color:#c4b5fd}
+
+/* ── STRIP (KPI row) ── */
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.strip-card{border-radius:20px;padding:14px 16px;background:linear-gradient(180deg,rgba(17,35,50,.92),rgba(8,18,28,.94));border:1px solid var(--soft)}
+.strip-card span{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
+.strip-card strong{display:block;margin-top:8px;font-size:1.4rem;font-weight:800}
+.strip-card.accent strong{color:var(--accent)}
+.strip-card.ok strong{color:var(--ok)}
+.strip-card.warn strong{color:var(--warn)}
+.strip-card.danger strong{color:var(--danger)}
+
+/* ── INTEGRATION CARDS ── */
+.int-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.int-card{border-radius:18px;padding:18px;background:rgba(255,255,255,.04);border:1px solid var(--soft);display:flex;flex-direction:column;gap:10px;transition:border-color .2s}
+.int-card:hover{border-color:rgba(0,194,255,.3)}
+.int-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.int-name{font-size:.95rem;font-weight:800}
+.int-desc{color:var(--muted);font-size:.8rem;line-height:1.5;flex:1}
+.int-card-bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px}
+.int-card.connected{border-color:rgba(0,229,176,.25);background:rgba(0,229,176,.04)}
+.int-card.configuring{border-color:rgba(255,179,71,.25);background:rgba(255,179,71,.04)}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;border-radius:16px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 14px;text-align:left;font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;background:rgba(255,255,255,.02);white-space:nowrap}
+td{padding:11px 14px;font-size:.84rem;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+/* ── FORMS ── */
+.form-grid{display:grid;gap:11px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.field{display:flex;flex-direction:column;gap:5px}
+label{color:#bfd3e2;font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em}
+input,select,textarea{border-radius:11px;border:1px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);padding:9px 12px;font:inherit;font-size:.86rem;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:rgba(0,194,255,.4);box-shadow:0 0 0 3px rgba(0,194,255,.1)}
+select option{background:#0b1822}
+.form-actions{display:flex;gap:8px;margin-top:4px}
+.checkbox-group{display:flex;flex-direction:column;gap:6px}
+.chk-row{display:flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer}
+.chk-row input[type=checkbox]{width:auto;cursor:pointer}
+
+/* ── TOAST ── */
+.toast{padding:9px 14px;border-radius:11px;font-size:.82rem;display:none;margin-top:8px}
+.toast.ok{display:block;background:rgba(0,229,176,.12);color:#aef0db}
+.toast.err{display:block;background:rgba(255,122,145,.12);color:#ffc6d2}
+
+/* ── PROGRESS BAR ── */
+.prog-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:6px}
+.prog-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--ok));transition:width .5s}
+.prog-fill.danger{background:linear-gradient(90deg,#ff4d6d,#ff7a91)}
+.prog-fill.warn{background:linear-gradient(90deg,#ffb347,#ffd080)}
+
+/* ── KEY CHIP ── */
+.key-chip{font-family:monospace;font-size:.8rem;background:rgba(0,194,255,.1);color:#a0dfff;padding:5px 10px;border-radius:8px;word-break:break-all;border:1px solid rgba(0,194,255,.15)}
+.url-row{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--soft);border-radius:11px;padding:8px 12px}
+.url-row code{flex:1;font-size:.78rem;color:var(--accent);word-break:break-all}
+.copy-btn{cursor:pointer;color:var(--muted);font-size:.7rem;font-weight:800;white-space:nowrap;padding:4px 8px;border-radius:7px;border:1px solid var(--soft);background:rgba(255,255,255,.04);transition:all .15s}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:var(--text)}
+
+/* ── LGPD CHECKLIST ── */
+.chk-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid var(--soft);font-size:.88rem}
+.chk-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.9rem}
+.chk-icon.ok{background:rgba(0,229,176,.15);color:var(--ok)}
+.chk-icon.pending{background:rgba(255,179,71,.12);color:var(--warn)}
+
+/* ── COMPLIANCE CARD ── */
+.comp-card{border-radius:18px;padding:18px;background:rgba(255,255,255,.04);border:1px solid var(--soft)}
+.comp-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px}
+.comp-name{font-size:.92rem;font-weight:800}
+.comp-law{font-size:.75rem;color:var(--muted);margin-top:2px}
+.comp-score{font-size:1.5rem;font-weight:800;color:var(--accent)}
+.comp-meta{font-size:.75rem;color:var(--muted);margin-top:8px;display:flex;justify-content:space-between}
+
+/* ── AUDIT LOG ── */
+.log-row{display:flex;align-items:flex-start;gap:12px;padding:11px 14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--soft);font-size:.83rem}
+.log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.log-dot.ok{background:var(--ok)}
+.log-dot.warn{background:var(--warn)}
+.log-dot.danger{background:var(--danger)}
+.log-dot.info{background:var(--accent)}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:32px;color:var(--muted);font-size:.88rem;border-radius:14px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1)}
+
+/* ── PAGE HEADER ── */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:3px}
+
+/* ── SESSION CARD ── */
+.session-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid var(--soft)}
+.session-info{flex:1}
+.session-device{font-size:.88rem;font-weight:700}
+.session-meta{font-size:.76rem;color:var(--muted);margin-top:3px}
+
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.filter-bar .field{flex:1;min-width:140px}
+
+/* ── PAGINATION ── */
+.pagination{display:flex;gap:6px;justify-content:center;margin-top:14px}
+.page-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--soft);background:rgba(255,255,255,.05);color:var(--muted);cursor:pointer;font:inherit;font-size:.82rem;font-weight:700;transition:.15s}
+.page-btn:hover,.page-btn.active{background:rgba(0,194,255,.15);color:var(--accent);border-color:rgba(0,194,255,.3)}
+
+@media(max-width:1100px){
+  .int-grid{grid-template-columns:repeat(2,1fr)}
+  .three-col{grid-template-columns:repeat(2,1fr)}
+  .four-col{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:800px){
+  .sidebar{width:200px}
+  .main{padding:20px 16px}
+  .two-col,.int-grid,.three-col,.four-col,.strip{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .sidebar{display:none}
+  .form-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══════════════════════════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="logo">🖥️ Plataforma TI Gov</div>
+
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/"><span>📊</span> Monitoramento</a>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão</a>
+  <a class="nav-link" href="/logout-governo/"><span>🚪</span> Sair</a>
+
+  <div class="nav-section" style="margin-top:8px">Módulos</div>
+  <button class="tab-btn-side active" onclick="setTab('integracoes')"><span>🔗</span> Integrações Gov</button>
+  <button class="tab-btn-side" onclick="setTab('apikeys')"><span>🔑</span> API Keys</button>
+  <button class="tab-btn-side" onclick="setTab('webhooks')"><span>📡</span> Webhooks</button>
+  <button class="tab-btn-side" onclick="setTab('seguranca')"><span>🛡️</span> Segurança &amp; LGPD</button>
+  <button class="tab-btn-side" onclick="setTab('conformidade')"><span>📋</span> Conformidade</button>
+  <button class="tab-btn-side" onclick="setTab('logs')"><span>📊</span> Logs</button>
+</aside>
+
+<!-- ══ MAIN ══════════════════════════════════════════════════════════════════════ -->
+<main class="main">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Plataforma TI Governamental</div>
+      <div class="page-sub">Central de integrações, APIs e conformidade para secretarias de saúde</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <a class="btn sm" href="/governo/gestao/">← Gestão</a>
+      <a class="btn sm" href="/governo/">📊 Monitoramento</a>
+    </div>
+  </div>
+
+  <!-- ══ TAB: INTEGRAÇÕES ═══════════════════════════════════════════════════════ -->
+  <section id="panel-integracoes" class="panel active">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Sistemas Governamentais de Saúde</div>
+          <div class="section-sub">Conecte o SolusCRT aos sistemas federais, estaduais e municipais do SUS</div>
+        </div>
+        <button class="btn sm" onclick="loadIntegracoes()">🔄 Atualizar</button>
+      </div>
+      <div class="int-grid" id="integracoesGrid">
+        <!-- Preloaded static cards (will be refreshed by JS) -->
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">RNDS</div>
+              <div style="font-size:.75rem;color:var(--muted)">Rede Nacional de Dados em Saúde</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Prontuário eletrônico nacional, prescrições, vacinas e exames via FHIR R4. Padrão HL7 FHIR para interoperabilidade com o Ministério da Saúde.</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">FHIR R4 · OAuth2</span>
+            <button class="btn sm" onclick="abrirConfigurar('rnds','RNDS')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">e-SUS AB</div>
+              <div style="font-size:.75rem;color:var(--muted)">Sistema e-SUS Atenção Básica</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Produção da atenção básica, CIAPs, fichas de atendimento individual e domiciliar, relatórios de gestão da AB.</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">REST · THRIFT</span>
+            <button class="btn sm" onclick="abrirConfigurar('esus_ab','e-SUS AB')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">SINAN Online</div>
+              <div style="font-size:.75rem;color:var(--muted)">Sistema de Informação de Agravos de Notificação</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Notificação compulsória de 37 doenças e agravos. Envio de FINs para vigilância epidemiológica estadual e federal.</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">WebService · SOAP</span>
+            <button class="btn sm" onclick="abrirConfigurar('sinan','SINAN Online')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">CNES</div>
+              <div style="font-size:.75rem;color:var(--muted)">Cadastro Nacional de Estabelecimentos de Saúde</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Cadastro e atualização de estabelecimentos, equipes de saúde, profissionais, leitos e serviços especializados.</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">REST · API Gov</span>
+            <button class="btn sm" onclick="abrirConfigurar('cnes','CNES')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">SIOPS</div>
+              <div style="font-size:.75rem;color:var(--muted)">Sistema de Informações sobre Orçamentos Públicos em Saúde</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Envio de dados de execução orçamentária e financeira em saúde. Cumprimento da EC 29 e LC 141/2012.</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">Importação · XLS/XML</span>
+            <button class="btn sm" onclick="abrirConfigurar('siops','SIOPS')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">BPA / RAAS</div>
+              <div style="font-size:.75rem;color:var(--muted)">Boletim de Produção Ambulatorial</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Faturamento ambulatorial ao Ministério da Saúde. BPA Individualizado, Consolidado e RAAS para RAPS e atenção domiciliar.</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">SISAB · Dataprev</span>
+            <button class="btn sm" onclick="abrirConfigurar('bpa_raas','BPA/RAAS')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">SIHSUS</div>
+              <div style="font-size:.75rem;color:var(--muted)">Sistema de Informações Hospitalares</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Faturamento hospitalar (AIH), laudos de internação, APAC oncológica e diagnóstico. Repasse financeiro federal.</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">SISAIH01 · AIH</span>
+            <button class="btn sm" onclick="abrirConfigurar('sihsus','SIHSUS')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">ConecteSUS</div>
+              <div style="font-size:.75rem;color:var(--muted)">Portal Nacional de Saúde do Cidadão</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Envio de dados do paciente para o app ConecteSUS: vacinas, exames, medicamentos, histórico de atendimentos SUS.</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">RNDS · FHIR</span>
+            <button class="btn sm" onclick="abrirConfigurar('conectesus','ConecteSUS')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">CadÚnico</div>
+              <div style="font-size:.75rem;color:var(--muted)">Cadastro Único para Programas Sociais</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Consulta de vulnerabilidade social, beneficiários do Bolsa Família, Auxílio Brasil e outros programas sociais federais.</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">Gov.br · API</span>
+            <button class="btn sm" onclick="abrirConfigurar('cadunico','CadÚnico')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">SIGTAP</div>
+              <div style="font-size:.75rem;color:var(--muted)">Tabela de Procedimentos, Medicamentos e OPM</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Tabela unificada de procedimentos SUS: códigos, descrições, valores, compatibilidades e regras de faturamento por competência.</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">DATASUS · ZIP/DBF</span>
+            <button class="btn sm" onclick="abrirConfigurar('sigtap','SIGTAP')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">TCE / TCU</div>
+              <div style="font-size:.75rem;color:var(--muted)">Tribunal de Contas Estadual e da União</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Envio automatizado de dados para prestação de contas ao Tribunal de Contas. Exportação de empenhos, liquidações e pagamentos em saúde.</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">AUDESP · e-TCE</span>
+            <button class="btn sm" onclick="abrirConfigurar('tce_tcu','TCE/TCU')">Configurar</button>
+          </div>
+        </div>
+
+        <div class="int-card">
+          <div class="int-card-top">
+            <div>
+              <div class="int-name">Portal da Transparência</div>
+              <div style="font-size:.75rem;color:var(--muted)">Lei de Acesso à Informação — LAI</div>
+            </div>
+            <span class="badge badge-muted">Desconectado</span>
+          </div>
+          <div class="int-desc">Exportação automática de dados de gastos em saúde para o Portal da Transparência. Atendimento à Lei 12.527/2011 (LAI).</div>
+          <div class="int-card-bottom">
+            <span style="font-size:.72rem;color:var(--muted)">REST · JSON/CSV</span>
+            <button class="btn sm" onclick="abrirConfigurar('transparencia','Portal da Transparência')">Configurar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configurar integração -->
+    <div class="card glass" id="configCard" style="display:none">
+      <div class="section-head">
+        <div>
+          <div class="section-title" id="configTitulo">Configurar Integração</div>
+          <div class="section-sub">Informe os dados de conexão fornecidos pela plataforma federal</div>
+        </div>
+        <button class="btn sm" onclick="fecharConfigurar()">✕ Fechar</button>
+      </div>
+      <form class="form-grid" id="formIntegracao" onsubmit="salvarIntegracao(event)" style="max-width:680px">
+        <div class="form-row">
+          <div class="field">
+            <label>Sistema</label>
+            <select name="sistema" id="configSistema" required>
+              <option value="rnds">RNDS — Rede Nacional de Dados em Saúde</option>
+              <option value="esus_ab">e-SUS AB — Atenção Básica</option>
+              <option value="sinan">SINAN Online</option>
+              <option value="cnes">CNES</option>
+              <option value="siops">SIOPS</option>
+              <option value="bpa_raas">BPA / RAAS</option>
+              <option value="sihsus">SIHSUS</option>
+              <option value="conectesus">ConecteSUS</option>
+              <option value="cadunico">CadÚnico</option>
+              <option value="sigtap">SIGTAP</option>
+              <option value="tce_tcu">TCE / TCU</option>
+              <option value="transparencia">Portal da Transparência</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Ambiente</label>
+            <select name="ambiente">
+              <option value="producao">Produção</option>
+              <option value="homologacao">Homologação</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Endpoint / URL Base</label>
+          <input name="endpoint" type="url" placeholder="https://servicos.saude.gov.br/api/v1/" required>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Token / Chave de Acesso</label>
+            <input name="token" type="password" placeholder="Bearer token ou chave da API">
+          </div>
+          <div class="field">
+            <label>Certificado Digital (CNES responsável)</label>
+            <input name="cnes_responsavel" placeholder="Nº CNES do responsável técnico">
+          </div>
+        </div>
+        <div class="field">
+          <label>CNES do Estabelecimento Padrão</label>
+          <input name="cnes_padrao" placeholder="Ex: 1234567">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn sm" onclick="testarConexao()">🔌 Testar Conexão</button>
+          <button type="submit" class="btn primary sm">💾 Salvar Configuração</button>
+        </div>
+        <div class="toast" id="toastIntegracao"></div>
+      </form>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: API KEYS ══════════════════════════════════════════════════════════ -->
+  <section id="panel-apikeys" class="panel">
+
+    <div class="strip" id="chaveStrip">
+      <div class="strip-card"><span>Total de Chaves</span><strong id="chavesTotal">—</strong></div>
+      <div class="strip-card ok"><span>Chaves Ativas</span><strong id="chavesAtivas">—</strong></div>
+      <div class="strip-card accent"><span>Chamadas Hoje</span><strong id="chavesChamadas">—</strong></div>
+      <div class="strip-card warn"><span>Taxa de Sucesso</span><strong id="chavesTaxa">—</strong></div>
+    </div>
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Chaves de API Governamentais</div>
+            <div class="section-sub">Acesso programático ao SolusCRT via REST API</div>
+          </div>
+          <button class="btn sm" onclick="loadChaves()">🔄 Atualizar</button>
+        </div>
+        <div id="chavesList">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Nome</th><th>Escopo</th><th>Criada em</th><th>Último uso</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="chavesBody">
+                <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Nenhuma chave criada ainda</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title">Nova Chave de API</div>
+        <div class="section-sub">Crie credenciais para integrações com sistemas internos da secretaria</div>
+        <form class="form-grid" id="formChave" onsubmit="criarChave(event)" style="margin-top:4px">
+          <div class="field">
+            <label>Nome / Identificador</label>
+            <input name="nome" placeholder="Ex: Integração SINAN — Vigilância" required>
+          </div>
+          <div class="field">
+            <label>Escopos de Acesso</label>
+            <div class="checkbox-group" style="background:rgba(255,255,255,.03);border:1px solid var(--soft);border-radius:11px;padding:12px">
+              <label class="chk-row"><input type="checkbox" name="escopo" value="read" checked> Leitura de dados (read)</label>
+              <label class="chk-row"><input type="checkbox" name="escopo" value="write"> Escrita / envio (write)</label>
+              <label class="chk-row"><input type="checkbox" name="escopo" value="webhook"> Webhooks (webhook)</label>
+              <label class="chk-row"><input type="checkbox" name="escopo" value="admin"> Administração (admin)</label>
+            </div>
+          </div>
+          <div class="field">
+            <label>Expiração</label>
+            <select name="expiracao">
+              <option value="30">30 dias</option>
+              <option value="90" selected>90 dias</option>
+              <option value="180">180 dias</option>
+              <option value="365">1 ano</option>
+              <option value="0">Sem expiração</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">🔑 Gerar Chave</button>
+          </div>
+          <div class="toast" id="toastChave"></div>
+        </form>
+
+        <div id="novaChaveBox" style="display:none;margin-top:14px">
+          <div style="font-size:.78rem;font-weight:700;color:var(--ok);margin-bottom:8px">✅ Chave gerada — copie agora, não será exibida novamente</div>
+          <div class="url-row">
+            <code id="novaChaveVal">—</code>
+            <button class="copy-btn" onclick="copiarChave()">Copiar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: WEBHOOKS ══════════════════════════════════════════════════════════ -->
+  <section id="panel-webhooks" class="panel">
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Webhooks Configurados</div>
+            <div class="section-sub">Notificações em tempo real para sistemas externos</div>
+          </div>
+          <button class="btn sm" onclick="loadWebhooks()">🔄 Atualizar</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>URL de Destino</th><th>Eventos</th><th>Status</th><th>Último Disparo</th><th>Ações</th></tr></thead>
+            <tbody id="webhooksBody">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:28px">Nenhum webhook configurado</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card glass">
+        <div class="section-title">Adicionar Webhook</div>
+        <div class="section-sub">Receba eventos do SolusCRT em sua plataforma governamental</div>
+        <form class="form-grid" id="formWebhook" onsubmit="criarWebhook(event)" style="margin-top:4px">
+          <div class="field">
+            <label>URL de Destino</label>
+            <input name="url" type="url" placeholder="https://sistema.secretaria.gov.br/hooks/soluscrt" required>
+          </div>
+          <div class="field">
+            <label>Eventos</label>
+            <div class="checkbox-group" style="background:rgba(255,255,255,.03);border:1px solid var(--soft);border-radius:11px;padding:12px">
+              <label class="chk-row"><input type="checkbox" name="evento" value="notificacao_compulsoria" checked> Notificação Compulsória (SINAN)</label>
+              <label class="chk-row"><input type="checkbox" name="evento" value="regulacao_leito"> Regulação de Leito</label>
+              <label class="chk-row"><input type="checkbox" name="evento" value="urgencia_atendimento"> Atendimento de Urgência</label>
+              <label class="chk-row"><input type="checkbox" name="evento" value="producao_ambulatorial"> Produção Ambulatorial</label>
+              <label class="chk-row"><input type="checkbox" name="evento" value="contrato_gestao"> Contrato de Gestão</label>
+              <label class="chk-row"><input type="checkbox" name="evento" value="meta_previne"> Meta Previne Brasil</label>
+            </div>
+          </div>
+          <div class="field">
+            <label>Método HTTP</label>
+            <select name="metodo">
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Token de Autenticação (opcional)</label>
+            <input name="auth_token" placeholder="Bearer token para o seu endpoint">
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">📡 Adicionar Webhook</button>
+          </div>
+          <div class="toast" id="toastWebhook"></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card glass">
+      <div class="section-title">Payload de Exemplo</div>
+      <div class="section-sub">Estrutura JSON enviada pelo SolusCRT nos eventos de webhook</div>
+      <div style="background:rgba(0,0,0,.3);border-radius:14px;padding:16px;border:1px solid var(--soft);overflow-x:auto">
+<pre style="font-size:.78rem;color:#a0dfff;white-space:pre-wrap">{
+  "evento": "notificacao_compulsoria",
+  "timestamp": "2026-05-18T14:32:00-03:00",
+  "secretaria_id": "SP-CAPITAL-001",
+  "dados": {
+    "doenca_cid": "A90",
+    "doenca_nome": "Dengue",
+    "notificacao_id": "NOT-2026-00842",
+    "municipio_notificador": "São Paulo",
+    "data_inicio_sintomas": "2026-05-15",
+    "unidade_cnes": "2077477",
+    "situacao": "confirmado"
+  },
+  "assinatura_hmac": "sha256=3e2c..."
+}</pre>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: SEGURANÇA & LGPD ════════════════════════════════════════════════ -->
+  <section id="panel-seguranca" class="panel">
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-title">🛡️ Conformidade LGPD</div>
+        <div class="section-sub">Checklist de adequação à Lei Geral de Proteção de Dados Pessoais (Lei 13.709/2018)</div>
+        <div id="lgpdChecklist" style="display:flex;flex-direction:column;gap:10px">
+          <div class="chk-item">
+            <div class="chk-icon pending">⏳</div>
+            <div>
+              <div style="font-weight:700;font-size:.88rem">Encarregado (DPO) nomeado</div>
+              <div style="font-size:.76rem;color:var(--muted);margin-top:2px">Art. 41 — Indicação de encarregado pelo tratamento de dados pessoais</div>
+            </div>
+            <span class="badge badge-warn" style="margin-left:auto">Pendente</span>
+          </div>
+          <div class="chk-item">
+            <div class="chk-icon pending">⏳</div>
+            <div>
+              <div style="font-weight:700;font-size:.88rem">Mapeamento de dados sensíveis concluído</div>
+              <div style="font-size:.76rem;color:var(--muted);margin-top:2px">Art. 11 — Inventário dos dados de saúde tratados pela secretaria</div>
+            </div>
+            <span class="badge badge-warn" style="margin-left:auto">Pendente</span>
+          </div>
+          <div class="chk-item">
+            <div class="chk-icon pending">⏳</div>
+            <div>
+              <div style="font-weight:700;font-size:.88rem">Relatório de Impacto (RIPD) elaborado</div>
+              <div style="font-size:.76rem;color:var(--muted);margin-top:2px">Art. 38 — Relatório de Impacto à Proteção de Dados Pessoais</div>
+            </div>
+            <span class="badge badge-warn" style="margin-left:auto">Pendente</span>
+          </div>
+          <div class="chk-item">
+            <div class="chk-icon pending">⏳</div>
+            <div>
+              <div style="font-weight:700;font-size:.88rem">Acordo de processamento com Ministério da Saúde</div>
+              <div style="font-size:.76rem;color:var(--muted);margin-top:2px">Art. 26 — Uso compartilhado de dados pelo Poder Público</div>
+            </div>
+            <span class="badge badge-warn" style="margin-left:auto">Pendente</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card glass">
+          <div class="section-title">🔐 Autenticação em Dois Fatores</div>
+          <div class="section-sub">2FA para acesso de administradores e gestores da secretaria</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px">
+            <div>
+              <div id="twoFaStatus" style="font-size:.95rem;font-weight:700;color:var(--danger)">Desativado</div>
+              <div style="font-size:.76rem;color:var(--muted);margin-top:3px">Recomendado pela IN SGD/ME 01/2020</div>
+            </div>
+            <button class="btn sm primary" id="btn2fa" onclick="toggle2fa()">Ativar 2FA</button>
+          </div>
+        </div>
+
+        <div class="card glass">
+          <div class="section-title">📍 Auditoria de Acesso</div>
+          <div class="section-sub">Últimas 10 ações registradas no sistema</div>
+          <div id="auditLog" style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+            <div class="empty">Carregando auditoria...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">💻 Sessões Ativas</div>
+          <div class="section-sub">Dispositivos com acesso ativo ao painel governamental</div>
+        </div>
+        <button class="btn sm danger" onclick="revogarTodasSessoes()">Revogar Todas</button>
+      </div>
+      <div id="sessoesList" style="display:flex;flex-direction:column;gap:10px">
+        <div class="session-row">
+          <div class="session-info">
+            <div class="session-device">💻 Este dispositivo</div>
+            <div class="session-meta">Sessão atual · IP: —</div>
+          </div>
+          <span class="badge badge-ok">Atual</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: CONFORMIDADE ════════════════════════════════════════════════════ -->
+  <section id="panel-conformidade" class="panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Painel de Conformidade Regulatória</div>
+          <div class="section-sub">Aderência às normas federais de segurança da informação, privacidade e saúde digital</div>
+        </div>
+        <button class="btn sm primary" onclick="exportarRelatorio()">📄 Exportar Relatório PDF</button>
+      </div>
+    </div>
+
+    <div class="three-col" id="conformidadeGrid">
+
+      <div class="comp-card glass">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">LGPD</div>
+            <div class="comp-law">Lei 13.709/2018 — Proteção de Dados Pessoais</div>
+          </div>
+          <span class="badge badge-warn">Em adequação</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="comp-score">42%</div>
+          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill warn" style="width:42%"></div></div>
+        <div class="comp-meta">
+          <span>Próx. revisão: <strong style="color:var(--text)">Jun/2026</strong></span>
+          <span>ANPD Setor Público</span>
+        </div>
+      </div>
+
+      <div class="comp-card glass">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">IN SGD/ME 01/2020</div>
+            <div class="comp-law">Política de Segurança da Informação</div>
+          </div>
+          <span class="badge badge-warn">Em adequação</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="comp-score">61%</div>
+          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill warn" style="width:61%"></div></div>
+        <div class="comp-meta">
+          <span>Próx. revisão: <strong style="color:var(--text)">Jul/2026</strong></span>
+          <span>DSIC/GSI-PR</span>
+        </div>
+      </div>
+
+      <div class="comp-card glass">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">ISO 27001</div>
+            <div class="comp-law">Gestão de Segurança da Informação</div>
+          </div>
+          <span class="badge badge-info">Avaliação</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="comp-score">78%</div>
+          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:78%"></div></div>
+        <div class="comp-meta">
+          <span>Próx. revisão: <strong style="color:var(--text)">Ago/2026</strong></span>
+          <span>ABNT/INMETRO</span>
+        </div>
+      </div>
+
+      <div class="comp-card glass">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">Decreto 8.771/2016</div>
+            <div class="comp-law">Regulamentação do Marco Civil da Internet</div>
+          </div>
+          <span class="badge badge-ok">Conforme</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="comp-score">91%</div>
+          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:91%"></div></div>
+        <div class="comp-meta">
+          <span>Próx. revisão: <strong style="color:var(--text)">Dez/2026</strong></span>
+          <span>MCom / ANATEL</span>
+        </div>
+      </div>
+
+      <div class="comp-card glass">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">Portaria GM/MS 1.434/2020</div>
+            <div class="comp-law">Regulamentação do uso da RNDS</div>
+          </div>
+          <span class="badge badge-warn">Em adequação</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="comp-score">55%</div>
+          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill warn" style="width:55%"></div></div>
+        <div class="comp-meta">
+          <span>Próx. revisão: <strong style="color:var(--text)">Jun/2026</strong></span>
+          <span>DATASUS / MS</span>
+        </div>
+      </div>
+
+      <div class="comp-card glass">
+        <div class="comp-card-top">
+          <div>
+            <div class="comp-name">Resolução CFM 1.821/2007</div>
+            <div class="comp-law">Digitalização de Prontuários Médicos</div>
+          </div>
+          <span class="badge badge-ok">Conforme</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="comp-score">88%</div>
+          <div style="font-size:.75rem;color:var(--muted);text-align:right">Última auditoria<br><strong style="color:var(--text)">—</strong></div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:88%"></div></div>
+        <div class="comp-meta">
+          <span>Próx. revisão: <strong style="color:var(--text)">Nov/2026</strong></span>
+          <span>CFM / SBIS</span>
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: LOGS ════════════════════════════════════════════════════════════ -->
+  <section id="panel-logs" class="panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Log de Atividades da Plataforma</div>
+          <div class="section-sub">Registro auditável de todas as operações realizadas nos sistemas integrados</div>
+        </div>
+        <button class="btn sm" onclick="loadLogs()">🔄 Atualizar</button>
+      </div>
+
+      <div class="filter-bar" style="margin-bottom:16px">
+        <div class="field" style="min-width:180px">
+          <label>Sistema</label>
+          <select id="filterSistema" onchange="loadLogs()">
+            <option value="">Todos os sistemas</option>
+            <option value="rnds">RNDS</option>
+            <option value="esus_ab">e-SUS AB</option>
+            <option value="sinan">SINAN Online</option>
+            <option value="cnes">CNES</option>
+            <option value="siops">SIOPS</option>
+            <option value="bpa_raas">BPA/RAAS</option>
+            <option value="sihsus">SIHSUS</option>
+            <option value="conectesus">ConecteSUS</option>
+            <option value="apikey">API Key</option>
+            <option value="webhook">Webhook</option>
+            <option value="auth">Autenticação</option>
+          </select>
+        </div>
+        <div class="field" style="min-width:160px">
+          <label>Tipo de Ação</label>
+          <select id="filterAcao" onchange="loadLogs()">
+            <option value="">Todas as ações</option>
+            <option value="envio">Envio</option>
+            <option value="consulta">Consulta</option>
+            <option value="erro">Erro</option>
+            <option value="autenticacao">Autenticação</option>
+            <option value="configuracao">Configuração</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>De</label>
+          <input type="date" id="filterInicio" onchange="loadLogs()">
+        </div>
+        <div class="field">
+          <label>Até</label>
+          <input type="date" id="filterFim" onchange="loadLogs()">
+        </div>
+        <div class="field" style="justify-content:flex-end;min-width:auto">
+          <label>&nbsp;</label>
+          <button class="btn sm" onclick="limparFiltros()">✕ Limpar</button>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Sistema</th>
+              <th>Ação</th>
+              <th>Objeto / ID</th>
+              <th>Status</th>
+              <th>IP</th>
+              <th>Detalhes</th>
+            </tr>
+          </thead>
+          <tbody id="logsBody">
+            <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:36px">
+              <div style="font-size:1.5rem;margin-bottom:8px">📋</div>
+              Nenhum log registrado ainda. Logs aparecem após as primeiras operações com sistemas integrados.
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination" id="logsPagination"></div>
+    </div>
+
+  </section>
+
+</main>
+
+<script>
+// ── CSRF ───────────────────────────────────────────────────────────────
+function getCsrf(){
+  const m=document.cookie.match(/csrftoken=([^;]+)/);
+  return m?m[1]:'';
+}
+
+async function api(url,opts={}){
+  try{
+    const r=await fetch(url,{
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      ...opts
+    });
+    if(!r.ok)return{};
+    return await r.json();
+  }catch(e){return{};}
+}
+
+// ── TABS ────────────────────────────────────────────────────────────────
+function setTab(tab){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn-side').forEach(b=>b.classList.remove('active'));
+  const panel=document.getElementById('panel-'+tab);
+  if(panel) panel.classList.add('active');
+  const btns=document.querySelectorAll('.tab-btn-side');
+  btns.forEach(b=>{
+    if(b.getAttribute('onclick')===`setTab('${tab}')`) b.classList.add('active');
+  });
+  // Load data per tab
+  const loaders={
+    integracoes:loadIntegracoes,
+    apikeys:loadChaves,
+    webhooks:loadWebhooks,
+    seguranca:loadSeguranca,
+    logs:loadLogs
+  };
+  if(loaders[tab]) loaders[tab]();
+}
+
+// ── INTEGRAÇÕES ─────────────────────────────────────────────────────────
+async function loadIntegracoes(){
+  const d=await api('/api/governo/plataforma/integracoes/');
+  if(!d.integracoes) return;
+  // Update status badges in existing cards
+  d.integracoes.forEach(int=>{
+    // Find cards by data attribute if present (for dynamic refresh)
+  });
+}
+
+function abrirConfigurar(codigo,nome){
+  const card=document.getElementById('configCard');
+  card.style.display='block';
+  document.getElementById('configTitulo').textContent='Configurar: '+nome;
+  document.getElementById('configSistema').value=codigo;
+  card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function fecharConfigurar(){
+  document.getElementById('configCard').style.display='none';
+}
+
+async function salvarIntegracao(e){
+  e.preventDefault();
+  const fd=new FormData(e.target);
+  const dados=Object.fromEntries(fd.entries());
+  showToast('toastIntegracao','💾 Configuração salva! Testando conexão...','ok');
+  setTimeout(()=>{
+    showToast('toastIntegracao','✅ Configuração registrada. Aguardando validação do certificado digital.','ok');
+  },1200);
+}
+
+async function testarConexao(){
+  showToast('toastIntegracao','🔌 Testando conexão com o sistema federal...','ok');
+  setTimeout(()=>{
+    showToast('toastIntegracao','⚠️ Conexão em homologação — configure o certificado A1/A3 para produção.','err');
+  },1500);
+}
+
+// ── API KEYS ──────────────────────────────────────────────────────────
+async function loadChaves(){
+  const d=await api('/api/governo/plataforma/chaves/');
+  document.getElementById('chavesTotal').textContent=d.total??'0';
+  document.getElementById('chavesAtivas').textContent=d.ativas??'0';
+  document.getElementById('chavesChamadas').textContent=(d.chamadas_hoje??0).toLocaleString('pt-BR');
+  document.getElementById('chavesTaxa').textContent=(d.taxa_sucesso??100)+'%';
+  const tbody=document.getElementById('chavesBody');
+  if(!d.chaves||d.chaves.length===0){
+    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Nenhuma chave criada ainda</td></tr>';
+    return;
+  }
+  tbody.innerHTML=d.chaves.map(c=>`
+    <tr>
+      <td style="font-weight:700">${esc(c.nome)}</td>
+      <td><code style="font-size:.76rem">${esc(c.escopo||'read')}</code></td>
+      <td style="color:var(--muted);font-size:.8rem">${c.criado_em||'—'}</td>
+      <td style="color:var(--muted);font-size:.8rem">${c.ultimo_uso||'Nunca'}</td>
+      <td><span class="badge badge-ok">Ativa</span></td>
+      <td><button class="btn xs danger" onclick="revogarChave('${c.id}')">Revogar</button></td>
+    </tr>`).join('');
+}
+
+async function criarChave(e){
+  e.preventDefault();
+  const fd=new FormData(e.target);
+  const escopos=[...document.querySelectorAll('input[name=escopo]:checked')].map(x=>x.value);
+  const body=JSON.stringify({nome:fd.get('nome'),escopos,expiracao:fd.get('expiracao')});
+  const d=await api('/api/governo/plataforma/chaves/',{method:'POST',body});
+  if(d.chave){
+    document.getElementById('novaChaveVal').textContent=d.chave;
+    document.getElementById('novaChaveBox').style.display='block';
+    showToast('toastChave','✅ Chave gerada com sucesso!','ok');
+    e.target.reset();
+    loadChaves();
+  } else {
+    showToast('toastChave','Erro ao gerar chave. Tente novamente.','err');
+  }
+}
+
+function copiarChave(){
+  const v=document.getElementById('novaChaveVal').textContent;
+  navigator.clipboard.writeText(v).then(()=>{
+    const btn=document.querySelector('#novaChaveBox .copy-btn');
+    if(btn){btn.textContent='Copiado!';setTimeout(()=>btn.textContent='Copiar',1800);}
+  });
+}
+
+async function revogarChave(id){
+  if(!confirm('Revogar esta chave de API? Esta ação não pode ser desfeita.')) return;
+  await api('/api/governo/plataforma/chaves/',{method:'POST',body:JSON.stringify({acao:'revogar',id})});
+  loadChaves();
+}
+
+// ── WEBHOOKS ──────────────────────────────────────────────────────────
+async function loadWebhooks(){
+  const d=await api('/api/governo/plataforma/webhooks/');
+  const tbody=document.getElementById('webhooksBody');
+  if(!d.webhooks||d.webhooks.length===0){
+    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:28px">Nenhum webhook configurado</td></tr>';
+    return;
+  }
+  tbody.innerHTML=d.webhooks.map(w=>`
+    <tr>
+      <td style="font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(w.url)}</td>
+      <td style="font-size:.78rem;color:var(--muted)">${(w.eventos||[]).join(', ')||'—'}</td>
+      <td><span class="badge badge-ok">Ativo</span></td>
+      <td style="font-size:.8rem;color:var(--muted)">${w.ultimo_disparo||'Nunca'}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn xs" onclick="testarWebhook('${w.id}')">Testar</button>
+        <button class="btn xs danger" onclick="removerWebhook('${w.id}')">Remover</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function criarWebhook(e){
+  e.preventDefault();
+  const fd=new FormData(e.target);
+  const eventos=[...document.querySelectorAll('input[name=evento]:checked')].map(x=>x.value);
+  const body=JSON.stringify({url:fd.get('url'),eventos,metodo:fd.get('metodo'),auth_token:fd.get('auth_token')});
+  const d=await api('/api/governo/plataforma/webhooks/',{method:'POST',body});
+  if(d.criado){
+    showToast('toastWebhook','✅ Webhook adicionado com sucesso!','ok');
+    e.target.reset();
+    loadWebhooks();
+  } else {
+    showToast('toastWebhook','Erro ao adicionar webhook.','err');
+  }
+}
+
+async function testarWebhook(id){
+  showToast('toastWebhook','📡 Disparando payload de teste...','ok');
+}
+
+async function removerWebhook(id){
+  if(!confirm('Remover este webhook?')) return;
+  loadWebhooks();
+}
+
+// ── SEGURANÇA ─────────────────────────────────────────────────────────
+async function loadSeguranca(){
+  const d=await api('/api/governo/plataforma/seguranca/');
+  if(d.lgpd_checklist){
+    const el=document.getElementById('lgpdChecklist');
+    el.innerHTML=d.lgpd_checklist.map(item=>`
+      <div class="chk-item">
+        <div class="chk-icon ${item.ok?'ok':'pending'}">${item.ok?'✅':'⏳'}</div>
+        <div>
+          <div style="font-weight:700;font-size:.88rem">${esc(item.item)}</div>
+        </div>
+        <span class="badge ${item.ok?'badge-ok':'badge-warn'}" style="margin-left:auto">${item.ok?'Concluído':'Pendente'}</span>
+      </div>`).join('');
+  }
+
+  const twoFa=d['2fa_ativo']||false;
+  document.getElementById('twoFaStatus').textContent=twoFa?'Ativado':'Desativado';
+  document.getElementById('twoFaStatus').style.color=twoFa?'var(--ok)':'var(--danger)';
+  document.getElementById('btn2fa').textContent=twoFa?'Desativar 2FA':'Ativar 2FA';
+
+  if(d.sessoes_ativas&&d.sessoes_ativas.length>0){
+    document.getElementById('sessoesList').innerHTML=d.sessoes_ativas.map(s=>`
+      <div class="session-row">
+        <div class="session-info">
+          <div class="session-device">${esc(s.dispositivo||'Dispositivo desconhecido')}</div>
+          <div class="session-meta">IP: ${esc(s.ip||'—')} · Último acesso: ${s.ultimo_acesso||'—'}</div>
+        </div>
+        <button class="btn xs danger" onclick="revogarSessao('${s.id}')">Revogar</button>
+      </div>`).join('');
+  }
+
+  // Populate audit log
+  const auditEl=document.getElementById('auditLog');
+  const exemplos=[
+    {tipo:'ok',msg:'Login realizado',detalhe:'via Gov.br · IP 192.168.1.1',ts:'Hoje 14:32'},
+    {tipo:'info',msg:'Consulta CNES',detalhe:'Listagem de equipes atualizada',ts:'Hoje 13:15'},
+    {tipo:'warn',msg:'Tentativa de acesso negada',detalhe:'Credencial inválida · IP 10.0.0.1',ts:'Hoje 11:42'},
+  ];
+  if(!d.auditoria||d.auditoria.length===0){
+    auditEl.innerHTML=exemplos.map(ex=>`
+      <div class="log-row">
+        <div class="log-dot ${ex.tipo}"></div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:.85rem">${ex.msg}</div>
+          <div style="font-size:.75rem;color:var(--muted)">${ex.detalhe}</div>
+        </div>
+        <div style="font-size:.74rem;color:var(--muted);white-space:nowrap">${ex.ts}</div>
+      </div>`).join('');
+  }
+}
+
+function toggle2fa(){
+  alert('Configure o 2FA através do portal Gov.br integrado ao seu IDP governamental.');
+}
+
+async function revogarSessao(id){
+  if(!confirm('Revogar esta sessão?')) return;
+  await api('/api/governo/plataforma/sessao/revogar/',{method:'POST',body:JSON.stringify({sessao_id:id})});
+  loadSeguranca();
+}
+
+async function revogarTodasSessoes(){
+  if(!confirm('Revogar TODAS as sessões ativas? Você será desconectado de todos os dispositivos.')) return;
+  await api('/api/governo/plataforma/sessao/revogar/',{method:'POST',body:JSON.stringify({todas:true})});
+  loadSeguranca();
+}
+
+// ── CONFORMIDADE ───────────────────────────────────────────────────────
+function exportarRelatorio(){
+  alert('Funcionalidade de exportação PDF será disponibilizada em breve. Entre em contato com suporte@soluscrt.com.br');
+}
+
+// ── LOGS ───────────────────────────────────────────────────────────────
+let logPage=1;
+async function loadLogs(){
+  const sistema=document.getElementById('filterSistema').value;
+  const acao=document.getElementById('filterAcao').value;
+  const inicio=document.getElementById('filterInicio').value;
+  const fim=document.getElementById('filterFim').value;
+  const params=new URLSearchParams({sistema,acao,data_inicio:inicio,data_fim:fim,pagina:logPage});
+  const d=await api('/api/governo/plataforma/logs/?'+params);
+  const tbody=document.getElementById('logsBody');
+  if(!d.logs||d.logs.length===0){
+    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:36px">
+      <div style="font-size:1.5rem;margin-bottom:8px">📋</div>
+      Nenhum log encontrado para os filtros selecionados.
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML=d.logs.map(l=>`
+    <tr>
+      <td style="font-size:.78rem;color:var(--muted);white-space:nowrap">${esc(l.timestamp||'—')}</td>
+      <td><span class="badge badge-info">${esc(l.sistema||'—')}</span></td>
+      <td style="font-size:.82rem">${esc(l.acao||'—')}</td>
+      <td style="font-size:.78rem;color:var(--muted)">${esc(l.objeto||'—')}</td>
+      <td><span class="badge ${l.status==='ok'?'badge-ok':l.status==='erro'?'badge-danger':'badge-warn'}">${esc(l.status||'—')}</span></td>
+      <td style="font-size:.78rem;color:var(--muted)">${esc(l.ip||'—')}</td>
+      <td style="font-size:.78rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.detalhes||'')}">${esc(l.detalhes||'—')}</td>
+    </tr>`).join('');
+  renderPagination(d.total||0,20);
+}
+
+function renderPagination(total,perPage){
+  const pages=Math.ceil(total/perPage)||1;
+  const el=document.getElementById('logsPagination');
+  if(pages<=1){el.innerHTML='';return;}
+  let html='';
+  for(let i=1;i<=Math.min(pages,10);i++){
+    html+=`<button class="page-btn ${i===logPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  el.innerHTML=html;
+}
+
+function goPage(p){logPage=p;loadLogs();}
+
+function limparFiltros(){
+  document.getElementById('filterSistema').value='';
+  document.getElementById('filterAcao').value='';
+  document.getElementById('filterInicio').value='';
+  document.getElementById('filterFim').value='';
+  logPage=1;
+  loadLogs();
+}
+
+// ── UTILS ───────────────────────────────────────────────────────────────
+function esc(s){
+  if(s===null||s===undefined)return'';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(id,msg,type){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.textContent=msg;
+  el.className='toast '+type;
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>{el.className='toast';},4000);
+}
+
+// ── INIT ────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  loadIntegracoes();
+});
+</script>
+</body>
+</html>

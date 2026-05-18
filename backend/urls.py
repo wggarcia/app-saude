@@ -28,7 +28,7 @@ from api.views import (
 
 from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba
 from api.views_enterprise import api_enterprise_command_center, api_enterprise_premium_suite, api_enterprise_seed_operational_demo
-from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_onboarding_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page, rede_gestao_page, plano_saude_gestao_page
+from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_onboarding_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page, governo_plataforma_page, rede_gestao_page, plano_saude_gestao_page
 from api.views_corporativo import (
     dashboard_empresa_corporativo,
     api_empresa_corporativo_resumo,
@@ -364,6 +364,9 @@ from api.views_governo_fase2 import (
     api_contratos_gestao, api_contrato_detalhe,
     api_atendimentos_urgencia, api_urgencia_dashboard,
     api_governo_fase2_dashboard,
+    api_governo_plataforma_integracoes, api_governo_plataforma_chaves,
+    api_governo_plataforma_webhooks, api_governo_plataforma_seguranca,
+    api_governo_plataforma_logs,
 )
 from api.views_rede import (
     api_redes, api_rede_convidar, api_rede_estoque, api_rede_item_disponibilidade,
@@ -461,6 +464,7 @@ urlpatterns = [
     path('farmacia/gestao/', farmacia_gestao_page),
     path('hospital/gestao/', hospital_gestao_page),
     path('governo/gestao/', governo_gestao_page),
+    path('governo/plataforma/', governo_plataforma_page),
     path('rede/gestao/', rede_gestao_page),
     path('plano-saude/gestao/', plano_saude_gestao_page),
     path('sala-decisao-ia/', command_ai),
@@ -900,6 +904,12 @@ urlpatterns = [
     # Urgência e Emergência
     path('api/governo/urgencia/', api_atendimentos_urgencia),
     path('api/governo/urgencia/dashboard/', api_urgencia_dashboard),
+    # Plataforma TI Governamental
+    path('api/governo/plataforma/integracoes/', api_governo_plataforma_integracoes),
+    path('api/governo/plataforma/chaves/', api_governo_plataforma_chaves),
+    path('api/governo/plataforma/webhooks/', api_governo_plataforma_webhooks),
+    path('api/governo/plataforma/seguranca/', api_governo_plataforma_seguranca),
+    path('api/governo/plataforma/logs/', api_governo_plataforma_logs),
     path('api/governanca/metodologia', api_metodologia_epidemiologica),
     path('api/governanca/matriz-decisao', api_matriz_decisao),
     path('api/governanca/auditoria', api_auditoria_institucional),

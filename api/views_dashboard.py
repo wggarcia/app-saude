@@ -211,6 +211,12 @@ def governo_gestao_page(request):
 
 
 @ensure_csrf_cookie
+@requer_setor('governo')
+def governo_plataforma_page(request):
+    return render(request, "governo_plataforma.html")
+
+
+@ensure_csrf_cookie
 @requer_setor('farmacia', 'hospital')
 def rede_gestao_page(request):
     return render(request, "rede_gestao.html")

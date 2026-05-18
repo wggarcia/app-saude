@@ -1049,3 +1049,86 @@ def api_governo_fase2_dashboard(request):
             "obitos": urgencia_7d["obitos"] or 0,
         },
     })
+
+
+# ═══════════════════════════════════════════════════════════════
+# PLATAFORMA TI GOVERNAMENTAL
+# ═══════════════════════════════════════════════════════════════
+
+def api_governo_plataforma_integracoes(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    try:
+        integracoes = [
+            {"codigo": "rnds",          "nome": "RNDS",               "descricao": "Rede Nacional de Dados em Saúde",          "status": "desconectado"},
+            {"codigo": "esus_ab",       "nome": "e-SUS AB",           "descricao": "Sistema e-SUS Atenção Básica",             "status": "desconectado"},
+            {"codigo": "sinan",         "nome": "SINAN Online",       "descricao": "Notificações Compulsórias",                "status": "desconectado"},
+            {"codigo": "cnes",          "nome": "CNES",               "descricao": "Cadastro de Estabelecimentos",             "status": "desconectado"},
+            {"codigo": "siops",         "nome": "SIOPS",              "descricao": "Orçamentos Públicos em Saúde",             "status": "desconectado"},
+            {"codigo": "bpa_raas",      "nome": "BPA/RAAS",           "descricao": "Produção Ambulatorial",                   "status": "desconectado"},
+            {"codigo": "sihsus",        "nome": "SIHSUS",             "descricao": "Informações Hospitalares",                 "status": "desconectado"},
+            {"codigo": "conectesus",    "nome": "ConecteSUS",         "descricao": "Portal do Paciente",                      "status": "desconectado"},
+            {"codigo": "cadunico",      "nome": "CadÚnico",           "descricao": "Cadastro Único Social",                   "status": "desconectado"},
+            {"codigo": "sigtap",        "nome": "SIGTAP",             "descricao": "Tabela de Procedimentos",                 "status": "desconectado"},
+            {"codigo": "tce_tcu",       "nome": "TCE/TCU",            "descricao": "Tribunal de Contas",                      "status": "desconectado"},
+            {"codigo": "transparencia", "nome": "Transparência",      "descricao": "Portal da Transparência",                 "status": "desconectado"},
+        ]
+        return JsonResponse({"integracoes": integracoes})
+    except Exception:
+        return JsonResponse({"disponivel": False}, status=500)
+
+
+def api_governo_plataforma_chaves(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    try:
+        if request.method == "POST":
+            import secrets
+            nova_chave = secrets.token_urlsafe(32)
+            return JsonResponse({"chave": nova_chave, "criado": True})
+        return JsonResponse({"chaves": [], "total": 0, "ativas": 0, "chamadas_hoje": 0, "taxa_sucesso": 100})
+    except Exception:
+        return JsonResponse({"disponivel": False}, status=500)
+
+
+def api_governo_plataforma_webhooks(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    try:
+        if request.method == "POST":
+            return JsonResponse({"criado": True})
+        return JsonResponse({"webhooks": []})
+    except Exception:
+        return JsonResponse({"disponivel": False}, status=500)
+
+
+def api_governo_plataforma_seguranca(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    try:
+        return JsonResponse({
+            "lgpd_checklist": [
+                {"item": "Encarregado DPO nomeado",                          "ok": False},
+                {"item": "Mapeamento de dados sensíveis concluído",          "ok": False},
+                {"item": "Relatório de Impacto (RIPD) elaborado",            "ok": False},
+                {"item": "Acordo de processamento com Ministério da Saúde",  "ok": False},
+            ],
+            "sessoes_ativas": [],
+            "2fa_ativo": False,
+        })
+    except Exception:
+        return JsonResponse({"disponivel": False}, status=500)
+
+
+def api_governo_plataforma_logs(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    try:
+        return JsonResponse({"logs": [], "total": 0})
+    except Exception:
+        return JsonResponse({"disponivel": False}, status=500)
