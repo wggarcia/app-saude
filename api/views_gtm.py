@@ -7,7 +7,7 @@ Page:     GET /gtm/
 """
 from datetime import date, timedelta
 from django.http import JsonResponse
-from .views_dashboard import _empresa_autenticada
+from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
 
 
 ETAPAS_FUNIL = [
@@ -213,8 +213,7 @@ def _ciclo_medio_real():
 
 
 def api_gtm_funil(request):
-    from .views_dashboard import _dono_autenticado
-    dono = _dono_autenticado(request)
+    dono = dono_autenticado_from_request(request)
     if not dono:
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
@@ -227,8 +226,7 @@ def api_gtm_funil(request):
 
 
 def api_gtm_pipeline(request):
-    from .views_dashboard import _dono_autenticado
-    if not _dono_autenticado(request):
+    if not dono_autenticado_from_request(request):
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     pipeline = _pipeline_valor()
@@ -251,8 +249,7 @@ def api_gtm_pipeline(request):
 
 
 def api_gtm_expansao(request):
-    from .views_dashboard import _dono_autenticado
-    if not _dono_autenticado(request):
+    if not dono_autenticado_from_request(request):
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     expansao = _land_and_expand()
@@ -289,8 +286,7 @@ def api_gtm_expansao(request):
 
 def gtm_page(request):
     from django.shortcuts import render, redirect
-    from .views_dashboard import _dono_autenticado
-    dono = _dono_autenticado(request)
+    dono = dono_autenticado_from_request(request)
     if not dono:
         empresa = getattr(request, "empresa", None)
         if empresa:

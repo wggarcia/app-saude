@@ -9,7 +9,7 @@ Page:     GET /financeiro/
 from datetime import date, timedelta
 from django.http import JsonResponse
 from django.db.models import Sum, Count, Avg, Q, F
-from .views_dashboard import _empresa_autenticada
+from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
 
 
 def _mrr_historico(meses=12):
@@ -202,8 +202,7 @@ def _ltv_cohort_real(ticket_medio):
 
 
 def api_financeiro_metricas(request):
-    from .views_dashboard import _dono_autenticado
-    dono = _dono_autenticado(request)
+    dono = dono_autenticado_from_request(request)
     if not dono:
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
@@ -322,8 +321,7 @@ def _alertas_financeiros(churn_rate, nrr, ltv_cac, payback_meses):
 
 
 def api_financeiro_cohorts(request):
-    from .views_dashboard import _dono_autenticado
-    if not _dono_autenticado(request):
+    if not dono_autenticado_from_request(request):
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     try:
@@ -360,10 +358,8 @@ def api_financeiro_cohorts(request):
 
 def financeiro_page(request):
     from django.shortcuts import render
-    from .access_control import requer_dono
-    from .views_dashboard import _dono_autenticado
     from django.shortcuts import redirect
-    dono = _dono_autenticado(request)
+    dono = dono_autenticado_from_request(request)
     if not dono:
         empresa = getattr(request, "empresa", None)
         if empresa:

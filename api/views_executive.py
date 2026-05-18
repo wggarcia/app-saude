@@ -4,11 +4,11 @@ Endpoint: GET /api/executive/dashboard/
 """
 from datetime import date, timedelta
 from django.http import JsonResponse
-from .views_dashboard import _empresa_autenticada
+from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
 
 
 def api_executive_dashboard(request):
-    empresa = _empresa_autenticada(request)
+    empresa = empresa_autenticada_from_request(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -258,8 +258,7 @@ def _alertas_resumo(empresa, hoje):
 
 def executive_dashboard_page(request):
     from django.shortcuts import render, redirect
-    from .views_dashboard import _dono_autenticado
-    dono = _dono_autenticado(request)
+    dono = dono_autenticado_from_request(request)
     if not dono:
         empresa = getattr(request, "empresa", None)
         if empresa:

@@ -14,7 +14,7 @@ Page:     GET /governanca/
 from datetime import date, timedelta
 from django.http import JsonResponse
 from django.db.models import Count, Avg, Sum, Q
-from .views_dashboard import _empresa_autenticada
+from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
 from .views_financeiro import _arr_atual, _churn_ultimos_90, _nrr_estimado
 
 
@@ -225,8 +225,7 @@ def _causal_impact(empresa):
 
 
 def api_governanca_semanal(request):
-    from .views_dashboard import _dono_autenticado
-    if not _dono_autenticado(request):
+    if not dono_autenticado_from_request(request):
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     arr_anual, mrr, clientes = _arr_atual()
@@ -281,8 +280,7 @@ def api_governanca_semanal(request):
 
 
 def api_governanca_burn_multiple(request):
-    from .views_dashboard import _dono_autenticado
-    if not _dono_autenticado(request):
+    if not dono_autenticado_from_request(request):
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     arr_anual, mrr, clientes = _arr_atual()
@@ -309,8 +307,7 @@ def api_governanca_burn_multiple(request):
 
 
 def api_governanca_pricing_valor(request):
-    from .views_dashboard import _dono_autenticado
-    if not _dono_autenticado(request):
+    if not dono_autenticado_from_request(request):
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
     return JsonResponse({
         "empresa": empresa.nome,
@@ -320,8 +317,7 @@ def api_governanca_pricing_valor(request):
 
 
 def api_governanca_ml_fairness(request):
-    from .views_dashboard import _dono_autenticado
-    if not _dono_autenticado(request):
+    if not dono_autenticado_from_request(request):
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
     return JsonResponse({
         "empresa": empresa.nome,
@@ -335,8 +331,7 @@ def api_governanca_ml_fairness(request):
 
 
 def api_governanca_causal_impact(request):
-    from .views_dashboard import _dono_autenticado
-    if not _dono_autenticado(request):
+    if not dono_autenticado_from_request(request):
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
     return JsonResponse({
         "empresa": empresa.nome,
@@ -346,8 +341,7 @@ def api_governanca_causal_impact(request):
 
 def governanca_page(request):
     from django.shortcuts import render, redirect
-    from .views_dashboard import _dono_autenticado
-    dono = _dono_autenticado(request)
+    dono = dono_autenticado_from_request(request)
     if not dono:
         empresa = getattr(request, "empresa", None)
         if empresa:

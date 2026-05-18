@@ -21,6 +21,7 @@ from .planos import (
     pacotes_por_setor,
     preco_pacote,
 )
+from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
 
 STATUS_APROVADOS_ASAAS = {
     "RECEIVED",
@@ -495,9 +496,7 @@ def status_pagamento(request):
 
 
 def api_billing_status(request):
-    from .views_dashboard import _empresa_autenticada
-
-    empresa = _empresa_autenticada(request)
+    empresa = empresa_autenticada_from_request(request)
     if not empresa:
         return JsonResponse({"erro": "nao autenticado"}, status=401)
 
@@ -541,9 +540,7 @@ def _readiness_item(codigo, ok, titulo, detalhe, severidade="alta"):
 
 
 def api_enterprise_readiness(request):
-    from .views_dashboard import _dono_autenticado
-
-    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    dono = getattr(request, "dono_saas", None) or dono_autenticado_from_request(request)
     if not dono:
         return JsonResponse({"erro": "nao autenticado"}, status=401)
 

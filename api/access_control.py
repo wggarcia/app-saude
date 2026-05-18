@@ -2,6 +2,7 @@ from functools import wraps
 from django.shortcuts import redirect
 from django.http import JsonResponse
 from .planos import detalhes_pacote
+from .services.auth_session import dono_autenticado_from_request
 
 TODOS_SETORES = ("empresa", "farmacia", "hospital", "governo", "rede", "plano_saude")
 
@@ -65,8 +66,7 @@ def requer_dono(view_func):
     """Decorator for operator-only page views. Requires DonoSaaS auth (owner_token cookie)."""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        from .views_dashboard import _dono_autenticado
-        dono = _dono_autenticado(request)
+        dono = dono_autenticado_from_request(request)
         if not dono:
             empresa = getattr(request, "empresa", None)
             if empresa:
@@ -80,8 +80,7 @@ def api_requer_dono(view_func):
     """Decorator for operator-only API views. Returns 403 for tenant requests."""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        from .views_dashboard import _dono_autenticado
-        dono = _dono_autenticado(request)
+        dono = dono_autenticado_from_request(request)
         if not dono:
             return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
         return view_func(request, *args, **kwargs)
