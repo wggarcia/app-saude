@@ -10,7 +10,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
 /* Sidebar */
-.sidebar{width:240px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0}
+.sidebar{width:220px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
 .logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
 .nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
 .nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
@@ -33,13 +33,11 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .kpi.ok .kpi-val{color:var(--ok)}
 .kpi.info .kpi-val{color:#a78bfa}
 .kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
-/* Tab layout — inner sidebar */
-.tabs-layout{display:flex;align-items:flex-start;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-.tabs{display:flex;flex-direction:column;width:196px;flex-shrink:0;border-right:1px solid var(--border);padding:8px 0;align-self:stretch;background:rgba(255,255,255,.02)}
-.tab-btn{display:flex;align-items:center;gap:9px;padding:10px 16px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-right:3px solid transparent;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif;text-align:left;width:100%;white-space:nowrap}
-.tab-btn:hover{background:rgba(0,194,255,.06);color:var(--text)}
-.tab-btn.active{color:var(--accent);border-right-color:var(--accent);background:rgba(0,194,255,.1)}
-.tab-content{flex:1;min-width:0;padding:20px}
+/* Tab buttons inside sidebar */
+.tab-btn{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-radius:8px;margin:2px 8px;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif;text-align:left;width:calc(100% - 16px);white-space:nowrap}
+.tab-btn:hover{background:rgba(0,194,255,.1);color:var(--accent)}
+.tab-btn.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.tab-btn span{font-size:16px}
 .tab-panel{display:none}.tab-panel.active{display:block}
 /* Table */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
@@ -92,10 +90,26 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="logo">💊 Farmácia</div>
   <div class="nav-section">Navegação</div>
   <a class="nav-link" href="/farmacia/"><span>📊</span> Inteligência</a>
-  <a class="nav-link active" href="/farmacia/gestao/"><span>🏪</span> Gestão Operacional</a>
+  <a class="nav-link" href="/farmacia/gestao/"><span>🏪</span> Gestão Operacional</a>
   <div class="nav-section">Rede de Farmácias</div>
   <a class="nav-link" href="/rede/gestao/"><span>🌐</span> Rede &amp; Comunicação</a>
   <a class="nav-link" href="/logout/"><span>🚪</span> Sair</a>
+  <div class="nav-section" style="margin-top:8px">Módulos</div>
+  <button class="tab-btn active" onclick="setTab('estoque')"><span>📦</span> Estoque</button>
+  <button class="tab-btn" onclick="setTab('dispensacoes')"><span>💊</span> Dispensações</button>
+  <button class="tab-btn" onclick="setTab('movimentos')"><span>↕️</span> Movimentos</button>
+  <button class="tab-btn" onclick="setTab('fornecedores')"><span>🏭</span> Fornecedores</button>
+  <button class="tab-btn" onclick="setTab('pedidos')"><span>🛒</span> Pedidos de Compra</button>
+  <button class="tab-btn" onclick="setTab('lotes')"><span>🏷️</span> Lotes / Validade</button>
+  <button class="tab-btn" onclick="setTab('pacientes')"><span>👥</span> Pacientes</button>
+  <button class="tab-btn" onclick="setTab('receitas')"><span>📋</span> Receitas</button>
+  <button class="tab-btn" onclick="setTab('inventario')"><span>🔍</span> Inventário</button>
+  <button class="tab-btn" onclick="setTab('descarte')"><span>🗑️</span> Descarte</button>
+  <button class="tab-btn" onclick="setTab('relatorios')"><span>📊</span> Relatórios</button>
+  <button class="tab-btn" onclick="setTab('conformidade')"><span>🛡️</span> Conformidade</button>
+  <button class="tab-btn" onclick="setTab('auditoria')"><span>📝</span> Auditoria</button>
+  <button class="tab-btn" onclick="setTab('rede')"><span>🌐</span> Rede</button>
+  <button class="tab-btn" onclick="setTab('ia')"><span>🤖</span> IA & Analytics</button>
 </aside>
 
 <main class="main">
@@ -124,27 +138,6 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="kpi"><div class="kpi-val" id="kavRuptura" style="color:var(--danger)">—</div><div class="kpi-lbl">Ruptura de Estoque</div></div>
     <div class="kpi"><div class="kpi-val" id="kavVencendo7" style="color:var(--warn)">—</div><div class="kpi-lbl">Vencendo em 7 Dias</div></div>
   </div>
-
-  <!-- Tabs -->
-  <div class="tabs-layout">
-    <nav class="tabs">
-      <button class="tab-btn active" onclick="setTab('estoque')"><span>📦</span> Estoque</button>
-      <button class="tab-btn" onclick="setTab('dispensacoes')"><span>💊</span> Dispensações</button>
-      <button class="tab-btn" onclick="setTab('movimentos')"><span>↕️</span> Movimentos</button>
-      <button class="tab-btn" onclick="setTab('fornecedores')"><span>🏭</span> Fornecedores</button>
-      <button class="tab-btn" onclick="setTab('pedidos')"><span>🛒</span> Pedidos de Compra</button>
-      <button class="tab-btn" onclick="setTab('lotes')"><span>🏷️</span> Lotes / Validade</button>
-      <button class="tab-btn" onclick="setTab('pacientes')"><span>👥</span> Pacientes</button>
-      <button class="tab-btn" onclick="setTab('receitas')"><span>📋</span> Receitas</button>
-      <button class="tab-btn" onclick="setTab('inventario')"><span>🔍</span> Inventário</button>
-      <button class="tab-btn" onclick="setTab('descarte')"><span>🗑️</span> Descarte</button>
-      <button class="tab-btn" onclick="setTab('relatorios')"><span>📊</span> Relatórios</button>
-      <button class="tab-btn" onclick="setTab('conformidade')"><span>🛡️</span> Conformidade</button>
-      <button class="tab-btn" onclick="setTab('auditoria')"><span>📝</span> Auditoria</button>
-      <button class="tab-btn" onclick="setTab('rede')"><span>🌐</span> Rede</button>
-      <button class="tab-btn" onclick="setTab('ia')"><span>🤖</span> IA & Analytics</button>
-    </nav>
-    <div class="tab-content">
 
     <!-- Estoque -->
     <div class="tab-panel active" id="tab-estoque">
@@ -647,8 +640,6 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
     </div>
 
-    </div><!-- end .tab-content -->
-  </div><!-- end .tabs-layout -->
 </main>
 
 <!-- Modal: Novo Item -->
