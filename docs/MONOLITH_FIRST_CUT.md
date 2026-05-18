@@ -12,6 +12,7 @@ Primeiro objetivo: transformar o monolito atual em um monolito modular com front
 
 - `Corte 1` iniciado e ja aplicado com extracao de auth/sessao para `api/services/auth_session.py`
 - `Corte 2` iniciado com extracao de funcoes de setor, onboarding e resumo operacional para `api/services/dashboard_core.py`
+- `Corte 2` avancou com command center e premium suite movidos de `api/views_enterprise.py` para `api/services/enterprise_dashboard.py`
 - proximo alvo dentro de dashboard: separar agregadores por setor sem mudar rotas publicas
 
 ## 2. Ordem recomendada
