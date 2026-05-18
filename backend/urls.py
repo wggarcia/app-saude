@@ -274,6 +274,14 @@ from api.views_comunicacao import (
     api_colab_mensagens, api_colab_enviar, api_colab_video_ativa,
     painel_grupos, api_criar_grupo, api_listar_salas_por_tipo, api_membros_grupo,
 )
+from api.views_saude_ocupacional import (
+    sst_saude_comunicacao_page,
+    api_wellness_resumo, api_wellness_por_setor, api_wellness_alertas,
+    api_conteudos_listar, api_conteudos_criar, api_conteudos_remover,
+    api_conflitos_listar, api_conflito_atualizar,
+    api_colab_conteudos, api_colab_conflito_registrar,
+    api_colab_checkin_diario, api_colab_checkin_semanal,
+)
 from api.views_farmacia import api_farmacia_painel
 from api.views_farmacia_gestao import (
     api_farmacia_dashboard,
@@ -476,6 +484,19 @@ urlpatterns = [
     path('console-operacional/', console_operacional),
 
     # 💬 COMUNICAÇÃO — Teams-like
+    path('sst/saude-comunicacao/', sst_saude_comunicacao_page),
+    path('api/sst/wellness/resumo/', api_wellness_resumo),
+    path('api/sst/wellness/setores/', api_wellness_por_setor),
+    path('api/sst/wellness/alertas/', api_wellness_alertas),
+    path('api/sst/conteudos/', api_conteudos_listar),
+    path('api/sst/conteudos/criar/', api_conteudos_criar),
+    path('api/sst/conteudos/<int:conteudo_id>/remover/', api_conteudos_remover),
+    path('api/sst/conflitos/', api_conflitos_listar),
+    path('api/sst/conflitos/<int:conflito_id>/atualizar/', api_conflito_atualizar),
+    path('api/colab/<str:codigo>/conteudos/', api_colab_conteudos),
+    path('api/colab/<str:codigo>/conflito/', api_colab_conflito_registrar),
+    path('api/colab/<str:codigo>/checkin-diario/', api_colab_checkin_diario),
+    path('api/colab/<str:codigo>/checkin-semanal/', api_colab_checkin_semanal),
     path('sst/comunicacao/', painel_comunicacao),
     path('sst/video/<int:sessao_id>/', sala_video_empresa),
     path('api/comunicacao/salas/', api_listar_salas_por_tipo),

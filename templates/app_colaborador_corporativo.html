@@ -1,777 +1,732 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>SolusCRT Colaborador | {{ empresa_nome }}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#08131d">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --bg:#07111a;
-      --bg-2:#0c1824;
-      --panel:rgba(12,23,34,.86);
-      --panel-2:rgba(255,255,255,.06);
-      --line:rgba(170,212,235,.14);
-      --text:#ecf6ff;
-      --muted:#9cb8ca;
-      --accent:#7fe0c3;
-      --accent-2:#7baeff;
-      --gold:#f0c06e;
-      --danger:#ff8298;
-      --shadow:0 26px 80px rgba(0,0,0,.34);
-    }
+<meta charset="UTF-8">
+<title>SolusCRT | {{ empresa_nome }}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#07111a">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07111a;--panel:rgba(12,23,34,.9);--line:rgba(170,212,235,.14);--soft:rgba(255,255,255,.07);
+  --text:#ecf6ff;--muted:#9cb8ca;--teal:#00c9a7;--accent:#7baeff;--gold:#f0c06e;
+  --red:#ff8298;--amber:#f59e0b;--shadow:0 20px 60px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:"Manrope","Segoe UI",sans-serif;color:var(--text);background:radial-gradient(circle at top,rgba(0,201,167,.12),transparent 20rem),linear-gradient(180deg,#07111a,#06101a)}
 
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      min-height:100vh;
-      font-family:"Manrope","Segoe UI",sans-serif;
-      color:var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(127,224,195,.12), transparent 18rem),
-        radial-gradient(circle at top right, rgba(123,174,255,.12), transparent 22rem),
-        linear-gradient(180deg,#07111a 0%,#08131d 50%,#050d14 100%);
-    }
+/* SHELL */
+.app{max-width:430px;margin:0 auto;height:100vh;display:flex;flex-direction:column;position:relative}
 
-    .shell{
-      width:min(1280px,calc(100% - 24px));
-      margin:0 auto;
-      padding:18px 0 36px;
-      display:grid;
-      grid-template-columns:minmax(320px,1fr) minmax(360px,430px);
-      gap:18px;
-      align-items:start;
-    }
+/* TOP BAR */
+.topbar{padding:env(safe-area-inset-top,12px) 16px 12px;background:rgba(7,17,26,.95);border-bottom:1px solid var(--line);flex-shrink:0;backdrop-filter:blur(18px)}
+.topbar-row{display:flex;align-items:center;justify-content:space-between}
+.topbar-brand{font-size:.72rem;font-weight:900;color:var(--teal);letter-spacing:.08em;text-transform:uppercase}
+.topbar-co{font-size:.72rem;font-weight:700;color:var(--muted)}
+.topbar-name{font-size:1rem;font-weight:800;margin-top:4px}
+.topbar-meta{font-size:.72rem;color:var(--muted);margin-top:2px}
 
-    .glass{
-      background:var(--panel);
-      border:1px solid var(--line);
-      box-shadow:var(--shadow);
-      backdrop-filter:blur(18px);
-    }
+/* SCROLL AREA */
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:80px}
+.scroll::-webkit-scrollbar{display:none}
 
-    .overview{
-      border-radius:34px;
-      padding:24px;
-      display:grid;
-      gap:18px;
-      background:
-        radial-gradient(circle at top right, rgba(127,224,195,.15), transparent 18rem),
-        linear-gradient(180deg, rgba(12,24,36,.94), rgba(8,17,26,.92));
-    }
+/* PANELS */
+.panel{display:none;flex-direction:column;gap:14px;padding:16px}
+.panel.active{display:flex}
 
-    .eyebrow{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 12px;
-      border-radius:999px;
-      background:rgba(127,224,195,.12);
-      border:1px solid rgba(127,224,195,.24);
-      color:#ddfff4;
-      font-size:.72rem;
-      font-weight:900;
-      letter-spacing:.12em;
-      text-transform:uppercase;
-    }
+/* CARDS */
+.card{border-radius:18px;padding:16px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow)}
+.card-title{font-size:.88rem;font-weight:800;margin-bottom:4px}
+.card-sub{color:var(--muted);font-size:.76rem;margin-bottom:14px;line-height:1.5}
+.card-icon{font-size:1.4rem;margin-bottom:8px}
 
-    h1{
-      margin:0;
-      font-family:"Fraunces",serif;
-      font-size:clamp(2.4rem,4vw,4.6rem);
-      line-height:.96;
-      letter-spacing:-.03em;
-      text-wrap:balance;
-    }
+/* BOTTOM NAV */
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:64px;padding:0 4px env(safe-area-inset-bottom,0);background:rgba(7,17,26,.97);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;backdrop-filter:blur(20px);z-index:100}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:6px 8px;border-radius:12px;transition:all .15s;flex:1;min-width:0}
+.nav-item.active{background:rgba(0,201,167,.1)}
+.nav-icon{font-size:1.25rem;line-height:1}
+.nav-label{font-size:.58rem;font-weight:700;color:var(--muted);transition:color .15s;white-space:nowrap}
+.nav-item.active .nav-label{color:var(--teal)}
 
-    .lead{
-      margin:0;
-      color:var(--muted);
-      line-height:1.72;
-      font-size:1rem;
-    }
+/* SLIDERS */
+.slider-group{display:flex;flex-direction:column;gap:12px}
+.slider-row{display:flex;flex-direction:column;gap:6px}
+.slider-head{display:flex;justify-content:space-between;align-items:center}
+.slider-label{font-size:.76rem;font-weight:700;color:var(--muted)}
+.slider-val{font-size:.8rem;font-weight:800;color:var(--teal)}
+input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:999px;background:rgba(255,255,255,.1);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px rgba(0,201,167,.4);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--teal);border:none;cursor:pointer}
 
-    .pill-row,
-    .chip-row{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-    }
+/* EMOJI SCALE */
+.emoji-scale{display:flex;justify-content:space-between;gap:4px}
+.emoji-btn{flex:1;padding:10px 4px;border-radius:12px;border:2px solid var(--soft);background:rgba(255,255,255,.04);cursor:pointer;text-align:center;font-size:1.4rem;transition:all .18s}
+.emoji-btn.active{border-color:var(--teal);background:rgba(0,201,167,.12)}
 
-    .pill,
-    .chip{
-      display:inline-flex;
-      align-items:center;
-      min-height:30px;
-      padding:0 10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.08);
-      color:#d8e9f5;
-      font-size:.75rem;
-      font-weight:800;
-    }
+/* TOGGLE */
+.toggle-row{display:flex;gap:8px}
+.toggle-btn{flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--soft);background:rgba(255,255,255,.04);color:var(--muted);font:inherit;font-size:.78rem;font-weight:700;cursor:pointer;text-align:center;transition:all .18s}
+.toggle-btn.active{border-color:var(--teal);background:rgba(0,201,167,.12);color:var(--teal)}
 
-    .stats{
-      display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:12px;
-    }
+/* CHECKBOXES */
+.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.check-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--soft);background:rgba(255,255,255,.03);cursor:pointer;transition:all .15s;font-size:.8rem;font-weight:600;color:var(--muted)}
+.check-item.active{border-color:var(--teal);background:rgba(0,201,167,.1);color:var(--teal)}
+.check-item .ci-icon{font-size:1rem}
 
-    .stat{
-      border-radius:22px;
-      padding:16px;
-      background:rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.08);
-    }
+/* FORMS */
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:.68rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.09em}
+textarea,input[type=text],input[type=url],select{width:100%;padding:10px 12px;border-radius:12px;border:1.5px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);font:inherit;font-size:.84rem;outline:none;transition:border .15s}
+textarea:focus,input[type=text]:focus,select:focus{border-color:rgba(0,201,167,.5)}
+textarea{resize:vertical;min-height:80px}
+select option{background:#0b1822}
+.char-count{font-size:.68rem;color:var(--muted);text-align:right;margin-top:2px}
 
-    .stat span{
-      display:block;
-      color:var(--muted);
-      font-size:.74rem;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
+/* BTNS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border-radius:999px;border:1.5px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);font:inherit;font-size:.84rem;font-weight:800;cursor:pointer;transition:all .18s;text-decoration:none;width:100%}
+.btn.primary{border:none;background:linear-gradient(135deg,#0db794,#1f6ff2);color:#fff;box-shadow:0 4px 20px rgba(0,201,167,.25)}
+.btn.danger{background:rgba(255,130,152,.12);border-color:rgba(255,130,152,.3);color:var(--red)}
+.btn.sm{padding:8px 16px;font-size:.78rem;width:auto}
+.btn:disabled{opacity:.4;cursor:not-allowed}
 
-    .stat strong{
-      display:block;
-      margin-top:8px;
-      font-size:1.06rem;
-      line-height:1.38;
-    }
+/* BADGE */
+.badge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:.67rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
+.badge-teal{background:rgba(0,201,167,.14);color:#b0ffe6}
+.badge-blue{background:rgba(123,174,255,.14);color:#c3deff}
+.badge-amber{background:rgba(240,192,110,.14);color:#fde68a}
+.badge-red{background:rgba(255,130,152,.14);color:#ffbfcb}
+.badge-muted{background:rgba(255,255,255,.08);color:var(--muted)}
 
-    .grid{
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:14px;
-    }
+/* CONTENT CARDS */
+.content-card{border-radius:16px;padding:14px;background:rgba(255,255,255,.04);border:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.cc-title{font-size:.86rem;font-weight:700}
+.cc-desc{font-size:.76rem;color:var(--muted);line-height:1.5}
+.cc-foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
 
-    .card{
-      border-radius:26px;
-      padding:18px;
-      background:rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.08);
-    }
+/* FILTER CHIPS */
+.chips{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;padding:6px 13px;border-radius:999px;border:1.5px solid var(--soft);background:rgba(255,255,255,.04);color:var(--muted);font:inherit;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s}
+.chip.active{background:rgba(0,201,167,.13);border-color:rgba(0,201,167,.35);color:var(--teal)}
 
-    .card h2{
-      margin:0 0 8px;
-      font-size:1rem;
-    }
+/* HOME WIDGETS */
+.status-card{border-radius:18px;padding:18px;background:linear-gradient(135deg,rgba(0,201,167,.12),rgba(123,174,255,.08));border:1px solid rgba(0,201,167,.2);display:flex;align-items:center;gap:14px}
+.sc-icon{font-size:2rem;flex-shrink:0}
+.sc-title{font-size:.9rem;font-weight:800;margin-bottom:2px}
+.sc-desc{font-size:.76rem;color:var(--muted)}
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quick-btn{border-radius:14px;padding:14px 12px;background:rgba(255,255,255,.04);border:1px solid var(--line);cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .18s;text-decoration:none}
+.quick-btn:hover{background:rgba(255,255,255,.07)}
+.quick-btn .qi{font-size:1.6rem}
+.quick-btn .ql{font-size:.74rem;font-weight:700;color:var(--muted)}
 
-    .card p{
-      margin:0;
-      color:var(--muted);
-      line-height:1.62;
-      font-size:.92rem;
-    }
+/* INFO BOX */
+.info-box{border-radius:14px;padding:14px 16px;background:rgba(123,174,255,.07);border:1px solid rgba(123,174,255,.2);font-size:.78rem;color:var(--muted);line-height:1.6}
 
-    .mini-list{
-      margin:12px 0 0;
-      padding-left:18px;
-      color:#d6e7f4;
-      line-height:1.65;
-      font-size:.88rem;
-    }
+/* SUCCESS STATE */
+.success-state{text-align:center;padding:28px 16px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.success-icon{font-size:3rem}
+.success-title{font-size:1rem;font-weight:800}
+.success-sub{color:var(--muted);font-size:.82rem}
 
-    .phone-shell{
-      position:sticky;
-      top:18px;
-      border-radius:42px;
-      padding:16px;
-      background:linear-gradient(180deg,#101922 0%,#070f16 100%);
-      border:1px solid rgba(255,255,255,.08);
-      box-shadow:0 30px 80px rgba(0,0,0,.48);
-    }
-
-    .notch{
-      width:44%;
-      height:24px;
-      margin:0 auto 12px;
-      border-radius:999px;
-      background:#02060a;
-      border:1px solid rgba(255,255,255,.06);
-    }
-
-    .phone{
-      border-radius:30px;
-      padding:16px;
-      background:
-        radial-gradient(circle at top right, rgba(127,224,195,.12), transparent 16rem),
-        linear-gradient(180deg,#0a1520 0%,#0f1b27 100%);
-      min-height:calc(100vh - 88px);
-      display:grid;
-      gap:14px;
-      align-content:start;
-    }
-
-    .phone-top{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      align-items:flex-start;
-    }
-
-    .phone-title{
-      font-size:1rem;
-      font-weight:800;
-    }
-
-    .phone-subtitle{
-      color:var(--muted);
-      font-size:.82rem;
-      line-height:1.45;
-    }
-
-    .tab-row{
-      display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:8px;
-    }
-
-    .tab{
-      min-height:40px;
-      border-radius:16px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:.76rem;
-      font-weight:800;
-      color:#d7e7f4;
-      background:rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.08);
-    }
-
-    .tab.active{
-      background:linear-gradient(135deg,rgba(127,224,195,.22),rgba(123,174,255,.18));
-      color:#eff8ff;
-    }
-
-    .panel{
-      border-radius:24px;
-      padding:16px;
-      background:rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.08);
-    }
-
-    .panel h3{
-      margin:0 0 8px;
-      font-size:.96rem;
-    }
-
-    .panel p{
-      margin:0;
-      color:var(--muted);
-      line-height:1.55;
-      font-size:.84rem;
-    }
-
-    .field-grid{
-      display:grid;
-      gap:10px;
-      margin-top:12px;
-    }
-
-    .field-row{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-    }
-
-    label{
-      display:block;
-      margin-bottom:6px;
-      color:#bfd3e2;
-      font-size:.7rem;
-      font-weight:900;
-      text-transform:uppercase;
-      letter-spacing:.1em;
-    }
-
-    input,textarea{
-      width:100%;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.06);
-      color:var(--text);
-      padding:12px;
-      font:inherit;
-      outline:none;
-    }
-
-    input:focus,textarea:focus{
-      border-color:rgba(123,174,255,.48);
-      box-shadow:0 0 0 3px rgba(123,174,255,.12);
-    }
-
-    textarea{
-      min-height:88px;
-      resize:vertical;
-    }
-
-    .score-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-    }
-
-    .check-grid{
-      display:grid;
-      gap:8px;
-    }
-
-    .check{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      padding:11px 12px;
-      border-radius:16px;
-      background:rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.06);
-      color:#dceaf5;
-      font-size:.82rem;
-      line-height:1.45;
-    }
-
-    .check input{
-      width:auto;
-      margin-top:2px;
-      padding:0;
-    }
-
-    .btn-row{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top:12px;
-    }
-
-    .btn{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-height:46px;
-      padding:0 14px;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.06);
-      color:var(--text);
-      font-weight:800;
-      cursor:pointer;
-      text-decoration:none;
-      font:inherit;
-    }
-
-    .btn.primary{
-      border:0;
-      background:linear-gradient(135deg,#0fb28e,#1b6af0);
-    }
-
-    .btn.ghost{
-      background:rgba(255,255,255,.04);
-    }
-
-    .toast{
-      margin-top:10px;
-      padding:12px;
-      border-radius:14px;
-      display:none;
-      font-size:.84rem;
-      line-height:1.45;
-    }
-
-    .toast.ok{display:block;background:rgba(15,178,142,.12);color:#aef0db}
-    .toast.err{display:block;background:rgba(255,130,152,.12);color:#ffc6d2}
-
-    .help-grid{
-      display:grid;
-      gap:10px;
-      margin-top:12px;
-    }
-
-    .help{
-      border-radius:18px;
-      padding:14px;
-      background:rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.06);
-    }
-
-    .help span{
-      display:inline-flex;
-      padding:6px 10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.06);
-      font-size:.72rem;
-      font-weight:800;
-      color:#d9e9f5;
-    }
-
-    .help strong{
-      display:block;
-      margin-top:10px;
-      font-size:.92rem;
-    }
-
-    .help p{
-      margin:8px 0 0;
-      color:var(--muted);
-      line-height:1.55;
-      font-size:.83rem;
-    }
-
-    @media(max-width:1120px){
-      .shell{grid-template-columns:1fr}
-      .phone-shell{position:relative;top:auto}
-      .phone{min-height:auto}
-    }
-
-    @media(max-width:760px){
-      .grid,.stats,.field-row,.score-grid,.tab-row{grid-template-columns:1fr}
-      .shell{width:min(100%,calc(100% - 12px));padding:10px 0 22px}
-      .overview{padding:18px}
-      .phone-shell{padding:10px;border-radius:28px}
-      .phone{padding:14px;border-radius:22px}
-    }
-  </style>
+/* TOAST */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:200;padding:11px 20px;border-radius:999px;font-size:.82rem;font-weight:700;display:none;white-space:nowrap;max-width:90vw}
+#toast.ok{display:block;background:rgba(0,201,167,.2);border:1px solid rgba(0,201,167,.4);color:#b0ffe6}
+#toast.err{display:block;background:rgba(255,130,152,.2);border:1px solid rgba(255,130,152,.4);color:var(--red)}
+</style>
 </head>
 <body>
-  <main class="shell">
-    <section class="overview glass">
-      <div>
-        <span class="eyebrow">Produto mobile do colaborador</span>
-        <h1>Check-ins seguros, apoio humano e desenvolvimento em um app proprio para celular.</h1>
+
+<div class="app">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-row">
+      <span class="topbar-brand">SolusCRT · SST</span>
+      <span class="topbar-co">{{ empresa_nome }}</span>
+    </div>
+    <div class="topbar-name">{{ alias_nome|default:"Colaborador" }}</div>
+    <div class="topbar-meta">{{ cargo|default:"" }}{% if setor %} · {{ setor }}{% endif %}</div>
+  </div>
+
+  <!-- SCROLL AREA -->
+  <div class="scroll">
+
+    <!-- ══════════════════════════════════════════ PANEL: INÍCIO -->
+    <div class="panel active" id="p-inicio">
+      <div class="status-card" id="homeStatusCard">
+        <div class="sc-icon">🌅</div>
+        <div>
+          <div class="sc-title" id="homeStatusTitle">Bom dia!</div>
+          <div class="sc-desc" id="homeStatusDesc">Faça seu check-in de hoje para monitorar sua saúde ocupacional.</div>
+        </div>
       </div>
 
-      <p class="lead">Este produto nao e a SaaS institucional da empresa. Ele foi desenhado para uso cotidiano do colaborador em contexto real de operacao, com check-ins rapidos, apoio opcional, trilhas curtas, mentoria e jornadas on/off para escalas como 14x14 e 28x28.</p>
+      <div class="card">
+        <div class="card-icon">💚</div>
+        <div class="card-title">Check-in de hoje</div>
+        <div class="card-sub">Como você está? Leva menos de 1 minuto.</div>
 
-      <div class="pill-row">
-        <span class="pill">{{ empresa_nome }}</span>
-        <span class="pill">grupo minimo {{ min_group_size }}</span>
-        <span class="pill">acesso por codigo corporativo</span>
-        <span class="pill">experiencia mobile dedicada</span>
-      </div>
-
-      <div class="stats">
-        <article class="stat">
-          <span>Privacidade</span>
-          <strong>A empresa ve apenas leituras agregadas.</strong>
-        </article>
-        <article class="stat">
-          <span>Uso diario</span>
-          <strong>Check-in em menos de um minuto, sem expor identidade no painel.</strong>
-        </article>
-        <article class="stat">
-          <span>Suporte</span>
-          <strong>Pedido de apoio so sai do anonimato com consentimento.</strong>
-        </article>
-      </div>
-
-      <div class="grid">
-        <article class="card">
-          <h2>O que este app faz</h2>
-          <p>O colaborador usa o mobile para registrar energia, estresse, sono, fadiga, sinais fisicos, carga emocional, necessidade de apoio e progresso de competencia por funcao. A empresa coordena os programas pelo ambiente institucional, mas o uso diario acontece aqui.</p>
-          <ul class="mini-list">
-            <li>check-in diario e semanal</li>
-            <li>pedido opcional de apoio</li>
-            <li>trilhas de competencia por funcao e equipamento</li>
-            <li>microlearning de bem-estar, idioma e cultura</li>
-            <li>mentoria, comunidade e handoff educativo</li>
-          </ul>
-        </article>
-
-        <article class="card">
-          <h2>Como a empresa deve usar</h2>
-          <p>Observar tendencia por grupo minimo, nunca individuo. O objetivo e ajustar escala, acolhimento, ergonomia, cultura, desenvolvimento e continuidade operacional sem transformar o app em vigilancia.</p>
-          <ul class="mini-list">
-            <li>sem leitura individual no painel</li>
-            <li>sem uso disciplinar do check-in</li>
-            <li>apoio nominal apenas com consentimento</li>
-            <li>trilha de auditoria no lado institucional</li>
-          </ul>
-        </article>
-      </div>
-    </section>
-
-    <section class="phone-shell">
-      <div class="notch"></div>
-      <div class="phone">
-        <div class="phone-top">
+        <div style="display:flex;flex-direction:column;gap:14px" id="quickCheckinForm">
           <div>
-            <div class="phone-title">SolusCRT Colaborador</div>
-            <div class="phone-subtitle">Saude ocupacional, apoio e desenvolvimento para {{ empresa_nome }}</div>
+            <div style="font-size:.76rem;font-weight:700;color:var(--muted);margin-bottom:8px">Como você está agora?</div>
+            <div class="emoji-scale" id="humorScale">
+              <div class="emoji-btn" data-val="1" onclick="selectEmoji('humor',1,this)" title="Muito mal">😔</div>
+              <div class="emoji-btn" data-val="2" onclick="selectEmoji('humor',2,this)" title="Mal">😟</div>
+              <div class="emoji-btn" data-val="3" onclick="selectEmoji('humor',3,this)" title="Ok">😐</div>
+              <div class="emoji-btn" data-val="4" onclick="selectEmoji('humor',4,this)" title="Bem">🙂</div>
+              <div class="emoji-btn" data-val="5" onclick="selectEmoji('humor',5,this)" title="Ótimo">😁</div>
+            </div>
           </div>
-          <span class="chip">alias anonimo</span>
-        </div>
-
-        <div class="tab-row">
-          <div class="tab active" onclick="mudarTab(0,this)">Hoje</div>
-          <div class="tab" onclick="mudarTab(1,this)">Semana</div>
-          <div class="tab" onclick="mudarTab(2,this)">Apoio</div>
-          <div class="tab" onclick="mudarTab(3,this)">Trilhas</div>
-          <div class="tab" onclick="window.location.href='/colaborador/c/{{ codigo_acesso|escapejs }}/chat/'">💬 Chat</div>
-        </div>
-
-        <article class="panel" data-tab="0">
-          <h3>Check-ins seguros</h3>
-          <p>O uso e pensado para celular. O colaborador entra no app, registra como esta hoje e ajuda a empresa a agir cedo, sem expor sua identidade no painel institucional.</p>
-        </article>
-
-        <article class="panel" data-tab="0">
-          <h3>Check-in diario</h3>
-          <form id="dailyForm" class="field-grid">
-            <div class="field-row">
-              <div>
-                <label>Unidade</label>
-                <input name="unit_name" placeholder="Matriz, Base Norte, Operacao Offshore">
-              </div>
-              <div>
-                <label>Setor</label>
-                <input name="sector_name" placeholder="Operacao, RH, Atendimento">
-              </div>
+          <div class="slider-group">
+            <div class="slider-row">
+              <div class="slider-head"><span class="slider-label">⚡ Energia</span><span class="slider-val" id="sv-energia">3</span></div>
+              <input type="range" min="1" max="5" value="3" oninput="updateSlider('energia',this.value)">
             </div>
-
-            <div class="field-row">
-              <div>
-                <label>Turno</label>
-                <input name="shift_name" placeholder="Manha, Noite, 14x14">
-              </div>
-              <div>
-                <label>Alias anonimo</label>
-                <input name="alias_code" id="aliasCode" placeholder="gerado pelo app">
-              </div>
+            <div class="slider-row">
+              <div class="slider-head"><span class="slider-label">😤 Estresse</span><span class="slider-val" id="sv-estresse">3</span></div>
+              <input type="range" min="1" max="5" value="3" oninput="updateSlider('estresse',this.value)">
             </div>
-
-            <div class="score-grid">
-              <div><label>Humor (1-5)</label><input name="mood" type="number" min="1" max="5" value="3"></div>
-              <div><label>Energia (1-5)</label><input name="energy" type="number" min="1" max="5" value="3"></div>
-              <div><label>Estresse (1-5)</label><input name="stress" type="number" min="1" max="5" value="3"></div>
-              <div><label>Sono (1-5)</label><input name="sleep_quality" type="number" min="1" max="5" value="3"></div>
-              <div><label>Dor fisica (1-5)</label><input name="physical_pain" type="number" min="1" max="5" value="1"></div>
-              <div><label>Fadiga (1-5)</label><input name="fatigue" type="number" min="1" max="5" value="1"></div>
-              <div><label>Ansiedade (1-5)</label><input name="anxiety" type="number" min="1" max="5" value="1"></div>
-              <div><label>Irritabilidade (1-5)</label><input name="irritability" type="number" min="1" max="5" value="1"></div>
+            <div class="slider-row">
+              <div class="slider-head"><span class="slider-label">😴 Qualidade do sono</span><span class="slider-val" id="sv-sono">3</span></div>
+              <input type="range" min="1" max="5" value="3" oninput="updateSlider('sono',this.value)">
             </div>
-
-            <div class="check-grid">
-              <label class="check"><input name="respiratory_symptoms" type="checkbox"><span>Sinto sinais respiratorios hoje</span></label>
-              <label class="check"><input name="body_pain" type="checkbox"><span>Estou com dor corporal recorrente</span></label>
-              <label class="check"><input name="headache" type="checkbox"><span>Estou com dor de cabeca</span></label>
-              <label class="check"><input name="fever" type="checkbox"><span>Tive febre ou mal-estar forte</span></label>
-              <label class="check"><input name="request_support" type="checkbox"><span>Quero pedir apoio institucional</span></label>
-              <label class="check"><input name="allow_contact" type="checkbox"><span>Autorizo contato para acolhimento</span></label>
-            </div>
-
-            <div>
-              <label>Observacao opcional</label>
-              <textarea name="note" placeholder="Se quiser, descreva em poucas palavras o que mais impactou seu dia."></textarea>
-            </div>
-
-            <div>
-              <label>Canal preferido para apoio</label>
-              <input name="contact_channel" placeholder="RH, ambulatario, e-mail ou telefone">
-            </div>
-
-            <div class="btn-row">
-              <button type="submit" class="btn primary">Enviar check-in diario</button>
-            </div>
-            <div class="toast" id="dailyToast"></div>
-          </form>
-        </article>
-
-        <article class="panel" data-tab="1">
-          <h3>Check-in semanal</h3>
-          <form id="weeklyForm" class="field-grid">
-            <div class="score-grid">
-              <div><label>Carga emocional (1-5)</label><input name="emotional_load" type="number" min="1" max="5" value="3"></div>
-              <div><label>Seguranca psicologica (1-5)</label><input name="psychological_safety" type="number" min="1" max="5" value="3"></div>
-              <div><label>Apoio percebido (1-5)</label><input name="support_perception" type="number" min="1" max="5" value="3"></div>
-              <div><label>Pressao de trabalho (1-5)</label><input name="work_pressure" type="number" min="1" max="5" value="3"></div>
-              <div><label>Bem-estar geral (1-5)</label><input name="overall_wellbeing" type="number" min="1" max="5" value="3"></div>
-              <div><label>Risco de burnout (1-5)</label><input name="burnout_risk" type="number" min="1" max="5" value="1"></div>
-            </div>
-
-            <div>
-              <label>Resumo da semana</label>
-              <textarea name="note" placeholder="Como foi sua semana em termos de carga, descanso, foco e apoio?"></textarea>
-            </div>
-
-            <div class="btn-row">
-              <button type="submit" class="btn ghost">Enviar check-in semanal</button>
-            </div>
-            <div class="toast" id="weeklyToast"></div>
-          </form>
-        </article>
-
-        <article class="panel" data-tab="2">
-          <h3>Meu cuidado</h3>
-          <div class="help-grid">
-            <article class="help">
-              <span>Recuperacao</span>
-              <strong>Micro-pausa operacional</strong>
-              <p>Se o turno estiver pesado, pare por dois minutos, hidrate-se e reduza a acumulacao de fadiga antes do fim da janela.</p>
-            </article>
-            <article class="help">
-              <span>Sono</span>
-              <strong>Higiene de descanso</strong>
-              <p>Proteja um intervalo curto de desaceleracao apos o expediente, especialmente em ciclo embarcado ou retorno de turno longo.</p>
-            </article>
-            <article class="help">
-              <span>Cultura e idioma</span>
-              <strong>Microlearning tecnico</strong>
-              <p>Este produto vai evoluir para trilhas curtas de idioma tecnico, CQ e comunicacao segura em ambientes multiculturais.</p>
-            </article>
-            <article class="help">
-              <span>Competencia</span>
-              <strong>Progresso por funcao</strong>
-              <p>Este app tambem vai acompanhar evidencias praticas, validacoes e crescimento por cargo, setor e equipamento critico.</p>
-            </article>
           </div>
-        </article>
-
-        <article class="panel" data-tab="3" id="trilhasPanel" style="display:none">
-          <h3>Minhas trilhas</h3>
-          <p style="color:var(--muted);font-size:.85rem;margin-top:0">Acompanhe seu progresso por competencia, funcao e equipamento critico.</p>
-          <div id="trilhasLista" style="margin-top:12px"></div>
-          <div id="trilhasMsg" style="font-size:.82rem;margin-top:8px"></div>
-        </article>
+          <div class="field">
+            <label>Observação (opcional)</label>
+            <textarea id="quickObs" maxlength="280" placeholder="Algo que queira registrar..." oninput="countChars(this,'quickObsCount')"></textarea>
+            <div class="char-count"><span id="quickObsCount">0</span>/280</div>
+          </div>
+          <button class="btn primary" onclick="enviarCheckinRapido()">✓ Enviar check-in</button>
+        </div>
+        <div class="success-state" id="quickCheckinDone" style="display:none">
+          <div class="success-icon">✅</div>
+          <div class="success-title">Check-in registrado!</div>
+          <div class="success-sub">Obrigado por registrar seu bem-estar hoje.</div>
+        </div>
       </div>
-    </section>
-  </main>
-  <script>
-    const accessCode = "{{ codigo_acesso|escapejs }}";
-    const mobileApiBase = "{{ mobile_api_base|escapejs }}";
 
-    function ensureAlias() {
-      let alias = localStorage.getItem(`corporativo_alias_${accessCode}`);
-      if (!alias) {
-        alias = `anon-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
-        localStorage.setItem(`corporativo_alias_${accessCode}`, alias);
-      }
-      document.getElementById("aliasCode").value = alias;
-      return alias;
-    }
+      <div class="card-title" style="padding:0 2px">Acesso rápido</div>
+      <div class="quick-grid">
+        <a class="quick-btn" onclick="goTab('fisico')"><div class="qi">🫀</div><div class="ql">Saúde Física</div></a>
+        <a class="quick-btn" onclick="goTab('mental')"><div class="qi">🧠</div><div class="ql">Saúde Mental</div></a>
+        <a class="quick-btn" onclick="goTab('conflito')"><div class="qi">🤝</div><div class="ql">Conflito Cultural</div></a>
+        <a class="quick-btn" onclick="goTab('conteudo')"><div class="qi">📚</div><div class="ql">Conteúdo SST</div></a>
+      </div>
+    </div>
 
-    function formToPayload(form) {
-      const payload = {};
-      const data = new FormData(form);
-      data.forEach((value, key) => {
-        payload[key] = value;
-      });
-      form.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
-        payload[checkbox.name] = checkbox.checked;
-      });
-      payload.alias_code = ensureAlias();
-      return payload;
-    }
+    <!-- ══════════════════════════════════════════ PANEL: SAÚDE FÍSICA -->
+    <div class="panel" id="p-fisico">
+      <div class="card">
+        <div class="card-icon">🫀</div>
+        <div class="card-title">Saúde Física</div>
+        <div class="card-sub">Registre sintomas físicos do seu dia de trabalho. Seus dados são analisados pelo time de SST.</div>
 
-    function showToast(target, ok, message) {
-      target.className = `toast ${ok ? "ok" : "err"}`;
-      target.textContent = message;
-    }
-
-    ensureAlias();
-
-    document.getElementById("dailyForm").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const toast = document.getElementById("dailyToast");
-      const response = await fetch(`${mobileApiBase}/checkin-diario`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(formToPayload(event.currentTarget)),
-      });
-      const payload = await response.json();
-      showToast(toast, response.ok, response.ok ? "Check-in diario enviado com sucesso." : (payload.erro || "Nao foi possivel enviar o check-in diario."));
-    });
-
-    document.getElementById("weeklyForm").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const toast = document.getElementById("weeklyToast");
-      const payload = formToPayload(event.currentTarget);
-      ["unit_name", "sector_name", "shift_name", "allow_contact", "contact_channel"].forEach((key) => {
-        if (!(key in payload)) {
-          payload[key] = document.querySelector(`#dailyForm [name="${key}"]`)?.value || "";
-        }
-      });
-      const response = await fetch(`${mobileApiBase}/checkin-semanal`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(payload),
-      });
-      const result = await response.json();
-      showToast(toast, response.ok, response.ok ? "Check-in semanal enviado com sucesso." : (result.erro || "Nao foi possivel enviar o check-in semanal."));
-    });
-
-    let activeTab = 0;
-    function mudarTab(idx, el) {
-      activeTab = idx;
-      document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i === idx));
-      document.querySelectorAll('[data-tab]').forEach(p => {
-        p.style.display = (parseInt(p.dataset.tab) === idx) ? '' : 'none';
-      });
-      if (idx === 3) carregarTrilhas();
-    }
-    // Apply initial visibility
-    document.querySelectorAll('[data-tab]').forEach(p => {
-      if (parseInt(p.dataset.tab) !== 0) p.style.display = 'none';
-    });
-
-    let trilhasCarregadas = false;
-    async function carregarTrilhas() {
-      if (trilhasCarregadas) return;
-      const alias = ensureAlias();
-      const msg = document.getElementById('trilhasMsg');
-      const lista = document.getElementById('trilhasLista');
-      msg.textContent = 'Carregando trilhas…';
-      try {
-        const r = await fetch(`${mobileApiBase}/trilhas?alias_code=${encodeURIComponent(alias)}`);
-        const d = await r.json();
-        if (!r.ok) { msg.textContent = d.erro || 'Erro ao carregar trilhas.'; return; }
-        msg.textContent = '';
-        if (!d.trilhas.length) { lista.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Nenhuma trilha cadastrada pela empresa ainda.</p>'; return; }
-        lista.innerHTML = d.trilhas.map(t => `
-          <div style="margin-bottom:18px;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-              <strong style="font-size:.95rem">${t.titulo}</strong>
-              <span style="font-size:.75rem;color:var(--muted)">${t.concluidos}/${t.total} concluidos</span>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <div style="font-size:.76rem;font-weight:700;color:var(--muted);margin-bottom:8px">Ambiente de trabalho</div>
+            <div class="toggle-row" id="ambienteToggle">
+              <button class="toggle-btn active" onclick="selectAmbiente('onshore',this)">⛏️ Onshore</button>
+              <button class="toggle-btn" onclick="selectAmbiente('offshore',this)">🛢️ Offshore</button>
             </div>
-            ${t.cargo ? `<div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">Cargo: ${t.cargo}</div>` : ''}
-            ${t.itens.map(item => `
-              <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.05)">
-                <span style="font-size:1rem">${item.evidencia_status === 'validada' ? '✅' : item.evidencia_status === 'enviada' ? '⏳' : item.evidencia_status === 'revisar' ? '🔁' : '⬜'}</span>
-                <div style="flex:1;min-width:0">
-                  <div style="font-size:.85rem">${item.titulo}</div>
-                  <div style="font-size:.72rem;color:var(--muted)">${item.tipo}${item.obrigatorio ? ' · obrigatorio' : ''}</div>
-                </div>
-                ${item.evidencia_status !== 'validada' && item.evidencia_status !== 'enviada' ? `
-                  <button onclick="enviarEvidencia(${item.id},this)" style="font-size:.72rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:var(--text);cursor:pointer">
-                    Enviar
-                  </button>` : ''}
-              </div>`).join('')}
-          </div>`).join('');
-        trilhasCarregadas = true;
-      } catch(e) { msg.textContent = 'Erro de conexao.'; }
-    }
+          </div>
 
-    async function enviarEvidencia(itemId, btn) {
-      const alias = ensureAlias();
-      const descricao = prompt('Descreva brevemente sua evidencia pratica (o que voce fez ou sabe fazer):');
-      if (!descricao) return;
-      btn.disabled = true;
-      btn.textContent = '…';
-      try {
-        const r = await fetch(`/api/corporativo/${accessCode}/evidencia`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({alias_code: alias, item_id: itemId, descricao, pontuacao_autodeclarada: 3})
-        });
-        if (r.ok) { trilhasCarregadas = false; carregarTrilhas(); }
-        else { btn.disabled = false; btn.textContent = 'Enviar'; alert('Erro ao enviar evidencia.'); }
-      } catch(e) { btn.disabled = false; btn.textContent = 'Enviar'; }
+          <div class="slider-group">
+            <div class="slider-row">
+              <div class="slider-head"><span class="slider-label">🩺 Dor física (intensidade)</span><span class="slider-val" id="sv-dor_fisica">1</span></div>
+              <input type="range" min="1" max="5" value="1" oninput="updateSlider('dor_fisica',this.value)">
+            </div>
+            <div class="slider-row">
+              <div class="slider-head"><span class="slider-label">😴 Fadiga</span><span class="slider-val" id="sv-fadiga">1</span></div>
+              <input type="range" min="1" max="5" value="1" oninput="updateSlider('fadiga',this.value)">
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:.76rem;font-weight:700;color:var(--muted);margin-bottom:8px">Sintomas presentes hoje</div>
+            <div class="check-grid" id="sintomasGrid">
+              <div class="check-item" data-key="dor_corporal" onclick="toggleCheck(this)"><span class="ci-icon">💪</span> Dor corporal</div>
+              <div class="check-item" data-key="dor_cabeca" onclick="toggleCheck(this)"><span class="ci-icon">🤕</span> Dor de cabeça</div>
+              <div class="check-item" data-key="sintomas_respiratorios" onclick="toggleCheck(this)"><span class="ci-icon">🫁</span> Resp. dificultada</div>
+              <div class="check-item" data-key="febre" onclick="toggleCheck(this)"><span class="ci-icon">🌡️</span> Febre / calafrio</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Observação</label>
+            <textarea id="fisicoObs" maxlength="280" placeholder="Descreva onde está sentindo dor ou desconforto..." oninput="countChars(this,'fisicoObsCount')"></textarea>
+            <div class="char-count"><span id="fisicoObsCount">0</span>/280</div>
+          </div>
+
+          <button class="btn primary" onclick="enviarCheckinFisico()">Registrar sintomas</button>
+        </div>
+      </div>
+
+      <div class="info-box">
+        💡 <strong>Por que registrar?</strong> O time de SST monitora os dados de forma agregada e anônima. Registros frequentes ajudam a identificar riscos ocupacionais no seu setor antes que se tornem acidentes.
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ PANEL: SAÚDE MENTAL -->
+    <div class="panel" id="p-mental">
+      <div class="card">
+        <div class="card-icon">🧠</div>
+        <div class="card-title">Saúde Mental & Emocional</div>
+        <div class="card-sub">Check-in semanal da sua saúde psicológica. Responda com honestidade — os dados são sigilosos.</div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="slider-group">
+            <div class="slider-row">
+              <div class="slider-head"><span class="slider-label">🧨 Carga emocional</span><span class="slider-val" id="sv-carga_emocional">3</span></div>
+              <input type="range" min="1" max="5" value="3" oninput="updateSlider('carga_emocional',this.value)">
+            </div>
+            <div class="slider-row">
+              <div class="slider-head"><span class="slider-label">🛡️ Segurança psicológica</span><span class="slider-val" id="sv-seguranca_psicologica">3</span></div>
+              <input type="range" min="1" max="5" value="3" oninput="updateSlider('seguranca_psicologica',this.value)">
+            </div>
+            <div class="slider-row">
+              <div class="slider-head"><span class="slider-label">🤲 Apoio percebido</span><span class="slider-val" id="sv-apoio_percebido">3</span></div>
+              <input type="range" min="1" max="5" value="3" oninput="updateSlider('apoio_percebido',this.value)">
+            </div>
+            <div class="slider-row">
+              <div class="slider-head"><span class="slider-label">⚖️ Pressão no trabalho</span><span class="slider-val" id="sv-pressao_trabalho">3</span></div>
+              <input type="range" min="1" max="5" value="3" oninput="updateSlider('pressao_trabalho',this.value)">
+            </div>
+            <div class="slider-row">
+              <div class="slider-head"><span class="slider-label">😌 Bem-estar geral</span><span class="slider-val" id="sv-bem_estar_geral">3</span></div>
+              <input type="range" min="1" max="5" value="3" oninput="updateSlider('bem_estar_geral',this.value)">
+            </div>
+            <div class="slider-row">
+              <div class="slider-head"><span class="slider-label">🔥 Risco de burnout</span><span class="slider-val" id="sv-risco_burnout">1</span></div>
+              <input type="range" min="1" max="5" value="1" oninput="updateSlider('risco_burnout',this.value)">
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:.76rem;font-weight:700;color:var(--muted);margin-bottom:8px">Sentimentos presentes esta semana</div>
+            <div class="check-grid">
+              <div class="check-item" data-key="ansiedade" onclick="toggleCheck(this)"><span class="ci-icon">😰</span> Ansiedade</div>
+              <div class="check-item" data-key="tristeza" onclick="toggleCheck(this)"><span class="ci-icon">😢</span> Tristeza</div>
+              <div class="check-item" data-key="irritabilidade" onclick="toggleCheck(this)"><span class="ci-icon">😤</span> Irritabilidade</div>
+              <div class="check-item" data-key="apoio_solicitado" onclick="toggleCheck(this)"><span class="ci-icon">🆘</span> Preciso de apoio</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Como você está se sentindo?</label>
+            <textarea id="mentalObs" maxlength="280" placeholder="Compartilhe o que quiser sobre sua semana..." oninput="countChars(this,'mentalObsCount')"></textarea>
+            <div class="char-count"><span id="mentalObsCount">0</span>/280</div>
+          </div>
+
+          <button class="btn primary" onclick="enviarCheckinMental()">Registrar check-in semanal</button>
+        </div>
+      </div>
+
+      <div class="info-box">
+        🧠 <strong>Suporte emocional</strong> está disponível pelo canal de Apoio. Se você estiver em sofrimento intenso, acesse a aba <strong>🆘 Apoio</strong> e solicite contato com o time de saúde da empresa.
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ PANEL: CONFLITO CULTURAL -->
+    <div class="panel" id="p-conflito">
+      <div class="card">
+        <div class="card-icon">🤝</div>
+        <div class="card-title">Conflito Intercultural</div>
+        <div class="card-sub">Canal confidencial para reportar situações de conflito, discriminação ou barreiras culturais no ambiente de trabalho.</div>
+
+        <div id="conflitoForm" style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <div style="font-size:.76rem;font-weight:700;color:var(--muted);margin-bottom:8px">Ambiente</div>
+            <div class="toggle-row" id="conflitoAmbienteToggle">
+              <button class="toggle-btn active" onclick="selectConflitoAmbiente('onshore',this)">⛏️ Onshore</button>
+              <button class="toggle-btn" onclick="selectConflitoAmbiente('offshore',this)">🛢️ Offshore</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Tipo de conflito</label>
+            <select id="conflitoTipo">
+              <option value="comunicacao">🗣️ Barreira de comunicação</option>
+              <option value="discriminacao">⚠️ Discriminação / preconceito</option>
+              <option value="idioma">🌐 Diferença de idioma</option>
+              <option value="religiao">☮️ Diferença religiosa / cultural</option>
+              <option value="comportamento">🚫 Comportamento inadequado</option>
+              <option value="outro">📝 Outro</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Países envolvidos (opcional)</label>
+            <input type="text" id="conflitoPaises" placeholder="Ex: Brasil, Filipinas, Estados Unidos...">
+          </div>
+
+          <div class="field">
+            <label>Descrição da situação</label>
+            <textarea id="conflitoDesc" maxlength="500" placeholder="Descreva o que aconteceu de forma objetiva..." oninput="countChars(this,'conflitoDescCount')"></textarea>
+            <div class="char-count"><span id="conflitoDescCount">0</span>/500</div>
+          </div>
+
+          <div>
+            <div style="font-size:.76rem;font-weight:700;color:var(--muted);margin-bottom:8px">Identificação</div>
+            <div class="toggle-row" id="anonimoToggle">
+              <button class="toggle-btn active" data-val="true" onclick="selectAnonimo(true,this)">🔒 Anônimo (recomendado)</button>
+              <button class="toggle-btn" data-val="false" onclick="selectAnonimo(false,this)">👤 Identificado</button>
+            </div>
+          </div>
+
+          <button class="btn primary" onclick="enviarConflito()">Enviar relato</button>
+        </div>
+
+        <div class="success-state" id="conflitoSucesso" style="display:none">
+          <div class="success-icon">🤝</div>
+          <div class="success-title">Relato enviado</div>
+          <div class="success-sub">Seu relato foi registrado com sigilo e será analisado pelo time de SST. Obrigado pela coragem de reportar.</div>
+          <button class="btn sm" onclick="document.getElementById('conflitoForm').style.display='flex';document.getElementById('conflitoSucesso').style.display='none'" style="margin-top:8px">Novo relato</button>
+        </div>
+      </div>
+
+      <div class="info-box">
+        🔒 <strong>Confidencialidade garantida.</strong> Os relatos são tratados pelo gestor de SST com total sigilo. Mesmo relatos identificados não são compartilhados sem consentimento. O objetivo é melhorar o ambiente de trabalho para todos.
+      </div>
+
+      <div class="card">
+        <div class="card-title">Por que reportar?</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.7;margin-top:6px">
+          Ambientes de trabalho multicultural são mais produtivos quando conflitos são resolvidos cedo. Seu relato ajuda o time de SST a identificar padrões e criar ações preventivas — protegendo você e seus colegas.
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ PANEL: CONTEÚDO -->
+    <div class="panel" id="p-conteudo">
+      <div class="chips" id="conteudoFiltros">
+        <div class="chip active" data-tipo="" onclick="filterConteudo(this)">Todos</div>
+        <div class="chip" data-tipo="comunicado" onclick="filterConteudo(this)">📢 Comunicados</div>
+        <div class="chip" data-tipo="video" onclick="filterConteudo(this)">🎥 Vídeos</div>
+        <div class="chip" data-tipo="treinamento" onclick="filterConteudo(this)">📚 Treinamentos</div>
+        <div class="chip" data-tipo="reuniao" onclick="filterConteudo(this)">📹 Reuniões</div>
+      </div>
+
+      <div id="conteudoList" style="display:flex;flex-direction:column;gap:10px">
+        <div style="text-align:center;padding:24px;color:var(--muted);font-size:.84rem">Carregando...</div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ PANEL: CHAT -->
+    <div class="panel" id="p-chat">
+      <div class="card" style="text-align:center;padding:28px">
+        <div style="font-size:2.5rem;margin-bottom:12px">💬</div>
+        <div class="card-title" style="font-size:1rem;margin-bottom:8px">Chat com SST</div>
+        <div style="color:var(--muted);font-size:.82rem;margin-bottom:20px;line-height:1.6">
+          Converse diretamente com o time de saúde e segurança da sua empresa. Tire dúvidas, agende exames ou solicite documentos.
+        </div>
+        <a class="btn primary" href="/colaborador/c/{{ codigo_acesso|escapejs }}/chat/">Abrir Chat</a>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ PANEL: APOIO -->
+    <div class="panel" id="p-apoio">
+      <div class="card">
+        <div class="card-icon">🆘</div>
+        <div class="card-title">Pedido de Apoio</div>
+        <div class="card-sub">Se você estiver passando por dificuldades emocionais, psicológicas ou de saúde, solicite apoio aqui. Seu pedido é confidencial.</div>
+
+        <div id="apoioForm" style="display:flex;flex-direction:column;gap:14px">
+          <div class="field">
+            <label>Como você está se sentindo?</label>
+            <textarea id="apoioRelato" maxlength="280" placeholder="Descreva brevemente o que está sentindo ou precisando..." oninput="countChars(this,'apoioRelatoCount')"></textarea>
+            <div class="char-count"><span id="apoioRelatoCount">0</span>/280</div>
+          </div>
+
+          <div>
+            <div style="font-size:.76rem;font-weight:700;color:var(--muted);margin-bottom:8px">Gostaria de ser contactado?</div>
+            <div class="toggle-row" id="contatoToggle">
+              <button class="toggle-btn active" data-val="false" onclick="selectContato(false,this)">Não preciso agora</button>
+              <button class="toggle-btn" data-val="true" onclick="selectContato(true,this)">Sim, quero contato</button>
+            </div>
+          </div>
+
+          <div id="canalField" style="display:none">
+            <div class="field">
+              <label>Canal preferido</label>
+              <select id="canalPref">
+                <option value="whatsapp">WhatsApp</option>
+                <option value="email">E-mail</option>
+                <option value="telefone">Telefone</option>
+                <option value="presencial">Presencial</option>
+              </select>
+            </div>
+          </div>
+
+          <button class="btn primary" onclick="enviarApoio()">Enviar pedido de apoio</button>
+        </div>
+
+        <div class="success-state" id="apoioSucesso" style="display:none">
+          <div class="success-icon">💚</div>
+          <div class="success-title">Pedido recebido</div>
+          <div class="success-sub">O time de SST foi notificado e entrará em contato se você solicitou. Você não está sozinho.</div>
+        </div>
+      </div>
+
+      <div class="info-box">
+        🔒 Seus pedidos de apoio são <strong>confidenciais</strong> e tratados com prioridade pelo time de saúde ocupacional. Não há penalização por solicitar apoio.
+      </div>
+    </div>
+
+  </div><!-- /scroll -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="nav">
+    <div class="nav-item active" onclick="goTab('inicio')"><div class="nav-icon">🏠</div><div class="nav-label">Início</div></div>
+    <div class="nav-item" onclick="goTab('fisico')"><div class="nav-icon">💚</div><div class="nav-label">Físico</div></div>
+    <div class="nav-item" onclick="goTab('mental')"><div class="nav-icon">🧠</div><div class="nav-label">Mental</div></div>
+    <div class="nav-item" onclick="goTab('conflito')"><div class="nav-icon">🤝</div><div class="nav-label">Conflito</div></div>
+    <div class="nav-item" onclick="goTab('conteudo')"><div class="nav-icon">📚</div><div class="nav-label">Conteúdo</div></div>
+    <div class="nav-item" onclick="goTab('chat')"><div class="nav-icon">💬</div><div class="nav-label">Chat</div></div>
+    <div class="nav-item" onclick="goTab('apoio')"><div class="nav-icon">🆘</div><div class="nav-label">Apoio</div></div>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const CODIGO = '{{ codigo_acesso|escapejs }}';
+const BASE = '/api/colab/' + CODIGO;
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
+async function apiCall(path, opts={}) {
+  const r = await fetch(BASE + path, {
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    ...opts
+  });
+  return r.json();
+}
+function getCookie(n) { return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith(n+'='))?.split('=')[1]||''; }
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+function countChars(el, countId) { document.getElementById(countId).textContent = el.value.length; }
+
+// ─── navigation ───────────────────────────────────────────────────────────────
+const tabMap = {inicio:'inicio',fisico:'fisico',mental:'mental',conflito:'conflito',conteudo:'conteudo',chat:'chat',apoio:'apoio'};
+function goTab(tab) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('p-' + tab).classList.add('active');
+  const navItems = document.querySelectorAll('.nav-item');
+  const tabs = Object.keys(tabMap);
+  const idx = tabs.indexOf(tab);
+  if (idx >= 0) navItems[idx].classList.add('active');
+  document.querySelector('.scroll').scrollTop = 0;
+  if (tab === 'conteudo') loadConteudos();
+}
+
+// ─── sliders ──────────────────────────────────────────────────────────────────
+const sliderVals = {};
+function updateSlider(key, val) {
+  sliderVals[key] = parseInt(val);
+  const el = document.getElementById('sv-' + key);
+  if (el) el.textContent = val;
+}
+
+// ─── emoji humor ──────────────────────────────────────────────────────────────
+let humorVal = 3;
+function selectEmoji(key, val, btn) {
+  humorVal = val;
+  document.querySelectorAll('#humorScale .emoji-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── ambiente ─────────────────────────────────────────────────────────────────
+let ambienteVal = 'onshore';
+function selectAmbiente(val, btn) {
+  ambienteVal = val;
+  document.querySelectorAll('#ambienteToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+let conflitoAmbiente = 'onshore';
+function selectConflitoAmbiente(val, btn) {
+  conflitoAmbiente = val;
+  document.querySelectorAll('#conflitoAmbienteToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── checkboxes ───────────────────────────────────────────────────────────────
+function toggleCheck(el) { el.classList.toggle('active'); }
+function getChecks(container) {
+  const r = {};
+  document.querySelectorAll(container + ' .check-item').forEach(c => {
+    r[c.dataset.key] = c.classList.contains('active');
+  });
+  return r;
+}
+
+// ─── anônimo toggle ───────────────────────────────────────────────────────────
+let conflitoAnonimo = true;
+function selectAnonimo(val, btn) {
+  conflitoAnonimo = val;
+  document.querySelectorAll('#anonimoToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── contato toggle ───────────────────────────────────────────────────────────
+let desejaCont = false;
+function selectContato(val, btn) {
+  desejaCont = val;
+  document.querySelectorAll('#contatoToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('canalField').style.display = val ? 'block' : 'none';
+}
+
+// ─── CHECK-IN RÁPIDO ──────────────────────────────────────────────────────────
+async function enviarCheckinRapido() {
+  const body = {
+    humor: humorVal,
+    energia: sliderVals.energia || 3,
+    estresse: sliderVals.estresse || 3,
+    sono: sliderVals.sono || 3,
+    observacao: document.getElementById('quickObs').value.trim(),
+  };
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  const r = await apiCall('/checkin-diario/', {method:'POST', body:JSON.stringify(body)});
+  if (r.ok) {
+    document.getElementById('quickCheckinForm').style.display = 'none';
+    document.getElementById('quickCheckinDone').style.display = 'flex';
+    document.getElementById('homeStatusTitle').textContent = 'Check-in feito!';
+    document.getElementById('homeStatusDesc').textContent = 'Continue cuidando da sua saúde. Registre sintomas físicos ou emocionais quando precisar.';
+  } else {
+    showToast('Erro ao enviar. Tente novamente.', 'err');
+    btn.disabled = false;
+    btn.textContent = '✓ Enviar check-in';
+  }
+}
+
+// ─── CHECK-IN FÍSICO ──────────────────────────────────────────────────────────
+async function enviarCheckinFisico() {
+  const checks = getChecks('#sintomasGrid');
+  const body = {
+    dor_fisica: sliderVals.dor_fisica || 1,
+    fadiga: sliderVals.fadiga || 1,
+    ...checks,
+    observacao: document.getElementById('fisicoObs').value.trim(),
+  };
+  const r = await apiCall('/checkin-diario/', {method:'POST', body:JSON.stringify(body)});
+  if (r.ok) {
+    showToast('Sintomas registrados!');
+    document.getElementById('fisicoObs').value = '';
+    document.querySelectorAll('#sintomasGrid .check-item').forEach(c => c.classList.remove('active'));
+  } else { showToast('Erro ao registrar.','err'); }
+}
+
+// ─── CHECK-IN MENTAL ──────────────────────────────────────────────────────────
+async function enviarCheckinMental() {
+  const checks = getChecks('#p-mental');
+  const body = {
+    carga_emocional: sliderVals.carga_emocional || 3,
+    seguranca_psicologica: sliderVals.seguranca_psicologica || 3,
+    apoio_percebido: sliderVals.apoio_percebido || 3,
+    pressao_trabalho: sliderVals.pressao_trabalho || 3,
+    bem_estar_geral: sliderVals.bem_estar_geral || 3,
+    risco_burnout: sliderVals.risco_burnout || 1,
+    ...checks,
+    observacao: document.getElementById('mentalObs').value.trim(),
+  };
+  const r = await apiCall('/checkin-semanal/', {method:'POST', body:JSON.stringify(body)});
+  if (r.ok) {
+    showToast('Check-in semanal registrado!');
+    document.getElementById('mentalObs').value = '';
+  } else { showToast('Erro ao registrar.','err'); }
+}
+
+// ─── CONFLITO ─────────────────────────────────────────────────────────────────
+async function enviarConflito() {
+  const desc = document.getElementById('conflitoDesc').value.trim();
+  if (!desc) { showToast('Descreva a situação antes de enviar.','err'); return; }
+  const body = {
+    tipo: document.getElementById('conflitoTipo').value,
+    ambiente: conflitoAmbiente,
+    descricao: desc,
+    paises_envolvidos: document.getElementById('conflitoPaises').value.trim(),
+    anonimo: conflitoAnonimo,
+  };
+  const r = await apiCall('/conflito/', {method:'POST', body:JSON.stringify(body)});
+  if (r.ok || r.id) {
+    document.getElementById('conflitoForm').style.display = 'none';
+    document.getElementById('conflitoSucesso').style.display = 'flex';
+  } else { showToast('Erro ao enviar.','err'); }
+}
+
+// ─── CONTEÚDO ─────────────────────────────────────────────────────────────────
+let conteudoTipoFiltro = '';
+function filterConteudo(chip) {
+  document.querySelectorAll('#conteudoFiltros .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  conteudoTipoFiltro = chip.dataset.tipo || '';
+  loadConteudos();
+}
+
+const tipoIcon = {video:'🎥',treinamento:'📚',reuniao:'📹',comunicado:'📢'};
+const tipoLabel = {video:'Vídeo',treinamento:'Treinamento',reuniao:'Reunião de Vídeo',comunicado:'Comunicado'};
+
+async function loadConteudos() {
+  const list = document.getElementById('conteudoList');
+  list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:.84rem">Carregando...</div>';
+  const params = new URLSearchParams();
+  if (conteudoTipoFiltro) params.set('tipo', conteudoTipoFiltro);
+  try {
+    const d = await fetch('/api/colab/' + CODIGO + '/conteudos/?' + params).then(r=>r.json());
+    if (!d.conteudos?.length) {
+      list.innerHTML = '<div style="text-align:center;padding:28px;color:var(--muted);font-size:.82rem;border-radius:14px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1)">Nenhum conteúdo publicado ainda pela sua empresa.</div>';
+      return;
     }
-  </script>
+    list.innerHTML = d.conteudos.map(c => `
+      <div class="content-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="font-size:1.2rem">${tipoIcon[c.tipo]||'📄'}</div>
+          <span class="badge badge-blue" style="flex-shrink:0">${tipoLabel[c.tipo]||c.tipo}</span>
+        </div>
+        <div class="cc-title">${c.titulo}</div>
+        ${c.descricao ? `<div class="cc-desc">${c.descricao}</div>` : ''}
+        <div class="cc-foot">
+          <div style="font-size:.7rem;color:var(--muted)">${c.publicado_por||''} · ${c.publicado_em||''}</div>
+          ${c.url_conteudo ? `<a class="btn sm primary" href="${c.url_conteudo}" target="_blank">Ver conteúdo ↗</a>` : ''}
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:.8rem;text-align:center;padding:20px">Erro ao carregar conteúdos.</div>';
+  }
+}
+
+// ─── APOIO ────────────────────────────────────────────────────────────────────
+async function enviarApoio() {
+  const body = {
+    relato: document.getElementById('apoioRelato').value.trim(),
+    deseja_contato: desejaCont,
+    canal_preferido: desejaCont ? document.getElementById('canalPref').value : '',
+  };
+  const r = await fetch('/api/colab/' + CODIGO + '/apoio/', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body: JSON.stringify(body)
+  }).then(r=>r.json()).catch(()=>({}));
+  if (r.ok || r.id) {
+    document.getElementById('apoioForm').style.display = 'none';
+    document.getElementById('apoioSucesso').style.display = 'flex';
+  } else { showToast('Erro ao enviar.','err'); }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+const hr = new Date().getHours();
+document.getElementById('homeStatusTitle').textContent = hr < 12 ? 'Bom dia! 🌅' : hr < 18 ? 'Boa tarde! ☀️' : 'Boa noite! 🌙';
+</script>
 </body>
 </html>

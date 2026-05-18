@@ -4582,3 +4582,108 @@ class UsoApiEmpresa(models.Model):
 
     def __str__(self):
         return f"{self.empresa.nome} {self.ano_mes} {self.endpoint}: {self.chamadas}"
+
+
+class ConteudoSSTPublicado(models.Model):
+    """Conteúdo publicado pelo gestor SST para os colaboradores (vídeos, treinamentos, comunicados, reuniões)."""
+    TIPO_VIDEO = "video"
+    TIPO_TREINAMENTO = "treinamento"
+    TIPO_REUNIAO = "reuniao"
+    TIPO_COMUNICADO = "comunicado"
+    TIPO_CHOICES = [
+        (TIPO_VIDEO, "Vídeo"),
+        (TIPO_TREINAMENTO, "Treinamento"),
+        (TIPO_REUNIAO, "Reunião de Vídeo"),
+        (TIPO_COMUNICADO, "Comunicado"),
+    ]
+
+    AMBIENTE_ONSHORE = "onshore"
+    AMBIENTE_OFFSHORE = "offshore"
+    AMBIENTE_AMBOS = "ambos"
+    AMBIENTE_CHOICES = [
+        (AMBIENTE_ONSHORE, "Onshore"),
+        (AMBIENTE_OFFSHORE, "Offshore"),
+        (AMBIENTE_AMBOS, "Todos"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="conteudos_sst")
+    titulo = models.CharField(max_length=200)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default=TIPO_COMUNICADO)
+    descricao = models.TextField(blank=True, default="")
+    url_conteudo = models.URLField(blank=True, default="")
+    setor_alvo = models.ForeignKey("EmpresaSetor", on_delete=models.SET_NULL, null=True, blank=True, related_name="conteudos_sst")
+    ambiente = models.CharField(max_length=10, choices=AMBIENTE_CHOICES, default=AMBIENTE_AMBOS)
+    publicado_por = models.CharField(max_length=160, blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    visualizacoes = models.PositiveIntegerField(default=0)
+    publicado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-publicado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "tipo", "ativo"]),
+            models.Index(fields=["empresa", "ambiente"]),
+        ]
+
+    def __str__(self):
+        return f"{self.empresa.nome} — {self.get_tipo_display()}: {self.titulo}"
+
+
+class RegistroConflitoCultural(models.Model):
+    """Registro de conflito intercultural enviado pelo colaborador."""
+    TIPO_COMUNICACAO = "comunicacao"
+    TIPO_DISCRIMINACAO = "discriminacao"
+    TIPO_IDIOMA = "idioma"
+    TIPO_RELIGIAO = "religiao"
+    TIPO_COMPORTAMENTO = "comportamento"
+    TIPO_OUTRO = "outro"
+    TIPO_CHOICES = [
+        (TIPO_COMUNICACAO, "Barreira de comunicação"),
+        (TIPO_DISCRIMINACAO, "Discriminação / preconceito"),
+        (TIPO_IDIOMA, "Diferença de idioma"),
+        (TIPO_RELIGIAO, "Diferença religiosa / cultural"),
+        (TIPO_COMPORTAMENTO, "Comportamento inadequado"),
+        (TIPO_OUTRO, "Outro"),
+    ]
+
+    STATUS_NOVO = "novo"
+    STATUS_EM_ANALISE = "em_analise"
+    STATUS_RESOLVIDO = "resolvido"
+    STATUS_ARQUIVADO = "arquivado"
+    STATUS_CHOICES = [
+        (STATUS_NOVO, "Novo"),
+        (STATUS_EM_ANALISE, "Em análise"),
+        (STATUS_RESOLVIDO, "Resolvido"),
+        (STATUS_ARQUIVADO, "Arquivado"),
+    ]
+
+    AMBIENTE_ONSHORE = "onshore"
+    AMBIENTE_OFFSHORE = "offshore"
+    AMBIENTE_CHOICES = [
+        (AMBIENTE_ONSHORE, "Onshore"),
+        (AMBIENTE_OFFSHORE, "Offshore"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="conflitos_culturais")
+    alias = models.ForeignKey("ColaboradorAliasCorporativo", on_delete=models.CASCADE, related_name="conflitos_culturais")
+    setor = models.ForeignKey("EmpresaSetor", on_delete=models.SET_NULL, null=True, blank=True, related_name="conflitos_culturais")
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default=TIPO_OUTRO)
+    ambiente = models.CharField(max_length=10, choices=AMBIENTE_CHOICES, default=AMBIENTE_ONSHORE)
+    descricao = models.CharField(max_length=500, blank=True, default="")
+    paises_envolvidos = models.CharField(max_length=200, blank=True, default="")
+    anonimo = models.BooleanField(default=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_NOVO)
+    observacao_gestor = models.CharField(max_length=280, blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "tipo"]),
+        ]
+
+    def __str__(self):
+        return f"{self.empresa.nome} — conflito {self.get_tipo_display()} ({self.status})"
