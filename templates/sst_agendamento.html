@@ -13,7 +13,7 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .sidebar{width:220px;min-height:100vh;background:rgba(7,32,48,.95);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 12px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto}
 .sb-logo{font-size:20px;font-weight:800;color:var(--accent);margin-bottom:6px;padding:0 8px}
 .sb-sub{font-size:11px;color:var(--muted);padding:0 8px;margin-bottom:20px}
-.sb-section{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:14px 0 6px}
+.sb-label,.sb-section{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin:14px 0 6px}
 .sb-link{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;color:var(--text);text-decoration:none;font-size:13px;font-weight:500;transition:.15s;margin-bottom:2px}
 .sb-link:hover{background:rgba(255,255,255,.05)}
 .sb-link.active{background:rgba(0,194,255,.12);color:var(--accent);font-weight:700}
@@ -87,31 +87,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 </head>
 <body>
 
-<aside class="sidebar">
-  <div class="sb-logo">🛡️ SST</div>
-  <div class="sb-sub">Saúde Ocupacional</div>
-  <div class="sb-section">Módulos</div>
-  <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
-  <a class="sb-link" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span></a>
-  <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🔬</span><span>Exames</span></a>
-  <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
-  <a class="sb-link" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
-  <a class="sb-link active" href="/sst/exames/agendar/"><span class="sb-icon">📅</span><span>Agendamentos</span></a>
-  <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">📁</span><span>PGR · PCMSO</span></a>
-  <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial</span></a>
-  <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
-  <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI / EPC</span></a>
-  <a class="sb-link" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos NR</span></a>
-  <a class="sb-link" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
-  <a class="sb-link" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
-  <a class="sb-link" href="/sst/conformidade/"><span class="sb-icon">🛡️</span><span>Conformidade</span></a>
-  <a class="sb-link" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação</span></a>
-  <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
-  <div class="sb-spacer"></div>
-  <a class="sb-link" href="/alertas/"><span class="sb-icon">🚨</span><span>Alertas</span></a>
-  <a class="sb-link" href="/sst/" style="color:var(--muted)"><span class="sb-icon">🏠</span><span>Painel SST</span></a>
-  <a class="sb-link" href="/logout/" style="color:var(--danger)"><span class="sb-icon">🚪</span><span>Sair</span></a>
-</aside>
+<aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
 
 <div class="main">
   <div class="page-header">

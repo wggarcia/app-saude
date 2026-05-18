@@ -175,23 +175,7 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
 
 <!-- ─── SIDEBAR ─── -->
 <div class="app">
-  <aside class="sidebar">
-    <div class="sb-label">Conformidade</div>
-    <a class="sb-link" href="/dashboard-empresa/"><span class="sb-icon">&#128202;</span><span>Painel SST</span></a>
-    <a class="sb-link" href="/sst/asos/"><span class="sb-icon">&#128203;</span><span>ASO</span></a>
-    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">&#128300;</span><span>Exames</span></a>
-    <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">&#127973;</span><span>Afastamentos</span></a>
-    <a class="sb-link" href="/sst/cats/"><span class="sb-icon">&#9888;&#65039;</span><span>CAT</span></a>
-    <div class="sb-label">Documentação</div>
-    <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">&#128193;</span><span>PGR · PCMSO</span></a>
-    <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">&#128279;</span><span>eSocial</span></a>
-    <div class="sb-label">Gestão</div>
-    <a class="sb-link active" href="/sst/funcionarios/"><span class="sb-icon">&#128101;</span><span>Funcionários</span></a>
-    <a class="sb-link" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação</span></a>
-    <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI / EPC</span></a>
-    <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
-    <a class="sb-link" href="/logout/" style="color:#ff7a91"><span class="sb-icon">&#8617;</span><span>Sair</span></a>
-  </aside>
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
 
   <!-- ─── MAIN ─── -->
   <main class="main">

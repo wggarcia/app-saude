@@ -95,7 +95,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'M
 <body>
 
 <header class="header">
-  <a class="logo" href="/dashboard-empresa/">
+  <a class="logo" href="/sst/">
     <div class="logo-icon">S</div>
     <div>
       <div class="logo-name">SolusCRT</div>
@@ -111,27 +111,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'M
 </header>
 
 <div class="app">
-  <aside class="sidebar">
-    <div class="sb-label">Conformidade</div>
-    <a class="sb-link" href="/dashboard-empresa/"><span class="sb-icon">📊</span><span>Painel SST</span></a>
-    <a class="sb-link" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span></a>
-    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🔬</span><span>Exames</span></a>
-    <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
-    <a class="sb-link" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
-    <div class="sb-label">Documentação</div>
-    <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">📁</span><span>PGR · PCMSO</span></a>
-    <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial</span></a>
-    <div class="sb-label">Gestão</div>
-    <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
-    <a class="sb-link" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos NR</span></a>
-    <a class="sb-link" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
-    <a class="sb-link active" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
-    <a class="sb-link" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação</span></a>
-    <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI / EPC</span></a>
-    <a class="sb-link" href="/sst/conformidade/"><span class="sb-icon">🛡️</span><span>Conformidade</span></a>
-    <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
-    <a class="sb-link" href="/logout/" style="color:var(--red)"><span class="sb-icon">↩</span><span>Sair</span></a>
-  </aside>
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
 
   <main class="main">
     <div style="margin-bottom:20px">

@@ -343,27 +343,7 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
 <div class="app">
 
   <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <span class="sb-label">SST</span>
-    <a href="/sst/" class="sb-link"><span class="sb-icon">🏠</span> Dashboard SST</a>
-    <a href="/sst/funcionarios/" class="sb-link"><span class="sb-icon">👤</span> Funcionários</a>
-    <a href="/sst/asos/" class="sb-link"><span class="sb-icon">📋</span> ASOs</a>
-    <a href="/sst/exames/" class="sb-link"><span class="sb-icon">🔬</span> Exames</a>
-    <a href="/sst/epis/" class="sb-link"><span class="sb-icon">🦺</span> EPI / EPC</a>
-    <a href="/sst/treinamentos/" class="sb-link active"><span class="sb-icon">🎓</span> Treinamentos NR</a>
-    <a href="/sst/normas/" class="sb-link"><span class="sb-icon">📚</span> Normas NR</a>
-    <a href="/sst/comunicacao/" class="sb-link"><span class="sb-icon">💬</span> Comunicação</a>
-    <a href="/sst/afastamentos/" class="sb-link"><span class="sb-icon">🏥</span> Afastamentos</a>
-    <a href="/sst/cats/" class="sb-link"><span class="sb-icon">⚠️</span> CATs</a>
-    <div class="sb-divider"></div>
-    <span class="sb-label">Documentos</span>
-    <a href="/sst/documentos/" class="sb-link"><span class="sb-icon">📁</span> Documentos</a>
-    <a href="/sst/esocial/" class="sb-link"><span class="sb-icon">📡</span> eSocial SST</a>
-    <div class="sb-divider"></div>
-    <span class="sb-label">Relatórios</span>
-    <a href="/sst/relatorios/" class="sb-link"><span class="sb-icon">📊</span> Relatórios</a>
-    <a href="/sst/epis/" class="sb-link"><span class="sb-icon">🦺</span> EPI / EPC</a><span class="sb-icon">⚙️</span> Configurações</a>
-  </aside>
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
 
   <!-- MAIN -->
   <main class="main">

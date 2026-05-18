@@ -106,7 +106,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 <header class="topbar">
   <div class="tb-logo"><div class="tb-icon">S</div><div><div class="tb-nome">SST</div><div class="tb-sub">Postos de Trabalho</div></div></div>
   <nav class="tb-nav">
-    <a href="/dashboard-empresa/">Painel</a>
+    <a href="/sst/">Central</a>
     <a href="/sst/funcionarios/">Funcionários</a>
     <a href="/sst/asos/">ASO</a>
     <a href="/sst/exames/">Exames</a>
@@ -121,21 +121,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 </header>
 
 <div class="app">
-  <aside class="sidebar">
-    <div class="sb-label">SST</div>
-    <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👤</span><span>Funcionários</span></a>
-    <a class="sb-link" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span></a>
-    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🩺</span><span>Exames</span></a>
-    <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
-    <a class="sb-link" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
-    <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">📂</span><span>Documentos</span></a>
-    <a class="sb-link" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos</span></a>
-    <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPIs</span></a>
-    <a class="sb-link" href="/sst/riscos/"><span class="sb-icon">🔴</span><span>Riscos / PGR</span></a>
-    <a class="sb-link active" href="/sst/postos/"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
-    <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">📡</span><span>eSocial</span></a>
-    <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
-  </aside>
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
 
   <main class="main">
     <div class="page-header">

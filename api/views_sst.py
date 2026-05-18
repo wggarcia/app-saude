@@ -754,9 +754,10 @@ def _sst_redirect(request):
 
 
 def sst_home_redirect(request):
-    if not _empresa_autenticada(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
         return _sst_redirect(request)
-    return redirect("/dashboard-empresa/")
+    return render(request, "sst_hub.html", {"empresa_nome": empresa.nome})
 
 
 def sst_configuracoes_redirect(request):

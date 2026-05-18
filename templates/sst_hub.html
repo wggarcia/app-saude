@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · Central SST</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#041018;
+  --panel:#071c28;
+  --panel2:#0b2638;
+  --panel3:#103247;
+  --line:rgba(126,225,195,.12);
+  --line2:rgba(126,225,195,.22);
+  --text:#e8f4f1;
+  --muted:#7fa2b1;
+  --teal:#00c9a7;
+  --blue:#52a6ff;
+  --amber:#f0bf6b;
+  --red:#f87171;
+  --green:#4ade80;
+}
+html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:radial-gradient(circle at top left,#0d3247 0,#041018 44%);color:var(--text);overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:56px;display:flex;align-items:center;background:rgba(4,16,24,.92);border-bottom:1px solid var(--line);backdrop-filter:blur(18px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:220px;border-right:1px solid var(--line);height:100%}
+.tb-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));display:grid;place-items:center;font-weight:900;font-size:.82rem;color:#041018;flex-shrink:0}
+.tb-nome{font-size:.82rem;font-weight:800}
+.tb-sub{font-size:.62rem;color:var(--muted)}
+.tb-nav{display:flex;align-items:center;gap:4px;padding:0 14px;flex:1;overflow-x:auto}
+.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{padding:6px 11px;border-radius:7px;font-size:.74rem;font-weight:700;color:var(--muted);text-decoration:none;white-space:nowrap;transition:all .15s}
+.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.tb-nav a.active{color:var(--teal);background:rgba(0,201,167,.09)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.btn-main,.btn-ghost{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:.74rem;font-weight:800;text-decoration:none;transition:all .15s;white-space:nowrap}
+.btn-main{background:linear-gradient(135deg,var(--teal),var(--blue));color:#041018;border:none;box-shadow:0 0 18px rgba(82,166,255,.18)}
+.btn-main:hover{opacity:.88}
+.btn-ghost{border:1px solid var(--line);color:var(--muted)}
+.btn-ghost:hover{color:var(--text);border-color:var(--line2);background:rgba(255,255,255,.05)}
+.app{display:flex;min-height:100vh;padding-top:56px}
+.sidebar{width:220px;flex-shrink:0;background:rgba(7,28,40,.72);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:56px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:.78rem;font-weight:600;color:var(--muted);text-decoration:none;border-left:2px solid transparent;transition:all .12s}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.07);border-left-color:var(--teal)}
+.sb-icon{font-size:.94rem;flex-shrink:0;width:18px;text-align:center}
+.main{flex:1;margin-left:220px;padding:24px;display:flex;flex-direction:column;gap:18px}
+.hero{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,1fr);gap:16px}
+.hero-card,.panel,.module-card,.metric-card{background:rgba(7,28,40,.84);border:1px solid var(--line);border-radius:18px}
+.hero-card{padding:22px;position:relative;overflow:hidden}
+.hero-card::before{content:"";position:absolute;inset:auto -12% -50% auto;width:240px;height:240px;background:radial-gradient(circle,rgba(82,166,255,.22),transparent 65%)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;background:rgba(0,201,167,.09);color:var(--teal);font-size:.67rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.hero h1{font-size:1.9rem;line-height:1.05;margin:14px 0 8px;max-width:12ch}
+.hero p{font-size:.84rem;color:var(--muted);line-height:1.65;max-width:66ch}
+.quick-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--text);text-decoration:none;font-size:.75rem;font-weight:700;transition:all .15s}
+.chip:hover{border-color:var(--line2);background:rgba(255,255,255,.06)}
+.hero-side{display:flex;flex-direction:column;gap:12px}
+.hero-side-card{padding:18px}
+.hero-side h2{font-size:.88rem;font-weight:800;margin-bottom:6px}
+.hero-side p{font-size:.76rem;color:var(--muted);line-height:1.55}
+.hero-kicker{font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.status-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);gap:12px}
+.status-row:last-child{border-bottom:none;padding-bottom:0}
+.status-row:first-child{padding-top:0}
+.status-title{font-size:.76rem;font-weight:700}
+.status-sub{font-size:.68rem;color:var(--muted);margin-top:3px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:.63rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.b-ok{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.22)}
+.b-warn{background:rgba(240,191,107,.12);color:var(--amber);border:1px solid rgba(240,191,107,.22)}
+.b-danger{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.22)}
+.b-muted{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line)}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.metric-card{padding:16px;position:relative;overflow:hidden}
+.metric-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--mc,var(--teal))}
+.metric-label{font-size:.63rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.metric-value{font-size:1.85rem;font-weight:900;line-height:1}
+.metric-sub{font-size:.69rem;color:var(--muted);margin-top:6px}
+.board{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(340px,.8fr);gap:16px}
+.panel{padding:18px}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.panel-head h2{font-size:.94rem;font-weight:800}
+.panel-head p{font-size:.74rem;color:var(--muted);line-height:1.5;max-width:52ch}
+.priority-list,.mini-list{display:flex;flex-direction:column;gap:10px}
+.priority-item,.mini-item{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04)}
+.priority-title{font-size:.8rem;font-weight:800}
+.priority-sub,.mini-sub{font-size:.71rem;color:var(--muted);margin-top:4px;line-height:1.5}
+.alert-pills{display:flex;flex-wrap:wrap;gap:8px}
+.alert-pill{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;font-size:.72rem;font-weight:700}
+.alert-pill.critico{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.alert-pill.alto{background:rgba(240,191,107,.12);color:var(--amber);border:1px solid rgba(240,191,107,.2)}
+.alert-pill.info{background:rgba(82,166,255,.1);color:var(--blue);border:1px solid rgba(82,166,255,.18)}
+.doc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.doc-card{padding:14px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04)}
+.doc-name{font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.doc-meta{font-size:.74rem;line-height:1.5;margin-top:8px;color:var(--muted)}
+.doc-meta strong{color:var(--text)}
+.modules{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.module-card{padding:16px;display:flex;flex-direction:column;gap:10px}
+.module-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.module-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:rgba(0,201,167,.08);font-size:1.1rem}
+.module-title{font-size:.86rem;font-weight:800}
+.module-copy{font-size:.73rem;color:var(--muted);line-height:1.55}
+.module-link{margin-top:auto;font-size:.72rem;font-weight:800;color:var(--teal);text-decoration:none}
+.module-link:hover{text-decoration:underline}
+.empty{padding:18px;border-radius:14px;background:rgba(255,255,255,.03);color:var(--muted);font-size:.75rem;line-height:1.6}
+.skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.09) 50%,rgba(255,255,255,.04) 75%);background-size:200%;animation:shimmer 1.8s infinite;border-radius:10px}
+@keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+@media(max-width:1200px){.metrics{grid-template-columns:repeat(3,1fr)}.modules{grid-template-columns:repeat(2,1fr)}.hero{grid-template-columns:1fr}.board{grid-template-columns:1fr}.doc-grid{grid-template-columns:1fr}}
+@media(max-width:860px){.main{margin-left:0;padding:14px}.sidebar{display:none}.metrics{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.metrics,.modules{grid-template-columns:1fr}.tb-actions{display:none}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="tb-logo">
+    <div class="tb-icon">S</div>
+    <div>
+      <div class="tb-nome">SolusCRT</div>
+      <div class="tb-sub">Central SST · {{ empresa_nome }}</div>
+    </div>
+  </div>
+  <nav class="tb-nav">
+    <a href="/sst/" class="active">Central</a>
+    <a href="/sst/funcionarios/">Funcionários</a>
+    <a href="/sst/asos/">ASO</a>
+    <a href="/sst/exames/">Exames</a>
+    <a href="/sst/documentos/">Documentos</a>
+    <a href="/sst/esocial/">eSocial</a>
+  </nav>
+  <div class="tb-actions">
+    <a class="btn-ghost" href="/sst/relatorios/">Relatórios</a>
+    <a class="btn-main" href="/sst/asos/">Emitir ASO</a>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    {% include "partials/sst_sidebar.html" %}
+  </aside>
+
+  <main class="main">
+    <section class="hero">
+      <article class="hero-card">
+        <div class="eyebrow">Operação diária SST</div>
+        <h1>Central de acesso e prioridade para o operador</h1>
+        <p>Organizei o SST por fluxo de trabalho para reduzir cliques, separar o que é urgência do que é governança e deixar as rotinas mais claras para quem opera a plataforma no dia a dia.</p>
+        <div class="quick-actions">
+          <a class="chip" href="/sst/funcionarios/">👥 Abrir funcionários</a>
+          <a class="chip" href="/sst/solicitacoes/">📨 Novo pedido</a>
+          <a class="chip" href="/sst/exames/agendar/">📅 Agendar exame</a>
+          <a class="chip" href="/sst/cats/">⚠️ Registrar CAT</a>
+          <a class="chip" href="/sst/esocial/">🔗 Fila eSocial</a>
+          <a class="chip" href="/sst/documentos/">📁 Ver documentos</a>
+        </div>
+      </article>
+
+      <aside class="hero-side">
+        <div class="hero-card hero-side-card">
+          <div class="hero-kicker">Obrigatórios estratégicos</div>
+          <div class="status-row">
+            <div>
+              <div class="status-title">PGR e PCMSO</div>
+              <div class="status-sub">Situação dos programas base da operação</div>
+            </div>
+            <span class="badge b-muted" id="hero-docs">Carregando</span>
+          </div>
+          <div class="status-row">
+            <div>
+              <div class="status-title">Fila eSocial</div>
+              <div class="status-sub">Pendências e erros que travam conformidade</div>
+            </div>
+            <span class="badge b-muted" id="hero-esocial">Carregando</span>
+          </div>
+          <div class="status-row">
+            <div>
+              <div class="status-title">ASOs e exames</div>
+              <div class="status-sub">Itens críticos de vencimento e atraso</div>
+            </div>
+            <span class="badge b-muted" id="hero-vencimentos">Carregando</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="metrics">
+      <article class="metric-card" style="--mc:var(--teal)">
+        <div class="metric-label">Funcionários ativos</div>
+        <div class="metric-value" id="k-func">—</div>
+        <div class="metric-sub">base operacional sob gestão</div>
+      </article>
+      <article class="metric-card" style="--mc:var(--amber)">
+        <div class="metric-label">ASOs vencendo</div>
+        <div class="metric-value" id="k-asos">—</div>
+        <div class="metric-sub">janela de 30 dias</div>
+      </article>
+      <article class="metric-card" style="--mc:var(--red)">
+        <div class="metric-label">Exames em atraso</div>
+        <div class="metric-value" id="k-exames">—</div>
+        <div class="metric-sub">pendências que precisam de ação</div>
+      </article>
+      <article class="metric-card" style="--mc:var(--blue)">
+        <div class="metric-label">Eventos eSocial</div>
+        <div class="metric-value" id="k-esocial">—</div>
+        <div class="metric-sub">pendentes ou com erro</div>
+      </article>
+      <article class="metric-card" style="--mc:var(--green)">
+        <div class="metric-label">Afastamentos ativos</div>
+        <div class="metric-value" id="k-afast">—</div>
+        <div class="metric-sub">casos em acompanhamento</div>
+      </article>
+    </section>
+
+    <section class="board">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Fila prioritária</h2>
+            <p>Itens que merecem atenção primeiro para o operador não perder prazo, transmissão ou renovação obrigatória.</p>
+          </div>
+        </div>
+        <div class="alert-pills" id="alerts">
+          <div class="skel" style="height:34px;width:180px"></div>
+          <div class="skel" style="height:34px;width:220px"></div>
+        </div>
+        <div class="priority-list" id="priority-list" style="margin-top:14px">
+          <div class="skel" style="height:82px"></div>
+          <div class="skel" style="height:82px"></div>
+        </div>
+      </article>
+
+      <aside class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Governança obrigatória</h2>
+            <p>Visão resumida de documentos-base e status dos eventos estruturantes do SST.</p>
+          </div>
+        </div>
+        <div class="doc-grid" id="doc-grid">
+          <div class="skel" style="height:116px"></div>
+          <div class="skel" style="height:116px"></div>
+          <div class="skel" style="height:116px"></div>
+          <div class="skel" style="height:116px"></div>
+        </div>
+        <div class="mini-list" id="event-list" style="margin-top:12px">
+          <div class="skel" style="height:62px"></div>
+          <div class="skel" style="height:62px"></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="modules">
+      <article class="module-card">
+        <div class="module-top"><div class="module-icon">👥</div><div class="badge b-ok">Base</div></div>
+        <div class="module-title">Funcionários</div>
+        <div class="module-copy">Entrada principal para prontuário, cargo, risco, histórico e vínculo com ASOs e exames.</div>
+        <a class="module-link" href="/sst/funcionarios/">Abrir módulo</a>
+      </article>
+      <article class="module-card">
+        <div class="module-top"><div class="module-icon">📋</div><div class="badge b-warn">Rotina</div></div>
+        <div class="module-title">ASO e pedidos</div>
+        <div class="module-copy">Emissão de ASO, renovação, pedidos para clínica e acompanhamento dos vencimentos.</div>
+        <a class="module-link" href="/sst/asos/">Abrir módulo</a>
+      </article>
+      <article class="module-card">
+        <div class="module-top"><div class="module-icon">🔬</div><div class="badge b-danger">Prazo</div></div>
+        <div class="module-title">Exames e agendamentos</div>
+        <div class="module-copy">Execução da agenda ocupacional com foco em vencidos, faltas e reagendamentos.</div>
+        <a class="module-link" href="/sst/exames/">Abrir módulo</a>
+      </article>
+      <article class="module-card">
+        <div class="module-top"><div class="module-icon">⚠️</div><div class="badge b-danger">Crítico</div></div>
+        <div class="module-title">CAT e afastamentos</div>
+        <div class="module-copy">Tratamento de ocorrências, afastamentos e eventos que exigem resposta formal imediata.</div>
+        <a class="module-link" href="/sst/cats/">Abrir módulo</a>
+      </article>
+      <article class="module-card">
+        <div class="module-top"><div class="module-icon">🦺</div><div class="badge b-ok">Prevenção</div></div>
+        <div class="module-title">EPI, riscos e postos</div>
+        <div class="module-copy">Estruture riscos, postos S-2240 e controles preventivos numa trilha única de prevenção.</div>
+        <a class="module-link" href="/sst/riscos/">Abrir módulo</a>
+      </article>
+      <article class="module-card">
+        <div class="module-top"><div class="module-icon">🎓</div><div class="badge b-ok">Capacitação</div></div>
+        <div class="module-title">Treinamentos NR</div>
+        <div class="module-copy">Gestão dos vencimentos de capacitação e das obrigações por norma regulamentadora.</div>
+        <a class="module-link" href="/sst/treinamentos/">Abrir módulo</a>
+      </article>
+      <article class="module-card">
+        <div class="module-top"><div class="module-icon">📁</div><div class="badge b-warn">Governança</div></div>
+        <div class="module-title">Documentos e normas</div>
+        <div class="module-copy">PGR, PCMSO, LTCAT, PPP, CIPA e a biblioteca de NRs com acesso mais claro.</div>
+        <a class="module-link" href="/sst/documentos/">Abrir módulo</a>
+      </article>
+      <article class="module-card">
+        <div class="module-top"><div class="module-icon">🔗</div><div class="badge b-muted">Integração</div></div>
+        <div class="module-title">eSocial e conformidade</div>
+        <div class="module-copy">Consolidação da fila de eventos, histórico de transmissões e checagem de aderência.</div>
+        <a class="module-link" href="/sst/esocial/">Abrir módulo</a>
+      </article>
+    </section>
+  </main>
+</div>
+
+<script>
+const DOC_LABELS = {
+  PGR: "PGR",
+  PCMSO: "PCMSO",
+  LTCAT: "LTCAT",
+  laudo_insalubridade: "NR-15",
+  PPP: "PPP",
+  CIPA: "CIPA"
+};
+
+function badgeClassForStatus(status){
+  if (status === "vigente" || status === "transmitido") return "b-ok";
+  if (status === "vencido" || status === "erro") return "b-danger";
+  if (status === "em_revisao" || status === "pendente" || status === "enviado") return "b-warn";
+  return "b-muted";
+}
+
+function statusLabel(status){
+  return {
+    vigente: "Vigente",
+    vencido: "Vencido",
+    em_revisao: "Em revisão",
+    nao_cadastrado: "Não cadastrado",
+    pendente: "Pendente",
+    enviado: "Enviado",
+    transmitido: "Transmitido",
+    erro: "Com erro",
+    nao_enviado: "Sem envio"
+  }[status] || "Sem status";
+}
+
+function renderAlerts(alertas){
+  const wrap = document.getElementById("alerts");
+  if (!alertas || !alertas.length) {
+    wrap.innerHTML = '<div class="alert-pill info">Tudo sob controle no momento</div>';
+    return;
+  }
+  wrap.innerHTML = alertas.map(a => `
+    <div class="alert-pill ${a.nivel === "critico" ? "critico" : a.nivel === "alto" ? "alto" : "info"}">
+      ${a.nivel === "critico" ? "⚠️" : a.nivel === "alto" ? "⏱️" : "ℹ️"}
+      <span>${a.mensagem}</span>
+    </div>
+  `).join("");
+}
+
+function renderPriority(data){
+  const list = [];
+  (data.asos?.vencendo_30d || []).slice(0, 4).forEach(item => {
+    list.push(`
+      <div class="priority-item">
+        <div>
+          <div class="priority-title">${item.funcionario}</div>
+          <div class="priority-sub">${item.tipo} · ${item.cargo || "Cargo não informado"} · validade ${item.validade || "sem data"}</div>
+        </div>
+        <span class="badge ${item.dias_restantes !== null && item.dias_restantes <= 7 ? "b-danger" : "b-warn"}">
+          ${item.dias_restantes !== null ? `${item.dias_restantes}d` : "Prazo"}
+        </span>
+      </div>
+    `);
+  });
+  (data.cats?.recentes || []).slice(0, 3).forEach(item => {
+    list.push(`
+      <div class="priority-item">
+        <div>
+          <div class="priority-title">CAT · ${item.funcionario}</div>
+          <div class="priority-sub">${item.tipo || "Tipo não informado"} · ${item.gravidade || "Gravidade não informada"} · ${item.data || "Sem data"}</div>
+        </div>
+        <span class="badge ${item.status_esocial === "transmitido" ? "b-ok" : "b-danger"}">${statusLabel(item.status_esocial)}</span>
+      </div>
+    `);
+  });
+
+  const wrap = document.getElementById("priority-list");
+  wrap.innerHTML = list.length ? list.join("") : '<div class="empty">Nenhum item prioritário aberto. Use a navegação lateral para entrar diretamente nos módulos operacionais.</div>';
+}
+
+function renderDocs(documents){
+  const ordered = ["PGR","PCMSO","LTCAT","laudo_insalubridade","PPP","CIPA"];
+  const wrap = document.getElementById("doc-grid");
+  wrap.innerHTML = ordered.map(key => {
+    const doc = documents?.[key] || {};
+    return `
+      <div class="doc-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div class="doc-name">${DOC_LABELS[key]}</div>
+          <span class="badge ${badgeClassForStatus(doc.status)}">${statusLabel(doc.status)}</span>
+        </div>
+        <div class="doc-meta">
+          <div><strong>Validade:</strong> ${doc.validade || "não informada"}</div>
+          <div><strong>Responsável:</strong> ${doc.responsavel || "não informado"}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderEvents(esocial){
+  const ordered = ["S-2210","S-2220","S-2240"];
+  const wrap = document.getElementById("event-list");
+  wrap.innerHTML = ordered.map(code => {
+    const event = esocial?.por_tipo?.[code] || {};
+    return `
+      <div class="mini-item">
+        <div>
+          <div class="priority-title">${code}</div>
+          <div class="mini-sub">${event.label || "Evento SST"}${event.data ? ` · ${event.data}` : ""}</div>
+        </div>
+        <span class="badge ${badgeClassForStatus(event.status)}">${statusLabel(event.status)}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function setHeroBadges(data){
+  const pgr = data.documentos?.PGR?.status;
+  const pcmso = data.documentos?.PCMSO?.status;
+  const docsOk = [pgr, pcmso].every(s => s === "vigente");
+  document.getElementById("hero-docs").className = `badge ${docsOk ? "b-ok" : "b-warn"}`;
+  document.getElementById("hero-docs").textContent = docsOk ? "Em ordem" : "Exige atenção";
+
+  const backlog = (data.esocial?.pendentes || 0) + (data.esocial?.erros || 0);
+  document.getElementById("hero-esocial").className = `badge ${backlog ? "b-danger" : "b-ok"}`;
+  document.getElementById("hero-esocial").textContent = backlog ? `${backlog} item(ns)` : "Sem fila crítica";
+
+  const vencimentos = (data.asos?.vencidos || 0) + (data.exames?.atrasados || 0);
+  document.getElementById("hero-vencimentos").className = `badge ${vencimentos ? "b-danger" : "b-ok"}`;
+  document.getElementById("hero-vencimentos").textContent = vencimentos ? `${vencimentos} pendência(s)` : "Em dia";
+}
+
+async function carregarDashboard(){
+  try {
+    const response = await fetch("/api/sst/dashboard");
+    if (!response.ok) throw new Error("Falha ao carregar dashboard");
+    const data = await response.json();
+
+    document.getElementById("k-func").textContent = data.funcionarios_ativos ?? 0;
+    document.getElementById("k-asos").textContent = data.asos?.a_vencer_60d ?? 0;
+    document.getElementById("k-exames").textContent = data.exames?.atrasados ?? 0;
+    document.getElementById("k-esocial").textContent = (data.esocial?.pendentes || 0) + (data.esocial?.erros || 0);
+    document.getElementById("k-afast").textContent = data.afastamentos?.ativos ?? 0;
+
+    renderAlerts(data.alertas || []);
+    renderPriority(data);
+    renderDocs(data.documentos || {});
+    renderEvents(data.esocial || {});
+    setHeroBadges(data);
+  } catch (_error) {
+    document.getElementById("alerts").innerHTML = '<div class="alert-pill critico">Falha ao carregar indicadores do SST</div>';
+    document.getElementById("priority-list").innerHTML = '<div class="empty">Não foi possível carregar a fila prioritária agora.</div>';
+    document.getElementById("doc-grid").innerHTML = '<div class="empty" style="grid-column:1/-1">Não foi possível carregar documentos obrigatórios.</div>';
+    document.getElementById("event-list").innerHTML = '<div class="empty">Não foi possível carregar o resumo eSocial.</div>';
+  }
+}
+
+carregarDashboard();
+</script>
+</body>
+</html>
