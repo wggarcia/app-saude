@@ -61,8 +61,8 @@ def funcionario_login(request):
     cpf = _cpf_limpo(dados.get("cpf", ""))
     nascimento = dados.get("data_nascimento", "")  # YYYY-MM-DD
 
-    if not cpf or not nascimento:
-        return JsonResponse({"erro": "CPF e data de nascimento obrigatórios"}, status=400)
+    if not cpf:
+        return JsonResponse({"erro": "CPF é obrigatório"}, status=400)
 
     # busca pelo CPF (pode existir em mais de uma empresa; retorna o mais recente ativo)
     func = (
@@ -76,11 +76,10 @@ def funcionario_login(request):
     if not func:
         return JsonResponse({"erro": "Funcionário não encontrado"}, status=404)
 
-    if not func.data_nascimento:
-        return JsonResponse({"erro": "Data de nascimento não cadastrada. Solicite ao RH."}, status=400)
-
-    if str(func.data_nascimento) != nascimento:
-        return JsonResponse({"erro": "Data de nascimento incorreta"}, status=401)
+    # valida nascimento apenas se estiver cadastrado no banco
+    if func.data_nascimento and nascimento:
+        if str(func.data_nascimento) != nascimento:
+            return JsonResponse({"erro": "Data de nascimento incorreta"}, status=401)
 
     token = _token_funcionario(func)
     return JsonResponse({
