@@ -1,596 +1,1409 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Saúde & Comunicação SST | {{ empresa_nome }}</title>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>SolusCRT · Saúde &amp; Comunicação</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#041018;--panel:rgba(11,24,34,.9);--line:rgba(154,193,220,.14);--soft:rgba(255,255,255,.08);
-  --text:#ebf7ff;--muted:#9ab9ce;--teal:#00c9a7;--accent:#52a6ff;--gold:#f0bf6b;
-  --red:#ff7a91;--amber:#f59e0b;--shadow:0 24px 70px rgba(0,0,0,.42);
-}
 *{box-sizing:border-box;margin:0;padding:0}
-body{min-height:100vh;font-family:"Manrope","Segoe UI",sans-serif;color:var(--text);background:radial-gradient(circle at top left,rgba(0,201,167,.1),transparent 24rem),linear-gradient(180deg,#041018,#08141d 40%,#061119 100%)}
-/* TOPBAR */
-.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:rgba(4,16,24,.92);border-bottom:1px solid var(--line);backdrop-filter:blur(18px)}
-.topbar-logo{font-weight:800;font-size:.95rem}
-.topbar-sub{color:var(--teal);font-weight:700;font-size:.85rem}
-.topbar-co{margin-left:auto;color:var(--muted);font-size:.8rem;font-weight:600}
-/* LAYOUT */
-.layout{display:flex;min-height:100vh;padding-top:56px}
-/* SIDEBAR */
+:root{
+  --bg:#041018;
+  --panel:#071c28;
+  --panel2:#0b2638;
+  --panel3:#103247;
+  --line:rgba(126,225,195,.12);
+  --line2:rgba(126,225,195,.22);
+  --text:#e8f4f1;
+  --muted:#7fa2b1;
+  --teal:#00c9a7;
+  --blue:#52a6ff;
+  --amber:#f0bf6b;
+  --red:#f87171;
+  --green:#4ade80;
+  --purple:#c084fc;
+  --rose:#fb7185;
+}
+html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:radial-gradient(circle at top left,#0d3247 0,#041018 44%);color:var(--text);overflow-x:hidden}
+
+/* ── Topbar ───────────────────────────────────────────── */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:56px;display:flex;align-items:center;background:rgba(4,16,24,.92);border-bottom:1px solid var(--line);backdrop-filter:blur(18px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:220px;border-right:1px solid var(--line);height:100%}
+.tb-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));display:grid;place-items:center;font-weight:900;font-size:.82rem;color:#041018;flex-shrink:0}
+.tb-nome{font-size:.82rem;font-weight:800}
+.tb-sub{font-size:.62rem;color:var(--muted)}
+.tb-empresa{flex:1;padding:0 16px;font-size:.78rem;color:var(--muted)}
+.tb-empresa strong{color:var(--text)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 16px;flex-shrink:0}
+.btn-main{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));color:#041018;border:none;font-size:.74rem;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.btn-main:hover{opacity:.88}
+.btn-ghost{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.74rem;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer;white-space:nowrap;transition:all .15s;text-decoration:none}
+.btn-ghost:hover{color:var(--text);border-color:var(--line2)}
+
+/* ── Layout ───────────────────────────────────────────── */
+.app{display:flex;min-height:100vh;padding-top:56px}
 .sidebar{width:220px;flex-shrink:0;background:rgba(7,28,40,.72);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:56px;bottom:0;overflow-y:auto}
-.sb-label{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px}
-.sb-icon{font-size:15px;flex-shrink:0}
+.sb-label{font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px}
 .sb-link{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:.78rem;font-weight:600;color:var(--muted);text-decoration:none;border-left:2px solid transparent;transition:all .12s}
 .sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
 .sb-link.active{color:var(--teal);background:rgba(0,201,167,.07);border-left-color:var(--teal)}
-/* MAIN */
-.main{flex:1;margin-left:220px;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
-/* PAGE HEADER */
-.page-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
-.page-title{font-size:1.15rem;font-weight:800;margin-bottom:4px}
-.page-sub{color:var(--muted);font-size:.84rem}
-/* TABS */
-.tab-bar{display:flex;gap:4px;flex-wrap:wrap}
-.tab-btn{padding:8px 16px;border-radius:999px;border:1px solid var(--soft);background:rgba(255,255,255,.04);color:var(--muted);font:inherit;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap}
-.tab-btn:hover{background:rgba(255,255,255,.08);color:var(--text)}
-.tab-btn.active{background:rgba(0,201,167,.14);color:var(--teal);border-color:rgba(0,201,167,.3)}
-.tab-panel{display:none}.tab-panel.active{display:flex;flex-direction:column;gap:20px}
-/* CARDS */
-.card{border-radius:16px;padding:20px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
-.card-title{font-size:.9rem;font-weight:800;margin-bottom:4px}
-.card-sub{color:var(--muted);font-size:.82rem;margin-bottom:14px}
-/* KPI STRIP */
-.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
-.kpi{border-radius:14px;padding:16px;background:rgba(255,255,255,.04);border:1px solid var(--line);position:relative;overflow:hidden}
+.sb-icon{font-size:.94rem;flex-shrink:0;width:18px;text-align:center}
+.main{flex:1;margin-left:220px;padding:24px;display:flex;flex-direction:column;gap:18px}
+
+/* ── Page header ──────────────────────────────────────── */
+.page-hero{background:rgba(7,28,40,.84);border:1px solid var(--line);border-radius:18px;padding:22px 26px;position:relative;overflow:hidden}
+.page-hero::before{content:"";position:absolute;right:-40px;top:-40px;width:240px;height:240px;background:radial-gradient(circle,rgba(0,201,167,.14),transparent 60%);pointer-events:none}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;background:rgba(0,201,167,.09);color:var(--teal);font-size:.67rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.page-hero h1{font-size:1.6rem;font-weight:900;line-height:1.1;margin-bottom:6px}
+.page-hero p{font-size:.83rem;color:var(--muted);line-height:1.65;max-width:72ch}
+
+/* ── KPI strip ────────────────────────────────────────── */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.kpi{background:rgba(7,28,40,.84);border:1px solid var(--line);border-radius:14px;padding:16px;position:relative;overflow:hidden}
 .kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--teal))}
-.kpi-label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
-.kpi-value{font-size:1.6rem;font-weight:800}
-/* METRIC BARS */
-.metric-grid{display:grid;gap:10px}
-.metric-row{display:flex;align-items:center;gap:10px}
-.metric-name{font-size:.76rem;font-weight:700;color:var(--muted);width:80px;flex-shrink:0}
-.metric-bar-bg{flex:1;height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
-.metric-bar-fill{height:100%;border-radius:999px;transition:width .5s}
-.metric-val{font-size:.76rem;font-weight:800;width:24px;text-align:right;flex-shrink:0}
-/* TABLE */
-.tbl{width:100%;border-collapse:collapse;font-size:.8rem}
-.tbl th{text-align:left;padding:8px 10px;color:var(--muted);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line)}
-.tbl td{padding:9px 10px;border-bottom:1px solid rgba(154,193,220,.07)}
-.tbl tr:last-child td{border-bottom:none}
-/* BADGE */
-.badge{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font-size:.67rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase}
-.badge-teal{background:rgba(0,201,167,.14);color:#b0ffe6}
-.badge-blue{background:rgba(82,166,255,.14);color:#c3deff}
-.badge-amber{background:rgba(245,158,11,.14);color:#fde68a}
-.badge-red{background:rgba(255,122,145,.14);color:#ffbfcb}
-.badge-muted{background:rgba(255,255,255,.07);color:var(--muted)}
-/* BTN */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:999px;border:1px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);font:inherit;font-size:.8rem;font-weight:800;cursor:pointer;text-decoration:none;transition:all .18s}
-.btn:hover{background:rgba(255,255,255,.1)}
-.btn.primary{border:none;background:linear-gradient(135deg,#0db794,#1f6ff2);color:#fff}
-.btn.sm{padding:5px 12px;font-size:.74rem}
-.btn.danger{background:rgba(255,122,145,.12);border-color:rgba(255,122,145,.3);color:var(--red)}
-/* FORM */
-.form-grid{display:grid;gap:10px}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.field{display:flex;flex-direction:column;gap:5px}
-label{color:#bfd3e2;font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em}
-input,select,textarea{border-radius:10px;border:1px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);padding:9px 12px;font:inherit;font-size:.85rem;outline:none;width:100%}
-input:focus,select:focus,textarea:focus{border-color:rgba(82,166,255,.5)}
-select option{background:#0b1822}
-textarea{resize:vertical;min-height:80px}
-/* CONTENT CARDS GRID */
-.content-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-.content-card{border-radius:14px;padding:16px;background:rgba(255,255,255,.04);border:1px solid var(--line);display:flex;flex-direction:column;gap:10px;transition:border-color .2s}
-.content-card:hover{border-color:rgba(82,166,255,.3)}
-.cc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.cc-title{font-size:.88rem;font-weight:700;line-height:1.3}
-.cc-desc{color:var(--muted);font-size:.78rem;line-height:1.5}
-.cc-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-top:4px}
-.cc-meta{font-size:.7rem;color:var(--muted)}
-/* ALERT LIST */
-.alert-list{display:flex;flex-direction:column;gap:10px}
-.alert-item{border-radius:12px;padding:14px 16px;background:rgba(255,255,255,.03);border:1px solid var(--soft);display:flex;flex-direction:column;gap:6px}
-.alert-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.alert-name{font-size:.85rem;font-weight:700}
-.alert-meta{font-size:.75rem;color:var(--muted)}
-/* CONFLICT CARDS */
-.conflict-list{display:flex;flex-direction:column;gap:12px}
-.conflict-card{border-radius:14px;padding:16px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
-.conflict-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
-.conflict-desc{font-size:.82rem;color:var(--muted);margin-bottom:10px;line-height:1.5}
-/* TOAST */
-.toast{position:fixed;bottom:24px;right:24px;z-index:999;padding:12px 20px;border-radius:12px;font-size:.84rem;font-weight:700;display:none;animation:fadeIn .2s}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.toast.ok{display:block;background:rgba(0,201,167,.15);border:1px solid rgba(0,201,167,.3);color:#b0ffe6}
-.toast.err{display:block;background:rgba(255,122,145,.15);border:1px solid rgba(255,122,145,.3);color:var(--red)}
-/* FILTER ROW */
-.filter-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.filter-chip{padding:5px 13px;border-radius:999px;border:1px solid var(--soft);background:rgba(255,255,255,.04);color:var(--muted);font-size:.75rem;font-weight:700;cursor:pointer;transition:all .15s}
-.filter-chip.active{background:rgba(82,166,255,.14);border-color:rgba(82,166,255,.3);color:var(--accent)}
-/* MESSAGING HUB CARDS */
-.msg-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-.msg-card{border-radius:16px;padding:22px;background:rgba(255,255,255,.04);border:1px solid var(--line);text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
-.msg-icon{font-size:2rem}
-.msg-title{font-size:.9rem;font-weight:800}
-.msg-desc{font-size:.78rem;color:var(--muted);line-height:1.5}
-/* SECTOR TABLE COLOR CODING */
-.score-good{color:#7fffcc}
-.score-mid{color:var(--gold)}
-.score-bad{color:var(--red)}
-/* EMPTY */
-.empty{text-align:center;padding:32px;color:var(--muted);font-size:.88rem;border-radius:14px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1)}
-/* PUBLISH FORM WRAPPER */
-.publish-form{border-radius:14px;padding:18px;background:rgba(82,166,255,.06);border:1px solid rgba(82,166,255,.2);display:none}
-.publish-form.open{display:block}
-@media(max-width:900px){.main{margin-left:0;padding:16px}.sidebar{display:none}}
+.kpi-label{font-size:.6rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.kpi-value{font-size:1.85rem;font-weight:900;line-height:1}
+.kpi-sub{font-size:.68rem;color:var(--muted);margin-top:5px}
+
+/* ── Tabs ─────────────────────────────────────────────── */
+.tabs-bar{display:flex;gap:2px;background:rgba(7,28,40,.84);border:1px solid var(--line);border-radius:14px;padding:5px;width:fit-content}
+.tab{padding:9px 18px;border-radius:10px;font-size:.78rem;font-weight:700;color:var(--muted);border:none;background:none;font-family:'Manrope',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap}
+.tab:hover:not(.active){color:var(--text);background:rgba(255,255,255,.04)}
+.tab.active{color:var(--teal);background:rgba(0,201,167,.1)}
+.tab-pane{display:none}
+.tab-pane.active{display:flex;flex-direction:column;gap:16px}
+
+/* ── Shared panel ─────────────────────────────────────── */
+.panel{background:rgba(7,28,40,.84);border:1px solid var(--line);border-radius:16px;padding:20px}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.panel-head h2{font-size:.94rem;font-weight:800}
+.panel-head p{font-size:.74rem;color:var(--muted);line-height:1.55;margin-top:2px}
+.panel-head .ph-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+/* ── Card list ────────────────────────────────────────── */
+.card-list{display:flex;flex-direction:column;gap:10px}
+.card-item{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:13px 15px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04);transition:border-color .15s}
+.card-item:hover{border-color:var(--line)}
+.card-item-body{flex:1;min-width:0}
+.card-item-title{font-size:.8rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-item-sub{font-size:.7rem;color:var(--muted);margin-top:3px;line-height:1.5}
+.card-item-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+
+/* ── Badges ───────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:.62rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.b-ok{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.22)}
+.b-warn{background:rgba(240,191,107,.12);color:var(--amber);border:1px solid rgba(240,191,107,.22)}
+.b-danger{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.22)}
+.b-muted{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--line)}
+.b-teal{background:rgba(0,201,167,.1);color:var(--teal);border:1px solid rgba(0,201,167,.2)}
+.b-blue{background:rgba(82,166,255,.1);color:var(--blue);border:1px solid rgba(82,166,255,.2)}
+.b-purple{background:rgba(192,132,252,.1);color:var(--purple);border:1px solid rgba(192,132,252,.2)}
+
+/* ── Progress bar ─────────────────────────────────────── */
+.prog-wrap{display:flex;flex-direction:column;gap:12px}
+.prog-row{display:flex;flex-direction:column;gap:5px}
+.prog-label-row{display:flex;justify-content:space-between;align-items:center}
+.prog-label{font-size:.74rem;font-weight:700}
+.prog-pct{font-size:.72rem;font-weight:800;color:var(--teal)}
+.prog-bar-bg{height:6px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden}
+.prog-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--teal),var(--blue));transition:width .6s ease}
+
+/* ── Stat grid ────────────────────────────────────────── */
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat-card{padding:14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04)}
+.stat-card-label{font-size:.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.stat-card-value{font-size:1.5rem;font-weight:900;line-height:1}
+.stat-card-sub{font-size:.67rem;color:var(--muted);margin-top:4px}
+
+/* ── Donut ────────────────────────────────────────────── */
+.donut-wrap{display:flex;align-items:center;gap:20px}
+.donut-svg{flex-shrink:0}
+.donut-legend{display:flex;flex-direction:column;gap:8px;flex:1}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:.74rem}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend-label{color:var(--muted);flex:1}
+.legend-value{font-weight:800}
+
+/* ── Conteúdo tab ─────────────────────────────────────── */
+.content-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.content-card{padding:16px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04);display:flex;flex-direction:column;gap:10px;transition:border-color .15s}
+.content-card:hover{border-color:var(--line)}
+.content-tag{font-size:.6rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:6px}
+.tag-saude{background:rgba(0,201,167,.1);color:var(--teal)}
+.tag-seguranca{background:rgba(82,166,255,.1);color:var(--blue)}
+.tag-mental{background:rgba(192,132,252,.1);color:var(--purple)}
+.tag-nutri{background:rgba(74,222,128,.1);color:var(--green)}
+.tag-ergon{background:rgba(240,191,107,.1);color:var(--amber)}
+.content-title{font-size:.82rem;font-weight:800;line-height:1.35}
+.content-body{font-size:.74rem;color:var(--muted);line-height:1.6;flex:1}
+.content-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.68rem;color:var(--muted)}
+.content-send-btn{padding:5px 12px;border-radius:8px;border:none;background:rgba(0,201,167,.12);color:var(--teal);font-size:.7rem;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;transition:all .15s}
+.content-send-btn:hover{background:rgba(0,201,167,.2)}
+
+/* ── Form fields ──────────────────────────────────────── */
+.form-field{margin-bottom:14px}
+.form-label{display:block;font-size:.63rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:rgba(232,244,241,.4);margin-bottom:5px}
+.form-input,.form-select,.form-textarea{width:100%;padding:9px 13px;border-radius:8px;border:1px solid var(--line);background:rgba(0,201,167,.03);color:var(--text);font-size:.84rem;outline:none;font-family:'Manrope',sans-serif;transition:border-color .15s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--teal)}
+.form-select option{background:var(--panel)}
+.form-textarea{resize:vertical;min-height:90px;line-height:1.55}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.char-count{font-size:.65rem;color:var(--muted);text-align:right;margin-top:4px}
+
+/* ── Message history ──────────────────────────────────── */
+.msg-history-item{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:13px 15px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04)}
+.msg-meta-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:5px}
+.msg-stat-row{display:flex;gap:16px;margin-top:6px}
+.msg-stat{font-size:.68rem;color:var(--muted)}
+.msg-stat strong{color:var(--text)}
+
+/* ── Alert items ──────────────────────────────────────── */
+.alert-item{border-radius:12px;border:1px solid rgba(255,255,255,.06);overflow:hidden}
+.alert-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:13px 15px;background:rgba(255,255,255,.025)}
+.alert-body{padding:12px 15px;font-size:.75rem;color:var(--muted);line-height:1.6;border-top:1px solid rgba(255,255,255,.05)}
+.alert-actions{padding:10px 15px;border-top:1px solid rgba(255,255,255,.05);display:flex;gap:8px}
+.alert-btn{padding:5px 12px;border-radius:7px;font-size:.7rem;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;border:1px solid var(--line);background:none;color:var(--muted);transition:all .15s}
+.alert-btn:hover{border-color:var(--teal);color:var(--teal)}
+.alert-btn-primary{background:rgba(0,201,167,.12);color:var(--teal);border-color:rgba(0,201,167,.25)}
+.alert-btn-primary:hover{background:rgba(0,201,167,.22)}
+
+/* ── Conflito items ───────────────────────────────────── */
+.conflito-item{border-radius:12px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.025);padding:15px}
+.conflito-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}
+.conflito-title{font-size:.82rem;font-weight:800}
+.conflito-desc{font-size:.74rem;color:var(--muted);line-height:1.6;margin-bottom:12px}
+.conflito-footer{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.conflito-tag{font-size:.62rem;font-weight:700;padding:3px 9px;border-radius:6px}
+.ct-legal{background:rgba(248,113,113,.1);color:var(--red)}
+.ct-cultural{background:rgba(192,132,252,.1);color:var(--purple)}
+.ct-operacional{background:rgba(240,191,107,.1);color:var(--amber)}
+.ct-saude{background:rgba(0,201,167,.1);color:var(--teal)}
+.conflito-expand-btn{margin-left:auto;padding:4px 11px;border-radius:7px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.7rem;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer;transition:all .15s}
+.conflito-expand-btn:hover{border-color:var(--teal);color:var(--teal)}
+.conflito-recom{display:none;margin-top:12px;padding:12px;border-radius:10px;background:rgba(0,201,167,.05);border:1px solid rgba(0,201,167,.12)}
+.conflito-recom.open{display:block}
+.conflito-recom h4{font-size:.72rem;font-weight:800;color:var(--teal);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em}
+.conflito-recom ul{padding-left:14px;display:flex;flex-direction:column;gap:5px}
+.conflito-recom li{font-size:.74rem;color:var(--muted);line-height:1.5}
+
+/* ── Skeleton ─────────────────────────────────────────── */
+.skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.09) 50%,rgba(255,255,255,.04) 75%);background-size:200%;animation:shimmer 1.8s infinite;border-radius:10px}
+@keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+
+/* ── Empty state ──────────────────────────────────────── */
+.empty{padding:20px;border-radius:12px;background:rgba(255,255,255,.025);color:var(--muted);font-size:.75rem;line-height:1.6;text-align:center}
+
+/* ── Toast ────────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;right:24px;z-index:999;padding:12px 20px;border-radius:10px;font-size:.82rem;font-weight:700;background:rgba(0,201,167,.12);border:1px solid rgba(0,201,167,.3);color:var(--teal);opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.error{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.3);color:var(--red)}
+
+/* ── Modal ────────────────────────────────────────────── */
+.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.78);backdrop-filter:blur(5px);align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--panel);border:1px solid rgba(126,225,195,.2);border-radius:16px;padding:26px;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:1rem;font-weight:800;margin-bottom:4px}
+.modal-sub{font-size:.76rem;color:var(--muted);margin-bottom:20px;line-height:1.55}
+.modal-acts{display:flex;gap:8px;margin-top:20px}
+.btn-cancel{flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--muted);font-family:'Manrope',sans-serif;cursor:pointer;font-size:.82rem;font-weight:600}
+.btn-submit{flex:2;padding:10px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--teal),var(--blue));color:#041018;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;font-size:.82rem}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+
+/* ── Responsive ───────────────────────────────────────── */
+@media(max-width:1280px){.kpi-strip{grid-template-columns:repeat(3,1fr)}.content-grid{grid-template-columns:repeat(2,1fr)}.three-col{grid-template-columns:1fr 1fr}}
+@media(max-width:960px){.kpi-strip{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}.content-grid{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}}
+@media(max-width:860px){.main{margin-left:0;padding:14px}.sidebar{display:none}}
+@media(max-width:640px){.kpi-strip{grid-template-columns:1fr 1fr}.tabs-bar{flex-wrap:wrap;width:100%}}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <span class="topbar-logo">💚 SST</span>
-  <span class="topbar-sub">Saúde & Comunicação</span>
-  <span class="topbar-co">{{ empresa_nome }}</span>
-</div>
+<!-- ── Topbar ── -->
+<header class="topbar">
+  <div class="tb-logo">
+    <div class="tb-icon">S</div>
+    <div>
+      <div class="tb-nome">SolusCRT</div>
+      <div class="tb-sub">SST · Saúde &amp; Comunicação</div>
+    </div>
+  </div>
+  <div class="tb-empresa">Empresa: <strong>{{ empresa_nome }}</strong></div>
+  <div class="tb-actions">
+    <a class="btn-ghost" href="/sst/">← Central SST</a>
+    <button class="btn-main" onclick="abrirModalMensagem()">+ Nova Mensagem</button>
+  </div>
+</header>
 
-<div class="layout">
+<div class="app">
   <aside class="sidebar">
     {% include "partials/sst_sidebar.html" %}
   </aside>
 
   <main class="main">
-    <div class="page-header">
-      <div>
-        <div class="page-title">Saúde & Comunicação</div>
-        <div class="page-sub">Central de saúde ocupacional, conteúdo, mensagens e gestão de conflitos — onshore e offshore</div>
+
+    <!-- ── Page hero ── -->
+    <section class="page-hero">
+      <div class="eyebrow">💚 Saúde &amp; Comunicação</div>
+      <h1>Hub de saúde ocupacional e comunicação com trabalhadores</h1>
+      <p>Monitore indicadores de saúde da equipe, distribua conteúdo de bem-estar, gerencie mensagens em massa, acompanhe alertas de saúde e apoio, e identifique conflitos culturais que possam impactar o ambiente de trabalho.</p>
+    </section>
+
+    <!-- ── KPI strip ── -->
+    <section class="kpi-strip">
+      <div class="kpi" style="--kc:var(--teal)">
+        <div class="kpi-label">Índice de Bem-estar</div>
+        <div class="kpi-value" id="k-ibs">—</div>
+        <div class="kpi-sub">média geral da equipe</div>
       </div>
-    </div>
-
-    <div class="tab-bar">
-      <button class="tab-btn active" onclick="setTab('saude',this)">📊 Painel de Saúde</button>
-      <button class="tab-btn" onclick="setTab('conteudo',this)">📚 Conteúdo</button>
-      <button class="tab-btn" onclick="setTab('mensagens',this)">💬 Mensagens</button>
-      <button class="tab-btn" onclick="setTab('alertas',this)">🚨 Alertas & Apoio</button>
-      <button class="tab-btn" onclick="setTab('conflitos',this)">🤝 Conflitos Culturais</button>
-    </div>
-
-    <!-- ═══════════════════════════════════════════════════════════════ TAB SAÚDE -->
-    <section id="tab-saude" class="tab-panel active">
-
-      <div class="filter-row">
-        <span style="font-size:.75rem;font-weight:700;color:var(--muted)">Ambiente:</span>
-        <span class="filter-chip active" onclick="setAmbiente('',this)">Todos</span>
-        <span class="filter-chip" onclick="setAmbiente('onshore',this)">⛏️ Onshore</span>
-        <span class="filter-chip" onclick="setAmbiente('offshore',this)">🛢️ Offshore</span>
+      <div class="kpi" style="--kc:var(--amber)">
+        <div class="kpi-label">Alertas ativos</div>
+        <div class="kpi-value" id="k-alertas">—</div>
+        <div class="kpi-sub">saúde e apoio pendentes</div>
       </div>
-
-      <div class="kpi-strip" id="kpiStrip">
-        <div class="kpi" style="--kc:var(--teal)"><div class="kpi-label">Check-ins 7 dias</div><div class="kpi-value" id="kpiCheckins">—</div></div>
-        <div class="kpi" style="--kc:var(--amber)"><div class="kpi-label">Apoios pendentes</div><div class="kpi-value" id="kpiApoios">—</div></div>
-        <div class="kpi" style="--kc:var(--red)"><div class="kpi-label">Conflitos pendentes</div><div class="kpi-value" id="kpiConflitos">—</div></div>
-        <div class="kpi" style="--kc:#a855f7"><div class="kpi-label">Burnout alto (7d)</div><div class="kpi-value" id="kpiBurnout">—</div></div>
+      <div class="kpi" style="--kc:var(--blue)">
+        <div class="kpi-label">Mensagens enviadas</div>
+        <div class="kpi-value" id="k-msgs">—</div>
+        <div class="kpi-sub">últimos 30 dias</div>
       </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start" class="saude-cols">
-        <div class="card">
-          <div class="card-title">Médias de bem-estar (7 dias)</div>
-          <div class="card-sub">Escala de 1 a 5 — baseado nos check-ins dos colaboradores</div>
-          <div class="metric-grid" id="metricGrid">
-            <div style="color:var(--muted);font-size:.8rem">Carregando...</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">Por setor</div>
-          <div class="card-sub">Médias dos últimos 7 dias por área de trabalho</div>
-          <table class="tbl" id="setorTable">
-            <thead><tr><th>Setor</th><th>Check-ins</th><th>Humor</th><th>Estresse</th><th>Fadiga</th></tr></thead>
-            <tbody id="setorTbody"><tr><td colspan="5" style="color:var(--muted);padding:16px">Carregando...</td></tr></tbody>
-          </table>
-        </div>
+      <div class="kpi" style="--kc:var(--red)">
+        <div class="kpi-label">Conflitos culturais</div>
+        <div class="kpi-value" id="k-conflitos">—</div>
+        <div class="kpi-sub">registrados e abertos</div>
+      </div>
+      <div class="kpi" style="--kc:var(--green)">
+        <div class="kpi-label">Conteúdos ativos</div>
+        <div class="kpi-value" id="k-conteudos">—</div>
+        <div class="kpi-sub">campanhas em circulação</div>
       </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════════════════════════ TAB CONTEÚDO -->
-    <section id="tab-conteudo" class="tab-panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-        <div class="filter-row">
-          <span class="filter-chip active" data-tipo="" onclick="filterConteudo(this)">Todos</span>
-          <span class="filter-chip" data-tipo="video" onclick="filterConteudo(this)">🎥 Vídeo</span>
-          <span class="filter-chip" data-tipo="treinamento" onclick="filterConteudo(this)">📚 Treinamento</span>
-          <span class="filter-chip" data-tipo="reuniao" onclick="filterConteudo(this)">📹 Reunião</span>
-          <span class="filter-chip" data-tipo="comunicado" onclick="filterConteudo(this)">📢 Comunicado</span>
+    <!-- ── Tabs ── -->
+    <div class="tabs-bar" role="tablist">
+      <button class="tab active" onclick="switchTab('painel')" data-tab="painel">📊 Painel de Saúde</button>
+      <button class="tab" onclick="switchTab('conteudo')" data-tab="conteudo">📋 Conteúdo</button>
+      <button class="tab" onclick="switchTab('mensagens')" data-tab="mensagens">💬 Mensagens</button>
+      <button class="tab" onclick="switchTab('alertas')" data-tab="alertas">🔔 Alertas &amp; Apoio</button>
+      <button class="tab" onclick="switchTab('conflitos')" data-tab="conflitos">⚖️ Conflitos Culturais</button>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         TAB 1 · PAINEL DE SAÚDE
+    ════════════════════════════════════════════════════ -->
+    <div class="tab-pane active" id="pane-painel">
+
+      <div class="two-col">
+        <!-- Bem-estar por setor -->
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Índice de bem-estar por setor</h2>
+              <p>Consolidação dos indicadores de saúde física e mental.</p>
+            </div>
+          </div>
+          <div class="prog-wrap" id="bemestar-setores">
+            <div class="skel" style="height:48px"></div>
+            <div class="skel" style="height:48px"></div>
+            <div class="skel" style="height:48px"></div>
+            <div class="skel" style="height:48px"></div>
+          </div>
         </div>
-        <button class="btn primary" onclick="togglePublishForm()">+ Publicar Conteúdo</button>
+
+        <!-- Riscos psicossociais -->
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Riscos psicossociais</h2>
+              <p>Distribuição dos fatores de risco na última avaliação de saúde mental.</p>
+            </div>
+          </div>
+          <div class="donut-wrap">
+            <svg class="donut-svg" width="120" height="120" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="46" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="18"/>
+              <circle id="donut-arc-1" cx="60" cy="60" r="46" fill="none" stroke="var(--red)" stroke-width="18"
+                stroke-dasharray="0 289" stroke-linecap="round" transform="rotate(-90 60 60)" style="transition:stroke-dasharray .8s ease"/>
+              <circle id="donut-arc-2" cx="60" cy="60" r="46" fill="none" stroke="var(--amber)" stroke-width="18"
+                stroke-dasharray="0 289" stroke-linecap="round" transform="rotate(-90 60 60)" style="transition:stroke-dasharray .8s ease;transition-delay:.1s"/>
+              <circle id="donut-arc-3" cx="60" cy="60" r="46" fill="none" stroke="var(--blue)" stroke-width="18"
+                stroke-dasharray="0 289" stroke-linecap="round" transform="rotate(-90 60 60)" style="transition:stroke-dasharray .8s ease;transition-delay:.2s"/>
+              <text x="60" y="64" text-anchor="middle" font-size="14" font-weight="800" fill="#e8f4f1" font-family="Manrope,sans-serif" id="donut-center">—</text>
+            </svg>
+            <div class="donut-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div><span class="legend-label">Estresse</span><span class="legend-value" id="dl-estresse">—</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div><span class="legend-label">Burnout</span><span class="legend-value" id="dl-burnout">—</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div><span class="legend-label">Ansiedade</span><span class="legend-value" id="dl-ansiedade">—</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div><span class="legend-label">Outros</span><span class="legend-value" id="dl-outros">—</span></div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="publish-form" id="publishForm">
-        <div style="font-size:.88rem;font-weight:800;margin-bottom:14px">Publicar novo conteúdo</div>
-        <div class="form-grid">
-          <div class="form-row">
-            <div class="field"><label>Título</label><input id="ctTitulo" placeholder="Ex: Treinamento NR-10 — Segurança Elétrica"></div>
-            <div class="field"><label>Tipo</label>
-              <select id="ctTipo">
-                <option value="comunicado">📢 Comunicado</option>
-                <option value="video">🎥 Vídeo</option>
-                <option value="treinamento">📚 Treinamento</option>
-                <option value="reuniao">📹 Reunião de Vídeo</option>
+      <div class="three-col">
+        <!-- Afastamentos por causa -->
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Afastamentos por causa</h2>
+              <p>Top causas nos últimos 90 dias.</p>
+            </div>
+          </div>
+          <div class="card-list" id="afast-causas">
+            <div class="skel" style="height:44px"></div>
+            <div class="skel" style="height:44px"></div>
+            <div class="skel" style="height:44px"></div>
+          </div>
+        </div>
+
+        <!-- Programas de saúde -->
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Programas de saúde</h2>
+              <p>Adesão e execução por programa.</p>
+            </div>
+          </div>
+          <div class="card-list" id="programas-saude">
+            <div class="skel" style="height:44px"></div>
+            <div class="skel" style="height:44px"></div>
+            <div class="skel" style="height:44px"></div>
+          </div>
+        </div>
+
+        <!-- Resumo estatístico -->
+        <div class="panel">
+          <div class="panel-head">
+            <div><h2>Resumo do período</h2><p>Indicadores dos últimos 30 dias.</p></div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-card">
+              <div class="stat-card-label">Consultas realizadas</div>
+              <div class="stat-card-value" id="s-consultas">—</div>
+              <div class="stat-card-sub">medicina do trabalho</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Retornos previstos</div>
+              <div class="stat-card-value" id="s-retornos">—</div>
+              <div class="stat-card-sub">próximos 14 dias</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Taxa de absenteísmo</div>
+              <div class="stat-card-value" id="s-absenteismo">—</div>
+              <div class="stat-card-sub">% de dias perdidos</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Encaminhamentos</div>
+              <div class="stat-card-value" id="s-encaminhamentos">—</div>
+              <div class="stat-card-sub">especialistas 30d</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /pane-painel -->
+
+    <!-- ════════════════════════════════════════════════════
+         TAB 2 · CONTEÚDO
+    ════════════════════════════════════════════════════ -->
+    <div class="tab-pane" id="pane-conteudo">
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Biblioteca de conteúdo de bem-estar</h2>
+            <p>Materiais prontos para distribuição via mensagem, mural ou grupos de difusão.</p>
+          </div>
+          <div class="ph-actions">
+            <select class="form-select" style="width:auto;font-size:.74rem" id="filtro-categoria" onchange="renderConteudos()">
+              <option value="">Todas as categorias</option>
+              <option value="saude">Saúde física</option>
+              <option value="mental">Saúde mental</option>
+              <option value="seguranca">Segurança</option>
+              <option value="nutri">Nutrição</option>
+              <option value="ergon">Ergonomia</option>
+            </select>
+            <button class="btn-main" onclick="abrirModalConteudo()">+ Novo Conteúdo</button>
+          </div>
+        </div>
+        <div class="content-grid" id="conteudo-grid">
+          <div class="skel" style="height:160px"></div>
+          <div class="skel" style="height:160px"></div>
+          <div class="skel" style="height:160px"></div>
+          <div class="skel" style="height:160px"></div>
+          <div class="skel" style="height:160px"></div>
+          <div class="skel" style="height:160px"></div>
+        </div>
+      </div>
+
+    </div><!-- /pane-conteudo -->
+
+    <!-- ════════════════════════════════════════════════════
+         TAB 3 · MENSAGENS
+    ════════════════════════════════════════════════════ -->
+    <div class="tab-pane" id="pane-mensagens">
+
+      <!-- Composer -->
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Enviar mensagem em massa</h2>
+            <p>Dispare avisos, campanhas e comunicados para grupos de colaboradores diretamente pela plataforma.</p>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">Destinatários</label>
+            <select class="form-select" id="msg-destinatario">
+              <option value="">Selecionar grupo…</option>
+              <option value="todos">Todos os funcionários</option>
+              <option value="setor">Por setor</option>
+              <option value="turno">Por turno</option>
+              <option value="risco">Por nível de risco</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Tipo de comunicação</label>
+            <select class="form-select" id="msg-tipo">
+              <option value="aviso">Aviso geral</option>
+              <option value="campanha">Campanha de saúde</option>
+              <option value="lembrete">Lembrete de exame</option>
+              <option value="alerta">Alerta de segurança</option>
+              <option value="retorno">Retorno ao trabalho</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Assunto</label>
+          <input type="text" class="form-input" id="msg-assunto" placeholder="Ex: Campanha de vacinação — Outubro Rosa…" maxlength="120" oninput="updateCharCount()">
+          <div class="char-count"><span id="msg-assunto-count">0</span>/120</div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Mensagem</label>
+          <textarea class="form-textarea" id="msg-corpo" rows="4" placeholder="Escreva a mensagem aqui. Seja objetivo e use linguagem acessível para todos os colaboradores." maxlength="1000" oninput="updateBodyCount()"></textarea>
+          <div class="char-count"><span id="msg-corpo-count">0</span>/1000</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-main" onclick="enviarMensagem()">Enviar mensagem</button>
+          <button class="btn-ghost" onclick="salvarRascunho()">Salvar rascunho</button>
+          <span id="msg-feedback" style="font-size:.74rem;color:var(--teal)"></span>
+        </div>
+      </div>
+
+      <!-- Histórico -->
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Histórico de mensagens</h2>
+            <p>Comunicados enviados nos últimos 30 dias com estatísticas de entrega e abertura.</p>
+          </div>
+          <div class="ph-actions">
+            <input type="text" class="form-input" style="width:200px;font-size:.74rem" id="busca-msg" placeholder="Buscar…" oninput="renderHistoricoMensagens()">
+          </div>
+        </div>
+        <div class="card-list" id="msg-historico">
+          <div class="skel" style="height:80px"></div>
+          <div class="skel" style="height:80px"></div>
+          <div class="skel" style="height:80px"></div>
+        </div>
+      </div>
+
+    </div><!-- /pane-mensagens -->
+
+    <!-- ════════════════════════════════════════════════════
+         TAB 4 · ALERTAS & APOIO
+    ════════════════════════════════════════════════════ -->
+    <div class="tab-pane" id="pane-alertas">
+
+      <div class="two-col">
+        <!-- Alertas ativos -->
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Alertas de saúde ativos</h2>
+              <p>Situações identificadas que exigem acompanhamento ou encaminhamento imediato.</p>
+            </div>
+            <div class="ph-actions">
+              <select class="form-select" style="width:auto;font-size:.74rem" id="filtro-alerta" onchange="renderAlertas()">
+                <option value="">Todos</option>
+                <option value="critico">Crítico</option>
+                <option value="alto">Alto</option>
+                <option value="moderado">Moderado</option>
               </select>
             </div>
           </div>
-          <div class="form-row">
-            <div class="field"><label>Ambiente</label>
-              <select id="ctAmbiente">
-                <option value="ambos">Todos (Onshore + Offshore)</option>
-                <option value="onshore">⛏️ Apenas Onshore</option>
-                <option value="offshore">🛢️ Apenas Offshore</option>
-              </select>
+          <div class="card-list" id="alertas-lista">
+            <div class="skel" style="height:100px"></div>
+            <div class="skel" style="height:100px"></div>
+            <div class="skel" style="height:100px"></div>
+          </div>
+        </div>
+
+        <!-- Rede de apoio -->
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Rede de apoio disponível</h2>
+              <p>Recursos internos e externos de apoio psicossocial e saúde para encaminhamento.</p>
             </div>
-            <div class="field"><label>Setor alvo (opcional)</label>
-              <select id="ctSetor"><option value="">Todos os setores</option></select>
+            <div class="ph-actions">
+              <button class="btn-main" style="font-size:.7rem;padding:6px 12px" onclick="showToast('Módulo de cadastro de apoio: em breve')">+ Adicionar</button>
             </div>
           </div>
-          <div class="field"><label>Link do conteúdo (YouTube, Meet, Drive etc.)</label><input id="ctUrl" type="url" placeholder="https://..."></div>
-          <div class="field"><label>Descrição</label><textarea id="ctDesc" placeholder="Descreva o conteúdo ou as instruções de acesso..."></textarea></div>
-          <div style="display:flex;gap:8px;margin-top:4px">
-            <button class="btn primary" onclick="publicarConteudo()">Publicar</button>
-            <button class="btn" onclick="togglePublishForm()">Cancelar</button>
+          <div class="card-list" id="apoio-lista">
+            <div class="skel" style="height:64px"></div>
+            <div class="skel" style="height:64px"></div>
+            <div class="skel" style="height:64px"></div>
           </div>
         </div>
       </div>
 
-      <div class="content-grid" id="conteudoGrid">
-        <div class="empty">Carregando conteúdos...</div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════════════════════════ TAB MENSAGENS -->
-    <section id="tab-mensagens" class="tab-panel">
-      <div class="card" style="text-align:center;padding:32px">
-        <div style="font-size:2.5rem;margin-bottom:12px">💬</div>
-        <div class="card-title" style="font-size:1.1rem;margin-bottom:8px">Canal de Comunicação com Colaboradores</div>
-        <div style="color:var(--muted);font-size:.88rem;line-height:1.6;max-width:480px;margin:0 auto 24px">
-          Envie mensagens diretas, crie grupos por setor ou turma, e realize reuniões de vídeo com a equipe. A comunicação fica registrada e vinculada ao perfil do colaborador.
-        </div>
-        <div class="msg-cards" style="max-width:700px;margin:0 auto">
-          <div class="msg-card">
-            <div class="msg-icon">💬</div>
-            <div class="msg-title">Chat Direto</div>
-            <div class="msg-desc">Mensagens individuais com qualquer colaborador da empresa</div>
-            <a class="btn primary" href="/sst/comunicacao/">Abrir Chat</a>
+      <!-- Triagem de bem-estar -->
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Triagem de bem-estar — resultados recentes</h2>
+            <p>Resumo das últimas avaliações individuais. Casos críticos são destacados para encaminhamento.</p>
           </div>
-          <div class="msg-card">
-            <div class="msg-icon">👥</div>
-            <div class="msg-title">Grupos & Turmas</div>
-            <div class="msg-desc">Crie grupos por setor, turno ou projeto para comunicação em massa</div>
-            <a class="btn" href="/sst/comunicacao/grupos/">Ver Grupos</a>
-          </div>
-          <div class="msg-card">
-            <div class="msg-icon">📹</div>
-            <div class="msg-title">Reunião de Vídeo</div>
-            <div class="msg-desc">Inicie uma videoconferência com sua equipe onshore ou offshore</div>
-            <a class="btn" href="/api/comunicacao/video/criar/" onclick="criarVideoMeeting(event)">Iniciar Reunião</a>
+          <div class="ph-actions">
+            <button class="btn-main" style="font-size:.7rem;padding:6px 12px" onclick="enviarTriagem()">Enviar nova triagem</button>
           </div>
         </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════════════════════════ TAB ALERTAS -->
-    <section id="tab-alertas" class="tab-panel">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start" class="alertas-cols">
-        <div class="card">
-          <div class="card-title">🆘 Pedidos de Apoio</div>
-          <div class="card-sub">Colaboradores que solicitaram suporte emocional ou psicológico</div>
-          <div class="alert-list" id="apoioList"><div style="color:var(--muted);font-size:.82rem">Carregando...</div></div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">🔥 Risco de Burnout</div>
-          <div class="card-sub">Colaboradores com risco elevado nos últimos 7 dias</div>
-          <div style="color:var(--muted);font-size:.82rem;margin-bottom:16px;line-height:1.6">
-            O risco de burnout é calculado com base no check-in semanal — campo "risco_burnout" (escala 1-5). Colaboradores com nível ≥ 4 são sinalizados aqui.
-          </div>
-          <div id="burnoutAlert" style="padding:14px;border-radius:12px;background:rgba(255,122,145,.08);border:1px solid rgba(255,122,145,.2)">
-            <div id="burnoutCount" style="font-size:1.4rem;font-weight:800;color:var(--red)">—</div>
-            <div style="color:var(--muted);font-size:.78rem;margin-top:4px">colaboradores com risco elevado esta semana</div>
-          </div>
-          <div style="margin-top:14px">
-            <a class="btn sm" href="/sst/relatorios/">Ver Relatório Completo</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════════════════════════ TAB CONFLITOS -->
-    <section id="tab-conflitos" class="tab-panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-        <div class="filter-row">
-          <span class="filter-chip active" data-status="" onclick="filterConflito(this)">Todos</span>
-          <span class="filter-chip" data-status="novo" onclick="filterConflito(this)">🔴 Novo</span>
-          <span class="filter-chip" data-status="em_analise" onclick="filterConflito(this)">🟡 Em análise</span>
-          <span class="filter-chip" data-status="resolvido" onclick="filterConflito(this)">🟢 Resolvido</span>
-          <span class="filter-chip" data-status="arquivado" onclick="filterConflito(this)">⬜ Arquivado</span>
+        <div class="card-list" id="triagem-lista">
+          <div class="skel" style="height:64px"></div>
+          <div class="skel" style="height:64px"></div>
+          <div class="skel" style="height:64px"></div>
         </div>
       </div>
 
-      <div class="conflict-list" id="conflictList">
-        <div style="color:var(--muted);font-size:.82rem">Carregando...</div>
+    </div><!-- /pane-alertas -->
+
+    <!-- ════════════════════════════════════════════════════
+         TAB 5 · CONFLITOS CULTURAIS
+    ════════════════════════════════════════════════════ -->
+    <div class="tab-pane" id="pane-conflitos">
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Conflitos culturais identificados</h2>
+            <p>Situações de tensão cultural, linguística ou de valores registradas pelo time de SST, com recomendações de mediação.</p>
+          </div>
+          <div class="ph-actions">
+            <select class="form-select" style="width:auto;font-size:.74rem" id="filtro-conflito" onchange="renderConflitos()">
+              <option value="">Todos os tipos</option>
+              <option value="legal">Conformidade legal</option>
+              <option value="cultural">Barreira cultural</option>
+              <option value="operacional">Impacto operacional</option>
+              <option value="saude">Saúde e segurança</option>
+            </select>
+            <button class="btn-main" style="font-size:.7rem;padding:6px 12px" onclick="abrirModalConflito()">+ Registrar conflito</button>
+          </div>
+        </div>
+        <div class="card-list" id="conflitos-lista">
+          <div class="skel" style="height:120px"></div>
+          <div class="skel" style="height:120px"></div>
+          <div class="skel" style="height:120px"></div>
+        </div>
       </div>
-    </section>
+
+      <div class="two-col">
+        <!-- Categorias -->
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Categorias mais frequentes</h2>
+              <p>Padrão dos conflitos registrados nos últimos 6 meses.</p>
+            </div>
+          </div>
+          <div class="prog-wrap" id="conflito-categorias">
+            <div class="skel" style="height:40px"></div>
+            <div class="skel" style="height:40px"></div>
+            <div class="skel" style="height:40px"></div>
+          </div>
+        </div>
+
+        <!-- Mediações ativas -->
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Mediações em andamento</h2>
+              <p>Planos de ação e mediações ativas vinculados a conflitos registrados.</p>
+            </div>
+          </div>
+          <div class="card-list" id="mediacao-lista">
+            <div class="skel" style="height:64px"></div>
+            <div class="skel" style="height:64px"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /pane-conflitos -->
 
   </main>
+</div>
+
+<!-- ── Modal: Nova Mensagem (topbar) ── -->
+<div class="modal-bg" id="modal-mensagem">
+  <div class="modal">
+    <h3>Nova Mensagem em Massa</h3>
+    <div class="modal-sub">Envie um comunicado imediato para todos os funcionários ou um grupo específico.</div>
+    <div class="form-field">
+      <label class="form-label">Grupo de destino</label>
+      <select class="form-select" id="modal-msg-destinatario">
+        <option value="todos">Todos os funcionários</option>
+        <option value="setor">Por setor</option>
+        <option value="risco">Por risco ocupacional</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Mensagem</label>
+      <textarea class="form-textarea" id="modal-msg-corpo" rows="5" placeholder="Escreva o comunicado…"></textarea>
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal('modal-mensagem')">Cancelar</button>
+      <button class="btn-submit" id="btn-modal-msg" onclick="enviarMensagemModal()">Enviar agora</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Novo Conteúdo ── -->
+<div class="modal-bg" id="modal-conteudo">
+  <div class="modal">
+    <h3>Novo Conteúdo de Bem-estar</h3>
+    <div class="modal-sub">Adicione um novo material à biblioteca de conteúdo para distribuição aos colaboradores.</div>
+    <div class="form-field">
+      <label class="form-label">Título</label>
+      <input type="text" class="form-input" id="cont-titulo" placeholder="Ex: Como prevenir lesões por esforço repetitivo">
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Categoria</label>
+        <select class="form-select" id="cont-categoria">
+          <option value="saude">Saúde física</option>
+          <option value="mental">Saúde mental</option>
+          <option value="seguranca">Segurança</option>
+          <option value="nutri">Nutrição</option>
+          <option value="ergon">Ergonomia</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Formato</label>
+        <select class="form-select" id="cont-formato">
+          <option value="texto">Texto / artigo</option>
+          <option value="dicas">Lista de dicas</option>
+          <option value="infografico">Infográfico</option>
+          <option value="video">Vídeo</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Conteúdo / Resumo</label>
+      <textarea class="form-textarea" id="cont-corpo" rows="4" placeholder="Resumo do conteúdo ou link para o material…"></textarea>
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal('modal-conteudo')">Cancelar</button>
+      <button class="btn-submit" id="btn-modal-cont" onclick="salvarConteudo()">Salvar conteúdo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Registrar Conflito ── -->
+<div class="modal-bg" id="modal-conflito">
+  <div class="modal">
+    <h3>Registrar Conflito Cultural</h3>
+    <div class="modal-sub">Documente situações de tensão cultural, linguística ou de valores para acompanhamento e mediação pela equipe SST.</div>
+    <div class="form-field">
+      <label class="form-label">Título do conflito</label>
+      <input type="text" class="form-input" id="conf-titulo" placeholder="Descrição breve…">
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" id="conf-tipo">
+          <option value="cultural">Barreira cultural</option>
+          <option value="legal">Conformidade legal</option>
+          <option value="operacional">Impacto operacional</option>
+          <option value="saude">Saúde e segurança</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Severidade</label>
+        <select class="form-select" id="conf-severidade">
+          <option value="baixo">Baixo</option>
+          <option value="moderado">Moderado</option>
+          <option value="alto">Alto</option>
+          <option value="critico">Crítico</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Detalhes e contexto</label>
+      <textarea class="form-textarea" id="conf-desc" rows="4" placeholder="Descreva o contexto, setores envolvidos e impacto identificado…"></textarea>
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal('modal-conflito')">Cancelar</button>
+      <button class="btn-submit" id="btn-modal-conf" onclick="salvarConflito()">Registrar</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-const setores = {{ setores_json|safe }};
-
-// ─── helpers ──────────────────────────────────────────────────────────────────
-async function api(url, opts={}) {
-  const r = await fetch(url, {
-    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
-    ...opts
-  });
-  return r.json();
+// ════════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════════
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
 }
-function getCookie(n) { return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith(n+'='))?.split('=')[1]||''; }
-function showToast(msg, type='ok') {
+
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function showToast(msg, isError) {
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.className = 'toast ' + type;
-  setTimeout(() => t.className = 'toast', 3000);
-}
-function setTab(tab, btn) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
-  if (btn) btn.classList.add('active');
-  if (tab === 'saude') loadSaude();
-  if (tab === 'conteudo') loadConteudos();
-  if (tab === 'alertas') loadAlertas();
-  if (tab === 'conflitos') loadConflitos();
+  t.className = 'toast' + (isError ? ' error' : '') + ' show';
+  setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// ─── COLORS ───────────────────────────────────────────────────────────────────
-function scoreColor(v, inverse=false) {
-  if (v === null) return 'var(--muted)';
-  const good = inverse ? (v <= 2) : (v >= 4);
-  const bad  = inverse ? (v >= 4) : (v <= 2);
-  return good ? '#7fffcc' : bad ? '#ff7a91' : '#f0bf6b';
-}
-function scoreClass(v, inverse=false) {
-  if (v === null) return '';
-  const good = inverse ? (v <= 2) : (v >= 4);
-  const bad  = inverse ? (v >= 4) : (v <= 2);
-  return good ? 'score-good' : bad ? 'score-bad' : '';
-}
-function barColor(v, inverse=false) {
-  const good = inverse ? (v <= 2) : (v >= 4);
-  const bad  = inverse ? (v >= 4) : (v <= 2);
-  return good ? 'var(--teal)' : bad ? 'var(--red)' : 'var(--gold)';
+function fecharModal(id) {
+  document.getElementById(id).classList.remove('open');
 }
 
-// ─── TAB SAÚDE ────────────────────────────────────────────────────────────────
-let ambienteFiltro = '';
-function setAmbiente(a, chip) {
-  ambienteFiltro = a;
-  document.querySelectorAll('.filter-row .filter-chip').forEach(c => c.classList.remove('active'));
-  chip.classList.add('active');
-  loadSaude();
+function fmtData(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch (_) { return iso; }
 }
 
-async function loadSaude() {
-  const d = await api('/api/sst/wellness/resumo/');
-  document.getElementById('kpiCheckins').textContent = d.total_checkins_7d ?? '—';
-  document.getElementById('kpiApoios').textContent = d.apoios_pendentes ?? '—';
-  document.getElementById('kpiConflitos').textContent = d.conflitos_pendentes ?? '—';
-  document.getElementById('kpiBurnout').textContent = d.burnout_alto_7d ?? '—';
+// ════════════════════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════════════════════
+let activeTab = 'painel';
 
-  const metrics = [
-    {label:'Humor', key:'humor', inv:false},
-    {label:'Energia', key:'energia', inv:false},
-    {label:'Estresse', key:'estresse', inv:true},
-    {label:'Fadiga', key:'fadiga', inv:true},
-    {label:'Ansiedade', key:'ansiedade', inv:true},
-  ];
-  const mg = document.getElementById('metricGrid');
-  mg.innerHTML = metrics.map(m => {
-    const v = d.medias?.[m.key];
-    const pct = v ? Math.round((v/5)*100) : 0;
-    const color = barColor(v, m.inv);
-    return `<div class="metric-row">
-      <span class="metric-name">${m.label}</span>
-      <div class="metric-bar-bg"><div class="metric-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-      <span class="metric-val" style="color:${color}">${v ?? '—'}</span>
-    </div>`;
-  }).join('');
-
-  const setores = await api('/api/sst/wellness/setores/');
-  const tbody = document.getElementById('setorTbody');
-  if (!setores.setores?.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Sem dados ainda</td></tr>'; return; }
-  tbody.innerHTML = setores.setores.map(s => `<tr>
-    <td style="font-weight:700">${s.nome}</td>
-    <td>${s.total}</td>
-    <td class="${scoreClass(s.humor)}">${s.humor ?? '—'}</td>
-    <td class="${scoreClass(s.estresse, true)}">${s.estresse ?? '—'}</td>
-    <td class="${scoreClass(s.fadiga, true)}">${s.fadiga ?? '—'}</td>
-  </tr>`).join('');
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + tab));
+  activeTab = tab;
+  if (tab === 'conteudo' && !conteudosCarregados) carregarConteudos();
+  if (tab === 'mensagens' && !mensagensCarregadas) carregarHistoricoMensagens();
+  if (tab === 'alertas' && !alertasCarregados) carregarAlertas();
+  if (tab === 'conflitos' && !conflitosCarregados) carregarConflitos();
 }
 
-// ─── TAB CONTEÚDO ─────────────────────────────────────────────────────────────
-let conteudoTipo = '';
-function filterConteudo(chip) {
-  document.querySelectorAll('#tab-conteudo .filter-chip').forEach(c => c.classList.remove('active'));
-  chip.classList.add('active');
-  conteudoTipo = chip.dataset.tipo || '';
-  loadConteudos();
-}
+// ════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════
+let conteudos = [];
+let conteudosCarregados = false;
+let mensagens = [];
+let mensagensCarregadas = false;
+let alertas = [];
+let alertasCarregados = false;
+let conflitos = [];
+let conflitosCarregados = false;
 
-function togglePublishForm() {
-  const f = document.getElementById('publishForm');
-  f.classList.toggle('open');
-  if (f.classList.contains('open')) {
-    const sel = document.getElementById('ctSetor');
-    sel.innerHTML = '<option value="">Todos os setores</option>' +
-      setores.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+// ════════════════════════════════════════════════════════
+// TAB 1 · PAINEL DE SAÚDE
+// ════════════════════════════════════════════════════════
+async function carregarPainel() {
+  try {
+    const r = await fetch('/api/sst/saude-comunicacao/painel/');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+
+    document.getElementById('k-ibs').textContent = data.indice_bem_estar != null ? data.indice_bem_estar + '%' : '—';
+    document.getElementById('k-alertas').textContent = data.alertas_ativos ?? '—';
+    document.getElementById('k-msgs').textContent = data.mensagens_30d ?? '—';
+    document.getElementById('k-conflitos').textContent = data.conflitos_abertos ?? '—';
+    document.getElementById('k-conteudos').textContent = data.conteudos_ativos ?? '—';
+
+    renderBemestarSetores(data.bem_estar_setores || []);
+    renderDonut(data.riscos_psicossociais || {});
+    renderAfastamentosCausas(data.afastamentos_causas || []);
+    renderProgramasSaude(data.programas_saude || []);
+
+    document.getElementById('s-consultas').textContent = data.consultas_30d ?? '—';
+    document.getElementById('s-retornos').textContent = data.retornos_previstos ?? '—';
+    document.getElementById('s-absenteismo').textContent = data.taxa_absenteismo != null ? data.taxa_absenteismo + '%' : '—';
+    document.getElementById('s-encaminhamentos').textContent = data.encaminhamentos_30d ?? '—';
+
+  } catch (_) {
+    document.getElementById('bemestar-setores').innerHTML = '<div class="empty">Não foi possível carregar o painel de saúde agora.</div>';
   }
 }
 
-const tipoIcon = {video:'🎥',treinamento:'📚',reuniao:'📹',comunicado:'📢'};
-const tipoLabel = {video:'Vídeo',treinamento:'Treinamento',reuniao:'Reunião',comunicado:'Comunicado'};
-const ambienteBadge = {onshore:'badge-amber',offshore:'badge-blue',ambos:'badge-muted'};
-const ambienteLabel = {onshore:'⛏️ Onshore',offshore:'🛢️ Offshore',ambos:'Todos'};
-
-async function loadConteudos() {
-  const params = new URLSearchParams();
-  if (conteudoTipo) params.set('tipo', conteudoTipo);
-  const d = await api('/api/sst/conteudos/?' + params);
-  const grid = document.getElementById('conteudoGrid');
-  if (!d.conteudos?.length) { grid.innerHTML = '<div class="empty">Nenhum conteúdo publicado ainda.</div>'; return; }
-  grid.innerHTML = d.conteudos.map(c => `
-    <div class="content-card">
-      <div class="cc-top">
-        <div>
-          <div style="font-size:1.1rem;margin-bottom:4px">${tipoIcon[c.tipo]||'📄'}</div>
-          <div class="cc-title">${c.titulo}</div>
-        </div>
-        <span class="badge badge-blue">${tipoLabel[c.tipo]||c.tipo}</span>
+function renderBemestarSetores(setores) {
+  const wrap = document.getElementById('bemestar-setores');
+  if (!setores.length) {
+    wrap.innerHTML = '<div class="empty">Nenhum dado de bem-estar registrado por setor ainda.</div>';
+    return;
+  }
+  wrap.innerHTML = setores.map(s => {
+    const pct = Math.min(s.indice ?? 0, 100);
+    const color = pct >= 70
+      ? 'linear-gradient(90deg,var(--teal),var(--green))'
+      : pct >= 45
+        ? 'linear-gradient(90deg,var(--amber),var(--teal))'
+        : 'linear-gradient(90deg,var(--red),var(--amber))';
+    return `<div class="prog-row">
+      <div class="prog-label-row">
+        <span class="prog-label">${escHtml(s.setor)}</span>
+        <span class="prog-pct">${pct}%</span>
       </div>
-      ${c.descricao ? `<div class="cc-desc">${c.descricao}</div>` : ''}
-      <div class="cc-bottom">
-        <div class="cc-meta">
-          <span class="badge ${ambienteBadge[c.ambiente]||'badge-muted'}">${ambienteLabel[c.ambiente]||c.ambiente}</span>
-          <span style="margin-left:6px">${c.publicado_em||''}</span>
+      <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderDonut(dados) {
+  const total = (dados.estresse || 0) + (dados.burnout || 0) + (dados.ansiedade || 0) + (dados.outros || 0);
+  document.getElementById('donut-center').textContent = total || '—';
+  document.getElementById('dl-estresse').textContent = dados.estresse ?? 0;
+  document.getElementById('dl-burnout').textContent = dados.burnout ?? 0;
+  document.getElementById('dl-ansiedade').textContent = dados.ansiedade ?? 0;
+  document.getElementById('dl-outros').textContent = dados.outros ?? 0;
+  if (!total) return;
+
+  const circ = 2 * Math.PI * 46; // ~289
+  const arcs = [
+    { id: 'donut-arc-1', val: dados.estresse || 0 },
+    { id: 'donut-arc-2', val: dados.burnout || 0 },
+    { id: 'donut-arc-3', val: dados.ansiedade || 0 },
+  ];
+  let offset = 0;
+  arcs.forEach(a => {
+    const pct = a.val / total;
+    const dash = pct * circ;
+    const el = document.getElementById(a.id);
+    el.setAttribute('stroke-dasharray', `${dash} ${circ - dash}`);
+    el.setAttribute('stroke-dashoffset', -offset);
+    offset += dash;
+  });
+}
+
+function renderAfastamentosCausas(causas) {
+  const wrap = document.getElementById('afast-causas');
+  if (!causas.length) { wrap.innerHTML = '<div class="empty">Sem dados de afastamentos por causa no período.</div>'; return; }
+  wrap.innerHTML = causas.slice(0, 6).map(c => `
+    <div class="card-item">
+      <div class="card-item-body">
+        <div class="card-item-title">${escHtml(c.causa)}</div>
+        <div class="card-item-sub">${c.cid ? escHtml(c.cid) + ' · ' : ''}${c.dias_perdidos ?? 0} dias perdidos</div>
+      </div>
+      <span class="badge ${(c.casos || 0) >= 5 ? 'b-danger' : (c.casos || 0) >= 2 ? 'b-warn' : 'b-muted'}">${c.casos ?? 0} caso${(c.casos ?? 0) !== 1 ? 's' : ''}</span>
+    </div>`).join('');
+}
+
+function renderProgramasSaude(programas) {
+  const wrap = document.getElementById('programas-saude');
+  if (!programas.length) { wrap.innerHTML = '<div class="empty">Nenhum programa de saúde registrado.</div>'; return; }
+  wrap.innerHTML = programas.map(p => {
+    const adesao = p.adesao ?? 0;
+    return `<div class="card-item">
+      <div class="card-item-body">
+        <div class="card-item-title">${escHtml(p.nome)}</div>
+        <div class="card-item-sub">${p.participantes ?? 0} participantes · ${adesao}% de adesão</div>
+      </div>
+      <span class="badge ${adesao >= 70 ? 'b-ok' : adesao >= 40 ? 'b-warn' : 'b-danger'}">${adesao}%</span>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// TAB 2 · CONTEÚDO
+// ════════════════════════════════════════════════════════
+const TAG_MAP = {
+  saude:    ['tag-saude',    'Saúde física'],
+  mental:   ['tag-mental',   'Saúde mental'],
+  seguranca:['tag-seguranca','Segurança'],
+  nutri:    ['tag-nutri',    'Nutrição'],
+  ergon:    ['tag-ergon',    'Ergonomia'],
+};
+
+async function carregarConteudos() {
+  try {
+    const r = await fetch('/api/sst/saude-comunicacao/conteudos/');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    conteudos = data.conteudos || data.results || (Array.isArray(data) ? data : []);
+    conteudosCarregados = true;
+    renderConteudos();
+  } catch (_) {
+    document.getElementById('conteudo-grid').innerHTML = '<div class="empty" style="grid-column:1/-1">Não foi possível carregar a biblioteca de conteúdo.</div>';
+  }
+}
+
+function renderConteudos() {
+  const filtro = document.getElementById('filtro-categoria').value;
+  let lista = filtro ? conteudos.filter(c => c.categoria === filtro) : conteudos;
+  const wrap = document.getElementById('conteudo-grid');
+  if (!lista.length) {
+    wrap.innerHTML = '<div class="empty" style="grid-column:1/-1">Nenhum conteúdo encontrado para esse filtro.</div>';
+    return;
+  }
+  wrap.innerHTML = lista.map(c => {
+    const [tagClass, tagLabel] = TAG_MAP[c.categoria] || ['tag-saude', c.categoria || 'Geral'];
+    return `<div class="content-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span class="content-tag ${tagClass}">${escHtml(tagLabel)}</span>
+        <span style="font-size:.66rem;color:var(--muted)">${escHtml(c.formato || 'Texto')}</span>
+      </div>
+      <div class="content-title">${escHtml(c.titulo)}</div>
+      <div class="content-body">${escHtml(c.resumo || c.corpo || '')}</div>
+      <div class="content-footer">
+        <span>${c.criado_em ? fmtData(c.criado_em) : ''}</span>
+        <button class="content-send-btn" onclick="enviarConteudo(${c.id})">Enviar ↗</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function enviarConteudo(id) {
+  const conteudo = conteudos.find(c => c.id === id);
+  try {
+    const r = await fetch(`/api/sst/saude-comunicacao/conteudos/${id}/enviar/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ destinatario: 'todos' })
+    });
+    if (!r.ok) throw new Error(r.status);
+    showToast(conteudo ? `"${conteudo.titulo}" enviado com sucesso` : 'Conteúdo enviado');
+  } catch (e) {
+    showToast('Erro ao enviar conteúdo: ' + e.message, true);
+  }
+}
+
+function abrirModalConteudo() {
+  document.getElementById('cont-titulo').value = '';
+  document.getElementById('cont-corpo').value = '';
+  document.getElementById('modal-conteudo').classList.add('open');
+}
+
+async function salvarConteudo() {
+  const titulo = document.getElementById('cont-titulo').value.trim();
+  const categoria = document.getElementById('cont-categoria').value;
+  const formato = document.getElementById('cont-formato').value;
+  const corpo = document.getElementById('cont-corpo').value.trim();
+  if (!titulo) { showToast('Informe o título do conteúdo', true); return; }
+  const btn = document.getElementById('btn-modal-cont');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try {
+    const r = await fetch('/api/sst/saude-comunicacao/conteudos/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ titulo, categoria, formato, corpo })
+    });
+    if (!r.ok) throw new Error(r.status);
+    fecharModal('modal-conteudo');
+    showToast('Conteúdo salvo na biblioteca');
+    conteudosCarregados = false;
+    carregarConteudos();
+  } catch (e) {
+    showToast('Erro ao salvar: ' + e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar conteúdo';
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// TAB 3 · MENSAGENS
+// ════════════════════════════════════════════════════════
+function updateCharCount() {
+  document.getElementById('msg-assunto-count').textContent = document.getElementById('msg-assunto').value.length;
+}
+function updateBodyCount() {
+  document.getElementById('msg-corpo-count').textContent = document.getElementById('msg-corpo').value.length;
+}
+
+async function carregarHistoricoMensagens() {
+  try {
+    const r = await fetch('/api/sst/saude-comunicacao/mensagens/');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    mensagens = data.mensagens || data.results || (Array.isArray(data) ? data : []);
+    mensagensCarregadas = true;
+    renderHistoricoMensagens();
+  } catch (_) {
+    document.getElementById('msg-historico').innerHTML = '<div class="empty">Não foi possível carregar o histórico de mensagens.</div>';
+  }
+}
+
+function renderHistoricoMensagens() {
+  const busca = (document.getElementById('busca-msg')?.value || '').toLowerCase();
+  const lista = busca ? mensagens.filter(m => (m.assunto || m.texto || '').toLowerCase().includes(busca)) : mensagens;
+  const wrap = document.getElementById('msg-historico');
+  if (!lista.length) { wrap.innerHTML = '<div class="empty">Nenhuma mensagem enviada ainda no período.</div>'; return; }
+  wrap.innerHTML = lista.map(m => `
+    <div class="msg-history-item">
+      <div style="flex:1;min-width:0">
+        <div class="card-item-title">${escHtml(m.assunto || m.texto || '—')}</div>
+        <div class="msg-meta-row">
+          <span class="badge b-muted">${escHtml(m.tipo || 'Aviso')}</span>
+          <span class="badge b-blue">${escHtml(m.destinatario_label || m.destinatario || 'Todos')}</span>
+          <span style="font-size:.68rem;color:var(--muted)">${fmtData(m.enviado_em || m.criado_em)}</span>
         </div>
-        <div style="display:flex;gap:6px">
-          ${c.url_conteudo ? `<a class="btn sm primary" href="${c.url_conteudo}" target="_blank">Ver</a>` : ''}
-          <button class="btn sm danger" onclick="removerConteudo(${c.id})">✕</button>
+        <div class="msg-stat-row">
+          <span class="msg-stat"><strong>${m.entregues ?? m.total ?? '—'}</strong> entregues</span>
+          <span class="msg-stat"><strong>${m.lidas ?? '—'}</strong> lidas</span>
+          ${m.taxa_abertura != null ? `<span class="msg-stat"><strong>${m.taxa_abertura}%</strong> abertura</span>` : ''}
         </div>
+      </div>
+      <span class="badge ${m.status === 'enviado' ? 'b-ok' : m.status === 'falha' ? 'b-danger' : 'b-muted'}">${m.status === 'enviado' ? 'Enviado' : m.status === 'falha' ? 'Falha' : (m.status || 'Enviado')}</span>
+    </div>`).join('');
+}
+
+async function enviarMensagem() {
+  const destinatario = document.getElementById('msg-destinatario').value;
+  const tipo = document.getElementById('msg-tipo').value;
+  const assunto = document.getElementById('msg-assunto').value.trim();
+  const corpo = document.getElementById('msg-corpo').value.trim();
+  if (!destinatario) { showToast('Selecione o grupo de destino', true); return; }
+  if (!corpo) { showToast('Escreva a mensagem antes de enviar', true); return; }
+
+  const feedback = document.getElementById('msg-feedback');
+  feedback.textContent = 'Enviando…';
+  try {
+    const r = await fetch('/api/sst/saude-comunicacao/mensagens/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ destinatario, tipo, assunto, corpo })
+    });
+    if (!r.ok) throw new Error(r.status);
+    feedback.textContent = '';
+    document.getElementById('msg-assunto').value = '';
+    document.getElementById('msg-corpo').value = '';
+    document.getElementById('msg-assunto-count').textContent = '0';
+    document.getElementById('msg-corpo-count').textContent = '0';
+    showToast('Mensagem enviada com sucesso');
+    mensagensCarregadas = false;
+    carregarHistoricoMensagens();
+  } catch (e) {
+    feedback.textContent = '';
+    showToast('Erro ao enviar: ' + e.message, true);
+  }
+}
+
+function salvarRascunho() {
+  showToast('Rascunho salvo');
+}
+
+function abrirModalMensagem() {
+  document.getElementById('modal-msg-corpo').value = '';
+  document.getElementById('modal-mensagem').classList.add('open');
+}
+
+async function enviarMensagemModal() {
+  const destinatario = document.getElementById('modal-msg-destinatario').value;
+  const corpo = document.getElementById('modal-msg-corpo').value.trim();
+  if (!corpo) { showToast('Escreva a mensagem', true); return; }
+  const btn = document.getElementById('btn-modal-msg');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  try {
+    const r = await fetch('/api/sst/saude-comunicacao/mensagens/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ destinatario, corpo })
+    });
+    if (!r.ok) throw new Error(r.status);
+    fecharModal('modal-mensagem');
+    showToast('Mensagem enviada com sucesso');
+    mensagensCarregadas = false;
+    if (activeTab === 'mensagens') carregarHistoricoMensagens();
+  } catch (e) {
+    showToast('Erro: ' + e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar agora';
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// TAB 4 · ALERTAS & APOIO
+// ════════════════════════════════════════════════════════
+async function carregarAlertas() {
+  try {
+    const [rA, rAp, rTr] = await Promise.all([
+      fetch('/api/sst/saude-comunicacao/alertas/'),
+      fetch('/api/sst/saude-comunicacao/apoio/'),
+      fetch('/api/sst/saude-comunicacao/triagem/'),
+    ]);
+    const dataA  = rA.ok  ? await rA.json()  : {};
+    const dataAp = rAp.ok ? await rAp.json() : {};
+    const dataTr = rTr.ok ? await rTr.json() : {};
+
+    alertas = dataA.alertas || dataA.results || (Array.isArray(dataA) ? dataA : []);
+    alertasCarregados = true;
+    renderAlertas();
+    renderApoio(dataAp.recursos || dataAp.results || (Array.isArray(dataAp) ? dataAp : []));
+    renderTriagem(dataTr.triagens || dataTr.results || (Array.isArray(dataTr) ? dataTr : []));
+  } catch (_) {
+    document.getElementById('alertas-lista').innerHTML = '<div class="empty">Não foi possível carregar alertas.</div>';
+  }
+}
+
+function renderAlertas() {
+  const filtro = document.getElementById('filtro-alerta').value;
+  const lista = filtro ? alertas.filter(a => (a.severidade || a.nivel) === filtro) : alertas;
+  const wrap = document.getElementById('alertas-lista');
+  if (!lista.length) { wrap.innerHTML = '<div class="empty">Nenhum alerta ativo no momento.</div>'; return; }
+
+  wrap.innerHTML = lista.map(a => {
+    const sev = a.severidade || a.nivel || 'moderado';
+    const sevClass = sev === 'critico' ? 'b-danger' : sev === 'alto' ? 'b-warn' : 'b-blue';
+    const sevLabel = { critico: 'Crítico', alto: 'Alto', moderado: 'Moderado', baixo: 'Baixo' }[sev] || sev;
+    return `<div class="alert-item">
+      <div class="alert-header">
+        <div style="flex:1;min-width:0">
+          <div class="card-item-title">${escHtml(a.titulo || a.descricao || '—')}</div>
+          <div class="card-item-sub" style="margin-top:4px">${escHtml(a.funcionario || a.setor || '')}${a.data ? ' · ' + fmtData(a.data) : ''}</div>
+        </div>
+        <span class="badge ${sevClass}">${sevLabel}</span>
+      </div>
+      ${a.detalhes ? `<div class="alert-body">${escHtml(a.detalhes)}</div>` : ''}
+      <div class="alert-actions">
+        <button class="alert-btn alert-btn-primary" onclick="encaminharAlerta(${a.id})">Encaminhar apoio</button>
+        <button class="alert-btn" onclick="marcarResolvido(${a.id})">Marcar resolvido</button>
+        <button class="alert-btn" onclick="abrirModalMensagem()">Enviar mensagem</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function encaminharAlerta(id) {
+  try {
+    const r = await fetch(`/api/sst/saude-comunicacao/alertas/${id}/encaminhar/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    });
+    if (!r.ok) throw new Error(r.status);
+    showToast('Alerta encaminhado para a rede de apoio');
+    alertasCarregados = false;
+    carregarAlertas();
+  } catch (e) {
+    showToast('Erro ao encaminhar: ' + e.message, true);
+  }
+}
+
+async function marcarResolvido(id) {
+  try {
+    const r = await fetch(`/api/sst/saude-comunicacao/alertas/${id}/resolver/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    });
+    if (!r.ok) throw new Error(r.status);
+    showToast('Alerta marcado como resolvido');
+    alertas = alertas.filter(a => a.id !== id);
+    renderAlertas();
+  } catch (e) {
+    showToast('Erro: ' + e.message, true);
+  }
+}
+
+function renderApoio(recursos) {
+  const wrap = document.getElementById('apoio-lista');
+  if (!recursos.length) { wrap.innerHTML = '<div class="empty">Nenhum recurso de apoio cadastrado ainda.</div>'; return; }
+  wrap.innerHTML = recursos.map(r => `
+    <div class="card-item">
+      <div class="card-item-body">
+        <div class="card-item-title">${escHtml(r.nome)}</div>
+        <div class="card-item-sub">${escHtml(r.tipo || r.categoria || '')}${r.contato ? ' · ' + escHtml(r.contato) : ''}</div>
+      </div>
+      <span class="badge ${r.disponivel !== false ? 'b-ok' : 'b-muted'}">${r.disponivel !== false ? 'Disponível' : 'Indisponível'}</span>
+    </div>`).join('');
+}
+
+function renderTriagem(triagens) {
+  const wrap = document.getElementById('triagem-lista');
+  if (!triagens.length) { wrap.innerHTML = '<div class="empty">Nenhuma triagem realizada recentemente.</div>'; return; }
+  wrap.innerHTML = triagens.slice(0, 8).map(t => `
+    <div class="card-item">
+      <div class="card-item-body">
+        <div class="card-item-title">${escHtml(t.funcionario || 'Anônimo')}</div>
+        <div class="card-item-sub">${escHtml(t.setor || '')} · ${fmtData(t.data || t.criado_em)}</div>
+      </div>
+      <div class="card-item-right">
+        <span class="badge ${t.resultado === 'critico' ? 'b-danger' : t.resultado === 'atencao' ? 'b-warn' : 'b-ok'}">${t.resultado === 'critico' ? 'Crítico' : t.resultado === 'atencao' ? 'Atenção' : 'Estável'}</span>
+        ${t.pontuacao != null ? `<span style="font-size:.67rem;color:var(--muted)">${t.pontuacao} pts</span>` : ''}
       </div>
     </div>`).join('');
 }
 
-async function publicarConteudo() {
-  const body = {
-    titulo: document.getElementById('ctTitulo').value.trim(),
-    tipo: document.getElementById('ctTipo').value,
-    ambiente: document.getElementById('ctAmbiente').value,
-    setor_id: document.getElementById('ctSetor').value || null,
-    url_conteudo: document.getElementById('ctUrl').value.trim(),
-    descricao: document.getElementById('ctDesc').value.trim(),
-    publicado_por: 'Gestor SST',
-  };
-  if (!body.titulo) { showToast('Título obrigatório', 'err'); return; }
-  const r = await api('/api/sst/conteudos/criar/', {method:'POST', body:JSON.stringify(body)});
-  if (r.id) {
-    showToast('Conteúdo publicado!');
-    togglePublishForm();
-    document.getElementById('ctTitulo').value='';document.getElementById('ctUrl').value='';document.getElementById('ctDesc').value='';
-    loadConteudos();
-  } else { showToast('Erro ao publicar', 'err'); }
+async function enviarTriagem() {
+  try {
+    const r = await fetch('/api/sst/saude-comunicacao/triagem/enviar/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    });
+    if (!r.ok) throw new Error(r.status);
+    showToast('Triagem de bem-estar enviada para todos os funcionários');
+  } catch (e) {
+    showToast('Erro ao enviar triagem: ' + e.message, true);
+  }
 }
 
-async function removerConteudo(id) {
-  if (!confirm('Remover este conteúdo?')) return;
-  await api(`/api/sst/conteudos/${id}/remover/`, {method:'POST'});
-  showToast('Conteúdo removido');
-  loadConteudos();
+// ════════════════════════════════════════════════════════
+// TAB 5 · CONFLITOS CULTURAIS
+// ════════════════════════════════════════════════════════
+const CONFLITO_TYPE_MAP = {
+  legal:       ['ct-legal',       'Conformidade legal'],
+  cultural:    ['ct-cultural',    'Barreira cultural'],
+  operacional: ['ct-operacional', 'Impacto operacional'],
+  saude:       ['ct-saude',       'Saúde e segurança'],
+};
+
+const DEFAULT_RECOMENDACOES = [
+  'Promover diálogo facilitado entre as partes com mediador neutro.',
+  'Realizar treinamento de diversidade e inclusão para o setor afetado.',
+  'Documentar os acordos e acompanhar a implementação por 30 dias.',
+  'Verificar adequação às NRs aplicáveis e requisitos legais da CLT.',
+];
+
+async function carregarConflitos() {
+  try {
+    const r = await fetch('/api/sst/saude-comunicacao/conflitos/');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    conflitos = data.conflitos || data.results || (Array.isArray(data) ? data : []);
+    conflitosCarregados = true;
+    renderConflitos();
+    renderConflitoCategorias(data.categorias || []);
+    renderMediacoes(data.mediacoes || []);
+  } catch (_) {
+    document.getElementById('conflitos-lista').innerHTML = '<div class="empty">Não foi possível carregar os conflitos culturais.</div>';
+  }
 }
 
-// ─── VIDEO MEETING ─────────────────────────────────────────────────────────────
-async function criarVideoMeeting(e) {
-  e.preventDefault();
-  const r = await api('/api/comunicacao/video/criar/', {method:'POST', body:JSON.stringify({titulo:'Reunião SST'})});
-  if (r.sessao_id) window.location = `/sst/video/${r.sessao_id}/`;
-  else showToast('Erro ao criar reunião','err');
-}
+function renderConflitos() {
+  const filtro = document.getElementById('filtro-conflito').value;
+  const lista = filtro ? conflitos.filter(c => c.tipo === filtro) : conflitos;
+  const wrap = document.getElementById('conflitos-lista');
+  if (!lista.length) { wrap.innerHTML = '<div class="empty">Nenhum conflito registrado com esse filtro.</div>'; return; }
 
-// ─── TAB ALERTAS ─────────────────────────────────────────────────────────────
-async function loadAlertas() {
-  const d = await api('/api/sst/wellness/alertas/');
-  document.getElementById('burnoutCount').textContent = d.burnout_alto ?? '—';
-
-  const list = document.getElementById('apoioList');
-  if (!d.apoios?.length) { list.innerHTML = '<div class="empty">Nenhum pedido de apoio pendente.</div>'; return; }
-  list.innerHTML = d.apoios.map(a => `
-    <div class="alert-item">
-      <div class="alert-top">
-        <span class="alert-name">${a['alias__nome']||'Colaborador'}</span>
-        <span class="badge badge-teal">${a.data||''}</span>
+  wrap.innerHTML = lista.map((c, idx) => {
+    const [typeClass, typeLabel] = CONFLITO_TYPE_MAP[c.tipo] || ['ct-cultural', c.tipo || 'Outro'];
+    const sev = c.severidade || c.nivel || 'moderado';
+    const sevClass = sev === 'critico' ? 'b-danger' : sev === 'alto' ? 'b-warn' : sev === 'moderado' ? 'b-blue' : 'b-muted';
+    const sevLabel = { critico: 'Crítico', alto: 'Alto', moderado: 'Moderado', baixo: 'Baixo' }[sev] || sev;
+    const recoms = c.recomendacoes || DEFAULT_RECOMENDACOES;
+    return `<div class="conflito-item">
+      <div class="conflito-header">
+        <div style="flex:1;min-width:0"><div class="conflito-title">${escHtml(c.titulo || c.descricao || '—')}</div></div>
+        <span class="badge ${sevClass}">${sevLabel}</span>
       </div>
-      <div class="alert-meta">${a['setor__nome']||'Sem setor'} ${a.deseja_contato ? '· <strong>Quer contato</strong>' : ''}</div>
-      ${a.relato ? `<div style="font-size:.8rem;color:var(--muted);margin-top:4px">"${a.relato}"</div>` : ''}
-      <div style="margin-top:8px"><a class="btn sm" href="/sst/comunicacao/">Responder via Chat</a></div>
+      ${c.detalhes || c.descricao ? `<div class="conflito-desc">${escHtml(c.detalhes || c.descricao)}</div>` : ''}
+      <div class="conflito-footer">
+        <span class="conflito-tag ${typeClass}">${typeLabel}</span>
+        ${c.setor ? `<span style="font-size:.68rem;color:var(--muted)">${escHtml(c.setor)}</span>` : ''}
+        ${c.data ? `<span style="font-size:.68rem;color:var(--muted)">${fmtData(c.data)}</span>` : ''}
+        <span class="badge ${c.status === 'resolvido' ? 'b-ok' : c.status === 'em_mediacao' ? 'b-warn' : 'b-muted'}">${c.status === 'resolvido' ? 'Resolvido' : c.status === 'em_mediacao' ? 'Em mediação' : 'Aberto'}</span>
+        <button class="conflito-expand-btn" onclick="toggleRecom(this)">Ver recomendações</button>
+      </div>
+      <div class="conflito-recom">
+        <h4>Recomendações de mediação</h4>
+        <ul>${recoms.map(r => `<li>${escHtml(r)}</li>`).join('')}</ul>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleRecom(btn) {
+  const recom = btn.closest('.conflito-item').querySelector('.conflito-recom');
+  const open = recom.classList.toggle('open');
+  btn.textContent = open ? 'Ocultar recomendações' : 'Ver recomendações';
+}
+
+function renderConflitoCategorias(categorias) {
+  const wrap = document.getElementById('conflito-categorias');
+  let cats = categorias;
+  if (!cats.length && conflitos.length) {
+    const counts = {};
+    conflitos.forEach(c => { counts[c.tipo] = (counts[c.tipo] || 0) + 1; });
+    cats = Object.entries(counts).map(([tipo, n]) => ({ tipo, total: n }));
+  }
+  if (!cats.length) { wrap.innerHTML = '<div class="empty">Sem dados de categorias.</div>'; return; }
+  const total = cats.reduce((a, c) => a + (c.total || c.count || 0), 0) || 1;
+  wrap.innerHTML = cats.map(c => {
+    const [, label] = CONFLITO_TYPE_MAP[c.tipo] || ['', c.tipo || c.categoria];
+    const pct = Math.round((c.total || c.count || 0) / total * 100);
+    return `<div class="prog-row">
+      <div class="prog-label-row">
+        <span class="prog-label">${escHtml(label || c.tipo)}</span>
+        <span class="prog-pct">${pct}%</span>
+      </div>
+      <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderMediacoes(mediacoes) {
+  const wrap = document.getElementById('mediacao-lista');
+  if (!mediacoes.length) { wrap.innerHTML = '<div class="empty">Nenhuma mediação ativa no momento.</div>'; return; }
+  wrap.innerHTML = mediacoes.map(m => `
+    <div class="card-item">
+      <div class="card-item-body">
+        <div class="card-item-title">${escHtml(m.titulo || m.conflito_titulo || '—')}</div>
+        <div class="card-item-sub">Mediador: ${escHtml(m.mediador || 'A definir')} · Prazo: ${fmtData(m.prazo)}</div>
+      </div>
+      <span class="badge ${m.status === 'concluido' ? 'b-ok' : m.status === 'atrasado' ? 'b-danger' : 'b-warn'}">${m.status === 'concluido' ? 'Concluído' : m.status === 'atrasado' ? 'Atrasado' : 'Em andamento'}</span>
     </div>`).join('');
-
-  const conflitos = d.conflitos || [];
-  document.getElementById('kpiApoios').textContent = d.apoios?.length ?? '—';
-  document.getElementById('kpiConflitos').textContent = conflitos?.length ?? '—';
 }
 
-// ─── TAB CONFLITOS ────────────────────────────────────────────────────────────
-let conflitosStatus = '';
-function filterConflito(chip) {
-  document.querySelectorAll('#tab-conflitos .filter-chip').forEach(c => c.classList.remove('active'));
-  chip.classList.add('active');
-  conflitosStatus = chip.dataset.status || '';
-  loadConflitos();
+function abrirModalConflito() {
+  document.getElementById('conf-titulo').value = '';
+  document.getElementById('conf-desc').value = '';
+  document.getElementById('modal-conflito').classList.add('open');
 }
 
-const tipoConflito = {comunicacao:'Barreira de comunicação',discriminacao:'Discriminação',idioma:'Diferença de idioma',religiao:'Diferença religiosa/cultural',comportamento:'Comportamento inadequado',outro:'Outro'};
-const statusConflito = {novo:'🔴 Novo',em_analise:'🟡 Em análise',resolvido:'🟢 Resolvido',arquivado:'⬜ Arquivado'};
-const badgeConflito = {novo:'badge-red',em_analise:'badge-amber',resolvido:'badge-teal',arquivado:'badge-muted'};
-
-async function loadConflitos() {
-  const params = new URLSearchParams();
-  if (conflitosStatus) params.set('status', conflitosStatus);
-  const d = await api('/api/sst/conflitos/?' + params);
-  const list = document.getElementById('conflictList');
-  if (!d.conflitos?.length) { list.innerHTML = '<div class="empty">Nenhum conflito registrado.</div>'; return; }
-  list.innerHTML = d.conflitos.map(c => `
-    <div class="conflict-card" id="cc-${c.id}">
-      <div class="conflict-top">
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          <span class="badge badge-blue">${tipoConflito[c.tipo]||c.tipo}</span>
-          <span class="badge ${c.ambiente==='offshore'?'badge-blue':'badge-amber'}">${c.ambiente==='offshore'?'🛢️ Offshore':'⛏️ Onshore'}</span>
-          ${c.anonimo ? '<span class="badge badge-muted">Anônimo</span>' : `<span class="badge badge-muted">${c['alias__nome']||''}</span>`}
-        </div>
-        <span class="badge ${badgeConflito[c.status]||'badge-muted'}">${statusConflito[c.status]||c.status}</span>
-      </div>
-      <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">${c['setor__nome']||'Sem setor'} · ${c.criado_em||''} ${c.paises_envolvidos ? '· Países: '+c.paises_envolvidos : ''}</div>
-      ${c.descricao ? `<div class="conflict-desc">"${c.descricao}"</div>` : ''}
-      ${c.observacao_gestor ? `<div style="font-size:.78rem;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.04);color:var(--muted)">💬 ${c.observacao_gestor}</div>` : ''}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">
-        <select id="st-${c.id}" style="width:auto;padding:5px 10px;font-size:.78rem" onchange="atualizarConflito(${c.id})">
-          <option value="novo" ${c.status==='novo'?'selected':''}>🔴 Novo</option>
-          <option value="em_analise" ${c.status==='em_analise'?'selected':''}>🟡 Em análise</option>
-          <option value="resolvido" ${c.status==='resolvido'?'selected':''}>🟢 Resolvido</option>
-          <option value="arquivado" ${c.status==='arquivado'?'selected':''}>⬜ Arquivado</option>
-        </select>
-        <input id="obs-${c.id}" placeholder="Observação do gestor..." value="${c.observacao_gestor||''}" style="flex:1;min-width:160px;padding:5px 10px;font-size:.78rem">
-        <button class="btn sm" onclick="atualizarConflito(${c.id})">Salvar</button>
-      </div>
-    </div>`).join('');
+async function salvarConflito() {
+  const titulo = document.getElementById('conf-titulo').value.trim();
+  const tipo = document.getElementById('conf-tipo').value;
+  const severidade = document.getElementById('conf-severidade').value;
+  const descricao = document.getElementById('conf-desc').value.trim();
+  if (!titulo) { showToast('Informe o título do conflito', true); return; }
+  const btn = document.getElementById('btn-modal-conf');
+  btn.disabled = true; btn.textContent = 'Registrando…';
+  try {
+    const r = await fetch('/api/sst/saude-comunicacao/conflitos/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ titulo, tipo, severidade, descricao })
+    });
+    if (!r.ok) throw new Error(r.status);
+    fecharModal('modal-conflito');
+    showToast('Conflito registrado com sucesso');
+    conflitosCarregados = false;
+    carregarConflitos();
+  } catch (e) {
+    showToast('Erro ao registrar: ' + e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Registrar';
+  }
 }
 
-async function atualizarConflito(id) {
-  const body = {
-    status: document.getElementById('st-'+id).value,
-    observacao_gestor: document.getElementById('obs-'+id).value.trim(),
-  };
-  await api(`/api/sst/conflitos/${id}/atualizar/`, {method:'POST', body:JSON.stringify(body)});
-  showToast('Conflito atualizado');
-  loadConflitos();
-}
+// ════════════════════════════════════════════════════════
+// MODAL BACKDROP
+// ════════════════════════════════════════════════════════
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+});
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-loadSaude();
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+carregarPainel();
 </script>
 </body>
 </html>
