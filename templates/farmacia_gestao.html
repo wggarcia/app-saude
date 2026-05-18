@@ -136,6 +136,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="tab-btn" onclick="setTab('inventario')">🔍 Inventário</button>
       <button class="tab-btn" onclick="setTab('descarte')">🗑️ Descarte</button>
       <button class="tab-btn" onclick="setTab('relatorios')">📊 Relatórios</button>
+      <button class="tab-btn" onclick="setTab('conformidade')">🛡️ Conformidade</button>
+      <button class="tab-btn" onclick="setTab('auditoria')">📝 Auditoria</button>
     </div>
 
     <!-- Estoque -->
@@ -343,6 +345,85 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <thead><tr><th>Medicamento</th><th>Lote</th><th>Motivo</th><th>Quantidade</th><th>Responsável</th><th>Empresa Descarte</th><th>Manifesto</th><th>Data</th></tr></thead>
           <tbody id="tbodyDescartes"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Conformidade & Segurança (Fase 1) -->
+    <div class="tab-panel" id="tab-conformidade" style="margin-top:16px">
+      <!-- KPIs de alerta -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+        <div class="kpi"><div class="kpi-value" id="cfVencidos" style="color:var(--danger)">—</div><div class="kpi-label">🔴 Lotes Vencidos em Estoque</div></div>
+        <div class="kpi"><div class="kpi-value" id="cfVencendo" style="color:var(--warn)">—</div><div class="kpi-label">⚠️ Vencendo em 30 dias</div></div>
+        <div class="kpi"><div class="kpi-value" id="cfBloqueados" style="color:var(--warn)">—</div><div class="kpi-label">🔒 Lotes Bloqueados (recall)</div></div>
+        <div class="kpi"><div class="kpi-value" id="cfSem344" style="color:var(--muted)">—</div><div class="kpi-label">⚠️ Controlados sem Lista 344</div></div>
+      </div>
+
+      <!-- Recall / Bloqueio de lotes -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <span class="card-title">🔒 Recall / Bloqueio de Lotes</span>
+          <button class="btn btn-ghost" onclick="carregarLotesBloqueio()">↻ Atualizar</button>
+        </div>
+        <div style="margin-bottom:12px;display:flex;gap:8px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="checkbox" id="chkSoBloqueados" onchange="carregarLotesBloqueio()"> Mostrar apenas bloqueados
+          </label>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="table">
+            <thead><tr><th>Lote</th><th>Medicamento</th><th>Validade</th><th>Qtd em Estoque</th><th>Status</th><th>Motivo Bloqueio</th><th>Ação</th></tr></thead>
+            <tbody id="tbodyLotesBloqueio"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Livro de Registro Controlado -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📒 Livro de Registro (Portaria 344)</span>
+          <div style="display:flex;gap:8px">
+            <input type="date" id="livroDataInicio" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px">
+            <input type="date" id="livroDataFim" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px">
+            <button class="btn btn-ghost" onclick="carregarLivroControlado()">↻ Filtrar</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="table">
+            <thead><tr><th>Data</th><th>Medicamento</th><th>Lista</th><th>Tipo</th><th>Qtd</th><th>Saldo Após</th><th>Paciente</th><th>CRM</th><th>Receita</th></tr></thead>
+            <tbody id="tbodyLivroControlado"><tr><td colspan="9" class="empty">Selecione o período e clique em Filtrar</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auditoria -->
+    <div class="tab-panel" id="tab-auditoria" style="margin-top:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📝 Trilha de Auditoria da Farmácia</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="filtroAudAcao" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px">
+              <option value="">Todas as ações</option>
+              <option value="dispensar">Dispensar</option>
+              <option value="bloquear_lote">Bloquear Lote</option>
+              <option value="desbloquear_lote">Desbloquear Lote</option>
+              <option value="ajuste_estoque">Ajuste de Estoque</option>
+              <option value="descarte">Descarte</option>
+              <option value="criar">Criar</option>
+              <option value="editar">Editar</option>
+              <option value="excluir">Excluir</option>
+            </select>
+            <input type="date" id="audDataInicio" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px">
+            <input type="date" id="audDataFim" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px">
+            <button class="btn btn-ghost" onclick="carregarAuditoria()">↻ Filtrar</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="table">
+            <thead><tr><th>Data/Hora</th><th>Ação</th><th>Objeto</th><th>Descrição</th><th>Usuário</th><th>IP</th></tr></thead>
+            <tbody id="tbodyAuditoria"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1298,7 +1379,7 @@ function fmtData(s) {
 let _currentTab = 'estoque';
 function setTab(tab) {
   _currentTab = tab;
-  const tabs = ['estoque','dispensacoes','movimentos','fornecedores','pedidos','lotes','pacientes','receitas','inventario','descarte','relatorios'];
+  const tabs = ['estoque','dispensacoes','movimentos','fornecedores','pedidos','lotes','pacientes','receitas','inventario','descarte','relatorios','conformidade','auditoria'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', tabs[i] === tab));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
@@ -1312,6 +1393,8 @@ function setTab(tab) {
   else if (tab === 'receitas') carregarReceitas();
   else if (tab === 'inventario') carregarInventarios();
   else if (tab === 'descarte') carregarDescartes();
+  else if (tab === 'conformidade') carregarConformidade();
+  else if (tab === 'auditoria') carregarAuditoria();
 }
 
 // ── Lotes ─────────────────────────────────────────────────────
@@ -1394,6 +1477,107 @@ async function deletarLote(id) {
 
 // Fechar modal ao clicar fora
 document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+// ── Conformidade & Segurança ────────────────────────────────────
+async function carregarConformidade() {
+  // KPIs
+  const d = await api('/api/farmacia/conformidade/');
+  if (d) {
+    document.getElementById('cfVencidos').textContent  = d.lotes_vencidos ?? '—';
+    document.getElementById('cfVencendo').textContent  = d.lotes_vencendo_30_dias ?? '—';
+    document.getElementById('cfBloqueados').textContent = d.lotes_bloqueados ?? '—';
+    document.getElementById('cfSem344').textContent    = d.controlados_sem_lista_344 ?? '—';
+  }
+  carregarLotesBloqueio();
+}
+
+async function carregarLotesBloqueio() {
+  const soBlq = document.getElementById('chkSoBloqueados')?.checked ? '1' : '';
+  const d = await api('/api/farmacia/lotes/bloqueio/' + (soBlq ? '?bloqueados=1' : ''));
+  const tb = document.getElementById('tbodyLotesBloqueio');
+  if (!d?.lotes?.length) { tb.innerHTML='<tr><td colspan="7" class="empty">Nenhum lote encontrado</td></tr>'; return; }
+  tb.innerHTML = d.lotes.map(l => {
+    const statusHtml = l.bloqueado
+      ? `<span style="color:var(--danger);font-weight:700">🔒 BLOQUEADO</span>`
+      : l.vencido
+        ? `<span style="color:var(--danger)">🔴 VENCIDO</span>`
+        : l.dias_para_vencer <= 30
+          ? `<span style="color:var(--warn)">⚠️ Vence em ${l.dias_para_vencer}d</span>`
+          : `<span style="color:var(--ok)">✅ OK</span>`;
+    const btnBlq = l.bloqueado
+      ? `<button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="toggleBloqueioLote(${l.id}, false)">Desbloquear</button>`
+      : `<button class="btn" style="font-size:11px;padding:4px 8px;background:var(--danger);color:#fff" onclick="toggleBloqueioLote(${l.id}, true)">Bloquear / Recall</button>`;
+    return `<tr>
+      <td>${l.numero_lote}</td>
+      <td>${l.item_nome}</td>
+      <td>${l.data_validade}</td>
+      <td>${l.quantidade_atual}</td>
+      <td>${statusHtml}</td>
+      <td style="font-size:12px;color:var(--muted)">${l.motivo_bloqueio || '—'}</td>
+      <td>${btnBlq}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function toggleBloqueioLote(loteId, bloquear) {
+  let motivo = '';
+  if (bloquear) {
+    motivo = prompt('Motivo do bloqueio / recall (obrigatório):');
+    if (!motivo) return;
+  } else {
+    if (!confirm('Desbloquear este lote e liberar para dispensação?')) return;
+  }
+  const d = await api('/api/farmacia/lotes/bloqueio/', {
+    method: 'POST',
+    body: JSON.stringify({ lote_id: loteId, bloquear, motivo })
+  });
+  if (d?.ok) carregarLotesBloqueio();
+}
+
+async function carregarLivroControlado() {
+  const ini = document.getElementById('livroDataInicio')?.value || '';
+  const fim = document.getElementById('livroDataFim')?.value || '';
+  let url = '/api/farmacia/livro-controlado/?';
+  if (ini) url += `data_inicio=${ini}&`;
+  if (fim) url += `data_fim=${fim}`;
+  const d = await api(url);
+  const tb = document.getElementById('tbodyLivroControlado');
+  if (!d?.registros?.length) { tb.innerHTML='<tr><td colspan="9" class="empty">Nenhum registro encontrado no período</td></tr>'; return; }
+  tb.innerHTML = d.registros.map(r => `<tr>
+    <td style="font-size:12px">${r.data_operacao}</td>
+    <td>${r.medicamento_nome}</td>
+    <td><span style="background:var(--accent);color:#000;padding:2px 6px;border-radius:4px;font-size:11px">${r.lista_portaria_344}</span></td>
+    <td>${r.tipo}</td>
+    <td>${r.quantidade}</td>
+    <td>${r.saldo_apos}</td>
+    <td>${r.paciente_nome || '—'}</td>
+    <td>${r.medico_crm || '—'}</td>
+    <td>${r.prescricao_numero || '—'}</td>
+  </tr>`).join('');
+}
+
+// ── Auditoria ───────────────────────────────────────────────────
+async function carregarAuditoria() {
+  const acao = document.getElementById('filtroAudAcao')?.value || '';
+  const ini = document.getElementById('audDataInicio')?.value || '';
+  const fim = document.getElementById('audDataFim')?.value || '';
+  let url = '/api/farmacia/auditoria/?';
+  if (acao) url += `acao=${acao}&`;
+  if (ini) url += `data_inicio=${ini}&`;
+  if (fim) url += `data_fim=${fim}`;
+  const d = await api(url);
+  const tb = document.getElementById('tbodyAuditoria');
+  if (!d?.logs?.length) { tb.innerHTML='<tr><td colspan="6" class="empty">Nenhum registro de auditoria encontrado</td></tr>'; return; }
+  const acaoCor = { dispensar:'var(--accent)', bloquear_lote:'var(--danger)', desbloquear_lote:'var(--ok)', ajuste_estoque:'var(--warn)', descarte:'var(--danger)', criar:'var(--ok)', editar:'var(--warn)', excluir:'var(--danger)' };
+  tb.innerHTML = d.logs.map(log => `<tr>
+    <td style="font-size:12px;white-space:nowrap">${log.criado_em}</td>
+    <td><span style="background:${acaoCor[log.acao]||'var(--muted)'};color:#000;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">${log.acao}</span></td>
+    <td style="font-size:12px">${log.modelo} #${log.objeto_id||''}</td>
+    <td style="font-size:12px;max-width:280px">${log.descricao}</td>
+    <td style="font-size:12px">${log.usuario||'—'}</td>
+    <td style="font-size:11px;color:var(--muted)">${log.ip||'—'}</td>
+  </tr>`).join('');
+}
 
 // Init
 carregarKpis();

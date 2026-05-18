@@ -15,8 +15,11 @@ from .models import (
     Dispensacao,
     EstoqueMovimento,
     FornecedorFarmaciaGestao,
+    LivroRegistroControlado,
+    LoteMedicamento,
     MedicamentoFarmacia,
     PedidoFarmacia,
+    FarmaciaAuditLog,
 )
 from .access_control import api_requer_setor
 
@@ -343,17 +346,92 @@ def api_farmacia_dispensacao(request):
         if not isinstance(medicamentos, list):
             medicamentos = []
 
+        medico_crm = (data.get("medico_crm") or "").strip()
+        prescricao_numero = (data.get("prescricao_numero") or "").strip()
+
+        # Validações de segurança por medicamento dispensado
+        for item in medicamentos:
+            med_id = item.get("medicamento_id")
+            if not med_id:
+                continue
+            try:
+                med = MedicamentoFarmacia.objects.get(pk=med_id, empresa=empresa)
+            except MedicamentoFarmacia.DoesNotExist:
+                continue
+
+            # Bloquear dispensação de controlado sem prescrição
+            if med.controlado and not medico_crm:
+                return JsonResponse({
+                    "erro": f"Medicamento controlado '{med.nome}' exige CRM do médico prescritor."
+                }, status=400)
+
+            # Verificar lote informado
+            lote_numero = (item.get("lote") or "").strip()
+            if lote_numero:
+                try:
+                    lote = LoteMedicamento.objects.get(numero_lote=lote_numero, empresa=empresa)
+                    if lote.bloqueado:
+                        return JsonResponse({
+                            "erro": f"Lote {lote_numero} de '{med.nome}' está BLOQUEADO (recall). Motivo: {lote.motivo_bloqueio}"
+                        }, status=400)
+                    if lote.vencido:
+                        return JsonResponse({
+                            "erro": f"Lote {lote_numero} de '{med.nome}' está VENCIDO desde {lote.data_validade.strftime('%d/%m/%Y')}."
+                        }, status=400)
+                except LoteMedicamento.DoesNotExist:
+                    pass
+
         disp = Dispensacao.objects.create(
             empresa=empresa,
             paciente_nome=paciente_nome,
             paciente_cpf=data.get("paciente_cpf", ""),
-            prescricao_numero=data.get("prescricao_numero", ""),
-            medico_crm=data.get("medico_crm", ""),
+            prescricao_numero=prescricao_numero,
+            medico_crm=medico_crm,
             medicamentos=medicamentos,
             valor_total=_decimal(data.get("valor_total", 0)),
             convenio=data.get("convenio", ""),
             status=data.get("status", "pendente"),
             observacoes=data.get("observacoes", ""),
+        )
+
+        # Pós-criação: livro de registro + auditoria para controlados
+        for item in medicamentos:
+            med_id = item.get("medicamento_id")
+            if not med_id:
+                continue
+            try:
+                med = MedicamentoFarmacia.objects.get(pk=med_id, empresa=empresa)
+            except MedicamentoFarmacia.DoesNotExist:
+                continue
+
+            if med.controlado and med.lista_portaria_344:
+                lote_obj = None
+                lote_numero = (item.get("lote") or "").strip()
+                if lote_numero:
+                    lote_obj = LoteMedicamento.objects.filter(numero_lote=lote_numero, empresa=empresa).first()
+
+                LivroRegistroControlado.objects.create(
+                    empresa=empresa,
+                    medicamento=med,
+                    lote=lote_obj,
+                    dispensacao=disp,
+                    tipo="dispensacao",
+                    quantidade=_decimal(item.get("quantidade", 0)),
+                    saldo_apos=med.quantidade_atual,
+                    paciente_nome=paciente_nome,
+                    paciente_cpf=data.get("paciente_cpf", ""),
+                    prescricao_numero=prescricao_numero,
+                    medico_crm=medico_crm,
+                )
+
+        FarmaciaAuditLog.objects.create(
+            empresa=empresa,
+            acao="dispensar",
+            modelo="Dispensacao",
+            objeto_id=disp.id,
+            descricao=f"Dispensação #{disp.id} para {paciente_nome} — {len(medicamentos)} item(ns)",
+            usuario=getattr(getattr(request, "usuario_jwt", None), "get", lambda k, d="": d)("nome", ""),
+            ip=request.META.get("REMOTE_ADDR", ""),
         )
 
         return JsonResponse({"ok": True, "dispensacao": _disp_to_dict(disp)}, status=201)

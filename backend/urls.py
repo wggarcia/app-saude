@@ -283,6 +283,12 @@ from api.views_farmacia_gestao import (
     api_farmacia_fornecedores,
     api_farmacia_pedidos,
 )
+from api.views_farmacia_fase1 import (
+    api_livro_controlado,
+    api_lotes_bloqueio,
+    api_farmacia_auditoria,
+    api_farmacia_conformidade,
+)
 from api.views_hospital import api_hospital_painel
 from api.views_hospital_dashboard import (
     api_hospital_dashboard,
@@ -733,6 +739,11 @@ urlpatterns = [
     path('api/farmacia/relatorios/curva-abc/', api_farmacia_relatorio_curva_abc),
     path('api/farmacia/relatorios/cmm/', api_farmacia_relatorio_cmm),
     path('api/farmacia/relatorios/giro/', api_farmacia_relatorio_giro),
+    # ── Fase 1: Conformidade & Segurança ─────────────────────────
+    path('api/farmacia/livro-controlado/', api_livro_controlado),
+    path('api/farmacia/lotes/bloqueio/', api_lotes_bloqueio),
+    path('api/farmacia/auditoria/', api_farmacia_auditoria),
+    path('api/farmacia/conformidade/', api_farmacia_conformidade),
     path('api/hospital/painel', api_hospital_painel),
     # ── Hospital Gestão (Manchester / KPIs) ─────────────────
     path('api/hospital/dashboard', api_hospital_dashboard),

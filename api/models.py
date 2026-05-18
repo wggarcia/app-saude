@@ -1987,6 +1987,8 @@ class LoteMedicamento(models.Model):
     quantidade_atual = models.DecimalField(max_digits=12, decimal_places=3, default=0)
     nota_fiscal      = models.CharField(max_length=100, blank=True, default="")
     fornecedor       = models.ForeignKey("FornecedorFarmacia", on_delete=models.SET_NULL, null=True, blank=True)
+    bloqueado        = models.BooleanField(default=False, help_text="Lote bloqueado para dispensação (recall, suspeita de desvio)")
+    motivo_bloqueio  = models.TextField(blank=True, default="")
     criado_em        = models.DateTimeField(auto_now_add=True)
     atualizado_em    = models.DateTimeField(auto_now=True)
 
@@ -3307,9 +3309,25 @@ class MedicamentoFarmacia(models.Model):
     preco_venda        = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     # Controle especial
-    controlado         = models.BooleanField(default=False, help_text="Medicamento sujeito a controle especial (Portaria 344)")
-    refrigerado        = models.BooleanField(default=False, help_text="Requer armazenamento refrigerado")
-    validade_media_dias = models.PositiveIntegerField(default=365, help_text="Validade média em dias após fabricação")
+    LISTA_PORTARIA_344 = [
+        ("",    "Não controlado"),
+        ("A1",  "Lista A1 — Entorpecentes"),
+        ("A2",  "Lista A2 — Entorpecentes especiais"),
+        ("A3",  "Lista A3 — Psicotrópicos"),
+        ("B1",  "Lista B1 — Psicotrópicos"),
+        ("B2",  "Lista B2 — Psicotrópicos anorexígenos"),
+        ("C1",  "Lista C1 — Outras substâncias sujeitas a controle"),
+        ("C2",  "Lista C2 — Retinoides"),
+        ("C3",  "Lista C3 — Imunossupressores"),
+        ("C4",  "Lista C4 — Antirretrovirais"),
+        ("C5",  "Lista C5 — Anabolizantes"),
+        ("D1",  "Lista D1 — Precursoras"),
+    ]
+    controlado             = models.BooleanField(default=False, help_text="Medicamento sujeito a controle especial (Portaria 344)")
+    lista_portaria_344     = models.CharField(max_length=4, choices=LISTA_PORTARIA_344, blank=True, default="", help_text="Lista ANVISA Portaria 344")
+    requer_notificacao_anvisa = models.BooleanField(default=False, help_text="Notificação ANVISA obrigatória na dispensação")
+    refrigerado            = models.BooleanField(default=False, help_text="Requer armazenamento refrigerado")
+    validade_media_dias    = models.PositiveIntegerField(default=365, help_text="Validade média em dias após fabricação")
 
     ativo              = models.BooleanField(default=True)
     criado_em          = models.DateTimeField(auto_now_add=True)
@@ -3449,6 +3467,80 @@ class PedidoFarmacia(models.Model):
 
     def __str__(self):
         return f"Pedido #{self.pk} — {self.fornecedor.nome if self.fornecedor else 'sem fornecedor'} ({self.status})"
+
+
+class LivroRegistroControlado(models.Model):
+    """Livro de registro obrigatório para dispensação de controlados (Portaria 344 ANVISA)."""
+
+    TIPO_CHOICES = [
+        ("dispensacao", "Dispensação"),
+        ("entrada", "Entrada em Estoque"),
+        ("descarte", "Descarte / Inutilização"),
+        ("transferencia", "Transferência"),
+    ]
+
+    empresa           = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="livro_registro_controlados")
+    medicamento       = models.ForeignKey(MedicamentoFarmacia, on_delete=models.PROTECT, related_name="registros_controlados")
+    lote              = models.ForeignKey(LoteMedicamento, on_delete=models.SET_NULL, null=True, blank=True, related_name="registros_controlados")
+    tipo              = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    data_operacao     = models.DateTimeField(auto_now_add=True)
+    quantidade        = models.DecimalField(max_digits=12, decimal_places=3)
+    saldo_apos        = models.DecimalField(max_digits=12, decimal_places=3)
+    paciente_nome     = models.CharField(max_length=200, blank=True, default="")
+    paciente_cpf      = models.CharField(max_length=14, blank=True, default="")
+    prescricao_numero = models.CharField(max_length=50, blank=True, default="")
+    medico_crm        = models.CharField(max_length=30, blank=True, default="")
+    responsavel       = models.CharField(max_length=200, blank=True, default="")
+    observacao        = models.TextField(blank=True, default="")
+    dispensacao       = models.ForeignKey("Dispensacao", on_delete=models.SET_NULL, null=True, blank=True, related_name="registros_controlados")
+    criado_em         = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_operacao"]
+        indexes = [
+            models.Index(fields=["empresa", "medicamento"], name="livro_ctrl_emp_med_idx"),
+            models.Index(fields=["empresa", "data_operacao"], name="livro_ctrl_emp_dt_idx"),
+        ]
+
+    def __str__(self):
+        return f"Livro #{self.pk} — {self.medicamento.nome} {self.tipo} {self.quantidade}"
+
+
+class FarmaciaAuditLog(models.Model):
+    """Trilha de auditoria completa para todas as operações de farmácia."""
+
+    ACAO_CHOICES = [
+        ("criar", "Criar"),
+        ("editar", "Editar"),
+        ("excluir", "Excluir"),
+        ("dispensar", "Dispensar"),
+        ("bloquear_lote", "Bloquear Lote"),
+        ("desbloquear_lote", "Desbloquear Lote"),
+        ("ajuste_estoque", "Ajuste de Estoque"),
+        ("descarte", "Descarte"),
+        ("notificacao_anvisa", "Notificação ANVISA"),
+    ]
+
+    empresa       = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="farmacia_audit_logs")
+    acao          = models.CharField(max_length=30, choices=ACAO_CHOICES)
+    modelo        = models.CharField(max_length=100)
+    objeto_id     = models.PositiveIntegerField(null=True, blank=True)
+    descricao     = models.TextField()
+    dados_antes   = models.JSONField(null=True, blank=True)
+    dados_depois  = models.JSONField(null=True, blank=True)
+    usuario       = models.CharField(max_length=200, blank=True, default="")
+    ip            = models.GenericIPAddressField(null=True, blank=True)
+    criado_em     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["empresa", "acao"], name="farm_audit_emp_acao_idx"),
+            models.Index(fields=["empresa", "criado_em"], name="farm_audit_emp_dt_idx"),
+        ]
+
+    def __str__(self):
+        return f"Audit #{self.pk} — {self.acao} {self.modelo} ({self.criado_em})"
 
 
 # ─── Hospital — Gestão Integrada (Manchester / Leitos / Internação) ──────────
