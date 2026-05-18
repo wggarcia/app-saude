@@ -1,0 +1,92 @@
+services:
+  - type: web
+    name: soluscrt-saude-staging-api
+    env: python
+    plan: starter
+    buildCommand: "./build.sh"
+    preDeployCommand: "python manage.py migrate --noinput && python manage.py bootstrap_acessos"
+    startCommand: "./start.sh"
+    healthCheckPath: /api/public/resumo
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DJANGO_ENV
+        value: staging
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: JWT_EXP_HOURS
+        value: "12"
+      - key: CORS_ALLOW_ALL_ORIGINS
+        value: "false"
+      - key: PAYMENT_PROVIDER
+        value: asaas
+      - key: SKIP_BUILD_MIGRATIONS
+        value: "true"
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "true"
+      - key: ASAAS_BASE_URL
+        value: https://sandbox.asaas.com/api/v3
+      - key: ASAAS_USER_AGENT
+        value: SolusCRT-Saude-Staging/1.0
+      - key: SOLUSCRT_BOOTSTRAP_RESET_PASSWORDS
+        value: "false"
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: soluscrt-saude-staging-db
+          property: connectionString
+      - key: ASAAS_API_KEY
+        sync: false
+      - key: ASAAS_WEBHOOK_TOKEN
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: MAPBOX_ACCESS_TOKEN
+        sync: false
+      - key: GOOGLE_MAPS_BROWSER_KEY
+        sync: false
+      - key: GOOGLE_MAPS_IOS_KEY
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_EMPRESA_EMAIL
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_EMPRESA_PASSWORD
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_EMPRESA_NOME
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_GOVERNO_EMAIL
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_GOVERNO_PASSWORD
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_GOVERNO_NOME
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_OWNER_EMAIL
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_OWNER_PASSWORD
+        sync: false
+      - key: SOLUSCRT_BOOTSTRAP_OWNER_NOME
+        sync: false
+
+databases:
+  - name: soluscrt-saude-staging-db
+    plan: starter

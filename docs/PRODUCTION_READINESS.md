@@ -6,6 +6,7 @@ Execucao passo a passo:
 
 - Go-live controlado: `docs/GO_LIVE_EXECUCAO.md`
 - Deploy no Render: `docs/DEPLOY_RENDER.md`
+- Staging e smoke: `docs/STAGING_AND_SMOKE.md`
 - Variaveis de producao: `.env.production.example`
 
 ## 1. Secrets obrigatorios

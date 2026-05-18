@@ -176,4 +176,6 @@ flutter test
 
 - Render: `docs/DEPLOY_RENDER.md`
 - Producao: `docs/PRODUCTION_READINESS.md`
+- Staging e smoke: `docs/STAGING_AND_SMOKE.md`
+- Scorecard executivo: `docs/EXECUTIVE_SCORECARD.md`
 - App Store: `app_saude/docs/APP_STORE_CONNECT_SUBMISSION.md`

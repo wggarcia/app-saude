@@ -53,6 +53,7 @@ fi
 
 run_check "Django check" "$PYTHON_BIN" manage.py check
 run_check "Migrações consistentes" "$PYTHON_BIN" manage.py makemigrations --check --dry-run
+run_check "Higiene do repositório" ./scripts/repo_hygiene_check.sh
 run_check "Testes automatizados" "$PYTHON_BIN" manage.py test
 
 # Deploy-safety check com ambiente simulado seguro.
@@ -107,6 +108,12 @@ if command -v flutter >/dev/null 2>&1 && [ -d "app_saude" ]; then
   run_check "Flutter test (app_saude)" bash -lc "cd app_saude && flutter test"
 else
   warn "Flutter não disponível localmente (ou pasta app_saude ausente)"
+fi
+
+if [ -n "${SMOKE_BASE_URL:-${BASE_URL:-}}" ]; then
+  run_check "Smoke test remoto" ./scripts/smoke_platform.sh
+else
+  warn "Smoke remoto desativado (defina SMOKE_BASE_URL ou BASE_URL)"
 fi
 
 echo
