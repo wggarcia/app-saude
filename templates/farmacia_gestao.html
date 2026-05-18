@@ -139,6 +139,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="tab-btn" onclick="setTab('conformidade')">🛡️ Conformidade</button>
       <button class="tab-btn" onclick="setTab('auditoria')">📝 Auditoria</button>
       <button class="tab-btn" onclick="setTab('rede')">🌐 Rede</button>
+      <button class="tab-btn" onclick="setTab('ia')">🤖 IA & Analytics</button>
     </div>
 
     <!-- Estoque -->
@@ -346,6 +347,114 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <thead><tr><th>Medicamento</th><th>Lote</th><th>Motivo</th><th>Quantidade</th><th>Responsável</th><th>Empresa Descarte</th><th>Manifesto</th><th>Data</th></tr></thead>
           <tbody id="tbodyDescartes"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- IA & Analytics (Fase 3) -->
+    <div class="tab-panel" id="tab-ia" style="margin-top:16px">
+      <!-- Sub-abas IA -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn btn-primary" id="iaBtn-dashboard" onclick="iaSetSubtab('dashboard')">🎯 Dashboard IA</button>
+        <button class="btn btn-ghost" id="iaBtn-previsao" onclick="iaSetSubtab('previsao')">📈 Previsão de Demanda</button>
+        <button class="btn btn-ghost" id="iaBtn-abc" onclick="iaSetSubtab('abc')">📊 Curva ABC</button>
+        <button class="btn btn-ghost" id="iaBtn-interacoes" onclick="iaSetSubtab('interacoes')">⚠️ Interações Medicamentosas</button>
+      </div>
+
+      <!-- Dashboard IA -->
+      <div id="ia-sub-dashboard">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+          <div class="kpi"><div class="kpi-value" id="iaTotalMeds">—</div><div class="kpi-label">💊 Total Medicamentos</div></div>
+          <div class="kpi"><div class="kpi-value" id="iaAlertas" style="color:var(--danger)">—</div><div class="kpi-label">🔴 Alertas de Ruptura</div></div>
+          <div class="kpi"><div class="kpi-value" id="iaRecomendacoes" style="color:var(--warn)">—</div><div class="kpi-label">🛒 Itens a Repor</div></div>
+          <div class="kpi"><div class="kpi-value" id="iaValorReposicao" style="color:var(--accent)">—</div><div class="kpi-label">💰 Valor Est. Reposição</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">🔴 Top Riscos de Ruptura</span></div>
+            <table class="table">
+              <thead><tr><th>Medicamento</th><th>Estoque</th><th>CMM</th><th>Score</th></tr></thead>
+              <tbody id="tbodyIaRupturas"><tr><td colspan="4" class="empty">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">🛒 Recomendações de Compra</span></div>
+            <table class="table">
+              <thead><tr><th>Medicamento</th><th>EOQ</th><th>Sugerido</th><th>Valor</th></tr></thead>
+              <tbody id="tbodyIaCompras"><tr><td colspan="4" class="empty">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Previsão de Demanda -->
+      <div id="ia-sub-previsao" style="display:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <label style="font-size:13px">Período de análise:</label>
+          <select id="prevMeses" onchange="carregarPrevisao()" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px">
+            <option value="1">1 mês</option>
+            <option value="3" selected>3 meses</option>
+            <option value="6">6 meses</option>
+            <option value="12">12 meses</option>
+          </select>
+          <button class="btn btn-ghost" onclick="carregarPrevisao()">↻ Recalcular</button>
+        </div>
+        <div class="card">
+          <div style="overflow-x:auto">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Medicamento</th><th>Estoque Atual</th><th>CMM</th><th>EOQ</th>
+                  <th>Ponto Reposição</th><th>Cobertura (dias)</th><th>Tendência</th><th>Score Ruptura</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyPrevisao"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Curva ABC -->
+      <div id="ia-sub-abc" style="display:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <label style="font-size:13px">Período:</label>
+          <select id="abcMeses" onchange="carregarCurvaAbcIA()" style="padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px">
+            <option value="1">1 mês</option>
+            <option value="3" selected>3 meses</option>
+            <option value="6">6 meses</option>
+            <option value="12">12 meses</option>
+          </select>
+          <button class="btn btn-ghost" onclick="carregarCurvaAbcIA()">↻ Recalcular</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px" id="abcResumoCards">
+          <div class="kpi" style="border-left:4px solid var(--danger)"><div class="kpi-value" id="abcAItens">—</div><div class="kpi-label">Classe A — <span id="abcAVal">—</span>% do valor</div></div>
+          <div class="kpi" style="border-left:4px solid var(--warn)"><div class="kpi-value" id="abcBItens">—</div><div class="kpi-label">Classe B — <span id="abcBVal">—</span>% do valor</div></div>
+          <div class="kpi" style="border-left:4px solid var(--muted)"><div class="kpi-value" id="abcCItens">—</div><div class="kpi-label">Classe C — <span id="abcCVal">—</span>% do valor</div></div>
+        </div>
+        <div class="card">
+          <div style="overflow-x:auto">
+            <table class="table">
+              <thead><tr><th>#</th><th>Classe</th><th>Medicamento</th><th>Qtd Consumida</th><th>Preço Custo</th><th>Valor Consumo</th><th>% Acumulado</th><th>Estoque Atual</th></tr></thead>
+              <tbody id="tbodyABC"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interações Medicamentosas -->
+      <div id="ia-sub-interacoes" style="display:none">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><span class="card-title">⚠️ Verificar Interações</span></div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Selecione os medicamentos que serão dispensados juntos para verificar interações clínicas.</p>
+          <div style="margin-bottom:12px">
+            <select id="interMedSel" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;min-width:260px">
+              <option value="">— adicionar medicamento —</option>
+            </select>
+            <button class="btn btn-ghost" style="margin-left:8px" onclick="adicionarMedInteracao()">+ Adicionar</button>
+          </div>
+          <div id="listaMedsInteracao" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;min-height:32px"></div>
+          <button class="btn btn-primary" onclick="verificarInteracoesIA()">🔍 Verificar Interações</button>
+        </div>
+        <div id="resultadoInteracoes"></div>
       </div>
     </div>
 
@@ -1460,7 +1569,7 @@ function fmtData(s) {
 let _currentTab = 'estoque';
 function setTab(tab) {
   _currentTab = tab;
-  const tabs = ['estoque','dispensacoes','movimentos','fornecedores','pedidos','lotes','pacientes','receitas','inventario','descarte','relatorios','conformidade','auditoria','rede'];
+  const tabs = ['estoque','dispensacoes','movimentos','fornecedores','pedidos','lotes','pacientes','receitas','inventario','descarte','relatorios','conformidade','auditoria','rede','ia'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', tabs[i] === tab));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
@@ -1477,6 +1586,7 @@ function setTab(tab) {
   else if (tab === 'conformidade') carregarConformidade();
   else if (tab === 'auditoria') carregarAuditoria();
   else if (tab === 'rede') carregarRede();
+  else if (tab === 'ia') carregarIA();
 }
 
 // ── Lotes ─────────────────────────────────────────────────────
@@ -1559,6 +1669,175 @@ async function deletarLote(id) {
 
 // Fechar modal ao clicar fora
 document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+// ── IA & Analytics (Fase 3) ────────────────────────────────────
+let _medsInteracao = [];
+let _medsInteracaoSelecionados = [];
+
+function iaSetSubtab(sub) {
+  ['dashboard','previsao','abc','interacoes'].forEach(s => {
+    document.getElementById('ia-sub-'+s).style.display = s === sub ? '' : 'none';
+    const btn = document.getElementById('iaBtn-'+s);
+    if (btn) { btn.className = s === sub ? 'btn btn-primary' : 'btn btn-ghost'; }
+  });
+  if (sub === 'dashboard') carregarIADashboard();
+  else if (sub === 'previsao') carregarPrevisao();
+  else if (sub === 'abc') carregarCurvaAbcIA();
+  else if (sub === 'interacoes') carregarSeletorInteracoes();
+}
+
+async function carregarIA() {
+  iaSetSubtab('dashboard');
+}
+
+async function carregarIADashboard() {
+  const d = await api('/api/farmacia/ia/dashboard/');
+  if (!d) return;
+  document.getElementById('iaTotalMeds').textContent     = d.total_medicamentos ?? '—';
+  document.getElementById('iaAlertas').textContent       = d.total_alertas_ruptura ?? '—';
+  document.getElementById('iaRecomendacoes').textContent = d.recomendacoes_compra?.length ?? '—';
+  document.getElementById('iaValorReposicao').textContent = d.total_valor_reposicao != null
+    ? `R$ ${d.total_valor_reposicao.toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '—';
+
+  const corScore = s => s >= 90 ? 'var(--danger)' : s >= 70 ? 'var(--warn)' : s >= 40 ? '#f59e0b' : 'var(--ok)';
+  const emojiScore = s => s >= 90 ? '🔴' : s >= 70 ? '🟠' : s >= 40 ? '🟡' : '🟢';
+
+  const tbR = document.getElementById('tbodyIaRupturas');
+  if (!d.alertas_ruptura?.length) tbR.innerHTML = '<tr><td colspan="4" class="empty">Nenhum alerta crítico</td></tr>';
+  else tbR.innerHTML = d.alertas_ruptura.map(m => `<tr>
+    <td>${m.nome}</td>
+    <td>${m.quantidade_atual}</td>
+    <td>${m.cmm}/mês</td>
+    <td><strong style="color:${corScore(m.score_ruptura)}">${emojiScore(m.score_ruptura)} ${m.score_ruptura}%</strong></td>
+  </tr>`).join('');
+
+  const tbC = document.getElementById('tbodyIaCompras');
+  if (!d.recomendacoes_compra?.length) tbC.innerHTML = '<tr><td colspan="4" class="empty">Estoque adequado</td></tr>';
+  else tbC.innerHTML = d.recomendacoes_compra.map(m => `<tr>
+    <td>${m.nome}</td>
+    <td>${m.eoq}</td>
+    <td><strong style="color:var(--warn)">${m.quantidade_sugerida}</strong></td>
+    <td>R$ ${m.valor_estimado.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+  </tr>`).join('');
+}
+
+async function carregarPrevisao() {
+  const meses = document.getElementById('prevMeses')?.value || 3;
+  const d = await api(`/api/farmacia/ia/previsao-demanda/?meses=${meses}`);
+  const tb = document.getElementById('tbodyPrevisao');
+  if (!d?.medicamentos?.length) { tb.innerHTML='<tr><td colspan="8" class="empty">Sem dados</td></tr>'; return; }
+
+  const corScore = s => s >= 90 ? 'var(--danger)' : s >= 70 ? 'var(--warn)' : s >= 40 ? '#f59e0b' : 'var(--ok)';
+  const tendEmoji = t => t > 0.5 ? '📈' : t < -0.5 ? '📉' : '➡️';
+
+  tb.innerHTML = d.medicamentos.map(m => `<tr>
+    <td>${m.nome}</td>
+    <td>${m.quantidade_atual}</td>
+    <td>${m.cmm}/mês</td>
+    <td>${m.eoq || '—'}</td>
+    <td>${m.ponto_reposicao || '—'}</td>
+    <td style="color:${m.dias_cobertura != null && m.dias_cobertura < 15 ? 'var(--danger)' : 'inherit'}">
+      ${m.dias_cobertura != null ? m.dias_cobertura + 'd' : '∞'}
+    </td>
+    <td title="inclinação: ${m.tendencia_mensal}">${tendEmoji(m.tendencia_mensal)}</td>
+    <td><span style="background:${corScore(m.score_ruptura)};color:#000;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">${m.score_ruptura}%</span></td>
+  </tr>`).join('');
+}
+
+async function carregarCurvaAbcIA() {
+  const meses = document.getElementById('abcMeses')?.value || 3;
+  const d = await api(`/api/farmacia/ia/curva-abc/?meses=${meses}`);
+  if (!d) return;
+
+  const r = d.resumo || {};
+  document.getElementById('abcAItens').textContent = `${r.A?.itens ?? 0} itens`;
+  document.getElementById('abcAVal').textContent   = r.A?.pct_valor ?? 0;
+  document.getElementById('abcBItens').textContent = `${r.B?.itens ?? 0} itens`;
+  document.getElementById('abcBVal').textContent   = r.B?.pct_valor ?? 0;
+  document.getElementById('abcCItens').textContent = `${r.C?.itens ?? 0} itens`;
+  document.getElementById('abcCVal').textContent   = r.C?.pct_valor ?? 0;
+
+  const corClasse = {'A':'var(--danger)','B':'var(--warn)','C':'var(--muted)'};
+  const tb = document.getElementById('tbodyABC');
+  if (!d.medicamentos?.length) { tb.innerHTML='<tr><td colspan="8" class="empty">Sem dados</td></tr>'; return; }
+  tb.innerHTML = d.medicamentos.map(m => `<tr>
+    <td>${m.posicao}</td>
+    <td><span style="background:${corClasse[m.classe]};color:${m.classe==='C'?'var(--text)':'#000'};padding:2px 10px;border-radius:4px;font-weight:700;font-size:13px">${m.classe}</span></td>
+    <td>${m.nome}</td>
+    <td>${m.quantidade_consumida}</td>
+    <td>R$ ${m.preco_custo.toFixed(2)}</td>
+    <td><strong>R$ ${m.valor_consumo.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></td>
+    <td>${m.pct_valor_acumulado}%</td>
+    <td style="color:${m.status_estoque==='critico'?'var(--danger)':m.status_estoque==='baixo'?'var(--warn)':'inherit'}">${m.quantidade_atual}</td>
+  </tr>`).join('');
+}
+
+async function carregarSeletorInteracoes() {
+  if (_medsInteracao.length) return;
+  const d = await api('/api/farmacia/estoque');
+  _medsInteracao = d?.medicamentos || d?.itens || [];
+  const sel = document.getElementById('interMedSel');
+  sel.innerHTML = '<option value="">— adicionar medicamento —</option>' +
+    _medsInteracao.map(m => `<option value="${m.id}" data-principio="${m.principio_ativo||m.nome}">${m.nome}${m.principio_ativo?' ('+m.principio_ativo+')':''}</option>`).join('');
+}
+
+function adicionarMedInteracao() {
+  const sel = document.getElementById('interMedSel');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.value) return;
+  const id = parseInt(opt.value);
+  if (_medsInteracaoSelecionados.find(m => m.id === id)) { sel.value=''; return; }
+  _medsInteracaoSelecionados.push({ id, nome: opt.text, principio: opt.dataset.principio });
+  sel.value = '';
+  renderMedsInteracao();
+}
+
+function removerMedInteracao(id) {
+  _medsInteracaoSelecionados = _medsInteracaoSelecionados.filter(m => m.id !== id);
+  renderMedsInteracao();
+}
+
+function renderMedsInteracao() {
+  const box = document.getElementById('listaMedsInteracao');
+  box.innerHTML = _medsInteracaoSelecionados.map(m => `
+    <span style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:13px;display:flex;align-items:center;gap:6px">
+      ${m.nome}
+      <button onclick="removerMedInteracao(${m.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;padding:0">✕</button>
+    </span>
+  `).join('');
+}
+
+async function verificarInteracoesIA() {
+  if (_medsInteracaoSelecionados.length < 2) {
+    alert('Adicione ao menos 2 medicamentos para verificar interações.');
+    return;
+  }
+  const d = await api('/api/farmacia/ia/interacoes/', {
+    method: 'POST',
+    body: JSON.stringify({ medicamento_ids: _medsInteracaoSelecionados.map(m => m.id) })
+  });
+  const box = document.getElementById('resultadoInteracoes');
+  if (!d) { box.innerHTML=''; return; }
+
+  if (!d.interacoes?.length) {
+    box.innerHTML = `<div class="card"><div class="empty" style="padding:32px;color:var(--ok)">✅ Nenhuma interação clínica relevante encontrada entre os medicamentos selecionados.</div></div>`;
+    return;
+  }
+
+  const corRisco = {'alto':'var(--danger)','medio':'var(--warn)','baixo':'#f59e0b'};
+  box.innerHTML = `<div class="card">
+    <div class="card-header"><span class="card-title" style="color:var(--danger)">⚠️ ${d.interacoes.length} interação(ões) encontrada(s)</span></div>
+    ${d.interacoes.map(i => `
+      <div style="border-left:4px solid ${corRisco[i.risco]||'var(--muted)'};padding:12px 16px;margin-bottom:10px;background:rgba(0,0,0,.15);border-radius:0 8px 8px 0">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <span style="background:${corRisco[i.risco]};color:#000;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase">${i.risco}</span>
+          <strong>${i.medicamento_a} + ${i.medicamento_b}</strong>
+        </div>
+        <p style="font-size:13px;color:var(--muted);margin:0">${i.efeito}</p>
+      </div>
+    `).join('')}
+  </div>`;
+}
 
 // ── Rede (Fase 2) ───────────────────────────────────────────────
 let _redeUnidades = [];

@@ -296,6 +296,12 @@ from api.views_farmacia_fase2 import (
     api_rede_farmacia_transferencia_acao,
     api_rede_farmacia_kpis,
 )
+from api.views_farmacia_fase3 import (
+    api_verificar_interacoes,
+    api_farmacia_previsao_demanda,
+    api_farmacia_curva_abc,
+    api_farmacia_ia_dashboard,
+)
 from api.views_hospital import api_hospital_painel
 from api.views_hospital_dashboard import (
     api_hospital_dashboard,
@@ -751,6 +757,11 @@ urlpatterns = [
     path('api/farmacia/lotes/bloqueio/', api_lotes_bloqueio),
     path('api/farmacia/auditoria/', api_farmacia_auditoria),
     path('api/farmacia/conformidade/', api_farmacia_conformidade),
+    # ── Fase 3: IA & Analytics ───────────────────────────────────
+    path('api/farmacia/ia/dashboard/', api_farmacia_ia_dashboard),
+    path('api/farmacia/ia/previsao-demanda/', api_farmacia_previsao_demanda),
+    path('api/farmacia/ia/curva-abc/', api_farmacia_curva_abc),
+    path('api/farmacia/ia/interacoes/', api_verificar_interacoes),
     # ── Fase 2: Multi-unidade & Rede ─────────────────────────────
     path('api/farmacia/rede/estoque/', api_rede_farmacia_estoque),
     path('api/farmacia/rede/disponibilidade/<str:nome_med>/', api_rede_farmacia_disponibilidade),
