@@ -7,7 +7,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import Empresa, FuncionarioSST, ReuniaoSST, NotificacaoFuncionario
+from .models import Empresa, FuncionarioSST, ReuniaoSST, NotificacaoFuncionario, VinculoClinicaEmpresa
 from .views_dashboard import _empresa_autenticada
 
 
@@ -51,8 +51,12 @@ def sst_comunicacao_page(request):
     empresa, redir = _autenticar(request)
     if redir:
         return redir
+    # Clínicas vinculadas à empresa (ativas)
+    clinica_ids = VinculoClinicaEmpresa.objects.filter(
+        empresa_contratante=empresa, status="ativo"
+    ).values_list("clinica_id", flat=True)
     clinicas = list(
-        Empresa.objects.filter(tipo="clinica", ativo=True)
+        Empresa.objects.filter(id__in=clinica_ids, ativo=True)
         .values("id", "nome")
         .order_by("nome")
     )
@@ -109,7 +113,10 @@ def api_reunioes(request):
 
         clinica = None
         if tipo == ReuniaoSST.TIPO_CLINICA and data.get("clinica_id"):
-            clinica = Empresa.objects.filter(id=data["clinica_id"]).first()
+            clinica_ids = VinculoClinicaEmpresa.objects.filter(
+                empresa_contratante=empresa, status="ativo"
+            ).values_list("clinica_id", flat=True)
+            clinica = Empresa.objects.filter(id=data["clinica_id"], id__in=clinica_ids).first()
 
         link_externo = (data.get("link_externo") or "").strip()
 
