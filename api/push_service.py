@@ -11,7 +11,7 @@ except Exception:  # pragma: no cover
     credentials = None
     messaging = None
 
-from .models import DispositivoPushPublico
+from .models import DispositivoPushPublico, CredencialAppFuncionario
 
 STATE_ALIASES = {
     "RJ": "Rio de Janeiro",
@@ -154,6 +154,60 @@ def _firebase_app():
 
 def push_disponivel():
     return _firebase_app() is not None and messaging is not None
+
+
+def enviar_push_funcionario(notificacao):
+    """
+    Envia push FCM para um funcionário específico quando uma NotificacaoFuncionario é criada.
+    Requer que CredencialAppFuncionario.fcm_token esteja preenchido.
+    """
+    app = _firebase_app()
+    if app is None or messaging is None:
+        return {"status": "push_indisponivel"}
+
+    try:
+        cred = CredencialAppFuncionario.objects.get(
+            funcionario_id=notificacao.funcionario_id,
+            ativo=True,
+        )
+    except CredencialAppFuncionario.DoesNotExist:
+        return {"status": "sem_credencial"}
+
+    token = (cred.fcm_token or "").strip()
+    if not token:
+        return {"status": "sem_token"}
+
+    try:
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=notificacao.titulo,
+                body=(notificacao.mensagem or "")[:180],
+            ),
+            data={
+                "tipo": notificacao.tipo or "geral",
+                "notificacao_id": str(notificacao.id),
+                "referencia_id": str(notificacao.referencia_id or ""),
+            },
+            token=token,
+        )
+        response = messaging.send(message, app=app)
+        return {"status": "ok", "message_id": response}
+    except Exception as exc:
+        code = getattr(exc, "code", None) or exc.__class__.__name__
+        # Token inválido → limpar para evitar tentativas futuras
+        if str(code) in {
+            "unregistered",
+            "registration-token-not-registered",
+            "invalid-argument",
+            "invalid-registration-token",
+            "sender-id-mismatch",
+            "UnregisteredError",
+            "SenderIdMismatchError",
+        }:
+            CredencialAppFuncionario.objects.filter(
+                funcionario_id=notificacao.funcionario_id
+            ).update(fcm_token="")
+        return {"status": "erro_push", "erro": str(exc)}
 
 
 def enviar_alerta_governamental(alerta):

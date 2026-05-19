@@ -1,5 +1,8 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
+import 'firebase_options.dart';
+import 'servicos/fcm_service.dart';
 import 'telas/empresa/tela_login_empresa.dart';
 import 'telas/funcionario/tela_login_funcionario.dart';
 
@@ -7,7 +10,16 @@ import 'telas/funcionario/tela_login_funcionario.dart';
 /// quando o token expirar sem depender de BuildContext.
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    // Inicializa FCM: solicita permissão + registra token no backend se já logado
+    await FcmService.inicializar();
+  } catch (e) {
+    // Firebase indisponível — app funciona normalmente sem push notifications
+    debugPrint('[FCM] Firebase não inicializado: $e');
+  }
   runApp(const SolusCrtOcupacionalApp());
 }
 

@@ -62,6 +62,23 @@ class FuncionarioSstService {
       _get('/api/funcionario/notificacoes');
   static Future<void> marcarLida(int id) =>
       _post('/api/funcionario/notificacoes/$id/lida');
+
+  static Future<void> deletarNotificacao(int id) async {
+    final headers = await _headers();
+    await http.delete(
+      Uri.parse('${Config.baseUrl}/api/funcionario/notificacoes/$id/lida'),
+      headers: headers,
+    );
+  }
+
+  static Future<void> limparNotificacoesLidas() async {
+    final headers = await _headers();
+    await http.delete(
+      Uri.parse('${Config.baseUrl}/api/funcionario/notificacoes/limpar-lidas'),
+      headers: headers,
+    );
+  }
+
   static Future<Map<String, dynamic>> reunioes() =>
       _get('/api/funcionario/reunioes');
 }

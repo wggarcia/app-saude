@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "214032128491",
+    "project_id": "soluscrt-apple",
+    "storage_bucket": "soluscrt-apple.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:214032128491:android:0aded80a8528fa4f5761ae",
+        "android_client_info": {
+          "package_name": "br.com.soluscrt.ocupacional"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnO4a7n9iXIicReAjmdT3WnNlIsmQ8e6I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:214032128491:android:9221f248177a386c5761ae",
+        "android_client_info": {
+          "package_name": "com.soluscrt.saude"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnO4a7n9iXIicReAjmdT3WnNlIsmQ8e6I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

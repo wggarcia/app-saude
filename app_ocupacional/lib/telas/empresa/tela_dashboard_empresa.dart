@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../servicos/empresa_auth_service.dart';
 import '../../servicos/empresa_sst_service.dart';
-import 'tela_login_empresa.dart';
 
 class TelaDashboardEmpresa extends StatefulWidget {
   const TelaDashboardEmpresa({super.key, required this.empresaNome});
@@ -41,25 +39,14 @@ class _TelaDashboardEmpresaState extends State<TelaDashboardEmpresa> {
     }
   }
 
-  Future<void> _sair() async {
-    await EmpresaAuthService.logout();
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const TelaLoginEmpresa()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.empresaNome),
+        title: const Text('Dashboard SST'),
+        automaticallyImplyLeading: false,
         actions: [
-          IconButton(
-            tooltip: 'Sair',
-            onPressed: _sair,
-            icon: const Icon(Icons.logout),
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _carregar),
         ],
       ),
       body: _body(context),

@@ -876,6 +876,8 @@ class CredencialAppFuncionario(models.Model):
     email = models.EmailField(unique=True)
     senha = models.CharField(max_length=255)  # bcrypt hash
     ativo = models.BooleanField(default=True)
+    # FCM token para push notifications (atualizado a cada login)
+    fcm_token = models.TextField(blank=True, default="")
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
@@ -915,6 +917,58 @@ class NotificacaoFuncionario(models.Model):
 
     def __str__(self):
         return f"{self.titulo} → {self.funcionario.nome}"
+
+
+class CheckinBemEstar(models.Model):
+    """
+    Check-in de bem-estar do funcionário.
+    Anônimo por padrão — a empresa só acessa dados agregados.
+    Se o funcionário pedir ajuda E marcar quer_contato=True, a empresa
+    pode ver o nome para oferecer suporte direto.
+    """
+    HUMOR = [
+        ("otimo",   "Ótimo 😄"),
+        ("bom",     "Bom 🙂"),
+        ("regular", "Regular 😐"),
+        ("ruim",    "Ruim 😔"),
+        ("pessimo", "Péssimo 😞"),
+    ]
+    TIPO_AJUDA = [
+        ("saude_fisica",  "Saúde física"),
+        ("saude_mental",  "Saúde mental / ansiedade"),
+        ("vicio",         "Dependência / vício"),
+        ("trabalho",      "Problemas no trabalho"),
+        ("financeiro",    "Dificuldade financeira"),
+        ("familiar",      "Problema familiar"),
+        ("outro",         "Outro"),
+    ]
+
+    funcionario  = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="checkins_bem_estar")
+    empresa      = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="checkins_bem_estar")
+
+    # ── resposta principal ────────────────────────────────────────────────────
+    humor              = models.CharField(max_length=10, choices=HUMOR)
+    saude_fisica       = models.PositiveSmallIntegerField(default=3)   # 1–5
+    saude_mental       = models.PositiveSmallIntegerField(default=3)   # 1–5
+    nivel_estresse     = models.PositiveSmallIntegerField(default=3)   # 1–5
+    satisfacao_trabalho= models.PositiveSmallIntegerField(default=3)   # 1–5
+    mensagem           = models.TextField(blank=True)  # sempre anônima
+
+    # ── pedido de ajuda ───────────────────────────────────────────────────────
+    precisa_ajuda  = models.BooleanField(default=False)
+    tipo_ajuda     = models.CharField(max_length=20, choices=TIPO_AJUDA, blank=True)
+    # Somente se o próprio funcionário consentir, a empresa vê o nome
+    quer_contato   = models.BooleanField(default=False)
+    contato_resolvido = models.BooleanField(default=False)  # empresa marca quando atendeu
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["empresa", "criado_em"])]
+
+    def __str__(self):
+        return f"Check-in {self.funcionario.nome} — {self.humor} ({self.criado_em:%d/%m/%Y})"
 
 
 class ASOOcupacional(models.Model):

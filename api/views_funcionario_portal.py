@@ -20,6 +20,42 @@ from .models import (
 from .services.employee_notifications import solicitacao_portal_dict
 
 
+# ── FCM token ───────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def funcionario_salvar_fcm_token(request):
+    """
+    POST /api/funcionario/fcm-token
+    Header: Authorization: Bearer <jwt>
+    Body:   { "fcm_token": "<token FCM do dispositivo>" }
+
+    Salva o FCM token na CredencialAppFuncionario para envio de push notifications.
+    """
+    if request.method != "POST":
+        return JsonResponse({"erro": "Use POST"}, status=405)
+
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "Não autorizado"}, status=401)
+
+    try:
+        dados = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    token_fcm = (dados.get("fcm_token") or "").strip()
+    if not token_fcm:
+        return JsonResponse({"erro": "fcm_token é obrigatório"}, status=400)
+
+    try:
+        cred = CredencialAppFuncionario.objects.get(funcionario=func, ativo=True)
+        cred.fcm_token = token_fcm
+        cred.save(update_fields=["fcm_token", "atualizado_em"])
+        return JsonResponse({"status": "ok"})
+    except CredencialAppFuncionario.DoesNotExist:
+        return JsonResponse({"erro": "Credencial não encontrada"}, status=404)
+
+
 # ── helpers ────────────────────────────────────────────────────────────────
 
 def _token_funcionario(funcionario):
@@ -248,13 +284,31 @@ def funcionario_notificacoes(request):
 
 @csrf_exempt
 def funcionario_notificacao_lida(request, notificacao_id):
-    if request.method != "POST":
-        return JsonResponse({"erro": "Use POST"}, status=405)
+    if request.method not in ("POST", "DELETE"):
+        return JsonResponse({"erro": "Use POST ou DELETE"}, status=405)
     func = _autenticar_funcionario(request)
     if not func:
         return JsonResponse({"erro": "não autorizado"}, status=401)
+    if request.method == "DELETE":
+        # Só permite deletar notificações já lidas
+        NotificacaoFuncionario.objects.filter(
+            id=notificacao_id, funcionario=func, lida=True
+        ).delete()
+        return JsonResponse({"ok": True})
     NotificacaoFuncionario.objects.filter(id=notificacao_id, funcionario=func).update(lida=True)
     return JsonResponse({"ok": True})
+
+
+@csrf_exempt
+def funcionario_notificacoes_limpar_lidas(request):
+    """DELETE /api/funcionario/notificacoes/limpar-lidas — apaga todas as lidas."""
+    if request.method != "DELETE":
+        return JsonResponse({"erro": "Use DELETE"}, status=405)
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "não autorizado"}, status=401)
+    deletadas, _ = NotificacaoFuncionario.objects.filter(funcionario=func, lida=True).delete()
+    return JsonResponse({"ok": True, "deletadas": deletadas})
 
 
 # ── perfil ─────────────────────────────────────────────────────────────────

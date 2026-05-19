@@ -1917,6 +1917,13 @@ def sst_conformidade_page(request):
     return render(request, "sst_conformidade.html", {"empresa_nome": empresa.nome})
 
 
+def sst_bem_estar_page(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_redirect(request)
+    return render(request, "sst_bem_estar.html", {"empresa_nome": empresa.nome})
+
+
 def api_sst_conformidade_pdf(request):
     """Exporta relatório de conformidade SST em PDF."""
     from django.http import HttpResponse

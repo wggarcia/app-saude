@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
+import 'fcm_service.dart';
 
 class FuncionarioAuthService {
   static const _tokenKey = 'funcionario_token';
@@ -28,6 +29,8 @@ class FuncionarioAuthService {
     }
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     await _salvarSessao(data);
+    // Registra FCM token após login bem-sucedido
+    FcmService.registrarTokenNoBackend().ignore();
     return data;
   }
 
@@ -66,6 +69,8 @@ class FuncionarioAuthService {
       throw Exception(body['erro'] ?? 'Falha no registro (${response.statusCode}).');
     }
     await _salvarSessao(body);
+    // Registra FCM token após registro bem-sucedido
+    FcmService.registrarTokenNoBackend().ignore();
     return body;
   }
 

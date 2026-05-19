@@ -85,6 +85,7 @@ from api.views_sst import (
     api_sst_conformidade_pdf,
     api_sst_relatorio_consolidado_pdf,
     sst_conformidade_page,
+    sst_bem_estar_page,
 )
 from api.views_agendamento_sst import (
     api_agendamentos_sst,
@@ -418,6 +419,13 @@ from api.views_funcionario_portal import (
     funcionario_meu_perfil, funcionario_meus_asos,
     funcionario_meus_treinamentos, funcionario_meus_epis, funcionario_minhas_solicitacoes,
     funcionario_notificacoes, funcionario_notificacao_lida,
+    funcionario_notificacoes_limpar_lidas,
+    funcionario_salvar_fcm_token,
+)
+from api.views_bem_estar import (
+    api_funcionario_checkin,
+    api_empresa_bem_estar_resumo,
+    api_empresa_bem_estar_contato_resolvido,
 )
 from api.views_assinatura_sst import (
     api_sst_assinaturas,
@@ -610,6 +618,7 @@ urlpatterns = [
     path('sst/configuracoes/', sst_configuracoes_page),
     path('sst/epis/', sst_epis_page),
     path('sst/conformidade/', sst_conformidade_page),
+    path('sst/bem-estar/', sst_bem_estar_page),
     path('sst/riscos/', sst_riscos_page),
     path('sst/postos/', sst_postos_page),
     path('sst/comunicacao/grupos/', painel_grupos),
@@ -667,6 +676,8 @@ urlpatterns = [
     path('api/sst/postos/<int:posto_id>/funcionarios', api_posto_funcionarios),
     path('api/sst/postos/<int:posto_id>/xml-s2240', api_posto_xml_s2240),
     # Riscos ocupacionais / PGR
+    path('api/sst/bem-estar/resumo', api_empresa_bem_estar_resumo),
+    path('api/sst/bem-estar/<int:checkin_id>/resolvido', api_empresa_bem_estar_contato_resolvido),
     path('api/sst/riscos/', api_riscos_ocupacionais),
     path('api/sst/riscos/kpis/', api_riscos_kpis),
     path('api/sst/riscos/<int:risco_id>/', api_risco_detalhe),
@@ -1136,7 +1147,10 @@ urlpatterns = [
     path('api/funcionario/buscar-cpf', funcionario_buscar_cpf),
     path('api/funcionario/registrar', funcionario_registrar),
     path('api/funcionario/login', funcionario_login),
+    path('api/funcionario/fcm-token', funcionario_salvar_fcm_token),
+    path('api/funcionario/bem-estar', api_funcionario_checkin),
     path('api/funcionario/notificacoes', funcionario_notificacoes),
+    path('api/funcionario/notificacoes/limpar-lidas', funcionario_notificacoes_limpar_lidas),
     path('api/funcionario/notificacoes/<int:notificacao_id>/lida', funcionario_notificacao_lida),
     path('api/funcionario/dashboard', funcionario_dashboard),
     path('api/funcionario/meu-perfil', funcionario_meu_perfil),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../servicos/empresa_auth_service.dart';
-import 'tela_dashboard_empresa.dart';
+import 'navegador_empresa.dart';
 
 class TelaLoginEmpresa extends StatefulWidget {
   const TelaLoginEmpresa({super.key});
@@ -40,8 +40,7 @@ class _TelaLoginEmpresaState extends State<TelaLoginEmpresa> {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) =>
-              TelaDashboardEmpresa(empresaNome: session.empresaNome),
+          builder: (_) => NavegadorEmpresa(empresaNome: session.empresaNome),
         ),
       );
     } on SessaoEmUsoException catch (e) {
