@@ -55,8 +55,14 @@ def _cpf_limpo(cpf):
 # ── registro ───────────────────────────────────────────────────────────────
 
 @csrf_exempt
-def funcionario_registrar(request):
-    """Funcionário cria sua própria conta no app usando CPF + email + senha."""
+def funcionario_buscar_cpf(request):
+    """
+    Etapa 1 do registro: retorna as empresas vinculadas ao CPF.
+    POST { "cpf": "..." }
+    Resposta:
+      - 1 empresa  → { "status": "ok", "funcionario_id": X, "empresa_nome": "..." }
+      - N empresas → { "status": "escolher_empresa", "opcoes": [{id, empresa_nome, cargo}] }
+    """
     if request.method != "POST":
         return JsonResponse({"erro": "Use POST"}, status=405)
     try:
@@ -65,25 +71,64 @@ def funcionario_registrar(request):
         return JsonResponse({"erro": "JSON inválido"}, status=400)
 
     cpf = _cpf_limpo(dados.get("cpf", ""))
+    if not cpf:
+        return JsonResponse({"erro": "CPF é obrigatório"}, status=400)
+
+    funcs = list(
+        FuncionarioSST.objects
+        .filter(cpf__icontains=cpf, ativo=True)
+        .select_related("empresa")
+        .order_by("empresa__nome")
+    )
+    if not funcs:
+        return JsonResponse({"erro": "CPF não encontrado. Solicite ao RH o seu cadastro."}, status=404)
+
+    if len(funcs) == 1:
+        return JsonResponse({
+            "status": "ok",
+            "funcionario_id": funcs[0].id,
+            "nome": funcs[0].nome,
+            "empresa_nome": funcs[0].empresa.nome,
+            "cargo": funcs[0].cargo,
+        })
+
+    return JsonResponse({
+        "status": "escolher_empresa",
+        "nome": funcs[0].nome,
+        "opcoes": [
+            {"funcionario_id": f.id, "empresa_nome": f.empresa.nome, "cargo": f.cargo or ""}
+            for f in funcs
+        ],
+    })
+
+
+@csrf_exempt
+def funcionario_registrar(request):
+    """
+    Etapa 2 do registro: cria credencial com email + senha para o funcionario_id escolhido.
+    POST { "funcionario_id": X, "email": "...", "senha": "..." }
+    """
+    if request.method != "POST":
+        return JsonResponse({"erro": "Use POST"}, status=405)
+    try:
+        dados = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    funcionario_id = dados.get("funcionario_id")
     email = (dados.get("email") or "").strip().lower()
     senha = dados.get("senha", "")
 
-    if not cpf:
-        return JsonResponse({"erro": "CPF é obrigatório"}, status=400)
+    if not funcionario_id:
+        return JsonResponse({"erro": "funcionario_id é obrigatório"}, status=400)
     if not email or "@" not in email:
         return JsonResponse({"erro": "E-mail inválido"}, status=400)
     if not senha or len(senha) < 6:
         return JsonResponse({"erro": "Senha deve ter pelo menos 6 caracteres"}, status=400)
 
-    func = (
-        FuncionarioSST.objects
-        .filter(cpf__icontains=cpf, ativo=True)
-        .select_related("empresa")
-        .order_by("-criado_em")
-        .first()
-    )
+    func = FuncionarioSST.objects.filter(id=funcionario_id, ativo=True).select_related("empresa").first()
     if not func:
-        return JsonResponse({"erro": "CPF não encontrado. Solicite ao RH o seu cadastro."}, status=404)
+        return JsonResponse({"erro": "Funcionário não encontrado."}, status=404)
 
     if CredencialAppFuncionario.objects.filter(email=email).exists():
         return JsonResponse({"erro": "E-mail já cadastrado. Use outro ou recupere sua senha."}, status=409)

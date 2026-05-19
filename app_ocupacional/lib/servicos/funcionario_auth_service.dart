@@ -31,18 +31,32 @@ class FuncionarioAuthService {
     return data;
   }
 
-  /// Registro: funcionário cria conta no app usando CPF + email + senha
+  /// Etapa 1: busca empresas vinculadas ao CPF
+  static Future<Map<String, dynamic>> buscarCpf(String cpf) async {
+    final cpfLimpo = cpf.replaceAll(RegExp(r'[^0-9]'), '');
+    final response = await http.post(
+      Uri.parse('${Config.baseUrl}/api/funcionario/buscar-cpf'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'cpf': cpfLimpo}),
+    );
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode != 200) {
+      throw Exception(body['erro'] ?? 'CPF não encontrado (${response.statusCode}).');
+    }
+    return body;
+  }
+
+  /// Etapa 2: registro com funcionario_id já escolhido + email + senha
   static Future<Map<String, dynamic>> registrar(
-    String cpf,
+    int funcionarioId,
     String email,
     String senha,
   ) async {
-    final cpfLimpo = cpf.replaceAll(RegExp(r'[^0-9]'), '');
     final response = await http.post(
       Uri.parse('${Config.baseUrl}/api/funcionario/registrar'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'cpf': cpfLimpo,
+        'funcionario_id': funcionarioId,
         'email': email.trim().toLowerCase(),
         'senha': senha,
       }),

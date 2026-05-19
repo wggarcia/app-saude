@@ -59,6 +59,7 @@ class _TelaMeuPerfilState extends State<TelaMeuPerfil> {
         padding: const EdgeInsets.all(16),
         children: [
           _Bloco('Dados pessoais', {
+            'ID': p['id']?.toString(),
             'Nome': p['nome'],
             'CPF': p['cpf'],
             'Nascimento': p['data_nascimento'],
