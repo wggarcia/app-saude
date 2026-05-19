@@ -837,7 +837,21 @@ def api_dono_atualizar_cliente(request):
     empresa.max_dispositivos = pacote["dispositivos"]
     empresa.plano = plano
     empresa.ativo = ativo
-    empresa.save(update_fields=["pacote_codigo", "max_usuarios", "max_dispositivos", "plano", "ativo"])
+    update_fields = ["pacote_codigo", "max_usuarios", "max_dispositivos", "plano", "ativo"]
+
+    if dados.get("data_expiracao"):
+        from django.utils import timezone as tz
+        from datetime import datetime as _dt
+        try:
+            nova_exp = _dt.fromisoformat(dados["data_expiracao"])
+            if nova_exp.tzinfo is None:
+                nova_exp = tz.make_aware(nova_exp)
+            empresa.data_expiracao = nova_exp
+            update_fields.append("data_expiracao")
+        except ValueError:
+            pass
+
+    empresa.save(update_fields=update_fields)
 
     FinanceiroEventoSaaS.objects.create(
         empresa=empresa,

@@ -98,6 +98,24 @@ def api_agendamentos_sst(request):
             medico=data.get("medico", ""),
             observacoes=data.get("observacoes", ""),
         )
+
+        # notificação no app do funcionário
+        try:
+            from .models import NotificacaoFuncionario
+            tipo_label = ag.get_tipo_display() if hasattr(ag, "get_tipo_display") else ag.tipo
+            data_fmt = data_hora.strftime("%d/%m/%Y às %H:%M")
+            local_txt = f" — {ag.local}" if ag.local else ""
+            NotificacaoFuncionario.objects.create(
+                funcionario=func,
+                empresa=empresa,
+                tipo="aso",
+                titulo=f"Agendamento: {tipo_label}",
+                mensagem=f"Você tem um exame agendado para {data_fmt}{local_txt}. {ag.observacoes or ''}".strip(),
+                referencia_id=ag.id,
+            )
+        except Exception:
+            pass  # notificação é best-effort
+
         return JsonResponse({"agendamento": _agenda_to_dict(ag)}, status=201)
 
     return JsonResponse({"erro": "Método não suportado"}, status=405)
