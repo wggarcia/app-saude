@@ -1105,60 +1105,59 @@ function updateBodyCount() {
 
 async function carregarHistoricoMensagens() {
   try {
-    const r = await fetch('/api/comunicacao/salas/');
+    const r = await fetch('/api/sst/mensagem-massa/');
     const data = r.ok ? await r.json() : {};
-    mensagens = data.salas || [];
+    mensagens = data.mensagens || [];
     mensagensCarregadas = true;
     renderHistoricoMensagens();
   } catch (_) {
-    document.getElementById('msg-historico').innerHTML = '<div class="empty">Use o Chat para ver o histórico de conversas.</div>';
+    document.getElementById('msg-historico').innerHTML = '<div class="empty">Erro ao carregar histórico.</div>';
   }
 }
 
 function renderHistoricoMensagens() {
   const busca = (document.getElementById('busca-msg')?.value || '').toLowerCase();
-  const lista = busca ? mensagens.filter(m => (m.assunto || m.texto || '').toLowerCase().includes(busca)) : mensagens;
+  const lista = busca ? mensagens.filter(m => (m.titulo || '').toLowerCase().includes(busca) || (m.mensagem || '').toLowerCase().includes(busca)) : mensagens;
   const wrap = document.getElementById('msg-historico');
-  if (!lista.length) { wrap.innerHTML = '<div class="empty">Nenhuma mensagem enviada ainda no período.</div>'; return; }
+  if (!lista.length) { wrap.innerHTML = '<div class="empty">Nenhuma mensagem enviada ainda. Use o formulário acima para enviar.</div>'; return; }
   wrap.innerHTML = lista.map(m => `
     <div class="msg-history-item">
       <div style="flex:1;min-width:0">
-        <div class="card-item-title">${escHtml(m.assunto || m.texto || '—')}</div>
+        <div class="card-item-title">${escHtml(m.titulo || '—')}</div>
         <div class="msg-meta-row">
-          <span class="badge b-muted">${escHtml(m.tipo || 'Aviso')}</span>
-          <span class="badge b-blue">${escHtml(m.destinatario_label || m.destinatario || 'Todos')}</span>
-          <span style="font-size:.68rem;color:var(--muted)">${fmtData(m.enviado_em || m.criado_em)}</span>
+          <span class="badge b-muted">📢 Aviso</span>
+          <span class="badge b-blue">Todos os funcionários</span>
+          <span style="font-size:.68rem;color:var(--muted)">${escHtml(m.enviado_em || '')}</span>
         </div>
-        <div class="msg-stat-row">
-          <span class="msg-stat"><strong>${m.entregues ?? m.total ?? '—'}</strong> entregues</span>
-          <span class="msg-stat"><strong>${m.lidas ?? '—'}</strong> lidas</span>
-          ${m.taxa_abertura != null ? `<span class="msg-stat"><strong>${m.taxa_abertura}%</strong> abertura</span>` : ''}
+        <div style="font-size:.75rem;color:var(--muted);margin-top:4px">${escHtml(m.mensagem || '')}</div>
+        <div class="msg-stat-row" style="margin-top:6px">
+          <span class="msg-stat"><strong>${m.total ?? '—'}</strong> destinatários</span>
         </div>
       </div>
-      <span class="badge ${m.status === 'enviado' ? 'b-ok' : m.status === 'falha' ? 'b-danger' : 'b-muted'}">${m.status === 'enviado' ? 'Enviado' : m.status === 'falha' ? 'Falha' : (m.status || 'Enviado')}</span>
+      <span class="badge b-ok">Enviado</span>
     </div>`).join('');
 }
 
 async function enviarMensagem() {
-  const destinatario = document.getElementById('msg-destinatario').value;
-  const tipo = document.getElementById('msg-tipo').value;
   const assunto = document.getElementById('msg-assunto').value.trim();
   const corpo = document.getElementById('msg-corpo').value.trim();
-  if (!destinatario) { showToast('Selecione o grupo de destino', true); return; }
   if (!corpo) { showToast('Escreva a mensagem antes de enviar', true); return; }
-
   const feedback = document.getElementById('msg-feedback');
   feedback.textContent = 'Enviando…';
   try {
-    window.location = '/sst/comunicacao/';
-    const r = {ok: true}; if (!r.ok) throw new Error();
-    if (!r.ok) throw new Error(r.status);
+    const r = await fetch('/api/sst/mensagem-massa/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({titulo: assunto || 'Aviso SST', mensagem: corpo})
+    });
+    const d = await r.json();
     feedback.textContent = '';
+    if (!r.ok) { showToast(d.erro || 'Erro ao enviar', true); return; }
     document.getElementById('msg-assunto').value = '';
     document.getElementById('msg-corpo').value = '';
     document.getElementById('msg-assunto-count').textContent = '0';
     document.getElementById('msg-corpo-count').textContent = '0';
-    showToast('Mensagem enviada com sucesso');
+    showToast(`Mensagem enviada para ${d.enviados} funcionário(s) ✓`);
     mensagensCarregadas = false;
     carregarHistoricoMensagens();
   } catch (e) {
@@ -1168,25 +1167,36 @@ async function enviarMensagem() {
 }
 
 function salvarRascunho() {
-  showToast('Rascunho salvo');
+  const assunto = document.getElementById('msg-assunto').value.trim();
+  const corpo = document.getElementById('msg-corpo').value.trim();
+  if (!corpo) { showToast('Nada para salvar', true); return; }
+  localStorage.setItem('sst_rascunho', JSON.stringify({assunto, corpo}));
+  showToast('Rascunho salvo localmente ✓');
 }
 
 function abrirModalMensagem() {
-  document.getElementById('modal-msg-corpo').value = '';
+  // Restaura rascunho se houver
+  const rascunho = JSON.parse(localStorage.getItem('sst_rascunho') || '{}');
+  if (rascunho.corpo) document.getElementById('modal-msg-corpo').value = rascunho.corpo;
   document.getElementById('modal-mensagem').classList.add('open');
 }
 
 async function enviarMensagemModal() {
-  const destinatario = document.getElementById('modal-msg-destinatario').value;
   const corpo = document.getElementById('modal-msg-corpo').value.trim();
   if (!corpo) { showToast('Escreva a mensagem', true); return; }
   const btn = document.getElementById('btn-modal-msg');
   btn.disabled = true; btn.textContent = 'Enviando…';
   try {
+    const r = await fetch('/api/sst/mensagem-massa/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({titulo: 'Aviso SST', mensagem: corpo})
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.erro || 'Erro');
     fecharModal('modal-mensagem');
-    window.location = '/sst/comunicacao/';
-    const r = {ok:true}; if(!r.ok) throw new Error();
-    showToast('Mensagem enviada com sucesso');
+    localStorage.removeItem('sst_rascunho');
+    showToast(`Mensagem enviada para ${d.enviados} funcionário(s) ✓`);
     mensagensCarregadas = false;
     if (activeTab === 'mensagens') carregarHistoricoMensagens();
   } catch (e) {

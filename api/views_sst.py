@@ -821,6 +821,52 @@ def api_afastamentos_sst(request):
     return JsonResponse({"erro": "método não permitido"}, status=405)
 
 
+@csrf_exempt
+def api_afastamento_retorno(request, afastamento_id):
+    """Registra retorno real de um afastamento."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    try:
+        af = AfastamentoSST.objects.get(id=afastamento_id, empresa=empresa)
+    except AfastamentoSST.DoesNotExist:
+        return JsonResponse({"erro": "Afastamento não encontrado"}, status=404)
+
+    if request.method in ("POST", "PATCH", "PUT"):
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        from datetime import datetime as _dt
+        def _parse(s):
+            if not s:
+                return date.today()
+            try:
+                return _dt.strptime(s, "%Y-%m-%d").date()
+            except Exception:
+                return date.today()
+        af.data_retorno_real = _parse(data.get("data_retorno_real"))
+        af.status = "encerrado"
+        af.save(update_fields=["data_retorno_real", "status", "atualizado_em"])
+        # notifica funcionário
+        try:
+            from .models import NotificacaoFuncionario
+            NotificacaoFuncionario.objects.create(
+                funcionario=af.funcionario,
+                empresa=empresa,
+                tipo="geral",
+                titulo="Retorno ao trabalho registrado",
+                mensagem=f"Seu afastamento foi encerrado. Data de retorno: {af.data_retorno_real.strftime('%d/%m/%Y')}.",
+                referencia_id=af.id,
+            )
+        except Exception:
+            pass
+        return JsonResponse({"ok": True, "status": "encerrado"})
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
 # ── Páginas SST ───────────────────────────────────────────────────────────────
 
 def _sst_redirect(request):
@@ -1466,6 +1512,63 @@ def sst_configuracoes_page(request):
     })
 
 
+@csrf_exempt
+def api_sst_mensagem_massa(request):
+    """Envia notificação/mensagem para todos os funcionários (ou de um setor)."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+    if request.method == "GET":
+        # histórico: últimas 50 notificações gerais enviadas pela empresa
+        from .models import NotificacaoFuncionario, EmpresaSetor
+        items = list(
+            NotificacaoFuncionario.objects
+            .filter(empresa=empresa, tipo="geral")
+            .values("id", "titulo", "mensagem", "criado_em", "funcionario__nome")
+            .order_by("-criado_em")[:50]
+        )
+        # agrupa por (titulo, mensagem, criado_em) para mostrar uma linha por envio
+        from itertools import groupby
+        agrupado = {}
+        for i in items:
+            chave = (i["titulo"], i["mensagem"], i["criado_em"].strftime("%d/%m/%Y %H:%M"))
+            agrupado.setdefault(chave, {"titulo": i["titulo"], "mensagem": i["mensagem"],
+                                        "enviado_em": chave[2], "total": 0})
+            agrupado[chave]["total"] += 1
+        return JsonResponse({"mensagens": list(agrupado.values())[:20]})
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        titulo = (data.get("titulo") or data.get("assunto") or "").strip()[:200]
+        mensagem = (data.get("mensagem") or data.get("corpo") or "").strip()
+        setor_id = data.get("setor_id")
+        if not titulo or not mensagem:
+            return JsonResponse({"erro": "título e mensagem são obrigatórios"}, status=400)
+
+        from .models import NotificacaoFuncionario
+        qs = FuncionarioSST.objects.filter(empresa=empresa, ativo=True)
+        if setor_id:
+            qs = qs.filter(setor=setor_id)
+
+        criados = 0
+        for func in qs[:500]:
+            NotificacaoFuncionario.objects.create(
+                funcionario=func,
+                empresa=empresa,
+                tipo="geral",
+                titulo=titulo,
+                mensagem=mensagem,
+            )
+            criados += 1
+        return JsonResponse({"ok": True, "enviados": criados}, status=201)
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+@csrf_exempt
 def api_sst_configuracoes(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1535,6 +1638,7 @@ def sst_epis_page(request):
     return render(request, "sst_epis.html", {"empresa_nome": empresa.nome})
 
 
+@csrf_exempt
 def api_epis_catalogo(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1574,6 +1678,7 @@ def api_epis_catalogo(request):
     return JsonResponse({"erro": "método não permitido"}, status=405)
 
 
+@csrf_exempt
 def api_epis_entregas(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1619,6 +1724,7 @@ def api_epis_entregas(request):
     return JsonResponse({"erro": "método não permitido"}, status=405)
 
 
+@csrf_exempt
 def api_epis_devolver(request, entrega_id):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1838,7 +1944,7 @@ def api_sst_conformidade_pdf(request):
         exames_ok = exames.exists() and exames_vencidos == 0
 
         # EPI
-        epi_ativo = EntregaEPI.objects.filter(funcionario=f, devolvido=False).exists()
+        epi_ativo = EntregaEPI.objects.filter(funcionario=f, data_devolucao__isnull=True).exists()
 
         # Treinamento NR
         trein_ok = TreinamentoNR.objects.filter(funcionario=f, data_validade__gte=hoje).exists()
@@ -1922,7 +2028,7 @@ def api_sst_relatorio_consolidado_pdf(request):
         exames = ExameMedico.objects.filter(funcionario=funcionario)
         exames_vencidos = sum(1 for exame in exames if exame.data_validade and exame.data_validade < hoje)
         exames_ok = exames.exists() and exames_vencidos == 0
-        epi_ativo = EntregaEPI.objects.filter(funcionario=funcionario, devolvido=False).exists()
+        epi_ativo = EntregaEPI.objects.filter(funcionario=funcionario, data_devolucao__isnull=True).exists()
         treinamento_ok = TreinamentoNR.objects.filter(funcionario=funcionario, data_validade__gte=hoje).exists()
         score = sum([aso_ok, exames_ok, epi_ativo, treinamento_ok])
         status = "conforme" if score == 4 else "alerta" if score >= 2 else "critico"
