@@ -1428,6 +1428,71 @@ class SessaoVideo(models.Model):
 
 
 # ─────────────────────────────────────────────────────────────
+#  SST — Reuniões
+# ─────────────────────────────────────────────────────────────
+
+class ReuniaoSST(models.Model):
+    TIPO_FUNCIONARIOS  = "funcionarios"
+    TIPO_GERENCIAL     = "gerencial"
+    TIPO_CLINICA       = "clinica_empresa"
+    TIPO_TODOS         = "todos"
+    TIPOS = [
+        (TIPO_FUNCIONARIOS, "Com Funcionários"),
+        (TIPO_GERENCIAL,    "Gerencial"),
+        (TIPO_CLINICA,      "Clínica & Empresa"),
+        (TIPO_TODOS,        "Todos"),
+    ]
+
+    STATUS_AGENDADA    = "agendada"
+    STATUS_EM_ANDAMENTO = "em_andamento"
+    STATUS_ENCERRADA   = "encerrada"
+    STATUS_CANCELADA   = "cancelada"
+    STATUS_CHOICES = [
+        (STATUS_AGENDADA,     "Agendada"),
+        (STATUS_EM_ANDAMENTO, "Em andamento"),
+        (STATUS_ENCERRADA,    "Encerrada"),
+        (STATUS_CANCELADA,    "Cancelada"),
+    ]
+
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="reunioes_sst")
+    titulo           = models.CharField(max_length=140)
+    descricao        = models.TextField(blank=True, default="")
+    tipo             = models.CharField(max_length=20, choices=TIPOS, default=TIPO_FUNCIONARIOS)
+    data_hora        = models.DateTimeField()
+    duracao_minutos  = models.PositiveSmallIntegerField(default=60)
+    sala_jitsi       = models.CharField(max_length=80, unique=True, default=_codigo_acesso)
+    link_externo     = models.URLField(blank=True, default="",
+                                       help_text="Link externo (Meet, Teams, Zoom). Se vazio usa Jitsi.")
+    status           = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_AGENDADA)
+    clinica          = models.ForeignKey(
+        Empresa, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="reunioes_clinica_sst",
+        help_text="Clínica convidada (para reuniões Clínica & Empresa)",
+    )
+    participantes    = models.ManyToManyField(
+        FuncionarioSST, blank=True, related_name="reunioes_sst",
+        help_text="Funcionários convidados. Vazio = todos.",
+    )
+    notificar_funcionarios = models.BooleanField(default=True)
+    observacoes      = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["data_hora"]
+        indexes  = [models.Index(fields=["empresa", "status", "data_hora"])]
+
+    def __str__(self):
+        return f"{self.titulo} — {self.get_status_display()} ({self.empresa.nome})"
+
+    @property
+    def link_reuniao(self):
+        if self.link_externo:
+            return self.link_externo
+        return f"https://meet.jit.si/{self.sala_jitsi}"
+
+
+# ─────────────────────────────────────────────────────────────
 #  SST — Configurações + EPI/EPC
 # ─────────────────────────────────────────────────────────────
 

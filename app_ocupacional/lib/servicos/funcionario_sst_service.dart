@@ -62,4 +62,6 @@ class FuncionarioSstService {
       _get('/api/funcionario/notificacoes');
   static Future<void> marcarLida(int id) =>
       _post('/api/funcionario/notificacoes/$id/lida');
+  static Future<Map<String, dynamic>> reunioes() =>
+      _get('/api/funcionario/reunioes');
 }

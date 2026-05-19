@@ -277,6 +277,9 @@ from api.views_comunicacao import (
     api_colab_mensagens, api_colab_enviar, api_colab_video_ativa,
     painel_grupos, api_criar_grupo, api_listar_salas_por_tipo, api_membros_grupo,
 )
+from api.views_reuniao_sst import (
+    sst_comunicacao_page, api_reunioes, api_reuniao_detalhe, api_funcionario_reunioes,
+)
 from api.views_saude_ocupacional import (
     sst_saude_comunicacao_page,
     api_wellness_resumo, api_wellness_por_setor, api_wellness_alertas,
@@ -501,7 +504,8 @@ urlpatterns = [
     path('api/colab/<str:codigo>/conflito/', api_colab_conflito_registrar),
     path('api/colab/<str:codigo>/checkin-diario/', api_colab_checkin_diario),
     path('api/colab/<str:codigo>/checkin-semanal/', api_colab_checkin_semanal),
-    path('sst/comunicacao/', painel_comunicacao),
+    path('sst/comunicacao/', sst_comunicacao_page),
+    path('sst/comunicacao/legado/', painel_comunicacao),
     path('sst/video/<int:sessao_id>/', sala_video_empresa),
     path('api/comunicacao/salas/', api_listar_salas_por_tipo),
     path('api/comunicacao/salas/criar/', api_criar_sala),
@@ -511,6 +515,9 @@ urlpatterns = [
     path('api/comunicacao/sala/<int:sala_id>/lida/', api_marcar_lida),
     path('api/comunicacao/video/criar/', api_criar_video),
     path('api/comunicacao/video/<int:sessao_id>/encerrar/', api_encerrar_video),
+    path('api/sst/reunioes/', api_reunioes),
+    path('api/sst/reunioes/<int:reuniao_id>/', api_reuniao_detalhe),
+    path('api/funcionario/reunioes', api_funcionario_reunioes),
     # colaborador side
     path('colaborador/c/<str:codigo>/chat/', colaborador_chat),
     path('colaborador/c/<str:codigo>/video/<str:sala>/', colaborador_video),

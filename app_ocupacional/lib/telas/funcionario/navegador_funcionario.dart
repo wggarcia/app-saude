@@ -9,6 +9,7 @@ import 'tela_meus_asos.dart';
 import 'tela_minhas_solicitacoes.dart';
 import 'tela_meus_treinamentos.dart';
 import 'tela_notificacoes.dart';
+import 'tela_reunioes.dart';
 import 'tela_login_funcionario.dart';
 
 class NavegadorFuncionario extends StatefulWidget {
@@ -79,6 +80,7 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
       const TelaMeusAsos(),
       const TelaMinhasSolicitacoes(),
       const TelaMeusTreinamentos(),
+      const TelaReunioesFunc(),
       TelaNotificacoes(onLidas: _onNotificacoesLidas),
       const TelaMeuPerfil(),
     ];
@@ -106,7 +108,7 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
         onDestinationSelected: (v) {
           setState(() => _idx = v);
           // Ao ir para Avisos, força refresh imediato do badge
-          if (v == 4) _carregarNotificacoes();
+          if (v == 5) _carregarNotificacoes();
         },
         destinations: [
           const NavigationDestination(
@@ -119,11 +121,15 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
           ),
           const NavigationDestination(
             icon: Icon(Icons.medical_services_outlined),
-            label: 'Solicitações',
+            label: 'Exames',
           ),
           const NavigationDestination(
             icon: Icon(Icons.school_outlined),
             label: 'Treinamentos',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.videocam_outlined),
+            label: 'Reuniões',
           ),
           NavigationDestination(
             icon: Badge(
