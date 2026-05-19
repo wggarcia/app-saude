@@ -269,6 +269,10 @@ class EmpresaMiddleware:
                 return redirect("/login-governo/")
             return redirect("/login-empresa/")
 
+        # Trial activation é permitido mesmo com empresa inativa
+        if request.path == "/api/trial/ativar":
+            return self.get_response(request)
+
         # 💣 BLOQUEIO: plano vencido
         if _plano_expirado(empresa) or not empresa.ativo:
             if request.path.startswith("/api/"):
