@@ -76,7 +76,7 @@ async function assinar(event){
     email: document.getElementById('email').value.trim(),
     aceite: document.getElementById('aceite').checked
   };
-  const res = await fetch('/api/public/sst/assinaturas/{{ token }}/assinar/', {
+  const res = await fetch('/api/public/sst/assinar/{{ token }}', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify(body)
