@@ -3,138 +3,180 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Conformidade SST</title>
+<title>Conformidade SST · SolusCRT</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#041018;--surface:#072030;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+:root{
+  --bg:#041018;--panel:#071c28;--border:rgba(126,225,195,.12);--border2:rgba(126,225,195,.22);
+  --text:#e8f4f1;--muted:#7fa2b1;--teal:#00c9a7;--blue:#52a6ff;--amber:#f0bf6b;
+  --red:#f87171;--green:#4ade80;
+  /* conformidade vars */
+  --ok:#00e5b0;--warn:#ffb347;--danger:#ff4d6d;
+  --card:rgba(255,255,255,.04);--radius:12px;
+}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:28px 32px}
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
-.page-title{font-size:22px;font-weight:800}
-.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
-.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+html,body{min-height:100%;font-family:'Manrope',sans-serif;background:radial-gradient(circle at top left,#0d3247 0,#041018 44%);color:var(--text);overflow-x:hidden}
+/* ── Layout ──────────────────────────────────────────────── */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:56px;display:flex;align-items:center;background:rgba(4,16,24,.92);border-bottom:1px solid var(--border);backdrop-filter:blur(18px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:220px;border-right:1px solid var(--border);height:100%}
+.tb-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));display:grid;place-items:center;font-weight:900;font-size:.82rem;color:#041018;flex-shrink:0}
+.tb-nome{font-size:.82rem;font-weight:800}
+.tb-sub{font-size:.62rem;color:var(--muted)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;margin-left:auto}
+.btn-ghost{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:.74rem;font-weight:800;text-decoration:none;border:1px solid var(--border);color:var(--muted);transition:all .15s;background:none;cursor:pointer;font-family:inherit}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2);background:rgba(255,255,255,.05)}
+.app{display:flex;min-height:100vh;padding-top:56px}
+.sidebar{width:220px;flex-shrink:0;background:rgba(7,28,40,.72);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:56px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:.78rem;font-weight:600;color:var(--muted);text-decoration:none;border-left:2px solid transparent;transition:all .12s}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.07);border-left-color:var(--teal)}
+.sb-icon{font-size:.94rem;flex-shrink:0;width:18px;text-align:center}
+.main{flex:1;margin-left:220px;padding:24px;display:flex;flex-direction:column;gap:18px}
+/* ── Content ──────────────────────────────────────────────── */
+.page-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.page-title{font-size:1.1rem;font-weight:800}
+.page-sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
 .kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--teal)}
 .kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}
-.kpi-val{font-size:28px;font-weight:800;color:var(--accent)}
+.kpi-val{font-size:1.8rem;font-weight:800;color:var(--teal)}
 .kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}
-.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.kpi-lbl{font-size:.68rem;font-weight:600;color:var(--muted);margin-top:4px}
 /* Gauge */
-.gauge-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;gap:32px;margin-bottom:24px}
-.gauge-wrap{position:relative}
-.gauge-label{text-align:center;margin-top:8px;font-size:12px;font-weight:600;color:var(--muted)}
+.gauge-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;gap:32px}
+.gauge-label{text-align:center;margin-top:8px;font-size:.72rem;font-weight:600;color:var(--muted)}
 .gauge-info{flex:1}
-.gauge-info h3{font-size:16px;font-weight:800;margin-bottom:8px}
-.gauge-info p{font-size:13px;color:var(--muted);line-height:1.6}
+.gauge-info h3{font-size:.94rem;font-weight:800;margin-bottom:8px}
+.gauge-info p{font-size:.78rem;color:var(--muted);line-height:1.6}
 /* Filter bar */
-.filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
-.filter-bar input,.filter-bar select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.filter-bar input,.filter-bar select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.78rem;color:var(--text);font-family:'Manrope',sans-serif;outline:none}
 .filter-bar input{width:260px}
 /* Table */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 table{width:100%;border-collapse:collapse}
-th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02);position:sticky;top:0;z-index:1}
-td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border)}
+th{padding:10px 14px;text-align:left;font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02);position:sticky;top:0;z-index:1}
+td{padding:11px 14px;font-size:.8rem;border-top:1px solid var(--border)}
 tr:hover td{background:rgba(255,255,255,.02)}
 .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
 .dot-ok{background:var(--ok)}.dot-warn{background:var(--warn)}.dot-danger{background:var(--danger)}
 .check{color:var(--ok);font-weight:700}.cross{color:var(--danger);font-weight:700}.alerta{color:var(--warn);font-weight:700}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:700}
 .badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
 .badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
 .badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:Manrope,sans-serif}
-.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border);text-decoration:none}
-.btn-ghost:hover{background:rgba(255,255,255,.1)}
-.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
-@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:.8rem}
+@media(max-width:1200px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:860px){.main{margin-left:0;padding:14px}.sidebar{display:none}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
 </style>
 </head>
 <body>
 
-<div class="page-header">
-  <div>
-    <div class="page-title">🛡️ Conformidade SST</div>
-    <div class="page-sub">Índice de conformidade dos funcionários em saúde e segurança do trabalho</div>
-  </div>
-  <div style="display:flex;gap:8px">
-    <a href="/sst/" class="btn btn-ghost">← Voltar ao SST</a>
-    <a href="/alertas/" class="btn btn-ghost">🚨 Alertas</a>
-    <a href="/api/sst/conformidade/pdf" id="btnPdf" class="btn btn-ghost">📄 Exportar PDF</a>
-  </div>
-</div>
-
-<!-- KPIs -->
-<div class="kpi-row" id="kpiRow">
-  <div class="kpi"><div class="kpi-val" id="kTotal">—</div><div class="kpi-lbl">Total Funcionários</div></div>
-  <div class="kpi ok"><div class="kpi-val" id="kConf">—</div><div class="kpi-lbl">Conformes ✅</div></div>
-  <div class="kpi warn"><div class="kpi-val" id="kAlert">—</div><div class="kpi-lbl">Em Alerta ⚠️</div></div>
-  <div class="kpi danger"><div class="kpi-val" id="kCrit">—</div><div class="kpi-lbl">Críticos 🔴</div></div>
-  <div class="kpi"><div class="kpi-val" id="kIdx">—%</div><div class="kpi-lbl">Índice de Conformidade</div></div>
-</div>
-
-<!-- Gauge -->
-<div class="gauge-section">
-  <div>
-    <svg viewBox="0 0 200 110" width="200" height="110">
-      <path fill="none" stroke="rgba(255,255,255,.08)" stroke-width="16" stroke-linecap="round" d="M 20 100 A 80 80 0 0 1 180 100"/>
-      <path fill="none" stroke="url(#gaugeGrad)" stroke-width="16" stroke-linecap="round" id="gaugePath" d="M 20 100 A 80 80 0 0 1 20 100"/>
-      <defs>
-        <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#ff4d6d"/>
-          <stop offset="50%" stop-color="#ffb347"/>
-          <stop offset="100%" stop-color="#00e5b0"/>
-        </linearGradient>
-      </defs>
-      <text x="100" y="90" text-anchor="middle" font-size="28" font-weight="800" fill="#e8f4ff" id="gaugeText">—%</text>
-      <text x="100" y="108" text-anchor="middle" font-size="10" fill="#7a9bb5">conformidade</text>
-    </svg>
-    <div class="gauge-label">Índice Geral</div>
-  </div>
-  <div class="gauge-info">
-    <h3>Visão Geral da Conformidade SST</h3>
-    <p>Cada funcionário é avaliado em <strong>4 critérios</strong>: ASO vigente, exames em dia, EPI entregue e treinamento NR válido. O índice de conformidade representa a proporção de funcionários com todos os critérios atendidos.</p>
-    <div style="display:flex;gap:16px;margin-top:12px;font-size:12px">
-      <span><span class="status-dot dot-ok"></span>Conforme: todos os 4 critérios</span>
-      <span><span class="status-dot dot-warn"></span>Alerta: 2-3 critérios</span>
-      <span><span class="status-dot dot-danger"></span>Crítico: 0-1 critério</span>
+<header class="topbar">
+  <div class="tb-logo">
+    <div class="tb-icon">S</div>
+    <div>
+      <div class="tb-nome">SolusCRT</div>
+      <div class="tb-sub">Conformidade SST</div>
     </div>
   </div>
-</div>
+  <div class="tb-actions">
+    <a href="/sst/" class="btn-ghost">← Central SST</a>
+    <a href="/api/sst/conformidade/pdf" id="btnPdf" class="btn-ghost">📄 Exportar PDF</a>
+  </div>
+</header>
 
-<!-- Tabela -->
-<div class="filter-bar">
-  <input type="text" id="busca" placeholder="🔍 Buscar funcionário…" oninput="filtrar()">
-  <select id="filtroStatus" onchange="filtrar()">
-    <option value="">Todos os status</option>
-    <option value="conforme">Conforme</option>
-    <option value="alerta">Em Alerta</option>
-    <option value="critico">Crítico</option>
-  </select>
-  <select id="filtroSetor" onchange="filtrar()">
-    <option value="">Todos os setores</option>
-  </select>
-  <span style="color:var(--muted);font-size:12px" id="countLabel"></span>
-</div>
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
 
-<div class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>Status</th>
-        <th>Funcionário</th>
-        <th>Cargo</th>
-        <th>Setor</th>
-        <th>ASO</th>
-        <th>Exames</th>
-        <th>EPI</th>
-        <th>Treinamento</th>
-        <th>Score</th>
-        <th>Situação</th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-  </table>
+  <main class="main">
+
+    <div class="page-header">
+      <div>
+        <div class="page-title">🛡️ Conformidade SST</div>
+        <div class="page-sub">Índice de conformidade dos funcionários em saúde e segurança do trabalho</div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi"><div class="kpi-val" id="kTotal">—</div><div class="kpi-lbl">Total Funcionários</div></div>
+      <div class="kpi ok"><div class="kpi-val" id="kConf">—</div><div class="kpi-lbl">Conformes ✅</div></div>
+      <div class="kpi warn"><div class="kpi-val" id="kAlert">—</div><div class="kpi-lbl">Em Alerta ⚠️</div></div>
+      <div class="kpi danger"><div class="kpi-val" id="kCrit">—</div><div class="kpi-lbl">Críticos 🔴</div></div>
+      <div class="kpi"><div class="kpi-val" id="kIdx">—%</div><div class="kpi-lbl">Índice de Conformidade</div></div>
+    </div>
+
+    <!-- Gauge -->
+    <div class="gauge-section">
+      <div>
+        <svg viewBox="0 0 200 110" width="200" height="110">
+          <path fill="none" stroke="rgba(255,255,255,.08)" stroke-width="16" stroke-linecap="round" d="M 20 100 A 80 80 0 0 1 180 100"/>
+          <path fill="none" stroke="url(#gaugeGrad)" stroke-width="16" stroke-linecap="round" id="gaugePath" d="M 20 100 A 80 80 0 0 1 20 100"/>
+          <defs>
+            <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#ff4d6d"/>
+              <stop offset="50%" stop-color="#ffb347"/>
+              <stop offset="100%" stop-color="#00e5b0"/>
+            </linearGradient>
+          </defs>
+          <text x="100" y="90" text-anchor="middle" font-size="28" font-weight="800" fill="#e8f4f1" id="gaugeText">—%</text>
+          <text x="100" y="108" text-anchor="middle" font-size="10" fill="#7fa2b1">conformidade</text>
+        </svg>
+        <div class="gauge-label">Índice Geral</div>
+      </div>
+      <div class="gauge-info">
+        <h3>Visão Geral da Conformidade SST</h3>
+        <p>Cada funcionário é avaliado em <strong>4 critérios</strong>: ASO vigente, exames em dia, EPI entregue e treinamento NR válido. O índice representa a proporção de funcionários com todos os critérios atendidos.</p>
+        <div style="display:flex;gap:16px;margin-top:12px;font-size:.72rem">
+          <span><span class="status-dot dot-ok"></span>Conforme: todos os 4 critérios</span>
+          <span><span class="status-dot dot-warn"></span>Alerta: 2-3 critérios</span>
+          <span><span class="status-dot dot-danger"></span>Crítico: 0-1 critério</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="filter-bar">
+      <input type="text" id="busca" placeholder="🔍 Buscar funcionário…" oninput="filtrar()">
+      <select id="filtroStatus" onchange="filtrar()">
+        <option value="">Todos os status</option>
+        <option value="conforme">Conforme</option>
+        <option value="alerta">Em Alerta</option>
+        <option value="critico">Crítico</option>
+      </select>
+      <select id="filtroSetor" onchange="filtrar()">
+        <option value="">Todos os setores</option>
+      </select>
+      <span style="color:var(--muted);font-size:.72rem" id="countLabel"></span>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Funcionário</th>
+            <th>Cargo</th>
+            <th>Setor</th>
+            <th>ASO</th>
+            <th>Exames</th>
+            <th>EPI</th>
+            <th>Treinamento</th>
+            <th>Score</th>
+            <th>Situação</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+  </main>
 </div>
 
 <script>
