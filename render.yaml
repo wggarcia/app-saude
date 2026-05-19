@@ -30,18 +30,23 @@ services:
         value: asaas
       - key: SKIP_BUILD_MIGRATIONS
         value: "true"
-      - key: EMAIL_HOST_USER
-        sync: false
-      - key: EMAIL_HOST_PASSWORD
-        sync: false
+      # ── Email transacional da plataforma SaaS ─────────────────────────────
+      # Um único remetente (noreply@soluscrt.com.br) envia em nome de TODOS os
+      # clientes. Os dados do cliente ficam no conteúdo do email.
+      # Configure EMAIL_HOST_USER e EMAIL_HOST_PASSWORD no painel do Render
+      # com a conta noreply@soluscrt.com.br do Zoho Mail.
       - key: EMAIL_HOST
-        value: smtp.gmail.com
+        value: smtp.zoho.com
       - key: EMAIL_PORT
         value: "587"
       - key: EMAIL_USE_TLS
         value: "true"
       - key: DEFAULT_FROM_EMAIL
-        sync: false
+        value: "SolusCRT <noreply@soluscrt.com.br>"
+      - key: EMAIL_HOST_USER
+        sync: false   # noreply@soluscrt.com.br  (configurar no painel Render)
+      - key: EMAIL_HOST_PASSWORD
+        sync: false   # senha da conta Zoho acima (configurar no painel Render)
       - key: DJANGO_SECRET_KEY
         sync: false
       - key: JWT_SECRET_KEY
@@ -110,17 +115,17 @@ services:
         fromDatabase:
           name: soluscrt-saude-db
           property: connectionString
-      - key: EMAIL_HOST_USER
-        sync: false
-      - key: EMAIL_HOST_PASSWORD
-        sync: false
       - key: EMAIL_HOST
-        value: smtp.gmail.com
+        value: smtp.zoho.com
       - key: EMAIL_PORT
         value: "587"
       - key: EMAIL_USE_TLS
         value: "true"
       - key: DEFAULT_FROM_EMAIL
+        value: "SolusCRT <noreply@soluscrt.com.br>"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
         sync: false
 
 databases:
