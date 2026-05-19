@@ -576,6 +576,19 @@ def _enviar_email_solicitacao(sol):
     backend = getattr(settings, "EMAIL_BACKEND", "")
     smtp_user = (getattr(settings, "EMAIL_HOST_USER", "") or "").strip()
     smtp_password = (getattr(settings, "EMAIL_HOST_PASSWORD", "") or "").strip()
+
+    # Console backend nunca envia email de verdade — falha silenciosamente com
+    # return value = 1, enganando a checagem abaixo. Bloqueamos aqui.
+    if "console.EmailBackend" in backend:
+        msg = (
+            "Email não enviado: servidor está usando o backend de console (desenvolvimento). "
+            "Configure a variável DJANGO_ENV=production e EMAIL_HOST_USER/PASSWORD no Render."
+        )
+        sol.email_enviado = False
+        sol.resposta_clinica = msg
+        sol.save(update_fields=["email_enviado", "resposta_clinica"])
+        return False, msg
+
     if "smtp.EmailBackend" in backend and (not smtp_user or not smtp_password):
         return False, "SMTP não configurado no Render: preencha EMAIL_HOST_USER e EMAIL_HOST_PASSWORD."
     from_email = (getattr(settings, "DEFAULT_FROM_EMAIL", "") or "").strip()

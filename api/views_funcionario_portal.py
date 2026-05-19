@@ -182,6 +182,7 @@ def funcionario_login(request):
 
 # ── notificações ────────────────────────────────────────────────────────────
 
+@csrf_exempt
 def funcionario_notificacoes(request):
     func = _autenticar_funcionario(request)
     if not func:

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../servicos/funcionario_auth_service.dart';
@@ -28,11 +29,22 @@ class NavegadorFuncionario extends StatefulWidget {
 class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
   int _idx = 0;
   int _naoLidas = 0;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _carregarNotificacoes();
+    // Polling automático a cada 60 segundos para atualizar o badge de avisos
+    _timer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _carregarNotificacoes();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   Future<void> _carregarNotificacoes() async {
@@ -42,9 +54,12 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
     } catch (_) {}
   }
 
-  void _onNotificacoesLidas() => setState(() => _naoLidas = 0);
+  void _onNotificacoesLidas() {
+    setState(() => _naoLidas = 0);
+  }
 
   Future<void> _logout() async {
+    _timer?.cancel();
     final navigator = Navigator.of(context);
     await FuncionarioAuthService.logout();
     if (!mounted) return;
@@ -72,6 +87,12 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
       appBar: AppBar(
         title: Text(widget.nome),
         actions: [
+          // Botão de refresh manual no topbar
+          IconButton(
+            onPressed: _carregarNotificacoes,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Atualizar',
+          ),
           IconButton(
             onPressed: _logout,
             icon: const Icon(Icons.logout),
@@ -84,6 +105,7 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
         selectedIndex: _idx,
         onDestinationSelected: (v) {
           setState(() => _idx = v);
+          // Ao ir para Avisos, força refresh imediato do badge
           if (v == 4) _carregarNotificacoes();
         },
         destinations: [
