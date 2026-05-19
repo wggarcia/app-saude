@@ -42,7 +42,10 @@ def unique_list(*groups):
 
 
 DJANGO_ENV = os.environ.get("DJANGO_ENV", "development").lower()
-IS_PRODUCTION = DJANGO_ENV == "production"
+# Render.com seta automaticamente RENDER=true em todos os serviços deploy.
+# Isso garante que IS_PRODUCTION funcione mesmo se DJANGO_ENV não for configurado manualmente.
+_IS_RENDER = os.environ.get("RENDER", "").lower() in ("true", "1", "yes")
+IS_PRODUCTION = DJANGO_ENV == "production" or _IS_RENDER
 
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",

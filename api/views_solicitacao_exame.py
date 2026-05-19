@@ -577,20 +577,29 @@ def _enviar_email_solicitacao(sol):
     smtp_user = (getattr(settings, "EMAIL_HOST_USER", "") or "").strip()
     smtp_password = (getattr(settings, "EMAIL_HOST_PASSWORD", "") or "").strip()
 
-    # Console backend nunca envia email de verdade — falha silenciosamente com
-    # return value = 1, enganando a checagem abaixo. Bloqueamos aqui.
+    # Console backend nunca envia email de verdade.
+    # Com o fix de IS_PRODUCTION via RENDER=true, isso só acontece se o
+    # EMAIL_BACKEND foi forçado manualmente para console.
     if "console.EmailBackend" in backend:
-        msg = (
-            "Email não enviado: servidor está usando o backend de console (desenvolvimento). "
-            "Configure a variável DJANGO_ENV=production e EMAIL_HOST_USER/PASSWORD no Render."
-        )
+        msg = "Email não enviado: backend de email está em modo console. Contate o suporte técnico."
         sol.email_enviado = False
         sol.resposta_clinica = msg
         sol.save(update_fields=["email_enviado", "resposta_clinica"])
         return False, msg
 
-    if "smtp.EmailBackend" in backend and (not smtp_user or not smtp_password):
-        return False, "SMTP não configurado no Render: preencha EMAIL_HOST_USER e EMAIL_HOST_PASSWORD."
+    if "smtp.EmailBackend" in backend and not smtp_user:
+        msg = "Email não enviado: EMAIL_HOST_USER não configurado no Render. Vá em Environment > adicione EMAIL_HOST_USER (conta Gmail) e EMAIL_HOST_PASSWORD (senha de app Gmail)."
+        sol.email_enviado = False
+        sol.resposta_clinica = msg
+        sol.save(update_fields=["email_enviado", "resposta_clinica"])
+        return False, msg
+
+    if "smtp.EmailBackend" in backend and not smtp_password:
+        msg = "Email não enviado: EMAIL_HOST_PASSWORD não configurado no Render. Vá em Environment > adicione EMAIL_HOST_PASSWORD (senha de app do Gmail)."
+        sol.email_enviado = False
+        sol.resposta_clinica = msg
+        sol.save(update_fields=["email_enviado", "resposta_clinica"])
+        return False, msg
     from_email = (getattr(settings, "DEFAULT_FROM_EMAIL", "") or "").strip()
     # Para SMTP autenticado, use sempre o remetente real da conta autenticada
     # para evitar rejeições silenciosas por SPF/DMARC no destino.
