@@ -115,8 +115,8 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
       <a href="#contato">{{ site.nav.contato }}</a>
     </div>
     <div class="nav-right">
-      <a class="btn" href="/login-empresa/" style="min-height:38px;padding:0 14px;font-size:.82rem">Entrar</a>
-      <a class="btn primary" href="/cadastro/" style="min-height:38px;padding:0 14px;font-size:.82rem">Criar conta grátis</a>
+      <a class="btn" href="/login-empresa/" style="min-height:38px;padding:0 14px;font-size:.82rem">{{ site.actions.login }}</a>
+      <a class="btn primary" href="/cadastro/" style="min-height:38px;padding:0 14px;font-size:.82rem">{{ site.actions.signup }}</a>
       <div class="language-switch" aria-label="{{ site.language_aria }}">
         {% for option in language_options %}
           <a class="language-link{% if option.active %} active{% endif %}" href="{{ option.url }}" hreflang="{{ option.html }}" lang="{{ option.html }}" title="{{ option.name }}" aria-current="{% if option.active %}true{% else %}false{% endif %}"><span class="flag" aria-hidden="true">{{ option.flag }}</span><span>{{ option.label }}</span></a>
@@ -133,7 +133,7 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
         <h1 class="mobile-title" aria-label="{{ site.hero_title }}">{% for line in site.hero_title_lines %}<span>{{ line }}</span>{% endfor %}</h1>
         <p class="lead">{{ site.hero_lead }}</p>
         <div class="actions">
-          <a class="btn primary" href="/cadastro/">Criar conta grátis</a>
+          <a class="btn primary" href="/cadastro/">{{ site.actions.signup }}</a>
           <a class="btn" href="{{ presentation_url }}">{{ site.actions.presentation }}</a>
           <a class="btn cyan" href="#app">{{ site.actions.app }}</a>
         </div>
@@ -204,49 +204,49 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
 
     <section id="plataforma" style="padding:78px 0">
       <div class="section-head">
-        <h2 style="font-size:clamp(2.5rem,4vw,4rem)">Uma plataforma.<br>Quatro ofertas comerciais.</h2>
-        <p>Cada cliente entra no ambiente que faz sentido para sua operacao. SST, farmacia e hospital podem crescer por assinatura e implantacao por unidade ou rede; governo opera com contrato institucional e governanca propria.</p>
+        <h2 style="font-size:clamp(2.5rem,4vw,4rem)">{{ site.platform.title_html|safe }}</h2>
+        <p>{{ site.platform.lead }}</p>
       </div>
       <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
         <a href="/cadastro/" style="text-decoration:none;display:block;padding:32px;border-radius:32px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.055);transition:all .25s;cursor:pointer" onmouseover="this.style.borderColor='rgba(217,184,111,.45)';this.style.background='rgba(217,184,111,.08)'" onmouseout="this.style.borderColor='rgba(255,255,255,.13)';this.style.background='rgba(255,255,255,.055)'">
           <div style="font-size:2.2rem;margin-bottom:16px">🏢</div>
-          <div style="font-weight:800;font-size:1.2rem;margin-bottom:8px;color:#f7f2e9">SST & Clinicas Ocupacionais</div>
-          <div style="color:#8a99a6;line-height:1.6;font-size:.92rem;margin-bottom:18px">Gestao ocupacional pura: ASO, CAT, exames, PGR, eSocial, app do funcionario e bem-estar anonimo. Sem radar epidemiologico dentro do ambiente.</div>
+          <div style="font-weight:800;font-size:1.2rem;margin-bottom:8px;color:#f7f2e9">{{ site.platform.cards.0.title }}</div>
+          <div style="color:#8a99a6;line-height:1.6;font-size:.92rem;margin-bottom:18px">{{ site.platform.cards.0.text }}</div>
           <div style="display:flex;align-items:baseline;gap:6px">
-            <span style="font-size:1.3rem;font-weight:800;color:#d9b86f">R$ 799</span>
-            <span style="color:#8a99a6;font-size:.82rem">/mes · assinatura recorrente</span>
+            <span style="font-size:1.3rem;font-weight:800;color:#d9b86f">{{ site.platform.cards.0.price }}</span>
+            <span style="color:#8a99a6;font-size:.82rem">{{ site.platform.cards.0.caption }}</span>
           </div>
-          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#d9b86f;font-weight:700;font-size:.85rem">Comecar gratis →</div>
+          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#d9b86f;font-weight:700;font-size:.85rem">{{ site.platform.cards.0.cta }} →</div>
         </a>
         <a href="/cadastro/" style="text-decoration:none;display:block;padding:32px;border-radius:32px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.055);transition:all .25s;cursor:pointer" onmouseover="this.style.borderColor='rgba(69,234,217,.4)';this.style.background='rgba(69,234,217,.07)'" onmouseout="this.style.borderColor='rgba(255,255,255,.13)';this.style.background='rgba(255,255,255,.055)'">
           <div style="font-size:2.2rem;margin-bottom:16px">💊</div>
-          <div style="font-weight:800;font-size:1.2rem;margin-bottom:8px;color:#f7f2e9">Farmacia & Rede Farmaceutica</div>
-          <div style="color:#8a99a6;line-height:1.6;font-size:.92rem;margin-bottom:18px">Gestao de lotes FEFO, controle de vencimentos, rastreabilidade e inteligencia de demanda por regiao com radar epidemiologico territorial.</div>
+          <div style="font-weight:800;font-size:1.2rem;margin-bottom:8px;color:#f7f2e9">{{ site.platform.cards.1.title }}</div>
+          <div style="color:#8a99a6;line-height:1.6;font-size:.92rem;margin-bottom:18px">{{ site.platform.cards.1.text }}</div>
           <div style="display:flex;align-items:baseline;gap:6px">
-            <span style="font-size:1.3rem;font-weight:800;color:#45ead9">R$ 699</span>
-            <span style="color:#8a99a6;font-size:.82rem">/mes · expansao por loja ou rede</span>
+            <span style="font-size:1.3rem;font-weight:800;color:#45ead9">{{ site.platform.cards.1.price }}</span>
+            <span style="color:#8a99a6;font-size:.82rem">{{ site.platform.cards.1.caption }}</span>
           </div>
-          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#45ead9;font-weight:700;font-size:.85rem">Solicitar demo →</div>
+          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#45ead9;font-weight:700;font-size:.85rem">{{ site.platform.cards.1.cta }} →</div>
         </a>
         <a href="/cadastro/" style="text-decoration:none;display:block;padding:32px;border-radius:32px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.055);transition:all .25s;cursor:pointer" onmouseover="this.style.borderColor='rgba(255,111,143,.38)';this.style.background='rgba(255,111,143,.07)'" onmouseout="this.style.borderColor='rgba(255,255,255,.13)';this.style.background='rgba(255,255,255,.055)'">
           <div style="font-size:2.2rem;margin-bottom:16px">🏥</div>
-          <div style="font-weight:800;font-size:1.2rem;margin-bottom:8px;color:#f7f2e9">Hospital & Rede Assistencial</div>
-          <div style="color:#8a99a6;line-height:1.6;font-size:.92rem;margin-bottom:18px">Gestao de leitos, triagem, internacoes, prescricoes e pressao assistencial com antecipacao epidemiologica para preparar equipe e capacidade.</div>
+          <div style="font-weight:800;font-size:1.2rem;margin-bottom:8px;color:#f7f2e9">{{ site.platform.cards.2.title }}</div>
+          <div style="color:#8a99a6;line-height:1.6;font-size:.92rem;margin-bottom:18px">{{ site.platform.cards.2.text }}</div>
           <div style="display:flex;align-items:baseline;gap:6px">
-            <span style="font-size:1.3rem;font-weight:800;color:#ff6f8f">R$ 12.000</span>
-            <span style="color:#8a99a6;font-size:.82rem">/mes · estrutura hospitalar ou rede</span>
+            <span style="font-size:1.3rem;font-weight:800;color:#ff6f8f">{{ site.platform.cards.2.price }}</span>
+            <span style="color:#8a99a6;font-size:.82rem">{{ site.platform.cards.2.caption }}</span>
           </div>
-          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#ff6f8f;font-weight:700;font-size:.85rem">Solicitar proposta →</div>
+          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#ff6f8f;font-weight:700;font-size:.85rem">{{ site.platform.cards.2.cta }} →</div>
         </a>
         <a href="mailto:comercial@soluscrt.com.br?subject=Governo%20SolusCRT" style="text-decoration:none;display:block;padding:32px;border-radius:32px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.055);transition:all .25s;cursor:pointer" onmouseover="this.style.borderColor='rgba(96,165,250,.4)';this.style.background='rgba(96,165,250,.07)'" onmouseout="this.style.borderColor='rgba(255,255,255,.13)';this.style.background='rgba(255,255,255,.055)'">
           <div style="font-size:2.2rem;margin-bottom:16px">🏛️</div>
-          <div style="font-weight:800;font-size:1.2rem;margin-bottom:8px;color:#f7f2e9">Governo & Vigilancia Publica</div>
-          <div style="color:#8a99a6;line-height:1.6;font-size:.92rem;margin-bottom:18px">Sala de situacao epidemiologica para federal, estadual e municipal, com auditoria, matriz de decisao, alertas oficiais e governanca territorial.</div>
+          <div style="font-weight:800;font-size:1.2rem;margin-bottom:8px;color:#f7f2e9">{{ site.platform.cards.3.title }}</div>
+          <div style="color:#8a99a6;line-height:1.6;font-size:.92rem;margin-bottom:18px">{{ site.platform.cards.3.text }}</div>
           <div style="display:flex;align-items:baseline;gap:6px">
-            <span style="font-size:1.3rem;font-weight:800;color:#60a5fa">Sob proposta</span>
-            <span style="color:#8a99a6;font-size:.82rem">contrato institucional B2G</span>
+            <span style="font-size:1.3rem;font-weight:800;color:#60a5fa">{{ site.platform.cards.3.price }}</span>
+            <span style="color:#8a99a6;font-size:.82rem">{{ site.platform.cards.3.caption }}</span>
           </div>
-          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#60a5fa;font-weight:700;font-size:.85rem">Falar com especialista →</div>
+          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#60a5fa;font-weight:700;font-size:.85rem">{{ site.platform.cards.3.cta }} →</div>
         </a>
       </div>
     </section>
