@@ -30,6 +30,14 @@ class FuncionarioSstService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  static Future<Map<String, dynamic>> _post(String path) async {
+    final response = await http.post(
+      Uri.parse('${Config.baseUrl}$path'),
+      headers: await _headers(),
+    );
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
   static Future<Map<String, dynamic>> dashboard() =>
       _get('/api/funcionario/dashboard');
   static Future<Map<String, dynamic>> perfil() =>
@@ -40,4 +48,8 @@ class FuncionarioSstService {
       _get('/api/funcionario/meus-treinamentos');
   static Future<Map<String, dynamic>> epis() =>
       _get('/api/funcionario/meus-epis');
+  static Future<Map<String, dynamic>> notificacoes() =>
+      _get('/api/funcionario/notificacoes');
+  static Future<void> marcarLida(int id) =>
+      _post('/api/funcionario/notificacoes/$id/lida');
 }

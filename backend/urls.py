@@ -408,9 +408,10 @@ from api.views_relatorios import (
 )
 from api.views_platform import platform_status, sla_page, status_page
 from api.views_funcionario_portal import (
-    funcionario_login, funcionario_dashboard,
+    funcionario_login, funcionario_registrar, funcionario_dashboard,
     funcionario_meu_perfil, funcionario_meus_asos,
     funcionario_meus_treinamentos, funcionario_meus_epis,
+    funcionario_notificacoes, funcionario_notificacao_lida,
 )
 from api.views_assinatura_sst import (
     api_sst_assinaturas,
@@ -1121,7 +1122,10 @@ urlpatterns = [
     path('api/sst/relatorio/treinamentos.pdf', relatorio_pdf_treinamentos),
 
     # ── Portal do Funcionário (app mobile trabalhador SST) ────────────────────
+    path('api/funcionario/registrar', funcionario_registrar),
     path('api/funcionario/login', funcionario_login),
+    path('api/funcionario/notificacoes', funcionario_notificacoes),
+    path('api/funcionario/notificacoes/<int:notificacao_id>/lida', funcionario_notificacao_lida),
     path('api/funcionario/dashboard', funcionario_dashboard),
     path('api/funcionario/meu-perfil', funcionario_meu_perfil),
     path('api/funcionario/meus-asos', funcionario_meus_asos),

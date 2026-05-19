@@ -565,6 +565,22 @@ def api_asos(request):
                     status="realizado",
                     observacoes=nome,
                 )
+        # notificação para o app do funcionário
+        try:
+            from .models import NotificacaoFuncionario
+            tipo_label = dict(ASOOcupacional.TIPO).get(aso.tipo, aso.tipo)
+            resultado_label = dict(ASOOcupacional.RESULTADO).get(aso.resultado, aso.resultado)
+            NotificacaoFuncionario.objects.create(
+                funcionario=func,
+                empresa=empresa,
+                tipo="aso",
+                titulo=f"Novo ASO — {tipo_label}",
+                mensagem=f"Um ASO {tipo_label} foi emitido para você. Resultado: {resultado_label}. Validade: {aso.data_validade.strftime('%d/%m/%Y') if aso.data_validade else '—'}.",
+                referencia_id=aso.id,
+            )
+        except Exception:
+            pass  # notificação é best-effort
+
         return JsonResponse({"id": aso.id, "ok": True}, status=201)
 
     return JsonResponse({"erro": "método não permitido"}, status=405)

@@ -1,18 +1,22 @@
 """
 Portal do Funcionário — SST
-Autenticação via CPF + data de nascimento.
-Funcionário vê apenas seus próprios dados.
+Autenticação via email + senha (criado pelo funcionário no app)
+ou via CPF + data de nascimento (legado).
 """
 import jwt
 import json
 import secrets
 from datetime import timedelta
 from django.conf import settings
+from django.contrib.auth.hashers import make_password, check_password
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
-from .models import FuncionarioSST, ASOOcupacional, TreinamentoNR, EntregaEPI
+from .models import (
+    FuncionarioSST, ASOOcupacional, TreinamentoNR, EntregaEPI,
+    CredencialAppFuncionario, NotificacaoFuncionario,
+)
 
 
 # ── helpers ────────────────────────────────────────────────────────────────
@@ -47,7 +51,64 @@ def _cpf_limpo(cpf):
     return "".join(c for c in (cpf or "") if c.isdigit())
 
 
-# ── login ──────────────────────────────────────────────────────────────────
+# ── registro ───────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def funcionario_registrar(request):
+    """Funcionário cria sua própria conta no app usando CPF + email + senha."""
+    if request.method != "POST":
+        return JsonResponse({"erro": "Use POST"}, status=405)
+    try:
+        dados = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    cpf = _cpf_limpo(dados.get("cpf", ""))
+    email = (dados.get("email") or "").strip().lower()
+    senha = dados.get("senha", "")
+
+    if not cpf:
+        return JsonResponse({"erro": "CPF é obrigatório"}, status=400)
+    if not email or "@" not in email:
+        return JsonResponse({"erro": "E-mail inválido"}, status=400)
+    if not senha or len(senha) < 6:
+        return JsonResponse({"erro": "Senha deve ter pelo menos 6 caracteres"}, status=400)
+
+    func = (
+        FuncionarioSST.objects
+        .filter(cpf__icontains=cpf, ativo=True)
+        .select_related("empresa")
+        .order_by("-criado_em")
+        .first()
+    )
+    if not func:
+        return JsonResponse({"erro": "CPF não encontrado. Solicite ao RH o seu cadastro."}, status=404)
+
+    if CredencialAppFuncionario.objects.filter(email=email).exists():
+        return JsonResponse({"erro": "E-mail já cadastrado. Use outro ou recupere sua senha."}, status=409)
+
+    if hasattr(func, "credencial_app"):
+        return JsonResponse({"erro": "Conta já existe para este CPF. Faça login com seu e-mail."}, status=409)
+
+    cred = CredencialAppFuncionario.objects.create(
+        funcionario=func,
+        email=email,
+        senha=make_password(senha),
+    )
+
+    token = _token_funcionario(func)
+    return JsonResponse({
+        "status": "ok",
+        "token": token,
+        "funcionario_id": func.id,
+        "nome": func.nome,
+        "cargo": func.cargo,
+        "empresa_nome": func.empresa.nome,
+        "email": cred.email,
+    }, status=201)
+
+
+# ── login ───────────────────────────────────────────────────────────────────
 
 @csrf_exempt
 def funcionario_login(request):
@@ -58,13 +119,40 @@ def funcionario_login(request):
     except Exception:
         return JsonResponse({"erro": "JSON inválido"}, status=400)
 
+    email = (dados.get("email") or "").strip().lower()
+    senha = dados.get("senha", "")
+
+    # ── login por email + senha (novo) ──
+    if email:
+        if not senha:
+            return JsonResponse({"erro": "Senha é obrigatória"}, status=400)
+        try:
+            cred = CredencialAppFuncionario.objects.select_related(
+                "funcionario__empresa"
+            ).get(email=email, ativo=True)
+        except CredencialAppFuncionario.DoesNotExist:
+            return JsonResponse({"erro": "E-mail não encontrado"}, status=404)
+        if not check_password(senha, cred.senha):
+            return JsonResponse({"erro": "Senha incorreta"}, status=401)
+        func = cred.funcionario
+        if not func.ativo:
+            return JsonResponse({"erro": "Conta desativada. Fale com o RH."}, status=403)
+        token = _token_funcionario(func)
+        return JsonResponse({
+            "status": "ok",
+            "token": token,
+            "funcionario_id": func.id,
+            "nome": func.nome,
+            "cargo": func.cargo,
+            "empresa_nome": func.empresa.nome,
+            "email": email,
+        })
+
+    # ── login legado por CPF (fallback) ──
     cpf = _cpf_limpo(dados.get("cpf", ""))
-    nascimento = dados.get("data_nascimento", "")  # YYYY-MM-DD
-
     if not cpf:
-        return JsonResponse({"erro": "CPF é obrigatório"}, status=400)
+        return JsonResponse({"erro": "E-mail ou CPF é obrigatório"}, status=400)
 
-    # busca pelo CPF (pode existir em mais de uma empresa; retorna o mais recente ativo)
     func = (
         FuncionarioSST.objects
         .filter(cpf__icontains=cpf, ativo=True)
@@ -72,11 +160,10 @@ def funcionario_login(request):
         .order_by("-criado_em")
         .first()
     )
-
     if not func:
         return JsonResponse({"erro": "Funcionário não encontrado"}, status=404)
 
-    # valida nascimento apenas se estiver cadastrado no banco
+    nascimento = dados.get("data_nascimento", "")
     if func.data_nascimento and nascimento:
         if str(func.data_nascimento) != nascimento:
             return JsonResponse({"erro": "Data de nascimento incorreta"}, status=401)
@@ -90,6 +177,37 @@ def funcionario_login(request):
         "cargo": func.cargo,
         "empresa_nome": func.empresa.nome,
     })
+
+
+# ── notificações ────────────────────────────────────────────────────────────
+
+def funcionario_notificacoes(request):
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "não autorizado"}, status=401)
+
+    nao_lidas = NotificacaoFuncionario.objects.filter(funcionario=func, lida=False).count()
+    items = list(
+        NotificacaoFuncionario.objects
+        .filter(funcionario=func)
+        .values("id", "tipo", "titulo", "mensagem", "lida", "criado_em", "referencia_id")
+        [:30]
+    )
+    for i in items:
+        i["criado_em"] = i["criado_em"].strftime("%d/%m/%Y %H:%M")
+
+    return JsonResponse({"notificacoes": items, "nao_lidas": nao_lidas})
+
+
+@csrf_exempt
+def funcionario_notificacao_lida(request, notificacao_id):
+    if request.method != "POST":
+        return JsonResponse({"erro": "Use POST"}, status=405)
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "não autorizado"}, status=401)
+    NotificacaoFuncionario.objects.filter(id=notificacao_id, funcionario=func).update(lida=True)
+    return JsonResponse({"ok": True})
 
 
 # ── perfil ─────────────────────────────────────────────────────────────────

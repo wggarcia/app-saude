@@ -868,6 +868,55 @@ class FuncionarioSST(models.Model):
         return f"{self.nome} — {self.cargo} ({self.empresa.nome})"
 
 
+class CredencialAppFuncionario(models.Model):
+    """Login e senha criados pelo próprio funcionário no app."""
+    funcionario = models.OneToOneField(
+        FuncionarioSST, on_delete=models.CASCADE, related_name="credencial_app"
+    )
+    email = models.EmailField(unique=True)
+    senha = models.CharField(max_length=255)  # bcrypt hash
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"{self.email} → {self.funcionario.nome}"
+
+
+class NotificacaoFuncionario(models.Model):
+    TIPO_ASO = "aso"
+    TIPO_EXAME = "exame"
+    TIPO_TREINAMENTO = "treinamento"
+    TIPO_GERAL = "geral"
+    TIPOS = [
+        (TIPO_ASO, "ASO"),
+        (TIPO_EXAME, "Exame"),
+        (TIPO_TREINAMENTO, "Treinamento"),
+        (TIPO_GERAL, "Geral"),
+    ]
+
+    funcionario = models.ForeignKey(
+        FuncionarioSST, on_delete=models.CASCADE, related_name="notificacoes_app"
+    )
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE)
+    tipo = models.CharField(max_length=20, choices=TIPOS, default=TIPO_GERAL)
+    titulo = models.CharField(max_length=200)
+    mensagem = models.TextField(blank=True)
+    referencia_id = models.PositiveIntegerField(null=True, blank=True)
+    lida = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["funcionario", "lida"])]
+
+    def __str__(self):
+        return f"{self.titulo} → {self.funcionario.nome}"
+
+
 class ASOOcupacional(models.Model):
     TIPO = [
         ("admissional", "Admissional"),

@@ -2,47 +2,55 @@ import 'package:flutter/material.dart';
 
 import '../../servicos/funcionario_auth_service.dart';
 import 'navegador_funcionario.dart';
-import 'tela_registro_funcionario.dart';
 
-class TelaLoginFuncionario extends StatefulWidget {
-  const TelaLoginFuncionario({super.key});
+class TelaRegistroFuncionario extends StatefulWidget {
+  const TelaRegistroFuncionario({super.key});
 
   @override
-  State<TelaLoginFuncionario> createState() => _TelaLoginFuncionarioState();
+  State<TelaRegistroFuncionario> createState() => _TelaRegistroFuncionarioState();
 }
 
-class _TelaLoginFuncionarioState extends State<TelaLoginFuncionario> {
+class _TelaRegistroFuncionarioState extends State<TelaRegistroFuncionario> {
+  final _cpf = TextEditingController();
   final _email = TextEditingController();
   final _senha = TextEditingController();
+  final _confirma = TextEditingController();
   bool _loading = false;
   bool _senhaVisivel = false;
   String? _erro;
 
   @override
-  void initState() {
-    super.initState();
-    // pré-preenche e-mail salvo
-    FuncionarioAuthService.emailSalvo().then((e) {
-      if (e != null && e.isNotEmpty && mounted) {
-        _email.text = e;
-      }
-    });
-  }
-
-  @override
   void dispose() {
+    _cpf.dispose();
     _email.dispose();
     _senha.dispose();
+    _confirma.dispose();
     super.dispose();
   }
 
-  Future<void> _entrar() async {
+  Future<void> _registrar() async {
+    final cpf = _cpf.text.trim();
+    final email = _email.text.trim();
+    final senha = _senha.text;
+    final confirma = _confirma.text;
+
+    if (cpf.isEmpty || email.isEmpty || senha.isEmpty) {
+      setState(() => _erro = 'Preencha todos os campos.');
+      return;
+    }
+    if (senha != confirma) {
+      setState(() => _erro = 'As senhas não coincidem.');
+      return;
+    }
+    if (senha.length < 6) {
+      setState(() => _erro = 'Senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
     setState(() { _loading = true; _erro = null; });
+
     try {
-      final payload = await FuncionarioAuthService.login(
-        _email.text.trim(),
-        _senha.text,
-      );
+      final payload = await FuncionarioAuthService.registrar(cpf, email, senha);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -61,16 +69,10 @@ class _TelaLoginFuncionarioState extends State<TelaLoginFuncionario> {
     }
   }
 
-  void _irParaRegistro() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const TelaRegistroFuncionario()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Trabalhador')),
+      appBar: AppBar(title: const Text('Criar conta')),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -79,10 +81,10 @@ class _TelaLoginFuncionarioState extends State<TelaLoginFuncionario> {
               padding: const EdgeInsets.all(24),
               shrinkWrap: true,
               children: [
-                const Icon(Icons.badge_outlined, size: 56),
+                const Icon(Icons.person_add_outlined, size: 56),
                 const SizedBox(height: 16),
                 Text(
-                  'Portal do trabalhador',
+                  'Crie sua conta',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w800,
@@ -90,13 +92,24 @@ class _TelaLoginFuncionarioState extends State<TelaLoginFuncionario> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Entre com seu e-mail e senha cadastrados no app.',
+                  'Use o CPF cadastrado pelo seu RH para vincular sua conta.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.white60,
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: _cpf,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'CPF',
+                    hintText: '000.000.000-00',
+                    prefixIcon: Icon(Icons.badge_outlined),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
@@ -110,8 +123,7 @@ class _TelaLoginFuncionarioState extends State<TelaLoginFuncionario> {
                 TextField(
                   controller: _senha,
                   obscureText: !_senhaVisivel,
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _loading ? null : _entrar(),
+                  textInputAction: TextInputAction.next,
                   decoration: InputDecoration(
                     labelText: 'Senha',
                     prefixIcon: const Icon(Icons.lock_outline),
@@ -121,33 +133,32 @@ class _TelaLoginFuncionarioState extends State<TelaLoginFuncionario> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _confirma,
+                  obscureText: !_senhaVisivel,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _loading ? null : _registrar(),
+                  decoration: const InputDecoration(
+                    labelText: 'Confirmar senha',
+                    prefixIcon: Icon(Icons.lock_outline),
+                  ),
+                ),
                 const SizedBox(height: 16),
-                if (_erro != null) _ErroLogin(_erro!),
+                if (_erro != null) _ErroCard(_erro!),
                 const SizedBox(height: 16),
                 FilledButton.icon(
-                  onPressed: _loading ? null : _entrar,
+                  onPressed: _loading ? null : _registrar,
                   icon: _loading
                       ? const SizedBox(width: 18, height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.login),
-                  label: Text(_loading ? 'Entrando...' : 'Entrar'),
+                      : const Icon(Icons.person_add),
+                  label: Text(_loading ? 'Criando conta...' : 'Criar conta'),
                 ),
-                const SizedBox(height: 20),
-                const Divider(),
                 const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _irParaRegistro,
-                  icon: const Icon(Icons.person_add_outlined),
-                  label: const Text('Criar conta'),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Ainda não tem conta? Crie usando o CPF cadastrado pelo seu RH.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white38,
-                    fontSize: 11,
-                  ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Já tenho conta — fazer login'),
                 ),
               ],
             ),
@@ -158,8 +169,8 @@ class _TelaLoginFuncionarioState extends State<TelaLoginFuncionario> {
   }
 }
 
-class _ErroLogin extends StatelessWidget {
-  const _ErroLogin(this.mensagem);
+class _ErroCard extends StatelessWidget {
+  const _ErroCard(this.mensagem);
   final String mensagem;
 
   @override
