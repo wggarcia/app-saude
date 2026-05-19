@@ -697,11 +697,7 @@ urlpatterns = [
     path('api/sst/agendamentos/kpis', api_agendamentos_sst_kpis),
     path('api/sst/agendamentos/<int:ag_id>/', api_agendamento_sst_detalhe),
     path('api/sst/agendamentos/<int:ag_id>', api_agendamento_sst_detalhe),
-    # Solicitações de exames ocupacionais para clínicas
-    path('api/sst/solicitacoes-exame/', api_solicitacoes_exame),
-    path('api/sst/solicitacoes-exame', api_solicitacoes_exame),
-    path('api/sst/solicitacoes-exame/<int:sol_id>/', api_solicitacao_detalhe),
-    path('api/sst/solicitacoes-exame/<int:sol_id>', api_solicitacao_detalhe),
+    # (solicitacoes-exame registradas acima em bloco único, removidas duplicatas)
     path('api/clinica/solicitacoes/', api_clinica_solicitacoes),
     path('api/clinica/solicitacoes', api_clinica_solicitacoes),
     path('api/clinica/solicitacoes/<int:sol_id>/', api_clinica_solicitacao_acao),

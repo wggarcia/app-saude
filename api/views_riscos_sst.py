@@ -293,5 +293,9 @@ def api_plano_acao_sst_detalhe(request, plano_id):
 
 
 def sst_riscos_page(request):
-    from django.shortcuts import render
-    return render(request, "sst_riscos.html")
+    from django.shortcuts import render, redirect
+    from .views_dashboard import _empresa_autenticada
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_riscos.html", {"empresa_nome": empresa.nome})

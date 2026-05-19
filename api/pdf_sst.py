@@ -32,17 +32,18 @@ W, H = A4
 
 
 def _styles():
-    base = dict(leading=14, textColor=BLACK)
+    # base sem textColor para evitar conflito ao sobrescrever por estilo
+    base = dict(leading=14)
     return {
-        "title":   ParagraphStyle("title",   **base, fontSize=16, fontName="Helvetica-Bold", textColor=DARK, spaceAfter=2),
+        "title":   ParagraphStyle("title",   **base, fontSize=16, fontName="Helvetica-Bold", textColor=DARK,  spaceAfter=2),
         "sub":     ParagraphStyle("sub",     **base, fontSize=9,  fontName="Helvetica",      textColor=MUTED, spaceAfter=6),
-        "h2":      ParagraphStyle("h2",      **base, fontSize=11, fontName="Helvetica-Bold", textColor=DARK, spaceBefore=10, spaceAfter=4),
+        "h2":      ParagraphStyle("h2",      **base, fontSize=11, fontName="Helvetica-Bold", textColor=DARK,  spaceBefore=10, spaceAfter=4),
         "label":   ParagraphStyle("label",   **base, fontSize=8,  fontName="Helvetica-Bold", textColor=MUTED),
-        "value":   ParagraphStyle("value",   **base, fontSize=10, fontName="Helvetica",      spaceBefore=1, spaceAfter=4),
+        "value":   ParagraphStyle("value",   **base, fontSize=10, fontName="Helvetica",      textColor=BLACK, spaceBefore=1, spaceAfter=4),
         "small":   ParagraphStyle("small",   **base, fontSize=8,  fontName="Helvetica",      textColor=MUTED),
         "center":  ParagraphStyle("center",  **base, fontSize=9,  fontName="Helvetica",      alignment=TA_CENTER, textColor=MUTED),
-        "bold":    ParagraphStyle("bold",    **base, fontSize=10, fontName="Helvetica-Bold"),
-        "result":  ParagraphStyle("result",  **base, fontSize=13, fontName="Helvetica-Bold", alignment=TA_CENTER),
+        "bold":    ParagraphStyle("bold",    **base, fontSize=10, fontName="Helvetica-Bold", textColor=BLACK),
+        "result":  ParagraphStyle("result",  **base, fontSize=13, fontName="Helvetica-Bold", alignment=TA_CENTER, textColor=BLACK),
     }
 
 

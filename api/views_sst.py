@@ -1911,8 +1911,10 @@ def api_sst_conformidade(request):
 
 
 def sst_conformidade_page(request):
-    from django.shortcuts import render
-    return render(request, "sst_conformidade.html")
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_redirect(request)
+    return render(request, "sst_conformidade.html", {"empresa_nome": empresa.nome})
 
 
 def api_sst_conformidade_pdf(request):

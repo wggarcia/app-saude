@@ -33,6 +33,11 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 
 /* ── Sidebar ── */
 .sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);padding:10px 0;display:flex;flex-direction:column;gap:3px;flex-shrink:0;position:fixed;top:56px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:9px 12px 3px}
+.sb-link{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:.75rem;font-weight:600;color:var(--text3);text-decoration:none;border-left:2px solid transparent;transition:all .12s}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.07);border-left-color:var(--teal)}
+.sb-icon{font-size:.88rem;flex-shrink:0;width:16px;text-align:center}
 
 /* ── Main ── */
 .main{flex:1;margin-left:220px;display:flex;flex-direction:column;overflow:hidden}
