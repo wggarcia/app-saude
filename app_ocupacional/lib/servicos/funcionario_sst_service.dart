@@ -48,6 +48,8 @@ class FuncionarioSstService {
       _get('/api/funcionario/meus-treinamentos');
   static Future<Map<String, dynamic>> epis() =>
       _get('/api/funcionario/meus-epis');
+  static Future<Map<String, dynamic>> solicitacoes() =>
+      _get('/api/funcionario/minhas-solicitacoes');
   static Future<Map<String, dynamic>> notificacoes() =>
       _get('/api/funcionario/notificacoes');
   static Future<void> marcarLida(int id) =>

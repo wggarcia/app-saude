@@ -19,6 +19,10 @@ from .models import (
 )
 from .views_dashboard import _empresa_autenticada
 from .access_control import requer_setor
+from .services.employee_notifications import (
+    notificar_solicitacao_exame,
+    status_notificacoes_por_referencia,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -519,8 +523,8 @@ def _empresa(request):
     return e, None
 
 
-def _sol_dict(s):
-    return {
+def _sol_dict(s, app_status=None):
+    payload = {
         "id": s.id,
         "funcionario_id": s.funcionario_id,
         "funcionario_nome": s.funcionario.nome,
@@ -544,7 +548,24 @@ def _sol_dict(s):
         "data_agendamento": s.data_agendamento.isoformat() if s.data_agendamento else None,
         "data_realizacao": s.data_realizacao.isoformat() if s.data_realizacao else None,
         "resposta_clinica": s.resposta_clinica,
+        "canal_envio": "sistema" if s.clinica_id else ("email" if s.clinica_email_externo else "interno"),
     }
+    payload.update(app_status or {
+        "app_notificado": False,
+        "app_notificacoes": 0,
+        "app_ultimo_envio": None,
+    })
+    return payload
+
+
+def _solicitacoes_com_status_app(empresa, qs):
+    solicitacoes = list(qs)
+    status_app = status_notificacoes_por_referencia(
+        empresa,
+        [sol.id for sol in solicitacoes],
+        tipo="exame",
+    )
+    return [_sol_dict(sol, status_app.get(sol.id)) for sol in solicitacoes]
 
 
 def _enviar_email_solicitacao(sol):
@@ -673,7 +694,7 @@ def api_solicitacoes_exame(request):
         if status_f:
             qs = qs.filter(status=status_f)
         return JsonResponse({
-            "solicitacoes": [_sol_dict(s) for s in qs],
+            "solicitacoes": _solicitacoes_com_status_app(empresa, qs),
             "catalogo": CATALOGO_EXAMES,
             "perfis_funcao": PERFIS_EXAMES_FUNCAO,
             "exames_padrao": EXAMES_PADRAO,
@@ -713,12 +734,16 @@ def api_solicitacoes_exame(request):
             clinica = Empresa.objects.filter(id=clinica_id).first()
             if not clinica:
                 return JsonResponse({"erro": "Clínica não encontrada"}, status=404)
+            if not vinculo:
+                return JsonResponse({"erro": "Clínica não vinculada à sua empresa"}, status=400)
 
         elif modo == "email":
             clinica_email_ext = (data.get("clinica_email") or "").strip()
             clinica_nome_ext = (data.get("clinica_nome") or "").strip()
             if not clinica_email_ext:
                 return JsonResponse({"erro": "Email da clínica é obrigatório"}, status=400)
+        elif modo != "interno":
+            return JsonResponse({"erro": "Modo de envio inválido"}, status=400)
 
         exames = data.get("exames", [])
         sol = SolicitacaoExame.objects.create(
@@ -738,7 +763,12 @@ def api_solicitacoes_exame(request):
         if modo == "email" and clinica_email_ext:
             ok, email_erro = _enviar_email_solicitacao(sol)
 
-        resp = _sol_dict(sol)
+        notificacao_app = notificar_solicitacao_exame(sol, "criada")
+        resp = _sol_dict(sol, {
+            "app_notificado": bool(notificacao_app),
+            "app_notificacoes": 1 if notificacao_app else 0,
+            "app_ultimo_envio": timezone.localtime(notificacao_app.criado_em).strftime("%d/%m/%Y %H:%M") if notificacao_app else None,
+        })
         resp["modo"] = modo
         if email_erro:
             resp["aviso_email"] = f"Pedido salvo, mas o email nao foi confirmado: {email_erro}"
@@ -760,7 +790,8 @@ def api_solicitacao_detalhe(request, sol_id):
         return JsonResponse({"erro": "Solicitação não encontrada"}, status=404)
 
     if request.method == "GET":
-        return JsonResponse(_sol_dict(sol))
+        status_app = status_notificacoes_por_referencia(empresa, [sol.id], tipo="exame")
+        return JsonResponse(_sol_dict(sol, status_app.get(sol.id)))
 
     if request.method == "POST":
         try:
@@ -781,7 +812,8 @@ def api_solicitacao_detalhe(request, sol_id):
         if sol.status not in ("pendente",):
             return JsonResponse({"erro": "Só é possível cancelar solicitações pendentes"}, status=400)
         sol.status = "cancelado"
-        sol.save()
+        sol.save(update_fields=["status"])
+        notificar_solicitacao_exame(sol, "cancelado")
         return JsonResponse({"ok": True})
 
     return JsonResponse({"erro": "método não permitido"}, status=405)
@@ -864,6 +896,8 @@ def api_clinica_solicitacao_acao(request, sol_id):
     from datetime import date, datetime
 
     if acao == "agendar":
+        status_anterior = sol.status
+        data_anterior = sol.data_agendamento
         data_ag = data.get("data_agendamento")
         if not data_ag:
             return JsonResponse({"erro": "data_agendamento é obrigatória"}, status=400)
@@ -874,9 +908,12 @@ def api_clinica_solicitacao_acao(request, sol_id):
         sol.status = "agendado"
         sol.resposta_clinica = data.get("resposta_clinica", sol.resposta_clinica)
         sol.save()
+        if status_anterior != sol.status or data_anterior != sol.data_agendamento:
+            notificar_solicitacao_exame(sol, "agendado")
         return JsonResponse({"ok": True, "status": sol.status})
 
     if acao == "realizar":
+        status_anterior = sol.status
         data_real = data.get("data_realizacao")
         try:
             sol.data_realizacao = datetime.strptime(data_real, "%Y-%m-%d").date() if data_real else date.today()
@@ -885,12 +922,17 @@ def api_clinica_solicitacao_acao(request, sol_id):
         sol.status = "realizado"
         sol.resposta_clinica = data.get("resposta_clinica", sol.resposta_clinica)
         sol.save()
+        if status_anterior != sol.status:
+            notificar_solicitacao_exame(sol, "realizado")
         return JsonResponse({"ok": True, "status": sol.status})
 
     if acao == "cancelar":
+        status_anterior = sol.status
         sol.status = "cancelado"
         sol.resposta_clinica = data.get("resposta_clinica", "")
         sol.save()
+        if status_anterior != sol.status:
+            notificar_solicitacao_exame(sol, "cancelado")
         return JsonResponse({"ok": True, "status": sol.status})
 
     return JsonResponse({"erro": f"Ação inválida: {acao}"}, status=400)

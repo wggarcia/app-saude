@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plataforma TI Restrita</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#041018;
+  --panel:rgba(7,28,40,.88);
+  --line:rgba(126,225,195,.12);
+  --line2:rgba(126,225,195,.22);
+  --text:#e8f4f1;
+  --muted:#7fa2b1;
+  --teal:#00c9a7;
+  --blue:#52a6ff;
+  --amber:#f0bf6b;
+}
+html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:radial-gradient(circle at top left,#0d3247 0,#041018 48%);color:var(--text)}
+body{display:grid;place-items:center;padding:24px}
+.card{width:min(720px,100%);background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:28px;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(82,166,255,.12);color:var(--blue);font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+h1{font-size:1.8rem;line-height:1.05;margin:16px 0 10px}
+p{font-size:.92rem;line-height:1.7;color:var(--muted)}
+.pill-list{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 22px}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--line);font-size:.8rem}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:12px;font-size:.82rem;font-weight:800;text-decoration:none;transition:all .15s}
+.btn-main{background:linear-gradient(135deg,var(--teal),var(--blue));color:#041018}
+.btn-main:hover{opacity:.9}
+.btn-ghost{border:1px solid var(--line2);color:var(--text)}
+.btn-ghost:hover{background:rgba(255,255,255,.05)}
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="eyebrow">Acesso restrito</div>
+    <h1>Plataforma TI protegida para uso técnico</h1>
+    <p>Esse ambiente foi isolado para operação de tecnologia da {{ empresa_nome }}. Para entrar, use um login próprio de TI com credenciais dedicadas ou finalize a configuração inicial com o administrador responsável.</p>
+
+    <div class="pill-list">
+      <div class="pill">🔐 Integrações, APIs e webhooks ficam separados da operação diária do SST</div>
+      <div class="pill">👤 Usuários comuns não acessam esta área</div>
+      <div class="pill">🧭 O restante do SST continua disponível normalmente</div>
+    </div>
+
+    <div class="actions">
+      <a class="btn btn-main" href="/sst/">Voltar para a Central SST</a>
+      <a class="btn btn-ghost" href="/logout/">Entrar com outro usuário</a>
+    </div>
+  </main>
+</body>
+</html>

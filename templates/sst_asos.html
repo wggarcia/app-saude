@@ -488,6 +488,12 @@ function emailStatusHtml(s){
   return`<br><span style="font-size:.67rem;color:${color}">${label}</span>${detalhe}`;
 }
 function emailActionLabel(s){return s.email_enviado?'📧 Reenviar':'📧 Enviar';}
+function appStatusHtml(s){
+  const label=s.app_notificado?`📲 App do funcionário: ${s.app_notificacoes>1?`${s.app_notificacoes} atualizações`:'Notificado'}`:'📲 App do funcionário: pendente';
+  const color=s.app_notificado?'#4ade80':'var(--amber)';
+  const detalhe=s.app_ultimo_envio?`<br><span style="font-size:.65rem;color:var(--muted)">Último envio: ${esc(s.app_ultimo_envio)}</span>`:'';
+  return`<br><span style="font-size:.67rem;color:${color}">${label}</span>${detalhe}`;
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Tabs
@@ -842,9 +848,9 @@ function renderTabelaPedidos(){
         s.exames&&s.exames.length?s.exames.slice(0,2).map(esc).join(', ')+(s.exames.length>2?` <span class="badge b-cinza">+${s.exames.length-2}</span>`:''):'<em>a definir</em>'
       }</span></td>
       <td>
-        ${s.clinica_id?`<span class="badge b-verde">No sistema</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span>`:''}
-        ${!s.clinica_id&&s.clinica_email_externo?`<span class="badge b-azul">Email</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span><br><span style="font-size:.67rem;color:var(--muted)">${esc(s.clinica_email_externo)}</span>${emailStatusHtml(s)}` :''}
-        ${!s.clinica_id&&!s.clinica_email_externo?`<span class="badge b-cinza">Interno</span>`:''}
+        ${s.clinica_id?`<span class="badge b-verde">No sistema</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span>${appStatusHtml(s)}`:''}
+        ${!s.clinica_id&&s.clinica_email_externo?`<span class="badge b-azul">Email</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span><br><span style="font-size:.67rem;color:var(--muted)">${esc(s.clinica_email_externo)}</span>${emailStatusHtml(s)}${appStatusHtml(s)}` :''}
+        ${!s.clinica_id&&!s.clinica_email_externo?`<span class="badge b-cinza">Interno</span>${appStatusHtml(s)}`:''}
       </td>
       <td style="color:var(--muted);font-size:.77rem">${s.data_solicitacao}${s.data_agendamento?`<br><span style="color:var(--blue)">Agend: ${s.data_agendamento}</span>`:''}</td>
       <td><span class="badge ${SB[s.status]||'b-cinza'}">${SL[s.status]||s.status}</span></td>
@@ -1002,8 +1008,13 @@ async function salvarPedido(){
     if(!r.ok){toast(d.erro||'Erro ao criar pedido','err');return;}
     if(d.aviso_email)toast(d.aviso_email,'err');
     else{
-      const msgs={sistema:'Pedido enviado à clínica!',email:'Pedido salvo. Servidor SMTP aceitou o envio.',interno:'Pedido salvo!'};
+      const msgs={
+        sistema:'Pedido enviado à clínica e funcionário notificado no app!',
+        email:'Pedido salvo. SMTP aceitou o envio e o app do funcionário foi atualizado!',
+        interno:'Pedido salvo e app do funcionário atualizado!'
+      };
       toast(msgs[_modo]||'Pedido criado!');
+      if(!d.app_notificado) toast('Pedido salvo, mas o app do funcionário não confirmou atualização.','err');
     }
     fecharModalPedido();carregarPedidos();
   }catch(e){toast('Erro de conexão','err');}

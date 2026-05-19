@@ -310,6 +310,19 @@ select option{background:#0b1822}
     </div>
   </div>
 
+  {% if ti_bootstrap %}
+  <div class="comp-card" style="border-color:rgba(240,191,107,.24);background:rgba(240,191,107,.06)">
+    <div class="comp-card-top">
+      <div>
+        <div class="comp-name">Implantação inicial da área de TI</div>
+        <div class="comp-law">Você entrou em modo de configuração inicial. Assim que um usuário de TI próprio acessar este ambiente, o isolamento passa a valer para ele.</div>
+      </div>
+      <span class="badge badge-gold">Bootstrap</span>
+    </div>
+    <div class="comp-law">Recomendação operacional: mantenha um login dedicado de TI com cargo como <strong style="color:var(--text)">TI</strong>, <strong style="color:var(--text)">Suporte</strong>, <strong style="color:var(--text)">Infra</strong> ou <strong style="color:var(--text)">DevOps</strong> para concentrar integrações, chaves e webhooks fora da operação diária do SST.</div>
+  </div>
+  {% endif %}
+
   <!-- ══ TAB: PLANO & TRIAL ═══════════════════════════════════════════════════ -->
   <section id="tab-plano" class="tab-panel active">
 
@@ -1221,6 +1234,7 @@ select option{background:#0b1822}
           <span class="badge badge-ok">Atual</span>
         </div>
       </div>
+      <div class="toast" id="toastSeguranca"></div>
     </div>
 
   </section>
@@ -1587,7 +1601,7 @@ const PASSOS_INFO = {
 async function loadOnboarding() {
   const d = await api("/api/gestao/trial");
   if (!d.ok) return;
-  const passos = d.onboarding || [];
+  const passos = d.onboarding_passos || d.onboarding?.passos || [];
   const concluidos = passos.filter(p=>p.concluido).length;
   const total = passos.length || Object.keys(PASSOS_INFO).length;
   const pct = total ? Math.round(concluidos / total * 100) : 0;
@@ -1679,10 +1693,19 @@ async function verIntegracao(id) {
 
 async function excluirIntegracao() {
   if (!integracaoSelecionada) return;
-  if (!confirm("Remover esta integração? Os funcionários já importados não serão apagados.")) return;
-  jq("integracaoDetalhe").style.display = "none";
-  integracaoSelecionada = null;
-  loadIntegracoes();
+  if (!confirm("Inativar esta integração? Os funcionários já importados não serão apagados.")) return;
+  const d = await api(`/api/gestao/integracoes/${integracaoSelecionada}/status`, {
+    method:"POST",
+    body:JSON.stringify({status:"inativo"})
+  });
+  if (d.ok) {
+    toast("toastIntegracao", "Integração inativada com sucesso!");
+    jq("integracaoDetalhe").style.display = "none";
+    integracaoSelecionada = null;
+    loadIntegracoes();
+  } else {
+    toast("toastIntegracao", "Não foi possível inativar a integração.", true);
+  }
 }
 
 async function criarIntegracao(e) {
@@ -1808,7 +1831,16 @@ function testarWebhook(id) {
 
 async function removerWebhook(id) {
   if (!confirm('Remover este webhook?')) return;
-  loadWebhooks();
+  const d = await api('/api/gestao/plataforma/webhooks/', {
+    method:'DELETE',
+    body:JSON.stringify({id})
+  });
+  if (d.ok) {
+    showToast('toastWebhook','Webhook removido com sucesso!','ok');
+    loadWebhooks();
+  } else {
+    showToast('toastWebhook','Não foi possível remover o webhook.','err');
+  }
 }
 
 // ── SEGURANÇA ─────────────────────────────────────────────────────────────────
@@ -1850,8 +1882,13 @@ async function loadSeguranca() {
     {tipo:'info', msg:'ASO gerado', detalhe:'Funcionário Ana Souza — Periódico', ts:'Hoje'},
     {tipo:'warn', msg:'Chave API criada', detalhe:'Nova credencial gerada', ts:'Ontem'},
   ];
-  if (!d.auditoria || d.auditoria.length === 0) {
-    auditEl.innerHTML = exemplos.map(ex => `
+  const auditoria = (d.auditoria && d.auditoria.length) ? d.auditoria.map(item => ({
+    tipo:item.status === 'ok' ? 'ok' : item.status === 'erro' ? 'danger' : 'warn',
+    msg:`${(item.sistema||'plataforma').toUpperCase()} · ${item.acao || 'evento'}`,
+    detalhe:item.detalhes || 'Registro operacional',
+    ts:item.timestamp || 'Agora',
+  })) : exemplos;
+  auditEl.innerHTML = auditoria.map(ex => `
       <div class="log-row">
         <div class="log-dot ${ex.tipo}"></div>
         <div style="flex:1">
@@ -1860,7 +1897,6 @@ async function loadSeguranca() {
         </div>
         <div style="font-size:.74rem;color:var(--muted);white-space:nowrap">${ex.ts}</div>
       </div>`).join('');
-  }
 }
 
 function toggle2fa() {
@@ -1869,11 +1905,31 @@ function toggle2fa() {
 
 async function revogarSessao(id) {
   if (!confirm('Revogar esta sessão?')) return;
-  loadSeguranca();
+  const d = await api('/api/dispositivos/revogar', {
+    method:'POST',
+    body:JSON.stringify({device_id:id})
+  });
+  if (d.ok) {
+    showToast('toastSeguranca','Sessão revogada com sucesso.','ok');
+    loadSeguranca();
+  } else {
+    showToast('toastSeguranca','Não foi possível revogar a sessão.','err');
+  }
 }
 
 async function revogarTodasSessoes() {
   if (!confirm('Revogar TODAS as sessões ativas? Você será desconectado de todos os dispositivos.')) return;
+  const botoes = [...document.querySelectorAll('#sessoesList .btn.danger')];
+  for (const btn of botoes) {
+    const id = (btn.getAttribute('onclick') || '').match(/revogarSessao\('([^']+)'\)/)?.[1];
+    if (id) {
+      await api('/api/dispositivos/revogar', {
+        method:'POST',
+        body:JSON.stringify({device_id:id})
+      });
+    }
+  }
+  showToast('toastSeguranca','Sessões ativas revogadas. Atualizando painel...','ok');
   loadSeguranca();
 }
 

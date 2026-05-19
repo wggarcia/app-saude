@@ -14,7 +14,7 @@
 }
 html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;overflow-x:hidden}
 /* HEADER */
-.header{background:var(--panel);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.header,.topbar{background:var(--panel);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
 .logo-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#041018;flex-shrink:0}
 .logo-name{font-size:.82rem;font-weight:800;color:var(--text)}
@@ -94,12 +94,12 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'M
 </head>
 <body>
 
-<header class="header">
+<header class="header topbar">
   <a class="logo" href="/sst/">
     <div class="logo-icon">S</div>
     <div>
       <div class="logo-name">SolusCRT</div>
-      <div class="logo-sub">{{ empresa_nome }}</div>
+      <div class="logo-sub">Central SST · Normas NR</div>
     </div>
   </a>
   <div class="header-right">

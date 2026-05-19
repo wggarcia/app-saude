@@ -56,12 +56,14 @@ from .models import (
     AgendamentoSST,
     CampanhaVacinacao,
     ConfiguracaoSST,
+    CredencialAppFuncionario,
     CATOcupacional,
     DocumentoSST,
     EntregaEPI,
     EPIItem,
     eSocialEventoSST,
     FuncionarioSST,
+    NotificacaoFuncionario,
     PlanoAcaoSST,
     RegistroVacinacao,
     RiscoOcupacional,
@@ -2649,3 +2651,302 @@ class SolicitacaoExameEmailTests(TestCase):
         self.assertEqual(resp.status_code, 201)
         _, kwargs = email_message_mock.call_args
         self.assertEqual(kwargs["from_email"], "SolusCRT <mailer@soluscrt.com.br>")
+
+
+@override_settings(DJANGO_ENV="test")
+class SolicitacaoExameAppSyncTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.empresa = Empresa.objects.create(
+            nome="Empresa SST",
+            email="sst@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+        )
+        self.funcionario = FuncionarioSST.objects.create(
+            empresa=self.empresa,
+            nome="Carlos Operador",
+            cpf="123.456.789-00",
+            cargo="Operador de Produção",
+            ativo=True,
+        )
+        CredencialAppFuncionario.objects.create(
+            funcionario=self.funcionario,
+            email="carlos@app.com",
+            senha=make_password("app12345"),
+        )
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({"email": "sst@teste.com", "senha": "senha123", "device_id": "sst-web", "device_name": "Navegador"}),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+    def _token_funcionario(self):
+        client = Client()
+        resp = client.post(
+            "/api/funcionario/login",
+            data=json.dumps({"email": "carlos@app.com", "senha": "app12345"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        return resp.json()["token"]
+
+    def test_pedido_interno_cria_notificacao_e_aparece_no_app(self):
+        resp = self.client.post(
+            "/api/sst/solicitacoes-exame",
+            data=json.dumps({
+                "funcionario_id": self.funcionario.id,
+                "tipo_aso": "periodico",
+                "modo": "interno",
+                "exames": ["Hemograma completo"],
+                "observacoes": "Levar documento com foto.",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(resp.status_code, 201)
+        body = resp.json()
+        self.assertTrue(body["app_notificado"])
+        self.assertEqual(NotificacaoFuncionario.objects.filter(
+            funcionario=self.funcionario,
+            empresa=self.empresa,
+            tipo="exame",
+            referencia_id=body["id"],
+        ).count(), 1)
+
+        token = self._token_funcionario()
+        app_client = Client()
+        resp_portal = app_client.get(
+            "/api/funcionario/minhas-solicitacoes",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        self.assertEqual(resp_portal.status_code, 200)
+        self.assertEqual(len(resp_portal.json()["solicitacoes"]), 1)
+        self.assertEqual(resp_portal.json()["solicitacoes"][0]["status"], "pendente")
+
+    def test_clinica_agenda_exame_e_app_recebe_atualizacao(self):
+        clinica = Empresa.objects.create(
+            nome="Clinica Centro",
+            email="clinica@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+        )
+        solicitacao = SolicitacaoExame.objects.create(
+            empresa=self.empresa,
+            funcionario=self.funcionario,
+            clinica=clinica,
+            tipo_aso="periodico",
+            exames=json.dumps(["Audiometria"], ensure_ascii=False),
+        )
+
+        clinica_client = Client()
+        login = clinica_client.post(
+            "/api/login",
+            data=json.dumps({"email": "clinica@teste.com", "senha": "senha123", "device_id": "clinica-web", "device_name": "Clinic"}),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        resp = clinica_client.post(
+            f"/api/clinica/solicitacoes-exame/{solicitacao.id}/acao",
+            data=json.dumps({"acao": "agendar", "data_agendamento": "2026-05-25"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        token = self._token_funcionario()
+        app_client = Client()
+        resp_notif = app_client.get(
+            "/api/funcionario/notificacoes",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        self.assertEqual(resp_notif.status_code, 200)
+        titulos = [item["titulo"] for item in resp_notif.json()["notificacoes"]]
+        self.assertIn("Exame agendado", titulos)
+
+        resp_portal = app_client.get(
+            "/api/funcionario/minhas-solicitacoes",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        self.assertEqual(resp_portal.status_code, 200)
+        self.assertEqual(resp_portal.json()["solicitacoes"][0]["status"], "agendado")
+
+
+@override_settings(DJANGO_ENV="test")
+class FuncionarioPortalEndpointsTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.empresa = Empresa.objects.create(
+            nome="Empresa Portal",
+            email="portal@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+        )
+        self.funcionario = FuncionarioSST.objects.create(
+            empresa=self.empresa,
+            nome="Aline Colaboradora",
+            cpf="111.222.333-44",
+            cargo="Analista",
+            setor="Operações",
+            ativo=True,
+        )
+        CredencialAppFuncionario.objects.create(
+            funcionario=self.funcionario,
+            email="aline@app.com",
+            senha=make_password("app12345"),
+        )
+        ASOOcupacional.objects.create(
+            empresa=self.empresa,
+            funcionario=self.funcionario,
+            tipo="periodico",
+            data_emissao=timezone.now().date(),
+            data_validade=timezone.now().date() + timedelta(days=180),
+            medico_responsavel="Dra. Portal",
+            crm="CRM/SP 123456",
+            resultado="apto",
+        )
+        TreinamentoNR.objects.create(
+            empresa=self.empresa,
+            funcionario=self.funcionario,
+            nr="NR-6",
+            titulo="Treinamento de EPI",
+            instrutor="Instrutor Portal",
+            carga_horaria=4,
+            data_realizacao=timezone.now().date() - timedelta(days=10),
+            data_validade=timezone.now().date() + timedelta(days=355),
+            status="valido",
+        )
+        epi = EPIItem.objects.create(
+            empresa=self.empresa,
+            nome="Respirador PFF2",
+            tipo="respiratoria",
+            ca_numero="CA-9988",
+            ativo=True,
+        )
+        EntregaEPI.objects.create(
+            empresa=self.empresa,
+            funcionario=self.funcionario,
+            epi=epi,
+            data_entrega=timezone.now().date() - timedelta(days=3),
+            quantidade=1,
+        )
+
+    def _token_funcionario(self):
+        app_client = Client()
+        resp = app_client.post(
+            "/api/funcionario/login",
+            data=json.dumps({"email": "aline@app.com", "senha": "app12345"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        return resp.json()["token"]
+
+    def test_portal_funcionario_treinamentos_e_epi_respondem_schema_compativel(self):
+        token = self._token_funcionario()
+        app_client = Client()
+
+        treinamentos = app_client.get(
+            "/api/funcionario/meus-treinamentos",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        self.assertEqual(treinamentos.status_code, 200)
+        item_treinamento = treinamentos.json()["treinamentos"][0]
+        self.assertEqual(item_treinamento["data_validade"], item_treinamento["data_vencimento"])
+
+        epis = app_client.get(
+            "/api/funcionario/meus-epis",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        self.assertEqual(epis.status_code, 200)
+        self.assertEqual(epis.json()["epis"][0]["ca"], "CA-9988")
+
+        dashboard = app_client.get(
+            "/api/funcionario/dashboard",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertEqual(dashboard.json()["treinamentos_total"], 1)
+
+    def test_conformidade_retorna_json_mesmo_com_modelos_atuais(self):
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({"email": "portal@teste.com", "senha": "senha123", "device_id": "portal-web", "device_name": "Browser"}),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        resp = self.client.get("/api/sst/conformidade/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["resumo"]["total"], 1)
+        self.assertEqual(resp.json()["funcionarios"][0]["nome"], "Aline Colaboradora")
+
+
+@override_settings(DJANGO_ENV="test")
+class PlataformaTiAccessTests(TestCase):
+    def setUp(self):
+        self.empresa = Empresa.objects.create(
+            nome="Empresa TI",
+            email="empresa-ti@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+        )
+        self.usuario_rh = EmpresaUsuario.objects.create(
+            empresa=self.empresa,
+            nome="Usuário RH",
+            email="rh@teste.com",
+            senha=make_password("senha123"),
+            cargo="RH",
+            ativo=True,
+        )
+        self.usuario_ti = EmpresaUsuario.objects.create(
+            empresa=self.empresa,
+            nome="Usuário TI",
+            email="ti@teste.com",
+            senha=make_password("senha123"),
+            cargo="TI",
+            ativo=True,
+        )
+
+    def _login_client(self, email, senha="senha123", device_id="dev-ti"):
+        client = Client()
+        resp = client.post(
+            "/api/login",
+            data=json.dumps({"email": email, "senha": senha, "device_id": device_id, "device_name": "Browser"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        return client
+
+    def test_usuario_sem_perfil_ti_nao_acessa_plataforma(self):
+        client = self._login_client("rh@teste.com", device_id="dev-rh")
+        resp_page = client.get("/gestao/plataforma/")
+        self.assertEqual(resp_page.status_code, 403)
+
+        resp_api = client.get("/api/gestao/plataforma/seguranca/")
+        self.assertEqual(resp_api.status_code, 403)
+
+    def test_usuario_ti_acessa_rotas_restritas(self):
+        client = self._login_client("ti@teste.com", device_id="dev-ti-user")
+        resp_page = client.get("/gestao/plataforma/")
+        self.assertEqual(resp_page.status_code, 200)
+
+        resp_api = client.get("/api/gestao/plataforma/seguranca/")
+        self.assertEqual(resp_api.status_code, 200)
+
+    def test_admin_principal_consegue_bootstrap_antes_do_ti_assumir(self):
+        empresa_sem_ti = Empresa.objects.create(
+            nome="Empresa Bootstrap",
+            email="bootstrap@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+        )
+        client = Client()
+        login = client.post(
+            "/api/login",
+            data=json.dumps({"email": "bootstrap@teste.com", "senha": "senha123", "device_id": "bootstrap-device", "device_name": "Browser"}),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+        resp_page = client.get("/gestao/plataforma/")
+        self.assertEqual(resp_page.status_code, 200)

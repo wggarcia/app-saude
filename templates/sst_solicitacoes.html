@@ -293,6 +293,12 @@ function toast(msg, tipo='ok'){
   document.getElementById('toastContainer').appendChild(t);setTimeout(()=>t.remove(),4000);
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function appStatusHtml(s){
+  const label=s.app_notificado?`📲 App do funcionário: ${s.app_notificacoes>1?`${s.app_notificacoes} atualizações`:'Notificado'}`:'📲 App do funcionário: pendente';
+  const color=s.app_notificado?'#4ade80':'var(--amber)';
+  const detalhe=s.app_ultimo_envio?`<br><span style="font-size:.65rem;color:var(--muted)">Último envio: ${esc(s.app_ultimo_envio)}</span>`:'';
+  return `<br><span style="font-size:.67rem;color:${color}">${label}</span>${detalhe}`;
+}
 
 const SB = {pendente:'b-amarelo',agendado:'b-azul',realizado:'b-verde',cancelado:'b-cinza'};
 const SL = {pendente:'Pendente',agendado:'Agendado',realizado:'Realizado',cancelado:'Cancelado'};
@@ -365,9 +371,9 @@ function renderTabela(){
         s.exames.length?s.exames.slice(0,2).map(esc).join(', ')+(s.exames.length>2?` <span class="badge b-cinza">+${s.exames.length-2}</span>`:''):'<em>a definir</em>'
       }</span></td>
       <td>
-        ${s.clinica_id?`<span class="badge b-verde">No sistema</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span>`:''}
-        ${!s.clinica_id&&s.clinica_email_externo?`<span class="badge b-azul">Email</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span><br><span style="font-size:.67rem;color:var(--muted)">${esc(s.clinica_email_externo)}</span>${s.email_enviado?'<br><span style="font-size:.67rem;color:#4ade80">✓ Entregue ao SMTP</span>':'<br><span style="font-size:.67rem;color:var(--amber)">⏳ Não enviado</span>'}${s.resposta_clinica?`<br><span style="font-size:.65rem;color:var(--muted)">${esc(s.resposta_clinica)}</span>`:''}`:'' }
-        ${!s.clinica_id&&!s.clinica_email_externo?`<span class="badge b-cinza">Interno</span>`:''}
+        ${s.clinica_id?`<span class="badge b-verde">No sistema</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span>${appStatusHtml(s)}`:''}
+        ${!s.clinica_id&&s.clinica_email_externo?`<span class="badge b-azul">Email</span><br><span style="font-size:.7rem;color:var(--muted)">${esc(s.clinica_nome)}</span><br><span style="font-size:.67rem;color:var(--muted)">${esc(s.clinica_email_externo)}</span>${s.email_enviado?'<br><span style="font-size:.67rem;color:#4ade80">✓ Entregue ao SMTP</span>':'<br><span style="font-size:.67rem;color:var(--amber)">⏳ Não enviado</span>'}${s.resposta_clinica?`<br><span style="font-size:.65rem;color:var(--muted)">${esc(s.resposta_clinica)}</span>`:''}${appStatusHtml(s)}`:'' }
+        ${!s.clinica_id&&!s.clinica_email_externo?`<span class="badge b-cinza">Interno</span>${appStatusHtml(s)}`:''}
       </td>
       <td style="color:var(--muted);font-size:.77rem">${s.data_solicitacao}${s.data_agendamento?`<br><span style="color:var(--blue)">Agend: ${s.data_agendamento}</span>`:''}</td>
       <td><span class="badge ${SB[s.status]||'b-cinza'}">${SL[s.status]||s.status}</span></td>
@@ -546,9 +552,14 @@ async function salvar(){
     });
     const d=await r.json();
     if(!r.ok){toast(d.erro||'Erro ao criar pedido','err');return;}
-    const msgs={sistema:'Pedido enviado à clínica!',email:'Pedido salvo e email enviado!',interno:'Pedido salvo!'};
+    const msgs={
+      sistema:'Pedido enviado à clínica e funcionário notificado no app!',
+      email:'Pedido salvo, email processado e app do funcionário atualizado!',
+      interno:'Pedido salvo e app do funcionário atualizado!'
+    };
     toast(msgs[_modo]||'Pedido criado!');
     if(d.aviso_email) toast(d.aviso_email,'err');
+    if(!d.app_notificado) toast('Pedido salvo, mas o app do funcionário não confirmou atualização.','err');
     fecharModal();carregar();
   }catch(e){toast('Erro de conexão','err');}
   finally{btn.disabled=false;btn.textContent=_modo==='email'?'Salvar e Enviar Email':_modo==='sistema'?'Enviar à Clínica':'Salvar Pedido';}

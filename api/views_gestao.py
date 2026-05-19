@@ -14,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import (
     AcaoCorporativa,
     ApiKeyEmpresa,
+    DispositivoAutorizado,
     EmpresaSetor,
     EmpresaUnidade,
     FuncionarioSST,
@@ -21,10 +22,17 @@ from .models import (
     OnboardingPasso,
     PedidoApoioCorporativo,
     ProgramaCorporativo,
+    SubscricaoEvento,
     TrialEmpresa,
     UsoApiEmpresa,
 )
-from .access_control import api_requer_setor, requer_setor
+from .access_control import (
+    acesso_plataforma_ti_em_bootstrap,
+    api_requer_plataforma_ti,
+    api_requer_setor,
+    requer_plataforma_ti_page,
+    requer_setor,
+)
 from .services.dashboard_core import setor_conta
 from .views_dashboard import _empresa_autenticada
 
@@ -54,11 +62,15 @@ def gestao_corporativa(request):
 
 
 @requer_setor("empresa")
+@requer_plataforma_ti_page
 def gestao_plataforma(request):
     empresa = _empresa_gestao(request)
     if not empresa:
         return redirect("/")
-    return render(request, "gestao_plataforma.html", {"empresa_nome": empresa.nome})
+    return render(request, "gestao_plataforma.html", {
+        "empresa_nome": empresa.nome,
+        "ti_bootstrap": acesso_plataforma_ti_em_bootstrap(request),
+    })
 
 
 # ── APOIO ─────────────────────────────────────────────────────────────────────
@@ -415,6 +427,7 @@ def _trial_dict(trial):
         "ativo": trial.ativo(),
         "dias_restantes": trial.dias_restantes(),
         "expira_em": trial.expira_em.strftime("%d/%m/%Y"),
+        "expiracao_em": trial.expira_em.isoformat(),
         "convertido": trial.convertido,
     }
 
@@ -439,6 +452,7 @@ def _onboarding_dict(empresa):
     }
 
 
+@api_requer_plataforma_ti
 def api_trial_status(request):
     """GET — situação do trial e checklist de onboarding."""
     empresa = _empresa_gestao(request)
@@ -446,13 +460,23 @@ def api_trial_status(request):
         return JsonResponse({"erro": "nao autenticado"}, status=401)
 
     trial = TrialEmpresa.objects.filter(empresa=empresa).first()
+    onboarding = _onboarding_dict(empresa)
+    trial_payload = _trial_dict(trial) if trial else None
+    if trial_payload:
+        status = "trial" if trial_payload["ativo"] else "expirado"
+    else:
+        status = "ativo" if empresa.ativo else "inativo"
     return JsonResponse({
-        "trial": _trial_dict(trial) if trial else None,
-        "onboarding": _onboarding_dict(empresa),
+        "status": status,
+        "setor": setor_conta(empresa),
+        "trial": trial_payload,
+        "onboarding": onboarding,
+        "onboarding_passos": onboarding["passos"],
     })
 
 
 @csrf_exempt
+@api_requer_plataforma_ti
 def api_trial_ativar(request):
     """POST — inicia trial de 14 dias (self-service). Idempotente."""
     empresa = _empresa_gestao(request)
@@ -469,6 +493,7 @@ def api_trial_ativar(request):
 
 
 @csrf_exempt
+@api_requer_plataforma_ti
 def api_onboarding_passo(request, passo):
     """POST — marca um passo do onboarding como concluído."""
     empresa = _empresa_gestao(request)
@@ -494,16 +519,22 @@ def _integracao_dict(i):
         "sistema_label": i.get_sistema_display(),
         "nome": i.nome,
         "status": i.status,
+        "ativo": i.status == "ativo",
         "webhook_secret": i.webhook_secret,
+        "secret": i.webhook_secret,
         "endpoint_destino": i.endpoint_destino,
+        "url_callback": i.endpoint_destino,
         "funcionarios_importados": i.funcionarios_importados,
+        "total_funcionarios": i.funcionarios_importados,
         "ultimo_sync_em": i.ultimo_sync_em.strftime("%d/%m/%Y %H:%M") if i.ultimo_sync_em else None,
+        "ultima_sync": i.ultimo_sync_em.isoformat() if i.ultimo_sync_em else None,
         "ultimo_erro": i.ultimo_erro,
         "criado_em": i.criado_em.strftime("%d/%m/%Y"),
     }
 
 
 @csrf_exempt
+@api_requer_plataforma_ti
 def api_integracoes(request):
     """GET lista / POST cria integração com sistema de RH."""
     empresa = _empresa_gestao(request)
@@ -529,16 +560,18 @@ def api_integracoes(request):
             sistema=sistema,
             defaults={
                 "nome": dados.get("nome") or f"Integração {sistema.upper()}",
-                "endpoint_destino": dados.get("endpoint_destino", ""),
-                "status": "inativo",
+                "endpoint_destino": dados.get("endpoint_destino") or dados.get("url_callback") or "",
+                "status": "ativo" if dados.get("ativo") else "inativo",
             },
         )
         if not criada:
             if "nome" in dados:
                 integracao.nome = dados["nome"]
-            if "endpoint_destino" in dados:
-                integracao.endpoint_destino = dados["endpoint_destino"]
-            integracao.save(update_fields=["nome", "endpoint_destino", "atualizado_em"])
+            if "endpoint_destino" in dados or "url_callback" in dados:
+                integracao.endpoint_destino = dados.get("endpoint_destino") or dados.get("url_callback") or ""
+            if "ativo" in dados:
+                integracao.status = "ativo" if dados.get("ativo") else "inativo"
+            integracao.save(update_fields=["nome", "endpoint_destino", "status", "atualizado_em"])
 
         return JsonResponse({"integracao": _integracao_dict(integracao)}, status=201 if criada else 200)
 
@@ -618,17 +651,22 @@ def api_integracao_webhook(request, sistema):
 
 
 @csrf_exempt
+@api_requer_plataforma_ti
 def api_integracao_status(request, integracao_id):
     """POST — ativa, desativa ou reseta uma integração."""
     empresa = _empresa_gestao(request)
     if not empresa:
         return JsonResponse({"erro": "nao autenticado"}, status=401)
-    if request.method != "POST":
-        return JsonResponse({"erro": "use POST"}, status=405)
 
     integracao = IntegracaoRH.objects.filter(id=integracao_id, empresa=empresa).first()
     if not integracao:
         return JsonResponse({"erro": "integração não encontrada"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse(_integracao_dict(integracao))
+
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
 
     dados = _parse_json(request) or {}
     novo_status = dados.get("status")
@@ -657,6 +695,7 @@ def _key_dict(k, mostrar_chave=False):
 
 
 @csrf_exempt
+@api_requer_plataforma_ti
 def api_chaves(request):
     """GET lista / POST cria API key para a empresa."""
     empresa = _empresa_gestao(request)
@@ -683,6 +722,7 @@ def api_chaves(request):
 
 
 @csrf_exempt
+@api_requer_plataforma_ti
 def api_chave_revogar(request, chave_id):
     """POST — revoga (desativa permanentemente) uma API key."""
     empresa = _empresa_gestao(request)
@@ -701,6 +741,7 @@ def api_chave_revogar(request, chave_id):
     return JsonResponse({"ok": True})
 
 
+@api_requer_plataforma_ti
 def api_uso_api(request):
     """GET — consumo mensal de API por endpoint."""
     empresa = _empresa_gestao(request)
@@ -711,13 +752,289 @@ def api_uso_api(request):
     qs = UsoApiEmpresa.objects.filter(empresa=empresa, ano_mes=ano_mes).order_by("-chamadas")
 
     total = sum(u.chamadas for u in qs)
+    ultima_chamada = (
+        ApiKeyEmpresa.objects.filter(empresa=empresa, ultimo_uso_em__isnull=False)
+        .order_by("-ultimo_uso_em")
+        .values_list("ultimo_uso_em", flat=True)
+        .first()
+    )
+
+    uso = [
+        {"endpoint": u.endpoint, "chamadas": u.chamadas}
+        for u in qs
+    ]
     return JsonResponse({
         "ano_mes": ano_mes,
         "total_chamadas": total,
-        "por_endpoint": [
-            {"endpoint": u.endpoint, "chamadas": u.chamadas}
-            for u in qs
+        "por_endpoint": uso,
+        "uso": uso,
+        "ultima_chamada": ultima_chamada.isoformat() if ultima_chamada else None,
+    })
+
+
+# ── WEBHOOKS / SEGURANÇA / LOGS DA PLATAFORMA ────────────────────────────────
+
+@csrf_exempt
+@api_requer_plataforma_ti
+def api_plataforma_webhooks(request):
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+
+    if request.method == "GET":
+        agrupado = {}
+        for sub in SubscricaoEvento.objects.filter(empresa=empresa).order_by("-criado_em"):
+            item = agrupado.setdefault(sub.url_destino, {
+                "id": sub.id,
+                "url": sub.url_destino,
+                "eventos": [],
+                "ultimo_disparo": None,
+            })
+            if sub.tipo_evento_pattern not in item["eventos"]:
+                item["eventos"].append(sub.tipo_evento_pattern)
+        return JsonResponse({"webhooks": list(agrupado.values())})
+
+    if request.method == "POST":
+        dados = _parse_json(request) or {}
+        url = (dados.get("url") or "").strip()
+        eventos = [str(evento).strip() for evento in (dados.get("eventos") or []) if str(evento).strip()]
+        if not url:
+            return JsonResponse({"erro": "url obrigatoria"}, status=400)
+        if not eventos:
+            return JsonResponse({"erro": "selecione ao menos um evento"}, status=400)
+
+        existentes = set(
+            SubscricaoEvento.objects.filter(empresa=empresa, url_destino=url)
+            .values_list("tipo_evento_pattern", flat=True)
+        )
+        criados = 0
+        for evento in eventos:
+            if evento in existentes:
+                continue
+            SubscricaoEvento.objects.create(
+                empresa=empresa,
+                url_destino=url,
+                tipo_evento_pattern=evento,
+            )
+            criados += 1
+
+        return JsonResponse({"criado": True, "novos_eventos": criados}, status=201)
+
+    if request.method == "DELETE":
+        dados = _parse_json(request) or {}
+        webhook_id = dados.get("id")
+        webhook = SubscricaoEvento.objects.filter(empresa=empresa, id=webhook_id).first()
+        if not webhook:
+            return JsonResponse({"erro": "webhook nao encontrado"}, status=404)
+        SubscricaoEvento.objects.filter(
+            empresa=empresa,
+            url_destino=webhook.url_destino,
+        ).delete()
+        return JsonResponse({"removido": True})
+
+    return JsonResponse({"erro": "metodo nao permitido"}, status=405)
+
+
+def _auditoria_plataforma_ti(empresa):
+    from .models import ASOOcupacional, SolicitacaoExame, eSocialEventoSST
+
+    eventos = []
+
+    for dispositivo in DispositivoAutorizado.objects.filter(empresa=empresa).order_by("-ultimo_acesso")[:20]:
+        eventos.append({
+            "timestamp": timezone.localtime(dispositivo.ultimo_acesso),
+            "sistema": "plataforma",
+            "acao": "acessar",
+            "objeto": dispositivo.apelido or dispositivo.device_id,
+            "status": "ok" if dispositivo.ativo else "warn",
+            "ip": dispositivo.ip or "",
+            "detalhes": "Sessao rastreada por dispositivo autorizado.",
+        })
+
+    for integracao in IntegracaoRH.objects.filter(empresa=empresa).order_by("-atualizado_em")[:20]:
+        eventos.append({
+            "timestamp": timezone.localtime(integracao.atualizado_em),
+            "sistema": "integracao_rh",
+            "acao": "editar" if integracao.funcionarios_importados else "criar",
+            "objeto": integracao.nome or integracao.get_sistema_display(),
+            "status": "ok" if integracao.status == "ativo" else ("erro" if integracao.status == "erro" else "warn"),
+            "ip": "",
+            "detalhes": f"Status {integracao.status}. Funcionarios importados: {integracao.funcionarios_importados}.",
+        })
+
+    for chave in ApiKeyEmpresa.objects.filter(empresa=empresa).order_by("-criado_em")[:20]:
+        eventos.append({
+            "timestamp": timezone.localtime(chave.revogada_em or chave.criado_em),
+            "sistema": "api",
+            "acao": "excluir" if chave.revogada_em else "criar",
+            "objeto": chave.nome,
+            "status": "warn" if chave.revogada_em else "ok",
+            "ip": "",
+            "detalhes": "Chave revogada." if chave.revogada_em else "Chave criada para integracoes externas.",
+        })
+
+    for webhook in SubscricaoEvento.objects.filter(empresa=empresa).order_by("-criado_em")[:20]:
+        eventos.append({
+            "timestamp": timezone.localtime(webhook.criado_em),
+            "sistema": "plataforma",
+            "acao": "criar",
+            "objeto": webhook.url_destino,
+            "status": "ok" if webhook.ativo else "warn",
+            "ip": "",
+            "detalhes": f"Webhook inscrito para {webhook.tipo_evento_pattern}.",
+        })
+
+    for aso in ASOOcupacional.objects.filter(empresa=empresa).select_related("funcionario").order_by("-criado_em")[:20]:
+        eventos.append({
+            "timestamp": timezone.localtime(aso.criado_em),
+            "sistema": "sst",
+            "acao": "criar",
+            "objeto": aso.funcionario.nome,
+            "status": "ok",
+            "ip": "",
+            "detalhes": f"ASO {aso.get_tipo_display()} emitido com resultado {aso.get_resultado_display()}.",
+        })
+
+    for solicitacao in SolicitacaoExame.objects.filter(empresa=empresa).select_related("funcionario").order_by("-data_solicitacao")[:20]:
+        eventos.append({
+            "timestamp": timezone.localtime(solicitacao.data_solicitacao),
+            "sistema": "sst",
+            "acao": "criar" if solicitacao.status == "pendente" else "editar",
+            "objeto": solicitacao.funcionario.nome,
+            "status": "ok" if solicitacao.status in {"agendado", "realizado"} else ("warn" if solicitacao.status == "pendente" else "erro"),
+            "ip": "",
+            "detalhes": f"Solicitacao {solicitacao.get_tipo_aso_display()} para {solicitacao.clinica_nome_externo or getattr(solicitacao.clinica, 'nome', 'clinica interna')} — status {solicitacao.status}.",
+        })
+
+    for evento in eSocialEventoSST.objects.filter(empresa=empresa).order_by("-criado_em")[:20]:
+        eventos.append({
+            "timestamp": timezone.localtime(evento.criado_em),
+            "sistema": "esocial",
+            "acao": "editar" if evento.status in {"erro", "pendente"} else "exportar",
+            "objeto": evento.tipo_evento,
+            "status": "ok" if evento.status == "transmitido" else ("erro" if evento.status == "erro" else "warn"),
+            "ip": "",
+            "detalhes": evento.mensagem_erro or evento.referencia or f"Evento {evento.tipo_evento} com status {evento.status}.",
+        })
+
+    eventos.sort(key=lambda item: item["timestamp"], reverse=True)
+    return eventos
+
+
+@api_requer_plataforma_ti
+def api_plataforma_seguranca(request):
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+
+    dispositivos = list(
+        DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True).order_by("-ultimo_acesso")[:20]
+    )
+    integracoes = list(IntegracaoRH.objects.filter(empresa=empresa))
+    chaves = list(ApiKeyEmpresa.objects.filter(empresa=empresa))
+    checklist = [
+        {
+            "item": "Acesso da Plataforma TI isolado por credenciais próprias",
+            "ok": not acesso_plataforma_ti_em_bootstrap(request),
+        },
+        {
+            "item": "Sessões rastreadas por dispositivo autorizado",
+            "ok": bool(dispositivos),
+        },
+        {
+            "item": "Integrações RH protegidas por segredo de webhook",
+            "ok": all(bool(item.webhook_secret) for item in integracoes) if integracoes else False,
+        },
+        {
+            "item": "Chaves de API sob governança e revogação centralizada",
+            "ok": bool(chaves) and all(item.ativa or item.revogada_em for item in chaves),
+        },
+    ]
+
+    auditoria = []
+    for item in _auditoria_plataforma_ti(empresa)[:8]:
+        auditoria.append({
+            "timestamp": item["timestamp"].strftime("%d/%m/%Y %H:%M"),
+            "acao": item["acao"],
+            "sistema": item["sistema"],
+            "status": item["status"],
+            "detalhes": item["detalhes"],
+        })
+
+    return JsonResponse({
+        "lgpd_checklist": checklist,
+        "2fa_ativo": False,
+        "sessoes_ativas": [
+            {
+                "id": item.device_id,
+                "dispositivo": item.apelido or item.device_id,
+                "ip": item.ip,
+                "ultimo_acesso": timezone.localtime(item.ultimo_acesso).strftime("%d/%m/%Y %H:%M"),
+            }
+            for item in dispositivos
         ],
+        "auditoria": auditoria,
+    })
+
+
+@api_requer_plataforma_ti
+def api_plataforma_logs(request):
+    empresa = _empresa_gestao(request)
+    if not empresa:
+        return JsonResponse({"erro": "nao autenticado"}, status=401)
+
+    logs = _auditoria_plataforma_ti(empresa)
+
+    sistema = (request.GET.get("sistema") or "").strip().lower()
+    acao = (request.GET.get("acao") or "").strip().lower()
+    data_inicio = (request.GET.get("data_inicio") or "").strip()
+    data_fim = (request.GET.get("data_fim") or "").strip()
+
+    if sistema:
+        logs = [item for item in logs if item["sistema"] == sistema]
+    if acao:
+        logs = [item for item in logs if item["acao"] == acao]
+
+    if data_inicio:
+        try:
+            from datetime import datetime as _dt
+            ini = _dt.fromisoformat(data_inicio).date()
+            logs = [item for item in logs if item["timestamp"].date() >= ini]
+        except ValueError:
+            pass
+    if data_fim:
+        try:
+            from datetime import datetime as _dt
+            fim = _dt.fromisoformat(data_fim).date()
+            logs = [item for item in logs if item["timestamp"].date() <= fim]
+        except ValueError:
+            pass
+
+    total = len(logs)
+    try:
+        pagina = max(int(request.GET.get("pagina", 1)), 1)
+    except (TypeError, ValueError):
+        pagina = 1
+    por_pagina = 20
+    inicio = (pagina - 1) * por_pagina
+    fatia = logs[inicio:inicio + por_pagina]
+
+    return JsonResponse({
+        "logs": [
+            {
+                "timestamp": item["timestamp"].strftime("%d/%m/%Y %H:%M"),
+                "sistema": item["sistema"],
+                "acao": item["acao"],
+                "objeto": item["objeto"],
+                "status": item["status"],
+                "ip": item["ip"],
+                "detalhes": item["detalhes"],
+            }
+            for item in fatia
+        ],
+        "total": total,
+        "pagina": pagina,
+        "por_pagina": por_pagina,
     })
 
 

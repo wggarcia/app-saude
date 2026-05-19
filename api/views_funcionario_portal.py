@@ -15,8 +15,9 @@ from django.utils import timezone
 
 from .models import (
     FuncionarioSST, ASOOcupacional, TreinamentoNR, EntregaEPI,
-    CredencialAppFuncionario, NotificacaoFuncionario,
+    CredencialAppFuncionario, NotificacaoFuncionario, SolicitacaoExame,
 )
+from .services.employee_notifications import solicitacao_portal_dict
 
 
 # ── helpers ────────────────────────────────────────────────────────────────
@@ -280,22 +281,22 @@ def funcionario_meus_treinamentos(request):
         return JsonResponse({"erro": "não autenticado"}, status=401)
 
     treinamentos = TreinamentoNR.objects.filter(
-        funcionarios=func, empresa=func.empresa
-    ).order_by("-data_realizacao")
+        funcionario=func, empresa=func.empresa
+    ).order_by("-data_realizacao", "-criado_em")
 
     hoje = timezone.now().date()
 
     def t_dict(t):
-        vencido = t.data_vencimento and t.data_vencimento < hoje
+        vencido = bool(t.data_validade and t.data_validade < hoje)
         return {
             "id": t.id,
             "nr": t.nr,
             "titulo": t.titulo,
             "carga_horaria": t.carga_horaria,
             "data_realizacao": str(t.data_realizacao) if t.data_realizacao else None,
-            "data_vencimento": str(t.data_vencimento) if t.data_vencimento else None,
+            "data_validade": str(t.data_validade) if t.data_validade else None,
+            "data_vencimento": str(t.data_validade) if t.data_validade else None,
             "instrutor": t.instrutor,
-            "local": t.local,
             "status": t.status,
             "vencido": vencido,
         }
@@ -321,7 +322,7 @@ def funcionario_meus_epis(request):
             return {
                 "id": e.id,
                 "epi_nome": e.epi.nome if e.epi else "—",
-                "ca": e.epi.ca if e.epi else "",
+                "ca": e.epi.ca_numero if e.epi else "",
                 "quantidade": e.quantidade,
                 "data_entrega": str(e.data_entrega),
                 "data_devolucao": str(e.data_devolucao) if e.data_devolucao else None,
@@ -330,6 +331,24 @@ def funcionario_meus_epis(request):
         return JsonResponse({"epis": [e_dict(e) for e in entregas]})
     except Exception:
         return JsonResponse({"epis": []})
+
+
+def funcionario_minhas_solicitacoes(request):
+    if request.method != "GET":
+        return JsonResponse({"erro": "Use GET"}, status=405)
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+
+    solicitacoes = (
+        SolicitacaoExame.objects
+        .filter(funcionario=func, empresa=func.empresa)
+        .select_related("clinica")
+        .order_by("-data_solicitacao")[:30]
+    )
+    return JsonResponse({
+        "solicitacoes": [solicitacao_portal_dict(item) for item in solicitacoes]
+    })
 
 
 # ── dashboard resumo ───────────────────────────────────────────────────────
@@ -361,12 +380,24 @@ def funcionario_dashboard(request):
 
     # Treinamentos vencidos
     treinamentos_total = TreinamentoNR.objects.filter(
-        funcionarios=func, empresa=func.empresa
+        funcionario=func, empresa=func.empresa
     ).count()
     treinamentos_vencidos = TreinamentoNR.objects.filter(
-        funcionarios=func, empresa=func.empresa,
-        data_vencimento__lt=hoje,
+        funcionario=func,
+        empresa=func.empresa,
+        data_validade__lt=hoje,
     ).count()
+    solicitacoes_ativas = SolicitacaoExame.objects.filter(
+        funcionario=func,
+        empresa=func.empresa,
+        status__in=["pendente", "agendado"],
+    )
+    proxima_solicitacao = (
+        solicitacoes_ativas
+        .exclude(data_agendamento__isnull=True)
+        .order_by("data_agendamento")
+        .first()
+    )
 
     return JsonResponse({
         "nome": func.nome,
@@ -379,4 +410,6 @@ def funcionario_dashboard(request):
         "treinamentos_total": treinamentos_total,
         "treinamentos_vencidos": treinamentos_vencidos,
         "treinamentos_ok": treinamentos_total - treinamentos_vencidos,
+        "solicitacoes_ativas": solicitacoes_ativas.count(),
+        "proximo_agendamento_exame": proxima_solicitacao.data_agendamento.isoformat() if proxima_solicitacao and proxima_solicitacao.data_agendamento else None,
     })

@@ -240,6 +240,9 @@ from api.views_gestao import (
     api_chaves,
     api_chave_revogar,
     api_uso_api,
+    api_plataforma_webhooks,
+    api_plataforma_seguranca,
+    api_plataforma_logs,
     api_benchmark,
     api_dados_empresa,
 )
@@ -410,7 +413,7 @@ from api.views_platform import platform_status, sla_page, status_page
 from api.views_funcionario_portal import (
     funcionario_login, funcionario_registrar, funcionario_dashboard,
     funcionario_meu_perfil, funcionario_meus_asos,
-    funcionario_meus_treinamentos, funcionario_meus_epis,
+    funcionario_meus_treinamentos, funcionario_meus_epis, funcionario_minhas_solicitacoes,
     funcionario_notificacoes, funcionario_notificacao_lida,
 )
 from api.views_assinatura_sst import (
@@ -1135,6 +1138,7 @@ urlpatterns = [
     path('api/funcionario/meus-asos', funcionario_meus_asos),
     path('api/funcionario/meus-treinamentos', funcionario_meus_treinamentos),
     path('api/funcionario/meus-epis', funcionario_meus_epis),
+    path('api/funcionario/minhas-solicitacoes', funcionario_minhas_solicitacoes),
 
     # ── Trial / Self-service Onboarding ──────────────────────────────────────
     path('api/gestao/trial', api_trial_status),
@@ -1152,6 +1156,9 @@ urlpatterns = [
     path('api/gestao/chaves/', api_chaves),
     path('api/gestao/chaves/<int:chave_id>/revogar', api_chave_revogar),
     path('api/gestao/uso-api', api_uso_api),
+    path('api/gestao/plataforma/webhooks/', api_plataforma_webhooks),
+    path('api/gestao/plataforma/seguranca/', api_plataforma_seguranca),
+    path('api/gestao/plataforma/logs/', api_plataforma_logs),
 
     # ── Benchmark setorial ────────────────────────────────────────────────────
     path('api/gestao/benchmark', api_benchmark),

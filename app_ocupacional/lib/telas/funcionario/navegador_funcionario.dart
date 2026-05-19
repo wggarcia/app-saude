@@ -5,6 +5,7 @@ import '../../servicos/funcionario_sst_service.dart';
 import 'tela_dashboard_funcionario.dart';
 import 'tela_meu_perfil.dart';
 import 'tela_meus_asos.dart';
+import 'tela_minhas_solicitacoes.dart';
 import 'tela_meus_treinamentos.dart';
 import 'tela_notificacoes.dart';
 import 'tela_login_funcionario.dart';
@@ -61,6 +62,7 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
         empresaNome: widget.empresaNome,
       ),
       const TelaMeusAsos(),
+      const TelaMinhasSolicitacoes(),
       const TelaMeusTreinamentos(),
       TelaNotificacoes(onLidas: _onNotificacoesLidas),
       const TelaMeuPerfil(),
@@ -82,7 +84,7 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
         selectedIndex: _idx,
         onDestinationSelected: (v) {
           setState(() => _idx = v);
-          if (v == 3) _carregarNotificacoes();
+          if (v == 4) _carregarNotificacoes();
         },
         destinations: [
           const NavigationDestination(
@@ -92,6 +94,10 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
           const NavigationDestination(
             icon: Icon(Icons.assignment_outlined),
             label: 'ASO',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.medical_services_outlined),
+            label: 'Solicitações',
           ),
           const NavigationDestination(
             icon: Icon(Icons.school_outlined),

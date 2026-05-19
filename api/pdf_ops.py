@@ -421,7 +421,7 @@ def gerar_pdf_conformidade_sst(empresa, resumo, funcionarios):
     story.append(Paragraph(
         f"<font color='#7a9bb5' size='8'>Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')} · "
         f"Critérios: ASO vigente, exames em dia, EPI entregue, treinamento NR válido.</font>",
-        s["normal"]
+        s["body"]
     ))
 
     doc.build(story)

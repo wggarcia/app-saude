@@ -49,7 +49,9 @@ class _TelaNotificacoesState extends State<TelaNotificacoes> {
       await FuncionarioSstService.marcarLida(item['id'] as int);
     }
     setState(() {
-      for (var item in _items) item['lida'] = true;
+      for (final item in _items) {
+        item['lida'] = true;
+      }
     });
     widget.onLidas?.call();
   }
