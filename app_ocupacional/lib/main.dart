@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'telas/empresa/tela_login_empresa.dart';
 import 'telas/funcionario/tela_login_funcionario.dart';
 
+/// Chave global do navigator — usada para redirecionar ao login
+/// quando o token expirar sem depender de BuildContext.
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
 void main() {
   runApp(const SolusCrtOcupacionalApp());
 }
@@ -47,6 +51,7 @@ class SolusCrtOcupacionalApp extends StatelessWidget {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
+      navigatorKey: appNavigatorKey,
       home: const TelaEntradaOcupacional(),
       routes: {
         '/empresa': (_) => const TelaLoginEmpresa(),

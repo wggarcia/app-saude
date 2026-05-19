@@ -1,8 +1,11 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
+import '../main.dart' show appNavigatorKey;
+import '../telas/funcionario/tela_login_funcionario.dart';
 import 'funcionario_auth_service.dart';
 
 class FuncionarioSstService {
@@ -22,6 +25,11 @@ class FuncionarioSstService {
     );
     if (response.statusCode == 401) {
       await FuncionarioAuthService.logout();
+      // Redireciona automaticamente para login sem depender de BuildContext
+      appNavigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const TelaLoginFuncionario()),
+        (_) => false,
+      );
       throw Exception('Sessão expirada. Faça login novamente.');
     }
     if (response.statusCode != 200) {
