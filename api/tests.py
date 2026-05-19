@@ -1407,7 +1407,7 @@ class AuthDeviceTests(TestCase):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "IA epidemiologica para antecipar surtos")
+        self.assertContains(response, "saude ocupacional com IA que antecipa surtos")
         self.assertNotContains(response, "sistema nervoso")
         self.assertNotContains(response, "empresa.soluscrt.com.br")
         self.assertNotContains(response, "governo.soluscrt.com.br")
@@ -1432,7 +1432,7 @@ class AuthDeviceTests(TestCase):
             ("/privacidade/", "Politica de Privacidade"),
             ("/termos/", "Termos de Uso"),
             ("/seguranca-lgpd/", "Seguranca, LGPD e Governanca"),
-            ("/metodologia/", "Metodologia Epidemiologica"),
+            ("/metodologia/", "Como o SolusCRT separa sinal precoce"),
             ("/suporte/", "Suporte e Atendimento"),
         ]:
             response = Client(HTTP_HOST="soluscrt.com.br").get(rota)
@@ -1443,7 +1443,7 @@ class AuthDeviceTests(TestCase):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/apresentacao/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Saude populacional precisa de radar")
+        self.assertContains(response, "Gestao de saude completa")
         self.assertContains(response, "Google Play")
         self.assertContains(response, "Valores que fazem a tecnologia merecer confianca")
         self.assertNotContains(response, "Slide 01")
