@@ -703,25 +703,48 @@ def api_esocial_certificado(request):
         cfg = ConfiguracaoSST.objects.create(empresa=e)
 
     if request.method == "GET":
+        from datetime import date, timedelta
+        validade = cfg.certificado_validade
+        validade_ok = bool(validade and validade > date.today() + timedelta(days=30))
         return JsonResponse({
-            "configurado": bool(cfg.certificado_pfx_b64),
-            "nome": cfg.certificado_nome,
-            "validade": cfg.certificado_validade.isoformat() if cfg.certificado_validade else None,
-            "ambiente": cfg.esocial_ambiente,
+            "certificado_presente": bool(cfg.certificado_pfx_b64),
+            "certificado_nome": cfg.certificado_nome,
+            "certificado_validade": validade.strftime("%d/%m/%Y") if validade else None,
+            "esocial_ambiente": cfg.esocial_ambiente or "homologacao",
+            "validade_ok": validade_ok,
         })
 
     if request.method == "POST":
-        import base64
-        arquivo = request.FILES.get("certificado")
-        senha = request.POST.get("senha", "")
-        ambiente = request.POST.get("ambiente", "homologacao")
+        import base64 as b64lib
+        import json as jsonlib
 
-        if not arquivo:
-            return JsonResponse({"erro": "Envie o arquivo .pfx"}, status=400)
+        # Aceita JSON (base64) enviado pelo template
+        content_type = request.content_type or ""
+        if "application/json" in content_type:
+            try:
+                data = jsonlib.loads(request.body)
+            except Exception:
+                return JsonResponse({"erro": "JSON inválido"}, status=400)
+            pfx_b64_str = data.get("certificado_pfx_b64", "").strip()
+            senha = data.get("certificado_senha", "")
+            ambiente = data.get("esocial_ambiente", "homologacao")
+            if not pfx_b64_str:
+                return JsonResponse({"erro": "Certificado não enviado"}, status=400)
+            try:
+                pfx_bytes = b64lib.b64decode(pfx_b64_str)
+            except Exception:
+                return JsonResponse({"erro": "Base64 inválido"}, status=400)
+        else:
+            # Aceita multipart (upload direto de arquivo)
+            arquivo = request.FILES.get("certificado")
+            senha = request.POST.get("senha", "")
+            ambiente = request.POST.get("ambiente", "homologacao")
+            if not arquivo:
+                return JsonResponse({"erro": "Envie o arquivo .pfx"}, status=400)
+            pfx_bytes = arquivo.read()
+            pfx_b64_str = b64lib.b64encode(pfx_bytes).decode()
 
-        pfx_bytes = arquivo.read()
-
-        # Validate certificate
+        # Valida o certificado PKCS#12
         try:
             from cryptography.hazmat.primitives.serialization import pkcs12
             from cryptography.hazmat.backends import default_backend
@@ -729,12 +752,15 @@ def api_esocial_certificado(request):
             private_key, cert, _ = pkcs12.load_key_and_certificates(
                 pfx_bytes, senha_bytes, backend=default_backend()
             )
-            validade = cert.not_valid_after_utc.date() if hasattr(cert, "not_valid_after_utc") else cert.not_valid_after.date()
+            if hasattr(cert, "not_valid_after_utc"):
+                validade = cert.not_valid_after_utc.date()
+            else:
+                validade = cert.not_valid_after.date()
             nome_cert = cert.subject.rfc4514_string()
         except Exception as ex:
-            return JsonResponse({"erro": f"Certificado inválido: {ex}"}, status=400)
+            return JsonResponse({"erro": f"Certificado inválido ou senha incorreta: {ex}"}, status=400)
 
-        cfg.certificado_pfx_b64 = base64.b64encode(pfx_bytes).decode()
+        cfg.certificado_pfx_b64 = pfx_b64_str
         cfg.certificado_senha = senha
         cfg.certificado_validade = validade
         cfg.certificado_nome = nome_cert[:200]
@@ -746,7 +772,7 @@ def api_esocial_certificado(request):
 
         return JsonResponse({
             "ok": True,
-            "nome": nome_cert[:200],
-            "validade": validade.isoformat(),
-            "ambiente": ambiente,
+            "certificado_nome": nome_cert[:200],
+            "certificado_validade": validade.strftime("%d/%m/%Y"),
+            "esocial_ambiente": ambiente,
         })
