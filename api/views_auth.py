@@ -3,7 +3,9 @@ import json
 import os
 from django.http import JsonResponse
 from django.contrib.auth.hashers import check_password, make_password
-from .models import Empresa, EmpresaUsuario, DonoSaaS
+from .models import Empresa, EmpresaUsuario, DonoSaaS, TrialEmpresa
+from django.utils import timezone
+from datetime import timedelta
 from django.shortcuts import redirect
 from .planos import pacote_padrao, detalhes_pacote, normalizar_codigo_pacote
 from .services.auth_session import (
@@ -174,7 +176,7 @@ def registrar_empresa(request):
         pacote_solicitado = pacote_padrao()
         pacote_info = PACOTES_SAAS[pacote_padrao()]
 
-    # 🔐 salva empresa
+    # 🔐 salva empresa — já ativa com trial de 15 dias
     empresa = Empresa.objects.create(
         nome=nome,
         email=email,
@@ -182,6 +184,13 @@ def registrar_empresa(request):
         pacote_codigo=pacote_solicitado,
         max_dispositivos=pacote_info["dispositivos"],
         max_usuarios=pacote_info["usuarios"],
+        ativo=True,
+    )
+
+    # 🎁 cria trial de 15 dias automaticamente
+    TrialEmpresa.objects.create(
+        empresa=empresa,
+        expira_em=timezone.now() + timedelta(days=15),
     )
 
     pacote = detalhes_pacote(empresa.pacote_codigo)
@@ -289,6 +298,54 @@ def logout_governo(request):
 
 def logout_operacao(request):
     return _logout(request, redirect_to="/operacao-central/")
+
+
+@csrf_exempt
+def ativar_trial(request):
+    """Ativa um trial de 15 dias para a empresa autenticada (ou por empresa_id no body).
+    Seguro: só aceita se a empresa ainda não teve trial e está autenticada.
+    """
+    if request.method != "POST":
+        return JsonResponse({"erro": "Use POST"}, status=405)
+
+    # Resolve empresa — prefere cookie/middleware, cai no body como fallback
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        try:
+            dados = json.loads(request.body)
+            empresa_id = dados.get("empresa_id")
+            if empresa_id:
+                empresa = Empresa.objects.filter(id=empresa_id).first()
+        except Exception:
+            pass
+
+    if not empresa:
+        return JsonResponse({"status": "erro", "mensagem": "Empresa não encontrada"}, status=404)
+
+    if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
+        return JsonResponse({"status": "erro", "mensagem": "Governo não usa trial"}, status=403)
+
+    # Verifica se já tem trial ativo
+    trial = getattr(empresa, "trial", None)
+    if trial:
+        if not trial.convertido and trial.expira_em > timezone.now():
+            # Trial ainda válido — ativa a empresa e redireciona
+            if not empresa.ativo:
+                empresa.ativo = True
+                empresa.save(update_fields=["ativo"])
+            return JsonResponse({"status": "ja_ativo", "dias_restantes": trial.dias_restantes()})
+        else:
+            return JsonResponse({"status": "erro", "mensagem": "Período de avaliação já utilizado. Contrate um plano para continuar."}, status=403)
+
+    # Cria trial + ativa a empresa
+    TrialEmpresa.objects.create(
+        empresa=empresa,
+        expira_em=timezone.now() + timedelta(days=15),
+    )
+    empresa.ativo = True
+    empresa.save(update_fields=["ativo"])
+
+    return JsonResponse({"status": "ok", "dias_restantes": 15})
 
 
 def _logout(request, redirect_to="/"):

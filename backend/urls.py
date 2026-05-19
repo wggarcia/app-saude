@@ -26,7 +26,7 @@ from api.views import (
     site_principal, apresentacao_comercial, documento_publico
 )
 
-from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba
+from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba, ativar_trial
 from api.views_enterprise import api_enterprise_command_center, api_enterprise_premium_suite, api_enterprise_seed_operational_demo
 from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_onboarding_acao, api_dono_exportar, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page, governo_plataforma_page, rede_gestao_page, plano_saude_gestao_page
 from api.views_corporativo import (
@@ -463,6 +463,7 @@ urlpatterns = [
     path('api/login-empresa-api', login_portal_empresa),  # alias for mobile app
     path('api/login-governo', login_portal_governo),
     path('api/sessao/aba', ativar_sessao_aba),
+    path('api/trial/ativar', ativar_trial),
     path('api/operacao-central/login', login_dono_saas),
     path('logout/', logout_empresa),
     path('sair/', logout_empresa),          # alias amigável

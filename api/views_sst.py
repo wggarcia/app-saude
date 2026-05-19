@@ -877,7 +877,25 @@ def sst_home_redirect(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return _sst_redirect(request)
-    return render(request, "sst_hub.html", {"empresa_nome": empresa.nome})
+
+    # info de trial para banner no dashboard
+    trial_dias = None
+    trial_ativo = False
+    try:
+        trial = empresa.trial
+        if trial and not trial.convertido:
+            from django.utils import timezone
+            if trial.expira_em > timezone.now():
+                trial_ativo = True
+                trial_dias = trial.dias_restantes()
+    except Exception:
+        pass
+
+    return render(request, "sst_hub.html", {
+        "empresa_nome": empresa.nome,
+        "trial_ativo": trial_ativo,
+        "trial_dias": trial_dias,
+    })
 
 
 def sst_configuracoes_redirect(request):

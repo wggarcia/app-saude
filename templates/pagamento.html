@@ -92,6 +92,14 @@
 
       <button class="btn" onclick="pagar()">Ativar assinatura empresarial</button>
       <div class="muted" style="margin-top:14px;">Contratações governamentais são feitas somente por proposta e contrato anual fechado.</div>
+
+      <div style="margin-top:22px;padding-top:18px;border-top:1px solid rgba(255,255,255,.07)">
+        <div class="muted" style="font-size:.82rem;margin-bottom:10px;">Ainda não tem conta ou quer avaliar antes de contratar?</div>
+        <button class="btn" id="btn-trial" onclick="ativarTrial()" style="background:rgba(90,240,211,.12);color:#5af0d3;border:1px solid rgba(90,240,211,.22);">
+          🎁 Testar 15 dias grátis
+        </button>
+        <div class="muted" style="font-size:.74rem;margin-top:8px;">Sem cartão de crédito. Acesso completo por 15 dias.</div>
+      </div>
     </section>
   </main>
 
@@ -165,6 +173,38 @@
     }
 
     atualizarPreco();
+
+    async function ativarTrial() {
+      const empresaId = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id");
+      if (!empresaId || empresaId === "null" || empresaId === "undefined") {
+        alert("Entre com sua conta empresarial para ativar o trial.");
+        window.location.href = "/login-empresa/";
+        return;
+      }
+      const btn = document.getElementById("btn-trial");
+      btn.disabled = true;
+      btn.innerText = "Ativando…";
+      try {
+        const res = await fetch("/api/trial/ativar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ empresa_id: parseInt(empresaId) })
+        });
+        const data = await res.json();
+        if (data.status === "ok" || data.status === "ja_ativo") {
+          window.location.href = "/sst/";
+        } else {
+          alert(data.mensagem || "Não foi possível ativar o trial.");
+          btn.disabled = false;
+          btn.innerText = "🎁 Testar 15 dias grátis";
+        }
+      } catch (e) {
+        alert("Erro ao conectar com o servidor.");
+        btn.disabled = false;
+        btn.innerText = "🎁 Testar 15 dias grátis";
+      }
+    }
   </script>
 </body>
 </html>

@@ -108,6 +108,11 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
 .empty{padding:18px;border-radius:14px;background:rgba(255,255,255,.03);color:var(--muted);font-size:.75rem;line-height:1.6}
 .skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.09) 50%,rgba(255,255,255,.04) 75%);background-size:200%;animation:shimmer 1.8s infinite;border-radius:10px}
 @keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+.trial-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 18px;border-radius:14px;background:linear-gradient(90deg,rgba(240,191,107,.08),rgba(90,240,211,.06));border:1px solid rgba(240,191,107,.28);margin-bottom:18px;flex-wrap:wrap}
+.trial-badge{display:inline-flex;align-items:center;gap:7px;font-size:.78rem;font-weight:800;color:var(--amber)}
+.trial-text{font-size:.8rem;color:var(--muted);line-height:1.5;flex:1;min-width:200px}
+.trial-cta{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:9px;background:rgba(240,191,107,.14);border:1px solid rgba(240,191,107,.28);color:var(--amber);font-size:.76rem;font-weight:800;text-decoration:none;white-space:nowrap;transition:all .15s}
+.trial-cta:hover{background:rgba(240,191,107,.22)}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
@@ -145,6 +150,13 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
   </aside>
 
   <main class="main">
+    {% if trial_ativo %}
+    <div class="trial-banner">
+      <span class="trial-badge">⏳ Trial gratuito</span>
+      <span class="trial-text">Você está no período de avaliação — <strong style="color:var(--amber)">{{ trial_dias }} dia{{ trial_dias|pluralize }} restante{{ trial_dias|pluralize }}</strong>. Contrate um pacote para continuar usando após o período.</span>
+      <a class="trial-cta" href="/pagamento/">Ver planos →</a>
+    </div>
+    {% endif %}
     <section class="hero">
       <article class="hero-card">
         <div class="eyebrow">Operação diária SST</div>

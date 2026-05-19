@@ -121,6 +121,14 @@ def _render_dashboard(request, variant):
             return redirect("/contrato-governo/")
         return redirect("/pagamento/")
 
+    # ⏰ verifica trial expirado — bloqueia e desativa a conta
+    if empresa.ativo and empresa.tipo_conta != Empresa.TIPO_GOVERNO:
+        trial = getattr(empresa, "trial", None)
+        if trial and not trial.convertido and trial.expira_em < timezone.now():
+            empresa.ativo = False
+            empresa.save(update_fields=["ativo"])
+            return redirect("/pagamento/")
+
     if empresa.tipo_conta == Empresa.TIPO_GOVERNO and variant != "governo":
         return redirect("/dashboard-governo/")
 
