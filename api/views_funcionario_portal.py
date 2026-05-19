@@ -413,4 +413,8 @@ def funcionario_dashboard(request):
         "treinamentos_ok": treinamentos_total - treinamentos_vencidos,
         "solicitacoes_ativas": solicitacoes_ativas.count(),
         "proximo_agendamento_exame": proxima_solicitacao.data_agendamento.isoformat() if proxima_solicitacao and proxima_solicitacao.data_agendamento else None,
+        # inclui contagem de notificações não lidas no dashboard
+        "notificacoes_nao_lidas": NotificacaoFuncionario.objects.filter(
+            funcionario=func, lida=False
+        ).count(),
     })
