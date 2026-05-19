@@ -22,6 +22,11 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .app{display:flex;min-height:100vh;padding-top:56px}
 /* ── Sidebar ── */
 .sidebar{width:220px;background:rgba(7,32,48,.95);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:10px 0;flex-shrink:0;position:fixed;top:56px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:9px 12px 3px}
+.sb-link{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:.75rem;font-weight:600;color:var(--muted);text-decoration:none;border-left:2px solid transparent;transition:all .12s}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--accent2);background:rgba(0,229,176,.07);border-left-color:var(--accent2)}
+.sb-icon{font-size:.88rem;flex-shrink:0;width:16px;text-align:center}
 /* ── Main ── */
 .main{flex:1;margin-left:220px;padding:24px 32px;overflow-x:hidden}
 .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px}

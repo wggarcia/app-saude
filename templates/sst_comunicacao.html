@@ -733,11 +733,14 @@ async function carregarFuncsModal(){
   if(_allFuncs.length){renderFuncsModal();return;}
   document.getElementById('r-func-list').innerHTML=`<div style="padding:12px;text-align:center;color:var(--muted);font-size:.74rem">Carregando...</div>`;
   try{
-    const r=await fetch('/api/comunicacao/colaboradores/');
+    // Usa FuncionarioSST reais (IDs corretos para participantes da reunião)
+    const r=await fetch('/api/sst/funcionarios?limit=500');
     const d=await r.json();
-    _allFuncs=(d.colaboradores||[]).map(c=>({id:c.funcionario_id||c.id,nome:c.nome,cargo:c.cargo||''}));
+    _allFuncs=(d.funcionarios||[]).map(f=>({id:f.id,nome:f.nome,cargo:f.cargo||''}));
     renderFuncsModal();
-  }catch(e){}
+  }catch(e){
+    document.getElementById('r-func-list').innerHTML=`<div style="padding:12px;text-align:center;color:var(--red);font-size:.74rem">Erro ao carregar funcionários.</div>`;
+  }
 }
 
 function filtrarFuncionariosModal(){renderFuncsModal()}

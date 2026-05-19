@@ -147,14 +147,19 @@ def api_reunioes(request):
             ReuniaoSST.TIPO_FUNCIONARIOS, ReuniaoSST.TIPO_TODOS
         ):
             data_fmt = timezone.localtime(data_hora).strftime("%d/%m/%Y às %H:%M")
+            link_reuniao = reuniao.link_reuniao
             for func in alvo_funcs:
                 try:
                     NotificacaoFuncionario.objects.create(
                         funcionario=func,
                         empresa=empresa,
                         tipo="geral",
-                        titulo=f"Reunião agendada: {titulo}",
-                        mensagem=f"Você foi convocado para a reunião '{titulo}' em {data_fmt}. Acesse o link no app.",
+                        titulo=f"📹 Reunião agendada: {titulo}",
+                        mensagem=(
+                            f"Você foi convocado para a reunião '{titulo}' "
+                            f"em {data_fmt}.\n\n"
+                            f"🔗 Link para entrar: {link_reuniao}"
+                        ),
                         referencia_id=reuniao.id,
                     )
                 except Exception:
