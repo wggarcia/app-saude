@@ -519,40 +519,51 @@ async function iniciarVideoDireto(){
   try{
     const r=await fetch('/api/comunicacao/video/criar/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify({sala_id:_salaAtiva,titulo:'Chamada de vídeo'})});
     const d=await r.json();
-    if(r.ok&&d.sala_jitsi){entrarJitsi(d.sala_jitsi,'Chamada de vídeo',null);}
+    if(r.ok&&d.sala_jitsi){entrarJitsi(null,d.sala_jitsi,'Chamada de vídeo',null);}
     else alert(d.erro||'Erro ao iniciar vídeo.');
   }catch(e){alert('Erro ao iniciar vídeo.');}
 }
 
-function entrarJitsi(sala, titulo, linkExterno){
-  // Se tem link externo (Google Meet, Teams etc) — abre em nova aba pois não suportam iframe
-  if(linkExterno){
-    window.open(linkExterno,'_blank');
-    return;
-  }
-  // Jitsi: usa External API oficial (iframe simples é bloqueado pelo meet.jit.si)
+async function entrarJitsi(reuniaoId, sala, titulo, linkExterno){
+  // Se tem link externo (Google Meet, Teams etc) — abre em nova aba
+  if(linkExterno){window.open(linkExterno,'_blank');return;}
+
   document.getElementById('video-title').textContent=titulo;
-  document.getElementById('video-sub').textContent='🔴 Em andamento · '+sala;
+  document.getElementById('video-sub').textContent='⏳ Conectando...';
   clearInterval(_pollTimer);_salaAtiva=null;_reuniaoAtiva=null;
   showView('video');
-  // Destroi instância anterior se existir
-  if(_jitsiApi){try{_jitsiApi.dispose();}catch(e){}  _jitsiApi=null;}
+
+  // Busca JWT do backend (retorna token=null em dev mode → sem autenticação)
+  let domain='meet.jit.si', room=sala, token=null;
+  if(reuniaoId){
+    try{
+      const r=await fetch(`/api/sst/reunioes/${reuniaoId}/token/`);
+      const d=await r.json();
+      if(r.ok){domain=d.domain;room=d.room;token=d.token;}
+    }catch(e){}
+  }
+
+  document.getElementById('video-sub').textContent='🔴 Em andamento · '+room;
+
+  if(_jitsiApi){try{_jitsiApi.dispose();}catch(e){} _jitsiApi=null;}
   const container=document.getElementById('jitsi-container');
   container.innerHTML='';
   try{
-    _jitsiApi=new JitsiMeetExternalAPI('meet.jit.si',{
-      roomName:sala,
+    const opts={
+      roomName:room,
       width:'100%',
       height:'100%',
       parentNode:container,
       userInfo:{displayName:'{{ empresa_nome }}'},
       configOverwrite:{startWithAudioMuted:false,startWithVideoMuted:false,prejoinPageEnabled:false},
       interfaceConfigOverwrite:{SHOW_JITSI_WATERMARK:false,SHOW_WATERMARK_FOR_GUESTS:false,TOOLBAR_BUTTONS:['microphone','camera','hangup','chat','tileview','fullscreen','settings']},
-    });
+    };
+    // JWT só é adicionado quando JITSI_SECRET está configurado (produção)
+    if(token) opts.jwt=token;
+    _jitsiApi=new JitsiMeetExternalAPI(domain,opts);
     _jitsiApi.addEventListener('readyToClose',()=>encerrarVideo());
   }catch(err){
-    // Fallback: abre em nova aba se a API não carregar
-    window.open('https://meet.jit.si/'+sala,'_blank');
+    window.open(`https://${domain}/${room}`+(token?`?jwt=${token}`:''),'_blank');
     showView('empty');
   }
 }
@@ -600,7 +611,7 @@ function selecionarReuniao(id){
   if(r.status==='agendada'||r.status==='em_andamento'){
     const b=document.createElement('button');
     b.className='btn-action primary';b.innerHTML='▶ Entrar na reunião';
-    b.onclick=()=>entrarJitsi(r.sala_jitsi,r.titulo,r.link_externo||null);
+    b.onclick=()=>entrarJitsi(r.id,r.sala_jitsi,r.titulo,r.link_externo||null);
     acts.appendChild(b);
   }
   if(r.status==='agendada'){

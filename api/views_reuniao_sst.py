@@ -2,6 +2,9 @@
 Reuniões SST — API e páginas
 """
 import json
+import time
+import jwt as pyjwt
+from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -241,3 +244,67 @@ def api_funcionario_reunioes(request):
             })
 
     return JsonResponse({"reunioes": resultado})
+
+
+# ── JWT para Jitsi self-hosted ─────────────────────────────────────────────────
+
+def api_reuniao_token(request, reuniao_id):
+    """
+    Gera um JWT assinado para o usuário entrar na reunião via Jitsi self-hosted.
+    Se JITSI_SECRET não estiver configurado (dev), retorna token=None
+    e o frontend usa meet.jit.si sem autenticação.
+    """
+    empresa, redir = _autenticar(request)
+    if redir:
+        return JsonResponse({"erro": "não autorizado"}, status=401)
+
+    reuniao = ReuniaoSST.objects.filter(id=reuniao_id, empresa=empresa).first()
+    if not reuniao:
+        return JsonResponse({"erro": "Reunião não encontrada"}, status=404)
+
+    domain = settings.JITSI_DOMAIN
+    app_id = settings.JITSI_APP_ID
+    secret = settings.JITSI_SECRET
+    sala = reuniao.sala_jitsi
+
+    # Sem secret configurado → modo dev (meet.jit.si público, sem JWT)
+    if not secret:
+        return JsonResponse({
+            "token": None,
+            "domain": domain,
+            "room": sala,
+            "link": reuniao.link_reuniao,
+            "dev_mode": True,
+        })
+
+    agora = int(time.time())
+    payload = {
+        "iss": app_id,
+        "sub": domain,
+        "aud": "jitsi",
+        "iat": agora,
+        "exp": agora + 7200,  # válido por 2 horas
+        "room": sala,
+        "context": {
+            "user": {
+                "name": empresa.nome,
+                "email": "",
+                "avatar": "",
+                "moderator": True,
+            },
+            "features": {
+                "livestreaming": False,
+                "recording": False,
+            },
+        },
+    }
+
+    token = pyjwt.encode(payload, secret, algorithm="HS256")
+
+    return JsonResponse({
+        "token": token,
+        "domain": domain,
+        "room": sala,
+        "link": f"https://{domain}/{sala}?jwt={token}",
+        "dev_mode": False,
+    })
