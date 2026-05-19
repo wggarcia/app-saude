@@ -147,7 +147,7 @@ SITE_TRANSLATIONS = {
         },
         "cta": {
             "title": "Veja a apresentacao completa antes de falar com vendas.",
-            "lead": "A apresentacao mostra como Governo, Farmacia, Hospital e SST compram, operam e protegem dados de formas diferentes — e como o SolusCRT transforma isso em demonstracao forte, venda clara e assinatura ou contrato no formato certo.",
+            "lead": "A apresentacao mostra como Governo, Farmacia, Hospital e SST compram, operam e protegem dados de formas diferentes — e como o SolusCRT transforma isso em demonstracao forte, posicionamento claro e assinatura ou contrato no formato certo.",
         },
         "footer": "SolusCRT Saude. Inteligencia epidemiologica, sala de situacao para governo, gestao para farmacia e hospital, SST e app populacional.",
         "footer_links": {
@@ -271,7 +271,7 @@ SITE_TRANSLATIONS = {
         },
         "cta": {
             "title": "See the full presentation before talking to sales.",
-            "lead": "The presentation shows how Government, Pharmacy, Hospital and OSH buy, operate and protect data in different ways — and how SolusCRT turns that into a strong demo, clear sales motion and the right subscription or contract model.",
+            "lead": "The presentation shows how Government, Pharmacy, Hospital and OSH buy, operate and protect data in different ways — and how SolusCRT turns that into a strong demo, clear positioning and the right subscription or contract model.",
         },
         "footer": "SolusCRT Health. Epidemiological intelligence, government situation room, pharmacy and hospital management, OSH and population app.",
         "footer_links": {
@@ -395,7 +395,7 @@ SITE_TRANSLATIONS = {
         },
         "cta": {
             "title": "Vea la presentacion completa antes de hablar con ventas.",
-            "lead": "La presentacion muestra como Gobierno, Farmacia, Hospital y SST compran, operan y protegen datos de manera distinta — y como SolusCRT convierte eso en una demostracion fuerte, una venta clara y el modelo correcto de suscripcion o contrato.",
+            "lead": "La presentacion muestra como Gobierno, Farmacia, Hospital y SST compran, operan y protegen datos de manera distinta — y como SolusCRT convierte eso en una demostracion fuerte, un posicionamiento claro y el modelo correcto de suscripcion o contrato.",
         },
         "footer": "SolusCRT Salud. Inteligencia epidemiologica, sala de situacion para gobierno, gestion para farmacia y hospital, SST y app poblacional.",
         "footer_links": {
@@ -456,8 +456,8 @@ PRESENTATION_TRANSLATIONS = {
         },
         "differential": {
             "eyebrow": "Diferencial",
-            "title": "Nao e um unico produto empurrado para todos. E um ecossistema pronto para quatro jornadas de venda.",
-            "body": "O SolusCRT fala a lingua comercial de cada segmento: contrato institucional e governanca para governo; expansao por loja ou rede para farmacia; capacidade assistencial para hospital; assinatura recorrente, implantacao rapida e prova de valor para SST e clinicas ocupacionais.",
+            "title": "Nao e um unico produto empurrado para todos. E um ecossistema pronto para quatro frentes que colaboram entre si.",
+            "body": "O SolusCRT respeita a logica de cada segmento: contrato institucional e governanca para governo; expansao por loja ou rede para farmacia; capacidade assistencial para hospital; assinatura recorrente, implantacao rapida e prova de valor para SST e clinicas ocupacionais.",
             "quote": "Governo compra inteligencia territorial. Farmacia compra demanda futura. Hospital compra preparo assistencial. SST compra conformidade, app e engajamento.",
         },
         "governance": {
@@ -490,7 +490,7 @@ PRESENTATION_TRANSLATIONS = {
         "closing": {
             "eyebrow": "Fechamento",
             "title": "Um discurso forte para mercado. Um produto claro para assinatura e contrato.",
-            "body": "Na demonstracao, cada comprador enxerga seu proprio valor: governo com contrato institucional e sala de situacao; farmacia e hospital com expansao por unidade ou rede; SST com assinatura recorrente, trial de 15 dias e implantacao rapida. O SolusCRT cresce sem misturar operacao, privacidade ou argumento comercial.",
+            "body": "Na demonstracao, cada comprador enxerga seu proprio valor: governo com contrato institucional e sala de situacao; farmacia e hospital com expansao por unidade ou rede; SST com assinatura recorrente, trial de 15 dias e implantacao rapida. O SolusCRT cresce sem misturar operacao, privacidade ou proposito institucional.",
             "meeting": "Solicitar demonstracao comercial",
             "back": "Voltar ao site principal",
         },
@@ -541,8 +541,8 @@ PRESENTATION_TRANSLATIONS = {
         },
         "differential": {
             "eyebrow": "Differentiator",
-            "title": "This is not one product forced on everyone. It is an ecosystem ready for four sales journeys.",
-            "body": "SolusCRT speaks the commercial language of each segment: institutional contract and governance for government; expansion by store or network for pharmacy; care capacity for hospital; recurring subscription, fast implementation and proof of value for OSH and occupational clinics.",
+            "title": "This is not one product forced on everyone. It is an ecosystem built for four coordinated paths.",
+            "body": "SolusCRT respects the logic of each segment: institutional contract and governance for government; expansion by store or network for pharmacy; care capacity for hospital; recurring subscription, fast implementation and proof of value for OSH and occupational clinics.",
             "quote": "Government buys territorial intelligence. Pharmacy buys future demand. Hospital buys care readiness. OSH buys compliance, app and engagement.",
         },
         "governance": {
@@ -575,7 +575,7 @@ PRESENTATION_TRANSLATIONS = {
         "closing": {
             "eyebrow": "Closing",
             "title": "A strong market story. A clear product for subscription and contract.",
-            "body": "In the demo, each buyer sees their own value: government with institutional contract and situation room; pharmacy and hospital with expansion by unit or network; OSH with recurring subscription, 15-day trial and fast implementation. SolusCRT grows without mixing operations, privacy or commercial argument.",
+            "body": "In the demo, each buyer sees their own value: government with institutional contract and situation room; pharmacy and hospital with expansion by unit or network; OSH with recurring subscription, 15-day trial and fast implementation. SolusCRT grows without mixing operations, privacy or institutional purpose.",
             "meeting": "Request a sales demo",
             "back": "Back to main website",
         },
@@ -626,8 +626,8 @@ PRESENTATION_TRANSLATIONS = {
         },
         "differential": {
             "eyebrow": "Diferencial",
-            "title": "No es un unico producto empujado para todos. Es un ecosistema listo para cuatro recorridos de venta.",
-            "body": "SolusCRT habla el idioma comercial de cada segmento: contrato institucional y gobernanza para gobierno; expansion por tienda o red para farmacia; capacidad asistencial para hospital; suscripcion recurrente, implantacion rapida y prueba de valor para SST y clinicas ocupacionales.",
+            "title": "No es un unico producto empujado para todos. Es un ecosistema listo para cuatro frentes que colaboran entre si.",
+            "body": "SolusCRT respeta la logica de cada segmento: contrato institucional y gobernanza para gobierno; expansion por tienda o red para farmacia; capacidad asistencial para hospital; suscripcion recurrente, implantacion rapida y prueba de valor para SST y clinicas ocupacionales.",
             "quote": "Gobierno compra inteligencia territorial. Farmacia compra demanda futura. Hospital compra preparacion asistencial. SST compra conformidad, app y compromiso.",
         },
         "governance": {
@@ -660,7 +660,7 @@ PRESENTATION_TRANSLATIONS = {
         "closing": {
             "eyebrow": "Cierre",
             "title": "Un relato fuerte para mercado. Un producto claro para suscripcion y contrato.",
-            "body": "En la demostracion, cada comprador ve su propio valor: gobierno con contrato institucional y sala de situacion; farmacia y hospital con expansion por unidad o red; SST con suscripcion recurrente, prueba de 15 dias e implantacion rapida. SolusCRT crece sin mezclar operacion, privacidad ni argumento comercial.",
+            "body": "En la demostracion, cada comprador ve su propio valor: gobierno con contrato institucional y sala de situacion; farmacia y hospital con expansion por unidad o red; SST con suscripcion recurrente, prueba de 15 dias e implantacion rapida. SolusCRT crece sin mezclar operacion, privacidad ni proposito institucional.",
             "meeting": "Solicitar demostracion comercial",
             "back": "Volver al sitio principal",
         },
