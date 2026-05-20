@@ -400,11 +400,23 @@ async function salvarAgendamento() {
   const r = await fetch(url, {method, credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
   if (r.ok) {
     fecharModal();
+    _agendToast('Agendamento salvo com sucesso!', 'ok');
     await carregar();
   } else {
     const err = await r.json();
-    alert('Erro: ' + (err.erro || JSON.stringify(err)));
+    _agendToast('Erro: ' + (err.erro || 'Tente novamente'), 'err');
   }
+}
+
+function _agendToast(msg, tipo) {
+  const el = document.createElement('div');
+  el.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:${tipo==='err'?'#ff4d6d':'#00c9a7'};color:#041018;padding:10px 24px;
+    border-radius:99px;font-size:.82rem;font-weight:800;z-index:9999;
+    pointer-events:none;white-space:nowrap;max-width:90vw`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
 }
 
 async function excluirAg(id) {

@@ -520,8 +520,8 @@ async function iniciarVideoDireto(){
     const r=await fetch('/api/comunicacao/video/criar/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify({sala_id:_salaAtiva,titulo:'Chamada de vídeo'})});
     const d=await r.json();
     if(r.ok&&d.sala_jitsi){entrarJitsi(null,d.sala_jitsi,'Chamada de vídeo',null);}
-    else alert(d.erro||'Erro ao iniciar vídeo.');
-  }catch(e){alert('Erro ao iniciar vídeo.');}
+    else showToast(d.erro||'Erro ao iniciar vídeo.','err');
+  }catch(e){showToast('Sem conexão — tente novamente.','err');}
 }
 
 async function entrarJitsi(reuniaoId, sala, titulo, linkExterno){
@@ -704,8 +704,8 @@ async function criarSala(){
     const r=await fetch('/api/comunicacao/salas/criar/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify({alias_codigo:_colabSel})});
     const d=await r.json();
     if(r.ok&&d.sala){fecharModal('modal-chat');await carregarSalas();selecionarSala(d.sala.id);}
-    else alert(d.erro||'Erro ao criar conversa.');
-  }catch(e){alert('Erro.');}
+    else showToast(d.erro||'Erro ao criar conversa.','err');
+  }catch(e){showToast('Erro de conexão — tente novamente.','err');}
   btn.textContent='Iniciar Conversa';btn.disabled=false;
 }
 
@@ -791,12 +791,25 @@ async function salvarReuniao(){
   if(clinicaId)body.clinica_id=parseInt(clinicaId);
   try{
     const r=await fetch('/api/sst/reunioes/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!r.ok){const e=await r.json();alert(e.erro||'Erro ao agendar.');return;}
+    if(!r.ok){const e=await r.json();showToast(e.erro||'Erro ao agendar.','err');return;}
     fecharModal('modal-reuniao');
+    showToast('Reunião agendada com sucesso!','ok');
     await carregarReunioes();
     setSection('reunioes');
-  }catch(e){alert('Erro de conexão.');}
+  }catch(e){showToast('Erro de conexão — tente novamente.','err');}
   btn.disabled=false;btn.textContent='Agendar Reunião';
+}
+
+// ── Toast helper ─────────────────────────────────────────────────────────────
+function showToast(msg, tipo='ok'){
+  const el=document.createElement('div');
+  const cor=tipo==='err'?'#ff4d6d':tipo==='warn'?'#ffb347':'#00c9a7';
+  el.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${cor};
+    color:#041018;padding:10px 22px;border-radius:99px;font-size:.8rem;font-weight:800;
+    z-index:9999;pointer-events:none;animation:fadeInUp .2s ease;white-space:nowrap;max-width:90vw`;
+  el.textContent=msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),3500);
 }
 
 // close modals on backdrop

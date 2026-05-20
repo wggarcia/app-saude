@@ -2327,12 +2327,12 @@ async function confirmarPortabilidade() {
   });
   var d = await resp.json();
   if (d.ok) {
-    alert('Portabilidade realizada com sucesso!\n' + d.beneficiario + '\n' + d.plano_anterior + ' → ' + d.novo_plano);
+    showToastPS('✓ Portabilidade realizada: ' + (d.plano_anterior||'') + ' → ' + (d.novo_plano||''));
     document.getElementById('port-beneficiario').value = '';
     document.getElementById('port-plano-atual').textContent = '—';
     document.getElementById('port-novo-plano').value = '';
   } else {
-    alert(d.erro || 'Erro ao realizar portabilidade');
+    showToastPS(d.erro || 'Erro ao realizar portabilidade', 'err');
   }
 }
 
@@ -2347,6 +2347,18 @@ function getCsrfToken() {
   await carregarKpisTopo();
   await carregarVisaoGeral();
 })();
+
+function showToastPS(msg, tipo='ok') {
+  const el = document.createElement('div');
+  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'warn' ? '#ffb347' : '#00c9a7';
+  el.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:${cor};color:#041018;padding:10px 24px;border-radius:99px;font-size:.82rem;
+    font-weight:800;z-index:9999;pointer-events:none;white-space:nowrap;max-width:90vw;
+    box-shadow:0 4px 20px rgba(0,0,0,.4)`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
 </script>
 </body>
 </html>
