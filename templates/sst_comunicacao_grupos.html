@@ -204,6 +204,23 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
   </main>
 </div>
 
+<!-- Modal: Editar Grupo -->
+<div class="modal-bg" id="modal-editar-grupo">
+  <div class="modal">
+    <h3>Editar Grupo</h3>
+    <div class="modal-sub">Atualize o nome do grupo de difusão.</div>
+    <input type="hidden" id="edit-grupo-id">
+    <div class="mf">
+      <label>Nome do Grupo</label>
+      <input type="text" id="edit-g-nome" placeholder="Ex: Turno Manhã, Setor Produção...">
+    </div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal('modal-editar-grupo')">Cancelar</button>
+      <button class="btn-submit" onclick="salvarEdicaoGrupo()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Novo Grupo -->
 <div class="modal-bg" id="modal-grupo">
   <div class="modal">
@@ -507,7 +524,35 @@ function renderMembros(membros) {
 }
 
 function editarGrupo() {
-  showToast('Edição de grupo: em breve');
+  if (!grupoAtivo) return;
+  document.getElementById('edit-grupo-id').value = grupoAtivo.id;
+  document.getElementById('edit-g-nome').value = grupoAtivo.nome || '';
+  document.getElementById('modal-editar-grupo').classList.add('open');
+}
+
+async function salvarEdicaoGrupo() {
+  const id = document.getElementById('edit-grupo-id').value;
+  const nome = document.getElementById('edit-g-nome').value.trim();
+  if (!nome) { showToast('Informe o nome do grupo', true); return; }
+  try {
+    const r = await fetch(`/api/comunicacao/grupos/${id}/`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({nome})
+    });
+    if (!r.ok) throw new Error('Erro ' + r.status);
+    const data = await r.json();
+    // Update local state
+    grupoAtivo.nome = nome;
+    document.getElementById('chat-nome').textContent = nome;
+    const idx = grupos.findIndex(g => g.id == id);
+    if (idx >= 0) grupos[idx].nome = nome;
+    renderGrupos();
+    fecharModal('modal-editar-grupo');
+    showToast('Grupo atualizado com sucesso');
+  } catch(e) {
+    showToast('Erro ao salvar: ' + e.message, true);
+  }
 }
 
 // ── Load colaboradores ────────────────────────────────────────

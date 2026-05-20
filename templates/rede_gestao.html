@@ -3,587 +3,1466 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Gestão de Rede | SaúdeSaaS</title>
+<title>SolusCRT · Gestão de Rede</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#1a2332;min-height:100vh}
-.topbar{position:sticky;top:0;z-index:100;background:#0f2027;display:flex;align-items:center;gap:12px;padding:0 20px;height:56px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
-.topbar .brand{font-weight:700;font-size:1.05rem;color:#4fd1c5;letter-spacing:.5px}
-.topbar .page-title{color:#cbd5e0;font-size:.95rem;border-left:1px solid #2d3748;padding-left:12px}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
-.btn-back{background:#2d3748;color:#cbd5e0;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
-.btn-back:hover{background:#4a5568}
-.bell-wrap{position:relative;cursor:pointer}
-.bell-wrap svg{width:22px;height:22px;fill:none;stroke:#a0aec0;stroke-width:2}
-.bell-wrap .badge{position:absolute;top:-4px;right:-4px;background:#e53e3e;color:#fff;font-size:.65rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
-.container{max-width:1400px;margin:0 auto;padding:24px 20px}
-.net-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.net-header h1{font-size:1.4rem;font-weight:700;color:#1a2332}
-.net-header h1 span{color:#0bc5ea}
-.btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-size:.88rem;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
-.btn-primary{background:#0bc5ea;color:#fff}.btn-primary:hover{background:#00b5d8}
-.btn-success{background:#38a169;color:#fff}.btn-success:hover{background:#2f855a}
-.btn-warning{background:#d69e2e;color:#fff}.btn-warning:hover{background:#b7791f}
-.btn-danger{background:#e53e3e;color:#fff}.btn-danger:hover{background:#c53030}
-.btn-sm{padding:5px 12px;font-size:.8rem}
-.btn-ghost{background:transparent;border:1px solid #cbd5e0;color:#4a5568}.btn-ghost:hover{background:#edf2f7}
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
-.kpi{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.06);position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ac,#0bc5ea)}
-.kpi-label{font-size:.75rem;color:#718096;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.kpi-val{font-size:1.8rem;font-weight:800;color:#1a2332;margin:4px 0 2px}
-.kpi-sub{font-size:.75rem;color:#718096}
-.tabs{display:flex;gap:4px;background:#fff;border-radius:10px;padding:6px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:20px;flex-wrap:wrap}
-.tab{padding:8px 18px;border-radius:8px;cursor:pointer;font-size:.88rem;font-weight:600;color:#718096;transition:all .15s;border:none;background:transparent}
-.tab.active{background:#0bc5ea;color:#fff}
-.tab-pane{display:none}.tab-pane.active{display:block}
-.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden}
-.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e2e8f0}
-.card-header h3{font-size:1rem;font-weight:700}
-.card-body{padding:20px}
-table{width:100%;border-collapse:collapse;font-size:.875rem}
-th{text-align:left;padding:10px 12px;background:#f7fafc;font-weight:700;color:#4a5568;font-size:.8rem;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e2e8f0}
-td{padding:10px 12px;border-bottom:1px solid #f0f4f8;color:#2d3748}
-tr:hover td{background:#f7fafc}
-.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:.75rem;font-weight:700}
-.badge-green{background:#c6f6d5;color:#276749}.badge-yellow{background:#fefcbf;color:#744210}.badge-red{background:#fed7d7;color:#822727}.badge-blue{background:#bee3f8;color:#2a69ac}.badge-gray{background:#edf2f7;color:#4a5568}.badge-purple{background:#e9d8fd;color:#553c9a}
-.unit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-.unit-card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden;border-top:4px solid #0bc5ea}
-.unit-card.mine{border-top-color:#38a169}
-.unit-card-head{padding:16px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between}
-.unit-name{font-weight:700;font-size:1rem}
-.unit-code{font-size:.75rem;color:#718096;margin-top:2px}
-.unit-card-body{padding:16px}
-.unit-stat{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f4f8;font-size:.85rem}
-.unit-stat:last-child{border:none}
-.unit-stat-label{color:#718096}
+:root{
+  --bg:#041018;--panel:#071c28;--panel2:#0a2235;
+  --border:rgba(126,225,195,.12);--border2:rgba(126,225,195,.2);
+  --text:#e8f4f1;--muted:#7a9fa0;
+  --teal:#00c9a7;--blue:#1f6ff2;--amber:#f0bf6b;--red:#f87171;--purple:#a78bfa;
+  --green:#4ade80;
+}
+html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif}
+
+/* ── TOPBAR ─────────────────────────────────────────────────────────────── */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:56px;display:flex;align-items:center;background:var(--panel);border-bottom:1px solid var(--border);gap:0}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 20px;min-width:240px;border-right:1px solid var(--border);height:100%;flex-shrink:0}
+.tb-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));display:grid;place-items:center;font-weight:900;font-size:.82rem;color:#041018;flex-shrink:0}
+.tb-nome{font-size:.82rem;font-weight:800}.tb-sub{font-size:.62rem;color:var(--muted);margin-top:1px}
+.tb-net{padding:0 20px;flex:1;min-width:0}
+.tb-net-name{font-size:.84rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-net-sub{font-size:.62rem;color:var(--muted);margin-top:1px}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 16px;flex-shrink:0}
+.tb-health{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;background:rgba(0,201,167,.06);border:1px solid rgba(0,201,167,.15);font-size:.72rem;font-weight:700;cursor:default}
+.tb-health .hs-val{font-size:1rem;font-weight:900;color:var(--teal)}
+.btn-tb{padding:6px 14px;border-radius:7px;border:none;font-size:.76rem;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;white-space:nowrap;transition:all .15s}
+.btn-primary{background:linear-gradient(135deg,var(--teal),var(--blue));color:#041018}
+.btn-primary:hover{opacity:.88}
+.btn-ghost{background:none;border:1px solid var(--border2);color:var(--muted)}
+.btn-ghost:hover{color:var(--text);border-color:rgba(126,225,195,.35)}
+.btn-back{padding:6px 12px;border-radius:7px;border:1px solid var(--border);color:var(--muted);font-size:.76rem;font-weight:600;text-decoration:none;transition:all .15s}
+.btn-back:hover{color:var(--text)}
+.bell-btn{position:relative;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:4px;line-height:1}
+.bell-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:.55rem;font-weight:900;min-width:14px;height:14px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px;display:none}
+.bell-badge.show{display:flex}
+
+/* ── LAYOUT ─────────────────────────────────────────────────────────────── */
+.app{display:flex;min-height:100vh;padding-top:56px}
+.sidebar{width:240px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:10px 0 20px;position:fixed;top:56px;bottom:0;overflow-y:auto}
+.sb-section{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:14px 16px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:.78rem;font-weight:500;color:var(--muted);text-decoration:none;cursor:pointer;transition:all .12s;border-left:2px solid transparent;border:none;background:none;width:100%;text-align:left;font-family:'Manrope',sans-serif}
+.sb-link:hover{color:var(--text);background:rgba(0,201,167,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.07);border-left:2px solid var(--teal);font-weight:600}
+.sb-icon{font-size:.9rem;width:18px;flex-shrink:0;text-align:center}
+.sb-badge{margin-left:auto;background:var(--red);color:#fff;font-size:.58rem;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.main{flex:1;margin-left:240px;padding:24px;display:flex;flex-direction:column;gap:20px;min-width:0}
+
+/* ── PAGE HEADER ─────────────────────────────────────────────────────────── */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:1.15rem;font-weight:900;margin-bottom:3px}
+.page-sub{font-size:.78rem;color:var(--muted)}
+.header-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* ── HEALTH BANNER ───────────────────────────────────────────────────────── */
+.health-banner{border-radius:14px;padding:20px 24px;background:linear-gradient(135deg,rgba(0,201,167,.06),rgba(31,111,242,.04));border:1px solid var(--border);display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}
+.hb-left h2{font-size:1rem;font-weight:800;margin-bottom:4px}
+.hb-left p{font-size:.78rem;color:var(--muted);line-height:1.5}
+.health-score-ring{width:80px;height:80px;position:relative;flex-shrink:0}
+.health-score-ring svg{width:80px;height:80px;transform:rotate(-90deg)}
+.hs-bg{fill:none;stroke:rgba(0,201,167,.12);stroke-width:6}
+.hs-fill{fill:none;stroke:var(--teal);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .8s ease}
+.hs-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.hs-num{font-size:1.1rem;font-weight:900;color:var(--teal);line-height:1}
+.hs-txt{font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.setup-banner{border-radius:14px;padding:28px;background:linear-gradient(135deg,rgba(31,111,242,.08),rgba(0,201,167,.05));border:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.setup-banner h2{font-size:1.1rem;font-weight:800;margin-bottom:5px}
+.setup-banner p{font-size:.8rem;color:var(--muted);max-width:420px;line-height:1.55}
+
+/* ── KPI STRIP ───────────────────────────────────────────────────────────── */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.kpi-card{padding:16px 18px;border-radius:12px;background:var(--panel);border:1px solid var(--border);position:relative;overflow:hidden;cursor:default}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--teal))}
+.kpi-label{font-size:.6rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi-val{font-size:1.7rem;font-weight:900;line-height:1;color:var(--text)}
+.kpi-sub{font-size:.65rem;color:var(--muted);margin-top:4px}
+.kpi-delta{font-size:.65rem;font-weight:700;margin-top:4px}
+.kpi-delta.up{color:var(--green)}
+.kpi-delta.down{color:var(--red)}
+
+/* ── TAB BAR ─────────────────────────────────────────────────────────────── */
+.tab-bar{display:flex;gap:4px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.tab-btn{padding:9px 18px;border-radius:8px 8px 0 0;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--muted);border:1px solid transparent;border-bottom:none;background:none;font-family:'Manrope',sans-serif;transition:all .15s;position:relative;bottom:-1px}
+.tab-btn.active{color:var(--teal);background:var(--panel);border-color:var(--border);border-bottom-color:var(--panel)}
+.tab-pane{display:none}.tab-pane.active{display:flex;flex-direction:column;gap:16px}
+
+/* ── PANELS ──────────────────────────────────────────────────────────────── */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.panel-header h3{font-size:.84rem;font-weight:700}
+.panel-header span{font-size:.72rem;color:var(--muted)}
+.panel-body{padding:18px}
+
+/* ── UNIT GRID ───────────────────────────────────────────────────────────── */
+.unit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.unit-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .15s}
+.unit-card:hover{border-color:var(--border2)}
+.unit-card.mine{border-left:3px solid var(--teal)}
+.unit-card.critical{border-left:3px solid var(--red)}
+.unit-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.unit-name{font-size:.9rem;font-weight:800}
+.unit-code{font-size:.68rem;color:var(--muted);margin-top:3px}
+.unit-body{padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.unit-stat{display:flex;justify-content:space-between;align-items:center;font-size:.78rem}
+.unit-stat-label{color:var(--muted)}
 .unit-stat-val{font-weight:700}
-.critical{color:#e53e3e}
-.unit-actions{padding:12px 16px;background:#f7fafc;display:flex;gap:8px}
-.stock-table{width:100%}
-.stock-table th{font-size:.75rem}
-.stock-bar{height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin-top:3px}
-.stock-bar-fill{height:100%;border-radius:3px;background:#0bc5ea;transition:width .3s}
-.stock-bar-fill.low{background:#e53e3e}
-.stock-bar-fill.warn{background:#d69e2e}
-.chat-layout{display:grid;grid-template-columns:260px 1fr;gap:0;background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);min-height:500px;overflow:hidden}
-.chat-sidebar{border-right:1px solid #e2e8f0;display:flex;flex-direction:column}
-.chat-sidebar-head{padding:14px 16px;font-weight:700;font-size:.9rem;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between}
-.chat-list{flex:1;overflow-y:auto}
-.chat-item{padding:12px 16px;cursor:pointer;border-bottom:1px solid #f0f4f8;transition:background .1s}
-.chat-item:hover{background:#f7fafc}
-.chat-item.active{background:#ebf8ff}
-.chat-item-name{font-weight:600;font-size:.875rem}
-.chat-item-preview{font-size:.75rem;color:#718096;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chat-item-time{font-size:.7rem;color:#a0aec0;margin-top:2px}
-.chat-item-badge{display:inline-block;background:#e53e3e;color:#fff;font-size:.65rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;text-align:center;line-height:16px;padding:0 3px}
-.chat-main{display:flex;flex-direction:column}
-.chat-header{padding:14px 16px;border-bottom:1px solid #e2e8f0;font-weight:700;display:flex;align-items:center;gap:10px}
-.chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:350px}
-.msg{max-width:70%;padding:10px 14px;border-radius:12px;font-size:.875rem;line-height:1.5}
-.msg.mine{background:#0bc5ea;color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
-.msg.theirs{background:#f0f4f8;color:#2d3748;align-self:flex-start;border-bottom-left-radius:4px}
-.msg-meta{font-size:.7rem;opacity:.75;margin-top:4px}
-.msg-type-badge{font-size:.65rem;font-weight:700;padding:2px 6px;border-radius:4px;margin-bottom:4px;display:inline-block}
-.msg-type-transferencia{background:#fefcbf;color:#744210}
-.msg-type-alerta{background:#fed7d7;color:#822727}
-.chat-input{border-top:1px solid #e2e8f0;padding:12px 16px;display:flex;gap:8px}
-.chat-input select{padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:.85rem;color:#2d3748}
-.chat-input input{flex:1;padding:8px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:.875rem;outline:none}
-.chat-input input:focus{border-color:#0bc5ea}
-.transfer-status{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-.ts-step{display:flex;align-items:center;gap:6px;font-size:.8rem;font-weight:600;color:#a0aec0}
-.ts-step.done{color:#38a169}.ts-step.active{color:#0bc5ea}.ts-step::after{content:'→';margin-left:8px;color:#e2e8f0}
-.ts-step:last-child::after{display:none}
-.empty-state{text-align:center;padding:48px;color:#a0aec0}
-.empty-state svg{width:48px;height:48px;margin:0 auto 12px;display:block;opacity:.4}
-.setup-banner{background:linear-gradient(135deg,#0f2027,#203a43);color:#fff;border-radius:12px;padding:32px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:20px}
-.setup-banner h2{font-size:1.3rem;margin-bottom:6px}
-.setup-banner p{opacity:.8;font-size:.9rem}
-.setup-actions{display:flex;gap:10px;flex-shrink:0}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.form-group{display:flex;flex-direction:column;gap:6px}
-.form-group label{font-size:.8rem;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.3px}
-.form-group input,.form-group select,.form-group textarea{padding:9px 13px;border:1px solid #e2e8f0;border-radius:8px;font-size:.875rem;outline:none;width:100%}
-.form-group input:focus,.form-group select:focus{border-color:#0bc5ea}
-.form-group textarea{resize:vertical;min-height:80px}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal-overlay.hidden{display:none}
-.modal{background:#fff;border-radius:16px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.modal-head{padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between}
-.modal-head h3{font-size:1.05rem;font-weight:700}
-.modal-close{background:none;border:none;cursor:pointer;font-size:1.3rem;color:#718096}
-.modal-body{padding:24px}
-.modal-footer{padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:10px}
-.toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
-.toast{background:#1a2332;color:#fff;padding:12px 18px;border-radius:10px;font-size:.875rem;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.3);transform:translateX(120%);transition:transform .3s;max-width:320px;display:flex;align-items:center;gap:8px}
-.toast.show{transform:translateX(0)}
-.toast.ok::before{content:'✓';color:#38a169;font-weight:800}
-.toast.err::before{content:'✕';color:#e53e3e;font-weight:800}
-.toast.info::before{content:'ℹ';color:#0bc5ea;font-weight:800}
-.urgente-badge{background:#e53e3e;color:#fff;font-size:.65rem;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:6px;animation:pulse 1.5s infinite}
+.unit-stat-val.crit{color:var(--red)}
+.unit-bar{height:4px;background:rgba(0,201,167,.08);border-radius:2px;overflow:hidden;margin:2px 0 6px}
+.unit-bar-fill{height:100%;border-radius:2px;background:var(--teal);transition:width .5s}
+.unit-bar-fill.warn{background:var(--amber)}
+.unit-bar-fill.crit{background:var(--red)}
+.unit-actions{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:6px}
+.btn-unit{padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.7rem;cursor:pointer;font-family:'Manrope',sans-serif;transition:all .15s;white-space:nowrap}
+.btn-unit:hover{color:var(--teal);border-color:rgba(0,201,167,.3)}
+.btn-unit.primary{background:linear-gradient(135deg,var(--teal),var(--blue));color:#041018;border:none;font-weight:700}
+.btn-unit.primary:hover{opacity:.88}
+
+/* ── TABLE ───────────────────────────────────────────────────────────────── */
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search-box{flex:1;min-width:200px;position:relative}
+.search-box input{width:100%;padding:8px 12px 8px 34px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.82rem;outline:none;font-family:'Manrope',sans-serif;transition:border .15s}
+.search-box input:focus{border-color:var(--teal)}
+.search-box::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.75rem;pointer-events:none}
+.filter-sel{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.8rem;outline:none;font-family:'Manrope',sans-serif;cursor:pointer}
+.filter-sel option{background:var(--panel)}
+.tbl-wrap{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.tbl{width:100%;border-collapse:collapse}
+.tbl thead th{padding:10px 14px;text-align:left;font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:rgba(0,201,167,.02);white-space:nowrap}
+.tbl tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+.tbl tbody tr:last-child{border-bottom:none}
+.tbl tbody tr:hover{background:rgba(0,201,167,.02)}
+.tbl td{padding:10px 14px;font-size:.8rem;vertical-align:middle;white-space:nowrap}
+
+/* ── BADGES ──────────────────────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:.62rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.b-teal{background:rgba(0,201,167,.1);color:var(--teal);border:1px solid rgba(0,201,167,.2)}
+.b-blue{background:rgba(31,111,242,.1);color:#60a5fa;border:1px solid rgba(31,111,242,.2)}
+.b-amber{background:rgba(240,191,107,.1);color:var(--amber);border:1px solid rgba(240,191,107,.2)}
+.b-red{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.b-purple{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+.b-muted{background:rgba(122,159,160,.08);color:var(--muted);border:1px solid var(--border)}
+.b-green{background:rgba(74,222,128,.08);color:var(--green);border:1px solid rgba(74,222,128,.2)}
+.urgente-badge{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3);font-size:.6rem;font-weight:900;padding:2px 6px;border-radius:4px;animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* ── ROW ACTIONS ──────────────────────────────────────────────────────────── */
+.row-acts{display:flex;gap:5px}
+.btn-row{padding:4px 9px;border-radius:5px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.68rem;cursor:pointer;font-family:'Manrope',sans-serif;transition:all .15s;white-space:nowrap}
+.btn-row:hover{color:var(--teal);border-color:rgba(0,201,167,.3)}
+.btn-row.success:hover{color:var(--green);border-color:rgba(74,222,128,.3)}
+.btn-row.danger:hover{color:var(--red);border-color:rgba(248,113,113,.3)}
+
+/* ── STOCK BAR ────────────────────────────────────────────────────────────── */
+.stock-bar{height:4px;background:rgba(0,201,167,.08);border-radius:2px;overflow:hidden;margin-top:4px;width:80px}
+.stock-fill{height:100%;border-radius:2px;background:var(--teal);transition:width .4s}
+.stock-fill.warn{background:var(--amber)}
+.stock-fill.crit{background:var(--red)}
+
+/* ── BENCHMARKING ─────────────────────────────────────────────────────────── */
+.bench-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.bench-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+.bench-title{font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px}
+.bench-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:.78rem}
+.bench-label{min-width:120px;color:var(--muted);font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bench-bar-wrap{flex:1;background:rgba(0,201,167,.06);border-radius:3px;height:6px;overflow:hidden}
+.bench-bar-fill{height:100%;border-radius:3px;background:var(--teal);transition:width .6s}
+.bench-val{min-width:40px;text-align:right;font-weight:700;font-size:.72rem}
+.bench-rank{display:flex;gap:8px;align-items:center;padding:10px 14px;border-radius:8px;background:rgba(0,201,167,.04);border:1px solid var(--border);margin-bottom:6px;font-size:.78rem}
+.bench-rank-pos{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;font-size:.72rem;font-weight:900;flex-shrink:0}
+.pos-1{background:rgba(240,191,107,.15);color:var(--amber)}
+.pos-2{background:rgba(122,159,160,.1);color:var(--muted)}
+.pos-3{background:rgba(167,139,250,.1);color:var(--purple)}
+.pos-n{background:rgba(0,201,167,.06);color:var(--teal)}
+
+/* ── CHAT ─────────────────────────────────────────────────────────────────── */
+.chat-wrap{display:grid;grid-template-columns:260px 1fr;background:var(--panel);border:1px solid var(--border);border-radius:12px;min-height:500px;overflow:hidden}
+.chat-list-panel{border-right:1px solid var(--border);display:flex;flex-direction:column}
+.chat-list-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:.8rem;font-weight:700}
+.chat-list-body{flex:1;overflow-y:auto}
+.chat-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s}
+.chat-item:hover{background:rgba(0,201,167,.03)}
+.chat-item.active{background:rgba(0,201,167,.06)}
+.chat-item-name{font-size:.8rem;font-weight:700;display:flex;justify-content:space-between}
+.chat-item-preview{font-size:.7rem;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-item-time{font-size:.65rem;color:var(--muted);margin-top:2px}
+.chat-unread{background:var(--red);color:#fff;font-size:.55rem;font-weight:900;min-width:14px;height:14px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;padding:0 3px}
+.chat-main{display:flex;flex-direction:column}
+.chat-header{padding:12px 16px;border-bottom:1px solid var(--border);font-size:.84rem;font-weight:700;display:flex;align-items:center;gap:10px}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:350px}
+.msg{max-width:75%;padding:10px 14px;border-radius:12px;font-size:.8rem;line-height:1.5}
+.msg.mine{background:linear-gradient(135deg,rgba(0,201,167,.18),rgba(31,111,242,.12));color:var(--text);align-self:flex-end;border-bottom-right-radius:4px;border:1px solid rgba(0,201,167,.2)}
+.msg.theirs{background:rgba(255,255,255,.04);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px;border:1px solid var(--border)}
+.msg-meta{font-size:.65rem;color:var(--muted);margin-top:5px}
+.msg-type-badge{font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:4px;margin-bottom:4px;display:inline-block}
+.msg-type-transferencia{background:rgba(240,191,107,.12);color:var(--amber)}
+.msg-type-alerta{background:rgba(248,113,113,.1);color:var(--red)}
+.chat-input-area{border-top:1px solid var(--border);padding:10px 14px;display:flex;gap:8px;align-items:flex-end}
+.chat-input-area select{padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.78rem;outline:none;font-family:'Manrope',sans-serif;flex-shrink:0;max-width:150px}
+.chat-input-area select option{background:var(--panel)}
+.chat-input-area input{flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(0,201,167,.03);color:var(--text);font-size:.8rem;outline:none;font-family:'Manrope',sans-serif;transition:border .15s}
+.chat-input-area input:focus{border-color:var(--teal)}
+
+/* ── ANALYTICS ─────────────────────────────────────────────────────────────── */
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.analytics-grid.wide{grid-template-columns:2fr 1fr}
+.metric-trend{display:flex;flex-direction:column;gap:6px;padding:16px}
+.trend-label{font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.trend-val{font-size:1.5rem;font-weight:900}
+.trend-sub{font-size:.68rem;color:var(--muted)}
+.alert-item{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);font-size:.78rem}
+.alert-item:last-child{border:none}
+.alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.alert-dot.red{background:var(--red)}
+.alert-dot.amber{background:var(--amber)}
+.alert-dot.teal{background:var(--teal)}
+.alert-text{flex:1;color:var(--text)}
+.alert-unit{font-size:.68rem;color:var(--muted)}
+.activity-item{display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);font-size:.78rem}
+.activity-item:last-child{border:none}
+.activity-icon{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;font-size:.8rem;flex-shrink:0;background:rgba(0,201,167,.08)}
+.activity-body{flex:1;min-width:0}
+.activity-text{line-height:1.4}
+.activity-time{font-size:.65rem;color:var(--muted);margin-top:2px}
+
+/* ── MODALS ──────────────────────────────────────────────────────────────── */
+.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.78);backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:.98rem;font-weight:800}
+.modal-close{background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--muted);line-height:1;padding:2px}
+.modal-body{padding:22px}
+.modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mf{margin-bottom:12px}
+.mf:last-child{margin-bottom:0}
+.mf label{display:block;font-size:.63rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:rgba(232,244,241,.4);margin-bottom:5px}
+.mf input,.mf select,.mf textarea{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(0,201,167,.03);color:var(--text);font-size:.84rem;outline:none;font-family:'Manrope',sans-serif;transition:border .15s}
+.mf input:focus,.mf select:focus,.mf textarea:focus{border-color:var(--teal)}
+.mf select option{background:var(--panel)}
+.mf textarea{resize:vertical;min-height:70px}
+.btn-cancel{padding:9px 18px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-family:'Manrope',sans-serif;cursor:pointer;font-size:.82rem}
+.btn-submit{padding:9px 22px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--teal),var(--blue));color:#041018;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;font-size:.82rem}
+
+/* ── SKELETON ─────────────────────────────────────────────────────────────── */
+.skel{background:linear-gradient(90deg,rgba(0,201,167,.04) 25%,rgba(0,201,167,.08) 50%,rgba(0,201,167,.04) 75%);background-size:200%;animation:shimmer 1.8s infinite;border-radius:6px}
+@keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+
+/* ── EMPTY ───────────────────────────────────────────────────────────────── */
+.empty-state{padding:48px 20px;text-align:center;color:var(--muted)}
+.empty-state .ei{font-size:2.5rem;margin-bottom:12px}
+.empty-state h3{font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:6px}
+.empty-state p{font-size:.78rem;line-height:1.5}
+
+/* ── TOAST ───────────────────────────────────────────────────────────────── */
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:11px 18px;border-radius:10px;font-size:.8rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.4);transform:translateX(120%);transition:transform .3s;max-width:320px;display:flex;align-items:center;gap:8px;color:var(--text)}
+.toast.show{transform:translateX(0)}
+.toast.ok{background:rgba(0,201,167,.12);border:1px solid rgba(0,201,167,.25)}
+.toast.ok::before{content:'✓';color:var(--teal);font-weight:900}
+.toast.err{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25)}
+.toast.err::before{content:'✕';color:var(--red);font-weight:900}
+.toast.info{background:rgba(31,111,242,.1);border:1px solid rgba(31,111,242,.25)}
+.toast.info::before{content:'ℹ';color:#60a5fa;font-weight:900}
+
+/* ── MEDIA ───────────────────────────────────────────────────────────────── */
+@media(max-width:1200px){.kpi-strip{grid-template-columns:repeat(3,1fr)}.analytics-grid{grid-template-columns:1fr 1fr}.analytics-grid.wide{grid-template-columns:1fr}}
+@media(max-width:900px){.sidebar{display:none}.main{margin-left:0}.kpi-strip{grid-template-columns:repeat(2,1fr)}.bench-grid{grid-template-columns:1fr}.chat-wrap{grid-template-columns:1fr}.chat-list-panel{display:none}.unit-grid{grid-template-columns:1fr}.health-banner{grid-template-columns:1fr}}
+@media(max-width:600px){.kpi-strip{grid-template-columns:1fr}.analytics-grid{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}.tab-btn{padding:7px 12px;font-size:.72rem}.main{padding:14px}}
+@media(max-width:768px){.tb-net{display:none}.tb-logo{min-width:auto}}
+
+/* ── SCROLLBAR ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,201,167,.15);border-radius:2px}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <span class="brand">SaúdeSaaS</span>
-  <span class="page-title">Gestão de Rede</span>
-  <div class="topbar-right">
-    {% if setor == 'farmacia' %}
-    <a href="/farmacia/gestao/" class="btn-back" style="background:#1e3a5f;color:#90cdf4">💊 Farmácia</a>
-    {% elif setor == 'hospital' %}
-    <a href="/hospital/gestao/" class="btn-back" style="background:#1a3a2a;color:#9ae6b4">🏥 Hospital</a>
-    {% endif %}
-    <a href="/logout/" class="btn-back" style="background:rgba(140,29,64,.82);color:#eef8ff">Sair</a>
-    <div class="bell-wrap" onclick="abrirAba('tab-msgs')">
-      <svg viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-      <span class="badge" id="badgeMsgs">0</span>
-    </div>
-  </div>
-</div>
-
-<div class="container">
-  <div class="net-header">
-    <h1>Minha <span>Rede</span></h1>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-ghost btn-sm" onclick="abrirModalConvidar()">+ Convidar Unidade</button>
-      <button class="btn btn-primary btn-sm" onclick="carregarTudo()">↻ Atualizar</button>
-    </div>
-  </div>
-
-  {% include "partials/enterprise_command_center.html" %}
-
-  <!-- Setup banner (shown when not in a network) -->
-  <div class="setup-banner hidden" id="setupBanner">
+<!-- ── TOPBAR ─────────────────────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="tb-logo">
+    <div class="tb-icon">S</div>
     <div>
-      <h2>Você ainda não pertence a uma rede</h2>
-      <p>Crie sua rede agora para conectar unidades, compartilhar estoque e comunicar entre filiais.</p>
-    </div>
-    <div class="setup-actions">
-      <button class="btn btn-primary" onclick="abrirModalCriarRede()">Criar Nova Rede</button>
+      <div class="tb-nome">SolusCRT</div>
+      <div class="tb-sub">Gestão de Rede</div>
     </div>
   </div>
-
-  <!-- KPIs -->
-  <div class="kpi-row" id="kpiRow">
-    <div class="kpi" style="--ac:#0bc5ea"><div class="kpi-label">Unidades na Rede</div><div class="kpi-val" id="kpiUnidades">—</div><div class="kpi-sub">unidades ativas</div></div>
-    <div class="kpi" style="--ac:#e53e3e"><div class="kpi-label">Itens Críticos</div><div class="kpi-val" id="kpiCriticos">—</div><div class="kpi-sub">abaixo do mínimo</div></div>
-    <div class="kpi" style="--ac:#d69e2e"><div class="kpi-label">Transferências Pendentes</div><div class="kpi-val" id="kpiTransf">—</div><div class="kpi-sub">aguardando resposta</div></div>
-    <div class="kpi" style="--ac:#38a169"><div class="kpi-label">Mensagens Não Lidas</div><div class="kpi-val" id="kpiMsgs">—</div><div class="kpi-sub">na caixa de entrada</div></div>
+  <div class="tb-net">
+    <div class="tb-net-name" id="tb-net-name">—</div>
+    <div class="tb-net-sub" id="tb-net-sub">Carregando rede...</div>
   </div>
-
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="tab active" onclick="abrirAba('tab-unidades')">Unidades</button>
-    <button class="tab" onclick="abrirAba('tab-estoque')">Estoque Consolidado</button>
-    <button class="tab" onclick="abrirAba('tab-transferencias')">Transferências</button>
-    <button class="tab" onclick="abrirAba('tab-msgs')">Chat / Mensagens</button>
-  </div>
-
-  <!-- Tab: Unidades -->
-  <div class="tab-pane active" id="tab-unidades">
-    <div class="unit-grid" id="unitGrid">
-      <div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2m-2 0H5m0 0H3m9-16v4"/></svg>Carregando unidades...</div>
+  <div class="tb-actions">
+    <div class="tb-health" id="tb-health-score" style="display:none">
+      <span class="hs-val" id="tb-hs-val">—</span>
+      <span style="color:var(--muted);font-size:.65rem">Saúde da Rede</span>
     </div>
+    {% if setor == 'farmacia' %}
+    <a href="/farmacia/gestao/" class="btn-back" style="border-color:rgba(96,165,250,.3);color:#90cdf4">💊 Farmácia</a>
+    {% elif setor == 'hospital' %}
+    <a href="/hospital/gestao/" class="btn-back" style="border-color:rgba(74,222,128,.3);color:#9ae6b4">🏥 Hospital</a>
+    {% endif %}
+    <button class="bell-btn" onclick="switchTab('msgs')" title="Mensagens">
+      🔔<span class="bell-badge" id="bell-badge">0</span>
+    </button>
+    <a href="/logout/" class="btn-back" style="border-color:rgba(248,113,113,.3);color:#f87171">Sair</a>
   </div>
+</header>
 
-  <!-- Tab: Estoque Consolidado -->
-  <div class="tab-pane" id="tab-estoque">
-    <div style="display:flex;gap:10px;margin-bottom:16px">
-      <input type="text" id="searchEstoque" placeholder="Buscar medicamento ou item..." style="flex:1;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:.875rem;outline:none" oninput="filtrarEstoque()">
-      <select id="filterUnidade" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:.875rem" onchange="filtrarEstoque()">
-        <option value="">Todas as unidades</option>
-      </select>
-    </div>
-    <div id="estoqueConsolidado">
-      <div class="empty-state">Carregando estoque consolidado...</div>
-    </div>
-  </div>
+<!-- ── APP ───────────────────────────────────────────────────────────────── -->
+<div class="app">
 
-  <!-- Tab: Transferências -->
-  <div class="tab-pane" id="tab-transferencias">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost btn-sm" onclick="carregarTransferencias('todas')">Todas</button>
-        <button class="btn btn-ghost btn-sm" onclick="carregarTransferencias('pendentes')">Pendentes</button>
-        <button class="btn btn-ghost btn-sm" onclick="carregarTransferencias('enviadas')">Enviadas</button>
-        <button class="btn btn-ghost btn-sm" onclick="carregarTransferencias('recebidas')">Recebidas</button>
+  <!-- ── SIDEBAR ──────────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sb-section">Visão Geral</div>
+    <button class="sb-link active" id="sb-painel" onclick="switchTab('painel',this)">
+      <span class="sb-icon">📊</span>Painel da Rede
+    </button>
+    <button class="sb-link" id="sb-unidades" onclick="switchTab('unidades',this)">
+      <span class="sb-icon">🏢</span>Unidades
+    </button>
+    <button class="sb-link" id="sb-bench" onclick="switchTab('bench',this)">
+      <span class="sb-icon">📈</span>Benchmarking
+    </button>
+
+    <div class="sb-section">Operação</div>
+    <button class="sb-link" id="sb-estoque" onclick="switchTab('estoque',this)">
+      <span class="sb-icon">📦</span>Estoque Consolidado
+    </button>
+    <button class="sb-link" id="sb-transferencias" onclick="switchTab('transferencias',this)">
+      <span class="sb-icon">🔄</span>Transferências
+      <span class="sb-badge" id="sb-badge-transf" style="display:none">0</span>
+    </button>
+
+    <div class="sb-section">Comunicação</div>
+    <button class="sb-link" id="sb-msgs" onclick="switchTab('msgs',this)">
+      <span class="sb-icon">💬</span>Mensagens
+      <span class="sb-badge" id="sb-badge-msgs" style="display:none">0</span>
+    </button>
+
+    <div class="sb-section">Ações</div>
+    <button class="sb-link" onclick="abrirModalConvidar()"><span class="sb-icon">➕</span>Convidar Unidade</button>
+    <button class="sb-link" onclick="abrirModalTransferencia()"><span class="sb-icon">📬</span>Solicitar Item</button>
+    <button class="sb-link" onclick="exportarRelatorio()"><span class="sb-icon">📄</span>Exportar Relatório</button>
+    <button class="sb-link" style="margin-top:auto;color:rgba(248,113,113,.8)" onclick="carregarTudo()"><span class="sb-icon">↻</span>Atualizar</button>
+  </aside>
+
+  <!-- ── MAIN ─────────────────────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- Setup banner (no network) -->
+    <div class="setup-banner" id="setup-banner" style="display:none">
+      <div>
+        <h2>⚡ Você ainda não pertence a uma rede</h2>
+        <p>Crie sua rede agora para conectar unidades, compartilhar estoque e comparar desempenho entre filiais com inteligência.</p>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="abrirModalTransferencia()">+ Solicitar Transferência</button>
-    </div>
-    <div class="card">
-      <table>
-        <thead><tr><th>Item</th><th>Qtd</th><th>Solicitante</th><th>Fornecedor</th><th>Status</th><th>Urgente</th><th>Ações</th></tr></thead>
-        <tbody id="tbTransf"><tr><td colspan="7" style="text-align:center;padding:24px;color:#a0aec0">Carregando...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Tab: Chat -->
-  <div class="tab-pane" id="tab-msgs">
-    <div class="chat-layout">
-      <div class="chat-sidebar">
-        <div class="chat-sidebar-head">
-          Conversas
-          <button class="btn btn-primary btn-sm" onclick="abrirModalNovaMensagem()">Nova</button>
-        </div>
-        <div class="chat-list" id="chatList">
-          <div style="padding:24px;text-align:center;color:#a0aec0;font-size:.85rem">Carregando...</div>
-        </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-tb btn-primary" onclick="abrirModalCriarRede()">+ Criar Nova Rede</button>
+        <button class="btn-tb btn-ghost" onclick="abrirModalEntrarRede()">Entrar com Código</button>
       </div>
-      <div class="chat-main">
-        <div class="chat-header" id="chatHeader">Selecione uma conversa</div>
-        <div class="chat-msgs" id="chatMsgs">
-          <div class="empty-state" style="margin:auto">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-            Selecione uma conversa para ver as mensagens
+    </div>
+
+    <!-- Enterprise Command Center -->
+    {% include "partials/enterprise_command_center.html" %}
+
+    <!-- KPI Strip (always visible) -->
+    <div class="kpi-strip" id="kpi-strip">
+      <div class="kpi-card" style="--kc:var(--teal)"><div class="kpi-label">Unidades Ativas</div><div class="kpi-val" id="k-unidades">—</div><div class="kpi-sub">na rede</div></div>
+      <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">Itens Críticos</div><div class="kpi-val" id="k-criticos">—</div><div class="kpi-sub">abaixo do mínimo</div></div>
+      <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Transf. Pendentes</div><div class="kpi-val" id="k-transf">—</div><div class="kpi-sub">aguardando ação</div></div>
+      <div class="kpi-card" style="--kc:var(--blue)"><div class="kpi-label">Msgs Não Lidas</div><div class="kpi-val" id="k-msgs">—</div><div class="kpi-sub">na caixa de entrada</div></div>
+      <div class="kpi-card" style="--kc:var(--purple)"><div class="kpi-label">Cobertura Média</div><div class="kpi-val" id="k-cobertura">—</div><div class="kpi-sub">dias de estoque</div></div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('painel',this)" data-tab="painel">📊 Painel</button>
+      <button class="tab-btn" onclick="switchTab('unidades',this)" data-tab="unidades">🏢 Unidades</button>
+      <button class="tab-btn" onclick="switchTab('bench',this)" data-tab="bench">📈 Benchmarking</button>
+      <button class="tab-btn" onclick="switchTab('estoque',this)" data-tab="estoque">📦 Estoque</button>
+      <button class="tab-btn" onclick="switchTab('transferencias',this)" data-tab="transferencias">🔄 Transferências</button>
+      <button class="tab-btn" onclick="switchTab('msgs',this)" data-tab="msgs">💬 Mensagens</button>
+    </div>
+
+    <!-- ── TAB: PAINEL ──────────────────────────────────────────────────── -->
+    <div class="tab-pane active" id="tab-painel">
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px">
+
+        <!-- Health + overview -->
+        <div class="health-banner">
+          <div class="hb-left">
+            <h2>Saúde Geral da Rede</h2>
+            <p id="hb-desc">Calculando score baseado em: cobertura de estoque, pendências, tempo de transferência e alertas críticos em todas as unidades.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+            <div class="health-score-ring">
+              <svg viewBox="0 0 80 80">
+                <circle class="hs-bg" cx="40" cy="40" r="33"/>
+                <circle class="hs-fill" id="hs-circle" cx="40" cy="40" r="33" stroke-dasharray="207" stroke-dashoffset="207"/>
+              </svg>
+              <div class="hs-label">
+                <div class="hs-num" id="hs-num">—</div>
+                <div class="hs-txt">Score</div>
+              </div>
+            </div>
+            <div id="hs-status" class="badge b-muted">Calculando...</div>
           </div>
         </div>
-        <div class="chat-input">
-          <select id="msgDestinatario" style="max-width:160px">
-            <option value="">Broadcast</option>
-          </select>
-          <input type="text" id="msgTexto" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter')enviarMensagem()">
-          <button class="btn btn-primary btn-sm" onclick="enviarMensagem()">Enviar</button>
+
+        <!-- Alertas críticos -->
+        <div class="panel">
+          <div class="panel-header"><h3>🚨 Alertas Críticos</h3><span id="cnt-alertas">—</span></div>
+          <div id="lista-alertas">
+            <div class="alert-item"><span class="alert-dot teal"></span><span class="alert-text">Carregando...</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-grid">
+        <!-- Atividade recente -->
+        <div class="panel">
+          <div class="panel-header"><h3>⚡ Atividade Recente</h3><span>Últimas 24h</span></div>
+          <div id="lista-atividade">
+            <div class="activity-item"><div class="activity-icon skel" style="height:28px;width:28px"></div><div style="flex:1"><div class="skel" style="height:14px;width:60%;margin-bottom:5px"></div><div class="skel" style="height:10px;width:40%"></div></div></div>
+          </div>
+        </div>
+
+        <!-- Distribuição por unidade -->
+        <div class="panel">
+          <div class="panel-header"><h3>📊 Estoque por Unidade</h3><span>% do total</span></div>
+          <div id="dist-estoque" class="panel-body" style="display:flex;flex-direction:column;gap:10px">
+            <div class="skel" style="height:30px"></div>
+            <div class="skel" style="height:30px"></div>
+          </div>
+        </div>
+
+        <!-- Transferências recentes -->
+        <div class="panel">
+          <div class="panel-header"><h3>🔄 Transferências Recentes</h3><span id="cnt-transf-rec">—</span></div>
+          <div id="lista-transf-rec">
+            <div class="empty-state" style="padding:24px"><p>Carregando...</p></div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- ── TAB: UNIDADES ──────────────────────────────────────────────────── -->
+    <div class="tab-pane" id="tab-unidades">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Unidades da Rede</div>
+          <div class="page-sub">Gerencie e visualize todas as unidades conectadas</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-tb btn-ghost" onclick="abrirModalConvidar()">+ Convidar Unidade</button>
+        </div>
+      </div>
+      <div class="unit-grid" id="unit-grid">
+        <div class="unit-card"><div class="unit-body"><div class="skel" style="height:60px"></div></div></div>
+        <div class="unit-card"><div class="unit-body"><div class="skel" style="height:60px"></div></div></div>
+        <div class="unit-card"><div class="unit-body"><div class="skel" style="height:60px"></div></div></div>
+      </div>
+    </div>
+
+    <!-- ── TAB: BENCHMARKING ──────────────────────────────────────────────── -->
+    <div class="tab-pane" id="tab-bench">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Benchmarking de Unidades</div>
+          <div class="page-sub">Compare desempenho, estoque e eficiência entre todas as unidades da rede</div>
+        </div>
+        <div class="header-actions">
+          <select class="filter-sel" id="bench-metric" onchange="renderBenchmarking()">
+            <option value="itens_totais">Total de Itens</option>
+            <option value="itens_criticos">Itens Críticos</option>
+            <option value="cobertura">Cobertura (dias)</option>
+            <option value="transferencias_out">Transf. Enviadas</option>
+            <option value="transferencias_in">Transf. Recebidas</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="bench-grid">
+        <div class="panel">
+          <div class="panel-header"><h3 id="bench-chart-title">Ranking por Total de Itens</h3></div>
+          <div id="bench-chart" class="panel-body" style="display:flex;flex-direction:column;gap:8px">
+            <div class="skel" style="height:40px"></div>
+            <div class="skel" style="height:40px"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h3>📋 Tabela Comparativa</h3></div>
+          <div style="overflow-x:auto">
+            <table class="tbl" id="bench-table">
+              <thead><tr><th>#</th><th>Unidade</th><th>Itens</th><th>Críticos</th><th>Cobertura</th><th>Transf.</th></tr></thead>
+              <tbody id="bench-tbody">
+                <tr><td colspan="6"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Análise de eficiência -->
+      <div class="panel">
+        <div class="panel-header"><h3>⚡ Análise de Eficiência de Transferências</h3><span>Tempo médio por unidade</span></div>
+        <div id="bench-eficiencia" class="panel-body">
+          <div class="skel" style="height:80px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: ESTOQUE ───────────────────────────────────────────────────── -->
+    <div class="tab-pane" id="tab-estoque">
+      <div class="toolbar">
+        <div class="search-box"><input type="text" id="busca-estoque" placeholder="Buscar item, medicamento ou categoria..." oninput="renderEstoque()"></div>
+        <select class="filter-sel" id="filtro-unidade-est" onchange="renderEstoque()">
+          <option value="">Todas as unidades</option>
+        </select>
+        <select class="filter-sel" id="filtro-status-est" onchange="renderEstoque()">
+          <option value="">Todos os status</option>
+          <option value="critico">Crítico</option>
+          <option value="alerta">Alerta</option>
+          <option value="ok">OK</option>
+        </select>
+      </div>
+      <div id="estoque-consolidado">
+        <div class="empty-state"><p>Carregando estoque...</p></div>
+      </div>
+    </div>
+
+    <!-- ── TAB: TRANSFERÊNCIAS ────────────────────────────────────────────── -->
+    <div class="tab-pane" id="tab-transferencias">
+      <div class="toolbar">
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="transf-filtros">
+          <button class="btn-tb btn-primary" onclick="carregarTransferencias('todas');setTransfFiltro(this)">Todas</button>
+          <button class="btn-tb btn-ghost" onclick="carregarTransferencias('pendentes');setTransfFiltro(this)">⏳ Pendentes</button>
+          <button class="btn-tb btn-ghost" onclick="carregarTransferencias('enviadas');setTransfFiltro(this)">📤 Enviadas</button>
+          <button class="btn-tb btn-ghost" onclick="carregarTransferencias('recebidas');setTransfFiltro(this)">📥 Recebidas</button>
+        </div>
+        <div style="margin-left:auto">
+          <button class="btn-tb btn-primary" onclick="abrirModalTransferencia()">+ Solicitar Item</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Item</th><th>Qtd Sol. / Apr.</th><th>Solicitante</th><th>Fornecedora</th><th>Data</th><th>Status</th><th>Urgência</th><th>Ações</th></tr></thead>
+          <tbody id="tbody-transf">
+            <tr><td colspan="8"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+            <tr><td colspan="8"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TAB: MENSAGENS ─────────────────────────────────────────────────── -->
+    <div class="tab-pane" id="tab-msgs">
+      <div class="chat-wrap">
+        <div class="chat-list-panel">
+          <div class="chat-list-head">
+            Conversas
+            <button class="btn-tb btn-primary" style="font-size:.7rem;padding:4px 10px" onclick="abrirModalNovaMensagem()">+ Nova</button>
+          </div>
+          <div class="chat-list-body" id="chat-list"></div>
+        </div>
+        <div class="chat-main">
+          <div class="chat-header" id="chat-header">
+            <span>Selecione uma conversa</span>
+          </div>
+          <div class="chat-msgs" id="chat-msgs">
+            <div class="empty-state" style="margin:auto">
+              <div class="ei">💬</div>
+              <h3>Sem conversa aberta</h3>
+              <p>Selecione uma conversa à esquerda ou inicie uma nova mensagem para outra unidade.</p>
+            </div>
+          </div>
+          <div class="chat-input-area">
+            <select id="msg-dest">
+              <option value="">Broadcast</option>
+            </select>
+            <input type="text" id="msg-texto" placeholder="Mensagem para a rede..." onkeydown="if(event.key==='Enter')enviarMensagem()">
+            <button class="btn-tb btn-primary" onclick="enviarMensagem()">Enviar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
 </div>
 
-<!-- Modal: Criar Rede -->
-<div class="modal-overlay hidden" id="modalCriarRede">
+<!-- ── MODAL: CRIAR REDE ──────────────────────────────────────────────────── -->
+<div class="modal-bg" id="modal-criar-rede">
   <div class="modal">
-    <div class="modal-head"><h3>Criar Nova Rede</h3><button class="modal-close" onclick="fecharModal('modalCriarRede')">×</button></div>
+    <div class="modal-head"><h3>Criar Nova Rede</h3><button class="modal-close" onclick="fecharModal('modal-criar-rede')">×</button></div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group" style="grid-column:1/-1"><label>Nome da Rede</label><input type="text" id="redeNome" placeholder="Ex: Rede Saúde+"></div>
-        <div class="form-group"><label>Tipo</label><select id="redeTipo"><option value="farmacia">Rede de Farmácias</option><option value="hospital">Rede Hospitalar</option><option value="misto">Rede Mista</option></select></div>
-        <div class="form-group"><label>CNPJ Raiz</label><input type="text" id="redeCNPJ" placeholder="00.000.000"></div>
-        <div class="form-group"><label>Nome desta Unidade</label><input type="text" id="redeNomeUnidade" placeholder="Ex: Filial Centro"></div>
-        <div class="form-group"><label>Código da Unidade</label><input type="text" id="redeCodigoUnidade" placeholder="Ex: UN-001"></div>
+      <div class="mf"><label>Nome da Rede</label><input type="text" id="r-nome" placeholder="Ex: Rede Saúde+, Grupo Hospitalar Norte..."></div>
+      <div class="form-row">
+        <div class="mf"><label>Tipo</label>
+          <select id="r-tipo">
+            <option value="farmacia">Rede de Farmácias</option>
+            <option value="hospital">Rede Hospitalar</option>
+            <option value="misto">Rede Mista</option>
+          </select>
+        </div>
+        <div class="mf"><label>CNPJ Raiz (opcional)</label><input type="text" id="r-cnpj" placeholder="00.000.000"></div>
+      </div>
+      <div class="form-row">
+        <div class="mf"><label>Nome desta Unidade</label><input type="text" id="r-unidade" placeholder="Ex: Filial Centro"></div>
+        <div class="mf"><label>Código da Unidade</label><input type="text" id="r-codigo" placeholder="Ex: UN-001"></div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="fecharModal('modalCriarRede')">Cancelar</button>
-      <button class="btn btn-primary" onclick="criarRede()">Criar Rede</button>
+      <button class="btn-cancel" onclick="fecharModal('modal-criar-rede')">Cancelar</button>
+      <button class="btn-submit" onclick="criarRede()">Criar Rede</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Convidar Unidade -->
-<div class="modal-overlay hidden" id="modalConvidar">
+<!-- ── MODAL: ENTRAR COM CÓDIGO ───────────────────────────────────────────── -->
+<div class="modal-bg" id="modal-entrar-rede">
   <div class="modal">
-    <div class="modal-head"><h3>Convidar Unidade para a Rede</h3><button class="modal-close" onclick="fecharModal('modalConvidar')">×</button></div>
+    <div class="modal-head"><h3>Entrar em uma Rede</h3><button class="modal-close" onclick="fecharModal('modal-entrar-rede')">×</button></div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group" style="grid-column:1/-1"><label>E-mail da empresa</label><input type="email" id="convidarEmail" placeholder="email@empresa.com.br"></div>
-        <div class="form-group"><label>Nome da Unidade</label><input type="text" id="convidarNomeUnidade" placeholder="Ex: Filial Norte"></div>
-        <div class="form-group"><label>Código</label><input type="text" id="convidarCodigo" placeholder="UN-002"></div>
-        <div class="form-group"><label>Tipo</label><select id="convidarTipo"><option value="farmacia">Farmácia</option><option value="hospital">Hospital</option></select></div>
+      <div class="mf"><label>Código do Convite</label><input type="text" id="e-codigo" placeholder="Ex: RD-XYZABC123" style="font-size:1rem;font-weight:700;letter-spacing:.05em"></div>
+      <div class="mf"><label>Nome desta Unidade</label><input type="text" id="e-unidade" placeholder="Ex: Filial Norte"></div>
+      <div class="mf"><label>Código da Unidade</label><input type="text" id="e-codigo-unidade" placeholder="Ex: UN-003"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModal('modal-entrar-rede')">Cancelar</button>
+      <button class="btn-submit" onclick="entrarRede()">Entrar na Rede</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: CONVIDAR UNIDADE ────────────────────────────────────────────── -->
+<div class="modal-bg" id="modal-convidar">
+  <div class="modal">
+    <div class="modal-head"><h3>Convidar Unidade</h3><button class="modal-close" onclick="fecharModal('modal-convidar')">×</button></div>
+    <div class="modal-body">
+      <div class="mf"><label>E-mail da Empresa</label><input type="email" id="c-email" placeholder="gerente@unidade.com.br"></div>
+      <div class="form-row">
+        <div class="mf"><label>Nome da Unidade</label><input type="text" id="c-nome" placeholder="Ex: Filial Norte"></div>
+        <div class="mf"><label>Código</label><input type="text" id="c-codigo" placeholder="UN-002"></div>
+      </div>
+      <div class="mf"><label>Tipo</label>
+        <select id="c-tipo">
+          <option value="farmacia">Farmácia</option>
+          <option value="hospital">Hospital</option>
+          <option value="clinica">Clínica</option>
+          <option value="laboratorio">Laboratório</option>
+        </select>
+      </div>
+      <div style="padding:10px 12px;border-radius:8px;background:rgba(31,111,242,.06);border:1px solid rgba(31,111,242,.15);font-size:.75rem;color:#60a5fa;margin-top:4px">
+        💡 Um código de convite será gerado. A unidade poderá entrar usando "Entrar com Código".
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="fecharModal('modalConvidar')">Cancelar</button>
-      <button class="btn btn-primary" onclick="convidarUnidade()">Convidar</button>
+      <button class="btn-cancel" onclick="fecharModal('modal-convidar')">Cancelar</button>
+      <button class="btn-submit" onclick="convidarUnidade()">Gerar Convite</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Solicitar Transferência -->
-<div class="modal-overlay hidden" id="modalTransferencia">
+<!-- ── MODAL: SOLICITAR TRANSFERÊNCIA ────────────────────────────────────── -->
+<div class="modal-bg" id="modal-transferencia">
   <div class="modal">
-    <div class="modal-head"><h3>Solicitar Transferência de Estoque</h3><button class="modal-close" onclick="fecharModal('modalTransferencia')">×</button></div>
+    <div class="modal-head"><h3>Solicitar Transferência de Estoque</h3><button class="modal-close" onclick="fecharModal('modal-transferencia')">×</button></div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group" style="grid-column:1/-1"><label>Unidade Fornecedora</label><select id="transfUnidade"><option value="">Selecione...</option></select></div>
-        <div class="form-group" style="grid-column:1/-1"><label>Item / Medicamento</label><input type="text" id="transfItem" placeholder="Nome do item"></div>
-        <div class="form-group"><label>Quantidade</label><input type="number" id="transfQtd" min="1" value="1"></div>
-        <div class="form-group"><label>Motivo</label><input type="text" id="transfMotivo" placeholder="Ex: Ruptura de estoque"></div>
-        <div class="form-group" style="grid-column:1/-1"><label>Solicitado por</label><input type="text" id="transfSolicitante" placeholder="Nome do responsável"></div>
-        <div class="form-group"><label>Urgente?</label><select id="transfUrgente"><option value="false">Não</option><option value="true">SIM - URGENTE</option></select></div>
+      <div class="mf"><label>Unidade Fornecedora</label><select id="t-unidade"><option value="">Selecione...</option></select></div>
+      <div class="mf"><label>Item / Medicamento</label><input type="text" id="t-item" placeholder="Nome do item, medicamento, equipamento..."></div>
+      <div class="form-row">
+        <div class="mf"><label>Quantidade</label><input type="number" id="t-qtd" min="1" value="1"></div>
+        <div class="mf"><label>Urgência</label>
+          <select id="t-urgente">
+            <option value="false">Normal</option>
+            <option value="true">🚨 URGENTE</option>
+          </select>
+        </div>
       </div>
+      <div class="mf"><label>Motivo / Justificativa</label><textarea id="t-motivo" placeholder="Ex: Ruptura de estoque, demanda inesperada, evento especial..."></textarea></div>
+      <div class="mf"><label>Solicitado por</label><input type="text" id="t-solicitante" placeholder="Nome do responsável pela solicitação"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="fecharModal('modalTransferencia')">Cancelar</button>
-      <button class="btn btn-primary" onclick="solicitarTransferencia()">Solicitar</button>
+      <button class="btn-cancel" onclick="fecharModal('modal-transferencia')">Cancelar</button>
+      <button class="btn-submit" onclick="solicitarTransferencia()">Solicitar</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Nova Mensagem -->
-<div class="modal-overlay hidden" id="modalNovaMensagem">
+<!-- ── MODAL: NOVA MENSAGEM ───────────────────────────────────────────────── -->
+<div class="modal-bg" id="modal-nova-msg">
   <div class="modal">
-    <div class="modal-head"><h3>Nova Mensagem</h3><button class="modal-close" onclick="fecharModal('modalNovaMensagem')">×</button></div>
+    <div class="modal-head"><h3>Nova Mensagem</h3><button class="modal-close" onclick="fecharModal('modal-nova-msg')">×</button></div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group" style="grid-column:1/-1"><label>Destinatário</label><select id="novaMsgDest"><option value="">Broadcast (todas as unidades)</option></select></div>
-        <div class="form-group" style="grid-column:1/-1"><label>Assunto</label><input type="text" id="novaMsgAssunto"></div>
-        <div class="form-group" style="grid-column:1/-1"><label>Mensagem</label><textarea id="novaMsgCorpo" rows="4"></textarea></div>
+      <div class="mf"><label>Destinatário</label>
+        <select id="nm-dest"><option value="">Broadcast — Todas as Unidades</option></select>
       </div>
+      <div class="mf"><label>Assunto</label><input type="text" id="nm-assunto" placeholder="Assunto da mensagem..."></div>
+      <div class="mf"><label>Mensagem</label><textarea id="nm-corpo" rows="4" placeholder="Conteúdo da mensagem..."></textarea></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="fecharModal('modalNovaMensagem')">Cancelar</button>
-      <button class="btn btn-primary" onclick="enviarNovaMensagem()">Enviar</button>
+      <button class="btn-cancel" onclick="fecharModal('modal-nova-msg')">Cancelar</button>
+      <button class="btn-submit" onclick="enviarNovaMensagem()">Enviar</button>
     </div>
   </div>
 </div>
 
-<div class="toast-container" id="toastContainer"></div>
+<div class="toast-container" id="toast-container"></div>
 
 <script>
-let _rede=null,_unidades=[],_minhaUnidadeId=null,_transferencias=[],_mensagens=[],_estoqueData=[];
-let _activeChatId=null;
+// ── STATE ──────────────────────────────────────────────────────────────────
+let _rede = null, _unidades = [], _minha = null;
+let _transferencias = [], _mensagens = [], _estoque = [];
+let _activeChatKey = null;
 
-function getCsrf(){return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1]||''}
-function toast(msg,tipo='ok'){const d=document.createElement('div');d.className=`toast ${tipo}`;d.textContent=msg;const c=document.getElementById('toastContainer');c.appendChild(d);requestAnimationFrame(()=>d.classList.add('show'));setTimeout(()=>{d.classList.remove('show');setTimeout(()=>d.remove(),400)},4000)}
-function fecharModal(id){document.getElementById(id).classList.add('hidden')}
-function abrirModalCriarRede(){document.getElementById('modalCriarRede').classList.remove('hidden')}
-function abrirModalConvidar(){if(!_rede){toast('Crie uma rede primeiro','err');return}document.getElementById('modalConvidar').classList.remove('hidden')}
-function abrirModalTransferencia(){if(!_rede){toast('Crie uma rede primeiro','err');return}preencherSelectUnidades('transfUnidade');document.getElementById('modalTransferencia').classList.remove('hidden')}
-function abrirModalNovaMensagem(){preencherSelectUnidades('novaMsgDest',true);document.getElementById('modalNovaMensagem').classList.remove('hidden')}
-
-function abrirAba(id){
-  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  const idx={'tab-unidades':0,'tab-estoque':1,'tab-transferencias':2,'tab-msgs':3}[id]??0;
-  document.querySelectorAll('.tab')[idx]?.classList.add('active');
-  if(id==='tab-estoque')renderEstoque();
-  if(id==='tab-msgs')carregarMensagens();
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function csrf() {
+  return (document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)') || ['',''])[2];
 }
 
-async function carregarTudo(){
+function toast(msg, tipo='ok') {
+  const c = document.getElementById('toast-container');
+  const d = document.createElement('div');
+  d.className = `toast ${tipo}`;
+  d.textContent = msg;
+  c.appendChild(d);
+  requestAnimationFrame(() => d.classList.add('show'));
+  setTimeout(() => { d.classList.remove('show'); setTimeout(() => d.remove(), 400); }, 4000);
+}
+
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+
+function abrirModalCriarRede() { abrirModal('modal-criar-rede'); }
+function abrirModalEntrarRede() { abrirModal('modal-entrar-rede'); }
+function abrirModalConvidar() {
+  if (!_rede) { toast('Crie uma rede primeiro','err'); return; }
+  abrirModal('modal-convidar');
+}
+function abrirModalTransferencia() {
+  if (!_rede) { toast('Crie uma rede primeiro','err'); return; }
+  preencherSelectUnidades('t-unidade');
+  abrirModal('modal-transferencia');
+}
+function abrirModalNovaMensagem() {
+  preencherSelectUnidades('nm-dest', true);
+  abrirModal('modal-nova-msg');
+}
+
+function fmtData(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch { return iso; }
+}
+
+function fmtDataShort(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit'}); } catch { return iso; }
+}
+
+// ── TAB SWITCHING ──────────────────────────────────────────────────────────
+function switchTab(name, srcEl) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sb-link').forEach(b => b.classList.remove('active'));
+
+  document.getElementById('tab-' + name).classList.add('active');
+  // Sync tab bar
+  document.querySelectorAll(`[data-tab="${name}"]`).forEach(b => b.classList.add('active'));
+  // Sync sidebar
+  const sbEl = document.getElementById('sb-' + name);
+  if (sbEl) sbEl.classList.add('active');
+
+  if (name === 'msgs') carregarMensagens();
+  if (name === 'estoque') renderEstoque();
+  if (name === 'bench') renderBenchmarking();
+  if (name === 'transferencias') carregarTransferencias('todas');
+}
+
+// ── LOAD ALL ───────────────────────────────────────────────────────────────
+async function carregarTudo() {
   await carregarRede();
-  carregarTransferencias();
+  carregarTransferencias('todas');
   carregarMensagens();
 }
 
-async function carregarRede(){
-  const r=await fetch('/api/rede/');
-  const d=await r.json();
-  _rede=d.rede;_unidades=d.unidades;_minhaUnidadeId=d.minha_unidade_id;
-  if(!_rede){
-    document.getElementById('setupBanner').classList.remove('hidden');
-    document.getElementById('kpiUnidades').textContent='0';
-    document.getElementById('unitGrid').innerHTML='<div class="empty-state"><p>Nenhuma rede configurada.<br>Clique em "Criar Nova Rede" acima.</p></div>';
+// ── REDE ───────────────────────────────────────────────────────────────────
+async function carregarRede() {
+  try {
+    const r = await fetch('/api/rede/');
+    const d = await r.json();
+    _rede = d.rede;
+    _unidades = d.unidades || [];
+    _minha = d.minha_unidade_id;
+
+    if (!_rede) {
+      document.getElementById('setup-banner').style.display = 'flex';
+      document.getElementById('k-unidades').textContent = '0';
+      document.getElementById('unit-grid').innerHTML = '<div class="empty-state"><div class="ei">🏢</div><h3>Nenhuma unidade</h3><p>Crie ou entre em uma rede para começar</p></div>';
+      setHealthScore(0);
+      return;
+    }
+
+    document.getElementById('setup-banner').style.display = 'none';
+    document.getElementById('tb-net-name').textContent = _rede.nome || 'Minha Rede';
+    document.getElementById('tb-net-sub').textContent = `${_rede.total_unidades || _unidades.length} unidade${_unidades.length !== 1 ? 's' : ''} • ${_rede.tipo || ''}`;
+
+    document.getElementById('k-unidades').textContent = _unidades.length;
+
+    await carregarEstoque();
+    preencherFiltros();
+    renderUnidades();
+    renderPainel();
+    calcularHealthScore();
+
+  } catch(e) {
+    toast('Erro ao carregar dados da rede', 'err');
+  }
+}
+
+// ── HEALTH SCORE ───────────────────────────────────────────────────────────
+function calcularHealthScore() {
+  if (!_unidades.length) { setHealthScore(0); return; }
+
+  let score = 100;
+  let criticos = 0;
+  let totalItens = 0;
+
+  for (const u of _unidades) {
+    const c = u.itens_criticos || 0;
+    const t = u.total_itens || 0;
+    criticos += c;
+    totalItens += t;
+    if (t > 0) {
+      const pctCrit = c / t;
+      score -= pctCrit * 30;
+    }
+  }
+
+  // Penalty para transferências pendentes
+  const pendentes = parseInt(document.getElementById('k-transf').textContent) || 0;
+  score -= Math.min(pendentes * 3, 20);
+
+  // Penalty para msgs nao lidas acumuladas
+  const msgs = parseInt(document.getElementById('k-msgs').textContent) || 0;
+  score -= Math.min(msgs * 1, 10);
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  setHealthScore(score);
+  document.getElementById('k-criticos').textContent = criticos;
+}
+
+function setHealthScore(score) {
+  const circumference = 207;
+  const offset = circumference - (score / 100) * circumference;
+  const circle = document.getElementById('hs-circle');
+  const num = document.getElementById('hs-num');
+  const status = document.getElementById('hs-status');
+  const tbVal = document.getElementById('tb-hs-val');
+  const tbScore = document.getElementById('tb-health-score');
+
+  if (circle) circle.style.strokeDashoffset = offset;
+  if (num) num.textContent = score;
+  if (tbVal) tbVal.textContent = score;
+  if (tbScore) tbScore.style.display = 'flex';
+
+  if (score >= 80) {
+    if (circle) circle.style.stroke = 'var(--teal)';
+    if (status) { status.textContent = 'Rede Saudável'; status.className = 'badge b-teal'; }
+    if (num) num.style.color = 'var(--teal)';
+    document.getElementById('hb-desc').textContent = 'Rede operando normalmente. Cobertura de estoque adequada, transferências fluindo bem.';
+  } else if (score >= 60) {
+    if (circle) circle.style.stroke = 'var(--amber)';
+    if (status) { status.textContent = 'Atenção Necessária'; status.className = 'badge b-amber'; }
+    if (num) num.style.color = 'var(--amber)';
+    document.getElementById('hb-desc').textContent = 'Alguns itens críticos detectados. Verifique unidades com estoque baixo e transfêrencias pendentes.';
+  } else {
+    if (circle) circle.style.stroke = 'var(--red)';
+    if (status) { status.textContent = 'Ação Urgente'; status.className = 'badge b-red'; }
+    if (num) num.style.color = 'var(--red)';
+    document.getElementById('hb-desc').textContent = '⚠️ Múltiplos itens críticos e pendências acumuladas. Ação imediata necessária para estabilizar a rede.';
+  }
+}
+
+// ── PAINEL ─────────────────────────────────────────────────────────────────
+function renderPainel() {
+  // Alertas críticos
+  const alertas = [];
+  for (const u of _unidades) {
+    if ((u.itens_criticos || 0) > 0) {
+      alertas.push({
+        dot: 'red',
+        text: `${u.itens_criticos} item${u.itens_criticos > 1 ? 's' : ''} crítico${u.itens_criticos > 1 ? 's' : ''}`,
+        unit: u.nome_unidade || u['empresa__nome'] || '—'
+      });
+    }
+  }
+  document.getElementById('cnt-alertas').textContent = alertas.length || '✓ Sem alertas';
+  document.getElementById('lista-alertas').innerHTML = alertas.length
+    ? alertas.slice(0, 6).map(a => `<div class="alert-item">
+        <span class="alert-dot ${a.dot}"></span>
+        <div><div class="alert-text">${a.text}</div><div class="alert-unit">${a.unit}</div></div>
+      </div>`).join('')
+    : '<div class="alert-item"><span class="alert-dot teal"></span><span class="alert-text" style="color:var(--muted)">Nenhum alerta crítico</span></div>';
+
+  // Atividade recente (from transferências)
+  const atividadeEl = document.getElementById('lista-atividade');
+  const ativs = _transferencias.slice(0, 6).map(t => ({
+    icon: t.urgente ? '🚨' : '🔄',
+    text: `Transferência de <strong>${t.nome_item}</strong> — ${t.status}`,
+    time: fmtData(t.criada_em || t.updated_at || ''),
+    unit: `${t.solicitante} → ${t.fornecedora}`
+  }));
+  atividadeEl.innerHTML = ativs.length
+    ? ativs.map(a => `<div class="activity-item">
+        <div class="activity-icon">${a.icon}</div>
+        <div class="activity-body">
+          <div class="activity-text">${a.text}<br><span style="font-size:.68rem;color:var(--muted)">${a.unit}</span></div>
+          <div class="activity-time">${a.time}</div>
+        </div>
+      </div>`).join('')
+    : '<div class="empty-state" style="padding:24px"><p>Nenhuma atividade recente</p></div>';
+
+  // Distribuição de estoque por unidade
+  const total = _estoque.reduce((s, u) => s + u.itens.length, 0) || 1;
+  document.getElementById('dist-estoque').innerHTML = _estoque.slice(0, 5).map(u => {
+    const pct = Math.round(u.itens.length / total * 100);
+    return `<div>
+      <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-bottom:4px">
+        <span>${u.unidade_nome}</span><span style="font-weight:700">${u.itens.length} itens</span>
+      </div>
+      <div class="unit-bar"><div class="unit-bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('') || '<div style="color:var(--muted);font-size:.78rem;padding:8px">Sem dados de estoque</div>';
+
+  // Transferências recentes no painel
+  const transfRec = _transferencias.slice(0, 5);
+  document.getElementById('cnt-transf-rec').textContent = `${_transferencias.length} total`;
+  document.getElementById('lista-transf-rec').innerHTML = transfRec.length
+    ? transfRec.map(t => `<div class="alert-item">
+        <span class="alert-dot ${t.status === 'pendente' ? 'amber' : t.status === 'recebida' ? 'teal' : 'red'}"></span>
+        <div style="flex:1;min-width:0">
+          <div class="alert-text">${t.nome_item} × ${t.quantidade_solicitada}</div>
+          <div class="alert-unit">${t.solicitante} → ${t.fornecedora} · ${t.status}</div>
+        </div>
+        ${t.urgente ? '<span class="urgente-badge">URGENTE</span>' : ''}
+      </div>`).join('')
+    : '<div class="empty-state" style="padding:24px"><p>Nenhuma transferência</p></div>';
+}
+
+// ── UNIDADES ───────────────────────────────────────────────────────────────
+function renderUnidades() {
+  const grid = document.getElementById('unit-grid');
+  if (!_unidades.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="ei">🏢</div><h3>Nenhuma unidade</h3><p>Convide unidades para conectar sua rede</p></div>';
     return;
   }
-  document.getElementById('setupBanner').classList.add('hidden');
-  document.getElementById('kpiUnidades').textContent=_rede.total_unidades;
-  renderUnidades();
-  await carregarEstoque();
-  preencherFiltroUnidades();
-}
-
-function renderUnidades(){
-  const g=document.getElementById('unitGrid');
-  if(!_unidades.length){g.innerHTML='<div class="empty-state"><p>Nenhuma unidade na rede.</p></div>';return}
-  let criticos=0;
-  g.innerHTML=_unidades.map(u=>{
-    criticos+=(u.itens_criticos||0);
-    const mine=u.id===_minhaUnidadeId;
-    return `<div class="unit-card ${mine?'mine':''}">
-      <div class="unit-card-head">
-        <div><div class="unit-name">${u.nome_unidade||u['empresa__nome']} ${mine?'<span class="badge badge-green">Minha unidade</span>':''}</div><div class="unit-code">${u.codigo_unidade||''} • ${u.cidade||''}${u.estado?' - '+u.estado:''}</div></div>
-        <span class="badge badge-blue">${u.tipo}</span>
+  grid.innerHTML = _unidades.map(u => {
+    const mine = u.id === _minha;
+    const criticos = u.itens_criticos || 0;
+    const total = u.total_itens || 0;
+    const pct = total > 0 ? Math.round((total - criticos) / total * 100) : 100;
+    const barClass = pct < 50 ? 'crit' : pct < 80 ? 'warn' : '';
+    return `<div class="unit-card${mine ? ' mine' : ''}${criticos > 0 ? ' critical' : ''}">
+      <div class="unit-head">
+        <div>
+          <div class="unit-name">${u.nome_unidade || u['empresa__nome'] || '—'}</div>
+          <div class="unit-code">${u.codigo_unidade || ''} · ${u.cidade || ''}${u.estado ? ' - ' + u.estado : ''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          ${mine ? '<span class="badge b-teal">Minha</span>' : ''}
+          <span class="badge b-blue">${u.tipo || '—'}</span>
+        </div>
       </div>
-      <div class="unit-card-body">
-        <div class="unit-stat"><span class="unit-stat-label">Itens no estoque</span><span class="unit-stat-val">${u.total_itens||0}</span></div>
-        <div class="unit-stat"><span class="unit-stat-label">Itens críticos</span><span class="unit-stat-val ${(u.itens_criticos||0)>0?'critical':''}">${u.itens_criticos||0}</span></div>
-        <div class="unit-stat"><span class="unit-stat-label">Responsável</span><span class="unit-stat-val">${u.responsavel||'—'}</span></div>
+      <div class="unit-body">
+        <div class="unit-stat"><span class="unit-stat-label">Itens no estoque</span><span class="unit-stat-val">${total}</span></div>
+        <div class="unit-bar"><div class="unit-bar-fill ${barClass}" style="width:${pct}%"></div></div>
+        <div class="unit-stat"><span class="unit-stat-label">Itens críticos</span><span class="unit-stat-val${criticos > 0 ? ' crit' : ''}">${criticos}</span></div>
+        <div class="unit-stat"><span class="unit-stat-label">Responsável</span><span class="unit-stat-val">${u.responsavel || '—'}</span></div>
       </div>
       <div class="unit-actions">
-        ${!mine?`<button class="btn btn-primary btn-sm" onclick="verEstoqueUnidade(${u.id},'${u.nome_unidade}')">Ver Estoque</button><button class="btn btn-ghost btn-sm" onclick="prepararTransf(${u.id})">Solicitar Item</button>`:'<button class="btn btn-ghost btn-sm" disabled>Minha unidade</button>'}
+        ${!mine
+          ? `<button class="btn-unit" onclick="verEstoqueUnidade(${u.id})">Ver Estoque</button>
+             <button class="btn-unit primary" onclick="prepararTransf(${u.id})">Solicitar Item</button>`
+          : '<span style="font-size:.72rem;color:var(--muted);padding:2px 6px">Esta é a sua unidade</span>'
+        }
       </div>
-    </div>`}).join('');
-  document.getElementById('kpiCriticos').textContent=criticos;
+    </div>`;
+  }).join('');
 }
 
-async function carregarEstoque(){
-  const r=await fetch('/api/rede/estoque/');
-  const d=await r.json();
-  _estoqueData=d.unidades||[];
-  renderEstoque();
+// ── ESTOQUE ────────────────────────────────────────────────────────────────
+async function carregarEstoque() {
+  try {
+    const r = await fetch('/api/rede/estoque/');
+    const d = await r.json();
+    _estoque = d.unidades || [];
+    calcularCobertura();
+  } catch(e) {}
 }
 
-function renderEstoque(){
-  const q=(document.getElementById('searchEstoque')?.value||'').toLowerCase();
-  const fu=document.getElementById('filterUnidade')?.value||'';
-  const el=document.getElementById('estoqueConsolidado');
-  if(!_estoqueData.length){el.innerHTML='<div class="empty-state"><p>Nenhum estoque disponível.</p></div>';return}
-  let html='';
-  for(const u of _estoqueData){
-    if(fu&&String(u.unidade_id)!==fu)continue;
-    const itens=u.itens.filter(i=>!q||i.nome.toLowerCase().includes(q));
-    if(!itens.length&&q)continue;
-    html+=`<div class="card" style="margin-bottom:16px">
-      <div class="card-header"><h3>${u.unidade_nome} <span style="font-weight:400;font-size:.8rem;color:#718096">${u.cidade||''}${u.estado?' - '+u.estado:''}</span>${u.eh_minha?'<span class="badge badge-green" style="margin-left:8px">Minha</span>':''}</h3>
-        <span class="badge badge-blue">${itens.length} itens</span>
-      </div>
-      <table class="stock-table"><thead><tr><th>Item</th><th>Categoria</th><th>Estoque</th><th>Mín.</th><th>Status</th><th></th></tr></thead><tbody>
-      ${itens.map(i=>{
-        const pct=i.estoque_minimo>0?Math.min(100,Math.round(i.estoque_atual/i.estoque_minimo*100)):100;
-        const sc=pct<50?'low':pct<100?'warn':'';
-        const st=i.estoque_atual<i.estoque_minimo?'<span class="badge badge-red">Crítico</span>':'<span class="badge badge-green">OK</span>';
-        return `<tr><td><strong>${i.nome}</strong><div class="stock-bar"><div class="stock-bar-fill ${sc}" style="width:${pct}%"></div></div></td>
-          <td>${i.categoria||'—'}</td><td>${i.estoque_atual} ${i.unidade_medida||''}</td><td>${i.estoque_minimo} ${i.unidade_medida||''}</td><td>${st}</td>
-          <td>${!u.eh_minha?`<button class="btn btn-primary btn-sm" onclick="prepararTransfItem(${u.unidade_id},'${i.nome}')">Solicitar</button>`:'—'}</td></tr>`;
-      }).join('')}
-      </tbody></table></div>`;
+function calcularCobertura() {
+  let totalDias = 0, cnt = 0;
+  for (const u of _estoque) {
+    for (const i of u.itens) {
+      if (i.estoque_minimo > 0) {
+        totalDias += Math.round(i.estoque_atual / i.estoque_minimo * 30);
+        cnt++;
+      }
+    }
   }
-  el.innerHTML=html||'<div class="empty-state"><p>Nenhum item encontrado.</p></div>';
+  document.getElementById('k-cobertura').textContent = cnt > 0 ? Math.round(totalDias / cnt) + 'd' : '—';
 }
 
-function filtrarEstoque(){renderEstoque()}
+function renderEstoque() {
+  const q = (document.getElementById('busca-estoque')?.value || '').toLowerCase();
+  const fu = document.getElementById('filtro-unidade-est')?.value || '';
+  const fs = document.getElementById('filtro-status-est')?.value || '';
+  const el = document.getElementById('estoque-consolidado');
 
-function preencherFiltroUnidades(){
-  const sel=document.getElementById('filterUnidade');
-  if(!sel)return;
-  sel.innerHTML='<option value="">Todas as unidades</option>'+_unidades.map(u=>`<option value="${u.id}">${u.nome_unidade||u['empresa__nome']}</option>`).join('');
+  if (!_estoque.length) {
+    el.innerHTML = '<div class="empty-state"><div class="ei">📦</div><h3>Sem dados de estoque</h3><p>O estoque consolidado aparecerá aqui quando as unidades cadastrarem seus itens</p></div>';
+    return;
+  }
+
+  let html = '';
+  for (const u of _estoque) {
+    if (fu && String(u.unidade_id) !== fu) continue;
+    let itens = u.itens;
+    if (q) itens = itens.filter(i => (i.nome || '').toLowerCase().includes(q) || (i.categoria || '').toLowerCase().includes(q));
+    if (fs === 'critico') itens = itens.filter(i => i.estoque_atual < i.estoque_minimo);
+    else if (fs === 'alerta') itens = itens.filter(i => i.estoque_atual >= i.estoque_minimo && i.estoque_atual < i.estoque_minimo * 1.5);
+    else if (fs === 'ok') itens = itens.filter(i => i.estoque_atual >= i.estoque_minimo * 1.5);
+    if (!itens.length && (q || fs)) continue;
+
+    html += `<div class="tbl-wrap" style="margin-bottom:16px">
+      <div class="panel-header">
+        <h3>${u.unidade_nome} ${u.cidade ? `<span style="font-weight:400;color:var(--muted);font-size:.76rem">· ${u.cidade}${u.estado ? ' - ' + u.estado : ''}</span>` : ''}</h3>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${u.eh_minha ? '<span class="badge b-teal">Minha Unidade</span>' : ''}
+          <span style="font-size:.72rem;color:var(--muted)">${itens.length} item${itens.length !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>Item / Medicamento</th><th>Categoria</th><th>Estoque Atual</th><th>Mínimo</th><th>Cobertura</th><th>Status</th>${!u.eh_minha ? '<th></th>' : ''}</tr></thead>
+        <tbody>
+        ${itens.map(i => {
+          const pct = i.estoque_minimo > 0 ? Math.min(100, Math.round(i.estoque_atual / i.estoque_minimo * 100)) : 100;
+          const sc = pct < 50 ? 'crit' : pct < 100 ? 'warn' : '';
+          const statusBadge = pct < 50 ? '<span class="badge b-red">Crítico</span>' : pct < 100 ? '<span class="badge b-amber">Alerta</span>' : '<span class="badge b-teal">OK</span>';
+          const cobertura = i.estoque_minimo > 0 ? Math.round(i.estoque_atual / i.estoque_minimo * 30) + 'd' : '—';
+          return `<tr>
+            <td><strong>${i.nome || '—'}</strong><div class="stock-bar"><div class="stock-fill ${sc}" style="width:${pct}%"></div></div></td>
+            <td>${i.categoria || '—'}</td>
+            <td>${i.estoque_atual} ${i.unidade_medida || ''}</td>
+            <td>${i.estoque_minimo} ${i.unidade_medida || ''}</td>
+            <td>${cobertura}</td>
+            <td>${statusBadge}</td>
+            ${!u.eh_minha ? `<td><button class="btn-row" onclick="prepararTransfItem(${u.unidade_id},'${i.nome.replace(/'/g,"\\'")}')">Solicitar</button></td>` : ''}
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+  el.innerHTML = html || '<div class="empty-state"><div class="ei">🔍</div><h3>Nenhum resultado</h3><p>Ajuste os filtros ou a busca</p></div>';
 }
 
-function preencherSelectUnidades(selId,incluirBroadcast=false){
-  const sel=document.getElementById(selId);
-  if(!sel)return;
-  const others=_unidades.filter(u=>u.id!==_minhaUnidadeId);
-  sel.innerHTML=(incluirBroadcast?'<option value="">Broadcast (todas)</option>':'')+others.map(u=>`<option value="${u.id}">${u.nome_unidade||u['empresa__nome']}</option>`).join('');
-}
+// ── BENCHMARKING ───────────────────────────────────────────────────────────
+function renderBenchmarking() {
+  if (!_unidades.length) return;
+  const metric = document.getElementById('bench-metric').value;
+  const labels = {itens_totais:'Total de Itens',itens_criticos:'Itens Críticos',cobertura:'Cobertura (dias)',transferencias_out:'Transf. Enviadas',transferencias_in:'Transf. Recebidas'};
+  document.getElementById('bench-chart-title').textContent = 'Ranking — ' + labels[metric];
 
-async function carregarTransferencias(filtro='todas'){
-  const r=await fetch(`/api/rede/transferencias/?filtro=${filtro}`);
-  const d=await r.json();
-  _transferencias=d.transferencias||[];
-  document.getElementById('kpiTransf').textContent=d.pendentes_para_mim||0;
-  const STATUS_BADGE={'pendente':'badge-yellow','aprovada':'badge-blue','enviada':'badge-purple','recebida':'badge-green','cancelada':'badge-gray'};
-  const tb=document.getElementById('tbTransf');
-  if(!_transferencias.length){tb.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:24px;color:#a0aec0">Nenhuma transferência encontrada.</td></tr>`;return}
-  tb.innerHTML=_transferencias.map(t=>`<tr>
-    <td><strong>${t.nome_item}</strong></td>
-    <td>${t.quantidade_solicitada}${t.quantidade_aprovada?`/<em>${t.quantidade_aprovada}</em>`:''}</td>
-    <td>${t.solicitante}</td>
-    <td>${t.fornecedora}</td>
-    <td><span class="badge ${STATUS_BADGE[t.status]||'badge-gray'}">${t.status}</span></td>
-    <td>${t.urgente?'<span class="urgente-badge">URGENTE</span>':'—'}</td>
-    <td>
-      ${t.sou_fornecedor&&t.status==='pendente'?`<button class="btn btn-success btn-sm" onclick="atualizarTransf(${t.id},'aprovada')">Aprovar</button> `:''}
-      ${t.sou_fornecedor&&t.status==='aprovada'?`<button class="btn btn-primary btn-sm" onclick="atualizarTransf(${t.id},'enviada')">Marcar Enviada</button> `:''}
-      ${t.sou_solicitante&&t.status==='enviada'?`<button class="btn btn-success btn-sm" onclick="atualizarTransf(${t.id},'recebida')">Confirmar Recebimento</button> `:''}
-      ${t.status==='pendente'?`<button class="btn btn-danger btn-sm" onclick="atualizarTransf(${t.id},'cancelada')">Cancelar</button>`:''}
-    </td>
+  // Build per-unit data
+  const data = _unidades.map(u => {
+    const estoqueU = _estoque.find(e => e.unidade_id === u.id) || {itens:[]};
+    const transfOut = _transferencias.filter(t => t.solicitante_id === u.id).length;
+    const transfIn = _transferencias.filter(t => t.fornecedora_id === u.id).length;
+    let cobDias = 0, cobCnt = 0;
+    for (const i of estoqueU.itens) {
+      if (i.estoque_minimo > 0) { cobDias += i.estoque_atual / i.estoque_minimo * 30; cobCnt++; }
+    }
+    return {
+      id: u.id,
+      nome: u.nome_unidade || u['empresa__nome'] || '—',
+      itens_totais: estoqueU.itens.length,
+      itens_criticos: u.itens_criticos || 0,
+      cobertura: cobCnt > 0 ? Math.round(cobDias / cobCnt) : 0,
+      transferencias_out: transfOut,
+      transferencias_in: transfIn,
+      mine: u.id === _minha
+    };
+  });
+
+  data.sort((a, b) => {
+    if (metric === 'itens_criticos') return b[metric] - a[metric]; // higher is worse → show at top
+    return b[metric] - a[metric];
+  });
+
+  const maxVal = Math.max(...data.map(d => d[metric] || 0), 1);
+
+  // Chart
+  document.getElementById('bench-chart').innerHTML = data.map((d, i) => {
+    const pct = Math.round((d[metric] || 0) / maxVal * 100);
+    const posClass = i === 0 ? 'pos-1' : i === 1 ? 'pos-2' : i === 2 ? 'pos-3' : 'pos-n';
+    return `<div class="bench-row">
+      <div class="bench-rank-pos ${posClass}" style="width:24px;height:24px;border-radius:6px;display:grid;place-items:center;font-size:.7rem;font-weight:900;flex-shrink:0">${i + 1}</div>
+      <span class="bench-label">${d.nome}${d.mine ? ' ⬡' : ''}</span>
+      <div class="bench-bar-wrap"><div class="bench-bar-fill" style="width:${pct}%;background:${metric==='itens_criticos'&&d[metric]>0?'var(--red)':'var(--teal)'}"></div></div>
+      <span class="bench-val">${d[metric] || 0}</span>
+    </div>`;
+  }).join('');
+
+  // Table
+  document.getElementById('bench-tbody').innerHTML = data.map((d, i) => `<tr${d.mine ? ' style="background:rgba(0,201,167,.04)"' : ''}>
+    <td><strong>${i + 1}</strong></td>
+    <td>${d.nome}${d.mine ? ' <span class="badge b-teal">Você</span>' : ''}</td>
+    <td>${d.itens_totais}</td>
+    <td><span class="${d.itens_criticos > 0 ? 'badge b-red' : 'badge b-teal'}">${d.itens_criticos}</span></td>
+    <td>${d.cobertura}d</td>
+    <td>${d.transferencias_out + d.transferencias_in}</td>
   </tr>`).join('');
+
+  // Eficiência
+  document.getElementById('bench-eficiencia').innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+    ${data.map((d, i) => `<div style="padding:12px;border-radius:8px;background:rgba(0,201,167,.04);border:1px solid var(--border)">
+      <div style="font-size:.68rem;color:var(--muted);margin-bottom:4px">${i + 1}. ${d.nome}</div>
+      <div style="font-size:1.1rem;font-weight:900;color:${d.itens_criticos > 0 ? 'var(--red)' : 'var(--teal)'}">${d.cobertura}d</div>
+      <div style="font-size:.65rem;color:var(--muted);margin-top:2px">cobertura estimada</div>
+      <div style="font-size:.68rem;margin-top:6px">${d.transferencias_out} env · ${d.transferencias_in} rec</div>
+    </div>`).join('')}
+  </div>`;
 }
 
-async function atualizarTransf(id,status){
-  const r=await fetch(`/api/rede/transferencias/${id}/`,{method:'PUT',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({status})});
-  if(r.ok){toast(`Transferência ${status}`);carregarTransferencias()}else toast('Erro ao atualizar','err');
+// ── TRANSFERÊNCIAS ─────────────────────────────────────────────────────────
+function setTransfFiltro(el) {
+  document.querySelectorAll('#transf-filtros .btn-tb').forEach(b => { b.classList.remove('btn-primary'); b.classList.add('btn-ghost'); });
+  el.classList.remove('btn-ghost'); el.classList.add('btn-primary');
 }
 
-async function carregarMensagens(){
-  const r=await fetch('/api/rede/mensagens/');
-  const d=await r.json();
-  _mensagens=d.mensagens||[];
-  document.getElementById('kpiMsgs').textContent=d.nao_lidas||0;
-  document.getElementById('badgeMsgs').textContent=d.nao_lidas||0;
-  preencherSelectUnidades('msgDestinatario',true);
-  renderChatList();
-}
+async function carregarTransferencias(filtro = 'todas') {
+  try {
+    const r = await fetch(`/api/rede/transferencias/?filtro=${filtro}`);
+    const d = await r.json();
+    _transferencias = d.transferencias || [];
+    const pendentes = d.pendentes_para_mim || 0;
+    document.getElementById('k-transf').textContent = pendentes;
+    // Badge sidebar
+    const sbBadge = document.getElementById('sb-badge-transf');
+    if (pendentes > 0) { sbBadge.textContent = pendentes; sbBadge.style.display = 'flex'; }
+    else sbBadge.style.display = 'none';
 
-function renderChatList(){
-  const list=document.getElementById('chatList');
-  if(!_mensagens.length){list.innerHTML='<div style="padding:24px;text-align:center;color:#a0aec0;font-size:.85rem">Nenhuma mensagem</div>';return}
-  const grupos={};
-  for(const m of _mensagens){
-    const key=m.sou_remetente?`dest_${m.destinatario_id||'broadcast'}`:`rem_${m.remetente_id}`;
-    if(!grupos[key])grupos[key]={nome:m.sou_remetente?m.destinatario:m.remetente,msgs:[],unread:0};
-    grupos[key].msgs.push(m);
-    if(!m.lida&&!m.sou_remetente)grupos[key].unread++;
+    const STATUS = {
+      pendente: 'b-amber', aprovada: 'b-blue', enviada: 'b-purple',
+      recebida: 'b-teal', cancelada: 'b-muted'
+    };
+    const tbody = document.getElementById('tbody-transf');
+    if (!_transferencias.length) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state" style="padding:32px"><div class="ei">🔄</div><h3>Nenhuma transferência</h3><p>Solicite transferências de estoque entre unidades</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = _transferencias.map(t => `<tr>
+      <td><strong>${t.nome_item}</strong>${t.motivo ? `<br><span style="font-size:.68rem;color:var(--muted)">${t.motivo.substring(0,40)}${t.motivo.length>40?'…':''}</span>` : ''}</td>
+      <td>${t.quantidade_solicitada}${t.quantidade_aprovada ? ` / <strong>${t.quantidade_aprovada}</strong>` : ''}</td>
+      <td>${t.solicitante || '—'}</td>
+      <td>${t.fornecedora || '—'}</td>
+      <td>${fmtDataShort(t.criada_em)}</td>
+      <td><span class="badge ${STATUS[t.status] || 'b-muted'}">${t.status}</span></td>
+      <td>${t.urgente ? '<span class="urgente-badge">URGENTE</span>' : '<span style="color:var(--muted);font-size:.72rem">Normal</span>'}</td>
+      <td><div class="row-acts">
+        ${t.sou_fornecedor && t.status === 'pendente' ? `<button class="btn-row success" onclick="atualizarTransf(${t.id},'aprovada')">✓ Aprovar</button>` : ''}
+        ${t.sou_fornecedor && t.status === 'aprovada' ? `<button class="btn-row" onclick="atualizarTransf(${t.id},'enviada')">Enviar</button>` : ''}
+        ${t.sou_solicitante && t.status === 'enviada' ? `<button class="btn-row success" onclick="atualizarTransf(${t.id},'recebida')">✓ Recebi</button>` : ''}
+        ${t.status === 'pendente' ? `<button class="btn-row danger" onclick="atualizarTransf(${t.id},'cancelada')">Cancelar</button>` : ''}
+      </div></td>
+    </tr>`).join('');
+
+    if (document.getElementById('tab-painel').classList.contains('active')) renderPainel();
+  } catch(e) {
+    toast('Erro ao carregar transferências','err');
   }
-  list.innerHTML=Object.entries(grupos).map(([key,g])=>`<div class="chat-item ${_activeChatId===key?'active':''}" onclick="abrirChat('${key}','${g.nome}')">
-    <div style="display:flex;justify-content:space-between"><span class="chat-item-name">${g.nome||'Broadcast'}</span>${g.unread?`<span class="chat-item-badge">${g.unread}</span>`:''}</div>
-    <div class="chat-item-preview">${g.msgs[0]?.corpo||''}</div>
-    <div class="chat-item-time">${new Date(g.msgs[0]?.enviada_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>
+}
+
+async function atualizarTransf(id, status) {
+  try {
+    const r = await fetch(`/api/rede/transferencias/${id}/`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json','X-CSRFToken': csrf()},
+      body: JSON.stringify({status})
+    });
+    if (r.ok) { toast(`Transferência ${status} com sucesso`); carregarTransferencias('todas'); }
+    else toast('Erro ao atualizar transferência','err');
+  } catch(e) { toast('Erro de conexão','err'); }
+}
+
+// ── MENSAGENS ──────────────────────────────────────────────────────────────
+async function carregarMensagens() {
+  try {
+    const r = await fetch('/api/rede/mensagens/');
+    const d = await r.json();
+    _mensagens = d.mensagens || [];
+    const naoLidas = d.nao_lidas || 0;
+    document.getElementById('k-msgs').textContent = naoLidas;
+    const bellBadge = document.getElementById('bell-badge');
+    const sbBadge = document.getElementById('sb-badge-msgs');
+    if (naoLidas > 0) {
+      bellBadge.textContent = naoLidas; bellBadge.classList.add('show');
+      sbBadge.textContent = naoLidas; sbBadge.style.display = 'flex';
+    } else {
+      bellBadge.classList.remove('show'); sbBadge.style.display = 'none';
+    }
+    preencherSelectUnidades('msg-dest', true);
+    renderChatList();
+  } catch(e) {}
+}
+
+function renderChatList() {
+  const list = document.getElementById('chat-list');
+  if (!_mensagens.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:32px"><div class="ei">💬</div><h3>Sem mensagens</h3><p>Envie uma mensagem para outra unidade</p></div>';
+    return;
+  }
+  const grupos = {};
+  for (const m of _mensagens) {
+    const key = m.sou_remetente ? `dest_${m.destinatario_id || 'broadcast'}` : `rem_${m.remetente_id}`;
+    if (!grupos[key]) grupos[key] = { nome: m.sou_remetente ? (m.destinatario || 'Broadcast') : (m.remetente || '—'), msgs: [], unread: 0 };
+    grupos[key].msgs.push(m);
+    if (!m.lida && !m.sou_remetente) grupos[key].unread++;
+  }
+  list.innerHTML = Object.entries(grupos).map(([key, g]) => `<div class="chat-item${_activeChatKey === key ? ' active' : ''}" onclick="abrirChat('${key}','${g.nome.replace(/'/g,"\\'")}')">
+    <div class="chat-item-name"><span>${g.nome}</span>${g.unread ? `<span class="chat-unread">${g.unread}</span>` : ''}</div>
+    <div class="chat-item-preview">${g.msgs[g.msgs.length - 1]?.corpo || ''}</div>
+    <div class="chat-item-time">${fmtData(g.msgs[g.msgs.length - 1]?.enviada_em)}</div>
   </div>`).join('');
 }
 
-function abrirChat(key,nome){
-  _activeChatId=key;
-  document.getElementById('chatHeader').textContent=nome||'Broadcast';
+function abrirChat(key, nome) {
+  _activeChatKey = key;
+  document.getElementById('chat-header').innerHTML = `<span>💬 ${nome}</span>`;
   renderChatList();
-  const filtradas=_mensagens.filter(m=>{
-    const k=m.sou_remetente?`dest_${m.destinatario_id||'broadcast'}`:`rem_${m.remetente_id}`;
-    return k===key;
+  const filtradas = _mensagens.filter(m => {
+    const k = m.sou_remetente ? `dest_${m.destinatario_id || 'broadcast'}` : `rem_${m.remetente_id}`;
+    return k === key;
   });
-  const el=document.getElementById('chatMsgs');
-  el.innerHTML=filtradas.map(m=>`<div>
-    ${m.tipo!=='geral'?`<span class="msg-type-badge msg-type-${m.tipo}">${m.tipo==='transferencia'?'Transferência':'Alerta'}</span>`:''}
-    <div class="msg ${m.sou_remetente?'mine':'theirs'}">
-      ${m.assunto?`<strong>${m.assunto}</strong><br>`:''}${m.corpo}
-      <div class="msg-meta">${new Date(m.enviada_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>
+  const el = document.getElementById('chat-msgs');
+  el.innerHTML = filtradas.map(m => `<div>
+    ${m.tipo !== 'geral' ? `<span class="msg-type-badge msg-type-${m.tipo}">${m.tipo === 'transferencia' ? '🔄 Transferência' : '⚠️ Alerta'}</span>` : ''}
+    <div class="msg ${m.sou_remetente ? 'mine' : 'theirs'}">
+      ${m.assunto ? `<strong style="display:block;margin-bottom:4px">${m.assunto}</strong>` : ''}${m.corpo}
+      <div class="msg-meta">${fmtData(m.enviada_em)}</div>
     </div>
   </div>`).join('');
-  el.scrollTop=el.scrollHeight;
-  // Mark as read
-  filtradas.filter(m=>!m.lida&&!m.sou_remetente).forEach(m=>fetch(`/api/rede/mensagens/${m.id}/lida/`,{method:'PUT',headers:{'X-CSRFToken':getCsrf()}}));
+  el.scrollTop = el.scrollHeight;
+  filtradas.filter(m => !m.lida && !m.sou_remetente).forEach(m =>
+    fetch(`/api/rede/mensagens/${m.id}/lida/`, {method:'PUT', headers:{'X-CSRFToken': csrf()}})
+  );
 }
 
-async function enviarMensagem(){
-  const corpo=document.getElementById('msgTexto').value.trim();
-  if(!corpo)return;
-  const dest=document.getElementById('msgDestinatario').value;
-  const r=await fetch('/api/rede/mensagens/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({corpo,destinatario_id:dest||null,tipo:'geral',assunto:''})});
-  if(r.ok){document.getElementById('msgTexto').value='';carregarMensagens();toast('Mensagem enviada')}else toast('Erro ao enviar','err');
+async function enviarMensagem() {
+  const corpo = document.getElementById('msg-texto').value.trim();
+  if (!corpo) return;
+  const dest = document.getElementById('msg-dest').value;
+  try {
+    const r = await fetch('/api/rede/mensagens/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': csrf()},
+      body: JSON.stringify({corpo, destinatario_id: dest || null, tipo: 'geral', assunto: ''})
+    });
+    if (r.ok) { document.getElementById('msg-texto').value = ''; carregarMensagens(); toast('Mensagem enviada'); }
+    else toast('Erro ao enviar','err');
+  } catch(e) { toast('Erro de conexão','err'); }
 }
 
-async function enviarNovaMensagem(){
-  const corpo=document.getElementById('novaMsgCorpo').value.trim();
-  const assunto=document.getElementById('novaMsgAssunto').value.trim();
-  const dest=document.getElementById('novaMsgDest').value;
-  if(!corpo)return;
-  const r=await fetch('/api/rede/mensagens/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({corpo,assunto,destinatario_id:dest||null,tipo:'geral'})});
-  if(r.ok){fecharModal('modalNovaMensagem');carregarMensagens();toast('Mensagem enviada')}else toast('Erro','err');
+async function enviarNovaMensagem() {
+  const corpo = document.getElementById('nm-corpo').value.trim();
+  const assunto = document.getElementById('nm-assunto').value.trim();
+  const dest = document.getElementById('nm-dest').value;
+  if (!corpo) { toast('Escreva a mensagem','err'); return; }
+  try {
+    const r = await fetch('/api/rede/mensagens/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': csrf()},
+      body: JSON.stringify({corpo, assunto, destinatario_id: dest || null, tipo: 'geral'})
+    });
+    if (r.ok) { fecharModal('modal-nova-msg'); carregarMensagens(); toast('Mensagem enviada'); }
+    else toast('Erro ao enviar','err');
+  } catch(e) { toast('Erro','err'); }
 }
 
-async function criarRede(){
-  const nome=document.getElementById('redeNome').value.trim();
-  if(!nome){toast('Informe o nome da rede','err');return}
-  const r=await fetch('/api/rede/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({nome,tipo:document.getElementById('redeTipo').value,cnpj_raiz:document.getElementById('redeCNPJ').value,nome_unidade:document.getElementById('redeNomeUnidade').value,codigo_unidade:document.getElementById('redeCodigoUnidade').value})});
-  const d=await r.json();
-  if(d.ok){fecharModal('modalCriarRede');toast('Rede criada com sucesso!');carregarTudo()}else toast(d.erro||'Erro','err');
+// ── CRUD ───────────────────────────────────────────────────────────────────
+async function criarRede() {
+  const nome = document.getElementById('r-nome').value.trim();
+  if (!nome) { toast('Informe o nome da rede','err'); return; }
+  try {
+    const r = await fetch('/api/rede/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': csrf()},
+      body: JSON.stringify({
+        nome, tipo: document.getElementById('r-tipo').value,
+        cnpj_raiz: document.getElementById('r-cnpj').value,
+        nome_unidade: document.getElementById('r-unidade').value,
+        codigo_unidade: document.getElementById('r-codigo').value
+      })
+    });
+    const d = await r.json();
+    if (d.ok || d.id || d.rede) { fecharModal('modal-criar-rede'); toast('Rede criada com sucesso! 🎉'); carregarTudo(); }
+    else toast(d.erro || 'Erro ao criar rede','err');
+  } catch(e) { toast('Erro de conexão','err'); }
 }
 
-async function convidarUnidade(){
-  const email=document.getElementById('convidarEmail').value.trim();
-  if(!email){toast('Informe o e-mail','err');return}
-  const r=await fetch('/api/rede/convidar/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({email_empresa:email,nome_unidade:document.getElementById('convidarNomeUnidade').value,codigo_unidade:document.getElementById('convidarCodigo').value,tipo:document.getElementById('convidarTipo').value})});
-  const d=await r.json();
-  if(d.ok){fecharModal('modalConvidar');toast('Unidade adicionada à rede!');carregarTudo()}else toast(d.erro||'Erro','err');
+async function entrarRede() {
+  const codigo = document.getElementById('e-codigo').value.trim();
+  const nome = document.getElementById('e-unidade').value.trim();
+  if (!codigo) { toast('Informe o código do convite','err'); return; }
+  if (!nome) { toast('Informe o nome da unidade','err'); return; }
+  try {
+    const r = await fetch('/api/rede/entrar/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': csrf()},
+      body: JSON.stringify({
+        codigo_convite: codigo,
+        nome_unidade: nome,
+        codigo_unidade: document.getElementById('e-codigo-unidade').value
+      })
+    });
+    const d = await r.json();
+    if (d.ok || d.id) { fecharModal('modal-entrar-rede'); toast('Bem-vindo à rede! 🎉'); carregarTudo(); }
+    else toast(d.erro || 'Código inválido ou rede não encontrada','err');
+  } catch(e) { toast('Erro de conexão','err'); }
 }
 
-async function solicitarTransferencia(){
-  const item=document.getElementById('transfItem').value.trim();
-  const qtd=parseFloat(document.getElementById('transfQtd').value)||1;
-  const dest=document.getElementById('transfUnidade').value;
-  if(!item||!dest){toast('Preencha item e unidade fornecedora','err');return}
-  const r=await fetch('/api/rede/transferencias/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify({nome_item:item,quantidade:qtd,unidade_fornecedora_id:parseInt(dest),motivo:document.getElementById('transfMotivo').value,solicitado_por:document.getElementById('transfSolicitante').value,urgente:document.getElementById('transfUrgente').value==='true'})});
-  const d=await r.json();
-  if(d.ok){fecharModal('modalTransferencia');toast('Transferência solicitada!');carregarTransferencias()}else toast(d.erro||'Erro','err');
+async function convidarUnidade() {
+  const email = document.getElementById('c-email').value.trim();
+  if (!email) { toast('Informe o e-mail','err'); return; }
+  try {
+    const r = await fetch('/api/rede/convidar/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': csrf()},
+      body: JSON.stringify({
+        email_empresa: email,
+        nome_unidade: document.getElementById('c-nome').value,
+        codigo_unidade: document.getElementById('c-codigo').value,
+        tipo: document.getElementById('c-tipo').value
+      })
+    });
+    const d = await r.json();
+    if (d.ok || d.codigo_convite) {
+      fecharModal('modal-convidar');
+      if (d.codigo_convite) {
+        toast(`Convite gerado! Código: ${d.codigo_convite}`,'info');
+      } else {
+        toast('Unidade adicionada à rede!');
+      }
+      carregarTudo();
+    } else {
+      toast(d.erro || 'Erro ao convidar unidade','err');
+    }
+  } catch(e) { toast('Erro de conexão','err'); }
 }
 
-function verEstoqueUnidade(uid,nome){
-  abrirAba('tab-estoque');
-  document.getElementById('filterUnidade').value=String(uid);
+async function solicitarTransferencia() {
+  const item = document.getElementById('t-item').value.trim();
+  const dest = document.getElementById('t-unidade').value;
+  if (!item) { toast('Informe o item','err'); return; }
+  if (!dest) { toast('Selecione a unidade fornecedora','err'); return; }
+  try {
+    const r = await fetch('/api/rede/transferencias/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': csrf()},
+      body: JSON.stringify({
+        nome_item: item,
+        quantidade: parseInt(document.getElementById('t-qtd').value) || 1,
+        unidade_fornecedora_id: parseInt(dest),
+        motivo: document.getElementById('t-motivo').value,
+        solicitado_por: document.getElementById('t-solicitante').value,
+        urgente: document.getElementById('t-urgente').value === 'true'
+      })
+    });
+    const d = await r.json();
+    if (d.ok || d.id) { fecharModal('modal-transferencia'); toast('Transferência solicitada!'); carregarTransferencias('todas'); }
+    else toast(d.erro || 'Erro ao solicitar','err');
+  } catch(e) { toast('Erro','err'); }
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function preencherFiltros() {
+  const selEst = document.getElementById('filtro-unidade-est');
+  if (selEst) selEst.innerHTML = '<option value="">Todas as unidades</option>' +
+    _unidades.map(u => `<option value="${u.id}">${u.nome_unidade || u['empresa__nome'] || '—'}</option>`).join('');
+}
+
+function preencherSelectUnidades(selId, incluirBroadcast = false) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const outros = _unidades.filter(u => u.id !== _minha);
+  sel.innerHTML = (incluirBroadcast ? '<option value="">Broadcast — Todas</option>' : '<option value="">Selecione...</option>') +
+    outros.map(u => `<option value="${u.id}">${u.nome_unidade || u['empresa__nome'] || '—'}</option>`).join('');
+}
+
+function verEstoqueUnidade(uid) {
+  switchTab('estoque');
+  document.getElementById('filtro-unidade-est').value = String(uid);
   renderEstoque();
 }
 
-function prepararTransf(uid){abrirModalTransferencia();document.getElementById('transfUnidade').value=String(uid)}
-function prepararTransfItem(uid,nome){abrirModalTransferencia();document.getElementById('transfUnidade').value=String(uid);document.getElementById('transfItem').value=nome}
+function prepararTransf(uid) {
+  abrirModalTransferencia();
+  setTimeout(() => { document.getElementById('t-unidade').value = String(uid); }, 50);
+}
 
+function prepararTransfItem(uid, nome) {
+  abrirModalTransferencia();
+  setTimeout(() => {
+    document.getElementById('t-unidade').value = String(uid);
+    document.getElementById('t-item').value = nome;
+  }, 50);
+}
+
+function exportarRelatorio() {
+  if (!_rede) { toast('Nenhuma rede carregada','err'); return; }
+  const link = document.createElement('a');
+  link.href = '/api/rede/kpis/';
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.click();
+  toast('Abrindo relatório da rede...','info');
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
 carregarTudo();
-setInterval(()=>{carregarMensagens();carregarTransferencias()},30000);
+setInterval(() => {
+  carregarMensagens();
+  carregarTransferencias('todas');
+}, 30000);
 </script>
-<script>(function tabGuard(){function cookieVal(n){var m=document.cookie.match("(^|;)\\s*"+n+"\\s*=\\s*([^;]+)");return m?m.pop():""}var rk="_tab_sync_rede";async function syncTab(){var ssId=sessionStorage.getItem("empresa_id");var ckId=cookieVal("empresa_id");if(!ssId||ssId===ckId)return;var token=sessionStorage.getItem("auth_token")||sessionStorage.getItem("token");if(!token)return;try{var res=await fetch("/api/sessao/aba",{method:"POST",headers:{Authorization:"Bearer "+token},credentials:"same-origin"});if(!res.ok)return;var p=await res.json();if(sessionStorage.getItem(rk)==="1"){sessionStorage.removeItem(rk);return}sessionStorage.setItem(rk,"1");window.location.replace(p.destination||"/")}catch(e){}}syncTab();window.addEventListener("focus",syncTab);document.addEventListener("visibilitychange",function(){if(!document.hidden)syncTab()})}());</script>
+
+<script>
+// Tab guard — sync multi-tab sessions
+(function tabGuard(){
+  function cookieVal(n){var m=document.cookie.match("(^|;)\\s*"+n+"\\s*=\\s*([^;]+)");return m?m.pop():""}
+  var rk="_tab_sync_rede";
+  async function syncTab(){
+    var ssId=sessionStorage.getItem("empresa_id");
+    var ckId=cookieVal("empresa_id");
+    if(!ssId||ssId===ckId)return;
+    var token=sessionStorage.getItem("auth_token")||sessionStorage.getItem("token");
+    if(!token)return;
+    try{
+      var res=await fetch("/api/sessao/aba",{method:"POST",headers:{Authorization:"Bearer "+token},credentials:"same-origin"});
+      if(!res.ok)return;
+      var p=await res.json();
+      if(sessionStorage.getItem(rk)==="1"){sessionStorage.removeItem(rk);return}
+      sessionStorage.setItem(rk,"1");
+      window.location.replace(p.destination||"/");
+    }catch(e){}
+  }
+  syncTab();
+  window.addEventListener("focus",syncTab);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)syncTab()});
+}());
+</script>
 </body>
 </html>

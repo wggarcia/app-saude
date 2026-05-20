@@ -399,7 +399,27 @@ document.getElementById('filtros').addEventListener('click', function(ev) {
 });
 
 function exportarTabela() {
-  alert('Exportação disponível em breve.');
+  const exames = todosExames;
+  if (!exames.length) { alert('Nenhum exame para exportar.'); return; }
+  const header = ['ID','Funcionário','Cargo','Tipo de Exame','Data Realização','Validade','Status','Resultado'];
+  const rows = exames.map(e => [
+    e.id,
+    `"${(e.funcionario||'').replace(/"/g,'""')}"`,
+    `"${(e.cargo||'').replace(/"/g,'""')}"`,
+    `"${(e.tipo_exame_label||e.tipo_exame||'').replace(/"/g,'""')}"`,
+    e.data_realizacao || '',
+    e.data_validade || '',
+    e.status || '',
+    `"${(e.resultado||'').replace(/"/g,'""')}"`
+  ]);
+  const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob(['﻿' + csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `exames_sst_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 async function carregarExames() {

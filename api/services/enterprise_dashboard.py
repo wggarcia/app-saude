@@ -1456,8 +1456,8 @@ def _suite_plano_saude(empresa):
     prestadores_ativos = prestadores.filter(status=PrestadorPlanoSaude.STATUS_CREDENCIADO).count()
 
     return {
-        "headline": "Operadora com gestao, regulacao clinica, sinistralidade e radar epidemiologico no mesmo cockpit.",
-        "diferencial": "Equaliza o que os lideres de mercado entregam em core admin, autorizacao, member journey, payment integrity e compliance, sem abrir mao do diferencial SolusCRT: epidemiologia territorial aplicada a carteira.",
+        "headline": "Camada cooperativa para operadoras: carteira, regulacao, prestadores e radar epidemiologico no mesmo cockpit, sem substituir o core legado.",
+        "diferencial": "A SolusCRT entra acima do sistema que a operadora ja possui para organizar fila clinica, sinistralidade, rede, reembolso e risco territorial, preservando o core admin e amplificando a leitura epidemiologica da carteira.",
         "processos": [
             {
                 "nome": "Operacao de operadora ponta a ponta",

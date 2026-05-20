@@ -88,6 +88,7 @@ def api_redes(request):
 @csrf_exempt
 def api_rede_convidar(request):
     """Generate invite code or register a unit into the network."""
+    import secrets
     empresa = get_empresa(request)
     if not empresa:
         return JsonResponse({'erro': 'Não autenticado'}, status=401)
@@ -98,22 +99,67 @@ def api_rede_convidar(request):
 
     if request.method == 'POST':
         data = json.loads(request.body)
-        # Register another empresa (by email) into the same network
-        email_destino = data.get('email_empresa', '')
-        try:
-            empresa_destino = Empresa.objects.get(email=email_destino)
-        except Empresa.DoesNotExist:
-            return JsonResponse({'erro': f'Empresa com email {email_destino} não encontrada'}, status=404)
+        rede = unidade.rede
 
-        u, created = UnidadeRede.objects.get_or_create(empresa=empresa_destino)
-        u.rede = unidade.rede
-        u.tipo = data.get('tipo', 'farmacia')
-        u.nome_unidade = data.get('nome_unidade', empresa_destino.nome)
-        u.codigo_unidade = data.get('codigo_unidade', '')
-        u.save()
-        return JsonResponse({'ok': True, 'criada': created, 'unidade_id': u.id})
+        # Ensure the rede has an invite code
+        if not rede.codigo_convite:
+            rede.codigo_convite = 'RD-' + secrets.token_urlsafe(8).upper()[:10]
+            rede.save()
+
+        email_destino = data.get('email_empresa', '').strip()
+        if email_destino:
+            # Register another empresa by email into the same network
+            try:
+                empresa_destino = Empresa.objects.get(email=email_destino)
+            except Empresa.DoesNotExist:
+                # Don't reveal if email exists — return invite code instead
+                return JsonResponse({
+                    'ok': True,
+                    'codigo_convite': rede.codigo_convite,
+                    'aviso': 'Empresa não encontrada no sistema. Compartilhe o código do convite diretamente.'
+                })
+            u, created = UnidadeRede.objects.get_or_create(empresa=empresa_destino)
+            u.rede = rede
+            u.tipo = data.get('tipo', 'farmacia')
+            u.nome_unidade = data.get('nome_unidade', empresa_destino.nome)
+            u.codigo_unidade = data.get('codigo_unidade', '')
+            u.save()
+            return JsonResponse({'ok': True, 'criada': created, 'unidade_id': u.id, 'codigo_convite': rede.codigo_convite})
+        else:
+            # Just return invite code
+            return JsonResponse({'ok': True, 'codigo_convite': rede.codigo_convite})
 
     return JsonResponse({'erro': 'Método não permitido'}, status=405)
+
+
+@csrf_exempt
+def api_rede_entrar(request):
+    """POST /api/rede/entrar/ — join a rede using an invite code."""
+    if request.method != 'POST':
+        return JsonResponse({'erro': 'Método não permitido'}, status=405)
+    empresa = get_empresa(request)
+    if not empresa:
+        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'erro': 'JSON inválido'}, status=400)
+    codigo = (data.get('codigo_convite') or '').strip().upper()
+    if not codigo:
+        return JsonResponse({'erro': 'Código do convite é obrigatório'}, status=400)
+    try:
+        rede = Rede.objects.get(codigo_convite=codigo, ativa=True)
+    except Rede.DoesNotExist:
+        return JsonResponse({'erro': 'Código de convite inválido ou rede não encontrada'}, status=404)
+
+    u, created = UnidadeRede.objects.get_or_create(empresa=empresa)
+    if u.rede and u.rede != rede:
+        return JsonResponse({'erro': 'Você já pertence a outra rede'}, status=400)
+    u.rede = rede
+    u.nome_unidade = data.get('nome_unidade', empresa.nome) or empresa.nome
+    u.codigo_unidade = data.get('codigo_unidade', '')
+    u.save()
+    return JsonResponse({'ok': True, 'id': u.id, 'rede_nome': rede.nome})
 
 
 # ─── ESTOQUE CONSOLIDADO DA REDE ─────────────────────────────────────────────

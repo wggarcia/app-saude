@@ -2,6 +2,7 @@ import json
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import (
@@ -403,3 +404,36 @@ def api_membros_grupo(request, sala_id):
     return JsonResponse({
         "membros": [{"codigo": m.alias.alias_publico} for m in membros]
     })
+
+
+@csrf_exempt
+def api_editar_grupo(request, sala_id):
+    """PUT /api/comunicacao/grupos/<sala_id>/ — editar nome/membros de um grupo"""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    sala = get_object_or_404(SalaChat, id=sala_id, empresa=empresa, tipo=SalaChat.TIPO_GRUPO)
+    if request.method != "PUT":
+        return JsonResponse({"erro": "método não permitido"}, status=405)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+    nome = data.get("nome", "").strip()
+    if nome:
+        sala.nome = nome
+        sala.save()
+    # Update members if provided
+    novos_membros = data.get("membros")
+    if novos_membros is not None:
+        # Replace member list
+        MembroGrupoChat.objects.filter(sala=sala).delete()
+        adicionados = 0
+        for codigo in novos_membros:
+            alias = ColaboradorAliasCorporativo.objects.filter(
+                empresa=empresa, alias_publico=codigo
+            ).first()
+            if alias:
+                MembroGrupoChat.objects.get_or_create(sala=sala, alias=alias)
+                adicionados += 1
+    return JsonResponse({"sala": _sala_json(sala), "ok": True})

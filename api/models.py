@@ -3016,6 +3016,7 @@ class Rede(models.Model):
     descricao = models.TextField(blank=True, default="")
     ativa = models.BooleanField(default=True)
     criada_em = models.DateTimeField(auto_now_add=True)
+    codigo_convite = models.CharField(max_length=24, blank=True, default="", unique=True, null=True)
 
     class Meta:
         ordering = ["nome"]
@@ -5002,7 +5003,7 @@ class AssinaturaDocumentoSST(models.Model):
 # ── CRESCIMENTO / UNICÓRNIO ───────────────────────────────────────────────────
 
 class TrialEmpresa(models.Model):
-    """Período de trial de 14 dias — self-service onboarding."""
+    """Período de trial self-service da plataforma."""
     empresa      = models.OneToOneField(Empresa, on_delete=models.CASCADE, related_name="trial")
     iniciado_em  = models.DateTimeField(auto_now_add=True)
     expira_em    = models.DateTimeField()

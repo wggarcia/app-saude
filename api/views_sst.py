@@ -1700,6 +1700,39 @@ def api_epis_catalogo(request):
 
 
 @csrf_exempt
+def api_epis_catalogo_detail(request, epi_id):
+    """PUT /api/sst/epis/catalogo/<epi_id>/ — editar EPI do catálogo"""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+    try:
+        epi = EPIItem.objects.get(id=epi_id, empresa=empresa)
+    except EPIItem.DoesNotExist:
+        return JsonResponse({"erro": "EPI não encontrado"}, status=404)
+    if request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        nome = data.get("nome", "").strip()
+        if not nome:
+            return JsonResponse({"erro": "nome obrigatório"}, status=400)
+        epi.nome = nome
+        epi.tipo = data.get("tipo", epi.tipo)
+        epi.ca_numero = data.get("ca_numero", epi.ca_numero)
+        epi.validade_ca = data.get("validade_ca") or None
+        epi.fornecedor = data.get("fornecedor", epi.fornecedor)
+        epi.descricao = data.get("descricao", epi.descricao)
+        epi.save()
+        return JsonResponse({"id": epi.id, "nome": epi.nome, "ok": True})
+    if request.method == "DELETE":
+        epi.ativo = False
+        epi.save()
+        return JsonResponse({"ok": True})
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+@csrf_exempt
 def api_epis_entregas(request):
     empresa = _empresa_autenticada(request)
     if not empresa:

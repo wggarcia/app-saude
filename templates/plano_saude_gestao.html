@@ -83,13 +83,14 @@ tr:hover td{background:rgba(255,107,157,.03)}
 <body>
 
 <aside class="sidebar">
-  <div class="logo">Plano de Saude</div>
+  <div class="logo">Operadora Cooperativa</div>
   <div class="nav-section">Navegacao</div>
-  <a class="nav-link" href="/dashboard-plano-saude/"><span>&#128202;</span> Inteligencia Epi</a>
+  <a class="nav-link" href="/dashboard-plano-saude/"><span>&#128202;</span> Radar Epi</a>
   <a class="nav-link active" href="/plano-saude/gestao/"><span>&#127973;</span> Gestao Operacional</a>
   <a class="nav-link" href="/logout/"><span>&#128682;</span> Sair</a>
   <div class="nav-section" style="margin-top:8px">Modulos</div>
   <button class="tab-btn active" onclick="setTab('visao')"><span>&#127968;</span> Visao Geral</button>
+  <button class="tab-btn" onclick="setTab('integracoes')"><span>&#129309;</span> Cooperacao</button>
   <button class="tab-btn" onclick="setTab('planos')"><span>&#128203;</span> Planos</button>
   <button class="tab-btn" onclick="setTab('beneficiarios')"><span>&#128101;</span> Beneficiarios</button>
   <button class="tab-btn" onclick="setTab('prestadores')"><span>&#127973;</span> Rede Credenciada</button>
@@ -108,10 +109,10 @@ tr:hover td{background:rgba(255,107,157,.03)}
 <main class="main">
   <div class="page-header">
     <div>
-      <div class="page-title">Gestao de Plano de Saude</div>
-      <div class="page-sub">Beneficiarios, elegibilidade, autorizacoes, sinistralidade, reembolsos e inteligencia epidemiologica</div>
+      <div class="page-title">Cockpit Cooperativo da Operadora</div>
+      <div class="page-sub">Carteira, regulacao, rede credenciada, sinistralidade e radar epidemiologico cooperando com o core legado da operadora.</div>
     </div>
-    <a href="/dashboard-plano-saude/" class="btn btn-ghost">Ver Inteligencia Epidemiologica</a>
+    <a href="/dashboard-plano-saude/" class="btn btn-ghost">Ver Radar Epidemiologico</a>
   </div>
 
   {% include "partials/enterprise_command_center.html" %}
@@ -166,8 +167,41 @@ tr:hover td{background:rgba(255,107,157,.03)}
         Ver mapa epidemiologico completo
       </a>
       <p style="margin-top:12px;font-size:13px;color:var(--muted)">
-        Acompanhe focos epidemiologicos, surtos e alertas territoriais que impactam a carteira de beneficiarios da operadora.
+        Acompanhe focos epidemiologicos, surtos e alertas territoriais que impactam a carteira e ajudam a operadora a decidir melhor sem trocar o sistema principal.
       </p>
+    </div>
+  </div>
+
+  <!-- COOPERACAO -->
+  <div class="tab-panel" id="tab-integracoes" style="margin-top:4px">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Camada Cooperativa com o Legado da Operadora</span>
+        <a href="/dashboard-plano-saude/" class="btn btn-ghost">Cruzar com Radar Epi</a>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:18px">
+        <div>
+          <div id="coopHeadline" style="font-size:20px;font-weight:800;color:var(--accent)">Carregando camada cooperativa...</div>
+          <p id="coopDesc" style="margin-top:10px;font-size:13px;color:var(--muted)"></p>
+          <p id="coopPromise" style="margin-top:10px;font-size:13px;color:var(--text)"></p>
+        </div>
+        <div class="summary-grid" id="coopGrid">
+          <div class="summary-box">
+            <div class="summary-box-title">Cooperacao</div>
+            <div class="summary-box-val" style="font-size:16px;color:var(--muted)">Carregando...</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Passos de Go-live Cooperativo</span>
+          </div>
+          <div style="padding:16px 20px">
+            <ul id="coopPassos" style="display:flex;flex-direction:column;gap:10px;padding-left:18px;color:var(--muted);font-size:13px">
+              <li>Carregando...</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1107,6 +1141,7 @@ function setTab(name) {
   });
   var loaders = {
     visao:carregarVisaoGeral,
+    integracoes:carregarIntegracoesCooperacao,
     planos:carregarPlanos,
     beneficiarios:carregarBeneficiarios,
     prestadores:carregarPrestadores,
@@ -1146,6 +1181,45 @@ async function carregarVisaoGeral() {
   setText('sgPortalAtivo', kpis.prestadores_portal_ativo != null ? kpis.prestadores_portal_ativo : '--');
   setText('sgFilaClinica', kpis.fila_clinica_pendencias != null ? kpis.fila_clinica_pendencias : '--');
   setText('sgGuiasSla', kpis.guias_sla_vencido != null ? kpis.guias_sla_vencido : '--');
+}
+
+function badgeCooperacao(status) {
+  return {
+    operando:'badge-ok',
+    implantacao:'badge-warn',
+    prioridade:'badge-danger',
+    monitorando:'badge-info'
+  }[status] || 'badge-gray';
+}
+
+async function carregarIntegracoesCooperacao() {
+  var dash = await api('/api/plano-saude/dashboard');
+  var coop = (dash && dash.cooperacao) ? dash.cooperacao : {};
+  setText('coopHeadline', coop.headline || 'Camada cooperativa nao configurada');
+  setText('coopDesc', coop.descricao || '');
+  setText('coopPromise', coop.promessa || '');
+
+  var grid = document.getElementById('coopGrid');
+  var frentes = Array.isArray(coop.frentes) ? coop.frentes : [];
+  if (!frentes.length) {
+    grid.innerHTML = '<div class="summary-box"><div class="summary-box-title">Cooperacao</div><div class="summary-box-val" style="font-size:16px;color:var(--muted)">Nenhuma frente configurada.</div></div>';
+  } else {
+    grid.innerHTML = frentes.map(function(item){
+      return '<div class="summary-box">'+
+        '<div class="summary-box-title">'+item.nome+'</div>'+
+        '<div style="display:flex;align-items:center;justify-content:flex-start;gap:8px;margin-bottom:10px"><span class="badge '+badgeCooperacao(item.status)+'">'+item.status_label+'</span></div>'+
+        '<div style="font-size:13px;line-height:1.55;color:var(--text)">'+item.descricao+'</div>'+
+        '<div style="margin-top:12px;font-size:12px;color:var(--accent2)">'+item.evidencia+'</div>'+
+        '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Proximo passo: '+item.proximo_passo+'</div>'+
+      '</div>';
+    }).join('');
+  }
+
+  var passos = document.getElementById('coopPassos');
+  var lista = Array.isArray(coop.proximos_passos) ? coop.proximos_passos : [];
+  passos.innerHTML = lista.length
+    ? lista.map(function(item){ return '<li>'+item+'</li>'; }).join('')
+    : '<li>Nenhum passo configurado.</li>';
 }
 
 async function carregarPlanos() {

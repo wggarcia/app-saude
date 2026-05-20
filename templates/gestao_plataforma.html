@@ -352,7 +352,7 @@ select option{background:#0b1822}
             <div class="progress-bar"><div class="progress-fill" id="trialBar" style="width:0%"></div></div>
           </div>
           <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn primary" id="btnAtivarTrial" onclick="ativarTrial()" style="display:none">Ativar Trial Gratuito 14 dias</button>
+            <button class="btn primary" id="btnAtivarTrial" onclick="ativarTrial()" style="display:none">Ativar Trial Gratuito 15 dias</button>
             <a class="btn" style="border-color:rgba(240,191,107,.3);color:var(--gold)" href="mailto:comercial@soluscrt.com?subject=Quero+assinar+o+SolusCRT">Falar com Vendas</a>
           </div>
         </div>
@@ -1575,7 +1575,7 @@ async function loadTrial() {
     set("trialPct", "100%");
   } else {
     set("trialNome", "Sem plano ativo");
-    set("trialDesc", "Ative o trial gratuito de 14 dias ou fale com vendas");
+    set("trialDesc", "Ative o trial gratuito de 15 dias ou fale com vendas");
     jq("btnAtivarTrial").style.display = "inline-flex";
     jq("trialBadge").outerHTML = sbadge("inativo");
   }
@@ -1935,7 +1935,11 @@ async function revogarTodasSessoes() {
 
 // ── CONFORMIDADE ──────────────────────────────────────────────────────────────
 function exportarRelatorio() {
-  alert('Funcionalidade de exportação PDF será disponibilizada em breve. Entre em contato com suporte@soluscrt.com.br');
+  const link = document.createElement('a');
+  link.href = '/api/sst/relatorio/consolidado/pdf/';
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.click();
 }
 
 // ── LOGS ──────────────────────────────────────────────────────────────────────

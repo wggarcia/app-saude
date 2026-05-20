@@ -134,11 +134,16 @@ def _firebase_app():
     if firebase_admin is None or credentials is None:
         return None
 
+    raw_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+    path = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH") or getattr(settings, "FIREBASE_SERVICE_ACCOUNT_PATH", "")
+
+    # If there are no credentials configured at all, report unavailable
+    # even if a previous initialization exists (catches override_settings in tests)
+    if not raw_json and not (path and os.path.exists(path)):
+        return None
+
     if firebase_admin._apps:
         return firebase_admin.get_app()
-
-    raw_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
-    path = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH") or settings.FIREBASE_SERVICE_ACCOUNT_PATH
 
     try:
         if raw_json:

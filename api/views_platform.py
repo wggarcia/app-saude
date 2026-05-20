@@ -3,6 +3,7 @@ Páginas e API de status/SLA da plataforma SolusCRT.
 """
 import time
 
+from django.conf import settings
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.db import connection, OperationalError
@@ -55,14 +56,11 @@ def platform_status(request):
         "descricao": "Endpoints REST respondendo normalmente",
     })
 
-    # 3. Processamento IA — verifica se o módulo de IA está importável
+    # 3. Processamento IA — valida se o motor epidemiologico esta carregado
     try:
-        from api.utils_ia import _placeholder  # noqa: F401 — apenas testa importação
+        from api.epidemiologia import DISEASE_WEIGHTS
         ia_status = "operacional"
-        ia_descricao = "Módulo de IA carregado com sucesso"
-    except ImportError:
-        ia_status = "operacional"
-        ia_descricao = "Motor de IA ativo"
+        ia_descricao = f"Motor epidemiologico carregado com {len(DISEASE_WEIGHTS)} grupos de doenca."
     except Exception as exc:
         ia_status = "degradado"
         ia_descricao = str(exc)
@@ -75,14 +73,15 @@ def platform_status(request):
         "descricao": ia_descricao,
     })
 
-    # 4. Notificações Push — verifica existência do módulo
+    # 4. Notificações Push — verifica configuracao real do Firebase/FCM
     try:
-        from api.push_service import _placeholder  # noqa: F401
-        push_status = "operacional"
-        push_descricao = "Serviço de push ativo"
-    except ImportError:
-        push_status = "operacional"
-        push_descricao = "Serviço de notificações ativo"
+        from api.push_service import push_disponivel
+        if push_disponivel():
+            push_status = "operacional"
+            push_descricao = "Firebase/FCM configurado e pronto para envio."
+        else:
+            push_status = "degradado"
+            push_descricao = "Firebase/FCM indisponivel ou sem credenciais configuradas."
     except Exception as exc:
         push_status = "degradado"
         push_descricao = str(exc)
@@ -95,11 +94,16 @@ def platform_status(request):
         "descricao": push_descricao,
     })
 
-    # 5. Pagamentos — sempre retorna operacional se módulo importa
+    # 5. Pagamentos — exige configuracao real do gateway e do webhook
     try:
-        from api import views_pagamento  # noqa: F401
-        pay_status = "operacional"
-        pay_descricao = "Gateway de pagamentos ativo"
+        asaas_key = (getattr(settings, "ASAAS_API_KEY", "") or "").strip()
+        webhook_token = (getattr(settings, "ASAAS_WEBHOOK_TOKEN", "") or "").strip()
+        if asaas_key and webhook_token:
+            pay_status = "operacional"
+            pay_descricao = "Gateway Asaas configurado com webhook validado."
+        else:
+            pay_status = "degradado"
+            pay_descricao = "Gateway configurado parcialmente ou sem webhook validado."
     except Exception as exc:
         pay_status = "degradado"
         pay_descricao = str(exc)

@@ -1212,7 +1212,11 @@ async function revogarTodasSessoes(){
 
 // ── CONFORMIDADE ───────────────────────────────────────────────────────
 function exportarRelatorio(){
-  alert('Funcionalidade de exportação PDF será disponibilizada em breve. Entre em contato com suporte@soluscrt.com.br');
+  const link = document.createElement('a');
+  link.href = '/api/governo/pdf/relatorio/';
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.click();
 }
 
 // ── LOGS ───────────────────────────────────────────────────────────────

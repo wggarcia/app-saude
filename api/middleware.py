@@ -1,3 +1,4 @@
+import json
 import jwt
 import logging
 import sys
@@ -56,10 +57,41 @@ def _touch_dispositivo_empresa(empresa, device_id):
 
 
 def _client_ip(request):
+    remote_ip = request.META.get("REMOTE_ADDR", "unknown")
+    if not getattr(settings, "TRUST_X_FORWARDED_FOR", False):
+        return remote_ip
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
     if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR", "unknown")
+        return forwarded.split(",")[0].strip() or remote_ip
+    return remote_ip
+
+
+def _login_identifier(request):
+    payload = {}
+    try:
+        if request.content_type and "application/json" in request.content_type:
+            bruto = request.body.decode("utf-8") if isinstance(request.body, (bytes, bytearray)) else (request.body or "")
+            payload = json.loads(bruto or "{}")
+        else:
+            payload = request.POST
+    except Exception:
+        payload = {}
+
+    email = str(payload.get("email") or "").strip().lower()
+    if email:
+        return f"email:{email}"
+    cpf = "".join(ch for ch in str(payload.get("cpf") or "") if ch.isdigit())
+    if cpf:
+        return f"cpf:{cpf}"
+    return ""
+
+
+def _rate_limit_keys(request):
+    keys = [f"login_attempts:ip:{_client_ip(request)}"]
+    identifier = _login_identifier(request)
+    if identifier:
+        keys.append(f"login_attempts:principal:{identifier}")
+    return keys
 
 
 def _rate_limit_login(request):
@@ -67,16 +99,17 @@ def _rate_limit_login(request):
     from django.conf import settings
     if getattr(settings, "DJANGO_ENV", "") == "test" or "test" in sys.argv:
         return False
-    ip = _client_ip(request)
-    cache_key = f"login_attempts:{ip}"
-    attempts = cache.get(cache_key, [])
     now_ts = time.time()
-    # Limpa tentativas fora da janela
-    attempts = [t for t in attempts if now_ts - t < _LOGIN_WINDOW_SECONDS]
-    if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
-        return True
-    attempts.append(now_ts)
-    cache.set(cache_key, attempts, _LOGIN_WINDOW_SECONDS)
+    windows = {}
+    for cache_key in _rate_limit_keys(request):
+        attempts = cache.get(cache_key, [])
+        attempts = [t for t in attempts if now_ts - t < _LOGIN_WINDOW_SECONDS]
+        if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
+            return True
+        windows[cache_key] = attempts
+    for cache_key, attempts in windows.items():
+        attempts.append(now_ts)
+        cache.set(cache_key, attempts, _LOGIN_WINDOW_SECONDS)
     return False
 
 
@@ -85,7 +118,8 @@ def clear_login_rate_limit(request):
     from django.conf import settings
     if getattr(settings, "DJANGO_ENV", "") == "test" or "test" in sys.argv:
         return
-    cache.delete(f"login_attempts:{_client_ip(request)}")
+    for cache_key in _rate_limit_keys(request):
+        cache.delete(cache_key)
 
 
 def _plano_expirado(empresa):
@@ -114,6 +148,7 @@ class EmpresaMiddleware:
             "/sucesso/",
             "/erro/",
             "/pendente/",
+            "/api/platform/status",
             "/logout/",
             "/logout-governo/",
             "/logout-operacao/",
@@ -157,7 +192,9 @@ class EmpresaMiddleware:
         rotas_login = (
             "/api/login",
             "/api/login-empresa",
+            "/api/login-empresa-api",
             "/api/login-governo",
+            "/api/operacao-central/login",
         )
         if any(request.path.startswith(r) for r in rotas_login):
             if _rate_limit_login(request):

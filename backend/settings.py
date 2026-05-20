@@ -55,6 +55,12 @@ JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
 JWT_EXP_HOURS = env_int("JWT_EXP_HOURS", 12, minimum=1, maximum=168)
 
 DEBUG = env_bool("DJANGO_DEBUG", default=not IS_PRODUCTION)
+TRIAL_DAYS = env_int("TRIAL_DAYS", 15, minimum=1, maximum=90)
+ALLOW_ENTERPRISE_DEMO_MUTATIONS = env_bool(
+    "ALLOW_ENTERPRISE_DEMO_MUTATIONS",
+    default=not IS_PRODUCTION,
+)
+TRUST_X_FORWARDED_FOR = env_bool("TRUST_X_FORWARDED_FOR", default=False)
 SOLUSCRT_DEFAULT_HOSTS = [
     "127.0.0.1",
     "localhost",

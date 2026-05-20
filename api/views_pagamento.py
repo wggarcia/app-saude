@@ -554,6 +554,9 @@ def api_enterprise_readiness(request):
     email_backend = getattr(settings, "EMAIL_BACKEND", "")
     asaas_key = (getattr(settings, "ASAAS_API_KEY", "") or "").strip()
     webhook_token = (getattr(settings, "ASAAS_WEBHOOK_TOKEN", "") or "").strip()
+    cache_backend = str(getattr(settings, "CACHES", {}).get("default", {}).get("BACKEND", "") or "")
+    shared_cache_ok = ("RedisCache" in cache_backend) or not getattr(settings, "IS_PRODUCTION", False)
+    demo_mutations_locked = not bool(getattr(settings, "ALLOW_ENTERPRISE_DEMO_MUTATIONS", True))
 
     checks = [
         _readiness_item(
@@ -597,6 +600,20 @@ def api_enterprise_readiness(request):
             "Asaas e webhook configurados",
             "ASAAS_API_KEY e ASAAS_WEBHOOK_TOKEN precisam estar definidos.",
             "critica",
+        ),
+        _readiness_item(
+            "shared_cache",
+            shared_cache_ok,
+            "Cache compartilhado para auth e rate limit",
+            f"Backend atual: {cache_backend or 'nao identificado'}. Produção deve usar Redis compartilhado.",
+            "critica",
+        ),
+        _readiness_item(
+            "demo_mutations_locked",
+            demo_mutations_locked or not getattr(settings, "IS_PRODUCTION", False),
+            "Seeds e resets demo bloqueados em producao",
+            "ALLOW_ENTERPRISE_DEMO_MUTATIONS deve ficar desligado em producao.",
+            "alta",
         ),
         _readiness_item(
             "email",

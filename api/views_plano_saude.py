@@ -1,7 +1,7 @@
 """
-Plano de Saúde — Gestão completa para Operadoras.
-Ambiente dedicado: beneficiários, contratos, sinistros,
-reembolsos, guias de autorização e mapa epidemiológico.
+ Plano de Saúde — cockpit cooperativo para Operadoras.
+ Ambiente dedicado para carteira, regulacao, sinistros,
+ prestadores, reembolsos e radar epidemiologico sem rip-and-replace.
 """
 import json
 from datetime import date, timedelta
@@ -70,6 +70,91 @@ def _pressao_epidemiologica_empresa(empresa, dias=14):
         "suspeitos": suspeitos,
         "nivel": nivel,
         "label": label,
+    }
+
+
+def _frente_cooperacao(codigo, nome, status, descricao, evidencia, proximo_passo):
+    labels = {
+        "operando": "Operando",
+        "implantacao": "Em implantacao",
+        "prioridade": "Prioridade alta",
+        "monitorando": "Monitorando",
+    }
+    return {
+        "codigo": codigo,
+        "nome": nome,
+        "status": status,
+        "status_label": labels.get(status, status.title()),
+        "descricao": descricao,
+        "evidencia": evidencia,
+        "proximo_passo": proximo_passo,
+    }
+
+
+def _cooperacao_operadora_payload(empresa, planos, beneficiarios, guias, prestadores, pressao):
+    total_planos = planos.count()
+    beneficiarios_ativos = beneficiarios.filter(
+        situacao=BeneficiarioPlano.SITUACAO_ATIVO
+    ).count()
+    prestadores_ativos = prestadores.filter(
+        status=PrestadorPlanoSaude.STATUS_CREDENCIADO
+    ).count()
+    prestadores_portal = prestadores.filter(portal_ativo=True).count()
+    guias_documentadas = guias.exclude(cid="").exclude(medico_solicitante="").count()
+    planos_com_ans = planos.exclude(registro_ans="").count()
+
+    return {
+        "modelo": "camada_cooperativa",
+        "headline": "A SolusCRT coopera com o sistema que a operadora ja possui e adiciona comando operacional, regulatorio e epidemiologico.",
+        "descricao": "O ambiente de plano de saude funciona como cockpit de orquestracao: a operadora pode manter core admin, ERP, faturamento e integrações proprias enquanto a SolusCRT organiza carteira, fila clinica, rede credenciada, sinistralidade e territorio.",
+        "promessa": "Sem rip-and-replace: entre como camada de cooperacao, enxergue risco assistencial mais cedo e devolva decisao melhor para o que a operadora ja tem.",
+        "frentes": [
+            _frente_cooperacao(
+                "core_legado",
+                "Core legado e carteira da operadora",
+                "operando" if beneficiarios_ativos else ("implantacao" if total_planos else "prioridade"),
+                "Mantem o cadastro mestre e a esteira principal no legado enquanto a SolusCRT organiza elegibilidade, vigencia e leitura operacional da carteira.",
+                f"{total_planos} plano(s) e {beneficiarios_ativos} beneficiario(s) ativo(s) espelhados no cockpit.",
+                "Conectar elegibilidade, faturamento e status do beneficiario ao core existente via API, arquivo ou rotina de carga.",
+            ),
+            _frente_cooperacao(
+                "rede_prestador",
+                "Rede credenciada e portal do prestador",
+                "operando" if prestadores_ativos and prestadores_portal else ("implantacao" if prestadores_ativos else "prioridade"),
+                "Acompanha rede, SLA, pendencias documentais e uso assistencial sem trocar o sistema transacional do prestador.",
+                f"{prestadores_ativos} prestador(es) credenciado(s) e {prestadores_portal} portal(is) ativo(s).",
+                "Ativar score de qualidade, ocorrencias e rotinas de cooperacao com o portal do prestador.",
+            ),
+            _frente_cooperacao(
+                "regulacao",
+                "Regulacao clinica, UM e auditoria",
+                "operando" if guias_documentadas else ("implantacao" if guias.count() else "prioridade"),
+                "Centraliza fila clinica, CID, medico solicitante, justificativa e decisao regulatoria para cooperar com autorizacao e auditoria do ambiente existente.",
+                f"{guias.count()} guia(s) no cockpit e {guias_documentadas} com documentacao clinica estruturada.",
+                "Padronizar CID, medico solicitante, motivos de negativa e SLA para circular entre operacao, auditoria e legado.",
+            ),
+            _frente_cooperacao(
+                "ans_tiss",
+                "Compliance ANS/TISS e trilha regulatoria",
+                "implantacao" if (planos_com_ans or guias_documentadas) else "prioridade",
+                "Usa ANS, justificativas e trilhas auditaveis como base de cooperacao com faturamento, TISS e conformidade regulatoria.",
+                f"{planos_com_ans} plano(s) com registro ANS e {guias_documentadas} guia(s) preparadas para cooperacao regulatoria.",
+                "Fechar integracao TISS/ANS via exportacao estruturada, API ou conector de implantacao para go-live regulatorio pleno.",
+            ),
+            _frente_cooperacao(
+                "epidemiologia",
+                "Radar epidemiologico da carteira",
+                "operando" if pressao["registros"] else "monitorando",
+                "Cruza sinais territoriais com carteira, prestadores e eventos assistenciais para antecipar demanda, comunicacao e custo em alta.",
+                f"{pressao['registros']} registro(s) territoriais e {pressao['suspeitos']} suspeito(s) na janela de {pressao['janela_dias']} dias.",
+                "Usar o mapa para acionar programas, comunicacao preventiva e priorizacao de autorizacoes antes da pressao virar sinistro.",
+            ),
+        ],
+        "proximos_passos": [
+            "Mapear os sistemas que permanecem no legado e definir qual dado entra no cockpit por API, lote ou rotina operacional.",
+            "Padronizar ANS, TISS, motivos regulatorios e justificativas clinicas para circular entre operadora, prestadores e auditoria.",
+            "Cruzar pressao epidemiologica com carteira, autorizacoes e sinistralidade para gerar acoes antes do custo explodir.",
+        ],
     }
 
 
@@ -355,6 +440,15 @@ def api_ps_dashboard(request):
         suspeito=True,
     ).count()
     prestadores_qs = PrestadorPlanoSaude.objects.filter(empresa=empresa)
+    pressao_cooperacao = _pressao_epidemiologica_empresa(empresa, dias=30)
+    cooperacao = _cooperacao_operadora_payload(
+        empresa,
+        planos,
+        BeneficiarioPlano.objects.filter(plano__empresa=empresa),
+        guias_qs,
+        prestadores_qs,
+        pressao_cooperacao,
+    )
 
     # Top CIDs nos sinistros
     top_cids = (
@@ -400,6 +494,7 @@ def api_ps_dashboard(request):
                 ]
             ).count(),
         },
+        "cooperacao": cooperacao,
         "top_cids": list(top_cids),
         "planos": [_plano_dict(p) for p in planos[:10]],
     })

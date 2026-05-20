@@ -166,7 +166,7 @@ PACOTES_SAAS = {
     "plano_saude_operadora": {
         "label": "Operadora de Plano de Saúde",
         "setor": "plano_saude",
-        "descricao": "Beneficiarios, elegibilidade, guias, regulacao clinica, sinistros, reembolsos, compliance ANS/TISS e dashboard epidemiologico.",
+        "descricao": "Camada cooperativa para operadoras: integra carteira, regulacao, sinistros, prestadores e radar epidemiologico sem substituir o core legado.",
         "usuarios": 100,
         "dispositivos": 100,
         "mensal": 12000.00,
@@ -176,7 +176,7 @@ PACOTES_SAAS = {
     "plano_saude_enterprise": {
         "label": "Operadora Enterprise",
         "setor": "plano_saude",
-        "descricao": "Multi-operadora com BI avancado, jornada do beneficiario, payment integrity, SLA dedicado e comando epidemiologico.",
+        "descricao": "Cockpit multi-operadora com cooperacao via API, BI avancado, payment integrity e comando epidemiologico acima do legado existente.",
         "usuarios": 500,
         "dispositivos": 500,
         "mensal": 45000.00,

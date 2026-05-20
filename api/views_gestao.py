@@ -4,6 +4,7 @@ import json
 import secrets
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import F as models_F
 from django.http import JsonResponse
@@ -478,7 +479,7 @@ def api_trial_status(request):
 @csrf_exempt
 @api_requer_plataforma_ti
 def api_trial_ativar(request):
-    """POST — inicia trial de 14 dias (self-service). Idempotente."""
+    """POST — inicia trial self-service. Idempotente."""
     empresa = _empresa_gestao(request)
     if not empresa:
         return JsonResponse({"erro": "nao autenticado"}, status=401)
@@ -487,7 +488,7 @@ def api_trial_ativar(request):
 
     trial, criado = TrialEmpresa.objects.get_or_create(
         empresa=empresa,
-        defaults={"expira_em": timezone.now() + timedelta(days=14)},
+        defaults={"expira_em": timezone.now() + timedelta(days=settings.TRIAL_DAYS)},
     )
     return JsonResponse({"trial": _trial_dict(trial), "novo": criado}, status=201 if criado else 200)
 

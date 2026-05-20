@@ -99,6 +99,7 @@ from api.views_sst import (
     api_sst_configuracoes, api_sst_mensagem_massa,
     sst_epis_page,
     api_epis_catalogo,
+    api_epis_catalogo_detail,
     api_epis_entregas,
     api_epis_devolver,
     api_epis_pdf_ficha,
@@ -301,7 +302,7 @@ from api.views_comunicacao import (
     api_colaboradores_comunicacao,
     colaborador_chat, colaborador_video,
     api_colab_mensagens, api_colab_enviar, api_colab_video_ativa,
-    painel_grupos, api_criar_grupo, api_listar_salas_por_tipo, api_membros_grupo,
+    painel_grupos, api_criar_grupo, api_listar_salas_por_tipo, api_membros_grupo, api_editar_grupo,
 )
 from api.views_reuniao_sst import (
     sst_comunicacao_page, api_reunioes, api_reuniao_detalhe, api_funcionario_reunioes, api_reuniao_token,
@@ -409,7 +410,7 @@ from api.views_governo_fase2 import (
     api_governo_plataforma_logs,
 )
 from api.views_rede import (
-    api_redes, api_rede_convidar, api_rede_estoque, api_rede_item_disponibilidade,
+    api_redes, api_rede_convidar, api_rede_entrar, api_rede_estoque, api_rede_item_disponibilidade,
     api_transferencias, api_transferencia_detalhe,
     api_mensagens_rede, api_mensagem_marcar_lida,
     api_planos_saude, api_plano_saude_detalhe,
@@ -682,6 +683,8 @@ urlpatterns = [
     path('api/sst/mensagem-massa/', api_sst_mensagem_massa),
     path('api/sst/epis/catalogo', api_epis_catalogo),
     path('api/sst/epis/catalogo/', api_epis_catalogo),
+    path('api/sst/epis/catalogo/<int:epi_id>/', api_epis_catalogo_detail),
+    path('api/sst/epis/catalogo/<int:epi_id>', api_epis_catalogo_detail),
     path('api/sst/epis/entregas', api_epis_entregas),
     path('api/sst/epis/entregas/', api_epis_entregas),
     path('api/sst/epis/entregas/<int:entrega_id>/devolver', api_epis_devolver),
@@ -769,6 +772,8 @@ urlpatterns = [
     path('api/comunicacao/grupos/criar/', api_criar_grupo),
     path('api/comunicacao/salas/filtro/', api_listar_salas_por_tipo),
     path('api/comunicacao/grupos/<int:sala_id>/membros/', api_membros_grupo),
+    path('api/comunicacao/grupos/<int:sala_id>/', api_editar_grupo),
+    path('api/comunicacao/grupos/<int:sala_id>', api_editar_grupo),
 
     # 📊 API PRINCIPAL
     path('api/registrar', registrar_sintoma),
@@ -923,6 +928,7 @@ urlpatterns = [
     # ── Rede / Network ───────────────────────────────────────────
     path('api/rede/', api_redes),
     path('api/rede/convidar/', api_rede_convidar),
+    path('api/rede/entrar/', api_rede_entrar),
     path('api/rede/estoque/', api_rede_estoque),
     path('api/rede/disponibilidade/<str:nome_item>/', api_rede_item_disponibilidade),
     path('api/rede/transferencias/', api_transferencias),

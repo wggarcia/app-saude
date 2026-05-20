@@ -261,6 +261,51 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
   </div>
 </div>
 
+<!-- Modal: Editar EPI -->
+<div class="modal-bg" id="modal-editar-epi">
+  <div class="modal">
+    <h3>Editar EPI</h3>
+    <div class="modal-sub">Atualize as informações do equipamento no catálogo.</div>
+    <input type="hidden" id="edit-epi-id">
+    <div class="mf"><label>Nome do EPI</label><input type="text" id="edit-epi-nome" placeholder="Ex: Protetor Auricular Plug de PVC"></div>
+    <div class="mf-row">
+      <div class="mf"><label>Tipo</label>
+        <select id="edit-epi-tipo">
+          <option value="Proteção Auditiva">Proteção Auditiva</option>
+          <option value="Proteção Respiratória">Proteção Respiratória</option>
+          <option value="Proteção Visual">Proteção Visual</option>
+          <option value="Proteção de Mãos">Proteção de Mãos</option>
+          <option value="Proteção de Pés">Proteção de Pés</option>
+          <option value="Proteção de Cabeça">Proteção de Cabeça</option>
+          <option value="Proteção de Altura">Proteção de Altura</option>
+          <option value="Proteção do Corpo">Proteção do Corpo</option>
+        </select>
+      </div>
+      <div class="mf"><label>CA Nº</label><input type="text" id="edit-epi-ca" placeholder="Ex: 12345"></div>
+    </div>
+    <div class="mf-row">
+      <div class="mf"><label>Validade do CA</label><input type="date" id="edit-epi-validade-ca"></div>
+      <div class="mf"><label>Fornecedor</label><input type="text" id="edit-epi-fornecedor" placeholder="Ex: 3M do Brasil"></div>
+    </div>
+    <div class="mf"><label>Descrição / Observações</label><textarea id="edit-epi-descricao" placeholder="Modelo, especificações técnicas, aplicações..."></textarea></div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal('modal-editar-epi')">Cancelar</button>
+      <button class="btn-submit" onclick="salvarEdicaoEPI()">Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhes da Entrega -->
+<div class="modal-bg" id="modal-ver-entrega">
+  <div class="modal">
+    <h3>Detalhes da Entrega</h3>
+    <div id="modal-ver-entrega-body" style="margin-top:14px"></div>
+    <div class="modal-acts">
+      <button class="btn-cancel" onclick="fecharModal('modal-ver-entrega')" style="flex:1">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Registrar Devolução -->
 <div class="modal-bg" id="modal-devolucao">
   <div class="modal">
@@ -530,11 +575,73 @@ function abrirModalDevolucao(id) {
 }
 
 function editarEPI(id) {
-  showToast('Edição de EPI: em breve');
+  const epi = catalogo.find(e => e.id === id);
+  if (!epi) return;
+  document.getElementById('edit-epi-id').value = epi.id;
+  document.getElementById('edit-epi-nome').value = epi.nome || '';
+  document.getElementById('edit-epi-tipo').value = epi.tipo || 'Proteção Auditiva';
+  document.getElementById('edit-epi-ca').value = epi.ca_numero || '';
+  document.getElementById('edit-epi-validade-ca').value = epi.validade_ca || '';
+  document.getElementById('edit-epi-fornecedor').value = epi.fornecedor || '';
+  document.getElementById('edit-epi-descricao').value = epi.descricao || '';
+  document.getElementById('modal-editar-epi').classList.add('open');
+}
+
+async function salvarEdicaoEPI() {
+  const id = document.getElementById('edit-epi-id').value;
+  const body = {
+    nome: document.getElementById('edit-epi-nome').value.trim(),
+    tipo: document.getElementById('edit-epi-tipo').value,
+    ca_numero: document.getElementById('edit-epi-ca').value.trim(),
+    validade_ca: document.getElementById('edit-epi-validade-ca').value || null,
+    fornecedor: document.getElementById('edit-epi-fornecedor').value.trim(),
+    descricao: document.getElementById('edit-epi-descricao').value.trim()
+  };
+  if (!body.nome) { showToast('Informe o nome do EPI', true); return; }
+  try {
+    const r = await fetch(`/api/sst/epis/catalogo/${id}/`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error('Erro ' + r.status);
+    fecharModal('modal-editar-epi');
+    showToast('EPI atualizado com sucesso');
+    await carregarCatalogo();
+  } catch(e) {
+    showToast('Erro ao salvar: ' + e.message, true);
+  }
 }
 
 function verEntrega(id) {
-  showToast('Detalhes da entrega: em breve');
+  const ent = entregas.find(e => e.id === id);
+  if (!ent) return;
+  const ativo = !ent.data_devolucao;
+  document.getElementById('modal-ver-entrega-body').innerHTML = `
+    <div style="display:grid;gap:10px">
+      <div style="display:flex;justify-content:space-between;padding:10px 14px;background:rgba(0,201,167,.04);border-radius:8px;border:1px solid var(--border)">
+        <span style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Funcionário</span>
+        <strong style="font-size:.84rem">${ent.funcionario_nome || '—'}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px 14px;background:rgba(0,201,167,.04);border-radius:8px;border:1px solid var(--border)">
+        <span style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">EPI</span>
+        <strong style="font-size:.84rem">${ent.epi_nome || '—'}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px 14px;background:rgba(0,201,167,.04);border-radius:8px;border:1px solid var(--border)">
+        <span style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Data de Entrega</span>
+        <strong style="font-size:.84rem">${fmtData(ent.data_entrega)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px 14px;background:rgba(0,201,167,.04);border-radius:8px;border:1px solid var(--border)">
+        <span style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Quantidade</span>
+        <strong style="font-size:.84rem">${ent.quantidade || 1} un.</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px 14px;background:rgba(0,201,167,.04);border-radius:8px;border:1px solid var(--border)">
+        <span style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Status</span>
+        ${ativo ? '<span class="badge b-teal">Ativo — em uso</span>' : `<span class="badge b-muted">Devolvido em ${fmtData(ent.data_devolucao)}</span>`}
+      </div>
+      ${ent.observacoes ? `<div style="padding:10px 14px;background:rgba(0,201,167,.04);border-radius:8px;border:1px solid var(--border)"><span style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Observações</span><span style="font-size:.82rem">${ent.observacoes}</span></div>` : ''}
+    </div>`;
+  document.getElementById('modal-ver-entrega').classList.add('open');
 }
 
 // ── CRUD ───────────────────────────────────────────────────────

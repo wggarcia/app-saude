@@ -978,6 +978,16 @@ class AuthDeviceTests(TestCase):
         self.assertIsNotNone(guia_pendente)
         self.assertIsNotNone(guia_pendente.prestador_id)
 
+    @override_settings(ALLOW_ENTERPRISE_DEMO_MUTATIONS=False)
+    def test_enterprise_seed_demo_respeita_bloqueio_do_ambiente(self):
+        login = self._login("seed-bloqueado-device")
+        self.assertEqual(login.status_code, 200)
+
+        response = self.client.post("/api/enterprise/seed-operational-demo")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("Seed demo desativado", response.json()["erro"])
+
     def test_enterprise_premium_suite_farmacia_mostra_capacidades_clinicas(self):
         farmacia = Empresa.objects.create(
             nome="Farmacia Suite",
@@ -1130,10 +1140,73 @@ class AuthDeviceTests(TestCase):
         self.assertIn("Softheon", referencias)
         self.assertIn("Operacao de operadora ponta a ponta", processos)
         self.assertIn("Monitorar epidemiologia da carteira", etapas)
+        self.assertIn("sem substituir o core legado", payload["headline"].lower())
         self.assertGreaterEqual(payload["crescimento"]["etapas_feitas"], 4)
         primeira_etapa = payload["processos"][0]["etapas"][0]
         self.assertEqual(primeira_etapa["status"], "feito")
         self.assertEqual(primeira_etapa["sinais"], 1)
+
+    def test_plano_saude_dashboard_expoe_camada_cooperativa(self):
+        operadora = Empresa.objects.create(
+            nome="Operadora Coop",
+            email="operadora-coop@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        plano = PlanoSaude.objects.create(
+            empresa=operadora,
+            nome="Plano Cooperativo",
+            registro_ans="654321",
+        )
+        beneficiario = BeneficiarioPlano.objects.create(
+            plano=plano,
+            nome="Beneficiario Coop",
+            cpf="000.000.000-55",
+            situacao=BeneficiarioPlano.SITUACAO_ATIVO,
+        )
+        prestador = PrestadorPlanoSaude.objects.create(
+            empresa=operadora,
+            nome_fantasia="Clinica Coop",
+            razao_social="Clinica Coop Ltda",
+            cnpj="00.000.000/0001-55",
+            tipo="clinica",
+            status=PrestadorPlanoSaude.STATUS_CREDENCIADO,
+            portal_ativo=True,
+        )
+        GuiaAutorizacao.objects.create(
+            plano=plano,
+            beneficiario=beneficiario,
+            prestador=prestador,
+            tipo=GuiaAutorizacao.TIPO_CONSULTA,
+            descricao_procedimento="Consulta cooperativa",
+            cid="J11",
+            medico_solicitante="Dr. Coop",
+            status=GuiaAutorizacao.STATUS_EM_ANALISE,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": operadora.email,
+                "senha": "123456",
+                "device_id": "operadora-coop-device",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        response = self.client.get("/api/plano-saude/dashboard")
+
+        self.assertEqual(response.status_code, 200)
+        coop = response.json()["cooperacao"]
+        nomes = " ".join(frente["nome"] for frente in coop["frentes"])
+        self.assertEqual(coop["modelo"], "camada_cooperativa")
+        self.assertIn("operadora ja possui", coop["headline"].lower())
+        self.assertIn("Core legado", nomes)
+        self.assertIn("Radar epidemiologico", nomes)
 
     def test_api_plano_saude_prestadores_portal_e_fila_clinica(self):
         operadora = Empresa.objects.create(
@@ -2725,12 +2798,12 @@ class GestaoTrialTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIsNone(resp.json()["trial"])
 
-    def test_ativar_trial_cria_periodo_14_dias(self):
+    def test_ativar_trial_cria_periodo_15_dias(self):
         resp = self._post("/api/gestao/trial/ativar")
         self.assertEqual(resp.status_code, 201)
         body = resp.json()
         self.assertTrue(body["trial"]["ativo"])
-        self.assertEqual(body["trial"]["dias_restantes"], 13)  # 13-14 por arredondamento
+        self.assertEqual(body["trial"]["dias_restantes"], 14)  # 14-15 por arredondamento
 
     def test_ativar_trial_e_idempotente(self):
         self._post("/api/gestao/trial/ativar")
@@ -2753,6 +2826,62 @@ class GestaoTrialTests(TestCase):
         self._post("/api/gestao/onboarding/primeiro_aso")
         resp = self._post("/api/gestao/onboarding/primeiro_aso")
         self.assertFalse(resp.json()["novo"])
+
+
+class PlatformStatusTests(TestCase):
+    @override_settings(
+        ASAAS_API_KEY="",
+        ASAAS_WEBHOOK_TOKEN="",
+        FIREBASE_SERVICE_ACCOUNT_PATH="/tmp/firebase-inexistente.json",
+    )
+    def test_platform_status_sinaliza_componentes_sem_configuracao_real(self):
+        response = self.client.get("/api/platform/status")
+
+        self.assertEqual(response.status_code, 200)
+        componentes = {item["slug"]: item for item in response.json()["componentes"]}
+        self.assertEqual(componentes["payments"]["status"], "degradado")
+        self.assertEqual(componentes["push"]["status"], "degradado")
+        self.assertEqual(componentes["ai"]["status"], "operacional")
+
+
+class LoginRateLimitTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        Empresa.objects.create(
+            nome="Empresa Limite",
+            email="limite@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+        )
+
+    @override_settings(TRUST_X_FORWARDED_FOR=True)
+    def test_rate_limit_considera_identificador_mesmo_com_ip_variando(self):
+        with patch("api.middleware.sys.argv", ["manage.py"]), patch("api.middleware._LOGIN_MAX_ATTEMPTS", 2):
+            for forwarded in ("10.0.0.1", "10.0.0.2"):
+                response = self.client.post(
+                    "/api/login",
+                    data=json.dumps({
+                        "email": "limite@teste.com",
+                        "senha": "senha-errada",
+                        "device_id": "limite-device",
+                    }),
+                    content_type="application/json",
+                    HTTP_X_FORWARDED_FOR=forwarded,
+                )
+                self.assertEqual(response.status_code, 401)
+
+            bloqueio = self.client.post(
+                "/api/login",
+                data=json.dumps({
+                    "email": "limite@teste.com",
+                    "senha": "senha-errada",
+                    "device_id": "limite-device",
+                }),
+                content_type="application/json",
+                HTTP_X_FORWARDED_FOR="10.0.0.3",
+            )
+
+        self.assertEqual(bloqueio.status_code, 429)
 
 
 @override_settings(DJANGO_ENV="test")

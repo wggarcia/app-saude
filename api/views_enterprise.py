@@ -1,6 +1,7 @@
 from datetime import timedelta
 import unicodedata
 
+from django.conf import settings
 from django.db.models import F, Sum
 from django.http import JsonResponse
 from django.utils import timezone
@@ -79,6 +80,10 @@ from .services.enterprise_dashboard import (
     build_enterprise_command_center_payload,
     build_enterprise_premium_suite_payload,
 )
+
+
+def _demo_mutations_enabled():
+    return bool(getattr(settings, "ALLOW_ENTERPRISE_DEMO_MUTATIONS", True))
 
 
 def _seed_farmacia(empresa):
@@ -1166,6 +1171,10 @@ def api_enterprise_seed_operational_demo(request):
         return JsonResponse({"erro": "Nao autenticado"}, status=401)
     if request.method != "POST":
         return JsonResponse({"erro": "Metodo nao permitido"}, status=405)
+    if not _demo_mutations_enabled():
+        return JsonResponse({
+            "erro": "Seed demo desativado neste ambiente. Use homologacao ou habilite ALLOW_ENTERPRISE_DEMO_MUTATIONS.",
+        }, status=403)
 
     resultado = seed_enterprise_operational_demo(empresa)
     resultado["suite"] = build_enterprise_premium_suite_payload(empresa)
@@ -1322,6 +1331,10 @@ def api_enterprise_reset_demo(request):
         return JsonResponse({"erro": "Nao autenticado"}, status=401)
     if request.method != "POST":
         return JsonResponse({"erro": "Metodo nao permitido"}, status=405)
+    if not _demo_mutations_enabled():
+        return JsonResponse({
+            "erro": "Reset demo desativado neste ambiente. Use homologacao ou habilite ALLOW_ENTERPRISE_DEMO_MUTATIONS.",
+        }, status=403)
 
     resultado = reset_enterprise_demo(empresa)
     resultado["suite"] = build_enterprise_premium_suite_payload(empresa)

@@ -1,6 +1,7 @@
 from django.views.decorators.csrf import csrf_exempt
 import json
 import os
+from django.conf import settings
 from django.http import JsonResponse
 from django.contrib.auth.hashers import check_password, make_password
 from .models import Empresa, EmpresaUsuario, DonoSaaS, TrialEmpresa
@@ -292,25 +293,13 @@ def logout_operacao(request):
 
 @csrf_exempt
 def ativar_trial(request):
-    """Ativa um trial de 15 dias para a empresa autenticada (ou por empresa_id no body).
-    Seguro: só aceita se a empresa ainda não teve trial e está autenticada.
-    """
+    """Ativa o trial self-service para a empresa autenticada."""
     if request.method != "POST":
         return JsonResponse({"erro": "Use POST"}, status=405)
 
-    # Resolve empresa — prefere cookie/middleware, cai no body como fallback
     empresa = getattr(request, "empresa", None)
     if not empresa:
-        try:
-            dados = json.loads(request.body)
-            empresa_id = dados.get("empresa_id")
-            if empresa_id:
-                empresa = Empresa.objects.filter(id=empresa_id).first()
-        except Exception:
-            pass
-
-    if not empresa:
-        return JsonResponse({"status": "erro", "mensagem": "Empresa não encontrada"}, status=404)
+        return JsonResponse({"erro": "não autenticado"}, status=401)
 
     if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
         return JsonResponse({"status": "erro", "mensagem": "Governo não usa trial"}, status=403)
@@ -335,7 +324,7 @@ def ativar_trial(request):
     # Cria trial + ativa a empresa
     TrialEmpresa.objects.create(
         empresa=empresa,
-        expira_em=timezone.now() + timedelta(days=15),
+        expira_em=timezone.now() + timedelta(days=settings.TRIAL_DAYS),
     )
     empresa.ativo = True
     empresa.save(update_fields=["ativo"])
@@ -350,7 +339,7 @@ def ativar_trial(request):
     from .services.auth_session import destino_conta as _destino_conta
     return JsonResponse({
         "status": "ok",
-        "dias_restantes": 15,
+        "dias_restantes": settings.TRIAL_DAYS,
         "destination": _destino_conta(empresa),
     })
 
