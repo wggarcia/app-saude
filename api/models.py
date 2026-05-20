@@ -3276,6 +3276,56 @@ class PrestadorPlanoSaude(models.Model):
         return self.nome_fantasia
 
 
+class CarenciaBeneficiario(models.Model):
+    """Carência (waiting period) per beneficiary and procedure type."""
+    TIPO_CONSULTA = "consulta"
+    TIPO_EXAME = "exame"
+    TIPO_INTERNACAO = "internacao"
+    TIPO_PARTO = "parto"
+    TIPO_URGENCIA = "urgencia"
+    TIPO_ODONTO = "odontologico"
+    TIPO_CHOICES = [
+        (TIPO_CONSULTA, "Consultas"),
+        (TIPO_EXAME, "Exames e Procedimentos"),
+        (TIPO_INTERNACAO, "Internações"),
+        (TIPO_PARTO, "Parto"),
+        (TIPO_URGENCIA, "Urgência e Emergência"),
+        (TIPO_ODONTO, "Odontológico"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="carencias")
+    beneficiario = models.ForeignKey(BeneficiarioPlano, on_delete=models.CASCADE, related_name="carencias")
+    tipo_procedimento = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    data_inicio = models.DateField()
+    dias_carencia = models.PositiveIntegerField(default=0, help_text="Período de carência em dias")
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["data_inicio"]
+        unique_together = [("beneficiario", "tipo_procedimento")]
+
+    @property
+    def data_fim(self):
+        from datetime import timedelta
+        return self.data_inicio + timedelta(days=self.dias_carencia)
+
+    @property
+    def ativa(self):
+        from datetime import date
+        return date.today() < self.data_fim
+
+    @property
+    def dias_restantes(self):
+        from datetime import date, timedelta
+        fim = self.data_inicio + timedelta(days=self.dias_carencia)
+        delta = (fim - date.today()).days
+        return max(0, delta)
+
+    def __str__(self):
+        return f"Carência {self.tipo_procedimento} — {self.beneficiario}"
+
+
 class GuiaAutorizacao(models.Model):
     """Prior authorization request (guia) for procedure or medication."""
     TIPO_CONSULTA = "consulta"

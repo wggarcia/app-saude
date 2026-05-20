@@ -290,6 +290,7 @@ select option{background:#0b1822}
   <button class="tab-btn-side" onclick="setTab('webhooks')"><span>📡</span> Webhooks</button>
 
   <div class="nav-section" style="margin-top:8px">Governança</div>
+  <button class="tab-btn-side" onclick="setTab('usuarios')"><span>👥</span> Usuários &amp; RBAC</button>
   <button class="tab-btn-side" onclick="setTab('seguranca')"><span>🛡️</span> Segurança &amp; LGPD</button>
   <button class="tab-btn-side" onclick="setTab('conformidade')"><span>📋</span> Conformidade</button>
   <button class="tab-btn-side" onclick="setTab('logs')"><span>📊</span> Logs</button>
@@ -1372,6 +1373,45 @@ select option{background:#0b1822}
 
   </section>
 
+  <!-- ══ TAB: USUÁRIOS & RBAC ═══════════════════════════════════════════════ -->
+  <section id="tab-usuarios" class="tab-panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Usuários da Plataforma</div>
+          <div class="section-sub">Gerencie os usuários com acesso à conta e suas permissões</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="usuarios-quota" style="font-size:.78rem;color:var(--muted)">— / — usuários</span>
+          <button class="btn sm primary" onclick="abrirModalNovoUsuario()">+ Novo Usuário</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Nome</th><th>E-mail</th><th>Cargo</th><th>Perfil</th><th>Status</th><th>Criado em</th><th>Ações</th></tr></thead>
+        <tbody id="usuarios-tbody">
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card glass">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Controle de Acesso por Módulo (RBAC)</div>
+          <div class="section-sub">Permissões granulares por módulo — clique em um usuário para gerenciar seu acesso</div>
+        </div>
+        <select id="rbac-usuario-sel" style="padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--glass);color:var(--text);font-size:.8rem;outline:none" onchange="loadRbacUsuario()">
+          <option value="">Selecione um usuário...</option>
+        </select>
+      </div>
+      <div id="rbac-permissoes-wrap" style="padding:16px">
+        <div style="color:var(--muted);font-size:.82rem;text-align:center;padding:24px">Selecione um usuário para ver suas permissões</div>
+      </div>
+    </div>
+
+  </section>
+
   <!-- ══ TAB: LOGS ════════════════════════════════════════════════════════════ -->
   <section id="tab-logs" class="tab-panel">
 
@@ -1531,6 +1571,7 @@ function loadTab(tab) {
   else if (tab === 'webhooks') loadWebhooks();
   else if (tab === 'seguranca') loadSeguranca();
   else if (tab === 'logs') loadLogs();
+  else if (tab === 'usuarios') { loadUsuarios(); loadRbacPermissoes(); }
 }
 
 // ── PLANO & TRIAL ─────────────────────────────────────────────────────────────
@@ -1993,6 +2034,158 @@ function limparFiltros() {
   jq('filterFim').value = '';
   logPage = 1;
   loadLogs();
+}
+
+// ── USUÁRIOS & RBAC ───────────────────────────────────────────────────────────
+let _usuarios = [];
+let _permissoes = [];
+
+async function loadUsuarios() {
+  const d = await api('/api/usuarios');
+  if (!d.ok && !d.usuarios) return;
+  _usuarios = d.usuarios || [];
+  jq('usuarios-quota').textContent = `${d.usuarios_ativos || _usuarios.filter(u => u.ativo).length} / ${d.max_usuarios || '∞'} usuários`;
+
+  // Populate select for RBAC
+  const sel = jq('rbac-usuario-sel');
+  sel.innerHTML = '<option value="">Selecione um usuário...</option>' +
+    _usuarios.filter(u => u.ativo).map(u => `<option value="${u.id}">${esc(u.nome)} — ${esc(u.email)}</option>`).join('');
+
+  const tbody = jq('usuarios-tbody');
+  if (!_usuarios.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">Nenhum usuário cadastrado ainda</td></tr>';
+    return;
+  }
+  tbody.innerHTML = _usuarios.map(u => `<tr>
+    <td><strong>${esc(u.nome)}</strong></td>
+    <td style="color:var(--muted);font-size:.8rem">${esc(u.email)}</td>
+    <td>${esc(u.cargo || '—')}</td>
+    <td>${u.is_admin ? '<span class="badge badge-warn">Admin</span>' : '<span class="badge badge-info">Operador</span>'}</td>
+    <td>${u.ativo ? '<span class="badge badge-ok">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>'}</td>
+    <td style="color:var(--muted);font-size:.78rem">${(u.criado_em||'').split('T')[0]}</td>
+    <td><div style="display:flex;gap:6px">
+      <button class="btn sm" onclick="gerenciarRbac(${u.id},'${esc(u.nome).replace(/'/g,"\\'")}')" title="Gerenciar permissões">🔑</button>
+      ${!u.is_admin ? `<button class="btn sm danger" onclick="desativarUsuario(${u.id})" title="Desativar">✕</button>` : ''}
+    </div></td>
+  </tr>`).join('');
+}
+
+let _rbacAtribuicoes = [];
+
+async function loadRbacPermissoes() {
+  const d = await api('/api/rbac/permissoes/');
+  _permissoes = d.permissoes || [];
+  _rbacAtribuicoes = d.atribuicoes || [];
+}
+
+async function loadRbacUsuario() {
+  const uid = jq('rbac-usuario-sel').value;
+  if (!uid) {
+    jq('rbac-permissoes-wrap').innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:24px">Selecione um usuário para ver suas permissões</div>';
+    return;
+  }
+  const usuario = _usuarios.find(u => String(u.id) === String(uid));
+  if (!_permissoes.length) await loadRbacPermissoes();
+
+  // Group by module
+  const modulos = {};
+  for (const p of _permissoes) {
+    if (!modulos[p.modulo]) modulos[p.modulo] = [];
+    modulos[p.modulo].push(p);
+  }
+
+  // Build set of assigned permission codes for this user
+  const atribuidas = new Set(
+    _rbacAtribuicoes
+      .filter(a => String(a.usuario_id) === String(uid))
+      .map(a => a['permissao__codigo'])
+  );
+
+  jq('rbac-permissoes-wrap').innerHTML = `
+    <div style="margin-bottom:14px;font-size:.82rem;color:var(--muted)">Permissões de <strong style="color:var(--text)">${esc(usuario?.nome || '—')}</strong></div>
+    ${Object.entries(modulos).map(([mod, perms]) => `
+      <div style="margin-bottom:16px">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">${esc(mod)}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">
+          ${perms.map(p => `
+            <label style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:.78rem;background:rgba(255,255,255,.02);transition:background .15s">
+              <input type="checkbox" ${atribuidas.has(p.codigo) ? 'checked' : ''} onchange="toggleRbac(${uid},'${esc(p.codigo)}',this.checked)"
+                style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
+              <div>
+                <div style="font-weight:600">${esc(p.descricao || p.codigo)}</div>
+                <div style="color:var(--muted);font-size:.68rem;margin-top:1px">${esc(p.codigo)}</div>
+              </div>
+            </label>`).join('')}
+        </div>
+      </div>`).join('')}
+    <div style="font-size:.72rem;color:var(--muted);margin-top:12px;padding:8px 12px;border-radius:7px;background:rgba(0,194,255,.05);border:1px solid rgba(0,194,255,.12)">
+      💡 Administradores têm acesso irrestrito a todos os módulos. Permissões granulares aplicam-se apenas a usuários operadores.
+    </div>`;
+}
+
+async function toggleRbac(userId, permCodigo, ativo) {
+  const d = await api('/api/rbac/atribuir/', {method:'POST', body: JSON.stringify({usuario_id: userId, permissao_codigo: permCodigo, ativo})});
+  if (d.atribuido !== undefined || d.ok) {
+    showToast('toastSeguranca', `Permissão ${ativo ? 'concedida' : 'revogada'} com sucesso`, 'ok');
+    // Refresh local state
+    if (ativo) {
+      _rbacAtribuicoes.push({usuario_id: userId, 'permissao__codigo': permCodigo});
+    } else {
+      _rbacAtribuicoes = _rbacAtribuicoes.filter(a => !(String(a.usuario_id) === String(userId) && a['permissao__codigo'] === permCodigo));
+    }
+  } else {
+    showToast('toastSeguranca', d.erro || 'Erro ao atualizar permissão', 'err');
+  }
+}
+
+function abrirModalNovoUsuario() {
+  const html = `<div style="position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px" id="modal-novo-usuario">
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:26px;width:100%;max-width:480px">
+      <h3 style="font-size:.98rem;font-weight:800;margin-bottom:16px">Novo Usuário</h3>
+      <div style="display:grid;gap:12px">
+        <div class="field"><label>Nome completo</label><input id="nu-nome" type="text" placeholder="Nome do usuário"></div>
+        <div class="field"><label>E-mail</label><input id="nu-email" type="email" placeholder="usuario@empresa.com"></div>
+        <div class="field"><label>Senha inicial</label><input id="nu-senha" type="password" placeholder="Mínimo 8 caracteres"></div>
+        <div class="field"><label>Cargo / Função</label><input id="nu-cargo" type="text" placeholder="Ex: Técnico SST, Enfermeiro..."></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px">
+        <button class="btn sm" onclick="document.getElementById('modal-novo-usuario').remove()">Cancelar</button>
+        <button class="btn sm primary" onclick="criarNovoUsuario()">Criar Usuário</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function criarNovoUsuario() {
+  const nome = jq('nu-nome').value.trim();
+  const email = jq('nu-email').value.trim();
+  const senha = jq('nu-senha').value;
+  const cargo = jq('nu-cargo').value.trim();
+  if (!nome || !email || !senha) { alert('Nome, e-mail e senha são obrigatórios'); return; }
+  const d = await api('/api/usuarios/criar', {method:'POST', body: JSON.stringify({nome, email, senha, cargo})});
+  if (d.ok || d.id) {
+    document.getElementById('modal-novo-usuario')?.remove();
+    showToast('toastSeguranca', `Usuário ${nome} criado com sucesso`, 'ok');
+    await loadUsuarios();
+  } else {
+    alert(d.erro || 'Erro ao criar usuário');
+  }
+}
+
+async function desativarUsuario(uid) {
+  if (!confirm('Desativar este usuário? Ele perderá o acesso imediatamente.')) return;
+  const d = await api('/api/usuarios/desativar', {method:'POST', body: JSON.stringify({usuario_id: uid})});
+  if (d.ok) { showToast('toastSeguranca', 'Usuário desativado', 'ok'); await loadUsuarios(); }
+  else showToast('toastSeguranca', d.erro || 'Erro ao desativar', 'err');
+}
+
+function gerenciarRbac(uid, nome) {
+  const sel = jq('rbac-usuario-sel');
+  if (sel) { sel.value = String(uid); loadRbacUsuario(); }
+  setTab('usuarios');
+  const rbacWrap = jq('rbac-permissoes-wrap');
+  if (rbacWrap) rbacWrap.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────

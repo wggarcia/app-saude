@@ -104,6 +104,8 @@ tr:hover td{background:rgba(255,107,157,.03)}
   <button class="tab-btn" onclick="setTab('faturamento')"><span>&#128200;</span> Faturamento</button>
   <button class="tab-btn" onclick="setTab('programas')"><span>&#127973;</span> Prog. Saude</button>
   <button class="tab-btn" onclick="setTab('sinistralidade')"><span>&#129504;</span> Sinistralidade IA</button>
+  <button class="tab-btn" onclick="setTab('carencias')"><span>&#9203;</span> Carencias</button>
+  <button class="tab-btn" onclick="setTab('portabilidade')"><span>&#128257;</span> Portabilidade</button>
 </aside>
 
 <main class="main">
@@ -617,6 +619,94 @@ tr:hover td{background:rgba(255,107,157,.03)}
     </div>
   </div>
 
+  <!-- TAB: CARÊNCIAS ──────────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-carencias" style="margin-top:4px">
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:1rem;font-weight:800">⏳ Gestão de Carências</div>
+          <div style="font-size:.78rem;color:var(--muted);margin-top:2px">Controle os períodos de carência por beneficiário e tipo de procedimento conforme RN ANS</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="car-filtro-plano" style="padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.78rem;outline:none" onchange="carregarCarencias()">
+            <option value="">Todos os planos</option>
+          </select>
+          <select id="car-filtro-status" style="padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.78rem;outline:none" onchange="renderCarencias()">
+            <option value="">Todos os status</option>
+            <option value="ativa">Em Carência</option>
+            <option value="encerrada">Encerrada</option>
+          </select>
+          <button class="btn-main" style="padding:7px 14px;font-size:.78rem" onclick="abrirModalCarencia()">+ Nova Carência</button>
+        </div>
+      </div>
+      <div style="padding:0">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr>
+            <th style="padding:9px 14px;text-align:left;font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)">Beneficiário</th>
+            <th style="padding:9px 14px;text-align:left;font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)">Plano</th>
+            <th style="padding:9px 14px;text-align:left;font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)">Tipo Procedimento</th>
+            <th style="padding:9px 14px;text-align:left;font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)">Início</th>
+            <th style="padding:9px 14px;text-align:left;font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)">Dias</th>
+            <th style="padding:9px 14px;text-align:left;font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)">Fim</th>
+            <th style="padding:9px 14px;text-align:left;font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)">Status</th>
+            <th style="padding:9px 14px;text-align:left;font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)">Restam</th>
+            <th style="padding:9px 14px;text-align:left;font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)"></th>
+          </tr></thead>
+          <tbody id="car-tbody">
+            <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: PORTABILIDADE ──────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-portabilidade" style="margin-top:4px">
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:1rem;font-weight:800">🔄 Portabilidade de Plano</div>
+          <div style="font-size:.78rem;color:var(--muted);margin-top:2px">Transfira beneficiários entre planos mantendo histórico e seguindo regras ANS (RN 438)</div>
+        </div>
+      </div>
+      <div style="padding:18px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:700px">
+          <div>
+            <label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Beneficiário</label>
+            <select id="port-beneficiario" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.84rem;outline:none">
+              <option value="">Selecione o beneficiário...</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Plano Atual</label>
+            <div id="port-plano-atual" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.02);font-size:.84rem;color:var(--muted)">—</div>
+          </div>
+          <div>
+            <label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Novo Plano</label>
+            <select id="port-novo-plano" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.84rem;outline:none">
+              <option value="">Selecione o plano destino...</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px">Data de Início no Novo Plano</label>
+            <input type="date" id="port-data" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:.84rem;outline:none">
+          </div>
+        </div>
+        <div style="margin-top:16px;padding:12px 14px;border-radius:8px;background:rgba(31,111,242,.06);border:1px solid rgba(31,111,242,.15);font-size:.76rem;color:#60a5fa;max-width:700px">
+          📋 <strong>RN ANS 438:</strong> A portabilidade é permitida após 2 anos no plano de origem (exceto para produtos individuais). Verifique a carência residual antes de confirmar a transferência.
+        </div>
+        <div style="margin-top:16px;display:flex;gap:10px">
+          <button class="btn-main" style="padding:9px 20px;font-size:.82rem" onclick="confirmarPortabilidade()">Confirmar Portabilidade</button>
+          <button style="padding:9px 16px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.82rem;cursor:pointer" onclick="document.getElementById('port-beneficiario').value='';document.getElementById('port-plano-atual').textContent='—'">Limpar</button>
+        </div>
+        <div id="port-historico" style="margin-top:20px">
+          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Histórico de Portabilidades</div>
+          <div style="color:var(--muted);font-size:.78rem;padding:20px;text-align:center;border-radius:8px;border:1px solid var(--border)">Nenhuma portabilidade registrada ainda.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <!-- MODAL: Novo Plano -->
@@ -1027,6 +1117,41 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalPrograma')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarPrograma()">Criar Programa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nova Carência -->
+<div class="modal-bg" id="modal-carencia">
+  <div class="modal">
+    <h3>Registrar Carência</h3>
+    <div class="form-group"><label>Beneficiário *</label>
+      <select id="car-beneficiario"><option value="">Carregando beneficiários...</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Procedimento *</label>
+        <select id="car-tipo">
+          <option value="consulta">Consultas</option>
+          <option value="exame">Exames e Procedimentos</option>
+          <option value="internacao">Internações</option>
+          <option value="parto">Parto</option>
+          <option value="urgencia">Urgência e Emergência</option>
+          <option value="odontologico">Odontológico</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Dias de Carência *</label>
+        <input type="number" id="car-dias" value="180" min="0" max="730" placeholder="Ex: 180">
+      </div>
+    </div>
+    <div class="form-group"><label>Data de Início *</label>
+      <input type="date" id="car-inicio">
+    </div>
+    <div class="form-group"><label>Observações</label>
+      <textarea id="car-obs" rows="2" placeholder="Observações sobre a carência..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-carencia')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCarencia()">Registrar Carência</button>
     </div>
   </div>
 </div>
@@ -2047,7 +2172,174 @@ setTab = function(name) {
   else if (name === 'faturamento') carregarFaturamento();
   else if (name === 'programas') carregarProgramas();
   else if (name === 'sinistralidade') carregarSinistralidade();
+  else if (name === 'carencias') { carregarCarencias(); popularSelectsCarencia(); }
+  else if (name === 'portabilidade') popularSelectsPortabilidade();
 };
+
+// ── CARÊNCIAS ─────────────────────────────────────────────────────────────────
+var _carencias = [];
+var _todosBeeneficiarios = [];
+
+async function carregarCarencias() {
+  var planoId = document.getElementById('car-filtro-plano')?.value || '';
+  var url = '/api/plano-saude/carencias/' + (planoId ? '?plano_id=' + planoId : '');
+  try {
+    var resp = await fetch(url, {credentials:'include'});
+    var data = await resp.json();
+    _carencias = data.carencias || [];
+    renderCarencias();
+  } catch(e) {
+    document.getElementById('car-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:28px">Erro ao carregar carências</td></tr>';
+  }
+}
+
+function renderCarencias() {
+  var statusF = document.getElementById('car-filtro-status')?.value || '';
+  var lista = _carencias;
+  if (statusF === 'ativa') lista = lista.filter(function(c){ return c.ativa; });
+  else if (statusF === 'encerrada') lista = lista.filter(function(c){ return !c.ativa; });
+
+  var tbody = document.getElementById('car-tbody');
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">Nenhuma carência encontrada</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(function(c) {
+    var statusBadge = c.ativa
+      ? '<span style="background:rgba(240,191,107,.1);color:#f0bf6b;border:1px solid rgba(240,191,107,.2);padding:2px 8px;border-radius:4px;font-size:.62rem;font-weight:800">EM CARÊNCIA</span>'
+      : '<span style="background:rgba(74,222,128,.08);color:#4ade80;border:1px solid rgba(74,222,128,.2);padding:2px 8px;border-radius:4px;font-size:.62rem;font-weight:800">ENCERRADA</span>';
+    var restam = c.ativa ? (c.dias_restantes + ' dias') : '—';
+    return '<tr>' +
+      '<td style="padding:10px 14px;font-size:.8rem"><strong>' + (c.beneficiario_nome||'—') + '</strong><br><span style="font-size:.68rem;color:var(--muted)">' + (c.beneficiario_carteirinha||'') + '</span></td>' +
+      '<td style="padding:10px 14px;font-size:.78rem">' + (c.plano_nome||'—') + '</td>' +
+      '<td style="padding:10px 14px;font-size:.78rem">' + (c.tipo_label||c.tipo_procedimento||'—') + '</td>' +
+      '<td style="padding:10px 14px;font-size:.78rem;color:var(--muted)">' + (c.data_inicio||'—') + '</td>' +
+      '<td style="padding:10px 14px;font-size:.78rem;font-weight:700">' + (c.dias_carencia||0) + 'd</td>' +
+      '<td style="padding:10px 14px;font-size:.78rem;color:var(--muted)">' + (c.data_fim||'—') + '</td>' +
+      '<td style="padding:10px 14px">' + statusBadge + '</td>' +
+      '<td style="padding:10px 14px;font-size:.78rem;font-weight:700;color:' + (c.ativa?'var(--warn)':'var(--muted)') + '">' + restam + '</td>' +
+      '<td style="padding:10px 14px"><button onclick="removerCarencia(' + c.id + ')" style="padding:4px 9px;border-radius:5px;border:1px solid rgba(248,113,113,.2);background:none;color:var(--danger);font-size:.68rem;cursor:pointer">Remover</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+async function removerCarencia(id) {
+  if (!confirm('Remover esta carência?')) return;
+  var resp = await fetch('/api/plano-saude/carencias/' + id + '/', {method:'DELETE', headers:{'X-CSRFToken':getCsrfToken()}, credentials:'include'});
+  if (resp.ok) { carregarCarencias(); }
+  else alert('Erro ao remover carência');
+}
+
+function popularSelectsCarencia() {
+  // Populate plano filter
+  var selPlano = document.getElementById('car-filtro-plano');
+  if (selPlano && _planos.length) {
+    selPlano.innerHTML = '<option value="">Todos os planos</option>' +
+      _planos.map(function(p){ return '<option value="' + p.id + '">' + (p.nome||p.nome_fantasia||'—') + '</option>'; }).join('');
+  }
+}
+
+function abrirModalCarencia() {
+  document.getElementById('modal-carencia').classList.add('open');
+  popularBeneficiariosCarencia();
+}
+
+async function popularBeneficiariosCarencia() {
+  var sel = document.getElementById('car-beneficiario');
+  if (!sel) return;
+  if (_planos.length === 0) return;
+  // Load beneficiarios from first plan
+  var bens = [];
+  for (var p of _planos.slice(0, 5)) {
+    try {
+      var r = await fetch('/api/planos-saude/' + p.id + '/beneficiarios/', {credentials:'include'});
+      var d = await r.json();
+      (d.beneficiarios || []).forEach(function(b){ bens.push({id:b.id, nome:b.nome, plano:p.nome||p.nome_fantasia}); });
+    } catch(e) {}
+  }
+  _todosBeeneficiarios = bens;
+  sel.innerHTML = '<option value="">Selecione o beneficiário...</option>' +
+    bens.map(function(b){ return '<option value="' + b.id + '">' + b.nome + ' — ' + b.plano + '</option>'; }).join('');
+}
+
+async function salvarCarencia() {
+  var body = {
+    beneficiario_id: document.getElementById('car-beneficiario').value,
+    tipo_procedimento: document.getElementById('car-tipo').value,
+    data_inicio: document.getElementById('car-inicio').value,
+    dias_carencia: parseInt(document.getElementById('car-dias').value) || 0,
+    observacoes: document.getElementById('car-obs').value
+  };
+  if (!body.beneficiario_id || !body.tipo_procedimento || !body.data_inicio) {
+    alert('Preencha todos os campos obrigatórios'); return;
+  }
+  var resp = await fetch('/api/plano-saude/carencias/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'X-CSRFToken': getCsrfToken()},
+    credentials: 'include',
+    body: JSON.stringify(body)
+  });
+  var data = await resp.json();
+  if (data.ok) {
+    document.getElementById('modal-carencia').classList.remove('open');
+    carregarCarencias();
+  } else {
+    alert(data.erro || 'Erro ao salvar carência');
+  }
+}
+
+// ── PORTABILIDADE ─────────────────────────────────────────────────────────────
+async function popularSelectsPortabilidade() {
+  var selBen = document.getElementById('port-beneficiario');
+  var selPlano = document.getElementById('port-novo-plano');
+  if (!selBen || !selPlano) return;
+
+  // Planos
+  selPlano.innerHTML = '<option value="">Selecione o plano destino...</option>' +
+    _planos.map(function(p){ return '<option value="' + p.id + '">' + (p.nome||p.nome_fantasia||'—') + '</option>'; }).join('');
+
+  // Beneficiarios
+  if (!_todosBeeneficiarios.length) await popularBeneficiariosCarencia();
+  selBen.innerHTML = '<option value="">Selecione o beneficiário...</option>' +
+    _todosBeeneficiarios.map(function(b){ return '<option value="' + b.id + '" data-plano="' + b.plano + '">' + b.nome + ' — ' + b.plano + '</option>'; }).join('');
+
+  selBen.onchange = function() {
+    var opt = selBen.options[selBen.selectedIndex];
+    document.getElementById('port-plano-atual').textContent = opt.dataset.plano || '—';
+  };
+
+  // Set default date to today
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('port-data').value = today;
+}
+
+async function confirmarPortabilidade() {
+  var benId = document.getElementById('port-beneficiario').value;
+  var novoPlanoId = document.getElementById('port-novo-plano').value;
+  var data = document.getElementById('port-data').value;
+  if (!benId || !novoPlanoId) { alert('Selecione o beneficiário e o novo plano'); return; }
+  if (!confirm('Confirmar portabilidade? Esta ação irá transferir o beneficiário para o novo plano.')) return;
+  var resp = await fetch('/api/plano-saude/portabilidade/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'X-CSRFToken': getCsrfToken()},
+    credentials: 'include',
+    body: JSON.stringify({beneficiario_id: benId, novo_plano_id: novoPlanoId, data_inicio: data})
+  });
+  var d = await resp.json();
+  if (d.ok) {
+    alert('Portabilidade realizada com sucesso!\n' + d.beneficiario + '\n' + d.plano_anterior + ' → ' + d.novo_plano);
+    document.getElementById('port-beneficiario').value = '';
+    document.getElementById('port-plano-atual').textContent = '—';
+    document.getElementById('port-novo-plano').value = '';
+  } else {
+    alert(d.erro || 'Erro ao realizar portabilidade');
+  }
+}
+
+function getCsrfToken() {
+  var m = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)');
+  return m ? m[2] : '';
+}
 
 (async function(){
   await carregarPlanos();

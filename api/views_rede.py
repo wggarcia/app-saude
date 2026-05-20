@@ -6,6 +6,7 @@ from django.db.models import Q, Sum
 from .models import (
     Empresa, Rede, UnidadeRede, TransferenciaEstoque, MensagemRede,
     PlanoSaude, BeneficiarioPlano, GuiaAutorizacao, ItemFarmacia,
+    CarenciaBeneficiario,
 )
 
 
@@ -574,6 +575,122 @@ def api_beneficiario_detalhe(request, plano_id, ben_id):
         return JsonResponse({'ok': True})
 
     return JsonResponse({'erro': 'Método não permitido'}, status=405)
+
+
+# ─── CARÊNCIA POR BENEFICIÁRIO ────────────────────────────────────────────────
+
+@csrf_exempt
+def api_carencias(request):
+    """GET/POST /api/plano-saude/carencias/ — list or create carências"""
+    from datetime import date
+    empresa = get_empresa(request)
+    if not empresa:
+        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+
+    if request.method == 'GET':
+        plano_id = request.GET.get('plano_id')
+        beneficiario_id = request.GET.get('beneficiario_id')
+        qs = CarenciaBeneficiario.objects.filter(empresa=empresa).select_related('beneficiario', 'beneficiario__plano')
+        if plano_id:
+            qs = qs.filter(beneficiario__plano_id=plano_id)
+        if beneficiario_id:
+            qs = qs.filter(beneficiario_id=beneficiario_id)
+        hoje = date.today()
+        return JsonResponse({'carencias': [{
+            'id': c.id,
+            'beneficiario_id': c.beneficiario_id,
+            'beneficiario_nome': c.beneficiario.nome,
+            'beneficiario_carteirinha': c.beneficiario.numero_carteirinha,
+            'plano_nome': c.beneficiario.plano.nome_fantasia if c.beneficiario.plano else '—',
+            'tipo_procedimento': c.tipo_procedimento,
+            'tipo_label': c.get_tipo_procedimento_display(),
+            'data_inicio': c.data_inicio.isoformat(),
+            'dias_carencia': c.dias_carencia,
+            'data_fim': c.data_fim.isoformat(),
+            'ativa': c.ativa,
+            'dias_restantes': c.dias_restantes,
+        } for c in qs]})
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({'erro': 'JSON inválido'}, status=400)
+        ben_id = data.get('beneficiario_id')
+        tipo = data.get('tipo_procedimento')
+        data_inicio = data.get('data_inicio')
+        dias = int(data.get('dias_carencia', 0))
+        if not ben_id or not tipo or not data_inicio:
+            return JsonResponse({'erro': 'beneficiario_id, tipo_procedimento e data_inicio são obrigatórios'}, status=400)
+        try:
+            beneficiario = BeneficiarioPlano.objects.get(id=ben_id, plano__empresa=empresa)
+        except BeneficiarioPlano.DoesNotExist:
+            return JsonResponse({'erro': 'Beneficiário não encontrado'}, status=404)
+        c, created = CarenciaBeneficiario.objects.update_or_create(
+            empresa=empresa,
+            beneficiario=beneficiario,
+            tipo_procedimento=tipo,
+            defaults={
+                'data_inicio': data_inicio,
+                'dias_carencia': dias,
+                'observacoes': data.get('observacoes', ''),
+            }
+        )
+        return JsonResponse({'ok': True, 'id': c.id, 'criado': created}, status=201 if created else 200)
+
+    return JsonResponse({'erro': 'Método não permitido'}, status=405)
+
+
+@csrf_exempt
+def api_carencia_detalhe(request, carencia_id):
+    """DELETE /api/plano-saude/carencias/<id>/ — remove carência"""
+    empresa = get_empresa(request)
+    if not empresa:
+        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    try:
+        c = CarenciaBeneficiario.objects.get(id=carencia_id, empresa=empresa)
+    except CarenciaBeneficiario.DoesNotExist:
+        return JsonResponse({'erro': 'Carência não encontrada'}, status=404)
+    if request.method == 'DELETE':
+        c.delete()
+        return JsonResponse({'ok': True})
+    return JsonResponse({'erro': 'Método não permitido'}, status=405)
+
+
+@csrf_exempt
+def api_portabilidade(request):
+    """POST /api/plano-saude/portabilidade/ — transfer beneficiary between plans"""
+    empresa = get_empresa(request)
+    if not empresa:
+        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    if request.method != 'POST':
+        return JsonResponse({'erro': 'Método não permitido'}, status=405)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'erro': 'JSON inválido'}, status=400)
+    ben_id = data.get('beneficiario_id')
+    novo_plano_id = data.get('novo_plano_id')
+    if not ben_id or not novo_plano_id:
+        return JsonResponse({'erro': 'beneficiario_id e novo_plano_id são obrigatórios'}, status=400)
+    try:
+        ben = BeneficiarioPlano.objects.get(id=ben_id, plano__empresa=empresa)
+    except BeneficiarioPlano.DoesNotExist:
+        return JsonResponse({'erro': 'Beneficiário não encontrado'}, status=404)
+    try:
+        novo_plano = PlanoSaude.objects.get(id=novo_plano_id, empresa=empresa)
+    except PlanoSaude.DoesNotExist:
+        return JsonResponse({'erro': 'Novo plano não encontrado'}, status=404)
+    plano_anterior = ben.plano
+    ben.plano = novo_plano
+    ben.data_inicio_vigencia = data.get('data_inicio') or ben.data_inicio_vigencia
+    ben.save()
+    return JsonResponse({
+        'ok': True,
+        'beneficiario': ben.nome,
+        'plano_anterior': plano_anterior.nome_fantasia,
+        'novo_plano': novo_plano.nome_fantasia,
+    })
 
 
 # ─── GUIAS DE AUTORIZAÇÃO ─────────────────────────────────────────────────────

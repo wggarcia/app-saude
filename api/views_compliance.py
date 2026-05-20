@@ -319,7 +319,7 @@ def api_rbac_permissoes(request):
         permissoes = list(RBACPermissao.objects.values("id", "codigo", "descricao", "modulo"))
         atribuicoes = list(
             RBACAtribuicao.objects.filter(empresa=empresa, ativo=True)
-            .values("usuario__email", "permissao__codigo", "concedido_por", "criado_em")
+            .values("usuario_id", "usuario__email", "permissao__codigo", "concedido_por", "criado_em")
         )
         return JsonResponse({"permissoes": permissoes, "atribuicoes": atribuicoes})
     except Exception as e:

@@ -416,6 +416,7 @@ from api.views_rede import (
     api_planos_saude, api_plano_saude_detalhe,
     api_beneficiarios, api_beneficiario_detalhe,
     api_guias, api_guia_detalhe, api_plano_kpis,
+    api_carencias, api_carencia_detalhe, api_portabilidade,
 )
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
@@ -943,6 +944,9 @@ urlpatterns = [
     path('api/planos-saude/<int:plano_id>/beneficiarios/<int:ben_id>/', api_beneficiario_detalhe),
     path('api/planos-saude/<int:plano_id>/guias/', api_guias),
     path('api/planos-saude/<int:plano_id>/guias/<int:guia_id>/', api_guia_detalhe),
+    path('api/plano-saude/carencias/', api_carencias),
+    path('api/plano-saude/carencias/<int:carencia_id>/', api_carencia_detalhe),
+    path('api/plano-saude/portabilidade/', api_portabilidade),
     path('api/governo/alertas', api_alertas_governo),
     # ── Governo Gestão ───────────────────────────────────────
     path('api/governo/ops/kpis/', api_governo_ops_kpis),
