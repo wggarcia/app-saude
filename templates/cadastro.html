@@ -103,6 +103,11 @@ body:before{
   background:rgba(69,234,217,.08);
   box-shadow:0 0 0 1px rgba(69,234,217,.28),0 12px 36px rgba(69,234,217,.1);
 }
+.mod-card.selected-rose{
+  border-color:var(--rose);
+  background:rgba(255,107,157,.08);
+  box-shadow:0 0 0 1px rgba(255,107,157,.28),0 12px 36px rgba(255,107,157,.1);
+}
 .mod-icon{font-size:2rem;margin-bottom:14px;display:block}
 .mod-title{font-weight:800;font-size:1.15rem;margin-bottom:6px}
 .mod-desc{font-size:.85rem;color:var(--muted);line-height:1.55}
@@ -120,8 +125,10 @@ body:before{
   font-size:.8rem;font-weight:900;
 }
 .mod-card.selected .mod-check,
-.mod-card.selected-cyan .mod-check{display:flex}
+.mod-card.selected-cyan .mod-check,
+.mod-card.selected-rose .mod-check{display:flex}
 .mod-card.selected-cyan .mod-check{background:var(--cyan)}
+.mod-card.selected-rose .mod-check{background:var(--rose)}
 
 /* PLAN GRID */
 .plan-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
@@ -300,6 +307,15 @@ input::placeholder{color:var(--muted)}
           <div class="mod-desc">Sala de controle epidemiológico municipal, estadual ou regional com atos normativos e alertas oficiais.</div>
           <span class="mod-badge blue">Contrato anual</span>
         </button>
+
+        <button class="mod-card" data-module="plano_saude" onclick="selectModule(this)" style="border-color:rgba(255,107,157,.28);position:relative">
+          <div class="mod-check" style="background:#ff6b9d">✓</div>
+          <div style="position:absolute;top:14px;right:14px;padding:4px 10px;border-radius:999px;background:rgba(255,107,157,.15);border:1px solid rgba(255,107,157,.35);color:#ff6b9d;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em">Novo</div>
+          <span class="mod-icon">🏥</span>
+          <div class="mod-title">Operadora de Plano de Saúde</div>
+          <div class="mod-desc">Gestão de beneficiários, contratos, guias de autorização, sinistros, reembolsos e dashboard epidemiológico.</div>
+          <span class="mod-badge rose">A partir de R$ 12.000/mês</span>
+        </button>
       </div>
 
       <div class="actions" style="margin-top:32px">
@@ -441,11 +457,29 @@ const PLANOS = {
       desc: "Sala de situação para rede hospitalar com SRAG.",
       feats: ["250 usuários", "Multi-hospital", "Dashboard executivo", "Análise de SRAG"]
     }
+  ],
+  plano_saude: [
+    {
+      codigo: "plano_saude_operadora",
+      nome: "Operadora",
+      preco: "R$ 12.000",
+      ciclo: "/mês",
+      desc: "Gestão completa para operadoras de plano de saúde.",
+      feats: ["100 usuários", "100 dispositivos", "Beneficiários & Contratos", "Guias de autorização", "Sinistros & Reembolsos", "Dashboard epidemiológico"]
+    },
+    {
+      codigo: "plano_saude_enterprise",
+      nome: "Enterprise",
+      preco: "R$ 45.000",
+      ciclo: "/mês",
+      desc: "Grande operadora com inteligência epidemiológica avançada e LGPD.",
+      feats: ["500 usuários", "500 dispositivos", "Multi-operadora", "BI epidemiológico avançado", "SLA dedicado", "Gestor de conta"]
+    }
   ]
 };
 
-const ICONES = {empresa:"🏢", farmacia:"💊", hospital:"🏥", governo:"🏛️"};
-const LABELS = {empresa:"Empresa & Corporativo", farmacia:"Farmácia", hospital:"Hospital", governo:"Governo"};
+const ICONES = {empresa:"🏢", farmacia:"💊", hospital:"🏥", governo:"🏛️", plano_saude:"🏥"};
+const LABELS = {empresa:"Empresa & Corporativo", farmacia:"Farmácia", hospital:"Hospital", governo:"Governo", plano_saude:"Operadora de Plano de Saúde"};
 
 let selectedModule = null;
 let selectedPlan = null;
@@ -453,10 +487,10 @@ let currentStep = 1;
 
 function selectModule(el) {
   document.querySelectorAll('.mod-card').forEach(c => {
-    c.classList.remove('selected','selected-cyan');
+    c.classList.remove('selected','selected-cyan','selected-rose');
   });
   const module = el.dataset.module;
-  el.classList.add(module === 'farmacia' || module === 'hospital' ? 'selected-cyan' : 'selected');
+  el.classList.add(module === 'farmacia' || module === 'hospital' ? 'selected-cyan' : module === 'plano_saude' ? 'selected-rose' : 'selected');
   selectedModule = module;
   selectedPlan = null;
   document.getElementById('btn-step1').disabled = false;
@@ -486,8 +520,10 @@ function renderPlans() {
 
   govCta.style.display = 'none';
   step2actions.style.display = 'flex';
-  step2title.textContent = 'Escolha seu plano';
-  step2sub.textContent = 'Todos os planos incluem 14 dias grátis. Sem cartão de crédito.';
+  step2title.textContent = selectedModule === 'plano_saude' ? 'Escolha o plano da operadora' : 'Escolha seu plano';
+  step2sub.textContent = selectedModule === 'plano_saude'
+    ? 'Ambiente exclusivo para operadoras de plano de saúde. Trial disponível mediante proposta.'
+    : 'Todos os planos incluem 14 dias grátis. Sem cartão de crédito.';
 
   const planos = PLANOS[selectedModule] || [];
   container.innerHTML = `<div class="plan-grid">${planos.map((p,i) => `
