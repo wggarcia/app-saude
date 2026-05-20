@@ -2854,7 +2854,7 @@ class LoginRateLimitTests(TestCase):
             ativo=True,
         )
 
-    @override_settings(TRUST_X_FORWARDED_FOR=True)
+    @override_settings(TRUST_X_FORWARDED_FOR=True, DJANGO_ENV="development")
     def test_rate_limit_considera_identificador_mesmo_com_ip_variando(self):
         with patch("api.middleware.sys.argv", ["manage.py"]), patch("api.middleware._LOGIN_MAX_ATTEMPTS", 2):
             for forwarded in ("10.0.0.1", "10.0.0.2"):
