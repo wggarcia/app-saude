@@ -2131,8 +2131,19 @@ async function loadSeguranca() {
       </div>`).join('');
 }
 
-function toggle2fa() {
-  alert('Configure o 2FA através das configurações de segurança do SolusCRT. Entre em contato com suporte@soluscrt.com.br');
+async function toggle2fa() {
+  const btn = document.getElementById('btn2fa');
+  const ativo = btn && btn.textContent.includes('Desativar');
+  const r = await api('/api/gestao/seguranca/2fa/', {
+    method: 'POST',
+    body: JSON.stringify({acao: ativo ? 'desativar' : 'ativar'})
+  });
+  if (r && !r.erro) {
+    if (btn) { btn.textContent = ativo ? 'Ativar 2FA' : 'Desativar 2FA'; btn.className = ativo ? 'btn sm primary' : 'btn sm warn'; }
+    showToast('toast-main', ativo ? '2FA desativado' : '2FA ativado — configure o app autenticador', 'ok');
+  } else {
+    showToast('toast-main', 'Para configurar 2FA entre em contato com suporte@soluscrt.com.br', 'warn');
+  }
 }
 
 async function revogarSessao(id) {

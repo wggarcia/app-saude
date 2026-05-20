@@ -2371,7 +2371,7 @@ async function salvarAlta() {
   const d = await api(`/api/hospital/pacientes/${pacId}/sumario-alta/`, { method:'POST', body: JSON.stringify(body) });
   if (d?.ok) {
     fecharModal('modalSumarioAlta');
-    alert('Alta emitida com sucesso! Leito liberado.');
+    toast('Alta emitida com sucesso! Leito liberado.', 'ok');
     await Promise.all([carregarLeitos(), carregarPacientes(), carregarKpis()]);
     carregarAltaTab();
   }
@@ -2689,7 +2689,7 @@ async function marcarColetado(pedidoId) {
     method:'PATCH', body: JSON.stringify({ status:'coletado' })
   });
   if (d?.ok) {
-    alert('Pedido marcado como coletado.');
+    toast('Pedido marcado como coletado.', 'ok');
     fecharModal('modalResultado');
     carregarExames();
   }
@@ -2751,7 +2751,7 @@ async function salvarResultado() {
   if (d?.ok) {
     fecharModal('modalResultado');
     carregarExames();
-    alert('Resultado lançado com sucesso!');
+    toast('Resultado lançado com sucesso!', 'ok');
   }
 }
 </script>
