@@ -98,6 +98,11 @@ tr:hover td{background:rgba(255,107,157,.03)}
   <button class="tab-btn" onclick="setTab('guias')"><span>&#128221;</span> Guias</button>
   <button class="tab-btn" onclick="setTab('sinistros')"><span>&#9877;&#65039;</span> Sinistros</button>
   <button class="tab-btn" onclick="setTab('reembolsos')"><span>&#128176;</span> Reembolsos</button>
+  <button class="tab-btn" onclick="setTab('glosas')"><span>&#128466;</span> Glosas</button>
+  <button class="tab-btn" onclick="setTab('coparticipacao')"><span>&#128181;</span> Coparticipacao</button>
+  <button class="tab-btn" onclick="setTab('faturamento')"><span>&#128200;</span> Faturamento</button>
+  <button class="tab-btn" onclick="setTab('programas')"><span>&#127973;</span> Prog. Saude</button>
+  <button class="tab-btn" onclick="setTab('sinistralidade')"><span>&#129504;</span> Sinistralidade IA</button>
 </aside>
 
 <main class="main">
@@ -422,6 +427,162 @@ tr:hover td{background:rgba(255,107,157,.03)}
     </div>
   </div>
 
+  <!-- GLOSAS -->
+  <div class="tab-panel" id="tab-glosas" style="margin-top:4px">
+    <div class="summary-grid" id="glosaSummary" style="margin-bottom:18px">
+      <div class="summary-box"><div class="summary-box-title">Total Glosado (ano)</div><div class="summary-box-val" id="gsTotalGlosado">—</div></div>
+      <div class="summary-box"><div class="summary-box-title">% Glosa s/ Sinistros</div><div class="summary-box-val" id="gsTaxaGlosa">—</div></div>
+      <div class="summary-box"><div class="summary-box-title">Em Recurso</div><div class="summary-box-val" id="gsEmRecurso">—</div></div>
+      <div class="summary-box"><div class="summary-box-title">Recurso Aceito</div><div class="summary-box-val" id="gsRecursoAceito">—</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Glosas e Recursos</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="filtroStatusGlosa" class="filter-sel" onchange="carregarGlosas()">
+            <option value="">Todos os status</option>
+            <option value="glosado">Glosado</option>
+            <option value="recurso_enviado">Recurso Enviado</option>
+            <option value="recurso_aceito">Recurso Aceito</option>
+            <option value="mantida">Glosa Mantida</option>
+          </select>
+          <button class="btn btn-primary" onclick="abrirModalGlosa()">+ Registrar Glosa</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Sinistro</th><th>Procedimento</th><th>Descricao</th><th>Valor Original</th><th>Valor Glosado</th><th>Status</th><th>Acoes</th></tr></thead>
+        <tbody id="tbodyGlosas"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- COPARTICIPACAO -->
+  <div class="tab-panel" id="tab-coparticipacao" style="margin-top:4px">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Regras de Coparticipacao por Plano</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="filtroPlanoCopart" class="filter-sel" onchange="carregarCoparticipacao()">
+            <option value="">Todos os planos</option>
+          </select>
+          <button class="btn btn-primary" onclick="abrirModalCopart()">+ Nova Regra</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Plano</th><th>Tipo Atendimento</th><th>% Copart.</th><th>Valor Fixo (R$)</th><th>Teto Mensal (R$)</th><th>Ativo</th><th>Acoes</th></tr></thead>
+        <tbody id="tbodyCopart"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FATURAMENTO -->
+  <div class="tab-panel" id="tab-faturamento" style="margin-top:4px">
+    <div class="summary-grid" id="faturSummary" style="margin-bottom:18px">
+      <div class="summary-box"><div class="summary-box-title">Total Mensalidades</div><div class="summary-box-val" id="ftTotalMens">—</div></div>
+      <div class="summary-box"><div class="summary-box-title">Total Coparticipacao</div><div class="summary-box-val" id="ftTotalCopart">—</div></div>
+      <div class="summary-box"><div class="summary-box-title">Total Geral</div><div class="summary-box-val" id="ftTotalGeral">—</div></div>
+      <div class="summary-box"><div class="summary-box-title">Faturas Vencidas</div><div class="summary-box-val" id="ftVencidas" style="color:var(--danger)">—</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Faturas de Beneficiarios</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="filtroCompetencia" class="search-input" placeholder="YYYY-MM" style="width:110px" onchange="carregarFaturamento()">
+          <select id="filtroStatusFatura" class="filter-sel" onchange="carregarFaturamento()">
+            <option value="">Todos os status</option>
+            <option value="pendente">Pendente</option>
+            <option value="pago">Pago</option>
+            <option value="vencido">Vencido</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <button class="btn btn-primary" onclick="abrirModalFatura()">+ Nova Fatura</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Competencia</th><th>Beneficiario</th><th>Plano</th><th>Mensalidade</th><th>Copart.</th><th>Total</th><th>Vencimento</th><th>Status</th><th>Acoes</th></tr></thead>
+        <tbody id="tbodyFaturas"><tr><td colspan="9" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PROGRAMAS DE SAUDE -->
+  <div class="tab-panel" id="tab-programas" style="margin-top:4px">
+    <div style="display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Programas</span>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalPrograma()">+ Novo</button>
+        </div>
+        <div id="listaProgramas" style="padding:8px 0"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title" id="tituloInscricoes">Selecione um programa</span>
+          <button class="btn btn-primary btn-sm" id="btnNovaInscricao" style="display:none" onclick="abrirModalInscricao()">+ Inscrever</button>
+        </div>
+        <table>
+          <thead><tr><th>Beneficiario</th><th>Inscricao</th><th>Status</th><th>Acoes</th></tr></thead>
+          <tbody id="tbodyInscricoes"><tr><td colspan="4" class="empty">Selecione um programa</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SINISTRALIDADE IA -->
+  <div class="tab-panel" id="tab-sinistralidade" style="margin-top:4px">
+    <!-- KPIs principais -->
+    <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+      <div class="kpi warn"><div class="kpi-val" id="siaTaxaSinistralidade">—</div><div class="kpi-lbl">Sinistralidade % (ano)</div></div>
+      <div class="kpi"><div class="kpi-val" id="siaReceita">—</div><div class="kpi-lbl">Receita Bruta (ano)</div></div>
+      <div class="kpi"><div class="kpi-val" id="siaCusto">—</div><div class="kpi-lbl">Custo Sinistros (ano)</div></div>
+      <div class="kpi info"><div class="kpi-val" id="siaTaxaGlosa">—</div><div class="kpi-lbl">Taxa de Glosa %</div></div>
+    </div>
+    <!-- Alertas IA -->
+    <div id="siaAlertas" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px"></div>
+    <!-- Pressao epidemiologica + serie mensal -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">&#127757; Pressao Epidemiologica</span></div>
+        <div id="siaEpidemio" style="padding:20px"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">&#128200; Serie Mensal de Sinistralidade</span></div>
+        <div id="siaSerie" style="padding:16px"></div>
+      </div>
+    </div>
+    <!-- Top risco beneficiarios + Top CIDs -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">&#129504; Top Beneficiarios em Risco (IA)</span></div>
+        <table>
+          <thead><tr><th>Nome</th><th>Plano</th><th>Score</th><th>Nivel</th></tr></thead>
+          <tbody id="siaTopRisco"><tr><td colspan="4" class="empty">Calculando...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">&#128203; Top CIDs de Alto Custo</span></div>
+        <table>
+          <thead><tr><th>CID</th><th>Qtd Sinistros</th><th>Valor Total</th></tr></thead>
+          <tbody id="siaTopCids"><tr><td colspan="3" class="empty">Calculando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Correlacao epidemio x sinistros -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">&#128200; Correlacao: Epidemiologia x Sinistros (ultimos 14 dias)</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:16px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Grupos Epidemiologicos com Suspeitos</div>
+          <div id="siaEpidemioCids"></div>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Tipos de Sinistros no Periodo</div>
+          <div id="siaSinistrosCids"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <!-- MODAL: Novo Plano -->
@@ -720,6 +881,138 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalReembolso')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarReembolso()">Solicitar Reembolso</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Glosa -->
+<div class="modal-bg" id="modalGlosa">
+  <div class="modal">
+    <h3>Registrar Glosa</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Sinistro ID *</label><input id="glSinistroId" type="number" placeholder="ID do sinistro"></div>
+      <div class="form-group"><label>Codigo Procedimento</label><input id="glCodigo" placeholder="TUSS/AMB"></div>
+    </div>
+    <div class="form-group"><label>Descricao *</label><input id="glDescricao" placeholder="Descricao do item glosado"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor Original (R$)</label><input id="glValorOriginal" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="form-group"><label>Valor Glosado (R$)</label><input id="glValorGlosado" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="form-group"><label>Motivo da Glosa</label><textarea id="glMotivo" rows="2" placeholder="Justificativa da glosa..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalGlosa')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarGlosa()">Registrar Glosa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Coparticipacao -->
+<div class="modal-bg" id="modalCopart">
+  <div class="modal">
+    <h3>Regra de Coparticipacao</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Plano *</label>
+        <select id="cpPlano"><option value="">selecione</option></select>
+      </div>
+      <div class="form-group"><label>Tipo de Atendimento *</label>
+        <select id="cpTipo">
+          <option value="consulta">Consulta</option>
+          <option value="exame">Exame / Diagnostico</option>
+          <option value="internacao">Internacao</option>
+          <option value="cirurgia">Cirurgia</option>
+          <option value="terapia">Terapia / Reabilitacao</option>
+          <option value="urgencia">Urgencia / Emergencia</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Percentual (%)</label><input id="cpPercentual" type="number" min="0" max="100" step="0.01" placeholder="0.00"></div>
+      <div class="form-group"><label>Valor Fixo (R$)</label><input id="cpValorFixo" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Teto Mensal (R$)</label><input id="cpTetoMensal" type="number" min="0" step="0.01" placeholder="sem teto"></div>
+      <div class="form-group"><label>Ativo</label>
+        <select id="cpAtivo"><option value="true">Sim</option><option value="false">Nao</option></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalCopart')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCopart()">Salvar Regra</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Fatura -->
+<div class="modal-bg" id="modalFatura">
+  <div class="modal" style="max-width:620px">
+    <h3>Nova Fatura</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Plano *</label>
+        <select id="ftPlano" onchange="carregarBeneficiariosPorPlano('ftBeneficiario',this.value)"><option value="">selecione</option></select>
+      </div>
+      <div class="form-group"><label>Beneficiario *</label>
+        <select id="ftBeneficiario"><option value="">selecione o plano primeiro</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Competencia (YYYY-MM) *</label><input id="ftCompetencia" placeholder="2025-01"></div>
+      <div class="form-group"><label>Vencimento</label><input id="ftVencimento" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Mensalidade (R$)</label><input id="ftMensalidade" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="form-group"><label>Coparticipacao (R$)</label><input id="ftCoparticipacao" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalFatura')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarFatura()">Gerar Fatura</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Programa de Saude -->
+<div class="modal-bg" id="modalPrograma">
+  <div class="modal">
+    <h3>Novo Programa de Saude</h3>
+    <div class="form-group"><label>Nome *</label><input id="pgNome" placeholder="Ex: Programa de Diabetes"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo</label>
+        <select id="pgTipo">
+          <option value="cronico">Doenca Cronica</option>
+          <option value="preventivo">Preventivo / Wellness</option>
+          <option value="oncologia">Oncologia</option>
+          <option value="maternidade">Maternidade / Pre-natal</option>
+          <option value="saude_mental">Saude Mental</option>
+          <option value="reabilitacao">Reabilitacao</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Ativo</label>
+        <select id="pgAtivo"><option value="true">Sim</option><option value="false">Nao</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Descricao</label><textarea id="pgDescricao" rows="2" placeholder="Descricao do programa..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalPrograma')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPrograma()">Criar Programa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Inscricao em Programa -->
+<div class="modal-bg" id="modalInscricao">
+  <div class="modal">
+    <h3>Inscrever Beneficiario</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Plano</label>
+        <select id="inPlano" onchange="carregarBeneficiariosPorPlano('inBeneficiario',this.value)"><option value="">selecione</option></select>
+      </div>
+      <div class="form-group"><label>Beneficiario *</label>
+        <select id="inBeneficiario"><option value="">selecione o plano primeiro</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Observacao</label><textarea id="inObservacao" rows="2" placeholder="Informacoes adicionais..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalInscricao')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarInscricao()">Inscrever</button>
     </div>
   </div>
 </div>
@@ -1374,6 +1667,313 @@ async function atualizarReembolso(id, status) {
 document.querySelectorAll('.modal-bg').forEach(function(bg){
   bg.addEventListener('click', function(e){ if(e.target===bg) bg.classList.remove('open'); });
 });
+
+// ── GLOSAS ───────────────────────────────────────────────────────────────────
+
+async function carregarGlosas() {
+  var status = document.getElementById('filtroStatusGlosa').value;
+  var url = '/api/plano-saude/glosas' + (status ? '?status='+status : '');
+  var data = await api(url);
+  if (!data) return;
+
+  // Summary
+  document.getElementById('gsTotalGlosado').textContent = 'R$ ' + (data.total_glosado||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  var pct = data.total_original > 0 ? ((data.total_glosado/data.total_original)*100).toFixed(1) : '0.0';
+  document.getElementById('gsTaxaGlosa').textContent = pct + '%';
+  var emRecurso = (data.por_status || []).find(function(s){ return s.status === 'recurso_enviado'; });
+  var aceito = (data.por_status || []).find(function(s){ return s.status === 'recurso_aceito'; });
+  document.getElementById('gsEmRecurso').textContent = emRecurso ? emRecurso.qtd : 0;
+  document.getElementById('gsRecursoAceito').textContent = aceito ? aceito.qtd : 0;
+
+  var tb = document.getElementById('tbodyGlosas');
+  var glosas = data.glosas || [];
+  if (!glosas.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma glosa encontrada</td></tr>'; return; }
+  tb.innerHTML = glosas.map(function(g) {
+    var badgeCls = {glosado:'badge-danger',recurso_enviado:'badge-warn',recurso_aceito:'badge-ok',mantida:'badge-gray'}[g.status] || 'badge-gray';
+    return '<tr><td>#'+g.id+'</td><td>#'+g.sinistro_id+'</td><td>'+(g.codigo_procedimento||'—')+'</td><td>'+g.descricao+'</td><td>R$ '+g.valor_original.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td><td style="color:var(--danger)">R$ '+g.valor_glosado.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td><td><span class="badge '+badgeCls+'">'+g.status_label+'</span></td><td><div style="display:flex;gap:6px">'+(g.status==='glosado'?'<button class="btn btn-ghost btn-sm" onclick="enviarRecursoGlosa('+g.id+')">Recurso</button>':'')+'<button class="btn btn-danger btn-sm" onclick="deletarGlosa('+g.id+')">Excluir</button></div></td></tr>';
+  }).join('');
+}
+
+function abrirModalGlosa() { document.getElementById('modalGlosa').classList.add('open'); }
+
+async function salvarGlosa() {
+  var payload = {
+    sinistro_id: parseInt(document.getElementById('glSinistroId').value) || null,
+    codigo_procedimento: document.getElementById('glCodigo').value,
+    descricao: document.getElementById('glDescricao').value,
+    valor_original: parseFloat(document.getElementById('glValorOriginal').value) || 0,
+    valor_glosado: parseFloat(document.getElementById('glValorGlosado').value) || 0,
+    motivo: document.getElementById('glMotivo').value,
+  };
+  if (!payload.sinistro_id || !payload.descricao) { alert('Sinistro ID e descricao sao obrigatorios'); return; }
+  var r = await api('/api/plano-saude/glosas', {method:'POST', body:JSON.stringify(payload)});
+  if (r && r.glosa) { fecharModal('modalGlosa'); carregarGlosas(); }
+}
+
+async function enviarRecursoGlosa(id) {
+  await api('/api/plano-saude/glosas/'+id, {method:'PUT', body:JSON.stringify({status:'recurso_enviado', data_recurso: new Date().toISOString().slice(0,10)})});
+  carregarGlosas();
+}
+
+async function deletarGlosa(id) {
+  if (!confirm('Excluir glosa #'+id+'?')) return;
+  await api('/api/plano-saude/glosas/'+id, {method:'DELETE'});
+  carregarGlosas();
+}
+
+// ── COPARTICIPACAO ───────────────────────────────────────────────────────────
+
+async function carregarCoparticipacao() {
+  var plano = document.getElementById('filtroPlanoCopart').value;
+  var url = '/api/plano-saude/coparticipacao' + (plano ? '?plano_id='+plano : '');
+  var data = await api(url);
+  if (!data) return;
+  var tb = document.getElementById('tbodyCopart');
+  var regras = data.regras || [];
+  if (!regras.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma regra cadastrada</td></tr>'; return; }
+  tb.innerHTML = regras.map(function(r) {
+    return '<tr><td>'+r.plano_nome+'</td><td>'+r.tipo_label+'</td><td>'+r.percentual.toFixed(2)+'%</td><td>R$ '+r.valor_fixo.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td><td>'+(r.teto_mensal!==null?'R$ '+r.teto_mensal.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—')+'</td><td>'+(r.ativo?'<span class="badge badge-ok">Sim</span>':'<span class="badge badge-gray">Nao</span>')+'</td><td><button class="btn btn-danger btn-sm" onclick="deletarCopart('+r.id+')">Excluir</button></td></tr>';
+  }).join('');
+}
+
+function abrirModalCopart() {
+  // Populate plano select
+  var sel = document.getElementById('cpPlano');
+  sel.innerHTML = '<option value="">selecione</option>' + _planos.map(function(p){ return '<option value="'+p.id+'">'+p.nome+'</option>'; }).join('');
+  document.getElementById('modalCopart').classList.add('open');
+}
+
+async function salvarCopart() {
+  var payload = {
+    plano_id: document.getElementById('cpPlano').value,
+    tipo_atendimento: document.getElementById('cpTipo').value,
+    percentual: parseFloat(document.getElementById('cpPercentual').value) || 0,
+    valor_fixo: parseFloat(document.getElementById('cpValorFixo').value) || 0,
+    teto_mensal: document.getElementById('cpTetoMensal').value || null,
+    ativo: document.getElementById('cpAtivo').value === 'true',
+  };
+  if (!payload.plano_id) { alert('Selecione um plano'); return; }
+  var r = await api('/api/plano-saude/coparticipacao', {method:'POST', body:JSON.stringify(payload)});
+  if (r && (r.regra)) { fecharModal('modalCopart'); carregarCoparticipacao(); }
+}
+
+async function deletarCopart(id) {
+  if (!confirm('Excluir regra?')) return;
+  await api('/api/plano-saude/coparticipacao/'+id, {method:'DELETE'});
+  carregarCoparticipacao();
+}
+
+// ── FATURAMENTO ──────────────────────────────────────────────────────────────
+
+async function carregarFaturamento() {
+  var comp = document.getElementById('filtroCompetencia').value;
+  var status = document.getElementById('filtroStatusFatura').value;
+  var params = [];
+  if (comp) params.push('competencia='+comp);
+  if (status) params.push('status='+status);
+  var url = '/api/plano-saude/faturamento' + (params.length ? '?'+params.join('&') : '');
+  var data = await api(url);
+  if (!data) return;
+
+  document.getElementById('ftTotalMens').textContent = 'R$ ' + (data.total_mensalidade||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  document.getElementById('ftTotalCopart').textContent = 'R$ ' + (data.total_coparticipacao||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  document.getElementById('ftTotalGeral').textContent = 'R$ ' + (data.total_geral||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  var vencidas = (data.por_status||[]).find(function(s){ return s.status==='vencido'; });
+  document.getElementById('ftVencidas').textContent = vencidas ? vencidas.qtd : 0;
+
+  var tb = document.getElementById('tbodyFaturas');
+  var faturas = data.faturas || [];
+  if (!faturas.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma fatura encontrada</td></tr>'; return; }
+  tb.innerHTML = faturas.map(function(f) {
+    var bc = {pendente:'badge-warn',pago:'badge-ok',vencido:'badge-danger',cancelado:'badge-gray'}[f.status]||'badge-gray';
+    return '<tr><td>'+f.competencia+'</td><td>'+f.beneficiario_nome+'</td><td>'+f.plano_nome+'</td><td>R$ '+f.valor_mensalidade.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td><td>R$ '+f.valor_coparticipacao.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td><td>R$ '+f.valor_total.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td><td>'+(f.vencimento||'—')+'</td><td><span class="badge '+bc+'">'+f.status_label+'</span></td><td><div style="display:flex;gap:4px">'+(f.status==='pendente'?'<button class="btn btn-ok btn-sm" onclick="pagarFatura('+f.id+')">Pago</button>':'')+(f.status==='pendente'?'<button class="btn btn-danger btn-sm" onclick="vencerFatura('+f.id+')">Vencer</button>':'')+'</div></td></tr>';
+  }).join('');
+}
+
+function abrirModalFatura() {
+  var sel = document.getElementById('ftPlano');
+  sel.innerHTML = '<option value="">selecione</option>' + _planos.map(function(p){ return '<option value="'+p.id+'">'+p.nome+'</option>'; }).join('');
+  document.getElementById('modalFatura').classList.add('open');
+}
+
+async function salvarFatura() {
+  var mens = parseFloat(document.getElementById('ftMensalidade').value) || 0;
+  var cop = parseFloat(document.getElementById('ftCoparticipacao').value) || 0;
+  var payload = {
+    plano_id: document.getElementById('ftPlano').value,
+    beneficiario_id: document.getElementById('ftBeneficiario').value,
+    competencia: document.getElementById('ftCompetencia').value,
+    vencimento: document.getElementById('ftVencimento').value || null,
+    valor_mensalidade: mens,
+    valor_coparticipacao: cop,
+    valor_total: mens + cop,
+  };
+  if (!payload.plano_id || !payload.beneficiario_id || !payload.competencia) { alert('Plano, beneficiario e competencia sao obrigatorios'); return; }
+  var r = await api('/api/plano-saude/faturamento', {method:'POST', body:JSON.stringify(payload)});
+  if (r && r.fatura) { fecharModal('modalFatura'); carregarFaturamento(); }
+}
+
+async function pagarFatura(id) {
+  await api('/api/plano-saude/faturamento/'+id, {method:'PUT', body:JSON.stringify({status:'pago', pago_em: new Date().toISOString().slice(0,10)})});
+  carregarFaturamento();
+}
+
+async function vencerFatura(id) {
+  await api('/api/plano-saude/faturamento/'+id, {method:'PUT', body:JSON.stringify({status:'vencido'})});
+  carregarFaturamento();
+}
+
+// ── PROGRAMAS DE SAUDE ───────────────────────────────────────────────────────
+
+var _programaAtualId = null;
+
+async function carregarProgramas() {
+  var data = await api('/api/plano-saude/programas');
+  if (!data) return;
+  var lista = document.getElementById('listaProgramas');
+  var programas = data.programas || [];
+  if (!programas.length) { lista.innerHTML = '<div class="empty">Nenhum programa cadastrado</div>'; return; }
+  lista.innerHTML = programas.map(function(p) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="verInscricoes('+p.id+',\''+p.nome+'\')"><div><div style="font-size:13px;font-weight:600">'+p.nome+'</div><div style="font-size:11px;color:var(--muted)">'+p.tipo_label+' &bull; '+p.total_inscritos+' ativos</div></div><span class="badge '+(p.ativo?'badge-ok':'badge-gray')+'">'+(p.ativo?'Ativo':'Inativo')+'</span></div>';
+  }).join('');
+}
+
+async function verInscricoes(programaId, nome) {
+  _programaAtualId = programaId;
+  document.getElementById('tituloInscricoes').textContent = nome;
+  document.getElementById('btnNovaInscricao').style.display = '';
+  var data = await api('/api/plano-saude/programas/'+programaId);
+  if (!data) return;
+  var tb = document.getElementById('tbodyInscricoes');
+  var inscricoes = (data.programa && data.programa.inscricoes) || [];
+  if (!inscricoes.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">Nenhum inscrito</td></tr>'; return; }
+  tb.innerHTML = inscricoes.map(function(i) {
+    var bc = {ativo:'badge-ok',concluido:'badge-info',abandonou:'badge-danger'}[i.status]||'badge-gray';
+    return '<tr><td>'+i.beneficiario_nome+'</td><td>'+(i.data_inscricao||'—')+'</td><td><span class="badge '+bc+'">'+i.status_label+'</span></td><td><button class="btn btn-danger btn-sm" onclick="encerrarInscricao('+i.id+')">Encerrar</button></td></tr>';
+  }).join('');
+}
+
+function abrirModalPrograma() { document.getElementById('modalPrograma').classList.add('open'); }
+
+async function salvarPrograma() {
+  var payload = {
+    nome: document.getElementById('pgNome').value,
+    tipo: document.getElementById('pgTipo').value,
+    descricao: document.getElementById('pgDescricao').value,
+    ativo: document.getElementById('pgAtivo').value === 'true',
+  };
+  if (!payload.nome) { alert('Nome e obrigatorio'); return; }
+  var r = await api('/api/plano-saude/programas', {method:'POST', body:JSON.stringify(payload)});
+  if (r && r.programa) { fecharModal('modalPrograma'); carregarProgramas(); }
+}
+
+function abrirModalInscricao() {
+  var sel = document.getElementById('inPlano');
+  sel.innerHTML = '<option value="">selecione</option>' + _planos.map(function(p){ return '<option value="'+p.id+'">'+p.nome+'</option>'; }).join('');
+  document.getElementById('modalInscricao').classList.add('open');
+}
+
+async function salvarInscricao() {
+  if (!_programaAtualId) { alert('Selecione um programa primeiro'); return; }
+  var payload = {
+    programa_id: _programaAtualId,
+    beneficiario_id: document.getElementById('inBeneficiario').value,
+    observacao: document.getElementById('inObservacao').value,
+  };
+  if (!payload.beneficiario_id) { alert('Selecione um beneficiario'); return; }
+  var r = await api('/api/plano-saude/inscricoes', {method:'POST', body:JSON.stringify(payload)});
+  if (r && r.inscricao) { fecharModal('modalInscricao'); verInscricoes(_programaAtualId, document.getElementById('tituloInscricoes').textContent); }
+}
+
+async function encerrarInscricao(id) {
+  if (!confirm('Encerrar inscricao?')) return;
+  await api('/api/plano-saude/inscricoes/'+id, {method:'PUT', body:JSON.stringify({status:'concluido'})});
+  if (_programaAtualId) verInscricoes(_programaAtualId, document.getElementById('tituloInscricoes').textContent);
+}
+
+// ── SINISTRALIDADE IA ────────────────────────────────────────────────────────
+
+async function carregarSinistralidade() {
+  var data = await api('/api/plano-saude/sinistralidade-ia');
+  if (!data) return;
+
+  // KPIs
+  document.getElementById('siaTaxaSinistralidade').textContent = (data.taxa_sinistralidade||0).toFixed(1) + '%';
+  document.getElementById('siaReceita').textContent = 'R$ ' + ((data.receita_bruta_ano||0)/1000).toFixed(0) + 'k';
+  document.getElementById('siaCusto').textContent = 'R$ ' + ((data.custo_sinistros_ano||0)/1000).toFixed(0) + 'k';
+  document.getElementById('siaTaxaGlosa').textContent = (data.taxa_glosa||0).toFixed(1) + '%';
+
+  // Alertas
+  var alertDiv = document.getElementById('siaAlertas');
+  var alertas = data.alertas || [];
+  if (alertas.length) {
+    alertDiv.innerHTML = alertas.map(function(a) {
+      var bg = {critico:'rgba(255,77,109,.12)',atencao:'rgba(255,179,71,.12)',epidemio:'rgba(192,132,252,.12)',financeiro:'rgba(0,229,176,.08)',sla:'rgba(255,107,157,.1)'}[a.tipo]||'rgba(255,255,255,.04)';
+      var cor = {critico:'var(--danger)',atencao:'var(--warn)',epidemio:'#c084fc',financeiro:'var(--ok)',sla:'var(--accent)'}[a.tipo]||'var(--text)';
+      return '<div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:10px;background:'+bg+';border:1px solid '+cor+'40"><span style="font-size:1.4rem">'+a.icone+'</span><span style="font-size:13px;font-weight:600;color:'+cor+'">'+a.mensagem+'</span></div>';
+    }).join('');
+  } else {
+    alertDiv.innerHTML = '<div style="padding:14px 18px;border-radius:10px;background:rgba(0,229,176,.08);border:1px solid rgba(0,229,176,.25);color:var(--ok);font-size:13px;font-weight:600">&#10003; Sinistralidade dentro dos parametros. Sem alertas criticos no momento.</div>';
+  }
+
+  // Pressao epidemiologica
+  var ep = data.pressao_epidemiologica || {};
+  var epCores = {controlada:'var(--ok)',monitoramento:'var(--warn)',moderada:'#ff8c42',alta:'var(--danger)'};
+  document.getElementById('siaEpidemio').innerHTML = '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><div style="text-align:center;min-width:100px"><div style="font-size:36px;font-weight:800;color:'+(epCores[ep.nivel]||'var(--muted)')+'">'+( ep.suspeitos||0)+'</div><div style="font-size:12px;color:var(--muted)">suspeitos / '+ep.janela_dias+'d</div></div><div style="flex:1"><div style="font-size:15px;font-weight:700;color:'+(epCores[ep.nivel]||'var(--text)')+'">'+ep.label+'</div><div style="font-size:12px;color:var(--muted);margin-top:4px">'+ep.registros+' registros totais no periodo</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Nivel: <strong>'+ep.nivel+'</strong></div></div></div>';
+
+  // Serie mensal
+  var serie = data.serie_mensal || [];
+  var maxSin = Math.max.apply(null, serie.map(function(s){ return s.sinistralidade_pct||0; })) || 100;
+  document.getElementById('siaSerie').innerHTML = serie.map(function(s) {
+    var largura = maxSin > 0 ? Math.round((s.sinistralidade_pct/maxSin)*100) : 0;
+    var cor = s.sinistralidade_pct > 80 ? 'var(--danger)' : s.sinistralidade_pct > 65 ? 'var(--warn)' : 'var(--ok)';
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="width:50px;font-size:11px;color:var(--muted);text-align:right">'+s.mes+'</div><div style="flex:1;background:rgba(255,255,255,.04);border-radius:4px;height:20px;overflow:hidden"><div style="width:'+largura+'%;height:100%;background:'+cor+'22;border-right:2px solid '+cor+'"></div></div><div style="width:50px;font-size:11px;color:'+cor+';font-weight:700">'+s.sinistralidade_pct+'%</div></div>';
+  }).join('');
+
+  // Top risco beneficiarios
+  var top = data.top_risco_beneficiarios || [];
+  var tbRisco = document.getElementById('siaTopRisco');
+  if (!top.length) { tbRisco.innerHTML = '<tr><td colspan="4" class="empty">Sem dados suficientes</td></tr>'; }
+  else tbRisco.innerHTML = top.map(function(b) {
+    var nc = {alto:'badge-danger',medio:'badge-warn',baixo:'badge-ok'}[b.nivel]||'badge-gray';
+    var barW = b.score;
+    return '<tr><td>'+b.nome+'</td><td style="font-size:11px;color:var(--muted)">'+b.plano_nome+'</td><td><div style="display:flex;align-items:center;gap:6px"><div style="width:60px;background:rgba(255,255,255,.04);border-radius:3px;height:8px;overflow:hidden"><div style="width:'+barW+'%;height:100%;background:var(--accent)"></div></div><span style="font-size:12px;font-weight:700">'+b.score+'</span></div></td><td><span class="badge '+nc+'">'+b.nivel+'</span></td></tr>';
+  }).join('');
+
+  // Top CIDs
+  var cids = data.top_cids_alto_custo || [];
+  var tbCids = document.getElementById('siaTopCids');
+  if (!cids.length) { tbCids.innerHTML = '<tr><td colspan="3" class="empty">Sem sinistros com CID</td></tr>'; }
+  else tbCids.innerHTML = cids.map(function(c) {
+    return '<tr><td style="font-weight:700;color:var(--accent)">'+c.cid+'</td><td>'+c.qtd+'</td><td>R$ '+(c.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td></tr>';
+  }).join('');
+
+  // Correlacao epidemio x sinistros
+  var epCids = data.correlacao_epidemio_cids || [];
+  document.getElementById('siaEpidemioCids').innerHTML = epCids.length ? epCids.map(function(e) {
+    return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px"><span>'+e.grupo+'</span><span style="font-weight:700;color:#c084fc">'+e.suspeitos+' suspeitos</span></div>';
+  }).join('') : '<div class="empty" style="padding:20px">Sem suspeitos no periodo</div>';
+
+  var snCids = data.correlacao_sinistros_cids || [];
+  document.getElementById('siaSinistrosCids').innerHTML = snCids.length ? snCids.map(function(s) {
+    return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px"><span>'+s.tipo+'</span><span style="font-weight:700;color:var(--accent)">'+s.qtd+' &bull; R$ '+(s.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span></div>';
+  }).join('') : '<div class="empty" style="padding:20px">Sem sinistros no periodo</div>';
+}
+
+// ── setTab extended ───────────────────────────────────────────────────────────
+
+var _tabLoaded = {};
+var _origSetTab = setTab;
+setTab = function(name) {
+  _origSetTab(name);
+  if (_tabLoaded[name]) return;
+  _tabLoaded[name] = true;
+  if (name === 'glosas') carregarGlosas();
+  else if (name === 'coparticipacao') { carregarCoparticipacao(); var sel=document.getElementById('filtroPlanoCopart'); sel.innerHTML='<option value="">Todos</option>'+_planos.map(function(p){return '<option value="'+p.id+'">'+p.nome+'</option>';}).join(''); }
+  else if (name === 'faturamento') carregarFaturamento();
+  else if (name === 'programas') carregarProgramas();
+  else if (name === 'sinistralidade') carregarSinistralidade();
+};
 
 (async function(){
   await carregarPlanos();

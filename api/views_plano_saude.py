@@ -16,6 +16,8 @@ from .access_control import get_setor
 from .models import (
     BeneficiarioPlano, Empresa, GuiaAutorizacao,
     PlanoSaude, PrestadorPlanoSaude, Reembolso, Sinistro, RegistroSintoma,
+    GlosaItem, CoparticipacaoRegra, FaturamentoBeneficiario,
+    ProgramaSaude, InscricaoPrograma,
 )
 from .views_dashboard import _empresa_autenticada
 
@@ -1298,4 +1300,786 @@ def api_ps_kpis(request):
             prazo_sla_em__lt=timezone.now(),
         ).count(),
         "serie_sinistros": serie,
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GLOSAS ── controle de glosas e recursos
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _glosa_dict(g):
+    return {
+        "id": g.id,
+        "sinistro_id": g.sinistro_id,
+        "codigo_procedimento": g.codigo_procedimento,
+        "descricao": g.descricao,
+        "valor_original": float(g.valor_original),
+        "valor_glosado": float(g.valor_glosado),
+        "motivo": g.motivo,
+        "status": g.status,
+        "status_label": g.get_status_display(),
+        "data_glosa": g.data_glosa.isoformat() if g.data_glosa else None,
+        "data_recurso": g.data_recurso.isoformat() if g.data_recurso else None,
+        "resposta_recurso": g.resposta_recurso,
+        "criado_em": g.criado_em.strftime("%d/%m/%Y"),
+    }
+
+
+@csrf_exempt
+def api_ps_glosas(request):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    sinistros_empresa = Sinistro.objects.filter(empresa=empresa).values_list("id", flat=True)
+    qs = GlosaItem.objects.filter(sinistro_id__in=sinistros_empresa)
+
+    if request.method == "GET":
+        sinistro_id = request.GET.get("sinistro_id")
+        status_f = request.GET.get("status", "")
+        if sinistro_id:
+            qs = qs.filter(sinistro_id=sinistro_id)
+        if status_f:
+            qs = qs.filter(status=status_f)
+
+        summary = qs.aggregate(
+            total_glosado=Sum("valor_glosado"),
+            total_original=Sum("valor_original"),
+        )
+        por_status = list(
+            qs.values("status").annotate(qtd=Count("id"), valor=Sum("valor_glosado")).order_by("-qtd")
+        )
+        return JsonResponse({
+            "glosas": [_glosa_dict(g) for g in qs.select_related("sinistro")[:200]],
+            "total_glosado": float(summary["total_glosado"] or 0),
+            "total_original": float(summary["total_original"] or 0),
+            "por_status": por_status,
+        })
+
+    if request.method == "POST":
+        data = json.loads(request.body or "{}")
+        sinistro_id = data.get("sinistro_id")
+        if not sinistro_id:
+            return JsonResponse({"erro": "sinistro_id obrigatório"}, status=400)
+        try:
+            sinistro = Sinistro.objects.get(id=sinistro_id, empresa=empresa)
+        except Sinistro.DoesNotExist:
+            return JsonResponse({"erro": "Sinistro não encontrado"}, status=404)
+
+        g = GlosaItem.objects.create(
+            sinistro=sinistro,
+            codigo_procedimento=data.get("codigo_procedimento", ""),
+            descricao=data.get("descricao", ""),
+            valor_original=Decimal(str(data.get("valor_original", 0))),
+            valor_glosado=Decimal(str(data.get("valor_glosado", 0))),
+            motivo=data.get("motivo", ""),
+            status=data.get("status", GlosaItem.STATUS_GLOSADO),
+        )
+        return JsonResponse({"glosa": _glosa_dict(g)}, status=201)
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@csrf_exempt
+def api_ps_glosa_detalhe(request, glosa_id):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    sinistros_empresa = Sinistro.objects.filter(empresa=empresa).values_list("id", flat=True)
+    try:
+        g = GlosaItem.objects.get(id=glosa_id, sinistro_id__in=sinistros_empresa)
+    except GlosaItem.DoesNotExist:
+        return JsonResponse({"erro": "Glosa não encontrada"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({"glosa": _glosa_dict(g)})
+
+    if request.method in ("PUT", "PATCH"):
+        data = json.loads(request.body or "{}")
+        for campo in ("codigo_procedimento", "descricao", "motivo", "status", "resposta_recurso"):
+            if campo in data:
+                setattr(g, campo, data[campo])
+        for campo in ("valor_original", "valor_glosado"):
+            if campo in data:
+                setattr(g, campo, Decimal(str(data[campo] or 0)))
+        for campo in ("data_glosa", "data_recurso"):
+            if campo in data and data[campo]:
+                from datetime import datetime as _dt
+                try:
+                    setattr(g, campo, _dt.strptime(data[campo], "%Y-%m-%d").date())
+                except ValueError:
+                    pass
+        g.save()
+        return JsonResponse({"glosa": _glosa_dict(g)})
+
+    if request.method == "DELETE":
+        g.delete()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# COPARTICIPAÇÃO ── regras por tipo de atendimento
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _copart_dict(r):
+    return {
+        "id": r.id,
+        "plano_id": r.plano_id,
+        "plano_nome": r.plano.nome,
+        "tipo_atendimento": r.tipo_atendimento,
+        "tipo_label": r.get_tipo_atendimento_display(),
+        "percentual": float(r.percentual),
+        "valor_fixo": float(r.valor_fixo),
+        "teto_mensal": float(r.teto_mensal) if r.teto_mensal is not None else None,
+        "ativo": r.ativo,
+        "criado_em": r.criado_em.strftime("%d/%m/%Y"),
+    }
+
+
+@csrf_exempt
+def api_ps_coparticipacao(request):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    planos_empresa = PlanoSaude.objects.filter(empresa=empresa).values_list("id", flat=True)
+    qs = CoparticipacaoRegra.objects.filter(plano_id__in=planos_empresa).select_related("plano")
+
+    if request.method == "GET":
+        plano_id = request.GET.get("plano_id")
+        if plano_id:
+            qs = qs.filter(plano_id=plano_id)
+        return JsonResponse({"regras": [_copart_dict(r) for r in qs]})
+
+    if request.method == "POST":
+        data = json.loads(request.body or "{}")
+        plano_id = data.get("plano_id")
+        tipo = data.get("tipo_atendimento")
+        if not plano_id or not tipo:
+            return JsonResponse({"erro": "plano_id e tipo_atendimento obrigatórios"}, status=400)
+        try:
+            plano = PlanoSaude.objects.get(id=plano_id, empresa=empresa)
+        except PlanoSaude.DoesNotExist:
+            return JsonResponse({"erro": "Plano não encontrado"}, status=404)
+
+        r, created = CoparticipacaoRegra.objects.get_or_create(
+            plano=plano, tipo_atendimento=tipo,
+            defaults={
+                "percentual": Decimal(str(data.get("percentual", 0))),
+                "valor_fixo": Decimal(str(data.get("valor_fixo", 0))),
+                "teto_mensal": Decimal(str(data["teto_mensal"])) if data.get("teto_mensal") else None,
+                "ativo": _to_bool(data.get("ativo"), True),
+            }
+        )
+        if not created:
+            r.percentual = Decimal(str(data.get("percentual", r.percentual)))
+            r.valor_fixo = Decimal(str(data.get("valor_fixo", r.valor_fixo)))
+            if "teto_mensal" in data:
+                r.teto_mensal = Decimal(str(data["teto_mensal"])) if data["teto_mensal"] else None
+            if "ativo" in data:
+                r.ativo = _to_bool(data["ativo"])
+            r.save()
+        return JsonResponse({"regra": _copart_dict(r)}, status=201 if created else 200)
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@csrf_exempt
+def api_ps_coparticipacao_detalhe(request, regra_id):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    planos_empresa = PlanoSaude.objects.filter(empresa=empresa).values_list("id", flat=True)
+    try:
+        r = CoparticipacaoRegra.objects.select_related("plano").get(id=regra_id, plano_id__in=planos_empresa)
+    except CoparticipacaoRegra.DoesNotExist:
+        return JsonResponse({"erro": "Regra não encontrada"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({"regra": _copart_dict(r)})
+
+    if request.method in ("PUT", "PATCH"):
+        data = json.loads(request.body or "{}")
+        for campo in ("percentual", "valor_fixo"):
+            if campo in data:
+                setattr(r, campo, Decimal(str(data[campo] or 0)))
+        if "teto_mensal" in data:
+            r.teto_mensal = Decimal(str(data["teto_mensal"])) if data["teto_mensal"] else None
+        if "ativo" in data:
+            r.ativo = _to_bool(data["ativo"])
+        r.save()
+        return JsonResponse({"regra": _copart_dict(r)})
+
+    if request.method == "DELETE":
+        r.delete()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FATURAMENTO ── faturas mensais dos beneficiários
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _fatura_dict(f):
+    return {
+        "id": f.id,
+        "beneficiario_id": f.beneficiario_id,
+        "beneficiario_nome": f.beneficiario.nome,
+        "plano_id": f.plano_id,
+        "plano_nome": f.plano.nome,
+        "competencia": f.competencia,
+        "valor_mensalidade": float(f.valor_mensalidade),
+        "valor_coparticipacao": float(f.valor_coparticipacao),
+        "valor_total": float(f.valor_total),
+        "status": f.status,
+        "status_label": f.get_status_display(),
+        "vencimento": f.vencimento.isoformat() if f.vencimento else None,
+        "pago_em": f.pago_em.isoformat() if f.pago_em else None,
+        "observacao": f.observacao,
+        "criado_em": f.criado_em.strftime("%d/%m/%Y"),
+    }
+
+
+@csrf_exempt
+def api_ps_faturamento(request):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    qs = FaturamentoBeneficiario.objects.filter(empresa=empresa).select_related("beneficiario", "plano")
+
+    if request.method == "GET":
+        competencia = request.GET.get("competencia", "")
+        status_f = request.GET.get("status", "")
+        plano_id = request.GET.get("plano_id")
+        if competencia:
+            qs = qs.filter(competencia=competencia)
+        if status_f:
+            qs = qs.filter(status=status_f)
+        if plano_id:
+            qs = qs.filter(plano_id=plano_id)
+
+        summary = qs.aggregate(
+            total_mensalidade=Sum("valor_mensalidade"),
+            total_copart=Sum("valor_coparticipacao"),
+            total_geral=Sum("valor_total"),
+        )
+        por_status = list(
+            qs.values("status").annotate(qtd=Count("id"), valor=Sum("valor_total")).order_by("-qtd")
+        )
+        return JsonResponse({
+            "faturas": [_fatura_dict(f) for f in qs[:300]],
+            "total_mensalidade": float(summary["total_mensalidade"] or 0),
+            "total_coparticipacao": float(summary["total_copart"] or 0),
+            "total_geral": float(summary["total_geral"] or 0),
+            "por_status": por_status,
+        })
+
+    if request.method == "POST":
+        data = json.loads(request.body or "{}")
+        beneficiario_id = data.get("beneficiario_id")
+        plano_id = data.get("plano_id")
+        competencia = data.get("competencia", "")
+        if not beneficiario_id or not plano_id or not competencia:
+            return JsonResponse({"erro": "beneficiario_id, plano_id e competencia são obrigatórios"}, status=400)
+        try:
+            beneficiario = BeneficiarioPlano.objects.get(id=beneficiario_id, plano__empresa=empresa)
+            plano = PlanoSaude.objects.get(id=plano_id, empresa=empresa)
+        except (BeneficiarioPlano.DoesNotExist, PlanoSaude.DoesNotExist):
+            return JsonResponse({"erro": "Beneficiário ou plano não encontrado"}, status=404)
+
+        valor_mens = Decimal(str(data.get("valor_mensalidade", 0)))
+        valor_cop = Decimal(str(data.get("valor_coparticipacao", 0)))
+        f, created = FaturamentoBeneficiario.objects.get_or_create(
+            empresa=empresa,
+            beneficiario=beneficiario,
+            competencia=competencia,
+            defaults={
+                "plano": plano,
+                "valor_mensalidade": valor_mens,
+                "valor_coparticipacao": valor_cop,
+                "valor_total": valor_mens + valor_cop,
+                "status": data.get("status", FaturamentoBeneficiario.STATUS_PENDENTE),
+                "observacao": data.get("observacao", ""),
+            }
+        )
+        if not created:
+            return JsonResponse({"erro": "Fatura já existe para esta competência"}, status=409)
+        return JsonResponse({"fatura": _fatura_dict(f)}, status=201)
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@csrf_exempt
+def api_ps_fatura_detalhe(request, fatura_id):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    try:
+        f = FaturamentoBeneficiario.objects.select_related("beneficiario", "plano").get(
+            id=fatura_id, empresa=empresa
+        )
+    except FaturamentoBeneficiario.DoesNotExist:
+        return JsonResponse({"erro": "Fatura não encontrada"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({"fatura": _fatura_dict(f)})
+
+    if request.method in ("PUT", "PATCH"):
+        data = json.loads(request.body or "{}")
+        for campo in ("status", "observacao"):
+            if campo in data:
+                setattr(f, campo, data[campo])
+        for campo in ("valor_mensalidade", "valor_coparticipacao", "valor_total"):
+            if campo in data:
+                setattr(f, campo, Decimal(str(data[campo] or 0)))
+        for campo in ("vencimento", "pago_em"):
+            if campo in data and data[campo]:
+                from datetime import datetime as _dt
+                try:
+                    setattr(f, campo, _dt.strptime(data[campo], "%Y-%m-%d").date())
+                except ValueError:
+                    pass
+        f.save()
+        return JsonResponse({"fatura": _fatura_dict(f)})
+
+    if request.method == "DELETE":
+        f.delete()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PROGRAMAS DE SAÚDE ── DIP, crônicos, oncologia, preventivo…
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _programa_dict(p):
+    return {
+        "id": p.id,
+        "nome": p.nome,
+        "tipo": p.tipo,
+        "tipo_label": p.get_tipo_display(),
+        "descricao": p.descricao,
+        "ativo": p.ativo,
+        "total_inscritos": p.inscricoes.filter(status=InscricaoPrograma.STATUS_ATIVO).count(),
+        "criado_em": p.criado_em.strftime("%d/%m/%Y"),
+    }
+
+
+def _inscricao_dict(i):
+    return {
+        "id": i.id,
+        "programa_id": i.programa_id,
+        "programa_nome": i.programa.nome,
+        "beneficiario_id": i.beneficiario_id,
+        "beneficiario_nome": i.beneficiario.nome,
+        "data_inscricao": i.data_inscricao.isoformat() if i.data_inscricao else None,
+        "status": i.status,
+        "status_label": i.get_status_display(),
+        "observacao": i.observacao,
+        "criado_em": i.criado_em.strftime("%d/%m/%Y"),
+    }
+
+
+@csrf_exempt
+def api_ps_programas(request):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    qs = ProgramaSaude.objects.filter(empresa=empresa).prefetch_related("inscricoes")
+
+    if request.method == "GET":
+        tipo_f = request.GET.get("tipo", "")
+        ativo_f = request.GET.get("ativo", "")
+        if tipo_f:
+            qs = qs.filter(tipo=tipo_f)
+        if ativo_f:
+            qs = qs.filter(ativo=_to_bool(ativo_f, True))
+        return JsonResponse({"programas": [_programa_dict(p) for p in qs]})
+
+    if request.method == "POST":
+        data = json.loads(request.body or "{}")
+        nome = data.get("nome", "").strip()
+        if not nome:
+            return JsonResponse({"erro": "nome obrigatório"}, status=400)
+        p = ProgramaSaude.objects.create(
+            empresa=empresa,
+            nome=nome,
+            tipo=data.get("tipo", ProgramaSaude.TIPO_CRONICO),
+            descricao=data.get("descricao", ""),
+            ativo=_to_bool(data.get("ativo"), True),
+        )
+        return JsonResponse({"programa": _programa_dict(p)}, status=201)
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@csrf_exempt
+def api_ps_programa_detalhe(request, programa_id):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    try:
+        p = ProgramaSaude.objects.prefetch_related("inscricoes__beneficiario").get(
+            id=programa_id, empresa=empresa
+        )
+    except ProgramaSaude.DoesNotExist:
+        return JsonResponse({"erro": "Programa não encontrado"}, status=404)
+
+    if request.method == "GET":
+        inscritos = [_inscricao_dict(i) for i in p.inscricoes.select_related("beneficiario", "programa").all()]
+        d = _programa_dict(p)
+        d["inscricoes"] = inscritos
+        return JsonResponse({"programa": d})
+
+    if request.method in ("PUT", "PATCH"):
+        data = json.loads(request.body or "{}")
+        for campo in ("nome", "tipo", "descricao"):
+            if campo in data:
+                setattr(p, campo, data[campo])
+        if "ativo" in data:
+            p.ativo = _to_bool(data["ativo"])
+        p.save()
+        return JsonResponse({"programa": _programa_dict(p)})
+
+    if request.method == "DELETE":
+        p.delete()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@csrf_exempt
+def api_ps_inscricoes(request):
+    """Listar ou criar inscrições de beneficiários em programas de saúde."""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    programas_empresa = ProgramaSaude.objects.filter(empresa=empresa).values_list("id", flat=True)
+    qs = InscricaoPrograma.objects.filter(programa_id__in=programas_empresa).select_related("programa", "beneficiario")
+
+    if request.method == "GET":
+        programa_id = request.GET.get("programa_id")
+        beneficiario_id = request.GET.get("beneficiario_id")
+        status_f = request.GET.get("status", "")
+        if programa_id:
+            qs = qs.filter(programa_id=programa_id)
+        if beneficiario_id:
+            qs = qs.filter(beneficiario_id=beneficiario_id)
+        if status_f:
+            qs = qs.filter(status=status_f)
+        return JsonResponse({"inscricoes": [_inscricao_dict(i) for i in qs[:300]]})
+
+    if request.method == "POST":
+        data = json.loads(request.body or "{}")
+        programa_id = data.get("programa_id")
+        beneficiario_id = data.get("beneficiario_id")
+        if not programa_id or not beneficiario_id:
+            return JsonResponse({"erro": "programa_id e beneficiario_id obrigatórios"}, status=400)
+        try:
+            programa = ProgramaSaude.objects.get(id=programa_id, empresa=empresa)
+        except ProgramaSaude.DoesNotExist:
+            return JsonResponse({"erro": "Programa não encontrado"}, status=404)
+        try:
+            beneficiario = BeneficiarioPlano.objects.get(id=beneficiario_id, plano__empresa=empresa)
+        except BeneficiarioPlano.DoesNotExist:
+            return JsonResponse({"erro": "Beneficiário não encontrado"}, status=404)
+
+        inscricao, created = InscricaoPrograma.objects.get_or_create(
+            programa=programa,
+            beneficiario=beneficiario,
+            defaults={
+                "status": data.get("status", InscricaoPrograma.STATUS_ATIVO),
+                "observacao": data.get("observacao", ""),
+            }
+        )
+        if not created:
+            return JsonResponse({"erro": "Beneficiário já inscrito neste programa"}, status=409)
+        return JsonResponse({"inscricao": _inscricao_dict(inscricao)}, status=201)
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@csrf_exempt
+def api_ps_inscricao_detalhe(request, inscricao_id):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    programas_empresa = ProgramaSaude.objects.filter(empresa=empresa).values_list("id", flat=True)
+    try:
+        i = InscricaoPrograma.objects.select_related("programa", "beneficiario").get(
+            id=inscricao_id, programa_id__in=programas_empresa
+        )
+    except InscricaoPrograma.DoesNotExist:
+        return JsonResponse({"erro": "Inscrição não encontrada"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({"inscricao": _inscricao_dict(i)})
+
+    if request.method in ("PUT", "PATCH"):
+        data = json.loads(request.body or "{}")
+        for campo in ("status", "observacao"):
+            if campo in data:
+                setattr(i, campo, data[campo])
+        i.save()
+        return JsonResponse({"inscricao": _inscricao_dict(i)})
+
+    if request.method == "DELETE":
+        i.delete()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SINISTRALIDADE + IA ── analytics avançado com scoring de risco
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _score_risco_beneficiario(beneficiario, sinistros_qs, epidemio):
+    """
+    Calcula score de risco do beneficiário (0-100).
+    Considera: volume de sinistros, valor total, suspeitos epidemiológicos,
+    programas crônicos e cobertura faturamento vencido.
+    """
+    score = 0
+
+    # Sinistros do beneficiário nos últimos 12 meses
+    ben_sinistros = sinistros_qs.filter(beneficiario=beneficiario)
+    qtd_sinistros = ben_sinistros.count()
+    valor_sinistros = float(ben_sinistros.aggregate(v=Sum("valor_total"))["v"] or 0)
+
+    # Volume de sinistros (0–25 pts)
+    score += min(25, qtd_sinistros * 5)
+
+    # Valor total (0–25 pts): escala R$0–R$50.000
+    score += min(25, int(valor_sinistros / 2000))
+
+    # Programas crônicos ativos (0–20 pts)
+    programas_cronicos = InscricaoPrograma.objects.filter(
+        beneficiario=beneficiario,
+        status=InscricaoPrograma.STATUS_ATIVO,
+        programa__tipo__in=[ProgramaSaude.TIPO_CRONICO, ProgramaSaude.TIPO_ONCOLOGIA],
+    ).count()
+    score += min(20, programas_cronicos * 10)
+
+    # Pressão epidemiológica (0–15 pts)
+    nivel = epidemio.get("nivel", "controlada")
+    ep_score = {"controlada": 0, "monitoramento": 5, "moderada": 10, "alta": 15}.get(nivel, 0)
+    score += ep_score
+
+    # Faturas vencidas (0–15 pts)
+    faturas_vencidas = FaturamentoBeneficiario.objects.filter(
+        beneficiario=beneficiario, status=FaturamentoBeneficiario.STATUS_VENCIDO
+    ).count()
+    score += min(15, faturas_vencidas * 5)
+
+    return min(100, score)
+
+
+def api_ps_sinistralidade_ia(request):
+    """
+    Analytics avançado de sinistralidade com IA: scoring de risco por beneficiário,
+    correlação com dados epidemiológicos, ranking de CIDs de alto custo,
+    previsão de tendência e alertas automáticos.
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    hoje = date.today()
+    inicio_ano = hoje.replace(month=1, day=1)
+    ultimo_mes = hoje.replace(day=1) - timedelta(days=1)
+    inicio_mes_atual = hoje.replace(day=1)
+
+    sinistros_ano = Sinistro.objects.filter(
+        empresa=empresa,
+        data_abertura__date__gte=inicio_ano,
+    )
+
+    # ── Receita esperada vs sinistralidade ──────────────────────────────
+    receita_bruta = float(
+        FaturamentoBeneficiario.objects.filter(
+            empresa=empresa, status=FaturamentoBeneficiario.STATUS_PAGO,
+        ).filter(
+            competencia__gte=inicio_ano.strftime("%Y-%m")
+        ).aggregate(v=Sum("valor_mensalidade"))["v"] or 0
+    )
+    custo_sinistros = float(
+        sinistros_ano.filter(status__in=["aprovado", "pago"]).aggregate(v=Sum("valor_total"))["v"] or 0
+    )
+    taxa_sinistralidade = round((custo_sinistros / receita_bruta * 100) if receita_bruta > 0 else 0, 2)
+
+    # ── Glosas ───────────────────────────────────────────────────────────
+    sinistros_ids = sinistros_ano.values_list("id", flat=True)
+    total_glosado = float(
+        GlosaItem.objects.filter(sinistro_id__in=sinistros_ids).aggregate(v=Sum("valor_glosado"))["v"] or 0
+    )
+    taxa_glosa = round((total_glosado / custo_sinistros * 100) if custo_sinistros > 0 else 0, 2)
+
+    # ── Top CIDs de alto custo ───────────────────────────────────────────
+    top_cids = list(
+        sinistros_ano.filter(cid__gt="", status__in=["aprovado", "pago"])
+        .values("cid")
+        .annotate(qtd=Count("id"), valor=Sum("valor_total"))
+        .order_by("-valor")[:10]
+    )
+
+    # ── Série mensal sinistralidade (últimos 6 meses) ────────────────────
+    serie_mensal = []
+    for i in range(5, -1, -1):
+        ref = hoje.replace(day=1) - timedelta(days=i * 28)
+        mes_inicio = ref.replace(day=1)
+        competencia_str = mes_inicio.strftime("%Y-%m")
+        if i == 0:
+            mes_fim = hoje
+        else:
+            prox = (mes_inicio.replace(day=28) + timedelta(days=4)).replace(day=1)
+            mes_fim = prox - timedelta(days=1)
+
+        custo_mes = float(
+            Sinistro.objects.filter(
+                empresa=empresa,
+                data_abertura__date__gte=mes_inicio,
+                data_abertura__date__lte=mes_fim,
+                status__in=["aprovado", "pago"],
+            ).aggregate(v=Sum("valor_total"))["v"] or 0
+        )
+        receita_mes = float(
+            FaturamentoBeneficiario.objects.filter(
+                empresa=empresa,
+                competencia=competencia_str,
+                status=FaturamentoBeneficiario.STATUS_PAGO,
+            ).aggregate(v=Sum("valor_mensalidade"))["v"] or 0
+        )
+        sinistralidade_mes = round((custo_mes / receita_mes * 100) if receita_mes > 0 else 0, 1)
+        serie_mensal.append({
+            "mes": mes_inicio.strftime("%b/%y"),
+            "competencia": competencia_str,
+            "custo": custo_mes,
+            "receita": receita_mes,
+            "sinistralidade_pct": sinistralidade_mes,
+        })
+
+    # ── Pressão epidemiológica ───────────────────────────────────────────
+    epidemio = _pressao_epidemiologica_empresa(empresa, dias=14)
+
+    # ── Scoring de risco dos beneficiários (top 20) ──────────────────────
+    ben_qs = BeneficiarioPlano.objects.filter(
+        plano__empresa=empresa, situacao=BeneficiarioPlano.SITUACAO_ATIVO
+    ).select_related("plano")[:200]
+
+    scores = []
+    for b in ben_qs:
+        score = _score_risco_beneficiario(b, sinistros_ano, epidemio)
+        if score > 0:
+            scores.append({
+                "beneficiario_id": b.id,
+                "nome": b.nome,
+                "plano_nome": b.plano.nome,
+                "score": score,
+                "nivel": "alto" if score >= 60 else ("medio" if score >= 30 else "baixo"),
+            })
+
+    scores.sort(key=lambda x: -x["score"])
+    top_risco = scores[:20]
+
+    # ── Alertas automáticos ──────────────────────────────────────────────
+    alertas = []
+    if taxa_sinistralidade > 80:
+        alertas.append({
+            "tipo": "critico",
+            "icone": "🚨",
+            "mensagem": f"Sinistralidade em {taxa_sinistralidade}% — acima do limite ANS de 80%",
+        })
+    elif taxa_sinistralidade > 65:
+        alertas.append({
+            "tipo": "atencao",
+            "icone": "⚠️",
+            "mensagem": f"Sinistralidade em {taxa_sinistralidade}% — monitoramento necessário",
+        })
+
+    if taxa_glosa > 10:
+        alertas.append({
+            "tipo": "atencao",
+            "icone": "📋",
+            "mensagem": f"Taxa de glosa em {taxa_glosa}% — revisar auditoria médica",
+        })
+
+    if epidemio["nivel"] in ("moderada", "alta"):
+        alertas.append({
+            "tipo": "epidemio",
+            "icone": "🦠",
+            "mensagem": f"Pressão epidemiológica {epidemio['nivel']}: {epidemio['suspeitos']} casos suspeitos nos últimos {epidemio['janela_dias']} dias",
+        })
+
+    faturas_vencidas_total = FaturamentoBeneficiario.objects.filter(
+        empresa=empresa, status=FaturamentoBeneficiario.STATUS_VENCIDO
+    ).count()
+    if faturas_vencidas_total > 0:
+        alertas.append({
+            "tipo": "financeiro",
+            "icone": "💰",
+            "mensagem": f"{faturas_vencidas_total} fatura(s) vencida(s) — impacto na inadimplência",
+        })
+
+    guias_sla_vencido = GuiaAutorizacao.objects.filter(
+        plano__empresa=empresa,
+        status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
+        prazo_sla_em__lt=timezone.now(),
+    ).count()
+    if guias_sla_vencido > 0:
+        alertas.append({
+            "tipo": "sla",
+            "icone": "⏱️",
+            "mensagem": f"{guias_sla_vencido} guia(s) com SLA vencido — risco de penalidade ANS",
+        })
+
+    # ── Distribuição de sinistros por tipo ───────────────────────────────
+    dist_tipo = list(
+        sinistros_ano.values("tipo")
+        .annotate(qtd=Count("id"), valor=Sum("valor_total"))
+        .order_by("-valor")
+    )
+
+    # ── Correlação epidemiologia × sinistros ─────────────────────────────
+    # Últimos 14 dias: suspeitos por CID vs sinistros por CID
+    inicio_epidemio = date.today() - timedelta(days=14)
+    epidemio_cids = list(
+        RegistroSintoma.objects.filter(
+            empresa=empresa,
+            data_registro__date__gte=inicio_epidemio,
+            suspeito=True,
+        ).values("grupo").annotate(suspeitos=Count("id")).order_by("-suspeitos")[:10]
+    )
+    sinistros_cids_recentes = list(
+        sinistros_ano.filter(data_abertura__date__gte=inicio_epidemio)
+        .values("tipo").annotate(qtd=Count("id"), valor=Sum("valor_total"))
+        .order_by("-qtd")[:10]
+    )
+
+    return JsonResponse({
+        "taxa_sinistralidade": taxa_sinistralidade,
+        "receita_bruta_ano": receita_bruta,
+        "custo_sinistros_ano": custo_sinistros,
+        "total_glosado_ano": total_glosado,
+        "taxa_glosa": taxa_glosa,
+        "top_cids_alto_custo": top_cids,
+        "serie_mensal": serie_mensal,
+        "pressao_epidemiologica": epidemio,
+        "top_risco_beneficiarios": top_risco,
+        "alertas": alertas,
+        "dist_tipo_sinistro": dist_tipo,
+        "correlacao_epidemio_cids": epidemio_cids,
+        "correlacao_sinistros_cids": sinistros_cids_recentes,
     })

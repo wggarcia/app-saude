@@ -3432,6 +3432,167 @@ class Reembolso(models.Model):
         return f"Reembolso #{self.numero_reembolso or self.id} — {self.beneficiario.nome}"
 
 
+class GlosaItem(models.Model):
+    """Item glosado em um sinistro — controle de glosas e recursos."""
+    STATUS_GLOSADO = "glosado"
+    STATUS_RECURSO_ENVIADO = "recurso_enviado"
+    STATUS_RECURSO_ACEITO = "recurso_aceito"
+    STATUS_MANTIDA = "mantida"
+    STATUS_CHOICES = [
+        (STATUS_GLOSADO, "Glosado"),
+        (STATUS_RECURSO_ENVIADO, "Recurso Enviado"),
+        (STATUS_RECURSO_ACEITO, "Recurso Aceito"),
+        (STATUS_MANTIDA, "Glosa Mantida"),
+    ]
+
+    sinistro = models.ForeignKey(Sinistro, on_delete=models.CASCADE, related_name="glosas")
+    codigo_procedimento = models.CharField(max_length=20, blank=True, default="")
+    descricao = models.TextField()
+    valor_original = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_glosado = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    motivo = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_GLOSADO)
+    data_glosa = models.DateField(null=True, blank=True)
+    data_recurso = models.DateField(null=True, blank=True)
+    resposta_recurso = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"Glosa #{self.id} — {self.descricao[:40]}"
+
+
+class CoparticipacaoRegra(models.Model):
+    """Regra de coparticipação do beneficiário por tipo de atendimento."""
+    TIPO_CONSULTA = "consulta"
+    TIPO_EXAME = "exame"
+    TIPO_INTERNACAO = "internacao"
+    TIPO_CIRURGIA = "cirurgia"
+    TIPO_TERAPIA = "terapia"
+    TIPO_URGENCIA = "urgencia"
+    TIPO_CHOICES = [
+        (TIPO_CONSULTA, "Consulta"),
+        (TIPO_EXAME, "Exame / Diagnóstico"),
+        (TIPO_INTERNACAO, "Internação"),
+        (TIPO_CIRURGIA, "Cirurgia"),
+        (TIPO_TERAPIA, "Terapia / Reabilitação"),
+        (TIPO_URGENCIA, "Urgência / Emergência"),
+    ]
+
+    plano = models.ForeignKey(PlanoSaude, on_delete=models.CASCADE, related_name="regras_coparticipacao")
+    tipo_atendimento = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    percentual = models.DecimalField(max_digits=5, decimal_places=2, default=0,
+                                     help_text="% cobrado do beneficiário (0 a 100)")
+    valor_fixo = models.DecimalField(max_digits=10, decimal_places=2, default=0,
+                                     help_text="Valor fixo por evento (R$)")
+    teto_mensal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                      help_text="Teto mensal de coparticipação (R$), se houver")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["plano", "tipo_atendimento"]
+        unique_together = [("plano", "tipo_atendimento")]
+
+    def __str__(self):
+        return f"{self.plano.nome} — {self.get_tipo_atendimento_display()}"
+
+
+class FaturamentoBeneficiario(models.Model):
+    """Fatura mensal de um beneficiário (mensalidade + coparticipação)."""
+    STATUS_PENDENTE = "pendente"
+    STATUS_PAGO = "pago"
+    STATUS_VENCIDO = "vencido"
+    STATUS_CANCELADO = "cancelado"
+    STATUS_CHOICES = [
+        (STATUS_PENDENTE, "Pendente"),
+        (STATUS_PAGO, "Pago"),
+        (STATUS_VENCIDO, "Vencido"),
+        (STATUS_CANCELADO, "Cancelado"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="faturas_beneficiarios")
+    beneficiario = models.ForeignKey(BeneficiarioPlano, on_delete=models.CASCADE, related_name="faturas")
+    plano = models.ForeignKey(PlanoSaude, on_delete=models.CASCADE, related_name="faturas")
+    competencia = models.CharField(max_length=7, help_text="YYYY-MM")
+    valor_mensalidade = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_coparticipacao = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_PENDENTE)
+    vencimento = models.DateField(null=True, blank=True)
+    pago_em = models.DateField(null=True, blank=True)
+    observacao = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-competencia", "beneficiario__nome"]
+        unique_together = [("empresa", "beneficiario", "competencia")]
+
+    def __str__(self):
+        return f"Fatura {self.competencia} — {self.beneficiario.nome}"
+
+
+class ProgramaSaude(models.Model):
+    """Programa de saúde gerenciado da operadora (DIP, crônicos, oncologia…)."""
+    TIPO_CRONICO = "cronico"
+    TIPO_PREVENTIVO = "preventivo"
+    TIPO_ONCOLOGIA = "oncologia"
+    TIPO_MATERNIDADE = "maternidade"
+    TIPO_SAUDE_MENTAL = "saude_mental"
+    TIPO_REABILITACAO = "reabilitacao"
+    TIPO_CHOICES = [
+        (TIPO_CRONICO, "Doença Crônica"),
+        (TIPO_PREVENTIVO, "Preventivo / Wellness"),
+        (TIPO_ONCOLOGIA, "Oncologia"),
+        (TIPO_MATERNIDADE, "Maternidade / Pré-natal"),
+        (TIPO_SAUDE_MENTAL, "Saúde Mental"),
+        (TIPO_REABILITACAO, "Reabilitação"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="programas_saude")
+    nome = models.CharField(max_length=200)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default=TIPO_CRONICO)
+    descricao = models.TextField(blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return self.nome
+
+
+class InscricaoPrograma(models.Model):
+    """Inscrição de um beneficiário em um programa de saúde."""
+    STATUS_ATIVO = "ativo"
+    STATUS_CONCLUIDO = "concluido"
+    STATUS_ABANDONOU = "abandonou"
+    STATUS_CHOICES = [
+        (STATUS_ATIVO, "Ativo"),
+        (STATUS_CONCLUIDO, "Concluído"),
+        (STATUS_ABANDONOU, "Abandonou"),
+    ]
+
+    programa = models.ForeignKey(ProgramaSaude, on_delete=models.CASCADE, related_name="inscricoes")
+    beneficiario = models.ForeignKey(BeneficiarioPlano, on_delete=models.CASCADE, related_name="inscricoes_programa")
+    data_inscricao = models.DateField(auto_now_add=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_ATIVO)
+    observacao = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_inscricao"]
+        unique_together = [("programa", "beneficiario")]
+
+    def __str__(self):
+        return f"{self.beneficiario.nome} — {self.programa.nome}"
+
+
 # ─── Event Backbone / Outbox Pattern ─────────────────────────────────────────
 
 class OutboxEvento(models.Model):

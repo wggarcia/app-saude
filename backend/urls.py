@@ -38,6 +38,13 @@ from api.views_plano_saude import (
     api_ps_sinistros, api_ps_sinistro_detalhe,
     api_ps_reembolsos, api_ps_reembolso_detalhe,
     api_ps_kpis,
+    # Expansão — Glosas, Coparticipação, Faturamento, Programas, Sinistralidade IA
+    api_ps_glosas, api_ps_glosa_detalhe,
+    api_ps_coparticipacao, api_ps_coparticipacao_detalhe,
+    api_ps_faturamento, api_ps_fatura_detalhe,
+    api_ps_programas, api_ps_programa_detalhe,
+    api_ps_inscricoes, api_ps_inscricao_detalhe,
+    api_ps_sinistralidade_ia,
 )
 from api.views_corporativo import (
     dashboard_empresa_corporativo,
@@ -1229,4 +1236,21 @@ urlpatterns = [
     path('api/plano-saude/sinistros/<int:sinistro_id>', api_ps_sinistro_detalhe),
     path('api/plano-saude/reembolsos', api_ps_reembolsos),
     path('api/plano-saude/reembolsos/<int:reembolso_id>', api_ps_reembolso_detalhe),
+    # Glosas
+    path('api/plano-saude/glosas', api_ps_glosas),
+    path('api/plano-saude/glosas/<int:glosa_id>', api_ps_glosa_detalhe),
+    # Coparticipação
+    path('api/plano-saude/coparticipacao', api_ps_coparticipacao),
+    path('api/plano-saude/coparticipacao/<int:regra_id>', api_ps_coparticipacao_detalhe),
+    # Faturamento
+    path('api/plano-saude/faturamento', api_ps_faturamento),
+    path('api/plano-saude/faturamento/<int:fatura_id>', api_ps_fatura_detalhe),
+    # Programas de Saúde
+    path('api/plano-saude/programas', api_ps_programas),
+    path('api/plano-saude/programas/<int:programa_id>', api_ps_programa_detalhe),
+    # Inscrições em Programas
+    path('api/plano-saude/inscricoes', api_ps_inscricoes),
+    path('api/plano-saude/inscricoes/<int:inscricao_id>', api_ps_inscricao_detalhe),
+    # Sinistralidade + IA
+    path('api/plano-saude/sinistralidade-ia', api_ps_sinistralidade_ia),
 ]
