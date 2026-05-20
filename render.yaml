@@ -175,11 +175,12 @@ services:
       - key: PUBLIC_BASE_URL
         value: https://app-saude-p9n8.onrender.com
 
+  # ── Redis — cache compartilhado entre workers (rate limiting, sessões) ──────
+  - type: redis
+    name: soluscrt-redis
+    plan: starter
+    ipAllowList: []   # só serviços internos do Render acessam
+
 databases:
   - name: soluscrt-saude-db
-    plan: starter
-
-  # ── Cache compartilhado — necessário para rate limiting consistente entre workers
-caches:
-  - name: soluscrt-redis
     plan: starter
