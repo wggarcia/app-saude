@@ -166,7 +166,7 @@ PACOTES_SAAS = {
     "plano_saude_operadora": {
         "label": "Operadora de Plano de Saúde",
         "setor": "plano_saude",
-        "descricao": "Gestao de beneficiarios, contratos, sinistros, coberturas e reembolsos.",
+        "descricao": "Beneficiarios, elegibilidade, guias, regulacao clinica, sinistros, reembolsos, compliance ANS/TISS e dashboard epidemiologico.",
         "usuarios": 100,
         "dispositivos": 100,
         "mensal": 12000.00,
@@ -176,7 +176,7 @@ PACOTES_SAAS = {
     "plano_saude_enterprise": {
         "label": "Operadora Enterprise",
         "setor": "plano_saude",
-        "descricao": "Plano de saude de grande porte com inteligencia epidemiologica e LGPD avancado.",
+        "descricao": "Multi-operadora com BI avancado, jornada do beneficiario, payment integrity, SLA dedicado e comando epidemiologico.",
         "usuarios": 500,
         "dispositivos": 500,
         "mensal": 45000.00,

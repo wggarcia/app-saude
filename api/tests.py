@@ -44,11 +44,14 @@ from .models import (
     PacienteHospital,
     PacienteInternado,
     PlanoSaude,
+    PrestadorPlanoSaude,
     PrescricaoMedica,
     PrescricaoHospitalar,
     PlanoAcaoGov,
     ProgramaSaudeGov,
+    Reembolso,
     RegistroSintoma,
+    Sinistro,
     TriagemHospital,
     TriagemManchester,
     ASOOcupacional,
@@ -923,6 +926,58 @@ class AuthDeviceTests(TestCase):
         self.assertGreaterEqual(CATOcupacional.objects.filter(empresa=empresa).count(), 1)
         self.assertGreaterEqual(TreinamentoNR.objects.filter(empresa=empresa).count(), 1)
 
+    def test_enterprise_seed_operacional_plano_saude_cria_fluxo_real(self):
+        operadora = Empresa.objects.create(
+            nome="Operadora Seed",
+            email="operadora-seed@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": operadora.email,
+                "senha": "123456",
+                "device_id": "operadora-seed-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        response = self.client.post("/api/enterprise/seed-operational-demo")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["setor"], "plano_saude")
+        self.assertGreater(payload["total_criado"], 0)
+        self.assertGreater(payload["suite"]["crescimento"]["progresso"], 0)
+        etapas = {
+            etapa["titulo"]: etapa["status"]
+            for processo in payload["suite"]["processos"]
+            for etapa in processo["etapas"]
+        }
+        self.assertEqual(etapas["Cadastrar plano"], "feito")
+        self.assertEqual(etapas["Cadastrar beneficiario"], "feito")
+        self.assertEqual(etapas["Abrir guia e regular autorizacao"], "feito")
+        self.assertEqual(etapas["Monitorar epidemiologia da carteira"], "feito")
+        self.assertGreaterEqual(PlanoSaude.objects.filter(empresa=operadora).count(), 1)
+        self.assertGreaterEqual(BeneficiarioPlano.objects.filter(plano__empresa=operadora).count(), 3)
+        self.assertGreaterEqual(PrestadorPlanoSaude.objects.filter(empresa=operadora).count(), 3)
+        self.assertGreaterEqual(GuiaAutorizacao.objects.filter(plano__empresa=operadora).count(), 3)
+        self.assertGreaterEqual(Sinistro.objects.filter(empresa=operadora).count(), 2)
+        self.assertGreaterEqual(Reembolso.objects.filter(empresa=operadora).count(), 2)
+        self.assertGreaterEqual(RegistroSintoma.objects.filter(empresa=operadora).count(), 3)
+        guia_pendente = GuiaAutorizacao.objects.filter(
+            plano__empresa=operadora,
+            fila_status=GuiaAutorizacao.FILA_PENDENCIA_DOCUMENTAL,
+        ).first()
+        self.assertIsNotNone(guia_pendente)
+        self.assertIsNotNone(guia_pendente.prestador_id)
+
     def test_enterprise_premium_suite_farmacia_mostra_capacidades_clinicas(self):
         farmacia = Empresa.objects.create(
             nome="Farmacia Suite",
@@ -968,9 +1023,218 @@ class AuthDeviceTests(TestCase):
         self.assertIn("Registrar receita", etapas)
         self.assertEqual(payload["crescimento"]["etapas_feitas"], 1)
         self.assertEqual(payload["crescimento"]["etapas_pendentes"], 7)
+
+    def test_enterprise_premium_suite_plano_saude_mostra_capacidades_de_operadora(self):
+        operadora = Empresa.objects.create(
+            nome="Operadora Suite",
+            email="operadora-suite@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": operadora.email,
+                "senha": "123456",
+                "device_id": "operadora-suite-device",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(login.status_code, 200)
+        plano = PlanoSaude.objects.create(empresa=operadora, nome="Plano Suite", registro_ans="123456")
+        beneficiario = BeneficiarioPlano.objects.create(
+            plano=plano,
+            nome="Beneficiario Suite",
+            cpf="000.000.000-31",
+            email="beneficiario@suite.local",
+            situacao=BeneficiarioPlano.SITUACAO_ATIVO,
+        )
+        GuiaAutorizacao.objects.create(
+            plano=plano,
+            beneficiario=beneficiario,
+            tipo=GuiaAutorizacao.TIPO_EXAME,
+            descricao_procedimento="Ressonancia magnetica",
+            cid="M54.5",
+            medico_solicitante="Dr. Suite",
+            status=GuiaAutorizacao.STATUS_AUTORIZADA,
+            valor_estimado="980.00",
+            numero_autorizacao="AUTH-SUITE-001",
+            validade_autorizacao=timezone.localdate() + timedelta(days=3),
+        )
+        Sinistro.objects.create(
+            empresa=operadora,
+            plano=plano,
+            beneficiario=beneficiario,
+            numero_sinistro="SIN-SUITE-001",
+            tipo="exame",
+            status="pago",
+            prestador="Hospital Suite",
+            valor_total="980.00",
+            valor_pago="980.00",
+        )
+        Reembolso.objects.create(
+            empresa=operadora,
+            plano=plano,
+            beneficiario=beneficiario,
+            numero_reembolso="REE-SUITE-001",
+            tipo_despesa="consulta",
+            status="pago",
+            valor_solicitado="210.00",
+            valor_aprovado="210.00",
+            valor_pago="210.00",
+            data_pagamento=timezone.localdate(),
+        )
+        RegistroSintoma.objects.create(
+            empresa=operadora,
+            device_id="suite-epi-001",
+            doenca="Influenza",
+            suspeito=True,
+            origem_dado=RegistroSintoma.ORIGEM_INSTITUCIONAL,
+            cidade="Sao Paulo",
+            bairro="Pinheiros",
+            estado="SP",
+            pais="Brasil",
+            latitude=-23.56,
+            longitude=-46.67,
+            febre=True,
+            tosse=True,
+        )
+
+        response = self.client.get("/api/enterprise/premium-suite")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        nomes = " ".join(capacidade["nome"] for capacidade in payload["capacidades"])
+        referencias = " ".join(
+            referencia
+            for capacidade in payload["capacidades"]
+            for referencia in capacidade["referencias"]
+        )
+        processos = " ".join(processo["nome"] for processo in payload["processos"])
+        etapas = " ".join(
+            etapa["titulo"]
+            for processo in payload["processos"]
+            for etapa in processo["etapas"]
+        )
+        self.assertEqual(payload["setor"], "plano_saude")
+        self.assertIn("Cadastro, elegibilidade", nomes)
+        self.assertIn("Rede credenciada e portal do prestador", nomes)
+        self.assertIn("Compliance ANS", nomes)
+        self.assertIn("Epidemiologia", nomes)
+        self.assertIn("HealthEdge", referencias)
+        self.assertIn("Softheon", referencias)
+        self.assertIn("Operacao de operadora ponta a ponta", processos)
+        self.assertIn("Monitorar epidemiologia da carteira", etapas)
+        self.assertGreaterEqual(payload["crescimento"]["etapas_feitas"], 4)
         primeira_etapa = payload["processos"][0]["etapas"][0]
         self.assertEqual(primeira_etapa["status"], "feito")
         self.assertEqual(primeira_etapa["sinais"], 1)
+
+    def test_api_plano_saude_prestadores_portal_e_fila_clinica(self):
+        operadora = Empresa.objects.create(
+            nome="Operadora Fila",
+            email="operadora-fila@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        plano = PlanoSaude.objects.create(empresa=operadora, nome="Plano Fila", registro_ans="123123")
+        beneficiario = BeneficiarioPlano.objects.create(
+            plano=plano,
+            nome="Paciente Fila",
+            cpf="000.000.000-44",
+            numero_carteirinha="PS-044",
+            situacao=BeneficiarioPlano.SITUACAO_ATIVO,
+        )
+
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": operadora.email,
+                "senha": "123456",
+                "device_id": "operadora-fila-device",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        prestador_resp = self.client.post(
+            "/api/plano-saude/prestadores",
+            data=json.dumps({
+                "nome_fantasia": "Hospital Operacional",
+                "tipo": "hospital",
+                "cidade": "Sao Paulo",
+                "estado": "SP",
+                "portal_ativo": True,
+                "sla_autorizacao_horas": 18,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(prestador_resp.status_code, 201)
+        prestador_id = prestador_resp.json()["prestador"]["id"]
+
+        RegistroSintoma.objects.create(
+            empresa=operadora,
+            device_id="operadora-fila-epi",
+            doenca="Influenza",
+            suspeito=True,
+            cidade="Sao Paulo",
+            estado="SP",
+            pais="Brasil",
+        )
+
+        guia_resp = self.client.post(
+            "/api/plano-saude/guias",
+            data=json.dumps({
+                "plano_id": plano.id,
+                "beneficiario_id": beneficiario.id,
+                "prestador_id": prestador_id,
+                "tipo": GuiaAutorizacao.TIPO_INTERNACAO,
+                "prioridade_clinica": GuiaAutorizacao.PRIORIDADE_INTERNACAO,
+                "descricao_procedimento": "Internacao clinica com monitoramento",
+                "cid": "J18.9",
+                "medico_solicitante": "Dr. Fila",
+                "valor_estimado": 1800,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(guia_resp.status_code, 201)
+        guia_payload = guia_resp.json()["guia"]
+        self.assertEqual(guia_payload["prestador_id"], prestador_id)
+        self.assertEqual(guia_payload["fila_status"], GuiaAutorizacao.FILA_TRIAGEM)
+        self.assertEqual(guia_payload["sla_horas"], 12)
+
+        fila_resp = self.client.get("/api/plano-saude/fila-clinica")
+        self.assertEqual(fila_resp.status_code, 200)
+        fila_payload = fila_resp.json()
+        self.assertEqual(fila_payload["resumo"]["triagem"], 1)
+        self.assertEqual(fila_payload["resumo"]["pressao_epidemiologica"]["suspeitos"], 1)
+        self.assertEqual(fila_payload["guias"][0]["prestador_nome"], "Hospital Operacional")
+
+        acao_resp = self.client.post(
+            f"/api/plano-saude/fila-clinica/{guia_payload['id']}/acao",
+            data=json.dumps({
+                "acao": "autorizar",
+                "auditor_responsavel": "Central Regulacao",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(acao_resp.status_code, 200)
+        self.assertEqual(acao_resp.json()["guia"]["fila_status"], GuiaAutorizacao.FILA_AUTORIZADA)
+        self.assertEqual(acao_resp.json()["guia"]["status"], GuiaAutorizacao.STATUS_AUTORIZADA)
+
+        portal_resp = self.client.get("/api/plano-saude/portal-prestador")
+        self.assertEqual(portal_resp.status_code, 200)
+        portal_payload = portal_resp.json()
+        self.assertEqual(portal_payload["resumo"]["prestadores_portal_ativo"], 1)
+        self.assertEqual(portal_payload["prestadores"][0]["nome_fantasia"], "Hospital Operacional")
 
     def test_enterprise_command_center_hospital_usa_dados_do_setor(self):
         hospital = Empresa.objects.create(

@@ -328,7 +328,7 @@ input::placeholder{color:var(--muted)}
     <!-- STEP 2: CHOOSE PLAN -->
     <div class="step-content" id="step2">
       <div class="panel-title" id="step2-title">Escolha seu plano</div>
-      <div class="panel-sub" id="step2-sub">Todos os planos incluem 14 dias grátis. Sem cartão de crédito.</div>
+      <div class="panel-sub" id="step2-sub">Todos os planos incluem 15 dias grátis. Sem cartão de crédito.</div>
 
       <div id="plan-options"></div>
 
@@ -464,16 +464,16 @@ const PLANOS = {
       nome: "Operadora",
       preco: "R$ 12.000",
       ciclo: "/mês",
-      desc: "Gestão completa para operadoras de plano de saúde.",
-      feats: ["100 usuários", "100 dispositivos", "Beneficiários & Contratos", "Guias de autorização", "Sinistros & Reembolsos", "Dashboard epidemiológico"]
+      desc: "Gestão completa para operadoras com regulação clínica e epidemiologia aplicada à carteira.",
+      feats: ["100 usuários", "100 dispositivos", "Beneficiários & elegibilidade", "Guias, SLA e regulação clínica", "Sinistros, glosas & reembolsos", "Compliance ANS/TISS + dashboard epidemiológico"]
     },
     {
       codigo: "plano_saude_enterprise",
       nome: "Enterprise",
       preco: "R$ 45.000",
       ciclo: "/mês",
-      desc: "Grande operadora com inteligência epidemiológica avançada e LGPD.",
-      feats: ["500 usuários", "500 dispositivos", "Multi-operadora", "BI epidemiológico avançado", "SLA dedicado", "Gestor de conta"]
+      desc: "Grande operadora com cockpit multi-operadora, BI avançado e IA operacional.",
+      feats: ["500 usuários", "500 dispositivos", "Multi-operadora", "BI avançado & command center", "SLA dedicado + gestor de conta", "IA de autorização, sinistralidade e epidemiologia"]
     }
   ]
 };
@@ -522,8 +522,8 @@ function renderPlans() {
   step2actions.style.display = 'flex';
   step2title.textContent = selectedModule === 'plano_saude' ? 'Escolha o plano da operadora' : 'Escolha seu plano';
   step2sub.textContent = selectedModule === 'plano_saude'
-    ? 'Ambiente exclusivo para operadoras de plano de saúde. Trial disponível mediante proposta.'
-    : 'Todos os planos incluem 14 dias grátis. Sem cartão de crédito.';
+    ? 'Cadastro normal leva você para /pagamento/ e o trial de 15 dias pode ser ativado sem cartão.'
+    : 'Todos os planos incluem 15 dias grátis. Sem cartão de crédito.';
 
   const planos = PLANOS[selectedModule] || [];
   container.innerHTML = `<div class="plan-grid">${planos.map((p,i) => `
@@ -560,7 +560,7 @@ function goToStep3() {
     <div class="summary-icon">${icon}</div>
     <div class="summary-text">
       <b>${label} — ${selectedPlan.nome}</b>
-      <span>${selectedPlan.preco}/mês · 14 dias grátis · Sem cartão de crédito</span>
+      <span>${selectedPlan.preco}/mês · 15 dias grátis · Sem cartão de crédito</span>
     </div>
   `;
   goToStep(3);

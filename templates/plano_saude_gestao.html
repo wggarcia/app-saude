@@ -19,7 +19,7 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .page-title{font-size:22px;font-weight:800}
 .page-sub{font-size:13px;color:var(--muted);margin-top:2px}
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
 .kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
 .kpi.warn::before{background:var(--warn)}
@@ -72,11 +72,11 @@ tr:hover td{background:rgba(255,107,157,.03)}
 .search-input::placeholder{color:var(--muted)}
 .filter-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:Manrope,sans-serif}
 .empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
-.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 .summary-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
 .summary-box-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
 .summary-box-val{font-size:28px;font-weight:800;color:var(--accent)}
-@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}.summary-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}.summary-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.form-row{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}.summary-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -92,6 +92,9 @@ tr:hover td{background:rgba(255,107,157,.03)}
   <button class="tab-btn active" onclick="setTab('visao')"><span>&#127968;</span> Visao Geral</button>
   <button class="tab-btn" onclick="setTab('planos')"><span>&#128203;</span> Planos</button>
   <button class="tab-btn" onclick="setTab('beneficiarios')"><span>&#128101;</span> Beneficiarios</button>
+  <button class="tab-btn" onclick="setTab('prestadores')"><span>&#127973;</span> Rede Credenciada</button>
+  <button class="tab-btn" onclick="setTab('portal')"><span>&#128279;</span> Portal Prestador</button>
+  <button class="tab-btn" onclick="setTab('fila')"><span>&#9201;</span> Fila Clinica</button>
   <button class="tab-btn" onclick="setTab('guias')"><span>&#128221;</span> Guias</button>
   <button class="tab-btn" onclick="setTab('sinistros')"><span>&#9877;&#65039;</span> Sinistros</button>
   <button class="tab-btn" onclick="setTab('reembolsos')"><span>&#128176;</span> Reembolsos</button>
@@ -101,16 +104,20 @@ tr:hover td{background:rgba(255,107,157,.03)}
   <div class="page-header">
     <div>
       <div class="page-title">Gestao de Plano de Saude</div>
-      <div class="page-sub">Planos, beneficiarios, guias, sinistros e reembolsos</div>
+      <div class="page-sub">Beneficiarios, elegibilidade, autorizacoes, sinistralidade, reembolsos e inteligencia epidemiologica</div>
     </div>
     <a href="/dashboard-plano-saude/" class="btn btn-ghost">Ver Inteligencia Epidemiologica</a>
   </div>
+
+  {% include "partials/enterprise_command_center.html" %}
+  {% include "partials/enterprise_premium_suite.html" %}
 
   <div class="kpi-row" id="kpiRow">
     <div class="kpi"><div class="kpi-val" id="kpiTotalBenef">&#8212;</div><div class="kpi-lbl">Beneficiarios Ativos</div></div>
     <div class="kpi warn"><div class="kpi-val" id="kpiGuiasPend">&#8212;</div><div class="kpi-lbl">Guias Pendentes</div></div>
     <div class="kpi warn"><div class="kpi-val" id="kpiSinAbertos">&#8212;</div><div class="kpi-lbl">Sinistros Abertos</div></div>
     <div class="kpi ok"><div class="kpi-val" id="kpiTaxaAprov">&#8212;</div><div class="kpi-lbl">Taxa Aprovacao Guias</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiEpi30">&#8212;</div><div class="kpi-lbl">Suspeitos Epi 30d</div></div>
   </div>
 
   <!-- VISAO GERAL -->
@@ -127,6 +134,26 @@ tr:hover td{background:rgba(255,107,157,.03)}
       <div class="summary-box">
         <div class="summary-box-title">Custo Medio por Sinistro</div>
         <div class="summary-box-val" id="sgCustoMedio" style="color:var(--accent2)">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">Sinistralidade do Mes</div>
+        <div class="summary-box-val" id="sgValorSinistros" style="color:#c084fc">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">Prestadores Credenciados</div>
+        <div class="summary-box-val" id="sgPrestadores" style="color:var(--accent2)">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">Portal do Prestador Ativo</div>
+        <div class="summary-box-val" id="sgPortalAtivo" style="color:var(--ok)">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">Fila Clinica Pendente</div>
+        <div class="summary-box-val" id="sgFilaClinica" style="color:var(--warn)">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">Guias Fora do SLA</div>
+        <div class="summary-box-val" id="sgGuiasSla" style="color:var(--danger)">&#8212;</div>
       </div>
     </div>
     <div style="margin-top:24px">
@@ -179,6 +206,125 @@ tr:hover td{background:rgba(255,107,157,.03)}
     </div>
   </div>
 
+  <!-- PRESTADORES -->
+  <div class="tab-panel" id="tab-prestadores" style="margin-top:4px">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Rede Credenciada da Operadora</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="buscaPrestador" class="search-input" placeholder="Buscar prestador, CNPJ ou cidade..." oninput="carregarPrestadores()">
+          <select id="filtroTipoPrestador" class="filter-sel" onchange="carregarPrestadores()">
+            <option value="">Todos os tipos</option>
+            <option value="hospital">Hospital</option>
+            <option value="clinica">Clinica</option>
+            <option value="laboratorio">Laboratorio</option>
+            <option value="imagem">Imagem</option>
+            <option value="pronto_atendimento">Pronto Atendimento</option>
+            <option value="homecare">Home Care</option>
+          </select>
+          <select id="filtroStatusPrestador" class="filter-sel" onchange="carregarPrestadores()">
+            <option value="">Todos os status</option>
+            <option value="credenciado">Credenciado</option>
+            <option value="implantacao">Implantacao</option>
+            <option value="suspenso">Suspenso</option>
+            <option value="descredenciado">Descredenciado</option>
+          </select>
+          <button class="btn btn-primary" onclick="abrirModalPrestador()">+ Novo Prestador</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Codigo</th><th>Prestador</th><th>Tipo</th><th>Cidade</th><th>SLA</th><th>Portal</th><th>Status</th><th>Guias</th><th>Acoes</th></tr></thead>
+        <tbody id="tbodyPrestadores"><tr><td colspan="9" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PORTAL PRESTADOR -->
+  <div class="tab-panel" id="tab-portal" style="margin-top:4px">
+    <div class="summary-grid" style="margin-bottom:16px">
+      <div class="summary-box">
+        <div class="summary-box-title">Prestadores no Portal</div>
+        <div class="summary-box-val" id="portalPrestadoresTotal">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">Guias Pendentes</div>
+        <div class="summary-box-val" id="portalGuiasPend" style="color:var(--warn)">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">Pendencia Documental</div>
+        <div class="summary-box-val" id="portalPendDoc" style="color:var(--accent2)">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">Pressao Epi 14d</div>
+        <div class="summary-box-val" id="portalPressaoEpi" style="color:#c084fc">&#8212;</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Cockpit do Portal do Prestador</span>
+        <button class="btn btn-ghost" onclick="carregarPortalPrestador()">Atualizar Portal</button>
+      </div>
+      <table>
+        <thead><tr><th>Prestador</th><th>Contato</th><th>Portal</th><th>Guias Pendentes</th><th>Docs</th><th>SLA Vencido</th><th>Qualidade</th></tr></thead>
+        <tbody id="tbodyPortalPrestador"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FILA CLINICA -->
+  <div class="tab-panel" id="tab-fila" style="margin-top:4px">
+    <div class="summary-grid" style="margin-bottom:16px">
+      <div class="summary-box">
+        <div class="summary-box-title">Triagem</div>
+        <div class="summary-box-val" id="filaTriagem">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">Auditoria Clinica</div>
+        <div class="summary-box-val" id="filaAudClinica" style="color:var(--accent2)">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">Pendencia Doc.</div>
+        <div class="summary-box-val" id="filaPendDoc" style="color:var(--warn)">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">SLA Vencido</div>
+        <div class="summary-box-val" id="filaSlaVencido" style="color:var(--danger)">&#8212;</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Fila Clinica de Autorizacao</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="filtroPrestadorFila" class="filter-sel" onchange="carregarFilaClinica()">
+            <option value="">Todos os prestadores</option>
+          </select>
+          <select id="filtroStatusFilaClinica" class="filter-sel" onchange="carregarFilaClinica()">
+            <option value="">Todas as filas</option>
+            <option value="triagem">Triagem</option>
+            <option value="auditoria_clinica">Auditoria Clinica</option>
+            <option value="auditoria_medica">Auditoria Medica</option>
+            <option value="pendencia_documental">Pendencia Documental</option>
+            <option value="devolvida_prestador">Devolvida ao Prestador</option>
+            <option value="autorizada">Autorizada</option>
+            <option value="negada">Negada</option>
+          </select>
+          <select id="filtroPrioridadeFila" class="filter-sel" onchange="carregarFilaClinica()">
+            <option value="">Todas as prioridades</option>
+            <option value="eletiva">Eletiva</option>
+            <option value="urgente">Urgente</option>
+            <option value="alta_complexidade">Alta Complexidade</option>
+            <option value="internacao">Internacao</option>
+          </select>
+          <button class="btn btn-primary" onclick="abrirModalGuia()">+ Nova Guia</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Guia</th><th>Beneficiario</th><th>Prestador</th><th>Prioridade</th><th>Fila</th><th>SLA</th><th>Auditor</th><th>Acoes</th></tr></thead>
+        <tbody id="tbodyFilaClinica"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- GUIAS -->
   <div class="tab-panel" id="tab-guias" style="margin-top:4px">
     <div class="card">
@@ -195,11 +341,21 @@ tr:hover td{background:rgba(255,107,157,.03)}
           <select id="filtroPlanoGuia" class="filter-sel" onchange="carregarGuias()">
             <option value="">Todos os planos</option>
           </select>
+          <select id="filtroPrestadorGuia" class="filter-sel" onchange="carregarGuias()">
+            <option value="">Todos os prestadores</option>
+          </select>
+          <select id="filtroPrioridadeGuia" class="filter-sel" onchange="carregarGuias()">
+            <option value="">Todas as prioridades</option>
+            <option value="eletiva">Eletiva</option>
+            <option value="urgente">Urgente</option>
+            <option value="alta_complexidade">Alta Complexidade</option>
+            <option value="internacao">Internacao</option>
+          </select>
           <button class="btn btn-primary" onclick="abrirModalGuia()">+ Nova Guia</button>
         </div>
       </div>
       <table>
-        <thead><tr><th>N Guia</th><th>Beneficiario</th><th>Plano</th><th>Tipo</th><th>Procedimento</th><th>CID</th><th>Valor Est.</th><th>Status</th><th>Acoes</th></tr></thead>
+        <thead><tr><th>N Guia</th><th>Beneficiario</th><th>Prestador</th><th>Prioridade</th><th>Procedimento</th><th>CID</th><th>SLA</th><th>Status</th><th>Acoes</th></tr></thead>
         <tbody id="tbodyGuias"><tr><td colspan="9" class="empty">Carregando...</td></tr></tbody>
       </table>
     </div>
@@ -304,6 +460,68 @@ tr:hover td{background:rgba(255,107,157,.03)}
   </div>
 </div>
 
+<!-- MODAL: Novo Prestador -->
+<div class="modal-bg" id="modalPrestador">
+  <div class="modal" style="max-width:760px">
+    <h3>Prestador da Rede Credenciada</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome Fantasia *</label><input id="prNome" placeholder="Hospital, clinica ou laboratorio"></div>
+      <div class="form-group"><label>Razao Social</label><input id="prRazao" placeholder="Razao social"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CNPJ</label><input id="prCnpj" placeholder="00.000.000/0001-00"></div>
+      <div class="form-group"><label>Codigo da Rede</label><input id="prCodigoRede" placeholder="PR-0001"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo</label>
+        <select id="prTipo">
+          <option value="hospital">Hospital</option>
+          <option value="clinica">Clinica</option>
+          <option value="laboratorio">Laboratorio</option>
+          <option value="imagem">Imagem</option>
+          <option value="pronto_atendimento">Pronto Atendimento</option>
+          <option value="homecare">Home Care</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select id="prStatus">
+          <option value="credenciado">Credenciado</option>
+          <option value="implantacao">Implantacao</option>
+          <option value="suspenso">Suspenso</option>
+          <option value="descredenciado">Descredenciado</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Cidade</label><input id="prCidade" placeholder="Cidade"></div>
+      <div class="form-group"><label>UF</label><input id="prEstado" maxlength="2" placeholder="SP"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Registro CNES</label><input id="prCnes" placeholder="CNES"></div>
+      <div class="form-group"><label>Responsavel</label><input id="prContato" placeholder="Contato responsavel"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>E-mail</label><input id="prEmail" placeholder="portal@prestador.local"></div>
+      <div class="form-group"><label>Telefone</label><input id="prTelefone" placeholder="(11) 4000-0000"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>SLA de Autorizacao (h)</label><input id="prSla" type="number" min="1" step="1" placeholder="72"></div>
+      <div class="form-group"><label>Score de Qualidade</label><input id="prScore" type="number" min="0" max="100" step="1" placeholder="85"></div>
+    </div>
+    <div class="form-group"><label>Especialidades</label><textarea id="prEspecialidades" rows="2" placeholder="Cardiologia, ortopedia, imagem..."></textarea></div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;color:var(--text)">
+        <input type="checkbox" id="prPortalAtivo" checked style="width:auto"> Portal do prestador ativo
+      </label>
+    </div>
+    <div class="form-group"><label>Observacoes</label><textarea id="prObs" rows="2" placeholder="Informacoes operacionais e contratuais..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalPrestador')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPrestador()">Salvar Prestador</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Novo Beneficiario -->
 <div class="modal-bg" id="modalBenef">
   <div class="modal" style="max-width:620px">
@@ -372,12 +590,31 @@ tr:hover td{background:rgba(255,107,157,.03)}
       </div>
       <div class="form-group"><label>CID</label><input id="guCid" placeholder="Ex: J06.9, F32.0"></div>
     </div>
+    <div class="form-row">
+      <div class="form-group"><label>Prestador</label>
+        <select id="guPrestador">
+          <option value="">rede livre / nao informado</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Prioridade Clinica</label>
+        <select id="guPrioridade">
+          <option value="eletiva">Eletiva</option>
+          <option value="urgente">Urgente</option>
+          <option value="alta_complexidade">Alta Complexidade</option>
+          <option value="internacao">Internacao</option>
+        </select>
+      </div>
+    </div>
     <div class="form-group"><label>Descricao do Procedimento *</label>
       <textarea id="guDescricao" rows="2" placeholder="Descreva o procedimento solicitado..."></textarea>
     </div>
     <div class="form-row">
       <div class="form-group"><label>Medico Solicitante</label><input id="guMedico" placeholder="Nome e CRM"></div>
       <div class="form-group"><label>Valor Estimado (R$)</label><input id="guValor" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Auditor Responsavel</label><input id="guAuditor" placeholder="Nome do auditor"></div>
+      <div class="form-group"><label>Docs Pendentes</label><input id="guDocs" placeholder="Laudo, pedido medico, justificativa..."></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalGuia')">Cancelar</button>
@@ -489,6 +726,8 @@ tr:hover td{background:rgba(255,107,157,.03)}
 
 <script>
 var _planos = [];
+var _prestadores = [];
+var _prestadorEditId = null;
 var _beneficiariosPorPlano = {};
 
 function getCsrf() {
@@ -528,13 +767,43 @@ function fmtMoeda(val) {
   return 'R$ ' + Number(val).toLocaleString('pt-BR', {minimumFractionDigits:2});
 }
 
-function fmtDt(s) {
-  if (!s) return '--';
-  var d = new Date(s);
-  return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+function fmtHoras(val) {
+  if (val == null || val === '') return '--';
+  var n = Number(val);
+  if (n < 0) return Math.abs(n).toFixed(1)+'h atraso';
+  return n.toFixed(1)+'h';
 }
 
-// ── Tabs ─────────────────────────────────────────────────────
+function badgePrestadorStatus(status) {
+  return {credenciado:'badge-ok',implantacao:'badge-info',suspenso:'badge-warn',descredenciado:'badge-danger'}[status] || 'badge-gray';
+}
+
+function badgeFila(status) {
+  return {
+    triagem:'badge-warn',
+    auditoria_clinica:'badge-info',
+    auditoria_medica:'badge-purple',
+    pendencia_documental:'badge-warn',
+    devolvida_prestador:'badge-danger',
+    autorizada:'badge-ok',
+    negada:'badge-danger'
+  }[status] || 'badge-gray';
+}
+
+function badgePrioridade(prioridade) {
+  return {
+    eletiva:'badge-gray',
+    urgente:'badge-warn',
+    alta_complexidade:'badge-purple',
+    internacao:'badge-danger'
+  }[prioridade] || 'badge-gray';
+}
+
+function setText(id, value) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
 function setTab(name) {
   document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
@@ -543,40 +812,54 @@ function setTab(name) {
   document.querySelectorAll('.tab-btn').forEach(function(b){
     if (b.getAttribute('onclick') === "setTab('"+name+"')") b.classList.add('active');
   });
-  var loaders = {visao:carregarVisaoGeral,planos:carregarPlanos,beneficiarios:carregarBeneficiarios,guias:carregarGuias,sinistros:carregarSinistros,reembolsos:carregarReembolsos};
+  var loaders = {
+    visao:carregarVisaoGeral,
+    planos:carregarPlanos,
+    beneficiarios:carregarBeneficiarios,
+    prestadores:carregarPrestadores,
+    portal:carregarPortalPrestador,
+    fila:carregarFilaClinica,
+    guias:carregarGuias,
+    sinistros:carregarSinistros,
+    reembolsos:carregarReembolsos
+  };
   if (loaders[name]) loaders[name]();
 }
 
-// ── KPIs topo ─────────────────────────────────────────────────
 async function carregarKpisTopo() {
   var dash = await api('/api/plano-saude/dashboard');
   var kpisRes = await api('/api/plano-saude/kpis');
   var kpis = (dash && dash.kpis) ? dash.kpis : {};
-  document.getElementById('kpiTotalBenef').textContent = kpis.total_beneficiarios != null ? kpis.total_beneficiarios : '--';
-  document.getElementById('kpiGuiasPend').textContent = kpis.guias_pendentes != null ? kpis.guias_pendentes : '--';
-  document.getElementById('kpiSinAbertos').textContent = kpis.sinistros_abertos != null ? kpis.sinistros_abertos : '--';
-  var taxa = kpisRes ? kpisRes.taxa_aprovacao_guias : null;
-  document.getElementById('kpiTaxaAprov').textContent = taxa != null ? Number(taxa).toFixed(1)+'%' : '--';
-  var rp = document.getElementById('sgReembolsosPend');
-  if (rp) rp.textContent = kpis.reembolsos_pendentes != null ? kpis.reembolsos_pendentes : '--';
-  var cm = document.getElementById('sgCustoMedio');
-  if (cm) cm.textContent = (kpisRes && kpisRes.custo_medio_sinistro != null) ? fmtMoeda(kpisRes.custo_medio_sinistro) : '--';
+  setText('kpiTotalBenef', kpis.total_beneficiarios != null ? kpis.total_beneficiarios : '--');
+  setText('kpiGuiasPend', kpis.guias_pendentes != null ? kpis.guias_pendentes : '--');
+  setText('kpiSinAbertos', kpis.sinistros_abertos != null ? kpis.sinistros_abertos : '--');
+  setText('kpiTaxaAprov', kpisRes && kpisRes.taxa_aprovacao_guias != null ? Number(kpisRes.taxa_aprovacao_guias).toFixed(1)+'%' : '--');
+  setText('kpiEpi30', kpis.suspeitos_epi_30d != null ? kpis.suspeitos_epi_30d : '--');
+  setText('sgReembolsosPend', kpis.reembolsos_pendentes != null ? kpis.reembolsos_pendentes : '--');
+  setText('sgCustoMedio', kpisRes && kpisRes.custo_medio_sinistro != null ? fmtMoeda(kpisRes.custo_medio_sinistro) : '--');
+  setText('sgValorSinistros', kpis.valor_sinistros_mes != null ? fmtMoeda(kpis.valor_sinistros_mes) : '--');
+  setText('sgPrestadores', kpis.prestadores_credenciados != null ? kpis.prestadores_credenciados : '--');
+  setText('sgPortalAtivo', kpis.prestadores_portal_ativo != null ? kpis.prestadores_portal_ativo : '--');
+  setText('sgFilaClinica', kpis.fila_clinica_pendencias != null ? kpis.fila_clinica_pendencias : '--');
+  setText('sgGuiasSla', kpis.guias_sla_vencido != null ? kpis.guias_sla_vencido : '--');
 }
 
-// ── Visao Geral ───────────────────────────────────────────────
 async function carregarVisaoGeral() {
-  var d = await api('/api/plano-saude/planos');
-  var planos = Array.isArray(d) ? d : (d.planos || d.results || []);
-  var el = document.getElementById('sgTotalPlanos');
-  if (el) el.textContent = planos.length || '--';
+  var dash = await api('/api/plano-saude/dashboard');
+  var kpis = (dash && dash.kpis) ? dash.kpis : {};
+  setText('sgTotalPlanos', kpis.total_planos != null ? kpis.total_planos : '--');
+  setText('sgReembolsosPend', kpis.reembolsos_pendentes != null ? kpis.reembolsos_pendentes : '--');
+  setText('sgPrestadores', kpis.prestadores_credenciados != null ? kpis.prestadores_credenciados : '--');
+  setText('sgPortalAtivo', kpis.prestadores_portal_ativo != null ? kpis.prestadores_portal_ativo : '--');
+  setText('sgFilaClinica', kpis.fila_clinica_pendencias != null ? kpis.fila_clinica_pendencias : '--');
+  setText('sgGuiasSla', kpis.guias_sla_vencido != null ? kpis.guias_sla_vencido : '--');
 }
 
-// ── Planos ────────────────────────────────────────────────────
 async function carregarPlanos() {
   var d = await api('/api/plano-saude/planos');
   _planos = Array.isArray(d) ? d : (d.planos || d.results || []);
   var tb = document.getElementById('tbodyPlanos');
-  if (!_planos.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum plano cadastrado</td></tr>'; return; }
+  if (!_planos.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum plano cadastrado</td></tr>'; popularSelectsPlanos(); return; }
   var modalMap = {cooperativa:'Cooperativa',autogestao:'Autogestao',seguradora:'Seguradora',filantropico:'Filantropico',outro:'Outro'};
   var abrangMap = {nacional:'Nacional',estadual:'Estadual',municipal:'Municipal',grupo_municipios:'Grupo de Municipios'};
   tb.innerHTML = _planos.map(function(p){
@@ -630,7 +913,25 @@ function popularSelectsPlanos() {
   });
 }
 
-// ── Beneficiarios ─────────────────────────────────────────────
+function popularSelectsPrestadores() {
+  var selectOpts = '<option value="">rede livre / nao informado</option>' + _prestadores.map(function(p){return '<option value="'+p.id+'">'+p.nome_fantasia+'</option>';}).join('');
+  var filterOpts = '<option value="">Todos os prestadores</option>' + _prestadores.map(function(p){return '<option value="'+p.id+'">'+p.nome_fantasia+'</option>';}).join('');
+  ['guPrestador'].forEach(function(sid){
+    var el = document.getElementById(sid);
+    if (!el) return;
+    var prev = el.value;
+    el.innerHTML = selectOpts;
+    if (prev) el.value = prev;
+  });
+  ['filtroPrestadorGuia','filtroPrestadorFila'].forEach(function(sid){
+    var el = document.getElementById(sid);
+    if (!el) return;
+    var prev = el.value;
+    el.innerHTML = filterOpts;
+    if (prev) el.value = prev;
+  });
+}
+
 async function carregarBeneficiarios() {
   var busca = (document.getElementById('buscaBenef')||{}).value || '';
   var plano = (document.getElementById('filtroPlanoBenef')||{}).value || '';
@@ -646,8 +947,8 @@ async function carregarBeneficiarios() {
   var sitBadge = {ativo:'badge-ok',suspenso:'badge-warn',cancelado:'badge-danger'};
   tb.innerHTML = benefs.map(function(b){
     return '<tr><td><strong>'+b.nome+'</strong></td><td>'+(b.cpf||'--')+'</td><td>'+(b.numero_carteirinha||'--')+'</td>'+
-      '<td>'+(b.plano_nome||b.plano||'--')+'</td><td>'+fmtData(b.data_nascimento)+'</td><td>'+(b.acomodacao||'--')+'</td>'+
-      '<td><span class="badge '+(sitBadge[b.situacao]||'badge-gray')+'">'+(b.situacao||'--')+'</span></td>'+
+      '<td>'+(b.plano_nome||b.plano||'--')+'</td><td>'+fmtData(b.data_nascimento)+'</td><td>'+(b.acomodacao_label||b.acomodacao||'--')+'</td>'+
+      '<td><span class="badge '+(sitBadge[b.situacao]||'badge-gray')+'">'+(b.situacao_label||b.situacao||'--')+'</span></td>'+
       '<td><button class="btn btn-danger btn-sm" onclick="inativarBenef('+b.id+')">Inativar</button></td></tr>';
   }).join('');
 }
@@ -662,15 +963,16 @@ function abrirModalBenef() {
 
 async function salvarBenef() {
   var body = {
-    plano_id: v('bfPlano') ? parseInt(v('bfPlano')) : null,
+    plano_id: v('bfPlano') ? parseInt(v('bfPlano'), 10) : null,
     nome: v('bfNome'), cpf: v('bfCpf'), numero_carteirinha: v('bfCarteirinha'),
     data_nascimento: v('bfNasc')||null, sexo: v('bfSexo'), acomodacao: v('bfAcomodacao'),
-    data_inicio_vigencia: v('bfInicioVigencia')||null,
+    data_inicio_vigencia: v('bfInicioVigencia')||null
   };
   if (!body.nome||!body.cpf) { alert('Nome e CPF sao obrigatorios'); return; }
   if (!body.plano_id) { alert('Selecione o plano'); return; }
   await api('/api/plano-saude/beneficiarios', {method:'POST',body:JSON.stringify(body)});
   fecharModal('modalBenef');
+  _beneficiariosPorPlano = {};
   carregarBeneficiarios();
   carregarKpisTopo();
 }
@@ -678,6 +980,7 @@ async function salvarBenef() {
 async function inativarBenef(id) {
   if (!confirm('Inativar este beneficiario?')) return;
   await api('/api/plano-saude/beneficiarios/'+id, {method:'PUT',body:JSON.stringify({situacao:'cancelado'})});
+  _beneficiariosPorPlano = {};
   carregarBeneficiarios();
   carregarKpisTopo();
 }
@@ -699,51 +1002,244 @@ function popularSelectBenef(sel, lista) {
     lista.map(function(b){return '<option value="'+b.id+'">'+b.nome+' -- '+(b.cpf||b.numero_carteirinha||'')+'</option>';}).join('');
 }
 
-// ── Guias ─────────────────────────────────────────────────────
+async function carregarPrestadores() {
+  var busca = (document.getElementById('buscaPrestador')||{}).value || '';
+  var tipo = (document.getElementById('filtroTipoPrestador')||{}).value || '';
+  var status = (document.getElementById('filtroStatusPrestador')||{}).value || '';
+  var params = new URLSearchParams();
+  if (busca.trim()) params.set('busca', busca.trim());
+  if (tipo) params.set('tipo', tipo);
+  if (status) params.set('status', status);
+  var d = await api('/api/plano-saude/prestadores?'+params.toString());
+  _prestadores = Array.isArray(d) ? d : (d.prestadores || d.results || []);
+  popularSelectsPrestadores();
+  var tb = document.getElementById('tbodyPrestadores');
+  if (!tb) return;
+  if (!_prestadores.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhum prestador credenciado</td></tr>'; return; }
+  tb.innerHTML = _prestadores.map(function(p){
+    var portal = p.portal_ativo ? '<span class="badge badge-ok">Ativo</span>' : '<span class="badge badge-gray">Inativo</span>';
+    var acaoStatus = p.status === 'credenciado' ? 'suspenso' : 'credenciado';
+    var labelStatus = p.status === 'credenciado' ? 'Suspender' : 'Credenciar';
+    return '<tr><td>'+(p.codigo_rede||'--')+'</td><td><strong>'+p.nome_fantasia+'</strong><br><span style="font-size:11px;color:var(--muted)">'+(p.cnpj||'sem CNPJ')+'</span></td>'+
+      '<td>'+(p.tipo_label||p.tipo||'--')+'</td><td>'+((p.cidade||'--') + (p.estado ? '/'+p.estado : ''))+'</td>'+
+      '<td>'+Number(p.sla_autorizacao_horas||0)+'h</td><td>'+portal+'</td>'+
+      '<td><span class="badge '+badgePrestadorStatus(p.status)+'">'+(p.status_label||p.status||'--')+'</span></td>'+
+      '<td>'+(p.guias_pendentes||0)+' pend. / '+(p.guias_sla_vencido||0)+' SLA</td>'+
+      '<td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="abrirModalPrestador('+p.id+')">Editar</button> <button class="btn btn-danger btn-sm" onclick="atualizarStatusPrestador('+p.id+',\''+acaoStatus+'\')">'+labelStatus+'</button></td></tr>';
+  }).join('');
+}
+
+function abrirModalPrestador(id) {
+  _prestadorEditId = id || null;
+  ['prNome','prRazao','prCnpj','prCodigoRede','prCidade','prEstado','prCnes','prContato','prEmail','prTelefone','prEspecialidades','prObs'].forEach(function(sid){
+    var el = document.getElementById(sid); if (el) el.value = '';
+  });
+  document.getElementById('prTipo').value = 'hospital';
+  document.getElementById('prStatus').value = 'credenciado';
+  document.getElementById('prSla').value = 72;
+  document.getElementById('prScore').value = 85;
+  document.getElementById('prPortalAtivo').checked = true;
+  if (id) {
+    var prestador = _prestadores.find(function(item){ return item.id === id; });
+    if (prestador) {
+      document.getElementById('prNome').value = prestador.nome_fantasia || '';
+      document.getElementById('prRazao').value = prestador.razao_social || '';
+      document.getElementById('prCnpj').value = prestador.cnpj || '';
+      document.getElementById('prCodigoRede').value = prestador.codigo_rede || '';
+      document.getElementById('prTipo').value = prestador.tipo || 'hospital';
+      document.getElementById('prStatus').value = prestador.status || 'credenciado';
+      document.getElementById('prCidade').value = prestador.cidade || '';
+      document.getElementById('prEstado').value = prestador.estado || '';
+      document.getElementById('prCnes').value = prestador.registro_cnes || '';
+      document.getElementById('prContato').value = prestador.contato_responsavel || '';
+      document.getElementById('prEmail').value = prestador.email || '';
+      document.getElementById('prTelefone').value = prestador.telefone || '';
+      document.getElementById('prSla').value = prestador.sla_autorizacao_horas || 72;
+      document.getElementById('prScore').value = prestador.score_qualidade || 85;
+      document.getElementById('prEspecialidades').value = prestador.especialidades || '';
+      document.getElementById('prObs').value = prestador.observacoes || '';
+      document.getElementById('prPortalAtivo').checked = !!prestador.portal_ativo;
+    }
+  }
+  abrirModal('modalPrestador');
+}
+
+async function salvarPrestador() {
+  var body = {
+    nome_fantasia: v('prNome'),
+    razao_social: v('prRazao'),
+    cnpj: v('prCnpj'),
+    codigo_rede: v('prCodigoRede'),
+    tipo: v('prTipo'),
+    status: v('prStatus'),
+    cidade: v('prCidade'),
+    estado: v('prEstado'),
+    registro_cnes: v('prCnes'),
+    contato_responsavel: v('prContato'),
+    email: v('prEmail'),
+    telefone: v('prTelefone'),
+    sla_autorizacao_horas: v('prSla') ? parseInt(v('prSla'), 10) : 72,
+    score_qualidade: v('prScore') ? parseInt(v('prScore'), 10) : 85,
+    especialidades: v('prEspecialidades'),
+    observacoes: v('prObs'),
+    portal_ativo: document.getElementById('prPortalAtivo').checked
+  };
+  if (!body.nome_fantasia) { alert('Nome fantasia e obrigatorio'); return; }
+  var url = _prestadorEditId ? '/api/plano-saude/prestadores/'+_prestadorEditId : '/api/plano-saude/prestadores';
+  var method = _prestadorEditId ? 'PATCH' : 'POST';
+  await api(url, {method:method, body:JSON.stringify(body)});
+  fecharModal('modalPrestador');
+  _prestadorEditId = null;
+  carregarPrestadores();
+  carregarPortalPrestador();
+  carregarKpisTopo();
+}
+
+async function atualizarStatusPrestador(id, status) {
+  await api('/api/plano-saude/prestadores/'+id, {method:'PATCH', body:JSON.stringify({status:status})});
+  carregarPrestadores();
+  carregarPortalPrestador();
+  carregarKpisTopo();
+}
+
+async function carregarPortalPrestador() {
+  var d = await api('/api/plano-saude/portal-prestador');
+  var resumo = d.resumo || {};
+  setText('portalPrestadoresTotal', resumo.prestadores_portal_ativo != null ? resumo.prestadores_portal_ativo : '--');
+  setText('portalGuiasPend', resumo.guias_pendentes != null ? resumo.guias_pendentes : '--');
+  setText('portalPendDoc', resumo.pendencias_documentais != null ? resumo.pendencias_documentais : '--');
+  var pressao = resumo.pressao_epidemiologica || {};
+  setText('portalPressaoEpi', pressao.label ? pressao.label+' ('+(pressao.suspeitos||0)+')' : '--');
+  var lista = d.prestadores || [];
+  var tb = document.getElementById('tbodyPortalPrestador');
+  if (!tb) return;
+  if (!lista.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum prestador com portal configurado</td></tr>'; return; }
+  tb.innerHTML = lista.map(function(p){
+    var contato = (p.email||'--') + ' / ' + (p.telefone||'--');
+    return '<tr><td><strong>'+p.nome_fantasia+'</strong><br><span style="font-size:11px;color:var(--muted)">'+(p.cidade||'--')+(p.estado?'/'+p.estado:'')+'</span></td>'+
+      '<td>'+contato+'</td><td>'+(p.portal_ativo ? '<span class="badge badge-ok">Portal ativo</span>' : '<span class="badge badge-gray">Portal inativo</span>')+'</td>'+
+      '<td>'+(p.guias_pendentes||0)+'</td><td>'+(p.guias_documentacao||0)+'</td><td>'+(p.guias_sla_vencido||0)+'</td>'+
+      '<td>'+(p.score_qualidade||0)+'/100</td></tr>';
+  }).join('');
+}
+
+async function carregarFilaClinica() {
+  var prestador = (document.getElementById('filtroPrestadorFila')||{}).value || '';
+  var fila = (document.getElementById('filtroStatusFilaClinica')||{}).value || '';
+  var prioridade = (document.getElementById('filtroPrioridadeFila')||{}).value || '';
+  var params = new URLSearchParams();
+  if (prestador) params.set('prestador_id', prestador);
+  if (fila) params.set('fila_status', fila);
+  if (prioridade) params.set('prioridade', prioridade);
+  var d = await api('/api/plano-saude/fila-clinica?'+params.toString());
+  var resumo = d.resumo || {};
+  setText('filaTriagem', resumo.triagem != null ? resumo.triagem : '--');
+  setText('filaAudClinica', resumo.auditoria_clinica != null ? resumo.auditoria_clinica : '--');
+  setText('filaPendDoc', resumo.pendencia_documental != null ? resumo.pendencia_documental : '--');
+  setText('filaSlaVencido', resumo.sla_vencido != null ? resumo.sla_vencido : '--');
+  var guias = d.guias || [];
+  var tb = document.getElementById('tbodyFilaClinica');
+  if (!tb) return;
+  if (!guias.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Fila clinica sem itens no filtro atual</td></tr>'; return; }
+  tb.innerHTML = guias.map(function(g){
+    var acoes = [];
+    if (g.fila_status === 'triagem') acoes.push('<button class="btn btn-ghost btn-sm" onclick="acaoFilaClinica('+g.id+',\'auditoria_clinica\')">Auditar</button>');
+    if (g.fila_status === 'auditoria_clinica') acoes.push('<button class="btn btn-ghost btn-sm" onclick="acaoFilaClinica('+g.id+',\'auditoria_medica\')">Aud. Medica</button>');
+    if (['triagem','auditoria_clinica','auditoria_medica'].indexOf(g.fila_status) >= 0) acoes.push('<button class="btn btn-ghost btn-sm" onclick="acaoFilaClinica('+g.id+',\'pendencia_documental\')">Pend. Doc</button>');
+    if (['pendencia_documental','devolvida_prestador'].indexOf(g.fila_status) >= 0) acoes.push('<button class="btn btn-ghost btn-sm" onclick="acaoFilaClinica('+g.id+',\'triagem\')">Reabrir</button>');
+    if (['triagem','auditoria_clinica','auditoria_medica','pendencia_documental','devolvida_prestador','solicitada','em_analise'].indexOf(g.fila_status) >= 0) acoes.push('<button class="btn btn-ok btn-sm" onclick="acaoFilaClinica('+g.id+',\'autorizar\')">Autorizar</button>');
+    if (['autorizada','negada'].indexOf(g.fila_status) < 0) acoes.push('<button class="btn btn-danger btn-sm" onclick="acaoFilaClinica('+g.id+',\'negar\')">Negar</button>');
+    var sla = g.sla_vencido ? '<span class="badge badge-danger">'+fmtHoras(g.horas_restantes)+'</span>' : '<span class="badge badge-ok">'+fmtHoras(g.horas_restantes)+'</span>';
+    return '<tr><td><strong>'+(g.numero_guia||('#'+g.id))+'</strong><br><span style="font-size:11px;color:var(--muted)">'+(g.cid||'CID nao informado')+'</span></td>'+
+      '<td>'+(g.beneficiario_nome||'--')+'</td><td>'+(g.prestador_nome||'Sem prestador')+'</td>'+
+      '<td><span class="badge '+badgePrioridade(g.prioridade_clinica)+'">'+(g.prioridade_clinica_label||g.prioridade_clinica||'--')+'</span></td>'+
+      '<td><span class="badge '+badgeFila(g.fila_status)+'">'+(g.fila_status_label||g.fila_status||'--')+'</span></td>'+
+      '<td>'+sla+'<br><span style="font-size:11px;color:var(--muted)">'+(g.prazo_sla_em_fmt||'--')+'</span></td>'+
+      '<td>'+(g.auditor_responsavel||'--')+'</td><td style="white-space:nowrap">'+acoes.join(' ')+'</td></tr>';
+  }).join('');
+}
+
+async function acaoFilaClinica(id, acao) {
+  var body = {acao: acao};
+  if (acao === 'pendencia_documental' || acao === 'devolver_prestador') {
+    var docs = prompt('Descreva a pendencia documental para o prestador:', '');
+    if (docs === null) return;
+    body.documentos_pendentes = docs;
+    body.observacao_auditoria = docs;
+  }
+  if (acao === 'negar') {
+    var justificativa = prompt('Informe a justificativa da negativa:', '');
+    if (justificativa === null || !justificativa.trim()) return;
+    body.justificativa_negativa = justificativa.trim();
+    body.observacao_auditoria = justificativa.trim();
+  }
+  if (acao === 'autorizar') {
+    var auditor = prompt('Auditor responsavel pela autorizacao:', 'Central de Regulacao');
+    if (auditor !== null) body.auditor_responsavel = auditor.trim();
+  }
+  await api('/api/plano-saude/fila-clinica/'+id+'/acao', {method:'POST', body:JSON.stringify(body)});
+  carregarFilaClinica();
+  carregarGuias();
+  carregarPortalPrestador();
+  carregarKpisTopo();
+}
+
 async function carregarGuias() {
   var status = (document.getElementById('filtroStatusGuia')||{}).value || '';
   var plano = (document.getElementById('filtroPlanoGuia')||{}).value || '';
+  var prestador = (document.getElementById('filtroPrestadorGuia')||{}).value || '';
+  var prioridade = (document.getElementById('filtroPrioridadeGuia')||{}).value || '';
   var params = new URLSearchParams();
   if (status) params.set('status', status);
   if (plano) params.set('plano_id', plano);
+  if (prestador) params.set('prestador_id', prestador);
+  if (prioridade) params.set('prioridade', prioridade);
   var d = await api('/api/plano-saude/guias?'+params.toString());
   var guias = Array.isArray(d) ? d : (d.guias || d.results || []);
   var tb = document.getElementById('tbodyGuias');
   if (!guias.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma guia encontrada</td></tr>'; return; }
   var stBadge = {solicitada:'badge-warn',em_analise:'badge-info',autorizada:'badge-ok',negada:'badge-danger'};
   tb.innerHTML = guias.map(function(g){
-    var acoes = '';
-    if (g.status==='solicitada'||g.status==='em_analise') {
-      acoes += '<button class="btn btn-ok btn-sm" onclick="atualizarGuia('+g.id+',\'autorizada\')">Autorizar</button> ';
-      acoes += '<button class="btn btn-danger btn-sm" onclick="atualizarGuia('+g.id+',\'negada\')">Negar</button> ';
+    var acoes = [];
+    if (g.status === 'solicitada') acoes.push('<button class="btn btn-ghost btn-sm" onclick="acaoFilaClinica('+g.id+',\'auditoria_clinica\')">Analisar</button>');
+    if (g.status === 'solicitada' || g.status === 'em_analise') {
+      acoes.push('<button class="btn btn-ok btn-sm" onclick="acaoFilaClinica('+g.id+',\'autorizar\')">Autorizar</button>');
+      acoes.push('<button class="btn btn-danger btn-sm" onclick="acaoFilaClinica('+g.id+',\'negar\')">Negar</button>');
     }
-    if (g.status==='solicitada') {
-      acoes += '<button class="btn btn-ghost btn-sm" onclick="atualizarGuia('+g.id+',\'em_analise\')">Analisar</button>';
-    }
-    return '<tr><td><strong>#'+g.id+'</strong></td><td>'+(g.beneficiario_nome||g.beneficiario||'--')+'</td>'+
-      '<td>'+(g.plano_nome||g.plano||'--')+'</td><td>'+(g.tipo||'--')+'</td>'+
-      '<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(g.descricao_procedimento||g.descricao||'--')+'</td>'+
-      '<td>'+(g.cid||'--')+'</td><td>'+fmtMoeda(g.valor_estimado)+'</td>'+
-      '<td><span class="badge '+(stBadge[g.status]||'badge-gray')+'">'+(g.status||'--')+'</span></td>'+
-      '<td style="white-space:nowrap">'+acoes+'</td></tr>';
+    var sla = g.sla_vencido ? '<span class="badge badge-danger">'+fmtHoras(g.horas_restantes)+'</span>' : '<span class="badge badge-ok">'+fmtHoras(g.horas_restantes)+'</span>';
+    return '<tr><td><strong>'+(g.numero_guia||('#'+g.id))+'</strong></td><td>'+(g.beneficiario_nome||'--')+'</td>'+
+      '<td>'+(g.prestador_nome||'Sem prestador')+'</td>'+
+      '<td><span class="badge '+badgePrioridade(g.prioridade_clinica)+'">'+(g.prioridade_clinica_label||g.prioridade_clinica||'--')+'</span></td>'+
+      '<td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(g.descricao_procedimento||'--')+'</td>'+
+      '<td>'+(g.cid||'--')+'</td><td>'+sla+'</td>'+
+      '<td><span class="badge '+(stBadge[g.status]||'badge-gray')+'">'+(g.status_label||g.status||'--')+'</span></td>'+
+      '<td style="white-space:nowrap">'+acoes.join(' ')+'</td></tr>';
   }).join('');
 }
 
 function abrirModalGuia() {
-  ['guCid','guMedico','guDescricao','guValor'].forEach(function(id){document.getElementById(id).value='';});
+  ['guCid','guMedico','guDescricao','guValor','guAuditor','guDocs'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('guTipo').value='consulta';
+  document.getElementById('guPrioridade').value='eletiva';
   document.getElementById('guBeneficiario').innerHTML='<option value="">selecione o plano primeiro</option>';
   popularSelectsPlanos();
+  popularSelectsPrestadores();
   abrirModal('modalGuia');
 }
 
 async function salvarGuia() {
   var body = {
-    plano_id: v('guPlano') ? parseInt(v('guPlano')) : null,
-    beneficiario_id: v('guBeneficiario') ? parseInt(v('guBeneficiario')) : null,
-    tipo: v('guTipo'), descricao_procedimento: v('guDescricao'),
-    cid: v('guCid'), medico_solicitante: v('guMedico'),
-    valor_estimado: v('guValor') ? parseFloat(v('guValor')) : null,
+    plano_id: v('guPlano') ? parseInt(v('guPlano'), 10) : null,
+    beneficiario_id: v('guBeneficiario') ? parseInt(v('guBeneficiario'), 10) : null,
+    prestador_id: v('guPrestador') ? parseInt(v('guPrestador'), 10) : null,
+    tipo: v('guTipo'),
+    prioridade_clinica: v('guPrioridade'),
+    descricao_procedimento: v('guDescricao'),
+    cid: v('guCid'),
+    medico_solicitante: v('guMedico'),
+    auditor_responsavel: v('guAuditor'),
+    documentos_pendentes: v('guDocs'),
+    valor_estimado: v('guValor') ? parseFloat(v('guValor')) : null
   };
   if (!body.plano_id) { alert('Selecione o plano'); return; }
   if (!body.beneficiario_id) { alert('Selecione o beneficiario'); return; }
@@ -751,16 +1247,10 @@ async function salvarGuia() {
   await api('/api/plano-saude/guias', {method:'POST',body:JSON.stringify(body)});
   fecharModal('modalGuia');
   carregarGuias();
+  carregarFilaClinica();
   carregarKpisTopo();
 }
 
-async function atualizarGuia(id, status) {
-  await api('/api/plano-saude/guias/'+id, {method:'PUT',body:JSON.stringify({status:status})});
-  carregarGuias();
-  carregarKpisTopo();
-}
-
-// ── Sinistros ─────────────────────────────────────────────────
 async function carregarSinistros() {
   var tipo = (document.getElementById('filtroTipoSinistro')||{}).value || '';
   var status = (document.getElementById('filtroStatusSinistro')||{}).value || '';
@@ -783,9 +1273,9 @@ async function carregarSinistros() {
     }
     if (s.status==='aberto') acoes += ' <button class="btn btn-danger btn-sm" onclick="atualizarSinistro('+s.id+',\'cancelado\')">Cancelar</button>';
     return '<tr><td><strong>#'+s.id+'</strong></td><td>'+(s.beneficiario_nome||s.beneficiario||'--')+'</td>'+
-      '<td>'+(s.tipo||'--')+'</td><td>'+(s.cid||'--')+'</td><td>'+(s.prestador||'--')+'</td>'+
+      '<td>'+(s.tipo_label||s.tipo||'--')+'</td><td>'+(s.cid||'--')+'</td><td>'+(s.prestador||'--')+'</td>'+
       '<td>'+fmtData(s.data_atendimento)+'</td><td>'+fmtMoeda(s.valor_total)+'</td>'+
-      '<td><span class="badge '+(stBadge[s.status]||'badge-gray')+'">'+(s.status||'--')+'</span></td>'+
+      '<td><span class="badge '+(stBadge[s.status]||'badge-gray')+'">'+(s.status_label||s.status||'--')+'</span></td>'+
       '<td style="white-space:nowrap">'+acoes+'</td></tr>';
   }).join('');
 }
@@ -801,12 +1291,12 @@ function abrirModalSinistro() {
 
 async function salvarSinistro() {
   var body = {
-    plano_id: v('siPlano') ? parseInt(v('siPlano')) : null,
-    beneficiario_id: v('siBeneficiario') ? parseInt(v('siBeneficiario')) : null,
+    plano_id: v('siPlano') ? parseInt(v('siPlano'), 10) : null,
+    beneficiario_id: v('siBeneficiario') ? parseInt(v('siBeneficiario'), 10) : null,
     tipo: v('siTipo'), cid: v('siCid'), prestador: v('siPrestador'),
     data_atendimento: v('siDataAtend')||null,
     valor_total: v('siValor') ? parseFloat(v('siValor')) : null,
-    status: v('siStatus'), descricao: v('siDescricao'), observacao: v('siObservacao'),
+    status: v('siStatus'), descricao: v('siDescricao'), observacao: v('siObservacao')
   };
   if (!body.plano_id) { alert('Selecione o plano'); return; }
   if (!body.beneficiario_id) { alert('Selecione o beneficiario'); return; }
@@ -824,7 +1314,6 @@ async function atualizarSinistro(id, status) {
   carregarKpisTopo();
 }
 
-// ── Reembolsos ────────────────────────────────────────────────
 async function carregarReembolsos() {
   var status = (document.getElementById('filtroStatusReembolso')||{}).value || '';
   var plano = (document.getElementById('filtroPlanoReembolso')||{}).value || '';
@@ -841,13 +1330,11 @@ async function carregarReembolsos() {
     if (r.status==='solicitado') acoes += '<button class="btn btn-ghost btn-sm" onclick="atualizarReembolso('+r.id+',\'em_analise\')">Analisar</button> ';
     if (r.status==='em_analise') acoes += '<button class="btn btn-ghost btn-sm" onclick="atualizarReembolso('+r.id+',\'aprovado\')">Aprovar</button> ';
     if (r.status==='aprovado') acoes += '<button class="btn btn-ok btn-sm" onclick="atualizarReembolso('+r.id+',\'pago\')">Pagar</button> ';
-    if (['solicitado','em_analise','aprovado'].indexOf(r.status) >= 0) {
-      acoes += '<button class="btn btn-danger btn-sm" onclick="atualizarReembolso('+r.id+',\'negado\')">Negar</button>';
-    }
+    if (['solicitado','em_analise','aprovado'].indexOf(r.status) >= 0) acoes += '<button class="btn btn-danger btn-sm" onclick="atualizarReembolso('+r.id+',\'negado\')">Negar</button>';
     var banco = r.banco ? r.banco+' ag. '+(r.agencia||'--') : '--';
     return '<tr><td><strong>#'+r.id+'</strong></td><td>'+(r.beneficiario_nome||r.beneficiario||'--')+'</td>'+
-      '<td>'+(r.tipo_despesa||'--')+'</td><td>'+fmtMoeda(r.valor_solicitado)+'</td><td>'+banco+'</td>'+
-      '<td><span class="badge '+(stBadge[r.status]||'badge-gray')+'">'+(r.status||'--')+'</span></td>'+
+      '<td>'+(r.tipo_despesa_label||r.tipo_despesa||'--')+'</td><td>'+fmtMoeda(r.valor_solicitado)+'</td><td>'+banco+'</td>'+
+      '<td><span class="badge '+(stBadge[r.status]||'badge-gray')+'">'+(r.status_label||r.status||'--')+'</span></td>'+
       '<td style="white-space:nowrap">'+acoes+'</td></tr>';
   }).join('');
 }
@@ -862,12 +1349,12 @@ function abrirModalReembolso() {
 
 async function salvarReembolso() {
   var body = {
-    plano_id: v('reePlano') ? parseInt(v('reePlano')) : null,
-    beneficiario_id: v('reeBeneficiario') ? parseInt(v('reeBeneficiario')) : null,
+    plano_id: v('reePlano') ? parseInt(v('reePlano'), 10) : null,
+    beneficiario_id: v('reeBeneficiario') ? parseInt(v('reeBeneficiario'), 10) : null,
     tipo_despesa: v('reeTipoDespesa'),
     valor_solicitado: v('reeValor') ? parseFloat(v('reeValor')) : null,
     banco: v('reeBanco'), agencia: v('reeAgencia'), conta: v('reeConta'),
-    descricao: v('reeDescricao'),
+    descricao: v('reeDescricao')
   };
   if (!body.plano_id) { alert('Selecione o plano'); return; }
   if (!body.beneficiario_id) { alert('Selecione o beneficiario'); return; }
@@ -884,18 +1371,16 @@ async function atualizarReembolso(id, status) {
   carregarKpisTopo();
 }
 
-// ── Fechar modal clicando fora ────────────────────────────────
 document.querySelectorAll('.modal-bg').forEach(function(bg){
   bg.addEventListener('click', function(e){ if(e.target===bg) bg.classList.remove('open'); });
 });
 
-// ── Init ─────────────────────────────────────────────────────
 (async function(){
   await carregarPlanos();
+  await carregarPrestadores();
   await carregarKpisTopo();
-  carregarVisaoGeral();
+  await carregarVisaoGeral();
 })();
 </script>
-{% include "partials/enterprise_command_center.html" %}
 </body>
 </html>

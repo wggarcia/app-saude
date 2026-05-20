@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .access_control import get_setor
 from .models import (
     BeneficiarioPlano, Empresa, GuiaAutorizacao,
-    PlanoSaude, Reembolso, Sinistro, RegistroSintoma,
+    PlanoSaude, PrestadorPlanoSaude, Reembolso, Sinistro, RegistroSintoma,
 )
 from .views_dashboard import _empresa_autenticada
 
@@ -33,6 +33,126 @@ def _ps_auth(request):
 
 
 # ── serializers ───────────────────────────────────────────────────────────────
+
+def _to_bool(value, default=False):
+    if value in (None, ""):
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "sim", "yes", "on"}
+
+
+def _pressao_epidemiologica_empresa(empresa, dias=14):
+    inicio = date.today() - timedelta(days=dias)
+    qs = RegistroSintoma.objects.filter(
+        empresa=empresa,
+        data_registro__date__gte=inicio,
+    )
+    total = qs.count()
+    suspeitos = qs.filter(suspeito=True).count()
+    if suspeitos >= 12:
+        nivel = "alta"
+        label = "Pressao alta"
+    elif suspeitos >= 5:
+        nivel = "moderada"
+        label = "Pressao moderada"
+    elif suspeitos > 0:
+        nivel = "monitoramento"
+        label = "Monitoramento ativo"
+    else:
+        nivel = "controlada"
+        label = "Territorio controlado"
+    return {
+        "janela_dias": dias,
+        "registros": total,
+        "suspeitos": suspeitos,
+        "nivel": nivel,
+        "label": label,
+    }
+
+
+def _sla_horas_prioridade(prioridade, prestador=None):
+    base = {
+        GuiaAutorizacao.PRIORIDADE_ELETIVA: 72,
+        GuiaAutorizacao.PRIORIDADE_URGENTE: 24,
+        GuiaAutorizacao.PRIORIDADE_ALTA_COMPLEXIDADE: 48,
+        GuiaAutorizacao.PRIORIDADE_INTERNACAO: 12,
+    }.get(prioridade or GuiaAutorizacao.PRIORIDADE_ELETIVA, 72)
+    if prestador and prestador.sla_autorizacao_horas:
+        return min(base, int(prestador.sla_autorizacao_horas))
+    return base
+
+
+def _calcular_prazo_sla(prioridade, prestador=None):
+    return timezone.now() + timedelta(hours=_sla_horas_prioridade(prioridade, prestador))
+
+
+def _fila_status_from_status(status):
+    return {
+        GuiaAutorizacao.STATUS_SOLICITADA: GuiaAutorizacao.FILA_TRIAGEM,
+        GuiaAutorizacao.STATUS_EM_ANALISE: GuiaAutorizacao.FILA_AUDITORIA_CLINICA,
+        GuiaAutorizacao.STATUS_AUTORIZADA: GuiaAutorizacao.FILA_AUTORIZADA,
+        GuiaAutorizacao.STATUS_NEGADA: GuiaAutorizacao.FILA_NEGADA,
+        GuiaAutorizacao.STATUS_CANCELADA: GuiaAutorizacao.FILA_DEVOLVIDA_PRESTADOR,
+    }.get(status or GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.FILA_TRIAGEM)
+
+
+def _guia_sla_info(g):
+    prazo = g.prazo_sla_em
+    if not prazo:
+        prazo = g.solicitada_em + timedelta(
+            hours=_sla_horas_prioridade(g.prioridade_clinica, g.prestador)
+        )
+    agora = timezone.now()
+    vencido = bool(prazo and prazo < agora and g.status in [
+        GuiaAutorizacao.STATUS_SOLICITADA,
+        GuiaAutorizacao.STATUS_EM_ANALISE,
+    ])
+    diff_horas = None
+    if prazo:
+        diff_horas = round((prazo - agora).total_seconds() / 3600, 1)
+    return {
+        "prazo_sla_em": prazo.isoformat() if prazo else None,
+        "prazo_sla_em_fmt": timezone.localtime(prazo).strftime("%d/%m/%Y %H:%M") if prazo else "",
+        "sla_horas": _sla_horas_prioridade(g.prioridade_clinica, g.prestador),
+        "sla_vencido": vencido,
+        "horas_restantes": diff_horas,
+    }
+
+
+def _prestador_dict(p):
+    pendentes = p.guias.filter(
+        status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE]
+    ).count()
+    vencidas = p.guias.filter(
+        status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
+        prazo_sla_em__lt=timezone.now(),
+    ).count()
+    return {
+        "id": p.id,
+        "codigo_rede": p.codigo_rede,
+        "nome_fantasia": p.nome_fantasia,
+        "razao_social": p.razao_social,
+        "cnpj": p.cnpj,
+        "tipo": p.tipo,
+        "tipo_label": p.get_tipo_display(),
+        "registro_cnes": p.registro_cnes,
+        "especialidades": p.especialidades,
+        "cidade": p.cidade,
+        "estado": p.estado,
+        "telefone": p.telefone,
+        "email": p.email,
+        "contato_responsavel": p.contato_responsavel,
+        "sla_autorizacao_horas": p.sla_autorizacao_horas,
+        "portal_ativo": p.portal_ativo,
+        "score_qualidade": p.score_qualidade,
+        "status": p.status,
+        "status_label": p.get_status_display(),
+        "observacoes": p.observacoes,
+        "guias_pendentes": pendentes,
+        "guias_sla_vencido": vencidas,
+        "criado_em": p.criado_em.strftime("%d/%m/%Y"),
+    }
 
 def _plano_dict(p):
     return {
@@ -77,20 +197,38 @@ def _beneficiario_dict(b):
 
 
 def _guia_dict(g):
+    sla = _guia_sla_info(g)
     return {
         "id": g.id,
         "plano_id": g.plano_id,
+        "plano_nome": g.plano.nome,
         "beneficiario_id": g.beneficiario_id,
         "beneficiario_nome": g.beneficiario.nome,
+        "prestador_id": g.prestador_id,
+        "prestador_nome": g.prestador.nome_fantasia if g.prestador_id else "",
+        "prestador_tipo": g.prestador.tipo if g.prestador_id else "",
+        "prestador_portal_ativo": bool(g.prestador_id and g.prestador.portal_ativo),
         "numero_guia": g.numero_guia,
         "tipo": g.tipo,
         "tipo_label": g.get_tipo_display(),
         "status": g.status,
         "status_label": g.get_status_display(),
+        "prioridade_clinica": g.prioridade_clinica,
+        "prioridade_clinica_label": g.get_prioridade_clinica_display(),
+        "fila_status": g.fila_status,
+        "fila_status_label": g.get_fila_status_display(),
+        "auditor_responsavel": g.auditor_responsavel,
         "descricao_procedimento": g.descricao_procedimento,
         "cid": g.cid,
         "medico_solicitante": g.medico_solicitante,
         "valor_estimado": float(g.valor_estimado or 0),
+        "prazo_sla_em": sla["prazo_sla_em"],
+        "prazo_sla_em_fmt": sla["prazo_sla_em_fmt"],
+        "sla_horas": sla["sla_horas"],
+        "sla_vencido": sla["sla_vencido"],
+        "horas_restantes": sla["horas_restantes"],
+        "observacao_auditoria": g.observacao_auditoria,
+        "documentos_pendentes": g.documentos_pendentes,
         "numero_autorizacao": g.numero_autorizacao,
         "validade_autorizacao": g.validade_autorizacao.isoformat() if g.validade_autorizacao else None,
         "justificativa_negativa": g.justificativa_negativa,
@@ -174,6 +312,10 @@ def api_ps_dashboard(request):
     # Guias
     guias_qs = GuiaAutorizacao.objects.filter(plano__empresa=empresa)
     guias_pendentes = guias_qs.filter(status__in=["solicitada", "em_analise"]).count()
+    guias_sla_vencido = guias_qs.filter(
+        status__in=["solicitada", "em_analise"],
+        prazo_sla_em__lt=timezone.now(),
+    ).count()
     guias_autorizadas_mes = guias_qs.filter(
         status="autorizada",
         atualizada_em__date__gte=inicio_mes,
@@ -210,6 +352,7 @@ def api_ps_dashboard(request):
         data_registro__date__gte=inicio_30,
         suspeito=True,
     ).count()
+    prestadores_qs = PrestadorPlanoSaude.objects.filter(empresa=empresa)
 
     # Top CIDs nos sinistros
     top_cids = (
@@ -231,6 +374,7 @@ def api_ps_dashboard(request):
             "total_beneficiarios": total_beneficiarios,
             "beneficiarios_suspensos": beneficiarios_suspensos,
             "guias_pendentes": guias_pendentes,
+            "guias_sla_vencido": guias_sla_vencido,
             "guias_autorizadas_mes": guias_autorizadas_mes,
             "guias_negadas_mes": guias_negadas_mes,
             "sinistros_abertos": sinistros_abertos,
@@ -240,6 +384,19 @@ def api_ps_dashboard(request):
             "valor_reembolsos_pagos_mes": float(valor_reembolsos_pagos_mes),
             "registros_epi_30d": registros_30d,
             "suspeitos_epi_30d": suspeitos_30d,
+            "prestadores_credenciados": prestadores_qs.filter(
+                status=PrestadorPlanoSaude.STATUS_CREDENCIADO
+            ).count(),
+            "prestadores_portal_ativo": prestadores_qs.filter(portal_ativo=True).count(),
+            "fila_clinica_pendencias": guias_qs.filter(
+                fila_status__in=[
+                    GuiaAutorizacao.FILA_TRIAGEM,
+                    GuiaAutorizacao.FILA_AUDITORIA_CLINICA,
+                    GuiaAutorizacao.FILA_AUDITORIA_MEDICA,
+                    GuiaAutorizacao.FILA_PENDENCIA_DOCUMENTAL,
+                    GuiaAutorizacao.FILA_DEVOLVIDA_PRESTADOR,
+                ]
+            ).count(),
         },
         "top_cids": list(top_cids),
         "planos": [_plano_dict(p) for p in planos[:10]],
@@ -436,6 +593,285 @@ def api_ps_beneficiario_detalhe(request, ben_id):
 # ── Guias de Autorização ──────────────────────────────────────────────────────
 
 @csrf_exempt
+def api_ps_prestadores(request):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    if request.method == "GET":
+        qs = PrestadorPlanoSaude.objects.filter(empresa=empresa)
+        status_f = request.GET.get("status")
+        if status_f:
+            qs = qs.filter(status=status_f)
+        tipo_f = request.GET.get("tipo")
+        if tipo_f:
+            qs = qs.filter(tipo=tipo_f)
+        busca = request.GET.get("busca", "").strip()
+        if busca:
+            qs = qs.filter(
+                Q(nome_fantasia__icontains=busca)
+                | Q(razao_social__icontains=busca)
+                | Q(cnpj__icontains=busca)
+                | Q(cidade__icontains=busca)
+            )
+        if request.GET.get("portal_ativo") in {"1", "true"}:
+            qs = qs.filter(portal_ativo=True)
+        return JsonResponse({"prestadores": [_prestador_dict(p) for p in qs[:300]]})
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        if not data.get("nome_fantasia"):
+            return JsonResponse({"erro": "Nome fantasia obrigatório"}, status=400)
+        import uuid as _uuid
+        prestador = PrestadorPlanoSaude.objects.create(
+            empresa=empresa,
+            codigo_rede=data.get("codigo_rede") or f"PR-{_uuid.uuid4().hex[:6].upper()}",
+            nome_fantasia=data["nome_fantasia"],
+            razao_social=data.get("razao_social", ""),
+            cnpj=data.get("cnpj", ""),
+            tipo=data.get("tipo", PrestadorPlanoSaude.TIPO_CLINICA),
+            registro_cnes=data.get("registro_cnes", ""),
+            especialidades=data.get("especialidades", ""),
+            cidade=data.get("cidade", ""),
+            estado=data.get("estado", ""),
+            telefone=data.get("telefone", ""),
+            email=data.get("email", ""),
+            contato_responsavel=data.get("contato_responsavel", ""),
+            sla_autorizacao_horas=int(data.get("sla_autorizacao_horas") or 72),
+            portal_ativo=_to_bool(data.get("portal_ativo"), default=True),
+            score_qualidade=int(data.get("score_qualidade") or 85),
+            status=data.get("status", PrestadorPlanoSaude.STATUS_CREDENCIADO),
+            observacoes=data.get("observacoes", ""),
+        )
+        return JsonResponse({"prestador": _prestador_dict(prestador)}, status=201)
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@csrf_exempt
+def api_ps_prestador_detalhe(request, prestador_id):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    try:
+        prestador = PrestadorPlanoSaude.objects.get(id=prestador_id, empresa=empresa)
+    except PrestadorPlanoSaude.DoesNotExist:
+        return JsonResponse({"erro": "Prestador não encontrado"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({"prestador": _prestador_dict(prestador)})
+
+    if request.method in ("PUT", "PATCH"):
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        for campo in [
+            "codigo_rede", "nome_fantasia", "razao_social", "cnpj", "tipo",
+            "registro_cnes", "especialidades", "cidade", "estado", "telefone",
+            "email", "contato_responsavel", "status", "observacoes",
+        ]:
+            if campo in data:
+                setattr(prestador, campo, data[campo])
+        if "portal_ativo" in data:
+            prestador.portal_ativo = _to_bool(data.get("portal_ativo"))
+        if "sla_autorizacao_horas" in data:
+            prestador.sla_autorizacao_horas = int(data.get("sla_autorizacao_horas") or 72)
+        if "score_qualidade" in data:
+            prestador.score_qualidade = int(data.get("score_qualidade") or 0)
+        prestador.save()
+        return JsonResponse({"prestador": _prestador_dict(prestador)})
+
+    if request.method == "DELETE":
+        prestador.delete()
+        return JsonResponse({"status": "ok"})
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+def api_ps_portal_prestador(request):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    pressao = _pressao_epidemiologica_empresa(empresa)
+    prestadores = PrestadorPlanoSaude.objects.filter(empresa=empresa)
+    lista = []
+    for prestador in prestadores[:120]:
+        guias = prestador.guias.all()
+        pendentes = guias.filter(
+            status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE]
+        ).count()
+        docs = guias.exclude(documentos_pendentes="").count()
+        vencidas = guias.filter(
+            status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
+            prazo_sla_em__lt=timezone.now(),
+        ).count()
+        lista.append({
+            **_prestador_dict(prestador),
+            "guias_pendentes": pendentes,
+            "guias_documentacao": docs,
+            "guias_sla_vencido": vencidas,
+        })
+    return JsonResponse({
+        "resumo": {
+            "prestadores_total": prestadores.count(),
+            "prestadores_portal_ativo": prestadores.filter(portal_ativo=True).count(),
+            "prestadores_suspensos": prestadores.filter(
+                status=PrestadorPlanoSaude.STATUS_SUSPENSO
+            ).count(),
+            "guias_pendentes": GuiaAutorizacao.objects.filter(
+                plano__empresa=empresa,
+                prestador__isnull=False,
+                status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
+            ).count(),
+            "guias_sla_vencido": GuiaAutorizacao.objects.filter(
+                plano__empresa=empresa,
+                prestador__isnull=False,
+                status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
+                prazo_sla_em__lt=timezone.now(),
+            ).count(),
+            "pendencias_documentais": GuiaAutorizacao.objects.filter(
+                plano__empresa=empresa,
+                prestador__isnull=False,
+            ).exclude(documentos_pendentes="").count(),
+            "pressao_epidemiologica": pressao,
+        },
+        "prestadores": lista,
+    })
+
+
+def api_ps_fila_clinica(request):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    pressao = _pressao_epidemiologica_empresa(empresa)
+    qs = GuiaAutorizacao.objects.filter(plano__empresa=empresa).select_related(
+        "plano", "beneficiario", "prestador"
+    )
+    prestador_id = request.GET.get("prestador_id")
+    if prestador_id:
+        qs = qs.filter(prestador_id=prestador_id)
+    fila_status = request.GET.get("fila_status")
+    if fila_status:
+        qs = qs.filter(fila_status=fila_status)
+    prioridade = request.GET.get("prioridade")
+    if prioridade:
+        qs = qs.filter(prioridade_clinica=prioridade)
+    status_f = request.GET.get("status")
+    if status_f:
+        qs = qs.filter(status=status_f)
+    busca = request.GET.get("busca", "").strip()
+    if busca:
+        qs = qs.filter(
+            Q(numero_guia__icontains=busca)
+            | Q(beneficiario__nome__icontains=busca)
+            | Q(prestador__nome_fantasia__icontains=busca)
+            | Q(descricao_procedimento__icontains=busca)
+            | Q(cid__icontains=busca)
+        )
+
+    guias = [_guia_dict(g) for g in qs.order_by("prazo_sla_em", "-solicitada_em")[:250]]
+    return JsonResponse({
+        "resumo": {
+            "total": qs.count(),
+            "triagem": qs.filter(fila_status=GuiaAutorizacao.FILA_TRIAGEM).count(),
+            "auditoria_clinica": qs.filter(
+                fila_status=GuiaAutorizacao.FILA_AUDITORIA_CLINICA
+            ).count(),
+            "auditoria_medica": qs.filter(
+                fila_status=GuiaAutorizacao.FILA_AUDITORIA_MEDICA
+            ).count(),
+            "pendencia_documental": qs.filter(
+                fila_status=GuiaAutorizacao.FILA_PENDENCIA_DOCUMENTAL
+            ).count(),
+            "sla_vencido": qs.filter(
+                status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
+                prazo_sla_em__lt=timezone.now(),
+            ).count(),
+            "pressao_epidemiologica": pressao,
+        },
+        "guias": guias,
+    })
+
+
+@csrf_exempt
+def api_ps_fila_clinica_acao(request, guia_id):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    try:
+        guia = GuiaAutorizacao.objects.select_related("prestador", "plano", "beneficiario").get(
+            id=guia_id, plano__empresa=empresa
+        )
+    except GuiaAutorizacao.DoesNotExist:
+        return JsonResponse({"erro": "Guia não encontrada"}, status=404)
+    if request.method not in ("POST", "PATCH"):
+        return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    acao = data.get("acao", "")
+    if "auditor_responsavel" in data:
+        guia.auditor_responsavel = data.get("auditor_responsavel", "")
+    if "observacao_auditoria" in data:
+        guia.observacao_auditoria = data.get("observacao_auditoria", "")
+    if "documentos_pendentes" in data:
+        guia.documentos_pendentes = data.get("documentos_pendentes", "")
+    if "prioridade_clinica" in data:
+        guia.prioridade_clinica = data.get("prioridade_clinica") or guia.prioridade_clinica
+        guia.prazo_sla_em = _calcular_prazo_sla(guia.prioridade_clinica, guia.prestador)
+
+    if acao == "triagem":
+        guia.status = GuiaAutorizacao.STATUS_SOLICITADA
+        guia.fila_status = GuiaAutorizacao.FILA_TRIAGEM
+    elif acao == "auditoria_clinica":
+        guia.status = GuiaAutorizacao.STATUS_EM_ANALISE
+        guia.fila_status = GuiaAutorizacao.FILA_AUDITORIA_CLINICA
+    elif acao == "auditoria_medica":
+        guia.status = GuiaAutorizacao.STATUS_EM_ANALISE
+        guia.fila_status = GuiaAutorizacao.FILA_AUDITORIA_MEDICA
+    elif acao == "pendencia_documental":
+        guia.status = GuiaAutorizacao.STATUS_EM_ANALISE
+        guia.fila_status = GuiaAutorizacao.FILA_PENDENCIA_DOCUMENTAL
+    elif acao == "devolver_prestador":
+        guia.status = GuiaAutorizacao.STATUS_EM_ANALISE
+        guia.fila_status = GuiaAutorizacao.FILA_DEVOLVIDA_PRESTADOR
+    elif acao == "autorizar":
+        guia.status = GuiaAutorizacao.STATUS_AUTORIZADA
+        guia.fila_status = GuiaAutorizacao.FILA_AUTORIZADA
+        guia.numero_autorizacao = data.get("numero_autorizacao") or guia.numero_autorizacao or f"AUTH-{guia.id:05d}"
+        if data.get("validade_autorizacao"):
+            from datetime import datetime as _dt
+            try:
+                guia.validade_autorizacao = _dt.strptime(
+                    data["validade_autorizacao"], "%Y-%m-%d"
+                ).date()
+            except ValueError:
+                pass
+        elif not guia.validade_autorizacao:
+            guia.validade_autorizacao = timezone.localdate() + timedelta(days=30)
+    elif acao == "negar":
+        guia.status = GuiaAutorizacao.STATUS_NEGADA
+        guia.fila_status = GuiaAutorizacao.FILA_NEGADA
+        guia.justificativa_negativa = data.get("justificativa_negativa", guia.justificativa_negativa)
+
+    if "status" in data:
+        guia.status = data["status"]
+        if "fila_status" not in data:
+            guia.fila_status = _fila_status_from_status(guia.status)
+    if "fila_status" in data:
+        guia.fila_status = data["fila_status"]
+    guia.save()
+    return JsonResponse({"guia": _guia_dict(guia)})
+
+@csrf_exempt
 def api_ps_guias(request):
     empresa, err = _ps_auth(request)
     if err:
@@ -444,13 +880,22 @@ def api_ps_guias(request):
     if request.method == "GET":
         qs = GuiaAutorizacao.objects.filter(
             plano__empresa=empresa
-        ).select_related("plano", "beneficiario")
+        ).select_related("plano", "beneficiario", "prestador")
         plano_id = request.GET.get("plano_id")
         if plano_id:
             qs = qs.filter(plano_id=plano_id)
         status_f = request.GET.get("status")
         if status_f:
             qs = qs.filter(status=status_f)
+        prestador_id = request.GET.get("prestador_id")
+        if prestador_id:
+            qs = qs.filter(prestador_id=prestador_id)
+        fila_status = request.GET.get("fila_status")
+        if fila_status:
+            qs = qs.filter(fila_status=fila_status)
+        prioridade = request.GET.get("prioridade")
+        if prioridade:
+            qs = qs.filter(prioridade_clinica=prioridade)
         ben_id = request.GET.get("beneficiario_id")
         if ben_id:
             qs = qs.filter(beneficiario_id=ben_id)
@@ -468,6 +913,13 @@ def api_ps_guias(request):
             )
         except (PlanoSaude.DoesNotExist, BeneficiarioPlano.DoesNotExist):
             return JsonResponse({"erro": "Plano ou beneficiário não encontrado"}, status=404)
+        prestador = None
+        if data.get("prestador_id"):
+            prestador = PrestadorPlanoSaude.objects.filter(
+                id=data.get("prestador_id"), empresa=empresa
+            ).first()
+            if not prestador:
+                return JsonResponse({"erro": "Prestador não encontrado"}, status=404)
         if not data.get("descricao_procedimento"):
             return JsonResponse({"erro": "Descrição do procedimento obrigatória"}, status=400)
         import uuid as _uuid
@@ -477,9 +929,11 @@ def api_ps_guias(request):
                 valor = Decimal(str(data["valor_estimado"]))
             except Exception:
                 pass
+        prioridade = data.get("prioridade_clinica") or GuiaAutorizacao.PRIORIDADE_ELETIVA
         g = GuiaAutorizacao.objects.create(
             plano=plano,
             beneficiario=beneficiario,
+            prestador=prestador,
             numero_guia=data.get("numero_guia") or f"G{_uuid.uuid4().hex[:8].upper()}",
             tipo=data.get("tipo", "consulta"),
             descricao_procedimento=data["descricao_procedimento"],
@@ -488,7 +942,13 @@ def api_ps_guias(request):
             crm_medico=data.get("crm_medico", ""),
             quantidade=int(data.get("quantidade", 1)),
             valor_estimado=valor,
-            status="solicitada",
+            status=GuiaAutorizacao.STATUS_SOLICITADA,
+            prioridade_clinica=prioridade,
+            fila_status=GuiaAutorizacao.FILA_TRIAGEM,
+            auditor_responsavel=data.get("auditor_responsavel", ""),
+            documentos_pendentes=data.get("documentos_pendentes", ""),
+            observacao_auditoria=data.get("observacao_auditoria", ""),
+            prazo_sla_em=_calcular_prazo_sla(prioridade, prestador),
         )
         return JsonResponse({"guia": _guia_dict(g)}, status=201)
 
@@ -501,7 +961,7 @@ def api_ps_guia_detalhe(request, guia_id):
     if err:
         return err
     try:
-        g = GuiaAutorizacao.objects.select_related("plano", "beneficiario").get(
+        g = GuiaAutorizacao.objects.select_related("plano", "beneficiario", "prestador").get(
             id=guia_id, plano__empresa=empresa
         )
     except GuiaAutorizacao.DoesNotExist:
@@ -515,8 +975,20 @@ def api_ps_guia_detalhe(request, guia_id):
             data = json.loads(request.body)
         except Exception:
             return JsonResponse({"erro": "JSON inválido"}, status=400)
+        if "prestador_id" in data:
+            if data["prestador_id"]:
+                prestador = PrestadorPlanoSaude.objects.filter(
+                    id=data["prestador_id"], empresa=empresa
+                ).first()
+                if not prestador:
+                    return JsonResponse({"erro": "Prestador não encontrado"}, status=404)
+                g.prestador = prestador
+            else:
+                g.prestador = None
         for campo in ["status", "numero_autorizacao", "justificativa_negativa", "cid",
-                      "descricao_procedimento", "medico_solicitante"]:
+                      "descricao_procedimento", "medico_solicitante", "auditor_responsavel",
+                      "observacao_auditoria", "documentos_pendentes", "prioridade_clinica",
+                      "fila_status"]:
             if campo in data:
                 setattr(g, campo, data[campo])
         if "validade_autorizacao" in data and data["validade_autorizacao"]:
@@ -525,6 +997,16 @@ def api_ps_guia_detalhe(request, guia_id):
                 g.validade_autorizacao = datetime.strptime(data["validade_autorizacao"], "%Y-%m-%d").date()
             except ValueError:
                 pass
+        if "prazo_sla_em" in data and data["prazo_sla_em"]:
+            from datetime import datetime
+            try:
+                g.prazo_sla_em = datetime.fromisoformat(data["prazo_sla_em"])
+            except ValueError:
+                pass
+        elif "prioridade_clinica" in data or "prestador_id" in data:
+            g.prazo_sla_em = _calcular_prazo_sla(g.prioridade_clinica, g.prestador)
+        if "status" in data and "fila_status" not in data:
+            g.fila_status = _fila_status_from_status(g.status)
         g.save()
         return JsonResponse({"guia": _guia_dict(g)})
 
@@ -740,12 +1222,10 @@ def api_ps_kpis(request):
     if err:
         return err
 
-    hoje = date.today()
-    inicio_mes = hoje.replace(day=1)
-
     sinistros_qs = Sinistro.objects.filter(empresa=empresa)
     reembolsos_qs = Reembolso.objects.filter(empresa=empresa)
     guias_qs = GuiaAutorizacao.objects.filter(plano__empresa=empresa)
+    prestadores_qs = PrestadorPlanoSaude.objects.filter(empresa=empresa)
 
     # Taxa de aprovação de guias
     guias_decididas = guias_qs.filter(status__in=["autorizada", "negada"]).count()
@@ -771,7 +1251,14 @@ def api_ps_kpis(request):
         .order_by("-qtd")
     )
 
+    dist_fila = (
+        guias_qs.values("fila_status")
+        .annotate(qtd=Count("id"))
+        .order_by("-qtd")
+    )
+
     # Série mensal de sinistros (últimos 6 meses)
+    hoje = date.today()
     serie = []
     for i in range(5, -1, -1):
         ref = hoje.replace(day=1) - timedelta(days=i * 28)
@@ -801,5 +1288,14 @@ def api_ps_kpis(request):
         "custo_medio_sinistro": float(custo_medio),
         "dist_tipo_sinistro": list(dist_tipo),
         "dist_reembolso_status": list(dist_reembolso),
+        "dist_fila_clinica": list(dist_fila),
+        "prestadores_ativos": prestadores_qs.filter(
+            status=PrestadorPlanoSaude.STATUS_CREDENCIADO
+        ).count(),
+        "prestadores_portal_ativo": prestadores_qs.filter(portal_ativo=True).count(),
+        "guias_sla_vencido": guias_qs.filter(
+            status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
+            prazo_sla_em__lt=timezone.now(),
+        ).count(),
         "serie_sinistros": serie,
     })

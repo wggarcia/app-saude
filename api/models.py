@@ -3197,6 +3197,61 @@ class BeneficiarioPlano(models.Model):
         return f"{self.nome} — {self.plano.nome}"
 
 
+class PrestadorPlanoSaude(models.Model):
+    """Prestador credenciado da operadora: hospital, clinica, laboratorio, imagem."""
+    STATUS_CREDENCIADO = "credenciado"
+    STATUS_IMPLANTACAO = "implantacao"
+    STATUS_SUSPENSO = "suspenso"
+    STATUS_DESCREDENCIADO = "descredenciado"
+    STATUS_CHOICES = [
+        (STATUS_CREDENCIADO, "Credenciado"),
+        (STATUS_IMPLANTACAO, "Em implantação"),
+        (STATUS_SUSPENSO, "Suspenso"),
+        (STATUS_DESCREDENCIADO, "Descredenciado"),
+    ]
+    TIPO_HOSPITAL = "hospital"
+    TIPO_CLINICA = "clinica"
+    TIPO_LABORATORIO = "laboratorio"
+    TIPO_IMAGEM = "imagem"
+    TIPO_PRONTO_ATENDIMENTO = "pronto_atendimento"
+    TIPO_HOMECARE = "homecare"
+    TIPO_CHOICES = [
+        (TIPO_HOSPITAL, "Hospital"),
+        (TIPO_CLINICA, "Clínica / AMB"),
+        (TIPO_LABORATORIO, "Laboratório"),
+        (TIPO_IMAGEM, "Imagem / Diagnóstico"),
+        (TIPO_PRONTO_ATENDIMENTO, "Pronto Atendimento"),
+        (TIPO_HOMECARE, "Home Care"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="prestadores_plano")
+    codigo_rede = models.CharField(max_length=30, blank=True, default="")
+    nome_fantasia = models.CharField(max_length=200)
+    razao_social = models.CharField(max_length=200, blank=True, default="")
+    cnpj = models.CharField(max_length=18, blank=True, default="")
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES, default=TIPO_CLINICA)
+    registro_cnes = models.CharField(max_length=30, blank=True, default="")
+    especialidades = models.TextField(blank=True, default="")
+    cidade = models.CharField(max_length=100, blank=True, default="")
+    estado = models.CharField(max_length=2, blank=True, default="")
+    telefone = models.CharField(max_length=20, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
+    contato_responsavel = models.CharField(max_length=150, blank=True, default="")
+    sla_autorizacao_horas = models.PositiveSmallIntegerField(default=72)
+    portal_ativo = models.BooleanField(default=True)
+    score_qualidade = models.PositiveSmallIntegerField(default=85)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_CREDENCIADO)
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["nome_fantasia"]
+
+    def __str__(self):
+        return self.nome_fantasia
+
+
 class GuiaAutorizacao(models.Model):
     """Prior authorization request (guia) for procedure or medication."""
     TIPO_CONSULTA = "consulta"
@@ -3223,9 +3278,38 @@ class GuiaAutorizacao(models.Model):
         (STATUS_NEGADA, "Negada"),
         (STATUS_CANCELADA, "Cancelada"),
     ]
+    PRIORIDADE_ELETIVA = "eletiva"
+    PRIORIDADE_URGENTE = "urgente"
+    PRIORIDADE_ALTA_COMPLEXIDADE = "alta_complexidade"
+    PRIORIDADE_INTERNACAO = "internacao"
+    PRIORIDADE_CHOICES = [
+        (PRIORIDADE_ELETIVA, "Eletiva"),
+        (PRIORIDADE_URGENTE, "Urgente"),
+        (PRIORIDADE_ALTA_COMPLEXIDADE, "Alta complexidade"),
+        (PRIORIDADE_INTERNACAO, "Internação"),
+    ]
+    FILA_TRIAGEM = "triagem"
+    FILA_AUDITORIA_CLINICA = "auditoria_clinica"
+    FILA_AUDITORIA_MEDICA = "auditoria_medica"
+    FILA_PENDENCIA_DOCUMENTAL = "pendencia_documental"
+    FILA_DEVOLVIDA_PRESTADOR = "devolvida_prestador"
+    FILA_AUTORIZADA = "autorizada"
+    FILA_NEGADA = "negada"
+    FILA_CHOICES = [
+        (FILA_TRIAGEM, "Triagem"),
+        (FILA_AUDITORIA_CLINICA, "Auditoria clínica"),
+        (FILA_AUDITORIA_MEDICA, "Auditoria médica"),
+        (FILA_PENDENCIA_DOCUMENTAL, "Pendência documental"),
+        (FILA_DEVOLVIDA_PRESTADOR, "Devolvida ao prestador"),
+        (FILA_AUTORIZADA, "Autorizada"),
+        (FILA_NEGADA, "Negada"),
+    ]
 
     plano = models.ForeignKey(PlanoSaude, on_delete=models.CASCADE, related_name="guias")
     beneficiario = models.ForeignKey(BeneficiarioPlano, on_delete=models.CASCADE, related_name="guias")
+    prestador = models.ForeignKey(
+        PrestadorPlanoSaude, on_delete=models.SET_NULL, null=True, blank=True, related_name="guias"
+    )
     unidade = models.ForeignKey(
         UnidadeRede, on_delete=models.SET_NULL, null=True, blank=True, related_name="guias"
     )
@@ -3239,6 +3323,12 @@ class GuiaAutorizacao(models.Model):
     quantidade = models.PositiveIntegerField(default=1)
     valor_estimado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_SOLICITADA)
+    prioridade_clinica = models.CharField(max_length=30, choices=PRIORIDADE_CHOICES, default=PRIORIDADE_ELETIVA)
+    fila_status = models.CharField(max_length=30, choices=FILA_CHOICES, default=FILA_TRIAGEM)
+    auditor_responsavel = models.CharField(max_length=150, blank=True, default="")
+    prazo_sla_em = models.DateTimeField(null=True, blank=True)
+    observacao_auditoria = models.TextField(blank=True, default="")
+    documentos_pendentes = models.TextField(blank=True, default="")
     justificativa_negativa = models.TextField(blank=True, default="")
     numero_autorizacao = models.CharField(max_length=50, blank=True, default="")
     validade_autorizacao = models.DateField(null=True, blank=True)

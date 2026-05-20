@@ -51,6 +51,7 @@ from .models import (
     OrcamentoSaudeGov,
     PlanoAcaoGov,
     PlanoSaude,
+    PrestadorPlanoSaude,
     PedidoApoioCorporativo,
     PedidoCompraFarmacia,
     PedidoFarmacia,
@@ -59,12 +60,14 @@ from .models import (
     ProgramaCorporativo,
     ProgramaSaudeGov,
     ReceitaMedica,
+    Reembolso,
     Rede,
     RegistroSintoma,
     RegistroVacinacao,
     RiscoOcupacional,
     PlanoAcaoSST,
     CampanhaVacinacao,
+    Sinistro,
     TreinamentoNR,
     TriagemHospital,
     TriagemManchester,
@@ -766,6 +769,365 @@ def _seed_empresa(empresa):
     return criados
 
 
+def _seed_plano_saude(empresa):
+    hoje = timezone.localdate()
+    agora = timezone.now()
+    criados = []
+
+    plano, created = PlanoSaude.objects.get_or_create(
+        empresa=empresa,
+        nome="Operadora Demo Prime",
+        defaults={
+            "registro_ans": "123456",
+            "cnpj": "00.000.000/0001-99",
+            "modalidade": "seguradora",
+            "telefone": "(11) 4000-2200",
+            "email": "operacao.demo@plano.local",
+            "abrangencia": "nacional",
+        },
+    )
+    if created:
+        criados.append("plano_saude")
+
+    beneficiarios_demo = [
+        {
+            "cpf": "000.000.000-21",
+            "nome": "Alice Carteira",
+            "numero_carteirinha": "PS-0001",
+            "sexo": "F",
+            "telefone": "(11) 99999-2101",
+            "email": "alice@demo.local",
+            "situacao": BeneficiarioPlano.SITUACAO_ATIVO,
+            "acomodacao": "apartamento",
+        },
+        {
+            "cpf": "000.000.000-22",
+            "nome": "Bruno Elegibilidade",
+            "numero_carteirinha": "PS-0002",
+            "sexo": "M",
+            "telefone": "(11) 99999-2202",
+            "situacao": BeneficiarioPlano.SITUACAO_ATIVO,
+            "acomodacao": "enfermaria",
+        },
+        {
+            "cpf": "000.000.000-23",
+            "nome": "Clara Jornada",
+            "numero_carteirinha": "PS-0003",
+            "sexo": "F",
+            "email": "clara@demo.local",
+            "situacao": BeneficiarioPlano.SITUACAO_SUSPENSO,
+            "acomodacao": "uti",
+        },
+    ]
+    beneficiarios = []
+    for idx, item in enumerate(beneficiarios_demo, start=1):
+        beneficiario, created = BeneficiarioPlano.objects.get_or_create(
+            plano=plano,
+            cpf=item["cpf"],
+            defaults={
+                "nome": item["nome"],
+                "numero_carteirinha": item["numero_carteirinha"],
+                "data_nascimento": hoje - timedelta(days=365 * (28 + idx)),
+                "sexo": item["sexo"],
+                "telefone": item.get("telefone", ""),
+                "email": item.get("email", ""),
+                "data_inicio_vigencia": hoje - timedelta(days=120 + idx),
+                "situacao": item["situacao"],
+                "plano_tipo": "Coletivo empresarial",
+                "acomodacao": item["acomodacao"],
+            },
+        )
+        if created:
+            criados.append(f"beneficiario:{idx}")
+        beneficiarios.append(beneficiario)
+
+    prestadores_demo = [
+        {
+            "codigo_rede": "PR-HOSP-001",
+            "nome_fantasia": "Hospital Referencia Demo",
+            "tipo": PrestadorPlanoSaude.TIPO_HOSPITAL,
+            "cidade": "Sao Paulo",
+            "estado": "SP",
+            "sla_autorizacao_horas": 24,
+            "score_qualidade": 93,
+            "especialidades": "Clinica medica, urgencia, imagem",
+        },
+        {
+            "codigo_rede": "PR-CLIN-002",
+            "nome_fantasia": "Clinica Especializada Demo",
+            "tipo": PrestadorPlanoSaude.TIPO_CLINICA,
+            "cidade": "Barueri",
+            "estado": "SP",
+            "sla_autorizacao_horas": 48,
+            "score_qualidade": 88,
+            "especialidades": "Ortopedia, fisiatria, reabilitacao",
+        },
+        {
+            "codigo_rede": "PR-LAB-003",
+            "nome_fantasia": "Laboratorio Rede Demo",
+            "tipo": PrestadorPlanoSaude.TIPO_LABORATORIO,
+            "cidade": "Osasco",
+            "estado": "SP",
+            "sla_autorizacao_horas": 12,
+            "score_qualidade": 91,
+            "especialidades": "Diagnostico, exames de imagem e laboratorio",
+        },
+    ]
+    prestadores = []
+    for idx, item in enumerate(prestadores_demo, start=1):
+        prestador, created = PrestadorPlanoSaude.objects.get_or_create(
+            empresa=empresa,
+            codigo_rede=item["codigo_rede"],
+            defaults={
+                "nome_fantasia": item["nome_fantasia"],
+                "razao_social": item["nome_fantasia"] + " LTDA",
+                "cnpj": f"00.000.000/000{idx}-0{idx}",
+                "tipo": item["tipo"],
+                "registro_cnes": f"CNES-DEMO-{idx:03d}",
+                "cidade": item["cidade"],
+                "estado": item["estado"],
+                "telefone": "(11) 4000-3300",
+                "email": f"portal{idx}@prestador.demo",
+                "contato_responsavel": f"Gestor Operacional {idx}",
+                "sla_autorizacao_horas": item["sla_autorizacao_horas"],
+                "portal_ativo": True,
+                "score_qualidade": item["score_qualidade"],
+                "especialidades": item["especialidades"],
+                "status": PrestadorPlanoSaude.STATUS_CREDENCIADO,
+            },
+        )
+        if created:
+            criados.append(f"prestador:{idx}")
+        prestadores.append(prestador)
+
+    guia_autorizada, created = GuiaAutorizacao.objects.get_or_create(
+        plano=plano,
+        beneficiario=beneficiarios[0],
+        numero_guia="GUIA-DEMO-001",
+        defaults={
+            "prestador": prestadores[2],
+            "tipo": GuiaAutorizacao.TIPO_EXAME,
+            "codigo_procedimento": "41001010",
+            "descricao_procedimento": "Tomografia computadorizada de torax",
+            "cid": "J18.9",
+            "medico_solicitante": "Dra. Helena Demo",
+            "crm_medico": "CRM/SP 123456",
+            "quantidade": 1,
+            "valor_estimado": "820.00",
+            "status": GuiaAutorizacao.STATUS_AUTORIZADA,
+            "prioridade_clinica": GuiaAutorizacao.PRIORIDADE_URGENTE,
+            "fila_status": GuiaAutorizacao.FILA_AUTORIZADA,
+            "auditor_responsavel": "Central de Regulacao Demo",
+            "prazo_sla_em": agora - timedelta(hours=2),
+            "numero_autorizacao": "AUTH-DEMO-001",
+            "validade_autorizacao": hoje + timedelta(days=5),
+        },
+    )
+    if created:
+        criados.append("guia_autorizada")
+
+    guia_negada, created = GuiaAutorizacao.objects.get_or_create(
+        plano=plano,
+        beneficiario=beneficiarios[1],
+        numero_guia="GUIA-DEMO-002",
+        defaults={
+            "prestador": prestadores[1],
+            "tipo": GuiaAutorizacao.TIPO_PROCEDIMENTO,
+            "codigo_procedimento": "30101012",
+            "descricao_procedimento": "Artroscopia com auditoria pendente",
+            "cid": "M25.5",
+            "medico_solicitante": "Dr. Caio Demo",
+            "crm_medico": "CRM/SP 654321",
+            "quantidade": 1,
+            "valor_estimado": "2100.00",
+            "status": GuiaAutorizacao.STATUS_NEGADA,
+            "prioridade_clinica": GuiaAutorizacao.PRIORIDADE_ALTA_COMPLEXIDADE,
+            "fila_status": GuiaAutorizacao.FILA_NEGADA,
+            "auditor_responsavel": "Auditoria Clinica Demo",
+            "justificativa_negativa": "Cobertura condicionada a protocolo clinico complementar.",
+        },
+    )
+    if created:
+        criados.append("guia_negada")
+
+    guia_pendente, created = GuiaAutorizacao.objects.get_or_create(
+        plano=plano,
+        beneficiario=beneficiarios[0],
+        numero_guia="GUIA-DEMO-003",
+        defaults={
+            "prestador": prestadores[0],
+            "tipo": GuiaAutorizacao.TIPO_INTERNACAO,
+            "codigo_procedimento": "71001099",
+            "descricao_procedimento": "Internacao clinica com acompanhamento de custo",
+            "cid": "I10",
+            "medico_solicitante": "Dra. Helena Demo",
+            "crm_medico": "CRM/SP 123456",
+            "quantidade": 1,
+            "valor_estimado": "4800.00",
+            "status": GuiaAutorizacao.STATUS_SOLICITADA,
+            "prioridade_clinica": GuiaAutorizacao.PRIORIDADE_INTERNACAO,
+            "fila_status": GuiaAutorizacao.FILA_PENDENCIA_DOCUMENTAL,
+            "auditor_responsavel": "Enf. Juliana Demo",
+            "documentos_pendentes": "Laudo clinico e justificativa de internacao",
+            "prazo_sla_em": agora - timedelta(hours=6),
+        },
+    )
+    if created:
+        criados.append("guia_pendente")
+        GuiaAutorizacao.objects.filter(id=guia_pendente.id).update(
+            solicitada_em=agora - timedelta(days=4)
+        )
+
+    sinistro, created = Sinistro.objects.get_or_create(
+        empresa=empresa,
+        plano=plano,
+        beneficiario=beneficiarios[0],
+        numero_sinistro="SIN-DEMO-001",
+        defaults={
+            "guia": guia_autorizada,
+            "tipo": "exame",
+            "status": "pago",
+            "cid": "J18.9",
+            "descricao_procedimento": "Tomografia concluida com pagamento aprovado",
+            "prestador": "Hospital Referencia Demo",
+            "medico": "Dra. Helena Demo",
+            "data_atendimento": hoje - timedelta(days=3),
+            "valor_total": "820.00",
+            "valor_pago": "820.00",
+            "observacao": "Sinistro demo pago para fechar o ciclo assistencial.",
+            "data_fechamento": agora - timedelta(days=1),
+        },
+    )
+    if created:
+        criados.append("sinistro_pago")
+
+    sinistro_aberto, created = Sinistro.objects.get_or_create(
+        empresa=empresa,
+        plano=plano,
+        beneficiario=beneficiarios[1],
+        numero_sinistro="SIN-DEMO-002",
+        defaults={
+            "guia": guia_negada,
+            "tipo": "procedimento",
+            "status": "em_analise",
+            "cid": "M25.5",
+            "descricao_procedimento": "Procedimento em auditoria clinica e contratual",
+            "prestador": "Clinica Especializada Demo",
+            "medico": "Dr. Caio Demo",
+            "data_atendimento": hoje - timedelta(days=1),
+            "valor_total": "2100.00",
+            "observacao": "Sinistro em analise para demonstrar glosa e auditoria.",
+        },
+    )
+    if created:
+        criados.append("sinistro_em_analise")
+
+    reembolso_pago, created = Reembolso.objects.get_or_create(
+        empresa=empresa,
+        plano=plano,
+        beneficiario=beneficiarios[0],
+        numero_reembolso="REE-DEMO-001",
+        defaults={
+            "sinistro": sinistro,
+            "tipo_despesa": "consulta",
+            "status": "pago",
+            "valor_solicitado": "320.00",
+            "valor_aprovado": "320.00",
+            "valor_pago": "320.00",
+            "data_pagamento": hoje - timedelta(days=1),
+            "banco": "Banco Demo",
+            "agencia": "0001",
+            "conta": "12345-6",
+            "descricao": "Livre escolha concluida",
+        },
+    )
+    if created:
+        criados.append("reembolso_pago")
+
+    reembolso_analise, created = Reembolso.objects.get_or_create(
+        empresa=empresa,
+        plano=plano,
+        beneficiario=beneficiarios[1],
+        numero_reembolso="REE-DEMO-002",
+        defaults={
+            "sinistro": sinistro_aberto,
+            "tipo_despesa": "exame",
+            "status": "em_analise",
+            "valor_solicitado": "540.00",
+            "banco": "Banco Demo",
+            "agencia": "0001",
+            "conta": "12345-6",
+            "descricao": "Reembolso em auditoria documental",
+        },
+    )
+    if created:
+        criados.append("reembolso_em_analise")
+
+    sinais_demo = [
+        {
+            "device_id": "ps-epidemo-1",
+            "doenca": "Influenza",
+            "suspeito": True,
+            "cidade": "Sao Paulo",
+            "bairro": "Pinheiros",
+            "latitude": -23.567,
+            "longitude": -46.692,
+            "febre": True,
+            "tosse": True,
+            "cansaco": True,
+        },
+        {
+            "device_id": "ps-epidemo-2",
+            "doenca": "Dengue",
+            "suspeito": True,
+            "cidade": "Sao Paulo",
+            "bairro": "Butanta",
+            "latitude": -23.569,
+            "longitude": -46.721,
+            "febre": True,
+            "dor_corpo": True,
+            "cansaco": True,
+        },
+        {
+            "device_id": "ps-epidemo-3",
+            "doenca": "Virose",
+            "suspeito": False,
+            "cidade": "Osasco",
+            "bairro": "Centro",
+            "latitude": -23.532,
+            "longitude": -46.791,
+            "tosse": True,
+            "cansaco": True,
+        },
+    ]
+    for idx, item in enumerate(sinais_demo, start=1):
+        _, created = RegistroSintoma.objects.get_or_create(
+            empresa=empresa,
+            device_id=item["device_id"],
+            defaults={
+                "doenca": item["doenca"],
+                "suspeito": item["suspeito"],
+                "origem_dado": RegistroSintoma.ORIGEM_INSTITUCIONAL,
+                "fonte_referencia": "seed_operadora_demo",
+                "revisado": True,
+                "cidade": item["cidade"],
+                "bairro": item["bairro"],
+                "estado": "SP",
+                "pais": "Brasil",
+                "latitude": item["latitude"],
+                "longitude": item["longitude"],
+                "febre": item.get("febre", False),
+                "tosse": item.get("tosse", False),
+                "dor_corpo": item.get("dor_corpo", False),
+                "cansaco": item.get("cansaco", False),
+            },
+        )
+        if created:
+            criados.append(f"registro_epi:{idx}")
+
+    return criados
+
+
 def seed_enterprise_operational_demo(empresa):
     setor = get_setor(empresa)
     if setor == "farmacia":
@@ -774,6 +1136,8 @@ def seed_enterprise_operational_demo(empresa):
         criados = _seed_hospital(empresa)
     elif setor == "empresa":
         criados = _seed_empresa(empresa)
+    elif setor == "plano_saude":
+        criados = _seed_plano_saude(empresa)
     else:
         criados = []
     return {"setor": setor, "criados": criados, "total_criado": len(criados)}

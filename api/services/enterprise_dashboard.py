@@ -1,7 +1,7 @@
 from datetime import timedelta
 import unicodedata
 
-from django.db.models import F, Sum
+from django.db.models import F, Q, Sum
 from django.utils import timezone
 
 from api.access_control import get_setor
@@ -52,15 +52,18 @@ from api.models import (
     PlanoAcaoGov,
     PlanoAcaoSST,
     PlanoSaude,
+    PrestadorPlanoSaude,
     PrescricaoHospitalar,
     PrescricaoMedica,
     ProgramaCorporativo,
     ProgramaSaudeGov,
     ReceitaMedica,
+    Reembolso,
     Rede,
     RegistroSintoma,
     RegistroVacinacao,
     RiscoOcupacional,
+    Sinistro,
     TransferenciaEstoque,
     TreinamentoNR,
     TriagemHospital,
@@ -894,39 +897,127 @@ def _rede_cards(empresa):
 
 
 def _plano_saude_cards(empresa):
+    hoje = timezone.localdate()
+    janela_30 = hoje - timedelta(days=30)
     planos = PlanoSaude.objects.filter(empresa=empresa)
     planos_ativos = planos.filter(status=PlanoSaude.STATUS_ATIVO).count()
     beneficiarios = BeneficiarioPlano.objects.filter(plano__empresa=empresa)
     beneficiarios_ativos = beneficiarios.filter(situacao=BeneficiarioPlano.SITUACAO_ATIVO).count()
+    beneficiarios_suspensos = beneficiarios.filter(situacao=BeneficiarioPlano.SITUACAO_SUSPENSO).count()
+    contatos_digitais = beneficiarios.filter(
+        Q(email__gt="") | Q(telefone__gt="")
+    ).count()
     guias = GuiaAutorizacao.objects.filter(plano__empresa=empresa)
     guias_pendentes = guias.filter(status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE]).count()
     guias_negadas = guias.filter(status=GuiaAutorizacao.STATUS_NEGADA).count()
+    limite_sla = timezone.now() - timedelta(hours=72)
+    guias_sla = guias.filter(
+        status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
+        solicitada_em__lt=limite_sla,
+    ).count()
+    sinistros = Sinistro.objects.filter(empresa=empresa)
+    sinistros_abertos = sinistros.filter(status__in=["aberto", "em_analise"]).count()
+    reembolsos = Reembolso.objects.filter(empresa=empresa)
+    reembolsos_pendentes = reembolsos.filter(status__in=["solicitado", "em_analise", "aprovado"]).count()
+    prestadores = PrestadorPlanoSaude.objects.filter(empresa=empresa)
+    prestadores_ativos = prestadores.filter(status=PrestadorPlanoSaude.STATUS_CREDENCIADO).count()
+    prestadores_portal = prestadores.filter(portal_ativo=True).count()
+    registros_epi = RegistroSintoma.objects.filter(
+        empresa=empresa,
+        data_registro__date__gte=janela_30,
+    )
+    registros_epi_total = registros_epi.count()
+    suspeitos_epi = registros_epi.filter(suspeito=True).count()
 
     carteira_score = 0
     carteira_score += 35 if planos_ativos else 0
     carteira_score += 40 if beneficiarios_ativos else 0
     carteira_score += 25 if planos_ativos and beneficiarios_ativos else 0
+    carteira_score += 10 if contatos_digitais and beneficiarios_ativos else 0
+    carteira_score -= min(20, beneficiarios_suspensos * 4)
 
     autorizacao_score = 0
     autorizacao_score += 45 if guias.exists() else 0
+    autorizacao_score += 10 if prestadores_portal else 0
     autorizacao_score += 30 if guias_pendentes == 0 and guias.exists() else 0
     autorizacao_score += 25 if guias_negadas == 0 and guias.exists() else 0
     autorizacao_score -= min(30, guias_pendentes * 5)
+    autorizacao_score -= min(35, guias_sla * 10)
+
+    financeiro_score = 0
+    financeiro_score += 35 if sinistros.exists() else 0
+    financeiro_score += 25 if reembolsos.exists() else 0
+    financeiro_score += 20 if sinistros_abertos == 0 and sinistros.exists() else 0
+    financeiro_score += 20 if reembolsos_pendentes == 0 and reembolsos.exists() else 0
+    financeiro_score -= min(25, sinistros_abertos * 6)
+    financeiro_score -= min(25, reembolsos_pendentes * 5)
+
+    epidemiologia_score = 0
+    epidemiologia_score += 45 if registros_epi_total else 0
+    epidemiologia_score += 25 if suspeitos_epi else 0
+    epidemiologia_score += 15 if registros_epi_total and beneficiarios_ativos else 0
+    epidemiologia_score += 15 if suspeitos_epi == 0 and registros_epi_total else 0
 
     return [
         _card(
             "carteira_beneficiarios",
             "Carteira e beneficiarios",
             carteira_score,
-            {"planos_ativos": planos_ativos, "beneficiarios_ativos": beneficiarios_ativos},
+            {
+                "planos_ativos": planos_ativos,
+                "beneficiarios_ativos": beneficiarios_ativos,
+                "beneficiarios_suspensos": beneficiarios_suspensos,
+                "contatos_digitais": contatos_digitais,
+            },
             proximas_acoes=["Cadastrar planos e beneficiarios para habilitar gestao assistencial."] if carteira_score < 50 else [],
         ),
         _card(
             "guias_autorizacao",
             "Guias, autorizacoes e auditoria",
             autorizacao_score,
-            {"guias_pendentes": guias_pendentes, "guias_negadas": guias_negadas},
-            riscos=[_prioridade("Guias aguardando analise", "media", "Criar fila de autorizacao com SLA.", "Plano de Saude")] if guias_pendentes else [],
+            {
+                "guias_pendentes": guias_pendentes,
+                "guias_negadas": guias_negadas,
+                "guias_sla_vencido": guias_sla,
+                "prestadores_portal_ativo": prestadores_portal,
+            },
+            riscos=[
+                r for r in [
+                    _prioridade("Guias aguardando analise", "media", "Criar fila de autorizacao com SLA.", "Plano de Saude") if guias_pendentes else None,
+                    _prioridade("Fila de autorizacao fora do SLA", "alta", "Priorizar guias com mais de 72h de atraso.", "Plano de Saude") if guias_sla else None,
+                ] if r
+            ],
+        ),
+        _card(
+            "sinistralidade_reembolsos",
+            "Sinistralidade, glosas e livre escolha",
+            financeiro_score,
+            {
+                "sinistros_abertos": sinistros_abertos,
+                "reembolsos_pendentes": reembolsos_pendentes,
+                "sinistros_total": sinistros.count(),
+                "reembolsos_total": reembolsos.count(),
+                "prestadores_ativos": prestadores_ativos,
+            },
+            riscos=[
+                r for r in [
+                    _prioridade("Sinistros aguardando desfecho", "alta", "Fechar analise assistencial e financeira para reduzir valor em risco.", "Sinistralidade") if sinistros_abertos else None,
+                    _prioridade("Reembolsos aguardando pagamento", "media", "Acelerar esteira de livre escolha para reduzir atrito com o beneficiario.", "Reembolsos") if reembolsos_pendentes else None,
+                ] if r
+            ],
+        ),
+        _card(
+            "epidemiologia_carteira",
+            "Epidemiologia aplicada a carteira",
+            epidemiologia_score,
+            {
+                "registros_epi_30d": registros_epi_total,
+                "suspeitos_epi_30d": suspeitos_epi,
+                "beneficiarios_monitorados": beneficiarios_ativos,
+            },
+            proximas_acoes=[
+                "Cruzar territorio, CID e carteira para antecipar pressao assistencial e custo."
+            ] if not registros_epi_total else [],
         ),
         _card_ciclo_receita(empresa, contexto="operadora"),
     ]
@@ -973,7 +1064,23 @@ def _radar_concorrencial(setor):
     if setor == "empresa":
         return [base[2], base[1]]
     if setor == "plano_saude":
-        return [base[1], base[0]]
+        return [
+            {
+                "referencia": "HealthEdge / TriZetto / Oracle",
+                "forca_mercado": "core admin, sinistros, regras de beneficio, payment integrity e provider network",
+                "resposta_solus": "A operadora conecta carteira, guias, sinistralidade, glosas, reembolsos e valor em risco no mesmo cockpit.",
+            },
+            {
+                "referencia": "Softheon / Salesforce / ZeOmega",
+                "forca_mercado": "member journey, premium billing, prior authorization, member 360 e utilization management",
+                "resposta_solus": "A suite enterprise traz jornada do beneficiario, fila regulatoria com SLA, comunicacao e IA operacional orientada por risco.",
+            },
+            {
+                "referencia": "Benner / TOTVS / Tasy",
+                "forca_mercado": "ANS, TISS, portal do beneficiario, reembolso, auditoria e operacao brasileira",
+                "resposta_solus": "O ambiente de plano de saude equaliza compliance, operacao brasileira e ainda adiciona epidemiologia territorial nativa.",
+            },
+        ]
     return base
 
 
@@ -1153,6 +1260,31 @@ def _status_etapas_empresa(empresa):
     }
 
 
+def _status_etapas_plano_saude(empresa):
+    janela_30 = timezone.localdate() - timedelta(days=30)
+    planos = PlanoSaude.objects.filter(empresa=empresa).count()
+    beneficiarios = BeneficiarioPlano.objects.filter(plano__empresa=empresa).count()
+    guias = GuiaAutorizacao.objects.filter(plano__empresa=empresa).count()
+    sinistros = Sinistro.objects.filter(empresa=empresa).count()
+    reembolsos_pagos = Reembolso.objects.filter(empresa=empresa, status="pago").count()
+    prestadores = PrestadorPlanoSaude.objects.filter(empresa=empresa).count()
+    registros_epi = RegistroSintoma.objects.filter(
+        empresa=empresa,
+        data_registro__date__gte=janela_30,
+    ).count()
+    sinais_briefing = guias + sinistros + reembolsos_pagos + registros_epi
+    return {
+        "Cadastrar plano": _etapa_status(planos),
+        "Cadastrar beneficiario": _etapa_status(beneficiarios),
+        "Abrir guia e regular autorizacao": _etapa_status(guias),
+        "Auditar sinistro": _etapa_status(sinistros),
+        "Acompanhar prestadores": _etapa_status(prestadores),
+        "Pagar reembolso": _etapa_status(reembolsos_pagos),
+        "Monitorar epidemiologia da carteira": _etapa_status(registros_epi),
+        "Gerar briefing executivo": _etapa_status(sinais_briefing),
+    }
+
+
 def _suite_farmacia(empresa):
     itens = ItemFarmacia.objects.filter(empresa=empresa, ativo=True).count()
     medicamentos = MedicamentoFarmacia.objects.filter(empresa=empresa, ativo=True).count()
@@ -1289,6 +1421,78 @@ def _suite_empresa(empresa):
     }
 
 
+def _suite_plano_saude(empresa):
+    hoje = timezone.localdate()
+    janela_30 = hoje - timedelta(days=30)
+    planos = PlanoSaude.objects.filter(empresa=empresa)
+    beneficiarios = BeneficiarioPlano.objects.filter(plano__empresa=empresa)
+    guias = GuiaAutorizacao.objects.filter(plano__empresa=empresa)
+    sinistros = Sinistro.objects.filter(empresa=empresa)
+    reembolsos = Reembolso.objects.filter(empresa=empresa)
+    prestadores = PrestadorPlanoSaude.objects.filter(empresa=empresa)
+    registros_epi = RegistroSintoma.objects.filter(
+        empresa=empresa,
+        data_registro__date__gte=janela_30,
+    )
+
+    planos_ativos = planos.filter(status=PlanoSaude.STATUS_ATIVO).count()
+    beneficiarios_ativos = beneficiarios.filter(situacao=BeneficiarioPlano.SITUACAO_ATIVO).count()
+    contatos_digitais = beneficiarios.filter(Q(email__gt="") | Q(telefone__gt="")).count()
+    guias_decididas = guias.filter(
+        status__in=[GuiaAutorizacao.STATUS_AUTORIZADA, GuiaAutorizacao.STATUS_NEGADA]
+    ).count()
+    guias_fora_sla = guias.filter(
+        status__in=[GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.STATUS_EM_ANALISE],
+        prazo_sla_em__lt=timezone.now(),
+    ).count()
+    sinistros_pagos = sinistros.filter(status__in=["aprovado", "pago"]).count()
+    reembolsos_pagos = reembolsos.filter(status="pago").count()
+    registros_epi_total = registros_epi.count()
+    suspeitos_epi = registros_epi.filter(suspeito=True).count()
+    planos_com_ans = planos.exclude(registro_ans="").count()
+    guias_documentadas = guias.exclude(cid="").exclude(medico_solicitante="").count()
+    reembolsos_com_data = reembolsos.exclude(data_pagamento__isnull=True).count()
+    prestadores_portal = prestadores.filter(portal_ativo=True).count()
+    prestadores_ativos = prestadores.filter(status=PrestadorPlanoSaude.STATUS_CREDENCIADO).count()
+
+    return {
+        "headline": "Operadora com gestao, regulacao clinica, sinistralidade e radar epidemiologico no mesmo cockpit.",
+        "diferencial": "Equaliza o que os lideres de mercado entregam em core admin, autorizacao, member journey, payment integrity e compliance, sem abrir mao do diferencial SolusCRT: epidemiologia territorial aplicada a carteira.",
+        "processos": [
+            {
+                "nome": "Operacao de operadora ponta a ponta",
+                "descricao": "Organiza carteira, elegibilidade, fila regulatoria e auditoria assistencial em uma esteira continua.",
+                "etapas": [
+                    {"ordem": 1, "titulo": "Cadastrar plano", "descricao": "Define ANS, modalidade, abrangencia e base contratual da operadora.", "acao_label": "Planos", "acao": "tab:planos"},
+                    {"ordem": 2, "titulo": "Cadastrar beneficiario", "descricao": "Ativa carteirinha, vigencia, acomodacao e base de elegibilidade.", "acao_label": "Beneficiarios", "acao": "tab:beneficiarios"},
+                    {"ordem": 3, "titulo": "Abrir guia e regular autorizacao", "descricao": "Monta fila clinica com CID, medico, SLA e justificativa.", "acao_label": "Fila clinica", "acao": "tab:fila"},
+                    {"ordem": 4, "titulo": "Auditar sinistro", "descricao": "Fecha valor em risco, glosa, pagamento e aprendizado contratual.", "acao_label": "Sinistros", "acao": "tab:sinistros"},
+                ],
+            },
+            {
+                "nome": "Controle financeiro, prestadores e epidemiologia",
+                "descricao": "Conecta prestadores, livre escolha, compliance e surtos territoriais a decisoes da carteira.",
+                "etapas": [
+                    {"ordem": 1, "titulo": "Acompanhar prestadores", "descricao": "Monitora unidades, ocorrencias e uso assistencial por prestador.", "acao_label": "Rede credenciada", "acao": "tab:prestadores"},
+                    {"ordem": 2, "titulo": "Pagar reembolso", "descricao": "Controla analise, aprovacao, pagamento e historico da livre escolha.", "acao_label": "Reembolsos", "acao": "tab:reembolsos"},
+                    {"ordem": 3, "titulo": "Monitorar epidemiologia da carteira", "descricao": "Usa mapa e sinais territoriais para antecipar demanda e alto custo.", "acao_label": "Mapa epidemiologico", "acao": "link:/dashboard-plano-saude/"},
+                    {"ordem": 4, "titulo": "Gerar briefing executivo", "descricao": "Traduz operacao, risco e territorio em leitura para diretoria e regulacao.", "acao_label": "Visao geral", "acao": "tab:visao"},
+                ],
+            },
+        ],
+        "capacidades": [
+            _capacidade("elegibilidade", "Cadastro, elegibilidade e vigencia", "Beneficiarios, carteirinha, vigencia, suspensoes e base da carteira.", planos_ativos + beneficiarios_ativos, 12, ["Oracle Health Insurance", "Benner", "TOTVS Saude"], "Cadastrar planos, vigencias e base ativa de beneficiarios."),
+            _capacidade("jornada", "Jornada do beneficiario e retencao", "Contato digital, status da carteira e experiencias de servico para reduzir atrito.", contatos_digitais + reembolsos.count(), 10, ["Softheon", "Salesforce"], "Completar canais digitais e jornadas de atendimento da carteira."),
+            _capacidade("rede", "Rede credenciada e portal do prestador", "Cadastro da rede, qualidade, portal ativo e SLA por parceiro.", prestadores_ativos + prestadores_portal, 10, ["HealthEdge", "Oracle Health", "Tasy"], "Estruturar rede credenciada, score de qualidade e portal ativo por prestador."),
+            _capacidade("autorizacao", "Autorizacao, UM e auditoria clinica", "Fila de guias, SLA, priorizacao clinica e decisao documentada.", guias.count() + guias_decididas + prestadores_portal, 10, ["ZeOmega Jiva", "Medecision", "Salesforce"], "Ativar CID, medico solicitante, SLA e parecer regulatorio nas guias."),
+            _capacidade("sinistralidade", "Sinistros, glosas e payment integrity", "Valor em risco, glosas, recursos e pagamento assistencial com rastreabilidade.", sinistros.count() + sinistros_pagos, 10, ["HealthEdge", "TriZetto", "Oracle Health"], "Fechar fluxo entre guia, sinistro, glosa e pagamento."),
+            _capacidade("reembolso", "Reembolso e livre escolha", "Solicitacao, analise, aprovacao, pagamento e reconciliacao do beneficiario.", reembolsos.count() + reembolsos_pagos, 8, ["Benner", "Tasy", "TOTVS Saude"], "Estruturar esteira de livre escolha com data de pagamento e trilha de auditoria."),
+            _capacidade("compliance", "Compliance ANS, TISS e governanca", "Registro ANS, dados clinicos, justificativas e trilha regulatoria auditavel.", planos_com_ans + guias_documentadas + reembolsos_com_data + guias_fora_sla, 10, ["Benner", "TOTVS Saude", "Tasy"], "Padronizar ANS, CID, medico solicitante e motivos de negativa/pagamento."),
+            _capacidade("epidemiologia", "Epidemiologia e saude populacional", "Cruza sinais territoriais, suspeitos e carteira para antecipar pressao assistencial.", registros_epi_total + suspeitos_epi, 8, ["SolusCRT AI", "Oracle Health"], "Usar sinais territoriais para antecipar demanda, comunicacao e custo em alta."),
+        ],
+    }
+
+
 def build_enterprise_premium_suite_payload(empresa):
     setor = get_setor(empresa)
     if setor == "farmacia":
@@ -1300,6 +1504,9 @@ def build_enterprise_premium_suite_payload(empresa):
     elif setor == "empresa":
         suite = _suite_empresa(empresa)
         status_map = _status_etapas_empresa(empresa)
+    elif setor == "plano_saude":
+        suite = _suite_plano_saude(empresa)
+        status_map = _status_etapas_plano_saude(empresa)
     else:
         suite = {
             "headline": "Suite enterprise integrada por ambiente.",
