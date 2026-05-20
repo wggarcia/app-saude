@@ -28,7 +28,15 @@ from api.views import (
 
 from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba, ativar_trial
 from api.views_enterprise import api_enterprise_command_center, api_enterprise_premium_suite, api_enterprise_seed_operational_demo
-from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_onboarding_acao, api_dono_exportar, api_dono_excluir_cliente, api_dono_reset_trial, api_dono_forcar_logout, api_dono_auditoria, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page, governo_plataforma_page, rede_gestao_page, plano_saude_gestao_page
+from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, dashboard_plano_saude, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_onboarding_acao, api_dono_exportar, api_dono_excluir_cliente, api_dono_reset_trial, api_dono_forcar_logout, api_dono_auditoria, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page, governo_plataforma_page, rede_gestao_page, plano_saude_gestao_page
+from api.views_plano_saude import (
+    api_ps_dashboard, api_ps_planos, api_ps_plano_detalhe,
+    api_ps_beneficiarios, api_ps_beneficiario_detalhe,
+    api_ps_guias, api_ps_guia_detalhe,
+    api_ps_sinistros, api_ps_sinistro_detalhe,
+    api_ps_reembolsos, api_ps_reembolso_detalhe,
+    api_ps_kpis,
+)
 from api.views_corporativo import (
     dashboard_empresa_corporativo,
     api_empresa_corporativo_resumo,
@@ -480,10 +488,12 @@ urlpatterns = [
     path('dashboard-farmacia/', dashboard_farmacia),
     path('dashboard-hospital/', dashboard_hospital),
     path('dashboard-governo/', dashboard_governo),
+    path('dashboard-plano-saude/', dashboard_plano_saude),
     # Aliases com slug mais curto
     path('farmacia/', dashboard_farmacia),
     path('hospital/', dashboard_hospital),
     path('governo/', dashboard_governo),
+    path('plano-saude/', dashboard_plano_saude),
     # Gestão operacional
     path('farmacia/gestao/', farmacia_gestao_page),
     path('hospital/gestao/', hospital_gestao_page),
@@ -1198,4 +1208,18 @@ urlpatterns = [
     path('validar-assinatura/<str:token>/', pagina_validar_assinatura),
     path('api/public/sst/validar/<str:token>', api_public_validar_assinatura_sst),
     path('api/public/sst/assinar/<str:token>', api_public_assinar_sst),
+
+    # ── Plano de Saúde ────────────────────────────────────────────────────────
+    path('api/plano-saude/dashboard', api_ps_dashboard),
+    path('api/plano-saude/kpis', api_ps_kpis),
+    path('api/plano-saude/planos', api_ps_planos),
+    path('api/plano-saude/planos/<int:plano_id>', api_ps_plano_detalhe),
+    path('api/plano-saude/beneficiarios', api_ps_beneficiarios),
+    path('api/plano-saude/beneficiarios/<int:ben_id>', api_ps_beneficiario_detalhe),
+    path('api/plano-saude/guias', api_ps_guias),
+    path('api/plano-saude/guias/<int:guia_id>', api_ps_guia_detalhe),
+    path('api/plano-saude/sinistros', api_ps_sinistros),
+    path('api/plano-saude/sinistros/<int:sinistro_id>', api_ps_sinistro_detalhe),
+    path('api/plano-saude/reembolsos', api_ps_reembolsos),
+    path('api/plano-saude/reembolsos/<int:reembolso_id>', api_ps_reembolso_detalhe),
 ]

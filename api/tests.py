@@ -1306,6 +1306,26 @@ class AuthDeviceTests(TestCase):
 
         self.assertEqual(login.status_code, 200)
         self.assertContains(self.client.get("/rede/gestao/"), "Command Center Enterprise")
+
+        # plano_saude_gestao_page agora requer setor plano_saude — testar com empresa correta
+        operadora = Empresa.objects.create(
+            nome="Operadora Rede Visual",
+            email="operadora-rede-visual@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": operadora.email,
+                "senha": "123456",
+                "device_id": "operadora-rede-visual-device",
+            }),
+            content_type="application/json",
+        )
         self.assertContains(self.client.get("/plano-saude/gestao/"), "Command Center Enterprise")
 
     def test_plano_saude_command_center_calcula_glosas_e_receita(self):

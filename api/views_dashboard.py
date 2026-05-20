@@ -231,9 +231,15 @@ def rede_gestao_page(request):
 
 
 @ensure_csrf_cookie
-@requer_setor('farmacia', 'hospital')
+@requer_setor('plano_saude')
 def plano_saude_gestao_page(request):
     return render(request, "plano_saude_gestao.html")
+
+
+@ensure_csrf_cookie
+@requer_setor('plano_saude')
+def dashboard_plano_saude(request):
+    return render(request, "dashboard_plano_saude.html")
 
 
 def _dashboard_return_url(empresa):

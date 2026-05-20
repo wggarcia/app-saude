@@ -31,6 +31,8 @@ def destino_conta(empresa):
             return "/dashboard-farmacia/"
         if setor == "hospital":
             return "/dashboard-hospital/"
+        if setor == "plano_saude":
+            return "/dashboard-plano-saude/"
         return "/dashboard-empresa/"
     return "/pagamento/"
 

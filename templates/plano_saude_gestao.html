@@ -3,514 +3,899 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Plano de Saúde | SaúdeSaaS</title>
+<title>Gestão — Plano de Saúde</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#1a2332;min-height:100vh}
-.topbar{position:sticky;top:0;z-index:100;background:#0f2027;display:flex;align-items:center;gap:12px;padding:0 20px;height:56px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
-.topbar .brand{font-weight:700;font-size:1.05rem;color:#4fd1c5;letter-spacing:.5px}
-.topbar .page-title{color:#cbd5e0;font-size:.95rem;border-left:1px solid #2d3748;padding-left:12px}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
-.btn-back{background:#2d3748;color:#cbd5e0;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
-.btn-back:hover{background:#4a5568}
-.container{max-width:1400px;margin:0 auto;padding:24px 20px}
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.page-header h1{font-size:1.4rem;font-weight:700}
-.page-header h1 span{color:#0bc5ea}
-.btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-size:.88rem;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
-.btn-primary{background:#0bc5ea;color:#fff}.btn-primary:hover{background:#00b5d8}
-.btn-success{background:#38a169;color:#fff}.btn-success:hover{background:#2f855a}
-.btn-warning{background:#d69e2e;color:#fff}.btn-warning:hover{background:#b7791f}
-.btn-danger{background:#e53e3e;color:#fff}.btn-danger:hover{background:#c53030}
-.btn-sm{padding:5px 12px;font-size:.8rem}
-.btn-ghost{background:transparent;border:1px solid #cbd5e0;color:#4a5568}.btn-ghost:hover{background:#edf2f7}
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}
-.kpi{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.06);position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ac,#0bc5ea)}
-.kpi-label{font-size:.75rem;color:#718096;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.kpi-val{font-size:1.8rem;font-weight:800;color:#1a2332;margin:4px 0 2px}
-.kpi-sub{font-size:.75rem;color:#718096}
-.layout{display:grid;grid-template-columns:280px 1fr;gap:20px}
-@media(max-width:900px){.layout{grid-template-columns:1fr}}
-.sidebar-planos{display:flex;flex-direction:column;gap:12px}
-.plano-item{background:#fff;border-radius:12px;padding:16px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06);border-left:4px solid transparent;transition:all .15s}
-.plano-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.1)}
-.plano-item.active{border-left-color:#0bc5ea;background:#ebf8ff}
-.plano-item-name{font-weight:700;font-size:.95rem}
-.plano-item-ans{font-size:.75rem;color:#718096;margin-top:2px}
-.plano-item-stats{display:flex;gap:10px;margin-top:8px}
-.plano-item-stat{font-size:.75rem;color:#4a5568;background:#f0f4f8;padding:3px 8px;border-radius:6px;font-weight:600}
-.add-plano-btn{background:#f0f4f8;border:2px dashed #cbd5e0;border-radius:12px;padding:20px;text-align:center;cursor:pointer;color:#718096;font-size:.875rem;transition:all .15s}
-.add-plano-btn:hover{border-color:#0bc5ea;color:#0bc5ea}
-.content-area{min-height:400px}
-.tabs{display:flex;gap:4px;background:#fff;border-radius:10px;padding:6px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:20px;flex-wrap:wrap}
-.tab{padding:8px 18px;border-radius:8px;cursor:pointer;font-size:.88rem;font-weight:600;color:#718096;transition:all .15s;border:none;background:transparent}
-.tab.active{background:#0bc5ea;color:#fff}
-.tab-pane{display:none}.tab-pane.active{display:block}
-.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden}
-.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e2e8f0}
-.card-header h3{font-size:1rem;font-weight:700}
-.card-body{padding:20px}
-table{width:100%;border-collapse:collapse;font-size:.875rem}
-th{text-align:left;padding:10px 12px;background:#f7fafc;font-weight:700;color:#4a5568;font-size:.8rem;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e2e8f0}
-td{padding:10px 12px;border-bottom:1px solid #f0f4f8;color:#2d3748}
-tr:hover td{background:#f7fafc}
-.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:.75rem;font-weight:700}
-.badge-green{background:#c6f6d5;color:#276749}.badge-yellow{background:#fefcbf;color:#744210}.badge-red{background:#fed7d7;color:#822727}.badge-blue{background:#bee3f8;color:#2a69ac}.badge-gray{background:#edf2f7;color:#4a5568}.badge-purple{background:#e9d8fd;color:#553c9a}.badge-orange{background:#feebc8;color:#744210}
-.pipeline{display:flex;gap:0;margin-bottom:20px;overflow-x:auto}
-.ps{flex:1;min-width:100px;text-align:center;padding:12px 8px;font-size:.8rem;font-weight:700;background:#edf2f7;color:#718096;border-right:2px solid #fff;position:relative;cursor:pointer;transition:all .15s}
-.ps:first-child{border-radius:8px 0 0 8px}.ps:last-child{border-radius:0 8px 8px 0;border-right:none}
-.ps.active{background:#0bc5ea;color:#fff}
-.ps .ps-count{display:block;font-size:1.4rem;font-weight:800;margin-bottom:2px}
-.empty-state{text-align:center;padding:48px;color:#a0aec0}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal-overlay.hidden{display:none}
-.modal{background:#fff;border-radius:16px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.modal-head{padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1}
-.modal-head h3{font-size:1.05rem;font-weight:700}
-.modal-close{background:none;border:none;cursor:pointer;font-size:1.3rem;color:#718096}
-.modal-body{padding:24px}
-.modal-footer{padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:#fff}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.form-group{display:flex;flex-direction:column;gap:6px}
-.form-group label{font-size:.8rem;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.3px}
-.form-group input,.form-group select,.form-group textarea{padding:9px 13px;border:1px solid #e2e8f0;border-radius:8px;font-size:.875rem;outline:none;width:100%}
-.form-group input:focus,.form-group select:focus{border-color:#0bc5ea}
-.form-group textarea{resize:vertical;min-height:80px}
-.search-bar{display:flex;gap:10px;margin-bottom:16px}
-.search-bar input{flex:1;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:.875rem;outline:none}
-.search-bar input:focus{border-color:#0bc5ea}
-.search-bar select{padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:.875rem}
-.toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
-.toast{background:#1a2332;color:#fff;padding:12px 18px;border-radius:10px;font-size:.875rem;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.3);transform:translateX(120%);transition:transform .3s;max-width:320px;display:flex;align-items:center;gap:8px}
-.toast.show{transform:translateX(0)}
-.toast.ok::before{content:'✓';color:#38a169;font-weight:800}
-.toast.err::before{content:'✕';color:#e53e3e;font-weight:800}
-.info-banner{background:#ebf8ff;border:1px solid #bee3f8;border-radius:10px;padding:16px;color:#2a69ac;font-size:.875rem;margin-bottom:16px}
-.guia-workflow{display:flex;gap:0;margin-bottom:20px}
-.wf-step{flex:1;text-align:center;padding:10px;font-size:.75rem;font-weight:700;background:#f7fafc;color:#a0aec0;border-right:1px solid #e2e8f0;transition:all .15s}
-.wf-step:first-child{border-radius:8px 0 0 8px}.wf-step:last-child{border-radius:0 8px 8px 0;border-right:none}
-.wf-step .wf-n{font-size:1.4rem;font-weight:800;display:block;margin-bottom:2px}
-.wf-step.s{color:#0bc5ea;background:#ebf8ff}
-.wf-step.a{color:#38a169;background:#c6f6d5}
-.wf-step.n{color:#e53e3e;background:#fed7d7}
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#ff6b9d;--accent2:#ff9ec4;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#fff0f6;--muted:#9a7289;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,107,157,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(255,107,157,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.ok::before{background:var(--ok)}
+.kpi.info::before{background:#c084fc}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}
+.kpi.ok .kpi-val{color:var(--ok)}
+.kpi.info .kpi-val{color:#c084fc}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.tab-btn{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-radius:8px;margin:2px 8px;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif;text-align:left;width:calc(100% - 16px);white-space:nowrap}
+.tab-btn:hover{background:rgba(255,107,157,.1);color:var(--accent)}
+.tab-btn.active{background:rgba(255,107,157,.12);color:var(--accent)}
+.tab-btn span{font-size:16px}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(255,107,157,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(255,107,157,.12);color:var(--accent)}
+.badge-purple{background:rgba(192,132,252,.12);color:#c084fc}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#1a0010}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:420px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px;color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:72px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.search-input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;width:220px}
+.search-input::placeholder{color:var(--muted)}
+.filter-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:Manrope,sans-serif}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.summary-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.summary-box-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.summary-box-val{font-size:28px;font-weight:800;color:var(--accent)}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}.summary-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.form-row{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}.summary-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <span class="brand">SaúdeSaaS</span>
-  <span class="page-title">Plano de Saúde</span>
-  <div class="topbar-right">
-    <a href="/hospital/gestao/" class="btn-back" style="background:#1e3a5f;color:#90cdf4">🏥 Hospital</a>
-    <a href="/rede/gestao/" class="btn-back" style="background:#1a3a2a;color:#9ae6b4">🌐 Rede</a>
-    <a href="/logout/" class="btn-back" style="background:rgba(140,29,64,.82);color:#eef8ff">Sair</a>
-  </div>
-</div>
+<aside class="sidebar">
+  <div class="logo">Plano de Saude</div>
+  <div class="nav-section">Navegacao</div>
+  <a class="nav-link" href="/dashboard-plano-saude/"><span>&#128202;</span> Inteligencia Epi</a>
+  <a class="nav-link active" href="/plano-saude/gestao/"><span>&#127973;</span> Gestao Operacional</a>
+  <a class="nav-link" href="/logout/"><span>&#128682;</span> Sair</a>
+  <div class="nav-section" style="margin-top:8px">Modulos</div>
+  <button class="tab-btn active" onclick="setTab('visao')"><span>&#127968;</span> Visao Geral</button>
+  <button class="tab-btn" onclick="setTab('planos')"><span>&#128203;</span> Planos</button>
+  <button class="tab-btn" onclick="setTab('beneficiarios')"><span>&#128101;</span> Beneficiarios</button>
+  <button class="tab-btn" onclick="setTab('guias')"><span>&#128221;</span> Guias</button>
+  <button class="tab-btn" onclick="setTab('sinistros')"><span>&#9877;&#65039;</span> Sinistros</button>
+  <button class="tab-btn" onclick="setTab('reembolsos')"><span>&#128176;</span> Reembolsos</button>
+</aside>
 
-<div class="container">
+<main class="main">
   <div class="page-header">
-    <h1>Gestão de <span>Planos de Saúde</span></h1>
-    <button class="btn btn-primary" onclick="abrirModalPlano()">+ Novo Plano</button>
+    <div>
+      <div class="page-title">Gestao de Plano de Saude</div>
+      <div class="page-sub">Planos, beneficiarios, guias, sinistros e reembolsos</div>
+    </div>
+    <a href="/dashboard-plano-saude/" class="btn btn-ghost">Ver Inteligencia Epidemiologica</a>
   </div>
 
-  {% include "partials/enterprise_command_center.html" %}
-
-  <!-- KPIs globais -->
   <div class="kpi-row" id="kpiRow">
-    <div class="kpi" style="--ac:#0bc5ea"><div class="kpi-label">Total Beneficiários</div><div class="kpi-val" id="kpiTotalBens">—</div><div class="kpi-sub">em todos os planos</div></div>
-    <div class="kpi" style="--ac:#38a169"><div class="kpi-label">Beneficiários Ativos</div><div class="kpi-val" id="kpiBensAtivos">—</div><div class="kpi-sub">situação ativa</div></div>
-    <div class="kpi" style="--ac:#d69e2e"><div class="kpi-label">Guias Pendentes</div><div class="kpi-val" id="kpiGuiasPend">—</div><div class="kpi-sub">aguardando análise</div></div>
-    <div class="kpi" style="--ac:#e53e3e"><div class="kpi-label">Guias Negadas</div><div class="kpi-val" id="kpiGuiasNeg">—</div><div class="kpi-sub">no período</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiTotalBenef">&#8212;</div><div class="kpi-lbl">Beneficiarios Ativos</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiGuiasPend">&#8212;</div><div class="kpi-lbl">Guias Pendentes</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiSinAbertos">&#8212;</div><div class="kpi-lbl">Sinistros Abertos</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiTaxaAprov">&#8212;</div><div class="kpi-lbl">Taxa Aprovacao Guias</div></div>
   </div>
 
-  <div class="layout">
-    <!-- Sidebar: Lista de planos -->
-    <div class="sidebar-planos">
-      <div id="listPlanos"><div style="color:#a0aec0;font-size:.85rem;padding:16px;text-align:center">Carregando...</div></div>
-      <div class="add-plano-btn" onclick="abrirModalPlano()">+ Adicionar Plano</div>
-    </div>
-
-    <!-- Content Area -->
-    <div class="content-area">
-      <div id="selectPlanoMsg" class="info-banner">Selecione um plano de saúde na lista à esquerda para gerenciar beneficiários e guias de autorização.</div>
-
-      <div id="planoContent" style="display:none">
-        <!-- Plano header -->
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-header">
-            <div>
-              <h3 id="planoNome">—</h3>
-              <div style="font-size:.8rem;color:#718096;margin-top:2px" id="planoMeta">—</div>
-            </div>
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-ghost btn-sm" onclick="abrirModalEditarPlano()">Editar</button>
-              <button class="btn btn-danger btn-sm" onclick="desativarPlano()">Desativar</button>
-            </div>
-          </div>
-          <div class="card-body">
-            <!-- Mini KPIs do plano selecionado -->
-            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
-              <div style="text-align:center"><div style="font-size:.7rem;color:#718096;font-weight:600;text-transform:uppercase">Beneficiários</div><div style="font-size:1.4rem;font-weight:800" id="pkBens">—</div></div>
-              <div style="text-align:center"><div style="font-size:.7rem;color:#718096;font-weight:600;text-transform:uppercase">Ativos</div><div style="font-size:1.4rem;font-weight:800;color:#38a169" id="pkAtivos">—</div></div>
-              <div style="text-align:center"><div style="font-size:.7rem;color:#718096;font-weight:600;text-transform:uppercase">Guias Pend.</div><div style="font-size:1.4rem;font-weight:800;color:#d69e2e" id="pkPend">—</div></div>
-              <div style="text-align:center"><div style="font-size:.7rem;color:#718096;font-weight:600;text-transform:uppercase">Autorizadas</div><div style="font-size:1.4rem;font-weight:800;color:#0bc5ea" id="pkAuth">—</div></div>
-              <div style="text-align:center"><div style="font-size:.7rem;color:#718096;font-weight:600;text-transform:uppercase">Negadas</div><div style="font-size:1.4rem;font-weight:800;color:#e53e3e" id="pkNeg">—</div></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sub-tabs -->
-        <div class="tabs">
-          <button class="tab active" onclick="abrirSubAba('sub-beneficiarios')">Beneficiários</button>
-          <button class="tab" onclick="abrirSubAba('sub-guias')">Guias de Autorização</button>
-        </div>
-
-        <!-- Sub-tab: Beneficiários -->
-        <div class="tab-pane active" id="sub-beneficiarios">
-          <div class="search-bar">
-            <input type="text" id="searchBen" placeholder="Buscar por nome, CPF ou carteirinha..." oninput="carregarBeneficiarios()">
-            <select id="filterSituacao" onchange="carregarBeneficiarios()">
-              <option value="">Todas situações</option>
-              <option value="ativo">Ativo</option>
-              <option value="suspenso">Suspenso</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-            <button class="btn btn-primary btn-sm" onclick="abrirModalBeneficiario()">+ Novo</button>
-          </div>
-          <div class="card">
-            <table>
-              <thead><tr><th>Nome</th><th>CPF</th><th>Carteirinha</th><th>Plano</th><th>Acomodação</th><th>Situação</th><th>Vigência</th><th></th></tr></thead>
-              <tbody id="tbBens"><tr><td colspan="8" style="text-align:center;padding:24px;color:#a0aec0">Carregando...</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Sub-tab: Guias -->
-        <div class="tab-pane" id="sub-guias">
-          <!-- Pipeline de guias -->
-          <div class="guia-workflow" id="guiaWorkflow">
-            <div class="wf-step"><span class="wf-n" id="wfSolic">—</span>Solicitadas</div>
-            <div class="wf-step s"><span class="wf-n" id="wfAnal">—</span>Em Análise</div>
-            <div class="wf-step a"><span class="wf-n" id="wfAuth">—</span>Autorizadas</div>
-            <div class="wf-step n"><span class="wf-n" id="wfNeg">—</span>Negadas</div>
-          </div>
-          <div class="search-bar">
-            <select id="filterGuiaStatus" onchange="carregarGuias()">
-              <option value="">Todos os status</option>
-              <option value="solicitada">Solicitada</option>
-              <option value="em_analise">Em Análise</option>
-              <option value="autorizada">Autorizada</option>
-              <option value="negada">Negada</option>
-              <option value="cancelada">Cancelada</option>
-            </select>
-            <button class="btn btn-primary btn-sm" onclick="abrirModalGuia()">+ Nova Guia</button>
-          </div>
-          <div class="card">
-            <table>
-              <thead><tr><th>Nº Guia</th><th>Tipo</th><th>Beneficiário</th><th>Procedimento</th><th>Médico/CRM</th><th>Valor Est.</th><th>Status</th><th></th></tr></thead>
-              <tbody id="tbGuias"><tr><td colspan="8" style="text-align:center;padding:24px;color:#a0aec0">Carregando...</td></tr></tbody>
-            </table>
-          </div>
-        </div>
+  <!-- VISAO GERAL -->
+  <div class="tab-panel active" id="tab-visao">
+    <div class="summary-grid">
+      <div class="summary-box">
+        <div class="summary-box-title">Total de Planos</div>
+        <div class="summary-box-val" id="sgTotalPlanos">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">Reembolsos Pendentes</div>
+        <div class="summary-box-val" id="sgReembolsosPend" style="color:var(--warn)">&#8212;</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-box-title">Custo Medio por Sinistro</div>
+        <div class="summary-box-val" id="sgCustoMedio" style="color:var(--accent2)">&#8212;</div>
       </div>
     </div>
+    <div style="margin-top:24px">
+      <a href="/dashboard-plano-saude/" class="btn btn-primary" style="font-size:14px;padding:12px 24px">
+        Ver mapa epidemiologico completo
+      </a>
+      <p style="margin-top:12px;font-size:13px;color:var(--muted)">
+        Acompanhe focos epidemiologicos, surtos e alertas territoriais que impactam a carteira de beneficiarios da operadora.
+      </p>
+    </div>
   </div>
-</div>
 
-<!-- Modal: Novo/Editar Plano -->
-<div class="modal-overlay hidden" id="modalPlano">
+  <!-- PLANOS -->
+  <div class="tab-panel" id="tab-planos" style="margin-top:4px">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Planos da Operadora</span>
+        <button class="btn btn-primary" onclick="abrirModalPlano()">+ Novo Plano</button>
+      </div>
+      <table>
+        <thead><tr><th>Nome</th><th>Registro ANS</th><th>Modalidade</th><th>Abrangencia</th><th>CNPJ</th><th>Acoes</th></tr></thead>
+        <tbody id="tbodyPlanos"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- BENEFICIARIOS -->
+  <div class="tab-panel" id="tab-beneficiarios" style="margin-top:4px">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Beneficiarios</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="buscaBenef" class="search-input" placeholder="Buscar por nome ou CPF..." oninput="carregarBeneficiarios()">
+          <select id="filtroPlanoBenef" class="filter-sel" onchange="carregarBeneficiarios()">
+            <option value="">Todos os planos</option>
+          </select>
+          <select id="filtroSituacaoBenef" class="filter-sel" onchange="carregarBeneficiarios()">
+            <option value="">Todas as situacoes</option>
+            <option value="ativo">Ativo</option>
+            <option value="suspenso">Suspenso</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <button class="btn btn-primary" onclick="abrirModalBenef()">+ Cadastrar</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Nome</th><th>CPF</th><th>Carteirinha</th><th>Plano</th><th>Nascimento</th><th>Acomodacao</th><th>Situacao</th><th>Acoes</th></tr></thead>
+        <tbody id="tbodyBenef"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- GUIAS -->
+  <div class="tab-panel" id="tab-guias" style="margin-top:4px">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Guias de Autorizacao</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="filtroStatusGuia" class="filter-sel" onchange="carregarGuias()">
+            <option value="">Todos os status</option>
+            <option value="solicitada">Solicitada</option>
+            <option value="em_analise">Em Analise</option>
+            <option value="autorizada">Autorizada</option>
+            <option value="negada">Negada</option>
+          </select>
+          <select id="filtroPlanoGuia" class="filter-sel" onchange="carregarGuias()">
+            <option value="">Todos os planos</option>
+          </select>
+          <button class="btn btn-primary" onclick="abrirModalGuia()">+ Nova Guia</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>N Guia</th><th>Beneficiario</th><th>Plano</th><th>Tipo</th><th>Procedimento</th><th>CID</th><th>Valor Est.</th><th>Status</th><th>Acoes</th></tr></thead>
+        <tbody id="tbodyGuias"><tr><td colspan="9" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SINISTROS -->
+  <div class="tab-panel" id="tab-sinistros" style="margin-top:4px">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Sinistros</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="buscaSinistro" class="search-input" placeholder="Buscar..." style="width:180px" oninput="carregarSinistros()">
+          <select id="filtroTipoSinistro" class="filter-sel" onchange="carregarSinistros()">
+            <option value="">Todos os tipos</option>
+            <option value="consulta">Consulta</option>
+            <option value="exame">Exame</option>
+            <option value="internacao">Internacao</option>
+            <option value="cirurgia">Cirurgia</option>
+            <option value="urgencia">Urgencia/Emergencia</option>
+            <option value="outro">Outro</option>
+          </select>
+          <select id="filtroStatusSinistro" class="filter-sel" onchange="carregarSinistros()">
+            <option value="">Todos os status</option>
+            <option value="aberto">Aberto</option>
+            <option value="em_analise">Em Analise</option>
+            <option value="pago">Pago</option>
+            <option value="negado">Negado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <button class="btn btn-primary" onclick="abrirModalSinistro()">+ Novo Sinistro</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Beneficiario</th><th>Tipo</th><th>CID</th><th>Prestador</th><th>Data Atend.</th><th>Valor</th><th>Status</th><th>Acoes</th></tr></thead>
+        <tbody id="tbodySinistros"><tr><td colspan="9" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- REEMBOLSOS -->
+  <div class="tab-panel" id="tab-reembolsos" style="margin-top:4px">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Reembolsos</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="filtroStatusReembolso" class="filter-sel" onchange="carregarReembolsos()">
+            <option value="">Todos os status</option>
+            <option value="solicitado">Solicitado</option>
+            <option value="em_analise">Em Analise</option>
+            <option value="aprovado">Aprovado</option>
+            <option value="pago">Pago</option>
+            <option value="negado">Negado</option>
+          </select>
+          <select id="filtroPlanoReembolso" class="filter-sel" onchange="carregarReembolsos()">
+            <option value="">Todos os planos</option>
+          </select>
+          <button class="btn btn-primary" onclick="abrirModalReembolso()">+ Novo Reembolso</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Beneficiario</th><th>Tipo Despesa</th><th>Valor Solic.</th><th>Banco</th><th>Status</th><th>Acoes</th></tr></thead>
+        <tbody id="tbodyReembolsos"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL: Novo Plano -->
+<div class="modal-bg" id="modalPlano">
   <div class="modal">
-    <div class="modal-head"><h3 id="modalPlanoTitle">Novo Plano de Saúde</h3><button class="modal-close" onclick="fecharModal('modalPlano')">×</button></div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group" style="grid-column:1/-1"><label>Nome do Plano</label><input type="text" id="plNome" placeholder="Ex: Unimed Nacional"></div>
-        <div class="form-group"><label>Registro ANS</label><input type="text" id="plANS" placeholder="000000"></div>
-        <div class="form-group"><label>CNPJ</label><input type="text" id="plCNPJ" placeholder="00.000.000/0001-00"></div>
-        <div class="form-group"><label>Modalidade</label><select id="plModalidade"><option value="">Selecione</option><option value="cooperativa">Cooperativa Médica</option><option value="autogestao">Autogestão</option><option value="seguradora">Seguradora</option><option value="filantropico">Filantrópico</option><option value="outro">Outro</option></select></div>
-        <div class="form-group"><label>Abrangência</label><select id="plAbrangencia"><option value="nacional">Nacional</option><option value="regional">Regional</option><option value="municipal">Municipal</option><option value="estadual">Estadual</option></select></div>
-        <div class="form-group"><label>Telefone</label><input type="text" id="plTelefone"></div>
-        <div class="form-group"><label>E-mail</label><input type="email" id="plEmail"></div>
-        <div class="form-group"><label>Site</label><input type="url" id="plSite" placeholder="https://"></div>
+    <h3>Cadastrar Plano</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome do Plano *</label><input id="plNome" placeholder="Ex: Plano Empresarial Plus"></div>
+      <div class="form-group"><label>Registro ANS</label><input id="plAns" placeholder="000000"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CNPJ</label><input id="plCnpj" placeholder="00.000.000/0001-00"></div>
+      <div class="form-group"><label>Modalidade</label>
+        <select id="plModalidade">
+          <option value="cooperativa">Cooperativa Medica</option>
+          <option value="autogestao">Autogestao</option>
+          <option value="seguradora">Seguradora</option>
+          <option value="filantropico">Filantropico</option>
+          <option value="outro">Outro</option>
+        </select>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="form-group"><label>Abrangencia</label>
+      <select id="plAbrangencia">
+        <option value="nacional">Nacional</option>
+        <option value="estadual">Estadual</option>
+        <option value="municipal">Municipal</option>
+        <option value="grupo_municipios">Grupo de Municipios</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Descricao / Observacoes</label><textarea id="plDesc" rows="2" placeholder="Informacoes adicionais..."></textarea></div>
+    <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalPlano')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarPlano()">Salvar</button>
+      <button class="btn btn-primary" onclick="salvarPlano()">Salvar Plano</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Novo/Editar Beneficiário -->
-<div class="modal-overlay hidden" id="modalBeneficiario">
-  <div class="modal">
-    <div class="modal-head"><h3 id="modalBenTitle">Novo Beneficiário</h3><button class="modal-close" onclick="fecharModal('modalBeneficiario')">×</button></div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group" style="grid-column:1/-1"><label>Nome Completo</label><input type="text" id="benNome"></div>
-        <div class="form-group"><label>CPF</label><input type="text" id="benCPF" placeholder="000.000.000-00"></div>
-        <div class="form-group"><label>Nº Carteirinha</label><input type="text" id="benCarteirinha"></div>
-        <div class="form-group"><label>Data de Nascimento</label><input type="date" id="benNasc"></div>
-        <div class="form-group"><label>Sexo</label><select id="benSexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option></select></div>
-        <div class="form-group"><label>Telefone</label><input type="text" id="benTel"></div>
-        <div class="form-group"><label>E-mail</label><input type="email" id="benEmail"></div>
-        <div class="form-group"><label>Plano/Tipo</label><input type="text" id="benTipo" placeholder="Ex: Ouro, Enfermaria"></div>
-        <div class="form-group"><label>Acomodação</label><select id="benAcomoda"><option value="enfermaria">Enfermaria</option><option value="apartamento">Apartamento</option><option value="uti">UTI</option></select></div>
-        <div class="form-group"><label>Situação</label><select id="benSituacao"><option value="ativo">Ativo</option><option value="suspenso">Suspenso</option><option value="cancelado">Cancelado</option></select></div>
-        <div class="form-group"><label>Início Vigência</label><input type="date" id="benInicioVig"></div>
-        <div class="form-group"><label>Fim Vigência</label><input type="date" id="benFimVig"></div>
+<!-- MODAL: Novo Beneficiario -->
+<div class="modal-bg" id="modalBenef">
+  <div class="modal" style="max-width:620px">
+    <h3>Cadastrar Beneficiario</h3>
+    <div class="form-group"><label>Plano *</label>
+      <select id="bfPlano"><option value="">selecione o plano</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Nome Completo *</label><input id="bfNome" placeholder="Nome do beneficiario"></div>
+      <div class="form-group"><label>CPF *</label><input id="bfCpf" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Numero da Carteirinha</label><input id="bfCarteirinha" placeholder="0000000000000000"></div>
+      <div class="form-group"><label>Data de Nascimento</label><input type="date" id="bfNasc"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Sexo</label>
+        <select id="bfSexo">
+          <option value="">--</option>
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+          <option value="O">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Acomodacao</label>
+        <select id="bfAcomodacao">
+          <option value="enfermaria">Enfermaria</option>
+          <option value="apartamento">Apartamento</option>
+          <option value="uti">UTI Individual</option>
+        </select>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="fecharModal('modalBeneficiario')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarBeneficiario()">Salvar</button>
+    <div class="form-group"><label>Data de Inicio de Vigencia *</label><input type="date" id="bfInicioVigencia"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalBenef')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarBenef()">Cadastrar Beneficiario</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Nova Guia -->
-<div class="modal-overlay hidden" id="modalGuia">
-  <div class="modal">
-    <div class="modal-head"><h3 id="modalGuiaTitle">Nova Guia de Autorização</h3><button class="modal-close" onclick="fecharModal('modalGuia')">×</button></div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group" style="grid-column:1/-1"><label>Beneficiário</label><select id="guiaBen"><option value="">Selecione...</option></select></div>
-        <div class="form-group"><label>Tipo</label><select id="guiaTipo"><option value="consulta">Consulta</option><option value="exame">Exame</option><option value="internacao">Internação</option><option value="medicamento">Medicamento Alto Custo</option><option value="procedimento">Procedimento Cirúrgico</option></select></div>
-        <div class="form-group"><label>Nº Guia</label><input type="text" id="guiaNumero" placeholder="Gerado automaticamente se vazio"></div>
-        <div class="form-group"><label>Código Procedimento (TUSS)</label><input type="text" id="guiaCodProc"></div>
-        <div class="form-group" style="grid-column:1/-1"><label>Descrição do Procedimento</label><textarea id="guiaDescProc"></textarea></div>
-        <div class="form-group"><label>CID</label><input type="text" id="guiaCID" placeholder="Ex: J18.9"></div>
-        <div class="form-group"><label>Médico Solicitante</label><input type="text" id="guiaMedico"></div>
-        <div class="form-group"><label>CRM</label><input type="text" id="guiaCRM"></div>
-        <div class="form-group"><label>Quantidade</label><input type="number" id="guiaQtd" min="1" value="1"></div>
-        <div class="form-group"><label>Valor Estimado (R$)</label><input type="number" id="guiaValor" step="0.01" min="0"></div>
+<!-- MODAL: Nova Guia -->
+<div class="modal-bg" id="modalGuia">
+  <div class="modal" style="max-width:620px">
+    <h3>Nova Guia de Autorizacao</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Plano *</label>
+        <select id="guPlano" onchange="carregarBeneficiariosPorPlano('guBeneficiario',this.value)">
+          <option value="">selecione</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Beneficiario *</label>
+        <select id="guBeneficiario"><option value="">selecione o plano primeiro</option></select>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Guia *</label>
+        <select id="guTipo">
+          <option value="consulta">Consulta</option>
+          <option value="exame">Exame / Diagnostico</option>
+          <option value="internacao">Internacao</option>
+          <option value="cirurgia">Cirurgia</option>
+          <option value="terapia">Terapia Continua</option>
+          <option value="urgencia">Urgencia/Emergencia</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>CID</label><input id="guCid" placeholder="Ex: J06.9, F32.0"></div>
+    </div>
+    <div class="form-group"><label>Descricao do Procedimento *</label>
+      <textarea id="guDescricao" rows="2" placeholder="Descreva o procedimento solicitado..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Medico Solicitante</label><input id="guMedico" placeholder="Nome e CRM"></div>
+      <div class="form-group"><label>Valor Estimado (R$)</label><input id="guValor" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalGuia')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarGuia()">Solicitar Guia</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Atualizar Status Guia -->
-<div class="modal-overlay hidden" id="modalGuiaStatus">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-head"><h3>Atualizar Guia</h3><button class="modal-close" onclick="fecharModal('modalGuiaStatus')">×</button></div>
-    <div class="modal-body">
-      <input type="hidden" id="guiaStatusId">
-      <div class="form-grid">
-        <div class="form-group" style="grid-column:1/-1"><label>Status</label><select id="guiaNovoStatus"><option value="solicitada">Solicitada</option><option value="em_analise">Em Análise</option><option value="autorizada">Autorizada</option><option value="negada">Negada</option><option value="cancelada">Cancelada</option></select></div>
-        <div class="form-group"><label>Nº Autorização</label><input type="text" id="guiaNumAuth"></div>
-        <div class="form-group"><label>Validade</label><input type="date" id="guiaValidade"></div>
-        <div class="form-group" style="grid-column:1/-1"><label>Justificativa (se negada)</label><textarea id="guiaJustif" rows="3"></textarea></div>
+<!-- MODAL: Novo Sinistro -->
+<div class="modal-bg" id="modalSinistro">
+  <div class="modal" style="max-width:640px">
+    <h3>Registrar Sinistro</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Plano *</label>
+        <select id="siPlano" onchange="carregarBeneficiariosPorPlano('siBeneficiario',this.value)">
+          <option value="">selecione</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Beneficiario *</label>
+        <select id="siBeneficiario"><option value="">selecione o plano primeiro</option></select>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="fecharModal('modalGuiaStatus')">Cancelar</button>
-      <button class="btn btn-primary" onclick="atualizarGuia()">Salvar</button>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo *</label>
+        <select id="siTipo">
+          <option value="consulta">Consulta</option>
+          <option value="exame">Exame</option>
+          <option value="internacao">Internacao</option>
+          <option value="cirurgia">Cirurgia</option>
+          <option value="urgencia">Urgencia/Emergencia</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>CID</label><input id="siCid" placeholder="Ex: K35.1, J18.9"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Prestador de Servico</label><input id="siPrestador" placeholder="Hospital / clinica"></div>
+      <div class="form-group"><label>Data do Atendimento *</label><input type="date" id="siDataAtend"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor Total (R$) *</label><input id="siValor" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="form-group"><label>Status Inicial</label>
+        <select id="siStatus">
+          <option value="aberto">Aberto</option>
+          <option value="em_analise">Em Analise</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Descricao</label>
+      <textarea id="siDescricao" rows="2" placeholder="Descricao do sinistro..."></textarea>
+    </div>
+    <div class="form-group"><label>Observacoes</label>
+      <textarea id="siObservacao" rows="2" placeholder="Observacoes internas..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalSinistro')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarSinistro()">Registrar Sinistro</button>
     </div>
   </div>
 </div>
 
-<div class="toast-container" id="toastContainer"></div>
+<!-- MODAL: Novo Reembolso -->
+<div class="modal-bg" id="modalReembolso">
+  <div class="modal" style="max-width:620px">
+    <h3>Solicitar Reembolso</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Plano *</label>
+        <select id="reePlano" onchange="carregarBeneficiariosPorPlano('reeBeneficiario',this.value)">
+          <option value="">selecione</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Beneficiario *</label>
+        <select id="reeBeneficiario"><option value="">selecione o plano primeiro</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Despesa *</label>
+        <select id="reeTipoDespesa">
+          <option value="consulta">Consulta Medica</option>
+          <option value="exame">Exame Laboratorial</option>
+          <option value="imagem">Exame de Imagem</option>
+          <option value="farmacia">Farmacia / Medicamentos</option>
+          <option value="fisioterapia">Fisioterapia</option>
+          <option value="psicologia">Psicologia</option>
+          <option value="odontologia">Odontologia</option>
+          <option value="internacao">Internacao</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Valor Solicitado (R$) *</label><input id="reeValor" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Banco</label><input id="reeBanco" placeholder="Nome do banco"></div>
+      <div class="form-group"><label>Agencia</label><input id="reeAgencia" placeholder="0000-0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Conta Corrente</label><input id="reeConta" placeholder="00000000-0"></div>
+      <div class="form-group"></div>
+    </div>
+    <div class="form-group"><label>Descricao / Justificativa</label>
+      <textarea id="reeDescricao" rows="2" placeholder="Descreva o motivo do reembolso..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalReembolso')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarReembolso()">Solicitar Reembolso</button>
+    </div>
+  </div>
+</div>
 
 <script>
-let _planos=[],_planoAtivo=null,_beneficiarios=[],_benMap={},_editBenId=null,_editGuiaId=null;
+var _planos = [];
+var _beneficiariosPorPlano = {};
 
-function getCsrf(){return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1]||''}
-function toast(msg,tipo='ok'){const d=document.createElement('div');d.className=`toast ${tipo}`;d.textContent=msg;const c=document.getElementById('toastContainer');c.appendChild(d);requestAnimationFrame(()=>d.classList.add('show'));setTimeout(()=>{d.classList.remove('show');setTimeout(()=>d.remove(),400)},4000)}
-function fecharModal(id){document.getElementById(id).classList.add('hidden')}
-function abrirSubAba(id){document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById(id).classList.add('active');const idx={'sub-beneficiarios':0,'sub-guias':1}[id]??0;document.querySelectorAll('.tab')[idx]?.classList.add('active');if(id==='sub-guias')carregarGuias()}
-
-async function carregarPlanos(){
-  const r=await fetch('/api/planos-saude/');
-  const d=await r.json();
-  _planos=d.planos||[];
-  renderListaPlanos();
-  // aggregate KPIs
-  let tb=0,ta=0,tp=0,tn=0;
-  for(const p of _planos){tb+=p.total_beneficiarios||0;tp+=p.guias_pendentes||0}
-  document.getElementById('kpiTotalBens').textContent=tb;
-  document.getElementById('kpiGuiasPend').textContent=tp;
-  if(_planoAtivo)selecionarPlano(_planoAtivo.id);
+function getCsrf() {
+  var c = document.cookie.split(';').map(function(x){return x.trim();}).find(function(x){return x.startsWith('csrftoken=');});
+  return c ? c.split('=')[1] : '';
 }
 
-function renderListaPlanos(){
-  const el=document.getElementById('listPlanos');
-  if(!_planos.length){el.innerHTML='<div style="color:#a0aec0;font-size:.85rem;padding:16px;text-align:center">Nenhum plano cadastrado</div>';return}
-  el.innerHTML=_planos.map(p=>`<div class="plano-item ${_planoAtivo?.id===p.id?'active':''}" onclick="selecionarPlano(${p.id})">
-    <div class="plano-item-name">${p.nome}</div>
-    <div class="plano-item-ans">ANS: ${p.registro_ans||'—'} • ${p.modalidade||'—'}</div>
-    <div class="plano-item-stats">
-      <span class="plano-item-stat">${p.total_beneficiarios} benef.</span>
-      ${p.guias_pendentes?`<span class="plano-item-stat" style="background:#fefcbf;color:#744210">${p.guias_pendentes} guias pend.</span>`:''}
-      <span class="plano-item-stat ${p.status==='ativo'?'':'opacity:.5'}">${p.status}</span>
-    </div>
-  </div>`).join('');
+async function api(url, opts) {
+  opts = opts || {};
+  try {
+    var r = await fetch(url, Object.assign({
+      credentials: 'include',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()}
+    }, opts));
+    if (!r.ok) return {};
+    return await r.json();
+  } catch(e) { return {}; }
 }
 
-function selecionarPlano(id){
-  _planoAtivo=_planos.find(p=>p.id===id);
-  renderListaPlanos();
-  document.getElementById('selectPlanoMsg').style.display='none';
-  document.getElementById('planoContent').style.display='block';
-  document.getElementById('planoNome').textContent=_planoAtivo.nome;
-  document.getElementById('planoMeta').textContent=`ANS ${_planoAtivo.registro_ans||'—'} • CNPJ ${_planoAtivo.cnpj||'—'} • ${_planoAtivo.modalidade||'—'} • ${_planoAtivo.abrangencia||'—'}`;
-  carregarKpisPlano();
+function v(id) {
+  var el = document.getElementById(id);
+  return el ? (el.value || '').trim() : '';
+}
+
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function fmtData(s) {
+  if (!s) return '--';
+  var parts = s.split('-');
+  if (parts.length === 3) return parts[2]+'/'+parts[1]+'/'+parts[0];
+  return s;
+}
+
+function fmtMoeda(val) {
+  if (val == null || val === '') return '--';
+  return 'R$ ' + Number(val).toLocaleString('pt-BR', {minimumFractionDigits:2});
+}
+
+function fmtDt(s) {
+  if (!s) return '--';
+  var d = new Date(s);
+  return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+// ── Tabs ─────────────────────────────────────────────────────
+function setTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  var panel = document.getElementById('tab-'+name);
+  if (panel) panel.classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    if (b.getAttribute('onclick') === "setTab('"+name+"')") b.classList.add('active');
+  });
+  var loaders = {visao:carregarVisaoGeral,planos:carregarPlanos,beneficiarios:carregarBeneficiarios,guias:carregarGuias,sinistros:carregarSinistros,reembolsos:carregarReembolsos};
+  if (loaders[name]) loaders[name]();
+}
+
+// ── KPIs topo ─────────────────────────────────────────────────
+async function carregarKpisTopo() {
+  var dash = await api('/api/plano-saude/dashboard');
+  var kpisRes = await api('/api/plano-saude/kpis');
+  var kpis = (dash && dash.kpis) ? dash.kpis : {};
+  document.getElementById('kpiTotalBenef').textContent = kpis.total_beneficiarios != null ? kpis.total_beneficiarios : '--';
+  document.getElementById('kpiGuiasPend').textContent = kpis.guias_pendentes != null ? kpis.guias_pendentes : '--';
+  document.getElementById('kpiSinAbertos').textContent = kpis.sinistros_abertos != null ? kpis.sinistros_abertos : '--';
+  var taxa = kpisRes ? kpisRes.taxa_aprovacao_guias : null;
+  document.getElementById('kpiTaxaAprov').textContent = taxa != null ? Number(taxa).toFixed(1)+'%' : '--';
+  var rp = document.getElementById('sgReembolsosPend');
+  if (rp) rp.textContent = kpis.reembolsos_pendentes != null ? kpis.reembolsos_pendentes : '--';
+  var cm = document.getElementById('sgCustoMedio');
+  if (cm) cm.textContent = (kpisRes && kpisRes.custo_medio_sinistro != null) ? fmtMoeda(kpisRes.custo_medio_sinistro) : '--';
+}
+
+// ── Visao Geral ───────────────────────────────────────────────
+async function carregarVisaoGeral() {
+  var d = await api('/api/plano-saude/planos');
+  var planos = Array.isArray(d) ? d : (d.planos || d.results || []);
+  var el = document.getElementById('sgTotalPlanos');
+  if (el) el.textContent = planos.length || '--';
+}
+
+// ── Planos ────────────────────────────────────────────────────
+async function carregarPlanos() {
+  var d = await api('/api/plano-saude/planos');
+  _planos = Array.isArray(d) ? d : (d.planos || d.results || []);
+  var tb = document.getElementById('tbodyPlanos');
+  if (!_planos.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum plano cadastrado</td></tr>'; return; }
+  var modalMap = {cooperativa:'Cooperativa',autogestao:'Autogestao',seguradora:'Seguradora',filantropico:'Filantropico',outro:'Outro'};
+  var abrangMap = {nacional:'Nacional',estadual:'Estadual',municipal:'Municipal',grupo_municipios:'Grupo de Municipios'};
+  tb.innerHTML = _planos.map(function(p){
+    return '<tr><td><strong>'+p.nome+'</strong></td><td>'+(p.registro_ans||'--')+'</td>'+
+      '<td><span class="badge badge-info">'+(modalMap[p.modalidade]||p.modalidade||'--')+'</span></td>'+
+      '<td>'+(abrangMap[p.abrangencia]||p.abrangencia||'--')+'</td>'+
+      '<td>'+(p.cnpj||'--')+'</td>'+
+      '<td><button class="btn btn-danger btn-sm" onclick="deletarPlano('+p.id+')">Excluir</button></td></tr>';
+  }).join('');
+  popularSelectsPlanos();
+}
+
+async function deletarPlano(id) {
+  if (!confirm('Excluir este plano?')) return;
+  await api('/api/plano-saude/planos/'+id, {method:'DELETE'});
+  carregarPlanos();
+}
+
+function abrirModalPlano() {
+  ['plNome','plAns','plCnpj','plDesc'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('plModalidade').value='cooperativa';
+  document.getElementById('plAbrangencia').value='nacional';
+  abrirModal('modalPlano');
+}
+
+async function salvarPlano() {
+  var body = {nome:v('plNome'),registro_ans:v('plAns'),cnpj:v('plCnpj'),modalidade:v('plModalidade'),abrangencia:v('plAbrangencia'),descricao:v('plDesc')};
+  if (!body.nome) { alert('Nome do plano e obrigatorio'); return; }
+  await api('/api/plano-saude/planos', {method:'POST',body:JSON.stringify(body)});
+  fecharModal('modalPlano');
+  carregarPlanos();
+  carregarKpisTopo();
+}
+
+function popularSelectsPlanos() {
+  var opts = '<option value="">selecione o plano</option>' + _planos.map(function(p){return '<option value="'+p.id+'">'+p.nome+'</option>';}).join('');
+  var filterOpts = '<option value="">Todos os planos</option>' + _planos.map(function(p){return '<option value="'+p.id+'">'+p.nome+'</option>';}).join('');
+  ['guPlano','siPlano','reePlano','bfPlano'].forEach(function(sid){
+    var el = document.getElementById(sid);
+    if (!el) return;
+    var prev = el.value;
+    el.innerHTML = opts;
+    if (prev) el.value = prev;
+  });
+  ['filtroPlanoBenef','filtroPlanoGuia','filtroPlanoReembolso'].forEach(function(sid){
+    var el = document.getElementById(sid);
+    if (!el) return;
+    var prev = el.value;
+    el.innerHTML = filterOpts;
+    if (prev) el.value = prev;
+  });
+}
+
+// ── Beneficiarios ─────────────────────────────────────────────
+async function carregarBeneficiarios() {
+  var busca = (document.getElementById('buscaBenef')||{}).value || '';
+  var plano = (document.getElementById('filtroPlanoBenef')||{}).value || '';
+  var situacao = (document.getElementById('filtroSituacaoBenef')||{}).value || '';
+  var params = new URLSearchParams();
+  if (busca.trim()) params.set('busca', busca.trim());
+  if (plano) params.set('plano_id', plano);
+  if (situacao) params.set('situacao', situacao);
+  var d = await api('/api/plano-saude/beneficiarios?'+params.toString());
+  var benefs = Array.isArray(d) ? d : (d.beneficiarios || d.results || []);
+  var tb = document.getElementById('tbodyBenef');
+  if (!benefs.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhum beneficiario encontrado</td></tr>'; return; }
+  var sitBadge = {ativo:'badge-ok',suspenso:'badge-warn',cancelado:'badge-danger'};
+  tb.innerHTML = benefs.map(function(b){
+    return '<tr><td><strong>'+b.nome+'</strong></td><td>'+(b.cpf||'--')+'</td><td>'+(b.numero_carteirinha||'--')+'</td>'+
+      '<td>'+(b.plano_nome||b.plano||'--')+'</td><td>'+fmtData(b.data_nascimento)+'</td><td>'+(b.acomodacao||'--')+'</td>'+
+      '<td><span class="badge '+(sitBadge[b.situacao]||'badge-gray')+'">'+(b.situacao||'--')+'</span></td>'+
+      '<td><button class="btn btn-danger btn-sm" onclick="inativarBenef('+b.id+')">Inativar</button></td></tr>';
+  }).join('');
+}
+
+function abrirModalBenef() {
+  ['bfNome','bfCpf','bfCarteirinha','bfNasc','bfInicioVigencia'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('bfSexo').value='';
+  document.getElementById('bfAcomodacao').value='enfermaria';
+  popularSelectsPlanos();
+  abrirModal('modalBenef');
+}
+
+async function salvarBenef() {
+  var body = {
+    plano_id: v('bfPlano') ? parseInt(v('bfPlano')) : null,
+    nome: v('bfNome'), cpf: v('bfCpf'), numero_carteirinha: v('bfCarteirinha'),
+    data_nascimento: v('bfNasc')||null, sexo: v('bfSexo'), acomodacao: v('bfAcomodacao'),
+    data_inicio_vigencia: v('bfInicioVigencia')||null,
+  };
+  if (!body.nome||!body.cpf) { alert('Nome e CPF sao obrigatorios'); return; }
+  if (!body.plano_id) { alert('Selecione o plano'); return; }
+  await api('/api/plano-saude/beneficiarios', {method:'POST',body:JSON.stringify(body)});
+  fecharModal('modalBenef');
   carregarBeneficiarios();
+  carregarKpisTopo();
 }
 
-async function carregarKpisPlano(){
-  const r=await fetch(`/api/planos-saude/${_planoAtivo.id}/kpis/`);
-  const d=await r.json();
-  document.getElementById('pkBens').textContent=d.total_beneficiarios;
-  document.getElementById('pkAtivos').textContent=d.beneficiarios_ativos;
-  document.getElementById('pkPend').textContent=d.guias_pendentes;
-  document.getElementById('pkAuth').textContent=d.guias_autorizadas;
-  document.getElementById('pkNeg').textContent=d.guias_negadas;
-  document.getElementById('kpiBensAtivos').textContent=d.beneficiarios_ativos;
-  document.getElementById('kpiGuiasNeg').textContent=d.guias_negadas;
+async function inativarBenef(id) {
+  if (!confirm('Inativar este beneficiario?')) return;
+  await api('/api/plano-saude/beneficiarios/'+id, {method:'PUT',body:JSON.stringify({situacao:'cancelado'})});
+  carregarBeneficiarios();
+  carregarKpisTopo();
 }
 
-async function carregarBeneficiarios(){
-  if(!_planoAtivo)return;
-  const q=document.getElementById('searchBen')?.value||'';
-  const r=await fetch(`/api/planos-saude/${_planoAtivo.id}/beneficiarios/?q=${encodeURIComponent(q)}`);
-  const d=await r.json();
-  _beneficiarios=d.beneficiarios||[];
-  _benMap={};_beneficiarios.forEach(b=>_benMap[b.id]=b);
-  const STATUS_BADGE={ativo:'badge-green',suspenso:'badge-yellow',cancelado:'badge-red'};
-  const tb=document.getElementById('tbBens');
-  if(!_beneficiarios.length){tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:24px;color:#a0aec0">Nenhum beneficiário encontrado.</td></tr>`;return}
-  tb.innerHTML=_beneficiarios.map(b=>`<tr>
-    <td><strong>${b.nome}</strong></td>
-    <td>${b.cpf||'—'}</td>
-    <td>${b.numero_carteirinha||'—'}</td>
-    <td>${b.plano_tipo||'—'}</td>
-    <td>${b.acomodacao||'—'}</td>
-    <td><span class="badge ${STATUS_BADGE[b.situacao]||'badge-gray'}">${b.situacao}</span></td>
-    <td>${b.data_inicio_vigencia||'—'}${b.data_fim_vigencia?' → '+b.data_fim_vigencia:''}</td>
-    <td><button class="btn btn-ghost btn-sm" onclick="editarBeneficiario(${b.id})">Editar</button></td>
-  </tr>`).join('');
+async function carregarBeneficiariosPorPlano(selectId, planoId) {
+  var sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Carregando...</option>';
+  if (!planoId) { sel.innerHTML = '<option value="">selecione o plano primeiro</option>'; return; }
+  if (_beneficiariosPorPlano[planoId]) { popularSelectBenef(sel, _beneficiariosPorPlano[planoId]); return; }
+  var d = await api('/api/plano-saude/beneficiarios?plano_id='+planoId+'&situacao=ativo');
+  var lista = Array.isArray(d) ? d : (d.beneficiarios || d.results || []);
+  _beneficiariosPorPlano[planoId] = lista;
+  popularSelectBenef(sel, lista);
 }
 
-async function carregarGuias(){
-  if(!_planoAtivo)return;
-  const sf=document.getElementById('filterGuiaStatus')?.value||'';
-  const r=await fetch(`/api/planos-saude/${_planoAtivo.id}/guias/${sf?'?status='+sf:''}`);
-  const d=await r.json();
-  const stats=d.stats||{};
-  document.getElementById('wfSolic').textContent=stats.solicitadas||0;
-  document.getElementById('wfAnal').textContent=stats.em_analise||0;
-  document.getElementById('wfAuth').textContent=stats.autorizadas||0;
-  document.getElementById('wfNeg').textContent=stats.negadas||0;
-  const STATUS_BADGE={solicitada:'badge-gray',em_analise:'badge-yellow',autorizada:'badge-green',negada:'badge-red',cancelada:'badge-gray'};
-  const TIPO_LABEL={consulta:'Consulta',exame:'Exame',internacao:'Internação',medicamento:'Medicamento',procedimento:'Procedimento'};
-  const tb=document.getElementById('tbGuias');
-  const guias=d.guias||[];
-  if(!guias.length){tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:24px;color:#a0aec0">Nenhuma guia encontrada.</td></tr>`;return}
-  tb.innerHTML=guias.map(g=>`<tr>
-    <td><strong>${g.numero_guia}</strong></td>
-    <td><span class="badge badge-blue">${TIPO_LABEL[g.tipo]||g.tipo}</span></td>
-    <td>${g.beneficiario_nome}<br><small style="color:#718096">${g.beneficiario_carteirinha}</small></td>
-    <td>${g.descricao_procedimento||g.codigo_procedimento||'—'}</td>
-    <td>${g.medico_solicitante||'—'}${g.crm_medico?' ('+g.crm_medico+')':''}</td>
-    <td>${g.valor_estimado?'R$ '+parseFloat(g.valor_estimado).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td>
-    <td><span class="badge ${STATUS_BADGE[g.status]||'badge-gray'}">${g.status}</span></td>
-    <td><button class="btn btn-ghost btn-sm" onclick="abrirStatusGuia(${g.id},'${g.status}','${g.numero_autorizacao||''}','${g.validade_autorizacao||''}','${g.justificativa_negativa||''}')">Atualizar</button></td>
-  </tr>`).join('');
+function popularSelectBenef(sel, lista) {
+  sel.innerHTML = '<option value="">selecione o beneficiario</option>' +
+    lista.map(function(b){return '<option value="'+b.id+'">'+b.nome+' -- '+(b.cpf||b.numero_carteirinha||'')+'</option>';}).join('');
 }
 
-function abrirModalPlano(){_editBenId=null;document.getElementById('modalPlanoTitle').textContent='Novo Plano de Saúde';['plNome','plANS','plCNPJ','plTelefone','plEmail','plSite'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('modalPlano').classList.remove('hidden')}
-function abrirModalEditarPlano(){if(!_planoAtivo)return;document.getElementById('modalPlanoTitle').textContent='Editar Plano';document.getElementById('plNome').value=_planoAtivo.nome||'';document.getElementById('plANS').value=_planoAtivo.registro_ans||'';document.getElementById('plCNPJ').value=_planoAtivo.cnpj||'';document.getElementById('plModalidade').value=_planoAtivo.modalidade||'';document.getElementById('plAbrangencia').value=_planoAtivo.abrangencia||'nacional';document.getElementById('plTelefone').value=_planoAtivo.telefone||'';document.getElementById('plEmail').value=_planoAtivo.email||'';document.getElementById('plSite').value=_planoAtivo.site||'';document.getElementById('modalPlano').classList.remove('hidden')}
-
-async function salvarPlano(){
-  const nome=document.getElementById('plNome').value.trim();
-  if(!nome){toast('Informe o nome do plano','err');return}
-  const body={nome,registro_ans:document.getElementById('plANS').value,cnpj:document.getElementById('plCNPJ').value,modalidade:document.getElementById('plModalidade').value,abrangencia:document.getElementById('plAbrangencia').value,telefone:document.getElementById('plTelefone').value,email:document.getElementById('plEmail').value,site:document.getElementById('plSite').value};
-  const r=await fetch('/api/planos-saude/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(body)});
-  const d=await r.json();
-  if(d.ok){fecharModal('modalPlano');carregarPlanos();toast('Plano salvo!')}else toast(d.erro||'Erro','err');
+// ── Guias ─────────────────────────────────────────────────────
+async function carregarGuias() {
+  var status = (document.getElementById('filtroStatusGuia')||{}).value || '';
+  var plano = (document.getElementById('filtroPlanoGuia')||{}).value || '';
+  var params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (plano) params.set('plano_id', plano);
+  var d = await api('/api/plano-saude/guias?'+params.toString());
+  var guias = Array.isArray(d) ? d : (d.guias || d.results || []);
+  var tb = document.getElementById('tbodyGuias');
+  if (!guias.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma guia encontrada</td></tr>'; return; }
+  var stBadge = {solicitada:'badge-warn',em_analise:'badge-info',autorizada:'badge-ok',negada:'badge-danger'};
+  tb.innerHTML = guias.map(function(g){
+    var acoes = '';
+    if (g.status==='solicitada'||g.status==='em_analise') {
+      acoes += '<button class="btn btn-ok btn-sm" onclick="atualizarGuia('+g.id+',\'autorizada\')">Autorizar</button> ';
+      acoes += '<button class="btn btn-danger btn-sm" onclick="atualizarGuia('+g.id+',\'negada\')">Negar</button> ';
+    }
+    if (g.status==='solicitada') {
+      acoes += '<button class="btn btn-ghost btn-sm" onclick="atualizarGuia('+g.id+',\'em_analise\')">Analisar</button>';
+    }
+    return '<tr><td><strong>#'+g.id+'</strong></td><td>'+(g.beneficiario_nome||g.beneficiario||'--')+'</td>'+
+      '<td>'+(g.plano_nome||g.plano||'--')+'</td><td>'+(g.tipo||'--')+'</td>'+
+      '<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(g.descricao_procedimento||g.descricao||'--')+'</td>'+
+      '<td>'+(g.cid||'--')+'</td><td>'+fmtMoeda(g.valor_estimado)+'</td>'+
+      '<td><span class="badge '+(stBadge[g.status]||'badge-gray')+'">'+(g.status||'--')+'</span></td>'+
+      '<td style="white-space:nowrap">'+acoes+'</td></tr>';
+  }).join('');
 }
 
-async function desativarPlano(){
-  if(!_planoAtivo||!confirm('Desativar este plano?'))return;
-  const r=await fetch(`/api/planos-saude/${_planoAtivo.id}/`,{method:'DELETE',headers:{'X-CSRFToken':getCsrf()}});
-  if(r.ok){_planoAtivo=null;document.getElementById('planoContent').style.display='none';document.getElementById('selectPlanoMsg').style.display='';toast('Plano desativado');carregarPlanos()}else toast('Erro','err');
+function abrirModalGuia() {
+  ['guCid','guMedico','guDescricao','guValor'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('guTipo').value='consulta';
+  document.getElementById('guBeneficiario').innerHTML='<option value="">selecione o plano primeiro</option>';
+  popularSelectsPlanos();
+  abrirModal('modalGuia');
 }
 
-function abrirModalBeneficiario(){_editBenId=null;document.getElementById('modalBenTitle').textContent='Novo Beneficiário';['benNome','benCPF','benCarteirinha','benNasc','benTel','benEmail','benTipo','benInicioVig','benFimVig'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('benSexo').value='';document.getElementById('benAcomoda').value='enfermaria';document.getElementById('benSituacao').value='ativo';document.getElementById('modalBeneficiario').classList.remove('hidden')}
-
-function editarBeneficiario(id){
-  const b=_benMap[id];if(!b)return;
-  _editBenId=id;
-  document.getElementById('modalBenTitle').textContent='Editar Beneficiário';
-  document.getElementById('benNome').value=b.nome||'';
-  document.getElementById('benCPF').value=b.cpf||'';
-  document.getElementById('benCarteirinha').value=b.numero_carteirinha||'';
-  document.getElementById('benNasc').value=b.data_nascimento||'';
-  document.getElementById('benSexo').value=b.sexo||'';
-  document.getElementById('benTel').value=b.telefone||'';
-  document.getElementById('benEmail').value=b.email||'';
-  document.getElementById('benTipo').value=b.plano_tipo||'';
-  document.getElementById('benAcomoda').value=b.acomodacao||'enfermaria';
-  document.getElementById('benSituacao').value=b.situacao||'ativo';
-  document.getElementById('benInicioVig').value=b.data_inicio_vigencia||'';
-  document.getElementById('benFimVig').value=b.data_fim_vigencia||'';
-  document.getElementById('modalBeneficiario').classList.remove('hidden');
+async function salvarGuia() {
+  var body = {
+    plano_id: v('guPlano') ? parseInt(v('guPlano')) : null,
+    beneficiario_id: v('guBeneficiario') ? parseInt(v('guBeneficiario')) : null,
+    tipo: v('guTipo'), descricao_procedimento: v('guDescricao'),
+    cid: v('guCid'), medico_solicitante: v('guMedico'),
+    valor_estimado: v('guValor') ? parseFloat(v('guValor')) : null,
+  };
+  if (!body.plano_id) { alert('Selecione o plano'); return; }
+  if (!body.beneficiario_id) { alert('Selecione o beneficiario'); return; }
+  if (!body.descricao_procedimento) { alert('Descricao do procedimento e obrigatoria'); return; }
+  await api('/api/plano-saude/guias', {method:'POST',body:JSON.stringify(body)});
+  fecharModal('modalGuia');
+  carregarGuias();
+  carregarKpisTopo();
 }
 
-async function salvarBeneficiario(){
-  if(!_planoAtivo)return;
-  const body={nome:document.getElementById('benNome').value,cpf:document.getElementById('benCPF').value,numero_carteirinha:document.getElementById('benCarteirinha').value,data_nascimento:document.getElementById('benNasc').value||null,sexo:document.getElementById('benSexo').value,telefone:document.getElementById('benTel').value,email:document.getElementById('benEmail').value,plano_tipo:document.getElementById('benTipo').value,acomodacao:document.getElementById('benAcomoda').value,situacao:document.getElementById('benSituacao').value,data_inicio_vigencia:document.getElementById('benInicioVig').value||null,data_fim_vigencia:document.getElementById('benFimVig').value||null};
-  const url=_editBenId?`/api/planos-saude/${_planoAtivo.id}/beneficiarios/${_editBenId}/`:`/api/planos-saude/${_planoAtivo.id}/beneficiarios/`;
-  const method=_editBenId?'PUT':'POST';
-  const r=await fetch(url,{method,headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(body)});
-  const d=await r.json();
-  if(d.ok){fecharModal('modalBeneficiario');carregarBeneficiarios();carregarKpisPlano();toast('Beneficiário salvo!')}else toast(d.erro||'Erro','err');
+async function atualizarGuia(id, status) {
+  await api('/api/plano-saude/guias/'+id, {method:'PUT',body:JSON.stringify({status:status})});
+  carregarGuias();
+  carregarKpisTopo();
 }
 
-function abrirModalGuia(){
-  if(!_planoAtivo)return;
-  document.getElementById('modalGuiaTitle').textContent='Nova Guia de Autorização';
-  const sel=document.getElementById('guiaBen');
-  sel.innerHTML='<option value="">Selecione o beneficiário...</option>'+_beneficiarios.filter(b=>b.situacao==='ativo').map(b=>`<option value="${b.id}">${b.nome} (${b.numero_carteirinha||b.cpf||'—'})</option>`).join('');
-  ['guiaNumero','guiaCodProc','guiaDescProc','guiaCID','guiaMedico','guiaCRM','guiaValor'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
-  document.getElementById('guiaQtd').value='1';
-  document.getElementById('modalGuia').classList.remove('hidden');
+// ── Sinistros ─────────────────────────────────────────────────
+async function carregarSinistros() {
+  var tipo = (document.getElementById('filtroTipoSinistro')||{}).value || '';
+  var status = (document.getElementById('filtroStatusSinistro')||{}).value || '';
+  var busca = ((document.getElementById('buscaSinistro')||{}).value || '').trim();
+  var params = new URLSearchParams();
+  if (tipo) params.set('tipo', tipo);
+  if (status) params.set('status', status);
+  if (busca) params.set('busca', busca);
+  var d = await api('/api/plano-saude/sinistros?'+params.toString());
+  var sins = Array.isArray(d) ? d : (d.sinistros || d.results || []);
+  var tb = document.getElementById('tbodySinistros');
+  if (!sins.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhum sinistro encontrado</td></tr>'; return; }
+  var stBadge = {aberto:'badge-warn',em_analise:'badge-info',pago:'badge-ok',negado:'badge-danger',cancelado:'badge-gray'};
+  tb.innerHTML = sins.map(function(s){
+    var acoes = '';
+    if (s.status==='aberto') acoes += '<button class="btn btn-ghost btn-sm" onclick="atualizarSinistro('+s.id+',\'em_analise\')">Analisar</button> ';
+    if (s.status==='em_analise') {
+      acoes += '<button class="btn btn-ok btn-sm" onclick="atualizarSinistro('+s.id+',\'pago\')">Pagar</button> ';
+      acoes += '<button class="btn btn-danger btn-sm" onclick="atualizarSinistro('+s.id+',\'negado\')">Negar</button>';
+    }
+    if (s.status==='aberto') acoes += ' <button class="btn btn-danger btn-sm" onclick="atualizarSinistro('+s.id+',\'cancelado\')">Cancelar</button>';
+    return '<tr><td><strong>#'+s.id+'</strong></td><td>'+(s.beneficiario_nome||s.beneficiario||'--')+'</td>'+
+      '<td>'+(s.tipo||'--')+'</td><td>'+(s.cid||'--')+'</td><td>'+(s.prestador||'--')+'</td>'+
+      '<td>'+fmtData(s.data_atendimento)+'</td><td>'+fmtMoeda(s.valor_total)+'</td>'+
+      '<td><span class="badge '+(stBadge[s.status]||'badge-gray')+'">'+(s.status||'--')+'</span></td>'+
+      '<td style="white-space:nowrap">'+acoes+'</td></tr>';
+  }).join('');
 }
 
-async function salvarGuia(){
-  if(!_planoAtivo)return;
-  const benId=document.getElementById('guiaBen').value;
-  if(!benId){toast('Selecione o beneficiário','err');return}
-  const body={beneficiario_id:parseInt(benId),tipo:document.getElementById('guiaTipo').value,numero_guia:document.getElementById('guiaNumero').value,codigo_procedimento:document.getElementById('guiaCodProc').value,descricao_procedimento:document.getElementById('guiaDescProc').value,cid:document.getElementById('guiaCID').value,medico_solicitante:document.getElementById('guiaMedico').value,crm_medico:document.getElementById('guiaCRM').value,quantidade:parseInt(document.getElementById('guiaQtd').value)||1,valor_estimado:parseFloat(document.getElementById('guiaValor').value)||null};
-  const r=await fetch(`/api/planos-saude/${_planoAtivo.id}/guias/`,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(body)});
-  const d=await r.json();
-  if(d.ok){fecharModal('modalGuia');carregarGuias();carregarKpisPlano();toast(`Guia ${d.numero_guia} criada!`)}else toast(d.erro||'Erro','err');
+function abrirModalSinistro() {
+  ['siCid','siPrestador','siDescricao','siObservacao','siValor','siDataAtend'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('siTipo').value='consulta';
+  document.getElementById('siStatus').value='aberto';
+  document.getElementById('siBeneficiario').innerHTML='<option value="">selecione o plano primeiro</option>';
+  popularSelectsPlanos();
+  abrirModal('modalSinistro');
 }
 
-function abrirStatusGuia(id,status,numAuth,validade,justif){
-  document.getElementById('guiaStatusId').value=id;
-  document.getElementById('guiaNovoStatus').value=status;
-  document.getElementById('guiaNumAuth').value=numAuth;
-  document.getElementById('guiaValidade').value=validade;
-  document.getElementById('guiaJustif').value=justif;
-  document.getElementById('modalGuiaStatus').classList.remove('hidden');
+async function salvarSinistro() {
+  var body = {
+    plano_id: v('siPlano') ? parseInt(v('siPlano')) : null,
+    beneficiario_id: v('siBeneficiario') ? parseInt(v('siBeneficiario')) : null,
+    tipo: v('siTipo'), cid: v('siCid'), prestador: v('siPrestador'),
+    data_atendimento: v('siDataAtend')||null,
+    valor_total: v('siValor') ? parseFloat(v('siValor')) : null,
+    status: v('siStatus'), descricao: v('siDescricao'), observacao: v('siObservacao'),
+  };
+  if (!body.plano_id) { alert('Selecione o plano'); return; }
+  if (!body.beneficiario_id) { alert('Selecione o beneficiario'); return; }
+  if (!body.data_atendimento) { alert('Data do atendimento e obrigatoria'); return; }
+  if (!body.valor_total) { alert('Valor total e obrigatorio'); return; }
+  await api('/api/plano-saude/sinistros', {method:'POST',body:JSON.stringify(body)});
+  fecharModal('modalSinistro');
+  carregarSinistros();
+  carregarKpisTopo();
 }
 
-async function atualizarGuia(){
-  if(!_planoAtivo)return;
-  const id=document.getElementById('guiaStatusId').value;
-  const body={status:document.getElementById('guiaNovoStatus').value,numero_autorizacao:document.getElementById('guiaNumAuth').value,validade_autorizacao:document.getElementById('guiaValidade').value||null,justificativa_negativa:document.getElementById('guiaJustif').value};
-  const r=await fetch(`/api/planos-saude/${_planoAtivo.id}/guias/${id}/`,{method:'PUT',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},body:JSON.stringify(body)});
-  if(r.ok){fecharModal('modalGuiaStatus');carregarGuias();carregarKpisPlano();toast('Guia atualizada!')}else toast('Erro','err');
+async function atualizarSinistro(id, status) {
+  await api('/api/plano-saude/sinistros/'+id, {method:'PUT',body:JSON.stringify({status:status})});
+  carregarSinistros();
+  carregarKpisTopo();
 }
 
-carregarPlanos();
-setInterval(carregarPlanos,60000);
+// ── Reembolsos ────────────────────────────────────────────────
+async function carregarReembolsos() {
+  var status = (document.getElementById('filtroStatusReembolso')||{}).value || '';
+  var plano = (document.getElementById('filtroPlanoReembolso')||{}).value || '';
+  var params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (plano) params.set('plano_id', plano);
+  var d = await api('/api/plano-saude/reembolsos?'+params.toString());
+  var reembs = Array.isArray(d) ? d : (d.reembolsos || d.results || []);
+  var tb = document.getElementById('tbodyReembolsos');
+  if (!reembs.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum reembolso encontrado</td></tr>'; return; }
+  var stBadge = {solicitado:'badge-warn',em_analise:'badge-info',aprovado:'badge-purple',pago:'badge-ok',negado:'badge-danger'};
+  tb.innerHTML = reembs.map(function(r){
+    var acoes = '';
+    if (r.status==='solicitado') acoes += '<button class="btn btn-ghost btn-sm" onclick="atualizarReembolso('+r.id+',\'em_analise\')">Analisar</button> ';
+    if (r.status==='em_analise') acoes += '<button class="btn btn-ghost btn-sm" onclick="atualizarReembolso('+r.id+',\'aprovado\')">Aprovar</button> ';
+    if (r.status==='aprovado') acoes += '<button class="btn btn-ok btn-sm" onclick="atualizarReembolso('+r.id+',\'pago\')">Pagar</button> ';
+    if (['solicitado','em_analise','aprovado'].indexOf(r.status) >= 0) {
+      acoes += '<button class="btn btn-danger btn-sm" onclick="atualizarReembolso('+r.id+',\'negado\')">Negar</button>';
+    }
+    var banco = r.banco ? r.banco+' ag. '+(r.agencia||'--') : '--';
+    return '<tr><td><strong>#'+r.id+'</strong></td><td>'+(r.beneficiario_nome||r.beneficiario||'--')+'</td>'+
+      '<td>'+(r.tipo_despesa||'--')+'</td><td>'+fmtMoeda(r.valor_solicitado)+'</td><td>'+banco+'</td>'+
+      '<td><span class="badge '+(stBadge[r.status]||'badge-gray')+'">'+(r.status||'--')+'</span></td>'+
+      '<td style="white-space:nowrap">'+acoes+'</td></tr>';
+  }).join('');
+}
+
+function abrirModalReembolso() {
+  ['reeValor','reeBanco','reeAgencia','reeConta','reeDescricao'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('reeTipoDespesa').value='consulta';
+  document.getElementById('reeBeneficiario').innerHTML='<option value="">selecione o plano primeiro</option>';
+  popularSelectsPlanos();
+  abrirModal('modalReembolso');
+}
+
+async function salvarReembolso() {
+  var body = {
+    plano_id: v('reePlano') ? parseInt(v('reePlano')) : null,
+    beneficiario_id: v('reeBeneficiario') ? parseInt(v('reeBeneficiario')) : null,
+    tipo_despesa: v('reeTipoDespesa'),
+    valor_solicitado: v('reeValor') ? parseFloat(v('reeValor')) : null,
+    banco: v('reeBanco'), agencia: v('reeAgencia'), conta: v('reeConta'),
+    descricao: v('reeDescricao'),
+  };
+  if (!body.plano_id) { alert('Selecione o plano'); return; }
+  if (!body.beneficiario_id) { alert('Selecione o beneficiario'); return; }
+  if (!body.valor_solicitado) { alert('Valor solicitado e obrigatorio'); return; }
+  await api('/api/plano-saude/reembolsos', {method:'POST',body:JSON.stringify(body)});
+  fecharModal('modalReembolso');
+  carregarReembolsos();
+  carregarKpisTopo();
+}
+
+async function atualizarReembolso(id, status) {
+  await api('/api/plano-saude/reembolsos/'+id, {method:'PUT',body:JSON.stringify({status:status})});
+  carregarReembolsos();
+  carregarKpisTopo();
+}
+
+// ── Fechar modal clicando fora ────────────────────────────────
+document.querySelectorAll('.modal-bg').forEach(function(bg){
+  bg.addEventListener('click', function(e){ if(e.target===bg) bg.classList.remove('open'); });
+});
+
+// ── Init ─────────────────────────────────────────────────────
+(async function(){
+  await carregarPlanos();
+  await carregarKpisTopo();
+  carregarVisaoGeral();
+})();
 </script>
-<script>(function tabGuard(){function cookieVal(n){var m=document.cookie.match("(^|;)\\s*"+n+"\\s*=\\s*([^;]+)");return m?m.pop():""}var rk="_tab_sync_ps";async function syncTab(){var ssId=sessionStorage.getItem("empresa_id");var ckId=cookieVal("empresa_id");if(!ssId||ssId===ckId)return;var token=sessionStorage.getItem("auth_token")||sessionStorage.getItem("token");if(!token)return;try{var res=await fetch("/api/sessao/aba",{method:"POST",headers:{Authorization:"Bearer "+token},credentials:"same-origin"});if(!res.ok)return;var p=await res.json();if(sessionStorage.getItem(rk)==="1"){sessionStorage.removeItem(rk);return}sessionStorage.setItem(rk,"1");window.location.replace(p.destination||"/")}catch(e){}}syncTab();window.addEventListener("focus",syncTab);document.addEventListener("visibilitychange",function(){if(!document.hidden)syncTab()})}());</script>
+{% include "partials/enterprise_command_center.html" %}
 </body>
 </html>

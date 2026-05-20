@@ -3252,6 +3252,96 @@ class GuiaAutorizacao(models.Model):
         return f"Guia #{self.numero_guia or self.id} — {self.beneficiario.nome}"
 
 
+class Sinistro(models.Model):
+    """Sinistro / ocorrência de saúde registrada pela operadora."""
+    TIPO_CHOICES = [
+        ("consulta", "Consulta"),
+        ("internacao", "Internação"),
+        ("exame", "Exame / Diagnóstico"),
+        ("procedimento", "Procedimento Cirúrgico"),
+        ("urgencia", "Urgência / Emergência"),
+        ("medicamento", "Medicamento de Alto Custo"),
+        ("outro", "Outro"),
+    ]
+    STATUS_CHOICES = [
+        ("aberto", "Aberto"),
+        ("em_analise", "Em Análise"),
+        ("aprovado", "Aprovado"),
+        ("negado", "Negado"),
+        ("pago", "Pago"),
+        ("cancelado", "Cancelado"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="sinistros")
+    plano = models.ForeignKey(PlanoSaude, on_delete=models.CASCADE, related_name="sinistros")
+    beneficiario = models.ForeignKey(BeneficiarioPlano, on_delete=models.CASCADE, related_name="sinistros")
+    guia = models.ForeignKey(GuiaAutorizacao, on_delete=models.SET_NULL, null=True, blank=True, related_name="sinistros")
+    numero_sinistro = models.CharField(max_length=60, blank=True, default="")
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default="consulta")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="aberto")
+    cid = models.CharField(max_length=10, blank=True, default="")
+    descricao_procedimento = models.TextField(blank=True, default="")
+    prestador = models.CharField(max_length=200, blank=True, default="")
+    medico = models.CharField(max_length=150, blank=True, default="")
+    data_atendimento = models.DateField(null=True, blank=True)
+    valor_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_pago = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    data_abertura = models.DateTimeField(auto_now_add=True)
+    data_fechamento = models.DateTimeField(null=True, blank=True)
+    observacao = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-data_abertura"]
+
+    def __str__(self):
+        return f"Sinistro #{self.numero_sinistro or self.id} — {self.beneficiario.nome}"
+
+
+class Reembolso(models.Model):
+    """Solicitação de reembolso de despesa médica pelo beneficiário."""
+    STATUS_CHOICES = [
+        ("solicitado", "Solicitado"),
+        ("em_analise", "Em Análise"),
+        ("aprovado", "Aprovado"),
+        ("pago", "Pago"),
+        ("negado", "Negado"),
+        ("cancelado", "Cancelado"),
+    ]
+    TIPO_DESPESA_CHOICES = [
+        ("consulta", "Consulta Médica"),
+        ("exame", "Exame / Diagnóstico"),
+        ("internacao", "Internação"),
+        ("medicamento", "Medicamento"),
+        ("terapia", "Terapia / Reabilitação"),
+        ("odonto", "Odontologia"),
+        ("outro", "Outro"),
+    ]
+
+    empresa = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="reembolsos")
+    plano = models.ForeignKey(PlanoSaude, on_delete=models.CASCADE, related_name="reembolsos")
+    beneficiario = models.ForeignKey(BeneficiarioPlano, on_delete=models.CASCADE, related_name="reembolsos")
+    sinistro = models.ForeignKey(Sinistro, on_delete=models.SET_NULL, null=True, blank=True, related_name="reembolsos")
+    numero_reembolso = models.CharField(max_length=60, blank=True, default="")
+    tipo_despesa = models.CharField(max_length=20, choices=TIPO_DESPESA_CHOICES, default="consulta")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="solicitado")
+    valor_solicitado = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_aprovado = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_pago = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    data_solicitacao = models.DateTimeField(auto_now_add=True)
+    data_pagamento = models.DateField(null=True, blank=True)
+    banco = models.CharField(max_length=100, blank=True, default="")
+    agencia = models.CharField(max_length=20, blank=True, default="")
+    conta = models.CharField(max_length=30, blank=True, default="")
+    descricao = models.TextField(blank=True, default="")
+    observacao = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-data_solicitacao"]
+
+    def __str__(self):
+        return f"Reembolso #{self.numero_reembolso or self.id} — {self.beneficiario.nome}"
+
+
 # ─── Event Backbone / Outbox Pattern ─────────────────────────────────────────
 
 class OutboxEvento(models.Model):
