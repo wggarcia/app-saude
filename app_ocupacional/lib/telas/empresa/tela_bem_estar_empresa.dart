@@ -99,7 +99,7 @@ class _TelaBemEstarEmpresaState extends State<TelaBemEstarEmpresa> {
                   label: Text('$d dias'),
                   selected: ativo,
                   onSelected: (_) => _mudarPeriodo(d),
-                  selectedColor: const Color(0xFF27D3BE).withOpacity(0.2),
+                  selectedColor: const Color(0xFF27D3BE).withValues(alpha: 0.2),
                   labelStyle: TextStyle(
                     color: ativo ? const Color(0xFF27D3BE) : Colors.white54,
                     fontWeight: ativo ? FontWeight.w800 : FontWeight.normal,
@@ -180,7 +180,7 @@ class _TelaBemEstarEmpresaState extends State<TelaBemEstarEmpresa> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.03),
+              color: Colors.white.withValues(alpha: 0.03),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.white10),
             ),
@@ -312,9 +312,9 @@ class _AlertaCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: (critico ? Colors.redAccent : Colors.orange).withOpacity(0.08),
+        color: (critico ? Colors.redAccent : Colors.orange).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: (critico ? Colors.redAccent : Colors.orange).withOpacity(0.25)),
+        border: Border.all(color: (critico ? Colors.redAccent : Colors.orange).withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
@@ -363,7 +363,7 @@ class _PedidoCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.12),
+                color: Colors.orange.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(99),
               ),
               child: Text(item['tipo_ajuda'] as String,

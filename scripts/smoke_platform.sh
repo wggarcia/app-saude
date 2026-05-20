@@ -86,7 +86,7 @@ assert_http_200() {
 run_public_smoke() {
   assert_http_200 "Resumo público" "/api/public/resumo"
   assert_http_200 "Mapa público" "/api/public/mapa"
-  assert_http_200 "Radar local público" "/api/public/radar-local"
+  assert_http_200 "Radar local público" "/api/public/radar-local?cidade=Sao%20Paulo&estado=SP"
   assert_http_200 "Alertas públicos" "/api/public/alertas"
   assert_http_200 "Política de privacidade" "/privacidade/"
 }

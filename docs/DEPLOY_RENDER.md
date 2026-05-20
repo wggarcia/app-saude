@@ -131,12 +131,12 @@ BASE_URL="https://app-saude-p9n8.onrender.com"
 
 curl -sS -m 20 -w "\nHTTP_STATUS:%{http_code}\n" "$BASE_URL/api/public/resumo"
 curl -sS -m 20 -w "\nHTTP_STATUS:%{http_code}\n" "$BASE_URL/api/public/mapa"
-curl -sS -m 20 -w "\nHTTP_STATUS:%{http_code}\n" "$BASE_URL/api/public/radar-local"
+curl -sS -m 20 -w "\nHTTP_STATUS:%{http_code}\n" "$BASE_URL/api/public/radar-local?cidade=Sao%20Paulo&estado=SP"
 curl -sS -m 20 -w "\nHTTP_STATUS:%{http_code}\n" "$BASE_URL/api/public/alertas"
 curl -sS -m 20 -w "\nHTTP_STATUS:%{http_code}\n" "$BASE_URL/privacidade/"
 ```
 
-Resultado esperado: `HTTP_STATUS:200` em todos.
+Resultado esperado: `HTTP_STATUS:200` em todos. O endpoint `radar-local` exige `cidade/estado` ou `latitude/longitude`.
 
 Cheque CORS:
 

@@ -1,5 +1,5 @@
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 from io import StringIO
 from unittest.mock import patch
 
@@ -606,6 +606,187 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(login.status_code, 200)
         self.assertEqual(self.client.get("/api/farmacia/dashboard").status_code, 403)
         self.assertEqual(self.client.get("/api/gestao/resumo").status_code, 403)
+
+    def test_apis_setoriais_bloqueiam_acesso_cruzado_critico(self):
+        empresa = Empresa.objects.create(
+            nome="Empresa Cruzada",
+            email="empresa-cruzada@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="empresa_starter_5",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Cruzada",
+            email="farmacia-cruzada@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        governo = Empresa.objects.create(
+            nome="Governo Cruzado",
+            email="governo-cruzado@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_pequeno",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        client_empresa = Client()
+        self.assertEqual(
+            client_empresa.post(
+                "/api/login",
+                data=json.dumps({
+                    "email": empresa.email,
+                    "senha": "123456",
+                    "device_id": "empresa-cruzada-device",
+                }),
+                content_type="application/json",
+            ).status_code,
+            200,
+        )
+        self.assertIn(client_empresa.get("/api/hospital/dashboard").status_code, {401, 403})
+        self.assertIn(client_empresa.get("/api/governo/programas/").status_code, {401, 403})
+
+        client_farmacia = Client()
+        self.assertEqual(
+            client_farmacia.post(
+                "/api/login",
+                data=json.dumps({
+                    "email": farmacia.email,
+                    "senha": "123456",
+                    "device_id": "farmacia-cruzada-device",
+                }),
+                content_type="application/json",
+            ).status_code,
+            200,
+        )
+        self.assertIn(client_farmacia.get("/api/sst/dashboard").status_code, {401, 403})
+
+        client_governo = Client()
+        self.assertEqual(
+            client_governo.post(
+                "/api/login-governo",
+                data=json.dumps({
+                    "email": governo.email,
+                    "senha": "123456",
+                    "device_id": "governo-cruzado-device",
+                }),
+                content_type="application/json",
+            ).status_code,
+            200,
+        )
+        self.assertIn(client_governo.get("/api/sst/dashboard").status_code, {401, 403})
+
+    def test_farmacia_dashboard_e_conformidade_resistem_a_decimais_e_jsonfield(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Decimal",
+            email="farmacia-decimal@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        MedicamentoFarmacia.objects.create(
+            empresa=farmacia,
+            nome="Dipirona",
+            quantidade_atual="10.000",
+            quantidade_minima="9.500",
+            preco_custo="2.50",
+            preco_venda="4.00",
+            controlado=False,
+        )
+        Dispensacao.objects.create(
+            empresa=farmacia,
+            paciente_nome="Paciente Farmacia",
+            medico_crm="",
+            status="dispensada",
+            medicamentos=[{"nome": "Clonazepam", "controlado": True, "quantidade": 1}],
+            valor_total="10.00",
+        )
+
+        client_farmacia = Client()
+        login = client_farmacia.post(
+            "/api/login",
+            data=json.dumps({
+                "email": farmacia.email,
+                "senha": "123456",
+                "device_id": "farmacia-decimal-device",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+        self.assertEqual(client_farmacia.get("/api/farmacia/dashboard").status_code, 200)
+        conformidade = client_farmacia.get("/api/farmacia/conformidade/")
+        self.assertEqual(conformidade.status_code, 200)
+        self.assertEqual(conformidade.json()["dispensacoes_controladas_sem_receita"], 1)
+
+    def test_hospital_analytics_responde_com_datefield_em_paciente_internado(self):
+        hospital = Empresa.objects.create(
+            nome="Hospital Analytics",
+            email="hospital-analytics@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+        PacienteInternado.objects.create(
+            empresa=hospital,
+            nome="Paciente Analytics",
+            cpf="100.200.300-40",
+            data_internacao=date.today(),
+        )
+
+        client_hospital = Client()
+        login = client_hospital.post(
+            "/api/login",
+            data=json.dumps({
+                "email": hospital.email,
+                "senha": "123456",
+                "device_id": "hospital-analytics-device",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+        analytics = client_hospital.get("/api/hospital/analytics/")
+        self.assertEqual(analytics.status_code, 200)
+        self.assertIn("internacoes_mensal", analytics.json())
+
+    def test_atos_normativos_aceitam_sessao_governamental(self):
+        governo = Empresa.objects.create(
+            nome="Governo Normativo",
+            email="governo-normativo@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+            acesso_governo=True,
+            tipo_conta=Empresa.TIPO_GOVERNO,
+            pacote_codigo="governo_municipio_pequeno",
+            max_dispositivos=5,
+            max_usuarios=5,
+        )
+
+        client_governo = Client()
+        login = client_governo.post(
+            "/api/login-governo",
+            data=json.dumps({
+                "email": governo.email,
+                "senha": "123456",
+                "device_id": "governo-normativo-device",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+        response = client_governo.get("/api/governo/atos-normativos/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["atos"], [])
 
     def test_enterprise_command_center_exige_autenticacao(self):
         response = self.client.get("/api/enterprise/command-center")
@@ -1438,6 +1619,16 @@ class AuthDeviceTests(TestCase):
             response = Client(HTTP_HOST="soluscrt.com.br").get(rota)
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, texto)
+
+    def test_radar_local_publico_com_cidade_e_estado_responde(self):
+        response = Client(HTTP_HOST="soluscrt.com.br").get(
+            "/api/public/radar-local",
+            {"cidade": "Sao Paulo", "estado": "SP"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["local"]["cidade"], "Sao Paulo")
+        self.assertEqual(response.json()["local"]["estado"], "SP")
 
     def test_apresentacao_comercial_abre_sem_autenticacao(self):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/apresentacao/")

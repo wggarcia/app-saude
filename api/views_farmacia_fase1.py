@@ -12,11 +12,25 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
-from .views_dashboard import _empresa_autenticada
+from .access_control import get_setor
 from .models import (
     LivroRegistroControlado, LoteMedicamento, MedicamentoFarmacia,
     FarmaciaAuditLog, Dispensacao,
 )
+from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
+
+
+def _empresa_autenticada(request):
+    empresa = _empresa_autenticada_base(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    setor = get_setor(empresa)
+    if setor != "farmacia":
+        return JsonResponse(
+            {"erro": f"Módulo não disponível para este plano. Seu módulo: {setor}"},
+            status=403,
+        )
+    return empresa
 
 
 def _get_ip(request):
@@ -222,17 +236,26 @@ def api_farmacia_conformidade(request):
         empresa=empresa, controlado=True, lista_portaria_344=""
     ).count()
 
-    dispensacoes_controladas_sem_receita = Dispensacao.objects.filter(
-        empresa=empresa, status="dispensada",
-        medico_crm="",
-    ).filter(
-        medicamentos__contains=[{"controlado": True}]
-    ).count()
+    dispensacoes_controladas_sem_receita = sum(
+        1
+        for dispensacao in Dispensacao.objects.filter(
+            empresa=empresa,
+            status="dispensada",
+            medico_crm="",
+        ).only("medicamentos")
+        if any(item.get("controlado") for item in (dispensacao.medicamentos or []))
+    )
 
     return JsonResponse({
         "lotes_vencidos": lotes_vencidos,
         "lotes_vencendo_30_dias": lotes_vencendo,
         "lotes_bloqueados": lotes_bloqueados,
         "controlados_sem_lista_344": controlados_sem_lista,
-        "alertas_totais": lotes_vencidos + lotes_bloqueados + controlados_sem_lista,
+        "dispensacoes_controladas_sem_receita": dispensacoes_controladas_sem_receita,
+        "alertas_totais": (
+            lotes_vencidos
+            + lotes_bloqueados
+            + controlados_sem_lista
+            + dispensacoes_controladas_sem_receita
+        ),
     })

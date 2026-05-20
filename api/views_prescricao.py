@@ -5,13 +5,20 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import PrescricaoMedica, InternacaoHospital, AtoNormativoGov
-from .views_dashboard import _empresa_autenticada
+from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 from .access_control import get_setor
 
 
 def _get_empresa_hospital(req):
-    empresa = _empresa_autenticada(req)
+    empresa = _empresa_autenticada_base(req)
     if empresa and get_setor(empresa) not in ('hospital',):
+        return None
+    return empresa
+
+
+def _get_empresa_governo(req):
+    empresa = _empresa_autenticada_base(req)
+    if empresa and get_setor(empresa) not in ('governo',):
         return None
     return empresa
 
@@ -131,7 +138,7 @@ def _ato_to_dict(a):
 @csrf_exempt
 def api_atos_normativos(request):
     """GET list / POST create atos normativos governamentais."""
-    empresa = _get_empresa_hospital(request)
+    empresa = _get_empresa_governo(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
@@ -180,7 +187,7 @@ def api_atos_normativos(request):
 @csrf_exempt
 def api_ato_normativo_detalhe(request, ato_id):
     """GET / PUT / DELETE ato normativo."""
-    empresa = _get_empresa_hospital(request)
+    empresa = _get_empresa_governo(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 

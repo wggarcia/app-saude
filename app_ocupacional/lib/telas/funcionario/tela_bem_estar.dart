@@ -197,7 +197,7 @@ class _TelaBemEstarState extends State<TelaBemEstar> {
                   Switch(
                     value: _precisaAjuda,
                     onChanged: (v) => setState(() => _precisaAjuda = v),
-                    activeColor: const Color(0xFF27D3BE),
+                    activeThumbColor: const Color(0xFF27D3BE),
                   ),
                 ],
               ),
@@ -206,7 +206,7 @@ class _TelaBemEstarState extends State<TelaBemEstar> {
                 Text('Tipo de ajuda', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.white60)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  value: _tipoAjuda,
+                  initialValue: _tipoAjuda,
                   dropdownColor: const Color(0xFF102435),
                   decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                   items: const [
@@ -223,7 +223,7 @@ class _TelaBemEstarState extends State<TelaBemEstar> {
                 const SizedBox(height: 16),
                 Container(
                   decoration: BoxDecoration(
-                    color: _querContato ? const Color(0xFF0D3020) : Colors.white.withOpacity(0.04),
+                    color: _querContato ? const Color(0xFF0D3020) : Colors.white.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _querContato ? const Color(0xFF27D3BE) : Colors.white12,
@@ -321,7 +321,7 @@ class _TelaBemEstarState extends State<TelaBemEstar> {
             duration: const Duration(milliseconds: 180),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: selecionado ? const Color(0xFF27D3BE).withOpacity(0.15) : Colors.transparent,
+              color: selecionado ? const Color(0xFF27D3BE).withValues(alpha: 0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: selecionado ? const Color(0xFF27D3BE) : Colors.white12,
@@ -366,7 +366,7 @@ class _TelaBemEstarState extends State<TelaBemEstar> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                 decoration: BoxDecoration(
-                  color: cor(valor).withOpacity(0.15),
+                  color: cor(valor).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text('$valor', style: TextStyle(color: cor(valor), fontWeight: FontWeight.w800)),
@@ -378,7 +378,7 @@ class _TelaBemEstarState extends State<TelaBemEstar> {
               activeTrackColor: cor(valor),
               thumbColor: cor(valor),
               inactiveTrackColor: Colors.white12,
-              overlayColor: cor(valor).withOpacity(0.1),
+              overlayColor: cor(valor).withValues(alpha: 0.1),
             ),
             child: Slider(
               value: valor.toDouble(),
@@ -412,7 +412,7 @@ class _TelaBemEstarState extends State<TelaBemEstar> {
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.white10),
           ),
@@ -433,7 +433,7 @@ class _TelaBemEstarState extends State<TelaBemEstar> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.15),
+                    color: Colors.orange.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text('Ajuda', style: TextStyle(fontSize: 11, color: Colors.orange)),

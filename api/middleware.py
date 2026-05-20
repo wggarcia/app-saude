@@ -80,6 +80,14 @@ def _rate_limit_login(request):
     return False
 
 
+def clear_login_rate_limit(request):
+    """Limpa o histórico de tentativas após um login bem-sucedido."""
+    from django.conf import settings
+    if getattr(settings, "DJANGO_ENV", "") == "test" or "test" in sys.argv:
+        return
+    cache.delete(f"login_attempts:{_client_ip(request)}")
+
+
 def _plano_expirado(empresa):
     if empresa.data_expiracao and empresa.data_expiracao < timezone.now():
         if empresa.ativo:

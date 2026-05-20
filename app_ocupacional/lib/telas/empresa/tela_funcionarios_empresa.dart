@@ -112,7 +112,7 @@ class _TelaFuncionariosEmpresaState extends State<TelaFuncionariosEmpresa> {
                                   return Card(
                                     child: ListTile(
                                       leading: CircleAvatar(
-                                        backgroundColor: const Color(0xFF27D3BE).withOpacity(0.15),
+                                        backgroundColor: const Color(0xFF27D3BE).withValues(alpha: 0.15),
                                         child: Text(
                                           (f['nome'] as String).isNotEmpty
                                               ? (f['nome'] as String)[0].toUpperCase()
@@ -132,7 +132,7 @@ class _TelaFuncionariosEmpresaState extends State<TelaFuncionariosEmpresa> {
                                           : Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                               decoration: BoxDecoration(
-                                                color: Colors.redAccent.withOpacity(0.15),
+                                                color: Colors.redAccent.withValues(alpha: 0.15),
                                                 borderRadius: BorderRadius.circular(99),
                                               ),
                                               child: const Text('Inativo',

@@ -27,6 +27,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 
+from .access_control import get_setor
 from .models import (
     AfastamentoSST,
     ASOOcupacional,
@@ -37,7 +38,7 @@ from .models import (
     FuncionarioSST,
     eSocialEventoSST,
 )
-from .views_dashboard import _empresa_autenticada
+from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 
 
 CID_SST_DOENCA_TRABALHO = [
@@ -206,13 +207,15 @@ def _classificar_tipo_exame(nome):
 
 
 def _empresa_sst_autenticada(request):
-    empresa = _empresa_autenticada(request)
+    empresa = _empresa_autenticada_base(request)
     if not empresa:
         return None
-    tipo = empresa.tipo_conta or ""
-    if tipo not in ("empresa",):
+    if get_setor(empresa) != "empresa":
         return None
     return empresa
+
+
+_empresa_autenticada = _empresa_sst_autenticada
 
 
 def _sst_nao_autorizado():

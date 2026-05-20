@@ -12,6 +12,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
+from .access_control import get_setor
 from .models import (
     LeitoHospitalar,
     TriagemManchester,
@@ -22,7 +23,10 @@ from .models import (
 
 def _get_empresa(request):
     """Retorna a empresa do JWT middleware ou None."""
-    return getattr(request, "empresa", None)
+    empresa = getattr(request, "empresa", None)
+    if empresa and get_setor(empresa) != "hospital":
+        return None
+    return empresa
 
 
 # ── Dashboard / KPIs ─────────────────────────────────────────────────────────

@@ -48,7 +48,7 @@ Depois de mover os secrets, rotacione chaves que ja ficaram em arquivos locais o
 - Android: criar keystore propria e configurar `app_saude/android/key.properties` localmente ou variaveis `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
 - iOS: configurar `GOOGLE_MAPS_IOS_KEY` no build setting do Xcode, revisar bundle id, capabilities, APNs e perfil de assinatura.
 - Firebase: registrar APNs no Firebase para push iOS.
-- Publicar somente depois que a URL de producao responder `/api/public/resumo`, `/api/public/mapa`, `/api/public/radar-local` e `/api/public/alertas`.
+- Publicar somente depois que a URL de producao responder `/api/public/resumo`, `/api/public/mapa`, `/api/public/radar-local?cidade=Sao%20Paulo&estado=SP` e `/api/public/alertas`.
 
 ## 4. LGPD e saude publica
 

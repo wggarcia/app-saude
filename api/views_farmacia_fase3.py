@@ -17,8 +17,22 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .views_dashboard import _empresa_autenticada
+from .access_control import get_setor
 from .models import EstoqueMovimento, MedicamentoFarmacia, Dispensacao
+from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
+
+
+def _empresa_autenticada(request):
+    empresa = _empresa_autenticada_base(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    setor = get_setor(empresa)
+    if setor != "farmacia":
+        return JsonResponse(
+            {"erro": f"Módulo não disponível para este plano. Seu módulo: {setor}"},
+            status=403,
+        )
+    return empresa
 
 
 # ─── Interações medicamentosas (base estática ANVISA + literatura) ────────────

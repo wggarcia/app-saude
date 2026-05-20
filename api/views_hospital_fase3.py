@@ -16,12 +16,32 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .views_dashboard import _empresa_autenticada
+from .access_control import get_setor
 from .models import (
     FaturaHospitalar, ItemFaturamento,
     PacienteInternado, LeitoHospitalar,
     SumarioAlta, CentroCirurgico, PedidoExame,
 )
+from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
+
+
+def _empresa_autenticada(request):
+    empresa = _empresa_autenticada_base(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    setor = get_setor(empresa)
+    if setor != "hospital":
+        return JsonResponse(
+            {"erro": f"Módulo não disponível para este plano. Seu módulo: {setor}"},
+            status=403,
+        )
+    return empresa
+
+
+def _as_date(value):
+    if value is None:
+        return None
+    return value.date() if hasattr(value, "date") else value
 
 
 def _fatura_to_dict(f):
@@ -334,7 +354,11 @@ def api_hospital_analytics(request):
             cid_counts[a.cid_principal] += 1
         pac = a.paciente
         if pac.data_internacao:
-            delta = (a.data_alta.date() - pac.data_internacao.date()).days
+            data_alta = _as_date(a.data_alta)
+            data_internacao = _as_date(pac.data_internacao)
+            if not data_alta or not data_internacao:
+                continue
+            delta = (data_alta - data_internacao).days
             if delta >= 0:
                 duracoes.append(delta)
 
@@ -364,8 +388,9 @@ def api_hospital_analytics(request):
             prev = internacoes[i - 1]
             curr = internacoes[i]
             try:
-                alta_prev = prev.sumario_alta.data_alta.date()
-                if curr.data_internacao and (curr.data_internacao.date() - alta_prev).days <= 30:
+                alta_prev = _as_date(prev.sumario_alta.data_alta)
+                data_atual = _as_date(curr.data_internacao)
+                if alta_prev and data_atual and (data_atual - alta_prev).days <= 30:
                     readmissoes += 1
             except Exception:
                 pass
@@ -401,8 +426,8 @@ def api_hospital_analytics(request):
             mes_fim = mes_inicio.replace(month=mes_inicio.month + 1, day=1)
         n = PacienteInternado.objects.filter(
             empresa=empresa,
-            data_internacao__date__gte=mes_inicio,
-            data_internacao__date__lt=mes_fim,
+            data_internacao__gte=mes_inicio,
+            data_internacao__lt=mes_fim,
         ).count()
         internacoes_mensal.append({"mes": mes_inicio.strftime("%b/%Y"), "n": n})
 

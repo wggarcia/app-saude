@@ -1,5 +1,7 @@
-from django.db import models
 import uuid
+from decimal import Decimal
+
+from django.db import models
 
 
 def _codigo_acesso():
@@ -3834,9 +3836,11 @@ class MedicamentoFarmacia(models.Model):
     def status_estoque(self):
         if self.quantidade_atual <= 0:
             return "critico"
-        if self.quantidade_minima > 0 and self.quantidade_atual <= self.quantidade_minima * 1.1:
+        margem_critica = Decimal("1.10")
+        margem_alerta = Decimal("1.50")
+        if self.quantidade_minima > 0 and self.quantidade_atual <= self.quantidade_minima * margem_critica:
             return "critico"
-        if self.quantidade_minima > 0 and self.quantidade_atual <= self.quantidade_minima * 1.5:
+        if self.quantidade_minima > 0 and self.quantidade_atual <= self.quantidade_minima * margem_alerta:
             return "baixo"
         return "ok"
 

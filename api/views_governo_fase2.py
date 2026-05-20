@@ -11,13 +11,21 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
+from .access_control import get_setor
 from .models import (
     UnidadeSaude, EquipeSaude,
     NotificacaoCompulsoria, SurtoEpidemiologico,
     RegulacaoLeito, ProducaoAmbulatorial,
     MetaPrevine, ContratoGestao, AtendimentoUrgencia,
 )
-from .views_dashboard import _empresa_autenticada
+from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
+
+
+def _empresa_autenticada(request):
+    empresa = _empresa_autenticada_base(request)
+    if not empresa or get_setor(empresa) != "governo":
+        return None
+    return empresa
 
 
 def _e(req):

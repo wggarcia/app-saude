@@ -7,6 +7,7 @@ from .models import Empresa, EmpresaUsuario, DonoSaaS, TrialEmpresa
 from django.utils import timezone
 from datetime import timedelta
 from django.shortcuts import redirect
+from .middleware import clear_login_rate_limit
 from .planos import pacote_padrao, detalhes_pacote, normalizar_codigo_pacote
 from .services.auth_session import (
     COOKIE_MAX_AGE,
@@ -114,6 +115,7 @@ def _login_conta(request, portal_tipo=None):
 
     session_key = _ativar_sessao(principal, device_id)
     token = _criar_token(empresa, session_key, principal_kind, principal_id, device_id=device_id)
+    clear_login_rate_limit(request)
     response = JsonResponse(_payload_resposta(
         empresa,
         token,
