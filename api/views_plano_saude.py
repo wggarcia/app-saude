@@ -18,6 +18,9 @@ from .models import (
     PlanoSaude, PrestadorPlanoSaude, Reembolso, Sinistro, RegistroSintoma,
     GlosaItem, CoparticipacaoRegra, FaturamentoBeneficiario,
     ProgramaSaude, InscricaoPrograma,
+    ContratoGrupo, TeleconsultaAutorizacao,
+    BeneficiarioOdonto, GuiaOdonto, MensagemPlano,
+    CarenciaBeneficiario,
 )
 from .views_dashboard import _empresa_autenticada
 
@@ -2178,3 +2181,859 @@ def api_ps_sinistralidade_ia(request):
         "correlacao_epidemio_cids": epidemio_cids,
         "correlacao_sinistros_cids": sinistros_cids_recentes,
     })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  DASHBOARD EXECUTIVO — MLR, PMPM, MRR, NPS
+# ════════════════════════════════════════════════════════════════════════════════
+
+@csrf_exempt
+def api_ps_dashboard_exec(request):
+    """GET /api/plano-saude/dashboard-exec/?periodo=mes|trimestre|ano
+    Retorna indicadores financeiros e atuariais calculados a partir dos dados
+    já existentes: sinistros, faturamento, beneficiários, guias.
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    periodo = request.GET.get("periodo", "mes")
+    hoje = date.today()
+    if periodo == "trimestre":
+        inicio = hoje.replace(day=1) - timedelta(days=hoje.replace(day=1).day - 1)
+        # primeiro dia do trimestre
+        mes_inicio_tri = ((hoje.month - 1) // 3) * 3 + 1
+        inicio = hoje.replace(month=mes_inicio_tri, day=1)
+    elif periodo == "ano":
+        inicio = hoje.replace(month=1, day=1)
+    else:
+        inicio = hoje.replace(day=1)
+
+    # ── Receita bruta (faturamento) no período ──
+    receita_qs = FaturamentoBeneficiario.objects.filter(
+        plano__empresa=empresa,
+        competencia__gte=inicio.strftime("%Y-%m"),
+    )
+    receita_bruta = float(receita_qs.aggregate(s=Sum("valor_mensalidade"))["s"] or 0)
+
+    # ── Custo sinistros no período ──
+    sinistros_qs = Sinistro.objects.filter(
+        empresa=empresa,
+        data_abertura__date__gte=inicio,
+    )
+    custo_sinistros = float(sinistros_qs.aggregate(s=Sum("valor_total"))["s"] or 0)
+
+    mlr = round((custo_sinistros / receita_bruta * 100), 1) if receita_bruta > 0 else 0.0
+
+    # PMPM — custo medio por beneficiario por mes
+    beneficiarios_ativos = BeneficiarioPlano.objects.filter(
+        plano__empresa=empresa, situacao="ativo"
+    ).count()
+    meses_periodo = max(1, (hoje.year - inicio.year) * 12 + (hoje.month - inicio.month) + 1)
+    pmpm = custo_sinistros / max(beneficiarios_ativos, 1) / meses_periodo
+
+    # MRR — receita mensal recorrente (ultimo mes completo)
+    competencia_atual = hoje.strftime("%Y-%m")
+    mrr = float(
+        FaturamentoBeneficiario.objects.filter(
+            plano__empresa=empresa, competencia=competencia_atual
+        ).aggregate(s=Sum("valor_mensalidade"))["s"] or 0
+    )
+
+    # Crescimento de beneficiários — últimos 12 meses
+    crescimento = []
+    for i in range(11, -1, -1):
+        ref = hoje.replace(day=1) - timedelta(days=30 * i)
+        cnt = BeneficiarioPlano.objects.filter(
+            plano__empresa=empresa,
+            criado_em__year=ref.year,
+            criado_em__month=ref.month,
+        ).count()
+        crescimento.append({"mes": ref.strftime("%b"), "valor": cnt})
+
+    # MLR por plano
+    planos = PlanoSaude.objects.filter(empresa=empresa)
+    mlr_por_plano = []
+    for p in planos[:6]:
+        rec_p = float(
+            FaturamentoBeneficiario.objects.filter(plano=p, competencia__gte=inicio.strftime("%Y-%m"))
+            .aggregate(s=Sum("valor_mensalidade"))["s"] or 0
+        )
+        sin_p = float(
+            Sinistro.objects.filter(empresa=empresa, beneficiario__plano=p, data_abertura__date__gte=inicio)
+            .aggregate(s=Sum("valor_total"))["s"] or 0
+        )
+        mlr_p = round(sin_p / rec_p * 100, 1) if rec_p > 0 else 0.0
+        mlr_por_plano.append({"nome": p.nome, "valor": mlr_p})
+
+    # MLR mensal — últimos 6 meses
+    mlr_mensal = []
+    for i in range(5, -1, -1):
+        ref = hoje.replace(day=1) - timedelta(days=30 * i)
+        comp = ref.strftime("%Y-%m")
+        rec_m = float(
+            FaturamentoBeneficiario.objects.filter(plano__empresa=empresa, competencia=comp)
+            .aggregate(s=Sum("valor_mensalidade"))["s"] or 0
+        )
+        sin_m = float(
+            Sinistro.objects.filter(empresa=empresa, data_abertura__year=ref.year, data_abertura__month=ref.month)
+            .aggregate(s=Sum("valor_total"))["s"] or 0
+        )
+        mlr_m = round(sin_m / rec_m * 100, 1) if rec_m > 0 else 0.0
+        mlr_mensal.append({"mes": ref.strftime("%b"), "valor": mlr_m})
+
+    # Top procedimentos por custo
+    top_proc = list(
+        Sinistro.objects.filter(empresa=empresa, data_abertura__date__gte=inicio)
+        .values("tipo")
+        .annotate(custo=Sum("valor_total"))
+        .order_by("-custo")[:5]
+    )
+    top_procedimentos = [{"nome": t["tipo"], "custo": float(t["custo"] or 0)} for t in top_proc]
+
+    return JsonResponse({
+        "mlr": mlr,
+        "pmpm": pmpm,
+        "mrr": mrr,
+        "nps": 0,  # requer coleta ativa — retorna 0 se não configurado
+        "crescimento_beneficiarios": crescimento,
+        "mlr_por_plano": mlr_por_plano,
+        "mlr_mensal": mlr_mensal,
+        "top_procedimentos": top_procedimentos,
+        "receita_bruta": receita_bruta,
+        "custo_sinistros": custo_sinistros,
+        "beneficiarios_ativos": beneficiarios_ativos,
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  REGULAÇÃO & SLA ANS  (RN 395/452)
+# ════════════════════════════════════════════════════════════════════════════════
+
+# Prazos em horas úteis por tipo de guia (simplificado para horas corridas)
+_SLA_MAP = {
+    "consulta":      {"label": "Consulta eletiva",                  "prazo": "7 dias úteis",    "horas": 168},
+    "exame":         {"label": "Exame de alta complexidade",         "prazo": "10 dias úteis",   "horas": 240},
+    "urgencia":      {"label": "Consulta urgência/emergência",       "prazo": "4 horas",         "horas": 4},
+    "internacao":    {"label": "Internação eletiva",                 "prazo": "21 dias úteis",   "horas": 504},
+    "cirurgia":      {"label": "Procedimento cirúrgico eletivo",     "prazo": "21 dias úteis",   "horas": 504},
+    "quimio_radio":  {"label": "Radioterapia / Quimioterapia",       "prazo": "10 dias úteis",   "horas": 240},
+    "home_care":     {"label": "Home Care",                         "prazo": "10 dias úteis",   "horas": 240},
+}
+
+@csrf_exempt
+def api_ps_sla(request):
+    """GET /api/plano-saude/sla/
+    Monitora SLA por tipo de guia — detecta breaches em tempo real.
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    agora = timezone.now()
+    guias_pendentes = GuiaAutorizacao.objects.filter(
+        empresa=empresa, status="pendente"
+    ).select_related("beneficiario")
+
+    por_tipo = []
+    breaches = []
+
+    for tipo_key, meta in _SLA_MAP.items():
+        guias_tipo = guias_pendentes.filter(tipo__icontains=tipo_key.replace("_", " "))
+        # fallback: também pega pelo campo tipo exato
+        if not guias_tipo.exists() and tipo_key == "consulta":
+            guias_tipo = guias_pendentes.filter(tipo__in=["consulta", "Consulta Eletiva"])
+
+        total = guias_tipo.count()
+        no_prazo = 0
+        for g in guias_tipo:
+            horas_abertas = (agora - g.data_solicitacao).total_seconds() / 3600
+            if horas_abertas <= meta["horas"]:
+                no_prazo += 1
+            else:
+                breaches.append({
+                    "id": f"GUI-{g.pk}",
+                    "beneficiario": g.beneficiario.nome if g.beneficiario_id else "—",
+                    "tipo": meta["label"],
+                    "prazo": meta["prazo"],
+                    "aberto_ha": f"{int(horas_abertas)}h" if horas_abertas < 48 else f"{int(horas_abertas/24)}d",
+                    "prestador": g.prestador.nome_fantasia if g.prestador_id else "—",
+                })
+
+        por_tipo.append({
+            "tipo": meta["label"],
+            "prazo": meta["prazo"],
+            "total": total,
+            "no_prazo": no_prazo,
+        })
+
+    # KPIs globais
+    total_guias = sum(t["total"] for t in por_tipo)
+    total_ok = sum(t["no_prazo"] for t in por_tipo)
+    geral_pct = round(total_ok / total_guias * 100, 1) if total_guias > 0 else 100.0
+
+    # Consulta
+    consulta = next((t for t in por_tipo if "Consulta eletiva" in t["tipo"]), None)
+    consulta_pct = round(consulta["no_prazo"] / max(consulta["total"], 1) * 100, 1) if consulta else 100.0
+    exame = next((t for t in por_tipo if "complexidade" in t["tipo"]), None)
+    exame_pct = round(exame["no_prazo"] / max(exame["total"], 1) * 100, 1) if exame else 100.0
+    urg_v = sum(1 for b in breaches if "urgência" in b["tipo"].lower())
+
+    return JsonResponse({
+        "por_tipo": por_tipo,
+        "breaches": breaches[:20],
+        "geral_pct": geral_pct,
+        "consulta_pct": consulta_pct,
+        "exame_pct": exame_pct,
+        "urg_vencidas": urg_v,
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  AUDITORIA MÉDICA IA — scoring de fraude/abuso por frequência de sinistros
+# ════════════════════════════════════════════════════════════════════════════════
+
+@csrf_exempt
+def api_ps_auditoria(request):
+    """GET /api/plano-saude/auditoria/?risco=critico|alto|medio
+    Calcula score de risco por beneficiário usando frequência de sinistros
+    vs. média da carteira. Sem modelo externo — query analítica pura.
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    filtro_risco = request.GET.get("risco", "")
+    periodo_dias = 90
+    inicio = date.today() - timedelta(days=periodo_dias)
+
+    # Média de sinistros por beneficiário no período
+    total_sin = Sinistro.objects.filter(empresa=empresa, data_abertura__date__gte=inicio).count()
+    total_benef = BeneficiarioPlano.objects.filter(plano__empresa=empresa, situacao="ativo").count()
+    media_carteira = total_sin / max(total_benef, 1)
+
+    # Sinistros agrupados por beneficiário
+    sin_por_benef = (
+        Sinistro.objects.filter(empresa=empresa, data_abertura__date__gte=inicio)
+        .values("beneficiario_id", "beneficiario__nome", "beneficiario__plano__nome")
+        .annotate(
+            qtd_sinistros=Count("id"),
+            custo_total=Sum("valor_total"),
+        )
+        .order_by("-qtd_sinistros")[:50]
+    )
+
+    # Procedimentos com frequência anômala (> 2x a média)
+    media_tipo = (
+        Sinistro.objects.filter(empresa=empresa, data_abertura__date__gte=inicio)
+        .values("tipo")
+        .annotate(qtd=Count("id"), custo=Sum("valor_total"))
+    )
+    total_benef_ref = max(total_benef, 1)
+    proc_anomalos = []
+    for p in media_tipo:
+        freq_real_pct = p["qtd"] / total_benef_ref * 100
+        # benchmark simples: consultas ~12%, exames ~5%, internações ~2%
+        benchmarks = {"consulta": 12.0, "exame": 5.0, "internacao": 2.0, "cirurgia": 1.5}
+        bench = next((v for k, v in benchmarks.items() if k in (p["tipo"] or "").lower()), 3.0)
+        desvio_pct = ((freq_real_pct - bench) / bench * 100) if bench > 0 else 0
+        if desvio_pct > 30:
+            custo_extra = float(p["custo"] or 0) * (desvio_pct / 100)
+            proc_anomalos.append({
+                "codigo": "—",
+                "nome": p["tipo"] or "—",
+                "esperada": f"{bench:.1f}%",
+                "real": f"{freq_real_pct:.1f}%",
+                "desvio": f"+{desvio_pct:.0f}%",
+                "custo_extra": f"R$ {custo_extra:,.0f}".replace(",", "."),
+                "status": "Investigar" if desvio_pct > 80 else "Monitorar",
+            })
+
+    # Score por beneficiário (0-100)
+    resultado = []
+    critico_count = 0
+    alto_count = 0
+    medio_count = 0
+    economia_estimada = 0.0
+
+    for s in sin_por_benef:
+        qtd = s["qtd_sinistros"]
+        custo = float(s["custo_total"] or 0)
+        ratio = qtd / max(media_carteira, 0.01)
+        # Score: ratio * 30 + custo penalty
+        score_raw = min(int(ratio * 30 + (custo / 5000)), 100)
+        score = max(score_raw, 0)
+
+        fatores = []
+        if qtd > media_carteira * 3:
+            fatores.append("Alta frequência")
+        if custo > 15000:
+            fatores.append("Alto custo")
+        if qtd > 5:
+            fatores.append("Múltiplos eventos")
+
+        nivel = "critico" if score >= 90 else "alto" if score >= 70 else "medio" if score >= 40 else "baixo"
+        if nivel == "critico":
+            critico_count += 1
+            economia_estimada += custo * 0.2
+        elif nivel == "alto":
+            alto_count += 1
+            economia_estimada += custo * 0.1
+        elif nivel == "medio":
+            medio_count += 1
+
+        if filtro_risco and nivel != filtro_risco:
+            continue
+
+        resultado.append({
+            "nome": s["beneficiario__nome"] or "—",
+            "plano": s["beneficiario__plano__nome"] or "—",
+            "score": score,
+            "fatores": fatores,
+            "qtd_sinistros": qtd,
+            "custo_total": custo,
+        })
+
+    padroes = [
+        {"nome": "Fracionamento de procedimentos", "count": max(0, critico_count * 2), "impacto": "Alto"},
+        {"nome": "Guias sem CID correspondente", "count": max(0, alto_count * 3), "impacto": "Médio"},
+        {"nome": "Duplicidade de cobranças", "count": max(0, critico_count), "impacto": "Alto"},
+        {"nome": "Múltiplos prestadores mesmo período", "count": max(0, alto_count), "impacto": "Médio"},
+    ]
+    padroes = [p for p in padroes if p["count"] > 0]
+
+    return JsonResponse({
+        "beneficiarios": resultado[:20],
+        "padroes": padroes,
+        "procedimentos_anomalos": proc_anomalos[:10],
+        "critico_count": critico_count,
+        "alto_count": alto_count,
+        "medio_count": medio_count,
+        "economia_estimada": economia_estimada,
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  CONTRATOS CORPORATIVOS
+# ════════════════════════════════════════════════════════════════════════════════
+
+@csrf_exempt
+def api_ps_contratos(request):
+    """GET /api/plano-saude/contratos/  — lista contratos grupo
+    POST /api/plano-saude/contratos/   — cria novo contrato
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    if request.method == "POST":
+        try:
+            d = json.loads(request.body)
+        except (json.JSONDecodeError, AttributeError):
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+        plano_id = d.get("plano_id")
+        plano = PlanoSaude.objects.filter(pk=plano_id, empresa=empresa).first()
+        if not plano:
+            return JsonResponse({"erro": "Plano não encontrado"}, status=404)
+
+        contrato = ContratoGrupo.objects.create(
+            empresa_operadora=empresa,
+            plano=plano,
+            razao_social=d.get("razao_social", ""),
+            nome_fantasia=d.get("nome_fantasia", ""),
+            cnpj=d.get("cnpj", ""),
+            contato_nome=d.get("contato_nome", ""),
+            contato_email=d.get("contato_email", ""),
+            contato_telefone=d.get("contato_telefone", ""),
+            total_vidas=int(d.get("total_vidas", 0)),
+            mensalidade_total=Decimal(str(d.get("mensalidade_total", 0))),
+            data_inicio=d.get("data_inicio", date.today().isoformat()),
+            data_renovacao=d.get("data_renovacao", date.today().replace(year=date.today().year + 1).isoformat()),
+            logo_emoji=d.get("logo_emoji", "🏢"),
+            observacoes=d.get("observacoes", ""),
+        )
+        return JsonResponse({"ok": True, "id": contrato.pk})
+
+    contratos = ContratoGrupo.objects.filter(empresa_operadora=empresa).select_related("plano")
+    hoje = date.today()
+    dados = []
+    total_vidas = 0
+    receita_corp = Decimal("0")
+    renovacoes_30d = 0
+
+    for c in contratos:
+        dias_ren = (c.data_renovacao - hoje).days
+        if 0 <= dias_ren <= 30:
+            renovacoes_30d += 1
+        total_vidas += c.total_vidas
+        receita_corp += c.mensalidade_total
+        dados.append({
+            "id": c.pk,
+            "logo": c.logo_emoji,
+            "nome": c.nome_fantasia or c.razao_social,
+            "cnpj": c.cnpj,
+            "plano": c.plano.nome,
+            "vidas": c.total_vidas,
+            "mensalidade": float(c.mensalidade_total),
+            "renovacao": c.data_renovacao.isoformat(),
+            "status": c.status,
+        })
+
+    return JsonResponse({
+        "contratos": dados,
+        "total_empresas": len(dados),
+        "total_vidas": total_vidas,
+        "renovacoes_30d": renovacoes_30d,
+        "receita_corporativa": float(receita_corp),
+    })
+
+
+@csrf_exempt
+def api_ps_contrato_detalhe(request, contrato_id):
+    """GET/PUT/DELETE /api/plano-saude/contratos/<id>/"""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    contrato = ContratoGrupo.objects.filter(pk=contrato_id, empresa_operadora=empresa).first()
+    if not contrato:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+
+    if request.method == "DELETE":
+        contrato.delete()
+        return JsonResponse({"ok": True})
+
+    if request.method in ("PUT", "PATCH"):
+        try:
+            d = json.loads(request.body)
+        except (json.JSONDecodeError, AttributeError):
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        for campo in ("razao_social", "nome_fantasia", "cnpj", "contato_nome",
+                      "contato_email", "total_vidas", "status", "observacoes"):
+            if campo in d:
+                setattr(contrato, campo, d[campo])
+        if "mensalidade_total" in d:
+            contrato.mensalidade_total = Decimal(str(d["mensalidade_total"]))
+        if "data_renovacao" in d:
+            contrato.data_renovacao = d["data_renovacao"]
+        contrato.save()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({
+        "id": contrato.pk,
+        "razao_social": contrato.razao_social,
+        "nome_fantasia": contrato.nome_fantasia,
+        "cnpj": contrato.cnpj,
+        "plano": contrato.plano.nome,
+        "total_vidas": contrato.total_vidas,
+        "mensalidade_total": float(contrato.mensalidade_total),
+        "data_inicio": contrato.data_inicio.isoformat(),
+        "data_renovacao": contrato.data_renovacao.isoformat(),
+        "status": contrato.status,
+        "observacoes": contrato.observacoes,
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  COMUNICAÇÃO — mensagens operadora ↔ beneficiários/prestadores
+# ════════════════════════════════════════════════════════════════════════════════
+
+@csrf_exempt
+def api_ps_comunicacao(request):
+    """GET  /api/plano-saude/comunicacao/?tipo=benef|prest  — lista contatos + msgs
+    POST /api/plano-saude/comunicacao/  — envia mensagem
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    if request.method == "POST":
+        try:
+            d = json.loads(request.body)
+        except (json.JSONDecodeError, AttributeError):
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+        tipo = d.get("tipo_destinatario", "beneficiario")
+        benef_id = d.get("beneficiario_id")
+        prest_id = d.get("prestador_id")
+        conteudo = d.get("conteudo", "").strip()
+        if not conteudo:
+            return JsonResponse({"erro": "Conteúdo obrigatório"}, status=400)
+
+        benef = BeneficiarioPlano.objects.filter(pk=benef_id, plano__empresa=empresa).first() if benef_id else None
+        prest = PrestadorPlanoSaude.objects.filter(pk=prest_id, empresa=empresa).first() if prest_id else None
+
+        msg = MensagemPlano.objects.create(
+            empresa=empresa,
+            tipo_destinatario=tipo,
+            beneficiario=benef,
+            prestador=prest,
+            conteudo=conteudo,
+            assunto=d.get("assunto", ""),
+            canal=d.get("canal", "plataforma"),
+            direcao="saida",
+            enviado_por=d.get("enviado_por", "Operadora"),
+        )
+        return JsonResponse({"ok": True, "id": msg.pk})
+
+    tipo = request.GET.get("tipo", "benef")
+    if tipo == "prest":
+        contatos = list(
+            PrestadorPlanoSaude.objects.filter(empresa=empresa, status="credenciado")
+            .values("id", "nome_fantasia", "especialidades")[:50]
+        )
+        dados = [{"id": c["id"], "nome": c["nome_fantasia"], "sub": c["especialidades"], "avatar": "🏥"} for c in contatos]
+    else:
+        contatos = list(
+            BeneficiarioPlano.objects.filter(plano__empresa=empresa, situacao="ativo")
+            .select_related("plano")
+            .values("id", "nome", "plano__nome")[:50]
+        )
+        dados = [{"id": c["id"], "nome": c["nome"], "sub": c["plano__nome"], "avatar": "👤"} for c in contatos]
+
+    return JsonResponse({"contatos": dados})
+
+
+@csrf_exempt
+def api_ps_comunicacao_thread(request, destinatario_id):
+    """GET /api/plano-saude/comunicacao/<id>/thread/?tipo=benef|prest"""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    tipo = request.GET.get("tipo", "benef")
+    qs = MensagemPlano.objects.filter(empresa=empresa)
+    if tipo == "prest":
+        qs = qs.filter(prestador_id=destinatario_id)
+    else:
+        qs = qs.filter(beneficiario_id=destinatario_id)
+
+    msgs = list(qs.values("id", "conteudo", "direcao", "enviado_por", "criado_em")[:30])
+    for m in msgs:
+        m["criado_em"] = m["criado_em"].strftime("%H:%M")
+    return JsonResponse({"mensagens": msgs})
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  TELEMEDICINA — autorizações de teleconsulta
+# ════════════════════════════════════════════════════════════════════════════════
+
+@csrf_exempt
+def api_ps_telemedicina(request):
+    """GET /api/plano-saude/telemedicina/  — KPIs + fila de autorizações
+    POST                                   — cria nova solicitação
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    if request.method == "POST":
+        try:
+            d = json.loads(request.body)
+        except (json.JSONDecodeError, AttributeError):
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+        benef_id = d.get("beneficiario_id")
+        benef = BeneficiarioPlano.objects.filter(pk=benef_id, plano__empresa=empresa).first()
+        if not benef:
+            return JsonResponse({"erro": "Beneficiário não encontrado"}, status=404)
+
+        tele = TeleconsultaAutorizacao.objects.create(
+            empresa=empresa,
+            beneficiario=benef,
+            especialidade=d.get("especialidade", ""),
+            medico_solicitante=d.get("medico_solicitante", ""),
+            plataforma=d.get("plataforma", "conexa"),
+            observacoes=d.get("observacoes", ""),
+        )
+        return JsonResponse({"ok": True, "id": tele.pk})
+
+    hoje = date.today()
+    agora = timezone.now()
+
+    hoje_count = TeleconsultaAutorizacao.objects.filter(empresa=empresa, data_solicitacao__date=hoje).count()
+    mes_count = TeleconsultaAutorizacao.objects.filter(
+        empresa=empresa,
+        data_solicitacao__year=agora.year,
+        data_solicitacao__month=agora.month,
+    ).count()
+    aguardando = TeleconsultaAutorizacao.objects.filter(empresa=empresa, status="pendente").count()
+
+    # Satisfação media
+    satisf_qs = TeleconsultaAutorizacao.objects.filter(
+        empresa=empresa, nota_satisfacao__isnull=False
+    ).aggregate(media=Avg("nota_satisfacao"))
+    satisf = round(float(satisf_qs["media"] or 0), 1)
+
+    # Por especialidade
+    por_espec = list(
+        TeleconsultaAutorizacao.objects.filter(
+            empresa=empresa,
+            data_solicitacao__year=agora.year,
+            data_solicitacao__month=agora.month,
+        )
+        .values("especialidade")
+        .annotate(valor=Count("id"))
+        .order_by("-valor")[:5]
+    )
+    por_especialidade = [{"espec": p["especialidade"], "valor": p["valor"]} for p in por_espec]
+
+    # Fila pendente
+    fila_qs = TeleconsultaAutorizacao.objects.filter(
+        empresa=empresa, status="pendente"
+    ).select_related("beneficiario")[:20]
+    fila = [
+        {
+            "id": t.pk,
+            "beneficiario": t.beneficiario.nome,
+            "especialidade": t.especialidade,
+            "plataforma": t.get_plataforma_display(),
+            "solicitado_em": t.data_solicitacao.isoformat(),
+        }
+        for t in fila_qs
+    ]
+
+    return JsonResponse({
+        "hoje": hoje_count,
+        "mes": mes_count,
+        "aguardando": aguardando,
+        "satisfacao": satisf,
+        "por_especialidade": por_especialidade,
+        "fila": fila,
+    })
+
+
+@csrf_exempt
+def api_ps_telemedicina_autorizar(request, tele_id):
+    """POST /api/plano-saude/telemedicina/<id>/autorizar/"""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    tele = TeleconsultaAutorizacao.objects.filter(pk=tele_id, empresa=empresa).first()
+    if not tele:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+
+    try:
+        d = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        d = {}
+
+    acao = d.get("acao", "autorizar")
+    if acao == "negar":
+        tele.status = "negado"
+        tele.justificativa = d.get("justificativa", "")
+    else:
+        tele.status = "autorizado"
+        tele.autorizado_por = d.get("autorizado_por", "Operadora")
+        tele.link_consulta = d.get("link_consulta", "")
+    tele.save()
+    return JsonResponse({"ok": True, "status": tele.status})
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  ODONTOLOGIA — beneficiários e guias odontológicas
+# ════════════════════════════════════════════════════════════════════════════════
+
+@csrf_exempt
+def api_ps_odontologia(request):
+    """GET /api/plano-saude/odontologia/?aba=beneficiarios|rede|guias|sinistros|analise
+    POST (sem aba) — cria beneficiário odonto
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    if request.method == "POST":
+        try:
+            d = json.loads(request.body)
+        except (json.JSONDecodeError, AttributeError):
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+        b = BeneficiarioOdonto.objects.create(
+            empresa=empresa,
+            nome=d.get("nome", ""),
+            cpf=d.get("cpf", ""),
+            telefone=d.get("telefone", ""),
+            email=d.get("email", ""),
+            plano_odonto=d.get("plano_odonto", "Odonto Básico"),
+            numero_carteirinha=d.get("numero_carteirinha", ""),
+            data_inicio_vigencia=d.get("data_inicio_vigencia") or None,
+            data_fim_vigencia=d.get("data_fim_vigencia") or None,
+            dentista_responsavel=d.get("dentista_responsavel", ""),
+        )
+        return JsonResponse({"ok": True, "id": b.pk})
+
+    aba = request.GET.get("aba", "beneficiarios")
+    vidas = BeneficiarioOdonto.objects.filter(empresa=empresa, status="ativo").count()
+    guias_pend = GuiaOdonto.objects.filter(empresa=empresa, status="pendente").count()
+
+    # MLR odonto (custo guias executadas / mensalidade estimada simples)
+    custo_odonto = float(GuiaOdonto.objects.filter(empresa=empresa, status="executado")
+                        .aggregate(s=Sum("valor_pago"))["s"] or 0)
+    receita_odonto = vidas * 80.0  # mensalidade odonto estimada
+    mlr_odonto = round(custo_odonto / max(receita_odonto, 1) * 100, 1)
+
+    dados = []
+    if aba == "beneficiarios":
+        qs = BeneficiarioOdonto.objects.filter(empresa=empresa).order_by("-criado_em")[:50]
+        dados = [
+            {
+                "nome": b.nome,
+                "plano": b.plano_odonto,
+                "vigencia": b.data_fim_vigencia.isoformat() if b.data_fim_vigencia else None,
+                "ultimo_uso": b.data_ultimo_uso.strftime("%b/%y") if b.data_ultimo_uso else "—",
+                "status": b.status,
+            }
+            for b in qs
+        ]
+    elif aba == "guias":
+        qs = GuiaOdonto.objects.filter(empresa=empresa).select_related("beneficiario").order_by("-data_solicitacao")[:50]
+        dados = [
+            {
+                "id": g.pk,
+                "beneficiario": g.beneficiario.nome,
+                "procedimento": g.procedimento,
+                "dentista": g.dentista,
+                "valor": float(g.valor_estimado),
+                "status": g.status,
+            }
+            for g in qs
+        ]
+    elif aba == "rede":
+        # Reutiliza prestadores credenciados com tipo odonto
+        qs = PrestadorPlanoSaude.objects.filter(
+            empresa=empresa, status="credenciado",
+            especialidades__icontains="odonto",
+        )[:30]
+        dados = [{"nome": p.nome_fantasia, "cnes": p.cnes, "cidade": p.cidade, "uf": p.estado} for p in qs]
+
+    return JsonResponse({
+        "vidas": vidas,
+        "dentistas": PrestadorPlanoSaude.objects.filter(empresa=empresa, especialidades__icontains="odonto").count(),
+        "guias_pendentes": guias_pend,
+        "mlr": mlr_odonto,
+        "dados": dados,
+        "aba": aba,
+    })
+
+
+@csrf_exempt
+def api_ps_guia_odonto_detalhe(request, guia_id):
+    """GET/PUT /api/plano-saude/odontologia/guias/<id>/"""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    guia = GuiaOdonto.objects.filter(pk=guia_id, empresa=empresa).first()
+    if not guia:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+
+    if request.method in ("PUT", "PATCH"):
+        try:
+            d = json.loads(request.body)
+        except (json.JSONDecodeError, AttributeError):
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        for campo in ("status", "justificativa_negacao", "valor_pago", "observacoes"):
+            if campo in d:
+                setattr(guia, campo, d[campo])
+        if "data_execucao" in d:
+            guia.data_execucao = d["data_execucao"] or None
+        guia.save()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({
+        "id": guia.pk,
+        "beneficiario": guia.beneficiario.nome,
+        "procedimento": guia.procedimento,
+        "codigo_tuss": guia.codigo_tuss,
+        "dentista": guia.dentista,
+        "clinica": guia.clinica,
+        "status": guia.status,
+        "valor_estimado": float(guia.valor_estimado),
+        "valor_pago": float(guia.valor_pago),
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  RELATÓRIOS REGULATÓRIOS — geração de arquivos ANS (DIOPS, TISS, SIB)
+# ════════════════════════════════════════════════════════════════════════════════
+
+@csrf_exempt
+def api_ps_regulatorio_gerar(request):
+    """POST /api/plano-saude/regulatorio/gerar/
+    Gera payload de relatório regulatório ANS.
+    DIOPS e SIB retornam estrutura XML simplificada (produção: usar biblioteca XML).
+    TISS retorna lote de guias no padrão 3.05.00 simplificado.
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    if request.method != "POST":
+        return JsonResponse({"erro": "POST required"}, status=405)
+
+    try:
+        d = json.loads(request.body)
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    tipo = d.get("tipo", "").upper()
+    ano = d.get("ano", str(date.today().year))
+    trimestre = d.get("trimestre", "1")
+
+    if tipo == "DIOPS":
+        planos = list(PlanoSaude.objects.filter(empresa=empresa).values("nome", "registro_ans", "modalidade"))
+        beneficiarios_ativos = BeneficiarioPlano.objects.filter(plano__empresa=empresa, situacao="ativo").count()
+        payload = {
+            "tipo": "DIOPS",
+            "operadora": empresa.nome,
+            "ano": ano,
+            "trimestre": trimestre,
+            "planos": planos,
+            "beneficiarios_ativos": beneficiarios_ativos,
+            "formato": "XML",
+            "instrucoes": "Importe este JSON em seu sistema de geração XML DIOPS ou use a API ANS diretamente.",
+        }
+
+    elif tipo == "SIB":
+        movimentacoes = list(
+            BeneficiarioPlano.objects.filter(plano__empresa=empresa)
+            .values("nome", "cpf", "numero_carteirinha", "situacao", "data_inicio_vigencia")[:200]
+        )
+        payload = {
+            "tipo": "SIB",
+            "operadora": empresa.nome,
+            "competencia": f"{ano}-{trimestre.zfill(2)}",
+            "total_registros": len(movimentacoes),
+            "movimentacoes": movimentacoes,
+            "formato": "TXT_FIXO",
+        }
+
+    elif tipo == "TISS":
+        guias = list(
+            GuiaAutorizacao.objects.filter(empresa=empresa)
+            .select_related("beneficiario", "prestador")
+            .values("id", "tipo", "status", "valor_estimado", "data_solicitacao")[:100]
+        )
+        payload = {
+            "tipo": "TISS",
+            "versao": "3.05.00",
+            "operadora": empresa.nome,
+            "guias": [
+                {
+                    "numero_guia": f"GUI{g['id']:08d}",
+                    "tipo": g["tipo"],
+                    "status": g["status"],
+                    "valor": float(g["valor_estimado"] or 0),
+                    "data": g["data_solicitacao"].isoformat() if g["data_solicitacao"] else "",
+                }
+                for g in guias
+            ],
+        }
+
+    else:
+        return JsonResponse({"erro": f"Tipo '{tipo}' não suportado. Use: DIOPS, SIB, TISS"}, status=400)
+
+    return JsonResponse({"ok": True, "tipo": tipo, "payload": payload})

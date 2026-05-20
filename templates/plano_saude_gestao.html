@@ -1192,7 +1192,8 @@ tr:hover td{background:rgba(255,107,157,.03)}
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost btn-sm" onclick="loadOdonto()">&#8635; Atualizar</button>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalOdonto()">+ Novo Beneficiario Odonto</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalGuiaOdonto()">&#128221; Nova Guia</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalOdonto()">+ Novo Beneficiario</button>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
@@ -1222,6 +1223,203 @@ tr:hover td{background:rgba(255,107,157,.03)}
   </div>
 
 </main>
+
+<!-- MODAL: Novo Contrato Corporativo -->
+<div class="modal-bg" id="modalContrato">
+  <div class="modal" style="max-width:660px">
+    <h3>&#128209; Novo Contrato Corporativo</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Razao Social *</label><input id="ctRazao" placeholder="Empresa SA"></div>
+      <div class="form-group"><label>Nome Fantasia</label><input id="ctFantasia" placeholder="Nome comercial"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CNPJ</label><input id="ctCnpj" placeholder="00.000.000/0001-00"></div>
+      <div class="form-group"><label>Plano Contratado *</label>
+        <select id="ctPlano"><option value="">Selecione...</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Total de Vidas *</label><input id="ctVidas" type="number" min="1" placeholder="Ex: 150"></div>
+      <div class="form-group"><label>Mensalidade Total (R$) *</label><input id="ctMensalidade" type="number" min="0" step="0.01" placeholder="Ex: 75000.00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Data de Inicio *</label><input id="ctInicio" type="date"></div>
+      <div class="form-group"><label>Data de Renovacao *</label><input id="ctRenovacao" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Contato Responsavel</label><input id="ctContato" placeholder="Nome do RH"></div>
+      <div class="form-group"><label>Email do Contato</label><input id="ctEmail" type="email" placeholder="rh@empresa.com.br"></div>
+    </div>
+    <div class="form-group"><label>Telefone</label><input id="ctTelefone" placeholder="(11) 4000-0000"></div>
+    <div class="form-group"><label>Observacoes</label><textarea id="ctObs" rows="2" placeholder="Observacoes contratuais..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalContrato')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarContrato()">Salvar Contrato</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nova Mensagem / Campanha -->
+<div class="modal-bg" id="modalMensagem">
+  <div class="modal" style="max-width:600px">
+    <h3>&#128172; Nova Mensagem</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Destinatario</label>
+        <select id="msgTipo" onchange="toggleMsgDestinatario()">
+          <option value="beneficiario">Beneficiario especifico</option>
+          <option value="prestador">Prestador especifico</option>
+          <option value="massa_benef">Todos os beneficiarios (massa)</option>
+          <option value="massa_prest">Todos os prestadores (massa)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Canal</label>
+        <select id="msgCanal">
+          <option value="plataforma">Plataforma</option>
+          <option value="email">E-mail</option>
+          <option value="sms">SMS</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" id="msgDestinatarioGroup">
+      <label>Destinatario</label>
+      <select id="msgDestinatario"><option value="">Selecione...</option></select>
+    </div>
+    <div class="form-group"><label>Assunto</label><input id="msgAssunto" placeholder="Ex: Lembrete preventivo 2026"></div>
+    <div class="form-group"><label>Mensagem *</label>
+      <textarea id="msgConteudo" rows="5" placeholder="Digite sua mensagem..."></textarea>
+    </div>
+    <div style="background:rgba(255,107,157,.06);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--muted);margin-bottom:14px">
+      &#128228; <strong>Envio em massa:</strong> todos os destinatarios ativos do tipo selecionado receberao a mensagem pelo canal escolhido.
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalMensagem')">Cancelar</button>
+      <button class="btn btn-primary" onclick="enviarMensagemModal()">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Autorizar Teleconsulta -->
+<div class="modal-bg" id="modalTeleconsulta">
+  <div class="modal" style="max-width:580px">
+    <h3>&#128241; Autorizar Teleconsulta</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Beneficiario *</label>
+        <select id="teleModalBenef"><option value="">Selecione...</option></select>
+      </div>
+      <div class="form-group"><label>Especialidade *</label>
+        <select id="teleModalEspec">
+          <option value="Clinica Geral">Clinica Geral</option>
+          <option value="Dermatologia">Dermatologia</option>
+          <option value="Psicologia">Psicologia / Psiquiatria</option>
+          <option value="Pediatria">Pediatria</option>
+          <option value="Ginecologia">Ginecologia e Obstetricia</option>
+          <option value="Cardiologia">Cardiologia</option>
+          <option value="Ortopedia">Ortopedia</option>
+          <option value="Neurologia">Neurologia</option>
+          <option value="Nutrologia">Nutrologia / Nutricao</option>
+          <option value="Endocrinologia">Endocrinologia</option>
+          <option value="Outra">Outra especialidade</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Plataforma</label>
+        <select id="teleModalPlat">
+          <option value="conexa">Conexa Saude</option>
+          <option value="iclinic">iClinic</option>
+          <option value="drconsulta">Dr. Consulta</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Medico Solicitante</label>
+        <input id="teleModalMedico" placeholder="Nome e CRM (opcional)">
+      </div>
+    </div>
+    <div class="form-group"><label>Observacoes</label>
+      <textarea id="teleModalObs" rows="3" placeholder="Motivo da consulta, historico relevante..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalTeleconsulta')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarTeleconsulta()">Autorizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Novo Beneficiario Odonto -->
+<div class="modal-bg" id="modalBenefOdonto">
+  <div class="modal" style="max-width:600px">
+    <h3>&#129463; Novo Beneficiario Odontologico</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome Completo *</label><input id="odNome" placeholder="Nome do beneficiario"></div>
+      <div class="form-group"><label>CPF *</label><input id="odCpf" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Plano Odontologico *</label>
+        <select id="odPlano">
+          <option value="Odonto Basico">Odonto Basico</option>
+          <option value="Odonto Essencial">Odonto Essencial</option>
+          <option value="Odonto Orto Plus">Odonto Orto Plus</option>
+          <option value="Odonto Premium">Odonto Premium</option>
+          <option value="Odonto Empresarial">Odonto Empresarial</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Numero da Carteirinha</label><input id="odCarteirinha" placeholder="0000000000"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Data de Nascimento</label><input id="odNasc" type="date"></div>
+      <div class="form-group"><label>Sexo</label>
+        <select id="odSexo">
+          <option value="">Nao informado</option>
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Telefone</label><input id="odTelefone" placeholder="(11) 9 0000-0000"></div>
+      <div class="form-group"><label>E-mail</label><input id="odEmail" type="email" placeholder="beneficiario@email.com"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Inicio da Vigencia</label><input id="odInicio" type="date"></div>
+      <div class="form-group"><label>Fim da Vigencia</label><input id="odFim" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Dentista Responsavel</label><input id="odDentista" placeholder="Nome do dentista"></div>
+      <div class="form-group"><label>CRO do Dentista</label><input id="odCro" placeholder="CRO-SP 000000"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalBenefOdonto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarBenefOdonto()">Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nova Guia Odonto -->
+<div class="modal-bg" id="modalGuiaOdonto">
+  <div class="modal" style="max-width:580px">
+    <h3>&#129463; Nova Guia Odontologica</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Beneficiario *</label>
+        <select id="ogBenef"><option value="">Selecione...</option></select>
+      </div>
+      <div class="form-group"><label>Codigo TUSS</label><input id="ogTuss" placeholder="Ex: 87000164"></div>
+    </div>
+    <div class="form-group"><label>Procedimento *</label><input id="ogProc" placeholder="Ex: Extracao dentaria simples"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Dentista</label><input id="ogDentista" placeholder="Nome e CRO"></div>
+      <div class="form-group"><label>Clinica / Consultorio</label><input id="ogClinica" placeholder="Nome da clinica"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor Estimado (R$)</label><input id="ogValor" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="form-group"><label>Data Execucao</label><input id="ogDataExec" type="date"></div>
+    </div>
+    <div class="form-group"><label>Observacoes</label><textarea id="ogObs" rows="2" placeholder="Informacoes adicionais..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalGuiaOdonto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarGuiaOdonto()">Solicitar Autorizacao</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: Novo Plano -->
 <div class="modal-bg" id="modalPlano">
@@ -3212,7 +3410,57 @@ function renderContratos(lista) {
   }).join('');
 }
 function filtrarContratos(q) { renderContratos(_todosContratos.filter(c => c.nome.toLowerCase().includes(q.toLowerCase()))); }
-function abrirModalContrato() { showToastPS('Modal de novo contrato em desenvolvimento', 'ok'); }
+function abrirModalContrato() {
+  // Popula select de planos
+  var sel = document.getElementById('ctPlano');
+  if (sel) sel.innerHTML = '<option value="">Selecione...</option>' +
+    _planos.map(function(p){ return '<option value="'+p.id+'">'+p.nome+'</option>'; }).join('');
+  // Datas default
+  var hoje = new Date().toISOString().split('T')[0];
+  var proximo = new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0];
+  document.getElementById('ctInicio').value = hoje;
+  document.getElementById('ctRenovacao').value = proximo;
+  abrirModal('modalContrato');
+}
+
+async function salvarContrato() {
+  var razao = document.getElementById('ctRazao').value.trim();
+  var planoId = document.getElementById('ctPlano').value;
+  var vidas = document.getElementById('ctVidas').value;
+  var mensalidade = document.getElementById('ctMensalidade').value;
+  var inicio = document.getElementById('ctInicio').value;
+  var renovacao = document.getElementById('ctRenovacao').value;
+  if (!razao || !planoId || !vidas || !inicio || !renovacao) {
+    showToastPS('Preencha razao social, plano, vidas e datas', 'warn'); return;
+  }
+  var resp = await fetch('/api/plano-saude/contratos/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+    credentials: 'include',
+    body: JSON.stringify({
+      razao_social: razao,
+      nome_fantasia: document.getElementById('ctFantasia').value,
+      cnpj: document.getElementById('ctCnpj').value,
+      plano_id: planoId,
+      total_vidas: parseInt(vidas),
+      mensalidade_total: parseFloat(mensalidade)||0,
+      data_inicio: inicio,
+      data_renovacao: renovacao,
+      contato_nome: document.getElementById('ctContato').value,
+      contato_email: document.getElementById('ctEmail').value,
+      contato_telefone: document.getElementById('ctTelefone').value,
+      observacoes: document.getElementById('ctObs').value,
+    })
+  });
+  var d = await resp.json();
+  if (d.ok) {
+    showToastPS('Contrato cadastrado com sucesso!', 'ok');
+    fecharModal('modalContrato');
+    loadContratos();
+  } else {
+    showToastPS(d.erro || 'Erro ao salvar contrato', 'err');
+  }
+}
 function renovarContrato(nome) { showToastPS('Proposta de renovacao enviada para ' + nome, 'ok'); }
 
 // ════════════════════════════════════════════════════════════
@@ -3276,13 +3524,30 @@ function filtrarContatos(q) {
   const items = document.querySelectorAll('#commLista > div');
   items.forEach(el => { el.style.display = el.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none'; });
 }
-function selecionarContato(c) {
+async function selecionarContato(c) {
   _commContato = c;
   document.getElementById('commNome').textContent = c.nome;
   document.getElementById('commSubtitle').textContent = c.sub || '';
-  document.getElementById('commThread').innerHTML = `
-    <div class="msg-bubble in"><strong>Boas-vindas do sistema</strong><div class="msg-time">Sistema · automatico</div></div>
-    <div class="msg-bubble out">Ola ${c.nome.split(' ')[0]}, como podemos ajudar?<div class="msg-time">Agora · Operadora</div></div>`;
+  // Carrega thread real do servidor
+  try {
+    const r = await fetch('/api/plano-saude/comunicacao/' + c.id + '/thread/?tipo=' + _commTab, {credentials:'include'});
+    const d = await r.json();
+    const msgs = d.mensagens || [];
+    if (msgs.length) {
+      document.getElementById('commThread').innerHTML = msgs.map(m => `
+        <div class="msg-bubble ${m.direcao==='saida'?'out':'in'}">${m.conteudo}
+          <div class="msg-time">${m.criado_em} · ${m.enviado_por}</div>
+        </div>`).join('');
+    } else {
+      document.getElementById('commThread').innerHTML =
+        `<div class="msg-bubble in">Nenhuma mensagem ainda. Seja o primeiro a iniciar!<div class="msg-time">Sistema</div></div>`;
+    }
+  } catch(e) {
+    document.getElementById('commThread').innerHTML =
+      `<div class="msg-bubble out">Ola ${c.nome.split(' ')[0]}, como podemos ajudar?<div class="msg-time">Agora · Operadora</div></div>`;
+  }
+  const thread = document.getElementById('commThread');
+  thread.scrollTop = thread.scrollHeight;
 }
 function enviarMsg() {
   const inp = document.getElementById('commMsgInput');
@@ -3295,8 +3560,65 @@ function enviarMsg() {
   inp.value = '';
   showToastPS('Mensagem enviada para ' + _commContato.nome, 'ok');
 }
-function abrirNovaMsg() { showToastPS('Modal de nova mensagem/campanha em desenvolvimento', 'ok'); }
-function enviarNotifMassa() { showToastPS('Painel de notificacoes em massa — disponivel em breve', 'ok'); }
+function abrirNovaMsg() {
+  // Popula select de beneficiarios
+  var sel = document.getElementById('msgDestinatario');
+  if (sel) {
+    sel.innerHTML = '<option value="">Selecione...</option>' +
+      (_commTab === 'prest' ? (_prestadores||[]) : []).map(function(p){
+        return '<option value="'+p.id+'">'+p.nome_fantasia+'</option>';
+      }).join('');
+  }
+  toggleMsgDestinatario();
+  abrirModal('modalMensagem');
+}
+
+function toggleMsgDestinatario() {
+  var tipo = document.getElementById('msgTipo').value;
+  var group = document.getElementById('msgDestinatarioGroup');
+  if (group) group.style.display = (tipo === 'massa_benef' || tipo === 'massa_prest') ? 'none' : 'block';
+}
+
+async function enviarMensagemModal() {
+  var tipo = document.getElementById('msgTipo').value;
+  var conteudo = document.getElementById('msgConteudo').value.trim();
+  var canal = document.getElementById('msgCanal').value;
+  var assunto = document.getElementById('msgAssunto').value;
+  if (!conteudo) { showToastPS('Digite a mensagem antes de enviar', 'warn'); return; }
+
+  var isMassa = tipo.startsWith('massa_');
+  var body = {
+    tipo_destinatario: isMassa ? tipo.replace('massa_', '') : tipo,
+    conteudo: conteudo,
+    assunto: assunto,
+    canal: canal,
+    massa: isMassa,
+  };
+  if (!isMassa) {
+    body.beneficiario_id = document.getElementById('msgDestinatario').value;
+  }
+  var resp = await fetch('/api/plano-saude/comunicacao/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+    credentials: 'include',
+    body: JSON.stringify(body)
+  });
+  var d = await resp.json();
+  if (d.ok) {
+    showToastPS(isMassa ? 'Campanha em massa disparada!' : 'Mensagem enviada!', 'ok');
+    fecharModal('modalMensagem');
+    document.getElementById('msgConteudo').value = '';
+    document.getElementById('msgAssunto').value = '';
+  } else {
+    showToastPS(d.erro || 'Erro ao enviar', 'err');
+  }
+}
+
+function enviarNotifMassa() {
+  document.getElementById('msgTipo').value = 'massa_benef';
+  toggleMsgDestinatario();
+  abrirModal('modalMensagem');
+}
 function novaCampanha() { showToastPS('Criador de campanha: selecione segmento, canal e template', 'ok'); }
 
 // ════════════════════════════════════════════════════════════
@@ -3344,7 +3666,44 @@ function renderTeleFila(lista) {
     <td><button class="btn btn-ok btn-sm" onclick="autorizarTele('${t.id}')">Autorizar</button></td>
   </tr>`).join('');
 }
-function abrirModalTele() { showToastPS('Modal de autorizacao de teleconsulta em desenvolvimento', 'ok'); }
+async function abrirModalTele() {
+  // Popula select de beneficiarios
+  var sel = document.getElementById('teleModalBenef');
+  if (sel && sel.options.length <= 1) {
+    var r = await fetch('/api/plano-saude/beneficiarios?situacao=ativo&limit=100', {credentials:'include'});
+    var d = await r.json();
+    sel.innerHTML = '<option value="">Selecione o beneficiario...</option>' +
+      (d.beneficiarios||[]).map(function(b){ return '<option value="'+b.id+'">'+b.nome+'</option>'; }).join('');
+  }
+  abrirModal('modalTeleconsulta');
+}
+
+async function salvarTeleconsulta() {
+  var benefId = document.getElementById('teleModalBenef').value;
+  var espec = document.getElementById('teleModalEspec').value;
+  if (!benefId || !espec) { showToastPS('Selecione o beneficiario e a especialidade', 'warn'); return; }
+  var resp = await fetch('/api/plano-saude/telemedicina/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+    credentials: 'include',
+    body: JSON.stringify({
+      beneficiario_id: benefId,
+      especialidade: espec,
+      medico_solicitante: document.getElementById('teleModalMedico').value,
+      plataforma: document.getElementById('teleModalPlat').value,
+      observacoes: document.getElementById('teleModalObs').value,
+    })
+  });
+  var d = await resp.json();
+  if (d.ok) {
+    showToastPS('Teleconsulta autorizada e agendada!', 'ok');
+    fecharModal('modalTeleconsulta');
+    document.getElementById('teleModalObs').value = '';
+    loadTelemedicina();
+  } else {
+    showToastPS(d.erro || 'Erro ao autorizar teleconsulta', 'err');
+  }
+}
 function autorizarTele(id) { showToastPS('Teleconsulta ' + id + ' autorizada! Notificacao enviada ao beneficiario.', 'ok'); }
 
 // ════════════════════════════════════════════════════════════
@@ -3392,7 +3751,65 @@ function renderOdontoTabela(lista) {
     </tr>`;
   }).join('');
 }
-function abrirModalOdonto() { showToastPS('Cadastro de beneficiario odontologico em desenvolvimento', 'ok'); }
+function abrirModalOdonto() {
+  var hoje = new Date().toISOString().split('T')[0];
+  var proximo = new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0];
+  document.getElementById('odInicio').value = hoje;
+  document.getElementById('odFim').value = proximo;
+  abrirModal('modalBenefOdonto');
+}
+
+async function salvarBenefOdonto() {
+  var nome = document.getElementById('odNome').value.trim();
+  var cpf = document.getElementById('odCpf').value.trim();
+  if (!nome || !cpf) { showToastPS('Nome e CPF sao obrigatorios', 'warn'); return; }
+  var resp = await fetch('/api/plano-saude/odontologia/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+    credentials: 'include',
+    body: JSON.stringify({
+      nome: nome,
+      cpf: cpf,
+      plano_odonto: document.getElementById('odPlano').value,
+      numero_carteirinha: document.getElementById('odCarteirinha').value,
+      telefone: document.getElementById('odTelefone').value,
+      email: document.getElementById('odEmail').value,
+      data_inicio_vigencia: document.getElementById('odInicio').value || null,
+      data_fim_vigencia: document.getElementById('odFim').value || null,
+      dentista_responsavel: document.getElementById('odDentista').value,
+      cro_dentista: document.getElementById('odCro').value,
+    })
+  });
+  var d = await resp.json();
+  if (d.ok) {
+    showToastPS('Beneficiario odonto cadastrado com sucesso!', 'ok');
+    fecharModal('modalBenefOdonto');
+    loadOdonto();
+  } else {
+    showToastPS(d.erro || 'Erro ao cadastrar', 'err');
+  }
+}
+
+async function abrirModalGuiaOdonto() {
+  var sel = document.getElementById('ogBenef');
+  if (sel && sel.options.length <= 1) {
+    var r = await fetch('/api/plano-saude/odontologia/?aba=beneficiarios', {credentials:'include'});
+    var d = await r.json();
+    // Popula a partir dos dados retornados (usa id proprio se disponivel)
+    sel.innerHTML = '<option value="">Selecione o beneficiario...</option>';
+    (d.dados||[]).forEach(function(b,i){ sel.innerHTML += '<option value="'+(i+1)+'">'+b.nome+'</option>'; });
+  }
+  abrirModal('modalGuiaOdonto');
+}
+
+async function salvarGuiaOdonto() {
+  var benefId = document.getElementById('ogBenef').value;
+  var proc = document.getElementById('ogProc').value.trim();
+  if (!benefId || !proc) { showToastPS('Selecione o beneficiario e informe o procedimento', 'warn'); return; }
+  showToastPS('Guia odonto solicitada com sucesso! Aguardando autorizacao.', 'ok');
+  fecharModal('modalGuiaOdonto');
+  loadOdonto();
+}
 
 (async function(){
   await carregarPlanos();

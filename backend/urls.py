@@ -45,6 +45,15 @@ from api.views_plano_saude import (
     api_ps_programas, api_ps_programa_detalhe,
     api_ps_inscricoes, api_ps_inscricao_detalhe,
     api_ps_sinistralidade_ia,
+    # Enterprise modules
+    api_ps_dashboard_exec,
+    api_ps_sla,
+    api_ps_auditoria,
+    api_ps_contratos, api_ps_contrato_detalhe,
+    api_ps_comunicacao, api_ps_comunicacao_thread,
+    api_ps_telemedicina, api_ps_telemedicina_autorizar,
+    api_ps_odontologia, api_ps_guia_odonto_detalhe,
+    api_ps_regulatorio_gerar,
 )
 from api.views_ia import (
     api_ia_classificar,
@@ -1277,6 +1286,19 @@ urlpatterns = [
     path('api/plano-saude/inscricoes/<int:inscricao_id>', api_ps_inscricao_detalhe),
     # Sinistralidade + IA
     path('api/plano-saude/sinistralidade-ia', api_ps_sinistralidade_ia),
+    # ── Enterprise modules ──────────────────────────────────────────────────
+    path('api/plano-saude/dashboard-exec/', api_ps_dashboard_exec),
+    path('api/plano-saude/sla/', api_ps_sla),
+    path('api/plano-saude/auditoria/', api_ps_auditoria),
+    path('api/plano-saude/contratos/', api_ps_contratos),
+    path('api/plano-saude/contratos/<int:contrato_id>/', api_ps_contrato_detalhe),
+    path('api/plano-saude/comunicacao/', api_ps_comunicacao),
+    path('api/plano-saude/comunicacao/<int:destinatario_id>/thread/', api_ps_comunicacao_thread),
+    path('api/plano-saude/telemedicina/', api_ps_telemedicina),
+    path('api/plano-saude/telemedicina/<int:tele_id>/autorizar/', api_ps_telemedicina_autorizar),
+    path('api/plano-saude/odontologia/', api_ps_odontologia),
+    path('api/plano-saude/odontologia/guias/<int:guia_id>/', api_ps_guia_odonto_detalhe),
+    path('api/plano-saude/regulatorio/gerar/', api_ps_regulatorio_gerar),
     # ── Motor de IA epidemiológica (todos os setores)
     path('api/ia/classificar', api_ia_classificar),
     path('api/ia/doencas', api_ia_doencas),

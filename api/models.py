@@ -5274,3 +5274,230 @@ class RegistroConflitoCultural(models.Model):
 
     def __str__(self):
         return f"{self.empresa.nome} — conflito {self.get_tipo_display()} ({self.status})"
+
+
+# ─── Plano de Saúde — módulos enterprise ─────────────────────────────────────
+
+class ContratoGrupo(models.Model):
+    """Contrato corporativo (empresa-cliente) com um plano de saúde."""
+    STATUS_ATIVO = "ativo"
+    STATUS_SUSPENSO = "suspenso"
+    STATUS_ENCERRADO = "encerrado"
+    STATUS_CHOICES = [
+        (STATUS_ATIVO, "Ativo"),
+        (STATUS_SUSPENSO, "Suspenso"),
+        (STATUS_ENCERRADO, "Encerrado"),
+    ]
+
+    empresa_operadora = models.ForeignKey(
+        "Empresa", on_delete=models.CASCADE,
+        related_name="contratos_grupo_operados",
+    )
+    plano = models.ForeignKey(
+        "PlanoSaude", on_delete=models.CASCADE,
+        related_name="contratos_grupo",
+    )
+    razao_social = models.CharField(max_length=200)
+    nome_fantasia = models.CharField(max_length=200, blank=True, default="")
+    cnpj = models.CharField(max_length=18, blank=True, default="")
+    contato_nome = models.CharField(max_length=100, blank=True, default="")
+    contato_email = models.EmailField(blank=True, default="")
+    contato_telefone = models.CharField(max_length=20, blank=True, default="")
+    total_vidas = models.IntegerField(default=0)
+    mensalidade_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    data_inicio = models.DateField()
+    data_renovacao = models.DateField()
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_ATIVO)
+    logo_emoji = models.CharField(max_length=10, blank=True, default="🏢")
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["razao_social"]
+
+    def __str__(self):
+        return f"{self.razao_social} — {self.plano.nome}"
+
+
+class TeleconsultaAutorizacao(models.Model):
+    """Autorização de teleconsulta emitida pela operadora."""
+    STATUS_PENDENTE = "pendente"
+    STATUS_AUTORIZADO = "autorizado"
+    STATUS_NEGADO = "negado"
+    STATUS_REALIZADO = "realizado"
+    STATUS_CHOICES = [
+        (STATUS_PENDENTE, "Pendente"),
+        (STATUS_AUTORIZADO, "Autorizado"),
+        (STATUS_NEGADO, "Negado"),
+        (STATUS_REALIZADO, "Realizado"),
+    ]
+
+    empresa = models.ForeignKey(
+        "Empresa", on_delete=models.CASCADE,
+        related_name="teleconsultas",
+    )
+    beneficiario = models.ForeignKey(
+        "BeneficiarioPlano", on_delete=models.CASCADE,
+        related_name="teleconsultas",
+    )
+    especialidade = models.CharField(max_length=100)
+    medico_solicitante = models.CharField(max_length=150, blank=True, default="")
+    plataforma = models.CharField(
+        max_length=50,
+        choices=[
+            ("conexa", "Conexa Saúde"),
+            ("iclinic", "iClinic"),
+            ("drconsulta", "Dr. Consulta"),
+            ("outro", "Outro"),
+        ],
+        default="conexa",
+    )
+    link_consulta = models.URLField(blank=True, default="")
+    data_solicitacao = models.DateTimeField(auto_now_add=True)
+    data_agendada = models.DateTimeField(null=True, blank=True)
+    data_realizada = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_PENDENTE)
+    nota_satisfacao = models.IntegerField(null=True, blank=True)  # 1-5
+    observacoes = models.TextField(blank=True, default="")
+    autorizado_por = models.CharField(max_length=100, blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_solicitacao"]
+
+    def __str__(self):
+        return f"Teleconsulta {self.beneficiario.nome} — {self.especialidade} ({self.status})"
+
+
+class BeneficiarioOdonto(models.Model):
+    """Beneficiário de plano odontológico vinculado à operadora."""
+    STATUS_ATIVO = "ativo"
+    STATUS_CARENCIA = "carencia"
+    STATUS_SUSPENSO = "suspenso"
+    STATUS_CANCELADO = "cancelado"
+    STATUS_CHOICES = [
+        (STATUS_ATIVO, "Ativo"),
+        (STATUS_CARENCIA, "Em Carência"),
+        (STATUS_SUSPENSO, "Suspenso"),
+        (STATUS_CANCELADO, "Cancelado"),
+    ]
+
+    empresa = models.ForeignKey(
+        "Empresa", on_delete=models.CASCADE,
+        related_name="beneficiarios_odonto",
+    )
+    nome = models.CharField(max_length=200)
+    cpf = models.CharField(max_length=14, blank=True, default="")
+    data_nascimento = models.DateField(null=True, blank=True)
+    telefone = models.CharField(max_length=20, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
+    plano_odonto = models.CharField(max_length=100, blank=True, default="Odonto Básico")
+    numero_carteirinha = models.CharField(max_length=50, blank=True, default="")
+    data_inicio_vigencia = models.DateField(null=True, blank=True)
+    data_fim_vigencia = models.DateField(null=True, blank=True)
+    data_ultimo_uso = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_ATIVO)
+    dentista_responsavel = models.CharField(max_length=150, blank=True, default="")
+    cro_dentista = models.CharField(max_length=20, blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.nome} — {self.plano_odonto}"
+
+
+class GuiaOdonto(models.Model):
+    """Guia/autorização de procedimento odontológico."""
+    STATUS_PENDENTE = "pendente"
+    STATUS_AUTORIZADO = "autorizado"
+    STATUS_NEGADO = "negado"
+    STATUS_EXECUTADO = "executado"
+    STATUS_CHOICES = [
+        (STATUS_PENDENTE, "Pendente"),
+        (STATUS_AUTORIZADO, "Autorizado"),
+        (STATUS_NEGADO, "Negado"),
+        (STATUS_EXECUTADO, "Executado"),
+    ]
+
+    empresa = models.ForeignKey(
+        "Empresa", on_delete=models.CASCADE,
+        related_name="guias_odonto",
+    )
+    beneficiario = models.ForeignKey(
+        BeneficiarioOdonto, on_delete=models.CASCADE,
+        related_name="guias",
+    )
+    codigo_tuss = models.CharField(max_length=20, blank=True, default="")
+    procedimento = models.CharField(max_length=200)
+    dentista = models.CharField(max_length=150, blank=True, default="")
+    clinica = models.CharField(max_length=200, blank=True, default="")
+    data_solicitacao = models.DateTimeField(auto_now_add=True)
+    data_execucao = models.DateField(null=True, blank=True)
+    valor_estimado = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    valor_pago = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_PENDENTE)
+    justificativa_negacao = models.TextField(blank=True, default="")
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_solicitacao"]
+
+    def __str__(self):
+        return f"{self.procedimento} — {self.beneficiario.nome} ({self.status})"
+
+
+class MensagemPlano(models.Model):
+    """Mensagem trocada entre a operadora e beneficiários ou prestadores."""
+    TIPO_BENEFICIARIO = "beneficiario"
+    TIPO_PRESTADOR = "prestador"
+    TIPO_CHOICES = [
+        (TIPO_BENEFICIARIO, "Beneficiário"),
+        (TIPO_PRESTADOR, "Prestador"),
+    ]
+    CANAL_PLATAFORMA = "plataforma"
+    CANAL_EMAIL = "email"
+    CANAL_SMS = "sms"
+    CANAL_CHOICES = [
+        (CANAL_PLATAFORMA, "Plataforma"),
+        (CANAL_EMAIL, "E-mail"),
+        (CANAL_SMS, "SMS"),
+    ]
+    DIRECAO_SAIDA = "saida"
+    DIRECAO_ENTRADA = "entrada"
+    DIRECAO_CHOICES = [
+        (DIRECAO_SAIDA, "Operadora → Destinatário"),
+        (DIRECAO_ENTRADA, "Destinatário → Operadora"),
+    ]
+
+    empresa = models.ForeignKey(
+        "Empresa", on_delete=models.CASCADE,
+        related_name="mensagens_plano",
+    )
+    tipo_destinatario = models.CharField(max_length=15, choices=TIPO_CHOICES)
+    beneficiario = models.ForeignKey(
+        "BeneficiarioPlano", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="mensagens",
+    )
+    prestador = models.ForeignKey(
+        "PrestadorPlanoSaude", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="mensagens",
+    )
+    canal = models.CharField(max_length=15, choices=CANAL_CHOICES, default=CANAL_PLATAFORMA)
+    direcao = models.CharField(max_length=10, choices=DIRECAO_CHOICES, default=DIRECAO_SAIDA)
+    assunto = models.CharField(max_length=200, blank=True, default="")
+    conteudo = models.TextField()
+    lida = models.BooleanField(default=False)
+    enviado_por = models.CharField(max_length=100, blank=True, default="Operadora")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        dest = self.beneficiario.nome if self.beneficiario else (self.prestador.nome_fantasia if self.prestador else "?")
+        return f"Msg → {dest} ({self.canal})"
