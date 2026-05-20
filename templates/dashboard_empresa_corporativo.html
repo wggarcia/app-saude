@@ -359,31 +359,9 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 
 <div class="app">
 
-  <!-- SIDEBAR -->
+  <!-- SIDEBAR — shared with all /sst/* pages -->
   <aside class="sidebar">
-    <div class="sb-label">Conformidade</div>
-    <a class="sb-link active" href="/dashboard-empresa/"><span class="sb-icon">📊</span><span>Painel SST</span></a>
-    <a class="sb-link" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO</span><span class="sb-badge" id="sb-asos-badge" style="display:none">0</span></a>
-    <a class="sb-link" href="/sst/exames/"><span class="sb-icon">🔬</span><span>Exames</span><span class="sb-badge" id="sb-exames-badge" style="display:none">0</span></a>
-    <a class="sb-link" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
-    <a class="sb-link" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT / Acidentes</span><span class="sb-badge" id="sb-cats-badge" style="display:none">0</span></a>
-    <div class="sb-label">Documentação</div>
-    <a class="sb-link" href="/sst/documentos/"><span class="sb-icon">📁</span><span>PGR · PCMSO</span></a>
-    <a class="sb-link" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial</span><span class="sb-badge" id="sb-esocial-badge" style="display:none">0</span></a>
-    <div class="sb-label">Gestão</div>
-    <a class="sb-link" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
-    <a class="sb-link" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos NR</span></a>
-    <a class="sb-link" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
-    <a class="sb-link" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação</span></a>
-    <a class="sb-link" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI / EPC</span></a>
-    <a class="sb-link" href="/sst/solicitacoes/"><span class="sb-icon">📨</span><span>Pedidos de Exame</span></a>
-    <a class="sb-link" href="/sst/postos/"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
-    <a class="sb-link" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
-    <div class="sb-label">Conta</div>
-    <a class="sb-link" href="/gestao/plataforma/"><span class="sb-icon">🔑</span><span>Plataforma & API</span></a>
-    <a class="sb-link" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Config. SST</span></a>
-    <a class="sb-link" href="/usuarios/"><span class="sb-icon">👤</span><span>Usuários</span></a>
-    <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
+    {% include "partials/sst_sidebar.html" %}
   </aside>
 
   <!-- MAIN -->

@@ -1,38 +1,47 @@
 {% with p=request.path %}
-<div class="sb-label">Central</div>
-<a class="sb-link {% if p == '/sst/' %}active{% endif %}" href="/sst/"><span class="sb-icon">🏠</span><span>Central SST</span></a>
+{# ── Painel / Hub ─────────────────────────────────────────────── #}
+<a class="sb-link {% if p == '/dashboard-empresa/' %}active{% endif %}" href="/dashboard-empresa/">
+  <span class="sb-icon">📊</span><span>Painel SST</span>
+</a>
 
-<div class="sb-label">Operação diária</div>
+{# ── Operação Diária ──────────────────────────────────────────── #}
+<div class="sb-label">Operação Diária</div>
 <a class="sb-link {% if '/sst/funcionarios/' in p %}active{% endif %}" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
 <a class="sb-link {% if p == '/sst/solicitacoes/' %}active{% endif %}" href="/sst/solicitacoes/"><span class="sb-icon">📨</span><span>Solicitações</span></a>
 <a class="sb-link {% if p == '/sst/exames/agendar/' %}active{% endif %}" href="/sst/exames/agendar/"><span class="sb-icon">📅</span><span>Agendamentos</span></a>
 <a class="sb-link {% if p == '/sst/asos/' %}active{% endif %}" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO e Pedidos</span></a>
 <a class="sb-link {% if p == '/sst/exames/' %}active{% endif %}" href="/sst/exames/"><span class="sb-icon">🔬</span><span>Exames</span></a>
 
-<div class="sb-label">Eventos críticos</div>
+{# ── Eventos Críticos ─────────────────────────────────────────── #}
+<div class="sb-label">Eventos Críticos</div>
 <a class="sb-link {% if p == '/sst/afastamentos/' %}active{% endif %}" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
-<a class="sb-link {% if p == '/sst/cats/' %}active{% endif %}" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT</span></a>
+<a class="sb-link {% if p == '/sst/cats/' %}active{% endif %}" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT / Acidentes</span></a>
 <a class="sb-link {% if p == '/sst/esocial/' %}active{% endif %}" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial SST</span></a>
 
+{# ── Prevenção ────────────────────────────────────────────────── #}
 <div class="sb-label">Prevenção</div>
-<a class="sb-link {% if p == '/sst/postos/' %}active{% endif %}" href="/sst/postos/"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
 <a class="sb-link {% if p == '/sst/riscos/' %}active{% endif %}" href="/sst/riscos/"><span class="sb-icon">🔴</span><span>Riscos e PGR</span></a>
+<a class="sb-link {% if p == '/sst/postos/' %}active{% endif %}" href="/sst/postos/"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
 <a class="sb-link {% if p == '/sst/epis/' %}active{% endif %}" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI e EPC</span></a>
 <a class="sb-link {% if p == '/sst/treinamentos/' %}active{% endif %}" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos NR</span></a>
 
+{# ── Saúde & Comunicação ──────────────────────────────────────── #}
 <div class="sb-label">Saúde & Comunicação</div>
 <a class="sb-link {% if p == '/sst/saude-comunicacao/' %}active{% endif %}" href="/sst/saude-comunicacao/"><span class="sb-icon">💚</span><span>Saúde & Comunicação</span></a>
 <a class="sb-link {% if p == '/sst/bem-estar/' %}active{% endif %}" href="/sst/bem-estar/"><span class="sb-icon">❤️</span><span>Bem-estar da Equipe</span></a>
+<a class="sb-link {% if '/sst/comunicacao/' in p %}active{% endif %}" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação SST</span></a>
 
-<div class="sb-label">Governança</div>
-<a class="sb-link {% if p == '/sst/documentos/' %}active{% endif %}" href="/sst/documentos/"><span class="sb-icon">📁</span><span>Documentos</span></a>
+{# ── Documentação & Governança ────────────────────────────────── #}
+<div class="sb-label">Documentação</div>
+<a class="sb-link {% if p == '/sst/documentos/' %}active{% endif %}" href="/sst/documentos/"><span class="sb-icon">📁</span><span>PGR · PCMSO · LTCAT</span></a>
 <a class="sb-link {% if p == '/sst/normas/' %}active{% endif %}" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
-<a class="sb-link {% if p == '/sst/relatorios/' %}active{% endif %}" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
 <a class="sb-link {% if p == '/sst/conformidade/' %}active{% endif %}" href="/sst/conformidade/"><span class="sb-icon">🛡️</span><span>Conformidade</span></a>
-<a class="sb-link {% if '/sst/comunicacao/' in p %}active{% endif %}" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação</span></a>
-<a class="sb-link {% if p == '/sst/configuracoes/' %}active{% endif %}" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Configurações</span></a>
+<a class="sb-link {% if p == '/sst/relatorios/' %}active{% endif %}" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
 
-<div class="sb-label">Plataforma</div>
-<a class="sb-link {% if p == '/gestao/plataforma/' %}active{% endif %}" href="/gestao/plataforma/"><span class="sb-icon">🖥️</span><span>Plataforma TI</span></a>
+{# ── Conta & Plataforma ───────────────────────────────────────── #}
+<div class="sb-label">Conta</div>
+<a class="sb-link {% if p == '/sst/configuracoes/' %}active{% endif %}" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Config. SST</span></a>
+<a class="sb-link {% if '/usuarios/' in p %}active{% endif %}" href="/usuarios/"><span class="sb-icon">👤</span><span>Usuários</span></a>
+<a class="sb-link {% if '/gestao/plataforma/' in p %}active{% endif %}" href="/gestao/plataforma/"><span class="sb-icon">🖥️</span><span>Plataforma & API</span></a>
 <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
 {% endwith %}

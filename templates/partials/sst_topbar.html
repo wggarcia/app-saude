@@ -1,0 +1,32 @@
+{% with p=request.path %}
+<header class="topbar">
+  <div class="tb-logo">
+    <div class="tb-icon">S</div>
+    <div>
+      <div class="tb-nome" id="tb-nome">{% block tb_nome %}SST{% endblock %}</div>
+      <div class="tb-sub">Saúde e Segurança do Trabalho</div>
+    </div>
+  </div>
+  <nav class="tb-nav">
+    <a href="/dashboard-empresa/" class="{% if p == '/dashboard-empresa/' %}active{% endif %}">Visão Geral</a>
+    <a href="/sst/funcionarios/" class="{% if '/sst/funcionarios/' in p %}active{% endif %}">Funcionários</a>
+    <a href="/sst/asos/" class="{% if p == '/sst/asos/' %}active{% endif %}">ASO</a>
+    <a href="/sst/exames/" class="{% if p == '/sst/exames/' %}active{% endif %}">Exames</a>
+    <a href="/sst/afastamentos/" class="{% if p == '/sst/afastamentos/' %}active{% endif %}">Afastamentos</a>
+    <a href="/sst/cats/" class="{% if p == '/sst/cats/' %}active{% endif %}">CAT / Acidentes</a>
+    <a href="/sst/documentos/" class="{% if p == '/sst/documentos/' %}active{% endif %}">PGR · PCMSO · LTCAT</a>
+    <a href="/sst/esocial/" class="{% if p == '/sst/esocial/' %}active{% endif %}">eSocial</a>
+    <a href="/sst/treinamentos/" class="{% if p == '/sst/treinamentos/' %}active{% endif %}">Treinamentos NR</a>
+    <a href="/sst/epis/" class="{% if p == '/sst/epis/' %}active{% endif %}">EPI / EPC</a>
+    <a href="/sst/comunicacao/" class="{% if '/sst/comunicacao/' in p %}active{% endif %}">Comunicação</a>
+    <a href="/sst/relatorios/" class="{% if p == '/sst/relatorios/' %}active{% endif %}">Relatórios</a>
+  </nav>
+  <div class="tb-actions">
+    <div class="badge-alerta" id="tb-alertas" style="display:none">
+      <span id="tb-alertas-count">0</span> alertas
+    </div>
+    <a class="btn-main" href="/sst/asos/">+ Emitir ASO</a>
+    <a class="btn-ghost" href="/sst/cats/" style="border-color:rgba(239,68,68,.4);color:#f87171">+ Registrar CAT</a>
+  </div>
+</header>
+{% endwith %}
