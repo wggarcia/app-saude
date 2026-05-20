@@ -56,11 +56,34 @@ class RegistroSintoma(models.Model):
 
     doenca = models.CharField(max_length=50, null=True, blank=True)
 
+    # ── Sintomas base (originais)
     febre = models.BooleanField(default=False)
     tosse = models.BooleanField(default=False)
     dor_corpo = models.BooleanField(default=False)
     cansaco = models.BooleanField(default=False)
     falta_ar = models.BooleanField(default=False)
+
+    # ── Sintomas expandidos (IA 2.0 — diagnóstico diferencial preciso)
+    dor_cabeca = models.BooleanField(default=False)          # cefaleia — dengue, gripe, meningite
+    dor_articular = models.BooleanField(default=False)       # artralgia — chikungunya (intensa!), zika, dengue
+    exantema = models.BooleanField(default=False)            # rash/manchas — dengue, zika, chikungunya, sarampo
+    conjuntivite = models.BooleanField(default=False)        # hiperemia ocular — zika (patognomônico), sarampo
+    vomito_nausea = models.BooleanField(default=False)       # dengue alarme, leptospirose, hepatite
+    diarreia = models.BooleanField(default=False)            # rotavírus, cólera, dengue hemorrágico
+    dor_abdominal = models.BooleanField(default=False)       # dengue, leptospirose, hepatite
+    rigidez_nuca = models.BooleanField(default=False)        # MENINGITE — flag de urgência imediata
+    ictericia = models.BooleanField(default=False)           # febre amarela, leptospirose, hepatite
+    manchas_hemorragicas = models.BooleanField(default=False) # petéquias — dengue hemorrágico, meningite
+    perda_olfato_paladar = models.BooleanField(default=False) # COVID-19 (quase patognomônico)
+    dor_garganta = models.BooleanField(default=False)        # gripe, COVID, estreptococo, resfriado
+    coriza = models.BooleanField(default=False)              # resfriado, gripe, RSV
+    calafrios = models.BooleanField(default=False)           # malária (ciclico), dengue, leptospirose
+    # Intensidade da febre (escala: None, baixa<38.5, moderada 38.5-39.5, alta>39.5)
+    intensidade_febre = models.CharField(max_length=10, blank=True, default="",
+        choices=[("", "Não informado"), ("baixa", "Baixa"), ("moderada", "Moderada"), ("alta", "Alta")])
+    # Intensidade da dor articular (diferencia chikungunya de dengue)
+    intensidade_articular = models.CharField(max_length=12, blank=True, default="",
+        choices=[("", "Não informado"), ("leve", "Leve"), ("moderada", "Moderada"), ("intensa", "Intensa — incapacitante")])
 
     latitude = models.FloatField(null=True)
     longitude = models.FloatField(null=True)

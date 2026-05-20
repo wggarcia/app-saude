@@ -16,6 +16,22 @@ PRODUCT_NAME = "Sala de Decisão IA"
 
 
 SECTOR_CONFIG = {
+    "plano_saude": {
+        "title": "Sala de Decisão IA — Plano de Saúde",
+        "subtitle": "sinistralidade, risco de beneficiários, programas crônicos, epidemiologia e guias de autorização",
+        "audience": "operadoras de plano de saúde, gestores de saúde suplementar",
+        "eyebrow": "Inteligência de saúde suplementar",
+        "panel_title": "Plano de saúde gerenciada e prevenção",
+        "recommendation_field": "market_recommendation",
+        "impact_field": "stock_pressure",
+        "impact_label": "impacto em sinistralidade",
+        "primary_metric": "stock_pressure",
+        "action_steps": [
+            "Acionar programas de saúde gerenciada para beneficiários de alto risco identificados pela IA.",
+            "Revisar filas de autorização de guias para doenças com pressão epidemiológica crescente.",
+            "Antecipar abertura de sinistros e reembolsos para doenças dominantes na área de risco.",
+        ],
+    },
     "governo": {
         "title": "Sala de Decisão IA - Governo",
         "subtitle": "vigilância territorial, risco populacional, alertas oficiais e resposta institucional",
@@ -87,7 +103,18 @@ def _company_sector(empresa):
     if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
         return "governo"
     pacote = detalhes_pacote(empresa.pacote_codigo)
-    return pacote.get("setor") or "empresa"
+    setor = pacote.get("setor") or "empresa"
+    # Mapeamento canônico — garante que cada setor caia na config correta
+    _mapa = {
+        "plano_saude": "plano_saude",
+        "farmacia": "farmacia",
+        "hospital": "hospital",
+        "governo": "governo",
+        "rede": "farmacia",   # rede usa config farmácia (abastecimento/demanda)
+        "sst": "empresa",
+        "empresa": "empresa",
+    }
+    return _mapa.get(setor, "empresa")
 
 
 def _safe_number(value, default=0.0):

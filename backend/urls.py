@@ -46,6 +46,14 @@ from api.views_plano_saude import (
     api_ps_inscricoes, api_ps_inscricao_detalhe,
     api_ps_sinistralidade_ia,
 )
+from api.views_ia import (
+    api_ia_classificar,
+    api_ia_doencas,
+    api_ia_sintomas,
+    api_ia_populacao,
+    api_ia_calibracao,
+    api_ia_urgencias,
+)
 from api.views_corporativo import (
     dashboard_empresa_corporativo,
     api_empresa_corporativo_resumo,
@@ -1253,4 +1261,11 @@ urlpatterns = [
     path('api/plano-saude/inscricoes/<int:inscricao_id>', api_ps_inscricao_detalhe),
     # Sinistralidade + IA
     path('api/plano-saude/sinistralidade-ia', api_ps_sinistralidade_ia),
+    # ── Motor de IA epidemiológica (todos os setores)
+    path('api/ia/classificar', api_ia_classificar),
+    path('api/ia/doencas', api_ia_doencas),
+    path('api/ia/sintomas', api_ia_sintomas),
+    path('api/ia/populacao', api_ia_populacao),
+    path('api/ia/calibracao', api_ia_calibracao),
+    path('api/ia/urgencias', api_ia_urgencias),
 ]

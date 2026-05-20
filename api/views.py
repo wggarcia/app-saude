@@ -1687,23 +1687,37 @@ def registrar_sintoma(request):
     # 💾 salvar
     RegistroSintoma.objects.create(
         id_anonimo=uuid.uuid4(),
-        febre=dados.get("febre", False),
-        tosse=dados.get("tosse", False),
-        dor_corpo=dados.get("dor_corpo", False),
-        cansaco=dados.get("cansaco", False),
-        falta_ar=dados.get("falta_ar", False),
-
+        # Sintomas base
+        febre=bool(dados.get("febre", False)),
+        tosse=bool(dados.get("tosse", False)),
+        dor_corpo=bool(dados.get("dor_corpo", False)),
+        cansaco=bool(dados.get("cansaco", False)),
+        falta_ar=bool(dados.get("falta_ar", False)),
+        # Sintomas expandidos (IA 2.0)
+        dor_cabeca=bool(dados.get("dor_cabeca", False)),
+        dor_articular=bool(dados.get("dor_articular", False)),
+        exantema=bool(dados.get("exantema", False)),
+        conjuntivite=bool(dados.get("conjuntivite", False)),
+        vomito_nausea=bool(dados.get("vomito_nausea", False)),
+        diarreia=bool(dados.get("diarreia", False)),
+        dor_abdominal=bool(dados.get("dor_abdominal", False)),
+        rigidez_nuca=bool(dados.get("rigidez_nuca", False)),
+        ictericia=bool(dados.get("ictericia", False)),
+        manchas_hemorragicas=bool(dados.get("manchas_hemorragicas", False)),
+        perda_olfato_paladar=bool(dados.get("perda_olfato_paladar", False)),
+        dor_garganta=bool(dados.get("dor_garganta", False)),
+        coriza=bool(dados.get("coriza", False)),
+        calafrios=bool(dados.get("calafrios", False)),
+        intensidade_febre=dados.get("intensidade_febre", ""),
+        intensidade_articular=dados.get("intensidade_articular", ""),
         latitude=latitude,
         longitude=longitude,
-
         pais=geo.get("pais"),
         estado=geo.get("estado"),
         cidade=geo.get("cidade"),
         bairro=geo.get("bairro") or "Centro",
         condado=geo.get("condado"),
-
         empresa=empresa,
-
         grupo=grupo,
         classificacao=classificacao,
         ip=ip,
@@ -1801,11 +1815,29 @@ def registrar_sintoma_publico(request):
     registro = RegistroSintoma.objects.create(
         id_anonimo=uuid.uuid4(),
         empresa=empresa,
+        # Sintomas base
         febre=bool(dados.get("febre", False)),
         tosse=bool(dados.get("tosse", False)),
         dor_corpo=bool(dados.get("dor_corpo", False)),
         cansaco=bool(dados.get("cansaco", False)),
         falta_ar=bool(dados.get("falta_ar", False)),
+        # Sintomas expandidos (IA 2.0)
+        dor_cabeca=bool(dados.get("dor_cabeca", False)),
+        dor_articular=bool(dados.get("dor_articular", False)),
+        exantema=bool(dados.get("exantema", False)),
+        conjuntivite=bool(dados.get("conjuntivite", False)),
+        vomito_nausea=bool(dados.get("vomito_nausea", False)),
+        diarreia=bool(dados.get("diarreia", False)),
+        dor_abdominal=bool(dados.get("dor_abdominal", False)),
+        rigidez_nuca=bool(dados.get("rigidez_nuca", False)),
+        ictericia=bool(dados.get("ictericia", False)),
+        manchas_hemorragicas=bool(dados.get("manchas_hemorragicas", False)),
+        perda_olfato_paladar=bool(dados.get("perda_olfato_paladar", False)),
+        dor_garganta=bool(dados.get("dor_garganta", False)),
+        coriza=bool(dados.get("coriza", False)),
+        calafrios=bool(dados.get("calafrios", False)),
+        intensidade_febre=dados.get("intensidade_febre", ""),
+        intensidade_articular=dados.get("intensidade_articular", ""),
         latitude=latitude,
         longitude=longitude,
         pais=geo.get("pais"),
@@ -2176,41 +2208,33 @@ def diagnostico_ia_avancado(request):
 
 
 
-def classificar_padrao(dados):
+def classificar_padrao(dados, setor: str = "governo"):
+    """
+    Motor IA 2.0 — diagnóstico diferencial probabilístico completo.
+    Retorna (grupo, classificacao) para compatibilidade com os endpoints legados.
+    Para resultado completo usar api.utils_ia.classificar_padrao diretamente.
+    """
+    from api.classificador_doencas import classificar, DOENCAS_BRASIL
+    resultado = classificar(dados, setor=setor)
+    doenca = resultado["primario"]
+    grupo = resultado["grupo"]
+    confianca = resultado["confianca"]
 
-    score_respiratorio = 0
-    score_arbovirose = 0
-    score_alerta = 0
+    # Flags de urgência absoluta
+    urgencias = resultado.get("urgencia_absoluta", [])
+    if urgencias:
+        titulo_urgencia = urgencias[0]["titulo"]
+        classificacao = f"URGÊNCIA: {titulo_urgencia} — {doenca} ({confianca}% confiança)"
+    elif doenca == "Inconclusivo":
+        classificacao = "Sintomas insuficientes para classificação"
+    else:
+        diferencial = resultado.get("diagnostico_diferencial", "")
+        if diferencial:
+            classificacao = f"{doenca} ({confianca}% confiança) — {diferencial}"
+        else:
+            classificacao = f"{doenca} ({confianca}% confiança)"
 
-    if dados.get("febre"):
-        score_respiratorio += 1
-        score_arbovirose += 2
-
-    if dados.get("tosse"):
-        score_respiratorio += 2
-
-    if dados.get("falta_ar"):
-        score_respiratorio += 3
-        score_alerta += 3
-
-    if dados.get("dor_corpo"):
-        score_arbovirose += 2
-
-    if dados.get("cansaco"):
-        score_respiratorio += 1
-        score_arbovirose += 1
-
-    # 🔥 decisão baseada em pontuação
-    if score_alerta >= 3:
-        return "Alerta", "Sinais que merecem atenção médica imediata"
-
-    if score_respiratorio >= 3:
-        return "Respiratório", "Padrão compatível com infecção respiratória viral"
-
-    if score_arbovirose >= 3:
-        return "Arbovirose", "Padrão compatível com dengue ou vírus similar"
-
-    return "Leve", "Sintomas inespecíficos de baixo risco"
+    return grupo, classificacao
 
 def resumo_estados(request):
     dados = RegistroSintoma.objects.values("estado").annotate(total=Count("id"))
