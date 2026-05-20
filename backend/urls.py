@@ -63,6 +63,8 @@ from api.views_corporativo import (
     api_corporativo_checkin_diario,
     api_corporativo_checkin_semanal,
     api_colaborador_trilhas,
+    api_corporativo_rh_resumo,
+    api_corporativo_rh_sincronizar,
 )
 from api.views_sst import (
     api_sst_dashboard,
@@ -802,6 +804,8 @@ urlpatterns = [
     path('api/colaborador-mobile/<str:codigo>/checkin-diario', api_corporativo_checkin_diario),
     path('api/colaborador-mobile/<str:codigo>/checkin-semanal', api_corporativo_checkin_semanal),
     path('api/colaborador-mobile/<str:codigo>/trilhas', api_colaborador_trilhas),
+    path('api/corporativo/rh/resumo/', api_corporativo_rh_resumo),
+    path('api/corporativo/rh/sincronizar/', api_corporativo_rh_sincronizar),
     path('api/public/resumo', app_resumo_publico),
     path('api/public/radar-local', app_radar_local),
     path('api/public/mapa', app_mapa_publico),

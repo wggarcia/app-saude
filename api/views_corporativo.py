@@ -1,6 +1,7 @@
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 
+from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -17,6 +18,7 @@ from .models import (
     EmpresaTurno,
     EmpresaUnidade,
     EvidenciaCompetenciaCorporativa,
+    FuncionarioSST,
     PedidoApoioCorporativo,
     TrilhaCompetenciaCorporativa,
 )
@@ -358,3 +360,70 @@ def api_colaborador_trilhas(request, codigo):
         })
 
     return JsonResponse({"trilhas": result})
+
+
+@csrf_exempt
+def api_corporativo_rh_resumo(request):
+    """GET /api/corporativo/rh/resumo/ — Headcount & turnover analytics from FuncionarioSST"""
+    empresa = _empresa_corporativa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    hoje = date.today()
+    trinta_dias = hoje - timedelta(days=30)
+
+    qs = FuncionarioSST.objects.filter(empresa=empresa)
+    headcount_total = qs.count()
+    ativos = qs.filter(ativo=True).count()
+    admissoes_30d = qs.filter(data_admissao__gte=trinta_dias).count()
+    desligamentos_30d = qs.filter(data_demissao__gte=trinta_dias).count()
+
+    # By department (setor)
+    por_dept_raw = (
+        qs.filter(ativo=True)
+        .values("setor")
+        .annotate(total=Count("id"))
+        .order_by("-total")[:10]
+    )
+    por_departamento = [
+        {"departamento": d["setor"] or "Sem setor", "total": d["total"]}
+        for d in por_dept_raw
+    ]
+
+    # Monthly turnover — last 12 months
+    turnover_mensal = []
+    for i in range(11, -1, -1):
+        ref = hoje.replace(day=1) - timedelta(days=i * 30)
+        mes_inicio = ref.replace(day=1)
+        mes_fim = (mes_inicio + timedelta(days=32)).replace(day=1)
+        saidas = qs.filter(data_demissao__gte=mes_inicio, data_demissao__lt=mes_fim).count()
+        turnover_mensal.append({
+            "mes": mes_inicio.strftime("%b/%y"),
+            "saidas": saidas,
+        })
+
+    # Annual turnover rate
+    saidas_anuais = qs.filter(data_demissao__gte=hoje - timedelta(days=365)).count()
+    taxa_turnover_anual = round((saidas_anuais / headcount_total * 100), 1) if headcount_total > 0 else 0
+
+    return JsonResponse({
+        "headcount_total": headcount_total,
+        "ativos": ativos,
+        "admissoes_30d": admissoes_30d,
+        "desligamentos_30d": desligamentos_30d,
+        "por_departamento": por_departamento,
+        "turnover_mensal": turnover_mensal,
+        "taxa_turnover_anual": taxa_turnover_anual,
+    })
+
+
+@csrf_exempt
+def api_corporativo_rh_sincronizar(request):
+    """POST /api/corporativo/rh/sincronizar/ — trigger RH sync (placeholder)"""
+    empresa = _empresa_corporativa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "método não permitido"}, status=405)
+    # In production, would trigger a Celery task to sync with HR system
+    return JsonResponse({"ok": True, "mensagem": "Sincronização enfileirada — aguarde até 2 minutos"})

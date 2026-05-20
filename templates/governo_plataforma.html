@@ -89,6 +89,15 @@ body::before{
 .badge-muted{background:rgba(255,255,255,.07);color:var(--muted)}
 .badge-purple{background:rgba(167,139,250,.14);color:#c4b5fd}
 
+/* ── STAT CARDS ── */
+.stat-card{border-radius:16px;padding:14px 16px;background:linear-gradient(180deg,rgba(17,35,50,.92),rgba(8,18,28,.94));border:1px solid var(--soft)}
+.stat-val{font-size:1.5rem;font-weight:800;margin-bottom:4px}
+.stat-label{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
+.input{border-radius:11px;border:1px solid var(--soft);background:rgba(255,255,255,.06);color:var(--text);padding:8px 12px;font:inherit;font-size:.84rem;outline:none}
+.input:focus{border-color:rgba(0,194,255,.4);box-shadow:0 0 0 3px rgba(0,194,255,.1)}
+.bar-wrap{height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;flex:1}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s}
+
 /* ── STRIP (KPI row) ── */
 .strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .strip-card{border-radius:20px;padding:14px 16px;background:linear-gradient(180deg,rgba(17,35,50,.92),rgba(8,18,28,.94));border:1px solid var(--soft)}
@@ -220,8 +229,16 @@ select option{background:#0b1822}
   <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão</a>
   <a class="nav-link" href="/logout-governo/"><span>🚪</span> Sair</a>
 
-  <div class="nav-section" style="margin-top:8px">Módulos</div>
-  <button class="tab-btn-side active" onclick="setTab('integracoes')"><span>🔗</span> Integrações Gov</button>
+  <div class="nav-section" style="margin-top:8px">Operações</div>
+  <button class="tab-btn-side active" onclick="setTab('painel')"><span>📊</span> Painel Central</button>
+  <button class="tab-btn-side" onclick="setTab('vigilancia')"><span>🦠</span> Vigilância Epidem.</button>
+  <button class="tab-btn-side" onclick="setTab('regulacao')"><span>🏥</span> Regulação de Leitos</button>
+  <button class="tab-btn-side" onclick="setTab('producao')"><span>📋</span> Produção &amp; Previne</button>
+  <button class="tab-btn-side" onclick="setTab('urgencia')"><span>🚨</span> Urgência &amp; Emerg.</button>
+  <button class="tab-btn-side" onclick="setTab('contratos')"><span>📄</span> Contratos</button>
+
+  <div class="nav-section" style="margin-top:8px">Plataforma TI</div>
+  <button class="tab-btn-side" onclick="setTab('integracoes')"><span>🔗</span> Integrações Gov</button>
   <button class="tab-btn-side" onclick="setTab('apikeys')"><span>🔑</span> API Keys</button>
   <button class="tab-btn-side" onclick="setTab('webhooks')"><span>📡</span> Webhooks</button>
   <button class="tab-btn-side" onclick="setTab('seguranca')"><span>🛡️</span> Segurança &amp; LGPD</button>
@@ -234,8 +251,8 @@ select option{background:#0b1822}
 
   <div class="page-header">
     <div>
-      <div class="page-title">Plataforma TI Governamental</div>
-      <div class="page-sub">Central de integrações, APIs e conformidade para secretarias de saúde</div>
+      <div class="page-title">Plataforma SaaS Governamental</div>
+      <div class="page-sub">Vigilância epidemiológica, regulação, produção ambulatorial e integrações para secretarias de saúde</div>
     </div>
     <div style="display:flex;gap:8px">
       <a class="btn sm" href="/governo/gestao/">← Gestão</a>
@@ -243,8 +260,347 @@ select option{background:#0b1822}
     </div>
   </div>
 
+  <!-- ══ TAB: PAINEL CENTRAL ════════════════════════════════════════════════════ -->
+  <section id="panel-painel" class="panel active">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div><div class="section-title">📊 Painel Central de Saúde Pública</div>
+          <div class="section-sub">Indicadores em tempo real da rede municipal/estadual</div></div>
+        <button class="btn sm" onclick="loadPainel()">🔄 Atualizar</button>
+      </div>
+      <div class="four-col" id="painelKpis" style="gap:12px">
+        <div class="stat-card"><div class="stat-val" id="kpiUnidadesAtivas">—</div><div class="stat-label">Unidades Ativas</div></div>
+        <div class="stat-card"><div class="stat-val" id="kpiEquipesESF">—</div><div class="stat-label">Equipes ESF</div></div>
+        <div class="stat-card"><div class="stat-val" id="kpiPopCoberta">—</div><div class="stat-label">Pop. Coberta ESF</div></div>
+        <div class="stat-card"><div class="stat-val" id="kpiSurtosAtivos" style="color:var(--danger)">—</div><div class="stat-label">Surtos Ativos</div></div>
+        <div class="stat-card"><div class="stat-val" id="kpiNotif30d">—</div><div class="stat-label">Notif. 30 dias</div></div>
+        <div class="stat-card"><div class="stat-val" id="kpiLeitosEspera" style="color:var(--warn)">—</div><div class="stat-label">Leitos Aguardando</div></div>
+        <div class="stat-card"><div class="stat-val" id="kpiPrevineScore" style="color:var(--ok)">—</div><div class="stat-label">Score Previne (%)</div></div>
+        <div class="stat-card"><div class="stat-val" id="kpiUrgencia7d">—</div><div class="stat-label">Atend. Urgência 7d</div></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:12px">🦠 Situação Epidemiológica</div>
+        <div id="painelSurtosList" style="display:flex;flex-direction:column;gap:8px">
+          <div style="color:var(--muted);font-size:.85rem">Carregando...</div>
+        </div>
+        <button class="btn sm" style="margin-top:12px" onclick="setTab('vigilancia')">Ver Vigilância Completa →</button>
+      </div>
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:12px">🏥 Regulação de Leitos</div>
+        <div id="painelRegulacaoInfo" style="color:var(--muted);font-size:.85rem">Carregando...</div>
+        <button class="btn sm" style="margin-top:12px" onclick="setTab('regulacao')">Ver Regulação Completa →</button>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:12px">📋 Previne Brasil — Competência Atual</div>
+        <div id="painelPrevineBar" style="color:var(--muted);font-size:.85rem">Carregando...</div>
+        <button class="btn sm" style="margin-top:12px" onclick="setTab('producao')">Ver Produção &amp; Previne →</button>
+      </div>
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:12px">📄 Contratos Vigentes</div>
+        <div id="painelContratosInfo" style="color:var(--muted);font-size:.85rem">Carregando...</div>
+        <div id="painelContratosWarn" style="display:none;margin-top:8px;padding:8px 12px;border-radius:8px;background:rgba(255,179,71,.12);color:var(--warn);font-size:.82rem"></div>
+        <button class="btn sm" style="margin-top:12px" onclick="setTab('contratos')">Ver Contratos →</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: VIGILÂNCIA EPIDEMIOLÓGICA ════════════════════════════════════════ -->
+  <section id="panel-vigilancia" class="panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div><div class="section-title">🦠 Vigilância Epidemiológica</div>
+          <div class="section-sub">Notificações compulsórias, surtos ativos e tendências (últimos 30 dias)</div></div>
+        <button class="btn sm" onclick="loadVigilancia()">🔄 Atualizar</button>
+      </div>
+      <div class="four-col" id="vigilanciaKpis" style="gap:10px;margin-bottom:16px">
+        <div class="stat-card"><div class="stat-val" id="vigNotif30d">—</div><div class="stat-label">Notif. 30 dias</div></div>
+        <div class="stat-card"><div class="stat-val" id="vigSurtos" style="color:var(--danger)">—</div><div class="stat-label">Surtos Ativos</div></div>
+        <div class="stat-card"><div class="stat-val" id="vigVermelho" style="color:#ff4d6d">—</div><div class="stat-label">Alerta Vermelho</div></div>
+        <div class="stat-card"><div class="stat-val" id="vigObitos" style="color:var(--muted)">—</div><div class="stat-label">Óbitos Notificados</div></div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div style="font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px">Top Doenças (30d)</div>
+          <div id="vigDoencasChart" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+        <div>
+          <div style="font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px">Surtos Ativos por Alerta</div>
+          <div id="vigSurtosList" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card glass">
+      <div class="section-head">
+        <div class="section-title">📋 Notificações Recentes</div>
+        <div style="display:flex;gap:8px">
+          <select id="vigFiltroStatus" class="input" onchange="loadNotificacoes()" style="width:140px">
+            <option value="">Todos status</option>
+            <option value="aberta">Aberta</option>
+            <option value="em_investigacao">Em investigação</option>
+            <option value="encerrada">Encerrada</option>
+          </select>
+          <button class="btn sm" onclick="abrirModalSurto()">+ Registrar Surto</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table" style="width:100%;border-collapse:collapse">
+          <thead><tr style="font-size:.75rem;color:var(--muted)">
+            <th style="text-align:left;padding:8px 10px">Doença</th>
+            <th style="text-align:left;padding:8px 10px">Município</th>
+            <th style="text-align:left;padding:8px 10px">Paciente</th>
+            <th style="text-align:left;padding:8px 10px">Data</th>
+            <th style="text-align:left;padding:8px 10px">Status</th>
+          </tr></thead>
+          <tbody id="vigNotifTabela" style="font-size:.82rem"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal Surto -->
+    <div id="modal-surto" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center">
+      <div class="card glass" style="width:440px;max-width:95vw;max-height:90vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="section-title">🚨 Registrar Surto Epidemiológico</div>
+          <button class="btn sm" onclick="fecharModalSurto()">✕</button>
+        </div>
+        <form onsubmit="salvarSurto(event)" style="display:flex;flex-direction:column;gap:10px">
+          <select name="doenca" class="input" required>
+            <option value="">Selecione a doença...</option>
+            <option value="dengue">Dengue</option><option value="chikungunya">Chikungunya</option>
+            <option value="zika">Zika</option><option value="covid19">Covid-19</option>
+            <option value="influenza">Influenza</option><option value="hepatitea">Hepatite A</option>
+            <option value="leptospirose">Leptospirose</option><option value="febreAmarela">Febre Amarela</option>
+            <option value="sarampo">Sarampo</option><option value="outros">Outros</option>
+          </select>
+          <input name="municipio" class="input" placeholder="Município" required>
+          <input name="uf" class="input" placeholder="UF (ex: SP)" maxlength="2" style="text-transform:uppercase" required>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <input name="total_casos" class="input" type="number" min="1" placeholder="Total de casos" required>
+            <input name="total_obitos" class="input" type="number" min="0" placeholder="Óbitos" value="0">
+          </div>
+          <select name="nivel_alerta" class="input" required>
+            <option value="amarelo">🟡 Amarelo</option>
+            <option value="laranja">🟠 Laranja</option>
+            <option value="vermelho">🔴 Vermelho</option>
+          </select>
+          <input name="data_inicio" class="input" type="date" required>
+          <button type="submit" class="btn primary">Registrar Surto</button>
+        </form>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: REGULAÇÃO DE LEITOS ══════════════════════════════════════════════ -->
+  <section id="panel-regulacao" class="panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div><div class="section-title">🏥 Regulação de Leitos</div>
+          <div class="section-sub">Central de vagas — pacientes regulados e tempo de espera</div></div>
+        <div style="display:flex;gap:8px">
+          <select id="regFiltroStatus" class="input" onchange="loadRegulacao()" style="width:140px">
+            <option value="">Todos</option>
+            <option value="solicitado">Solicitado</option>
+            <option value="regulado">Regulado</option>
+            <option value="internado">Internado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <button class="btn sm" onclick="loadRegulacao()">🔄 Atualizar</button>
+        </div>
+      </div>
+
+      <div class="four-col" id="regKpis" style="gap:10px;margin-bottom:16px">
+        <div class="stat-card"><div class="stat-val" id="regSolicitados">—</div><div class="stat-label">Solicitados</div></div>
+        <div class="stat-card"><div class="stat-val" id="regRegulados" style="color:var(--warn)">—</div><div class="stat-label">Regulados (Aguard.)</div></div>
+        <div class="stat-card"><div class="stat-val" id="regInternados" style="color:var(--ok)">—</div><div class="stat-label">Internados</div></div>
+        <div class="stat-card"><div class="stat-val" id="regTempoMedio">—</div><div class="stat-label">Tempo Médio (h)</div></div>
+      </div>
+
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+          <thead><tr style="font-size:.74rem;color:var(--muted)">
+            <th style="text-align:left;padding:8px 10px">Paciente</th>
+            <th style="text-align:left;padding:8px 10px">Unidade Origem</th>
+            <th style="text-align:left;padding:8px 10px">Especialidade</th>
+            <th style="text-align:left;padding:8px 10px">Prioridade</th>
+            <th style="text-align:left;padding:8px 10px">Status</th>
+            <th style="text-align:left;padding:8px 10px">Data Solicit.</th>
+            <th style="text-align:left;padding:8px 10px">Ações</th>
+          </tr></thead>
+          <tbody id="regTabela" style="font-size:.82rem"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: PRODUÇÃO & PREVINE ════════════════════════════════════════════════ -->
+  <section id="panel-producao" class="panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div><div class="section-title">📋 Produção Ambulatorial &amp; Previne Brasil</div>
+          <div class="section-sub">BPA/RAAS e metas do Programa Previne Brasil por competência</div></div>
+        <div style="display:flex;gap:8px">
+          <input type="month" id="prodCompetencia" class="input" onchange="loadProducao()" style="width:160px">
+          <button class="btn sm" onclick="loadProducao()">🔄 Atualizar</button>
+        </div>
+      </div>
+      <div class="four-col" style="gap:10px;margin-bottom:16px">
+        <div class="stat-card"><div class="stat-val" id="prodTotalProc">—</div><div class="stat-label">Procedimentos</div></div>
+        <div class="stat-card"><div class="stat-val" id="prodTotalAtend">—</div><div class="stat-label">Atendimentos</div></div>
+        <div class="stat-card"><div class="stat-val" id="prodPrevineScore" style="color:var(--ok)">—%</div><div class="stat-label">Score Previne</div></div>
+        <div class="stat-card"><div class="stat-val" id="prodMetasAtingidas" style="color:var(--accent2)">—</div><div class="stat-label">Metas Atingidas</div></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:12px">📊 Produção por Tipo</div>
+        <div id="prodPorTipo" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:12px">🎯 Metas Previne Brasil</div>
+        <div id="previneMetasList" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: URGÊNCIA & EMERGÊNCIA ════════════════════════════════════════════ -->
+  <section id="panel-urgencia" class="panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div><div class="section-title">🚨 Urgência &amp; Emergência</div>
+          <div class="section-sub">Monitoramento de atendimentos de urgência na rede</div></div>
+        <div style="display:flex;gap:8px">
+          <select id="urgPeriodo" class="input" onchange="loadUrgencia()" style="width:140px">
+            <option value="7">Últimos 7 dias</option>
+            <option value="30">Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+          </select>
+          <button class="btn sm" onclick="loadUrgencia()">🔄 Atualizar</button>
+        </div>
+      </div>
+      <div class="four-col" style="gap:10px;margin-bottom:16px">
+        <div class="stat-card"><div class="stat-val" id="urgTotalAtend">—</div><div class="stat-label">Total Atendimentos</div></div>
+        <div class="stat-card"><div class="stat-val" id="urgObitos" style="color:var(--danger)">—</div><div class="stat-label">Óbitos</div></div>
+        <div class="stat-card"><div class="stat-val" id="urgTaxaObito" style="color:var(--warn)">—%</div><div class="stat-label">Taxa Mortalidade</div></div>
+        <div class="stat-card"><div class="stat-val" id="urgUnidades">—</div><div class="stat-label">Unidades Reportando</div></div>
+      </div>
+    </div>
+
+    <div class="card glass">
+      <div class="section-head">
+        <div class="section-title">📈 Atendimentos por Unidade</div>
+      </div>
+      <div id="urgPorUnidade" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <div class="card glass">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+          <thead><tr style="font-size:.74rem;color:var(--muted)">
+            <th style="text-align:left;padding:8px 10px">Unidade</th>
+            <th style="text-align:left;padding:8px 10px">Data</th>
+            <th style="text-align:right;padding:8px 10px">Atendimentos</th>
+            <th style="text-align:right;padding:8px 10px">Internações</th>
+            <th style="text-align:right;padding:8px 10px">Óbitos</th>
+            <th style="text-align:right;padding:8px 10px">Taxa Mortal.</th>
+          </tr></thead>
+          <tbody id="urgTabela"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: CONTRATOS ════════════════════════════════════════════════════════ -->
+  <section id="panel-contratos" class="panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div><div class="section-title">📄 Gestão de Contratos</div>
+          <div class="section-sub">Contratos de saúde com prestadores, fornecedores e entidades</div></div>
+        <div style="display:flex;gap:8px">
+          <select id="contFiltroStatus" class="input" onchange="loadContratos()" style="width:130px">
+            <option value="">Todos</option>
+            <option value="vigente">Vigente</option>
+            <option value="vencido">Vencido</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <button class="btn sm primary" onclick="abrirModalContrato()">+ Novo Contrato</button>
+        </div>
+      </div>
+
+      <div id="contVencendoWarn" style="display:none;padding:10px 14px;border-radius:10px;background:rgba(255,179,71,.12);border:1px solid rgba(255,179,71,.3);color:var(--warn);font-size:.84rem;margin-bottom:12px"></div>
+
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+          <thead><tr style="font-size:.74rem;color:var(--muted)">
+            <th style="text-align:left;padding:8px 10px">Contrato</th>
+            <th style="text-align:left;padding:8px 10px">Tipo</th>
+            <th style="text-align:left;padding:8px 10px">Prestador</th>
+            <th style="text-align:right;padding:8px 10px">Valor</th>
+            <th style="text-align:left;padding:8px 10px">Vigência</th>
+            <th style="text-align:left;padding:8px 10px">Status</th>
+            <th style="text-align:left;padding:8px 10px">Ações</th>
+          </tr></thead>
+          <tbody id="contTabela"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal Contrato -->
+    <div id="modal-contrato" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center">
+      <div class="card glass" style="width:460px;max-width:95vw;max-height:90vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="section-title">📄 Novo Contrato</div>
+          <button class="btn sm" onclick="fecharModalContrato()">✕</button>
+        </div>
+        <form onsubmit="salvarContrato(event)" style="display:flex;flex-direction:column;gap:10px">
+          <input name="numero" class="input" placeholder="Número do contrato" required>
+          <input name="objeto" class="input" placeholder="Objeto / descrição" required>
+          <select name="tipo" class="input" required>
+            <option value="">Tipo de contrato...</option>
+            <option value="prestacao_servicos">Prestação de Serviços</option>
+            <option value="fornecimento">Fornecimento</option>
+            <option value="convenio">Convênio</option>
+            <option value="contrato_programa">Contrato de Programa</option>
+            <option value="outros">Outros</option>
+          </select>
+          <input name="prestador_nome" class="input" placeholder="Prestador / entidade" required>
+          <input name="valor_total" class="input" type="number" step="0.01" placeholder="Valor total (R$)">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <input name="data_inicio" class="input" type="date" placeholder="Início" required>
+            <input name="data_fim" class="input" type="date" placeholder="Vencimento" required>
+          </div>
+          <select name="status" class="input">
+            <option value="vigente">Vigente</option>
+            <option value="em_elaboracao">Em Elaboração</option>
+          </select>
+          <button type="submit" class="btn primary">Salvar Contrato</button>
+        </form>
+      </div>
+    </div>
+
+  </section>
+
   <!-- ══ TAB: INTEGRAÇÕES ═══════════════════════════════════════════════════════ -->
-  <section id="panel-integracoes" class="panel active">
+  <section id="panel-integracoes" class="panel">
 
     <div class="card glass">
       <div class="section-head">
@@ -996,6 +1352,12 @@ function setTab(tab){
   });
   // Load data per tab
   const loaders={
+    painel:loadPainel,
+    vigilancia:loadVigilanciaAll,
+    regulacao:loadRegulacao,
+    producao:loadProducao,
+    urgencia:loadUrgencia,
+    contratos:loadContratos,
     integracoes:loadIntegracoes,
     apikeys:loadChaves,
     webhooks:loadWebhooks,
@@ -1004,6 +1366,311 @@ function setTab(tab){
   };
   if(loaders[tab]) loaders[tab]();
 }
+
+// ══ PAINEL CENTRAL ═══════════════════════════════════════════════════════════
+async function loadPainel(){
+  const d=await api('/api/governo/dashboard/fase2/');
+  if(!d||d.erro) return;
+
+  // KPIs
+  const r=d.rede||{}, v=d.vigilancia||{}, reg=d.regulacao||{}, p=d.previne||{}, c=d.contratos||{}, u=d.urgencia||{};
+  setText('kpiUnidadesAtivas', r.unidades_ativas??'—');
+  setText('kpiEquipesESF', r.equipes_esf??'—');
+  setText('kpiPopCoberta', fmtNum(r.populacao_coberta_esf||0));
+  setText('kpiSurtosAtivos', v.surtos_ativos??'—');
+  setText('kpiNotif30d', v.notificacoes_30d??'—');
+  setText('kpiLeitosEspera', reg.leitos_aguardando??'—');
+  setText('kpiPrevineScore', (p.score_previne??0)+'%');
+  setText('kpiUrgencia7d', fmtNum(u.total_atendimentos||0));
+
+  // Surtos
+  const surtos=v.surtos_ativos_lista||[];
+  const sl=document.getElementById('painelSurtosList');
+  if(sl){
+    if(!surtos.length){sl.innerHTML='<div style="color:var(--muted);font-size:.85rem">Nenhum surto ativo</div>';}
+    else{sl.innerHTML=surtos.slice(0,4).map(s=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.04)">
+        <div><div style="font-weight:700;font-size:.85rem">${esc(s.doenca)}</div><div style="color:var(--muted);font-size:.76rem">${esc(s.municipio)} - ${esc(s.uf)}</div></div>
+        <span class="badge badge-${s.nivel_alerta==='vermelho'?'danger':s.nivel_alerta==='laranja'?'warn':'warn'}">${s.nivel_alerta}</span>
+      </div>`).join('');}
+  }
+
+  // Regulação
+  const ri=document.getElementById('painelRegulacaoInfo');
+  if(ri) ri.innerHTML=`<div style="display:flex;flex-direction:column;gap:6px">
+    <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Aguardando vaga:</span><strong style="color:var(--warn)">${reg.leitos_aguardando||0}</strong></div>
+    <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Tempo médio (h):</span><strong>${reg.tempo_medio_regulacao!=null?reg.tempo_medio_regulacao.toFixed(1):'—'}</strong></div>
+  </div>`;
+
+  // Previne
+  const pb=document.getElementById('painelPrevineBar');
+  const score=p.score_previne||0;
+  if(pb) pb.innerHTML=`<div style="margin-bottom:8px"><span style="font-size:2rem;font-weight:800;color:${score>=80?'var(--ok)':score>=60?'var(--warn)':'var(--danger)'}">${score}%</span> <span style="color:var(--muted);font-size:.82rem">das metas atingidas</span></div>
+    <div class="bar-wrap"><div class="bar-fill" style="width:${score}%;background:${score>=80?'var(--ok)':score>=60?'var(--warn)':'var(--danger)'}"></div></div>`;
+
+  // Contratos
+  const ci=document.getElementById('painelContratosInfo');
+  if(ci) ci.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Contratos vigentes:</span><strong>${c.vigentes||0}</strong></div>`;
+  const cw=document.getElementById('painelContratosWarn');
+  if(cw&&c.vencendo_30d>0){cw.style.display='block';cw.textContent=`⚠️ ${c.vencendo_30d} contrato(s) vencem nos próximos 30 dias`;}
+}
+
+// ══ VIGILÂNCIA EPIDEMIOLÓGICA ════════════════════════════════════════════════
+async function loadVigilanciaAll(){
+  await Promise.all([loadVigilancia(), loadNotificacoes()]);
+}
+
+async function loadVigilancia(){
+  const d=await api('/api/governo/vigilancia/dashboard/');
+  if(!d||d.erro) return;
+
+  setText('vigNotif30d', d.total_notificacoes_30d??'—');
+  setText('vigSurtos', d.surtos_ativos??'—');
+  setText('vigVermelho', d.surtos_vermelho??'—');
+  setText('vigObitos', d.total_obitos_notificacoes??'—');
+
+  // Top doenças chart
+  const chart=document.getElementById('vigDoencasChart');
+  if(chart&&d.por_doenca){
+    const max=Math.max(...d.por_doenca.map(x=>x.total),1);
+    chart.innerHTML=d.por_doenca.slice(0,8).map(x=>`
+      <div style="display:flex;align-items:center;gap:8px;font-size:.8rem">
+        <div style="width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${esc(x.doenca_label||x.doenca)}</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${(x.total/max*100).toFixed(0)}%;background:var(--accent)"></div></div>
+        <div style="width:28px;text-align:right;color:var(--muted)">${x.total}</div>
+      </div>`).join('');
+  }
+
+  // Surtos list
+  const sl=document.getElementById('vigSurtosList');
+  if(sl&&d.surtos_ativos_lista){
+    if(!d.surtos_ativos_lista.length){sl.innerHTML='<div style="color:var(--muted)">Nenhum surto ativo</div>';}
+    else{sl.innerHTML=d.surtos_ativos_lista.map(s=>`
+      <div style="padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.04);display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-weight:700;font-size:.83rem">${esc(s.doenca)} — ${esc(s.municipio)}/${esc(s.uf)}</div>
+        <div style="font-size:.75rem;color:var(--muted)">${s.total_casos} casos · ${s.total_obitos} óbitos</div></div>
+        <span class="badge badge-${s.nivel_alerta==='vermelho'?'danger':'warn'}">${s.nivel_alerta}</span>
+      </div>`).join('');}
+  }
+}
+
+async function loadNotificacoes(){
+  const status=document.getElementById('vigFiltroStatus')?.value||'';
+  let url='/api/governo/vigilancia/notificacoes/';
+  if(status) url+='?status='+status;
+  const d=await api(url);
+  const tb=document.getElementById('vigNotifTabela');
+  if(!tb) return;
+  const list=Array.isArray(d)?d:(d.notificacoes||[]);
+  if(!list.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhuma notificação</td></tr>';return;}
+  tb.innerHTML=list.slice(0,30).map(n=>`<tr>
+    <td>${esc(n.doenca_label||n.doenca||'')}</td>
+    <td>${esc(n.municipio_notificacao||'')}</td>
+    <td>${esc(n.paciente_nome||n.paciente||'')}</td>
+    <td>${n.data_notificacao||''}</td>
+    <td><span class="badge badge-${n.status==='encerrada'?'ok':n.status==='em_investigacao'?'warn':'info'}">${esc(n.status||'')}</span></td>
+  </tr>`).join('');
+}
+
+function abrirModalSurto(){
+  const m=document.getElementById('modal-surto');
+  if(m){m.style.display='flex';}
+}
+function fecharModalSurto(){
+  const m=document.getElementById('modal-surto');
+  if(m){m.style.display='none';}
+}
+async function salvarSurto(e){
+  e.preventDefault();
+  const fd=new FormData(e.target);
+  const data=Object.fromEntries(fd.entries());
+  const r=await api('/api/governo/vigilancia/surtos/',{method:'POST',body:JSON.stringify(data)});
+  if(r&&!r.erro){fecharModalSurto();e.target.reset();loadVigilanciaAll();showToast('toast-main','Surto registrado','ok');}
+  else{showToast('toast-main',r?.erro||'Erro ao registrar surto','err');}
+}
+
+// ══ REGULAÇÃO DE LEITOS ══════════════════════════════════════════════════════
+async function loadRegulacao(){
+  const status=document.getElementById('regFiltroStatus')?.value||'';
+  let url='/api/governo/regulacao/dashboard/';
+  const [dash, lista]=await Promise.all([api(url), api('/api/governo/regulacao/'+(status?'?status='+status:''))]);
+
+  if(dash&&!dash.erro){
+    setText('regSolicitados', dash.total_solicitacoes??'—');
+    setText('regRegulados', dash.regulados??'—');
+    setText('regInternados', dash.internados??'—');
+    const tm=dash.tempo_medio_espera_horas;
+    setText('regTempoMedio', tm!=null?parseFloat(tm).toFixed(1):'—');
+  }
+
+  const tb=document.getElementById('regTabela');
+  if(!tb) return;
+  const list=Array.isArray(lista)?lista:(lista.regulacoes||[]);
+  if(!list.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Nenhuma regulação</td></tr>';return;}
+  const prioLabel={urgente:'🔴 Urgente',eletivo:'🟢 Eletivo',prioritario:'🟡 Prioritário'};
+  const stBadge={solicitado:'info',regulado:'warn',internado:'ok',cancelado:'muted'};
+  tb.innerHTML=list.slice(0,25).map(r=>`<tr>
+    <td>${esc(r.paciente_nome||r.paciente||'')}</td>
+    <td>${esc(r.unidade_origem_nome||r.unidade_origem||'')}</td>
+    <td>${esc(r.especialidade||'')}</td>
+    <td>${prioLabel[r.prioridade]||r.prioridade||''}</td>
+    <td><span class="badge badge-${stBadge[r.status]||'muted'}">${esc(r.status||'')}</span></td>
+    <td>${r.data_solicitacao||''}</td>
+    <td>
+      ${r.status==='solicitado'?`<button class="btn xs" onclick="avancarRegulacao(${r.id},'regulado')">Regular</button>`:''}
+      ${r.status==='regulado'?`<button class="btn xs" onclick="avancarRegulacao(${r.id},'internado')">Internar</button>`:''}
+    </td>
+  </tr>`).join('');
+}
+
+async function avancarRegulacao(id, status){
+  const r=await api('/api/governo/regulacao/'+id+'/',{method:'PATCH',body:JSON.stringify({status})});
+  if(r&&!r.erro) loadRegulacao();
+}
+
+// ══ PRODUÇÃO & PREVINE ════════════════════════════════════════════════════════
+async function loadProducao(){
+  const comp=document.getElementById('prodCompetencia')?.value||'';
+  const url=comp?'/api/governo/producao/dashboard/?competencia='+comp:'/api/governo/producao/dashboard/';
+  const prevUrl=comp?'/api/governo/previne/dashboard/?competencia='+comp:'/api/governo/previne/dashboard/';
+  const [prod, prev]=await Promise.all([api(url), api(prevUrl)]);
+
+  if(prod&&!prod.erro){
+    setText('prodTotalProc', fmtNum(prod.total_procedimentos||0));
+    setText('prodTotalAtend', fmtNum(prod.total_atendimentos||0));
+    // Bar chart por tipo
+    const pt=document.getElementById('prodPorTipo');
+    if(pt&&prod.por_tipo){
+      const max=Math.max(...prod.por_tipo.map(x=>x.total),1);
+      pt.innerHTML=prod.por_tipo.map(x=>`
+        <div style="display:flex;align-items:center;gap:8px;font-size:.8rem">
+          <div style="width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.tipo_label||x.tipo||'')}</div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:${(x.total/max*100).toFixed(0)}%;background:var(--accent2)"></div></div>
+          <div style="width:40px;text-align:right;color:var(--muted)">${fmtNum(x.total)}</div>
+        </div>`).join('');
+    }
+  }
+
+  if(prev&&!prev.erro){
+    const score=prev.score_previne||0;
+    const ating=prev.metas_atingidas||0;
+    const total=prev.total_metas||0;
+    setText('prodPrevineScore', score+'%');
+    setText('prodMetasAtingidas', ating+'/'+total);
+    const ml=document.getElementById('previneMetasList');
+    if(ml&&prev.metas){
+      ml.innerHTML=prev.metas.slice(0,8).map(m=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,.04)">
+          <div style="font-size:.8rem">${esc(m.indicador||m.descricao||'')}</div>
+          <span class="badge badge-${m.atingiu_meta?'ok':'danger'}">${m.atingiu_meta?'✓ Atingiu':'✗ Abaixo'}</span>
+        </div>`).join('');
+    }
+  }
+}
+
+// ══ URGÊNCIA & EMERGÊNCIA ════════════════════════════════════════════════════
+async function loadUrgencia(){
+  const periodo=document.getElementById('urgPeriodo')?.value||'7';
+  const [dash, lista]=await Promise.all([
+    api('/api/governo/urgencia/dashboard/?dias='+periodo),
+    api('/api/governo/urgencia/?dias='+periodo)
+  ]);
+
+  if(dash&&!dash.erro){
+    const total=dash.total_atendimentos||0;
+    const obitos=dash.total_obitos||0;
+    const taxa=total>0?((obitos/total)*100).toFixed(1):0;
+    setText('urgTotalAtend', fmtNum(total));
+    setText('urgObitos', obitos);
+    setText('urgTaxaObito', taxa+'%');
+    setText('urgUnidades', dash.unidades_reportando||'—');
+
+    // Por unidade bar chart
+    const pu=document.getElementById('urgPorUnidade');
+    if(pu&&dash.por_unidade){
+      const max=Math.max(...dash.por_unidade.map(x=>x.total),1);
+      pu.innerHTML=dash.por_unidade.slice(0,8).map(x=>`
+        <div style="display:flex;align-items:center;gap:8px;font-size:.8rem">
+          <div style="width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.unidade||'')}</div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:${(x.total/max*100).toFixed(0)}%;background:var(--danger)"></div></div>
+          <div style="width:40px;text-align:right;color:var(--muted)">${fmtNum(x.total)}</div>
+        </div>`).join('');
+    }
+  }
+
+  const tb=document.getElementById('urgTabela');
+  if(!tb) return;
+  const list=Array.isArray(lista)?lista:(lista.atendimentos||[]);
+  if(!list.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Nenhum atendimento</td></tr>';return;}
+  tb.innerHTML=list.slice(0,20).map(a=>{
+    const taxa=a.total_atendimentos>0?((a.obitos/a.total_atendimentos)*100).toFixed(1):0;
+    return`<tr>
+      <td>${esc(a.unidade_saude_nome||a.unidade_saude||'')}</td>
+      <td>${a.data_atendimento||''}</td>
+      <td style="text-align:right">${fmtNum(a.total_atendimentos||0)}</td>
+      <td style="text-align:right">${a.internacoes||0}</td>
+      <td style="text-align:right;color:var(--danger)">${a.obitos||0}</td>
+      <td style="text-align:right;color:var(--warn)">${taxa}%</td>
+    </tr>`;}).join('');
+}
+
+// ══ CONTRATOS ════════════════════════════════════════════════════════════════
+async function loadContratos(){
+  const status=document.getElementById('contFiltroStatus')?.value||'';
+  const url='/api/governo/contratos/'+(status?'?status='+status:'');
+  const d=await api(url);
+  const list=Array.isArray(d)?d:(d.contratos||[]);
+
+  const vencendo=list.filter(c=>c.status==='vigente'&&c.dias_para_vencer!=null&&c.dias_para_vencer<=30);
+  const cw=document.getElementById('contVencendoWarn');
+  if(cw){
+    if(vencendo.length>0){cw.style.display='block';cw.textContent=`⚠️ ${vencendo.length} contrato(s) vencem em até 30 dias`;}
+    else{cw.style.display='none';}
+  }
+
+  const tb=document.getElementById('contTabela');
+  if(!tb) return;
+  if(!list.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Nenhum contrato</td></tr>';return;}
+  const stBadge={vigente:'ok',vencido:'danger',cancelado:'muted',em_elaboracao:'info'};
+  tb.innerHTML=list.slice(0,30).map(c=>`<tr>
+    <td style="font-weight:700">${esc(c.numero||'')}</td>
+    <td>${esc(c.tipo_label||c.tipo||'')}</td>
+    <td>${esc(c.prestador_nome||'')}</td>
+    <td style="text-align:right">${c.valor_total?'R$ '+parseFloat(c.valor_total).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td>
+    <td>${c.data_inicio||'—'} → ${c.data_fim||'—'}</td>
+    <td><span class="badge badge-${stBadge[c.status]||'muted'}">${esc(c.status||'')}</span></td>
+    <td>
+      <button class="btn xs" onclick="encerrarContrato(${c.id})">Encerrar</button>
+    </td>
+  </tr>`).join('');
+}
+
+function abrirModalContrato(){
+  const m=document.getElementById('modal-contrato');
+  if(m){m.style.display='flex';}
+}
+function fecharModalContrato(){
+  const m=document.getElementById('modal-contrato');
+  if(m){m.style.display='none';}
+}
+async function salvarContrato(e){
+  e.preventDefault();
+  const fd=new FormData(e.target);
+  const data=Object.fromEntries(fd.entries());
+  const r=await api('/api/governo/contratos/',{method:'POST',body:JSON.stringify(data)});
+  if(r&&!r.erro){fecharModalContrato();e.target.reset();loadContratos();showToast('toast-main','Contrato salvo','ok');}
+  else{showToast('toast-main',r?.erro||'Erro ao salvar','err');}
+}
+async function encerrarContrato(id){
+  if(!confirm('Encerrar este contrato?')) return;
+  const r=await api('/api/governo/contratos/'+id+'/',{method:'PATCH',body:JSON.stringify({status:'cancelado'})});
+  if(r&&!r.erro) loadContratos();
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
+function fmtNum(n){return Number(n).toLocaleString('pt-BR');}
+
 
 // ── INTEGRAÇÕES ─────────────────────────────────────────────────────────
 async function loadIntegracoes(){
@@ -1194,8 +1861,16 @@ async function loadSeguranca(){
   }
 }
 
-function toggle2fa(){
-  alert('Configure o 2FA através do portal Gov.br integrado ao seu IDP governamental.');
+async function toggle2fa(){
+  const btn=document.getElementById('btn2fa');
+  const ativo=btn&&btn.textContent.includes('Desativar');
+  const r=await api('/api/governo/plataforma/seguranca/',{method:'POST',body:JSON.stringify({acao:ativo?'desativar_2fa':'ativar_2fa'})});
+  if(r&&!r.erro){
+    if(btn){btn.textContent=ativo?'Ativar 2FA':'Desativar 2FA';btn.className=ativo?'btn sm primary':'btn sm warn';}
+    showToast('toast-main',ativo?'2FA desativado':'2FA ativado — use o app autenticador','ok');
+  }else{
+    showToast('toast-main','Configure o 2FA via portal Gov.br do seu IDP','info');
+  }
 }
 
 async function revogarSessao(id){
@@ -1288,7 +1963,11 @@ function showToast(id,msg,type){
 
 // ── INIT ────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
-  loadIntegracoes();
+  loadPainel();
+  // set competência to current month
+  const today=new Date();
+  const comp=document.getElementById('prodCompetencia');
+  if(comp) comp.value=today.toISOString().slice(0,7);
 });
 </script>
 </body>

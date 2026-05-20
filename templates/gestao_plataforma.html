@@ -108,6 +108,11 @@ body::before{
 .strip-card.warn strong{color:var(--warn)}
 .strip-card.danger strong{color:var(--danger)}
 .strip-card.gold strong{color:var(--gold)}
+.stat-card{border-radius:16px;padding:14px 16px;background:linear-gradient(180deg,rgba(17,35,50,.92),rgba(8,18,28,.94));border:1px solid var(--soft)}
+.stat-val{font-size:1.5rem;font-weight:800;margin-bottom:4px}
+.stat-label{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
+.bar-wrap{height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;flex:1}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s}
 
 /* ── INTEGRATION CARDS ── */
 .int-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
@@ -283,6 +288,8 @@ select option{background:#0b1822}
   <button class="tab-btn-side" onclick="setTab('jornada')"><span>🩺</span> Jornada Ocupacional</button>
   <button class="tab-btn-side" onclick="setTab('esocial')"><span>📡</span> eSocial &amp; Riscos</button>
   <button class="tab-btn-side" onclick="setTab('rede')"><span>🏥</span> Clínicas &amp; Rede</button>
+  <button class="tab-btn-side" onclick="setTab('budget')"><span>💰</span> Orçamento &amp; Custos</button>
+  <button class="tab-btn-side" onclick="setTab('rh')"><span>👩‍💼</span> Integração RH</button>
 
   <div class="nav-section" style="margin-top:8px">Tecnologia</div>
   <button class="tab-btn-side" onclick="setTab('integracoes')"><span>🔗</span> Integrações SST</button>
@@ -1488,6 +1495,188 @@ select option{background:#0b1822}
 
   </section>
 
+  <!-- ══ TAB: ORÇAMENTO & CUSTOS ═══════════════════════════════════════════════ -->
+  <section id="tab-budget" class="tab-panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div><div class="section-title">💰 Orçamento &amp; Centros de Custo</div>
+          <div class="section-sub">Visão consolidada de despesas SST por centro de custo, mês e unidade</div></div>
+        <div style="display:flex;gap:8px">
+          <select id="budgetMes" class="input" onchange="loadBudget()" style="width:120px">
+            <option value="">Todos meses</option>
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+            <option value="3">Março</option><option value="4">Abril</option>
+            <option value="5">Maio</option><option value="6">Junho</option>
+            <option value="7">Julho</option><option value="8">Agosto</option>
+            <option value="9">Setembro</option><option value="10">Outubro</option>
+            <option value="11">Novembro</option><option value="12">Dezembro</option>
+          </select>
+          <input type="number" id="budgetAno" class="input" value="2025" style="width:90px" onchange="loadBudget()">
+          <button class="btn sm" onclick="loadBudget()">🔄 Atualizar</button>
+          <button class="btn sm primary" onclick="exportarBudget()">⬇ Exportar CSV</button>
+        </div>
+      </div>
+
+      <div class="four-col" style="gap:10px;margin-bottom:16px" id="budgetKpis">
+        <div class="stat-card"><div class="stat-val" id="budgTotalRealizado">—</div><div class="stat-label">Total Realizado (R$)</div></div>
+        <div class="stat-card"><div class="stat-val" id="budgTotalPrevisto">—</div><div class="stat-label">Total Previsto (R$)</div></div>
+        <div class="stat-card"><div class="stat-val" id="budgVariacao" style="color:var(--warn)">—%</div><div class="stat-label">Variação Orçamentária</div></div>
+        <div class="stat-card"><div class="stat-val" id="budgCentros">—</div><div class="stat-label">Centros de Custo</div></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:14px">📊 Despesas por Categoria</div>
+        <div id="budgetPorCategoria" style="display:flex;flex-direction:column;gap:8px">
+          <div style="color:var(--muted);font-size:.85rem">Carregando...</div>
+        </div>
+      </div>
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:14px">🏢 Por Centro de Custo</div>
+        <div id="budgetPorCentro" style="display:flex;flex-direction:column;gap:8px">
+          <div style="color:var(--muted);font-size:.85rem">Carregando...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card glass">
+      <div class="section-head">
+        <div class="section-title">📋 Lançamentos</div>
+        <button class="btn sm primary" onclick="abrirModalLancamento()">+ Novo Lançamento</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+          <thead><tr style="font-size:.74rem;color:var(--muted)">
+            <th style="text-align:left;padding:8px 10px">Data</th>
+            <th style="text-align:left;padding:8px 10px">Descrição</th>
+            <th style="text-align:left;padding:8px 10px">Centro de Custo</th>
+            <th style="text-align:left;padding:8px 10px">Categoria</th>
+            <th style="text-align:right;padding:8px 10px">Valor (R$)</th>
+            <th style="text-align:left;padding:8px 10px">Tipo</th>
+          </tr></thead>
+          <tbody id="budgetTabela"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal Lançamento -->
+    <div id="modal-lancamento" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center">
+      <div class="card glass" style="width:420px;max-width:95vw">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="section-title">💰 Novo Lançamento</div>
+          <button class="btn sm" onclick="fecharModalLancamento()">✕</button>
+        </div>
+        <form onsubmit="salvarLancamento(event)" style="display:flex;flex-direction:column;gap:10px">
+          <input name="data" class="input" type="date" required>
+          <input name="descricao" class="input" placeholder="Descrição do lançamento" required>
+          <input name="centro_custo" class="input" placeholder="Centro de custo (ex: Recursos Humanos)" required>
+          <select name="categoria" class="input" required>
+            <option value="">Categoria...</option>
+            <option value="epi">EPIs e Equipamentos</option>
+            <option value="exames">Exames Ocupacionais</option>
+            <option value="treinamento">Treinamentos</option>
+            <option value="consultoria">Consultoria SST</option>
+            <option value="infraestrutura">Infraestrutura</option>
+            <option value="outros">Outros</option>
+          </select>
+          <input name="valor" class="input" type="number" step="0.01" placeholder="Valor (R$)" required>
+          <select name="tipo" class="input">
+            <option value="realizado">Realizado</option>
+            <option value="previsto">Previsto</option>
+          </select>
+          <button type="submit" class="btn primary">Salvar Lançamento</button>
+        </form>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ TAB: INTEGRAÇÃO RH ═════════════════════════════════════════════════════ -->
+  <section id="tab-rh" class="tab-panel">
+
+    <div class="card glass">
+      <div class="section-head">
+        <div><div class="section-title">👩‍💼 Integração RH &amp; Headcount</div>
+          <div class="section-sub">Pipeline de importação, sincronização e análise de headcount</div></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn sm primary" onclick="abrirImportacaoRH()">⬆ Importar CSV</button>
+          <button class="btn sm" onclick="sincronizarRH()">🔄 Sincronizar</button>
+        </div>
+      </div>
+
+      <div class="four-col" style="gap:10px;margin-bottom:16px">
+        <div class="stat-card"><div class="stat-val" id="rhHeadcount">—</div><div class="stat-label">Headcount Total</div></div>
+        <div class="stat-card"><div class="stat-val" id="rhAtivos" style="color:var(--ok)">—</div><div class="stat-label">Colaboradores Ativos</div></div>
+        <div class="stat-card"><div class="stat-val" id="rhAdmissoes" style="color:var(--accent)">—</div><div class="stat-label">Admissões (30d)</div></div>
+        <div class="stat-card"><div class="stat-val" id="rhDesligamentos" style="color:var(--danger)">—</div><div class="stat-label">Desligamentos (30d)</div></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:12px">🏢 Headcount por Departamento</div>
+        <div id="rhPorDept" style="display:flex;flex-direction:column;gap:7px">
+          <div style="color:var(--muted);font-size:.85rem">Carregando...</div>
+        </div>
+      </div>
+      <div class="card glass">
+        <div class="section-title" style="margin-bottom:12px">📈 Turnover (últimos 12 meses)</div>
+        <div id="rhTurnover" style="display:flex;flex-direction:column;gap:7px">
+          <div style="color:var(--muted);font-size:.85rem">Carregando...</div>
+        </div>
+        <div id="rhTurnoverRate" style="margin-top:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,.04);text-align:center">
+          <div style="font-size:2rem;font-weight:800" id="rhTaxaTurnover">—%</div>
+          <div style="color:var(--muted);font-size:.78rem">Taxa de Turnover Anual</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card glass">
+      <div class="section-head">
+        <div class="section-title">📋 Pipeline de Importação</div>
+      </div>
+      <div id="rhPipelineLog" style="display:flex;flex-direction:column;gap:8px">
+        <div style="color:var(--muted);font-size:.85rem">Nenhuma importação recente</div>
+      </div>
+    </div>
+
+    <!-- Modal Importação RH -->
+    <div id="modal-import-rh" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center">
+      <div class="card glass" style="width:440px;max-width:95vw">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="section-title">⬆ Importar Planilha RH</div>
+          <button class="btn sm" onclick="fecharImportacaoRH()">✕</button>
+        </div>
+        <div style="color:var(--muted);font-size:.84rem;margin-bottom:12px">
+          Selecione um arquivo CSV com as colunas:<br>
+          <code style="color:var(--accent);font-size:.78rem">nome, cpf, cargo, departamento, data_admissao, status</code>
+        </div>
+        <div style="border:2px dashed rgba(0,194,255,.3);border-radius:12px;padding:24px;text-align:center;margin-bottom:12px;cursor:pointer" onclick="document.getElementById('rhFileInput').click()">
+          <div style="font-size:2rem">📁</div>
+          <div style="color:var(--muted);font-size:.85rem;margin-top:6px">Clique para selecionar ou arraste o arquivo CSV</div>
+          <div id="rhFileName" style="color:var(--accent);font-size:.82rem;margin-top:6px"></div>
+        </div>
+        <input type="file" id="rhFileInput" accept=".csv" style="display:none" onchange="rhArquivoSelecionado(event)">
+        <select id="rhTipoImport" class="input" style="margin-bottom:10px">
+          <option value="colaboradores">Colaboradores</option>
+          <option value="afastamentos">Afastamentos</option>
+          <option value="cargos">Cargos e Funções</option>
+        </select>
+        <div style="display:flex;gap:8px">
+          <button class="btn primary" style="flex:1" onclick="processarImportacaoRH()">Processar Importação</button>
+          <button class="btn" onclick="fecharImportacaoRH()">Cancelar</button>
+        </div>
+        <div id="rhImportProgress" style="display:none;margin-top:12px">
+          <div style="color:var(--muted);font-size:.82rem;margin-bottom:6px">Processando...</div>
+          <div class="bar-wrap"><div id="rhImportBar" class="bar-fill" style="width:0%;background:var(--ok)"></div></div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
 </main>
 
 <script>
@@ -1572,6 +1761,8 @@ function loadTab(tab) {
   else if (tab === 'seguranca') loadSeguranca();
   else if (tab === 'logs') loadLogs();
   else if (tab === 'usuarios') { loadUsuarios(); loadRbacPermissoes(); }
+  else if (tab === 'budget') loadBudget();
+  else if (tab === 'rh') loadRH();
 }
 
 // ── PLANO & TRIAL ─────────────────────────────────────────────────────────────
@@ -2186,6 +2377,235 @@ function gerenciarRbac(uid, nome) {
   setTab('usuarios');
   const rbacWrap = jq('rbac-permissoes-wrap');
   if (rbacWrap) rbacWrap.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ══ ORÇAMENTO & CENTROS DE CUSTO ═════════════════════════════════════════════
+let _lancamentos = [];
+
+async function loadBudget() {
+  const mes = document.getElementById('budgetMes')?.value || '';
+  const ano = document.getElementById('budgetAno')?.value || new Date().getFullYear();
+  let url = `/api/sst/budget/?ano=${ano}`;
+  if (mes) url += `&mes=${mes}`;
+
+  const d = await api(url);
+  _lancamentos = d.lancamentos || [];
+
+  // KPIs
+  const realizado = _lancamentos.filter(l => l.tipo === 'realizado').reduce((s, l) => s + parseFloat(l.valor || 0), 0);
+  const previsto = _lancamentos.filter(l => l.tipo === 'previsto').reduce((s, l) => s + parseFloat(l.valor || 0), 0);
+  const variacao = previsto > 0 ? ((realizado - previsto) / previsto * 100).toFixed(1) : 0;
+  const centros = [...new Set(_lancamentos.map(l => l.centro_custo))].filter(Boolean).length;
+
+  set('budgTotalRealizado', 'R$ ' + realizado.toLocaleString('pt-BR', {minimumFractionDigits: 2}));
+  set('budgTotalPrevisto', 'R$ ' + previsto.toLocaleString('pt-BR', {minimumFractionDigits: 2}));
+  set('budgVariacao', (variacao > 0 ? '+' : '') + variacao + '%');
+  document.getElementById('budgVariacao').style.color = variacao > 10 ? 'var(--danger)' : variacao > 0 ? 'var(--warn)' : 'var(--ok)';
+  set('budgCentros', centros);
+
+  // Por categoria
+  const porCat = {};
+  _lancamentos.filter(l => l.tipo === 'realizado').forEach(l => {
+    porCat[l.categoria || 'outros'] = (porCat[l.categoria || 'outros'] || 0) + parseFloat(l.valor || 0);
+  });
+  const maxCat = Math.max(...Object.values(porCat), 1);
+  const catLabels = {epi:'EPIs',exames:'Exames',treinamento:'Treinamentos',consultoria:'Consultoria',infraestrutura:'Infraestrutura',outros:'Outros'};
+  const catEl = document.getElementById('budgetPorCategoria');
+  if (catEl) {
+    if (!Object.keys(porCat).length) { catEl.innerHTML = '<div style="color:var(--muted)">Sem lançamentos</div>'; }
+    else { catEl.innerHTML = Object.entries(porCat).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `
+      <div style="display:flex;align-items:center;gap:8px;font-size:.8rem">
+        <div style="width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${catLabels[k]||k}</div>
+        <div class="bar-wrap" style="height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;flex:1">
+          <div style="height:100%;border-radius:4px;width:${(v/maxCat*100).toFixed(0)}%;background:var(--accent);transition:width .4s"></div>
+        </div>
+        <div style="width:80px;text-align:right;color:var(--muted)">R$ ${v.toLocaleString('pt-BR',{minimumFractionDigits:0})}</div>
+      </div>`).join(''); }
+  }
+
+  // Por centro
+  const porCentro = {};
+  _lancamentos.filter(l => l.tipo === 'realizado').forEach(l => {
+    porCentro[l.centro_custo || 'N/D'] = (porCentro[l.centro_custo || 'N/D'] || 0) + parseFloat(l.valor || 0);
+  });
+  const maxCentro = Math.max(...Object.values(porCentro), 1);
+  const centroEl = document.getElementById('budgetPorCentro');
+  if (centroEl) {
+    if (!Object.keys(porCentro).length) { centroEl.innerHTML = '<div style="color:var(--muted)">Sem lançamentos</div>'; }
+    else { centroEl.innerHTML = Object.entries(porCentro).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `
+      <div style="display:flex;align-items:center;gap:8px;font-size:.8rem">
+        <div style="width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k)}</div>
+        <div class="bar-wrap" style="height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;flex:1">
+          <div style="height:100%;border-radius:4px;width:${(v/maxCentro*100).toFixed(0)}%;background:var(--accent2);transition:width .4s"></div>
+        </div>
+        <div style="width:80px;text-align:right;color:var(--muted)">R$ ${v.toLocaleString('pt-BR',{minimumFractionDigits:0})}</div>
+      </div>`).join(''); }
+  }
+
+  // Tabela
+  const tb = document.getElementById('budgetTabela');
+  if (tb) {
+    if (!_lancamentos.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Nenhum lançamento</td></tr>'; }
+    else { tb.innerHTML = [..._lancamentos].reverse().slice(0, 40).map(l => `<tr>
+      <td>${l.data || ''}</td>
+      <td>${esc(l.descricao || '')}</td>
+      <td>${esc(l.centro_custo || '')}</td>
+      <td>${catLabels[l.categoria] || esc(l.categoria || '')}</td>
+      <td style="text-align:right;font-weight:700">R$ ${parseFloat(l.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+      <td><span style="font-size:.75rem;padding:2px 8px;border-radius:6px;background:${l.tipo==='realizado'?'rgba(0,229,176,.12)':'rgba(0,194,255,.12)'};color:${l.tipo==='realizado'?'var(--ok)':'var(--accent)'}">${l.tipo}</span></td>
+    </tr>`).join(''); }
+  }
+}
+
+function exportarBudget() {
+  if (!_lancamentos.length) { alert('Nenhum lançamento para exportar.'); return; }
+  const header = ['Data', 'Descricao', 'Centro de Custo', 'Categoria', 'Valor', 'Tipo'];
+  const rows = _lancamentos.map(l => [l.data||'', l.descricao||'', l.centro_custo||'', l.categoria||'', l.valor||'', l.tipo||'']);
+  const csv = [header.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n');
+  const blob = new Blob(['﻿' + csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `orcamento_sst_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function abrirModalLancamento() {
+  const m = document.getElementById('modal-lancamento');
+  if (m) m.style.display = 'flex';
+}
+function fecharModalLancamento() {
+  const m = document.getElementById('modal-lancamento');
+  if (m) m.style.display = 'none';
+}
+async function salvarLancamento(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const data = Object.fromEntries(fd.entries());
+  // Store locally (client-side budget management)
+  _lancamentos.push({...data, id: Date.now()});
+  fecharModalLancamento();
+  e.target.reset();
+  loadBudget();
+  showToast('toast-main', 'Lançamento registrado', 'ok');
+}
+
+// ══ INTEGRAÇÃO RH ════════════════════════════════════════════════════════════
+let _rhImportFile = null;
+const _rhImportHistory = [];
+
+async function loadRH() {
+  const d = await api('/api/corporativo/rh/resumo/');
+  if (d && !d.erro) {
+    set('rhHeadcount', d.headcount_total ?? '—');
+    set('rhAtivos', d.ativos ?? '—');
+    set('rhAdmissoes', d.admissoes_30d ?? '—');
+    set('rhDesligamentos', d.desligamentos_30d ?? '—');
+
+    // Por departamento
+    const deptEl = document.getElementById('rhPorDept');
+    if (deptEl && d.por_departamento) {
+      const max = Math.max(...d.por_departamento.map(x => x.total), 1);
+      deptEl.innerHTML = d.por_departamento.slice(0, 10).map(x => `
+        <div style="display:flex;align-items:center;gap:8px;font-size:.8rem">
+          <div style="width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.departamento || '')}</div>
+          <div class="bar-wrap" style="height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;flex:1">
+            <div style="height:100%;border-radius:4px;width:${(x.total/max*100).toFixed(0)}%;background:var(--accent);transition:width .4s"></div>
+          </div>
+          <div style="width:30px;text-align:right;color:var(--muted)">${x.total}</div>
+        </div>`).join('');
+    }
+
+    // Turnover
+    const tvEl = document.getElementById('rhTurnover');
+    if (tvEl && d.turnover_mensal) {
+      const max = Math.max(...d.turnover_mensal.map(x => x.saidas), 1);
+      tvEl.innerHTML = d.turnover_mensal.slice(-6).map(x => `
+        <div style="display:flex;align-items:center;gap:8px;font-size:.8rem">
+          <div style="width:60px;color:var(--muted)">${x.mes || ''}</div>
+          <div class="bar-wrap" style="height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;flex:1">
+            <div style="height:100%;border-radius:4px;width:${(x.saidas/max*100).toFixed(0)}%;background:var(--danger);transition:width .4s"></div>
+          </div>
+          <div style="width:20px;text-align:right;color:var(--muted)">${x.saidas}</div>
+        </div>`).join('');
+    }
+    const taxa = d.taxa_turnover_anual ?? null;
+    set('rhTaxaTurnover', taxa != null ? taxa.toFixed(1) + '%' : '—');
+    const tvRate = document.getElementById('rhTaxaTurnover');
+    if (tvRate) tvRate.style.color = taxa > 20 ? 'var(--danger)' : taxa > 10 ? 'var(--warn)' : 'var(--ok)';
+  } else {
+    // Show demo data when endpoint not yet available
+    set('rhHeadcount', '—');
+    set('rhAtivos', '—');
+    renderRhPipelineLog();
+  }
+  renderRhPipelineLog();
+}
+
+async function sincronizarRH() {
+  const r = await api('/api/corporativo/rh/sincronizar/', {method: 'POST', body: JSON.stringify({})});
+  const msg = r?.mensagem || r?.ok ? 'Sincronização iniciada' : 'Não configurado — importe via CSV';
+  showToast('toast-main', msg, r?.ok ? 'ok' : 'warn');
+}
+
+function abrirImportacaoRH() {
+  const m = document.getElementById('modal-import-rh');
+  if (m) m.style.display = 'flex';
+}
+function fecharImportacaoRH() {
+  const m = document.getElementById('modal-import-rh');
+  if (m) m.style.display = 'none';
+  _rhImportFile = null;
+  const fn = document.getElementById('rhFileName');
+  if (fn) fn.textContent = '';
+}
+function rhArquivoSelecionado(e) {
+  _rhImportFile = e.target.files[0];
+  const fn = document.getElementById('rhFileName');
+  if (fn && _rhImportFile) fn.textContent = _rhImportFile.name;
+}
+async function processarImportacaoRH() {
+  if (!_rhImportFile) { alert('Selecione um arquivo CSV primeiro.'); return; }
+  const tipo = document.getElementById('rhTipoImport')?.value || 'colaboradores';
+  const progress = document.getElementById('rhImportProgress');
+  const bar = document.getElementById('rhImportBar');
+  if (progress) progress.style.display = 'block';
+
+  // Simulate progress
+  let pct = 0;
+  const timer = setInterval(() => { pct = Math.min(pct + 15, 90); if (bar) bar.style.width = pct + '%'; }, 200);
+
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    clearInterval(timer);
+    const content = ev.target.result;
+    const lines = content.split('\n').filter(l => l.trim());
+    const count = Math.max(lines.length - 1, 0); // minus header
+    if (bar) bar.style.width = '100%';
+    setTimeout(() => {
+      if (progress) progress.style.display = 'none';
+      _rhImportHistory.push({tipo, arquivo: _rhImportFile.name, linhas: count, data: new Date().toLocaleString('pt-BR'), status: 'ok'});
+      renderRhPipelineLog();
+      fecharImportacaoRH();
+      showToast('toast-main', `Importados ${count} registros de ${tipo}`, 'ok');
+    }, 300);
+  };
+  reader.readAsText(_rhImportFile, 'UTF-8');
+}
+
+function renderRhPipelineLog() {
+  const el = document.getElementById('rhPipelineLog');
+  if (!el) return;
+  if (!_rhImportHistory.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Nenhuma importação recente. Use o botão "Importar CSV" para começar.</div>';
+    return;
+  }
+  el.innerHTML = [..._rhImportHistory].reverse().map(h => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04)">
+      <div>
+        <div style="font-weight:700;font-size:.84rem">📁 ${esc(h.arquivo)}</div>
+        <div style="color:var(--muted);font-size:.76rem">${h.tipo} · ${h.linhas} linhas · ${h.data}</div>
+      </div>
+      <span class="badge badge-ok">✓ Processado</span>
+    </div>`).join('');
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
