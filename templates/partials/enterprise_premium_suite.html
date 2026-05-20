@@ -31,8 +31,18 @@
       </div>
     </div>
     <aside class="eps-actions">
-      <button type="button" class="eps-seed" id="epsSeedBtn">Implantacao rapida</button>
-      <small class="eps-seed-note" id="epsSeedNote">Cria dados iniciais controlados para demonstrar o fluxo completo.</small>
+      <div class="eps-demo-header">
+        <span class="eps-section-title" style="margin-bottom:0">Implantação Rápida</span>
+        <label class="eps-toggle-wrap" title="Ativar / Desativar modo demo">
+          <input type="checkbox" id="epsDemoToggle" checked>
+          <span class="eps-toggle-track"><span class="eps-toggle-thumb"></span></span>
+        </label>
+      </div>
+      <div id="epsDemoBlock">
+        <button type="button" class="eps-seed" id="epsSeedBtn">▶ Implantar demo</button>
+        <button type="button" class="eps-reset" id="epsResetBtn">🗑 Zerar demo</button>
+        <small class="eps-seed-note" id="epsSeedNote">Cria dados iniciais controlados para demonstrar o fluxo completo.</small>
+      </div>
       <strong>Proximas automacoes</strong>
       <div id="epsActions" class="eps-action-list"></div>
     </aside>
@@ -83,8 +93,19 @@
 .eps-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .eps-chip{font-size:10px;font-weight:800;color:#a9c0d0;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);border-radius:99px;padding:4px 7px}
 .eps-actions{background:rgba(4,16,24,.66);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;align-self:start}
-.eps-seed{width:100%;min-height:38px;border:0;border-radius:9px;background:linear-gradient(135deg,#00e5b0,#00c2ff);color:#041018;font-size:12px;font-weight:950;cursor:pointer;font-family:inherit;margin-bottom:8px}
-.eps-seed:disabled{opacity:.62;cursor:wait}.eps-seed-note{display:block;color:#8fb1c9;line-height:1.35;margin-bottom:14px;font-size:11px}
+.eps-demo-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.eps-toggle-wrap{display:flex;align-items:center;cursor:pointer}
+.eps-toggle-wrap input{position:absolute;opacity:0;width:0;height:0}
+.eps-toggle-track{position:relative;display:inline-block;width:36px;height:20px;background:rgba(255,255,255,.12);border-radius:99px;transition:background .2s}
+.eps-toggle-wrap input:checked + .eps-toggle-track{background:linear-gradient(135deg,#00e5b0,#00c2ff)}
+.eps-toggle-thumb{position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.eps-toggle-wrap input:checked + .eps-toggle-track .eps-toggle-thumb{transform:translateX(16px)}
+.eps-seed{width:100%;min-height:38px;border:0;border-radius:9px;background:linear-gradient(135deg,#00e5b0,#00c2ff);color:#041018;font-size:12px;font-weight:950;cursor:pointer;font-family:inherit;margin-bottom:7px}
+.eps-seed:disabled{opacity:.62;cursor:wait}
+.eps-reset{width:100%;min-height:34px;border:1px solid rgba(255,77,109,.4);border-radius:9px;background:rgba(255,77,109,.1);color:#ff8aa0;font-size:11px;font-weight:900;cursor:pointer;font-family:inherit;margin-bottom:8px;transition:background .2s}
+.eps-reset:hover{background:rgba(255,77,109,.2)}
+.eps-reset:disabled{opacity:.5;cursor:wait}
+.eps-seed-note{display:block;color:#8fb1c9;line-height:1.35;margin-bottom:14px;font-size:11px}
 .eps-actions strong{display:block;font-size:13px;margin-bottom:10px;color:#f3fbff}
 .eps-action-list{display:grid;gap:9px}
 .eps-action{font-size:12px;line-height:1.45;color:#d7e7f1;border-left:3px solid #00c2ff;background:rgba(255,255,255,.045);border-radius:8px;padding:9px 10px}
@@ -183,6 +204,7 @@
       document.getElementById("epsCapabilities").innerHTML = '<div class="eps-empty">Nao foi possivel carregar a Suite Enterprise agora.</div>';
     });
   }
+  // ── Seed (implantação rápida) ──────────────────────────────────────
   document.getElementById("epsSeedBtn")?.addEventListener("click", async () => {
     const btn = document.getElementById("epsSeedBtn");
     const note = document.getElementById("epsSeedNote");
@@ -194,15 +216,54 @@
       const payload = await res.json();
       render(payload.suite || lastPayload || {});
       note.textContent = payload.total_criado
-        ? `Implantacao criada: ${payload.criados.join(", ")}.`
-        : "Estrutura inicial ja estava implantada.";
-      btn.textContent = "Implantacao concluida";
+        ? `Demo criado: ${payload.criados.join(", ")}.`
+        : "Estrutura de demo ja estava implantada.";
+      btn.textContent = "▶ Implantar demo";
+      btn.disabled = false;
     } catch (error) {
       note.textContent = "Nao foi possivel executar a implantacao rapida agora.";
-      btn.textContent = "Tentar novamente";
+      btn.textContent = "▶ Implantar demo";
       btn.disabled = false;
     }
   });
+
+  // ── Reset (zerar demo) ─────────────────────────────────────────────
+  document.getElementById("epsResetBtn")?.addEventListener("click", async () => {
+    const btn = document.getElementById("epsResetBtn");
+    const note = document.getElementById("epsSeedNote");
+    if (!confirm("Zerar todos os dados de demonstracao? Esta acao nao pode ser desfeita.")) return;
+    btn.disabled = true;
+    btn.textContent = "Zerando...";
+    try {
+      const res = await fetch("/api/enterprise/reset-demo", {method: "POST"});
+      if (!res.ok) throw new Error("reset_failed");
+      const payload = await res.json();
+      render(payload.suite || lastPayload || {});
+      note.textContent = `Demo zerado: ${payload.removidos || 0} registros removidos. Pronto para dados reais.`;
+      btn.textContent = "🗑 Zerar demo";
+      btn.disabled = false;
+      loadSuite();
+    } catch (error) {
+      note.textContent = "Nao foi possivel zerar o demo agora.";
+      btn.textContent = "🗑 Zerar demo";
+      btn.disabled = false;
+    }
+  });
+
+  // ── Toggle ativar/desativar demo ──────────────────────────────────
+  const demoToggle = document.getElementById("epsDemoToggle");
+  const demoBlock = document.getElementById("epsDemoBlock");
+  function applyToggleState(active) {
+    if (demoBlock) demoBlock.style.display = active ? "" : "none";
+    try { localStorage.setItem("eps_demo_ativo", active ? "1" : "0"); } catch(e){}
+  }
+  // Restore state from localStorage
+  try {
+    const stored = localStorage.getItem("eps_demo_ativo");
+    if (stored === "0") { demoToggle.checked = false; applyToggleState(false); }
+  } catch(e){}
+  demoToggle?.addEventListener("change", () => applyToggleState(demoToggle.checked));
+
   loadSuite();
 }());
 </script>

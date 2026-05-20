@@ -227,7 +227,10 @@ def governo_plataforma_page(request):
 @ensure_csrf_cookie
 @requer_setor('farmacia', 'hospital')
 def rede_gestao_page(request):
-    return render(request, "rede_gestao.html")
+    from .access_control import get_setor
+    empresa = getattr(request, "empresa", None)
+    setor = get_setor(empresa) if empresa else "farmacia"
+    return render(request, "rede_gestao.html", {"setor": setor})
 
 
 @ensure_csrf_cookie

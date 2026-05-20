@@ -1170,3 +1170,159 @@ def api_enterprise_seed_operational_demo(request):
     resultado = seed_enterprise_operational_demo(empresa)
     resultado["suite"] = build_enterprise_premium_suite_payload(empresa)
     return JsonResponse(resultado)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# RESET DEMO — apaga todos os registros de demonstração por setor
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _reset_farmacia(empresa):
+    """Remove todos os dados demo criados por _seed_farmacia."""
+    removidos = 0
+    # Itens e dispensações demo
+    demo_items = ItemFarmacia.objects.filter(empresa=empresa, codigo__icontains="DEMO")
+    removidos += demo_items.count()
+    demo_items.delete()
+
+    demo_meds = MedicamentoFarmacia.objects.filter(empresa=empresa, fabricante__icontains="Demo")
+    removidos += demo_meds.count()
+    demo_meds.delete()
+
+    demo_lotes = LoteMedicamento.objects.filter(empresa=empresa, numero_lote__icontains="DEMO")
+    removidos += demo_lotes.count()
+    demo_lotes.delete()
+
+    demo_pacs = PacienteFarmacia.objects.filter(empresa=empresa, cpf__startswith="000.000.000")
+    removidos += demo_pacs.count()
+    demo_pacs.delete()
+
+    demo_inv = InventarioFarmacia.objects.filter(empresa=empresa, responsavel__icontains="Demo")
+    removidos += demo_inv.count()
+    demo_inv.delete()
+
+    demo_ped = PedidoCompraFarmacia.objects.filter(empresa=empresa, observacoes__icontains="Demo")
+    removidos += demo_ped.count()
+    demo_ped.delete()
+
+    demo_forn = FornecedorFarmaciaGestao.objects.filter(empresa=empresa, nome__icontains="Demo")
+    removidos += demo_forn.count()
+    demo_forn.delete()
+
+    demo_forn2 = FornecedorFarmacia.objects.filter(empresa=empresa, nome__icontains="Demo")
+    removidos += demo_forn2.count()
+    demo_forn2.delete()
+
+    return removidos
+
+
+def _reset_hospital(empresa):
+    """Remove todos os dados demo criados por _seed_hospital."""
+    removidos = 0
+
+    demo_leitos = LeitoHospitalar.objects.filter(empresa=empresa, numero__icontains="DEMO")
+    removidos += demo_leitos.count()
+    demo_leitos.delete()
+
+    demo_pacs = PacienteHospital.objects.filter(empresa=empresa, cpf__startswith="000.000.000")
+    removidos += demo_pacs.count()
+    demo_pacs.delete()
+
+    demo_deps = DepartamentoHospital.objects.filter(empresa=empresa, nome__icontains="Demo")
+    removidos += demo_deps.count()
+    demo_deps.delete()
+
+    return removidos
+
+
+def _reset_empresa(empresa):
+    """Remove dados demo da empresa SST/corporativo."""
+    removidos = 0
+
+    demo_funcs = FuncionarioSST.objects.filter(empresa=empresa, cpf__startswith="000.000.000")
+    removidos += demo_funcs.count()
+    demo_funcs.delete()
+
+    demo_trein = TreinamentoNR.objects.filter(empresa=empresa, instrutor__icontains="Demo")
+    removidos += demo_trein.count()
+    demo_trein.delete()
+
+    demo_aso = ASOOcupacional.objects.filter(empresa=empresa, medico__icontains="Demo")
+    removidos += demo_aso.count()
+    demo_aso.delete()
+
+    demo_epi = EPIItem.objects.filter(empresa=empresa, ca__icontains="DEMO")
+    removidos += demo_epi.count()
+    demo_epi.delete()
+
+    demo_risco = RiscoOcupacional.objects.filter(empresa=empresa, descricao__icontains="Demo")
+    removidos += demo_risco.count()
+    demo_risco.delete()
+
+    return removidos
+
+
+def _reset_plano_saude(empresa):
+    """Remove dados demo criados por _seed_plano_saude."""
+    from .models import GlosaItem, CoparticipacaoRegra, FaturamentoBeneficiario, ProgramaSaude, InscricaoPrograma
+    removidos = 0
+
+    demo_planos = PlanoSaude.objects.filter(empresa=empresa, nome__icontains="Demo")
+    for plano in demo_planos:
+        # Cascade: beneficiarios → sinistros → guias → glosas
+        beneficiarios = BeneficiarioPlano.objects.filter(plano=plano)
+        for ben in beneficiarios:
+            sinistros = Sinistro.objects.filter(beneficiario=ben)
+            for sin in sinistros:
+                g = GlosaItem.objects.filter(sinistro=sin)
+                removidos += g.count(); g.delete()
+                guias = GuiaAutorizacao.objects.filter(sinistro=sin)
+                removidos += guias.count(); guias.delete()
+            fat = FaturamentoBeneficiario.objects.filter(beneficiario=ben)
+            removidos += fat.count(); fat.delete()
+            insc = InscricaoPrograma.objects.filter(beneficiario=ben)
+            removidos += insc.count(); insc.delete()
+            removidos += sinistros.count(); sinistros.delete()
+        cop = CoparticipacaoRegra.objects.filter(plano=plano)
+        removidos += cop.count(); cop.delete()
+        prog = ProgramaSaude.objects.filter(empresa=empresa, nome__icontains="Demo")
+        removidos += prog.count(); prog.delete()
+        prest = PrestadorPlanoSaude.objects.filter(plano=plano, nome_fantasia__icontains="Demo")
+        removidos += prest.count(); prest.delete()
+        removidos += beneficiarios.count(); beneficiarios.delete()
+
+    removidos += demo_planos.count()
+    demo_planos.delete()
+    return removidos
+
+
+def reset_enterprise_demo(empresa):
+    """Dispatcher de reset por setor."""
+    setor = get_setor(empresa)
+    if setor == "farmacia":
+        removidos = _reset_farmacia(empresa)
+    elif setor == "hospital":
+        removidos = _reset_hospital(empresa)
+    elif setor == "empresa":
+        removidos = _reset_empresa(empresa)
+    elif setor == "plano_saude":
+        removidos = _reset_plano_saude(empresa)
+    else:
+        removidos = 0
+    return {"setor": setor, "removidos": removidos}
+
+
+@csrf_exempt
+def api_enterprise_reset_demo(request):
+    """
+    POST /api/enterprise/reset-demo
+    Apaga todos os dados de demonstração do ambiente logado.
+    """
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Nao autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "Metodo nao permitido"}, status=405)
+
+    resultado = reset_enterprise_demo(empresa)
+    resultado["suite"] = build_enterprise_premium_suite_payload(empresa)
+    return JsonResponse(resultado)
