@@ -193,7 +193,7 @@
         });
         const data = await res.json();
         if (data.status === "ok" || data.status === "ja_ativo") {
-          window.location.href = "/sst/";
+          window.location.href = data.destination || "/dashboard-empresa/";
         } else {
           alert(data.mensagem || "Não foi possível ativar o trial.");
           btn.disabled = false;

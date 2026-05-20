@@ -178,7 +178,7 @@ def registrar_empresa(request):
         pacote_solicitado = pacote_padrao()
         pacote_info = PACOTES_SAAS[pacote_padrao()]
 
-    # 🔐 salva empresa — já ativa com trial de 15 dias
+    # 🔐 salva empresa — INATIVA até escolher plano ou ativar trial
     empresa = Empresa.objects.create(
         nome=nome,
         email=email,
@@ -186,33 +186,18 @@ def registrar_empresa(request):
         pacote_codigo=pacote_solicitado,
         max_dispositivos=pacote_info["dispositivos"],
         max_usuarios=pacote_info["usuarios"],
-        ativo=True,
+        ativo=False,  # bloqueado até pagamento ou ativação do trial
     )
-
-    # 🎁 cria trial de 15 dias automaticamente
-    TrialEmpresa.objects.create(
-        empresa=empresa,
-        expira_em=timezone.now() + timedelta(days=15),
-    )
-
-    pacote = detalhes_pacote(empresa.pacote_codigo)
 
     autorizado, device_id, dispositivos_em_uso, erro_dispositivo = _registrar_dispositivo_login(empresa, request, dados)
     if not autorizado:
         return JsonResponse({"erro": erro_dispositivo}, status=403)
 
-    # 📧 email de boas-vindas
-    try:
-        from .email_service import enviar_email_boas_vindas
-        enviar_email_boas_vindas(empresa)
-    except Exception:
-        pass
-
-    # 🔑 gera token AUTOMÁTICO
+    # 🔑 gera token — acesso restrito ao /pagamento/ até ativar
     session_key = _ativar_sessao(empresa, device_id)
     token = _criar_token(empresa, session_key, "empresa_admin", empresa.id, device_id=device_id)
 
-    response = JsonResponse(_payload_resposta(
+    payload = _payload_resposta(
         empresa,
         token,
         device_id,
@@ -220,8 +205,11 @@ def registrar_empresa(request):
         "empresa_admin",
         empresa.id,
         empresa.nome,
-    ))
+    )
+    # Força destino para pagamento independente do setor
+    payload["destination"] = "/pagamento/"
 
+    response = JsonResponse(payload)
     return _aplicar_cookies_autenticacao(response, empresa, token)
 
 
@@ -335,7 +323,12 @@ def ativar_trial(request):
             if not empresa.ativo:
                 empresa.ativo = True
                 empresa.save(update_fields=["ativo"])
-            return JsonResponse({"status": "ja_ativo", "dias_restantes": trial.dias_restantes()})
+            from .services.auth_session import destino_conta as _destino_conta
+            return JsonResponse({
+                "status": "ja_ativo",
+                "dias_restantes": trial.dias_restantes(),
+                "destination": _destino_conta(empresa),
+            })
         else:
             return JsonResponse({"status": "erro", "mensagem": "Período de avaliação já utilizado. Contrate um plano para continuar."}, status=403)
 
@@ -347,7 +340,19 @@ def ativar_trial(request):
     empresa.ativo = True
     empresa.save(update_fields=["ativo"])
 
-    return JsonResponse({"status": "ok", "dias_restantes": 15})
+    # Email de boas-vindas enviado aqui — momento correto após ativação
+    try:
+        from .email_service import enviar_email_boas_vindas
+        enviar_email_boas_vindas(empresa)
+    except Exception:
+        pass
+
+    from .services.auth_session import destino_conta as _destino_conta
+    return JsonResponse({
+        "status": "ok",
+        "dias_restantes": 15,
+        "destination": _destino_conta(empresa),
+    })
 
 
 def _logout(request, redirect_to="/"):
