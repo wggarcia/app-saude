@@ -105,7 +105,7 @@ p{color:#c3ced8;font-size:1.12rem;line-height:1.82;margin-top:20px;max-width:780
     <div>
       <div class="eyebrow">{{ deck.ecosystem.eyebrow }}</div>
       <h2>{{ deck.ecosystem.title }}</h2>
-      <div class="grid">
+      <div class="grid" style="grid-template-columns:repeat(3,1fr)">
         {% for card in deck.ecosystem.cards %}
         <div class="card"><b>{{ card.title }}</b><span>{{ card.text }}</span></div>
         {% endfor %}

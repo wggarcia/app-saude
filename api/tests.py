@@ -1654,7 +1654,7 @@ class AuthDeviceTests(TestCase):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/apresentacao/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "quatro ambientes privados")
+        self.assertContains(response, "cinco ambientes privados")
         self.assertContains(response, "Google Play")
         self.assertContains(response, "Valores que fazem a tecnologia merecer confianca")
         self.assertNotContains(response, "Slide 01")
