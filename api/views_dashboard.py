@@ -1142,3 +1142,186 @@ def api_dono_exportar(request):
 
     _registrar_auditoria_dono(dono, f"exportacao_{tipo}", detalhes=f"Formato={formato}")
     return response
+
+
+@csrf_exempt
+def api_dono_excluir_cliente(request):
+    """
+    POST /api/operacao-central/cliente/excluir
+    Exclui permanentemente uma conta e todos os seus dados.
+    Libera o email para novo cadastro.
+    Requer confirmação via campo 'confirmar_email' igual ao email da empresa.
+    """
+    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    empresa_id = dados.get("empresa_id")
+    confirmar_email = (dados.get("confirmar_email") or "").strip().lower()
+
+    empresa = Empresa.objects.filter(id=empresa_id).first()
+    if not empresa:
+        return JsonResponse({"erro": "cliente não encontrado"}, status=404)
+
+    if confirmar_email != empresa.email.strip().lower():
+        return JsonResponse({
+            "erro": "Confirmação inválida. Digite o email exato da conta para confirmar a exclusão."
+        }, status=400)
+
+    # Registra auditoria ANTES de deletar (dados serão perdidos)
+    _registrar_auditoria_dono(
+        dono,
+        "exclusao_conta",
+        empresa=None,  # empresa será deletada, não manter referência
+        detalhes=(
+            f"Conta excluída: id={empresa.id} | nome={empresa.nome} | "
+            f"email={empresa.email} | setor={empresa.pacote_codigo} | "
+            f"ativo={empresa.ativo} | criado_em={empresa.criado_em.isoformat() if hasattr(empresa, 'criado_em') and empresa.criado_em else 'N/A'}"
+        ),
+    )
+
+    nome_backup = empresa.nome
+    email_backup = empresa.email
+
+    # Deleta em cascata (todos os dados relacionados)
+    empresa.delete()
+
+    return JsonResponse({
+        "status": "ok",
+        "mensagem": f"Conta '{nome_backup}' ({email_backup}) excluída com sucesso. O email está livre para novo cadastro.",
+    })
+
+
+@csrf_exempt
+def api_dono_reset_trial(request):
+    """
+    POST /api/operacao-central/cliente/reset-trial
+    Reseta o trial de uma empresa: exclui o trial existente e cria um novo de 15 dias.
+    Útil para dar segunda chance a um cliente em negociação.
+    """
+    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    from .models import TrialEmpresa
+    empresa = Empresa.objects.filter(id=dados.get("empresa_id")).first()
+    if not empresa:
+        return JsonResponse({"erro": "cliente não encontrado"}, status=404)
+
+    if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
+        return JsonResponse({"erro": "Governo não usa trial"}, status=400)
+
+    # Remove trial anterior e cria novo
+    TrialEmpresa.objects.filter(empresa=empresa).delete()
+    nova_expiracao = timezone.now() + timedelta(days=15)
+    TrialEmpresa.objects.create(empresa=empresa, expira_em=nova_expiracao)
+
+    # Garante que a empresa está ativa
+    if not empresa.ativo:
+        empresa.ativo = True
+        empresa.save(update_fields=["ativo"])
+
+    _registrar_auditoria_dono(
+        dono,
+        "reset_trial",
+        empresa=empresa,
+        detalhes=f"Trial resetado para 15 dias. Expira em: {nova_expiracao.strftime('%d/%m/%Y')}",
+    )
+
+    return JsonResponse({
+        "status": "ok",
+        "mensagem": f"Trial de '{empresa.nome}' resetado. Novo vencimento: {nova_expiracao.strftime('%d/%m/%Y')}",
+        "dias_restantes": 15,
+    })
+
+
+@csrf_exempt
+def api_dono_forcar_logout(request):
+    """
+    POST /api/operacao-central/cliente/forcar-logout
+    Encerra todas as sessões ativas da empresa (admin + usuários).
+    """
+    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    empresa = Empresa.objects.filter(id=dados.get("empresa_id")).first()
+    if not empresa:
+        return JsonResponse({"erro": "cliente não encontrado"}, status=404)
+
+    # Encerra sessão do admin (Empresa)
+    empresa.sessao_ativa_chave = None
+    empresa.sessao_ativa_em = None
+    update_fields = ["sessao_ativa_chave", "sessao_ativa_em"]
+    if hasattr(empresa, "sessao_ativa_device_id"):
+        empresa.sessao_ativa_device_id = None
+        update_fields.append("sessao_ativa_device_id")
+    empresa.save(update_fields=update_fields)
+
+    # Encerra sessão de todos os usuários da empresa
+    usuarios_afetados = EmpresaUsuario.objects.filter(empresa=empresa, ativo=True)
+    count = usuarios_afetados.count()
+    usuarios_afetados.update(sessao_ativa_chave=None, sessao_ativa_em=None)
+
+    _registrar_auditoria_dono(
+        dono,
+        "forcar_logout",
+        empresa=empresa,
+        detalhes=f"Sessão encerrada: admin + {count} usuário(s)",
+    )
+
+    return JsonResponse({
+        "status": "ok",
+        "mensagem": f"Todas as sessões de '{empresa.nome}' foram encerradas ({count + 1} sessão(ões)).",
+    })
+
+
+def api_dono_auditoria(request):
+    """
+    GET /api/operacao-central/auditoria?empresa_id=X&limit=50
+    Retorna log de ações do console operacional.
+    """
+    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+
+    empresa_id = request.GET.get("empresa_id")
+    limit = min(int(request.GET.get("limit", 50)), 200)
+
+    qs = DonoAuditoriaAcao.objects.order_by("-criado_em")
+    if empresa_id:
+        qs = qs.filter(empresa_id=empresa_id)
+
+    registros = []
+    for r in qs[:limit]:
+        registros.append({
+            "id": r.id,
+            "acao": r.acao,
+            "empresa_id": r.empresa_id,
+            "empresa_nome": r.empresa.nome if r.empresa_id else "—",
+            "detalhes": r.detalhes,
+            "criado_em": timezone.localtime(r.criado_em).strftime("%d/%m/%Y %H:%M"),
+        })
+
+    return JsonResponse({"registros": registros, "total": qs.count()})

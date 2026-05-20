@@ -39,6 +39,16 @@
     .tabs{display:flex;gap:10px;flex-wrap:wrap}
     .tab-btn{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);color:#eef8ff;cursor:pointer}
     .tab-btn.active{background:linear-gradient(135deg,#ffb454,#ff8a3d);color:#221104}
+    .danger{background:rgba(255,92,122,.15)!important;color:#ff8fa3!important;border:1px solid rgba(255,92,122,.35)!important}
+    .warn-btn{background:rgba(255,180,84,.12)!important;color:#ffd9a0!important;border:1px solid rgba(255,180,84,.28)!important}
+    /* Modal de confirmação */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+    .modal-overlay.open{display:flex}
+    .modal{background:#0c1a2b;border:1px solid rgba(255,92,122,.35);border-radius:20px;padding:28px;max-width:440px;width:100%;margin:16px}
+    .modal h3{margin:0 0 8px;color:#ff8fa3}
+    .modal p{color:#9cc4db;font-size:.9rem;line-height:1.6;margin:0 0 16px}
+    .modal input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eef8ff;margin-bottom:14px;font-size:.95rem}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end}
     @media(max-width:1300px){.grid,.split,.triple{grid-template-columns:1fr}}
   </style>
 </head>
@@ -142,6 +152,15 @@
     </section>
 
     <section class="card">
+      <h2>Log de Auditoria Operacional</h2>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="ghost" onclick="carregarAuditoria()">Atualizar</button>
+        <button class="ghost" onclick="exportar('auditoria')">Exportar CSV</button>
+      </div>
+      <div id="auditLogList" class="list" style="max-height:320px;overflow-y:auto;">Clique em "Atualizar" para carregar.</div>
+    </section>
+
+    <section class="card">
       <div class="row" style="margin-bottom:12px;">
         <h2 style="margin:0;">Clientes e Ajustes Rápidos</h2>
         <div class="tabs">
@@ -153,6 +172,19 @@
       <div id="clientsList" class="list">Carregando...</div>
     </section>
   </main>
+
+  <!-- Modal de confirmação de exclusão -->
+  <div class="modal-overlay" id="modalExcluir">
+    <div class="modal">
+      <h3>⚠️ Excluir conta permanentemente</h3>
+      <p id="modalExcluirDesc">Esta ação remove todos os dados da conta e libera o email para novo cadastro. <strong>Não pode ser desfeita.</strong></p>
+      <input type="text" id="modalEmailConfirm" placeholder="Digite o email da conta para confirmar" autocomplete="off">
+      <div class="modal-actions">
+        <button class="ghost" onclick="fecharModal()">Cancelar</button>
+        <button style="background:linear-gradient(135deg,#ff5c7a,#c0392b);color:#fff;" onclick="confirmarExclusao()">Excluir definitivamente</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const pacoteOptions = {{ pacotes_json|safe }};
@@ -225,6 +257,88 @@
 
     function exportar(tipo) {
       window.open(`/api/operacao-central/exportar?tipo=${tipo}&formato=csv`, "_blank");
+    }
+
+    // ── Exclusão de conta ──────────────────────────────────────────────────────
+    let _excluirId = null;
+    let _excluirEmail = null;
+
+    function abrirModalExcluir(empresaId, empresaNome, empresaEmail) {
+      _excluirId = empresaId;
+      _excluirEmail = empresaEmail;
+      document.getElementById("modalExcluirDesc").innerHTML =
+        `Você está prestes a excluir a conta <strong>${empresaNome}</strong> (${empresaEmail}). ` +
+        `Todos os dados serão removidos permanentemente e o email ficará livre para novo cadastro. <strong>Não pode ser desfeita.</strong>`;
+      document.getElementById("modalEmailConfirm").value = "";
+      document.getElementById("modalExcluir").classList.add("open");
+    }
+
+    function fecharModal() {
+      document.getElementById("modalExcluir").classList.remove("open");
+      _excluirId = null;
+      _excluirEmail = null;
+    }
+
+    async function confirmarExclusao() {
+      const digitado = document.getElementById("modalEmailConfirm").value.trim();
+      if (!digitado) { alert("Digite o email para confirmar."); return; }
+      const res = await fetch("/api/operacao-central/cliente/excluir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empresa_id: _excluirId, confirmar_email: digitado }),
+      });
+      const data = await res.json();
+      fecharModal();
+      if (data.status === "ok") {
+        alert(data.mensagem);
+        loadOwnerPanel();
+      } else {
+        alert(data.erro || "Erro ao excluir conta.");
+      }
+    }
+
+    // ── Reset de trial ─────────────────────────────────────────────────────────
+    async function resetarTrial(empresaId, empresaNome) {
+      if (!confirm(`Resetar o trial de "${empresaNome}"? Um novo período de 15 dias será criado.`)) return;
+      const res = await fetch("/api/operacao-central/cliente/reset-trial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empresa_id: empresaId }),
+      });
+      const data = await res.json();
+      alert(data.mensagem || data.erro || "Erro.");
+      loadOwnerPanel();
+    }
+
+    // ── Forçar logout ──────────────────────────────────────────────────────────
+    async function forcarLogout(empresaId, empresaNome) {
+      if (!confirm(`Encerrar todas as sessões ativas de "${empresaNome}"?`)) return;
+      const res = await fetch("/api/operacao-central/cliente/forcar-logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empresa_id: empresaId }),
+      });
+      const data = await res.json();
+      alert(data.mensagem || data.erro || "Erro.");
+    }
+
+    // ── Log de auditoria ───────────────────────────────────────────────────────
+    async function carregarAuditoria(empresaId) {
+      const url = empresaId
+        ? `/api/operacao-central/auditoria?empresa_id=${empresaId}&limit=100`
+        : "/api/operacao-central/auditoria?limit=100";
+      const res = await fetch(url);
+      const data = await res.json();
+      const el = document.getElementById("auditLogList");
+      el.innerHTML = (data.registros || []).map((r) => `
+        <div class="event">
+          <div class="row">
+            <strong>${r.acao}</strong>
+            <span class="muted small">${r.criado_em}</span>
+          </div>
+          <div class="muted small">${r.empresa_nome !== "—" ? r.empresa_nome + " | " : ""}${r.detalhes || ""}</div>
+        </div>
+      `).join("") || "Sem registros de auditoria.";
     }
 
     function renderCharts(historico) {
@@ -318,6 +432,12 @@
             <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'validacao')">Validação</button>
             <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'go_live')">Go-live</button>
           </div>
+          <div class="actions" style="margin-top:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);">
+            ${cliente.segmento !== "governo" ? `<button class="ghost warn-btn" onclick="resetarTrial(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}')">🎁 Resetar trial</button>` : ""}
+            <button class="ghost warn-btn" onclick="forcarLogout(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}')">🔒 Forçar logout</button>
+            <button class="ghost" onclick="carregarAuditoria(${cliente.id});document.getElementById('auditLogList').scrollIntoView({behavior:'smooth'})">📋 Ver auditoria</button>
+            <button class="ghost danger" onclick="abrirModalExcluir(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}', '${cliente.email}')">🗑 Excluir conta</button>
+          </div>
         </div>
       `).join("") || "Sem clientes para esse filtro.";
     }
@@ -370,6 +490,12 @@
             <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'treinamento')">Treinamento</button>
             <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'validacao')">Validação</button>
             <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'go_live')">Go-live</button>
+          </div>
+          <div class="actions" style="margin-top:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);">
+            ${cliente.segmento !== "governo" ? `<button class="ghost warn-btn" onclick="resetarTrial(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}')">🎁 Resetar trial</button>` : ""}
+            <button class="ghost warn-btn" onclick="forcarLogout(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}')">🔒 Forçar logout</button>
+            <button class="ghost" onclick="carregarAuditoria(${cliente.id});document.getElementById('auditLogList').scrollIntoView({behavior:'smooth'})">📋 Ver auditoria</button>
+            <button class="ghost danger" onclick="abrirModalExcluir(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}', '${cliente.email}')">🗑 Excluir conta</button>
           </div>
         </div>
       `).join("") || "Todos os clientes estão com go-live aprovado.";
