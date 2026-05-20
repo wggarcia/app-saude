@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import CheckinBemEstar, FuncionarioSST
 from .views_funcionario_portal import _autenticar_funcionario
 from .views_dashboard import _empresa_autenticada
+from .access_control import get_setor
 
 
 # ── Funcionário: enviar check-in ────────────────────────────────────────────
@@ -108,6 +109,8 @@ def api_empresa_bem_estar_resumo(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "Não autorizado"}, status=401)
+    if get_setor(empresa) != "empresa":
+        return JsonResponse({"erro": "Módulo SST não disponível para este plano."}, status=403)
 
     dias = int(request.GET.get("dias", 30))
     desde = timezone.now() - timedelta(days=dias)
@@ -199,6 +202,8 @@ def api_empresa_bem_estar_contato_resolvido(request, checkin_id):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "Não autorizado"}, status=401)
+    if get_setor(empresa) != "empresa":
+        return JsonResponse({"erro": "Módulo SST não disponível para este plano."}, status=403)
     try:
         checkin = CheckinBemEstar.objects.get(id=checkin_id, empresa=empresa)
     except CheckinBemEstar.DoesNotExist:

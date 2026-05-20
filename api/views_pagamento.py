@@ -1,4 +1,5 @@
 import datetime
+import hmac
 import json
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -299,7 +300,7 @@ def _asaas_token_valido(request):
         # Token não configurado = rejeitar tudo por segurança
         return False
     received = (request.headers.get("asaas-access-token") or "").strip()
-    return expected == received
+    return hmac.compare_digest(expected, received)
 
 
 # ── VIEWS ─────────────────────────────────────────────────────────────────────

@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import Empresa, FuncionarioSST, ReuniaoSST, NotificacaoFuncionario, VinculoClinicaEmpresa
 from .views_dashboard import _empresa_autenticada
+from .access_control import get_setor
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
@@ -45,6 +46,8 @@ def _autenticar(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return None, redirect("/login-empresa/")
+    if get_setor(empresa) != "empresa":
+        return None, JsonResponse({"erro": "Módulo SST não disponível para este plano."}, status=403)
     return empresa, None
 
 

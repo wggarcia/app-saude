@@ -20,12 +20,15 @@ from .models import (
     Empresa, ASOOcupacional, VinculoClinicaEmpresa, ASOEnviadoClinica, FuncionarioSST,
 )
 from .views_dashboard import _empresa_autenticada
+from .access_control import get_setor
 
 
 def _empresa_req(request):
     e = _empresa_autenticada(request)
     if not e:
         return None, JsonResponse({"erro": "Não autenticado"}, status=401)
+    if get_setor(e) != "empresa":
+        return None, JsonResponse({"erro": "Módulo SST não disponível para este plano."}, status=403)
     return e, None
 
 

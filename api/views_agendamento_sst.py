@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from .models import AgendamentoSST, FuncionarioSST
 from .views_dashboard import _empresa_autenticada
+from .access_control import get_setor
 
 
 def _agenda_to_dict(a):
@@ -36,6 +37,8 @@ def api_agendamentos_sst(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if get_setor(empresa) != "empresa":
+        return JsonResponse({"erro": "Módulo SST não disponível para este plano."}, status=403)
 
     if request.method == "GET":
         qs = AgendamentoSST.objects.filter(empresa=empresa).select_related("funcionario")
@@ -127,6 +130,8 @@ def api_agendamento_sst_detalhe(request, ag_id):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if get_setor(empresa) != "empresa":
+        return JsonResponse({"erro": "Módulo SST não disponível para este plano."}, status=403)
 
     try:
         ag = AgendamentoSST.objects.get(id=ag_id, empresa=empresa)
@@ -162,6 +167,8 @@ def api_agendamentos_sst_kpis(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if get_setor(empresa) != "empresa":
+        return JsonResponse({"erro": "Módulo SST não disponível para este plano."}, status=403)
 
     hoje = date.today()
     fim_semana = hoje + timedelta(days=7)
