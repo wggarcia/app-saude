@@ -2234,7 +2234,7 @@ def classificar_padrao(dados, setor: str = "governo"):
         else:
             classificacao = f"{doenca} ({confianca}% confiança)"
 
-    return grupo, classificacao
+    return grupo, classificacao[:300]
 
 def resumo_estados(request):
     dados = RegistroSintoma.objects.values("estado").annotate(total=Count("id"))

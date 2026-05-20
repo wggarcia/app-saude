@@ -98,7 +98,7 @@ class RegistroSintoma(models.Model):
 
     doenca_confirmada = models.CharField(max_length=50, null=True, blank=True)
     grupo = models.CharField(max_length=50, null=True, blank=True)
-    classificacao = models.CharField(max_length=100, null=True, blank=True)
+    classificacao = models.CharField(max_length=300, null=True, blank=True)
 
     # 🔐 SEGURANÇA (NOVO)
     ip = models.GenericIPAddressField(null=True, blank=True)
