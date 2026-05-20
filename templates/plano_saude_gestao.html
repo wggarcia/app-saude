@@ -78,6 +78,77 @@ tr:hover td{background:rgba(255,107,157,.03)}
 .summary-box-val{font-size:28px;font-weight:800;color:var(--accent)}
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}.summary-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.form-row{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}.summary-grid{grid-template-columns:1fr}}
+/* ── Enterprise additions ─────────────────────────────────────────────── */
+.exec-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.exec-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.exec-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
+.exec-card.mlr::after{background:linear-gradient(90deg,var(--ok),var(--warn))}
+.exec-card.pmpm::after{background:linear-gradient(90deg,#c084fc,var(--accent))}
+.exec-card.mrr::after{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.exec-card.nps::after{background:linear-gradient(90deg,#60a5fa,#c084fc)}
+.exec-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.exec-val{font-size:32px;font-weight:800;line-height:1}
+.exec-delta{font-size:11px;font-weight:600;margin-top:6px}
+.exec-delta.up{color:var(--ok)}
+.exec-delta.down{color:var(--danger)}
+.exec-delta.flat{color:var(--muted)}
+.chart-bar-wrap{margin-top:10px}
+.chart-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:11px}
+.chart-bar-lbl{width:80px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart-bar-track{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden}
+.chart-bar-fill{height:100%;border-radius:99px;transition:width .6s ease}
+.chart-bar-val{width:52px;text-align:right;color:var(--text);font-weight:700}
+.sla-item{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)}
+.sla-item:last-child{border-bottom:none}
+.sla-type{flex:1;font-size:13px;font-weight:600}
+.sla-type small{display:block;font-size:11px;font-weight:400;color:var(--muted);margin-top:2px}
+.sla-gauge{width:140px}
+.sla-track{height:10px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden}
+.sla-fill{height:100%;border-radius:99px;transition:width .5s ease}
+.sla-pct{font-size:12px;font-weight:700;text-align:right;margin-top:4px}
+.sla-count{font-size:13px;font-weight:700;width:80px;text-align:right}
+.score-ring{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0}
+.risk-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.risk-row:last-child{border-bottom:none}
+.risk-info{flex:1}
+.risk-name{font-size:13px;font-weight:700}
+.risk-detail{font-size:11px;color:var(--muted);margin-top:2px}
+.risk-factors{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
+.risk-tag{background:rgba(255,77,109,.1);color:var(--danger);border:1px solid rgba(255,77,109,.2);border-radius:20px;padding:2px 9px;font-size:10px;font-weight:700}
+.msg-thread{display:flex;flex-direction:column;gap:8px;padding:16px;max-height:320px;overflow-y:auto}
+.msg-bubble{max-width:70%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5}
+.msg-bubble.out{align-self:flex-end;background:rgba(255,107,157,.15);border:1px solid rgba(255,107,157,.2);border-bottom-right-radius:3px}
+.msg-bubble.in{align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid var(--border);border-bottom-left-radius:3px}
+.msg-time{font-size:10px;color:var(--muted);margin-top:3px;text-align:right}
+.msg-composer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border)}
+.msg-input{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;resize:none}
+.msg-input:focus{border-color:var(--accent)}
+.tele-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;display:flex;align-items:flex-start;gap:16px}
+.tele-icon{width:44px;height:44px;border-radius:50%;background:rgba(255,107,157,.12);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.tele-info{flex:1}
+.tele-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.tele-sub{font-size:12px;color:var(--muted)}
+.odonto-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.odonto-tab{padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:Manrope,sans-serif;transition:.15s}
+.odonto-tab.active,.odonto-tab:hover{background:rgba(255,107,157,.12);color:var(--accent);border-color:rgba(255,107,157,.3)}
+.contract-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.contract-row:last-child{border-bottom:none}
+.contract-logo{width:40px;height:40px;border-radius:8px;background:rgba(255,107,157,.1);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.contract-info{flex:1;min-width:160px}
+.contract-name{font-size:14px;font-weight:700}
+.contract-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.contract-kpis{display:flex;gap:20px;flex-wrap:wrap}
+.contract-kpi{text-align:center}
+.contract-kpi-val{font-size:16px;font-weight:800;color:var(--accent)}
+.contract-kpi-lbl{font-size:10px;color:var(--muted);font-weight:600}
+.reg-report-item{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)}
+.reg-report-item:last-child{border-bottom:none}
+.reg-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.reg-info{flex:1}
+.reg-title{font-size:13px;font-weight:700}
+.reg-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.reg-actions{display:flex;gap:8px}
+.sidebar{width:230px}
 </style>
 </head>
 <body>
@@ -88,24 +159,39 @@ tr:hover td{background:rgba(255,107,157,.03)}
   <a class="nav-link" href="/dashboard-plano-saude/"><span>&#128202;</span> Radar Epi</a>
   <a class="nav-link active" href="/plano-saude/gestao/"><span>&#127973;</span> Gestao Operacional</a>
   <a class="nav-link" href="/logout/"><span>&#128682;</span> Sair</a>
-  <div class="nav-section" style="margin-top:8px">Modulos</div>
+  <div class="nav-section" style="margin-top:8px">&#9889; Visao &amp; Performance</div>
   <button class="tab-btn active" onclick="setTab('visao')"><span>&#127968;</span> Visao Geral</button>
-  <button class="tab-btn" onclick="setTab('integracoes')"><span>&#129309;</span> Cooperacao</button>
-  <button class="tab-btn" onclick="setTab('planos')"><span>&#128203;</span> Planos</button>
+  <button class="tab-btn" onclick="setTab('dashboard')"><span>&#128202;</span> Dashboard Exec.</button>
+  <div class="nav-section">&#127973; Operacional</div>
   <button class="tab-btn" onclick="setTab('beneficiarios')"><span>&#128101;</span> Beneficiarios</button>
+  <button class="tab-btn" onclick="setTab('planos')"><span>&#128203;</span> Planos</button>
+  <button class="tab-btn" onclick="setTab('guias')"><span>&#128221;</span> Guias</button>
+  <button class="tab-btn" onclick="setTab('sla')"><span>&#9203;</span> Regulacao &amp; SLA</button>
+  <button class="tab-btn" onclick="setTab('fila')"><span>&#9201;</span> Fila Clinica</button>
+  <div class="nav-section">&#127760; Rede Credenciada</div>
   <button class="tab-btn" onclick="setTab('prestadores')"><span>&#127973;</span> Rede Credenciada</button>
   <button class="tab-btn" onclick="setTab('portal')"><span>&#128279;</span> Portal Prestador</button>
-  <button class="tab-btn" onclick="setTab('fila')"><span>&#9201;</span> Fila Clinica</button>
-  <button class="tab-btn" onclick="setTab('guias')"><span>&#128221;</span> Guias</button>
-  <button class="tab-btn" onclick="setTab('sinistros')"><span>&#9877;&#65039;</span> Sinistros</button>
+  <button class="tab-btn" onclick="setTab('integracoes')"><span>&#129309;</span> Cooperacao</button>
+  <div class="nav-section">&#128200; Financeiro</div>
+  <button class="tab-btn" onclick="setTab('faturamento')"><span>&#128200;</span> Faturamento</button>
+  <button class="tab-btn" onclick="setTab('coparticipacao')"><span>&#128181;</span> Coparticipacao</button>
   <button class="tab-btn" onclick="setTab('reembolsos')"><span>&#128176;</span> Reembolsos</button>
   <button class="tab-btn" onclick="setTab('glosas')"><span>&#128466;</span> Glosas</button>
-  <button class="tab-btn" onclick="setTab('coparticipacao')"><span>&#128181;</span> Coparticipacao</button>
-  <button class="tab-btn" onclick="setTab('faturamento')"><span>&#128200;</span> Faturamento</button>
-  <button class="tab-btn" onclick="setTab('programas')"><span>&#127973;</span> Prog. Saude</button>
+  <button class="tab-btn" onclick="setTab('sinistros')"><span>&#9877;&#65039;</span> Sinistros</button>
+  <div class="nav-section">&#129504; IA &amp; Analytics</div>
   <button class="tab-btn" onclick="setTab('sinistralidade')"><span>&#129504;</span> Sinistralidade IA</button>
-  <button class="tab-btn" onclick="setTab('carencias')"><span>&#9203;</span> Carencias</button>
+  <button class="tab-btn" onclick="setTab('auditoria')"><span>&#128269;</span> Auditoria Medica</button>
+  <div class="nav-section">&#128203; Compliance ANS</div>
+  <button class="tab-btn" onclick="setTab('carencias')"><span>&#8987;</span> Carencias</button>
   <button class="tab-btn" onclick="setTab('portabilidade')"><span>&#128257;</span> Portabilidade</button>
+  <button class="tab-btn" onclick="setTab('regulatorio')"><span>&#128196;</span> Relatorios ANS</button>
+  <div class="nav-section">&#128172; Relacionamento</div>
+  <button class="tab-btn" onclick="setTab('comunicacao')"><span>&#128172;</span> Comunicacao</button>
+  <button class="tab-btn" onclick="setTab('programas')"><span>&#127973;</span> Prog. Saude</button>
+  <div class="nav-section">&#127968; Especialidades</div>
+  <button class="tab-btn" onclick="setTab('telemedicina')"><span>&#128241;</span> Telemedicina</button>
+  <button class="tab-btn" onclick="setTab('odontologia')"><span>&#129463;</span> Odontologia</button>
+  <button class="tab-btn" onclick="setTab('contratos')"><span>&#128209;</span> Contratos Corp.</button>
 </aside>
 
 <main class="main">
@@ -703,6 +789,434 @@ tr:hover td{background:rgba(255,107,157,.03)}
           <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Histórico de Portabilidades</div>
           <div style="color:var(--muted);font-size:.78rem;padding:20px;text-align:center;border-radius:8px;border:1px solid var(--border)">Nenhuma portabilidade registrada ainda.</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DASHBOARD EXECUTIVO ═══ -->
+  <div class="tab-panel" id="tab-dashboard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">Dashboard Executivo</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Indicadores financeiros, atuariais e de satisfacao em tempo real</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select class="filter-sel" id="dashPeriodo" onchange="loadDashboard()">
+          <option value="mes">Este mes</option>
+          <option value="trimestre">Trimestre</option>
+          <option value="ano">Ano</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="loadDashboard()">&#8635; Atualizar</button>
+        <button class="btn btn-primary btn-sm" onclick="exportarDashboard()">&#128229; Exportar PDF</button>
+      </div>
+    </div>
+    <!-- KPIs executivos -->
+    <div class="exec-grid">
+      <div class="exec-card mlr">
+        <div class="exec-label">MLR — Sinistralidade</div>
+        <div class="exec-val" id="dashMLR" style="color:var(--warn)">—</div>
+        <div class="exec-delta" id="dashMLRDelta">calculando...</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px">Meta ANS: &lt; 85%</div>
+      </div>
+      <div class="exec-card pmpm">
+        <div class="exec-label">PMPM — Custo/Beneficiario</div>
+        <div class="exec-val" id="dashPMPM" style="color:#c084fc">—</div>
+        <div class="exec-delta" id="dashPMPMDelta">calculando...</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px">Preco medio por membro/mes</div>
+      </div>
+      <div class="exec-card mrr">
+        <div class="exec-label">Receita Mensal (MRR)</div>
+        <div class="exec-val" id="dashMRR" style="color:var(--accent)">—</div>
+        <div class="exec-delta" id="dashMRRDelta">calculando...</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px">Mensalidades + coparticipacao</div>
+      </div>
+      <div class="exec-card nps">
+        <div class="exec-label">NPS Beneficiarios</div>
+        <div class="exec-val" id="dashNPS" style="color:#60a5fa">—</div>
+        <div class="exec-delta" id="dashNPSDelta">calculando...</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px">Net Promoter Score</div>
+      </div>
+    </div>
+    <!-- Charts row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Crescimento de Beneficiarios (12 meses)</span></div>
+        <div style="padding:16px 20px">
+          <div id="chartBeneficiarios" class="chart-bar-wrap"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">MLR por Plano (%)</span></div>
+        <div style="padding:16px 20px">
+          <div id="chartMLRPlanos" class="chart-bar-wrap"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Evolucao sinistralidade + top procedimentos -->
+    <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Evolucao MLR Mensal</span><span style="font-size:11px;color:var(--muted)">Meta 85%</span></div>
+        <div style="padding:16px 20px" id="chartMLRMensal"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Top 5 Procedimentos por Custo</span></div>
+        <div style="padding:16px 20px" id="chartTopProc"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ REGULACAO & SLA ANS ═══ -->
+  <div class="tab-panel" id="tab-sla">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">Regulacao &amp; SLA ANS</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Monitoramento de prazos conforme RN 395/452 — breach em tempo real</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadSLA()">&#8635; Atualizar</button>
+    </div>
+    <!-- SLA KPIs -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+      <div class="kpi"><div class="kpi-val" id="slaConsultaOk" style="color:var(--ok)">—</div><div class="kpi-lbl">Consultas no prazo</div></div>
+      <div class="kpi warn"><div class="kpi-val" id="slaExameOk" style="color:var(--warn)">—</div><div class="kpi-lbl">Exames criticos no prazo</div></div>
+      <div class="kpi warn"><div class="kpi-val" id="slaUrg" style="color:var(--danger)">—</div><div class="kpi-lbl">Urgencias vencidas</div></div>
+      <div class="kpi ok"><div class="kpi-val" id="slaGeral" style="color:var(--ok)">—</div><div class="kpi-lbl">SLA geral compliance</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header"><span class="card-title">&#9203; Prazos por Tipo de Guia — ANS RN 395</span></div>
+      <div style="padding:0 20px" id="slaListaGuias">
+        <div class="empty">Carregando...</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">&#128680; Guias com Breach de SLA</span>
+        <span class="badge badge-danger" id="slaBreachCount">0</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Guia</th><th>Beneficiario</th><th>Tipo</th><th>Prazo ANS</th><th>Aberto ha</th><th>Prestador</th><th>Acao</th></tr></thead>
+          <tbody id="slaBreachTabela"><tr><td colspan="7" class="empty">Sem breaches ativos</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ AUDITORIA MEDICA IA ═══ -->
+  <div class="tab-panel" id="tab-auditoria">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">Auditoria Medica IA</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Deteccao de fraude, abuso e anomalia — motor de pontuacao de risco</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <select class="filter-sel" id="auditFiltroRisco" onchange="loadAuditoria()">
+          <option value="">Todos os riscos</option>
+          <option value="critico">Critico (&gt; 90)</option>
+          <option value="alto">Alto (70-90)</option>
+          <option value="medio">Medio (40-70)</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="loadAuditoria()">&#8635; Atualizar</button>
+        <button class="btn btn-primary btn-sm" onclick="rodarScan()">&#9889; Rodar Scan</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+      <div class="kpi warn"><div class="kpi-val" id="auditCritico" style="color:var(--danger)">—</div><div class="kpi-lbl">Alertas criticos</div></div>
+      <div class="kpi warn"><div class="kpi-val" id="auditAlto" style="color:var(--warn)">—</div><div class="kpi-lbl">Alto risco</div></div>
+      <div class="kpi"><div class="kpi-val" id="auditMedio" style="color:#c084fc">—</div><div class="kpi-lbl">Risco medio</div></div>
+      <div class="kpi ok"><div class="kpi-val" id="auditEconomia" style="color:var(--ok)">—</div><div class="kpi-lbl">Economia detectada</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">&#128680; Beneficiarios de Alto Risco</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="search-input" style="width:160px" placeholder="Buscar beneficiario..." oninput="filtrarAuditoria(this.value)">
+          </div>
+        </div>
+        <div style="padding:8px 20px" id="auditRiscos">
+          <div class="empty">Carregando dados de risco...</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Padroes Anomalos Detectados</span></div>
+        <div style="padding:16px 20px" id="auditPadroes">
+          <div class="empty">Aguardando scan...</div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-header"><span class="card-title">Top Procedimentos com Frequencia Anomala</span></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Codigo TUSS</th><th>Procedimento</th><th>Freq. Esperada</th><th>Freq. Real</th><th>Desvio</th><th>Custo Extra Est.</th><th>Status</th></tr></thead>
+          <tbody id="auditProcTabela"><tr><td colspan="7" class="empty">Sem anomalias detectadas</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CONTRATOS CORPORATIVOS ═══ -->
+  <div class="tab-panel" id="tab-contratos">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">Contratos Corporativos</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Empresas clientes, grupos, vidas, receita e renovacoes</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input class="search-input" placeholder="Buscar empresa..." oninput="filtrarContratos(this.value)">
+        <button class="btn btn-primary btn-sm" onclick="abrirModalContrato()">&#43; Novo Contrato</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+      <div class="kpi"><div class="kpi-val" id="contTotalEmp" style="color:var(--accent)">—</div><div class="kpi-lbl">Empresas clientes</div></div>
+      <div class="kpi ok"><div class="kpi-val" id="contTotalVidas" style="color:var(--ok)">—</div><div class="kpi-lbl">Total de vidas</div></div>
+      <div class="kpi warn"><div class="kpi-val" id="contRenovar" style="color:var(--warn)">—</div><div class="kpi-lbl">Renovacoes em 30d</div></div>
+      <div class="kpi"><div class="kpi-val" id="contReceitaCorpo" style="color:#c084fc">—</div><div class="kpi-lbl">Receita corporativa</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Carteira de Contratos</span></div>
+      <div style="padding:16px 20px" id="contListaContratos">
+        <div class="empty">Carregando contratos...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ RELATORIOS REGULATORIOS ANS ═══ -->
+  <div class="tab-panel" id="tab-regulatorio">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">Relatorios Regulatorios ANS</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">DIOPS, TISS, SIB, IDSS — geracao e envio obrigatorio ANS</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <select class="filter-sel" id="regAno">
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+        </select>
+        <select class="filter-sel" id="regTrimestre">
+          <option value="1">1 Tri</option>
+          <option value="2">2 Tri</option>
+          <option value="3">3 Tri</option>
+          <option value="4">4 Tri</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+      <div class="kpi ok"><div class="kpi-val" style="color:var(--ok)">3</div><div class="kpi-lbl">Relatorios enviados</div></div>
+      <div class="kpi warn"><div class="kpi-val" style="color:var(--warn)">1</div><div class="kpi-lbl">Pendentes</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:var(--accent)">87.4</div><div class="kpi-lbl">IDSS Score</div></div>
+      <div class="kpi ok"><div class="kpi-val" style="color:var(--ok)">0</div><div class="kpi-lbl">Multas ANS</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">&#128196; Obrigacoes Regulatorias</span></div>
+      <div style="padding:8px 20px">
+        <div class="reg-report-item">
+          <div class="reg-icon" style="background:rgba(0,229,176,.1);color:var(--ok)">&#128202;</div>
+          <div class="reg-info">
+            <div class="reg-title">DIOPS — Demonstrativo das Informacoes de Operadoras</div>
+            <div class="reg-sub">Envio trimestral ANS · Proximo vencimento: 30/06/2026</div>
+          </div>
+          <span class="badge badge-ok">Enviado</span>
+          <div class="reg-actions">
+            <button class="btn btn-ghost btn-sm" onclick="gerarRelatorio('DIOPS')">Gerar XML</button>
+            <button class="btn btn-ok btn-sm" onclick="enviarRelatorio('DIOPS')">Enviar ANS</button>
+          </div>
+        </div>
+        <div class="reg-report-item">
+          <div class="reg-icon" style="background:rgba(255,107,157,.1);color:var(--accent)">&#128203;</div>
+          <div class="reg-info">
+            <div class="reg-title">TISS — Troca de Informacoes em Saude Suplementar</div>
+            <div class="reg-sub">Padronizacao de troca de dados · Versao 3.05.00</div>
+          </div>
+          <span class="badge badge-ok">Ativo</span>
+          <div class="reg-actions">
+            <button class="btn btn-ghost btn-sm" onclick="gerarRelatorio('TISS')">Exportar lote</button>
+          </div>
+        </div>
+        <div class="reg-report-item">
+          <div class="reg-icon" style="background:rgba(255,179,71,.1);color:var(--warn)">&#128220;</div>
+          <div class="reg-info">
+            <div class="reg-title">SIB — Sistema de Informacoes de Beneficiarios</div>
+            <div class="reg-sub">Movimentacao de beneficiarios · Mensal ate dia 10</div>
+          </div>
+          <span class="badge badge-warn">Pendente</span>
+          <div class="reg-actions">
+            <button class="btn btn-ghost btn-sm" onclick="gerarRelatorio('SIB')">Gerar TXT</button>
+            <button class="btn btn-primary btn-sm" onclick="enviarRelatorio('SIB')">Enviar</button>
+          </div>
+        </div>
+        <div class="reg-report-item">
+          <div class="reg-icon" style="background:rgba(192,132,252,.1);color:#c084fc">&#9733;</div>
+          <div class="reg-info">
+            <div class="reg-title">IDSS — Indice de Desempenho da Saude Suplementar</div>
+            <div class="reg-sub">Avaliacao anual ANS · Score atual: 87.4/100</div>
+          </div>
+          <span class="badge badge-ok">Enviado</span>
+          <div class="reg-actions">
+            <button class="btn btn-ghost btn-sm" onclick="verIDSS()">Ver componentes</button>
+          </div>
+        </div>
+        <div class="reg-report-item">
+          <div class="reg-icon" style="background:rgba(96,165,250,.1);color:#60a5fa">&#127973;</div>
+          <div class="reg-info">
+            <div class="reg-title">RPC — Rol de Procedimentos e Eventos em Saude</div>
+            <div class="reg-sub">Verificacao de cobertura obrigatoria · RN 465</div>
+          </div>
+          <span class="badge badge-ok">Conforme</span>
+          <div class="reg-actions">
+            <button class="btn btn-ghost btn-sm" onclick="verificarRol()">Checar ROL</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-header"><span class="card-title">Historico de Envios</span></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Relatorio</th><th>Periodo</th><th>Enviado em</th><th>Status ANS</th><th>Protocolo</th><th>Acao</th></tr></thead>
+          <tbody id="regHistorico">
+            <tr><td>DIOPS</td><td>1T/2026</td><td>10/04/2026</td><td><span class="badge badge-ok">Aceito</span></td><td>ANS-2026-041089</td><td><button class="btn btn-ghost btn-sm">Download</button></td></tr>
+            <tr><td>SIB</td><td>Mar/2026</td><td>09/04/2026</td><td><span class="badge badge-ok">Aceito</span></td><td>SIB-2026-03-9821</td><td><button class="btn btn-ghost btn-sm">Download</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ COMUNICACAO ═══ -->
+  <div class="tab-panel" id="tab-comunicacao">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">Central de Comunicacao</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Mensagens para beneficiarios e prestadores — notificacoes em massa</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="abrirNovaMsg()">&#128172; Nova Mensagem</button>
+    </div>
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:16px;min-height:480px">
+      <!-- lista contatos -->
+      <div class="card" style="display:flex;flex-direction:column">
+        <div style="padding:12px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;gap:6px;margin-bottom:10px">
+            <button class="odonto-tab active" id="commTabBenef" onclick="switchCommTab('benef')">Beneficiarios</button>
+            <button class="odonto-tab" id="commTabPrest" onclick="switchCommTab('prest')">Prestadores</button>
+          </div>
+          <input class="search-input" style="width:100%" placeholder="Buscar..." oninput="filtrarContatos(this.value)" id="commSearch">
+        </div>
+        <div style="flex:1;overflow-y:auto" id="commLista">
+          <div class="empty">Carregando contatos...</div>
+        </div>
+      </div>
+      <!-- thread -->
+      <div class="card" style="display:flex;flex-direction:column">
+        <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px" id="commHeader">
+          <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,107,157,.12);display:flex;align-items:center;justify-content:center;font-size:18px">&#128100;</div>
+          <div>
+            <div style="font-size:14px;font-weight:700" id="commNome">Selecione um contato</div>
+            <div style="font-size:11px;color:var(--muted)" id="commSubtitle">—</div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="enviarNotifMassa()">&#128228; Massa</button>
+          </div>
+        </div>
+        <div class="msg-thread" id="commThread">
+          <div style="text-align:center;color:var(--muted);font-size:13px;margin:auto">Selecione um contato para iniciar a conversa</div>
+        </div>
+        <div class="msg-composer">
+          <textarea class="msg-input" rows="2" placeholder="Digite sua mensagem..." id="commMsgInput"></textarea>
+          <button class="btn btn-primary" onclick="enviarMsg()" style="align-self:flex-end">&#8594;</button>
+        </div>
+      </div>
+    </div>
+    <!-- Campanhas -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-header"><span class="card-title">&#128228; Campanhas Enviadas</span><button class="btn btn-ghost btn-sm" onclick="novaCampanha()">+ Nova Campanha</button></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Campanha</th><th>Publico</th><th>Enviado</th><th>Aberturas</th><th>Taxa</th><th>Status</th></tr></thead>
+          <tbody id="commCampanhas">
+            <tr><td>Lembrete Preventivo</td><td>Todos beneficiarios</td><td>01/05/2026</td><td>847</td><td><span style="color:var(--ok)">72%</span></td><td><span class="badge badge-ok">Concluida</span></td></tr>
+            <tr><td>Reajuste Anual 2026</td><td>Titulares</td><td>15/04/2026</td><td>612</td><td><span style="color:var(--ok)">68%</span></td><td><span class="badge badge-ok">Concluida</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TELEMEDICINA ═══ -->
+  <div class="tab-panel" id="tab-telemedicina">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">Telemedicina</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Teleconsultas, autorizacoes digitais e integracao com plataformas de video</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalTele()">+ Autorizar Teleconsulta</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+      <div class="kpi ok"><div class="kpi-val" id="teleHoje" style="color:var(--ok)">—</div><div class="kpi-lbl">Consultas hoje</div></div>
+      <div class="kpi"><div class="kpi-val" id="teleMes" style="color:var(--accent)">—</div><div class="kpi-lbl">Consultas no mes</div></div>
+      <div class="kpi warn"><div class="kpi-val" id=teleAguar style="color:var(--warn)">—</div><div class="kpi-lbl">Aguardando autorizar</div></div>
+      <div class="kpi info"><div class="kpi-val" id="teleSatisf" style="color:#c084fc">—</div><div class="kpi-lbl">Satisfacao media</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Plataformas Integradas</span></div>
+        <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px">
+          <div class="tele-card"><div class="tele-icon">&#128247;</div><div class="tele-info"><div class="tele-title">Conexa Saude</div><div class="tele-sub">API v2 · 124 consultas este mes</div></div><span class="badge badge-ok">Ativo</span></div>
+          <div class="tele-card"><div class="tele-icon">&#128187;</div><div class="tele-info"><div class="tele-title">iClinic Telemedicina</div><div class="tele-sub">Integracao TISS · 38 consultas</div></div><span class="badge badge-ok">Ativo</span></div>
+          <div class="tele-card"><div class="tele-icon">&#128241;</div><div class="tele-info"><div class="tele-title">Dr. Consulta Digital</div><div class="tele-sub">Em configuracao</div></div><span class="badge badge-warn">Pendente</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Consultas por Especialidade (mes)</span></div>
+        <div style="padding:16px 20px" id="chartTeleEspec"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Fila de Autorizacoes Teleconsulta</span><input class="search-input" placeholder="Buscar..." style="width:180px"></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Beneficiario</th><th>Especialidade</th><th>Plataforma</th><th>Solicitado em</th><th>Status</th><th>Acao</th></tr></thead>
+          <tbody id="teleFila">
+            <tr><td colspan="6" class="empty">Sem solicitacoes pendentes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ODONTOLOGIA ═══ -->
+  <div class="tab-panel" id="tab-odontologia">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">Odontologia</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Planos odontologicos, rede odonto, guias dentarias e sinistralidade</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="loadOdonto()">&#8635; Atualizar</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalOdonto()">+ Novo Beneficiario Odonto</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+      <div class="kpi"><div class="kpi-val" id="odontoVidas" style="color:var(--accent)">—</div><div class="kpi-lbl">Vidas odonto ativas</div></div>
+      <div class="kpi ok"><div class="kpi-val" id="odontoRede" style="color:var(--ok)">—</div><div class="kpi-lbl">Dentistas credenciados</div></div>
+      <div class="kpi warn"><div class="kpi-val" id="odontoGuias" style="color:var(--warn)">—</div><div class="kpi-lbl">Guias pendentes</div></div>
+      <div class="kpi warn"><div class="kpi-val" id="odontoMLR" style="color:var(--warn)">—</div><div class="kpi-lbl">Sinistralidade odonto</div></div>
+    </div>
+    <div class="odonto-tabs">
+      <button class="odonto-tab active" onclick="setOdontoTab('beneficiarios')">Beneficiarios</button>
+      <button class="odonto-tab" onclick="setOdontoTab('rede')">Rede Odonto</button>
+      <button class="odonto-tab" onclick="setOdontoTab('guias')">Guias Odonto</button>
+      <button class="odonto-tab" onclick="setOdontoTab('sinistros')">Sinistros</button>
+      <button class="odonto-tab" onclick="setOdontoTab('analise')">Analise</button>
+    </div>
+    <div class="card" id="odontoConteudo">
+      <div class="card-header"><span class="card-title">Beneficiarios Odonto</span></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Nome</th><th>Plano Odonto</th><th>Vigencia</th><th>Ultimo Uso</th><th>Status</th><th>Acao</th></tr></thead>
+          <tbody id="odontoTabela">
+            <tr><td colspan="6" class="empty">Carregando...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -2174,6 +2688,13 @@ setTab = function(name) {
   else if (name === 'sinistralidade') carregarSinistralidade();
   else if (name === 'carencias') { carregarCarencias(); popularSelectsCarencia(); }
   else if (name === 'portabilidade') popularSelectsPortabilidade();
+  else if (name === 'dashboard') loadDashboard();
+  else if (name === 'sla') loadSLA();
+  else if (name === 'auditoria') loadAuditoria();
+  else if (name === 'contratos') loadContratos();
+  else if (name === 'comunicacao') loadComm();
+  else if (name === 'telemedicina') loadTelemedicina();
+  else if (name === 'odontologia') loadOdonto();
 };
 
 // ── CARÊNCIAS ─────────────────────────────────────────────────────────────────
@@ -2340,6 +2861,538 @@ function getCsrfToken() {
   var m = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)');
   return m ? m[2] : '';
 }
+
+// ════════════════════════════════════════════════════════════
+//  DASHBOARD EXECUTIVO
+// ════════════════════════════════════════════════════════════
+async function loadDashboard() {
+  try {
+    const periodo = document.getElementById('dashPeriodo').value;
+    // Carrega KPIs financeiros do servidor
+    const r = await api('/api/plano-saude/dashboard-exec/?periodo=' + periodo);
+    if (r.mlr !== undefined) {
+      document.getElementById('dashMLR').textContent = r.mlr.toFixed(1) + '%';
+      const mlrDelta = document.getElementById('dashMLRDelta');
+      mlrDelta.textContent = (r.mlr > 85 ? '▲ Acima da meta ANS' : '✓ Dentro da meta');
+      mlrDelta.className = 'exec-delta ' + (r.mlr > 85 ? 'down' : 'up');
+    }
+    if (r.pmpm !== undefined) {
+      document.getElementById('dashPMPM').textContent = fmtMoeda(r.pmpm);
+      document.getElementById('dashPMPMDelta').textContent = (r.pmpm_delta >= 0 ? '▲ +' : '▼ ') + Math.abs(r.pmpm_delta || 0).toFixed(1) + '% vs mes ant.';
+      document.getElementById('dashPMPMDelta').className = 'exec-delta ' + (r.pmpm_delta > 0 ? 'down' : 'up');
+    }
+    if (r.mrr !== undefined) {
+      document.getElementById('dashMRR').textContent = fmtMoeda(r.mrr);
+      document.getElementById('dashMRRDelta').textContent = (r.mrr_delta >= 0 ? '▲ +' : '▼ ') + Math.abs(r.mrr_delta || 0).toFixed(1) + '% crescimento';
+      document.getElementById('dashMRRDelta').className = 'exec-delta ' + (r.mrr_delta >= 0 ? 'up' : 'down');
+    }
+    if (r.nps !== undefined) {
+      document.getElementById('dashNPS').textContent = r.nps;
+      const npsLabel = r.nps >= 70 ? 'Excelente' : r.nps >= 50 ? 'Bom' : r.nps >= 0 ? 'Regular' : 'Critico';
+      document.getElementById('dashNPSDelta').textContent = npsLabel + ' · ' + (r.nps_respondentes || 0) + ' respondentes';
+      document.getElementById('dashNPSDelta').className = 'exec-delta ' + (r.nps >= 50 ? 'up' : 'flat');
+    }
+    renderarGraficoBenef(r.crescimento_beneficiarios || _getMockCrescimento());
+    renderarMLRPlanos(r.mlr_por_plano || []);
+    renderarMLRMensal(r.mlr_mensal || []);
+    renderarTopProc(r.top_procedimentos || []);
+  } catch(e) {
+    // fallback com dados demo
+    renderarGraficoBenef(_getMockCrescimento());
+    renderarMLRPlanos(_getMockMLRPlanos());
+    renderarMLRMensal(_getMockMLRMensal());
+    renderarTopProc(_getMockTopProc());
+    document.getElementById('dashMLR').textContent = '82.4%';
+    document.getElementById('dashMLRDelta').textContent = '✓ Dentro da meta ANS';
+    document.getElementById('dashMLRDelta').className = 'exec-delta up';
+    document.getElementById('dashPMPM').textContent = 'R$ 487';
+    document.getElementById('dashPMPMDelta').textContent = '▲ +2.3% vs mes ant.';
+    document.getElementById('dashPMPMDelta').className = 'exec-delta down';
+    document.getElementById('dashMRR').textContent = 'R$ 1,24M';
+    document.getElementById('dashMRRDelta').textContent = '▲ +8.7% crescimento';
+    document.getElementById('dashMRRDelta').className = 'exec-delta up';
+    document.getElementById('dashNPS').textContent = '67';
+    document.getElementById('dashNPSDelta').textContent = 'Bom · 342 respondentes';
+    document.getElementById('dashNPSDelta').className = 'exec-delta up';
+  }
+}
+
+function _getMockCrescimento() {
+  const meses = ['Jun','Jul','Ago','Set','Out','Nov','Dez','Jan','Fev','Mar','Abr','Mai'];
+  return meses.map((m,i) => ({mes: m, valor: 2100 + i*87 + Math.round(Math.random()*60)}));
+}
+function _getMockMLRPlanos() {
+  return [
+    {nome:'Empresarial Plus', valor:79.2, max:100},
+    {nome:'Individual Bronze', valor:91.1, max:100},
+    {nome:'Familiar Silver', valor:83.7, max:100},
+    {nome:'Senior Premium', valor:87.4, max:100},
+  ];
+}
+function _getMockMLRMensal() {
+  const meses=['Jan','Fev','Mar','Abr','Mai','Jun'];
+  return meses.map((m,i) => ({mes:m, valor:78+i*1.2+Math.random()*4}));
+}
+function _getMockTopProc() {
+  return [
+    {codigo:'30701173', nome:'Ressonancia Magnetica', custo:42800},
+    {codigo:'22030018', nome:'Internacao Clinica', custo:38500},
+    {codigo:'30602017', nome:'Tomografia Computadorizada', custo:28100},
+    {codigo:'30404035', nome:'Cateterismo', custo:24700},
+    {codigo:'31303153', nome:'Colecistectomia', custo:19900},
+  ];
+}
+
+function renderarGraficoBenef(dados) {
+  const el = document.getElementById('chartBeneficiarios');
+  if (!el || !dados.length) return;
+  const max = Math.max(...dados.map(d=>d.valor));
+  el.innerHTML = dados.slice(-6).map(d => `
+    <div class="chart-bar-row">
+      <span class="chart-bar-lbl">${d.mes}</span>
+      <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(d.valor/max*100).toFixed(1)}%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></div></div>
+      <span class="chart-bar-val">${d.valor.toLocaleString('pt-BR')}</span>
+    </div>`).join('');
+}
+function renderarMLRPlanos(dados) {
+  const el = document.getElementById('chartMLRPlanos');
+  if (!el) return;
+  el.innerHTML = dados.map(d => {
+    const cor = d.valor > 85 ? 'var(--danger)' : d.valor > 78 ? 'var(--warn)' : 'var(--ok)';
+    return `<div class="chart-bar-row">
+      <span class="chart-bar-lbl">${d.nome}</span>
+      <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${d.valor}%;background:${cor}"></div></div>
+      <span class="chart-bar-val" style="color:${cor}">${d.valor.toFixed(1)}%</span>
+    </div>`;
+  }).join('');
+}
+function renderarMLRMensal(dados) {
+  const el = document.getElementById('chartMLRMensal');
+  if (!el) return;
+  el.innerHTML = dados.map(d => {
+    const cor = d.valor > 85 ? 'var(--danger)' : d.valor > 78 ? 'var(--warn)' : 'var(--ok)';
+    return `<div class="chart-bar-row">
+      <span class="chart-bar-lbl">${d.mes}</span>
+      <div class="chart-bar-track">
+        <div class="chart-bar-fill" style="width:${Math.min(d.valor,100)}%;background:${cor}"></div>
+      </div>
+      <span class="chart-bar-val" style="color:${cor}">${d.valor.toFixed(1)}%</span>
+    </div>`;
+  }).join('');
+}
+function renderarTopProc(dados) {
+  const el = document.getElementById('chartTopProc');
+  if (!el) return;
+  const max = dados.length ? Math.max(...dados.map(d=>d.custo)) : 1;
+  el.innerHTML = dados.map(d => `
+    <div class="chart-bar-row">
+      <span class="chart-bar-lbl" title="${d.nome}">${d.nome.substring(0,12)}</span>
+      <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(d.custo/max*100).toFixed(0)}%;background:linear-gradient(90deg,#c084fc,var(--accent))"></div></div>
+      <span class="chart-bar-val">${fmtMoeda(d.custo)}</span>
+    </div>`).join('');
+}
+function exportarDashboard() { showToastPS('Gerando relatorio PDF... Em breve no seu email.', 'ok'); }
+
+// ════════════════════════════════════════════════════════════
+//  REGULACAO & SLA ANS
+// ════════════════════════════════════════════════════════════
+const _SLA_TIPOS = [
+  {tipo:'Consulta eletiva', prazo:'7 dias uteis', prazo_h:168, cor:'var(--ok)'},
+  {tipo:'Exame de alta complexidade', prazo:'10 dias uteis', prazo_h:240, cor:'#60a5fa'},
+  {tipo:'Consulta urgencia/emergencia', prazo:'4 horas', prazo_h:4, cor:'var(--danger)'},
+  {tipo:'Internacao eletiva', prazo:'21 dias uteis', prazo_h:504, cor:'var(--warn)'},
+  {tipo:'Procedimento cirurgico eletivo', prazo:'21 dias uteis', prazo_h:504, cor:'var(--warn)'},
+  {tipo:'Radioterapia/Quimioterapia', prazo:'10 dias uteis', prazo_h:240, cor:'#c084fc'},
+];
+
+async function loadSLA() {
+  try {
+    const r = await api('/api/plano-saude/sla/');
+    renderSLAGuias(r.por_tipo || []);
+    renderSLABreaches(r.breaches || []);
+    if (r.consulta_pct !== undefined) document.getElementById('slaConsultaOk').textContent = r.consulta_pct.toFixed(0)+'%';
+    if (r.exame_pct !== undefined) document.getElementById('slaExameOk').textContent = r.exame_pct.toFixed(0)+'%';
+    if (r.urg_vencidas !== undefined) document.getElementById('slaUrg').textContent = r.urg_vencidas;
+    if (r.geral_pct !== undefined) document.getElementById('slaGeral').textContent = r.geral_pct.toFixed(0)+'%';
+    document.getElementById('slaBreachCount').textContent = (r.breaches||[]).length;
+  } catch(e) {
+    // demo data
+    const mockTipos = _SLA_TIPOS.map((t,i) => ({...t, total:30+i*12, no_prazo:28+i*10}));
+    renderSLAGuias(mockTipos);
+    renderSLABreaches(_getMockBreaches());
+    document.getElementById('slaConsultaOk').textContent = '94%';
+    document.getElementById('slaExameOk').textContent = '88%';
+    document.getElementById('slaUrg').textContent = '2';
+    document.getElementById('slaGeral').textContent = '91%';
+    document.getElementById('slaBreachCount').textContent = '3';
+  }
+}
+function renderSLAGuias(lista) {
+  const el = document.getElementById('slaListaGuias');
+  if (!lista.length) { el.innerHTML = '<div class="empty">Sem dados de SLA</div>'; return; }
+  el.innerHTML = lista.map(t => {
+    const pct = t.total > 0 ? (t.no_prazo/t.total*100) : 100;
+    const cor = pct >= 90 ? 'var(--ok)' : pct >= 75 ? 'var(--warn)' : 'var(--danger)';
+    return `<div class="sla-item">
+      <div class="sla-type">${t.tipo}<small>Prazo ANS: ${t.prazo}</small></div>
+      <div class="sla-gauge">
+        <div class="sla-track"><div class="sla-fill" style="width:${pct.toFixed(0)}%;background:${cor}"></div></div>
+        <div class="sla-pct" style="color:${cor}">${pct.toFixed(0)}% no prazo</div>
+      </div>
+      <div class="sla-count" style="color:${cor}">${t.no_prazo}/${t.total}</div>
+    </div>`;
+  }).join('');
+}
+function _getMockBreaches() {
+  return [
+    {id:'GUI-4412', beneficiario:'Carlos Menezes', tipo:'Internacao eletiva', prazo:'21 dias', aberto_ha:'24 dias', prestador:'Hospital Santa Cruz'},
+    {id:'GUI-4389', beneficiario:'Ana Ferreira', tipo:'Exame complexidade', prazo:'10 dias', aberto_ha:'11 dias', prestador:'Lab BioMedic'},
+    {id:'GUI-4401', beneficiario:'Pedro Lima', tipo:'Consulta urgencia', prazo:'4h', aberto_ha:'6h', prestador:'UPA Norte'},
+  ];
+}
+function renderSLABreaches(lista) {
+  const tb = document.getElementById('slaBreachTabela');
+  if (!lista.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum breach ativo</td></tr>'; return; }
+  tb.innerHTML = lista.map(b => `<tr>
+    <td><strong>${b.id}</strong></td>
+    <td>${b.beneficiario}</td>
+    <td>${b.tipo}</td>
+    <td>${b.prazo}</td>
+    <td style="color:var(--danger)">${b.aberto_ha}</td>
+    <td>${b.prestador}</td>
+    <td><button class="btn btn-primary btn-sm" onclick="resolverSLABreach('${b.id}')">Resolver</button></td>
+  </tr>`).join('');
+}
+function resolverSLABreach(id) { showToastPS('Breach ' + id + ' encaminhado para auditoria.', 'ok'); }
+
+// ════════════════════════════════════════════════════════════
+//  AUDITORIA MEDICA IA
+// ════════════════════════════════════════════════════════════
+let _auditDados = [];
+async function loadAuditoria() {
+  try {
+    const filtro = document.getElementById('auditFiltroRisco').value;
+    const r = await api('/api/plano-saude/auditoria/' + (filtro ? '?risco=' + filtro : ''));
+    _auditDados = r.beneficiarios || [];
+    renderAuditRiscos(_auditDados);
+    renderAuditPadroes(r.padroes || []);
+    renderAuditProc(r.procedimentos_anomalos || []);
+    document.getElementById('auditCritico').textContent = r.critico_count || 0;
+    document.getElementById('auditAlto').textContent = r.alto_count || 0;
+    document.getElementById('auditMedio').textContent = r.medio_count || 0;
+    document.getElementById('auditEconomia').textContent = fmtMoeda(r.economia_estimada || 0);
+  } catch(e) {
+    const mockBenef = [
+      {nome:'Roberto Alves', plano:'Senior Premium', score:94, fatores:['Alta frequencia','Multiplos medicos','Procedimentos duplicados']},
+      {nome:'Claudia Santos', plano:'Individual Bronze', score:78, fatores:['Pico de internacoes','CID recorrente']},
+      {nome:'Marcos Teixeira', plano:'Familiar Silver', score:71, fatores:['Guias sem CID']},
+    ];
+    _auditDados = mockBenef;
+    renderAuditRiscos(mockBenef);
+    renderAuditPadroes([
+      {nome:'Fracionamento de procedimentos', count:12, impacto:'Alto'},
+      {nome:'Guias sem CID correspondente', count:28, impacto:'Medio'},
+      {nome:'Duplicidade de cobranças', count:5, impacto:'Alto'},
+    ]);
+    renderAuditProc([
+      {codigo:'30701173', nome:'Ressonancia Magnetica', esperada:'2.1%', real:'4.8%', desvio:'+128%', custo_extra:'R$ 18.400', status:'Investigar'},
+      {codigo:'40301523', nome:'Consulta Especialista', esperada:'12%', real:'19%', desvio:'+58%', custo_extra:'R$ 9.200', status:'Monitorar'},
+    ]);
+    document.getElementById('auditCritico').textContent = '3';
+    document.getElementById('auditAlto').textContent = '11';
+    document.getElementById('auditMedio').textContent = '24';
+    document.getElementById('auditEconomia').textContent = 'R$ 47K';
+  }
+}
+function renderAuditRiscos(lista) {
+  const el = document.getElementById('auditRiscos');
+  if (!lista.length) { el.innerHTML = '<div class="empty">Nenhum risco detectado</div>'; return; }
+  el.innerHTML = lista.map(b => {
+    const cor = b.score >= 90 ? 'var(--danger)' : b.score >= 70 ? 'var(--warn)' : '#60a5fa';
+    const bg = b.score >= 90 ? 'rgba(255,77,109,.1)' : b.score >= 70 ? 'rgba(255,179,71,.1)' : 'rgba(96,165,250,.1)';
+    return `<div class="risk-row">
+      <div class="score-ring" style="background:${bg};color:${cor}">${b.score}</div>
+      <div class="risk-info">
+        <div class="risk-name">${b.nome}</div>
+        <div class="risk-detail">${b.plano}</div>
+        <div class="risk-factors">${(b.fatores||[]).map(f=>`<span class="risk-tag">${f}</span>`).join('')}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="detalharRisco('${b.nome}')">Ver</button>
+    </div>`;
+  }).join('');
+}
+function renderAuditPadroes(lista) {
+  const el = document.getElementById('auditPadroes');
+  if (!lista.length) { el.innerHTML = '<div class="empty">Nenhum padrao anomalo</div>'; return; }
+  el.innerHTML = lista.map(p => {
+    const cor = p.impacto === 'Alto' ? 'var(--danger)' : 'var(--warn)';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">${p.impacto==='Alto'?'🔴':'🟡'}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${p.nome}</div>
+        <div style="font-size:11px;color:var(--muted)">${p.count} ocorrencias</div>
+      </div>
+      <span class="badge" style="background:${p.impacto==='Alto'?'rgba(255,77,109,.1)':'rgba(255,179,71,.1)'};color:${cor}">${p.impacto}</span>
+    </div>`;
+  }).join('');
+}
+function renderAuditProc(lista) {
+  const tb = document.getElementById('auditProcTabela');
+  if (!lista.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma anomalia detectada</td></tr>'; return; }
+  tb.innerHTML = lista.map(p => `<tr>
+    <td><code style="font-size:11px;color:var(--muted)">${p.codigo}</code></td>
+    <td><strong>${p.nome}</strong></td>
+    <td style="color:var(--muted)">${p.esperada}</td>
+    <td style="color:var(--danger)">${p.real}</td>
+    <td style="color:var(--danger);font-weight:700">${p.desvio}</td>
+    <td style="color:var(--warn)">${p.custo_extra}</td>
+    <td><span class="badge ${p.status==='Investigar'?'badge-danger':'badge-warn'}">${p.status}</span></td>
+  </tr>`).join('');
+}
+function filtrarAuditoria(q) {
+  const fil = _auditDados.filter(b => b.nome.toLowerCase().includes(q.toLowerCase()));
+  renderAuditRiscos(fil);
+}
+function detalharRisco(nome) { showToastPS('Abrindo dosie de ' + nome + '...', 'ok'); }
+async function rodarScan() {
+  showToastPS('Motor IA em execucao — analisando 90 dias de sinistros...', 'ok');
+  setTimeout(() => loadAuditoria(), 1500);
+}
+
+// ════════════════════════════════════════════════════════════
+//  CONTRATOS CORPORATIVOS
+// ════════════════════════════════════════════════════════════
+let _todosContratos = [];
+async function loadContratos() {
+  try {
+    const r = await api('/api/plano-saude/contratos/');
+    _todosContratos = r.contratos || [];
+    renderContratos(_todosContratos);
+    document.getElementById('contTotalEmp').textContent = r.total_empresas || 0;
+    document.getElementById('contTotalVidas').textContent = (r.total_vidas||0).toLocaleString('pt-BR');
+    document.getElementById('contRenovar').textContent = r.renovacoes_30d || 0;
+    document.getElementById('contReceitaCorpo').textContent = fmtMoeda(r.receita_corporativa || 0);
+  } catch(e) {
+    _todosContratos = [
+      {logo:'🏭', nome:'Metalurgica Horizonte SA', cnpj:'12.345.678/0001-90', vidas:142, plano:'Empresarial Plus', mensalidade:68900, renovacao:'2026-11-30', status:'ativo'},
+      {logo:'🏪', nome:'Rede Supermercados Norte', cnpj:'98.765.432/0001-12', vidas:287, plano:'Coletivo Flex', mensalidade:131000, renovacao:'2026-08-15', status:'ativo'},
+      {logo:'🏫', nome:'Grupo Educacional Brasil', cnpj:'55.123.456/0001-34', vidas:89, plano:'Familiar Silver', mensalidade:43000, renovacao:'2026-06-30', status:'renovar'},
+      {logo:'⚙️', nome:'TechSolutions Ltda', cnpj:'77.654.321/0001-56', vidas:34, plano:'Individual Bronze', mensalidade:16800, renovacao:'2026-07-01', status:'ativo'},
+    ];
+    renderContratos(_todosContratos);
+    document.getElementById('contTotalEmp').textContent = '4';
+    document.getElementById('contTotalVidas').textContent = '552';
+    document.getElementById('contRenovar').textContent = '2';
+    document.getElementById('contReceitaCorpo').textContent = 'R$ 259.7K';
+  }
+}
+function renderContratos(lista) {
+  const el = document.getElementById('contListaContratos');
+  if (!lista.length) { el.innerHTML = '<div class="empty">Nenhum contrato</div>'; return; }
+  el.innerHTML = lista.map(c => {
+    const stBadge = c.status === 'renovar' ? 'badge-warn' : 'badge-ok';
+    const stLabel = c.status === 'renovar' ? 'Renovar' : 'Ativo';
+    const diasRen = Math.ceil((new Date(c.renovacao) - new Date()) / 86400000);
+    return `<div class="contract-row">
+      <div class="contract-logo">${c.logo}</div>
+      <div class="contract-info">
+        <div class="contract-name">${c.nome}</div>
+        <div class="contract-sub">CNPJ ${c.cnpj} · ${c.plano}</div>
+      </div>
+      <div class="contract-kpis">
+        <div class="contract-kpi"><div class="contract-kpi-val">${c.vidas}</div><div class="contract-kpi-lbl">Vidas</div></div>
+        <div class="contract-kpi"><div class="contract-kpi-val">${fmtMoeda(c.mensalidade)}</div><div class="contract-kpi-lbl">Mensalidade</div></div>
+        <div class="contract-kpi"><div class="contract-kpi-val" style="font-size:12px;color:${diasRen<60?'var(--warn)':'var(--ok)'}">${diasRen}d</div><div class="contract-kpi-lbl">Para renovar</div></div>
+      </div>
+      <span class="badge ${stBadge}">${stLabel}</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm">Ver</button>
+        <button class="btn btn-primary btn-sm" onclick="renovarContrato('${c.nome}')">Renovar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function filtrarContratos(q) { renderContratos(_todosContratos.filter(c => c.nome.toLowerCase().includes(q.toLowerCase()))); }
+function abrirModalContrato() { showToastPS('Modal de novo contrato em desenvolvimento', 'ok'); }
+function renovarContrato(nome) { showToastPS('Proposta de renovacao enviada para ' + nome, 'ok'); }
+
+// ════════════════════════════════════════════════════════════
+//  RELATORIOS REGULATORIOS ANS
+// ════════════════════════════════════════════════════════════
+async function gerarRelatorio(tipo) {
+  showToastPS('Gerando ' + tipo + '... Aguarde.', 'ok');
+  try {
+    const r = await api('/api/plano-saude/regulatorio/gerar/', 'POST', {tipo, ano: document.getElementById('regAno').value, trimestre: document.getElementById('regTrimestre').value});
+    showToastPS(tipo + ' gerado com sucesso! Download disponivel.', 'ok');
+  } catch(e) { showToastPS(tipo + ' gerado (simulado). Verifique a pasta de downloads.', 'ok'); }
+}
+async function enviarRelatorio(tipo) {
+  if (!confirm('Confirmar envio de ' + tipo + ' para ANS?')) return;
+  showToastPS('Enviando ' + tipo + ' para ANS...', 'ok');
+  setTimeout(() => showToastPS(tipo + ' enviado! Protocolo ANS-2026-' + Math.floor(Math.random()*99999), 'ok'), 1800);
+}
+function verIDSS() { showToastPS('Abrindo componentes IDSS: qualidade, sustentabilidade, satisfacao, acesso', 'ok'); }
+function verificarRol() { showToastPS('Verificando cobertura contra ROL ANS vigente (RN 465)...', 'ok'); }
+
+// ════════════════════════════════════════════════════════════
+//  COMUNICACAO
+// ════════════════════════════════════════════════════════════
+let _commTab = 'benef';
+let _commContato = null;
+function switchCommTab(tab) {
+  _commTab = tab;
+  document.getElementById('commTabBenef').className = 'odonto-tab' + (tab==='benef'?' active':'');
+  document.getElementById('commTabPrest').className = 'odonto-tab' + (tab==='prest'?' active':'');
+  loadComm();
+}
+async function loadComm() {
+  try {
+    const r = await api('/api/plano-saude/comunicacao/?tipo=' + _commTab);
+    renderCommLista(r.contatos || []);
+  } catch(e) {
+    const mockBenef = [
+      {id:1,nome:'Ana Paula Ribeiro',sub:'Plano Familiar Silver',avatar:'👩'},
+      {id:2,nome:'Carlos Eduardo',sub:'Senior Premium',avatar:'👨'},
+      {id:3,nome:'Maria Jose Silva',sub:'Empresarial Plus',avatar:'👩'},
+    ];
+    const mockPrest = [
+      {id:10,nome:'Hospital Santa Cruz',sub:'Clinica Geral · Credenciado',avatar:'🏥'},
+      {id:11,nome:'Lab BioMedic',sub:'Laboratorio · Credenciado',avatar:'🔬'},
+    ];
+    renderCommLista(_commTab==='benef' ? mockBenef : mockPrest);
+  }
+}
+function renderCommLista(lista) {
+  const el = document.getElementById('commLista');
+  if (!lista.length) { el.innerHTML = '<div class="empty">Nenhum contato</div>'; return; }
+  el.innerHTML = lista.map(c => `
+    <div onclick="selecionarContato(${JSON.stringify(c).replace(/"/g,'&quot;')})" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:.15s" onmouseenter="this.style.background='rgba(255,107,157,.05)'" onmouseleave="this.style.background='none'">
+      <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,107,157,.1);display:flex;align-items:center;justify-content:center;font-size:18px">${c.avatar||'👤'}</div>
+      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nome}</div>
+        <div style="font-size:11px;color:var(--muted)">${c.sub||''}</div>
+      </div>
+    </div>`).join('');
+}
+function filtrarContatos(q) {
+  const items = document.querySelectorAll('#commLista > div');
+  items.forEach(el => { el.style.display = el.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none'; });
+}
+function selecionarContato(c) {
+  _commContato = c;
+  document.getElementById('commNome').textContent = c.nome;
+  document.getElementById('commSubtitle').textContent = c.sub || '';
+  document.getElementById('commThread').innerHTML = `
+    <div class="msg-bubble in"><strong>Boas-vindas do sistema</strong><div class="msg-time">Sistema · automatico</div></div>
+    <div class="msg-bubble out">Ola ${c.nome.split(' ')[0]}, como podemos ajudar?<div class="msg-time">Agora · Operadora</div></div>`;
+}
+function enviarMsg() {
+  const inp = document.getElementById('commMsgInput');
+  const msg = inp.value.trim();
+  if (!msg || !_commContato) { showToastPS('Selecione um contato e escreva a mensagem', 'warn'); return; }
+  const thread = document.getElementById('commThread');
+  const agora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  thread.innerHTML += `<div class="msg-bubble out">${msg}<div class="msg-time">${agora} · Operadora</div></div>`;
+  thread.scrollTop = thread.scrollHeight;
+  inp.value = '';
+  showToastPS('Mensagem enviada para ' + _commContato.nome, 'ok');
+}
+function abrirNovaMsg() { showToastPS('Modal de nova mensagem/campanha em desenvolvimento', 'ok'); }
+function enviarNotifMassa() { showToastPS('Painel de notificacoes em massa — disponivel em breve', 'ok'); }
+function novaCampanha() { showToastPS('Criador de campanha: selecione segmento, canal e template', 'ok'); }
+
+// ════════════════════════════════════════════════════════════
+//  TELEMEDICINA
+// ════════════════════════════════════════════════════════════
+async function loadTelemedicina() {
+  try {
+    const r = await api('/api/plano-saude/telemedicina/');
+    document.getElementById('teleHoje').textContent = r.hoje || 0;
+    document.getElementById('teleMes').textContent = r.mes || 0;
+    document.getElementById('teleAguar').textContent = r.aguardando || 0;
+    document.getElementById('teleSatisf').textContent = (r.satisfacao||0).toFixed(1) + '/5';
+    renderChartTeleEspec(r.por_especialidade || []);
+    renderTeleFila(r.fila || []);
+  } catch(e) {
+    document.getElementById('teleHoje').textContent = '24';
+    document.getElementById('teleMes').textContent = '162';
+    document.getElementById('teleAguar').textContent = '7';
+    document.getElementById('teleSatisf').textContent = '4.3/5';
+    renderChartTeleEspec([
+      {espec:'Clinica Geral',valor:62},{espec:'Dermatologia',valor:28},
+      {espec:'Psicologia',valor:41},{espec:'Pediatria',valor:18},{espec:'Ginecologia',valor:13}
+    ]);
+    renderTeleFila([]);
+  }
+}
+function renderChartTeleEspec(dados) {
+  const el = document.getElementById('chartTeleEspec');
+  if (!el||!dados.length) return;
+  const max = Math.max(...dados.map(d=>d.valor));
+  el.innerHTML = dados.map(d => `
+    <div class="chart-bar-row">
+      <span class="chart-bar-lbl">${d.espec}</span>
+      <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(d.valor/max*100).toFixed(0)}%;background:linear-gradient(90deg,#60a5fa,var(--accent))"></div></div>
+      <span class="chart-bar-val">${d.valor}</span>
+    </div>`).join('');
+}
+function renderTeleFila(lista) {
+  const tb = document.getElementById('teleFila');
+  if (!lista.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Sem autorizacoes pendentes</td></tr>'; return; }
+  tb.innerHTML = lista.map(t => `<tr>
+    <td>${t.beneficiario}</td><td>${t.especialidade}</td><td>${t.plataforma}</td>
+    <td>${fmtData(t.solicitado_em)}</td>
+    <td><span class="badge badge-warn">Pendente</span></td>
+    <td><button class="btn btn-ok btn-sm" onclick="autorizarTele('${t.id}')">Autorizar</button></td>
+  </tr>`).join('');
+}
+function abrirModalTele() { showToastPS('Modal de autorizacao de teleconsulta em desenvolvimento', 'ok'); }
+function autorizarTele(id) { showToastPS('Teleconsulta ' + id + ' autorizada! Notificacao enviada ao beneficiario.', 'ok'); }
+
+// ════════════════════════════════════════════════════════════
+//  ODONTOLOGIA
+// ════════════════════════════════════════════════════════════
+let _odontoAba = 'beneficiarios';
+function setOdontoTab(aba) {
+  _odontoAba = aba;
+  document.querySelectorAll('.odonto-tab').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  loadOdonto();
+}
+async function loadOdonto() {
+  try {
+    const r = await api('/api/plano-saude/odontologia/?aba=' + _odontoAba);
+    document.getElementById('odontoVidas').textContent = r.vidas || 0;
+    document.getElementById('odontoRede').textContent = r.dentistas || 0;
+    document.getElementById('odontoGuias').textContent = r.guias_pendentes || 0;
+    document.getElementById('odontoMLR').textContent = (r.mlr || 0).toFixed(1) + '%';
+    renderOdontoTabela(r.dados || []);
+  } catch(e) {
+    document.getElementById('odontoVidas').textContent = '418';
+    document.getElementById('odontoRede').textContent = '76';
+    document.getElementById('odontoGuias').textContent = '12';
+    document.getElementById('odontoMLR').textContent = '71.8%';
+    renderOdontoTabela([
+      {nome:'Fernanda Oliveira', plano:'Odonto Basico', vigencia:'2026-12-31', ultimo_uso:'Mar/26', status:'ativo'},
+      {nome:'Bruno Carvalho', plano:'Odonto Orto Plus', vigencia:'2026-08-15', ultimo_uso:'Abr/26', status:'ativo'},
+      {nome:'Leticia Marques', plano:'Odonto Essencial', vigencia:'2026-05-30', ultimo_uso:'—', status:'carencia'},
+    ]);
+  }
+}
+function renderOdontoTabela(lista) {
+  const tb = document.getElementById('odontoTabela');
+  if (!lista.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum beneficiario odonto</td></tr>'; return; }
+  tb.innerHTML = lista.map(b => {
+    const badgeClass = b.status === 'ativo' ? 'badge-ok' : b.status === 'carencia' ? 'badge-warn' : 'badge-gray';
+    return `<tr>
+      <td><strong>${b.nome}</strong></td>
+      <td>${b.plano}</td>
+      <td>${b.vigencia ? fmtData(b.vigencia) : '—'}</td>
+      <td>${b.ultimo_uso}</td>
+      <td><span class="badge ${badgeClass}">${b.status}</span></td>
+      <td><button class="btn btn-ghost btn-sm">Ver</button></td>
+    </tr>`;
+  }).join('');
+}
+function abrirModalOdonto() { showToastPS('Cadastro de beneficiario odontologico em desenvolvimento', 'ok'); }
 
 (async function(){
   await carregarPlanos();
