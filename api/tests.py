@@ -2740,6 +2740,37 @@ class TemporalDecayTests(TestCase):
         self.assertEqual(payload["overview"]["raw_total_cases"], 4)
         self.assertLess(payload["overview"]["total_cases"], payload["overview"]["raw_total_cases"])
 
+    def test_panorama_epidemiologico_reduz_risco_quando_foco_envelhece(self):
+        empresa = Empresa.objects.create(
+            nome="Populacao Risco Temporal",
+            email="risco-temporal@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        agora = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
+        for _ in range(13):
+            registro = RegistroSintoma.objects.create(
+                empresa=empresa,
+                febre=True,
+                latitude=-22.9,
+                longitude=-43.1,
+                cidade="Rio de Janeiro",
+                estado="RJ",
+                bairro="Centro",
+                grupo="Respiratorio",
+            )
+            RegistroSintoma.objects.filter(id=registro.id).update(
+                data_registro=agora - timedelta(days=20)
+            )
+
+        epidemiologia._PANORAMA_CACHE["created_at"] = 0.0
+        epidemiologia._PANORAMA_CACHE["payload"] = None
+        payload = epidemiologia.build_panorama_payload()
+        area = payload["layers"]["bairros"][0]
+
+        self.assertLess(area["total_cases"], area["raw_total_cases"])
+        self.assertEqual(area["risk_level"], "BAIXO")
+
 
 class WebhookMiddlewareTests(TestCase):
     @override_settings(ASAAS_WEBHOOK_TOKEN="token-teste")

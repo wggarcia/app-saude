@@ -1,0 +1,2160 @@
+=== PROGRAMA DE COMPUTADOR — EXTRATO DE CÓDIGO-FONTE ===
+Título: SolusCRT Saude | Versão: 1.0.0 | Linguagem: Python 3.11 / Dart
+Data de conclusão: 21/05/2026 | Autor: Wagner Garcia — CPF 091.189.637-65
+CONFIDENCIAL — Sigilo requerido por 50 anos (Lei 9.609/1998, art. 2.º, § 3.º)
+=========================================================
+
+--- EXTRATO INICIAL (primeiras linhas dos arquivos principais) ---
+
+
+### ARQUIVO: backend/settings.py ###
+from pathlib import Path
+import os
+from urllib.parse import urlparse
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_list(name, default=None):
+    value = os.environ.get(name)
+    if not value:
+        return default or []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def env_int(name, default, minimum=None, maximum=None):
+    value = os.environ.get(name)
+    try:
+        parsed = int(value) if value is not None else int(default)
+    except (TypeError, ValueError):
+        raise RuntimeError(f"Configure {name} como numero inteiro.")
+    if minimum is not None and parsed < minimum:
+        raise RuntimeError(f"Configure {name} com valor >= {minimum}.")
+    if maximum is not None and parsed > maximum:
+        raise RuntimeError(f"Configure {name} com valor <= {maximum}.")
+    return parsed
+
+
+def unique_list(*groups):
+    items = []
+    for group in groups:
+        for item in group or []:
+            if item and item not in items:
+                items.append(item)
+    return items
+
+
+DJANGO_ENV = os.environ.get("DJANGO_ENV", "development").lower()
+# Render.com seta automaticamente RENDER=true em todos os serviços deploy.
+# Isso garante que IS_PRODUCTION funcione mesmo se DJANGO_ENV não for configurado manualmente.
+_IS_RENDER = os.environ.get("RENDER", "").lower() in ("true", "1", "yes")
+IS_PRODUCTION = DJANGO_ENV == "production" or _IS_RENDER
+
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "dev-only-soluscrt-change-me-with-DJANGO_SECRET_KEY-before-production",
+)
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
+JWT_EXP_HOURS = env_int("JWT_EXP_HOURS", 12, minimum=1, maximum=168)
+
+DEBUG = env_bool("DJANGO_DEBUG", default=not IS_PRODUCTION)
+TRIAL_DAYS = env_int("TRIAL_DAYS", 15, minimum=1, maximum=90)
+ALLOW_ENTERPRISE_DEMO_MUTATIONS = env_bool(
+    "ALLOW_ENTERPRISE_DEMO_MUTATIONS",
+    default=not IS_PRODUCTION,
+)
+TRUST_X_FORWARDED_FOR = env_bool("TRUST_X_FORWARDED_FOR", default=False)
+SOLUSCRT_DEFAULT_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "testserver",
+    "app-saude-p9n8.onrender.com",
+    "soluscrt.com.br",
+    "soluscrtsaude.com.br",
+    "empresa.soluscrt.com.br",
+    "governo.soluscrt.com.br",
+    "admin.soluscrt.com.br",
+    "app.soluscrt.com.br",
+    ".soluscrt.com.br",
+    ".soluscrtsaude.com.br",
+]
+ALLOWED_HOSTS = unique_list(
+    env_list(
+        "DJANGO_ALLOWED_HOSTS",
+        SOLUSCRT_DEFAULT_HOSTS,
+    ),
+    SOLUSCRT_DEFAULT_HOSTS,
+)
+
+if IS_PRODUCTION and (
+    SECRET_KEY.startswith("dev-only-")
+    or JWT_SECRET_KEY.startswith("dev-only-")
+    or len(SECRET_KEY) < 50
+    or len(JWT_SECRET_KEY) < 50
+):
+    raise RuntimeError(
+        "Configure DJANGO_SECRET_KEY e JWT_SECRET_KEY longas antes de subir em produção."
+    )
+
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'api',
+    'corsheaders',
+    'django_extensions',
+]
+
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'api.middleware.EmpresaMiddleware',
+    'api.views_api_versioning.EnterpriseAPIMiddleware',
+]
+
+if not DEBUG:
+    MIDDLEWARE.insert(
+        MIDDLEWARE.index('django.middleware.security.SecurityMiddleware') + 1,
+        'whitenoise.middleware.WhiteNoiseMiddleware',
+    )
+
+CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", default=False)
+SOLUSCRT_DEFAULT_ORIGINS = [
+    "https://app-saude-p9n8.onrender.com",
+    "https://soluscrt.com.br",
+    "https://soluscrtsaude.com.br",
+    "https://empresa.soluscrt.com.br",
+    "https://governo.soluscrt.com.br",
+    "https://admin.soluscrt.com.br",
+    "https://app.soluscrt.com.br",
+]
+CORS_ALLOWED_ORIGINS = unique_list(
+    env_list(
+        "CORS_ALLOWED_ORIGINS",
+        SOLUSCRT_DEFAULT_ORIGINS if IS_PRODUCTION else [],
+    ),
+    SOLUSCRT_DEFAULT_ORIGINS if IS_PRODUCTION else [],
+)
+if IS_PRODUCTION and CORS_ALLOW_ALL_ORIGINS:
+    raise RuntimeError("CORS_ALLOW_ALL_ORIGINS deve ser false em producao.")
+
+CSRF_TRUSTED_ORIGINS = unique_list(
+    env_list(
+        "CSRF_TRUSTED_ORIGINS",
+        SOLUSCRT_DEFAULT_ORIGINS if IS_PRODUCTION else [],
+    ),
+    SOLUSCRT_DEFAULT_ORIGINS if IS_PRODUCTION else [],
+)
+
+ROOT_URLCONF = 'backend.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+                'api.context_processors.public_settings',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'backend.wsgi.application'
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL:
+    import dj_database_url
+
+    default_database = dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+        ssl_require=IS_PRODUCTION,
+    )
+    if IS_PRODUCTION and default_database.get("ENGINE") == "django.db.backends.sqlite3":
+        raise RuntimeError("DATABASE_URL de producao deve apontar para PostgreSQL gerenciado, nao SQLite.")
+    DATABASES = {
+        "default": default_database
+    }
+else:
+    if IS_PRODUCTION:
+        raise RuntimeError("Configure DATABASE_URL com PostgreSQL gerenciado antes de subir em producao.")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+
+### ARQUIVO: api/models.py ###
+import uuid
+from decimal import Decimal
+
+from django.db import models
+
+
+def _codigo_acesso():
+    return uuid.uuid4().hex
+
+
+class Empresa(models.Model):
+    TIPO_EMPRESA = "empresa"
+    TIPO_GOVERNO = "governo"
+    TIPOS_CONTA = [
+        (TIPO_EMPRESA, "Empresa"),
+        (TIPO_GOVERNO, "Governo"),
+    ]
+
+    nome = models.CharField(max_length=100)
+    email = models.EmailField(unique=True)
+    senha = models.CharField(max_length=255)
+
+    tipo_conta = models.CharField(max_length=20, choices=TIPOS_CONTA, default=TIPO_EMPRESA)
+    pacote_codigo = models.CharField(max_length=40, default="starter_5")
+    plano = models.CharField(max_length=20, null=True, blank=True)
+    ativo = models.BooleanField(default=False)
+    acesso_governo = models.BooleanField(default=False)
+    max_dispositivos = models.PositiveIntegerField(default=1)
+    max_usuarios = models.PositiveIntegerField(default=1)
+    sessao_ativa_chave = models.CharField(max_length=120, null=True, blank=True)
+    sessao_ativa_device_id = models.CharField(max_length=120, null=True, blank=True)
+    sessao_ativa_em = models.DateTimeField(null=True, blank=True)
+    data_pagamento = models.DateField(null=True, blank=True)
+    data_expiracao = models.DateTimeField(null=True, blank=True)
+    codigo_acesso_corporativo = models.CharField(max_length=32, unique=True, default=_codigo_acesso)
+
+    def __str__(self):
+        return self.nome
+
+
+class RegistroSintoma(models.Model):
+    ORIGEM_CIDADAO = "cidadao"
+    ORIGEM_OFICIAL = "oficial"
+    ORIGEM_IA = "ia_estimativa"
+    ORIGEM_INSTITUCIONAL = "institucional"
+    ORIGENS_DADO = [
+        (ORIGEM_CIDADAO, "Relato cidadao"),
+        (ORIGEM_OFICIAL, "Fonte oficial"),
+        (ORIGEM_IA, "Estimativa IA"),
+        (ORIGEM_INSTITUCIONAL, "Registro institucional"),
+    ]
+
+    id_anonimo = models.UUIDField(default=uuid.uuid4, editable=False)
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE)
+
+    doenca = models.CharField(max_length=50, null=True, blank=True)
+
+    # ── Sintomas base (originais)
+    febre = models.BooleanField(default=False)
+    tosse = models.BooleanField(default=False)
+    dor_corpo = models.BooleanField(default=False)
+    cansaco = models.BooleanField(default=False)
+    falta_ar = models.BooleanField(default=False)
+
+    # ── Sintomas expandidos (IA 2.0 — diagnóstico diferencial preciso)
+    dor_cabeca = models.BooleanField(default=False)          # cefaleia — dengue, gripe, meningite
+    dor_articular = models.BooleanField(default=False)       # artralgia — chikungunya (intensa!), zika, dengue
+    exantema = models.BooleanField(default=False)            # rash/manchas — dengue, zika, chikungunya, sarampo
+    conjuntivite = models.BooleanField(default=False)        # hiperemia ocular — zika (patognomônico), sarampo
+    vomito_nausea = models.BooleanField(default=False)       # dengue alarme, leptospirose, hepatite
+    diarreia = models.BooleanField(default=False)            # rotavírus, cólera, dengue hemorrágico
+    dor_abdominal = models.BooleanField(default=False)       # dengue, leptospirose, hepatite
+    rigidez_nuca = models.BooleanField(default=False)        # MENINGITE — flag de urgência imediata
+    ictericia = models.BooleanField(default=False)           # febre amarela, leptospirose, hepatite
+    manchas_hemorragicas = models.BooleanField(default=False) # petéquias — dengue hemorrágico, meningite
+    perda_olfato_paladar = models.BooleanField(default=False) # COVID-19 (quase patognomônico)
+    dor_garganta = models.BooleanField(default=False)        # gripe, COVID, estreptococo, resfriado
+    coriza = models.BooleanField(default=False)              # resfriado, gripe, RSV
+    calafrios = models.BooleanField(default=False)           # malária (ciclico), dengue, leptospirose
+    # Intensidade da febre (escala: None, baixa<38.5, moderada 38.5-39.5, alta>39.5)
+    intensidade_febre = models.CharField(max_length=10, blank=True, default="",
+        choices=[("", "Não informado"), ("baixa", "Baixa"), ("moderada", "Moderada"), ("alta", "Alta")])
+    # Intensidade da dor articular (diferencia chikungunya de dengue)
+    intensidade_articular = models.CharField(max_length=12, blank=True, default="",
+        choices=[("", "Não informado"), ("leve", "Leve"), ("moderada", "Moderada"), ("intensa", "Intensa — incapacitante")])
+
+    latitude = models.FloatField(null=True)
+    longitude = models.FloatField(null=True)
+
+    pais = models.CharField(max_length=100, null=True, blank=True)
+    estado = models.CharField(max_length=100, null=True, blank=True)
+    cidade = models.CharField(max_length=100, null=True, blank=True)
+    bairro = models.CharField(max_length=100, null=True, blank=True)
+    condado = models.CharField(max_length=100, null=True, blank=True)
+
+    data_registro = models.DateTimeField(auto_now_add=True)
+
+    doenca_confirmada = models.CharField(max_length=50, null=True, blank=True)
+    grupo = models.CharField(max_length=50, null=True, blank=True)
+    classificacao = models.CharField(max_length=300, null=True, blank=True)
+
+    # 🔐 SEGURANÇA (NOVO)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    device_id = models.CharField(max_length=120, null=True, blank=True)
+    confianca = models.FloatField(default=1.0)
+    suspeito = models.BooleanField(default=False)
+    origem_dado = models.CharField(max_length=30, choices=ORIGENS_DADO, default=ORIGEM_CIDADAO)
+    validade_epidemiologica = models.CharField(max_length=60, default="sinal_colaborativo")
+    fonte_referencia = models.CharField(max_length=160, null=True, blank=True)
+    revisado = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Sintoma {self.id_anonimo}"
+
+
+class DispositivoAutorizado(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="dispositivos")
+    device_id = models.CharField(max_length=120)
+    apelido = models.CharField(max_length=120, null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    ativo = models.BooleanField(default=True)
+    ultimo_acesso = models.DateTimeField(auto_now=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "device_id")
+
+    def __str__(self):
+        return f"{self.empresa.nome} - {self.device_id}"
+
+
+class EmpresaUsuario(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="usuarios")
+    nome = models.CharField(max_length=120)
+    email = models.EmailField()
+    senha = models.CharField(max_length=255)
+    cargo = models.CharField(max_length=100, null=True, blank=True)
+    ativo = models.BooleanField(default=True)
+    is_admin = models.BooleanField(default=False)
+    sessao_ativa_chave = models.CharField(max_length=120, null=True, blank=True)
+    sessao_ativa_device_id = models.CharField(max_length=120, null=True, blank=True)
+    sessao_ativa_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "email")
+
+    def __str__(self):
+        return f"{self.empresa.nome} - {self.email}"
+
+
+class EmpresaUnidade(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="unidades_corporativas")
+    nome = models.CharField(max_length=120)
+    codigo = models.CharField(max_length=40, blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "nome")
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - {self.nome}"
+
+
+class EmpresaSetor(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="setores_corporativos")
+    unidade = models.ForeignKey(EmpresaUnidade, on_delete=models.SET_NULL, null=True, blank=True, related_name="setores")
+    nome = models.CharField(max_length=120)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "unidade", "nome")
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - {self.nome}"
+
+
+class EmpresaTurno(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="turnos_corporativos")
+    nome = models.CharField(max_length=80)
+    janela = models.CharField(max_length=80, blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("empresa", "nome")
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.empresa.nome} - {self.nome}"
+
+
+class EmpresaCargoCorporativo(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="cargos_corporativos")
+
+### ARQUIVO: api/views.py ###
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render, redirect
+from django.db.models import Count
+from .utils import probabilidade_doenca
+
+from .models import RegistroSintoma, Empresa, AlertaGovernamental, DispositivoPushPublico, AceiteLegalPublico
+from .utils_cidades import buscar_coordenada
+from .utils import obter_localizacao
+from django.conf import settings
+from api.utils_ia import classificar_padrao
+from api.utils_geo import obter_endereco
+from api.utils_auth import validar_token
+from api.models import Empresa, RegistroSintoma
+from api.epidemiologia import _build_disease_probabilities
+from django.db.models import Count, Avg, Q
+from django.db.models.functions import TruncDate
+from django.contrib.auth.hashers import check_password, make_password
+from collections import defaultdict
+from datetime import datetime, timedelta
+
+# ============================
+# 🧠 IA GLOBAL (MOVER PRA CIMA)
+# ============================
+
+historico = defaultdict(list)
+
+
+SITE_LANGUAGE_META = {
+    "pt": {"label": "PT", "flag": "🇧🇷", "name": "Portugues", "html": "pt-BR"},
+    "en": {"label": "EN", "flag": "🇺🇸", "name": "English", "html": "en"},
+    "es": {"label": "ES", "flag": "🇪🇸", "name": "Espanol", "html": "es"},
+}
+
+
+SITE_TRANSLATIONS = {
+    "pt": {
+        "title": "SolusCRT Saude | Epidemiologia, SST, Farmacia, Hospital e Governo",
+        "description": "SolusCRT Saude apresenta Governo, Farmacia, Hospital e SST em quatro ambientes independentes para transformar sinais em preparo, confianca e decisao com privacidade real.",
+        "brand": "SolusCRT Saude",
+        "nav": {
+            "diferencial": "Diferencial",
+            "ecossistema": "Ecossistema",
+            "valores": "Valores",
+            "app": "App",
+            "contato": "Contato",
+        },
+        "nav_note": "Quatro ambientes premium. Uma marca pronta para liderar.",
+        "language_aria": "Selecionar idioma",
+        "hero_eyebrow": "Quatro ambientes privados. Uma presenca que transmite autoridade.",
+        "hero_title": "A plataforma que faz sua operacao parecer pronta antes da pressao chegar.",
+        "hero_title_desktop_lines": ["A plataforma", "que faz sua operacao", "parecer pronta", "antes da pressao chegar."],
+        "hero_title_lines": ["A plataforma", "que faz sua operacao", "parecer pronta", "antes da pressao chegar."],
+        "hero_lead": "O SolusCRT Saude apresenta quatro ambientes completamente separados para que cada visitante reconheca, em segundos, que o produto foi feito para o seu proprio mundo. Governo encontra uma sala de situacao capaz de sustentar decisao publica. Farmacia encontra previsibilidade de demanda e ruptura sob controle. Hospital encontra preparo assistencial antes do pico. SST encontra organizacao, app do funcionario e bem-estar com privacidade. A primeira impressao ja transmite solidez, cuidado e maturidade.",
+        "actions": {
+            "presentation": "Ver apresentacao completa",
+            "app": "Baixar app da populacao",
+            "sales": "Falar com comercial",
+            "open_presentation": "Abrir apresentacao completa",
+            "meeting": "Solicitar reuniao",
+            "login": "Entrar",
+            "signup": "Criar conta gratis",
+        },
+        "proofs": [
+            {"title": "Governo com mais autoridade", "text": "Uma sala de situacao que ajuda gestores a comunicar melhor, responder mais cedo e sustentar decisao publica com mais seguranca."},
+            {"title": "Farmacia com mais previsibilidade", "text": "Demanda antecipada, menos ruptura e uma operacao farmaceutica mais preparada para crescer com margem e confianca."},
+            {"title": "Hospital com mais folego", "text": "Leitos, triagem, equipes e fluxo assistencial organizados antes da pressao virar correria na porta de entrada."},
+            {"title": "SST com mais adesao", "text": "Conformidade, app do funcionario e bem-estar anonimo em uma experiencia ocupacional que organiza a rotina e valoriza o colaborador."},
+        ],
+        "chips": ["Governo", "Farmacia", "Hospital", "SST", "Plano de Saude", "App da populacao"],
+        "metrics": [
+            {"value": "5 ambientes", "text": "Cada segmento entra em uma experiencia que parece ter sido feita sob medida para a sua rotina"},
+            {"value": "IA + 10 dias", "text": "Tempo extra para comunicar, comprar, preparar equipes ou agir antes do pico ganhar escala"},
+            {"value": "100 mil", "text": "Leitura territorial comparavel para apresentar cenarios com clareza executiva e presenca institucional"},
+            {"value": "LGPD", "text": "Privacidade, segregacao e controle de acesso tratados como parte do valor percebido pelo cliente"},
+        ],
+        "differential": {
+            "title": "Quem age antes protege mais, perde menos e comunica melhor.",
+            "lead": "O diferencial do SolusCRT nao esta apenas no que ele mostra. Esta na sensacao de preparo que ele entrega para quem decide: uma leitura clara, elegante e acionavel, no ambiente certo, antes que o atraso se transforme em correria.",
+            "traditional_title": "Vigilancia tradicional",
+            "traditional_items": [
+                "Depende de notificacao, atendimento, consolidacao e publicacao para ganhar forma.",
+                "Confirma e registra muito bem, mas nem sempre chega no tempo de proteger operacao, margem, reputacao e capacidade.",
+                "Quando a leitura demora, estoque, equipe, atendimento e comunicacao ja entraram em regime de pressao.",
+            ],
+            "solus_title": "Leitura SolusCRT com IA",
+            "solus_items": [
+                "Capta sinais da populacao com localizacao atual, controle antifraude e leitura territorial confiavel.",
+                "Reconhece crescimento, risco e predominancia de sintomas antes da confirmacao oficial ganhar escala.",
+                "Entrega uma visao pronta para decisao em governo, farmacia, hospital ou operacao ocupacional, com linguagem adequada a cada cliente.",
+            ],
+        },
+        "ecosystem_title": "Cinco ambientes que parecem feitos sob medida.",
+        "ecosystem_lead": "O visitante nao precisa traduzir o produto. Ele reconhece o seu setor, a sua rotina e a sua prioridade logo na primeira tela. Por isso, Governo, Farmacia, Hospital, SST e Plano de Saude aparecem com identidade propria, valor claro e privacidade preservada.",
+        "slides": [
+            {"small": "Governo", "title": "Governanca que inspira autoridade", "text": "Sala de situacao epidemiologica para gestores que precisam comunicar melhor, agir antes e sustentar cada resposta com mais presenca institucional."},
+            {"small": "Farmacia", "title": "Demanda antecipada, compra mais segura", "text": "Gestao farmaceutica conectada ao territorio para reduzir ruptura, planejar compras e fazer a operacao crescer com mais previsibilidade."},
+            {"small": "Hospital", "title": "Capacidade preparada antes do pico", "text": "Leitos, triagem, internacoes e equipes organizados antes da pressao ganhar velocidade no atendimento."},
+            {"small": "SST", "title": "Organizacao, cuidado e adesao", "text": "SST completo, app do funcionario e bem-estar anonimo em uma jornada ocupacional mais fluida, segura e pronta para assinatura."},
+            {"small": "Plano de Saude", "title": "Gestao completa de operadora", "text": "Beneficiarios, contratos, guias de autorizacao, sinistros, reembolsos e dashboard epidemiologico proprios para operadoras de plano de saude."},
+        ],
+        "platform": {
+            "title_html": "Uma plataforma.<br>Cinco portas de entrada que fazem sentido.",
+            "lead": "Cada cliente encontra um ambiente que respeita sua linguagem, sua operacao e seu ritmo de decisao. O resultado e uma conversa mais madura desde o primeiro contato.",
+            "cards": [
+                {
+                    "title": "SST & Clinicas Ocupacionais",
+                    "text": "Uma assinatura que organiza a rotina, valoriza o colaborador e reduz atrito operacional sem misturar SST com epidemiologia.",
+                    "price": "R$ 799",
+                    "caption": "/mes · assinatura recorrente com trial",
+                    "cta": "Comecar com teste",
+                },
+                {
+                    "title": "Farmacia & Rede Farmaceutica",
+                    "text": "Um ambiente para antecipar demanda, proteger margem e fazer a farmacia se preparar antes da ruptura.",
+                    "price": "R$ 699",
+                    "caption": "/mes · por loja ou operacao",
+                    "cta": "Solicitar demonstracao",
+                },
+                {
+                    "title": "Hospital & Rede Assistencial",
+                    "text": "Uma plataforma para proteger capacidade assistencial, organizar fluxo e preparar equipe antes da pressao.",
+                    "price": "R$ 12.000",
+                    "caption": "/mes · por estrutura ou rede",
+                    "cta": "Solicitar proposta",
+                },
+                {
+                    "title": "Governo & Vigilancia Publica",
+                    "text": "Uma sala de situacao pensada para autoridade publica, resposta territorial e governanca institucional.",
+                    "price": "Sob proposta",
+                    "caption": "contrato institucional B2G",
+                    "cta": "Falar com especialista",
+                },
+                {
+                    "title": "Operadora de Plano de Saude",
+                    "text": "Gestao completa para operadoras: beneficiarios, contratos, guias de autorizacao, sinistros, reembolsos e dashboard epidemiologico com mapa de calor territorial. 100 usuarios e 100 maquinas autorizadas.",
+                    "price": "R$ 12.000",
+                    "caption": "/mes · anual R$ 120.000 · por operadora",
+                    "cta": "Solicitar proposta",
+                },
+            ],
+        },
+        "enterprise": {
+            "eyebrow": "Ambiente SST — Empresas e Clinicas Ocupacionais",
+            "title": "O SST que organiza a empresa e faz o colaborador perceber cuidado de verdade.",
+            "lead": "O ambiente SST do SolusCRT foi pensado para empresas e clinicas ocupacionais que querem mais do que cumprir regra. Elas querem transmitir organizacao, reduzir atrito, fortalecer a relacao com o colaborador e transformar conformidade em uma experiencia de cuidado e maturidade operacional.",
+            "items": [
+                {"title": "SST que transmite controle", "text": "ASO digital, CAT, afastamentos, exames, treinamentos NR, EPI/EPC, riscos, PGR e eSocial integrados em uma operacao mais clara, confiavel e pronta para auditoria."},
+                {"title": "Bem-estar que protege sem expor", "text": "A empresa passa a enxergar tendencias reais de humor, saude e estresse sem invadir a privacidade individual do colaborador."},
+                {"title": "App do funcionario que reduz atrito", "text": "O colaborador acessa seu ASO, recebe notificacoes, envia check-ins e percebe cuidado ativo em uma experiencia simples e moderna."},
+            ],
+            "metrics": [
+                {"value": "37 NRs", "text": "Base tecnica para unir conformidade e imagem de maturidade operacional"},
+                {"value": "eSocial SST", "text": "Menos correria documental, mais visibilidade para a gestao e mais controle percebido"},
+                {"value": "15 dias gratis", "text": "Entrada rapida para experimentar valor real antes da assinatura"},
+            ],
+        },
+        "matrix": [
+            {"label": "Governo", "title": "Autoridade territorial", "text": "Paineis para gestores federais, estaduais e municipais com radar territorial, fontes oficiais, comunicacao e auditoria institucional."},
+            {"label": "Farmacia", "title": "Previsibilidade de demanda", "text": "Antecipacao de demanda, giro, ruptura e insumos com gestao farmaceutica conectada ao risco regional."},
+            {"label": "Hospital", "title": "Preparo assistencial", "text": "Preparacao de leitos, triagem, equipes e pressao assistencial com visibilidade de surtos antes do pico chegar ao pronto-socorro."},
+            {"label": "SST", "title": "Operacao ocupacional", "text": "ASO, CAT, afastamentos, NR, EPI/EPC, PGR, eSocial SST, app do funcionario e bem-estar anonimo em ambiente proprio, sem dado epidemiologico."},
+            {"label": "IA preditiva", "title": "Motor que antecipa", "text": "Classifica sinais populacionais, estima doencas provaveis, mede crescimento e valida reducao gradual com serie temporal, agregados e fontes brasileiras oficiais."},
+            {"label": "Privacidade", "title": "Confianca por segregacao", "text": "Cada ambiente tem login, permissao, dados e auditoria proprios. Governo, farmacia, hospital, SST e plano de saude nao compartilham base operacional entre si."},
+        ],
+        "values": {
+            "eyebrow": "Valores SolusCRT",
+            "title": "Tecnologia para proteger pessoas, nao apenas vender software.",
+            "lead": "A SolusCRT nasce com uma responsabilidade clara: transformar dados em cuidado, antecipar riscos sem gerar alarme vazio e ajudar empresas, governos, farmacias e hospitais a agir com mais consciencia, velocidade e humanidade.",
+            "items": [
+                {"title": "Vida em primeiro lugar", "text": "Todo indicador, alerta e mapa existe para reduzir atraso, orientar cuidado e apoiar decisoes que preservem pessoas."},
+                {"title": "Verdade antes de impacto", "text": "Separar sinal precoce, dado oficial e inferencia de IA e um compromisso para evitar conclusoes falsas."},
+                {"title": "Privacidade como fundamento", "text": "Dados de saude exigem minimizacao, seguranca, transparencia e exibicao adequada ao perfil autorizado. Cada ambiente tem sua propria segregacao."},
+                {"title": "Cooperacao institucional", "text": "O sistema foi pensado para unir populacao, empresas, hospitais, farmacias e governo sem confundir responsabilidades nem misturar dados."},
+                {"title": "Acesso social", "text": "O app da populacao deve ser gratuito, simples e util, porque vigilancia inteligente comeca quando todos podem contribuir."},
+                {"title": "Coragem operacional", "text": "A SolusCRT existe para antecipar problemas dificeis, mostrar territorios criticos e ajudar lideres a agir antes do pico."},
+            ],
+        },
+        "app": {
+            "eyebrow": "App da populacao",
+            "title": "O app gratuito que transforma participacao em inteligencia territorial.",
+            "lead": "O app coleta sintomas sem cadastro nominal, usa localizacao atual para proteger a leitura territorial, mostra o radar local e recebe alertas oficiais. Para quem usa, a experiencia e simples. Para governo, farmacia e hospital, ela vira sinal precoce com valor estrategico.",
+            "app_store": "Baixar na App Store",
+            "google_play": "Ver no Google Play",
+            "risks": [
+                {"title": "Radar local", "text": "Leitura por localizacao atual."},
+                {"title": "Mapa vivo", "text": "Focos e sintomas por regiao."},
+                {"title": "Alertas oficiais", "text": "Comunicacao de governo no celular."},
+                {"title": "Protecao", "text": "Sem envio aproximado para cidade errada."},
+            ],
+        },
+        "cta": {
+            "title": "Veja a apresentacao que faz cada decisor enxergar valor no seu proprio ambiente.",
+            "lead": "Da primeira tela ao contrato, o SolusCRT foi desenhado para transmitir maturidade, clareza e seguranca. A apresentacao mostra como o ecossistema impressiona sem misturar segmentos e como cada frente evolui para assinatura ou contrato no modelo certo.",
+        },
+        "footer": "SolusCRT Saude. Inteligencia epidemiologica, sala de situacao para governo, gestao para farmacia, hospital, plano de saude, SST e app populacional.",
+        "footer_links": {
+            "privacy": "Privacidade",
+            "terms": "Termos",
+            "security": "Seguranca",
+
+### ARQUIVO: api/views_plano_saude.py ###
+"""
+ Plano de Saúde — cockpit cooperativo para Operadoras.
+ Ambiente dedicado para carteira, regulacao, sinistros,
+ prestadores, reembolsos e radar epidemiologico sem rip-and-replace.
+"""
+import json
+from datetime import date, timedelta
+from decimal import Decimal
+
+from django.db.models import Avg, Count, Q, Sum
+from django.http import JsonResponse
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+
+from .access_control import get_setor
+from .models import (
+    BeneficiarioPlano, Empresa, GuiaAutorizacao,
+    PlanoSaude, PrestadorPlanoSaude, Reembolso, Sinistro, RegistroSintoma,
+    GlosaItem, CoparticipacaoRegra, FaturamentoBeneficiario,
+    ProgramaSaude, InscricaoPrograma,
+    ContratoGrupo, TeleconsultaAutorizacao,
+    BeneficiarioOdonto, GuiaOdonto, MensagemPlano,
+    CarenciaBeneficiario,
+)
+from .views_dashboard import _empresa_autenticada
+from .email_service import (
+    enviar_email_novo_contrato,
+    enviar_email_teleconsulta_autorizada,
+    enviar_email_guia_odonto_aprovada,
+    enviar_email_guia_odonto_negada,
+    enviar_email_sla_breach_critico,
+    enviar_email_auditoria_alerta,
+    enviar_email_novo_beneficiario,
+)
+
+
+# ── helpers de autenticação ───────────────────────────────────────────────────
+
+def _ps_auth(request):
+    """Retorna (empresa, erro_response). Verifica setor plano_saude."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return None, JsonResponse({"erro": "Não autenticado"}, status=401)
+    if get_setor(empresa) != "plano_saude":
+        return None, JsonResponse({"erro": "Módulo Plano de Saúde não disponível para este plano."}, status=403)
+    return empresa, None
+
+
+# ── serializers ───────────────────────────────────────────────────────────────
+
+def _to_bool(value, default=False):
+    if value in (None, ""):
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "sim", "yes", "on"}
+
+
+def _pressao_epidemiologica_empresa(empresa, dias=14):
+    inicio = date.today() - timedelta(days=dias)
+    qs = RegistroSintoma.objects.filter(
+        empresa=empresa,
+        data_registro__date__gte=inicio,
+    )
+    total = qs.count()
+    suspeitos = qs.filter(suspeito=True).count()
+    if suspeitos >= 12:
+        nivel = "alta"
+        label = "Pressao alta"
+    elif suspeitos >= 5:
+        nivel = "moderada"
+        label = "Pressao moderada"
+    elif suspeitos > 0:
+        nivel = "monitoramento"
+        label = "Monitoramento ativo"
+    else:
+        nivel = "controlada"
+        label = "Territorio controlado"
+    return {
+        "janela_dias": dias,
+        "registros": total,
+        "suspeitos": suspeitos,
+        "nivel": nivel,
+        "label": label,
+    }
+
+
+def _frente_cooperacao(codigo, nome, status, descricao, evidencia, proximo_passo):
+    labels = {
+        "operando": "Operando",
+        "implantacao": "Em implantacao",
+        "prioridade": "Prioridade alta",
+        "monitorando": "Monitorando",
+    }
+    return {
+        "codigo": codigo,
+        "nome": nome,
+        "status": status,
+        "status_label": labels.get(status, status.title()),
+        "descricao": descricao,
+        "evidencia": evidencia,
+        "proximo_passo": proximo_passo,
+    }
+
+
+def _cooperacao_operadora_payload(empresa, planos, beneficiarios, guias, prestadores, pressao):
+    total_planos = planos.count()
+    beneficiarios_ativos = beneficiarios.filter(
+        situacao=BeneficiarioPlano.SITUACAO_ATIVO
+    ).count()
+    prestadores_ativos = prestadores.filter(
+        status=PrestadorPlanoSaude.STATUS_CREDENCIADO
+    ).count()
+    prestadores_portal = prestadores.filter(portal_ativo=True).count()
+    guias_documentadas = guias.exclude(cid="").exclude(medico_solicitante="").count()
+    planos_com_ans = planos.exclude(registro_ans="").count()
+
+    return {
+        "modelo": "camada_cooperativa",
+        "headline": "A SolusCRT coopera com o sistema que a operadora ja possui e adiciona comando operacional, regulatorio e epidemiologico.",
+        "descricao": "O ambiente de plano de saude funciona como cockpit de orquestracao: a operadora pode manter core admin, ERP, faturamento e integrações proprias enquanto a SolusCRT organiza carteira, fila clinica, rede credenciada, sinistralidade e territorio.",
+        "promessa": "Sem rip-and-replace: entre como camada de cooperacao, enxergue risco assistencial mais cedo e devolva decisao melhor para o que a operadora ja tem.",
+        "frentes": [
+            _frente_cooperacao(
+                "core_legado",
+                "Core legado e carteira da operadora",
+                "operando" if beneficiarios_ativos else ("implantacao" if total_planos else "prioridade"),
+                "Mantem o cadastro mestre e a esteira principal no legado enquanto a SolusCRT organiza elegibilidade, vigencia e leitura operacional da carteira.",
+                f"{total_planos} plano(s) e {beneficiarios_ativos} beneficiario(s) ativo(s) espelhados no cockpit.",
+                "Conectar elegibilidade, faturamento e status do beneficiario ao core existente via API, arquivo ou rotina de carga.",
+            ),
+            _frente_cooperacao(
+                "rede_prestador",
+                "Rede credenciada e portal do prestador",
+                "operando" if prestadores_ativos and prestadores_portal else ("implantacao" if prestadores_ativos else "prioridade"),
+                "Acompanha rede, SLA, pendencias documentais e uso assistencial sem trocar o sistema transacional do prestador.",
+                f"{prestadores_ativos} prestador(es) credenciado(s) e {prestadores_portal} portal(is) ativo(s).",
+                "Ativar score de qualidade, ocorrencias e rotinas de cooperacao com o portal do prestador.",
+            ),
+            _frente_cooperacao(
+                "regulacao",
+                "Regulacao clinica, UM e auditoria",
+                "operando" if guias_documentadas else ("implantacao" if guias.count() else "prioridade"),
+                "Centraliza fila clinica, CID, medico solicitante, justificativa e decisao regulatoria para cooperar com autorizacao e auditoria do ambiente existente.",
+                f"{guias.count()} guia(s) no cockpit e {guias_documentadas} com documentacao clinica estruturada.",
+                "Padronizar CID, medico solicitante, motivos de negativa e SLA para circular entre operacao, auditoria e legado.",
+            ),
+            _frente_cooperacao(
+                "ans_tiss",
+                "Compliance ANS/TISS e trilha regulatoria",
+                "implantacao" if (planos_com_ans or guias_documentadas) else "prioridade",
+                "Usa ANS, justificativas e trilhas auditaveis como base de cooperacao com faturamento, TISS e conformidade regulatoria.",
+                f"{planos_com_ans} plano(s) com registro ANS e {guias_documentadas} guia(s) preparadas para cooperacao regulatoria.",
+                "Fechar integracao TISS/ANS via exportacao estruturada, API ou conector de implantacao para go-live regulatorio pleno.",
+            ),
+            _frente_cooperacao(
+                "epidemiologia",
+                "Radar epidemiologico da carteira",
+                "operando" if pressao["registros"] else "monitorando",
+                "Cruza sinais territoriais com carteira, prestadores e eventos assistenciais para antecipar demanda, comunicacao e custo em alta.",
+                f"{pressao['registros']} registro(s) territoriais e {pressao['suspeitos']} suspeito(s) na janela de {pressao['janela_dias']} dias.",
+                "Usar o mapa para acionar programas, comunicacao preventiva e priorizacao de autorizacoes antes da pressao virar sinistro.",
+            ),
+        ],
+        "proximos_passos": [
+            "Mapear os sistemas que permanecem no legado e definir qual dado entra no cockpit por API, lote ou rotina operacional.",
+            "Padronizar ANS, TISS, motivos regulatorios e justificativas clinicas para circular entre operadora, prestadores e auditoria.",
+            "Cruzar pressao epidemiologica com carteira, autorizacoes e sinistralidade para gerar acoes antes do custo explodir.",
+        ],
+    }
+
+
+def _sla_horas_prioridade(prioridade, prestador=None):
+    base = {
+        GuiaAutorizacao.PRIORIDADE_ELETIVA: 72,
+        GuiaAutorizacao.PRIORIDADE_URGENTE: 24,
+        GuiaAutorizacao.PRIORIDADE_ALTA_COMPLEXIDADE: 48,
+        GuiaAutorizacao.PRIORIDADE_INTERNACAO: 12,
+    }.get(prioridade or GuiaAutorizacao.PRIORIDADE_ELETIVA, 72)
+    if prestador and prestador.sla_autorizacao_horas:
+        return min(base, int(prestador.sla_autorizacao_horas))
+    return base
+
+
+def _calcular_prazo_sla(prioridade, prestador=None):
+    return timezone.now() + timedelta(hours=_sla_horas_prioridade(prioridade, prestador))
+
+
+def _fila_status_from_status(status):
+    return {
+        GuiaAutorizacao.STATUS_SOLICITADA: GuiaAutorizacao.FILA_TRIAGEM,
+        GuiaAutorizacao.STATUS_EM_ANALISE: GuiaAutorizacao.FILA_AUDITORIA_CLINICA,
+        GuiaAutorizacao.STATUS_AUTORIZADA: GuiaAutorizacao.FILA_AUTORIZADA,
+        GuiaAutorizacao.STATUS_NEGADA: GuiaAutorizacao.FILA_NEGADA,
+        GuiaAutorizacao.STATUS_CANCELADA: GuiaAutorizacao.FILA_DEVOLVIDA_PRESTADOR,
+    }.get(status or GuiaAutorizacao.STATUS_SOLICITADA, GuiaAutorizacao.FILA_TRIAGEM)
+
+
+def _guia_sla_info(g):
+    prazo = g.prazo_sla_em
+
+### ARQUIVO: api/email_service.py ###
+"""
+Email service — transactional emails sent by SolusCRT.
+All calls are wrapped in try/except so email failures never break core flows.
+"""
+from django.conf import settings
+from django.core.mail import send_mail
+
+
+def _from():
+    return getattr(settings, "DEFAULT_FROM_EMAIL", "SolusCRT <noreply@soluscrt.com.br>")
+
+
+def enviar_email_boas_vindas(empresa):
+    """Send welcome email immediately after empresa registration."""
+    try:
+        nome = empresa.nome
+        email = empresa.email
+        subject = "Bem-vindo ao SolusCRT — sua conta está pronta 🎉"
+        body_html = f"""
+<!DOCTYPE html>
+<html lang="pt-br">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{{margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2eeff}}
+.wrap{{max-width:600px;margin:0 auto;padding:32px 20px}}
+.logo{{font-size:22px;font-weight:900;color:#00c9a7;letter-spacing:-0.5px;margin-bottom:32px}}
+.card{{background:#111827;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:32px}}
+h1{{font-size:24px;font-weight:800;margin:0 0 8px}}
+.sub{{color:#7b90b0;font-size:14px;margin-bottom:28px}}
+.btn{{display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#00c9a7,#0077ff);
+  color:#fff;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;margin:20px 0}}
+.steps{{margin:28px 0 0}}
+.step{{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px}}
+.step-num{{width:28px;height:28px;background:rgba(0,201,167,.15);border:1px solid rgba(0,201,167,.3);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  color:#00c9a7;font-weight:800;font-size:13px;flex-shrink:0;margin-top:2px}}
+.step-text{{font-size:14px;color:#e2eeff}}
+.step-title{{font-weight:700;margin-bottom:3px}}
+.step-desc{{color:#7b90b0;font-size:13px}}
+.footer{{margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,.07);
+  font-size:12px;color:#7b90b0;text-align:center}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">SolusCRT</div>
+  <div class="card">
+    <h1>Olá, {nome}! 👋</h1>
+    <p class="sub">Sua conta SolusCRT está ativa e pronta para uso.</p>
+    <p style="font-size:15px;line-height:1.6;color:#b0c4d8">
+      Seja bem-vindo à plataforma de Saúde, Segurança do Trabalho e Inteligência Epidemiológica
+      mais moderna do Brasil. Você está a poucos cliques de ter controle total sobre a saúde
+      ocupacional da sua empresa.
+    </p>
+    <a href="https://app.soluscrt.com.br/login-empresa/" class="btn">Acessar minha conta →</a>
+    <div class="steps">
+      <p style="font-size:13px;font-weight:700;color:#7b90b0;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px">
+        Primeiros passos recomendados
+      </p>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <div class="step-title">Cadastre seus funcionários</div>
+          <div class="step-desc">Adicione os dados de cada colaborador para começar a gestão de SST.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <div class="step-title">Configure os ASOs e exames</div>
+          <div class="step-desc">Registre os Atestados de Saúde Ocupacional e defina os prazos de validade.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <div class="step-title">Ative o monitoramento de eSocial</div>
+          <div class="step-desc">Acompanhe o status dos eventos S-2210, S-2220 e S-2240 em tempo real.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">
+    Precisa de ajuda? Entre em contato: <a href="mailto:suporte@soluscrt.com.br" style="color:#00c9a7">suporte@soluscrt.com.br</a><br>
+    SolusCRT · Saúde Ocupacional e Inteligência Epidemiológica<br>
+    <a href="https://soluscrt.com.br/privacidade/" style="color:#7b90b0">Política de Privacidade</a> ·
+    <a href="https://soluscrt.com.br/termos/" style="color:#7b90b0">Termos de Uso</a>
+  </div>
+</div>
+</body>
+</html>
+"""
+        body_text = (
+            f"Olá, {nome}!\n\n"
+            "Sua conta SolusCRT está ativa e pronta para uso.\n\n"
+            "Acesse: https://app.soluscrt.com.br/login-empresa/\n\n"
+            "Primeiros passos:\n"
+            "1. Cadastre seus funcionários\n"
+            "2. Configure os ASOs e exames ocupacionais\n"
+            "3. Ative o monitoramento de eSocial\n\n"
+            "Suporte: suporte@soluscrt.com.br\n"
+        )
+        send_mail(
+            subject=subject,
+            message=body_text,
+            from_email=_from(),
+            recipient_list=[email],
+            html_message=body_html,
+            fail_silently=False,
+        )
+    except Exception:
+        pass  # Email failure must never break registration
+
+
+def enviar_email_trial_expirando(empresa, dias_restantes):
+    """Send warning email 7 days (and 1 day) before trial expires."""
+    try:
+        base_url = _base_url()
+        urgencia = "🔴 Urgente — " if dias_restantes <= 1 else "⏳ "
+        subject = f"{urgencia}Seu trial SolusCRT expira em {dias_restantes} dia{'s' if dias_restantes != 1 else ''}"
+        corpo_dias = (
+            "Seu período de teste expira <strong>hoje</strong>."
+            if dias_restantes <= 1
+            else f"Seu período de teste expira em <strong>{dias_restantes} dias</strong>."
+        )
+        body_html = f"""
+<!DOCTYPE html>
+<html lang="pt-br">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{{margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2eeff}}
+.wrap{{max-width:600px;margin:0 auto;padding:32px 20px}}
+.logo{{font-size:22px;font-weight:900;color:#00c9a7;margin-bottom:32px}}
+.card{{background:#111827;border:1px solid rgba(255,179,71,.3);border-radius:16px;padding:32px}}
+.warn-bar{{background:rgba(255,179,71,.12);border:1px solid rgba(255,179,71,.3);border-radius:10px;
+  padding:14px 18px;margin-bottom:24px;color:#ffd080;font-size:14px;font-weight:600}}
+h1{{font-size:22px;font-weight:800;margin:0 0 12px}}
+.btn{{display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#00c9a7,#0077ff);
+  color:#fff;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;margin:20px 0}}
+.features{{margin:20px 0;display:flex;flex-direction:column;gap:8px}}
+.feat{{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#b0c4d8}}
+.feat-icon{{color:#00c9a7;font-size:16px;flex-shrink:0}}
+.footer{{margin-top:24px;font-size:12px;color:#7b90b0;text-align:center}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">SolusCRT</div>
+  <div class="card">
+    <div class="warn-bar">⏰ {corpo_dias}</div>
+    <h1>Não perca o acesso, {empresa.nome}!</h1>
+    <p style="font-size:14px;color:#b0c4d8;line-height:1.7;margin-bottom:16px">
+      Você explorou o SolusCRT durante o período de teste. Para continuar com acesso completo
+      à plataforma — EPIs, ASOs, eSocial, exames, dashboards e muito mais — ative sua assinatura agora.
+    </p>
+    <div class="features">
+      <div class="feat"><span class="feat-icon">✓</span>Todos os módulos SST desbloqueados</div>
+      <div class="feat"><span class="feat-icon">✓</span>Exportação de relatórios e eSocial</div>
+      <div class="feat"><span class="feat-icon">✓</span>Suporte técnico incluso</div>
+      <div class="feat"><span class="feat-icon">✓</span>Sem contratos longos — cancele quando quiser</div>
+    </div>
+    <a href="{base_url}/pagamento/" class="btn">Ativar minha assinatura →</a>
+    <p style="font-size:13px;color:#7b90b0;margin-top:8px">
+      Ou entre em contato: <a href="mailto:comercial@soluscrt.com.br" style="color:#00c9a7">comercial@soluscrt.com.br</a>
+    </p>
+  </div>
+  <div class="footer">SolusCRT · <a href="mailto:suporte@soluscrt.com.br" style="color:#7b90b0">suporte@soluscrt.com.br</a></div>
+</div>
+</body>
+</html>"""
+        body_text = (
+            f"SolusCRT — trial expira em {dias_restantes} dia(s)\n"
+            f"Olá, {empresa.nome}!\n"
+            f"Ative sua assinatura em: {base_url}/pagamento/\n"
+            "Dúvidas: comercial@soluscrt.com.br\n"
+        )
+        send_mail(
+            subject=subject,
+            message=body_text,
+            from_email=_from(),
+            recipient_list=[empresa.email],
+            html_message=body_html,
+            fail_silently=False,
+        )
+    except Exception:
+        pass
+
+
+def enviar_email_trial_expirado(empresa):
+    """Send email when trial has just expired."""
+    try:
+        base_url = _base_url()
+        subject = "🔒 Seu acesso SolusCRT foi suspenso — reative agora"
+        body_html = f"""
+<!DOCTYPE html>
+<html lang="pt-br">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{{margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2eeff}}
+.wrap{{max-width:600px;margin:0 auto;padding:32px 20px}}
+
+### ARQUIVO: backend/urls.py ###
+from django.contrib import admin
+from django.urls import path, include
+from django.http import FileResponse
+import os
+from api.views_dashboard import dashboard
+from api.views import casos_por_regiao
+from api.views import mapa_risco
+from api import views
+
+
+
+from api.views import (
+    registrar_sintoma, listar_sintomas,
+    alertas, tela_login, tela_pagamento,
+    relatorio_regioes, relatorio_municipios,
+    analisar_tosse,
+    resumo_municipios, resumo_estados,
+    detectar_surtos, prever_surtos,
+    painel,
+    diagnostico_ia, analisar_audio,
+    resumo_doencas, diagnostico_ia_avancado,
+    limpar_casos, mapa_casos,
+    insights_nacional,
+    tela_cadastro, tela_login_empresa, tela_login_governo,
+    registrar_sintoma_publico, app_resumo_publico, app_radar_local, app_mapa_publico, app_alertas_publicos, registrar_push_publico,
+    site_principal, apresentacao_comercial, documento_publico
+)
+
+from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba, ativar_trial
+from api.views_enterprise import api_enterprise_command_center, api_enterprise_premium_suite, api_enterprise_seed_operational_demo, api_enterprise_reset_demo
+from api.views_dashboard import dados_dashboard, dashboard, global_paises, dashboard_farmacia, dashboard_hospital, dashboard_governo, dashboard_plano_saude, command_ai, api_command_ai, api_command_ai_feedback, contrato_governo, licencas, seguranca, api_dispositivos, api_revogar_dispositivo, api_auditoria_seguranca, usuarios_empresa, api_usuarios_empresa, api_criar_usuario_empresa, api_desativar_usuario_empresa, login_operacao, console_operacional, api_dono_resumo, api_dono_atualizar_cliente, api_dono_financeiro_acao, api_dono_onboarding_acao, api_dono_exportar, api_dono_excluir_cliente, api_dono_reset_trial, api_dono_forcar_logout, api_dono_auditoria, api_alertas_governo, api_criar_alerta_governo, api_toggle_alerta_governo, api_fluxo_alerta_governo, farmacia_gestao_page, hospital_gestao_page, governo_gestao_page, governo_plataforma_page, rede_gestao_page, plano_saude_gestao_page
+from api.views_plano_saude import (
+    api_ps_dashboard, api_ps_planos, api_ps_plano_detalhe,
+    api_ps_beneficiarios, api_ps_beneficiario_detalhe,
+    api_ps_prestadores, api_ps_prestador_detalhe, api_ps_portal_prestador,
+    api_ps_fila_clinica, api_ps_fila_clinica_acao,
+    api_ps_guias, api_ps_guia_detalhe,
+    api_ps_sinistros, api_ps_sinistro_detalhe,
+    api_ps_reembolsos, api_ps_reembolso_detalhe,
+    api_ps_kpis,
+    # Expansão — Glosas, Coparticipação, Faturamento, Programas, Sinistralidade IA
+    api_ps_glosas, api_ps_glosa_detalhe,
+    api_ps_coparticipacao, api_ps_coparticipacao_detalhe,
+    api_ps_faturamento, api_ps_fatura_detalhe,
+    api_ps_programas, api_ps_programa_detalhe,
+    api_ps_inscricoes, api_ps_inscricao_detalhe,
+    api_ps_sinistralidade_ia,
+    # Enterprise modules
+    api_ps_dashboard_exec,
+    api_ps_sla,
+    api_ps_auditoria,
+    api_ps_contratos, api_ps_contrato_detalhe,
+    api_ps_comunicacao, api_ps_comunicacao_thread,
+    api_ps_telemedicina, api_ps_telemedicina_autorizar,
+    api_ps_odontologia, api_ps_guia_odonto_detalhe,
+    api_ps_regulatorio_gerar,
+)
+from api.views_ia import (
+    api_ia_classificar,
+    api_ia_doencas,
+    api_ia_sintomas,
+    api_ia_populacao,
+    api_ia_calibracao,
+    api_ia_urgencias,
+)
+from api.views_corporativo import (
+    dashboard_empresa_corporativo,
+    api_empresa_corporativo_resumo,
+    api_empresa_corporativo_catalogo,
+    app_colaborador_corporativo,
+    api_colaborador_corporativo_config,
+    api_corporativo_checkin_diario,
+    api_corporativo_checkin_semanal,
+    api_colaborador_trilhas,
+    api_corporativo_rh_resumo,
+    api_corporativo_rh_sincronizar,
+)
+from api.views_sst import (
+    api_sst_dashboard,
+    api_funcionarios, api_funcionario_detalhe,
+    api_asos,
+    api_cats,
+    api_sst_cids_ocupacionais,
+    api_documentos_sst,
+    api_afastamentos_sst, api_afastamento_retorno,
+    api_exames,
+    api_esocial_eventos as api_esocial_eventos_legacy,
+    api_relatorios_sst,
+    api_prontuario_funcionario,
+    api_treinamentos,
+    api_treinamentos_resumo,
+    sst_home_redirect,
+    sst_configuracoes_redirect,
+    sst_funcionarios_page,
+    sst_asos_page,
+    sst_exames_page,
+    sst_afastamentos_page,
+    sst_cats_page,
+    sst_documentos_page,
+    sst_esocial_page,
+    sst_relatorios_page,
+    sst_agendamento_page,
+    sst_funcionarios_novo_redirect,
+    sst_documentos_novo_redirect,
+    sst_prontuario_page,
+    sst_treinamentos_page,
+    sst_normas_page,
+    # new
+    sst_configuracoes_page,
+    api_sst_configuracoes, api_sst_mensagem_massa,
+    sst_epis_page,
+    api_epis_catalogo,
+    api_epis_catalogo_detail,
+    api_epis_entregas,
+    api_epis_devolver,
+    api_epis_pdf_ficha,
+    api_epis_sem_epi,
+    api_aso_pdf,
+    api_cat_pdf,
+    api_prontuario_pdf,
+    api_sst_conformidade,
+    api_sst_conformidade_pdf,
+    api_sst_relatorio_consolidado_pdf,
+    sst_conformidade_page,
+    sst_bem_estar_page,
+)
+from api.views_agendamento_sst import (
+    api_agendamentos_sst,
+    api_agendamento_sst_detalhe,
+    api_agendamentos_sst_kpis,
+)
+from api.views_esocial_sst import (
+    api_esocial_eventos as api_esocial_eventos_sst,
+    api_esocial_gerar_xml,
+    api_esocial_registrar_cat,
+    api_esocial_registrar_aso,
+    api_esocial_registrar_afastamento,
+    api_esocial_marcar_transmitido,
+    api_esocial_kpis,
+    api_aso_compartilhamentos,
+    api_aso_revogar_compartilhamento,
+    portal_aso_publico,
+    api_esocial_transmitir,
+    api_esocial_transmitir_pendentes,
+    api_esocial_certificado,
+)
+from api.views_alertas import api_alertas, alertas_page
+from api.views_executive import api_executive_dashboard, executive_dashboard_page
+from api.views_rede import api_rede_kpis, dashboard_rede_page
+from api.views_compliance import (
+    api_compliance_resumo, api_compliance_trilha,
+    api_compliance_dispositivos, api_compliance_exportar, compliance_page,
+    api_soc2_controles, api_soc2_evidencias, api_rbac_permissoes, api_rbac_atribuir,
+)
+from api.views_hub import hub_view
+from api.views_relatorio import api_relatorio_executivo, relatorio_page
+from api.views_financeiro import api_financeiro_metricas, api_financeiro_cohorts, financeiro_page
+from api.views_observabilidade import api_health, api_slo_status, api_slo_incidentes, observabilidade_page
+from api.views_gtm import api_gtm_funil, api_gtm_pipeline, api_gtm_expansao, gtm_page
+from api.views_eventos import (
+    api_eventos_status, api_eventos_dlq, api_eventos_publicar,
+    api_eventos_reprocessar, api_eventos_subscricoes, eventos_page,
+)
+from api.views_schema import (
+    api_schema_contratos, api_schema_contrato_detalhe,
+    api_schema_versoes, api_schema_validar, api_schema_seed, schema_registry_page,
+)
+from api.views_mlops import (
+    api_mlops_modelos, api_mlops_modelo_detalhe, api_mlops_run,
+    api_mlops_snapshot, api_mlops_drift_alertas, api_mlops_seed, mlops_page,
+)
+from api.views_feature_store import (
+    api_feature_store_features, api_feature_store_dicionario,
+    api_feature_store_qualidade, feature_store_page,
+)
+from api.views_governanca import (
+    api_governanca_semanal, api_governanca_burn_multiple,
+    api_governanca_pricing_valor, api_governanca_ml_fairness,
+    api_governanca_causal_impact, governanca_page,
+)
+from api.views_api_versioning import api_circuit_breaker_status, api_rate_limit_status
+from api.views_contratos import (
+    api_beneficiario_excluir,
+    api_beneficiarios_contrato,
+    api_contrato_saude_detalhe,
+    api_contratos_kpis,
+    api_contratos_saude,
+    contratos_page,
+)
+from api.views_series_epi import (
+    api_ponto_serie_detalhe,
+    api_pontos_serie,
+    api_serie_epidemiologica_detalhe,
+    api_series_dashboard,
+    api_series_epidemiologicas,
+    series_epi_page,
+)
+from api.views_lotes_farmacia import (
+    api_lotes_farmacia,
+    api_lote_farmacia_detalhe,
+
+### ARQUIVO: api/access_control.py ###
+import unicodedata
+from functools import wraps
+from django.shortcuts import redirect, render
+from django.http import JsonResponse
+from .planos import detalhes_pacote
+from .services.auth_session import dono_autenticado_from_request
+
+TODOS_SETORES = ("empresa", "farmacia", "hospital", "governo", "rede", "plano_saude")
+
+
+def get_setor(empresa):
+    """Return the sector/module for this empresa based on its plan."""
+    setor = detalhes_pacote(empresa.pacote_codigo).get("setor", "empresa")
+    # Safety fallback: TIPO_GOVERNO accounts must never land on empresa sector
+    if setor == "empresa" and getattr(empresa, "tipo_conta", "empresa") == "governo":
+        return "governo"
+    return setor
+
+
+def _destino_correto(setor):
+    destinos = {
+        "farmacia": "/farmacia/gestao/",
+        "hospital": "/hospital/gestao/",
+        "governo": "/dashboard-governo/",
+        "rede": "/rede/gestao/",
+        "plano_saude": "/plano-saude/gestao/",
+    }
+    return destinos.get(setor, "/dashboard-empresa/")
+
+
+def requer_setor(*setores):
+    """Decorator for page views. Redirects to correct home if wrong module."""
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            empresa = getattr(request, "empresa", None)
+            if not empresa:
+                return redirect("/login-empresa/")
+            setor = get_setor(empresa)
+            if setor not in setores:
+                return redirect(_destino_correto(setor))
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def api_requer_setor(*setores):
+    """Decorator for API views. Returns 403 JSON if wrong module."""
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            empresa = getattr(request, "empresa", None)
+            if not empresa:
+                return JsonResponse({"erro": "Não autenticado"}, status=401)
+            setor = get_setor(empresa)
+            if setor not in setores:
+                return JsonResponse(
+                    {"erro": f"Módulo não disponível para este plano. Seu módulo: {setor}"},
+                    status=403
+                )
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def requer_dono(view_func):
+    """Decorator for operator-only page views. Requires DonoSaaS auth (owner_token cookie)."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        dono = dono_autenticado_from_request(request)
+        if not dono:
+            empresa = getattr(request, "empresa", None)
+            if empresa:
+                return redirect(_destino_correto(get_setor(empresa)))
+            return redirect("/operacao-central/")
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def api_requer_dono(view_func):
+    """Decorator for operator-only API views. Returns 403 for tenant requests."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        dono = dono_autenticado_from_request(request)
+        if not dono:
+            return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def _texto_normalizado(valor):
+    texto = unicodedata.normalize("NFKD", str(valor or ""))
+    return texto.encode("ascii", "ignore").decode("ascii").lower().strip()
+
+
+def _garantir_permissao_ti():
+    try:
+        from .models import RBACPermissao
+        permissao, _ = RBACPermissao.objects.get_or_create(
+            codigo="plataforma_ti",
+            defaults={
+                "descricao": "Acesso exclusivo à Plataforma TI",
+                "modulo": "ti",
+            },
+        )
+        return permissao
+    except Exception:
+        return None
+
+
+def _usuario_tem_cargo_ti(usuario):
+    texto = _texto_normalizado(getattr(usuario, "cargo", ""))
+    if not texto:
+        return False
+    palavras = set(texto.replace("/", " ").replace("-", " ").split())
+    marcadores = {
+        "ti",
+        "tecnologia",
+        "suporte",
+        "infra",
+        "infraestrutura",
+        "devops",
+        "sistemas",
+        "seguranca",
+        "security",
+        "helpdesk",
+    }
+    if palavras & marcadores:
+        return True
+    return any(
+        trecho in texto
+        for trecho in (
+            "seguranca da informacao",
+            "seguranca informacao",
+            "tecnologia da informacao",
+            "tecnologia informacao",
+        )
+    )
+
+
+def _principal_tem_permissao(empresa, principal, permissao):
+    if not empresa or not principal:
+        return False
+    if principal.__class__.__name__ != "EmpresaUsuario":
+        return False
+    try:
+        from .models import RBACAtribuicao
+        return RBACAtribuicao.objects.filter(
+            empresa=empresa,
+            usuario_id=principal.id,
+            permissao__codigo=permissao,
+            ativo=True,
+        ).exists()
+    except Exception:
+        return False
+
+
+def _atribuir_permissao_ti_por_cargo(empresa, principal):
+    if not empresa or not principal or principal.__class__.__name__ != "EmpresaUsuario":
+        return False
+    if not _usuario_tem_cargo_ti(principal):
+        return False
+    permissao = _garantir_permissao_ti()
+    if not permissao:
+        return False
+    try:
+        from .models import RBACAtribuicao
+        atribuicao, criada = RBACAtribuicao.objects.get_or_create(
+            empresa=empresa,
+            usuario=principal,
+            permissao=permissao,
+            defaults={"concedido_por": "auto:cargo_ti", "ativo": True},
+        )
+        if not criada and not atribuicao.ativo:
+            atribuicao.ativo = True
+            atribuicao.save(update_fields=["ativo", "atualizado_em"])
+        return True
+    except Exception:
+        return False
+
+
+def _empresa_tem_responsavel_ti(empresa):
+    if not empresa:
+        return False
+    try:
+        from .models import RBACAtribuicao
+        return RBACAtribuicao.objects.filter(
+            empresa=empresa,
+            permissao__codigo="plataforma_ti",
+            ativo=True,
+            usuario__ativo=True,
+        ).exists()
+    except Exception:
+        return False
+
+
+def pode_acessar_plataforma_ti(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return False
+
+--- EXTRATO FINAL (últimas linhas dos arquivos principais) ---
+
+
+### ARQUIVO (trecho final): api/models.py ###
+        default="conexa",
+    )
+    link_consulta = models.URLField(blank=True, default="")
+    data_solicitacao = models.DateTimeField(auto_now_add=True)
+    data_agendada = models.DateTimeField(null=True, blank=True)
+    data_realizada = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_PENDENTE)
+    nota_satisfacao = models.IntegerField(null=True, blank=True)  # 1-5
+    observacoes = models.TextField(blank=True, default="")
+    autorizado_por = models.CharField(max_length=100, blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_solicitacao"]
+
+    def __str__(self):
+        return f"Teleconsulta {self.beneficiario.nome} — {self.especialidade} ({self.status})"
+
+
+class BeneficiarioOdonto(models.Model):
+    """Beneficiário de plano odontológico vinculado à operadora."""
+    STATUS_ATIVO = "ativo"
+    STATUS_CARENCIA = "carencia"
+    STATUS_SUSPENSO = "suspenso"
+    STATUS_CANCELADO = "cancelado"
+    STATUS_CHOICES = [
+        (STATUS_ATIVO, "Ativo"),
+        (STATUS_CARENCIA, "Em Carência"),
+        (STATUS_SUSPENSO, "Suspenso"),
+        (STATUS_CANCELADO, "Cancelado"),
+    ]
+
+    empresa = models.ForeignKey(
+        "Empresa", on_delete=models.CASCADE,
+        related_name="beneficiarios_odonto",
+    )
+    nome = models.CharField(max_length=200)
+    cpf = models.CharField(max_length=14, blank=True, default="")
+    data_nascimento = models.DateField(null=True, blank=True)
+    telefone = models.CharField(max_length=20, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
+    plano_odonto = models.CharField(max_length=100, blank=True, default="Odonto Básico")
+    numero_carteirinha = models.CharField(max_length=50, blank=True, default="")
+    data_inicio_vigencia = models.DateField(null=True, blank=True)
+    data_fim_vigencia = models.DateField(null=True, blank=True)
+    data_ultimo_uso = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_ATIVO)
+    dentista_responsavel = models.CharField(max_length=150, blank=True, default="")
+    cro_dentista = models.CharField(max_length=20, blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.nome} — {self.plano_odonto}"
+
+
+class GuiaOdonto(models.Model):
+    """Guia/autorização de procedimento odontológico."""
+    STATUS_PENDENTE = "pendente"
+    STATUS_AUTORIZADO = "autorizado"
+    STATUS_NEGADO = "negado"
+    STATUS_EXECUTADO = "executado"
+    STATUS_CHOICES = [
+        (STATUS_PENDENTE, "Pendente"),
+        (STATUS_AUTORIZADO, "Autorizado"),
+        (STATUS_NEGADO, "Negado"),
+        (STATUS_EXECUTADO, "Executado"),
+    ]
+
+    empresa = models.ForeignKey(
+        "Empresa", on_delete=models.CASCADE,
+        related_name="guias_odonto",
+    )
+    beneficiario = models.ForeignKey(
+        BeneficiarioOdonto, on_delete=models.CASCADE,
+        related_name="guias",
+    )
+    codigo_tuss = models.CharField(max_length=20, blank=True, default="")
+    procedimento = models.CharField(max_length=200)
+    dentista = models.CharField(max_length=150, blank=True, default="")
+    clinica = models.CharField(max_length=200, blank=True, default="")
+    data_solicitacao = models.DateTimeField(auto_now_add=True)
+    data_execucao = models.DateField(null=True, blank=True)
+    valor_estimado = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    valor_pago = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default=STATUS_PENDENTE)
+    justificativa_negacao = models.TextField(blank=True, default="")
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_solicitacao"]
+
+    def __str__(self):
+        return f"{self.procedimento} — {self.beneficiario.nome} ({self.status})"
+
+
+class MensagemPlano(models.Model):
+    """Mensagem trocada entre a operadora e beneficiários ou prestadores."""
+    TIPO_BENEFICIARIO = "beneficiario"
+    TIPO_PRESTADOR = "prestador"
+    TIPO_CHOICES = [
+        (TIPO_BENEFICIARIO, "Beneficiário"),
+        (TIPO_PRESTADOR, "Prestador"),
+    ]
+    CANAL_PLATAFORMA = "plataforma"
+    CANAL_EMAIL = "email"
+    CANAL_SMS = "sms"
+    CANAL_CHOICES = [
+        (CANAL_PLATAFORMA, "Plataforma"),
+        (CANAL_EMAIL, "E-mail"),
+        (CANAL_SMS, "SMS"),
+    ]
+    DIRECAO_SAIDA = "saida"
+    DIRECAO_ENTRADA = "entrada"
+    DIRECAO_CHOICES = [
+        (DIRECAO_SAIDA, "Operadora → Destinatário"),
+        (DIRECAO_ENTRADA, "Destinatário → Operadora"),
+    ]
+
+    empresa = models.ForeignKey(
+        "Empresa", on_delete=models.CASCADE,
+        related_name="mensagens_plano",
+    )
+    tipo_destinatario = models.CharField(max_length=15, choices=TIPO_CHOICES)
+    beneficiario = models.ForeignKey(
+        "BeneficiarioPlano", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="mensagens",
+    )
+    prestador = models.ForeignKey(
+        "PrestadorPlanoSaude", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="mensagens",
+    )
+    canal = models.CharField(max_length=15, choices=CANAL_CHOICES, default=CANAL_PLATAFORMA)
+    direcao = models.CharField(max_length=10, choices=DIRECAO_CHOICES, default=DIRECAO_SAIDA)
+    assunto = models.CharField(max_length=200, blank=True, default="")
+    conteudo = models.TextField()
+    lida = models.BooleanField(default=False)
+    enviado_por = models.CharField(max_length=100, blank=True, default="Operadora")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        dest = self.beneficiario.nome if self.beneficiario else (self.prestador.nome_fantasia if self.prestador else "?")
+        return f"Msg → {dest} ({self.canal})"
+
+### ARQUIVO (trecho final): api/views_plano_saude.py ###
+                "procedimento": g.procedimento,
+                "dentista": g.dentista,
+                "valor": float(g.valor_estimado),
+                "status": g.status,
+            }
+            for g in qs
+        ]
+    elif aba == "rede":
+        # Reutiliza prestadores credenciados com tipo odonto
+        qs = PrestadorPlanoSaude.objects.filter(
+            empresa=empresa, status="credenciado",
+            especialidades__icontains="odonto",
+        )[:30]
+        dados = [{"nome": p.nome_fantasia, "cnes": p.cnes, "cidade": p.cidade, "uf": p.estado} for p in qs]
+
+    return JsonResponse({
+        "vidas": vidas,
+        "dentistas": PrestadorPlanoSaude.objects.filter(empresa=empresa, especialidades__icontains="odonto").count(),
+        "guias_pendentes": guias_pend,
+        "mlr": mlr_odonto,
+        "dados": dados,
+        "aba": aba,
+    })
+
+
+@csrf_exempt
+def api_ps_guia_odonto_detalhe(request, guia_id):
+    """GET/PUT /api/plano-saude/odontologia/guias/<id>/"""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    guia = GuiaOdonto.objects.filter(pk=guia_id, empresa=empresa).first()
+    if not guia:
+        return JsonResponse({"erro": "Não encontrado"}, status=404)
+
+    if request.method in ("PUT", "PATCH"):
+        try:
+            d = json.loads(request.body)
+        except (json.JSONDecodeError, AttributeError):
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        status_anterior = guia.status
+        for campo in ("status", "justificativa_negacao", "valor_pago", "observacoes"):
+            if campo in d:
+                setattr(guia, campo, d[campo])
+        if "data_execucao" in d:
+            guia.data_execucao = d["data_execucao"] or None
+        guia.save()
+        # Dispara email quando status muda para autorizado ou negado
+        if d.get("status") and d["status"] != status_anterior:
+            if guia.status == "autorizado":
+                enviar_email_guia_odonto_aprovada(guia)
+            elif guia.status == "negado":
+                enviar_email_guia_odonto_negada(guia)
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({
+        "id": guia.pk,
+        "beneficiario": guia.beneficiario.nome,
+        "procedimento": guia.procedimento,
+        "codigo_tuss": guia.codigo_tuss,
+        "dentista": guia.dentista,
+        "clinica": guia.clinica,
+        "status": guia.status,
+        "valor_estimado": float(guia.valor_estimado),
+        "valor_pago": float(guia.valor_pago),
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  RELATÓRIOS REGULATÓRIOS — geração de arquivos ANS (DIOPS, TISS, SIB)
+# ════════════════════════════════════════════════════════════════════════════════
+
+@csrf_exempt
+def api_ps_regulatorio_gerar(request):
+    """POST /api/plano-saude/regulatorio/gerar/
+    Gera payload de relatório regulatório ANS.
+    DIOPS e SIB retornam estrutura XML simplificada (produção: usar biblioteca XML).
+    TISS retorna lote de guias no padrão 3.05.00 simplificado.
+    """
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    if request.method != "POST":
+        return JsonResponse({"erro": "POST required"}, status=405)
+
+    try:
+        d = json.loads(request.body)
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    tipo = d.get("tipo", "").upper()
+    ano = d.get("ano", str(date.today().year))
+    trimestre = d.get("trimestre", "1")
+
+    if tipo == "DIOPS":
+        planos = list(PlanoSaude.objects.filter(empresa=empresa).values("nome", "registro_ans", "modalidade"))
+        beneficiarios_ativos = BeneficiarioPlano.objects.filter(plano__empresa=empresa, situacao="ativo").count()
+        payload = {
+            "tipo": "DIOPS",
+            "operadora": empresa.nome,
+            "ano": ano,
+            "trimestre": trimestre,
+            "planos": planos,
+            "beneficiarios_ativos": beneficiarios_ativos,
+            "formato": "XML",
+            "instrucoes": "Importe este JSON em seu sistema de geração XML DIOPS ou use a API ANS diretamente.",
+        }
+
+    elif tipo == "SIB":
+        movimentacoes = list(
+            BeneficiarioPlano.objects.filter(plano__empresa=empresa)
+            .values("nome", "cpf", "numero_carteirinha", "situacao", "data_inicio_vigencia")[:200]
+        )
+        payload = {
+            "tipo": "SIB",
+            "operadora": empresa.nome,
+            "competencia": f"{ano}-{trimestre.zfill(2)}",
+            "total_registros": len(movimentacoes),
+            "movimentacoes": movimentacoes,
+            "formato": "TXT_FIXO",
+        }
+
+    elif tipo == "TISS":
+        guias = list(
+            GuiaAutorizacao.objects.filter(plano__empresa=empresa)
+            .select_related("beneficiario", "prestador")
+            .values("id", "tipo", "status", "valor_estimado", "solicitada_em")[:100]
+        )
+        payload = {
+            "tipo": "TISS",
+            "versao": "3.05.00",
+            "operadora": empresa.nome,
+            "guias": [
+                {
+                    "numero_guia": f"GUI{g['id']:08d}",
+                    "tipo": g["tipo"],
+                    "status": g["status"],
+                    "valor": float(g["valor_estimado"] or 0),
+                    "data": g["solicitada_em"].isoformat() if g["solicitada_em"] else "",
+                }
+                for g in guias
+            ],
+        }
+
+    else:
+        return JsonResponse({"erro": f"Tipo '{tipo}' não suportado. Use: DIOPS, SIB, TISS"}, status=400)
+
+    return JsonResponse({"ok": True, "tipo": tipo, "payload": payload})
+
+### ARQUIVO (trecho final): api/email_service.py ###
+    <p class="sub">Guias fora do prazo ANS (RN 395/452) exigem resolução imediata para evitar penalidades.</p>
+    <div class="err-bar">
+      ⏱ As guias abaixo ultrapassaram o prazo regulatório. O descumprimento de SLA
+      pode resultar em <strong>advertência e multa ANS</strong>.
+    </div>
+    <div style="margin:18px 0">
+      <div class="row" style="font-size:12px;font-weight:700;color:#7b90b0;text-transform:uppercase">
+        <span class="lbl">Guia</span>
+        <span style="flex:1;padding:0 12px">Beneficiário · Tipo</span>
+        <span>Tempo em atraso</span>
+      </div>
+      {linhas_tabela}
+    </div>
+    {mais}
+    <a href="{base_url}/plano-saude/gestao/" class="btn">Resolver agora →</a>
+    <p style="font-size:13px;color:#7b90b0;margin-top:8px">
+      Acesse a aba <strong>Regulação &amp; SLA</strong> no painel para ver todas as guias e tomar ação.
+    </p>
+    """
+    html = _html_base(card, f"SolusCRT · Operadora — {empresa.nome}")
+    text = (
+        f"ALERTA SLA — {qtd} guia(s) com prazo ANS violado\n"
+        f"Operadora: {empresa.nome}\n\n"
+        + "\n".join(f"• {b['id']} | {b['beneficiario']} | {b['tipo']} | {b['aberto_ha']}" for b in breaches[:10])
+        + f"\n\nResolver: {base_url}/plano-saude/gestao/\n"
+    )
+    _send(
+        subject=f"🚨 SLA violado — {qtd} guia{'s' if qtd > 1 else ''} fora do prazo ANS",
+        to=empresa.email,
+        html=html,
+        text=text,
+    )
+
+
+# ── 6. Alerta de Auditoria (Risco de Fraude) ─────────────────────────────────
+
+def enviar_email_auditoria_alerta(empresa, nome_benef: str, score: int, fatores: list) -> None:
+    """Email para a operadora quando um beneficiário atinge score de risco alto/crítico.
+
+    Args:
+        empresa: instância de Empresa (operadora)
+        nome_benef: nome do beneficiário de alto risco
+        score: score de risco 0-100
+        fatores: lista de strings descrevendo os fatores de risco
+    """
+    base_url = _base_url()
+    nivel = "Crítico" if score >= 90 else "Alto"
+    cor_nivel = "#ff4d6d" if score >= 90 else "#ffb347"
+    bar_class = "err-bar" if score >= 90 else "warn-bar"
+    emoji = "🔴" if score >= 90 else "🟡"
+
+    tags_html = "".join(f'<span class="tag">{f}</span>' for f in fatores)
+
+    card = f"""
+    <h1>{emoji} Alerta de auditoria — risco {nivel.lower()}</h1>
+    <p class="sub">O motor de auditoria identificou padrões anômalos que requerem revisão manual.</p>
+    <div class="row"><span class="lbl">Beneficiário</span><strong>{nome_benef}</strong></div>
+    <div class="row"><span class="lbl">Score de risco</span>
+      <strong style="color:{cor_nivel};font-size:20px">{score}/100</strong>
+    </div>
+    <div class="row"><span class="lbl">Nível</span>
+      <span class="badge-{'err' if score >= 90 else 'warn'}">{nivel}</span>
+    </div>
+    <div class="{bar_class}">
+      <strong>Fatores detectados:</strong><br>
+      <div style="margin-top:8px">{tags_html if tags_html else '—'}</div>
+    </div>
+    <div class="info-bar">
+      📋 <strong>Ação recomendada:</strong> Revise o histórico de sinistros dos últimos 90 dias
+      para este beneficiário. Em caso de confirmação de fraude ou abuso, acione o
+      departamento jurídico conforme RN ANS 137.
+    </div>
+    <a href="{base_url}/plano-saude/gestao/" class="btn">Abrir auditoria →</a>
+    <p style="font-size:13px;color:#7b90b0;margin-top:8px">
+      Acesse a aba <strong>Auditoria Médica IA</strong> para ver o dossiê completo.
+    </p>
+    """
+    html = _html_base(card, f"SolusCRT · Operadora — {empresa.nome}")
+    text = (
+        f"ALERTA AUDITORIA — Risco {nivel}\n"
+        f"Operadora: {empresa.nome}\n"
+        f"Beneficiário: {nome_benef}\n"
+        f"Score: {score}/100\n"
+        f"Fatores: {', '.join(fatores)}\n"
+        f"Revisar: {base_url}/plano-saude/gestao/\n"
+    )
+    _send(
+        subject=f"{emoji} Auditoria — risco {nivel.lower()}: {nome_benef} (score {score})",
+        to=empresa.email,
+        html=html,
+        text=text,
+    )
+
+
+# ── 7. Novo Beneficiário Cadastrado ──────────────────────────────────────────
+
+def enviar_email_novo_beneficiario(empresa, beneficiario) -> None:
+    """Email de confirmação para o beneficiário recém-cadastrado no plano.
+
+    Args:
+        empresa: instância de Empresa (operadora)
+        beneficiario: instância de BeneficiarioPlano
+    """
+    email_dest = beneficiario.email
+    if not email_dest:
+        return
+
+    base_url = _base_url()
+    vigencia_str = (
+        beneficiario.data_inicio_vigencia.strftime("%d/%m/%Y")
+        if beneficiario.data_inicio_vigencia else "—"
+    )
+    carteirinha_str = beneficiario.numero_carteirinha or "Será enviada em breve"
+
+    card = f"""
+    <h1>🎉 Bem-vindo ao plano de saúde, {beneficiario.nome.split()[0]}!</h1>
+    <p class="sub">Seu cadastro foi realizado com sucesso. Guarde os dados abaixo.</p>
+    <div class="row"><span class="lbl">Nome completo</span><strong>{beneficiario.nome}</strong></div>
+    <div class="row"><span class="lbl">Plano</span><strong>{beneficiario.plano.nome}</strong></div>
+    <div class="row"><span class="lbl">N° da carteirinha</span><span>{carteirinha_str}</span></div>
+    <div class="row"><span class="lbl">Início da vigência</span><span>{vigencia_str}</span></div>
+    <div class="row"><span class="lbl">Acomodação</span><span style="text-transform:capitalize">{beneficiario.acomodacao}</span></div>
+    <div class="row"><span class="lbl">Status</span><span class="badge-ok">Ativo</span></div>
+    <div class="info-bar">
+      ℹ️ <strong>Período de carência:</strong> alguns procedimentos podem estar sujeitos a carência
+      conforme RN ANS 162. Consulte sua operadora para verificar quais coberturas já estão liberadas.
+    </div>
+    <div class="warn-bar">
+      📱 Baixe o aplicativo ou acesse o portal do beneficiário para agendar consultas,
+      emitir guias e verificar sua rede credenciada.
+    </div>
+    <p style="font-size:13px;color:#7b90b0;margin-top:8px">
+      Dúvidas? Fale com a operadora: <a href="mailto:{empresa.email}" style="color:#00c9a7">{empresa.email}</a>
+    </p>
+    """
+    html = _html_base(card, f"SolusCRT · {empresa.nome} — Plano de Saúde")
+    text = (
+        f"Bem-vindo ao plano de saúde!\n"
+        f"Nome: {beneficiario.nome}\n"
+        f"Plano: {beneficiario.plano.nome}\n"
+        f"Carteirinha: {carteirinha_str}\n"
+        f"Vigência: {vigencia_str}\n"
+        f"Dúvidas: {empresa.email}\n"
+    )
+    _send(
+        subject=f"🎉 Cadastro confirmado — {beneficiario.plano.nome}",
+        to=email_dest,
+        html=html,
+        text=text,
+    )
+
+### ARQUIVO (trecho final): api/tests.py ###
+            data_inicio=date.today(),
+            data_renovacao=date.today() + timedelta(days=365),
+        )
+        enviar_email_novo_contrato(contrato)
+        mock_mail.assert_called_once()
+        kwargs = mock_mail.call_args[1]
+        self.assertEqual(kwargs["recipient_list"], [self.operadora.email])
+        self.assertIn("Empresa Email Teste", kwargs["html_message"])
+
+    @patch("api.email_service.send_mail")
+    def test_email_teleconsulta_autorizada_envia_para_beneficiario(self, mock_mail):
+        from api.email_service import enviar_email_teleconsulta_autorizada
+        tele = TeleconsultaAutorizacao.objects.create(
+            empresa=self.operadora,
+            beneficiario=self.benef,
+            especialidade="Cardiologia",
+            plataforma="conexa",
+            status="autorizado",
+        )
+        enviar_email_teleconsulta_autorizada(tele)
+        mock_mail.assert_called_once()
+        self.assertEqual(mock_mail.call_args[1]["recipient_list"], ["ana@beneficiario.com"])
+
+    @patch("api.email_service.send_mail")
+    def test_email_beneficiario_sem_email_nao_envia(self, mock_mail):
+        from api.email_service import enviar_email_novo_beneficiario
+        benef_sem_email = BeneficiarioPlano.objects.create(
+            plano=self.plano,
+            nome="Sem Email",
+            email="",
+            situacao="ativo",
+        )
+        enviar_email_novo_beneficiario(self.operadora, benef_sem_email)
+        mock_mail.assert_not_called()
+
+    @patch("api.email_service.send_mail")
+    def test_email_sla_breach_sem_breaches_nao_envia(self, mock_mail):
+        from api.email_service import enviar_email_sla_breach_critico
+        enviar_email_sla_breach_critico(self.operadora, [])
+        mock_mail.assert_not_called()
+
+    @patch("api.email_service.send_mail")
+    def test_email_sla_breach_com_breaches_envia(self, mock_mail):
+        from api.email_service import enviar_email_sla_breach_critico
+        breaches = [
+            {"id": "GUI-001", "beneficiario": "Ana", "tipo": "urgência",
+             "prazo": "4h", "aberto_ha": "6h", "prestador": "UPA"},
+        ]
+        enviar_email_sla_breach_critico(self.operadora, breaches)
+        mock_mail.assert_called_once()
+        subject = mock_mail.call_args[1].get("subject") or mock_mail.call_args[0][0]
+        self.assertIn("SLA", subject)
+
+    @patch("api.email_service.send_mail")
+    def test_email_auditoria_alerta_score_critico(self, mock_mail):
+        from api.email_service import enviar_email_auditoria_alerta
+        enviar_email_auditoria_alerta(
+            empresa=self.operadora,
+            nome_benef="Roberto Alto Risco",
+            score=95,
+            fatores=["Alta frequência", "Múltiplos médicos"],
+        )
+        mock_mail.assert_called_once()
+        html = mock_mail.call_args[1]["html_message"]
+        self.assertIn("95", html)
+        self.assertIn("Roberto Alto Risco", html)
+
+    @patch("api.email_service.send_mail")
+    def test_email_guia_odonto_aprovada(self, mock_mail):
+        from api.email_service import enviar_email_guia_odonto_aprovada
+        benef_odonto = BeneficiarioOdonto.objects.create(
+            empresa=self.operadora,
+            nome="Fernanda Odonto",
+            email="fernanda@odonto.com",
+            status="ativo",
+        )
+        guia = GuiaOdonto.objects.create(
+            empresa=self.operadora,
+            beneficiario=benef_odonto,
+            procedimento="Limpeza dental",
+            valor_estimado=200,
+            status="autorizado",
+        )
+        enviar_email_guia_odonto_aprovada(guia)
+        mock_mail.assert_called_once()
+        self.assertEqual(mock_mail.call_args[1]["recipient_list"], ["fernanda@odonto.com"])
+
+    @patch("api.email_service.send_mail")
+    def test_email_falha_nao_propaga_excecao(self, mock_mail):
+        """Email failure nunca deve quebrar o fluxo principal."""
+        from api.email_service import enviar_email_novo_beneficiario
+        mock_mail.side_effect = Exception("SMTP timeout")
+        # Não deve lançar exceção
+        enviar_email_novo_beneficiario(self.operadora, self.benef)
+
+
+class SLABreachCronTests(PlanoSaudeEnterpriseBaseTests):
+    """Testes do management command sla_breach_alertas."""
+
+    def test_dry_run_sem_guias_nao_envia(self):
+        out = StringIO()
+        call_command("sla_breach_alertas", "--dry-run", stdout=out)
+        output = out.getvalue()
+        self.assertIn("0 breach(es)", output)
+
+    @patch("api.email_service.send_mail")
+    def test_dry_run_com_breach_nao_envia_email(self, mock_mail):
+        # Cria guia de urgência vencida
+        guia = GuiaAutorizacao.objects.create(
+            plano=self.plano,
+            beneficiario=self.benef,
+            tipo="urgencia",
+            status="solicitada",
+            valor_estimado=400,
+        )
+        GuiaAutorizacao.objects.filter(pk=guia.pk).update(
+            solicitada_em=timezone.now() - timedelta(hours=10)
+        )
+        out = StringIO()
+        call_command("sla_breach_alertas", "--dry-run", stdout=out)
+        mock_mail.assert_not_called()
+        self.assertIn("[DRY]", out.getvalue())
+
+    @patch("api.email_service.send_mail")
+    def test_producao_com_breach_envia_email(self, mock_mail):
+        guia = GuiaAutorizacao.objects.create(
+            plano=self.plano,
+            beneficiario=self.benef,
+            tipo="urgencia",
+            status="solicitada",
+            valor_estimado=400,
+        )
+        GuiaAutorizacao.objects.filter(pk=guia.pk).update(
+            solicitada_em=timezone.now() - timedelta(hours=10)
+        )
+        call_command("sla_breach_alertas", f"--empresa-id={self.operadora.pk}")
+        mock_mail.assert_called_once()
+
+    def test_empresa_id_filtra_corretamente(self):
+        # Cria segunda operadora sem guias vencidas
+        outra = Empresa.objects.create(
+            nome="Outra Operadora",
+            email="outra@op.com",
+            senha=make_password("123"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+        )
+        out = StringIO()
+        call_command("sla_breach_alertas", f"--empresa-id={outra.pk}", "--dry-run", stdout=out)
+        self.assertIn("0 breach(es)", out.getvalue())
+
+### ARQUIVO (trecho final): api/management/commands/sla_breach_alertas.py ###
+"""
+python manage.py sla_breach_alertas
+
+Detecta guias com SLA ANS violado (RN 395/452) e envia alerta por email
+para a operadora. Registrar como Render Cron Job — roda 2x/dia.
+
+Configurar no render.yaml:
+  schedule: "0 8,14 * * *"  (08h e 14h BRT = 11h e 17h UTC)
+"""
+from datetime import timedelta
+
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+
+from api.email_service import enviar_email_sla_breach_critico
+from api.models import Empresa, GuiaAutorizacao
+
+# Prazos ANS em horas corridas por tipo de guia (RN 395/452 simplificado)
+SLA_MAP = {
+    "urgencia":   4,
+    "urgência":   4,
+    "consulta":   168,   # 7 dias úteis ≈ 168h
+    "exame":      240,   # 10 dias úteis ≈ 240h
+    "internacao": 504,   # 21 dias úteis ≈ 504h
+    "internação": 504,
+    "cirurgia":   504,
+    "quimio":     240,
+    "radio":      240,
+    "home":       240,
+}
+DEFAULT_PRAZO_H = 168  # fallback: 7 dias
+
+
+def _prazo_horas(tipo: str) -> int:
+    tipo_lower = (tipo or "").lower()
+    for key, horas in SLA_MAP.items():
+        if key in tipo_lower:
+            return horas
+    return DEFAULT_PRAZO_H
+
+
+class Command(BaseCommand):
+    help = "Detecta breaches de SLA ANS e envia alerta por email para as operadoras"
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Lista os alertas que seriam enviados sem enviar emails",
+        )
+        parser.add_argument(
+            "--empresa-id",
+            type=int,
+            default=None,
+            help="Processar apenas uma empresa específica (para testes)",
+        )
+
+    def handle(self, *args, **options):
+        dry_run = options["dry_run"]
+        empresa_id = options.get("empresa_id")
+        agora = timezone.now()
+
+        empresas_qs = Empresa.objects.filter(
+            pacote_codigo__in=["plano_saude_operadora", "plano_saude_enterprise"],
+            ativo=True,
+        )
+        if empresa_id:
+            empresas_qs = empresas_qs.filter(pk=empresa_id)
+
+        total_emails = 0
+        total_breaches = 0
+
+        for empresa in empresas_qs:
+            guias_pendentes = GuiaAutorizacao.objects.filter(
+                plano__empresa=empresa,
+                status__in=["solicitada", "em_analise"],
+            ).select_related("beneficiario", "prestador")
+
+            breaches = []
+            for guia in guias_pendentes:
+                prazo_h = _prazo_horas(guia.tipo)
+                horas_abertas = (agora - guia.solicitada_em).total_seconds() / 3600
+                if horas_abertas > prazo_h:
+                    breaches.append({
+                        "id": f"GUI-{guia.pk}",
+                        "beneficiario": guia.beneficiario.nome if guia.beneficiario_id else "—",
+                        "tipo": guia.tipo or "Guia",
+                        "prazo": f"{prazo_h}h",
+                        "aberto_ha": (
+                            f"{int(horas_abertas)}h"
+                            if horas_abertas < 48
+                            else f"{int(horas_abertas / 24)}d"
+                        ),
+                        "prestador": (
+                            guia.prestador.nome_fantasia
+                            if guia.prestador_id
+                            else "—"
+                        ),
+                    })
+
+            if not breaches:
+                continue
+
+            total_breaches += len(breaches)
+
+            if dry_run:
+                self.stdout.write(
+                    f"  [DRY] {empresa.nome}: {len(breaches)} breach(es) → {empresa.email}"
+                )
+                for b in breaches[:5]:
+                    self.stdout.write(f"    • {b['id']} {b['beneficiario']} — {b['aberto_ha']}")
+            else:
+                enviar_email_sla_breach_critico(empresa, breaches)
+                self.stdout.write(
+                    f"  ✉  {empresa.nome}: {len(breaches)} breach(es) → {empresa.email}"
+                )
+                total_emails += 1
+
+        prefixo = "[DRY RUN] " if dry_run else ""
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"{prefixo}sla_breach_alertas concluído — "
+                f"{total_breaches} breach(es), {total_emails} email(s) enviado(s)"
+            )
+        )

@@ -18,8 +18,8 @@
 - [x] **Anexo IV — Segurança e Resposta a Incidentes** — `02_ANEXOS_JURIDICOS/ANEXO_IV_SEGURANCA_RESPOSTA_INCIDENTES_SOLUSCRT.md` *(NOVO)*
 - [x] **Anexo V — Plano de Continuidade e Transição** — `02_ANEXOS_JURIDICOS/ANEXO_V_PLANO_CONTINUIDADE_TRANSICAO_SOLUSCRT.md` *(NOVO)*
 - [x] **Addendum Plano de Saúde/ANS** — `02_ANEXOS_JURIDICOS/ADDENDUM_PLANO_SAUDE_ANS_SOLUSCRT.md` *(NOVO)*
-- [ ] **Marca protocolada no INPI** (classe 42 — SaaS) → ⚠️ Ação manual: protocolar em inpi.gov.br (R$~355 taxa INPI, prazo 18–24 meses para concessão; o protocolo já protege) 
-- [ ] **Registro de software** (Lei 9.609/98) → ⚠️ Ação manual: registrar backend + app no INPI Software (custo ~R$80/obra)
+- [x] **Marca protocolada no INPI** (classe 42 — SaaS) → ✅ Protocolo realizado. Guardar número do protocolo e acompanhar publicação na RPI (Revista da Propriedade Industrial) quinzenalmente em busca.inpi.gov.br
+- [x] **Registro de software** (Lei 9.609/98) → ✅ Protocolado em 21/05/2026. Cod. 730 — R$ 210,00. Hash SHA-256: 2becde6be7c2676a50e14b21ad8fbe81f828a8af5502c0f0fdc8bda8f866dad5. Aguardar certificado (30–60 dias). Guardar protocolo em local seguro.
 
 ---
 

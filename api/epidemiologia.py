@@ -132,7 +132,8 @@ _CACHE_TTL_SECONDS = 15
 _CITY_TO_UF = None
 FOCUS_STABILITY_DAYS = 10
 FOCUS_DECAY_WINDOW_DAYS = 30
-FOCUS_MIN_WEIGHT = 0.01
+FOCUS_MIN_WEIGHT = 0.0
+FOCUS_VISIBILITY_THRESHOLD = 0.1
 
 UF_CODES = {
     11: "RO", 12: "AC", 13: "AM", 14: "RR", 15: "PA", 16: "AP", 17: "TO",
@@ -206,11 +207,14 @@ def _active_case_value(value):
     return round(float(value or 0), 2)
 
 
-def _risk_score(total, max_total, recent_24h, max_recent, growth):
+def _risk_score(total, max_total, recent_24h, max_recent, growth, temporal_retention_percent):
     total_score = (total / max_total) * 55 if max_total else 0
     recent_score = (recent_24h / max_recent) * 25 if max_recent else 0
     growth_score = min(max(growth, 0), 100) * 0.2
-    return round(total_score + recent_score + growth_score, 2)
+    retention_factor = max(min(float(temporal_retention_percent or 0) / 100, 1.0), 0.0)
+    # Resfria o foco conforme os casos envelhecem, sem zerar surtos realmente recentes.
+    temporal_factor = 0.25 + (0.75 * (retention_factor ** 2))
+    return round((total_score + recent_score + growth_score) * temporal_factor, 2)
 
 
 def _risk_level(score):
@@ -229,6 +233,16 @@ def _area_label(level, row):
     if level == "municipio":
         return f"{row['cidade']}/{row['estado']}"
     return row["estado"]
+
+
+def _stable_area_id(level, *parts):
+    normalized_parts = []
+
+    for part in parts:
+        value = " ".join(str(part or "").strip().lower().split())
+        normalized_parts.append(value or "_")
+
+    return "|".join([level, *normalized_parts])
 
 
 def _focus_message(dominant_symptom, dominant_disease, risk_level):
@@ -629,7 +643,11 @@ def _build_layer_queryset(group_fields):
         row["active_cases"] = _active_case_value(active_by_group.get(key, row["total"] or 0))
         row["temporal_retention_percent"] = _safe_pct(row["active_cases"], row["raw_total_cases"])
 
-    return sorted(rows, key=lambda item: item["active_cases"], reverse=True)
+    visible_rows = [
+        row for row in rows
+        if float(row.get("active_cases") or 0) > FOCUS_VISIBILITY_THRESHOLD
+    ]
+    return sorted(visible_rows, key=lambda item: item["active_cases"], reverse=True)
 
 
 def _serialize_layer(level, group_fields):
@@ -638,7 +656,7 @@ def _serialize_layer(level, group_fields):
     max_recent = max((row["recent_24h"] for row in rows), default=1)
     areas = []
 
-    for index, row in enumerate(rows, start=1):
+    for row in rows:
         raw_total_cases = int(row.get("raw_total_cases", row["total"] or 0) or 0)
         total_cases = float(row.get("active_cases", raw_total_cases) or 0)
         normalized_state = _normalize_state(row.get("cidade"), row.get("estado"))
@@ -661,6 +679,7 @@ def _serialize_layer(level, group_fields):
             int(row["recent_24h"] or 0),
             max_recent,
             growth,
+            row.get("temporal_retention_percent", 100),
         )
         risk_level = _risk_level(risk_score)
         surveillance_index = _surveillance_index(total_cases, int(row["recent_24h"] or 0), growth, max_total, max_recent)
@@ -669,7 +688,13 @@ def _serialize_layer(level, group_fields):
         hospital_load_estimate = _hospital_load_estimate(total_cases, growth, dominant_symptom)
 
         area = {
-            "id": f"{level}-{index}",
+            "id": _stable_area_id(
+                level,
+                *[
+                    normalized_state if field == "estado" else row.get(field)
+                    for field in group_fields
+                ],
+            ),
             "level": level,
             "nome": row[group_fields[-1]],
             "cidade": row.get("cidade"),
@@ -754,9 +779,10 @@ def _build_state_layer(municipios):
     max_recent = max((row["recent_24h"] for row in rows), default=1)
     states = []
 
-    for index, row in enumerate(sorted(rows, key=lambda item: item["total_cases"], reverse=True), start=1):
+    for row in sorted(rows, key=lambda item: item["total_cases"], reverse=True):
         total_cases = row["total_cases"]
         raw_total_cases = int(row.get("raw_total_cases") or 0)
+        temporal_retention_percent = _safe_pct(total_cases, raw_total_cases)
         symptom_breakdown = _serialize_symptoms(row["symptom_counts"], raw_total_cases)
         dominant_symptom = symptom_breakdown[0]["label"] if symptom_breakdown else "Sem dados"
         probable_diseases = _build_disease_probabilities(row["symptom_counts"], raw_total_cases)
@@ -766,7 +792,14 @@ def _build_state_layer(municipios):
         probable_diseases = _attach_active_probabilities(probable_diseases, activity_percent)
         dominant_disease = probable_diseases[0]["name"] if probable_diseases else "Indefinido"
         growth = _safe_growth(row["recent_24h"], row["previous_24h"])
-        risk_score = _risk_score(total_cases, max_total, row["recent_24h"], max_recent, growth)
+        risk_score = _risk_score(
+            total_cases,
+            max_total,
+            row["recent_24h"],
+            max_recent,
+            growth,
+            temporal_retention_percent,
+        )
         weight = row["weight"] or 1
         risk_level = _risk_level(risk_score)
         surveillance_index = _surveillance_index(total_cases, row["recent_24h"], growth, max_total, max_recent)
@@ -775,7 +808,7 @@ def _build_state_layer(municipios):
         hospital_load_estimate = _hospital_load_estimate(total_cases, growth, dominant_symptom)
 
         states.append({
-            "id": f"estado-{index}",
+            "id": _stable_area_id("estado", row["estado"]),
             "level": "estado",
             "nome": row["estado"],
             "cidade": None,
@@ -787,7 +820,7 @@ def _build_state_layer(municipios):
             "active_cases": _active_case_value(total_cases),
             "raw_total_cases": raw_total_cases,
             "total_registros_30d": raw_total_cases,
-            "temporal_retention_percent": _safe_pct(total_cases, raw_total_cases),
+            "temporal_retention_percent": temporal_retention_percent,
             "recent_24h": row["recent_24h"],
             "previous_24h": row["previous_24h"],
             "growth_percent": growth,

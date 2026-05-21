@@ -1149,12 +1149,13 @@
       `;
     }
 
-    function selectArea(area) {
+    function selectArea(area, options = {}) {
+      const { shouldCenter = true } = options;
       selectedAreaId = area.id;
       renderFocusList();
       renderDetails(area);
 
-      if (area.latitude && area.longitude) {
+      if (shouldCenter && area.latitude && area.longitude) {
         map.flyTo([area.latitude, area.longitude], levelFilter.value === "bairros" ? 11 : levelFilter.value === "municipios" ? 8 : 5, {
           duration: 0.8,
         });
