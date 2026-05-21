@@ -539,7 +539,10 @@ def _build_disease_probabilities(symptom_counts, total_cases):
             if weight >= 0:
                 score += rate * weight
             else:
-                score += (1 - rate) * abs(weight) * 0.25
+                # Ausencia do sintoma contrario e neutra.
+                # Penalidade so deve existir quando o sintoma que aponta contra
+                # a doenca aparece de fato no conjunto observado.
+                score += rate * weight
 
         raw_scores[disease] = max(score, 0.01)
 

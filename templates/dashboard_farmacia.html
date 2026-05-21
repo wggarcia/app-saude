@@ -468,8 +468,9 @@
     }
 
     .bairro-hotspot {
-      min-width: 12px;
-      height: 12px;
+      width: 14px;
+      height: 14px;
+      display: block;
       border-radius: 999px;
       border: 2px solid rgba(255, 255, 255, 0.95);
       box-shadow: 0 0 18px rgba(255, 122, 24, 0.55);
@@ -1288,6 +1289,13 @@
       }
     }
 
+    function bindHoverTooltip(layer, label) {
+      layer.bindTooltip(label, { sticky: true, direction: "top", opacity: 0.96 });
+      layer.on("mouseover", () => layer.openTooltip());
+      layer.on("mouseout", () => layer.closeTooltip());
+      return layer;
+    }
+
     function addPulseMarker(area) {
       const marker = L.circleMarker([area.latitude, area.longitude], {
         radius: levelFilter.value === "bairros" ? 8 : 10,
@@ -1299,7 +1307,7 @@
       });
 
       marker.bindPopup(areaPopup(area));
-      marker.bindTooltip(`${area.label} | ${area.dominant_symptom}`, { sticky: true });
+      bindHoverTooltip(marker, `${area.label} | ${area.dominant_symptom}`);
       marker.on("click", () => selectArea(area));
       marker.addTo(markersLayer);
       pulseMarkers.push(marker);
@@ -1344,12 +1352,12 @@
             icon: L.divIcon({
               className: "",
               html: `<div class="bairro-hotspot" style="background:${color};"></div>`,
-              iconSize: [16, 16],
-              iconAnchor: [8, 8],
+              iconSize: [22, 22],
+              iconAnchor: [11, 11],
             }),
           });
 
-          hotspot.bindTooltip(`${area.label} | ${area.dominant_symptom}`, { sticky: true });
+          bindHoverTooltip(hotspot, `${area.label} | ${area.dominant_symptom}`);
           hotspot.bindPopup(areaPopup(area));
           hotspot.on("click", () => selectArea(area));
           hotspot.addTo(markersLayer);
@@ -1365,7 +1373,7 @@
           weight: modeFilter.value === "surtos" ? 3.2 : 2.2,
         });
 
-        circle.bindTooltip(`${area.label} | ${area.dominant_symptom}`, { sticky: true });
+        bindHoverTooltip(circle, `${area.label} | ${area.dominant_symptom}`);
         circle.bindPopup(areaPopup(area));
         circle.on("click", () => selectArea(area));
         circle.addTo(circlesLayer);

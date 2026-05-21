@@ -2217,6 +2217,36 @@ class PublicApiTests(TestCase):
         self.assertIn("doencas_provaveis", hotspot)
         self.assertTrue(hotspot["doencas_provaveis"])
 
+    def test_probabilidades_nao_puxam_hantavirose_em_quadro_generico_sem_respiratorio(self):
+        probabilidades = epidemiologia._build_disease_probabilities(
+            {
+                "febre": 10,
+                "dor_corpo": 10,
+                "cansaco": 10,
+                "tosse": 0,
+                "falta_ar": 0,
+            },
+            10,
+        )
+
+        self.assertTrue(probabilidades)
+        self.assertNotEqual(probabilidades[0]["name"], "Hantavirose")
+
+    def test_probabilidades_priorizam_hantavirose_quando_assinatura_respiratoria_esta_presente(self):
+        probabilidades = epidemiologia._build_disease_probabilities(
+            {
+                "febre": 10,
+                "tosse": 10,
+                "falta_ar": 10,
+                "cansaco": 10,
+                "dor_corpo": 6,
+            },
+            10,
+        )
+
+        self.assertTrue(probabilidades)
+        self.assertEqual(probabilidades[0]["name"], "Hantavirose")
+
     def test_envios_publicos_de_dispositivos_distintos_na_mesma_rede_nao_bloqueiam_primeiro_volume(self):
         payload = {
             "febre": True,

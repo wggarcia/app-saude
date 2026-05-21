@@ -1503,6 +1503,13 @@ function _t(msg, tipo) {
       }
     }
 
+    function bindHoverTooltip(layer, label) {
+      layer.bindTooltip(label, { sticky: true, direction: "top", opacity: 0.96 });
+      layer.on("mouseover", () => layer.openTooltip());
+      layer.on("mouseout", () => layer.closeTooltip());
+      return layer;
+    }
+
     function selectArea(area, options = {}) {
       const { shouldCenter = true } = options;
       selectedAreaId = area.id;
@@ -1547,18 +1554,22 @@ function _t(msg, tipo) {
         });
 
         marker.bindPopup(areaPopup(area));
-        marker.bindTooltip(`${area.label} | P${area.response_priority}`, { sticky: true });
+        bindHoverTooltip(marker, `${area.label} | P${area.response_priority}`);
         marker.on("click", () => selectArea(area));
         marker.addTo(markersLayer);
 
         if (!isBairroView) {
-          L.circle([area.latitude, area.longitude], {
+          const focusCircle = L.circle([area.latitude, area.longitude], {
             radius: area.radius,
             color: riskColor(area.risk_level),
             fillColor: riskColor(area.risk_level),
             fillOpacity: 0.16,
             weight: 2.1,
-          }).addTo(circlesLayer).bindPopup(areaPopup(area));
+          });
+          bindHoverTooltip(focusCircle, `${area.label} | P${area.response_priority}`);
+          focusCircle.bindPopup(areaPopup(area));
+          focusCircle.on("click", () => selectArea(area));
+          focusCircle.addTo(circlesLayer);
         }
       });
 
