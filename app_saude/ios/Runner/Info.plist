@@ -67,6 +67,12 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 		<string>O SolusCRT Saude usa sua localizacao enquanto o app esta aberto para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial.</string>
 
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>O SolusCRT Saude usa sua localizacao para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial. A localizacao e usada somente enquanto o app esta em uso.</string>
+
+	<key>NSLocationAlwaysUsageDescription</key>
+		<string>O SolusCRT Saude usa sua localizacao para mostrar riscos epidemiologicos da sua regiao e enviar sintomas com recorte territorial.</string>
+
 	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
 	<dict>
 		<key>RegistrarSintomaAtual</key>
