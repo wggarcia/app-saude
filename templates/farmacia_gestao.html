@@ -1101,7 +1101,7 @@ async function salvarItem() {
     unidade_medida: v('iUnidade'), estoque_minimo: parseInt(v('iEstMin')||0),
     descricao: v('iDesc'), fornecedor_id: v('iFornecedor')||null,
   };
-  if (!body.nome) return alert('Nome obrigatório');
+  if (!body.nome) return _t('Nome obrigatório','warn');
   await api('/api/farmacia/itens/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalItem');
   carregarEstoque(); carregarKpis();
@@ -1119,7 +1119,7 @@ async function salvarDispensacao() {
     paciente_cpf: v('dCpf'), quantidade: parseInt(v('dQtd')||1),
     responsavel: v('dResp'), observacoes: v('dObs'),
   };
-  if (!body.item_id || !body.paciente_nome) return alert('Item e Paciente obrigatórios');
+  if (!body.item_id || !body.paciente_nome) return _t('Item e Paciente obrigatórios','warn');
   await api('/api/farmacia/dispensacoes/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalDisp');
   carregarDispensacoes(); carregarEstoque(); carregarMovimentos(); carregarKpis();
@@ -1139,7 +1139,7 @@ async function salvarMovimento() {
     quantidade: parseInt(v('mQtd')||1),
     responsavel: v('mResp'), motivo: v('mMotivo'),
   };
-  if (!body.item_id) return alert('Selecione o item');
+  if (!body.item_id) return _t('Selecione o item','warn');
   await api('/api/farmacia/movimentos/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalMov');
   carregarEstoque(); carregarMovimentos(); carregarKpis();
@@ -1151,7 +1151,7 @@ function abrirModalFornecedor() {
 }
 async function salvarFornecedor() {
   const body = {nome:v('fNome'),cnpj:v('fCnpj'),contato:v('fContato'),telefone:v('fTel'),email:v('fEmail')};
-  if (!body.nome) return alert('Nome obrigatório');
+  if (!body.nome) return _t('Nome obrigatório','warn');
   await api('/api/farmacia/fornecedores/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalForn');
   carregarFornecedores();
@@ -1188,7 +1188,7 @@ async function salvarPedido() {
     fornecedor_id: v('pForn') ? parseInt(v('pForn')) : null,
     observacoes: v('pObs'), itens,
   };
-  if (!itens.length) return alert('Adicione ao menos 1 item');
+  if (!itens.length) return _t('Adicione ao menos 1 item','warn');
   await api('/api/farmacia/pedidos/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalPed');
   carregarPedidos(); carregarKpis();
@@ -1263,13 +1263,13 @@ async function salvarPaciente() {
     endereco: v('pacEnd'), alergias: v('pacAlergias'),
     condicoes_cronicas: v('pacCondicoes'), medicamentos_uso_continuo: v('pacMedUso'),
   };
-  if (!body.nome) return alert('Nome obrigatório');
+  if (!body.nome) return _t('Nome obrigatório','warn');
   const editId = document.getElementById('modalPaciente').dataset.editId;
   if (editId) {
     await api(`/api/farmacia/pacientes/${editId}/`, {method:'PUT', body:JSON.stringify(body)});
   } else {
     const res = await api('/api/farmacia/pacientes/', {method:'POST', body:JSON.stringify(body)});
-    if (res.erro) return alert(res.erro);
+    if (res.erro) return _t(res.erro,'err');
   }
   fecharModal('modalPaciente');
   carregarPacientes(); carregarKpis();
@@ -1328,7 +1328,7 @@ async function salvarReceita() {
     quantidade: parseInt(v('recQtd')||1),
     posologia: v('recPosologia'),
   };
-  if (!body.data_emissao) return alert('Data de emissão obrigatória');
+  if (!body.data_emissao) return _t('Data de emissão obrigatória','warn');
   await api('/api/farmacia/receitas/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalReceita');
   carregarReceitas(); carregarKpis();
@@ -1482,8 +1482,8 @@ async function salvarDescarte() {
     responsavel: v('descResp'), empresa_descarte: v('descEmpresa'),
     numero_manifesto: v('descManifesto'), observacoes: v('descObs'),
   };
-  if (!body.item_id) return alert('Selecione o item');
-  if (!body.quantidade || body.quantidade < 1) return alert('Informe a quantidade');
+  if (!body.item_id) return _t('Selecione o item','warn');
+  if (!body.quantidade || body.quantidade < 1) return _t('Informe a quantidade','warn');
   if (!confirm(`Confirmar descarte de ${body.quantidade} unidade(s)? Esta ação irá baixar o estoque.`)) return;
   await api('/api/farmacia/descartes/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalDescarte');
@@ -1655,9 +1655,9 @@ async function salvarLote() {
     nota_fiscal: v('lNF'),
     fornecedor_id: v('lForn') ? parseInt(v('lForn')) : null,
   };
-  if (!body.item_id) return alert('Selecione o medicamento');
-  if (!body.numero_lote) return alert('Informe o número do lote');
-  if (!body.data_validade) return alert('Informe a data de validade');
+  if (!body.item_id) return _t('Selecione o medicamento','warn');
+  if (!body.numero_lote) return _t('Informe o número do lote','warn');
+  if (!body.data_validade) return _t('Informe a data de validade','warn');
   await api('/api/farmacia/lotes/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalLote');
   carregarLotes(); carregarEstoque(); carregarKpis();
@@ -1811,7 +1811,7 @@ function renderMedsInteracao() {
 
 async function verificarInteracoesIA() {
   if (_medsInteracaoSelecionados.length < 2) {
-    alert('Adicione ao menos 2 medicamentos para verificar interações.');
+    _t('Adicione ao menos 2 medicamentos para verificar interações.','warn');
     return;
   }
   const d = await api('/api/farmacia/ia/interacoes/', {
@@ -1968,7 +1968,7 @@ async function salvarTransferencia() {
   const medId = document.getElementById('tMedicamento').value;
   const fornId = document.getElementById('tFornecedora').value;
   const qtd = document.getElementById('tQuantidade').value;
-  if (!medId || !fornId || !qtd) { alert('Preencha medicamento, unidade fornecedora e quantidade.'); return; }
+  if (!medId || !fornId || !qtd) { _t('Preencha medicamento, unidade fornecedora e quantidade.','warn'); return; }
   const body = {
     medicamento_id: parseInt(medId),
     empresa_fornecedora_id: parseInt(fornId),
@@ -2089,6 +2089,18 @@ async function carregarAuditoria() {
 carregarKpis();
 carregarEstoque();
 carregarFornecedores(); // preload para selects
+
+function _t(msg, tipo) {
+  const el = document.createElement('div');
+  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'ok' ? '#00e5b0' : '#ffb347';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
+    'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
+    'white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
 </script>
 <script>(function tabGuard(){function cookieVal(n){var m=document.cookie.match("(^|;)\\s*"+n+"\\s*=\\s*([^;]+)");return m?m.pop():""}var rk="_tab_sync_farm";async function syncTab(){var ssId=sessionStorage.getItem("empresa_id");var ckId=cookieVal("empresa_id");if(!ssId||ssId===ckId)return;var token=sessionStorage.getItem("auth_token")||sessionStorage.getItem("token");if(!token)return;try{var res=await fetch("/api/sessao/aba",{method:"POST",headers:{Authorization:"Bearer "+token},credentials:"same-origin"});if(!res.ok)return;var p=await res.json();if(sessionStorage.getItem(rk)==="1"){sessionStorage.removeItem(rk);return}sessionStorage.setItem(rk,"1");window.location.replace(p.destination||"/")}catch(e){}}syncTab();window.addEventListener("focus",syncTab);document.addEventListener("visibilitychange",function(){if(!document.hidden)syncTab()})}());</script>
 </body>

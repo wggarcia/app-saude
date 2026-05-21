@@ -463,7 +463,7 @@ async function revogarDev(id) {
     await fetch(`/api/revogar_dispositivo/${id}`, {method:'DELETE'});
     window._devsLoaded = false;
     loadDispositivos();
-  } catch(e) { alert('Erro ao revogar: ' + e.message); }
+  } catch(e) { _t('Erro ao revogar: ' + e.message,'err'); }
 }
 
 // ── LGPD ──────────────────────────────────────────────────────────────────────
@@ -543,6 +543,18 @@ async function loadLGPD() {
 function fmt(n) { return n != null ? Number(n).toLocaleString('pt-BR') : '—'; }
 function escHtml(s) {
   return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function _t(msg, tipo) {
+  const el = document.createElement('div');
+  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'ok' ? '#00e5b0' : '#ffb347';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
+    'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
+    'white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
 }
 </script>
 </body>

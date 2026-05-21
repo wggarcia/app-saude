@@ -707,9 +707,9 @@ async function submitASO(){
       observacoes:document.getElementById("aso-obs").value.trim(),
     })});
     const d=await r.json();
-    if(r.ok){closeModal();alert("ASO emitido com sucesso!");loadDashboard();}
-    else alert(d.erro||"Erro ao emitir ASO");
-  }catch(e){alert("Erro de conexão");}
+    if(r.ok){closeModal();_t("ASO emitido com sucesso!",'ok');loadDashboard();}
+    else _t(d.erro||"Erro ao emitir ASO",'err');
+  }catch(e){_t("Erro de conexão",'err');}
   btn.textContent="Emitir ASO";btn.disabled=false;
 }
 
@@ -727,9 +727,9 @@ async function submitCAT(){
       descricao:document.getElementById("cat-desc").value.trim(),
     })});
     const d=await r.json();
-    if(r.ok){closeModal();alert("CAT registrada com sucesso! Lembre-se de transmitir pelo eSocial.");loadDashboard();}
-    else alert(d.erro||"Erro ao registrar CAT");
-  }catch(e){alert("Erro de conexão");}
+    if(r.ok){closeModal();_t("CAT registrada com sucesso! Lembre-se de transmitir pelo eSocial.",'ok');loadDashboard();}
+    else _t(d.erro||"Erro ao registrar CAT",'err');
+  }catch(e){_t("Erro de conexão",'err');}
   btn.textContent="Registrar CAT";btn.disabled=false;
 }
 
@@ -746,9 +746,9 @@ async function submitFuncionario(){
       classe_risco:document.getElementById("fn-risco").value,
     })});
     const d=await r.json();
-    if(r.ok){closeModal();alert("Funcionário cadastrado!");loadDashboard();}
-    else alert(d.erro||"Erro ao cadastrar");
-  }catch(e){alert("Erro de conexão");}
+    if(r.ok){closeModal();_t("Funcionário cadastrado!",'ok');loadDashboard();}
+    else _t(d.erro||"Erro ao cadastrar",'err');
+  }catch(e){_t("Erro de conexão",'err');}
   btn.textContent="Cadastrar";btn.disabled=false;
 }
 
@@ -929,6 +929,18 @@ async function loadDashboard(){
 
 loadDashboard();
 setInterval(loadDashboard,90000);
+
+function _t(msg, tipo) {
+  const el = document.createElement('div');
+  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'ok' ? '#00e5b0' : '#ffb347';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
+    'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
+    'white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
 </script>
 </body>
 </html>

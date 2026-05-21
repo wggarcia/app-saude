@@ -1816,7 +1816,7 @@ async function loadTrial() {
 async function ativarTrial() {
   const d = await api("/api/gestao/trial/ativar", {method:"POST"});
   if (d.ok) loadTrial();
-  else alert(d.erro || "Erro ao ativar trial");
+  else toast(d.erro || "Erro ao ativar trial",'err');
 }
 
 // ── ONBOARDING ────────────────────────────────────────────────────────────────
@@ -2364,14 +2364,14 @@ async function criarNovoUsuario() {
   const email = jq('nu-email').value.trim();
   const senha = jq('nu-senha').value;
   const cargo = jq('nu-cargo').value.trim();
-  if (!nome || !email || !senha) { alert('Nome, e-mail e senha são obrigatórios'); return; }
+  if (!nome || !email || !senha) { toast('Nome, e-mail e senha são obrigatórios','warn'); return; }
   const d = await api('/api/usuarios/criar', {method:'POST', body: JSON.stringify({nome, email, senha, cargo})});
   if (d.ok || d.id) {
     document.getElementById('modal-novo-usuario')?.remove();
     showToast('toastSeguranca', `Usuário ${nome} criado com sucesso`, 'ok');
     await loadUsuarios();
   } else {
-    alert(d.erro || 'Erro ao criar usuário');
+    toast(d.erro || 'Erro ao criar usuário','err');
   }
 }
 
@@ -2469,7 +2469,7 @@ async function loadBudget() {
 }
 
 function exportarBudget() {
-  if (!_lancamentos.length) { alert('Nenhum lançamento para exportar.'); return; }
+  if (!_lancamentos.length) { toast('Nenhum lançamento para exportar.','warn'); return; }
   const header = ['Data', 'Descricao', 'Centro de Custo', 'Categoria', 'Valor', 'Tipo'];
   const rows = _lancamentos.map(l => [l.data||'', l.descricao||'', l.centro_custo||'', l.categoria||'', l.valor||'', l.tipo||'']);
   const csv = [header.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n');
@@ -2574,7 +2574,7 @@ function rhArquivoSelecionado(e) {
   if (fn && _rhImportFile) fn.textContent = _rhImportFile.name;
 }
 async function processarImportacaoRH() {
-  if (!_rhImportFile) { alert('Selecione um arquivo CSV primeiro.'); return; }
+  if (!_rhImportFile) { toast('Selecione um arquivo CSV primeiro.','warn'); return; }
   const tipo = document.getElementById('rhTipoImport')?.value || 'colaboradores';
   const progress = document.getElementById('rhImportProgress');
   const bar = document.getElementById('rhImportBar');

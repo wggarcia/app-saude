@@ -2091,7 +2091,7 @@ function abrirModalPlano() {
 
 async function salvarPlano() {
   var body = {nome:v('plNome'),registro_ans:v('plAns'),cnpj:v('plCnpj'),modalidade:v('plModalidade'),abrangencia:v('plAbrangencia'),descricao:v('plDesc')};
-  if (!body.nome) { alert('Nome do plano e obrigatorio'); return; }
+  if (!body.nome) { showToastPS('Nome do plano e obrigatorio','warn'); return; }
   await api('/api/plano-saude/planos', {method:'POST',body:JSON.stringify(body)});
   fecharModal('modalPlano');
   carregarPlanos();
@@ -2172,8 +2172,8 @@ async function salvarBenef() {
     data_nascimento: v('bfNasc')||null, sexo: v('bfSexo'), acomodacao: v('bfAcomodacao'),
     data_inicio_vigencia: v('bfInicioVigencia')||null
   };
-  if (!body.nome||!body.cpf) { alert('Nome e CPF sao obrigatorios'); return; }
-  if (!body.plano_id) { alert('Selecione o plano'); return; }
+  if (!body.nome||!body.cpf) { showToastPS('Nome e CPF sao obrigatorios','warn'); return; }
+  if (!body.plano_id) { showToastPS('Selecione o plano','warn'); return; }
   await api('/api/plano-saude/beneficiarios', {method:'POST',body:JSON.stringify(body)});
   fecharModal('modalBenef');
   _beneficiariosPorPlano = {};
@@ -2288,7 +2288,7 @@ async function salvarPrestador() {
     observacoes: v('prObs'),
     portal_ativo: document.getElementById('prPortalAtivo').checked
   };
-  if (!body.nome_fantasia) { alert('Nome fantasia e obrigatorio'); return; }
+  if (!body.nome_fantasia) { showToastPS('Nome fantasia e obrigatorio','warn'); return; }
   var url = _prestadorEditId ? '/api/plano-saude/prestadores/'+_prestadorEditId : '/api/plano-saude/prestadores';
   var method = _prestadorEditId ? 'PATCH' : 'POST';
   await api(url, {method:method, body:JSON.stringify(body)});
@@ -2445,9 +2445,9 @@ async function salvarGuia() {
     documentos_pendentes: v('guDocs'),
     valor_estimado: v('guValor') ? parseFloat(v('guValor')) : null
   };
-  if (!body.plano_id) { alert('Selecione o plano'); return; }
-  if (!body.beneficiario_id) { alert('Selecione o beneficiario'); return; }
-  if (!body.descricao_procedimento) { alert('Descricao do procedimento e obrigatoria'); return; }
+  if (!body.plano_id) { showToastPS('Selecione o plano','warn'); return; }
+  if (!body.beneficiario_id) { showToastPS('Selecione o beneficiario','warn'); return; }
+  if (!body.descricao_procedimento) { showToastPS('Descricao do procedimento e obrigatoria','warn'); return; }
   await api('/api/plano-saude/guias', {method:'POST',body:JSON.stringify(body)});
   fecharModal('modalGuia');
   carregarGuias();
@@ -2502,10 +2502,10 @@ async function salvarSinistro() {
     valor_total: v('siValor') ? parseFloat(v('siValor')) : null,
     status: v('siStatus'), descricao: v('siDescricao'), observacao: v('siObservacao')
   };
-  if (!body.plano_id) { alert('Selecione o plano'); return; }
-  if (!body.beneficiario_id) { alert('Selecione o beneficiario'); return; }
-  if (!body.data_atendimento) { alert('Data do atendimento e obrigatoria'); return; }
-  if (!body.valor_total) { alert('Valor total e obrigatorio'); return; }
+  if (!body.plano_id) { showToastPS('Selecione o plano','warn'); return; }
+  if (!body.beneficiario_id) { showToastPS('Selecione o beneficiario','warn'); return; }
+  if (!body.data_atendimento) { showToastPS('Data do atendimento e obrigatoria','warn'); return; }
+  if (!body.valor_total) { showToastPS('Valor total e obrigatorio','warn'); return; }
   await api('/api/plano-saude/sinistros', {method:'POST',body:JSON.stringify(body)});
   fecharModal('modalSinistro');
   carregarSinistros();
@@ -2560,9 +2560,9 @@ async function salvarReembolso() {
     banco: v('reeBanco'), agencia: v('reeAgencia'), conta: v('reeConta'),
     descricao: v('reeDescricao')
   };
-  if (!body.plano_id) { alert('Selecione o plano'); return; }
-  if (!body.beneficiario_id) { alert('Selecione o beneficiario'); return; }
-  if (!body.valor_solicitado) { alert('Valor solicitado e obrigatorio'); return; }
+  if (!body.plano_id) { showToastPS('Selecione o plano','warn'); return; }
+  if (!body.beneficiario_id) { showToastPS('Selecione o beneficiario','warn'); return; }
+  if (!body.valor_solicitado) { showToastPS('Valor solicitado e obrigatorio','warn'); return; }
   await api('/api/plano-saude/reembolsos', {method:'POST',body:JSON.stringify(body)});
   fecharModal('modalReembolso');
   carregarReembolsos();
@@ -2616,7 +2616,7 @@ async function salvarGlosa() {
     valor_glosado: parseFloat(document.getElementById('glValorGlosado').value) || 0,
     motivo: document.getElementById('glMotivo').value,
   };
-  if (!payload.sinistro_id || !payload.descricao) { alert('Sinistro ID e descricao sao obrigatorios'); return; }
+  if (!payload.sinistro_id || !payload.descricao) { showToastPS('Sinistro ID e descricao sao obrigatorios','warn'); return; }
   var r = await api('/api/plano-saude/glosas', {method:'POST', body:JSON.stringify(payload)});
   if (r && r.glosa) { fecharModal('modalGlosa'); carregarGlosas(); }
 }
@@ -2663,7 +2663,7 @@ async function salvarCopart() {
     teto_mensal: document.getElementById('cpTetoMensal').value || null,
     ativo: document.getElementById('cpAtivo').value === 'true',
   };
-  if (!payload.plano_id) { alert('Selecione um plano'); return; }
+  if (!payload.plano_id) { showToastPS('Selecione um plano','warn'); return; }
   var r = await api('/api/plano-saude/coparticipacao', {method:'POST', body:JSON.stringify(payload)});
   if (r && (r.regra)) { fecharModal('modalCopart'); carregarCoparticipacao(); }
 }
@@ -2719,7 +2719,7 @@ async function salvarFatura() {
     valor_coparticipacao: cop,
     valor_total: mens + cop,
   };
-  if (!payload.plano_id || !payload.beneficiario_id || !payload.competencia) { alert('Plano, beneficiario e competencia sao obrigatorios'); return; }
+  if (!payload.plano_id || !payload.beneficiario_id || !payload.competencia) { showToastPS('Plano, beneficiario e competencia sao obrigatorios','warn'); return; }
   var r = await api('/api/plano-saude/faturamento', {method:'POST', body:JSON.stringify(payload)});
   if (r && r.fatura) { fecharModal('modalFatura'); carregarFaturamento(); }
 }
@@ -2773,7 +2773,7 @@ async function salvarPrograma() {
     descricao: document.getElementById('pgDescricao').value,
     ativo: document.getElementById('pgAtivo').value === 'true',
   };
-  if (!payload.nome) { alert('Nome e obrigatorio'); return; }
+  if (!payload.nome) { showToastPS('Nome e obrigatorio','warn'); return; }
   var r = await api('/api/plano-saude/programas', {method:'POST', body:JSON.stringify(payload)});
   if (r && r.programa) { fecharModal('modalPrograma'); carregarProgramas(); }
 }
@@ -2785,13 +2785,13 @@ function abrirModalInscricao() {
 }
 
 async function salvarInscricao() {
-  if (!_programaAtualId) { alert('Selecione um programa primeiro'); return; }
+  if (!_programaAtualId) { showToastPS('Selecione um programa primeiro','warn'); return; }
   var payload = {
     programa_id: _programaAtualId,
     beneficiario_id: document.getElementById('inBeneficiario').value,
     observacao: document.getElementById('inObservacao').value,
   };
-  if (!payload.beneficiario_id) { alert('Selecione um beneficiario'); return; }
+  if (!payload.beneficiario_id) { showToastPS('Selecione um beneficiario','warn'); return; }
   var r = await api('/api/plano-saude/inscricoes', {method:'POST', body:JSON.stringify(payload)});
   if (r && r.inscricao) { fecharModal('modalInscricao'); verInscricoes(_programaAtualId, document.getElementById('tituloInscricoes').textContent); }
 }
@@ -2946,7 +2946,7 @@ async function removerCarencia(id) {
   if (!confirm('Remover esta carência?')) return;
   var resp = await fetch('/api/plano-saude/carencias/' + id + '/', {method:'DELETE', headers:{'X-CSRFToken':getCsrfToken()}, credentials:'include'});
   if (resp.ok) { carregarCarencias(); }
-  else alert('Erro ao remover carência');
+  else showToastPS('Erro ao remover carência','err');
 }
 
 function popularSelectsCarencia() {
@@ -2990,7 +2990,7 @@ async function salvarCarencia() {
     observacoes: document.getElementById('car-obs').value
   };
   if (!body.beneficiario_id || !body.tipo_procedimento || !body.data_inicio) {
-    alert('Preencha todos os campos obrigatórios'); return;
+    showToastPS('Preencha todos os campos obrigatórios','warn'); return;
   }
   var resp = await fetch('/api/plano-saude/carencias/', {
     method: 'POST',
@@ -3003,7 +3003,7 @@ async function salvarCarencia() {
     document.getElementById('modal-carencia').classList.remove('open');
     carregarCarencias();
   } else {
-    alert(data.erro || 'Erro ao salvar carência');
+    showToastPS(data.erro || 'Erro ao salvar carência','err');
   }
 }
 
@@ -3036,7 +3036,7 @@ async function confirmarPortabilidade() {
   var benId = document.getElementById('port-beneficiario').value;
   var novoPlanoId = document.getElementById('port-novo-plano').value;
   var data = document.getElementById('port-data').value;
-  if (!benId || !novoPlanoId) { alert('Selecione o beneficiário e o novo plano'); return; }
+  if (!benId || !novoPlanoId) { showToastPS('Selecione o beneficiário e o novo plano','warn'); return; }
   if (!confirm('Confirmar portabilidade? Esta ação irá transferir o beneficiário para o novo plano.')) return;
   var resp = await fetch('/api/plano-saude/portabilidade/', {
     method: 'POST',

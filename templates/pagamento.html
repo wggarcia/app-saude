@@ -137,7 +137,7 @@
       const button = document.querySelector(".btn");
 
       if (!empresaId || empresaId === "null" || empresaId === "undefined") {
-        alert("Entre com sua conta empresarial antes de ativar a assinatura.");
+        _t("Entre com sua conta empresarial antes de ativar a assinatura.",'warn');
         window.location.href = "/login-empresa/";
         return;
       }
@@ -161,12 +161,12 @@
         } else if (data.redirect) {
           window.location.href = data.redirect;
         } else {
-          alert(data.erro || "Erro ao gerar pagamento");
+          _t(data.erro || "Erro ao gerar pagamento",'err');
           button.disabled = false;
           button.innerText = "Ativar assinatura empresarial";
         }
       } catch (e) {
-        alert("Erro ao conectar com o servidor");
+        _t("Erro ao conectar com o servidor",'err');
         button.disabled = false;
         button.innerText = "Ativar assinatura empresarial";
       }
@@ -177,7 +177,7 @@
     async function ativarTrial() {
       const empresaId = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id");
       if (!empresaId || empresaId === "null" || empresaId === "undefined") {
-        alert("Entre com sua conta empresarial para ativar o trial.");
+        _t("Entre com sua conta empresarial para ativar o trial.",'warn');
         window.location.href = "/login-empresa/";
         return;
       }
@@ -195,16 +195,28 @@
         if (data.status === "ok" || data.status === "ja_ativo") {
           window.location.href = data.destination || "/dashboard-empresa/";
         } else {
-          alert(data.mensagem || "Não foi possível ativar o trial.");
+          _t(data.mensagem || "Não foi possível ativar o trial.",'err');
           btn.disabled = false;
           btn.innerText = "🎁 Testar 15 dias grátis";
         }
       } catch (e) {
-        alert("Erro ao conectar com o servidor.");
+        _t("Erro ao conectar com o servidor.",'err');
         btn.disabled = false;
         btn.innerText = "🎁 Testar 15 dias grátis";
       }
     }
-  </script>
+  
+function _t(msg, tipo) {
+  const el = document.createElement('div');
+  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'ok' ? '#00e5b0' : '#ffb347';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
+    'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
+    'white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+</script>
 </body>
 </html>

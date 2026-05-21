@@ -801,7 +801,7 @@ async function salvarPrograma() {
     orcamento_previsto:v('progOrcPrev')||null, orcamento_executado:v('progOrcExec')||null,
     data_inicio:v('progInicio')||null, data_fim_prevista:v('progFim')||null,
   };
-  if (!body.nome) return alert('Nome obrigatório');
+  if (!body.nome) return _t('Nome obrigatório','warn');
   const id = document.getElementById('progId').value;
   if (id) await api(`/api/governo/programas/${id}/`, {method:'PUT', body:JSON.stringify(body)});
   else await api('/api/governo/programas/', {method:'POST', body:JSON.stringify(body)});
@@ -883,7 +883,7 @@ async function salvarIndicador() {
     unidade:v('indUnidade'), periodo_referencia:v('indPeriodo'),
     programa_id:v('indProg')||null,
   };
-  if (!body.nome) return alert('Nome obrigatório');
+  if (!body.nome) return _t('Nome obrigatório','warn');
   const id = document.getElementById('indId').value;
   if (id) await api(`/api/governo/indicadores/${id}/`, {method:'PUT', body:JSON.stringify(body)});
   else await api('/api/governo/indicadores/', {method:'POST', body:JSON.stringify(body)});
@@ -960,7 +960,7 @@ async function salvarPlano() {
     prioridade:v('planoPrioridade'), status:v('planoStatus'),
     programa_id:v('planoProg')||null,
   };
-  if (!body.titulo) return alert('Título obrigatório');
+  if (!body.titulo) return _t('Título obrigatório','warn');
   const id = document.getElementById('planoId').value;
   if (id) await api(`/api/governo/planos-acao/${id}/`, {method:'PUT', body:JSON.stringify(body)});
   else await api('/api/governo/planos-acao/', {method:'POST', body:JSON.stringify(body)});
@@ -1006,7 +1006,7 @@ async function salvarOrcamento() {
     fonte_recurso:v('orcFonte'),
     observacoes:v('orcObs'),
   };
-  if (!body.ano) return alert('Ano obrigatório');
+  if (!body.ano) return _t('Ano obrigatório','warn');
   await api('/api/governo/orcamentos/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalOrc');
   carregarOrcamentos(); carregarKpis();
@@ -1117,7 +1117,7 @@ async function salvarAto() {
     orgao_emissor:v('atoOrgao'), url_documento:v('atoUrl'),
     programa_id:v('atoProg')||null,
   };
-  if (!body.titulo) return alert('Título obrigatório');
+  if (!body.titulo) return _t('Título obrigatório','warn');
   const url = id ? `/api/governo/atos-normativos/${id}/` : '/api/governo/atos-normativos/';
   const method = id ? 'PUT' : 'POST';
   await api(url, {method, body:JSON.stringify(body)});
@@ -1213,7 +1213,7 @@ async function salvarUnidade() {
     leitos_sus:parseInt(v('unidLeitusSus'))||0, leitos_uti:parseInt(v('unidLeitosUti'))||0,
     populacao_referenciada:parseInt(v('unidPopRef'))||0, diretor:v('unidDiretor'),
   };
-  if (!body.nome || !body.tipo || !body.municipio) return alert('Nome, tipo e município são obrigatórios');
+  if (!body.nome || !body.tipo || !body.municipio) return _t('Nome, tipo e município são obrigatórios','warn');
   const url = id ? `/api/governo/unidades/${id}/` : '/api/governo/unidades/';
   const method = id ? 'PUT' : 'POST';
   await api(url, {method, body:JSON.stringify(body)});
@@ -1307,7 +1307,7 @@ async function salvarNotificacao() {
     idade_paciente:v('notifIdade')||null, sexo:v('notifSexo'),
     status_investigacao:v('notifStatus'), evolucao:v('notifEvolucao'),
   };
-  if (!body.doenca || !body.data_notificacao || !body.municipio_notificacao) return alert('Preencha os campos obrigatórios');
+  if (!body.doenca || !body.data_notificacao || !body.municipio_notificacao) return _t('Preencha os campos obrigatórios','warn');
   await api('/api/governo/vigilancia/notificacoes/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalNotif');
   carregarNotificacoes(); carregarVigilDash();
@@ -1346,7 +1346,7 @@ async function salvarSurto() {
     status:v('surtoStatus'), nivel_alerta:v('surtoAlerta'),
     responsavel_investigacao:v('surtoResponsavel'),
   };
-  if (!body.doenca || !body.municipio || !body.data_inicio) return alert('Doença, município e data de início são obrigatórios');
+  if (!body.doenca || !body.municipio || !body.data_inicio) return _t('Doença, município e data de início são obrigatórios','warn');
   const url = id ? `/api/governo/vigilancia/surtos/${id}/` : '/api/governo/vigilancia/surtos/';
   const method = id ? 'PUT' : 'POST';
   await api(url, {method, body:JSON.stringify(body)});
@@ -1410,7 +1410,7 @@ async function salvarRegulacao() {
     idade_paciente:v('regIdade')||null, municipio_origem:v('regMunicipioOrigem'),
     medico_solicitante:v('regMedico'), observacoes:v('regObs'),
   };
-  if (!body.tipo_leito) return alert('Tipo de leito é obrigatório');
+  if (!body.tipo_leito) return _t('Tipo de leito é obrigatório','warn');
   await api('/api/governo/regulacao/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalRegulacao');
   carregarRegulacao(); carregarRegDash();
@@ -1477,7 +1477,7 @@ async function salvarProducao() {
     visitas_domiciliares:parseInt(v('prodVisitas2'))||0,
     acolhimentos:parseInt(v('prodAcolhim'))||0,
   };
-  if (!body.unidade_id || !body.competencia) return alert('Unidade e competência são obrigatórios');
+  if (!body.unidade_id || !body.competencia) return _t('Unidade e competência são obrigatórios','warn');
   await api('/api/governo/producao/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalProducao');
   carregarProducao(); carregarProdDash();
@@ -1543,7 +1543,7 @@ async function salvarMeta() {
     numerador:parseInt(v('metaNumer'))||0,
     meta_percentual:parseFloat(v('metaPctMeta'))||0,
   };
-  if (!body.indicador || !body.competencia) return alert('Indicador e competência são obrigatórios');
+  if (!body.indicador || !body.competencia) return _t('Indicador e competência são obrigatórios','warn');
   await api('/api/governo/previne/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalMeta');
   carregarPrevineLista(); carregarPrevineDash();
@@ -1627,7 +1627,7 @@ async function salvarContrato() {
     data_inicio:v('contInicio'), data_fim:v('contFim'), gestor_contrato:v('contGestor'),
   };
   const req = ['numero_contrato','fornecedor_nome','tipo','objeto','data_inicio','data_fim'];
-  for (const f of req) { if (!body[f]) return alert(f+' é obrigatório'); }
+  for (const f of req) { if (!body[f]) return _t(f+' é obrigatório','warn'); }
   const url = id ? `/api/governo/contratos/${id}/` : '/api/governo/contratos/';
   const method = id ? 'PUT' : 'POST';
   await api(url, {method, body:JSON.stringify(body)});
@@ -1715,7 +1715,7 @@ async function salvarUrgencia() {
     azul:parseInt(v('urgAzul'))||0, obitos:parseInt(v('urgObitos2'))||0,
     tempo_espera_medio_min:parseInt(v('urgTempoE'))||0,
   };
-  if (!body.tipo_unidade || !body.data_atendimento) return alert('Tipo de unidade e data são obrigatórios');
+  if (!body.tipo_unidade || !body.data_atendimento) return _t('Tipo de unidade e data são obrigatórios','warn');
   await api('/api/governo/urgencia/', {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalUrgencia');
   carregarUrgencia(); carregarUrgDash();
@@ -1756,6 +1756,18 @@ document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>
 carregarKpis();
 carregarProgramas();
 carregarOrcamentos();
+
+function _t(msg, tipo) {
+  const el = document.createElement('div');
+  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'ok' ? '#00e5b0' : '#ffb347';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
+    'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
+    'white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
 </script>
 <!-- ═══ Modal: Unidade de Saúde ═══════════════════════════════════════════════ -->
 <div class="modal-bg" id="modalUnidade">

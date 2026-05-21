@@ -1262,7 +1262,7 @@ let _urgentTriageCount = 0;
 let _activeIntCount = 0;
 
 // ══════════════════════════════════════════════════════════════
-// TOAST SYSTEM (replaces all alert() calls)
+// TOAST SYSTEM (replaces all toast(,'warn') calls)
 // ══════════════════════════════════════════════════════════════
 function toast(msg, type='info', duration=4000) {
   const icons = {ok:'✅',error:'❌',warn:'⚠️',info:'ℹ️'};
@@ -2297,7 +2297,7 @@ async function salvarCirurgia() {
   const g = id => document.getElementById(id)?.value || '';
   const procedimento = g('ccProcedimento');
   const dataHora = g('ccDataHora');
-  if (!procedimento || !dataHora) { alert('Procedimento e data/hora são obrigatórios.'); return; }
+  if (!procedimento || !dataHora) { toast('Procedimento e data/hora são obrigatórios.','warn'); return; }
   const body = {
     paciente_id: g('ccPaciente') ? parseInt(g('ccPaciente')) : null,
     procedimento, data_hora_prevista: dataHora,
@@ -2334,7 +2334,7 @@ async function carregarAltaTab() {
 
 function abrirModalAlta() {
   const sel = document.getElementById('altaPacienteSelect');
-  if (!sel.value) { alert('Selecione um paciente internado.'); return; }
+  if (!sel.value) { toast('Selecione um paciente internado.','warn'); return; }
   const now = new Date();
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
   document.getElementById('altaDataHora').value = now.toISOString().slice(0,16);
@@ -2349,7 +2349,7 @@ function abrirModalAlta() {
 
 async function salvarAlta() {
   const pacId = document.getElementById('altaPacienteSelect').value;
-  if (!pacId) { alert('Selecione um paciente.'); return; }
+  if (!pacId) { toast('Selecione um paciente.','warn'); return; }
   const g = id => document.getElementById(id)?.value || '';
   const body = {
     tipo_alta: g('altaTipo'),
@@ -2367,7 +2367,7 @@ async function salvarAlta() {
     retorno_previsao: g('altaRetorno') || null,
     dar_alta: true,
   };
-  if (!body.data_alta) { alert('Data/hora da alta é obrigatória.'); return; }
+  if (!body.data_alta) { toast('Data/hora da alta é obrigatória.','warn'); return; }
   const d = await api(`/api/hospital/pacientes/${pacId}/sumario-alta/`, { method:'POST', body: JSON.stringify(body) });
   if (d?.ok) {
     fecharModal('modalSumarioAlta');
@@ -2454,7 +2454,7 @@ async function abrirModalFatura() {
 
 async function salvarFatura() {
   const pacId = parseInt(document.getElementById('fatPaciente')?.value);
-  if (!pacId) { alert('Selecione um paciente.'); return; }
+  if (!pacId) { toast('Selecione um paciente.','warn'); return; }
   const body = {
     convenio:           document.getElementById('fatConvenio')?.value || 'particular',
     nome_convenio:      document.getElementById('fatNomeConvenio')?.value || '',
@@ -2466,7 +2466,7 @@ async function salvarFatura() {
   if (d?.ok) {
     fecharModal('modalFatura');
     carregarFaturamento();
-    alert('Fatura criada! Agora adicione os itens na visualização detalhada.');
+    toast('Fatura criada! Agora adicione os itens na visualização detalhada.','warn');
   }
 }
 
@@ -2479,7 +2479,7 @@ async function acaoFatura(pacId, acao, extra={}) {
 async function abrirDetalheFatura(pacId) {
   _fatPacAtual = pacId;
   const d = await api(`/api/hospital/pacientes/${pacId}/fatura/`);
-  if (!d?.fatura) { alert('Fatura não encontrada. Crie uma primeiro.'); return; }
+  if (!d?.fatura) { toast('Fatura não encontrada. Crie uma primeiro.','warn'); return; }
   const f = d.fatura;
 
   // Reutiliza modalItemFat como painel de itens — abre direto com contexto
@@ -2496,7 +2496,7 @@ async function salvarItemFat() {
   if (!_fatPacAtual) return;
   const desc = document.getElementById('itemDesc')?.value?.trim();
   const valor = parseFloat(document.getElementById('itemValorUnit')?.value);
-  if (!desc || isNaN(valor)) { alert('Descrição e valor são obrigatórios.'); return; }
+  if (!desc || isNaN(valor)) { toast('Descrição e valor são obrigatórios.','warn'); return; }
   const body = {
     tipo:          document.getElementById('itemTipo')?.value || 'procedimento',
     descricao:     desc,
@@ -2510,7 +2510,7 @@ async function salvarItemFat() {
   if (d?.ok) {
     fecharModal('modalItemFat');
     carregarFaturamento();
-    alert(`Item adicionado: ${desc} — ${_brl(body.quantidade * body.valor_unitario)}`);
+    toast(`Item adicionado: ${desc} — ${_brl(body.quantidade * body.valor_unitario)}`,'ok');
   }
 }
 
@@ -2721,7 +2721,7 @@ async function salvarExame() {
     material:           document.getElementById('exMaterial')?.value || '',
   };
   if (!body.paciente_id || !body.tipo || exames.length === 0) {
-    alert('Paciente, tipo e ao menos um exame são obrigatórios.');
+    toast('Paciente, tipo e ao menos um exame são obrigatórios.','warn');
     return;
   }
   const d = await api('/api/hospital/exames/', { method:'POST', body: JSON.stringify(body) });

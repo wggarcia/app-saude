@@ -773,8 +773,8 @@ function toggleFunc(id,nome){
 async function salvarReuniao(){
   const titulo=document.getElementById('r-titulo').value.trim();
   const data=document.getElementById('r-data').value;
-  if(!titulo){alert('Informe o título.');return;}
-  if(!data){alert('Informe a data e hora.');return;}
+  if(!titulo){showToast('Informe o título.','warn');return;}
+  if(!data){showToast('Informe a data e hora.','warn');return;}
   const btn=document.getElementById('btn-salvar-reuniao');
   btn.disabled=true;btn.textContent='Agendando...';
   const body={

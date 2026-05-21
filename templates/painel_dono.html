@@ -4,7 +4,19 @@
   <meta charset="UTF-8">
   <title>SolusCRT Console Operacional</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js">
+function _t(msg, tipo) {
+  const el = document.createElement('div');
+  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'ok' ? '#00e5b0' : '#ffb347';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
+    'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
+    'white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+</script>
   <style>
     *{box-sizing:border-box} body{margin:0;font-family:"Avenir Next","Segoe UI",sans-serif;background:#050f18;color:#eef8ff}
     .shell{padding:24px;display:grid;gap:18px}
@@ -281,7 +293,7 @@
 
     async function confirmarExclusao() {
       const digitado = document.getElementById("modalEmailConfirm").value.trim();
-      if (!digitado) { alert("Digite o email para confirmar."); return; }
+      if (!digitado) { _t("Digite o email para confirmar.",'warn'); return; }
       const res = await fetch("/api/operacao-central/cliente/excluir", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -290,10 +302,10 @@
       const data = await res.json();
       fecharModal();
       if (data.status === "ok") {
-        alert(data.mensagem);
+        _t(data.mensagem,'warn');
         loadOwnerPanel();
       } else {
-        alert(data.erro || "Erro ao excluir conta.");
+        _t(data.erro || "Erro ao excluir conta.",'err');
       }
     }
 
@@ -306,7 +318,7 @@
         body: JSON.stringify({ empresa_id: empresaId }),
       });
       const data = await res.json();
-      alert(data.mensagem || data.erro || "Erro.");
+      _t(data.mensagem || data.erro || "Erro.",'err');
       loadOwnerPanel();
     }
 
@@ -319,7 +331,7 @@
         body: JSON.stringify({ empresa_id: empresaId }),
       });
       const data = await res.json();
-      alert(data.mensagem || data.erro || "Erro.");
+      _t(data.mensagem || data.erro || "Erro.",'err');
     }
 
     // ── Log de auditoria ───────────────────────────────────────────────────────

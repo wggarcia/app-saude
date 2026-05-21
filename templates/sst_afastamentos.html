@@ -531,7 +531,7 @@ async function confirmarRetorno() {
   const data = document.getElementById('retornoData').value;
   const obs  = document.getElementById('retornoObs').value;
   const btn  = document.getElementById('btnConfirmarRetorno');
-  if (!data) { alert('Informe a data de retorno.'); return; }
+  if (!data) { toast('Informe a data de retorno.','warn'); return; }
   btn.disabled = true;
   btn.textContent = 'Salvando...';
   try {
@@ -599,7 +599,7 @@ async function registrarAfastamento() {
     data_retorno: document.getElementById('novoRetorno').value,
   };
   if (!payload.funcionario || !payload.motivo || !payload.data_inicio) {
-    alert('Preencha os campos obrigatórios: funcionário, motivo e data de início.');
+    toast('Preencha os campos obrigatórios: funcionário, motivo e data de início.','warn');
     return;
   }
   try {

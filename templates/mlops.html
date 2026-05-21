@@ -247,12 +247,24 @@ async function carregarDrift() {
 
 async function seedModelos() {
   const r = await fetch('/api/mlops/seed').then(r=>r.json()).catch(()=>null);
-  if (r) alert(`${r.criados} modelo(s) padrão criados`);
+  if (r) _t(`${r.criados} modelo(s) padrão criados`,'ok');
   carregar();
 }
 
 carregar();
 setInterval(carregar, 60000);
+
+function _t(msg, tipo) {
+  const el = document.createElement('div');
+  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'ok' ? '#00e5b0' : '#ffb347';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
+    'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
+    'white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
 </script>
 </body>
 </html>

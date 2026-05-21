@@ -5,7 +5,19 @@
   <title>SolusCRT Governo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js">
+function _t(msg, tipo) {
+  const el = document.createElement('div');
+  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'ok' ? '#00e5b0' : '#ffb347';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
+    'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
+    'white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+</script>
   <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -1192,7 +1204,7 @@
       });
       const data = await response.json();
       if (!response.ok) {
-        alert(data.erro || "Nao foi possivel criar o alerta.");
+        _t(data.erro || "Nao foi possivel criar o alerta.",'err');
         return;
       }
 
@@ -1203,7 +1215,7 @@
       govAlertDistrict.value = "";
       govAlertJustification.value = "";
       await loadGovernmentAlerts();
-      alert("Alerta enviado para revisao. Publique somente apos aprovacao.");
+      _t("Alerta enviado para revisao. Publique somente apos aprovacao.",'ok');
     }
 
     async function governAlertFlow(alertaId, acao, options = {}) {
@@ -1218,7 +1230,7 @@
       });
       const data = await response.json();
       if (!response.ok) {
-        alert(data.erro || "Nao foi possivel atualizar o alerta.");
+        _t(data.erro || "Nao foi possivel atualizar o alerta.",'err');
         return;
       }
       await loadGovernmentAlerts();
@@ -1238,11 +1250,11 @@
           if (data.push?.erro) {
             parts.push(`erro: ${data.push.erro}`);
           }
-          alert(parts.join(" | "));
+          _t(parts.join(" | "),'err');
         } else if (acao === "aprovar") {
-          alert("Alerta aprovado. Agora clique em Publicar no App para aparecer no telefone da populacao.");
+          _t("Alerta aprovado. Agora clique em Publicar no App para aparecer no telefone da populacao.",'warn');
         } else if (acao === "excluir") {
-          alert("Alerta revogado removido da barra lateral.");
+          _t("Alerta revogado removido da barra lateral.",'warn');
         }
       }
       return data;

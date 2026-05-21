@@ -614,7 +614,7 @@ async function salvarSerie() {
     granularidade: document.getElementById('sGran').value,
     ativo: document.getElementById('sAtivo').value === 'true',
   };
-  if (!payload.nome) { alert('Nome é obrigatório'); return; }
+  if (!payload.nome) { _t('Nome é obrigatório','warn'); return; }
   const url = id ? `/api/series-epi/${id}/` : '/api/series-epi/';
   const method = id ? 'PUT' : 'POST';
   try {
@@ -622,7 +622,7 @@ async function salvarSerie() {
       method, headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
       body: JSON.stringify(payload)
     });
-    if (!r.ok) { const e = await r.json(); alert(e.erro||'Erro ao salvar'); return; }
+    if (!r.ok) { const e = await r.json(); _t(e.erro||'Erro ao salvar','err'); return; }
     fecharModal('ovSerie');
     carregarSeries();
   } catch(e) { console.error(e); }
@@ -678,14 +678,14 @@ async function salvarPontos() {
       ok = false;
     }
   });
-  if (!ok) { alert('Preencha data e valor em todas as linhas ou remova as incompletas'); return; }
-  if (!pontos.length) { alert('Adicione pelo menos um ponto'); return; }
+  if (!ok) { _t('Preencha data e valor em todas as linhas ou remova as incompletas','warn'); return; }
+  if (!pontos.length) { _t('Adicione pelo menos um ponto','warn'); return; }
   try {
     const r = await fetch(`/api/series-epi/${serieAtiva.id}/pontos/`, {
       method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
       body: JSON.stringify({pontos})
     });
-    if (!r.ok) { const e = await r.json(); alert(e.erro||'Erro'); return; }
+    if (!r.ok) { const e = await r.json(); _t(e.erro||'Erro','err'); return; }
     const d = await r.json();
     fecharModal('ovPontos');
     carregarPontos();
@@ -705,6 +705,18 @@ function fmtDate(s) {
   return `${d}/${m}/${y}`;
 }
 document.querySelectorAll('.overlay').forEach(ov => ov.addEventListener('click', e => { if(e.target===ov) fecharModal(ov.id); }));
+
+function _t(msg, tipo) {
+  const el = document.createElement('div');
+  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'ok' ? '#00e5b0' : '#ffb347';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
+    'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
+    'white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
 </script>
 </body>
 </html>

@@ -350,7 +350,7 @@ async function confirmarTransmissao(){
     })
   });
   if(r.ok){closeModal("modalTransmitido");carregar();}
-  else alert("Erro ao confirmar transmissão");
+  else _t("Erro ao confirmar transmissão",'err');
   btn.textContent="Confirmar";btn.disabled=false;
 }
 
@@ -376,12 +376,24 @@ async function salvar(){
   })});
   const d=await r.json();
   if(r.ok){closeModal("modal");document.getElementById("e-ref").value="";carregar();}
-  else alert(d.erro||"Erro ao registrar evento");
+  else _t(d.erro||"Erro ao registrar evento",'err');
   btn.textContent="Registrar na Fila";btn.disabled=false;
 }
 
 carregar();
 setInterval(carregar,60000);
+
+function _t(msg, tipo) {
+  const el = document.createElement('div');
+  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'ok' ? '#00e5b0' : '#ffb347';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
+    'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
+    'white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
 </script>
 </body>
 </html>

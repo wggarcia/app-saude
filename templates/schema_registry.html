@@ -193,7 +193,7 @@ async function validarPayload() {
   const versao = document.getElementById('inpVersao').value.trim();
   const payloadStr = document.getElementById('inpPayload').value.trim();
   let payload;
-  try { payload = JSON.parse(payloadStr || '{}'); } catch { alert('JSON inválido'); return; }
+  try { payload = JSON.parse(payloadStr || '{}'); } catch { _t('JSON inválido','err'); return; }
 
   const r = await fetch('/api/schema/validar', {
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -216,11 +216,23 @@ async function validarPayload() {
 
 async function seedSchemas() {
   const r = await fetch('/api/schema/seed').then(r=>r.json()).catch(()=>null);
-  if (r) alert(`${r.mensagem}`);
+  if (r) _t(`${r.mensagem}`,'err');
   carregar();
 }
 
 carregar();
+
+function _t(msg, tipo) {
+  const el = document.createElement('div');
+  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'ok' ? '#00e5b0' : '#ffb347';
+  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
+    'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
+    'white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
 </script>
 </body>
 </html>
