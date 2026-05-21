@@ -219,6 +219,37 @@ class AlertaInboxService {
     await _saveSeen(seen.where((item) => item != id).toList());
   }
 
+  /// Expõe a chave única de um alerta (uso externo).
+  static String alertKey(Map<String, dynamic> alerta) => _alertKey(alerta);
+
+  // ── Radar dismissed (comunicados dispensados na aba Radar) ────────────────
+
+  static const _radarDismissedKey = 'soluscrt_radar_dismissed_v1';
+
+  /// Carrega o conjunto de chaves de alertas dispensados no Radar.
+  static Future<Set<String>> loadRadarDismissedKeys() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_radarDismissedKey);
+      if (raw == null || raw.isEmpty) return {};
+      return Set<String>.from(
+        (jsonDecode(raw) as List<dynamic>).map((e) => e.toString()),
+      );
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Marca um alerta como dispensado na aba Radar (persiste localmente).
+  static Future<void> dismissFromRadar(Map<String, dynamic> alerta) async {
+    final keys = await loadRadarDismissedKeys();
+    keys.add(_alertKey(alerta));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_radarDismissedKey, jsonEncode(keys.toList()));
+    } catch (_) {}
+  }
+
   /// Remove um alerta individual da inbox local.
   static Future<void> dismissAlert(Map<String, dynamic> alerta) async {
     final inbox = await loadInbox();

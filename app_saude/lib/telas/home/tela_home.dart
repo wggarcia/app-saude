@@ -132,6 +132,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
   String modoMonitoramento = 'atual';
   bool loading = true;
   bool _refreshingInBackground = false;
+  Set<String> _dismissedKeys = {};
 
   @override
   void initState() {
@@ -220,6 +221,13 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
       if (alertas.isEmpty) {
         alertas = await PublicApiService.fetchAlertas();
       }
+      final dismissedKeys = await AlertaInboxService.loadRadarDismissedKeys();
+      final alertasFiltrados = alertas.where((item) {
+        return !dismissedKeys.contains(
+          AlertaInboxService.alertKey(
+              Map<String, dynamic>.from(item as Map)),
+        );
+      }).toList();
       if (!mounted) {
         return;
       }
@@ -228,7 +236,8 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
         radarSelecionado = radarPreferido;
         radarAtual = radarAgora;
         regiaoBase = updatedBase;
-        alertasPublicos = alertas;
+        alertasPublicos = alertasFiltrados;
+        _dismissedKeys = dismissedKeys;
         modoMonitoramento = modo;
         loading = false;
       });
@@ -330,6 +339,21 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
     });
   }
 
+  Future<void> _dismissAlerta(Map<String, dynamic> alerta) async {
+    await AlertaInboxService.dismissFromRadar(alerta);
+    final key = AlertaInboxService.alertKey(alerta);
+    if (!mounted) return;
+    setState(() {
+      _dismissedKeys = {..._dismissedKeys, key};
+      alertasPublicos = alertasPublicos.where((item) {
+        return !_dismissedKeys.contains(
+          AlertaInboxService.alertKey(
+              Map<String, dynamic>.from(item as Map)),
+        );
+      }).toList();
+    });
+  }
+
   Future<void> _alterarModo(String modo) async {
     if (modoMonitoramento == modo) {
       return;
@@ -360,11 +384,15 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
         radarSelecionado?['alerta_publico'] as Map<String, dynamic>? ??
             resumo?['alerta_publico'] as Map<String, dynamic>? ??
             {};
-    final alertaPublicoEfetivo = alertaPublico.isNotEmpty
+    final alertaPublicoFeatured = alertaPublico.isNotEmpty &&
+            !_dismissedKeys
+                .contains(AlertaInboxService.alertKey(alertaPublico))
         ? alertaPublico
-        : alertasPublicos.isNotEmpty
+        : null;
+    final alertaPublicoEfetivo = alertaPublicoFeatured ??
+        (alertasPublicos.isNotEmpty
             ? Map<String, dynamic>.from(alertasPublicos.first as Map)
-            : const <String, dynamic>{};
+            : const <String, dynamic>{});
     final orientacao =
         radarSelecionado?['orientacao_publica'] as Map<String, dynamic>? ??
             resumo?['orientacao_publica'] as Map<String, dynamic>? ??
@@ -432,7 +460,13 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                     semaforo: semaforo,
                   ),
                 const SizedBox(height: 16),
-                if (!loading) _PublicAlertCard(alerta: alertaPublicoEfetivo),
+                if (!loading)
+                  _PublicAlertCard(
+                    alerta: alertaPublicoEfetivo,
+                    onDismiss: alertaPublicoEfetivo.isNotEmpty
+                        ? _dismissAlerta
+                        : null,
+                  ),
                 const SizedBox(height: 16),
                 if (!loading && alertasPublicos.isNotEmpty)
                   _GovernmentAlertsCard(
@@ -441,6 +475,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                       [alerta],
                       permitirLembrarDepois: false,
                     ),
+                    onDismiss: _dismissAlerta,
                   ),
                 if (!loading && alertasPublicos.isNotEmpty)
                   const SizedBox(height: 16),
@@ -631,9 +666,13 @@ class _ModoMonitoramentoCard extends StatelessWidget {
 }
 
 class _PublicAlertCard extends StatelessWidget {
-  const _PublicAlertCard({required this.alerta});
+  const _PublicAlertCard({
+    required this.alerta,
+    this.onDismiss,
+  });
 
   final Map<String, dynamic> alerta;
+  final ValueChanged<Map<String, dynamic>>? onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -644,40 +683,66 @@ class _PublicAlertCard extends StatelessWidget {
       'moderada' => const Color(0xFF8A6A14),
       _ => const Color(0xFF165C46),
     };
+    final temConteudo =
+        alerta.isNotEmpty && alerta['titulo'] != null;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Alerta publico',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Alerta publico',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                alerta['titulo']?.toString() ?? 'Sem alerta relevante',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                alerta['mensagem']?.toString() ?? '',
+                style: const TextStyle(color: Colors.white, height: 1.45),
+              ),
+            ],
+          ),
+        ),
+        if (temConteudo && onDismiss != null)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: () => onDismiss!(alerta),
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white70,
+                  size: 15,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            alerta['titulo']?.toString() ?? 'Sem alerta relevante',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            alerta['mensagem']?.toString() ?? '',
-            style: const TextStyle(color: Colors.white, height: 1.45),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -750,10 +815,12 @@ class _GovernmentAlertsCard extends StatelessWidget {
   const _GovernmentAlertsCard({
     required this.alertas,
     required this.onOpenAlert,
+    required this.onDismiss,
   });
 
   final List<dynamic> alertas;
   final ValueChanged<Map<String, dynamic>> onOpenAlert;
+  final ValueChanged<Map<String, dynamic>> onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -774,76 +841,114 @@ class _GovernmentAlertsCard extends StatelessWidget {
             const SizedBox(height: 12),
             ...alertas.take(3).map((item) {
               final alerta = item as Map<String, dynamic>;
+              final itemKey = ValueKey(
+                (alerta['id'] ?? alerta['titulo'] ?? Object()).toString(),
+              );
               final recorte = [
                 alerta['bairro']?.toString(),
                 alerta['cidade']?.toString(),
                 alerta['estado']?.toString(),
-              ].where((item) => item != null && item.isNotEmpty).join(' / ');
+              ].where((e) => e != null && e.isNotEmpty).join(' / ');
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(18),
-                  onTap: () => onOpenAlert(alerta),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF132B3C),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color:
-                                const Color(0xFF39D0C3).withValues(alpha: 0.24),
-                          ),
+                child: Dismissible(
+                  key: itemKey,
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (_) => onDismiss(alerta),
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B1A1A),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.delete_outline,
+                            color: Colors.white, size: 22),
+                        SizedBox(height: 4),
+                        Text(
+                          'Apagar',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.campaign_outlined,
-                                    color: Color(0xFFFFD166)),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    alerta['titulo']?.toString() ??
-                                        'Alerta publico',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                      ],
+                    ),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: () => onOpenAlert(alerta),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF132B3C),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color:
+                              const Color(0xFF39D0C3).withValues(alpha: 0.24),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.campaign_outlined,
+                                  color: Color(0xFFFFD166)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  alerta['titulo']?.toString() ??
+                                      'Alerta publico',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              alerta['mensagem']?.toString() ?? '',
-                              style: const TextStyle(
-                                  color: Color(0xFF9CC4DB), height: 1.4),
-                            ),
-                            if (recorte.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                'Recorte: $recorte',
-                                style: const TextStyle(
-                                  color: Color(0xFFFFD166),
-                                  fontSize: 12,
+                              ),
+                              GestureDetector(
+                                onTap: () => onDismiss(alerta),
+                                child: const Padding(
+                                  padding: EdgeInsets.only(left: 8),
+                                  child: Icon(
+                                    Icons.close,
+                                    color: Color(0xFF6A8FA8),
+                                    size: 18,
+                                  ),
                                 ),
                               ),
                             ],
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Toque para abrir o comunicado completo',
-                              style: TextStyle(
-                                color: Color(0xFF39D0C3),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            alerta['mensagem']?.toString() ?? '',
+                            style: const TextStyle(
+                                color: Color(0xFF9CC4DB), height: 1.4),
+                          ),
+                          if (recorte.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              'Recorte: $recorte',
+                              style: const TextStyle(
+                                color: Color(0xFFFFD166),
                                 fontSize: 12,
                               ),
                             ),
                           ],
-                        ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Toque para abrir · deslize para apagar',
+                            style: TextStyle(
+                              color: Color(0xFF39D0C3),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               );
