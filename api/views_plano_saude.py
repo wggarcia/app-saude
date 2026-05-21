@@ -2342,7 +2342,7 @@ def api_ps_sla(request):
 
     agora = timezone.now()
     guias_pendentes = GuiaAutorizacao.objects.filter(
-        empresa=empresa, status="pendente"
+        plano__empresa=empresa, status__in=["solicitada", "em_analise"]
     ).select_related("beneficiario")
 
     por_tipo = []
@@ -2357,7 +2357,7 @@ def api_ps_sla(request):
         total = guias_tipo.count()
         no_prazo = 0
         for g in guias_tipo:
-            horas_abertas = (agora - g.data_solicitacao).total_seconds() / 3600
+            horas_abertas = (agora - g.solicitada_em).total_seconds() / 3600
             if horas_abertas <= meta["horas"]:
                 no_prazo += 1
             else:
@@ -3045,9 +3045,9 @@ def api_ps_regulatorio_gerar(request):
 
     elif tipo == "TISS":
         guias = list(
-            GuiaAutorizacao.objects.filter(empresa=empresa)
+            GuiaAutorizacao.objects.filter(plano__empresa=empresa)
             .select_related("beneficiario", "prestador")
-            .values("id", "tipo", "status", "valor_estimado", "data_solicitacao")[:100]
+            .values("id", "tipo", "status", "valor_estimado", "solicitada_em")[:100]
         )
         payload = {
             "tipo": "TISS",
@@ -3059,7 +3059,7 @@ def api_ps_regulatorio_gerar(request):
                     "tipo": g["tipo"],
                     "status": g["status"],
                     "valor": float(g["valor_estimado"] or 0),
-                    "data": g["data_solicitacao"].isoformat() if g["data_solicitacao"] else "",
+                    "data": g["solicitada_em"].isoformat() if g["solicitada_em"] else "",
                 }
                 for g in guias
             ],

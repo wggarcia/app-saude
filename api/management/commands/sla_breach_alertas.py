@@ -60,7 +60,10 @@ class Command(BaseCommand):
         empresa_id = options.get("empresa_id")
         agora = timezone.now()
 
-        empresas_qs = Empresa.objects.filter(setor="plano_saude", ativo=True)
+        empresas_qs = Empresa.objects.filter(
+            pacote_codigo__in=["plano_saude_operadora", "plano_saude_enterprise"],
+            ativo=True,
+        )
         if empresa_id:
             empresas_qs = empresas_qs.filter(pk=empresa_id)
 
@@ -69,14 +72,14 @@ class Command(BaseCommand):
 
         for empresa in empresas_qs:
             guias_pendentes = GuiaAutorizacao.objects.filter(
-                empresa=empresa,
-                status="pendente",
+                plano__empresa=empresa,
+                status__in=["solicitada", "em_analise"],
             ).select_related("beneficiario", "prestador")
 
             breaches = []
             for guia in guias_pendentes:
                 prazo_h = _prazo_horas(guia.tipo)
-                horas_abertas = (agora - guia.data_solicitacao).total_seconds() / 3600
+                horas_abertas = (agora - guia.solicitada_em).total_seconds() / 3600
                 if horas_abertas > prazo_h:
                     breaches.append({
                         "id": f"GUI-{guia.pk}",

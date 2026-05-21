@@ -394,9 +394,14 @@ def enviar_email_novo_contrato(contrato) -> None:
     Args:
         contrato: instância de ContratoGrupo
     """
+    import datetime as _dt
     base_url = _base_url()
     empresa = contrato.empresa_operadora
-    dias_renovacao = (contrato.data_renovacao - __import__('datetime').date.today()).days
+    # Coerce to date in case the field is a raw string (happens after objects.create with string arg)
+    _parse_date = lambda v: _dt.date.fromisoformat(v) if isinstance(v, str) else v
+    data_inicio = _parse_date(contrato.data_inicio)
+    data_renovacao = _parse_date(contrato.data_renovacao)
+    dias_renovacao = (data_renovacao - _dt.date.today()).days
 
     card = f"""
     <h1>📑 Novo contrato corporativo cadastrado</h1>
@@ -406,10 +411,10 @@ def enviar_email_novo_contrato(contrato) -> None:
     <div class="row"><span class="lbl">Plano contratado</span><span>{contrato.plano.nome}</span></div>
     <div class="row"><span class="lbl">Total de vidas</span><strong>{contrato.total_vidas}</strong></div>
     <div class="row"><span class="lbl">Mensalidade</span><strong>R$ {float(contrato.mensalidade_total):,.2f}</strong></div>
-    <div class="row"><span class="lbl">Início</span><span>{contrato.data_inicio.strftime('%d/%m/%Y')}</span></div>
+    <div class="row"><span class="lbl">Início</span><span>{data_inicio.strftime('%d/%m/%Y')}</span></div>
     <div class="row"><span class="lbl">Renovação</span>
       <span style="color:{'#ffb347' if dias_renovacao < 90 else '#00e5b0'}">
-        {contrato.data_renovacao.strftime('%d/%m/%Y')} ({dias_renovacao}d)
+        {data_renovacao.strftime('%d/%m/%Y')} ({dias_renovacao}d)
       </span>
     </div>
     <div class="row"><span class="lbl">Status</span><span class="badge-ok">Ativo</span></div>
@@ -426,7 +431,7 @@ def enviar_email_novo_contrato(contrato) -> None:
         f"Plano: {contrato.plano.nome}\n"
         f"Vidas: {contrato.total_vidas}\n"
         f"Mensalidade: R$ {float(contrato.mensalidade_total):,.2f}\n"
-        f"Renovação: {contrato.data_renovacao.strftime('%d/%m/%Y')}\n"
+        f"Renovação: {data_renovacao.strftime('%d/%m/%Y')}\n"
         f"Painel: {base_url}/plano-saude/gestao/\n"
     )
     _send(

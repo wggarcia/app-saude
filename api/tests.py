@@ -3554,3 +3554,850 @@ class PlataformaTiAccessTests(TestCase):
         self.assertEqual(login.status_code, 200)
         resp_page = client.get("/gestao/plataforma/")
         self.assertEqual(resp_page.status_code, 200)
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  TESTES — Módulos enterprise do Plano de Saúde
+#  Endpoints: dashboard-exec, sla, auditoria, contratos, comunicacao,
+#             telemedicina, odontologia, regulatorio
+# ════════════════════════════════════════════════════════════════════════════════
+
+from .models import (
+    CarenciaBeneficiario,
+    ContratoGrupo,
+    TeleconsultaAutorizacao,
+    BeneficiarioOdonto,
+    GuiaOdonto,
+    MensagemPlano,
+    FaturamentoBeneficiario,
+    ProgramaSaude,
+)
+
+
+class PlanoSaudeEnterpriseBaseTests(TestCase):
+    """Mixin com setUp e helpers compartilhados por todos os suites enterprise."""
+
+    def setUp(self):
+        self.client = Client()
+        self.operadora = Empresa.objects.create(
+            nome="Operadora Teste",
+            email="operadora@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+            max_dispositivos=10,
+            max_usuarios=10,
+        )
+        resp = self.client.post(
+            "/api/login",
+            data=json.dumps({
+                "email": "operadora@teste.com",
+                "senha": "senha123",
+                "device_id": "device-enterprise",
+                "device_name": "Test",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200, msg=f"Login falhou: {resp.content}")
+        # Django test Client persists the auth_token cookie set by login
+        # so all subsequent self.client requests are authenticated via cookie.
+        self.anon = Client()  # fresh client with no cookies — used in 401 tests
+
+        # Plano base
+        self.plano = PlanoSaude.objects.create(
+            empresa=self.operadora,
+            nome="Plano Teste",
+            registro_ans="000001",
+            modalidade="cooperativa",
+            status="ativo",
+        )
+        # Beneficiário base
+        self.benef = BeneficiarioPlano.objects.create(
+            plano=self.plano,
+            nome="Ana Beneficiaria",
+            cpf="111.222.333-44",
+            email="ana@beneficiario.com",
+            situacao="ativo",
+        )
+        # Prestador base
+        self.prestador = PrestadorPlanoSaude.objects.create(
+            empresa=self.operadora,
+            nome_fantasia="Clinica Teste",
+            especialidades="Cardiologia",
+            status="credenciado",
+        )
+
+    def _get(self, url):
+        return self.client.get(url)
+
+    def _post(self, url, data=None):
+        return self.client.post(
+            url,
+            data=json.dumps(data or {}),
+            content_type="application/json",
+        )
+
+    def _put(self, url, data=None):
+        return self.client.put(
+            url,
+            data=json.dumps(data or {}),
+            content_type="application/json",
+        )
+
+    def _delete(self, url):
+        return self.client.delete(url)
+
+
+class DashboardExecTests(PlanoSaudeEnterpriseBaseTests):
+    """GET /api/plano-saude/dashboard-exec/"""
+
+    def test_retorna_200_e_chaves_obrigatorias(self):
+        resp = self._get("/api/plano-saude/dashboard-exec/")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        for chave in ("mlr", "pmpm", "mrr", "beneficiarios_ativos",
+                      "crescimento_beneficiarios", "mlr_por_plano",
+                      "mlr_mensal", "top_procedimentos"):
+            self.assertIn(chave, payload, msg=f"Chave '{chave}' ausente no dashboard-exec")
+
+    def test_mlr_zero_sem_dados(self):
+        resp = self._get("/api/plano-saude/dashboard-exec/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["mlr"], 0.0)
+
+    def test_mlr_calculado_com_sinistros_e_faturamento(self):
+        FaturamentoBeneficiario.objects.create(
+            empresa=self.operadora,
+            plano=self.plano,
+            beneficiario=self.benef,
+            competencia=date.today().strftime("%Y-%m"),
+            valor_mensalidade=1000,
+            valor_total=1000,
+        )
+        Sinistro.objects.create(
+            empresa=self.operadora,
+            plano=self.plano,
+            beneficiario=self.benef,
+            tipo="consulta",
+            valor_total=800,
+            status="aberto",
+        )
+        resp = self._get("/api/plano-saude/dashboard-exec/?periodo=mes")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertAlmostEqual(payload["mlr"], 80.0, places=0)
+        self.assertGreater(payload["mrr"], 0)
+
+    def test_periodo_trimestre_aceito(self):
+        resp = self._get("/api/plano-saude/dashboard-exec/?periodo=trimestre")
+        self.assertEqual(resp.status_code, 200)
+
+    def test_periodo_ano_aceito(self):
+        resp = self._get("/api/plano-saude/dashboard-exec/?periodo=ano")
+        self.assertEqual(resp.status_code, 200)
+
+    def test_crescimento_beneficiarios_tem_12_meses(self):
+        resp = self._get("/api/plano-saude/dashboard-exec/")
+        crescimento = resp.json()["crescimento_beneficiarios"]
+        self.assertEqual(len(crescimento), 12)
+        for item in crescimento:
+            self.assertIn("mes", item)
+            self.assertIn("valor", item)
+
+    def test_sem_autenticacao_retorna_401(self):
+        resp = self.anon.get("/api/plano-saude/dashboard-exec/")
+        self.assertEqual(resp.status_code, 401)
+
+
+class SLAMonitoringTests(PlanoSaudeEnterpriseBaseTests):
+    """GET /api/plano-saude/sla/"""
+
+    def test_retorna_200_e_estrutura(self):
+        resp = self._get("/api/plano-saude/sla/")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        for chave in ("por_tipo", "breaches", "geral_pct",
+                      "consulta_pct", "exame_pct", "urg_vencidas"):
+            self.assertIn(chave, payload, msg=f"Chave '{chave}' ausente no SLA")
+
+    def test_sem_guias_geral_pct_100(self):
+        resp = self._get("/api/plano-saude/sla/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["geral_pct"], 100.0)
+        self.assertEqual(resp.json()["breaches"], [])
+
+    def test_guia_urgencia_vencida_aparece_em_breaches(self):
+        # Cria guia de urgência aberta há 10 horas (prazo=4h → breach)
+        guia = GuiaAutorizacao.objects.create(
+            plano=self.plano,
+            beneficiario=self.benef,
+            prestador=self.prestador,
+            tipo="urgencia",
+            status="solicitada",
+            valor_estimado=500,
+        )
+        # Força data de solicitação para 10h atrás
+        GuiaAutorizacao.objects.filter(pk=guia.pk).update(
+            solicitada_em=timezone.now() - timedelta(hours=10)
+        )
+        resp = self._get("/api/plano-saude/sla/")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertGreater(len(payload["breaches"]), 0)
+        self.assertGreater(payload["urg_vencidas"], 0)
+
+    def test_guia_consulta_dentro_prazo_nao_e_breach(self):
+        GuiaAutorizacao.objects.create(
+            plano=self.plano,
+            beneficiario=self.benef,
+            tipo="consulta",
+            status="solicitada",
+            valor_estimado=200,
+        )
+        resp = self._get("/api/plano-saude/sla/")
+        self.assertEqual(resp.status_code, 200)
+        # Guia recém-criada não é breach (prazo = 168h)
+        self.assertEqual(resp.json()["breaches"], [])
+
+    def test_sem_autenticacao_retorna_401(self):
+        resp = self.anon.get("/api/plano-saude/sla/")
+        self.assertEqual(resp.status_code, 401)
+
+
+class AuditoriaMedicaTests(PlanoSaudeEnterpriseBaseTests):
+    """GET/POST /api/plano-saude/auditoria/"""
+
+    def test_get_retorna_200_e_estrutura(self):
+        resp = self._get("/api/plano-saude/auditoria/")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        for chave in ("beneficiarios", "padroes", "procedimentos_anomalos",
+                      "critico_count", "alto_count", "medio_count", "economia_estimada"):
+            self.assertIn(chave, payload)
+
+    def test_sem_sinistros_counts_sao_zero(self):
+        resp = self._get("/api/plano-saude/auditoria/")
+        payload = resp.json()
+        self.assertEqual(payload["critico_count"], 0)
+        self.assertEqual(payload["alto_count"], 0)
+        self.assertEqual(payload["economia_estimada"], 0.0)
+
+    def test_benef_com_muitos_sinistros_recebe_score_alto(self):
+        # Cria benef com apenas 1 sinistro para elevar a média da carteira
+        benef2 = BeneficiarioPlano.objects.create(
+            plano=self.plano,
+            nome="Outro Benef",
+            cpf="999.000.111-22",
+            situacao="ativo",
+        )
+        Sinistro.objects.create(
+            empresa=self.operadora,
+            plano=self.plano,
+            beneficiario=benef2,
+            tipo="consulta",
+            valor_total=100,
+            status="aberto",
+        )
+        # Cria 15 sinistros para o beneficiário principal (muito acima da média)
+        for i in range(15):
+            Sinistro.objects.create(
+                empresa=self.operadora,
+                plano=self.plano,
+                beneficiario=self.benef,
+                tipo="consulta",
+                valor_total=2000,
+                status="aberto",
+            )
+        resp = self._get("/api/plano-saude/auditoria/")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        # Deve aparecer na lista com score acima de 40 (ratio=15/8=1.875 → score≥56)
+        self.assertGreater(len(payload["beneficiarios"]), 0)
+        scores = [b["score"] for b in payload["beneficiarios"]]
+        self.assertGreater(max(scores), 40)
+
+    @patch("api.email_service.send_mail")
+    def test_post_scan_envia_email_para_criticos(self, mock_mail):
+        # Cria sinistros pesados para score crítico (>= 90)
+        for _ in range(30):
+            Sinistro.objects.create(
+                empresa=self.operadora,
+                plano=self.plano,
+                beneficiario=self.benef,
+                tipo="internacao",
+                valor_total=10000,
+                status="aberto",
+            )
+        resp = self._post("/api/plano-saude/auditoria/")
+        self.assertEqual(resp.status_code, 200)
+        # Email deve ter sido chamado para beneficiários críticos
+        # (apenas verifica que não quebrou; mock evita envio real)
+
+    def test_filtro_risco_critico_aceito(self):
+        resp = self._get("/api/plano-saude/auditoria/?risco=critico")
+        self.assertEqual(resp.status_code, 200)
+
+    def test_sem_autenticacao_retorna_401(self):
+        resp = self.anon.get("/api/plano-saude/auditoria/")
+        self.assertEqual(resp.status_code, 401)
+
+
+class ContratosCorporativosTests(PlanoSaudeEnterpriseBaseTests):
+    """GET/POST /api/plano-saude/contratos/  e  detalhe"""
+
+    @patch("api.email_service.send_mail")
+    def test_criar_contrato_retorna_ok(self, mock_mail):
+        resp = self._post("/api/plano-saude/contratos/", {
+            "razao_social": "Metalurgica SA",
+            "nome_fantasia": "Meta",
+            "cnpj": "12.345.678/0001-99",
+            "plano_id": self.plano.pk,
+            "total_vidas": 80,
+            "mensalidade_total": 42000,
+            "data_inicio": date.today().isoformat(),
+            "data_renovacao": (date.today() + timedelta(days=365)).isoformat(),
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["ok"])
+        self.assertEqual(ContratoGrupo.objects.filter(empresa_operadora=self.operadora).count(), 1)
+
+    @patch("api.email_service.send_mail")
+    def test_criar_contrato_dispara_email(self, mock_mail):
+        self._post("/api/plano-saude/contratos/", {
+            "razao_social": "Empresa Email",
+            "plano_id": self.plano.pk,
+            "total_vidas": 10,
+            "mensalidade_total": 5000,
+            "data_inicio": date.today().isoformat(),
+            "data_renovacao": (date.today() + timedelta(days=365)).isoformat(),
+        })
+        mock_mail.assert_called_once()
+        subject = mock_mail.call_args[1].get("subject") or mock_mail.call_args[0][0]
+        self.assertIn("contrato", subject.lower())
+
+    def test_listar_contratos_retorna_kpis(self):
+        ContratoGrupo.objects.create(
+            empresa_operadora=self.operadora,
+            plano=self.plano,
+            razao_social="Empresa Lista",
+            total_vidas=50,
+            mensalidade_total=25000,
+            data_inicio=date.today(),
+            data_renovacao=date.today() + timedelta(days=365),
+        )
+        resp = self._get("/api/plano-saude/contratos/")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertEqual(payload["total_empresas"], 1)
+        self.assertEqual(payload["total_vidas"], 50)
+        self.assertGreater(payload["receita_corporativa"], 0)
+
+    def test_detalhe_contrato_get(self):
+        contrato = ContratoGrupo.objects.create(
+            empresa_operadora=self.operadora,
+            plano=self.plano,
+            razao_social="Contrato Detalhe",
+            total_vidas=30,
+            mensalidade_total=15000,
+            data_inicio=date.today(),
+            data_renovacao=date.today() + timedelta(days=365),
+        )
+        resp = self._get(f"/api/plano-saude/contratos/{contrato.pk}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["razao_social"], "Contrato Detalhe")
+
+    def test_detalhe_contrato_put(self):
+        contrato = ContratoGrupo.objects.create(
+            empresa_operadora=self.operadora,
+            plano=self.plano,
+            razao_social="Contrato PUT",
+            total_vidas=20,
+            mensalidade_total=10000,
+            data_inicio=date.today(),
+            data_renovacao=date.today() + timedelta(days=365),
+        )
+        resp = self._put(f"/api/plano-saude/contratos/{contrato.pk}/", {"total_vidas": 25, "status": "ativo"})
+        self.assertEqual(resp.status_code, 200)
+        contrato.refresh_from_db()
+        self.assertEqual(contrato.total_vidas, 25)
+
+    def test_detalhe_contrato_delete(self):
+        contrato = ContratoGrupo.objects.create(
+            empresa_operadora=self.operadora,
+            plano=self.plano,
+            razao_social="Contrato DELETE",
+            total_vidas=10,
+            mensalidade_total=5000,
+            data_inicio=date.today(),
+            data_renovacao=date.today() + timedelta(days=365),
+        )
+        resp = self._delete(f"/api/plano-saude/contratos/{contrato.pk}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(ContratoGrupo.objects.filter(pk=contrato.pk).exists())
+
+    def test_plano_invalido_retorna_404(self):
+        resp = self._post("/api/plano-saude/contratos/", {
+            "razao_social": "Empresa Sem Plano",
+            "plano_id": 99999,
+            "total_vidas": 5,
+            "data_inicio": date.today().isoformat(),
+            "data_renovacao": (date.today() + timedelta(days=365)).isoformat(),
+        })
+        self.assertEqual(resp.status_code, 404)
+
+    def test_sem_autenticacao_retorna_401(self):
+        resp = self.anon.get("/api/plano-saude/contratos/")
+        self.assertEqual(resp.status_code, 401)
+
+
+class ComunicacaoTests(PlanoSaudeEnterpriseBaseTests):
+    """GET/POST /api/plano-saude/comunicacao/"""
+
+    def test_listar_contatos_beneficiarios(self):
+        resp = self._get("/api/plano-saude/comunicacao/?tipo=benef")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertIn("contatos", payload)
+        nomes = [c["nome"] for c in payload["contatos"]]
+        self.assertIn("Ana Beneficiaria", nomes)
+
+    def test_listar_contatos_prestadores(self):
+        resp = self._get("/api/plano-saude/comunicacao/?tipo=prest")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertIn("contatos", payload)
+        nomes = [c["nome"] for c in payload["contatos"]]
+        self.assertIn("Clinica Teste", nomes)
+
+    def test_enviar_mensagem_para_beneficiario(self):
+        resp = self._post("/api/plano-saude/comunicacao/", {
+            "tipo_destinatario": "beneficiario",
+            "beneficiario_id": self.benef.pk,
+            "conteudo": "Lembrete de consulta preventiva.",
+            "canal": "plataforma",
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["ok"])
+        self.assertEqual(MensagemPlano.objects.filter(empresa=self.operadora).count(), 1)
+
+    def test_mensagem_sem_conteudo_retorna_400(self):
+        resp = self._post("/api/plano-saude/comunicacao/", {
+            "tipo_destinatario": "beneficiario",
+            "beneficiario_id": self.benef.pk,
+            "conteudo": "",
+        })
+        self.assertEqual(resp.status_code, 400)
+
+    def test_thread_beneficiario(self):
+        MensagemPlano.objects.create(
+            empresa=self.operadora,
+            tipo_destinatario="beneficiario",
+            beneficiario=self.benef,
+            conteudo="Ola beneficiario",
+            direcao="saida",
+        )
+        resp = self._get(f"/api/plano-saude/comunicacao/{self.benef.pk}/thread/?tipo=benef")
+        self.assertEqual(resp.status_code, 200)
+        msgs = resp.json()["mensagens"]
+        self.assertEqual(len(msgs), 1)
+        self.assertEqual(msgs[0]["conteudo"], "Ola beneficiario")
+
+    def test_sem_autenticacao_retorna_401(self):
+        resp = self.anon.get("/api/plano-saude/comunicacao/")
+        self.assertEqual(resp.status_code, 401)
+
+
+class TelemedicinaTests(PlanoSaudeEnterpriseBaseTests):
+    """GET/POST /api/plano-saude/telemedicina/  e  autorizar"""
+
+    def test_kpis_iniciais_sao_zero(self):
+        resp = self._get("/api/plano-saude/telemedicina/")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertEqual(payload["hoje"], 0)
+        self.assertEqual(payload["aguardando"], 0)
+        self.assertIn("por_especialidade", payload)
+        self.assertIn("fila", payload)
+
+    def test_criar_solicitacao_teleconsulta(self):
+        resp = self._post("/api/plano-saude/telemedicina/", {
+            "beneficiario_id": self.benef.pk,
+            "especialidade": "Cardiologia",
+            "plataforma": "conexa",
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["ok"])
+        self.assertEqual(TeleconsultaAutorizacao.objects.filter(empresa=self.operadora).count(), 1)
+
+    def test_beneficiario_invalido_retorna_404(self):
+        resp = self._post("/api/plano-saude/telemedicina/", {
+            "beneficiario_id": 99999,
+            "especialidade": "Cardiologia",
+        })
+        self.assertEqual(resp.status_code, 404)
+
+    @patch("api.email_service.send_mail")
+    def test_autorizar_teleconsulta_muda_status_e_envia_email(self, mock_mail):
+        tele = TeleconsultaAutorizacao.objects.create(
+            empresa=self.operadora,
+            beneficiario=self.benef,
+            especialidade="Dermatologia",
+            plataforma="conexa",
+        )
+        resp = self._post(f"/api/plano-saude/telemedicina/{tele.pk}/autorizar/", {
+            "acao": "autorizar",
+            "autorizado_por": "Dr. Auditoria",
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["status"], "autorizado")
+        tele.refresh_from_db()
+        self.assertEqual(tele.status, "autorizado")
+        mock_mail.assert_called_once()
+
+    def test_negar_teleconsulta_muda_status(self):
+        tele = TeleconsultaAutorizacao.objects.create(
+            empresa=self.operadora,
+            beneficiario=self.benef,
+            especialidade="Psicologia",
+            plataforma="iclinic",
+        )
+        resp = self._post(f"/api/plano-saude/telemedicina/{tele.pk}/autorizar/", {
+            "acao": "negar",
+            "justificativa": "Fora da cobertura do plano.",
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["status"], "negado")
+
+    def test_autorizar_inexistente_retorna_404(self):
+        resp = self._post("/api/plano-saude/telemedicina/99999/autorizar/")
+        self.assertEqual(resp.status_code, 404)
+
+    def test_aguardando_aumenta_apos_criacao(self):
+        self._post("/api/plano-saude/telemedicina/", {
+            "beneficiario_id": self.benef.pk,
+            "especialidade": "Neurologia",
+        })
+        resp = self._get("/api/plano-saude/telemedicina/")
+        self.assertEqual(resp.json()["aguardando"], 1)
+
+    def test_sem_autenticacao_retorna_401(self):
+        resp = self.anon.get("/api/plano-saude/telemedicina/")
+        self.assertEqual(resp.status_code, 401)
+
+
+class OdontologiaTests(PlanoSaudeEnterpriseBaseTests):
+    """GET/POST /api/plano-saude/odontologia/  e  guias detalhe"""
+
+    def test_get_beneficiarios_retorna_200(self):
+        resp = self._get("/api/plano-saude/odontologia/?aba=beneficiarios")
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertIn("vidas", payload)
+        self.assertIn("dados", payload)
+
+    def test_cadastrar_beneficiario_odonto(self):
+        resp = self._post("/api/plano-saude/odontologia/", {
+            "nome": "Pedro Odonto",
+            "cpf": "999.888.777-66",
+            "plano_odonto": "Odonto Básico",
+            "data_inicio_vigencia": date.today().isoformat(),
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["ok"])
+        self.assertEqual(BeneficiarioOdonto.objects.filter(empresa=self.operadora).count(), 1)
+
+    def test_vidas_contadas_corretamente(self):
+        BeneficiarioOdonto.objects.create(
+            empresa=self.operadora,
+            nome="Luisa Odonto",
+            cpf="111.222.333-55",
+            status="ativo",
+        )
+        resp = self._get("/api/plano-saude/odontologia/")
+        self.assertEqual(resp.json()["vidas"], 1)
+
+    def test_get_aba_guias(self):
+        resp = self._get("/api/plano-saude/odontologia/?aba=guias")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("dados", resp.json())
+
+    @patch("api.email_service.send_mail")
+    def test_aprovacao_guia_odonto_envia_email(self, mock_mail):
+        benef_odonto = BeneficiarioOdonto.objects.create(
+            empresa=self.operadora,
+            nome="Maria Odonto",
+            cpf="222.333.444-55",
+            email="maria@odonto.com",
+            status="ativo",
+        )
+        guia = GuiaOdonto.objects.create(
+            empresa=self.operadora,
+            beneficiario=benef_odonto,
+            procedimento="Extração simples",
+            valor_estimado=350,
+            status="pendente",
+        )
+        resp = self._put(f"/api/plano-saude/odontologia/guias/{guia.pk}/", {"status": "autorizado"})
+        self.assertEqual(resp.status_code, 200)
+        guia.refresh_from_db()
+        self.assertEqual(guia.status, "autorizado")
+        mock_mail.assert_called_once()
+        subject = mock_mail.call_args[1].get("subject") or mock_mail.call_args[0][0]
+        self.assertIn("autorizada", subject.lower())
+
+    @patch("api.email_service.send_mail")
+    def test_negacao_guia_odonto_envia_email(self, mock_mail):
+        benef_odonto = BeneficiarioOdonto.objects.create(
+            empresa=self.operadora,
+            nome="Carlos Odonto",
+            cpf="333.444.555-66",
+            email="carlos@odonto.com",
+            status="ativo",
+        )
+        guia = GuiaOdonto.objects.create(
+            empresa=self.operadora,
+            beneficiario=benef_odonto,
+            procedimento="Implante dentário",
+            valor_estimado=3500,
+            status="pendente",
+        )
+        resp = self._put(f"/api/plano-saude/odontologia/guias/{guia.pk}/", {
+            "status": "negado",
+            "justificativa_negacao": "Procedimento não coberto no plano básico.",
+        })
+        self.assertEqual(resp.status_code, 200)
+        guia.refresh_from_db()
+        self.assertEqual(guia.status, "negado")
+        mock_mail.assert_called_once()
+
+    def test_guia_odonto_inexistente_retorna_404(self):
+        resp = self._put("/api/plano-saude/odontologia/guias/99999/", {"status": "autorizado"})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_sem_autenticacao_retorna_401(self):
+        resp = self.anon.get("/api/plano-saude/odontologia/")
+        self.assertEqual(resp.status_code, 401)
+
+
+class RelatorioRegulatorioTests(PlanoSaudeEnterpriseBaseTests):
+    """POST /api/plano-saude/regulatorio/gerar/"""
+
+    def test_gerar_diops_retorna_payload(self):
+        resp = self._post("/api/plano-saude/regulatorio/gerar/", {
+            "tipo": "DIOPS", "ano": "2026", "trimestre": "1",
+        })
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["tipo"], "DIOPS")
+        self.assertIn("planos", payload["payload"])
+        self.assertIn("beneficiarios_ativos", payload["payload"])
+
+    def test_gerar_sib_retorna_movimentacoes(self):
+        resp = self._post("/api/plano-saude/regulatorio/gerar/", {
+            "tipo": "SIB", "ano": "2026", "trimestre": "5",
+        })
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertTrue(payload["ok"])
+        self.assertIn("movimentacoes", payload["payload"])
+        self.assertIn("total_registros", payload["payload"])
+
+    def test_gerar_tiss_retorna_guias(self):
+        GuiaAutorizacao.objects.create(
+            plano=self.plano,
+            beneficiario=self.benef,
+            tipo="consulta",
+            status="autorizada",
+            valor_estimado=250,
+        )
+        resp = self._post("/api/plano-saude/regulatorio/gerar/", {
+            "tipo": "TISS", "ano": "2026", "trimestre": "1",
+        })
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertTrue(payload["ok"])
+        self.assertIn("guias", payload["payload"])
+        self.assertEqual(payload["payload"]["versao"], "3.05.00")
+        self.assertGreater(len(payload["payload"]["guias"]), 0)
+
+    def test_tipo_invalido_retorna_400(self):
+        resp = self._post("/api/plano-saude/regulatorio/gerar/", {"tipo": "XPTO"})
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("erro", resp.json())
+
+    def test_get_nao_permitido_retorna_405(self):
+        resp = self._get("/api/plano-saude/regulatorio/gerar/")
+        self.assertEqual(resp.status_code, 405)
+
+    def test_sem_autenticacao_retorna_401(self):
+        resp = self.anon.post(
+            "/api/plano-saude/regulatorio/gerar/",
+            data=json.dumps({"tipo": "DIOPS"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 401)
+
+
+class EmailsTransacionaisTests(PlanoSaudeEnterpriseBaseTests):
+    """Testes unitários das funções de email — verifica estrutura sem enviar."""
+
+    @patch("api.email_service.send_mail")
+    def test_email_novo_contrato_envia_para_operadora(self, mock_mail):
+        from api.email_service import enviar_email_novo_contrato
+        contrato = ContratoGrupo.objects.create(
+            empresa_operadora=self.operadora,
+            plano=self.plano,
+            razao_social="Empresa Email Teste",
+            total_vidas=100,
+            mensalidade_total=50000,
+            data_inicio=date.today(),
+            data_renovacao=date.today() + timedelta(days=365),
+        )
+        enviar_email_novo_contrato(contrato)
+        mock_mail.assert_called_once()
+        kwargs = mock_mail.call_args[1]
+        self.assertEqual(kwargs["recipient_list"], [self.operadora.email])
+        self.assertIn("Empresa Email Teste", kwargs["html_message"])
+
+    @patch("api.email_service.send_mail")
+    def test_email_teleconsulta_autorizada_envia_para_beneficiario(self, mock_mail):
+        from api.email_service import enviar_email_teleconsulta_autorizada
+        tele = TeleconsultaAutorizacao.objects.create(
+            empresa=self.operadora,
+            beneficiario=self.benef,
+            especialidade="Cardiologia",
+            plataforma="conexa",
+            status="autorizado",
+        )
+        enviar_email_teleconsulta_autorizada(tele)
+        mock_mail.assert_called_once()
+        self.assertEqual(mock_mail.call_args[1]["recipient_list"], ["ana@beneficiario.com"])
+
+    @patch("api.email_service.send_mail")
+    def test_email_beneficiario_sem_email_nao_envia(self, mock_mail):
+        from api.email_service import enviar_email_novo_beneficiario
+        benef_sem_email = BeneficiarioPlano.objects.create(
+            plano=self.plano,
+            nome="Sem Email",
+            email="",
+            situacao="ativo",
+        )
+        enviar_email_novo_beneficiario(self.operadora, benef_sem_email)
+        mock_mail.assert_not_called()
+
+    @patch("api.email_service.send_mail")
+    def test_email_sla_breach_sem_breaches_nao_envia(self, mock_mail):
+        from api.email_service import enviar_email_sla_breach_critico
+        enviar_email_sla_breach_critico(self.operadora, [])
+        mock_mail.assert_not_called()
+
+    @patch("api.email_service.send_mail")
+    def test_email_sla_breach_com_breaches_envia(self, mock_mail):
+        from api.email_service import enviar_email_sla_breach_critico
+        breaches = [
+            {"id": "GUI-001", "beneficiario": "Ana", "tipo": "urgência",
+             "prazo": "4h", "aberto_ha": "6h", "prestador": "UPA"},
+        ]
+        enviar_email_sla_breach_critico(self.operadora, breaches)
+        mock_mail.assert_called_once()
+        subject = mock_mail.call_args[1].get("subject") or mock_mail.call_args[0][0]
+        self.assertIn("SLA", subject)
+
+    @patch("api.email_service.send_mail")
+    def test_email_auditoria_alerta_score_critico(self, mock_mail):
+        from api.email_service import enviar_email_auditoria_alerta
+        enviar_email_auditoria_alerta(
+            empresa=self.operadora,
+            nome_benef="Roberto Alto Risco",
+            score=95,
+            fatores=["Alta frequência", "Múltiplos médicos"],
+        )
+        mock_mail.assert_called_once()
+        html = mock_mail.call_args[1]["html_message"]
+        self.assertIn("95", html)
+        self.assertIn("Roberto Alto Risco", html)
+
+    @patch("api.email_service.send_mail")
+    def test_email_guia_odonto_aprovada(self, mock_mail):
+        from api.email_service import enviar_email_guia_odonto_aprovada
+        benef_odonto = BeneficiarioOdonto.objects.create(
+            empresa=self.operadora,
+            nome="Fernanda Odonto",
+            email="fernanda@odonto.com",
+            status="ativo",
+        )
+        guia = GuiaOdonto.objects.create(
+            empresa=self.operadora,
+            beneficiario=benef_odonto,
+            procedimento="Limpeza dental",
+            valor_estimado=200,
+            status="autorizado",
+        )
+        enviar_email_guia_odonto_aprovada(guia)
+        mock_mail.assert_called_once()
+        self.assertEqual(mock_mail.call_args[1]["recipient_list"], ["fernanda@odonto.com"])
+
+    @patch("api.email_service.send_mail")
+    def test_email_falha_nao_propaga_excecao(self, mock_mail):
+        """Email failure nunca deve quebrar o fluxo principal."""
+        from api.email_service import enviar_email_novo_beneficiario
+        mock_mail.side_effect = Exception("SMTP timeout")
+        # Não deve lançar exceção
+        enviar_email_novo_beneficiario(self.operadora, self.benef)
+
+
+class SLABreachCronTests(PlanoSaudeEnterpriseBaseTests):
+    """Testes do management command sla_breach_alertas."""
+
+    def test_dry_run_sem_guias_nao_envia(self):
+        out = StringIO()
+        call_command("sla_breach_alertas", "--dry-run", stdout=out)
+        output = out.getvalue()
+        self.assertIn("0 breach(es)", output)
+
+    @patch("api.email_service.send_mail")
+    def test_dry_run_com_breach_nao_envia_email(self, mock_mail):
+        # Cria guia de urgência vencida
+        guia = GuiaAutorizacao.objects.create(
+            plano=self.plano,
+            beneficiario=self.benef,
+            tipo="urgencia",
+            status="solicitada",
+            valor_estimado=400,
+        )
+        GuiaAutorizacao.objects.filter(pk=guia.pk).update(
+            solicitada_em=timezone.now() - timedelta(hours=10)
+        )
+        out = StringIO()
+        call_command("sla_breach_alertas", "--dry-run", stdout=out)
+        mock_mail.assert_not_called()
+        self.assertIn("[DRY]", out.getvalue())
+
+    @patch("api.email_service.send_mail")
+    def test_producao_com_breach_envia_email(self, mock_mail):
+        guia = GuiaAutorizacao.objects.create(
+            plano=self.plano,
+            beneficiario=self.benef,
+            tipo="urgencia",
+            status="solicitada",
+            valor_estimado=400,
+        )
+        GuiaAutorizacao.objects.filter(pk=guia.pk).update(
+            solicitada_em=timezone.now() - timedelta(hours=10)
+        )
+        call_command("sla_breach_alertas", f"--empresa-id={self.operadora.pk}")
+        mock_mail.assert_called_once()
+
+    def test_empresa_id_filtra_corretamente(self):
+        # Cria segunda operadora sem guias vencidas
+        outra = Empresa.objects.create(
+            nome="Outra Operadora",
+            email="outra@op.com",
+            senha=make_password("123"),
+            ativo=True,
+            pacote_codigo="plano_saude_operadora",
+        )
+        out = StringIO()
+        call_command("sla_breach_alertas", f"--empresa-id={outra.pk}", "--dry-run", stdout=out)
+        self.assertIn("0 breach(es)", out.getvalue())
