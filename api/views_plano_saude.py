@@ -23,6 +23,15 @@ from .models import (
     CarenciaBeneficiario,
 )
 from .views_dashboard import _empresa_autenticada
+from .email_service import (
+    enviar_email_novo_contrato,
+    enviar_email_teleconsulta_autorizada,
+    enviar_email_guia_odonto_aprovada,
+    enviar_email_guia_odonto_negada,
+    enviar_email_sla_breach_critico,
+    enviar_email_auditoria_alerta,
+    enviar_email_novo_beneficiario,
+)
 
 
 # ── helpers de autenticação ───────────────────────────────────────────────────
@@ -644,6 +653,7 @@ def api_ps_beneficiarios(request):
             data_inicio_vigencia=div,
             data_fim_vigencia=dfv,
         )
+        enviar_email_novo_beneficiario(empresa, b)
         return JsonResponse({"beneficiario": _beneficiario_dict(b)}, status=201)
 
     return JsonResponse({"erro": "Método não suportado"}, status=405)
@@ -2502,6 +2512,18 @@ def api_ps_auditoria(request):
     ]
     padroes = [p for p in padroes if p["count"] > 0]
 
+    # Dispara email de alerta para beneficiários críticos (score >= 90)
+    # Apenas quando chamado como scan explícito (POST) — GET é visualização
+    if request.method == "POST":
+        for benef in resultado:
+            if benef["score"] >= 90:
+                enviar_email_auditoria_alerta(
+                    empresa=empresa,
+                    nome_benef=benef["nome"],
+                    score=benef["score"],
+                    fatores=benef.get("fatores", []),
+                )
+
     return JsonResponse({
         "beneficiarios": resultado[:20],
         "padroes": padroes,
@@ -2553,6 +2575,7 @@ def api_ps_contratos(request):
             logo_emoji=d.get("logo_emoji", "🏢"),
             observacoes=d.get("observacoes", ""),
         )
+        enviar_email_novo_contrato(contrato)
         return JsonResponse({"ok": True, "id": contrato.pk})
 
     contratos = ContratoGrupo.objects.filter(empresa_operadora=empresa).select_related("plano")
@@ -2829,6 +2852,8 @@ def api_ps_telemedicina_autorizar(request, tele_id):
         tele.autorizado_por = d.get("autorizado_por", "Operadora")
         tele.link_consulta = d.get("link_consulta", "")
     tele.save()
+    if tele.status == "autorizado":
+        enviar_email_teleconsulta_autorizada(tele)
     return JsonResponse({"ok": True, "status": tele.status})
 
 
@@ -2935,12 +2960,19 @@ def api_ps_guia_odonto_detalhe(request, guia_id):
             d = json.loads(request.body)
         except (json.JSONDecodeError, AttributeError):
             return JsonResponse({"erro": "JSON inválido"}, status=400)
+        status_anterior = guia.status
         for campo in ("status", "justificativa_negacao", "valor_pago", "observacoes"):
             if campo in d:
                 setattr(guia, campo, d[campo])
         if "data_execucao" in d:
             guia.data_execucao = d["data_execucao"] or None
         guia.save()
+        # Dispara email quando status muda para autorizado ou negado
+        if d.get("status") and d["status"] != status_anterior:
+            if guia.status == "autorizado":
+                enviar_email_guia_odonto_aprovada(guia)
+            elif guia.status == "negado":
+                enviar_email_guia_odonto_negada(guia)
         return JsonResponse({"ok": True})
 
     return JsonResponse({

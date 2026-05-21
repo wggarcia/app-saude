@@ -312,3 +312,461 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px}}
         )
     except Exception:
         pass
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+#  PLANO DE SAÚDE — Emails transacionais enterprise
+# ════════════════════════════════════════════════════════════════════════════════
+
+def _html_base(conteudo_card: str, titulo_rodape: str = "SolusCRT · Plano de Saúde") -> str:
+    """Wrapper HTML com design system dark-mode usado em todos os emails."""
+    return f"""<!DOCTYPE html>
+<html lang="pt-br">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{{margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2eeff}}
+.wrap{{max-width:600px;margin:0 auto;padding:32px 20px}}
+.logo{{font-size:22px;font-weight:900;color:#00c9a7;letter-spacing:-.5px;margin-bottom:32px}}
+.card{{background:#111827;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:32px}}
+h1{{font-size:22px;font-weight:800;margin:0 0 8px;line-height:1.3}}
+.sub{{color:#7b90b0;font-size:14px;margin-bottom:22px}}
+.btn{{display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#00c9a7,#0077ff);
+  color:#fff;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;margin:20px 0}}
+.row{{display:flex;justify-content:space-between;padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.07);font-size:14px}}
+.lbl{{color:#7b90b0}}
+.badge-ok{{display:inline-block;padding:3px 12px;background:rgba(0,229,176,.12);
+  color:#00e5b0;border-radius:20px;font-size:12px;font-weight:700}}
+.badge-warn{{display:inline-block;padding:3px 12px;background:rgba(255,179,71,.12);
+  color:#ffb347;border-radius:20px;font-size:12px;font-weight:700}}
+.badge-err{{display:inline-block;padding:3px 12px;background:rgba(255,77,109,.12);
+  color:#ff4d6d;border-radius:20px;font-size:12px;font-weight:700}}
+.info-bar{{background:rgba(0,201,167,.08);border:1px solid rgba(0,201,167,.2);
+  border-radius:10px;padding:14px 18px;margin:18px 0;font-size:14px;color:#a0dfd4;line-height:1.6}}
+.warn-bar{{background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.25);
+  border-radius:10px;padding:14px 18px;margin:18px 0;font-size:14px;color:#ffd080;line-height:1.6}}
+.err-bar{{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);
+  border-radius:10px;padding:14px 18px;margin:18px 0;font-size:14px;color:#ff8fa3;line-height:1.6}}
+.tag{{display:inline-block;background:rgba(255,77,109,.1);color:#ff8fa3;
+  border:1px solid rgba(255,77,109,.2);border-radius:20px;padding:2px 10px;
+  font-size:12px;font-weight:700;margin:2px 3px}}
+.footer{{margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,.07);
+  font-size:12px;color:#7b90b0;text-align:center;line-height:1.8}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">SolusCRT</div>
+  <div class="card">
+    {conteudo_card}
+  </div>
+  <div class="footer">
+    {titulo_rodape}<br>
+    <a href="https://soluscrt.com.br/privacidade/" style="color:#7b90b0">Privacidade</a> ·
+    <a href="https://soluscrt.com.br/termos/" style="color:#7b90b0">Termos</a> ·
+    <a href="mailto:suporte@soluscrt.com.br" style="color:#00c9a7">suporte@soluscrt.com.br</a>
+  </div>
+</div>
+</body>
+</html>"""
+
+
+def _send(subject: str, to: str, html: str, text: str) -> None:
+    """Helper de envio. Falha silenciosamente para não quebrar fluxos."""
+    try:
+        send_mail(
+            subject=subject,
+            message=text,
+            from_email=_from(),
+            recipient_list=[to],
+            html_message=html,
+            fail_silently=False,
+        )
+    except Exception:
+        pass
+
+
+# ── 1. Novo Contrato Corporativo ──────────────────────────────────────────────
+
+def enviar_email_novo_contrato(contrato) -> None:
+    """Email para a operadora quando um contrato corporativo é cadastrado.
+
+    Args:
+        contrato: instância de ContratoGrupo
+    """
+    base_url = _base_url()
+    empresa = contrato.empresa_operadora
+    dias_renovacao = (contrato.data_renovacao - __import__('datetime').date.today()).days
+
+    card = f"""
+    <h1>📑 Novo contrato corporativo cadastrado</h1>
+    <p class="sub">O contrato foi registrado com sucesso na plataforma.</p>
+    <div class="row"><span class="lbl">Empresa cliente</span><strong>{contrato.razao_social}</strong></div>
+    <div class="row"><span class="lbl">CNPJ</span><span>{contrato.cnpj or '—'}</span></div>
+    <div class="row"><span class="lbl">Plano contratado</span><span>{contrato.plano.nome}</span></div>
+    <div class="row"><span class="lbl">Total de vidas</span><strong>{contrato.total_vidas}</strong></div>
+    <div class="row"><span class="lbl">Mensalidade</span><strong>R$ {float(contrato.mensalidade_total):,.2f}</strong></div>
+    <div class="row"><span class="lbl">Início</span><span>{contrato.data_inicio.strftime('%d/%m/%Y')}</span></div>
+    <div class="row"><span class="lbl">Renovação</span>
+      <span style="color:{'#ffb347' if dias_renovacao < 90 else '#00e5b0'}">
+        {contrato.data_renovacao.strftime('%d/%m/%Y')} ({dias_renovacao}d)
+      </span>
+    </div>
+    <div class="row"><span class="lbl">Status</span><span class="badge-ok">Ativo</span></div>
+    <div class="info-bar">
+      💡 Lembre-se de cadastrar os beneficiários desta empresa na aba
+      <strong>Beneficiários</strong> para que eles possam utilizar o plano imediatamente.
+    </div>
+    <a href="{base_url}/plano-saude/gestao/" class="btn">Ver no painel →</a>
+    """
+    html = _html_base(card, f"SolusCRT · Operadora — {empresa.nome}")
+    text = (
+        f"Novo contrato corporativo cadastrado\n"
+        f"Empresa: {contrato.razao_social}\n"
+        f"Plano: {contrato.plano.nome}\n"
+        f"Vidas: {contrato.total_vidas}\n"
+        f"Mensalidade: R$ {float(contrato.mensalidade_total):,.2f}\n"
+        f"Renovação: {contrato.data_renovacao.strftime('%d/%m/%Y')}\n"
+        f"Painel: {base_url}/plano-saude/gestao/\n"
+    )
+    _send(
+        subject=f"📑 Contrato corporativo cadastrado — {contrato.razao_social}",
+        to=empresa.email,
+        html=html,
+        text=text,
+    )
+
+
+# ── 2. Teleconsulta Autorizada ────────────────────────────────────────────────
+
+def enviar_email_teleconsulta_autorizada(tele) -> None:
+    """Email para o beneficiário quando a teleconsulta é autorizada.
+
+    Args:
+        tele: instância de TeleconsultaAutorizacao
+    """
+    beneficiario = tele.beneficiario
+    email_dest = beneficiario.email
+    if not email_dest:
+        return
+
+    plat_labels = {
+        "conexa": "Conexa Saúde",
+        "iclinic": "iClinic Telemedicina",
+        "drconsulta": "Dr. Consulta",
+        "outro": "Plataforma de vídeo",
+    }
+    plat = plat_labels.get(tele.plataforma, tele.plataforma)
+    data_str = (
+        tele.data_agendada.strftime("%d/%m/%Y às %H:%M")
+        if tele.data_agendada else "A definir — aguarde contato da clínica"
+    )
+    link_html = (
+        f'<a href="{tele.link_consulta}" class="btn">Entrar na consulta →</a>'
+        if tele.link_consulta
+        else '<p style="color:#7b90b0;font-size:13px">O link da consulta será enviado em breve.</p>'
+    )
+
+    card = f"""
+    <h1>📱 Sua teleconsulta foi autorizada!</h1>
+    <p class="sub">Você já pode realizar sua consulta online. Veja os detalhes abaixo.</p>
+    <div class="row"><span class="lbl">Beneficiário</span><strong>{beneficiario.nome}</strong></div>
+    <div class="row"><span class="lbl">Especialidade</span><span>{tele.especialidade}</span></div>
+    <div class="row"><span class="lbl">Plataforma</span><span>{plat}</span></div>
+    <div class="row"><span class="lbl">Data/Hora</span><span>{data_str}</span></div>
+    <div class="row"><span class="lbl">Status</span><span class="badge-ok">Autorizado</span></div>
+    <div class="info-bar">
+      🎥 Você precisará de câmera e microfone funcionando. Entre no link alguns minutos antes
+      do horário agendado para testar a conexão.
+    </div>
+    {link_html}
+    <p style="font-size:13px;color:#7b90b0;margin-top:8px">
+      Dúvidas? Entre em contato com nossa central:
+      <a href="mailto:suporte@soluscrt.com.br" style="color:#00c9a7">suporte@soluscrt.com.br</a>
+    </p>
+    """
+    html = _html_base(card, "SolusCRT · Plano de Saúde — Telemedicina")
+    text = (
+        f"Teleconsulta autorizada!\n"
+        f"Beneficiário: {beneficiario.nome}\n"
+        f"Especialidade: {tele.especialidade}\n"
+        f"Plataforma: {plat}\n"
+        f"Data: {data_str}\n"
+        + (f"Link: {tele.link_consulta}\n" if tele.link_consulta else "")
+    )
+    _send(
+        subject=f"📱 Teleconsulta autorizada — {tele.especialidade}",
+        to=email_dest,
+        html=html,
+        text=text,
+    )
+
+
+# ── 3. Guia Odonto Aprovada ───────────────────────────────────────────────────
+
+def enviar_email_guia_odonto_aprovada(guia) -> None:
+    """Email para beneficiário quando guia odontológica é autorizada.
+
+    Args:
+        guia: instância de GuiaOdonto
+    """
+    email_dest = guia.beneficiario.email
+    if not email_dest:
+        return
+
+    card = f"""
+    <h1>🦷 Guia odontológica autorizada!</h1>
+    <p class="sub">Seu procedimento foi aprovado. Confira os detalhes e agende com seu dentista.</p>
+    <div class="row"><span class="lbl">Beneficiário</span><strong>{guia.beneficiario.nome}</strong></div>
+    <div class="row"><span class="lbl">Procedimento</span><strong>{guia.procedimento}</strong></div>
+    {'<div class="row"><span class="lbl">Código TUSS</span><span>' + guia.codigo_tuss + '</span></div>' if guia.codigo_tuss else ''}
+    {'<div class="row"><span class="lbl">Dentista</span><span>' + guia.dentista + '</span></div>' if guia.dentista else ''}
+    {'<div class="row"><span class="lbl">Clínica</span><span>' + guia.clinica + '</span></div>' if guia.clinica else ''}
+    <div class="row"><span class="lbl">Valor estimado</span><span>R$ {float(guia.valor_estimado):,.2f}</span></div>
+    <div class="row"><span class="lbl">Status</span><span class="badge-ok">Autorizado</span></div>
+    <div class="info-bar">
+      ✅ Apresente esta autorização ao dentista na hora do atendimento.
+      A guia tem validade de <strong>30 dias</strong> a partir desta data.
+    </div>
+    """
+    html = _html_base(card, "SolusCRT · Plano de Saúde — Odontologia")
+    text = (
+        f"Guia odontológica autorizada\n"
+        f"Beneficiário: {guia.beneficiario.nome}\n"
+        f"Procedimento: {guia.procedimento}\n"
+        f"Valor estimado: R$ {float(guia.valor_estimado):,.2f}\n"
+        "Apresente esta confirmação ao dentista.\n"
+    )
+    _send(
+        subject=f"🦷 Guia autorizada — {guia.procedimento}",
+        to=email_dest,
+        html=html,
+        text=text,
+    )
+
+
+# ── 4. Guia Odonto Negada ─────────────────────────────────────────────────────
+
+def enviar_email_guia_odonto_negada(guia) -> None:
+    """Email para beneficiário quando guia odontológica é negada.
+
+    Args:
+        guia: instância de GuiaOdonto
+    """
+    email_dest = guia.beneficiario.email
+    if not email_dest:
+        return
+
+    justif = guia.justificativa_negacao or "Não atende aos critérios de cobertura do plano."
+    card = f"""
+    <h1>⚠️ Guia odontológica não autorizada</h1>
+    <p class="sub">Sua solicitação foi analisada. Veja abaixo o motivo e como recorrer.</p>
+    <div class="row"><span class="lbl">Beneficiário</span><strong>{guia.beneficiario.nome}</strong></div>
+    <div class="row"><span class="lbl">Procedimento</span><strong>{guia.procedimento}</strong></div>
+    <div class="row"><span class="lbl">Status</span><span class="badge-err">Não autorizado</span></div>
+    <div class="err-bar">
+      <strong>Motivo:</strong> {justif}
+    </div>
+    <div class="warn-bar">
+      📋 <strong>Como recorrer:</strong> Você pode solicitar uma revisão enviando documentação
+      complementar (laudos, receituários, justificativa médica) para a central da operadora.
+      O prazo de resposta é de <strong>30 dias</strong> conforme RN ANS 395.
+    </div>
+    <p style="font-size:14px;color:#b0c4d8;margin-top:16px">
+      Entre em contato com nossa central de autorização:<br>
+      <a href="mailto:autorizacao@soluscrt.com.br" style="color:#00c9a7">autorizacao@soluscrt.com.br</a>
+    </p>
+    """
+    html = _html_base(card, "SolusCRT · Plano de Saúde — Odontologia")
+    text = (
+        f"Guia odontológica não autorizada\n"
+        f"Beneficiário: {guia.beneficiario.nome}\n"
+        f"Procedimento: {guia.procedimento}\n"
+        f"Motivo: {justif}\n"
+        "Para recurso: autorizacao@soluscrt.com.br\n"
+    )
+    _send(
+        subject=f"⚠️ Guia não autorizada — {guia.procedimento}",
+        to=email_dest,
+        html=html,
+        text=text,
+    )
+
+
+# ── 5. SLA Breach Crítico ─────────────────────────────────────────────────────
+
+def enviar_email_sla_breach_critico(empresa, breaches: list) -> None:
+    """Email de alerta para a operadora quando há guias com SLA violado.
+
+    Args:
+        empresa: instância de Empresa (operadora)
+        breaches: lista de dicts com chaves id, beneficiario, tipo, prazo, aberto_ha, prestador
+    """
+    if not breaches:
+        return
+
+    base_url = _base_url()
+    qtd = len(breaches)
+
+    linhas_tabela = "".join(
+        f"""<div class="row">
+          <span class="lbl">{b['id']}</span>
+          <span style="flex:1;padding:0 12px">{b['beneficiario']} · {b['tipo']}</span>
+          <span style="color:#ff4d6d;font-weight:700">{b['aberto_ha']}</span>
+        </div>"""
+        for b in breaches[:10]
+    )
+    mais = f'<p style="color:#7b90b0;font-size:13px;margin-top:8px">+ {qtd-10} guias adicionais no painel.</p>' if qtd > 10 else ""
+
+    card = f"""
+    <h1>🚨 {qtd} guia{'s' if qtd > 1 else ''} com SLA violado — ação necessária</h1>
+    <p class="sub">Guias fora do prazo ANS (RN 395/452) exigem resolução imediata para evitar penalidades.</p>
+    <div class="err-bar">
+      ⏱ As guias abaixo ultrapassaram o prazo regulatório. O descumprimento de SLA
+      pode resultar em <strong>advertência e multa ANS</strong>.
+    </div>
+    <div style="margin:18px 0">
+      <div class="row" style="font-size:12px;font-weight:700;color:#7b90b0;text-transform:uppercase">
+        <span class="lbl">Guia</span>
+        <span style="flex:1;padding:0 12px">Beneficiário · Tipo</span>
+        <span>Tempo em atraso</span>
+      </div>
+      {linhas_tabela}
+    </div>
+    {mais}
+    <a href="{base_url}/plano-saude/gestao/" class="btn">Resolver agora →</a>
+    <p style="font-size:13px;color:#7b90b0;margin-top:8px">
+      Acesse a aba <strong>Regulação &amp; SLA</strong> no painel para ver todas as guias e tomar ação.
+    </p>
+    """
+    html = _html_base(card, f"SolusCRT · Operadora — {empresa.nome}")
+    text = (
+        f"ALERTA SLA — {qtd} guia(s) com prazo ANS violado\n"
+        f"Operadora: {empresa.nome}\n\n"
+        + "\n".join(f"• {b['id']} | {b['beneficiario']} | {b['tipo']} | {b['aberto_ha']}" for b in breaches[:10])
+        + f"\n\nResolver: {base_url}/plano-saude/gestao/\n"
+    )
+    _send(
+        subject=f"🚨 SLA violado — {qtd} guia{'s' if qtd > 1 else ''} fora do prazo ANS",
+        to=empresa.email,
+        html=html,
+        text=text,
+    )
+
+
+# ── 6. Alerta de Auditoria (Risco de Fraude) ─────────────────────────────────
+
+def enviar_email_auditoria_alerta(empresa, nome_benef: str, score: int, fatores: list) -> None:
+    """Email para a operadora quando um beneficiário atinge score de risco alto/crítico.
+
+    Args:
+        empresa: instância de Empresa (operadora)
+        nome_benef: nome do beneficiário de alto risco
+        score: score de risco 0-100
+        fatores: lista de strings descrevendo os fatores de risco
+    """
+    base_url = _base_url()
+    nivel = "Crítico" if score >= 90 else "Alto"
+    cor_nivel = "#ff4d6d" if score >= 90 else "#ffb347"
+    bar_class = "err-bar" if score >= 90 else "warn-bar"
+    emoji = "🔴" if score >= 90 else "🟡"
+
+    tags_html = "".join(f'<span class="tag">{f}</span>' for f in fatores)
+
+    card = f"""
+    <h1>{emoji} Alerta de auditoria — risco {nivel.lower()}</h1>
+    <p class="sub">O motor de auditoria identificou padrões anômalos que requerem revisão manual.</p>
+    <div class="row"><span class="lbl">Beneficiário</span><strong>{nome_benef}</strong></div>
+    <div class="row"><span class="lbl">Score de risco</span>
+      <strong style="color:{cor_nivel};font-size:20px">{score}/100</strong>
+    </div>
+    <div class="row"><span class="lbl">Nível</span>
+      <span class="badge-{'err' if score >= 90 else 'warn'}">{nivel}</span>
+    </div>
+    <div class="{bar_class}">
+      <strong>Fatores detectados:</strong><br>
+      <div style="margin-top:8px">{tags_html if tags_html else '—'}</div>
+    </div>
+    <div class="info-bar">
+      📋 <strong>Ação recomendada:</strong> Revise o histórico de sinistros dos últimos 90 dias
+      para este beneficiário. Em caso de confirmação de fraude ou abuso, acione o
+      departamento jurídico conforme RN ANS 137.
+    </div>
+    <a href="{base_url}/plano-saude/gestao/" class="btn">Abrir auditoria →</a>
+    <p style="font-size:13px;color:#7b90b0;margin-top:8px">
+      Acesse a aba <strong>Auditoria Médica IA</strong> para ver o dossiê completo.
+    </p>
+    """
+    html = _html_base(card, f"SolusCRT · Operadora — {empresa.nome}")
+    text = (
+        f"ALERTA AUDITORIA — Risco {nivel}\n"
+        f"Operadora: {empresa.nome}\n"
+        f"Beneficiário: {nome_benef}\n"
+        f"Score: {score}/100\n"
+        f"Fatores: {', '.join(fatores)}\n"
+        f"Revisar: {base_url}/plano-saude/gestao/\n"
+    )
+    _send(
+        subject=f"{emoji} Auditoria — risco {nivel.lower()}: {nome_benef} (score {score})",
+        to=empresa.email,
+        html=html,
+        text=text,
+    )
+
+
+# ── 7. Novo Beneficiário Cadastrado ──────────────────────────────────────────
+
+def enviar_email_novo_beneficiario(empresa, beneficiario) -> None:
+    """Email de confirmação para o beneficiário recém-cadastrado no plano.
+
+    Args:
+        empresa: instância de Empresa (operadora)
+        beneficiario: instância de BeneficiarioPlano
+    """
+    email_dest = beneficiario.email
+    if not email_dest:
+        return
+
+    base_url = _base_url()
+    vigencia_str = (
+        beneficiario.data_inicio_vigencia.strftime("%d/%m/%Y")
+        if beneficiario.data_inicio_vigencia else "—"
+    )
+    carteirinha_str = beneficiario.numero_carteirinha or "Será enviada em breve"
+
+    card = f"""
+    <h1>🎉 Bem-vindo ao plano de saúde, {beneficiario.nome.split()[0]}!</h1>
+    <p class="sub">Seu cadastro foi realizado com sucesso. Guarde os dados abaixo.</p>
+    <div class="row"><span class="lbl">Nome completo</span><strong>{beneficiario.nome}</strong></div>
+    <div class="row"><span class="lbl">Plano</span><strong>{beneficiario.plano.nome}</strong></div>
+    <div class="row"><span class="lbl">N° da carteirinha</span><span>{carteirinha_str}</span></div>
+    <div class="row"><span class="lbl">Início da vigência</span><span>{vigencia_str}</span></div>
+    <div class="row"><span class="lbl">Acomodação</span><span style="text-transform:capitalize">{beneficiario.acomodacao}</span></div>
+    <div class="row"><span class="lbl">Status</span><span class="badge-ok">Ativo</span></div>
+    <div class="info-bar">
+      ℹ️ <strong>Período de carência:</strong> alguns procedimentos podem estar sujeitos a carência
+      conforme RN ANS 162. Consulte sua operadora para verificar quais coberturas já estão liberadas.
+    </div>
+    <div class="warn-bar">
+      📱 Baixe o aplicativo ou acesse o portal do beneficiário para agendar consultas,
+      emitir guias e verificar sua rede credenciada.
+    </div>
+    <p style="font-size:13px;color:#7b90b0;margin-top:8px">
+      Dúvidas? Fale com a operadora: <a href="mailto:{empresa.email}" style="color:#00c9a7">{empresa.email}</a>
+    </p>
+    """
+    html = _html_base(card, f"SolusCRT · {empresa.nome} — Plano de Saúde")
+    text = (
+        f"Bem-vindo ao plano de saúde!\n"
+        f"Nome: {beneficiario.nome}\n"
+        f"Plano: {beneficiario.plano.nome}\n"
+        f"Carteirinha: {carteirinha_str}\n"
+        f"Vigência: {vigencia_str}\n"
+        f"Dúvidas: {empresa.email}\n"
+    )
+    _send(
+        subject=f"🎉 Cadastro confirmado — {beneficiario.plano.nome}",
+        to=email_dest,
+        html=html,
+        text=text,
+    )
