@@ -340,7 +340,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
   }
 
   Future<void> _dismissAlerta(Map<String, dynamic> alerta) async {
-    await AlertaInboxService.dismissFromRadar(alerta);
+    // Remove da UI imediatamente — obrigatório para o Dismissible não travar.
     final key = AlertaInboxService.alertKey(alerta);
     if (!mounted) return;
     setState(() {
@@ -352,6 +352,8 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
         );
       }).toList();
     });
+    // Persiste em background (sem bloquear a UI).
+    await AlertaInboxService.dismissFromRadar(alerta);
   }
 
   Future<void> _alterarModo(String modo) async {

@@ -81,8 +81,17 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
   }
 
   Future<void> _dismissAlert(Map<String, dynamic> alerta) async {
+    // Remove da UI imediatamente (Dismissible exige remoção síncrona).
+    if (!mounted) return;
+    setState(() {
+      _alertas = _alertas
+          .where((item) =>
+              AlertaInboxService.alertKey(item) !=
+              AlertaInboxService.alertKey(alerta))
+          .toList();
+    });
+    // Persiste em background.
     await AlertaInboxService.dismissAlert(alerta);
-    await _load();
   }
 
   Future<void> _clearAll() async {
