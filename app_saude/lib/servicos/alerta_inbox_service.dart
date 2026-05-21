@@ -218,4 +218,18 @@ class AlertaInboxService {
     final seen = await _loadSeen();
     await _saveSeen(seen.where((item) => item != id).toList());
   }
+
+  /// Remove um alerta individual da inbox local.
+  static Future<void> dismissAlert(Map<String, dynamic> alerta) async {
+    final inbox = await loadInbox();
+    final target = _alertKey(alerta);
+    final updated =
+        inbox.where((item) => _alertKey(item) != target).toList();
+    await _saveInbox(updated);
+  }
+
+  /// Remove todos os alertas da inbox local.
+  static Future<void> clearInbox() async {
+    await _saveInbox([]);
+  }
 }

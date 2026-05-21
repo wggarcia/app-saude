@@ -80,6 +80,38 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
     });
   }
 
+  Future<void> _dismissAlert(Map<String, dynamic> alerta) async {
+    await AlertaInboxService.dismissAlert(alerta);
+    await _load();
+  }
+
+  Future<void> _clearAll() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Limpar todos os alertas?'),
+        content: const Text(
+          'Todos os alertas salvos serao removidos da sua caixa. '
+          'Novos alertas continuarao chegando normalmente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF6B6B)),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Limpar tudo'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+    await AlertaInboxService.clearInbox();
+    await _load();
+  }
+
   Future<void> _openAlert(Map<String, dynamic> alerta) async {
     await AlertaInboxService.markAsRead(alerta);
     if (!mounted) {
@@ -179,12 +211,39 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
         title: const Text('Alertas'),
         actions: [
           if (_alertas.isNotEmpty)
-            TextButton(
-              onPressed: () async {
-                await AlertaInboxService.markAllAsRead();
-                await _load();
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) async {
+                if (value == 'marcar') {
+                  await AlertaInboxService.markAllAsRead();
+                  await _load();
+                } else if (value == 'limpar') {
+                  await _clearAll();
+                }
               },
-              child: const Text('Marcar tudo'),
+              itemBuilder: (ctx) => [
+                const PopupMenuItem(
+                  value: 'marcar',
+                  child: Row(
+                    children: [
+                      Icon(Icons.done_all, size: 18, color: Color(0xFF39D0C3)),
+                      SizedBox(width: 10),
+                      Text('Marcar tudo como lido'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'limpar',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_sweep_outlined, size: 18, color: Color(0xFFFF6B6B)),
+                      SizedBox(width: 10),
+                      Text('Limpar todos os alertas',
+                          style: TextStyle(color: Color(0xFFFF6B6B))),
+                    ],
+                  ),
+                ),
+              ],
             ),
         ],
       ),
@@ -235,9 +294,51 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
               ..._alertas.map(
                 (alerta) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _AlertListTile(
-                    alerta: alerta,
-                    onTap: () => _openAlert(alerta),
+                  child: Dismissible(
+                    key: ValueKey(alerta['inbox_key'] ?? alerta['id'] ?? alerta['titulo']),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 24),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF5C1515),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.delete_outline, color: Color(0xFFFF8E8E), size: 28),
+                          SizedBox(height: 4),
+                          Text('Excluir', style: TextStyle(color: Color(0xFFFF8E8E), fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    confirmDismiss: (_) async {
+                      return await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Excluir alerta?'),
+                          content: const Text('Este alerta sera removido da sua caixa.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancelar'),
+                            ),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFF6B6B)),
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Excluir'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    onDismissed: (_) => _dismissAlert(alerta),
+                    child: _AlertListTile(
+                      alerta: alerta,
+                      onTap: () => _openAlert(alerta),
+                    ),
                   ),
                 ),
               ),

@@ -132,7 +132,17 @@
 
 ---
 
-**Status:** [  ] GO COMERCIAL   [  ] NÃO GO
+## Smoke Test — Resultado (21/05/2026)
+
+- [x] Login empresa B2B → dashboard → SST
+- [x] Login governo → alertas → emitir rascunho de alerta
+- [x] Login owner → console operacional
+- [x] Exportar PDF do dashboard
+- [x] Acessar /privacidade e /termos — conteúdo correto
+- [x] Auth protegida (401 sem token em todos os módulos)
+- [x] Health check verde
+
+**Status:** [x] GO COMERCIAL   [  ] NÃO GO
 
 **Responsável:** Wagner Garcia
 **Data de revisão:** 21/05/2026

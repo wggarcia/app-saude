@@ -125,6 +125,8 @@ class PublicApiService {
     required double latitude,
     required double longitude,
     String locationSource = 'current',
+    String? intensidadeFebre,
+    String? intensidadeArticular,
   }) async {
     final deviceId = await DeviceService.getDeviceId();
     final response = await http
@@ -135,11 +137,32 @@ class PublicApiService {
             'X-Device-Id': deviceId,
           },
           body: jsonEncode({
+            // Sintomas base
             'febre': sintomas['febre'] ?? false,
             'tosse': sintomas['tosse'] ?? false,
             'dor_corpo': sintomas['dor_corpo'] ?? false,
             'cansaco': sintomas['cansaco'] ?? false,
             'falta_ar': sintomas['falta_ar'] ?? false,
+            // Sintomas expandidos — arbovirose
+            'dor_cabeca': sintomas['dor_cabeca'] ?? false,
+            'dor_articular': sintomas['dor_articular'] ?? false,
+            'exantema': sintomas['exantema'] ?? false,
+            'conjuntivite': sintomas['conjuntivite'] ?? false,
+            'vomito_nausea': sintomas['vomito_nausea'] ?? false,
+            'dor_abdominal': sintomas['dor_abdominal'] ?? false,
+            'calafrios': sintomas['calafrios'] ?? false,
+            // Sintomas expandidos — respiratorio
+            'dor_garganta': sintomas['dor_garganta'] ?? false,
+            'coriza': sintomas['coriza'] ?? false,
+            'perda_olfato_paladar': sintomas['perda_olfato_paladar'] ?? false,
+            // Sintomas expandidos — geral / urgencia
+            'diarreia': sintomas['diarreia'] ?? false,
+            'ictericia': sintomas['ictericia'] ?? false,
+            'rigidez_nuca': sintomas['rigidez_nuca'] ?? false,
+            'manchas_hemorragicas': sintomas['manchas_hemorragicas'] ?? false,
+            // Intensidades (dropdowns)
+            'intensidade_febre': intensidadeFebre ?? '',
+            'intensidade_articular': intensidadeArticular ?? '',
             'latitude': latitude,
             'longitude': longitude,
             'location_source': locationSource,

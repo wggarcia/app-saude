@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../config.dart';
 import '../../servicos/location_service.dart';
 import '../../servicos/public_api_service.dart';
 import '../../servicos/regiao_base_service.dart';
@@ -28,6 +27,8 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
   bool radarExpanded = false;
   String? notice;
   bool _refreshingInBackground = false;
+  // 'rua' = OpenStreetMap | 'satelite' = ESRI World Imagery
+  String _tipoMapa = 'rua';
 
   @override
   void initState() {
@@ -337,6 +338,17 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
         title: const Text('Mapa de risco'),
         actions: [
           IconButton(
+            tooltip:
+                _tipoMapa == 'rua' ? 'Ver satélite' : 'Ver mapa de ruas',
+            icon: Icon(
+              _tipoMapa == 'rua'
+                  ? Icons.satellite_alt
+                  : Icons.map_outlined,
+            ),
+            onPressed: () =>
+                setState(() => _tipoMapa = _tipoMapa == 'rua' ? 'satelite' : 'rua'),
+          ),
+          IconButton(
             onPressed: _load,
             icon: const Icon(Icons.refresh),
           ),
@@ -356,9 +368,11 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
               ),
               children: [
                 TileLayer(
-                  urlTemplate:
-                      'https://api.mapbox.com/styles/v1/mapbox/navigation-day-v1/tiles/256/{z}/{x}/{y}@2x?access_token=${Config.mapboxPublicToken}',
+                  urlTemplate: _tipoMapa == 'satelite'
+                      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.soluscrt.saude',
+                  maxNativeZoom: 19,
                 ),
                 CircleLayer(circles: circles),
                 MarkerLayer(markers: markers),
