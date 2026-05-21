@@ -3189,7 +3189,92 @@ function renderarTopProc(dados) {
       <span class="chart-bar-val">${fmtMoeda(d.custo)}</span>
     </div>`).join('');
 }
-function exportarDashboard() { showToastPS('Gerando relatorio PDF... Em breve no seu email.', 'ok'); }
+function exportarDashboard() {
+  // Coleta dados actuais do dashboard para gerar relatório imprimível
+  const now = new Date();
+  const dataHora = now.toLocaleString('pt-BR');
+  const nomeOp = document.querySelector('.sidebar-logo-text')?.textContent?.trim() || 'Operadora';
+
+  // KPIs do painel
+  const mlr  = document.getElementById('kpi-mlr')?.textContent  || '—';
+  const pmpm = document.getElementById('kpi-pmpm')?.textContent || '—';
+  const mrr  = document.getElementById('kpi-mrr')?.textContent  || '—';
+  const vidas = document.getElementById('kpi-vidas')?.textContent || '—';
+
+  // Gera HTML da janela de impressão
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório Executivo — ${nomeOp}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;font-size:12px;color:#111;background:#fff;padding:24px}
+    h1{font-size:18px;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:6px;margin-bottom:4px}
+    .sub{font-size:11px;color:#555;margin-bottom:20px}
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+    .kpi-box{border:1px solid #d1d5db;border-radius:6px;padding:12px;text-align:center}
+    .kpi-box .lbl{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px}
+    .kpi-box .val{font-size:22px;font-weight:700;color:#1e3a5f;margin-top:4px}
+    .section{margin-bottom:20px}
+    .section h2{font-size:13px;font-weight:700;color:#1e3a5f;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin-bottom:10px}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th{background:#1e3a5f;color:#fff;padding:6px 8px;text-align:left}
+    td{padding:5px 8px;border-bottom:1px solid #f0f0f0}
+    tr:nth-child(even) td{background:#f9fafb}
+    .footer{margin-top:24px;font-size:10px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:8px}
+    .badge-ok{color:#059669;font-weight:600} .badge-warn{color:#d97706;font-weight:600} .badge-err{color:#dc2626;font-weight:600}
+    @media print{body{padding:0}}
+  </style>
+</head>
+<body>
+  <h1>📊 Relatório Executivo — Plano de Saúde</h1>
+  <div class="sub">Gerado em ${dataHora} &nbsp;|&nbsp; ${nomeOp} &nbsp;|&nbsp; SolusCRT Saude</div>
+
+  <div class="kpi-grid">
+    <div class="kpi-box"><div class="lbl">MLR (Sinistralidade)</div><div class="val">${mlr}</div></div>
+    <div class="kpi-box"><div class="lbl">PMPM</div><div class="val">${pmpm}</div></div>
+    <div class="kpi-box"><div class="lbl">MRR</div><div class="val">${mrr}</div></div>
+    <div class="kpi-box"><div class="lbl">Beneficiários ativos</div><div class="val">${vidas}</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Conformidade SLA ANS (RN 395/452)</h2>
+    <table>
+      <tr><th>Tipo de guia</th><th>Prazo ANS</th><th>Em conformidade</th><th>Breaches</th></tr>
+      ${(() => {
+        const rows = [];
+        document.querySelectorAll('#sla-por-tipo-rows tr').forEach(tr => {
+          rows.push('<tr>' + [...tr.cells].map(td => '<td>'+td.innerText+'</td>').join('') + '</tr>');
+        });
+        return rows.length ? rows.join('') : '<tr><td colspan="4">Sem dados SLA carregados. Acesse a aba SLA e exporte novamente.</td></tr>';
+      })()}
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Observações Gerais</h2>
+    <p style="color:#555;font-size:11px">
+      Este relatório é gerado a partir dos dados exibidos na plataforma SolusCRT no momento da exportação.
+      Para relatórios regulatórios oficiais (DIOPS, TISS, SIB), utilize a aba <strong>Regulatório ANS</strong>.
+      MLR recomendado pela ANS: abaixo de 85%. Valores acima indicam atenção à sinistralidade.
+    </p>
+  </div>
+
+  <div class="footer">
+    SolusCRT Saude &nbsp;|&nbsp; soluscrt.com.br &nbsp;|&nbsp; Documento gerado eletronicamente em ${dataHora}
+    <br>Este documento tem finalidade gerencial interna. Não substitui relatórios regulatórios ANS.
+  </div>
+
+  <script>window.onload = function(){ window.print(); window.onafterprint = function(){ window.close(); }; }<\/script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (!w) { showToastPS('Habilite popups para exportar PDF.', 'err'); return; }
+  w.document.write(html);
+  w.document.close();
+}
 
 // ════════════════════════════════════════════════════════════
 //  REGULACAO & SLA ANS
