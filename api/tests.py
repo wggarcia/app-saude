@@ -1945,13 +1945,13 @@ class AuthDeviceTests(TestCase):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "quatro ambientes completamente separados")
+        self.assertContains(response, "Cinco ambientes privados para cada decisor em saude.")
         self.assertNotContains(response, "sistema nervoso")
         self.assertNotContains(response, "empresa.soluscrt.com.br")
         self.assertNotContains(response, "governo.soluscrt.com.br")
         self.assertContains(response, "/apresentacao/")
         self.assertContains(response, "https://play.google.com/store/apps/details?id=com.soluscrt.saude")
-        self.assertContains(response, "Valores SolusCRT")
+        self.assertContains(response, "Confianca SolusCRT")
 
     def test_subdominios_raiz_separam_ambientes(self):
         empresa = Client(HTTP_HOST="empresa.soluscrt.com.br").get("/")
