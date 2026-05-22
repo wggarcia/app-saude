@@ -509,3 +509,26 @@ def api_fluxo_caixa_clinica(request):
         return JsonResponse({"fluxo_caixa": resultado})
     except Exception as e:
         return JsonResponse({"erro": str(e)}, status=500)
+
+
+# ── Página HTML ───────────────────────────────────────────────────────────────
+
+def sst_financeiro_clinica_page(request):
+    from django.shortcuts import render, redirect
+    from .views_sst import _empresa_sst_autenticada
+    empresa = _empresa_sst_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_expansao_modulo.html", {
+        "modulo_id":      "financeiro_clinica",
+        "modulo_area":    "Financeiro · Clínica Ocupacional",
+        "modulo_titulo":  "Financeiro da Clínica",
+        "modulo_descricao": (
+            "Faturamento de serviços SST com TISS, DRE mensal, fluxo de caixa de 6 meses, "
+            "gestão de glosas e contas a pagar/receber para clínicas ocupacionais."
+        ),
+        "api_base":     "/api/clinica/financeiro/faturas/",
+        "api_kpi":      "/api/clinica/financeiro/kpis/",
+        "accent_color": "#a374ff",
+        "empresa_nome": empresa.nome,
+    })

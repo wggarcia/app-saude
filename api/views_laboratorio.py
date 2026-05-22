@@ -380,3 +380,26 @@ def api_laboratorio_kpis(request):
         })
     except Exception as e:
         return JsonResponse({"erro": str(e)}, status=500)
+
+
+# ── Página HTML ───────────────────────────────────────────────────────────────
+
+def sst_laboratorio_page(request):
+    from django.shortcuts import render, redirect
+    from .views_sst import _empresa_sst_autenticada
+    empresa = _empresa_sst_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_expansao_modulo.html", {
+        "modulo_id":      "laboratorio",
+        "modulo_area":    "Saúde Ocupacional · SST",
+        "modulo_titulo":  "Integração Laboratorial",
+        "modulo_descricao": (
+            "Resultados de exames importados via API, CSV, HL7 ou FHIR. "
+            "Alertas automáticos de resultados críticos e alterados com vinculação ao ASO."
+        ),
+        "api_base":     "/api/sst/laboratorios/resultados/",
+        "api_kpi":      "/api/sst/laboratorios/kpis/",
+        "accent_color": "#34d399",
+        "empresa_nome": empresa.nome,
+    })

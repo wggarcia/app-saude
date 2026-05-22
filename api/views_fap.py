@@ -42,6 +42,7 @@ Endpoints:
 
 from datetime import date
 from django.http import JsonResponse
+from django.shortcuts import render, redirect
 import json
 
 
@@ -534,3 +535,27 @@ def api_fap_kpis(request):
         })
     except Exception as e:
         return JsonResponse({"erro": str(e)}, status=500)
+
+
+# ── Página HTML ───────────────────────────────────────────────────────────────
+
+def sst_fap_page(request):
+    from .views_dashboard import _empresa_autenticada
+    from .views_sst import _empresa_sst_autenticada
+    empresa = _empresa_sst_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_expansao_modulo.html", {
+        "modulo_id":      "fap",
+        "modulo_area":    "Previdência Social · SST",
+        "modulo_titulo":  "Gestão FAP",
+        "modulo_descricao": (
+            "Fator Acidentário de Prevenção publicado pelo INSS. "
+            "Monitore o multiplicador RAT, simule economia ou custo adicional "
+            "e gerencie o prazo de contestação (30 dias após publicação)."
+        ),
+        "api_base":     "/api/sst/fap/historico/",
+        "api_kpi":      "/api/sst/fap/kpis/",
+        "accent_color": "#f59e0b",
+        "empresa_nome": empresa.nome,
+    })

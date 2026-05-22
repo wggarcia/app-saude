@@ -143,6 +143,11 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
     <a href="/sst/treinamentos/">Treinamentos NR</a>
     <a href="/sst/epis/">EPI / EPC</a>
     <a href="/sst/relatorios/">Relatórios</a>
+    <a href="/sst/ppp/">PPP</a>
+    <a href="/sst/laudos/">Laudos</a>
+    <a href="/sst/fap/">FAP</a>
+    <a href="/sst/laboratorios/">Laboratório</a>
+    <a href="/sst/rede-credenciada/">Rede Credenciada</a>
   </nav>
   <div class="tb-actions">
     <a class="btn-main" href="/sst/asos/">+ Emitir ASO</a>
@@ -334,6 +339,44 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
         <div class="module-title">Plataforma TI</div>
         <div class="module-copy">Integrações, API keys, webhooks, segurança e trilha técnica isolada para o time de TI.</div>
         <a class="module-link" href="/gestao/plataforma/">Abrir módulo</a>
+      </article>
+
+      <!-- ── Módulos SST Expansão ────────────────────────────── -->
+      <article class="module-card" style="border-color:rgba(90,240,211,.22)">
+        <div class="module-top"><div class="module-icon" style="background:rgba(90,240,211,.12)">📜</div><div class="badge b-ok">Legal</div></div>
+        <div class="module-title">PPP — Perfil Profissiográfico</div>
+        <div class="module-copy">Geração automática do PPP por IN INSS 128/2022. Agentes nocivos, monitoração biológica e histórico de cargos.</div>
+        <a class="module-link" href="/sst/ppp/" id="linkPPP">Abrir módulo</a>
+      </article>
+      <article class="module-card" style="border-color:rgba(111,180,255,.22)">
+        <div class="module-top"><div class="module-icon" style="background:rgba(111,180,255,.12)">📑</div><div class="badge b-warn">Validade</div></div>
+        <div class="module-title">Laudos Técnicos</div>
+        <div class="module-copy">LTCAT, LIP, LTIP, PGR e PCMSO com controle de vigência, assinatura e alertas de vencimento (≤ 60 dias).</div>
+        <a class="module-link" href="/sst/laudos/" id="linkLaudos">Abrir módulo</a>
+      </article>
+      <article class="module-card" style="border-color:rgba(255,176,32,.22)">
+        <div class="module-top"><div class="module-icon" style="background:rgba(255,176,32,.12)">📊</div><div class="badge b-danger">FAP</div></div>
+        <div class="module-title">Gestão FAP</div>
+        <div class="module-copy">Fator Acidentário de Prevenção: monitore o multiplicador RAT, simule economia/custo e gerencie prazo de contestação.</div>
+        <a class="module-link" href="/sst/fap/" id="linkFAP">Abrir módulo</a>
+      </article>
+      <article class="module-card" style="border-color:rgba(6,214,160,.22)">
+        <div class="module-top"><div class="module-icon" style="background:rgba(6,214,160,.12)">🧪</div><div class="badge b-ok">Lab</div></div>
+        <div class="module-title">Laboratório</div>
+        <div class="module-copy">Resultados de exames importados via API, CSV, HL7 ou FHIR. Alertas de resultados críticos e alterados em tempo real.</div>
+        <a class="module-link" href="/sst/laboratorios/" id="linkLab">Abrir módulo</a>
+      </article>
+      <article class="module-card" style="border-color:rgba(255,107,157,.22)">
+        <div class="module-top"><div class="module-icon" style="background:rgba(255,107,157,.12)">🏥</div><div class="badge b-muted">Rede</div></div>
+        <div class="module-title">Rede Credenciada</div>
+        <div class="module-copy">Mapa nacional de clínicas parceiras com busca por especialidade, cidade e geolocalização. Meta: +3.000 clínicas.</div>
+        <a class="module-link" href="/sst/rede-credenciada/" id="linkRede">Abrir módulo</a>
+      </article>
+      <article class="module-card" style="border-color:rgba(163,110,255,.22)">
+        <div class="module-top"><div class="module-icon" style="background:rgba(163,110,255,.12)">💰</div><div class="badge b-warn">Clínica</div></div>
+        <div class="module-title">Financeiro da Clínica</div>
+        <div class="module-copy">Faturamento de serviços SST, DRE, fluxo de caixa, glosas e contas a pagar/receber para clínicas ocupacionais.</div>
+        <a class="module-link" href="/clinica/financeiro/" id="linkFinClinica">Abrir módulo</a>
       </article>
     </section>
   </main>

@@ -254,32 +254,38 @@ from api.views_postos_trabalho import (
 from api.views_ppp import (
     api_ppp_lista, api_ppp_criar, api_ppp_detalhe,
     api_ppp_finalizar, api_ppp_pdf, api_ppp_kpis,
+    sst_ppp_page,
 )
 from api.views_laudos_tecnicos import (
     api_laudos_lista, api_laudo_detalhe,
     api_laudo_assinar, api_laudo_pdf, api_laudos_kpis,
+    sst_laudos_page,
 )
 from api.views_rede_credenciada import (
     api_rede_credenciada_busca, api_rede_credenciada_proximas,
     api_rede_credenciada_detalhe, api_rede_credenciar,
     api_rede_kpis_credenciada, api_rede_por_estado,
+    sst_rede_credenciada_page,
 )
 from api.views_laboratorio import (
     api_laboratorios_lista, api_laboratorio_registrar,
     api_resultado_importar, api_resultado_lote_csv,
     api_resultados_empresa, api_resultados_funcionario,
     api_resultados_alertas, api_laboratorio_kpis,
+    sst_laboratorio_page,
 )
 from api.views_financeiro_clinica import (
     api_faturas, api_fatura_detalhe, api_fatura_baixar,
     api_fatura_cancelar, api_fatura_pdf,
     api_despesas_clinica, api_glosas,
     api_financeiro_kpis_clinica, api_fluxo_caixa_clinica,
+    sst_financeiro_clinica_page,
 )
 from api.views_fap import (
     api_fap_lista, api_fap_registrar, api_fap_detalhe,
     api_fap_simulacao, api_fap_contestacao,
     api_fap_historico, api_fap_kpis,
+    sst_fap_page,
 )
 from api.views_solicitacao_exame import (
     sst_solicitacoes_page,
@@ -1368,6 +1374,14 @@ urlpatterns = [
     path('api/plano-saude/odontologia/', api_ps_odontologia),
     path('api/plano-saude/odontologia/guias/<int:guia_id>/', api_ps_guia_odonto_detalhe),
     path('api/plano-saude/regulatorio/gerar/', api_ps_regulatorio_gerar),
+    # ── Páginas SST Expansão ─────────────────────────────────────────────────
+    path('sst/ppp/', sst_ppp_page),
+    path('sst/laudos/', sst_laudos_page),
+    path('sst/fap/', sst_fap_page),
+    path('sst/laboratorios/', sst_laboratorio_page),
+    path('sst/rede-credenciada/', sst_rede_credenciada_page),
+    path('clinica/financeiro/', sst_financeiro_clinica_page),
+
     # ── Gestão FAP (Fator Acidentário de Prevenção) ─────────────────────────
     path('api/sst/fap/', api_fap_lista),
     path('api/sst/fap/registrar/', api_fap_registrar),

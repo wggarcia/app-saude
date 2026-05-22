@@ -255,3 +255,26 @@ def api_rede_por_estado(request):
         return JsonResponse({"por_estado": resultado})
     except Exception as e:
         return JsonResponse({"erro": str(e)}, status=500)
+
+
+# ── Página HTML ───────────────────────────────────────────────────────────────
+
+def sst_rede_credenciada_page(request):
+    from django.shortcuts import render, redirect
+    from .views_sst import _empresa_sst_autenticada
+    empresa = _empresa_sst_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_expansao_modulo.html", {
+        "modulo_id":      "rede",
+        "modulo_area":    "Rede de Clínicas · SST",
+        "modulo_titulo":  "Rede Credenciada",
+        "modulo_descricao": (
+            "Mapa nacional de clínicas parceiras com busca por especialidade, cidade e geolocalização. "
+            "Meta: superar as +3.000 clínicas da rede SOC."
+        ),
+        "api_base":     "/api/sst/rede-credenciada/",
+        "api_kpi":      "/api/sst/rede-credenciada/kpis/",
+        "accent_color": "#ff6b9d",
+        "empresa_nome": empresa.nome,
+    })

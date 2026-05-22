@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ modulo_titulo }} — SolusCRT SST</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06111a;
+      --panel: rgba(7,25,38,.84);
+      --line: rgba(111,196,255,.10);
+      --text: #e8f4ff;
+      --muted: #7aa4c0;
+      --teal: #00c9a7;
+      --blue: #52a6ff;
+      --amber: #f59e0b;
+      --red: #f87171;
+      --green: #34d399;
+      --purple: #a374ff;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: Manrope, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.55; }
+
+    /* ── Topbar ── */
+    .topbar { display: flex; align-items: center; gap: 14px; padding: 0 24px; height: 58px; border-bottom: 1px solid var(--line); background: rgba(6,16,25,.92); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100; }
+    .tb-logo { font-size: .74rem; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: var(--teal); }
+    .tb-div { width: 1px; height: 20px; background: var(--line); }
+    .tb-sub { font-size: .78rem; color: var(--muted); font-weight: 600; }
+    .tb-nav { display: flex; gap: 2px; margin-left: 8px; overflow-x: auto; }
+    .tb-nav a { padding: 6px 12px; border-radius: 8px; font-size: .78rem; font-weight: 600; color: var(--muted); text-decoration: none; white-space: nowrap; }
+    .tb-nav a:hover, .tb-nav a.active { background: rgba(0,201,167,.1); color: var(--teal); }
+    .tb-actions { display: flex; gap: 8px; margin-left: auto; }
+    .btn-main { padding: 8px 16px; border-radius: 10px; background: linear-gradient(135deg,#00c9a7,#0096ff); color: #04111a; font-weight: 800; font-size: .78rem; text-decoration: none; }
+    .btn-ghost { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted); font-size: .78rem; text-decoration: none; font-weight: 600; }
+
+    /* ── Layout ── */
+    .app { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 58px); }
+    .sidebar { padding: 20px 0; border-right: 1px solid var(--line); }
+    .sidebar a { display: flex; align-items: center; gap: 10px; padding: 9px 20px; font-size: .82rem; font-weight: 600; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; }
+    .sidebar a:hover { color: var(--text); }
+    .sidebar a.active { color: var(--teal); border-left-color: var(--teal); background: rgba(0,201,167,.06); }
+    .sidebar-section { padding: 14px 20px 6px; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); opacity: .55; }
+    main { padding: 28px 32px; max-width: 1200px; }
+
+    /* ── Hero ── */
+    .hero { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start; margin-bottom: 28px; }
+    .hero-eyebrow { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .13em; color: var(--accent-color, var(--teal)); margin-bottom: 6px; }
+    .hero-title { font-size: 1.65rem; font-weight: 800; line-height: 1.2; margin-bottom: 10px; }
+    .hero-sub { font-size: .9rem; color: var(--muted); line-height: 1.6; max-width: 580px; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; font-size: .75rem; font-weight: 800; background: rgba(0,201,167,.12); border: 1px solid rgba(0,201,167,.3); color: var(--teal); }
+
+    /* ── KPI strip ── */
+    .kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .kpi-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; border-top: 2px solid var(--accent-color, var(--teal)); }
+    .kpi-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .kpi-value { font-size: 1.6rem; font-weight: 800; margin-top: 6px; color: var(--text); }
+    .kpi-sub { font-size: .72rem; color: var(--muted); margin-top: 3px; }
+
+    /* ── Section ── */
+    .section-title { font-size: .82rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 14px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; margin-bottom: 20px; }
+
+    /* ── Table ── */
+    .data-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .data-table th { padding: 8px 12px; text-align: left; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-bottom: 1px solid var(--line); }
+    .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(111,196,255,.05); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(255,255,255,.02); }
+
+    /* ── Badges ── */
+    .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 999px; font-size: .68rem; font-weight: 800; }
+    .b-ok { background: rgba(52,211,153,.12); color: #34d399; border: 1px solid rgba(52,211,153,.25); }
+    .b-warn { background: rgba(245,158,11,.12); color: #f59e0b; border: 1px solid rgba(245,158,11,.25); }
+    .b-danger { background: rgba(248,113,113,.12); color: #f87171; border: 1px solid rgba(248,113,113,.25); }
+    .b-muted { background: rgba(122,164,192,.1); color: var(--muted); border: 1px solid var(--line); }
+
+    /* ── Alert ── */
+    .alert { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 12px; font-size: .82rem; margin-bottom: 14px; }
+    .alert.info { background: rgba(82,166,255,.08); border: 1px solid rgba(82,166,255,.2); }
+    .alert.warn { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.2); color: #f59e0b; }
+    .alert.danger { background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.2); color: #f87171; }
+
+    /* ── FAP specific ── */
+    .fap-box { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 20px; }
+    .fap-card { padding: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; text-align: center; }
+    .fap-number { font-size: 2.2rem; font-weight: 800; margin: 8px 0; }
+    .fap-label { font-size: .72rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+
+    /* ── Loading ── */
+    .loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .85rem; padding: 20px; }
+    .spinner { width: 18px; height: 18px; border: 2px solid var(--line); border-top-color: var(--teal); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Empty ── */
+    .empty { text-align: center; padding: 40px; color: var(--muted); }
+    .empty-icon { font-size: 2.4rem; margin-bottom: 12px; }
+    .empty-title { font-size: .95rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .empty-sub { font-size: .82rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) { .app { grid-template-columns: 1fr; } .sidebar { display: none; } main { padding: 20px; } }
+    @media (max-width: 640px) { .hero { grid-template-columns: 1fr; } .kpi-strip { grid-template-columns: 1fr 1fr; } .fap-box { grid-template-columns: 1fr; } .tb-nav { display: none; } }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="tb-logo">SolusCRT</div>
+  <div class="tb-div"></div>
+  <div class="tb-sub">SST · <span id="nomeEmpresa">{{ empresa_nome }}</span></div>
+  <nav class="tb-nav">
+    <a href="/dashboard-empresa/">Painel SST</a>
+    <a href="/sst/">Central SST</a>
+    <a href="/sst/funcionarios/">Funcionários</a>
+    <a href="/sst/asos/">ASO</a>
+    <a href="/sst/cats/">CAT</a>
+    <a href="/sst/ppp/" {% if modulo_id == "ppp" %}class="active"{% endif %}>PPP</a>
+    <a href="/sst/laudos/" {% if modulo_id == "laudos" %}class="active"{% endif %}>Laudos</a>
+    <a href="/sst/fap/" {% if modulo_id == "fap" %}class="active"{% endif %}>FAP</a>
+    <a href="/sst/laboratorios/" {% if modulo_id == "laboratorio" %}class="active"{% endif %}>Laboratório</a>
+    <a href="/sst/rede-credenciada/" {% if modulo_id == "rede" %}class="active"{% endif %}>Rede</a>
+  </nav>
+  <div class="tb-actions">
+    <a class="btn-ghost" href="/sst/">← Central SST</a>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-section">SST Base</div>
+    <a href="/sst/funcionarios/">👥 Funcionários</a>
+    <a href="/sst/asos/">📋 ASO</a>
+    <a href="/sst/exames/">🔬 Exames</a>
+    <a href="/sst/cats/">⚠️ CAT / Acidentes</a>
+    <a href="/sst/riscos/">🦺 Riscos e EPIs</a>
+    <a href="/sst/esocial/">🔗 eSocial</a>
+
+    <div class="sidebar-section" style="margin-top:14px;">Expansão SST</div>
+    <a href="/sst/ppp/" {% if modulo_id == "ppp" %}class="active"{% endif %}>📜 PPP</a>
+    <a href="/sst/laudos/" {% if modulo_id == "laudos" %}class="active"{% endif %}>📑 Laudos Técnicos</a>
+    <a href="/sst/fap/" {% if modulo_id == "fap" %}class="active"{% endif %}>📊 Gestão FAP</a>
+    <a href="/sst/laboratorios/" {% if modulo_id == "laboratorio" %}class="active"{% endif %}>🧪 Laboratório</a>
+    <a href="/sst/rede-credenciada/" {% if modulo_id == "rede" %}class="active"{% endif %}>🏥 Rede Credenciada</a>
+    <a href="/clinica/financeiro/" {% if modulo_id == "financeiro_clinica" %}class="active"{% endif %}>💰 Financeiro Clínica</a>
+  </aside>
+
+  <main>
+    <div class="hero">
+      <div>
+        <div class="hero-eyebrow" style="color:var(--accent-color,var(--teal))">{{ modulo_area }}</div>
+        <div class="hero-title">{{ modulo_titulo }}</div>
+        <div class="hero-sub">{{ modulo_descricao }}</div>
+      </div>
+      <div class="hero-badge" id="heroBadge">⟳ Carregando...</div>
+    </div>
+
+    <div class="kpi-strip" id="kpiStrip">
+      <div class="kpi-card"><div class="kpi-label">Aguarde</div><div class="kpi-value">—</div></div>
+    </div>
+
+    <div id="alertsSection"></div>
+
+    <div class="panel" id="mainPanel">
+      <div class="loading"><div class="spinner"></div> Carregando dados do módulo...</div>
+    </div>
+  </main>
+</div>
+
+<script>
+const MODULO_ID   = "{{ modulo_id }}";
+const API_BASE    = "{{ api_base }}";
+const API_KPI     = "{{ api_kpi }}";
+const ACCENT      = "{{ accent_color|default:'#00c9a7' }}";
+
+// Apply accent color
+document.documentElement.style.setProperty("--accent-color", ACCENT);
+
+function auth() {
+  return sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || "";
+}
+
+function headers() {
+  return { "Authorization": "Bearer " + auth(), "Content-Type": "application/json" };
+}
+
+function badge(text, cls) {
+  return `<span class="badge ${cls}">${text}</span>`;
+}
+
+function fmt(val, prefix = "") {
+  if (val === null || val === undefined) return "—";
+  if (typeof val === "number") return prefix + val.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  return String(val);
+}
+
+async function loadKpis() {
+  if (!API_KPI) return;
+  try {
+    const r = await fetch(API_KPI, { headers: headers() });
+    if (!r.ok) return;
+    const d = await r.json();
+    renderKpis(d);
+  } catch (e) { console.warn("KPI load error", e); }
+}
+
+async function loadMain() {
+  if (!API_BASE) return;
+  try {
+    const r = await fetch(API_BASE, { headers: headers() });
+    if (!r.ok) return;
+    const d = await r.json();
+    renderMain(d);
+  } catch (e) { console.warn("Main load error", e); }
+}
+
+// ── Module-specific renderers ────────────────────────────────────────────────
+
+function renderKpis(d) {
+  const strip = document.getElementById("kpiStrip");
+  const badge = document.getElementById("heroBadge");
+  let kpis = [];
+  let badgeText = "✓ Ativo";
+
+  if (MODULO_ID === "fap") {
+    const fv = d.fap_valor;
+    const tipo = d.tipo_fap;
+    badgeText = fv ? `FAP ${parseFloat(fv).toFixed(4)} — ${tipo === "bonus" ? "✅ Bônus" : tipo === "malus" ? "⚠️ Malus" : "Neutro"}` : "Nenhum FAP registrado";
+    kpis = [
+      { label: "FAP Atual",         value: fv ? parseFloat(fv).toFixed(4) : "—",     sub: d.ano_atual ? `Exercício ${d.ano_atual}` : "" },
+      { label: "RAT Base",          value: d.rat_base_pct ? d.rat_base_pct + "%" : "—", sub: "Alíquota sobre folha" },
+      { label: "RAT Ajustado",      value: d.rat_ajustado_pct ? parseFloat(d.rat_ajustado_pct).toFixed(4) + "%" : "—", sub: "RAT × FAP" },
+      { label: "Custo/mês (RAT)",   value: d.impacto_financeiro?.custo_rat_mensal ? "R$ " + parseFloat(d.impacto_financeiro.custo_rat_mensal).toLocaleString("pt-BR") : "—", sub: "" },
+      { label: "Economia/Custo ano",value: d.impacto_financeiro?.delta_anual ? "R$ " + parseFloat(d.impacto_financeiro.delta_anual).toLocaleString("pt-BR") : "—", sub: d.impacto_financeiro?.delta_anual > 0 ? "↓ Economia" : "↑ Custo extra" },
+      { label: "CATs (12 meses)",   value: d.indicadores_acidente?.cats_ultimos_12_meses ?? "—", sub: "" },
+    ];
+    // Render alertas
+    const alerts = d.alertas || [];
+    const sec = document.getElementById("alertsSection");
+    sec.innerHTML = alerts.map(a => `<div class="alert ${a.nivel === "urgente" || a.nivel === "critico" ? "danger" : a.nivel === "atencao" ? "warn" : "info"}">${a.msg}</div>`).join("");
+
+  } else if (MODULO_ID === "ppp") {
+    badgeText = `${d.total_ppps ?? 0} PPPs`;
+    kpis = [
+      { label: "Total PPPs",       value: d.total_ppps ?? "—",     sub: "" },
+      { label: "Finalizados",      value: d.finalizados ?? "—",    sub: "" },
+      { label: "Rascunho",         value: d.rascunho ?? "—",       sub: "" },
+      { label: "Sem PPP",          value: d.funcionarios_sem_ppp ?? "—", sub: "funcionários" },
+      { label: "Cobertura",        value: d.cobertura_pct ? d.cobertura_pct + "%" : "—", sub: "" },
+    ];
+  } else if (MODULO_ID === "laudos") {
+    badgeText = `${d.total ?? 0} laudos`;
+    kpis = [
+      { label: "Total Laudos",     value: d.total ?? "—",              sub: "" },
+      { label: "Vigentes",         value: d.vigentes ?? "—",           sub: "" },
+      { label: "Vencidos",         value: d.vencidos ?? "—",           sub: "", accent: "var(--red)" },
+      { label: "Vencendo (60d)",   value: d.alertas_vencimento ?? "—", sub: "", accent: "var(--amber)" },
+      { label: "Assinados",        value: d.assinados ?? "—",          sub: "" },
+    ];
+  } else if (MODULO_ID === "laboratorio") {
+    badgeText = `${d.total_resultados ?? 0} resultados`;
+    kpis = [
+      { label: "Total Resultados", value: d.total_resultados ?? "—",         sub: "" },
+      { label: "Com Exame",        value: d.funcionarios_com_exame ?? "—",   sub: "funcionários" },
+      { label: "Sem Exame Lab",    value: d.funcionarios_sem_exame_laboratorial ?? "—", sub: "sem exame" },
+      { label: "Cobertura",        value: d.cobertura_pct ? d.cobertura_pct + "%" : "—", sub: "" },
+      { label: "Alterados",        value: d.resultados_alterados ?? "—",     sub: "", accent: "var(--amber)" },
+      { label: "Críticos",         value: d.resultados_criticos ?? "—",      sub: "", accent: "var(--red)" },
+    ];
+  } else if (MODULO_ID === "rede") {
+    badgeText = `${d.total_clinicas_ativas ?? 0} clínicas`;
+    kpis = [
+      { label: "Clínicas Ativas",  value: d.total_clinicas_ativas ?? "—",       sub: "" },
+      { label: "Estados Cobertos", value: d.estados_cobertos ?? "—",             sub: "/ 27 UFs" },
+      { label: "Meta Rede",        value: d.meta_rede ?? 3000,                   sub: "benchmark SOC" },
+      { label: "Progresso Meta",   value: d.progresso_meta_pct ? d.progresso_meta_pct + "%" : "—", sub: "" },
+      { label: "Avaliação Média",  value: d.avaliacao_media_rede ?? "—",         sub: "/ 5.0" },
+      { label: "Com Agendamento",  value: d.com_agendamento_online ?? "—",       sub: "online" },
+    ];
+  } else if (MODULO_ID === "financeiro_clinica") {
+    badgeText = d.receita_realizada ? `R$ ${parseFloat(d.receita_realizada).toLocaleString("pt-BR")}` : "Financeiro";
+    kpis = [
+      { label: "Receita Realizada",  value: d.receita_realizada ? "R$ " + parseFloat(d.receita_realizada).toLocaleString("pt-BR") : "—", sub: "mês atual" },
+      { label: "A Receber",          value: d.a_receber ? "R$ " + parseFloat(d.a_receber).toLocaleString("pt-BR") : "—",             sub: "" },
+      { label: "Despesas",           value: d.despesas ? "R$ " + parseFloat(d.despesas).toLocaleString("pt-BR") : "—",               sub: "" },
+      { label: "Lucro Líquido",      value: d.lucro_liquido ? "R$ " + parseFloat(d.lucro_liquido).toLocaleString("pt-BR") : "—",     sub: "" },
+      { label: "Margem",             value: d.margem_pct ? d.margem_pct + "%" : "—",                                                 sub: "" },
+    ];
+  }
+
+  badge.textContent = badgeText;
+
+  if (kpis.length === 0) return;
+  strip.innerHTML = kpis.map(k => `
+    <div class="kpi-card" style="${k.accent ? `border-top-color:${k.accent}` : ""}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value" style="${k.accent ? `color:${k.accent}` : ""}">${fmt(k.value)}</div>
+      ${k.sub ? `<div class="kpi-sub">${k.sub}</div>` : ""}
+    </div>
+  `).join("");
+}
+
+function renderMain(d) {
+  const panel = document.getElementById("mainPanel");
+
+  if (MODULO_ID === "fap") {
+    const hist = d.historico || [];
+    if (hist.length === 0) {
+      panel.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">📊</div>
+          <div class="empty-title">Nenhum FAP registrado ainda</div>
+          <div class="empty-sub">Registre o FAP publicado pelo INSS para começar a monitorar o impacto financeiro.</div>
+          <button class="btn-main" style="margin-top:16px;display:inline-block;border:none;cursor:pointer;" onclick="showRegistrarFap()">+ Registrar FAP</button>
+        </div>`;
+      return;
+    }
+    panel.innerHTML = `
+      <div class="section-title">Histórico de FAP por Exercício</div>
+      <table class="data-table">
+        <thead><tr><th>Ano</th><th>FAP</th><th>Tipo</th><th>RAT Base</th><th>RAT Ajustado</th><th>Δ Anual (R$)</th></tr></thead>
+        <tbody>
+          ${hist.map(h => `
+            <tr>
+              <td><strong>${h.ano}</strong></td>
+              <td><strong>${parseFloat(h.fap_valor).toFixed(4)}</strong></td>
+              <td>${h.tipo_fap === "bonus" ? `<span class="badge b-ok">Bônus</span>` : h.tipo_fap === "malus" ? `<span class="badge b-danger">Malus</span>` : `<span class="badge b-muted">Neutro</span>`}</td>
+              <td>${h.rat_base_pct}%</td>
+              <td>${parseFloat(h.rat_ajustado_pct).toFixed(4)}%</td>
+              <td style="color:${h.delta_anual > 0 ? "var(--green)" : "var(--red)"}">${h.delta_anual > 0 ? "+" : ""}R$ ${parseFloat(h.delta_anual).toLocaleString("pt-BR")}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+      ${d.tendencia ? `<div style="margin-top:14px;font-size:.82rem;color:var(--muted)">${{"melhorando":"📉 FAP caindo — ótimo resultado! Menos acidentes que no ano anterior.","piorando":"📈 FAP subindo — intensifique ações preventivas de SST.","estavel":"➡️ FAP estável."}[d.tendencia] || ""}</div>` : ""}
+    `;
+
+  } else if (MODULO_ID === "ppp") {
+    const ppps = d.ppps || [];
+    if (ppps.length === 0) {
+      panel.innerHTML = `<div class="empty"><div class="empty-icon">📜</div><div class="empty-title">Nenhum PPP gerado</div><div class="empty-sub">Crie o primeiro PPP a partir do prontuário do funcionário.</div></div>`;
+      return;
+    }
+    panel.innerHTML = `
+      <div class="section-title">PPPs Gerados</div>
+      <table class="data-table">
+        <thead><tr><th>Funcionário</th><th>Cargo</th><th>Status</th><th>Agentes Nocivos</th><th>Data</th></tr></thead>
+        <tbody>${ppps.map(p => `
+          <tr>
+            <td><strong>${p.funcionario_nome || "—"}</strong></td>
+            <td>${p.cargo_atual || "—"}</td>
+            <td>${p.status === "finalizado" ? `<span class="badge b-ok">Finalizado</span>` : p.status === "rascunho" ? `<span class="badge b-warn">Rascunho</span>` : `<span class="badge b-muted">${p.status}</span>`}</td>
+            <td>${(p.agentes_nocivos || []).length} agente(s)</td>
+            <td>${p.data_admissao || "—"}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`;
+
+  } else if (MODULO_ID === "laudos") {
+    const laudos = d.laudos || [];
+    if (laudos.length === 0) {
+      panel.innerHTML = `<div class="empty"><div class="empty-icon">📑</div><div class="empty-title">Nenhum laudo cadastrado</div><div class="empty-sub">Cadastre o primeiro laudo técnico (LTCAT, LIP, PGR, PCMSO).</div></div>`;
+      return;
+    }
+    panel.innerHTML = `
+      <div class="section-title">Laudos Técnicos</div>
+      <table class="data-table">
+        <thead><tr><th>Tipo</th><th>Responsável</th><th>Vigência</th><th>Status</th><th>Assinado</th></tr></thead>
+        <tbody>${laudos.map(l => `
+          <tr>
+            <td><strong>${(l.tipo || "").toUpperCase()}</strong></td>
+            <td>${l.responsavel_tecnico || "—"}</td>
+            <td>${l.data_vigencia_fim || "—"}</td>
+            <td>${l.status === "vigente" ? `<span class="badge b-ok">Vigente</span>` : l.status === "vencido" ? `<span class="badge b-danger">Vencido</span>` : `<span class="badge b-warn">${l.status}</span>`}</td>
+            <td>${l.assinado ? "✅" : "—"}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`;
+
+  } else if (MODULO_ID === "laboratorio") {
+    const res = d.resultados || [];
+    if (res.length === 0) {
+      panel.innerHTML = `<div class="empty"><div class="empty-icon">🧪</div><div class="empty-title">Nenhum resultado importado</div><div class="empty-sub">Importe resultados via CSV, API do laboratório, HL7 ou FHIR.</div></div>`;
+      return;
+    }
+    panel.innerHTML = `
+      <div class="section-title">Resultados Recentes</div>
+      <table class="data-table">
+        <thead><tr><th>Funcionário</th><th>Exame</th><th>Resultado</th><th>Criticidade</th><th>Coleta</th></tr></thead>
+        <tbody>${res.slice(0,20).map(r => `
+          <tr>
+            <td><strong>${r.funcionario_nome || "—"}</strong></td>
+            <td>${r.exame || "—"}</td>
+            <td>${r.resultado || "—"} ${r.unidade ? `<span style="color:var(--muted)">${r.unidade}</span>` : ""}</td>
+            <td>${r.criticidade === "critico" ? `<span class="badge b-danger">Crítico</span>` : r.criticidade === "atencao" ? `<span class="badge b-warn">Atenção</span>` : `<span class="badge b-ok">Normal</span>`}</td>
+            <td>${r.data_coleta || "—"}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`;
+
+  } else if (MODULO_ID === "rede") {
+    const cls = d.clinicas || [];
+    if (cls.length === 0) {
+      panel.innerHTML = `<div class="empty"><div class="empty-icon">🏥</div><div class="empty-title">Nenhuma clínica na rede</div><div class="empty-sub">Clínicas podem solicitar credenciamento em /api/sst/rede-credenciada/credenciar/</div></div>`;
+      return;
+    }
+    panel.innerHTML = `
+      <div class="section-title">Clínicas da Rede Credenciada</div>
+      <table class="data-table">
+        <thead><tr><th>Nome</th><th>Cidade/UF</th><th>Especialidades</th><th>Avaliação</th><th>Agendamento</th></tr></thead>
+        <tbody>${cls.slice(0,20).map(c => `
+          <tr>
+            <td><strong>${c.nome}</strong></td>
+            <td>${c.cidade} / ${c.uf}</td>
+            <td>${(c.especialidades || []).slice(0,2).join(", ")}</td>
+            <td>${c.avaliacao_media ? "⭐ " + c.avaliacao_media : "—"}</td>
+            <td>${c.aceita_agendamento_online ? `<span class="badge b-ok">Online</span>` : `<span class="badge b-muted">Presencial</span>`}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`;
+
+  } else if (MODULO_ID === "financeiro_clinica") {
+    const faturas = d.faturas || [];
+    if (faturas.length === 0) {
+      panel.innerHTML = `<div class="empty"><div class="empty-icon">💰</div><div class="empty-title">Nenhuma fatura emitida</div><div class="empty-sub">Emita a primeira fatura de serviços SST para um cliente.</div></div>`;
+      return;
+    }
+    panel.innerHTML = `
+      <div class="section-title">Faturas Recentes</div>
+      <table class="data-table">
+        <thead><tr><th>Número</th><th>Cliente</th><th>Emissão</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody>${faturas.slice(0,20).map(f => `
+          <tr>
+            <td><strong>${f.numero}</strong></td>
+            <td>${f.empresa_cliente_nome}</td>
+            <td>${f.data_emissao}</td>
+            <td>R$ ${parseFloat(f.total).toLocaleString("pt-BR")}</td>
+            <td>${f.status === "paga" ? `<span class="badge b-ok">Paga</span>` : f.status === "vencida" ? `<span class="badge b-danger">Vencida</span>` : f.status === "pendente" ? `<span class="badge b-warn">Pendente</span>` : `<span class="badge b-muted">${f.status}</span>`}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`;
+  }
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+(async () => {
+  await Promise.all([ loadKpis(), loadMain() ]);
+})();
+</script>
+</body>
+</html>

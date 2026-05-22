@@ -427,3 +427,27 @@ def api_ppp_kpis(request):
         })
     except Exception as e:
         return JsonResponse({"erro": str(e)}, status=500)
+
+
+# ── Página HTML ───────────────────────────────────────────────────────────────
+
+def sst_ppp_page(request):
+    from django.shortcuts import render, redirect
+    from .views_sst import _empresa_sst_autenticada
+    empresa = _empresa_sst_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_expansao_modulo.html", {
+        "modulo_id":      "ppp",
+        "modulo_area":    "Previdência Social · SST",
+        "modulo_titulo":  "PPP — Perfil Profissiográfico Previdenciário",
+        "modulo_descricao": (
+            "Geração automática do PPP por IN INSS 128/2022. "
+            "Consolida agentes nocivos, monitoração biológica e histórico de cargos "
+            "para aposentadoria especial e emissão de benefícios previdenciários."
+        ),
+        "api_base":     "/api/sst/ppp/",
+        "api_kpi":      "/api/sst/ppp/kpis/",
+        "accent_color": "#00c9a7",
+        "empresa_nome": empresa.nome,
+    })

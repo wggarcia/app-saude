@@ -370,3 +370,26 @@ def api_laudos_kpis(request):
         })
     except Exception as e:
         return JsonResponse({"erro": str(e)}, status=500)
+
+
+# ── Página HTML ───────────────────────────────────────────────────────────────
+
+def sst_laudos_page(request):
+    from django.shortcuts import render, redirect
+    from .views_sst import _empresa_sst_autenticada
+    empresa = _empresa_sst_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_expansao_modulo.html", {
+        "modulo_id":      "laudos",
+        "modulo_area":    "Documentação Legal · SST",
+        "modulo_titulo":  "Laudos Técnicos",
+        "modulo_descricao": (
+            "LTCAT, LIP, LTIP, PGR e PCMSO com controle de vigência, "
+            "alertas de vencimento (≤ 60 dias) e assinatura digital do responsável técnico."
+        ),
+        "api_base":     "/api/sst/laudos/",
+        "api_kpi":      "/api/sst/laudos/kpis/",
+        "accent_color": "#52a6ff",
+        "empresa_nome": empresa.nome,
+    })
