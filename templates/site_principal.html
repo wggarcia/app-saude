@@ -41,7 +41,7 @@ body{
 }
 body:before{content:"";position:fixed;inset:0;pointer-events:none;background:linear-gradient(rgba(255,255,255,.026) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.026) 1px,transparent 1px);background-size:74px 74px;mask-image:linear-gradient(to bottom,#000,transparent 80%)}
 a{color:inherit;text-decoration:none}
-.shell{width:min(1220px,calc(100% - 36px));margin:auto;position:relative;z-index:2}
+	.shell{width:min(1240px,calc(100% - 40px));margin:auto;position:relative;z-index:2}
 	.nav{position:sticky;top:16px;z-index:50;margin-top:16px;display:grid;grid-template-columns:max-content minmax(0,1fr) max-content;align-items:center;gap:18px;padding:12px 14px;border:1px solid var(--line);border-radius:999px;background:rgba(5,7,10,.78);backdrop-filter:blur(28px);box-shadow:0 18px 70px rgba(0,0,0,.28)}
 	.brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:0;white-space:nowrap}
 	.mark{width:38px;height:38px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,var(--gold),#f6e9bd);color:#090d12;font-size:.72rem;font-weight:900;box-shadow:0 0 38px rgba(217,184,111,.24)}
@@ -57,23 +57,23 @@ a{color:inherit;text-decoration:none}
 	.btn:hover{transform:translateY(-2px);box-shadow:0 18px 50px rgba(69,234,217,.12);border-color:rgba(69,234,217,.45)}
 	.btn.primary{background:linear-gradient(135deg,#f6e7b7,var(--gold));color:#070a0e;border:0}
 	.btn.cyan{background:linear-gradient(135deg,var(--cyan),var(--aqua));color:#061011;border:0}
-		.hero{padding:92px 0 56px;display:grid;grid-template-columns:minmax(0,1fr) minmax(500px,.94fr);gap:58px;align-items:start}
+			.hero{padding:88px 0 64px;display:grid;grid-template-columns:minmax(0,1.02fr) minmax(440px,.98fr);gap:48px;align-items:center}
 	.hero>*,.section-head>*,.compare>*,.download>*,.values>*,.enterprise>*{min-width:0}
 .eyebrow{display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;border:1px solid rgba(217,184,111,.34);background:rgba(217,184,111,.08);color:#f3dfaa;text-transform:uppercase;letter-spacing:.14em;font-size:.73rem;font-weight:800}
 .pulse{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 8px rgba(69,234,217,.12)}
-	h1,h2,h3{font-family:Newsreader,serif;letter-spacing:0;text-wrap:balance;max-width:100%}
-		h1{font-size:clamp(4.25rem,4.75vw,4.85rem);line-height:1;margin:22px 0 24px;max-width:100%}
-		.desktop-title span{display:block}
+		h1,h2,h3{font-family:Newsreader,serif;letter-spacing:0;text-wrap:balance;max-width:100%;text-rendering:optimizeLegibility}
+			h1{font-size:clamp(3.8rem,5.1vw,5.35rem);line-height:.93;margin:20px 0 22px;max-width:12ch}
+			.desktop-title span{display:block;white-space:nowrap}
 		.mobile-title{display:none}
 		.mobile-title span{display:block}
-	h2{font-size:4.9rem;line-height:.96}
-h3{font-size:2rem;line-height:1}
-.lead{font-size:1.13rem;line-height:1.86;color:#c1ccd6;max-width:760px}
-	.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px;max-width:100%;min-width:0}
-	.proofs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:34px}
-	.proof{min-width:0;padding:18px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.052)}
-.proof strong{display:block;margin-bottom:6px;color:#fff}.proof span{color:#aeb9c4;font-size:.9rem;line-height:1.52}
-		.command{min-height:620px;border-radius:48px;border:1px solid rgba(255,255,255,.17);background:linear-gradient(180deg,rgba(255,255,255,.105),rgba(255,255,255,.035));box-shadow:var(--shadow);padding:18px;position:relative;overflow:hidden}
+		h2{font-size:clamp(2.7rem,4.35vw,4.4rem);line-height:.98}
+	h3{font-size:1.9rem;line-height:1.04}
+	.lead{font-size:1.07rem;line-height:1.82;color:#c7d1d9;max-width:64ch}
+		.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px;max-width:100%;min-width:0}
+		.proofs{display:grid;grid-template-columns:repeat(auto-fit,minmax(176px,1fr));gap:14px;margin-top:38px}
+		.proof{min-width:0;padding:20px 18px;border-radius:26px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04));min-height:172px}
+	.proof strong{display:block;margin-bottom:8px;color:#fff;font-size:1rem;line-height:1.18}.proof span{color:#aeb9c4;font-size:.92rem;line-height:1.58}
+			.command{min-height:620px;border-radius:48px;border:1px solid rgba(255,255,255,.17);background:linear-gradient(180deg,rgba(255,255,255,.105),rgba(255,255,255,.035));box-shadow:var(--shadow);padding:18px;position:relative;overflow:hidden}
 .command:before{content:"";position:absolute;inset:-35%;background:conic-gradient(from 220deg,transparent,rgba(69,234,217,.13),transparent,rgba(217,184,111,.15),transparent);animation:spin 24s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .command-inner{position:relative;z-index:2;height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:16px}
@@ -85,23 +85,50 @@ h3{font-size:2rem;line-height:1}
 .node{position:absolute;width:86px;height:86px;border-radius:50%;display:grid;place-items:center;background:#fbf8ef;color:#07131a;font-weight:900;border:5px solid var(--cyan);box-shadow:0 0 0 20px rgba(69,234,217,.1),0 24px 52px rgba(0,0,0,.42)}
 .node.gold{border-color:var(--gold);box-shadow:0 0 0 22px rgba(217,184,111,.13),0 24px 52px rgba(0,0,0,.42)}.node.rose{border-color:var(--rose);box-shadow:0 0 0 22px rgba(255,111,143,.12),0 24px 52px rgba(0,0,0,.42)}
 .n1{left:9%;top:18%}.n2{right:13%;top:17%}.n3{left:43%;bottom:12%}
-	.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.metric{min-width:0;padding:20px;border-radius:26px;background:rgba(4,8,12,.7);border:1px solid rgba(255,255,255,.12)}.metric:nth-child(2){grid-column:span 2}.metric b{display:block;font-size:1.55rem;color:#fff}.metric span{color:#aeb9c4;font-size:.84rem;line-height:1.48}
-section{padding:78px 0}
-.section-head{display:grid;grid-template-columns:1.16fr .84fr;gap:28px;align-items:end;margin-bottom:30px}.section-head p{color:#b8c4ce;line-height:1.76}
-	.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{min-width:0;padding:30px;border-radius:36px;border:1px solid var(--line);background:rgba(255,255,255,.055)}.card.premium{background:linear-gradient(180deg,rgba(69,234,217,.12),rgba(255,255,255,.045));border-color:rgba(69,234,217,.34)}.card h3{margin-bottom:18px}.list{display:grid;gap:13px}.item{display:flex;gap:12px;color:#c9d4dc;line-height:1.58}.item:before{content:"";width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.2);margin-top:3px;flex:0 0 18px}.premium .item:before{background:linear-gradient(135deg,var(--cyan),var(--aqua))}
-	.slides{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.slide{min-width:0;min-height:320px;padding:25px;border-radius:32px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.035));position:relative;overflow:hidden}.slide:after{content:"";position:absolute;right:-70px;bottom:-74px;width:190px;height:190px;border-radius:50%;background:rgba(217,184,111,.12)}.slide small{color:#d9b86f;text-transform:uppercase;letter-spacing:.14em;font-weight:800}.slide h3{font-size:1.75rem;margin:52px 0 12px}.slide p{color:#b9c5cf;line-height:1.68;font-size:.95rem}
-	.enterprise{display:grid;grid-template-columns:.9fr 1.1fr;gap:22px;align-items:start;padding:36px 0;border-top:1px solid rgba(255,255,255,.12);border-bottom:1px solid rgba(255,255,255,.12)}.enterprise-copy{padding-top:6px}.enterprise-copy h2{font-size:4.25rem;line-height:.96;margin:18px 0}.enterprise-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.enterprise-item{min-width:0;padding:24px;border-radius:30px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12)}.enterprise-item b{display:block;color:#fff;margin-bottom:10px;font-size:1.06rem}.enterprise-item span{display:block;color:#b7c3cd;line-height:1.62;font-size:.92rem}.enterprise-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}.enterprise-metric{min-width:0;padding:18px;border-radius:24px;border:1px solid rgba(69,234,217,.22);background:rgba(69,234,217,.07)}.enterprise-metric strong{display:block;color:#f3dfaa;font-size:1.2rem;margin-bottom:6px}.enterprise-metric span{display:block;color:#b7c3cd;line-height:1.5;font-size:.84rem}
+		.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.metric{min-width:0;padding:22px;border-radius:26px;background:rgba(4,8,12,.72);border:1px solid rgba(255,255,255,.12)}.metric:nth-child(2){grid-column:span 2}.metric b{display:block;font-size:1.45rem;color:#fff;margin-bottom:8px}.metric span{color:#aeb9c4;font-size:.86rem;line-height:1.56}
+	section{padding:78px 0}
+	.section-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.82fr);gap:32px;align-items:start;margin-bottom:32px}.section-head p{color:#b8c4ce;line-height:1.78;max-width:40ch}
+		.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{min-width:0;padding:30px;border-radius:36px;border:1px solid var(--line);background:rgba(255,255,255,.055)}.card.premium{background:linear-gradient(180deg,rgba(69,234,217,.12),rgba(255,255,255,.045));border-color:rgba(69,234,217,.34)}.card h3{margin-bottom:18px}.list{display:grid;gap:13px}.item{display:flex;gap:12px;color:#c9d4dc;line-height:1.58}.item:before{content:"";width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.2);margin-top:3px;flex:0 0 18px}.premium .item:before{background:linear-gradient(135deg,var(--cyan),var(--aqua))}
+		.slides{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.slide{min-width:0;min-height:300px;padding:26px;border-radius:32px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.035));position:relative;overflow:hidden}.slide:after{content:"";position:absolute;right:-70px;bottom:-74px;width:190px;height:190px;border-radius:50%;background:rgba(217,184,111,.12)}.slide small{color:#d9b86f;text-transform:uppercase;letter-spacing:.14em;font-weight:800}.slide h3{font-size:1.58rem;margin:48px 0 12px}.slide p{color:#b9c5cf;line-height:1.7;font-size:.95rem}
+		.gateway-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+		.gateway-card{display:block;padding:30px;border-radius:32px;border:1px solid rgba(255,255,255,.13);background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.045));transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease,background .22s ease;cursor:pointer;position:relative;overflow:hidden}
+		.gateway-card:hover{transform:translateY(-4px);box-shadow:0 26px 60px rgba(0,0,0,.28)}
+		.gateway-card:before{content:"";position:absolute;inset:auto -40px -54px auto;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.05)}
+		.gateway-card.full{grid-column:span 2}
+		.gateway-card.sst:hover{border-color:rgba(217,184,111,.45);background:linear-gradient(180deg,rgba(217,184,111,.12),rgba(255,255,255,.045))}
+		.gateway-card.pharmacy:hover{border-color:rgba(69,234,217,.42);background:linear-gradient(180deg,rgba(69,234,217,.12),rgba(255,255,255,.045))}
+		.gateway-card.hospital:hover{border-color:rgba(255,111,143,.42);background:linear-gradient(180deg,rgba(255,111,143,.12),rgba(255,255,255,.045))}
+		.gateway-card.government:hover{border-color:rgba(96,165,250,.44);background:linear-gradient(180deg,rgba(96,165,250,.12),rgba(255,255,255,.045))}
+		.gateway-card.healthplan{border-color:rgba(255,107,157,.32);background:linear-gradient(135deg,rgba(255,107,157,.12),rgba(255,255,255,.05))}
+		.gateway-card.healthplan:hover{border-color:rgba(255,107,157,.56);background:linear-gradient(135deg,rgba(255,107,157,.18),rgba(255,255,255,.07))}
+		.gateway-top,.gateway-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:relative;z-index:1}
+		.gateway-icon{font-size:2rem;line-height:1}
+		.gateway-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#d8e2ea}
+		.gateway-card.healthplan .gateway-badge{background:rgba(255,107,157,.16);border-color:rgba(255,107,157,.35);color:#ff8ab2}
+		.gateway-body{position:relative;z-index:1;margin-top:18px}
+		.gateway-title{font-size:1.24rem;font-weight:800;color:#f7f2e9;line-height:1.2}
+		.gateway-copy{margin-top:10px;color:#93a4b2;line-height:1.68;font-size:.95rem;max-width:60ch}
+		.gateway-price{font-size:1.35rem;font-weight:800}
+		.gateway-caption{color:#9eb0bc;font-size:.84rem}
+		.gateway-cta{margin-top:14px;display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:.86rem}
+		.gateway-card.sst .gateway-price,.gateway-card.sst .gateway-cta{color:#d9b86f}
+		.gateway-card.pharmacy .gateway-price,.gateway-card.pharmacy .gateway-cta{color:#45ead9}
+		.gateway-card.hospital .gateway-price,.gateway-card.hospital .gateway-cta{color:#ff6f8f}
+		.gateway-card.government .gateway-price,.gateway-card.government .gateway-cta{color:#60a5fa}
+		.gateway-card.healthplan .gateway-price,.gateway-card.healthplan .gateway-cta{color:#ff6b9d}
+		.enterprise{display:grid;grid-template-columns:.9fr 1.1fr;gap:22px;align-items:start;padding:36px 0;border-top:1px solid rgba(255,255,255,.12);border-bottom:1px solid rgba(255,255,255,.12)}.enterprise-copy{padding-top:6px}.enterprise-copy h2{font-size:4.25rem;line-height:.96;margin:18px 0}.enterprise-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.enterprise-item{min-width:0;padding:24px;border-radius:30px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12)}.enterprise-item b{display:block;color:#fff;margin-bottom:10px;font-size:1.06rem}.enterprise-item span{display:block;color:#b7c3cd;line-height:1.62;font-size:.92rem}.enterprise-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}.enterprise-metric{min-width:0;padding:18px;border-radius:24px;border:1px solid rgba(69,234,217,.22);background:rgba(69,234,217,.07)}.enterprise-metric strong{display:block;color:#f3dfaa;font-size:1.2rem;margin-bottom:6px}.enterprise-metric span{display:block;color:#b7c3cd;line-height:1.5;font-size:.84rem}
 	.matrix{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.tile{min-width:0;padding:24px;border-radius:30px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12)}.tile .label{font-size:.74rem;color:#d9b86f;text-transform:uppercase;letter-spacing:.14em;font-weight:800}.tile h3{font-size:1.65rem;margin:16px 0 10px}.tile p{color:#b7c3cd;line-height:1.65;font-size:.94rem}
 	.values{display:grid;grid-template-columns:.9fr 1.1fr;gap:18px;align-items:stretch}.values-hero{padding:34px;border-radius:38px;background:linear-gradient(180deg,rgba(217,184,111,.14),rgba(255,255,255,.045));border:1px solid rgba(217,184,111,.24);box-shadow:var(--shadow)}.values-hero p{margin-top:18px;color:#c7d2dc;line-height:1.78}.values-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.value{min-width:0;padding:24px;border-radius:30px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12)}.value b{display:block;color:#fff;margin-bottom:9px;font-size:1.06rem}.value span{display:block;color:#b7c3cd;line-height:1.62;font-size:.94rem}
-.download{display:grid;grid-template-columns:1fr .82fr;gap:22px;align-items:center;padding:40px;border-radius:46px;background:linear-gradient(135deg,rgba(217,184,111,.14),rgba(69,234,217,.1));border:1px solid rgba(255,255,255,.16);box-shadow:var(--shadow)}
-.store-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}.store{padding:14px 18px;border-radius:18px;background:#f8edcd;color:#070b10;font-weight:900}.store.dark{background:#0f1820;color:#fff;border:1px solid rgba(255,255,255,.16)}
-.phone{height:432px;border-radius:50px;background:#03080c;border:12px solid #152530;padding:30px;box-shadow:0 28px 80px rgba(0,0,0,.38);position:relative}.phone:before{content:"";position:absolute;top:12px;left:50%;transform:translateX(-50%);width:118px;height:22px;border-radius:999px;background:#000}.screen{height:100%;border-radius:34px;background:linear-gradient(180deg,#081923,#0e2c38);padding:42px 20px 20px}.risk{padding:17px;border-radius:22px;background:rgba(255,255,255,.08);margin-bottom:13px}.risk b{display:block}.risk span{color:#a9bac5}
-.cta{padding:54px;border-radius:48px;text-align:center;border:1px solid rgba(255,255,255,.16);background:radial-gradient(circle at 20% 18%,rgba(217,184,111,.18),transparent 24rem),linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.04));box-shadow:var(--shadow)}.cta p{max-width:760px;margin:18px auto 28px;color:#bdc9d2;line-height:1.78}
-footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.12);padding-top:24px}.footer-links{display:flex;gap:16px;flex-wrap:wrap}.footer-links a{color:#d9c089}
-	@media(max-width:1120px){.nav-note{display:none}.nav{gap:14px}.nav-links{gap:14px}.hero{grid-template-columns:minmax(0,1fr) minmax(470px,.92fr);gap:34px}h1{font-size:4.08rem}.command{min-height:600px}.radar{height:380px}}
-	@media(max-width:980px){.nav{grid-template-columns:1fr auto;border-radius:28px}.nav-links,.nav-note{display:none}.brand{min-width:0;overflow:hidden;text-overflow:ellipsis}.hero,.section-head,.compare,.download,.values,.enterprise{grid-template-columns:1fr}.proofs,.metrics,.slides,.matrix,.values-grid,.enterprise-grid,.enterprise-metrics{grid-template-columns:1fr}.metric:nth-child(2){grid-column:auto}h1{font-size:4.1rem;line-height:.95}h2{font-size:3.35rem}.enterprise-copy h2{font-size:3.35rem}.command{min-height:auto}.slide{min-height:auto}}
-	@media(max-width:520px){.shell{width:min(356px,calc(100% - 34px));margin-left:17px;margin-right:auto}.nav{display:grid;grid-template-columns:1fr;justify-items:center;gap:10px;padding:12px;overflow:visible;border-radius:24px}.nav-right{width:100%;justify-content:center}.brand{justify-content:center;max-width:100%;font-size:.92rem}.mark{width:34px;height:34px;border-radius:14px}.language-switch{gap:3px;padding:4px}.language-link{min-width:54px;height:30px;font-size:.72rem;padding:0 7px}.hero{padding-top:58px}.desktop-title{display:none}.mobile-title{display:block}h1{font-size:2.08rem;line-height:1.1;text-wrap:wrap;overflow-wrap:break-word}h2,.enterprise-copy h2{font-size:2.18rem;line-height:1.08;text-wrap:wrap}.lead{font-size:.98rem;line-height:1.7}.btn{width:100%;padding:0 16px}.actions{width:100%}.eyebrow{max-width:100%;white-space:normal;line-height:1.35}.proof span,.metric span,.tile p,.slide p,.value span,.enterprise-item span,.enterprise-metric span{overflow-wrap:break-word}}
-</style>
+	.download{display:grid;grid-template-columns:1fr .82fr;gap:22px;align-items:center;padding:40px;border-radius:46px;background:linear-gradient(135deg,rgba(217,184,111,.14),rgba(69,234,217,.1));border:1px solid rgba(255,255,255,.16);box-shadow:var(--shadow)}
+	.store-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}.store{padding:14px 18px;border-radius:18px;background:#f8edcd;color:#070b10;font-weight:900}.store.dark{background:#0f1820;color:#fff;border:1px solid rgba(255,255,255,.16)}
+	.app-note{margin-top:16px;color:#91a2af;line-height:1.65;font-size:.92rem;max-width:56ch}
+	.phone{height:432px;border-radius:50px;background:#03080c;border:12px solid #152530;padding:30px;box-shadow:0 28px 80px rgba(0,0,0,.38);position:relative}.phone:before{content:"";position:absolute;top:12px;left:50%;transform:translateX(-50%);width:118px;height:22px;border-radius:999px;background:#000}.screen{height:100%;border-radius:34px;background:linear-gradient(180deg,#081923,#0e2c38);padding:42px 20px 20px}.risk{padding:17px;border-radius:22px;background:rgba(255,255,255,.08);margin-bottom:13px}.risk b{display:block}.risk span{color:#a9bac5}
+	.cta{padding:54px;border-radius:48px;text-align:center;border:1px solid rgba(255,255,255,.16);background:radial-gradient(circle at 20% 18%,rgba(217,184,111,.18),transparent 24rem),linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.04));box-shadow:var(--shadow)}.cta p{max-width:760px;margin:18px auto 28px;color:#bdc9d2;line-height:1.78}
+	footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.12);padding-top:24px}.footer-links{display:flex;gap:16px;flex-wrap:wrap}.footer-links a{color:#d9c089}
+		@media(max-width:1120px){.nav-note{display:none}.nav{gap:14px}.nav-links{gap:14px}.hero{grid-template-columns:minmax(0,1fr) minmax(420px,.94fr);gap:34px}h1{font-size:4.35rem}.command{min-height:600px}.radar{height:380px}}
+		@media(max-width:980px){.nav{grid-template-columns:1fr auto;border-radius:28px}.nav-links,.nav-note{display:none}.brand{min-width:0;overflow:hidden;text-overflow:ellipsis}.hero,.section-head,.compare,.download,.values,.enterprise,.gateway-grid{grid-template-columns:1fr}.proofs,.slides,.matrix,.values-grid,.enterprise-grid,.enterprise-metrics{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.metric:nth-child(2),.gateway-card.full{grid-column:auto}h1{font-size:4rem;line-height:.95;max-width:13ch}h2{font-size:3.2rem}.enterprise-copy h2{font-size:3.2rem}.command{min-height:auto}.slide{min-height:auto}}
+		@media(max-width:520px){.shell{width:min(356px,calc(100% - 34px));margin-left:17px;margin-right:auto}.nav{display:grid;grid-template-columns:1fr;justify-items:center;gap:10px;padding:12px;overflow:visible;border-radius:24px}.nav-right{width:100%;justify-content:center}.brand{justify-content:center;max-width:100%;font-size:.92rem}.mark{width:34px;height:34px;border-radius:14px}.language-switch{gap:3px;padding:4px}.language-link{min-width:54px;height:30px;font-size:.72rem;padding:0 7px}.hero{padding-top:58px}.desktop-title{display:none}.mobile-title{display:block}h1{font-size:2.36rem;line-height:1.04;text-wrap:wrap;overflow-wrap:break-word;max-width:100%}h2,.enterprise-copy h2{font-size:2.28rem;line-height:1.05;text-wrap:wrap}.lead{font-size:.99rem;line-height:1.72}.btn{width:100%;padding:0 16px}.actions{width:100%}.eyebrow{max-width:100%;white-space:normal;line-height:1.35}.proof,.metric,.gateway-card,.tile,.slide,.value,.enterprise-item,.enterprise-metric{padding-left:18px;padding-right:18px}.proof span,.metric span,.tile p,.slide p,.value span,.enterprise-item span,.enterprise-metric span,.gateway-copy,.app-note{overflow-wrap:break-word}.metrics{grid-template-columns:1fr}}
+	</style>
 </head>
 <body>
 <div class="shell">
@@ -202,67 +229,89 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
       </div>
     </section>
 
-    <section id="plataforma" style="padding:78px 0">
-      <div class="section-head">
-        <h2 style="font-size:clamp(2.5rem,4vw,4rem)">{{ site.platform.title_html|safe }}</h2>
-        <p>{{ site.platform.lead }}</p>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
-        <a href="/cadastro/" style="text-decoration:none;display:block;padding:32px;border-radius:32px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.055);transition:all .25s;cursor:pointer" onmouseover="this.style.borderColor='rgba(217,184,111,.45)';this.style.background='rgba(217,184,111,.08)'" onmouseout="this.style.borderColor='rgba(255,255,255,.13)';this.style.background='rgba(255,255,255,.055)'">
-          <div style="font-size:2.2rem;margin-bottom:16px">🏢</div>
-          <div style="font-weight:800;font-size:1.2rem;margin-bottom:8px;color:#f7f2e9">{{ site.platform.cards.0.title }}</div>
-          <div style="color:#8a99a6;line-height:1.6;font-size:.92rem;margin-bottom:18px">{{ site.platform.cards.0.text }}</div>
-          <div style="display:flex;align-items:baseline;gap:6px">
-            <span style="font-size:1.3rem;font-weight:800;color:#d9b86f">{{ site.platform.cards.0.price }}</span>
-            <span style="color:#8a99a6;font-size:.82rem">{{ site.platform.cards.0.caption }}</span>
-          </div>
-          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#d9b86f;font-weight:700;font-size:.85rem">{{ site.platform.cards.0.cta }} →</div>
-        </a>
-        <a href="/cadastro/" style="text-decoration:none;display:block;padding:32px;border-radius:32px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.055);transition:all .25s;cursor:pointer" onmouseover="this.style.borderColor='rgba(69,234,217,.4)';this.style.background='rgba(69,234,217,.07)'" onmouseout="this.style.borderColor='rgba(255,255,255,.13)';this.style.background='rgba(255,255,255,.055)'">
-          <div style="font-size:2.2rem;margin-bottom:16px">💊</div>
-          <div style="font-weight:800;font-size:1.2rem;margin-bottom:8px;color:#f7f2e9">{{ site.platform.cards.1.title }}</div>
-          <div style="color:#8a99a6;line-height:1.6;font-size:.92rem;margin-bottom:18px">{{ site.platform.cards.1.text }}</div>
-          <div style="display:flex;align-items:baseline;gap:6px">
-            <span style="font-size:1.3rem;font-weight:800;color:#45ead9">{{ site.platform.cards.1.price }}</span>
-            <span style="color:#8a99a6;font-size:.82rem">{{ site.platform.cards.1.caption }}</span>
-          </div>
-          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#45ead9;font-weight:700;font-size:.85rem">{{ site.platform.cards.1.cta }} →</div>
-        </a>
-        <a href="/cadastro/" style="text-decoration:none;display:block;padding:32px;border-radius:32px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.055);transition:all .25s;cursor:pointer" onmouseover="this.style.borderColor='rgba(255,111,143,.38)';this.style.background='rgba(255,111,143,.07)'" onmouseout="this.style.borderColor='rgba(255,255,255,.13)';this.style.background='rgba(255,255,255,.055)'">
-          <div style="font-size:2.2rem;margin-bottom:16px">🏥</div>
-          <div style="font-weight:800;font-size:1.2rem;margin-bottom:8px;color:#f7f2e9">{{ site.platform.cards.2.title }}</div>
-          <div style="color:#8a99a6;line-height:1.6;font-size:.92rem;margin-bottom:18px">{{ site.platform.cards.2.text }}</div>
-          <div style="display:flex;align-items:baseline;gap:6px">
-            <span style="font-size:1.3rem;font-weight:800;color:#ff6f8f">{{ site.platform.cards.2.price }}</span>
-            <span style="color:#8a99a6;font-size:.82rem">{{ site.platform.cards.2.caption }}</span>
-          </div>
-          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#ff6f8f;font-weight:700;font-size:.85rem">{{ site.platform.cards.2.cta }} →</div>
-        </a>
-        <a href="mailto:comercial@soluscrt.com.br?subject=Governo%20SolusCRT" style="text-decoration:none;display:block;padding:32px;border-radius:32px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.055);transition:all .25s;cursor:pointer" onmouseover="this.style.borderColor='rgba(96,165,250,.4)';this.style.background='rgba(96,165,250,.07)'" onmouseout="this.style.borderColor='rgba(255,255,255,.13)';this.style.background='rgba(255,255,255,.055)'">
-          <div style="font-size:2.2rem;margin-bottom:16px">🏛️</div>
-          <div style="font-weight:800;font-size:1.2rem;margin-bottom:8px;color:#f7f2e9">{{ site.platform.cards.3.title }}</div>
-          <div style="color:#8a99a6;line-height:1.6;font-size:.92rem;margin-bottom:18px">{{ site.platform.cards.3.text }}</div>
-          <div style="display:flex;align-items:baseline;gap:6px">
-            <span style="font-size:1.3rem;font-weight:800;color:#60a5fa">{{ site.platform.cards.3.price }}</span>
-            <span style="color:#8a99a6;font-size:.82rem">{{ site.platform.cards.3.caption }}</span>
-          </div>
-          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#60a5fa;font-weight:700;font-size:.85rem">{{ site.platform.cards.3.cta }} →</div>
-        </a>
-        <a href="mailto:comercial@soluscrt.com.br?subject=Plano%20de%20Saude%20SolusCRT" style="text-decoration:none;display:block;grid-column:span 2;padding:32px;border-radius:32px;border:1px solid rgba(255,107,157,.32);background:linear-gradient(135deg,rgba(255,107,157,.1),rgba(255,255,255,.04));transition:all .25s;cursor:pointer" onmouseover="this.style.borderColor='rgba(255,107,157,.6)';this.style.background='linear-gradient(135deg,rgba(255,107,157,.18),rgba(255,255,255,.06))'" onmouseout="this.style.borderColor='rgba(255,107,157,.32)';this.style.background='linear-gradient(135deg,rgba(255,107,157,.1),rgba(255,255,255,.04))'">
-          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-            <div style="font-size:2.2rem">🏥</div>
-            <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:rgba(255,107,157,.15);border:1px solid rgba(255,107,157,.35);color:#ff6b9d;font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em">Novo ambiente</div>
-          </div>
-          <div style="margin-top:14px;font-weight:800;font-size:1.3rem;color:#f7f2e9">{{ site.platform.cards.4.title }}</div>
-          <div style="margin-top:8px;color:#8a99a6;line-height:1.6;font-size:.94rem;max-width:720px">{{ site.platform.cards.4.text }}</div>
-          <div style="margin-top:18px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
-            <span style="font-size:1.4rem;font-weight:800;color:#ff6b9d">{{ site.platform.cards.4.price }}</span>
-            <span style="color:#8a99a6;font-size:.82rem">{{ site.platform.cards.4.caption }}</span>
-          </div>
-          <div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;color:#ff6b9d;font-weight:700;font-size:.85rem">{{ site.platform.cards.4.cta }} →</div>
-        </a>
-      </div>
-    </section>
+	    <section id="plataforma" style="padding:78px 0">
+	      <div class="section-head">
+	        <h2 style="font-size:clamp(2.5rem,4vw,4rem)">{{ site.platform.title_html|safe }}</h2>
+	        <p>{{ site.platform.lead }}</p>
+	      </div>
+	      <div class="gateway-grid">
+	        <a class="gateway-card sst" href="/cadastro/">
+	          <div class="gateway-top">
+	            <div class="gateway-icon">🏢</div>
+	            <div class="gateway-badge">{{ site.platform.cards.0.badge }}</div>
+	          </div>
+	          <div class="gateway-body">
+	            <div class="gateway-title">{{ site.platform.cards.0.title }}</div>
+	            <div class="gateway-copy">{{ site.platform.cards.0.text }}</div>
+	            <div class="gateway-meta" style="margin-top:18px">
+	              <span class="gateway-price">{{ site.platform.cards.0.price }}</span>
+	              <span class="gateway-caption">{{ site.platform.cards.0.caption }}</span>
+	            </div>
+	            <div class="gateway-cta">{{ site.platform.cards.0.cta }} →</div>
+	          </div>
+	        </a>
+	        <a class="gateway-card pharmacy" href="/cadastro/">
+	          <div class="gateway-top">
+	            <div class="gateway-icon">💊</div>
+	            <div class="gateway-badge">{{ site.platform.cards.1.badge }}</div>
+	          </div>
+	          <div class="gateway-body">
+	            <div class="gateway-title">{{ site.platform.cards.1.title }}</div>
+	            <div class="gateway-copy">{{ site.platform.cards.1.text }}</div>
+	            <div class="gateway-meta" style="margin-top:18px">
+	              <span class="gateway-price">{{ site.platform.cards.1.price }}</span>
+	              <span class="gateway-caption">{{ site.platform.cards.1.caption }}</span>
+	            </div>
+	            <div class="gateway-cta">{{ site.platform.cards.1.cta }} →</div>
+	          </div>
+	        </a>
+	        <a class="gateway-card hospital" href="/cadastro/">
+	          <div class="gateway-top">
+	            <div class="gateway-icon">🏥</div>
+	            <div class="gateway-badge">{{ site.platform.cards.2.badge }}</div>
+	          </div>
+	          <div class="gateway-body">
+	            <div class="gateway-title">{{ site.platform.cards.2.title }}</div>
+	            <div class="gateway-copy">{{ site.platform.cards.2.text }}</div>
+	            <div class="gateway-meta" style="margin-top:18px">
+	              <span class="gateway-price">{{ site.platform.cards.2.price }}</span>
+	              <span class="gateway-caption">{{ site.platform.cards.2.caption }}</span>
+	            </div>
+	            <div class="gateway-cta">{{ site.platform.cards.2.cta }} →</div>
+	          </div>
+	        </a>
+	        <a class="gateway-card government" href="mailto:comercial@soluscrt.com.br?subject=Governo%20SolusCRT">
+	          <div class="gateway-top">
+	            <div class="gateway-icon">🏛️</div>
+	            <div class="gateway-badge">{{ site.platform.cards.3.badge }}</div>
+	          </div>
+	          <div class="gateway-body">
+	            <div class="gateway-title">{{ site.platform.cards.3.title }}</div>
+	            <div class="gateway-copy">{{ site.platform.cards.3.text }}</div>
+	            <div class="gateway-meta" style="margin-top:18px">
+	              <span class="gateway-price">{{ site.platform.cards.3.price }}</span>
+	              <span class="gateway-caption">{{ site.platform.cards.3.caption }}</span>
+	            </div>
+	            <div class="gateway-cta">{{ site.platform.cards.3.cta }} →</div>
+	          </div>
+	        </a>
+	        <a class="gateway-card healthplan full" href="mailto:comercial@soluscrt.com.br?subject=Plano%20de%20Saude%20SolusCRT">
+	          <div class="gateway-top">
+	            <div class="gateway-icon">🧾</div>
+	            <div class="gateway-badge">{{ site.platform.cards.4.badge }}</div>
+	          </div>
+	          <div class="gateway-body">
+	            <div class="gateway-title">{{ site.platform.cards.4.title }}</div>
+	            <div class="gateway-copy">{{ site.platform.cards.4.text }}</div>
+	            <div class="gateway-meta" style="margin-top:18px">
+	              <span class="gateway-price">{{ site.platform.cards.4.price }}</span>
+	              <span class="gateway-caption">{{ site.platform.cards.4.caption }}</span>
+	            </div>
+	            <div class="gateway-cta">{{ site.platform.cards.4.cta }} →</div>
+	          </div>
+	        </a>
+	      </div>
+	    </section>
 
     <section id="empresa">
       <div class="enterprise">
@@ -309,17 +358,18 @@ footer{padding:38px 0 60px;color:#98a6b1}.footer-grid{display:flex;justify-conte
       </div>
     </section>
 
-    <section id="app">
-      <div class="download">
-        <div>
-          <div class="eyebrow"><span class="pulse"></span> {{ site.app.eyebrow }}</div>
-          <h2>{{ site.app.title }}</h2>
-          <p class="lead">{{ site.app.lead }}</p>
-          <div class="store-row">
-            <a class="store" href="https://apps.apple.com/app/id6762992414">{{ site.app.app_store }}</a>
-            <a class="store dark" href="https://play.google.com/store/apps/details?id=com.soluscrt.saude">{{ site.app.google_play }}</a>
-          </div>
-        </div>
+	    <section id="app">
+	      <div class="download">
+	        <div>
+	          <div class="eyebrow"><span class="pulse"></span> {{ site.app.eyebrow }}</div>
+	          <h2>{{ site.app.title }}</h2>
+	          <p class="lead">{{ site.app.lead }}</p>
+	          <div class="store-row">
+	            <a class="store" href="https://apps.apple.com/app/id6762992414">{{ site.app.app_store }}</a>
+	            <a class="store dark" href="https://play.google.com/store/apps/details?id=com.soluscrt.saude">{{ site.app.google_play }}</a>
+	          </div>
+	          <p class="app-note">{{ site.app.note }}</p>
+	        </div>
         <div class="phone">
           <div class="screen">
             {% for risk in site.app.risks %}
