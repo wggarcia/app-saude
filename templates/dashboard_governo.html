@@ -12,7 +12,7 @@ function _t(msg, tipo) {
   el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
     'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
     'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
-    'white-space:nowrap;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+    'white-space:normal;line-height:1.35;text-align:center;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
   el.textContent = msg;
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 3500);
@@ -129,6 +129,37 @@ function _t(msg, tipo) {
       line-height: 1.45;
     }
 
+    .topbar > *,
+    .metrics-strip > *,
+    .actions > *,
+    .filters > *,
+    .detail-grid > *,
+    .official-detail-grid > *,
+    .legend > *,
+    .dock-scroll > *,
+    .stack > * {
+      min-width: 0;
+    }
+
+    .brand-title,
+    .brand-subtitle,
+    .mini,
+    .metric-card span,
+    .metric-card strong,
+    .risk-badge,
+    .section h2,
+    .detail-box,
+    .official-detail-box,
+    .legend span,
+    .btn,
+    select,
+    .filters label,
+    .leaflet-popup-content,
+    .badge {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
     .metrics-strip {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -177,6 +208,16 @@ function _t(msg, tipo) {
     .btn {
       cursor: pointer;
       font-weight: 700;
+    }
+
+    .actions .btn,
+    .actions a.btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.25;
+      min-height: 42px;
     }
 
     .btn.primary {
@@ -440,7 +481,58 @@ function _t(msg, tipo) {
       border: 1px solid var(--stroke);
     }
 
-    .leaflet-popup-content { min-width: 260px; line-height: 1.45; }
+    .leaflet-popup-content {
+      min-width: 220px;
+      max-width: min(320px, 76vw);
+      line-height: 1.45;
+    }
+
+    .quick-link {
+      position: fixed;
+      z-index: 900;
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      max-width: calc(100vw - 32px);
+      padding: 11px 20px;
+      border-radius: 50px;
+      text-decoration: none;
+      font-family: Manrope, "Avenir Next", sans-serif;
+      font-weight: 800;
+      font-size: 13px;
+      line-height: 1.2;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.32);
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .quick-link-right {
+      right: 24px;
+      bottom: 24px;
+      background: #00c2ff;
+      color: #041018;
+      box-shadow: 0 4px 20px rgba(0, 194, 255, 0.4);
+    }
+
+    .quick-link-center {
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .quick-link-left {
+      left: 24px;
+      bottom: 24px;
+      background: linear-gradient(135deg, #00e5b0, #00c2ff);
+      color: #041018;
+      box-shadow: 0 4px 20px rgba(0, 229, 176, 0.35);
+    }
 
     @media (max-width: 1180px) {
       .topbar {
@@ -475,6 +567,10 @@ function _t(msg, tipo) {
         padding-top: 64vh;
       }
 
+      .card {
+        padding: 13px 14px;
+      }
+
       .sheet-body,
       .detail-grid,
       .filters,
@@ -484,6 +580,136 @@ function _t(msg, tipo) {
 
       .floating-button {
         display: none;
+      }
+
+      .actions .btn,
+      .actions a.btn,
+      .actions select {
+        flex: 1 1 180px;
+      }
+
+      .quick-link {
+        font-size: 12px;
+        padding: 10px 16px;
+        left: 12px;
+        right: 12px;
+        transform: none;
+        justify-content: center;
+      }
+
+      .quick-link-left {
+        bottom: 120px;
+      }
+
+      .quick-link-right {
+        bottom: 66px;
+      }
+
+      .quick-link-center {
+        bottom: 12px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-content: stretch;
+      }
+
+      .card {
+        border-radius: 20px;
+        padding: 12px;
+      }
+
+      .brand-title {
+        font-size: 1.02rem;
+        line-height: 1.25;
+      }
+
+      .brand-subtitle,
+      .mini {
+        font-size: 0.8rem;
+        line-height: 1.5;
+      }
+
+      .eyebrow,
+      .risk-badge {
+        font-size: 0.7rem;
+        line-height: 1.3;
+      }
+
+      .metric-card strong {
+        font-size: 1.05rem;
+      }
+
+      .metric-card span {
+        font-size: 0.68rem;
+      }
+
+      .actions .btn,
+      .actions a.btn,
+      .actions select {
+        width: 100%;
+      }
+
+      .dock,
+      .dock-left,
+      .dock-right,
+      .bottom-sheet {
+        border-radius: 22px;
+      }
+
+      .dock-header,
+      .sheet-header {
+        padding: 14px 16px 10px;
+      }
+
+      .dock-scroll,
+      .sheet-body {
+        padding: 12px;
+        gap: 12px;
+      }
+
+      .section {
+        padding: 12px;
+      }
+
+      .section h2 {
+        font-size: 0.92rem;
+        line-height: 1.35;
+      }
+
+      .leaflet-popup-content {
+        min-width: 0;
+        width: min(220px, 68vw);
+      }
+    }
+
+    @media (max-width: 520px) {
+      #map {
+        height: 56vh;
+      }
+
+      .topbar {
+        padding-top: 56vh;
+      }
+
+      .hud {
+        padding: 10px;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+      }
+
+      .brand-title {
+        font-size: 0.96rem;
+      }
+
+      .brand-subtitle,
+      .mini {
+        font-size: 0.76rem;
       }
     }
   </style>
@@ -533,9 +759,9 @@ function _t(msg, tipo) {
       </section>
     </div>
 
-    <a href="/governo/gestao/" style="position:fixed;bottom:24px;right:24px;z-index:900;pointer-events:auto;background:#00c2ff;color:#041018;font-family:Manrope,sans-serif;font-weight:700;font-size:13px;padding:11px 20px;border-radius:50px;text-decoration:none;box-shadow:0 4px 20px rgba(0,194,255,.4);display:flex;align-items:center;gap:8px">🏛️ Gestão Governamental</a>
-    <a href="/governo/gestao/" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:900;pointer-events:auto;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-family:Manrope,sans-serif;font-weight:700;font-size:12px;padding:9px 18px;border-radius:50px;text-decoration:none;box-shadow:0 4px 20px rgba(99,102,241,.4);display:flex;align-items:center;gap:6px">Command Center</a>
-    <a href="/sala-decisao-ia/" style="position:fixed;bottom:24px;left:24px;z-index:900;pointer-events:auto;background:linear-gradient(135deg,#00e5b0,#00c2ff);color:#041018;font-family:Manrope,sans-serif;font-weight:800;font-size:13px;padding:11px 20px;border-radius:50px;text-decoration:none;box-shadow:0 4px 20px rgba(0,229,176,.35);display:flex;align-items:center;gap:8px">Sala de Decisão IA</a>
+    <a href="/governo/gestao/" class="quick-link quick-link-right">🏛️ Gestão Governamental</a>
+    <a href="/governo/gestao/" class="quick-link quick-link-center">Command Center</a>
+    <a href="/sala-decisao-ia/" class="quick-link quick-link-left">Sala de Decisão IA</a>
     <button class="floating-button toggle-left shifted" id="leftHandle">›</button>
     <button class="floating-button toggle-right shifted" id="rightHandle">‹</button>
     <button class="floating-button toggle-bottom shifted" id="bottomHandle">▲</button>
