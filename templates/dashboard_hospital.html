@@ -111,32 +111,18 @@
       padding: 14px 16px;
     }
 
-    .brand-line {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
+    .eyebrow {
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      color: var(--accent);
     }
 
     .brand-title {
-      font-size: 1.1rem;
-      font-weight: 800;
-      letter-spacing: 0.02em;
-    }
-
-    .environment-badge {
-      display: inline-flex;
-      align-items: center;
       margin-top: 8px;
-      padding: 7px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(139, 185, 255, 0.42);
-      background: rgba(139, 185, 255, 0.14);
-      color: #dceaff;
-      font-size: 0.74rem;
-      font-weight: 900;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      font-size: 1.25rem;
+      font-weight: 800;
     }
 
     .brand-subtitle,
@@ -183,7 +169,6 @@
     .filters > *,
     .detail-grid > *,
     .legend > *,
-    .brand-line > div,
     .dock-scroll > *,
     .stack > * {
       min-width: 0;
@@ -606,11 +591,6 @@
         padding: 13px 14px;
       }
 
-      .brand-line {
-        align-items: flex-start;
-        flex-wrap: wrap;
-      }
-
       .dock,
       .dock-left,
       .dock-right {
@@ -682,7 +662,6 @@
         line-height: 1.5;
       }
 
-      .environment-badge,
       .risk-badge {
         font-size: 0.7rem;
         line-height: 1.3;
@@ -784,15 +763,10 @@
   <div class="hud">
     <div class="topbar">
       <section class="topbar-card">
-        <div class="brand-line">
-          <div>
-            <div class="brand-title">SolusCRT Hospital Intelligence</div>
-            <div class="environment-badge">Ambiente Hospital</div>
-            <div class="brand-subtitle">Painel de prontidão clínica para triagem, pressão assistencial, risco de superlotação e preparação de emergência.</div>
-          </div>
-          <span class="risk-badge" id="metricRiskBadge">BAIXO</span>
-        </div>
-        <div class="mini" id="generatedAt">Atualizando leitura nacional...</div>
+        <div class="eyebrow">SolusCRT Hospital</div>
+        <div class="brand-title">Centro de Inteligência Assistencial</div>
+        <div class="brand-subtitle">Painel de prontidão clínica para triagem, pressão assistencial, risco de superlotação e preparação de emergência.</div>
+        <div class="mini" id="generatedAt" style="margin-top:10px;">Atualizando leitura hospitalar...</div>
       </section>
 
       <section class="topbar-card">
@@ -822,6 +796,7 @@
 
       <section class="topbar-card">
         <div class="actions">
+          <span class="risk-badge baixo" id="metricRiskBadge">BAIXO</span>
           <button class="btn secondary" id="toggleLeftDock">Radar</button>
           <button class="btn secondary" id="toggleRightDock">Capacidade</button>
           <button class="btn primary" id="gotoMapa">Mapa Geral</button>

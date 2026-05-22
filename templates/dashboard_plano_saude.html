@@ -101,32 +101,18 @@
       padding: 14px 16px;
     }
 
-    .brand-line {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
+    .eyebrow {
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      color: var(--accent);
     }
 
     .brand-title {
-      font-size: 1.1rem;
-      font-weight: 800;
-      letter-spacing: 0.02em;
-    }
-
-    .environment-badge {
-      display: inline-flex;
-      align-items: center;
       margin-top: 8px;
-      padding: 7px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 107, 157, 0.38);
-      background: rgba(255, 107, 157, 0.13);
-      color: #ffd0e4;
-      font-size: 0.74rem;
-      font-weight: 900;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      font-size: 1.25rem;
+      font-weight: 800;
     }
 
     .brand-subtitle, .mini {
@@ -172,7 +158,6 @@
     .filters > *,
     .detail-grid > *,
     .legend > *,
-    .brand-line > div,
     .dock-scroll > *,
     .stack > * {
       min-width: 0;
@@ -535,7 +520,6 @@
       .hud { position: relative; min-height: 100vh; padding-top: 62vh; }
       .topbar { position: absolute; top: 12px; left: 12px; right: 12px; }
       .topbar-card { padding: 13px 14px; }
-      .brand-line { align-items: flex-start; flex-wrap: wrap; }
       .dock, .dock-left, .dock-right {
         position: relative; top: auto; left: auto; right: auto; bottom: auto;
         width: auto; margin: 12px; transform: none !important; opacity: 1 !important;
@@ -560,7 +544,6 @@
       .brand-title { font-size: 1rem; line-height: 1.25; }
       .brand-subtitle,
       .mini { font-size: 0.8rem; line-height: 1.5; }
-      .environment-badge,
       .risk-badge { font-size: 0.7rem; line-height: 1.3; }
       .metric-card strong { font-size: 1.05rem; }
       .metric-card span { font-size: 0.68rem; }
@@ -597,15 +580,10 @@
     <div class="topbar">
       <!-- Card 1: Brand -->
       <section class="topbar-card">
-        <div class="brand-line">
-          <div>
-            <div class="brand-title">SolusCRT Plano de Saúde Intelligence</div>
-            <div class="environment-badge">Operadora de Plano de Saúde</div>
-            <div class="brand-subtitle">Vigilância epidemiológica, gestão de sinistros, guias e beneficiários orientada por foco territorial e risco clínico.</div>
-          </div>
-          <span class="risk-badge" id="metricRiskBadge">BAIXO</span>
-        </div>
-        <div class="mini" id="generatedAt">Atualizando leitura nacional...</div>
+        <div class="eyebrow">SolusCRT Plano de Saúde</div>
+        <div class="brand-title">Centro Executivo de Gestão de Operadora</div>
+        <div class="brand-subtitle">Vigilância epidemiológica, gestão de sinistros, guias e beneficiários orientada por foco territorial e risco clínico.</div>
+        <div class="mini" id="generatedAt" style="margin-top:10px;">Atualizando leitura operacional...</div>
       </section>
 
       <!-- Card 2: KPIs rápidos -->
@@ -637,6 +615,7 @@
       <!-- Card 3: Ações -->
       <section class="topbar-card">
         <div class="actions">
+          <span class="risk-badge baixo" id="metricRiskBadge">BAIXO</span>
           <button class="btn secondary" id="toggleLeftDock">KPIs</button>
           <button class="btn secondary" id="toggleRightDock">Sinistros</button>
           <a href="/plano-saude/gestao/" class="btn primary" style="text-decoration:none">Gestão</a>
