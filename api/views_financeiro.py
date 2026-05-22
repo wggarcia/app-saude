@@ -10,6 +10,16 @@ from datetime import date, timedelta
 from django.http import JsonResponse
 from django.db.models import Sum, Count, Avg, Q, F
 from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
+from .planos import normalizar_codigo_pacote, PACOTES_SAAS
+
+
+def _ticket_mensal(pacote_codigo: str) -> float:
+    """Retorna o preço mensal do pacote. Para governo (ciclo anual), retorna anual/12."""
+    codigo = normalizar_codigo_pacote(pacote_codigo or "empresa_starter_5")
+    pacote = PACOTES_SAAS.get(codigo, {})
+    if pacote.get("ciclos") == ["anual"]:
+        return pacote.get("anual", 0) / 12
+    return pacote.get("mensal", 799.0)
 
 
 def _mrr_historico(meses=12):
@@ -55,16 +65,9 @@ def _arr_atual():
 
     try:
         from .models import Empresa
-        # fallback: conta empresas × ticket médio estimado por pacote
-        TICKETS = {
-            "basico": 990,
-            "profissional": 2490,
-            "enterprise": 5990,
-            "governo": 3990,
-            "hospital": 4490,
-        }
+        # fallback: conta empresas × ticket mensal real por pacote (via planos.py)
         empresas = Empresa.objects.filter(ativo=True).values("pacote_codigo")
-        total_mrr = sum(TICKETS.get(e["pacote_codigo"], 990) for e in empresas)
+        total_mrr = sum(_ticket_mensal(e["pacote_codigo"]) for e in empresas)
         total_clientes = Empresa.objects.filter(ativo=True).count()
         return float(total_mrr) * 12, float(total_mrr), total_clientes
     except Exception:
@@ -116,15 +119,8 @@ def _distribuicao_planos():
             .annotate(total=Count("id"))
             .order_by("-total")
         )
-        TICKETS = {
-            "basico": 990,
-            "profissional": 2490,
-            "enterprise": 5990,
-            "governo": 3990,
-            "hospital": 4490,
-        }
         for d in dist:
-            d["ticket_medio"] = TICKETS.get(d["pacote_codigo"], 990)
+            d["ticket_medio"] = _ticket_mensal(d["pacote_codigo"])
             d["mrr_parcial"] = d["total"] * d["ticket_medio"]
         return dist
     except Exception:
@@ -328,10 +324,6 @@ def api_financeiro_cohorts(request):
         from .models import Empresa
         hoje = date.today()
         cohorts = []
-        TICKETS = {
-            "basico": 990, "profissional": 2490,
-            "enterprise": 5990, "governo": 3990, "hospital": 4490,
-        }
         for i in range(5, -1, -1):
             mes = (hoje.replace(day=1) - timedelta(days=30 * i)).replace(day=1)
             prox = (mes.replace(day=28) + timedelta(days=4)).replace(day=1)
@@ -342,7 +334,7 @@ def api_financeiro_cohorts(request):
             total = adquiridos.count()
             ativos_hoje = adquiridos.filter(ativo=True).count()
             retencao = round(ativos_hoje / total * 100, 1) if total > 0 else 0
-            mrr_cohort = sum(TICKETS.get(e["pacote_codigo"], 990) for e in adquiridos.values("pacote_codigo"))
+            mrr_cohort = sum(_ticket_mensal(e["pacote_codigo"]) for e in adquiridos.values("pacote_codigo"))
             cohorts.append({
                 "cohort": mes.strftime("%Y-%m"),
                 "cohort_fmt": mes.strftime("%b/%y"),

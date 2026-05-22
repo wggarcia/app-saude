@@ -16,6 +16,16 @@ from django.http import JsonResponse
 from django.db.models import Count, Avg, Sum, Q
 from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
 from .views_financeiro import _arr_atual, _churn_ultimos_90, _nrr_estimado
+from .planos import normalizar_codigo_pacote, PACOTES_SAAS
+
+
+def _ticket_mensal(pacote_codigo: str) -> float:
+    """Retorna o preço mensal do pacote. Para governo (ciclo anual), retorna anual/12."""
+    codigo = normalizar_codigo_pacote(pacote_codigo or "empresa_starter_5")
+    pacote = PACOTES_SAAS.get(codigo, {})
+    if pacote.get("ciclos") == ["anual"]:
+        return pacote.get("anual", 0) / 12
+    return pacote.get("mensal", 799.0)
 
 
 def _burn_multiple(mrr_atual, mrr_anterior, burn_mensal_estimado):
@@ -42,10 +52,6 @@ def _arr_waterfall():
     """ARR Waterfall: novo + expansão - contração - churn."""
     try:
         from .models import Empresa
-        TICKETS = {
-            "basico": 990, "profissional": 2490,
-            "enterprise": 5990, "governo": 3990, "hospital": 4490,
-        }
         hoje = date.today()
         mes_atual = hoje.replace(day=1)
         mes_anterior = (mes_atual - timedelta(days=1)).replace(day=1)
@@ -54,13 +60,13 @@ def _arr_waterfall():
             ativo=True,
             criado_em__date__gte=mes_atual,
         )
-        arr_novos = sum(TICKETS.get(e["pacote_codigo"], 990) * 12 for e in novos.values("pacote_codigo"))
+        arr_novos = sum(_ticket_mensal(e["pacote_codigo"]) * 12 for e in novos.values("pacote_codigo"))
 
         churned = Empresa.objects.filter(
             ativo=False,
             atualizado_em__date__gte=mes_atual,
         )
-        arr_churn = sum(TICKETS.get(e["pacote_codigo"], 990) * 12 for e in churned.values("pacote_codigo"))
+        arr_churn = sum(_ticket_mensal(e["pacote_codigo"]) * 12 for e in churned.values("pacote_codigo"))
 
         return {
             "arr_novos": arr_novos,
@@ -123,11 +129,12 @@ def _scoring_leads():
             {"criterio": "Budget confirmado", "peso": 10, "valores": {"sim": 10, "parcial": 5, "nao": 0}},
         ],
         "segmentos": {
-            "industria_pesada": {"score_min": 70, "ciclo_dias": 60, "ticket_medio": 4990},
-            "saude_privada": {"score_min": 65, "ciclo_dias": 90, "ticket_medio": 5990},
-            "varejo_grande": {"score_min": 55, "ciclo_dias": 45, "ticket_medio": 2490},
-            "governo_municipal": {"score_min": 60, "ciclo_dias": 180, "ticket_medio": 3990},
-            "pme_geral": {"score_min": 40, "ciclo_dias": 21, "ticket_medio": 990},
+            # ticket_medio = MRR mensal estimado por segmento (fonte: planos.py)
+            "industria_pesada": {"score_min": 70, "ciclo_dias": 60, "ticket_medio": 4900},    # empresa_enterprise_100
+            "saude_privada":    {"score_min": 65, "ciclo_dias": 90, "ticket_medio": 12000},   # hospital_medio
+            "varejo_grande":    {"score_min": 55, "ciclo_dias": 45, "ticket_medio": 1990},    # empresa_profissional_25
+            "governo_municipal": {"score_min": 60, "ciclo_dias": 180, "ticket_medio": 10000}, # governo_municipio_pequeno R$120k/ano ÷ 12
+            "pme_geral":        {"score_min": 40, "ciclo_dias": 21, "ticket_medio": 799},     # empresa_starter_5
         },
         "nota": "Implemente LeadComercial model e registre scores reais para análise estatística",
     }

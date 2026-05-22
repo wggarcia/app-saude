@@ -5501,3 +5501,298 @@ class MensagemPlano(models.Model):
     def __str__(self):
         dest = self.beneficiario.nome if self.beneficiario else (self.prestador.nome_fantasia if self.prestador else "?")
         return f"Msg → {dest} ({self.canal})"
+
+
+# ═══════════════════════════════════════════════════════════
+# MÓDULOS SST EXPANSÃO — PPP, LTCAT/LIP, REDE, LAB, FINANCEIRO
+# ═══════════════════════════════════════════════════════════
+
+class PPPFuncionario(models.Model):
+    """Perfil Profissiográfico Previdenciário — IN INSS 128/2022."""
+    STATUS = [("rascunho", "Rascunho"), ("finalizado", "Finalizado"), ("entregue", "Entregue ao trabalhador")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="ppps")
+    funcionario = models.ForeignKey("FuncionarioSST", on_delete=models.CASCADE, related_name="ppps")
+    nit_pis = models.CharField(max_length=20, blank=True, default="", verbose_name="NIT/PIS do trabalhador")
+    cbo = models.CharField(max_length=10, blank=True, default="", verbose_name="CBO do cargo")
+    data_geracao = models.DateField(default=__import__('datetime').date.today)
+    data_desligamento = models.DateField(null=True, blank=True)
+    data_finalizacao = models.DateField(null=True, blank=True)
+    responsavel_tecnico = models.CharField(max_length=200, blank=True, default="")
+    conselho_registro = models.CharField(max_length=100, blank=True, default="", verbose_name="CRM/CREA/CRQ")
+    agentes_nocivos = models.JSONField(default=list, blank=True)
+    monitoracao_biologica = models.JSONField(default=list, blank=True)
+    historico_cargos = models.JSONField(default=list, blank=True)
+    resultado_conclusao = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS, default="rascunho")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_geracao"]
+        indexes = [models.Index(fields=["empresa", "funcionario"]), models.Index(fields=["empresa", "status"])]
+
+    def __str__(self):
+        return f"PPP {self.funcionario.nome} — {self.data_geracao}"
+
+
+class LaudoTecnicoSST(models.Model):
+    """LTCAT, LIP, LTIP, PGR, PCMSO — laudos técnicos SST."""
+    TIPOS = [
+        ("ltcat", "LTCAT"), ("lip", "LIP"), ("ltip", "LTIP"),
+        ("pgr", "PGR"), ("pcmso", "PCMSO"),
+    ]
+    STATUS = [("rascunho", "Rascunho"), ("vigente", "Vigente"), ("vencido", "Vencido"), ("revogado", "Revogado")]
+    GRAUS = [("minimo", "Mínimo (10%)"), ("medio", "Médio (20%)"), ("maximo", "Máximo (40%)"), ("nao_se_aplica", "Não se aplica")]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="laudos_tecnicos")
+    tipo = models.CharField(max_length=10, choices=TIPOS)
+    posto_trabalho = models.CharField(max_length=200, blank=True, default="")
+    setor = models.CharField(max_length=200, blank=True, default="")
+    data_emissao = models.DateField(null=True, blank=True)
+    data_assinatura = models.DateField(null=True, blank=True)
+    responsavel_tecnico = models.CharField(max_length=200, blank=True, default="")
+    conselho_registro = models.CharField(max_length=100, blank=True, default="")
+    agentes_avaliados = models.JSONField(default=list, blank=True)
+    metodologia = models.TextField(blank=True, default="")
+    resultados = models.JSONField(default=list, blank=True)
+    conclusao = models.TextField(blank=True, default="")
+    grau_insalubridade = models.CharField(max_length=20, choices=GRAUS, blank=True, default="nao_se_aplica")
+    adicional_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS, default="rascunho")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_emissao"]
+        indexes = [models.Index(fields=["empresa", "tipo", "status"])]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} — {self.empresa.nome} ({self.data_emissao})"
+
+
+class ClinicaCredenciada(models.Model):
+    """Rede nacional de clínicas credenciadas SolusCRT."""
+    STATUS_CRED = [("pendente", "Pendente"), ("ativo", "Ativo"), ("suspenso", "Suspenso"), ("cancelado", "Cancelado")]
+    TIPOS = [
+        ("clinica_ocupacional", "Clínica de Medicina Ocupacional"),
+        ("laboratorio", "Laboratório de Análises"),
+        ("sesi", "SESI"), ("sesc", "SESC"), ("ame", "AME"),
+        ("hospital", "Hospital"), ("policlinica", "Policlínica"),
+    ]
+
+    nome = models.CharField(max_length=200)
+    cnpj = models.CharField(max_length=18, unique=True)
+    tipo = models.CharField(max_length=30, choices=TIPOS, default="clinica_ocupacional")
+    especialidades = models.JSONField(default=list)
+    endereco = models.CharField(max_length=300, blank=True, default="")
+    cidade = models.CharField(max_length=100)
+    uf = models.CharField(max_length=2)
+    cep = models.CharField(max_length=9, blank=True, default="")
+    telefone = models.CharField(max_length=20, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
+    responsavel_tecnico = models.CharField(max_length=200, blank=True, default="")
+    crm = models.CharField(max_length=20, blank=True, default="")
+    horario_atendimento = models.CharField(max_length=100, blank=True, default="Seg–Sex 08h–18h")
+    aceita_agendamento_online = models.BooleanField(default=True)
+    tempo_medio_laudo_dias = models.PositiveSmallIntegerField(default=3)
+    avaliacao_media = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    total_avaliacoes = models.PositiveIntegerField(default=0)
+    lat = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    lng = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    status_credenciamento = models.CharField(max_length=20, choices=STATUS_CRED, default="pendente")
+    ativa = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-avaliacao_media", "nome"]
+        indexes = [
+            models.Index(fields=["uf", "status_credenciamento"]),
+            models.Index(fields=["cidade", "uf"]),
+        ]
+
+    def __str__(self):
+        return f"{self.nome} — {self.cidade}/{self.uf}"
+
+
+class LaboratorioIntegrado(models.Model):
+    """Laboratório parceiro com integração de resultados."""
+    TIPOS_INT = [("api", "API REST"), ("hl7", "HL7"), ("fhir", "FHIR R4"), ("csv", "CSV"), ("manual", "Manual")]
+
+    nome = models.CharField(max_length=200)
+    cnpj = models.CharField(max_length=18, unique=True)
+    cidade = models.CharField(max_length=100, blank=True, default="")
+    uf = models.CharField(max_length=2, blank=True, default="")
+    tipo_integracao = models.CharField(max_length=10, choices=TIPOS_INT, default="manual")
+    endpoint_api = models.URLField(blank=True, default="")
+    token_api = models.CharField(max_length=500, blank=True, default="")
+    ativo = models.BooleanField(default=True)
+    total_resultados_enviados = models.PositiveIntegerField(default=0)
+    ultima_sincronizacao = models.DateField(null=True, blank=True)
+    empresas_vinculadas = models.ManyToManyField(Empresa, blank=True, related_name="laboratorios_integrados")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.nome} ({self.tipo_integracao})"
+
+
+class ResultadoExameLaboratorio(models.Model):
+    """Resultado de exame importado de laboratório integrado."""
+    CRITICIDADE = [("normal", "Normal"), ("atencao", "Atenção"), ("critico", "Crítico")]
+    VIA = [("api", "API"), ("hl7", "HL7"), ("fhir", "FHIR"), ("csv", "CSV"), ("manual", "Manual")]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="resultados_laboratorio")
+    funcionario = models.ForeignKey("FuncionarioSST", on_delete=models.CASCADE, related_name="resultados_laboratorio")
+    laboratorio = models.ForeignKey(LaboratorioIntegrado, null=True, blank=True, on_delete=models.SET_NULL)
+    laboratorio_nome = models.CharField(max_length=200)
+    exame = models.CharField(max_length=200)
+    data_coleta = models.DateField()
+    data_resultado = models.DateField(null=True, blank=True)
+    resultado = models.CharField(max_length=500)
+    unidade = models.CharField(max_length=50, blank=True, default="")
+    valor_referencia = models.CharField(max_length=200, blank=True, default="")
+    alterado = models.BooleanField(default=False)
+    criticidade = models.CharField(max_length=10, choices=CRITICIDADE, default="normal")
+    medico_responsavel = models.CharField(max_length=200, blank=True, default="")
+    importado_via = models.CharField(max_length=10, choices=VIA, default="manual")
+    vinculado_aso = models.ForeignKey("ASOOcupacional", null=True, blank=True,
+                                      on_delete=models.SET_NULL, related_name="resultados_lab")
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_coleta"]
+        indexes = [
+            models.Index(fields=["empresa", "funcionario"]),
+            models.Index(fields=["empresa", "alterado"]),
+            models.Index(fields=["empresa", "criticidade"]),
+        ]
+
+    def __str__(self):
+        return f"{self.exame} — {self.funcionario.nome} ({self.data_coleta})"
+
+
+class FaturaClinica(models.Model):
+    """Fatura de serviços emitida pela clínica para empresa-cliente."""
+    STATUS = [
+        ("pendente", "Pendente"), ("enviada", "Enviada"), ("paga", "Paga"),
+        ("vencida", "Vencida"), ("cancelada", "Cancelada"),
+        ("em_glosa", "Em glosa"), ("parcial", "Pago parcialmente"),
+    ]
+
+    clinica = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="faturas_emitidas")
+    numero = models.CharField(max_length=30, unique=True)
+    empresa_cliente_nome = models.CharField(max_length=200)
+    empresa_cliente_cnpj = models.CharField(max_length=18)
+    data_emissao = models.DateField()
+    data_vencimento = models.DateField()
+    data_pagamento = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="pendente")
+    itens = models.JSONField(default=list)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    desconto = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    valor_pago = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    forma_pagamento = models.CharField(max_length=50, blank=True, default="transferencia")
+    glosa_valor = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    glosa_motivo = models.TextField(blank=True, default="")
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_emissao"]
+        indexes = [
+            models.Index(fields=["clinica", "status"]),
+            models.Index(fields=["clinica", "data_emissao"]),
+        ]
+
+    def __str__(self):
+        return f"Fatura {self.numero} — {self.empresa_cliente_nome} R${self.total}"
+
+
+class DespesaClinica(models.Model):
+    """Despesa operacional da clínica (contas a pagar)."""
+    CATEGORIAS = [
+        ("pessoal", "Pessoal / Folha"),
+        ("equipamentos", "Equipamentos / Manutenção"),
+        ("insumos", "Insumos / Reagentes"),
+        ("aluguel", "Aluguel / Imóvel"),
+        ("sistema", "Sistemas / TI"),
+        ("marketing", "Marketing"),
+        ("impostos", "Impostos / Taxas"),
+        ("outros", "Outros"),
+    ]
+
+    clinica = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="despesas_clinica")
+    descricao = models.CharField(max_length=300)
+    categoria = models.CharField(max_length=20, choices=CATEGORIAS, default="outros")
+    valor = models.DecimalField(max_digits=12, decimal_places=2)
+    data_competencia = models.DateField()
+    data_vencimento = models.DateField(null=True, blank=True)
+    pago = models.BooleanField(default=False)
+    data_pagamento = models.DateField(null=True, blank=True)
+    fornecedor = models.CharField(max_length=200, blank=True, default="")
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_competencia"]
+        indexes = [models.Index(fields=["clinica", "data_competencia"]), models.Index(fields=["clinica", "pago"])]
+
+    def __str__(self):
+        return f"{self.descricao} R${self.valor} ({self.data_competencia})"
+
+
+class FAPEmpresa(models.Model):
+    """
+    FAP — Fator Acidentário de Prevenção.
+    Registra o FAP anual publicado pelo INSS para a empresa,
+    calculando impacto sobre o RAT (Risco Ambiental do Trabalho).
+    """
+    FONTE_CHOICES = [
+        ("manual", "Informado manualmente"),
+        ("inss_portal", "Importado do portal INSS/PLENUS"),
+        ("importado", "Importado via arquivo"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="faps")
+    ano = models.PositiveSmallIntegerField()                      # ex: 2026
+    cnae = models.CharField(max_length=20, blank=True, default="")
+    cnae_descricao = models.CharField(max_length=300, blank=True, default="")
+    grau_risco = models.PositiveSmallIntegerField(default=2)     # 1, 2 ou 3
+    rat_base_pct = models.DecimalField(
+        max_digits=5, decimal_places=4, default=2.0,
+        help_text="Alíquota RAT base: 1.0, 2.0 ou 3.0%"
+    )
+    fap_valor = models.DecimalField(
+        max_digits=6, decimal_places=4,
+        help_text="FAP publicado pelo INSS — entre 0.5000 e 2.0000"
+    )
+    folha_salarial_mensal = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0,
+        help_text="Folha de pagamento mensal bruta para cálculo do impacto"
+    )
+    fonte = models.CharField(max_length=20, choices=FONTE_CHOICES, default="manual")
+    publicado_em = models.DateField(null=True, blank=True,
+                                    help_text="Data de publicação do FAP pelo INSS no DOU")
+    prazo_contestacao = models.DateField(null=True, blank=True,
+                                         help_text="Prazo de contestação (publicação + 30 dias)")
+    contestado = models.BooleanField(default=False)
+    resultado_contestacao = models.CharField(max_length=200, blank=True, default="",
+                                              help_text="Ex: Indeferido / Deferido — FAP reduzido para 0.8500")
+    observacoes = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("empresa", "ano")]
+        ordering = ["-ano"]
+        indexes = [
+            models.Index(fields=["empresa", "ano"]),
+        ]
+
+    def __str__(self):
+        return f"FAP {self.ano} — {self.empresa.nome} — {self.fap_valor}"

@@ -6,7 +6,7 @@
 
 ## Partes
 
-**CONTRATADA:** **WAGNER GARCIA**, CPF no **091.189.637-65**, sede operacional em **Niteroi/RJ**, e-mail **soluscrtsaude@gmail.com**, doravante denominada **SOLUSCRT** ou **CONTRATADA**.
+**CONTRATADA:** **SolusCRT Tecnologia em Saúde Ltda.**, CNPJ no **66.940.015/0001-48**, com sede em **Niterói/RJ**, e-mail **contato@soluscrt.com.br**, representada por Wagner Garcia (CPF 091.189.637-65)**, doravante denominada **SOLUSCRT** ou **CONTRATADA**.
 
 **CONTRATANTE:** **[ORGAO/ENTE PUBLICO]**, CNPJ no **[CNPJ ORGAO]**, com sede em **[ENDERECO]**, representado por **[NOME AUTORIDADE]**, CPF **[CPF]**, cargo **[CARGO]**, doravante denominado **CONTRATANTE**.
 

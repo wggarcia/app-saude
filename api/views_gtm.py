@@ -21,14 +21,28 @@ ETAPAS_FUNIL = [
 
 SEGMENTOS = ["industria", "saude", "varejo", "governo", "financeiro", "outros"]
 
-# Ticket médio por plano (espelho de views_financeiro)
-TICKETS = {
-    "basico": 990,
-    "profissional": 2490,
-    "enterprise": 5990,
-    "governo": 3990,
-    "hospital": 4490,
-}
+# Ticket médio por plano — lido diretamente do planos.py (fonte da verdade)
+from .planos import preco_pacote, normalizar_codigo_pacote, PACOTES_SAAS
+
+def _ticket_mensal(pacote_codigo: str) -> float:
+    """Retorna o preço mensal do pacote. Para governo (ciclo anual), retorna anual/12."""
+    codigo = normalizar_codigo_pacote(pacote_codigo or "empresa_starter_5")
+    pacote = PACOTES_SAAS.get(codigo, {})
+    if pacote.get("ciclos") == ["anual"]:
+        return pacote.get("anual", 0) / 12
+    return pacote.get("mensal", 799.0)
+
+# Legado: dicionário estático substituído — use _ticket_mensal() para novos cálculos
+TICKETS = {k: _ticket_mensal(k) for k in [
+    "empresa_starter_5", "empresa_profissional_25", "empresa_enterprise_100",
+    "empresa_corporativo_250", "empresa_nacional_500", "empresa_nacional_1000",
+    "farmacia_local", "farmacia_rede_regional",
+    "hospital_medio", "hospital_rede",
+    "governo_municipio_pequeno", "governo_municipio_medio",
+    "governo_capital_regiao", "governo_estado",
+    "plano_saude_operadora", "plano_saude_enterprise",
+    "rede_regional", "rede_nacional",
+]}
 
 
 def _funil_dados():
@@ -174,19 +188,15 @@ def _nrr_real():
             criado_em__date__gte=janela
         ).aggregate(delta=Sum("delta_mrr"))["delta"] or 0
 
-        TICKETS_BASE = {
-            "basico": 990, "profissional": 2490, "enterprise": 5990,
-            "governo": 3990, "hospital": 4490,
-        }
         mrr_base = sum(
-            TICKETS_BASE.get(e["pacote_codigo"], 990)
+            _ticket_mensal(e["pacote_codigo"])
             for e in Empresa.objects.filter(criado_em__date__lte=janela).values("pacote_codigo")
         )
 
         if mrr_base <= 0:
             return 100.0
 
-        churn_mrr = canceladas * 990  # estimativa conservadora
+        churn_mrr = canceladas * 799  # estimativa conservadora (Starter = menor plano)
         nrr = round(((mrr_base - churn_mrr + float(expansao)) / mrr_base) * 100, 1)
         return min(max(nrr, 0.0), 200.0)
     except Exception:

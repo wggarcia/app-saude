@@ -9,7 +9,7 @@
 
 Pelo presente instrumento particular, de um lado:
 
-**CONTRATADA:** **[RAZAO SOCIAL DA SOLUSCRT LTDA]**, inscrita no CNPJ sob o no **[CNPJ]**, com sede em **[ENDERECO COMPLETO]**, neste ato representada na forma de seu contrato social, doravante denominada **"SOLUSCRT"** ou **"CONTRATADA"**.
+**CONTRATADA:** **SolusCRT Tecnologia em Saúde Ltda.**, inscrita no CNPJ sob o no **66.940.015/0001-48**, com sede em **[ENDERECO COMPLETO]**, neste ato representada na forma de seu contrato social, doravante denominada **"SOLUSCRT"** ou **"CONTRATADA"**.
 
 E, de outro lado:
 

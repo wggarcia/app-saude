@@ -37,7 +37,7 @@
 | **Autor 1 — CPF** | 091.189.637-65 |
 | **Autor 1 — endereço** | Niterói, RJ, Brasil |
 | **Titular dos direitos** | Wagner Garcia (mesmo que o autor) |
-| **Pessoa física ou jurídica** | Pessoa Física (atualizar para PJ assim que CNPJ ativo) |
+| **Pessoa física ou jurídica** | Pessoa Jurídica — CNPJ 66.940.015/0001-48 |
 
 ### Descrição do Programa (copie este texto no formulário)
 

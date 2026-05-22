@@ -250,6 +250,37 @@ from api.views_postos_trabalho import (
     api_posto_funcionarios,
     api_posto_xml_s2240,
 )
+# ── Módulos SST Expansão ──────────────────────────────────
+from api.views_ppp import (
+    api_ppp_lista, api_ppp_criar, api_ppp_detalhe,
+    api_ppp_finalizar, api_ppp_pdf, api_ppp_kpis,
+)
+from api.views_laudos_tecnicos import (
+    api_laudos_lista, api_laudo_detalhe,
+    api_laudo_assinar, api_laudo_pdf, api_laudos_kpis,
+)
+from api.views_rede_credenciada import (
+    api_rede_credenciada_busca, api_rede_credenciada_proximas,
+    api_rede_credenciada_detalhe, api_rede_credenciar,
+    api_rede_kpis_credenciada, api_rede_por_estado,
+)
+from api.views_laboratorio import (
+    api_laboratorios_lista, api_laboratorio_registrar,
+    api_resultado_importar, api_resultado_lote_csv,
+    api_resultados_empresa, api_resultados_funcionario,
+    api_resultados_alertas, api_laboratorio_kpis,
+)
+from api.views_financeiro_clinica import (
+    api_faturas, api_fatura_detalhe, api_fatura_baixar,
+    api_fatura_cancelar, api_fatura_pdf,
+    api_despesas_clinica, api_glosas,
+    api_financeiro_kpis_clinica, api_fluxo_caixa_clinica,
+)
+from api.views_fap import (
+    api_fap_lista, api_fap_registrar, api_fap_detalhe,
+    api_fap_simulacao, api_fap_contestacao,
+    api_fap_historico, api_fap_kpis,
+)
 from api.views_solicitacao_exame import (
     sst_solicitacoes_page,
     api_solicitacoes_exame,
@@ -732,6 +763,44 @@ urlpatterns = [
     path('api/sst/vacinacao/campanhas/<int:campanha_id>/', api_campanha_detalhe),
     path('api/sst/vacinacao/campanhas/<int:campanha_id>/registros/', api_registros_vacinacao),
     path('api/sst/vacinacao/registros/<int:reg_id>/', api_registro_vacinacao_detalhe),
+    # ── PPP ──────────────────────────────────────────────────
+    path('api/sst/ppp/', api_ppp_lista),
+    path('api/sst/ppp/kpis/', api_ppp_kpis),
+    path('api/sst/ppp/<int:ppp_id>/', api_ppp_detalhe),
+    path('api/sst/ppp/<int:ppp_id>/finalizar/', api_ppp_finalizar),
+    path('api/sst/ppp/<int:ppp_id>/pdf/', api_ppp_pdf),
+    # ── Laudos Técnicos (LTCAT / LIP / PGR / PCMSO) ─────────
+    path('api/sst/laudos/', api_laudos_lista),
+    path('api/sst/laudos/kpis/', api_laudos_kpis),
+    path('api/sst/laudos/<int:laudo_id>/', api_laudo_detalhe),
+    path('api/sst/laudos/<int:laudo_id>/assinar/', api_laudo_assinar),
+    path('api/sst/laudos/<int:laudo_id>/pdf/', api_laudo_pdf),
+    # ── Rede Credenciada ──────────────────────────────────────
+    path('api/sst/rede-credenciada/', api_rede_credenciada_busca),
+    path('api/sst/rede-credenciada/kpis/', api_rede_kpis_credenciada),
+    path('api/sst/rede-credenciada/proximas/', api_rede_credenciada_proximas),
+    path('api/sst/rede-credenciada/por-estado/', api_rede_por_estado),
+    path('api/sst/rede-credenciada/credenciar/', api_rede_credenciar),
+    path('api/sst/rede-credenciada/<int:clinica_id>/', api_rede_credenciada_detalhe),
+    # ── Laboratórios ─────────────────────────────────────────
+    path('api/sst/laboratorios/', api_laboratorios_lista),
+    path('api/sst/laboratorios/registrar/', api_laboratorio_registrar),
+    path('api/sst/laboratorios/kpis/', api_laboratorio_kpis),
+    path('api/sst/laboratorios/resultados/', api_resultados_empresa),
+    path('api/sst/laboratorios/resultados/alertas/', api_resultados_alertas),
+    path('api/sst/laboratorios/resultados/funcionario/<int:funcionario_id>/', api_resultados_funcionario),
+    path('api/sst/laboratorios/resultado/', api_resultado_importar),
+    path('api/sst/laboratorios/resultado/lote/', api_resultado_lote_csv),
+    # ── Financeiro Clínica ────────────────────────────────────
+    path('api/clinica/financeiro/faturas/', api_faturas),
+    path('api/clinica/financeiro/faturas/<int:fatura_id>/', api_fatura_detalhe),
+    path('api/clinica/financeiro/faturas/<int:fatura_id>/baixar/', api_fatura_baixar),
+    path('api/clinica/financeiro/faturas/<int:fatura_id>/cancelar/', api_fatura_cancelar),
+    path('api/clinica/financeiro/faturas/<int:fatura_id>/pdf/', api_fatura_pdf),
+    path('api/clinica/financeiro/despesas/', api_despesas_clinica),
+    path('api/clinica/financeiro/glosas/', api_glosas),
+    path('api/clinica/financeiro/kpis/', api_financeiro_kpis_clinica),
+    path('api/clinica/financeiro/fluxo-caixa/', api_fluxo_caixa_clinica),
     # Contratos de saúde / convênios
     path('api/contratos/', api_contratos_saude),
     path('api/contratos/kpis/', api_contratos_kpis),
@@ -1299,6 +1368,15 @@ urlpatterns = [
     path('api/plano-saude/odontologia/', api_ps_odontologia),
     path('api/plano-saude/odontologia/guias/<int:guia_id>/', api_ps_guia_odonto_detalhe),
     path('api/plano-saude/regulatorio/gerar/', api_ps_regulatorio_gerar),
+    # ── Gestão FAP (Fator Acidentário de Prevenção) ─────────────────────────
+    path('api/sst/fap/', api_fap_lista),
+    path('api/sst/fap/registrar/', api_fap_registrar),
+    path('api/sst/fap/simulacao/', api_fap_simulacao),
+    path('api/sst/fap/contestacao/', api_fap_contestacao),
+    path('api/sst/fap/historico/', api_fap_historico),
+    path('api/sst/fap/kpis/', api_fap_kpis),
+    path('api/sst/fap/<int:fap_id>/', api_fap_detalhe),
+
     # ── Motor de IA epidemiológica (todos os setores)
     path('api/ia/classificar', api_ia_classificar),
     path('api/ia/doencas', api_ia_doencas),

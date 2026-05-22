@@ -4,7 +4,7 @@
 **Data:** 27/04/2026
 
 ## Partes
-**Parte A (SOLUSCRT):** Wagner Garcia, CPF 091.189.637-65.  
+**Parte A (SOLUSCRT):** SolusCRT Tecnologia em Saúde Ltda., CNPJ 66.940.015/0001-48, representada por Wagner Garcia (CPF 091.189.637-65).  
 **Parte B:** [RAZAO SOCIAL/NOME], [CNPJ/CPF].
 
 As Partes firmam o presente NDA bilateral.
