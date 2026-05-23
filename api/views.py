@@ -2492,29 +2492,62 @@ def app_mapa_publico(request):
     hotspots = sorted(areas.values(), key=lambda item: item["indice_ativo"], reverse=True)[:250]
     total_indice_mapa = sum(item["indice_ativo"] for item in hotspots) or 1
 
+    if not hotspots:
+        return JsonResponse({"hotspots": []}, safe=False)
+
+    filtros_area = Q()
+    for item in hotspots:
+        cond = Q(cidade=item["cidade"], estado=item["estado"])
+        if item["bairro"] is None:
+            cond &= Q(bairro__isnull=True)
+        else:
+            cond &= Q(bairro=item["bairro"])
+        filtros_area |= cond
+
+    sintomas_por_area = {}
+    for row in (
+        base.filter(filtros_area)
+        .values("cidade", "estado", "bairro")
+        .annotate(
+            febre=Count("id", filter=Q(febre=True)),
+            tosse=Count("id", filter=Q(tosse=True)),
+            dor_corpo=Count("id", filter=Q(dor_corpo=True)),
+            cansaco=Count("id", filter=Q(cansaco=True)),
+            falta_ar=Count("id", filter=Q(falta_ar=True)),
+        )
+    ):
+        sintomas_por_area[(row["cidade"], row["estado"], row["bairro"])] = {
+            "febre": row["febre"],
+            "tosse": row["tosse"],
+            "dor_corpo": row["dor_corpo"],
+            "cansaco": row["cansaco"],
+            "falta_ar": row["falta_ar"],
+        }
+
+    grupo_dominante_por_area = {}
+    for row in (
+        base.filter(filtros_area)
+        .exclude(grupo__isnull=True)
+        .exclude(grupo="")
+        .values("cidade", "estado", "bairro", "grupo")
+        .annotate(total=Count("id"))
+        .order_by("cidade", "estado", "bairro", "-total", "grupo")
+    ):
+        key = (row["cidade"], row["estado"], row["bairro"])
+        if key not in grupo_dominante_por_area:
+            grupo_dominante_por_area[key] = row["grupo"]
+
     resultado = []
     for item in hotspots:
-        area_queryset = base.filter(
-            cidade=item["cidade"],
-            estado=item["estado"],
-            bairro=item["bairro"],
-        )
-        grupo_top = (
-            area_queryset
-            .exclude(grupo__isnull=True)
-            .exclude(grupo="")
-            .values("grupo")
-            .annotate(total=Count("id"))
-            .order_by("-total")
-            .first()
-        )
-        sintomas_area = {
-            "febre": area_queryset.filter(febre=True).count(),
-            "tosse": area_queryset.filter(tosse=True).count(),
-            "dor_corpo": area_queryset.filter(dor_corpo=True).count(),
-            "cansaco": area_queryset.filter(cansaco=True).count(),
-            "falta_ar": area_queryset.filter(falta_ar=True).count(),
-        }
+        key = (item["cidade"], item["estado"], item["bairro"])
+        sintomas_area = sintomas_por_area.get(key, {
+            "febre": 0,
+            "tosse": 0,
+            "dor_corpo": 0,
+            "cansaco": 0,
+            "falta_ar": 0,
+        })
+        perfil_sindromico = grupo_dominante_por_area.get(key, "Monitoramento geral")
         doencas_provaveis = _build_disease_probabilities(sintomas_area, item["total"])
         doenca_top = doencas_provaveis[0]["name"] if doencas_provaveis else None
         indice_ativo = round(item["indice_ativo"], 2)
@@ -2531,8 +2564,8 @@ def app_mapa_publico(request):
             "percentual_ativo": round((indice_ativo / total_indice_mapa) * 100, 2),
             "latitude": round(item["latitude_soma"] / peso_geo, 6),
             "longitude": round(item["longitude_soma"] / peso_geo, 6),
-            "grupo_dominante": doenca_top or (grupo_top["grupo"] if grupo_top else "Monitoramento geral"),
-            "perfil_sindromico": grupo_top["grupo"] if grupo_top else "Monitoramento geral",
+            "grupo_dominante": doenca_top or perfil_sindromico,
+            "perfil_sindromico": perfil_sindromico,
             "doenca_dominante": doenca_top,
             "doencas_provaveis": doencas_provaveis[:5],
             "semaforo": _semaforo_publico(nivel),

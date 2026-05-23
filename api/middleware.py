@@ -261,8 +261,10 @@ class EmpresaMiddleware:
 
         if not token and auth:
             auth_norm = auth.strip()
-            if auth_norm.lower().startswith("bearer "):
-                token = auth_norm.split(" ", 1)[1].strip()
+            if auth_norm:
+                scheme, sep, credentials = auth_norm.partition(" ")
+                if scheme.lower() == "bearer":
+                    token = credentials.strip() if sep else ""
         elif not token:
             token = request.COOKIES.get("auth_token")
 

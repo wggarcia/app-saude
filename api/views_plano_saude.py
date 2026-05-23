@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db.models import Avg, Count, Q, Sum
+from django.db.models.functions import TruncMonth
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -1367,30 +1368,41 @@ def api_ps_kpis(request):
         .order_by("-qtd")
     )
 
-    # Série mensal de sinistros (últimos 6 meses)
+    # Série mensal de sinistros (últimos 6 meses) sem N+1 de consultas.
     hoje = date.today()
+    mes_atual = hoje.replace(day=1)
+
+    def _somar_meses_inicio(mes_inicio, deslocamento):
+        total_meses = (mes_inicio.year * 12 + (mes_inicio.month - 1)) + deslocamento
+        novo_ano = total_meses // 12
+        novo_mes = (total_meses % 12) + 1
+        return date(novo_ano, novo_mes, 1)
+
+    meses = [_somar_meses_inicio(mes_atual, deslocamento) for deslocamento in range(-5, 1)]
+    serie_bruta = (
+        sinistros_qs
+        .filter(data_abertura__date__gte=meses[0], data_abertura__date__lte=hoje)
+        .annotate(mes=TruncMonth("data_abertura", tzinfo=timezone.get_current_timezone()))
+        .values("mes")
+        .annotate(
+            sinistros=Count("id"),
+            valor=Sum("valor_total", filter=Q(status__in=["aprovado", "pago"])),
+        )
+    )
+    serie_por_mes = {}
+    for item in serie_bruta:
+        mes_ref = item["mes"]
+        if hasattr(mes_ref, "date"):
+            mes_ref = mes_ref.date()
+        serie_por_mes[(mes_ref.year, mes_ref.month)] = item
+
     serie = []
-    for i in range(5, -1, -1):
-        ref = hoje.replace(day=1) - timedelta(days=i * 28)
-        mes_inicio = ref.replace(day=1)
-        if i == 0:
-            mes_fim = hoje
-        else:
-            prox = (mes_inicio.replace(day=28) + timedelta(days=4)).replace(day=1)
-            mes_fim = prox - timedelta(days=1)
-        qtd = sinistros_qs.filter(
-            data_abertura__date__gte=mes_inicio,
-            data_abertura__date__lte=mes_fim,
-        ).count()
-        valor = sinistros_qs.filter(
-            data_abertura__date__gte=mes_inicio,
-            data_abertura__date__lte=mes_fim,
-            status__in=["aprovado", "pago"],
-        ).aggregate(total=Sum("valor_total"))["total"] or 0
+    for mes_inicio in meses:
+        linha = serie_por_mes.get((mes_inicio.year, mes_inicio.month), {})
         serie.append({
             "mes": mes_inicio.strftime("%b/%y"),
-            "sinistros": qtd,
-            "valor": float(valor),
+            "sinistros": linha.get("sinistros", 0),
+            "valor": float(linha.get("valor") or 0),
         })
 
     return JsonResponse({
