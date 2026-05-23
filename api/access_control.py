@@ -255,6 +255,51 @@ def api_requer_plataforma_ti(view_func):
     return wrapper
 
 
+def _principal_gestor_ti(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return False
+    principal = getattr(request, "principal", None) or empresa
+    if principal == empresa:
+        return True
+    if principal.__class__.__name__ != "EmpresaUsuario":
+        return False
+    if getattr(principal, "is_admin", False):
+        return True
+
+    cargo = _texto_normalizado(getattr(principal, "cargo", ""))
+    if not cargo:
+        return False
+    palavras = set(cargo.replace("/", " ").replace("-", " ").split())
+    if "rh" in palavras:
+        return True
+    return any(
+        trecho in cargo
+        for trecho in (
+            "recursos humanos",
+            "departamento pessoal",
+            "gestao de pessoas",
+            "gente e gestao",
+            "people",
+            "talentos",
+        )
+    )
+
+
+def api_requer_plataforma_ti_ou_gestor(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        empresa = getattr(request, "empresa", None)
+        if not empresa:
+            return JsonResponse({"erro": "Não autenticado"}, status=401)
+        if not (pode_acessar_plataforma_ti(request) or _principal_gestor_ti(request)):
+            return JsonResponse({
+                "erro": "Acesso restrito à TI ou gestão autorizada.",
+            }, status=403)
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 def requer_permissao(permissao):
     """RBAC decorator — checks RBACAtribuicao for the authenticated principal."""
     def decorator(view_func):

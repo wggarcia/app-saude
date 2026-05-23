@@ -30,6 +30,7 @@ from .models import (
 )
 from .access_control import (
     api_requer_plataforma_ti,
+    api_requer_plataforma_ti_ou_gestor,
     api_requer_setor,
     requer_plataforma_ti_page,
     requer_setor,
@@ -496,7 +497,7 @@ def _onboarding_dict(empresa):
     }
 
 
-@api_requer_plataforma_ti
+@api_requer_plataforma_ti_ou_gestor
 def api_trial_status(request):
     """GET — situação do trial e checklist de onboarding."""
     empresa = _empresa_gestao(request)
@@ -520,7 +521,7 @@ def api_trial_status(request):
 
 
 @csrf_exempt
-@api_requer_plataforma_ti
+@api_requer_plataforma_ti_ou_gestor
 def api_trial_ativar(request):
     """POST — inicia trial self-service. Idempotente."""
     empresa = _empresa_gestao(request)
@@ -537,7 +538,7 @@ def api_trial_ativar(request):
 
 
 @csrf_exempt
-@api_requer_plataforma_ti
+@api_requer_plataforma_ti_ou_gestor
 def api_onboarding_passo(request, passo):
     """POST — marca um passo do onboarding como concluído."""
     empresa = _empresa_gestao(request)
@@ -578,7 +579,7 @@ def _integracao_dict(i):
 
 
 @csrf_exempt
-@api_requer_plataforma_ti
+@api_requer_plataforma_ti_ou_gestor
 def api_integracoes(request):
     """GET lista / POST cria integração com sistema de RH."""
     empresa = _empresa_gestao(request)
@@ -695,7 +696,7 @@ def api_integracao_webhook(request, sistema):
 
 
 @csrf_exempt
-@api_requer_plataforma_ti
+@api_requer_plataforma_ti_ou_gestor
 def api_integracao_status(request, integracao_id):
     """POST — ativa, desativa ou reseta uma integração."""
     empresa = _empresa_gestao(request)
@@ -739,7 +740,7 @@ def _key_dict(k, mostrar_chave=False):
 
 
 @csrf_exempt
-@api_requer_plataforma_ti
+@api_requer_plataforma_ti_ou_gestor
 def api_chaves(request):
     """GET lista / POST cria API key para a empresa."""
     empresa = _empresa_gestao(request)
@@ -766,7 +767,7 @@ def api_chaves(request):
 
 
 @csrf_exempt
-@api_requer_plataforma_ti
+@api_requer_plataforma_ti_ou_gestor
 def api_chave_revogar(request, chave_id):
     """POST — revoga (desativa permanentemente) uma API key."""
     empresa = _empresa_gestao(request)
@@ -785,7 +786,7 @@ def api_chave_revogar(request, chave_id):
     return JsonResponse({"ok": True})
 
 
-@api_requer_plataforma_ti
+@api_requer_plataforma_ti_ou_gestor
 def api_uso_api(request):
     """GET — consumo mensal de API por endpoint."""
     empresa = _empresa_gestao(request)
