@@ -3599,7 +3599,7 @@ class PlataformaTiAccessTests(TestCase):
         resp_api = client.get("/api/gestao/plataforma/seguranca/")
         self.assertEqual(resp_api.status_code, 200)
 
-    def test_admin_principal_consegue_bootstrap_antes_do_ti_assumir(self):
+    def test_admin_principal_sem_perfil_ti_nao_acessa_plataforma(self):
         empresa_sem_ti = Empresa.objects.create(
             nome="Empresa Bootstrap",
             email="bootstrap@teste.com",
@@ -3614,7 +3614,8 @@ class PlataformaTiAccessTests(TestCase):
         )
         self.assertEqual(login.status_code, 200)
         resp_page = client.get("/gestao/plataforma/")
-        self.assertEqual(resp_page.status_code, 200)
+        self.assertEqual(resp_page.status_code, 403)
+        self.assertContains(resp_page, "Plataforma TI protegida para uso técnico", status_code=403)
 
     def test_links_ambiente_it_aparecem_nas_gestoes_setoriais(self):
         empresas = [

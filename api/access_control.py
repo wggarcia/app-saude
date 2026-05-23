@@ -207,22 +207,10 @@ def pode_acessar_plataforma_ti(request):
     if _atribuir_permissao_ti_por_cargo(empresa, principal):
         return True
 
-    # Bootstrap controlado: enquanto não houver responsável de TI definido,
-    # o admin principal ainda pode entrar para concluir a configuração.
-    if not _empresa_tem_responsavel_ti(empresa):
-        if principal == empresa:
-            return True
-        if principal.__class__.__name__ == "EmpresaUsuario" and getattr(principal, "is_admin", False):
-            return True
-
     return False
 
 
 def acesso_plataforma_ti_em_bootstrap(request):
-    empresa = getattr(request, "empresa", None)
-    if not empresa or not _empresa_tem_responsavel_ti(empresa):
-        principal = getattr(request, "principal", None) or empresa
-        return not _principal_tem_permissao(empresa, principal, "plataforma_ti")
     return False
 
 
@@ -261,7 +249,7 @@ def api_requer_plataforma_ti(view_func):
             return JsonResponse({"erro": "Não autenticado"}, status=401)
         if not pode_acessar_plataforma_ti(request):
             return JsonResponse({
-                "erro": "Acesso restrito à Plataforma TI. Use um login próprio de TI ou um admin habilitado para a implantação inicial.",
+                "erro": "Acesso restrito à Plataforma TI. Entre com um usuário de TI (cargo TI/Suporte/Infra/DevOps) para continuar.",
             }, status=403)
         return view_func(request, *args, **kwargs)
     return wrapper

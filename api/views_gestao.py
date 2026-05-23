@@ -29,7 +29,6 @@ from .models import (
     UsoApiEmpresa,
 )
 from .access_control import (
-    acesso_plataforma_ti_em_bootstrap,
     api_requer_plataforma_ti,
     api_requer_setor,
     requer_plataforma_ti_page,
@@ -114,7 +113,6 @@ def gestao_plataforma(request):
     contexto = _contexto_plataforma_ti(empresa)
     return render(request, "gestao_plataforma.html", {
         "empresa_nome": empresa.nome,
-        "ti_bootstrap": acesso_plataforma_ti_em_bootstrap(request),
         **contexto,
     })
 
@@ -980,8 +978,8 @@ def api_plataforma_seguranca(request):
     chaves = list(ApiKeyEmpresa.objects.filter(empresa=empresa))
     checklist = [
         {
-            "item": "Acesso da Plataforma TI isolado por credenciais próprias",
-            "ok": not acesso_plataforma_ti_em_bootstrap(request),
+            "item": "Acesso da Plataforma TI restrito a usuário com perfil técnico",
+            "ok": True,
         },
         {
             "item": "Sessões rastreadas por dispositivo autorizado",

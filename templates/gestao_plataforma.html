@@ -89,6 +89,7 @@ body::before{
 .badge-warn{background:rgba(255,179,71,.14);color:#ffd080}
 .badge-danger{background:rgba(255,77,109,.14);color:#ffb3be}
 .badge-info{background:rgba(0,194,255,.14);color:#a0dfff}
+.badge-blue{background:rgba(82,166,255,.14);color:#a9d2ff}
 .badge-muted{background:rgba(255,255,255,.07);color:var(--muted)}
 .badge-purple{background:rgba(167,139,250,.14);color:#c4b5fd}
 .badge-gold{background:rgba(240,191,107,.14);color:#ffe4ad}
@@ -324,18 +325,16 @@ select option{background:#0b1822}
     </div>
   </div>
 
-  {% if ti_bootstrap %}
-  <div class="comp-card" style="border-color:rgba(240,191,107,.24);background:rgba(240,191,107,.06)">
+  <div class="comp-card" style="border-color:rgba(82,166,255,.24);background:rgba(82,166,255,.06)">
     <div class="comp-card-top">
       <div>
-        <div class="comp-name">Implantação inicial da área de TI</div>
-        <div class="comp-law">Você entrou em modo de configuração inicial. Assim que um usuário de TI próprio acessar este ambiente, o isolamento passa a valer para ele.</div>
+        <div class="comp-name">Acesso técnico dedicado</div>
+        <div class="comp-law">Este ambiente aceita somente login com perfil técnico de TI para manter o isolamento operacional.</div>
       </div>
-      <span class="badge badge-gold">Bootstrap</span>
+      <span class="badge badge-blue">Restrito</span>
     </div>
     <div class="comp-law">Recomendação operacional: mantenha um login dedicado de TI com cargo como <strong style="color:var(--text)">TI</strong>, <strong style="color:var(--text)">Suporte</strong>, <strong style="color:var(--text)">Infra</strong> ou <strong style="color:var(--text)">DevOps</strong> para concentrar integrações, chaves e webhooks fora da operação diária do SST.</div>
   </div>
-  {% endif %}
 
   <!-- ══ TAB: PLANO & TRIAL ═══════════════════════════════════════════════════ -->
   <section id="tab-plano" class="tab-panel active">
