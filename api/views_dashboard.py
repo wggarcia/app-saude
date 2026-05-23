@@ -6,6 +6,7 @@ from django.db.models import Count, Avg
 from django.utils import timezone
 from datetime import timedelta
 import json
+import unicodedata
 from .models import RegistroSintoma, DispositivoAutorizado, EmpresaUsuario, FinanceiroEventoSaaS, DonoAuditoriaAcao, AlertaGovernamental
 from .inteligencia import nivel_risco
 from .models import Empresa
@@ -58,6 +59,65 @@ def _principal_label(request):
     if empresa:
         return empresa.nome
     return "sistema"
+
+
+def _texto_normalizado(valor):
+    texto = unicodedata.normalize("NFKD", str(valor or ""))
+    return texto.encode("ascii", "ignore").decode("ascii").lower().strip()
+
+
+def _principal_pode_configurar_ti(request, empresa):
+    principal = getattr(request, "principal", None) or empresa
+    if not principal or not empresa:
+        return False
+    if principal == empresa:
+        return True
+    if getattr(principal, "is_admin", False):
+        return True
+
+    cargo = _texto_normalizado(getattr(principal, "cargo", ""))
+    if not cargo:
+        return False
+    palavras = set(cargo.replace("/", " ").replace("-", " ").split())
+    if "rh" in palavras:
+        return True
+    return any(
+        trecho in cargo
+        for trecho in (
+            "recursos humanos",
+            "departamento pessoal",
+            "gestao de pessoas",
+            "gente e gestao",
+            "people",
+            "talentos",
+        )
+    )
+
+
+def _atribuir_permissao_ti(empresa, usuario, concedido_por):
+    try:
+        from .models import RBACAtribuicao, RBACPermissao
+
+        permissao, _ = RBACPermissao.objects.get_or_create(
+            codigo="plataforma_ti",
+            defaults={
+                "descricao": "Acesso exclusivo à Plataforma TI",
+                "modulo": "ti",
+            },
+        )
+        atribuicao, criada = RBACAtribuicao.objects.get_or_create(
+            empresa=empresa,
+            usuario=usuario,
+            permissao=permissao,
+            defaults={"concedido_por": concedido_por, "ativo": True},
+        )
+        if not criada and not atribuicao.ativo:
+            atribuicao.ativo = True
+            atribuicao.concedido_por = concedido_por or atribuicao.concedido_por
+            atribuicao.save(update_fields=["ativo", "concedido_por", "atualizado_em"])
+    except Exception:
+        # Ambiente sem tabela RBAC migrada continua funcional via cargo TI.
+        pass
 
 
 def _status_contrato(empresa, agora):
@@ -700,11 +760,13 @@ def usuarios_empresa(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return redirect("/")
+    pode_configurar_ti = _principal_pode_configurar_ti(request, empresa)
     return render(request, "usuarios_empresa.html", {
         "empresa_nome": empresa.nome,
         "tipo_conta": empresa.tipo_conta,
         "max_usuarios": empresa.max_usuarios,
         "pacote": detalhes_pacote(empresa.pacote_codigo),
+        "pode_configurar_ti": pode_configurar_ti,
     })
 
 
@@ -717,6 +779,7 @@ def api_usuarios_empresa(request):
     return JsonResponse({
         "max_usuarios": empresa.max_usuarios,
         "usuarios_ativos": usuarios.filter(ativo=True).count(),
+        "pode_configurar_ti": _principal_pode_configurar_ti(request, empresa),
         "usuarios": [
             {
                 "id": usuario.id,
@@ -770,6 +833,81 @@ def api_criar_usuario_empresa(request):
     )
 
     return JsonResponse({"status": "ok", "usuario_id": usuario.id})
+
+
+@csrf_exempt
+def api_criar_credencial_ti(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+    if not _principal_pode_configurar_ti(request, empresa):
+        return JsonResponse({
+            "erro": "Apenas RH ou administrador da empresa pode configurar credenciais de TI.",
+        }, status=403)
+
+    try:
+        from django.contrib.auth.hashers import make_password
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    nome = (dados.get("nome") or "Responsável TI").strip()
+    email = (dados.get("email") or "").strip().lower()
+    senha = dados.get("senha") or ""
+
+    if not email or not senha:
+        return JsonResponse({"erro": "email e senha são obrigatórios"}, status=400)
+    if len(senha) < 8:
+        return JsonResponse({"erro": "senha deve ter pelo menos 8 caracteres"}, status=400)
+
+    usuario_empresa = EmpresaUsuario.objects.filter(empresa=empresa, email=email).first()
+    email_em_outra_empresa = EmpresaUsuario.objects.filter(email=email).exclude(empresa=empresa).exists()
+    email_conta_empresa = Empresa.objects.filter(email=email).exists()
+
+    if email_em_outra_empresa or email_conta_empresa:
+        return JsonResponse({"erro": "email já cadastrado em outra conta"}, status=400)
+
+    criado = False
+    if usuario_empresa:
+        usuario_empresa.nome = nome
+        usuario_empresa.cargo = "TI"
+        usuario_empresa.senha = make_password(senha)
+        usuario_empresa.ativo = True
+        usuario_empresa.sessao_ativa_chave = None
+        usuario_empresa.sessao_ativa_device_id = None
+        usuario_empresa.sessao_ativa_em = None
+        usuario_empresa.save(update_fields=[
+            "nome", "cargo", "senha", "ativo",
+            "sessao_ativa_chave", "sessao_ativa_device_id", "sessao_ativa_em",
+        ])
+    else:
+        ativos = EmpresaUsuario.objects.filter(empresa=empresa, ativo=True).count()
+        if ativos >= empresa.max_usuarios:
+            return JsonResponse({"erro": "limite de usuários do pacote atingido"}, status=403)
+        usuario_empresa = EmpresaUsuario.objects.create(
+            empresa=empresa,
+            nome=nome,
+            email=email,
+            senha=make_password(senha),
+            cargo="TI",
+            ativo=True,
+        )
+        criado = True
+
+    _atribuir_permissao_ti(
+        empresa,
+        usuario_empresa,
+        concedido_por=_principal_label(request),
+    )
+
+    return JsonResponse({
+        "status": "ok",
+        "acao": "criado" if criado else "atualizado",
+        "usuario_id": usuario_empresa.id,
+        "usuario_email": usuario_empresa.email,
+    })
 
 
 @csrf_exempt

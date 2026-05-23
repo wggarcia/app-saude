@@ -3555,6 +3555,8 @@ class PlataformaTiAccessTests(TestCase):
             email="empresa-ti@teste.com",
             senha=make_password("senha123"),
             ativo=True,
+            max_dispositivos=10,
+            max_usuarios=10,
         )
         self.usuario_rh = EmpresaUsuario.objects.create(
             empresa=self.empresa,
@@ -3570,6 +3572,14 @@ class PlataformaTiAccessTests(TestCase):
             email="ti@teste.com",
             senha=make_password("senha123"),
             cargo="TI",
+            ativo=True,
+        )
+        self.usuario_operacao = EmpresaUsuario.objects.create(
+            empresa=self.empresa,
+            nome="Usuário Operação",
+            email="operacao@teste.com",
+            senha=make_password("senha123"),
+            cargo="Operacao",
             ativo=True,
         )
 
@@ -3679,6 +3689,42 @@ class PlataformaTiAccessTests(TestCase):
         resp_page = client.get("/gestao/plataforma/")
         self.assertEqual(resp_page.status_code, 403)
         self.assertContains(resp_page, "Plataforma TI protegida para uso técnico", status_code=403)
+
+    def test_rh_consegue_cadastrar_credencial_ti(self):
+        client = self._login_client("rh@teste.com", device_id="dev-rh-ti")
+        resp = client.post(
+            "/api/usuarios/credencial-ti",
+            data=json.dumps({
+                "nome": "Tecnologia RH",
+                "email": "novo-ti@teste.com",
+                "senha": "SenhaTI123!",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["status"], "ok")
+
+        novo_ti = EmpresaUsuario.objects.get(empresa=self.empresa, email="novo-ti@teste.com")
+        self.assertEqual(novo_ti.cargo, "TI")
+        self.assertTrue(novo_ti.ativo)
+
+        client_ti = self._login_client("novo-ti@teste.com", senha="SenhaTI123!", device_id="dev-ti-novo")
+        resp_page = client_ti.get("/gestao/plataforma/")
+        self.assertEqual(resp_page.status_code, 200)
+
+    def test_usuario_sem_perfil_rh_nao_pode_cadastrar_credencial_ti(self):
+        client = self._login_client("operacao@teste.com", device_id="dev-op-ti")
+        resp = client.post(
+            "/api/usuarios/credencial-ti",
+            data=json.dumps({
+                "nome": "Tecnologia Operacao",
+                "email": "ti-bloqueado@teste.com",
+                "senha": "SenhaTI123!",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 403)
+        self.assertIn("Apenas RH", resp.json().get("erro", ""))
 
 
 # ════════════════════════════════════════════════════════════════════════════════

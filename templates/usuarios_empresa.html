@@ -23,6 +23,10 @@
     .row{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
     .badge{padding:6px 10px;border-radius:999px;font-size:.74rem;font-weight:800}
     .active{background:#1dd1a1;color:#042018}.inactive{background:#ff8fa3;color:#2a0710}
+    .ti-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;border:1px solid rgba(111,180,255,.22);background:rgba(111,180,255,.12);font-size:.72rem;font-weight:700;color:#cde7ff}
+    .tip{padding:12px 14px;border-radius:12px;background:rgba(90,240,211,.09);border:1px solid rgba(90,240,211,.2);font-size:.83rem;color:#bceee3}
+    .warn{padding:12px 14px;border-radius:12px;background:rgba(255,143,163,.12);border:1px solid rgba(255,143,163,.25);font-size:.83rem;color:#ffd3dc}
+    input:disabled,.btn:disabled{opacity:.45;cursor:not-allowed}
     @media(max-width:900px){.top,.grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -63,21 +67,63 @@
     </section>
 
     <section class="card">
+      <h2 style="margin-top:0;">Configuração de Credencial TI (RH)</h2>
+      <div class="tip">
+        Cadastre aqui o login técnico que terá acesso ao <strong>Ambiente IT</strong>. Esse cadastro força o cargo para <strong>TI</strong> e libera o acesso técnico isolado.
+      </div>
+      <div class="form" style="margin-top:12px">
+        <input id="ti_nome" placeholder="Nome do responsável TI">
+        <input id="ti_email" placeholder="Email do login TI">
+        <input id="ti_senha" type="password" placeholder="Senha inicial TI">
+        <button class="btn" id="btnCriarTi" onclick="cadastrarCredencialTi()">Salvar credencial TI</button>
+        <div id="msgTi" class="muted"></div>
+      </div>
+      <h3 style="margin:14px 0 8px;font-size:1rem;">Logins TI cadastrados</h3>
+      <div id="tiUsersList" class="list">Carregando usuários TI...</div>
+    </section>
+
+    <section class="card">
       <h2 style="margin-top:0;">Usuários da empresa</h2>
       <div id="usersList" class="list">Carregando usuários...</div>
     </section>
   </main>
 
   <script>
+    let podeConfigurarTi = {{ pode_configurar_ti|yesno:"true,false" }};
+
+    function isTiCargo(cargo) {
+      const texto = (cargo || "").toLowerCase();
+      if (!texto) return false;
+      const markers = ["ti", "suporte", "infra", "devops", "tecnologia", "sistemas", "helpdesk", "security"];
+      return markers.some((m) => texto.includes(m));
+    }
+
+    function atualizarEstadoTi() {
+      const disabled = !podeConfigurarTi;
+      ["ti_nome", "ti_email", "ti_senha", "btnCriarTi"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = disabled;
+      });
+      if (disabled) {
+        document.getElementById("msgTi").innerHTML = '<div class="warn">Seu perfil atual não pode cadastrar credencial TI. Use um login de RH ou administrador da empresa.</div>';
+      }
+    }
+
     async function loadUsers() {
       const response = await fetch("/api/usuarios");
       const data = await response.json();
+      if (typeof data.pode_configurar_ti === "boolean") {
+        podeConfigurarTi = data.pode_configurar_ti;
+      }
+      atualizarEstadoTi();
       document.getElementById("maxUsers").textContent = data.max_usuarios;
       document.getElementById("activeUsers").textContent = data.usuarios_ativos;
       const list = document.getElementById("usersList");
+      const tiList = document.getElementById("tiUsersList");
 
       if (!data.usuarios.length) {
         list.innerHTML = "Nenhum usuário cadastrado.";
+        tiList.innerHTML = "Nenhuma credencial TI cadastrada.";
         return;
       }
 
@@ -95,6 +141,22 @@
           </div>
         </div>
       `).join("");
+
+      const usuariosTi = data.usuarios.filter((usuario) => isTiCargo(usuario.cargo));
+      if (!usuariosTi.length) {
+        tiList.innerHTML = '<div class="warn">Nenhuma credencial TI ativa. Cadastre um usuário TI para liberar o Ambiente IT.</div>';
+      } else {
+        tiList.innerHTML = usuariosTi.map((usuario) => `
+          <div class="user">
+            <div class="row">
+              <strong>${usuario.nome}</strong>
+              <span class="ti-pill">Acesso Ambiente IT</span>
+            </div>
+            <div class="muted">${usuario.email}</div>
+            <div class="muted">Cargo: ${usuario.cargo || "TI"}</div>
+          </div>
+        `).join("");
+      }
     }
 
     async function criarUsuario() {
@@ -129,6 +191,32 @@
       loadUsers();
     }
 
+    async function cadastrarCredencialTi() {
+      if (!podeConfigurarTi) {
+        return;
+      }
+      const payload = {
+        nome: document.getElementById("ti_nome").value,
+        email: document.getElementById("ti_email").value,
+        senha: document.getElementById("ti_senha").value,
+      };
+      const response = await fetch("/api/usuarios/credencial-ti", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      const msg = document.getElementById("msgTi");
+      msg.textContent = data.erro || `Credencial TI ${data.acao || "atualizada"} com sucesso.`;
+      if (response.ok) {
+        document.getElementById("ti_nome").value = "";
+        document.getElementById("ti_email").value = "";
+        document.getElementById("ti_senha").value = "";
+        loadUsers();
+      }
+    }
+
+    atualizarEstadoTi();
     loadUsers();
   </script>
 </body>
