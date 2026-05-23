@@ -761,6 +761,16 @@ function fmtDataShort(iso) {
   try { return new Date(iso).toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit'}); } catch { return iso; }
 }
 
+function scrollMainToTop() {
+  const main = document.querySelector('.main');
+  if (main && main.scrollHeight > main.clientHeight) {
+    try { main.scrollTo({ top: 0, behavior: 'smooth' }); }
+    catch (_) { main.scrollTop = 0; }
+  }
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  catch (_) { window.scrollTo(0, 0); }
+}
+
 // ── TAB SWITCHING ──────────────────────────────────────────────────────────
 function switchTab(name, srcEl) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -773,6 +783,7 @@ function switchTab(name, srcEl) {
   // Sync sidebar
   const sbEl = document.getElementById('sb-' + name);
   if (sbEl) sbEl.classList.add('active');
+  scrollMainToTop();
 
   if (name === 'msgs') carregarMensagens();
   if (name === 'estoque') renderEstoque();

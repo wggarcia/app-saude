@@ -46,6 +46,9 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .nav-badge{background:var(--danger);color:#fff;font-size:10px;font-weight:700;border-radius:10px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px}
 .nav-badge.warn{background:var(--warn);color:#041018}
 .nav-badge.ok{background:var(--ok);color:#041018}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.28)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2);color:#ffc6d3}
 /* ── MAIN ── */
 .main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
 /* ── ALERT STRIP ── */
@@ -271,9 +274,11 @@ tr:hover td{background:rgba(255,255,255,.018)}
   <a class="nav-link" href="/plano-saude/gestao/" style="text-decoration:none">
     <div class="nav-link-inner"><span>🏥</span><span>Planos de Saúde</span></div>
   </a>
-  <a class="nav-link" href="/logout/" style="text-decoration:none">
-    <div class="nav-link-inner"><span>🚪</span><span>Sair</span></div>
-  </a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/" style="text-decoration:none">
+      <div class="nav-link-inner"><span>🚪</span><span>Sair</span></div>
+    </a>
+  </div>
 </aside>
 
 <main class="main">
@@ -2068,6 +2073,13 @@ function popularSelectDeps(sid) {
 // ══════════════════════════════════════════════════════════════
 const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes','uti','cirurgias','exames','alta','faturamento','analytics'];
 
+function scrollMainToTop() {
+  const main = document.querySelector('.main');
+  if (!main) return;
+  try { main.scrollTo({ top: 0, behavior: 'smooth' }); }
+  catch (_) { main.scrollTop = 0; }
+}
+
 function setTab(tab) {
   _currentTab = tab;
   ALL_TABS.forEach(t => {
@@ -2078,6 +2090,7 @@ function setTab(tab) {
     if (panel) panel.classList.toggle('active', t===tab);
     if (nav) nav.classList.toggle('active', t===tab);
   });
+  scrollMainToTop();
   if (tab==='leitos') carregarLeitos();
   else if (tab==='triagem') { carregarPacientes(); carregarTriagens(); }
   else if (tab==='internacoes') { carregarPacientes(); carregarLeitos(); carregarInternacoes(); }

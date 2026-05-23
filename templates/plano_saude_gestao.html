@@ -15,6 +15,9 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
 .nav-link:hover,.nav-link.active{background:rgba(255,107,157,.1);color:var(--accent)}
 .nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2);color:#ffc6d3}
 .main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
 .page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .page-title{font-size:22px;font-weight:800}
@@ -158,7 +161,6 @@ tr:hover td{background:rgba(255,107,157,.03)}
   <div class="nav-section">Navegacao</div>
   <a class="nav-link" href="/dashboard-plano-saude/"><span>&#128202;</span> Radar Epi</a>
   <a class="nav-link active" href="/plano-saude/gestao/"><span>&#127973;</span> Gestao Operacional</a>
-  <a class="nav-link" href="/logout/"><span>&#128682;</span> Sair</a>
   <div class="nav-section" style="margin-top:8px">&#9889; Visao &amp; Performance</div>
   <button class="tab-btn active" onclick="setTab('visao')"><span>&#127968;</span> Visao Geral</button>
   <button class="tab-btn" onclick="setTab('dashboard')"><span>&#128202;</span> Dashboard Exec.</button>
@@ -192,6 +194,9 @@ tr:hover td{background:rgba(255,107,157,.03)}
   <button class="tab-btn" onclick="setTab('telemedicina')"><span>&#128241;</span> Telemedicina</button>
   <button class="tab-btn" onclick="setTab('odontologia')"><span>&#129463;</span> Odontologia</button>
   <button class="tab-btn" onclick="setTab('contratos')"><span>&#128209;</span> Contratos Corp.</button>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>&#128682;</span> Sair</a>
+  </div>
 </aside>
 
 <main class="main">
@@ -1968,6 +1973,13 @@ function setText(id, value) {
   if (el) el.textContent = value;
 }
 
+function scrollMainToTop() {
+  var main = document.querySelector('.main');
+  if (!main) return;
+  try { main.scrollTo({ top: 0, behavior: 'smooth' }); }
+  catch (_) { main.scrollTop = 0; }
+}
+
 function setTab(name) {
   document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
@@ -1976,6 +1988,7 @@ function setTab(name) {
   document.querySelectorAll('.tab-btn').forEach(function(b){
     if (b.getAttribute('onclick') === "setTab('"+name+"')") b.classList.add('active');
   });
+  scrollMainToTop();
   var loaders = {
     visao:carregarVisaoGeral,
     integracoes:carregarIntegracoesCooperacao,

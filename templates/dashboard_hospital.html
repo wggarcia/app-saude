@@ -549,6 +549,87 @@
       100% { box-shadow: 0 0 0 0 rgba(255, 122, 24, 0); }
     }
 
+    /* Harmonizacao visual entre Governo, Hospital e Farmacia */
+    html, body {
+      font-size: clamp(13px, 0.7vw + 10px, 15px);
+    }
+
+    .topbar {
+      grid-template-columns: minmax(280px, 1.15fr) minmax(320px, 1.5fr) minmax(370px, 1.2fr);
+    }
+
+    .metrics-strip {
+      align-items: stretch;
+    }
+
+    .metric-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 86px;
+    }
+
+    .metric-card span {
+      font-size: clamp(0.66rem, 0.24vw + 0.58rem, 0.74rem);
+      line-height: 1.2;
+    }
+
+    .metric-card strong {
+      margin-top: 8px;
+      min-height: 1.1em;
+      line-height: 1.05;
+      letter-spacing: 0.01em;
+      font-size: clamp(1.06rem, 0.44vw + 0.92rem, 1.28rem);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    #metricCases,
+    #metricAreas,
+    #metricGrowth,
+    #metricThreshold {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 3.2rem;
+      min-height: 1.9rem;
+      line-height: 1;
+      text-align: center;
+      font-size: clamp(0.68rem, 0.18vw + 0.62rem, 0.76rem);
+      font-variant-numeric: tabular-nums;
+    }
+
+    #metricRiskBadge {
+      min-width: 4.8rem;
+    }
+
+    .mini {
+      line-height: 1.5;
+    }
+
+    .alert-card > div:first-child,
+    .list-top,
+    .list-item > div:first-child {
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .alert-card strong,
+    .list-item strong,
+    .info-card strong {
+      line-height: 1.28;
+    }
+
+    .alert-card .risk-badge,
+    .list-item .risk-badge {
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+
     @media (max-width: 1280px) {
       .topbar {
         grid-template-columns: 1fr;
@@ -784,8 +865,8 @@
             <strong id="metricGrowth">0%</strong>
           </div>
           <div class="metric-card">
-            <span>Empresa</span>
-            <strong class="metric-text">{{ empresa_nome }}</strong>
+            <span>Limiar</span>
+            <strong id="metricThreshold">0,00</strong>
           </div>
         </div>
       </section>
@@ -812,8 +893,6 @@
       </section>
     </div>
 
-    <a href="/hospital/gestao/" class="quick-link quick-link-right">🏥 Gestão Hospitalar</a>
-    <a href="/hospital/gestao/" class="quick-link quick-link-center">Command Center</a>
     <button class="floating-button toggle-left shifted" id="leftHandle">‹</button>
     <button class="floating-button toggle-right shifted" id="rightHandle">›</button>
 
@@ -1173,9 +1252,16 @@
     }
 
     function updateMetrics(summary) {
-      document.getElementById("metricCases").textContent = summary.totalCases.toLocaleString("pt-BR");
+      const thresholdRaw = Number(panorama?.overview?.timeline?.epidemic_threshold ?? 0);
+      const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 0;
+
+      document.getElementById("metricCases").textContent = Math.round(summary.totalCases).toLocaleString("pt-BR");
       document.getElementById("metricAreas").textContent = summary.activeAreas.toLocaleString("pt-BR");
       document.getElementById("metricGrowth").textContent = `${summary.averageGrowth.toFixed(1)}%`;
+      document.getElementById("metricThreshold").textContent = threshold.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
 
       const badge = document.getElementById("metricRiskBadge");
       badge.textContent = summary.riskLevel;

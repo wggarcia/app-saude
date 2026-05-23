@@ -18,6 +18,9 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
 .nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
 .nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2);color:#ffc6d3}
 .main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
 .page-header{display:flex;align-items:center;justify-content:space-between}
 .page-title{font-size:22px;font-weight:800}
@@ -95,7 +98,6 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="nav-section">Navegação</div>
   <a class="nav-link" href="/governo/"><span>📊</span> Alertas e Monitoramento</a>
   <a class="nav-link active" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
-  <a class="nav-link" href="/logout-governo/"><span>🚪</span> Sair</a>
   <div class="nav-section">Plataforma</div>
   <a class="nav-link" href="/governo/plataforma/"><span>🖥️</span> Plataforma TI</a>
   <div class="nav-section" style="margin-top:8px">Módulos</div>
@@ -112,6 +114,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <button class="tab-btn-side" onclick="setTab('contratos')"><span>📑</span> Contratos</button>
   <button class="tab-btn-side" onclick="setTab('urgencia')"><span>🚑</span> Urgência/SAMU</button>
   <button class="tab-btn-side" onclick="setTab('fase2dash')"><span>📊</span> Painel F2</button>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
 </aside>
 
 <main class="main">
@@ -1029,6 +1034,13 @@ function abrirModal(id) { document.getElementById(id).classList.add('open'); }
 function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
 
 let _currentTab = 'programas';
+function scrollMainToTop() {
+  const main = document.querySelector('.main');
+  if (!main) return;
+  try { main.scrollTo({ top: 0, behavior: 'smooth' }); }
+  catch (_) { main.scrollTop = 0; }
+}
+
 function setTab(tab) {
   _currentTab = tab;
   document.querySelectorAll('.tab-btn-side').forEach(b => {
@@ -1038,6 +1050,7 @@ function setTab(tab) {
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   const panel = document.getElementById('tab-'+tab);
   if (panel) panel.classList.add('active');
+  scrollMainToTop();
   if (tab==='programas') carregarProgramas();
   else if (tab==='indicadores') carregarIndicadores();
   else if (tab==='planos') { popularSelectProgramas('planoProg'); carregarPlanos(); }

@@ -16,6 +16,9 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
 .nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
 .nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2);color:#ffc6d3}
 /* Main */
 .main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
 .page-header{display:flex;align-items:center;justify-content:space-between}
@@ -93,7 +96,6 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <a class="nav-link" href="/farmacia/gestao/"><span>🏪</span> Gestão Operacional</a>
   <div class="nav-section">Rede de Farmácias</div>
   <a class="nav-link" href="/rede/gestao/"><span>🌐</span> Rede &amp; Comunicação</a>
-  <a class="nav-link" href="/logout/"><span>🚪</span> Sair</a>
   <div class="nav-section" style="margin-top:8px">Módulos</div>
   <button class="tab-btn active" onclick="setTab('estoque')"><span>📦</span> Estoque</button>
   <button class="tab-btn" onclick="setTab('dispensacoes')"><span>💊</span> Dispensações</button>
@@ -110,6 +112,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <button class="tab-btn" onclick="setTab('auditoria')"><span>📝</span> Auditoria</button>
   <button class="tab-btn" onclick="setTab('rede')"><span>🌐</span> Rede</button>
   <button class="tab-btn" onclick="setTab('ia')"><span>🤖</span> IA & Analytics</button>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
+  </div>
 </aside>
 
 <main class="main">
@@ -1566,6 +1571,13 @@ function fmtData(s) {
 }
 
 let _currentTab = 'estoque';
+function scrollMainToTop() {
+  const main = document.querySelector('.main');
+  if (!main) return;
+  try { main.scrollTo({ top: 0, behavior: 'smooth' }); }
+  catch (_) { main.scrollTop = 0; }
+}
+
 function setTab(tab) {
   _currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => {
@@ -1575,6 +1587,7 @@ function setTab(tab) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   const panel = document.getElementById('tab-' + tab);
   if (panel) panel.classList.add('active');
+  scrollMainToTop();
   if (tab === 'estoque') carregarEstoque();
   else if (tab === 'dispensacoes') carregarDispensacoes();
   else if (tab === 'movimentos') carregarMovimentos();
