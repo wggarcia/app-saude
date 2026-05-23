@@ -3829,9 +3829,46 @@ class PlataformaTiAccessTests(TestCase):
 
         client = self._login_client("farmacia-menu-op-user@teste.com", device_id="dev-farm-menu-op")
         response = client.get("/farmacia/gestao/")
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Ambiente IT")
-        self.assertNotContains(response, "Configurar TI (RH)")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/dashboard-farmacia/")
+
+    def test_usuario_operacao_bloqueado_nas_gestoes_setoriais(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Restrita Operacao",
+            email="farmacia-restrita-op@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+        )
+        EmpresaUsuario.objects.create(
+            empresa=farmacia,
+            nome="Operador Restrito",
+            email="farmacia-restrita-op-user@teste.com",
+            senha=make_password("senha123"),
+            cargo="Operacao",
+            ativo=True,
+        )
+
+        client = self._login_client("farmacia-restrita-op-user@teste.com", device_id="dev-farm-restrita")
+        self.assertEqual(client.get("/farmacia/gestao/")["Location"], "/dashboard-farmacia/")
+
+        hospital = Empresa.objects.create(
+            nome="Hospital Restrito Operacao",
+            email="hospital-restrita-op@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+            pacote_codigo="hospital_medio",
+        )
+        EmpresaUsuario.objects.create(
+            empresa=hospital,
+            nome="Operador Restrito H",
+            email="hospital-restrita-op-user@teste.com",
+            senha=make_password("senha123"),
+            cargo="Operacao",
+            ativo=True,
+        )
+        client_h = self._login_client("hospital-restrita-op-user@teste.com", device_id="dev-hosp-restrita")
+        self.assertEqual(client_h.get("/hospital/gestao/")["Location"], "/dashboard-hospital/")
 
 
 # ════════════════════════════════════════════════════════════════════════════════
