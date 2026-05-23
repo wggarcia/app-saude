@@ -6,7 +6,6 @@ from django.db.models import Count, Avg
 from django.utils import timezone
 from datetime import timedelta
 import json
-import unicodedata
 from .models import RegistroSintoma, DispositivoAutorizado, EmpresaUsuario, FinanceiroEventoSaaS, DonoAuditoriaAcao, AlertaGovernamental
 from .inteligencia import nivel_risco
 from .models import Empresa
@@ -14,7 +13,14 @@ from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_ciclo, normalizar_
 from .push_service import enviar_alerta_governamental, push_disponivel
 from .governanca import registrar_auditoria_institucional
 from .command_ai import build_command_ai_payload
-from .access_control import requer_setor
+from .access_control import (
+    api_requer_perfis,
+    contexto_acesso_por_perfil,
+    get_setor,
+    requer_perfis,
+    requer_setor,
+)
+from .profile_access import resolver_perfil_principal, texto_normalizado
 from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
 from .services.dashboard_core import (
     build_owner_resumo_payload,
@@ -62,36 +68,15 @@ def _principal_label(request):
 
 
 def _texto_normalizado(valor):
-    texto = unicodedata.normalize("NFKD", str(valor or ""))
-    return texto.encode("ascii", "ignore").decode("ascii").lower().strip()
+    return texto_normalizado(valor)
 
 
 def _principal_pode_configurar_ti(request, empresa):
     principal = getattr(request, "principal", None) or empresa
     if not principal or not empresa:
         return False
-    if principal == empresa:
-        return True
-    if getattr(principal, "is_admin", False):
-        return True
-
-    cargo = _texto_normalizado(getattr(principal, "cargo", ""))
-    if not cargo:
-        return False
-    palavras = set(cargo.replace("/", " ").replace("-", " ").split())
-    if "rh" in palavras:
-        return True
-    return any(
-        trecho in cargo
-        for trecho in (
-            "recursos humanos",
-            "departamento pessoal",
-            "gestao de pessoas",
-            "gente e gestao",
-            "people",
-            "talentos",
-        )
-    )
+    acesso = resolver_perfil_principal(empresa, principal)
+    return acesso["acesso_gerencia"] or acesso["acesso_rh"]
 
 
 def _atribuir_permissao_ti(empresa, usuario, concedido_por):
@@ -263,23 +248,24 @@ def dashboard_governo(request):
 @ensure_csrf_cookie
 @requer_setor('farmacia')
 def farmacia_gestao_page(request):
-    return render(request, "farmacia_gestao.html")
+    return render(request, "farmacia_gestao.html", contexto_acesso_por_perfil(request))
 
 
 @ensure_csrf_cookie
 @requer_setor('hospital')
 def hospital_gestao_page(request):
-    return render(request, "hospital_gestao.html")
+    return render(request, "hospital_gestao.html", contexto_acesso_por_perfil(request))
 
 
 @ensure_csrf_cookie
 @requer_setor('governo')
 def governo_gestao_page(request):
-    return render(request, "governo_gestao.html")
+    return render(request, "governo_gestao.html", contexto_acesso_por_perfil(request))
 
 
 @ensure_csrf_cookie
 @requer_setor('governo')
+@requer_perfis('ti', 'gerencia')
 def governo_plataforma_page(request):
     return render(request, "governo_plataforma.html")
 
@@ -287,16 +273,15 @@ def governo_plataforma_page(request):
 @ensure_csrf_cookie
 @requer_setor('farmacia', 'hospital')
 def rede_gestao_page(request):
-    from .access_control import get_setor
     empresa = getattr(request, "empresa", None)
     setor = get_setor(empresa) if empresa else "farmacia"
-    return render(request, "rede_gestao.html", {"setor": setor})
+    return render(request, "rede_gestao.html", {"setor": setor, **contexto_acesso_por_perfil(request)})
 
 
 @ensure_csrf_cookie
 @requer_setor('plano_saude')
 def plano_saude_gestao_page(request):
-    return render(request, "plano_saude_gestao.html")
+    return render(request, "plano_saude_gestao.html", contexto_acesso_por_perfil(request))
 
 
 @ensure_csrf_cookie
@@ -756,6 +741,7 @@ def api_auditoria_seguranca(request):
     })
 
 
+@requer_perfis('gerencia', 'rh')
 def usuarios_empresa(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -770,6 +756,7 @@ def usuarios_empresa(request):
     })
 
 
+@api_requer_perfis('gerencia', 'rh')
 def api_usuarios_empresa(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -796,6 +783,7 @@ def api_usuarios_empresa(request):
 
 
 @csrf_exempt
+@api_requer_perfis('gerencia', 'rh')
 def api_criar_usuario_empresa(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -836,6 +824,7 @@ def api_criar_usuario_empresa(request):
 
 
 @csrf_exempt
+@api_requer_perfis('gerencia', 'rh')
 def api_criar_credencial_ti(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -911,6 +900,7 @@ def api_criar_credencial_ti(request):
 
 
 @csrf_exempt
+@api_requer_perfis('gerencia', 'rh')
 def api_desativar_usuario_empresa(request):
     empresa = _empresa_autenticada(request)
     if not empresa:

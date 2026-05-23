@@ -98,8 +98,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="nav-section">Navegação</div>
   <a class="nav-link" href="/governo/"><span>📊</span> Alertas e Monitoramento</a>
   <a class="nav-link active" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  {% if mostrar_menu_ti %}
   <div class="nav-section">Plataforma</div>
   <a class="nav-link" href="/governo/plataforma/"><span>🖥️</span> Plataforma TI</a>
+  {% endif %}
   <div class="nav-section" style="margin-top:8px">Módulos</div>
   <button class="tab-btn-side active" onclick="setTab('programas')"><span>📋</span> Programas</button>
   <button class="tab-btn-side" onclick="setTab('indicadores')"><span>📈</span> Indicadores</button>
@@ -132,7 +134,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
   </div>
 
+  {% if mostrar_command_center %}
   {% include "partials/enterprise_command_center.html" %}
+  {% endif %}
 
   <!-- KPIs -->
   <div class="kpi-row" id="kpiRow">

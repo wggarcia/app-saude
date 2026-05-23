@@ -364,7 +364,9 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
     </div>
 
     <!-- Enterprise Command Center -->
+    {% if mostrar_command_center %}
     {% include "partials/enterprise_command_center.html" %}
+    {% endif %}
 
     <!-- KPI Strip (always visible) -->
     <div class="kpi-strip" id="kpi-strip">

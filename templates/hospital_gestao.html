@@ -274,13 +274,19 @@ tr:hover td{background:rgba(255,255,255,.018)}
   <a class="nav-link" href="/plano-saude/gestao/" style="text-decoration:none">
     <div class="nav-link-inner"><span>🏥</span><span>Planos de Saúde</span></div>
   </a>
+  {% if mostrar_menu_ti or mostrar_menu_rh %}
   <div class="nav-section" style="margin-top:8px">Tecnologia</div>
+  {% endif %}
+  {% if mostrar_menu_ti %}
   <a class="nav-link" href="/gestao/plataforma/" style="text-decoration:none">
     <div class="nav-link-inner"><span>🖥️</span><span>Ambiente IT</span></div>
   </a>
+  {% endif %}
+  {% if mostrar_menu_rh %}
   <a class="nav-link" href="/usuarios/" style="text-decoration:none">
     <div class="nav-link-inner"><span>👤</span><span>Configurar TI (RH)</span></div>
   </a>
+  {% endif %}
   <div class="sidebar-footer">
     <a class="nav-link nav-link-logout" href="/logout/" style="text-decoration:none">
       <div class="nav-link-inner"><span>🚪</span><span>Sair</span></div>
@@ -316,8 +322,10 @@ tr:hover td{background:rgba(255,255,255,.018)}
       <a href="/api/hospital/pdf/internacoes/" target="_blank" class="btn btn-ghost">📄 Relatório PDF</a>
     </div>
 
+    {% if mostrar_command_center %}
     {% include "partials/enterprise_command_center.html" %}
     {% include "partials/enterprise_premium_suite.html" %}
+    {% endif %}
 
     <!-- KPI ROW -->
     <div class="kpi-row-6" id="kpiRow">

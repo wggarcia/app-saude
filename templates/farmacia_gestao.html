@@ -96,9 +96,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <a class="nav-link" href="/farmacia/gestao/"><span>🏪</span> Gestão Operacional</a>
   <div class="nav-section">Rede de Farmácias</div>
   <a class="nav-link" href="/rede/gestao/"><span>🌐</span> Rede &amp; Comunicação</a>
+  {% if mostrar_menu_ti or mostrar_menu_rh %}
   <div class="nav-section">Tecnologia</div>
+  {% endif %}
+  {% if mostrar_menu_ti %}
   <a class="nav-link" href="/gestao/plataforma/"><span>🖥️</span> Ambiente IT</a>
+  {% endif %}
+  {% if mostrar_menu_rh %}
   <a class="nav-link" href="/usuarios/"><span>👤</span> Configurar TI (RH)</a>
+  {% endif %}
   <div class="nav-section" style="margin-top:8px">Módulos</div>
   <button class="tab-btn active" onclick="setTab('estoque')"><span>📦</span> Estoque</button>
   <button class="tab-btn" onclick="setTab('dispensacoes')"><span>💊</span> Dispensações</button>
@@ -129,8 +135,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <a href="/farmacia/" class="btn btn-ghost">📊 Ver Inteligência Epidemiológica</a>
   </div>
 
+  {% if mostrar_command_center %}
   {% include "partials/enterprise_command_center.html" %}
   {% include "partials/enterprise_premium_suite.html" %}
+  {% endif %}
 
   <!-- KPIs Row 1 — Operacional -->
   <div class="kpi-row" id="kpiRow">

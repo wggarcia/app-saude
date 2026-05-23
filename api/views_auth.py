@@ -125,6 +125,7 @@ def _login_conta(request, portal_tipo=None):
         principal_kind,
         principal_id,
         principal_nome,
+        principal=principal,
     ))
     return _aplicar_cookies_autenticacao(response, empresa, token)
 
@@ -206,6 +207,7 @@ def registrar_empresa(request):
         "empresa_admin",
         empresa.id,
         empresa.nome,
+        principal=empresa,
     )
     # Força destino para pagamento independente do setor
     payload["destination"] = "/pagamento/"
@@ -272,7 +274,7 @@ def ativar_sessao_aba(request):
         "status": "ok",
         "empresa_id": empresa.id,
         "tipo_conta": empresa.tipo_conta,
-        "destination": _destino_conta(empresa),
+        "destination": _destino_conta(empresa, principal=principal),
         "tab_key": _registrar_sessao_aba(token),
     })
     # Re-apply cookie so this tab's cookie matches its sessionStorage token
