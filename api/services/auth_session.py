@@ -25,7 +25,7 @@ def destino_conta(empresa, principal=None):
             if principal:
                 try:
                     from api.access_control import destino_por_perfil
-                    return destino_por_perfil(empresa, principal, prefer_operacao=False)
+                    return destino_por_perfil(empresa, principal, prefer_operacao=True)
                 except Exception:
                     pass
             return "/dashboard-governo/"
@@ -43,7 +43,7 @@ def destino_conta(empresa, principal=None):
         if principal and principal != empresa:
             try:
                 from api.access_control import destino_por_perfil
-                return destino_por_perfil(empresa, principal, prefer_operacao=False)
+                return destino_por_perfil(empresa, principal, prefer_operacao=True)
             except Exception:
                 return destino_base
         return destino_base
