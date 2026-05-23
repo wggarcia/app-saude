@@ -259,8 +259,10 @@ class EmpresaMiddleware:
                 token = cached_token
                 token_from_tab = True
 
-        if not token and auth and "Bearer" in auth:
-            token = auth.split(" ")[1]
+        if not token and auth:
+            auth_norm = auth.strip()
+            if auth_norm.lower().startswith("bearer "):
+                token = auth_norm.split(" ", 1)[1].strip()
         elif not token:
             token = request.COOKIES.get("auth_token")
 

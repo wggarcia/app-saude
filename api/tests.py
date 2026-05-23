@@ -2459,6 +2459,15 @@ class GovernanceTests(TestCase):
         self.assertEqual(alerta.status, AlertaGovernamental.STATUS_PUBLICADO)
         self.assertTrue(alerta.ativo)
 
+    def test_header_bearer_invalido_nao_gera_erro_no_middleware(self):
+        response = self.client.post(
+            "/api/governo/alertas/criar",
+            data=json.dumps({"titulo": "A", "mensagem": "B"}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Bearer",
+        )
+        self.assertEqual(response.status_code, 401)
+
     def test_fluxo_alerta_revogado_pode_ser_excluido(self):
         alerta = AlertaGovernamental.objects.create(
             empresa=self.governo,
@@ -2943,6 +2952,62 @@ class LoginRateLimitTests(TestCase):
             )
 
         self.assertEqual(bloqueio.status_code, 429)
+
+
+@override_settings(DJANGO_ENV="test")
+class SaudeOcupacionalAliasTests(TestCase):
+    def setUp(self):
+        from .models import ColaboradorAliasCorporativo, EmpresaSetor, PedidoApoioCorporativo, RegistroConflitoCultural
+
+        self.client = Client()
+        self.empresa = Empresa.objects.create(
+            nome="Empresa Saúde Ocupacional",
+            email="saude-ocupacional@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+            max_dispositivos=10,
+            max_usuarios=10,
+        )
+        login = self.client.post(
+            "/api/login",
+            data=json.dumps({"email": "saude-ocupacional@teste.com", "senha": "senha123", "device_id": "dev-saude", "device_name": "Browser"}),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+        self.auth = {"HTTP_AUTHORIZATION": f"Bearer {login.json()['token']}"}
+
+        setor = EmpresaSetor.objects.create(empresa=self.empresa, nome="Operação")
+        alias = ColaboradorAliasCorporativo.objects.create(
+            empresa=self.empresa,
+            alias_publico="anon-001",
+            setor=setor,
+            ativo=True,
+        )
+        PedidoApoioCorporativo.objects.create(
+            empresa=self.empresa,
+            alias=alias,
+            setor=setor,
+            relato="Preciso de apoio",
+            status=PedidoApoioCorporativo.STATUS_NOVO,
+        )
+        RegistroConflitoCultural.objects.create(
+            empresa=self.empresa,
+            alias=alias,
+            setor=setor,
+            descricao="Conflito de comunicação",
+            anonimo=False,
+            status=RegistroConflitoCultural.STATUS_NOVO,
+        )
+
+    def test_alertas_wellness_retorna_alias_sem_field_error(self):
+        response = self.client.get("/api/sst/wellness/alertas/", **self.auth)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["apoios"][0]["alias__nome"], "anon-001")
+
+    def test_conflitos_lista_retorna_alias_sem_field_error(self):
+        response = self.client.get("/api/sst/conflitos/", **self.auth)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["conflitos"][0]["alias__nome"], "anon-001")
 
 
 @override_settings(DJANGO_ENV="test")

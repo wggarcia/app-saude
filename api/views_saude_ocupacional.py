@@ -41,8 +41,8 @@ def app_colaborador_saude(request, codigo):
     setores = list(EmpresaSetor.objects.filter(empresa=empresa).values("id", "nome"))
     return render(request, "app_colaborador_corporativo.html", {
         "empresa_nome": empresa.nome,
-        "codigo_acesso": alias.codigo_acesso,
-        "alias_nome": alias.nome,
+        "codigo_acesso": codigo,
+        "alias_nome": alias.alias_publico,
         "cargo": alias.cargo.nome if alias.cargo else "",
         "setor": alias.setor.nome if alias.setor else "",
         "setores_json": json.dumps(setores),
@@ -140,7 +140,7 @@ def api_wellness_alertas(request):
         PedidoApoioCorporativo.objects
         .filter(empresa=empresa, status=PedidoApoioCorporativo.STATUS_NOVO)
         .select_related("alias", "setor")
-        .values("id", "alias__nome", "setor__nome", "relato", "criado_em", "deseja_contato")
+        .values("id", "alias__alias_publico", "setor__nome", "relato", "criado_em", "deseja_contato")
         .order_by("-criado_em")[:20]
     )
 
@@ -155,7 +155,10 @@ def api_wellness_alertas(request):
     return JsonResponse({
         "apoios": [
             {
-                **a,
+                **{
+                    **a,
+                    "alias__nome": a.get("alias__alias_publico"),
+                },
                 "criado_em": a["criado_em"].strftime("%d/%m/%Y %H:%M") if a["criado_em"] else None,
             }
             for a in apoios
@@ -253,9 +256,10 @@ def api_conflitos_listar(request):
 
     items = list(qs.select_related("alias", "setor").values(
         "id", "tipo", "ambiente", "descricao", "paises_envolvidos",
-        "anonimo", "alias__nome", "setor__nome", "status", "observacao_gestor", "criado_em"
+        "anonimo", "alias__alias_publico", "setor__nome", "status", "observacao_gestor", "criado_em"
     )[:50])
     for i in items:
+        i["alias__nome"] = i.pop("alias__alias_publico", "")
         if i["anonimo"]:
             i["alias__nome"] = "Anônimo"
         i["criado_em"] = i["criado_em"].strftime("%d/%m/%Y %H:%M") if i["criado_em"] else None
