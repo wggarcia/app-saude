@@ -93,6 +93,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
 .empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
 </style>
+  {% include "partials/sst_unified_theme.html" %>
 </head>
 <body>
 
@@ -298,7 +299,7 @@ async function carregar() {
   filtrar();
 
   // Load funcionarios for modal
-  const fd = await fetch('/api/sst/funcionarios', {credentials:'same-origin'}).then(r=>r.json());
+  const fd = await fetch('/api/sst/funcionarios?all=1', {credentials:'same-origin'}).then(r=>r.json());
   _funcionarios = fd.funcionarios || [];
   const sel = document.getElementById('agFunc');
   sel.innerHTML = '<option value="">Selecione…</option>' + _funcionarios.map(f=>`<option value="${f.id}">${f.nome} — ${f.cargo||''}</option>`).join('');

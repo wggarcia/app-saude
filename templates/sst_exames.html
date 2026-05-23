@@ -200,6 +200,7 @@ body{min-height:100vh;overflow-x:hidden}
 }
 .btn-primary:hover{opacity:.86}
 </style>
+  {% include "partials/sst_unified_theme.html" %>
 </head>
 <body>
 
@@ -425,8 +426,8 @@ function exportarTabela() {
 async function carregarExames() {
   try {
     const url = filtroAtivo
-      ? `/api/sst/exames?status=${filtroAtivo}`
-      : '/api/sst/exames';
+      ? `/api/sst/exames?all=1&status=${filtroAtivo}`
+      : '/api/sst/exames?all=1';
 
     const resp = await fetch(url, { credentials: 'include' });
     if (!resp.ok) throw new Error('Erro ' + resp.status);

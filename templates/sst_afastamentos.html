@@ -235,6 +235,7 @@ body{min-height:100vh;overflow-x:hidden}
 .btn-submit:hover{opacity:.88}
 .btn-submit:disabled{opacity:.5;cursor:not-allowed}
 </style>
+  {% include "partials/sst_unified_theme.html" %>
 </head>
 <body>
 <div class="toast" id="toast"></div>
@@ -646,7 +647,7 @@ document.getElementById('modalNovo').addEventListener('click', e => { if (e.targ
 
 async function carregarAfastamentos() {
   try {
-    const r = await fetch('/api/sst/afastamentos', { credentials:'include' });
+    const r = await fetch('/api/sst/afastamentos?all=1', { credentials:'include' });
     if (!r.ok) throw new Error('Erro ' + r.status);
     const data = await r.json();
     todosAfastamentos = data.afastamentos || [];

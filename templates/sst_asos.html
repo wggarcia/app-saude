@@ -162,6 +162,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
 @media(max-width:768px){.main{margin-left:0;padding:12px}.sidebar{display:none}.kpi-strip{flex-wrap:wrap}.mf-row{grid-template-columns:1fr}.modo-tabs{grid-template-columns:1fr}.cat-body{grid-template-columns:1fr}.perfil-box{grid-template-columns:1fr}}
 </style>
+  {% include "partials/sst_unified_theme.html" %>
 </head>
 <body>
 <div class="toast" id="toast"></div>
@@ -515,7 +516,7 @@ const esocialCls={nao_enviado:'b-cinza',pendente:'b-amarelo',transmitido:'b-verd
 const esocialLbl={nao_enviado:'—',pendente:'Pendente',transmitido:'S-2220 ✓',erro:'Erro'};
 
 async function carregarAsos(){
-  const r=await fetch('/api/sst/asos');
+  const r=await fetch('/api/sst/asos?all=1');
   if(!r.ok)return;
   const d=await r.json();
   _catalogo=d.catalogo_exames||_catalogo;
@@ -1044,7 +1045,7 @@ async function reenviarEmail(id){
 // ══════════════════════════════════════════════════════════════════════════════
 async function carregarFuncionarios(){
   try{
-    const r=await fetch('/api/sst/funcionarios',{credentials:'include'});
+    const r=await fetch('/api/sst/funcionarios?all=1',{credentials:'include'});
     const d=await r.json();
     _funcionarios=d.funcionarios||[];
     const opts='<option value="">Selecione o funcionário...</option>'+

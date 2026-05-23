@@ -104,6 +104,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 @media(max-width:700px){.ev-grid{grid-template-columns:1fr}.kpi-strip{grid-template-columns:repeat(2,1fr)}}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
 </style>
+  {% include "partials/sst_unified_theme.html" %>
 </head>
 <body>
 <header class="topbar">
@@ -355,7 +356,7 @@ async function confirmarTransmissao(){
 }
 
 async function carregar(){
-  const [rEvt,rKpi]=await Promise.all([fetch("/api/sst/esocial/eventos/"),fetch("/api/sst/esocial/kpis/")]);
+  const [rEvt,rKpi]=await Promise.all([fetch("/api/sst/esocial/eventos/?all=1"),fetch("/api/sst/esocial/kpis/")]);
   if(!rEvt.ok||!rKpi.ok)return;
   const[dEvt,dKpi]=await Promise.all([rEvt.json(),rKpi.json()]);
   _todos=dEvt.eventos||[];

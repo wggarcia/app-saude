@@ -1,0 +1,152 @@
+<style id="sst-unified-theme">
+:root{
+  --sst-bg:#041018;
+  --sst-panel:#071c28;
+  --sst-line:rgba(126,225,195,.12);
+  --sst-line-strong:rgba(126,225,195,.24);
+  --sst-text:#e8f4f1;
+  --sst-muted:#7fa2b1;
+  --sst-teal:#00c9a7;
+  --sst-blue:#52a6ff;
+}
+html,body{
+  background:radial-gradient(circle at top left,#0d3247 0,#041018 44%) !important;
+  color:var(--sst-text) !important;
+  font-family:'Manrope',system-ui,sans-serif !important;
+}
+.topbar{
+  height:56px !important;
+  background:rgba(4,16,24,.94) !important;
+  border-bottom:1px solid var(--sst-line) !important;
+  backdrop-filter:blur(18px) !important;
+}
+.tb-logo{
+  min-width:230px !important;
+  height:56px !important;
+  border-right:1px solid var(--sst-line) !important;
+}
+.tb-icon{
+  width:32px !important;
+  height:32px !important;
+  border-radius:8px !important;
+  background:linear-gradient(135deg,var(--sst-teal),var(--sst-blue)) !important;
+  color:#041018 !important;
+}
+.tb-nome{
+  font-size:.82rem !important;
+  font-weight:800 !important;
+  color:var(--sst-text) !important;
+  letter-spacing:.01em;
+}
+.tb-sub{
+  font-size:.62rem !important;
+  color:var(--sst-muted) !important;
+}
+.tb-nav a{
+  font-size:.74rem !important;
+  font-weight:700 !important;
+  color:var(--sst-muted) !important;
+  border-radius:7px !important;
+}
+.tb-nav a:hover{
+  color:var(--sst-text) !important;
+  background:rgba(255,255,255,.05) !important;
+}
+.tb-nav a.active{
+  color:var(--sst-teal) !important;
+  background:rgba(0,201,167,.1) !important;
+}
+.tb-empresa{
+  color:var(--sst-muted) !important;
+}
+.tb-empresa strong{
+  color:var(--sst-text) !important;
+}
+.btn-main{
+  border:none !important;
+  background:linear-gradient(135deg,var(--sst-teal),var(--sst-blue)) !important;
+  color:#041018 !important;
+}
+.btn-ghost{
+  border:1px solid var(--sst-line) !important;
+  color:var(--sst-muted) !important;
+}
+.btn-ghost:hover{
+  border-color:var(--sst-line-strong) !important;
+  color:var(--sst-text) !important;
+}
+.app{
+  padding-top:56px !important;
+}
+.sidebar,.sst-nav{
+  width:220px !important;
+  top:56px !important;
+  background:rgba(7,28,40,.72) !important;
+  border-right:1px solid var(--sst-line) !important;
+}
+.sb-label{
+  color:var(--sst-muted) !important;
+}
+.sb-link{
+  color:var(--sst-muted) !important;
+  border-left-color:transparent !important;
+}
+.sb-link:hover{
+  color:var(--sst-text) !important;
+  background:rgba(255,255,255,.04) !important;
+}
+.sb-link.active{
+  color:var(--sst-teal) !important;
+  border-left-color:var(--sst-teal) !important;
+  background:rgba(0,201,167,.08) !important;
+}
+.main{
+  margin-left:220px !important;
+}
+@media(max-width:860px){
+  .sidebar,.sst-nav{display:none !important}
+  .main{margin-left:0 !important}
+}
+</style>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  function getCookie(name) {
+    const cookie = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith(name + "="));
+    return cookie ? cookie.split("=").slice(1).join("=") : "";
+  }
+  const nomeCtx = "{{ empresa_nome|default:''|escapejs }}".trim();
+  let nomeCookie = "";
+  try {
+    nomeCookie = decodeURIComponent(getCookie("empresa_nome") || "").trim();
+  } catch (e) {
+    nomeCookie = (getCookie("empresa_nome") || "").trim();
+  }
+  const empresa = nomeCtx || nomeCookie;
+  const subTitulo = empresa
+    ? "SST · " + empresa
+    : "SST · Saúde e Segurança do Trabalho";
+
+  document.querySelectorAll(".tb-nome").forEach((el) => {
+    el.textContent = "SolusCRT";
+  });
+  document.querySelectorAll(".tb-sub").forEach((el) => {
+    el.textContent = subTitulo;
+  });
+  document.querySelectorAll(".tb-empresa").forEach((el) => {
+    if (!empresa) return;
+    const strong = el.querySelector("strong");
+    if (strong) {
+      strong.textContent = empresa;
+      return;
+    }
+    el.textContent = "Empresa: " + empresa;
+  });
+  document.querySelectorAll("#nomeEmpresa").forEach((el) => {
+    if (empresa) {
+      el.textContent = empresa;
+    }
+  });
+});
+</script>

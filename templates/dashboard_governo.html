@@ -5,19 +5,7 @@
   <title>SolusCRT Governo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js">
-function _t(msg, tipo) {
-  const el = document.createElement('div');
-  const cor = tipo === 'err' ? '#ff4d6d' : tipo === 'ok' ? '#00e5b0' : '#ffb347';
-  el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
-    'background:' + cor + ';color:#041018;padding:10px 24px;border-radius:99px;' +
-    'font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;' +
-    'white-space:normal;line-height:1.35;text-align:center;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)';
-  el.textContent = msg;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3500);
-}
-</script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -534,6 +522,82 @@ function _t(msg, tipo) {
       box-shadow: 0 4px 20px rgba(0, 229, 176, 0.35);
     }
 
+    /* Harmonizacao visual entre Governo, Hospital e Farmacia */
+    html, body {
+      font-size: clamp(13px, 0.7vw + 10px, 15px);
+    }
+
+    .topbar {
+      grid-template-columns: minmax(280px, 1.15fr) minmax(320px, 1.5fr) minmax(370px, 1.2fr);
+    }
+
+    .metrics-strip {
+      align-items: stretch;
+    }
+
+    .metric-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 86px;
+    }
+
+    .metric-card span {
+      font-size: clamp(0.66rem, 0.24vw + 0.58rem, 0.74rem);
+      line-height: 1.2;
+    }
+
+    .metric-card strong {
+      margin-top: 8px;
+      min-height: 1.1em;
+      line-height: 1.05;
+      letter-spacing: 0.01em;
+      font-size: clamp(1.06rem, 0.44vw + 0.92rem, 1.28rem);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .risk-badge,
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 3.2rem;
+      min-height: 1.9rem;
+      line-height: 1;
+      text-align: center;
+      font-size: clamp(0.68rem, 0.18vw + 0.62rem, 0.76rem);
+      font-variant-numeric: tabular-nums;
+    }
+
+    #metricRiskBadge {
+      min-width: 4.8rem;
+    }
+
+    .mini {
+      line-height: 1.5;
+    }
+
+    .alert-card > div:first-child,
+    .list-item > div:first-child {
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .alert-card strong,
+    .list-item strong,
+    .info-card strong {
+      line-height: 1.28;
+    }
+
+    .alert-card .risk-badge,
+    .alert-card .badge,
+    .list-item .risk-badge,
+    .list-item .badge {
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+
     @media (max-width: 1180px) {
       .topbar {
         grid-template-columns: 1fr;
@@ -734,7 +798,7 @@ function _t(msg, tipo) {
           <div class="metric-card"><span>Casos</span><strong id="metricCases">0</strong></div>
           <div class="metric-card"><span>Focos</span><strong id="metricAreas">0</strong></div>
           <div class="metric-card"><span>Crescimento</span><strong id="metricGrowth">0%</strong></div>
-          <div class="metric-card"><span>Limiar</span><strong id="metricThreshold">0</strong></div>
+          <div class="metric-card"><span>Limiar</span><strong id="metricThreshold">0,00</strong></div>
         </div>
       </section>
 
@@ -941,6 +1005,18 @@ function _t(msg, tipo) {
     const rightHandle = document.getElementById("rightHandle");
     const bottomHandle = document.getElementById("bottomHandle");
 
+    function _t(msg, tipo) {
+      const el = document.createElement("div");
+      const cor = tipo === "err" ? "#ff4d6d" : tipo === "ok" ? "#00e5b0" : "#ffb347";
+      el.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);" +
+        "background:" + cor + ";color:#041018;padding:10px 24px;border-radius:99px;" +
+        "font-size:.82rem;font-weight:800;z-index:9999;pointer-events:none;" +
+        "white-space:normal;line-height:1.35;text-align:center;max-width:90vw;box-shadow:0 4px 20px rgba(0,0,0,.4)";
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 3500);
+    }
+
     function getScopedValue(key) {
       return sessionStorage.getItem(key) || localStorage.getItem(key) || "";
     }
@@ -1089,12 +1165,17 @@ function _t(msg, tipo) {
       const avgGrowth = areas.length ? areas.reduce((sum, area) => sum + area.growth_percent, 0) / areas.length : 0;
       const topRisk = areas.reduce((acc, area) => Math.max(acc, area.risk_score), 0);
       const riskLevel = topRisk >= 75 ? "CRITICO" : topRisk >= 55 ? "ALTO" : topRisk >= 35 ? "MODERADO" : "BAIXO";
+      const thresholdRaw = Number(panorama?.overview?.timeline?.epidemic_threshold ?? 0);
+      const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 0;
       const riskBadge = document.getElementById("metricRiskBadge");
 
-      document.getElementById("metricCases").textContent = totalCases.toLocaleString("pt-BR");
+      document.getElementById("metricCases").textContent = Math.round(totalCases).toLocaleString("pt-BR");
       document.getElementById("metricAreas").textContent = areas.length.toLocaleString("pt-BR");
       document.getElementById("metricGrowth").textContent = `${avgGrowth.toFixed(1)}%`;
-      document.getElementById("metricThreshold").textContent = `${(panorama?.overview?.timeline?.epidemic_threshold || 0).toLocaleString("pt-BR")}`;
+      document.getElementById("metricThreshold").textContent = threshold.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
       riskBadge.textContent = riskLevel;
       riskBadge.className = `risk-badge ${badgeClass(riskLevel)}`;
     }

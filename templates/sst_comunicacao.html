@@ -153,6 +153,7 @@ html,body{margin:0;overflow:hidden;height:100vh;background:var(--bg);color:var(-
 ::-webkit-scrollbar-thumb{background:rgba(0,201,167,.15);border-radius:2px}
 @keyframes fadeInUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 </style>
+  {% include "partials/sst_unified_theme.html" %>
 </head>
 <body>
 
@@ -745,7 +746,7 @@ async function carregarFuncsModal(){
   document.getElementById('r-func-list').innerHTML=`<div style="padding:12px;text-align:center;color:var(--muted);font-size:.74rem">Carregando...</div>`;
   try{
     // Usa FuncionarioSST reais (IDs corretos para participantes da reunião)
-    const r=await fetch('/api/sst/funcionarios?limit=500');
+    const r=await fetch('/api/sst/funcionarios?all=1');
     const d=await r.json();
     _allFuncs=(d.funcionarios||[]).map(f=>({id:f.id,nome:f.nome,cargo:f.cargo||''}));
     renderFuncsModal();

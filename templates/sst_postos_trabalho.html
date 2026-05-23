@@ -101,6 +101,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
 @media(max-width:768px){.main{margin-left:0;padding:12px}.sidebar{display:none}.info-grid{grid-template-columns:1fr 1fr}.mf-row{grid-template-columns:1fr}}
 </style>
+  {% include "partials/sst_unified_theme.html" %>
 </head>
 <body>
 <header class="topbar">
@@ -618,7 +619,7 @@ function renderFuncionariosVinculados(lista){
 
 async function carregarFuncionariosSelect(){
   try{
-    const r = await fetch('/api/sst/funcionarios',{credentials:'include'});
+    const r = await fetch('/api/sst/funcionarios?all=1',{credentials:'include'});
     const d = await r.json();
     const sel = document.getElementById('funcSelect');
     const vinculados = new Set((postoAtual?.funcionarios||[]).filter(f=>f.ativo).map(f=>f.funcionario_id));

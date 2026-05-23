@@ -11,15 +11,20 @@ from datetime import date, timedelta
 
 def _paginar(request, qs, limit_default=100, limit_max=500):
     """Return (page_qs, meta_dict) applying ?limit= and ?offset= from request."""
+    total = qs.count()
+    limit_raw = str(request.GET.get("limit", "")).strip().lower()
+    all_raw = str(request.GET.get("all", "")).strip().lower()
+    if all_raw in {"1", "true", "yes", "sim"} or limit_raw in {"all", "max", "0", "-1"}:
+        return qs, {"total": total, "limit": total, "offset": 0, "all": True}
     try:
         limit = min(int(request.GET.get("limit", limit_default)), limit_max)
     except (ValueError, TypeError):
         limit = limit_default
+    limit = max(limit, 1)
     try:
         offset = max(int(request.GET.get("offset", 0)), 0)
     except (ValueError, TypeError):
         offset = 0
-    total = qs.count()
     return qs[offset: offset + limit], {"total": total, "limit": limit, "offset": offset}
 
 from django.db.models import Count
@@ -377,8 +382,13 @@ def api_funcionarios(request):
         return _sst_nao_autorizado()
 
     if request.method == "GET":
-        qs = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).select_related("unidade")
-        page, meta = _paginar(request, qs)
+        qs = (
+            FuncionarioSST.objects
+            .filter(empresa=empresa, ativo=True)
+            .select_related("unidade")
+            .order_by("nome")
+        )
+        page, meta = _paginar(request, qs, limit_default=1000, limit_max=10000)
         return JsonResponse({
             "funcionarios": [
                 {
@@ -486,7 +496,14 @@ def api_asos(request):
 
     if request.method == "GET":
         from .views_solicitacao_exame import CATALOGO_EXAMES, PERFIS_EXAMES_FUNCAO
-        qs = ASOOcupacional.objects.filter(empresa=empresa).select_related("funcionario").prefetch_related("exames")
+        qs = (
+            ASOOcupacional.objects
+            .filter(empresa=empresa)
+            .select_related("funcionario")
+            .prefetch_related("exames")
+            .order_by("-data_emissao", "-id")
+        )
+        page, meta = _paginar(request, qs, limit_default=1000, limit_max=10000)
         return JsonResponse({
             "asos": [
                 {
@@ -511,10 +528,11 @@ def api_asos(request):
                     "observacoes": a.observacoes,
                     "status_esocial": "nao_enviado",
                 }
-                for a in qs[:200]
+                for a in page
             ],
             "catalogo_exames": CATALOGO_EXAMES,
             "perfis_funcao": PERFIS_EXAMES_FUNCAO,
+            **meta,
         })
 
     if request.method == "POST":
@@ -598,7 +616,13 @@ def api_cats(request):
         return _sst_nao_autorizado()
 
     if request.method == "GET":
-        qs = CATOcupacional.objects.filter(empresa=empresa).select_related("funcionario")
+        qs = (
+            CATOcupacional.objects
+            .filter(empresa=empresa)
+            .select_related("funcionario")
+            .order_by("-data_acidente", "-id")
+        )
+        page, meta = _paginar(request, qs, limit_default=1000, limit_max=10000)
         return JsonResponse({
             "cats": [
                 {
@@ -626,8 +650,9 @@ def api_cats(request):
                     "numero_cat": c.numero_cat,
                     "protocolo_esocial": c.protocolo_esocial,
                 }
-                for c in qs[:50]
-            ]
+                for c in page
+            ],
+            **meta,
         })
 
     if request.method == "POST":
@@ -767,7 +792,13 @@ def api_afastamentos_sst(request):
         return _sst_nao_autorizado()
 
     if request.method == "GET":
-        qs = AfastamentoSST.objects.filter(empresa=empresa).select_related("funcionario")
+        qs = (
+            AfastamentoSST.objects
+            .filter(empresa=empresa)
+            .select_related("funcionario")
+            .order_by("-data_inicio", "-id")
+        )
+        page, meta = _paginar(request, qs, limit_default=1000, limit_max=10000)
         return JsonResponse({
             "afastamentos": [
                 {
@@ -779,8 +810,9 @@ def api_afastamentos_sst(request):
                     "data_retorno": a.data_prevista_retorno.strftime("%d/%m/%Y") if a.data_prevista_retorno else None,
                     "status": a.status,
                 }
-                for a in qs[:50]
-            ]
+                for a in page
+            ],
+            **meta,
         })
 
     if request.method == "POST":
@@ -908,45 +940,52 @@ def sst_configuracoes_redirect(request):
 
 
 def sst_funcionarios_page(request):
-    if not _empresa_autenticada(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
         return _sst_redirect(request)
-    return render(request, "sst_funcionarios.html")
+    return render(request, "sst_funcionarios.html", {"empresa_nome": empresa.nome})
 
 
 def sst_asos_page(request):
-    if not _empresa_autenticada(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
         return _sst_redirect(request)
-    return render(request, "sst_asos.html")
+    return render(request, "sst_asos.html", {"empresa_nome": empresa.nome})
 
 
 def sst_exames_page(request):
-    if not _empresa_autenticada(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
         return _sst_redirect(request)
-    return render(request, "sst_exames.html")
+    return render(request, "sst_exames.html", {"empresa_nome": empresa.nome})
 
 
 def sst_afastamentos_page(request):
-    if not _empresa_autenticada(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
         return _sst_redirect(request)
-    return render(request, "sst_afastamentos.html")
+    return render(request, "sst_afastamentos.html", {"empresa_nome": empresa.nome})
 
 
 def sst_cats_page(request):
-    if not _empresa_autenticada(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
         return _sst_redirect(request)
-    return render(request, "sst_cats.html")
+    return render(request, "sst_cats.html", {"empresa_nome": empresa.nome})
 
 
 def sst_documentos_page(request):
-    if not _empresa_autenticada(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
         return _sst_redirect(request)
-    return render(request, "sst_documentos.html")
+    return render(request, "sst_documentos.html", {"empresa_nome": empresa.nome})
 
 
 def sst_esocial_page(request):
-    if not _empresa_autenticada(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
         return _sst_redirect(request)
-    return render(request, "sst_esocial.html")
+    return render(request, "sst_esocial.html", {"empresa_nome": empresa.nome})
 
 
 # ── Exames (API) ──────────────────────────────────────────────────────────────
@@ -962,7 +1001,7 @@ def api_exames(request):
         qs = ExameOcupacional.objects.filter(empresa=empresa).select_related("funcionario")
         if status_filtro:
             qs = qs.filter(status=status_filtro)
-        page, meta = _paginar(request, qs.order_by("data_realizacao"))
+        page, meta = _paginar(request, qs.order_by("data_realizacao"), limit_default=1000, limit_max=10000)
         return JsonResponse({
             "exames": [
                 {
@@ -1033,6 +1072,7 @@ def api_esocial_eventos(request):
 
     if request.method == "GET":
         qs = eSocialEventoSST.objects.filter(empresa=empresa).order_by("-criado_em")
+        page, meta = _paginar(request, qs, limit_default=1000, limit_max=10000)
         return JsonResponse({
             "eventos": [
                 {
@@ -1046,8 +1086,9 @@ def api_esocial_eventos(request):
                     "data_envio": ev.data_envio.strftime("%d/%m/%Y %H:%M") if ev.data_envio else None,
                     "criado_em": ev.criado_em.strftime("%d/%m/%Y"),
                 }
-                for ev in qs[:100]
-            ]
+                for ev in page
+            ],
+            **meta,
         })
 
     if request.method == "POST":
@@ -1378,7 +1419,7 @@ def api_treinamentos(request):
         if nr_filtro:
             qs = qs.filter(nr=nr_filtro)
         hoje = date.today()
-        page, meta = _paginar(request, qs)
+        page, meta = _paginar(request, qs, limit_default=1000, limit_max=10000)
         return JsonResponse({
             "treinamentos": [
                 {

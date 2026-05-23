@@ -345,7 +345,25 @@ def api_esocial_eventos(request):
             qs = qs.filter(tipo_evento=tipo)
         if status:
             qs = qs.filter(status=status)
-        return JsonResponse({"eventos": [_evt_dict(ev) for ev in qs[:100]]})
+        qs = qs.order_by("-criado_em", "-id")
+        total = qs.count()
+        limit_raw = str(request.GET.get("limit", "")).strip().lower()
+        all_raw = str(request.GET.get("all", "")).strip().lower()
+        if all_raw in {"1", "true", "yes", "sim"} or limit_raw in {"all", "max", "0", "-1"}:
+            eventos = list(qs)
+            meta = {"total": total, "limit": total, "offset": 0, "all": True}
+        else:
+            try:
+                limit = min(max(int(request.GET.get("limit", 1000)), 1), 10000)
+            except (ValueError, TypeError):
+                limit = 1000
+            try:
+                offset = max(int(request.GET.get("offset", 0)), 0)
+            except (ValueError, TypeError):
+                offset = 0
+            eventos = list(qs[offset: offset + limit])
+            meta = {"total": total, "limit": limit, "offset": offset}
+        return JsonResponse({"eventos": [_evt_dict(ev) for ev in eventos], **meta})
 
     data = json.loads(request.body or "{}")
     ev = eSocialEventoSST.objects.create(
