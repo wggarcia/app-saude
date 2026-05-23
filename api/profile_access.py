@@ -31,7 +31,6 @@ MARCADORES_GERENCIA = {
     "gerente",
     "gerencia",
     "gestor",
-    "gestao",
     "diretor",
     "diretoria",
     "coordenador",
@@ -107,10 +106,10 @@ def usuario_tem_cargo_gerencia(usuario):
     return any(
         trecho in texto
         for trecho in (
-            "lider de",
-            "responsavel",
-            "coordenacao",
-            "gestao",
+            "gerente de",
+            "diretor de",
+            "coordenador de",
+            "supervisor de",
         )
     )
 
