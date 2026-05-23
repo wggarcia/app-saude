@@ -281,8 +281,8 @@ select option{background:#0b1822}
   <div class="logo">🖥️ Plataforma TI</div>
 
   <div class="nav-section">Navegação</div>
-  <a class="nav-link" href="/gestao/"><span>📊</span> Gestão</a>
-  <a class="nav-link" href="/sst/"><span>🏥</span> SST</a>
+  <a class="nav-link" href="{{ return_url|default:'/gestao/' }}"><span>📊</span> {{ return_label|default:'Gestão SST' }}</a>
+  <a class="nav-link" href="{{ panel_url|default:'/sst/' }}"><span>🏥</span> {{ panel_label|default:'Painel SST' }}</a>
 
   <div class="nav-section" style="margin-top:8px">Operação SST</div>
   <button class="tab-btn-side active" onclick="setTab('plano')"><span>📦</span> Plano &amp; Trial</button>
@@ -318,9 +318,9 @@ select option{background:#0b1822}
       <div class="page-sub">Hub técnico de saúde ocupacional para operação SST, rede clínica, eSocial e governança de dados sensíveis</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <a class="btn sm" href="/gestao/">← Gestão</a>
-      <a class="btn sm" href="/sst/">🏥 Painel SST</a>
-      <a class="btn sm" href="/sst/relatorios/">📈 Relatórios</a>
+      <a class="btn sm" href="{{ return_url|default:'/gestao/' }}">← {{ return_label|default:'Gestão SST' }}</a>
+      <a class="btn sm" href="{{ panel_url|default:'/sst/' }}">🏥 {{ panel_label|default:'Painel SST' }}</a>
+      <a class="btn sm" href="{{ reports_url|default:'/sst/relatorios/' }}">📈 {{ reports_label|default:'Relatórios SST' }}</a>
     </div>
   </div>
 

@@ -3616,6 +3616,69 @@ class PlataformaTiAccessTests(TestCase):
         resp_page = client.get("/gestao/plataforma/")
         self.assertEqual(resp_page.status_code, 200)
 
+    def test_links_ambiente_it_aparecem_nas_gestoes_setoriais(self):
+        empresas = [
+            ("farmacia_rede_regional", "farmacia-it-link@teste.com", "/farmacia/gestao/"),
+            ("hospital_medio", "hospital-it-link@teste.com", "/hospital/gestao/"),
+            ("plano_saude_operadora", "plano-it-link@teste.com", "/plano-saude/gestao/"),
+        ]
+        for pacote_codigo, email, rota in empresas:
+            empresa = Empresa.objects.create(
+                nome=f"Empresa {pacote_codigo}",
+                email=email,
+                senha=make_password("senha123"),
+                ativo=True,
+                pacote_codigo=pacote_codigo,
+            )
+            client = self._login_client(email, device_id=f"dev-{pacote_codigo}")
+            response = client.get(rota)
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "Ambiente IT")
+            self.assertContains(response, "/gestao/plataforma/")
+
+    def test_usuario_ti_de_farmacia_acessa_plataforma_ti(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia TI",
+            email="farmacia-ti@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+        )
+        EmpresaUsuario.objects.create(
+            empresa=farmacia,
+            nome="Tecnico Farmacia",
+            email="farmacia-ti-user@teste.com",
+            senha=make_password("senha123"),
+            cargo="TI",
+            ativo=True,
+        )
+
+        client = self._login_client("farmacia-ti-user@teste.com", device_id="dev-farm-ti")
+        resp_page = client.get("/gestao/plataforma/")
+        self.assertEqual(resp_page.status_code, 200)
+
+    def test_usuario_nao_ti_de_farmacia_nao_acessa_plataforma_ti(self):
+        farmacia = Empresa.objects.create(
+            nome="Farmacia Operacao",
+            email="farmacia-op@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+            pacote_codigo="farmacia_rede_regional",
+        )
+        EmpresaUsuario.objects.create(
+            empresa=farmacia,
+            nome="Operador Farmacia",
+            email="farmacia-op-user@teste.com",
+            senha=make_password("senha123"),
+            cargo="Operacao",
+            ativo=True,
+        )
+
+        client = self._login_client("farmacia-op-user@teste.com", device_id="dev-farm-op")
+        resp_page = client.get("/gestao/plataforma/")
+        self.assertEqual(resp_page.status_code, 403)
+        self.assertContains(resp_page, "Plataforma TI protegida para uso técnico", status_code=403)
+
 
 # ════════════════════════════════════════════════════════════════════════════════
 #  TESTES — Módulos enterprise do Plano de Saúde

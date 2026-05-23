@@ -233,10 +233,20 @@ def requer_plataforma_ti_page(view_func):
         if not empresa:
             return redirect("/login-empresa/")
         if not pode_acessar_plataforma_ti(request):
+            setor = get_setor(empresa)
             return render(
                 request,
                 "plataforma_ti_restrita.html",
-                {"empresa_nome": empresa.nome},
+                {
+                    "empresa_nome": empresa.nome,
+                    "return_url": _destino_correto(setor),
+                    "return_label": {
+                        "farmacia": "Gestão Farmácia",
+                        "hospital": "Gestão Hospitalar",
+                        "plano_saude": "Gestão Operadora",
+                        "governo": "Painel Governo",
+                    }.get(setor, "Central SST"),
+                },
                 status=403,
             )
         return view_func(request, *args, **kwargs)

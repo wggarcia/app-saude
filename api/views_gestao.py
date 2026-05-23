@@ -16,6 +16,7 @@ from .models import (
     AcaoCorporativa,
     ApiKeyEmpresa,
     DispositivoAutorizado,
+    Empresa,
     EmpresaSetor,
     EmpresaUnidade,
     FuncionarioSST,
@@ -42,9 +43,51 @@ def _empresa_gestao(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return None
-    if setor_conta(empresa) != "empresa":
+    if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
         return None
     return empresa
+
+
+def _contexto_plataforma_ti(empresa):
+    setor = setor_conta(empresa)
+    contexto = {
+        "empresa": {
+            "return_url": "/gestao/",
+            "return_label": "Gestão SST",
+            "panel_url": "/sst/",
+            "panel_label": "Painel SST",
+            "reports_url": "/sst/relatorios/",
+            "reports_label": "Relatórios SST",
+        },
+        "farmacia": {
+            "return_url": "/farmacia/gestao/",
+            "return_label": "Gestão Farmácia",
+            "panel_url": "/dashboard-farmacia/",
+            "panel_label": "Radar Farmácia",
+            "reports_url": "/farmacia/gestao/",
+            "reports_label": "Operação Farmácia",
+        },
+        "hospital": {
+            "return_url": "/hospital/gestao/",
+            "return_label": "Gestão Hospitalar",
+            "panel_url": "/dashboard-hospital/",
+            "panel_label": "Radar Hospital",
+            "reports_url": "/hospital/gestao/",
+            "reports_label": "Operação Hospital",
+        },
+        "plano_saude": {
+            "return_url": "/plano-saude/gestao/",
+            "return_label": "Gestão Operadora",
+            "panel_url": "/dashboard-plano-saude/",
+            "panel_label": "Radar Plano de Saúde",
+            "reports_url": "/plano-saude/gestao/",
+            "reports_label": "Operação Plano",
+        },
+    }
+    return {
+        "setor_conta": setor,
+        **contexto.get(setor, contexto["empresa"]),
+    }
 
 
 def _parse_json(request):
@@ -62,15 +105,17 @@ def gestao_corporativa(request):
     return render(request, "gestao_corporativa.html", {"empresa_nome": empresa.nome})
 
 
-@requer_setor("empresa")
+@requer_setor("empresa", "farmacia", "hospital", "plano_saude")
 @requer_plataforma_ti_page
 def gestao_plataforma(request):
     empresa = _empresa_gestao(request)
     if not empresa:
         return redirect("/")
+    contexto = _contexto_plataforma_ti(empresa)
     return render(request, "gestao_plataforma.html", {
         "empresa_nome": empresa.nome,
         "ti_bootstrap": acesso_plataforma_ti_em_bootstrap(request),
+        **contexto,
     })
 
 

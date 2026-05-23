@@ -47,7 +47,7 @@ p{font-size:.92rem;line-height:1.7;color:var(--muted)}
     </div>
 
     <div class="actions">
-      <a class="btn btn-main" href="/sst/">Voltar para a Central SST</a>
+      <a class="btn btn-main" href="{{ return_url|default:'/sst/' }}">Voltar para {{ return_label|default:'Central SST' }}</a>
       <a class="btn btn-ghost" href="/logout/">Entrar com outro usuário</a>
     </div>
   </main>
