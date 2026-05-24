@@ -1,28 +1,14 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-<meta charset="UTF-8">
-<title>SolusCRT · Configurações SST</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+{% extends "base_sst.html" %}
+
+{% block sst_title %}SolusCRT · Configurações SST{% endblock %}
+
+{% block sst_head %}
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#041018;--panel:#071c28;--border:rgba(126,225,195,.12);--text:#e8f4f1;--muted:#7a9fa0;--teal:#00c9a7;--blue:#1f6ff2;--amber:#f0bf6b;--red:#f87171}
 html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif}
-.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:56px;display:flex;align-items:center;background:var(--panel);border-bottom:1px solid var(--border)}
-.tb-logo{display:flex;align-items:center;gap:10px;padding:0 20px;min-width:220px;border-right:1px solid var(--border);height:100%}
-.tb-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));display:grid;place-items:center;font-weight:900;font-size:.82rem;color:#041018;flex-shrink:0}
-.tb-nome{font-size:.82rem;font-weight:800}.tb-sub{font-size:.62rem;color:var(--muted);margin-top:1px}
 .tb-empresa{padding:0 16px;flex:1;font-size:.78rem;color:var(--muted)}
 .tb-empresa strong{color:var(--text)}
-.app{display:flex;min-height:100vh;padding-top:56px}
-.sidebar{width:220px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:56px;bottom:0;overflow-y:auto}
-.sb-label{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px}
-.sb-link{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:.78rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
-.sb-link:hover{color:var(--text);background:rgba(0,201,167,.04)}
-.sb-link.active{color:var(--teal);background:rgba(0,201,167,.07);border-left-color:var(--teal);font-weight:600}
-.sb-icon{font-size:.92rem;flex-shrink:0;width:18px;text-align:center}
-.main{flex:1;margin-left:220px;padding:24px;display:flex;flex-direction:column;gap:20px}
 .page-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .page-title{font-size:1.1rem;font-weight:800;margin-bottom:3px}
 .page-sub{font-size:.78rem;color:var(--muted)}
@@ -72,16 +58,10 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
 ::-webkit-scrollbar-thumb{background:rgba(0,201,167,.15);border-radius:2px}
 @media(max-width:768px){.form-grid{grid-template-columns:1fr}.form-grid.three{grid-template-columns:1fr 1fr}}
 </style>
-  {% include "partials/sst_unified_theme.html" %}
-</head>
-<body>
-{% include "partials/sst_topbar.html" %}
+{% endblock %}
 
-<div class="app">
-  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
-
-  <main class="main">
-    <div class="page-header">
+{% block sst_content %}
+<div class="page-header">
       <div>
         <div class="page-title">Configurações SST</div>
         <div class="page-sub">Equipe SESMT, alertas de vencimento e dados da empresa para conformidade</div>
@@ -263,11 +243,11 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
         </div>
       </div>
     </div>
-  </main>
-</div>
 
 <div class="toast" id="toast"></div>
+{% endblock %}
 
+{% block sst_scripts %}
 <script>
 const CONFIG_JSON = {{ config_json|default:"null"|safe }};
 
@@ -487,5 +467,4 @@ async function uploadCertificado() {
   }
 }
 </script>
-</body>
-</html>
+{% endblock %}

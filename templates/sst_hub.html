@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-<meta charset="UTF-8">
-<title>SolusCRT · Central SST</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+{% extends "base_sst.html" %}
+
+{% block sst_title %}SolusCRT · Central SST{% endblock %}
+
+{% block sst_head %}
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -23,30 +21,11 @@
   --green:#4ade80;
 }
 html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:radial-gradient(circle at top left,#0d3247 0,#041018 44%);color:var(--text);overflow-x:hidden}
-.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:56px;display:flex;align-items:center;background:rgba(4,16,24,.92);border-bottom:1px solid var(--line);backdrop-filter:blur(18px)}
-.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:220px;border-right:1px solid var(--line);height:100%}
-.tb-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));display:grid;place-items:center;font-weight:900;font-size:.82rem;color:#041018;flex-shrink:0}
-.tb-nome{font-size:.82rem;font-weight:800}
-.tb-sub{font-size:.62rem;color:var(--muted)}
-.tb-nav{display:flex;align-items:center;gap:4px;padding:0 14px;flex:1;overflow-x:auto}
-.tb-nav::-webkit-scrollbar{display:none}
-.tb-nav a{padding:6px 11px;border-radius:7px;font-size:.74rem;font-weight:700;color:var(--muted);text-decoration:none;white-space:nowrap;transition:all .15s}
-.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.05)}
-.tb-nav a.active{color:var(--teal);background:rgba(0,201,167,.09)}
-.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
 .btn-main,.btn-ghost{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:.74rem;font-weight:800;text-decoration:none;transition:all .15s;white-space:nowrap}
 .btn-main{background:linear-gradient(135deg,var(--teal),var(--blue));color:#041018;border:none;box-shadow:0 0 18px rgba(82,166,255,.18)}
 .btn-main:hover{opacity:.88}
 .btn-ghost{border:1px solid var(--line);color:var(--muted)}
 .btn-ghost:hover{color:var(--text);border-color:var(--line2);background:rgba(255,255,255,.05)}
-.app{display:flex;min-height:100vh;padding-top:56px}
-.sidebar{width:220px;flex-shrink:0;background:rgba(7,28,40,.72);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:56px;bottom:0;overflow-y:auto}
-.sb-label{font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px}
-.sb-link{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:.78rem;font-weight:600;color:var(--muted);text-decoration:none;border-left:2px solid transparent;transition:all .12s}
-.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
-.sb-link.active{color:var(--teal);background:rgba(0,201,167,.07);border-left-color:var(--teal)}
-.sb-icon{font-size:.94rem;flex-shrink:0;width:18px;text-align:center}
-.main{flex:1;margin-left:220px;padding:24px;display:flex;flex-direction:column;gap:18px}
 .hero{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,1fr);gap:16px}
 .hero-card,.panel,.module-card,.metric-card{background:rgba(7,28,40,.84);border:1px solid var(--line);border-radius:18px}
 .hero-card{padding:22px;position:relative;overflow:hidden}
@@ -117,21 +96,13 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
 @media(max-width:1200px){.metrics{grid-template-columns:repeat(3,1fr)}.modules{grid-template-columns:repeat(2,1fr)}.hero{grid-template-columns:1fr}.board{grid-template-columns:1fr}.doc-grid{grid-template-columns:1fr}}
-@media(max-width:860px){.main{margin-left:0;padding:14px}.sidebar{display:none}.metrics{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:560px){.metrics,.modules{grid-template-columns:1fr}.tb-actions{display:none}}
+@media(max-width:860px){.metrics{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.metrics,.modules{grid-template-columns:1fr}}
 </style>
-  {% include "partials/sst_unified_theme.html" %}
-</head>
-<body>
-{% include "partials/sst_topbar.html" %}
+{% endblock %}
 
-<div class="app">
-  <aside class="sidebar">
-    {% include "partials/sst_sidebar.html" %}
-  </aside>
-
-  <main class="main">
-    {% if trial_ativo %}
+{% block sst_content %}
+{% if trial_ativo %}
     <div class="trial-banner">
       <span class="trial-badge">⏳ Trial gratuito</span>
       <span class="trial-text">Você está no período de avaliação — <strong style="color:var(--amber)">{{ trial_dias }} dia{{ trial_dias|pluralize }} restante{{ trial_dias|pluralize }}</strong>. Contrate um pacote para continuar usando após o período.</span>
@@ -364,9 +335,9 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
         <a class="module-link" href="/clinica/financeiro/" id="linkFinClinica">Abrir módulo</a>
       </article>
     </section>
-  </main>
-</div>
+{% endblock %}
 
+{% block sst_scripts %}
 <script>
 const DOC_LABELS = {
   PGR: "PGR",
@@ -523,5 +494,4 @@ async function carregarDashboard(){
 
 carregarDashboard();
 </script>
-</body>
-</html>
+{% endblock %}

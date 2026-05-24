@@ -1,11 +1,8 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PGR — Gestão de Riscos Ocupacionais</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+{% extends "base_sst.html" %}
+
+{% block sst_title %}PGR — Gestão de Riscos Ocupacionais{% endblock %}
+
+{% block sst_head %}
 <style>
 :root{
   --bg:#041018;--bg2:#071c28;--bg3:#0a2536;--bg4:#0d2f42;
@@ -21,26 +18,10 @@ html,body{min-height:100%}
 body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 
 /* ── Shell ── */
-.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:56px;display:flex;align-items:center;background:rgba(7,28,40,.92);border-bottom:1px solid var(--border);backdrop-filter:blur(18px)}
-.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:220px;border-right:1px solid var(--border);height:100%}
-.tb-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));display:grid;place-items:center;font-weight:900;font-size:.82rem;color:#041018;flex-shrink:0}
-.tb-nome{font-size:.82rem;font-weight:800}
-.tb-sub{font-size:.62rem;color:var(--text3)}
-.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;margin-left:auto}
 .btn-top{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:.74rem;font-weight:800;text-decoration:none;border:1px solid var(--border);color:var(--text2);transition:all .15s;background:none;cursor:pointer;font-family:inherit}
 .btn-top:hover{color:var(--text);border-color:var(--border2);background:var(--bg3)}
-.app{display:flex;min-height:100vh;padding-top:56px}
-
 /* ── Sidebar ── */
-.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);padding:10px 0;display:flex;flex-direction:column;gap:3px;flex-shrink:0;position:fixed;top:56px;bottom:0;overflow-y:auto}
-.sb-label{font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:9px 12px 3px}
-.sb-link{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:.75rem;font-weight:600;color:var(--text3);text-decoration:none;border-left:2px solid transparent;transition:all .12s}
-.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
-.sb-link.active{color:var(--teal);background:rgba(0,201,167,.07);border-left-color:var(--teal)}
-.sb-icon{font-size:.88rem;flex-shrink:0;width:16px;text-align:center}
-
 /* ── Main ── */
-.main{flex:1;margin-left:220px;display:flex;flex-direction:column;overflow:hidden}
 .header{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .header h1{font-size:19px;font-weight:800}
 .header-actions{display:flex;gap:10px;align-items:center}
@@ -154,19 +135,12 @@ input[type=range]{padding:0;background:transparent;border:none;accent-color:var(
 .prio-alta{background:#ffb74d}
 .prio-media{background:#ffd600}
 .prio-baixa{background:#00e676}
-@media(max-width:860px){.sidebar{display:none}.main{margin-left:0}.tb-logo{min-width:auto;border-right:none}.tb-actions{padding-right:10px}}
+@media(max-width:860px){}
 </style>
-  {% include "partials/sst_unified_theme.html" %}
-</head>
-<body>
+{% endblock %}
 
-{% include "partials/sst_topbar.html" %}
-
-<div class="app">
-<nav class="sidebar">{% include "partials/sst_sidebar.html" %}</nav>
-
-<div class="main">
-  <div class="header">
+{% block sst_content %}
+<div class="header">
     <h1>🔴 PGR — Programa de Gerenciamento de Riscos</h1>
     <div class="header-actions">
       <button class="btn btn-ghost btn-sm" onclick="setTab('planos')">📋 Planos de Ação</button>
@@ -295,8 +269,6 @@ input[type=range]{padding:0;background:transparent;border:none;accent-color:var(
       </div>
     </div>
   </div>
-</div>
-</div>
 
 <!-- Modal Risco -->
 <div class="overlay" id="ovRisco">
@@ -460,7 +432,9 @@ input[type=range]{padding:0;background:transparent;border:none;accent-color:var(
     </div>
   </div>
 </div>
+{% endblock %}
 
+{% block sst_scripts %}
 <script>
 const getCsrf = () => document.cookie.split(';').find(c=>c.trim().startsWith('csrftoken='))?.split('=')[1] || '';
 
@@ -823,5 +797,4 @@ function _t(msg, tipo) {
   setTimeout(() => el.remove(), 3500);
 }
 </script>
-</body>
-</html>
+{% endblock %}

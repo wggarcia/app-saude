@@ -1,33 +1,14 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-<meta charset="UTF-8">
-<title>SolusCRT · CAT / Acidentes</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+{% extends "base_sst.html" %}
+
+{% block sst_title %}SolusCRT · CAT / Acidentes{% endblock %}
+
+{% block sst_head %}
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2233;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.13);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7;--blue:#3b82f6;--amber:#f59e0b;--red:#ef4444;--green:#22c55e;--purple:#8b5cf6}
 html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
-.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:52px;display:flex;align-items:center;background:rgba(10,14,26,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(14px)}
-.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:210px;border-right:1px solid var(--line);height:100%}
-.tb-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#0a0e1a;flex-shrink:0}
-.tb-nome{font-size:.8rem;font-weight:700}.tb-sub{font-size:.6rem;color:var(--muted);margin-top:1px}
-.tb-nav{display:flex;align-items:center;gap:1px;padding:0 14px;flex:1;overflow-x:auto}.tb-nav::-webkit-scrollbar{display:none}
-.tb-nav a{padding:5px 11px;border-radius:6px;font-size:.75rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap}
-.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
-.tb-nav a.active{color:var(--teal);background:rgba(0,201,167,.08)}
-.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
 .btn-main{padding:6px 13px;border-radius:7px;border:none;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;box-shadow:0 0 16px rgba(239,68,68,.2);transition:opacity .2s}
 .btn-main:hover{opacity:.88}
-.app{display:flex;min-height:100vh;padding-top:52px}
-.sidebar{width:200px;flex-shrink:0;background:rgba(17,24,39,.55);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:52px;bottom:0;overflow-y:auto}
-.sb-label{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px}
-.sb-link{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.77rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
-.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
-.sb-link.active{color:var(--teal);background:rgba(0,201,167,.06);border-left-color:var(--teal);font-weight:600}
-.sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
-.main{flex:1;margin-left:200px;padding:20px;display:flex;flex-direction:column;gap:16px}
 .kpi-strip{display:flex;gap:10px}
 .kpi-card{flex:1;padding:14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
 .kpi-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--red));opacity:.7}
@@ -100,15 +81,12 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
 </style>
-  {% include "partials/sst_unified_theme.html" %}
-</head>
-<body>
+{% endblock %}
+
+{% block sst_content %}
 <div class="toast" id="toast"></div>
-{% include "partials/sst_topbar.html" %}
-<div class="app">
-  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
-  <main class="main">
-    <div class="aviso"><div>⚠️</div><div><strong>Prazo legal:</strong> A CAT deve ser registrada até o primeiro dia útil após o acidente. Em caso de óbito, o registro é imediato. Após o registro, transmita pelo eSocial (evento S-2210) diretamente por esta tela.</div></div>
+
+<div class="aviso"><div>⚠️</div><div><strong>Prazo legal:</strong> A CAT deve ser registrada até o primeiro dia útil após o acidente. Em caso de óbito, o registro é imediato. Após o registro, transmita pelo eSocial (evento S-2210) diretamente por esta tela.</div></div>
     <div class="kpi-strip">
       <div class="kpi-card" style="--kc:var(--red)"><div class="kpi-label">Total de CATs</div><div class="kpi-val" id="k-total">—</div><div class="kpi-sub">acidentes registrados</div></div>
       <div class="kpi-card" style="--kc:var(--amber)"><div class="kpi-label">Pendentes eSocial</div><div class="kpi-val" id="k-pendentes">—</div><div class="kpi-sub">aguardando transmissão S-2210</div></div>
@@ -137,8 +115,6 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
         </tbody>
       </table>
     </div>
-  </main>
-</div>
 
 <!-- Modal: Registrar CAT -->
 <div class="modal-bg" id="modal">
@@ -180,7 +156,9 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     </div>
   </div>
 </div>
+{% endblock %}
 
+{% block sst_scripts %}
 <script>
 let _todos=[];let _filtro='todos';let _xmlEventoId=null;let _cidsSst=[];
 const esocialLabel={nao_enviado:'Pendente',pendente:'Pendente',transmitido:'Gerado',erro:'Erro',retificado:'Retificado'};
@@ -325,5 +303,4 @@ async function salvar(){
 carregar();
 carregarCidsSst();
 </script>
-</body>
-</html>
+{% endblock %}
