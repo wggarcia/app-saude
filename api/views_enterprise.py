@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from .access_control import get_setor
+from .access_control import api_requer_gerencia, get_setor
 from .models import (
     ASOOcupacional,
     AcaoCorporativa,
@@ -1148,6 +1148,7 @@ def seed_enterprise_operational_demo(empresa):
     return {"setor": setor, "criados": criados, "total_criado": len(criados)}
 
 
+@api_requer_gerencia
 def api_enterprise_command_center(request):
     empresa = getattr(request, "empresa", None)
     if not empresa:
@@ -1156,6 +1157,7 @@ def api_enterprise_command_center(request):
     return JsonResponse(build_enterprise_command_center_payload(empresa))
 
 
+@api_requer_gerencia
 def api_enterprise_premium_suite(request):
     empresa = getattr(request, "empresa", None)
     if not empresa:

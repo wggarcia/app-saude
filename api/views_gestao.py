@@ -29,6 +29,7 @@ from .models import (
     UsoApiEmpresa,
 )
 from .access_control import (
+    contexto_navegacao_setorial,
     api_requer_plataforma_ti,
     api_requer_plataforma_ti_ou_gestor,
     api_requer_setor,
@@ -102,7 +103,10 @@ def gestao_corporativa(request):
     empresa = _empresa_gestao(request)
     if not empresa:
         return redirect("/")
-    return render(request, "gestao_corporativa.html", {"empresa_nome": empresa.nome})
+    return render(request, "gestao_corporativa.html", {
+        "empresa_nome": empresa.nome,
+        **contexto_navegacao_setorial(request, "empresa"),
+    })
 
 
 @requer_setor("empresa", "farmacia", "hospital", "plano_saude")
@@ -116,6 +120,19 @@ def gestao_plataforma(request):
         "empresa_nome": empresa.nome,
         **contexto,
     })
+
+
+def portal_ti_unificado(request):
+    """
+    Entrada única da TI por empresa.
+    Governo usa rota própria /governo/plataforma/.
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    if setor_conta(empresa) == "governo":
+        return redirect("/governo/plataforma/")
+    return gestao_plataforma(request)
 
 
 # ── APOIO ─────────────────────────────────────────────────────────────────────

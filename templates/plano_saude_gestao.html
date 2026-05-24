@@ -161,14 +161,18 @@ tr:hover td{background:rgba(255,107,157,.03)}
   <div class="nav-section">Navegacao</div>
   <a class="nav-link" href="/dashboard-plano-saude/"><span>&#128202;</span> Radar Epi</a>
   <a class="nav-link active" href="/plano-saude/gestao/"><span>&#127973;</span> Gestao Operacional</a>
-  {% if mostrar_menu_ti or mostrar_menu_rh %}
+  {% if mostrar_link_ti or mostrar_link_rh %}
   <div class="nav-section">Tecnologia</div>
+  {% if mostrar_link_ti %}
+  <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener"><span>&#128421;</span> Ambiente IT</a>
   {% endif %}
-  {% if mostrar_menu_ti %}
-  <a class="nav-link" href="/gestao/plataforma/"><span>&#128421;</span> Ambiente IT</a>
-  {% endif %}
-  {% if mostrar_menu_rh %}
+  {% if mostrar_link_rh %}
   <a class="nav-link" href="/usuarios/"><span>&#128100;</span> Configurar TI (RH)</a>
+  {% endif %}
+  {% endif %}
+  {% if mostrar_aba_gerencia %}
+  <div class="nav-section">Gerencia</div>
+  <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}"><span>&#128200;</span> Painel Gerencial</a>
   {% endif %}
   <div class="nav-section" style="margin-top:8px">&#9889; Visao &amp; Performance</div>
   <button class="tab-btn active" onclick="setTab('visao')"><span>&#127968;</span> Visao Geral</button>
@@ -217,7 +221,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <a href="/dashboard-plano-saude/" class="btn btn-ghost">Ver Radar Epidemiologico</a>
   </div>
 
-  {% if mostrar_command_center %}
+  {% if mostrar_aba_gerencia %}
   {% include "partials/enterprise_command_center.html" %}
   {% include "partials/enterprise_premium_suite.html" %}
   {% endif %}

@@ -14,13 +14,12 @@ from .push_service import enviar_alerta_governamental, push_disponivel
 from .governanca import registrar_auditoria_institucional
 from .command_ai import build_command_ai_payload
 from .access_control import (
-    api_requer_perfis,
-    contexto_acesso_por_perfil,
-    get_setor,
-    requer_perfis,
+    contexto_navegacao_setorial,
+    principal_pode_configurar_ti,
+    requer_gerencia_page,
+    requer_plataforma_ti_page,
     requer_setor,
 )
-from .profile_access import resolver_perfil_principal, texto_normalizado
 from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
 from .services.dashboard_core import (
     build_owner_resumo_payload,
@@ -67,16 +66,10 @@ def _principal_label(request):
     return "sistema"
 
 
-def _texto_normalizado(valor):
-    return texto_normalizado(valor)
-
-
 def _principal_pode_configurar_ti(request, empresa):
-    principal = getattr(request, "principal", None) or empresa
-    if not principal or not empresa:
+    if not empresa:
         return False
-    acesso = resolver_perfil_principal(empresa, principal)
-    return acesso["acesso_gerencia"] or acesso["acesso_rh"]
+    return principal_pode_configurar_ti(request)
 
 
 def _atribuir_permissao_ti(empresa, usuario, concedido_por):
@@ -248,24 +241,24 @@ def dashboard_governo(request):
 @ensure_csrf_cookie
 @requer_setor('farmacia')
 def farmacia_gestao_page(request):
-    return render(request, "farmacia_gestao.html", contexto_acesso_por_perfil(request))
+    return render(request, "farmacia_gestao.html", contexto_navegacao_setorial(request, "farmacia"))
 
 
 @ensure_csrf_cookie
 @requer_setor('hospital')
 def hospital_gestao_page(request):
-    return render(request, "hospital_gestao.html", contexto_acesso_por_perfil(request))
+    return render(request, "hospital_gestao.html", contexto_navegacao_setorial(request, "hospital"))
 
 
 @ensure_csrf_cookie
 @requer_setor('governo')
 def governo_gestao_page(request):
-    return render(request, "governo_gestao.html", contexto_acesso_por_perfil(request))
+    return render(request, "governo_gestao.html", contexto_navegacao_setorial(request, "governo"))
 
 
 @ensure_csrf_cookie
 @requer_setor('governo')
-@requer_perfis('ti', 'gerencia')
+@requer_plataforma_ti_page
 def governo_plataforma_page(request):
     return render(request, "governo_plataforma.html")
 
@@ -273,15 +266,32 @@ def governo_plataforma_page(request):
 @ensure_csrf_cookie
 @requer_setor('farmacia', 'hospital')
 def rede_gestao_page(request):
+    from .access_control import get_setor
     empresa = getattr(request, "empresa", None)
     setor = get_setor(empresa) if empresa else "farmacia"
-    return render(request, "rede_gestao.html", {"setor": setor, **contexto_acesso_por_perfil(request)})
+    return render(request, "rede_gestao.html", {"setor": setor, **contexto_navegacao_setorial(request, setor)})
 
 
 @ensure_csrf_cookie
 @requer_setor('plano_saude')
 def plano_saude_gestao_page(request):
-    return render(request, "plano_saude_gestao.html", contexto_acesso_por_perfil(request))
+    return render(request, "plano_saude_gestao.html", contexto_navegacao_setorial(request, "plano_saude"))
+
+
+@ensure_csrf_cookie
+@requer_gerencia_page
+def gerencia_executiva_page(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return redirect("/")
+    return render(request, "gerencia_executiva.html", {
+        "empresa_nome": empresa.nome,
+        "setor_label": _setor_label(_setor_conta(empresa)),
+        "setor_conta": _setor_conta(empresa),
+        "return_url": _dashboard_return_url(empresa),
+        "logout_url": "/logout-governo/" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else "/logout/",
+        **contexto_navegacao_setorial(request),
+    })
 
 
 @ensure_csrf_cookie
@@ -741,12 +751,13 @@ def api_auditoria_seguranca(request):
     })
 
 
-@requer_perfis('gerencia', 'rh')
 def usuarios_empresa(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return redirect("/")
     pode_configurar_ti = _principal_pode_configurar_ti(request, empresa)
+    if not pode_configurar_ti:
+        return redirect(_dashboard_return_url(empresa))
     return render(request, "usuarios_empresa.html", {
         "empresa_nome": empresa.nome,
         "tipo_conta": empresa.tipo_conta,
@@ -756,11 +767,12 @@ def usuarios_empresa(request):
     })
 
 
-@api_requer_perfis('gerencia', 'rh')
 def api_usuarios_empresa(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not _principal_pode_configurar_ti(request, empresa):
+        return JsonResponse({"erro": "Acesso restrito a RH/gerência."}, status=403)
 
     usuarios = EmpresaUsuario.objects.filter(empresa=empresa).order_by("nome")
     return JsonResponse({
@@ -783,11 +795,12 @@ def api_usuarios_empresa(request):
 
 
 @csrf_exempt
-@api_requer_perfis('gerencia', 'rh')
 def api_criar_usuario_empresa(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not _principal_pode_configurar_ti(request, empresa):
+        return JsonResponse({"erro": "Acesso restrito a RH/gerência."}, status=403)
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
 
@@ -824,7 +837,6 @@ def api_criar_usuario_empresa(request):
 
 
 @csrf_exempt
-@api_requer_perfis('gerencia', 'rh')
 def api_criar_credencial_ti(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -900,11 +912,12 @@ def api_criar_credencial_ti(request):
 
 
 @csrf_exempt
-@api_requer_perfis('gerencia', 'rh')
 def api_desativar_usuario_empresa(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not _principal_pode_configurar_ti(request, empresa):
+        return JsonResponse({"erro": "Acesso restrito a RH/gerência."}, status=403)
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
 

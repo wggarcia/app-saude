@@ -19,15 +19,9 @@ COOKIE_SECURE = not settings.DEBUG
 DEVICE_IDLE_TIMEOUT = SESSION_IDLE_TIMEOUT
 
 
-def destino_conta(empresa, principal=None):
+def destino_conta(empresa):
     if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
         if empresa.ativo and empresa.acesso_governo:
-            if principal:
-                try:
-                    from api.access_control import destino_por_perfil
-                    return destino_por_perfil(empresa, principal, prefer_operacao=True)
-                except Exception:
-                    pass
             return "/dashboard-governo/"
         return "/contrato-governo/"
 
@@ -39,27 +33,11 @@ def destino_conta(empresa, principal=None):
             return "/dashboard-hospital/"
         if setor == "plano_saude":
             return "/dashboard-plano-saude/"
-        destino_base = "/dashboard-empresa/"
-        if principal and principal != empresa:
-            try:
-                from api.access_control import destino_por_perfil
-                return destino_por_perfil(empresa, principal, prefer_operacao=True)
-            except Exception:
-                return destino_base
-        return destino_base
+        return "/dashboard-empresa/"
     return "/pagamento/"
 
 
-def payload_resposta(
-    empresa,
-    token,
-    device_id,
-    dispositivos_em_uso,
-    principal_kind,
-    principal_id,
-    principal_nome,
-    principal=None,
-):
+def payload_resposta(empresa, token, device_id, dispositivos_em_uso, principal_kind, principal_id, principal_nome):
     return {
         "status": "ok",
         "token": token,
@@ -76,7 +54,7 @@ def payload_resposta(
         "principal_kind": principal_kind,
         "principal_id": principal_id,
         "principal_nome": principal_nome,
-        "destination": destino_conta(empresa, principal=principal),
+        "destination": destino_conta(empresa),
     }
 
 

@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor
+from .access_control import api_requer_plataforma_ti, get_setor
 from .models import (
     UnidadeSaude, EquipeSaude,
     NotificacaoCompulsoria, SurtoEpidemiologico,
@@ -1063,6 +1063,7 @@ def api_governo_fase2_dashboard(request):
 # PLATAFORMA TI GOVERNAMENTAL
 # ═══════════════════════════════════════════════════════════════
 
+@api_requer_plataforma_ti
 def api_governo_plataforma_integracoes(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1087,6 +1088,7 @@ def api_governo_plataforma_integracoes(request):
         return JsonResponse({"disponivel": False}, status=500)
 
 
+@api_requer_plataforma_ti
 def api_governo_plataforma_chaves(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1101,6 +1103,7 @@ def api_governo_plataforma_chaves(request):
         return JsonResponse({"disponivel": False}, status=500)
 
 
+@api_requer_plataforma_ti
 def api_governo_plataforma_webhooks(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1113,6 +1116,7 @@ def api_governo_plataforma_webhooks(request):
         return JsonResponse({"disponivel": False}, status=500)
 
 
+@api_requer_plataforma_ti
 def api_governo_plataforma_seguranca(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1132,6 +1136,7 @@ def api_governo_plataforma_seguranca(request):
         return JsonResponse({"disponivel": False}, status=500)
 
 
+@api_requer_plataforma_ti
 def api_governo_plataforma_logs(request):
     empresa = _empresa_autenticada(request)
     if not empresa:

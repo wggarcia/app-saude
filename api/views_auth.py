@@ -46,6 +46,12 @@ def _provisionar_dono_por_ambiente(email, senha):
 
 
 
+def _destino_ti_empresa(empresa):
+    if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
+        return "/governo/plataforma/"
+    return "/ti/"
+
+
 def _login_conta(request, portal_tipo=None):
     if request.method != "POST":
         return JsonResponse({"erro": "Use POST"}, status=405)
@@ -117,7 +123,7 @@ def _login_conta(request, portal_tipo=None):
     session_key = _ativar_sessao(principal, device_id)
     token = _criar_token(empresa, session_key, principal_kind, principal_id, device_id=device_id)
     clear_login_rate_limit(request)
-    response = JsonResponse(_payload_resposta(
+    payload = _payload_resposta(
         empresa,
         token,
         device_id,
@@ -125,8 +131,16 @@ def _login_conta(request, portal_tipo=None):
         principal_kind,
         principal_id,
         principal_nome,
-        principal=principal,
-    ))
+    )
+    try:
+        from .access_control import principal_tem_acesso_ti
+
+        if principal_tem_acesso_ti(empresa, principal):
+            payload["destination"] = _destino_ti_empresa(empresa)
+    except Exception:
+        pass
+
+    response = JsonResponse(payload)
     return _aplicar_cookies_autenticacao(response, empresa, token)
 
 
@@ -207,7 +221,6 @@ def registrar_empresa(request):
         "empresa_admin",
         empresa.id,
         empresa.nome,
-        principal=empresa,
     )
     # Força destino para pagamento independente do setor
     payload["destination"] = "/pagamento/"
@@ -274,7 +287,7 @@ def ativar_sessao_aba(request):
         "status": "ok",
         "empresa_id": empresa.id,
         "tipo_conta": empresa.tipo_conta,
-        "destination": _destino_conta(empresa, principal=principal),
+        "destination": _destino_conta(empresa),
         "tab_key": _registrar_sessao_aba(token),
     })
     # Re-apply cookie so this tab's cookie matches its sessionStorage token

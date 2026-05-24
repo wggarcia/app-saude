@@ -98,9 +98,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="nav-section">Navegação</div>
   <a class="nav-link" href="/governo/"><span>📊</span> Alertas e Monitoramento</a>
   <a class="nav-link active" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
-  {% if mostrar_menu_ti %}
+  {% if mostrar_link_ti %}
   <div class="nav-section">Plataforma</div>
-  <a class="nav-link" href="/governo/plataforma/"><span>🖥️</span> Plataforma TI</a>
+  <a class="nav-link" href="{{ portal_ti_url|default:'/governo/plataforma/' }}" target="_blank" rel="noopener"><span>🖥️</span> Plataforma TI</a>
+  {% endif %}
+  {% if mostrar_aba_gerencia %}
+  <div class="nav-section">Gerência</div>
+  <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}"><span>📈</span> Painel Gerencial</a>
   {% endif %}
   <div class="nav-section" style="margin-top:8px">Módulos</div>
   <button class="tab-btn-side active" onclick="setTab('programas')"><span>📋</span> Programas</button>
@@ -134,7 +138,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </div>
   </div>
 
-  {% if mostrar_command_center %}
+  {% if mostrar_aba_gerencia %}
   {% include "partials/enterprise_command_center.html" %}
   {% endif %}
 

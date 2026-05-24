@@ -1,17 +1,8 @@
+import unicodedata
 from functools import wraps
-
-from django.http import JsonResponse
 from django.shortcuts import redirect, render
-
+from django.http import JsonResponse
 from .planos import detalhes_pacote
-from .profile_access import (
-    PERFIL_RH,
-    PERFIL_TI,
-    principal_tem_permissao,
-    resolver_perfil_principal,
-    texto_normalizado,
-    usuario_tem_cargo_ti,
-)
 from .services.auth_session import dono_autenticado_from_request
 
 TODOS_SETORES = ("empresa", "farmacia", "hospital", "governo", "rede", "plano_saude")
@@ -26,133 +17,19 @@ def get_setor(empresa):
     return setor
 
 
-def _destino_gestao(setor):
+def _destino_correto(setor):
     destinos = {
         "farmacia": "/farmacia/gestao/",
         "hospital": "/hospital/gestao/",
-        "governo": "/governo/gestao/",
+        "governo": "/dashboard-governo/",
         "rede": "/rede/gestao/",
         "plano_saude": "/plano-saude/gestao/",
-    }
-    return destinos.get(setor, "/gestao/")
-
-
-def _destino_operacao(setor):
-    destinos = {
-        "farmacia": "/dashboard-farmacia/",
-        "hospital": "/dashboard-hospital/",
-        "governo": "/dashboard-governo/",
-        "plano_saude": "/dashboard-plano-saude/",
-        "rede": "/rede/gestao/",
     }
     return destinos.get(setor, "/dashboard-empresa/")
 
 
-def _destino_correto(setor):
-    # Compat: mantem o nome usado por trechos antigos.
-    return _destino_gestao(setor)
-
-
-def destino_por_perfil(empresa, principal=None, prefer_operacao=False):
-    """
-    Resolve a landing route based on account sector + authenticated profile.
-
-    prefer_operacao=True keeps classic dashboard destination for conta principal.
-    """
-    if not empresa:
-        return "/login-empresa/"
-
-    setor = get_setor(empresa)
-    principal = principal or empresa
-    acesso = resolver_perfil_principal(empresa, principal)
-
-    if acesso["acesso_gerencia"]:
-        if prefer_operacao:
-            return _destino_operacao(setor)
-        return _destino_gestao(setor)
-
-    if acesso["perfil"] == PERFIL_RH:
-        return "/usuarios/"
-
-    if acesso["perfil"] == PERFIL_TI:
-        return "/governo/plataforma/" if setor == "governo" else "/gestao/plataforma/"
-
-    return _destino_operacao(setor)
-
-
-def perfil_principal_request(request):
-    empresa = getattr(request, "empresa", None)
-    principal = getattr(request, "principal", None) or empresa
-    return resolver_perfil_principal(empresa, principal)
-
-
-def contexto_acesso_por_perfil(request):
-    acesso = perfil_principal_request(request)
-    return {
-        "perfil_principal": acesso["perfil"],
-        "acesso_gerencia": acesso["acesso_gerencia"],
-        "acesso_rh": acesso["acesso_rh"],
-        "acesso_ti": acesso["acesso_ti"],
-        "acesso_operacao": acesso["acesso_operacao"],
-        "mostrar_menu_ti": acesso["acesso_ti"] or acesso["acesso_gerencia"],
-        "mostrar_menu_rh": acesso["acesso_rh"] or acesso["acesso_gerencia"],
-        "mostrar_command_center": acesso["acesso_gerencia"],
-    }
-
-
-def _principal_tem_perfil(request, perfis):
-    acesso = perfil_principal_request(request)
-    if acesso["acesso_gerencia"]:
-        return True
-    return acesso["perfil"] in set(perfis)
-
-
-def requer_perfis(*perfis):
-    """Decorator for page views restricted to specific profiles."""
-
-    def decorator(view_func):
-        @wraps(view_func)
-        def wrapper(request, *args, **kwargs):
-            empresa = getattr(request, "empresa", None)
-            if not empresa:
-                return redirect("/login-empresa/")
-            principal = getattr(request, "principal", None) or empresa
-            if not _principal_tem_perfil(request, perfis):
-                return redirect(destino_por_perfil(empresa, principal, prefer_operacao=True))
-            return view_func(request, *args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
-def api_requer_perfis(*perfis):
-    """Decorator for API views restricted to specific profiles."""
-
-    def decorator(view_func):
-        @wraps(view_func)
-        def wrapper(request, *args, **kwargs):
-            empresa = getattr(request, "empresa", None)
-            if not empresa:
-                return JsonResponse({"erro": "Não autenticado"}, status=401)
-            if not _principal_tem_perfil(request, perfis):
-                return JsonResponse(
-                    {
-                        "erro": "Acesso restrito por perfil. Use uma credencial autorizada para este modulo.",
-                        "perfil_necessario": list(perfis),
-                    },
-                    status=403,
-                )
-            return view_func(request, *args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
 def requer_setor(*setores):
     """Decorator for page views. Redirects to correct home if wrong module."""
-
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
@@ -161,18 +38,14 @@ def requer_setor(*setores):
                 return redirect("/login-empresa/")
             setor = get_setor(empresa)
             if setor not in setores:
-                principal = getattr(request, "principal", None) or empresa
-                return redirect(destino_por_perfil(empresa, principal, prefer_operacao=True))
+                return redirect(_destino_correto(setor))
             return view_func(request, *args, **kwargs)
-
         return wrapper
-
     return decorator
 
 
 def api_requer_setor(*setores):
     """Decorator for API views. Returns 403 JSON if wrong module."""
-
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
@@ -183,53 +56,46 @@ def api_requer_setor(*setores):
             if setor not in setores:
                 return JsonResponse(
                     {"erro": f"Módulo não disponível para este plano. Seu módulo: {setor}"},
-                    status=403,
+                    status=403
                 )
             return view_func(request, *args, **kwargs)
-
         return wrapper
-
     return decorator
 
 
 def requer_dono(view_func):
     """Decorator for operator-only page views. Requires DonoSaaS auth (owner_token cookie)."""
-
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         dono = dono_autenticado_from_request(request)
         if not dono:
             empresa = getattr(request, "empresa", None)
             if empresa:
-                principal = getattr(request, "principal", None) or empresa
-                return redirect(destino_por_perfil(empresa, principal, prefer_operacao=True))
+                return redirect(_destino_correto(get_setor(empresa)))
             return redirect("/operacao-central/")
         return view_func(request, *args, **kwargs)
-
     return wrapper
 
 
 def api_requer_dono(view_func):
     """Decorator for operator-only API views. Returns 403 for tenant requests."""
-
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         dono = dono_autenticado_from_request(request)
         if not dono:
             return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
         return view_func(request, *args, **kwargs)
-
     return wrapper
 
 
 def _texto_normalizado(valor):
-    return texto_normalizado(valor)
+    texto = unicodedata.normalize("NFKD", str(valor or ""))
+    return texto.encode("ascii", "ignore").decode("ascii").lower().strip()
 
 
 def _garantir_permissao_ti():
     try:
         from .models import RBACPermissao
-
         permissao, _ = RBACPermissao.objects.get_or_create(
             codigo="plataforma_ti",
             defaults={
@@ -243,11 +109,50 @@ def _garantir_permissao_ti():
 
 
 def _usuario_tem_cargo_ti(usuario):
-    return usuario_tem_cargo_ti(usuario)
+    texto = _texto_normalizado(getattr(usuario, "cargo", ""))
+    if not texto:
+        return False
+    palavras = set(texto.replace("/", " ").replace("-", " ").split())
+    marcadores = {
+        "ti",
+        "tecnologia",
+        "suporte",
+        "infra",
+        "infraestrutura",
+        "devops",
+        "sistemas",
+        "seguranca",
+        "security",
+        "helpdesk",
+    }
+    if palavras & marcadores:
+        return True
+    return any(
+        trecho in texto
+        for trecho in (
+            "seguranca da informacao",
+            "seguranca informacao",
+            "tecnologia da informacao",
+            "tecnologia informacao",
+        )
+    )
 
 
 def _principal_tem_permissao(empresa, principal, permissao):
-    return principal_tem_permissao(empresa, principal, permissao)
+    if not empresa or not principal:
+        return False
+    if principal.__class__.__name__ != "EmpresaUsuario":
+        return False
+    try:
+        from .models import RBACAtribuicao
+        return RBACAtribuicao.objects.filter(
+            empresa=empresa,
+            usuario_id=principal.id,
+            permissao__codigo=permissao,
+            ativo=True,
+        ).exists()
+    except Exception:
+        return False
 
 
 def _atribuir_permissao_ti_por_cargo(empresa, principal):
@@ -260,7 +165,6 @@ def _atribuir_permissao_ti_por_cargo(empresa, principal):
         return False
     try:
         from .models import RBACAtribuicao
-
         atribuicao, criada = RBACAtribuicao.objects.get_or_create(
             empresa=empresa,
             usuario=principal,
@@ -280,7 +184,6 @@ def _empresa_tem_responsavel_ti(empresa):
         return False
     try:
         from .models import RBACAtribuicao
-
         return RBACAtribuicao.objects.filter(
             empresa=empresa,
             permissao__codigo="plataforma_ti",
@@ -297,19 +200,15 @@ def pode_acessar_plataforma_ti(request):
         return False
 
     principal = getattr(request, "principal", None) or empresa
-    acesso = resolver_perfil_principal(empresa, principal)
+    return principal_tem_acesso_ti(empresa, principal)
 
-    # Gerencia tem acesso total ao ambiente.
-    if acesso["acesso_gerencia"]:
-        return True
 
+def principal_tem_acesso_ti(empresa, principal):
     if _principal_tem_permissao(empresa, principal, "plataforma_ti"):
         return True
-
     if _atribuir_permissao_ti_por_cargo(empresa, principal):
         return True
-
-    return acesso["perfil"] == PERFIL_TI
+    return False
 
 
 def acesso_plataforma_ti_em_bootstrap(request):
@@ -324,25 +223,22 @@ def requer_plataforma_ti_page(view_func):
             return redirect("/login-empresa/")
         if not pode_acessar_plataforma_ti(request):
             setor = get_setor(empresa)
-            principal = getattr(request, "principal", None) or empresa
-            return_url = destino_por_perfil(empresa, principal, prefer_operacao=True)
             return render(
                 request,
                 "plataforma_ti_restrita.html",
                 {
                     "empresa_nome": empresa.nome,
-                    "return_url": return_url,
+                    "return_url": _destino_correto(setor),
                     "return_label": {
-                        "farmacia": "Painel Farmacia",
-                        "hospital": "Painel Hospital",
-                        "plano_saude": "Painel Operadora",
+                        "farmacia": "Gestão Farmácia",
+                        "hospital": "Gestão Hospitalar",
+                        "plano_saude": "Gestão Operadora",
                         "governo": "Painel Governo",
                     }.get(setor, "Central SST"),
                 },
                 status=403,
             )
         return view_func(request, *args, **kwargs)
-
     return wrapper
 
 
@@ -353,14 +249,10 @@ def api_requer_plataforma_ti(view_func):
         if not empresa:
             return JsonResponse({"erro": "Não autenticado"}, status=401)
         if not pode_acessar_plataforma_ti(request):
-            return JsonResponse(
-                {
-                    "erro": "Acesso restrito à Plataforma TI. Use um login TI ou Gerencia autorizada.",
-                },
-                status=403,
-            )
+            return JsonResponse({
+                "erro": "Acesso restrito à Plataforma TI. Entre com um usuário de TI (cargo TI/Suporte/Infra/DevOps) para continuar.",
+            }, status=403)
         return view_func(request, *args, **kwargs)
-
     return wrapper
 
 
@@ -369,8 +261,140 @@ def _principal_gestor_ti(request):
     if not empresa:
         return False
     principal = getattr(request, "principal", None) or empresa
-    acesso = resolver_perfil_principal(empresa, principal)
-    return acesso["acesso_gerencia"]
+    if principal == empresa:
+        return True
+    if principal.__class__.__name__ != "EmpresaUsuario":
+        return False
+    if getattr(principal, "is_admin", False):
+        return True
+
+    cargo = _texto_normalizado(getattr(principal, "cargo", ""))
+    if not cargo:
+        return False
+    palavras = set(cargo.replace("/", " ").replace("-", " ").split())
+    if "rh" in palavras:
+        return True
+    return any(
+        trecho in cargo
+        for trecho in (
+            "recursos humanos",
+            "departamento pessoal",
+            "gestao de pessoas",
+            "gente e gestao",
+            "people",
+            "talentos",
+        )
+    )
+
+
+def principal_e_gerencia(request):
+    """
+    Detecta perfil de gerência de forma pragmática por cargo/permissões.
+    Regra:
+      - conta principal da empresa: gerência
+      - usuário admin: gerência
+      - cargos com marcadores de liderança: gerência
+    """
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return False
+
+    principal = getattr(request, "principal", None) or empresa
+    if principal == empresa:
+        return True
+    if getattr(principal, "is_admin", False):
+        return True
+
+    cargo = _texto_normalizado(getattr(principal, "cargo", ""))
+    if not cargo:
+        return False
+
+    palavras = set(cargo.replace("/", " ").replace("-", " ").split())
+    marcadores = {
+        "gerencia",
+        "gerente",
+        "gestor",
+        "coordenador",
+        "supervisor",
+        "diretor",
+        "diretoria",
+        "lider",
+        "lideranca",
+        "administrador",
+    }
+    if palavras & marcadores:
+        return True
+
+    return any(
+        trecho in cargo
+        for trecho in (
+            "gerente",
+            "gestor",
+            "diretor",
+            "lider de",
+            "head",
+            "chief",
+            "coordenacao",
+            "supervisao",
+        )
+    )
+
+
+def principal_pode_configurar_ti(request):
+    """
+    RH/Gerência pode cadastrar e gerenciar credenciais TI.
+    """
+    return _principal_gestor_ti(request) or principal_e_gerencia(request)
+
+
+def contexto_navegacao_setorial(request, setor=None):
+    """
+    Contexto padrão de navegação por perfil para templates setoriais.
+    """
+    empresa = getattr(request, "empresa", None)
+    setor_resolvido = setor or (get_setor(empresa) if empresa else "empresa")
+
+    acesso_ti = pode_acessar_plataforma_ti(request)
+    acesso_gerencia = principal_e_gerencia(request)
+    acesso_rh = principal_pode_configurar_ti(request)
+
+    return {
+        "setor_atual": setor_resolvido,
+        "acesso_ti": acesso_ti,
+        "acesso_gerencia": acesso_gerencia,
+        "acesso_rh": acesso_rh,
+        "mostrar_link_ti": acesso_ti or acesso_gerencia or acesso_rh,
+        "mostrar_link_rh": acesso_rh,
+        "mostrar_aba_gerencia": acesso_gerencia,
+        "portal_ti_url": "/governo/plataforma/" if setor_resolvido == "governo" else "/ti/",
+        "gerencia_url": "/gerencia/",
+    }
+
+
+def requer_gerencia_page(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        empresa = getattr(request, "empresa", None)
+        if not empresa:
+            return redirect("/login-empresa/")
+        if not principal_e_gerencia(request):
+            return redirect(_destino_correto(get_setor(empresa)))
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def api_requer_gerencia(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        empresa = getattr(request, "empresa", None)
+        if not empresa:
+            return JsonResponse({"erro": "Não autenticado"}, status=401)
+        if not principal_e_gerencia(request):
+            return JsonResponse({
+                "erro": "Acesso restrito à gerência.",
+            }, status=403)
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 
 def api_requer_plataforma_ti_ou_gestor(view_func):
@@ -380,20 +404,15 @@ def api_requer_plataforma_ti_ou_gestor(view_func):
         if not empresa:
             return JsonResponse({"erro": "Não autenticado"}, status=401)
         if not (pode_acessar_plataforma_ti(request) or _principal_gestor_ti(request)):
-            return JsonResponse(
-                {
-                    "erro": "Acesso restrito à TI ou Gerencia autorizada.",
-                },
-                status=403,
-            )
+            return JsonResponse({
+                "erro": "Acesso restrito à TI ou gestão autorizada.",
+            }, status=403)
         return view_func(request, *args, **kwargs)
-
     return wrapper
 
 
 def requer_permissao(permissao):
     """RBAC decorator — checks RBACAtribuicao for the authenticated principal."""
-
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
@@ -404,7 +423,6 @@ def requer_permissao(permissao):
             if principal:
                 try:
                     from .models import RBACAtribuicao
-
                     tem = RBACAtribuicao.objects.filter(
                         empresa=empresa,
                         usuario_id=principal.id,
@@ -416,7 +434,5 @@ def requer_permissao(permissao):
                 except Exception:
                     pass  # tabela ainda não existe — deixa passar
             return view_func(request, *args, **kwargs)
-
         return wrapper
-
     return decorator

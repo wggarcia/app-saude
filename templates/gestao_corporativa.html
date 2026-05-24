@@ -230,7 +230,12 @@
     <button class="tab-btn" data-tab="programas">Programas</button>
   </nav>
   <div class="topbar-actions">
-    <a class="btn sm" href="/gestao/plataforma/">Plataforma & API</a>
+    {% if mostrar_link_ti %}
+    <a class="btn sm" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener">Plataforma TI</a>
+    {% endif %}
+    {% if mostrar_aba_gerencia %}
+    <a class="btn sm" href="{{ gerencia_url|default:'/gerencia/' }}">Painel Gerencial</a>
+    {% endif %}
     <a class="btn sm" href="/competencia/">Competência</a>
     <a class="btn sm" href="/dashboard-empresa/">← Painel</a>
     <a class="btn sm warn" href="/logout/">Sair</a>
@@ -238,7 +243,9 @@
 </header>
 
 <main class="shell">
+  {% if mostrar_aba_gerencia %}
   {% include "partials/enterprise_command_center.html" %}
+  {% endif %}
 
   <!-- ══ AÇÕES ══════════════════════════════════════════════════════════════ -->
   <section id="panel-acoes" class="panel active">

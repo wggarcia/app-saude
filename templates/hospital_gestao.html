@@ -274,17 +274,23 @@ tr:hover td{background:rgba(255,255,255,.018)}
   <a class="nav-link" href="/plano-saude/gestao/" style="text-decoration:none">
     <div class="nav-link-inner"><span>🏥</span><span>Planos de Saúde</span></div>
   </a>
-  {% if mostrar_menu_ti or mostrar_menu_rh %}
+  {% if mostrar_link_ti or mostrar_link_rh %}
   <div class="nav-section" style="margin-top:8px">Tecnologia</div>
-  {% endif %}
-  {% if mostrar_menu_ti %}
-  <a class="nav-link" href="/gestao/plataforma/" style="text-decoration:none">
+  {% if mostrar_link_ti %}
+  <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener" style="text-decoration:none">
     <div class="nav-link-inner"><span>🖥️</span><span>Ambiente IT</span></div>
   </a>
   {% endif %}
-  {% if mostrar_menu_rh %}
+  {% if mostrar_link_rh %}
   <a class="nav-link" href="/usuarios/" style="text-decoration:none">
     <div class="nav-link-inner"><span>👤</span><span>Configurar TI (RH)</span></div>
+  </a>
+  {% endif %}
+  {% endif %}
+  {% if mostrar_aba_gerencia %}
+  <div class="nav-section">Gerência</div>
+  <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}" style="text-decoration:none">
+    <div class="nav-link-inner"><span>📈</span><span>Painel Gerencial</span></div>
   </a>
   {% endif %}
   <div class="sidebar-footer">
@@ -322,7 +328,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
       <a href="/api/hospital/pdf/internacoes/" target="_blank" class="btn btn-ghost">📄 Relatório PDF</a>
     </div>
 
-    {% if mostrar_command_center %}
+    {% if mostrar_aba_gerencia %}
     {% include "partials/enterprise_command_center.html" %}
     {% include "partials/enterprise_premium_suite.html" %}
     {% endif %}

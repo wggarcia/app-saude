@@ -303,6 +303,12 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
     {% elif setor == 'hospital' %}
     <a href="/hospital/gestao/" class="btn-back" style="border-color:rgba(74,222,128,.3);color:#9ae6b4">🏥 Hospital</a>
     {% endif %}
+    {% if mostrar_link_ti %}
+    <a href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener" class="btn-back" style="border-color:rgba(0,201,167,.3);color:#7ee1c3">🖥️ TI</a>
+    {% endif %}
+    {% if mostrar_aba_gerencia %}
+    <a href="{{ gerencia_url|default:'/gerencia/' }}" class="btn-back" style="border-color:rgba(96,165,250,.3);color:#93c5fd">📈 Gerência</a>
+    {% endif %}
     <button class="bell-btn" onclick="switchTab('msgs')" title="Mensagens">
       🔔<span class="bell-badge" id="bell-badge">0</span>
     </button>
@@ -363,8 +369,8 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
       </div>
     </div>
 
+    {% if mostrar_aba_gerencia %}
     <!-- Enterprise Command Center -->
-    {% if mostrar_command_center %}
     {% include "partials/enterprise_command_center.html" %}
     {% endif %}
 

@@ -3674,7 +3674,17 @@ class PlataformaTiAccessTests(TestCase):
         resp_api = client.get("/api/gestao/plataforma/seguranca/")
         self.assertEqual(resp_api.status_code, 200)
 
-    def test_admin_principal_sem_perfil_ti_acessa_plataforma(self):
+    def test_login_usuario_ti_prioriza_destino_portal_ti(self):
+        client = Client()
+        resp = client.post(
+            "/api/login",
+            data=json.dumps({"email": "ti@teste.com", "senha": "senha123", "device_id": "dev-ti-destino", "device_name": "Browser"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json().get("destination"), "/ti/")
+
+    def test_admin_principal_sem_perfil_ti_nao_acessa_plataforma(self):
         empresa_sem_ti = Empresa.objects.create(
             nome="Empresa Bootstrap",
             email="bootstrap@teste.com",
@@ -3689,9 +3699,8 @@ class PlataformaTiAccessTests(TestCase):
         )
         self.assertEqual(login.status_code, 200)
         resp_page = client.get("/gestao/plataforma/")
-        self.assertEqual(resp_page.status_code, 200)
-        resp_api = client.get("/api/gestao/plataforma/seguranca/")
-        self.assertEqual(resp_api.status_code, 200)
+        self.assertEqual(resp_page.status_code, 403)
+        self.assertContains(resp_page, "Plataforma TI protegida para uso técnico", status_code=403)
 
     def test_links_ambiente_it_aparecem_nas_gestoes_setoriais(self):
         empresas = [
@@ -3711,7 +3720,7 @@ class PlataformaTiAccessTests(TestCase):
             response = client.get(rota)
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, "Ambiente IT")
-            self.assertContains(response, "/gestao/plataforma/")
+            self.assertContains(response, "/ti/")
 
     def test_usuario_ti_de_farmacia_acessa_plataforma_ti(self):
         farmacia = Empresa.objects.create(
@@ -3790,48 +3799,7 @@ class PlataformaTiAccessTests(TestCase):
             content_type="application/json",
         )
         self.assertEqual(resp.status_code, 403)
-        self.assertIn("Acesso restrito", resp.json().get("erro", ""))
-
-    def test_usuario_operacao_nao_acessa_area_rh(self):
-        client = self._login_client("operacao@teste.com", device_id="dev-op-rh")
-        resp_page = client.get("/usuarios/")
-        self.assertEqual(resp_page.status_code, 302)
-        self.assertEqual(resp_page["Location"], "/dashboard-empresa/")
-
-        resp_api = client.get("/api/usuarios")
-        self.assertEqual(resp_api.status_code, 403)
-
-    def test_usuario_ti_nao_acessa_area_rh(self):
-        client = self._login_client("ti@teste.com", device_id="dev-ti-rh")
-        resp_page = client.get("/usuarios/")
-        self.assertEqual(resp_page.status_code, 302)
-        self.assertEqual(resp_page["Location"], "/gestao/plataforma/")
-
-        resp_api = client.get("/api/usuarios")
-        self.assertEqual(resp_api.status_code, 403)
-
-    def test_usuario_operacao_nao_ve_links_ti_e_rh_no_menu_setorial(self):
-        farmacia = Empresa.objects.create(
-            nome="Farmacia Menu Operacao",
-            email="farmacia-menu-op@teste.com",
-            senha=make_password("senha123"),
-            ativo=True,
-            pacote_codigo="farmacia_rede_regional",
-        )
-        EmpresaUsuario.objects.create(
-            empresa=farmacia,
-            nome="Operador de Loja",
-            email="farmacia-menu-op-user@teste.com",
-            senha=make_password("senha123"),
-            cargo="Operacao",
-            ativo=True,
-        )
-
-        client = self._login_client("farmacia-menu-op-user@teste.com", device_id="dev-farm-menu-op")
-        response = client.get("/farmacia/gestao/")
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Ambiente IT")
-        self.assertNotContains(response, "Configurar TI (RH)")
+        self.assertIn("Apenas RH", resp.json().get("erro", ""))
 
 
 # ════════════════════════════════════════════════════════════════════════════════

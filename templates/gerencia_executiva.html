@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gerência Executiva | {{ empresa_nome }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--ok:#00e5b0;--warn:#ffb347;--danger:#ff4d6d;--text:#e8f4ff;--muted:#7a9bb5;--border:rgba(255,255,255,.08);--card:rgba(255,255,255,.04)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.wrapper{max-width:1240px;margin:0 auto;padding:24px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.title{font-size:24px;font-weight:800}
+.subtitle{font-size:13px;color:var(--muted);margin-top:3px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:9px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);text-decoration:none;font-size:12px;font-weight:700;cursor:pointer}
+.btn:hover{background:rgba(255,255,255,.1)}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--ok));color:#041018;border:none}
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:16px 0}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.danger::before{background:var(--danger)}
+.kpi-label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.kpi-val{font-size:30px;font-weight:800;margin-top:8px}
+.kpi-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:8px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+.card h3{font-size:14px;font-weight:800;margin-bottom:10px}
+.list{display:grid;gap:8px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:9px;background:rgba(255,255,255,.03);font-size:13px}
+.row span:last-child{font-weight:800}
+.links{display:grid;gap:8px}
+.link{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text);text-decoration:none;font-size:13px;font-weight:700}
+.link:hover{background:rgba(255,255,255,.08)}
+@media(max-width:1050px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+@media(max-width:640px){.kpi-grid{grid-template-columns:1fr}.wrapper{padding:16px}}
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header class="header">
+    <div>
+      <div class="title">Gerência Executiva</div>
+      <div class="subtitle">{{ empresa_nome }} · {{ setor_label }} · visão estratégica restrita</div>
+    </div>
+    <div class="actions">
+      <a class="btn" href="{{ return_url|default:'/dashboard-empresa/' }}">Voltar ao Ambiente</a>
+      <a class="btn" href="/sala-decisao-ia/">Sala de Decisão IA</a>
+      <a class="btn primary" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener">Plataforma TI</a>
+      <a class="btn" href="{{ logout_url|default:'/logout/' }}">Sair</a>
+    </div>
+  </header>
+
+  {% include "partials/enterprise_command_center.html" %}
+  {% include "partials/enterprise_premium_suite.html" %}
+
+  <section class="kpi-grid">
+    <article class="kpi"><div class="kpi-label">Funcionários SST</div><div class="kpi-val" id="k1">—</div><div class="kpi-sub" id="k1s">—</div></article>
+    <article class="kpi ok"><div class="kpi-label">Dispensações mês</div><div class="kpi-val" id="k2">—</div><div class="kpi-sub" id="k2s">—</div></article>
+    <article class="kpi warn"><div class="kpi-label">Ocupação hospitalar</div><div class="kpi-val" id="k3">—</div><div class="kpi-sub" id="k3s">—</div></article>
+    <article class="kpi"><div class="kpi-label">Programas governo</div><div class="kpi-val" id="k4">—</div><div class="kpi-sub" id="k4s">—</div></article>
+    <article class="kpi danger"><div class="kpi-label">Alertas totais</div><div class="kpi-val" id="k5">—</div><div class="kpi-sub" id="k5s">—</div></article>
+  </section>
+
+  <section class="grid">
+    <article class="card">
+      <h3>Resumo Executivo do Dia</h3>
+      <div class="list" id="resumoList">
+        <div class="row"><span>Carregando dados gerenciais...</span><span>⏳</span></div>
+      </div>
+    </article>
+
+    <aside class="card">
+      <h3>Acessos Estratégicos</h3>
+      <div class="links">
+        <a class="link" href="/executive/">Dashboard Executivo Global</a>
+        <a class="link" href="/compliance/">Compliance & Auditoria</a>
+        <a class="link" href="/financeiro/">Financeiro Estratégico</a>
+        <a class="link" href="/governanca/">Governança</a>
+        <a class="link" href="/relatorio-executivo/">Relatório Executivo</a>
+      </div>
+    </aside>
+  </section>
+</div>
+
+<script>
+async function carregarGerencia(){
+  try{
+    const r = await fetch('/api/executive/dashboard/', {credentials:'same-origin'});
+    if(!r.ok){ throw new Error('Falha ao carregar'); }
+    const d = await r.json();
+    const sst = d.sst || {};
+    const farm = d.farmacia || {};
+    const hosp = d.hospital || {};
+    const gov = d.governo || {};
+    const alertas = d.alertas || {};
+
+    document.getElementById('k1').textContent = sst.total_funcionarios ?? 0;
+    document.getElementById('k1s').textContent = `${sst.afastados ?? 0} afastados · ${sst.aso_alertas ?? 0} ASOs em alerta`;
+
+    document.getElementById('k2').textContent = farm.dispensacoes_mes ?? 0;
+    document.getElementById('k2s').textContent = `${farm.pedidos_abertos ?? 0} pedidos abertos`;
+
+    const taxa = hosp.taxa_ocupacao ?? 0;
+    document.getElementById('k3').textContent = `${taxa}%`;
+    document.getElementById('k3s').textContent = `${hosp.internacoes_ativas ?? 0} internações ativas`;
+
+    document.getElementById('k4').textContent = gov.programas_ativos ?? 0;
+    document.getElementById('k4s').textContent = `${gov.metas_atingidas ?? 0} metas atingidas`;
+
+    document.getElementById('k5').textContent = alertas.total ?? 0;
+    document.getElementById('k5s').textContent = `${alertas.criticos ?? 0} críticos`;
+
+    const resumo = [
+      ['Exames SST vencidos', sst.exames_vencidos ?? 0],
+      ['Treinamentos vencidos', sst.treinamentos_vencidos ?? 0],
+      ['Estoque crítico farmácia', farm.estoque_critico ?? 0],
+      ['Lotes vencendo 30d', farm.lotes_vencendo_30d ?? 0],
+      ['Leitos em manutenção', hosp.leitos_manutencao ?? 0],
+      ['Planos de ação atrasados', gov.planos_atrasados ?? 0],
+      ['Alertas críticos', alertas.criticos ?? 0],
+    ];
+
+    document.getElementById('resumoList').innerHTML = resumo
+      .map(([label, valor]) => `<div class="row"><span>${label}</span><span>${valor}</span></div>`)
+      .join('');
+  }catch(e){
+    document.getElementById('resumoList').innerHTML = '<div class="row"><span>Não foi possível carregar o resumo executivo.</span><span>⚠️</span></div>';
+  }
+}
+carregarGerencia();
+</script>
+</body>
+</html>
