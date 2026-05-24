@@ -1,8 +1,10 @@
-{% extends "base_sst.html" %}
-
-{% block sst_title %}Normas Regulamentadoras · SolusCRT{% endblock %}
-
-{% block sst_head %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Normas Regulamentadoras · SolusCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -11,8 +13,26 @@
   --amber:#f0bf6b;--red:#f87171;--green:#4ade80;
 }
 html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;overflow-x:hidden}
+/* HEADER */
+.header,.topbar{background:var(--panel);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#041018;flex-shrink:0}
+.logo-name{font-size:.82rem;font-weight:800;color:var(--text)}
+.logo-sub{font-size:.62rem;color:var(--muted)}
+.header-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.hbtn{padding:5px 13px;border-radius:7px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.75rem;font-weight:600;text-decoration:none;cursor:pointer;font-family:inherit;transition:all .15s}
+.hbtn:hover{color:var(--text);border-color:rgba(126,225,195,.3)}
+.hbtn.primary{background:linear-gradient(135deg,var(--teal),#0077ff);border:none;color:#041018;font-weight:800}
 /* LAYOUT */
+.app{display:flex}
+.sidebar{width:220px;flex-shrink:0;background:rgba(7,28,40,.7);border-right:1px solid var(--border);min-height:calc(100vh - 56px);padding:10px 0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+.sb-label{font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:.77rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.06);border-left-color:var(--teal);font-weight:700}
+.sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
 /* MAIN */
+.main{flex:1;padding:24px;min-width:0}
 /* KPI */
 .kpi-row{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
 .kpi{flex:1;min-width:140px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden}
@@ -70,21 +90,34 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'M
 .empty-icon{font-size:2.5rem;margin-bottom:12px}
 .empty h3{font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:6px}
 .count-info{font-size:.78rem;color:var(--muted);margin-bottom:16px}
-.normas-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:20px}
-.hbtn{padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.73rem;font-weight:700;text-decoration:none;cursor:pointer;transition:all .15s}
-.hbtn:hover{color:var(--text);border-color:rgba(126,225,195,.3);background:rgba(255,255,255,.04)}
 </style>
-{% endblock %}
+  {% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
 
-{% block sst_content %}
-<div class="normas-head">
-      <div>
-        <h1 style="font-size:1.3rem;font-weight:900;margin-bottom:4px">📚 Normas Regulamentadoras</h1>
-        <p style="color:var(--muted);font-size:.82rem">Todas as 37 NRs do Ministério do Trabalho · consulta técnica para profissionais de SST</p>
-      </div>
-      <a class="hbtn" href="https://www.gov.br/trabalho-e-emprego/pt-br/acesso-a-informacao/participacao-social/conselhos-e-orgaos-colegiados/ctpp-nrs/normas-regulamentadoras-nrs" target="_blank" rel="noopener">
-        🔗 Fonte oficial MTE
-      </a>
+<header class="header topbar">
+  <a class="logo" href="/sst/">
+    <div class="logo-icon">S</div>
+    <div>
+      <div class="logo-name">SolusCRT</div>
+      <div class="logo-sub">Central SST · Normas NR</div>
+    </div>
+  </a>
+  <div class="header-right">
+    <a class="hbtn" href="/sst/treinamentos/">🎓 Treinamentos</a>
+    <a class="hbtn" href="/sst/relatorios/">📈 Relatórios</a>
+    <a class="hbtn" href="https://www.gov.br/trabalho-e-emprego/pt-br/acesso-a-informacao/participacao-social/conselhos-e-orgaos-colegiados/ctpp-nrs/normas-regulamentadoras-nrs" target="_blank">🔗 MTE Oficial</a>
+    <a class="hbtn" href="/logout/" style="color:var(--red)">Sair</a>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+
+  <main class="main">
+    <div style="margin-bottom:20px">
+      <h1 style="font-size:1.3rem;font-weight:900;margin-bottom:4px">📚 Normas Regulamentadoras</h1>
+      <p style="color:var(--muted);font-size:.82rem">Todas as 37 NRs do Ministério do Trabalho · consulta técnica para profissionais de SST</p>
     </div>
 
     <div class="kpi-row">
@@ -110,9 +143,9 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'M
       <h3>Nenhuma NR encontrada</h3>
       <p>Tente outros termos de busca</p>
     </div>
-{% endblock %}
+  </main>
+</div>
 
-{% block sst_scripts %}
 <script>
 const CATS = ["Todas","Gestão de SST","EPI e EPC","Saúde Ocupacional","Riscos Específicos","Segurança em Máquinas","Construção Civil","Indústrias Específicas","Ergonomia e Conforto","Fiscalização"];
 
@@ -612,4 +645,5 @@ function toggleCard(num) {
 // Init
 render();
 </script>
-{% endblock %}
+</body>
+</html>

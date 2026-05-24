@@ -1,13 +1,32 @@
-{% extends "base_sst.html" %}
-
-{% block sst_title %}SolusCRT · Comunicação{% endblock %}
-
-{% block sst_head %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · Comunicação</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://meet.jit.si/external_api.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#041018;--panel:#071c28;--panel2:#0b2638;--border:rgba(126,225,195,.12);--border2:rgba(126,225,195,.22);--text:#e8f4f1;--muted:#7a9fa0;--teal:#00c9a7;--blue:#1f6ff2;--amber:#f0bf6b;--red:#f87171;--green:#22c55e;--purple:#a78bfa}
 html,body{margin:0;overflow:hidden;height:100vh;background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif}
+/* ── Topbar ── */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:52px;display:flex;align-items:center;background:rgba(4,16,24,.96);border-bottom:1px solid var(--border);backdrop-filter:blur(14px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 14px;min-width:200px;border-right:1px solid var(--border);height:100%;flex-shrink:0}
+.tb-icon{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;font-size:.75rem;color:#041018;flex-shrink:0}
+.tb-nome{font-size:.78rem;font-weight:800}.tb-sub{font-size:.58rem;color:var(--muted)}
+.tb-mid{flex:1;padding:0 16px;font-size:.84rem;font-weight:700}
+.tb-empresa{padding:0 16px;font-size:.75rem;color:var(--muted);white-space:nowrap}
+/* ── Layout ── */
+.app{display:flex;height:100vh;padding-top:52px}
+/* SST sidebar */
+.sst-nav{width:200px;flex-shrink:0;background:rgba(7,28,40,.72);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:8px 0;overflow-y:auto}
+.sb-label{font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:9px 12px 3px}
+.sb-link{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:.75rem;font-weight:600;color:var(--muted);text-decoration:none;border-left:2px solid transparent;transition:all .12s}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.07);border-left-color:var(--teal)}
+.sb-icon{font-size:.88rem;flex-shrink:0;width:16px;text-align:center}
 /* Channel column */
 .ch-col{width:270px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
 .ch-top{padding:12px 12px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
@@ -134,16 +153,17 @@ html,body{margin:0;overflow:hidden;height:100vh;background:var(--bg);color:var(-
 ::-webkit-scrollbar-thumb{background:rgba(0,201,167,.15);border-radius:2px}
 @keyframes fadeInUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 </style>
-<style>
-.main{padding:0 !important;margin-left:0 !important;display:flex !important;min-height:calc(100vh - 56px) !important;}
-.com-layout{display:flex;flex:1;min-width:0;width:100%;}
-@media(max-width:860px){.com-layout{display:block}.ch-col{width:100%}.main-area{min-height:60vh}}
-</style>
-{% endblock %}
+  {% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
 
-{% block sst_content %}
-<div class="com-layout">
-<!-- SST Nav -->
+{% include "partials/sst_topbar.html" %}
+
+<div class="app">
+
+  <!-- SST Nav -->
+  <aside class="sst-nav">{% include "partials/sst_sidebar.html" %}</aside>
+
   <!-- Channel Column -->
   <div class="ch-col">
     <div class="ch-top">
@@ -245,6 +265,8 @@ html,body{margin:0;overflow:hidden;height:100vh;background:var(--bg);color:var(-
     </div>
   </div>
 
+</div>
+
 <!-- ── MODAL: Nova Conversa ── -->
 <div class="modal-bg" id="modal-chat">
   <div class="modal">
@@ -328,10 +350,7 @@ html,body{margin:0;overflow:hidden;height:100vh;background:var(--bg);color:var(-
     </div>
   </div>
 </div>
-</div>
-{% endblock %}
 
-{% block sst_scripts %}
 <script>
 // ── helpers ──────────────────────────────────────────────────────────────────
 function getCookie(n){let v=null;document.cookie.split(';').forEach(c=>{c=c.trim();if(c.startsWith(n+'='))v=decodeURIComponent(c.slice(n.length+1))});return v}
@@ -794,4 +813,5 @@ document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>
 carregarSalas();
 carregarReunioes();
 </script>
-{% endblock %}
+</body>
+</html>

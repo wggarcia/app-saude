@@ -1,8 +1,10 @@
-{% extends "base_sst.html" %}
-
-{% block sst_title %}SolusCRT · Prontuário — {{ funcionario_nome }}{% endblock %}
-
-{% block sst_head %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · Prontuário — {{ funcionario_nome }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -25,6 +27,17 @@
 html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
 
 /* ─── TOPBAR ─── */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:54px;display:flex;align-items:center;background:rgba(4,16,24,.97);border-bottom:1px solid var(--line);backdrop-filter:blur(16px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:210px;border-right:1px solid var(--line);height:100%}
+.tb-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#041018;flex-shrink:0}
+.tb-nome{font-size:.8rem;font-weight:800}
+.tb-sub{font-size:.6rem;color:var(--muted);margin-top:1px}
+.tb-nav{display:flex;align-items:center;gap:1px;padding:0 14px;flex:1;overflow-x:auto}
+.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{padding:5px 11px;border-radius:6px;font-size:.75rem;font-weight:600;color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap}
+.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tb-nav a.active{color:var(--accent);background:rgba(126,225,195,.08)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
 .btn-main{padding:6px 13px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#041018;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;box-shadow:0 0 16px rgba(126,225,195,.18);transition:opacity .2s}
 .btn-main:hover{opacity:.85}
 .btn-warn{padding:6px 13px;border-radius:7px;border:1px solid rgba(255,122,145,.25);background:rgba(255,122,145,.08);color:var(--danger);font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;transition:all .15s}
@@ -37,6 +50,15 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
 .breadcrumb span{color:var(--muted)}
 
 /* ─── LAYOUT ─── */
+.app{display:flex;min-height:100vh;padding-top:54px}
+.sidebar{width:200px;flex-shrink:0;background:rgba(7,28,40,.6);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:54px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.77rem;font-weight:600;color:var(--muted);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--accent);background:rgba(126,225,195,.06);border-left-color:var(--accent)}
+.sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
+.main{flex:1;margin-left:200px;padding:22px;display:flex;flex-direction:column;gap:18px}
+
 /* ─── CARD IDENTIFICAÇÃO ─── */
 .id-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;position:relative;overflow:hidden}
 .id-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.8}
@@ -129,13 +151,21 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
 </style>
-{% endblock %}
+  {% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
 
-{% block sst_content %}
 <!-- ─── TOPBAR ─── -->
-<!-- ─── SIDEBAR ─── -->
+{% include "partials/sst_topbar.html" %}
 
-<!-- CARD IDENTIFICAÇÃO -->
+<!-- ─── SIDEBAR ─── -->
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+
+  <!-- ─── MAIN ─── -->
+  <main class="main">
+
+    <!-- CARD IDENTIFICAÇÃO -->
     <div class="id-card" id="id-card">
       <div class="id-info">
         <div class="id-nome" id="id-nome">
@@ -310,9 +340,9 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
       </div>
 
     </div><!-- /tabs -->
-{% endblock %}
+  </main>
+</div>
 
-{% block sst_scripts %}
 <script>
 const FUNC_ID = {{ funcionario_id }};
 const FUNC_NOME_INICIAL = {{ funcionario_nome|safe|default:"''" }};
@@ -509,4 +539,5 @@ async function init() {
 
 init();
 </script>
-{% endblock %}
+</body>
+</html>

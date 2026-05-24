@@ -109,41 +109,6 @@ html,body{
 }
 </style>
 <script>
-async function sstSyncTabSession() {
-  const token = sessionStorage.getItem("auth_token")
-    || sessionStorage.getItem("token")
-    || localStorage.getItem("auth_token")
-    || localStorage.getItem("token");
-  if (!token) return;
-
-  try {
-    const response = await fetch("/api/sessao/aba", {
-      method: "POST",
-      headers: { Authorization: "Bearer " + token },
-      credentials: "same-origin",
-    });
-    if (!response.ok) return;
-
-    const payload = await response.json();
-    if (payload.empresa_id !== undefined && payload.empresa_id !== null) {
-      sessionStorage.setItem("empresa_id", String(payload.empresa_id));
-    }
-    if (payload.tipo_conta) {
-      sessionStorage.setItem("tipo_conta", payload.tipo_conta);
-    }
-    if (payload.tab_key) {
-      sessionStorage.setItem("tab_session_key", payload.tab_key);
-      const url = new URL(window.location.href);
-      if (url.searchParams.get("tab") !== payload.tab_key) {
-        url.searchParams.set("tab", payload.tab_key);
-        window.history.replaceState({}, "", url);
-      }
-    }
-  } catch (_err) {
-    // Não interrompe o carregamento da página SST se falhar a sincronização.
-  }
-}
-
 document.addEventListener("DOMContentLoaded", function () {
   const nomeCtx = "{{ empresa_nome|default:''|escapejs }}".trim();
   const empresa = nomeCtx;
@@ -171,6 +136,5 @@ document.addEventListener("DOMContentLoaded", function () {
       el.textContent = empresa;
     }
   });
-  sstSyncTabSession();
 });
 </script>

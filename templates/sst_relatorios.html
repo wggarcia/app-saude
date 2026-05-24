@@ -1,9 +1,11 @@
-{% extends "base_sst.html" %}
-
-{% block sst_title %}Relatórios SST · SolusCRT{% endblock %}
-
-{% block sst_head %}
-<style>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatórios SST · SolusCRT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
     :root{
       --bg:#041018;--panel:#071c28;--border:rgba(126,225,195,.12);--border2:rgba(126,225,195,.22);
       --text:#e8f4f1;--muted:#7fa2b1;--teal:#00c9a7;--blue:#52a6ff;--amber:#f0bf6b;
@@ -15,12 +17,26 @@
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{min-height:100%;font-family:'Manrope',sans-serif;background:radial-gradient(circle at top left,#0d3247 0,#041018 44%);color:var(--text);overflow-x:hidden}
     /* ── Layout ──────────────────────────────────────────────── */
+    .topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:56px;display:flex;align-items:center;background:rgba(4,16,24,.92);border-bottom:1px solid var(--border);backdrop-filter:blur(18px)}
+    .tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:220px;border-right:1px solid var(--border);height:100%}
+    .tb-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));display:grid;place-items:center;font-weight:900;font-size:.82rem;color:#041018;flex-shrink:0}
+    .tb-nome{font-size:.82rem;font-weight:800}
+    .tb-sub{font-size:.62rem;color:var(--muted)}
+    .tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;margin-left:auto}
     .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:.74rem;font-weight:800;text-decoration:none;transition:all .15s;white-space:nowrap;cursor:pointer;font-family:inherit}
     .btn-ghost{border:1px solid var(--border);color:var(--muted);background:none}
     .btn-ghost:hover{color:var(--text);border-color:var(--border2);background:rgba(255,255,255,.05)}
     .btn-accent{background:linear-gradient(135deg,var(--gold),#e08a20);color:#0b0f14;border:0}
     .btn-primary{background:linear-gradient(135deg,var(--teal),var(--blue));color:#041018;border:0}
     .btn-sm{padding:5px 10px;font-size:.7rem}
+    .app{display:flex;min-height:100vh;padding-top:56px}
+    .sidebar{width:220px;flex-shrink:0;background:rgba(7,28,40,.72);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:56px;bottom:0;overflow-y:auto}
+    .sb-label{font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px}
+    .sb-link{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:.78rem;font-weight:600;color:var(--muted);text-decoration:none;border-left:2px solid transparent;transition:all .12s}
+    .sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+    .sb-link.active{color:var(--teal);background:rgba(0,201,167,.07);border-left-color:var(--teal)}
+    .sb-icon{font-size:.94rem;flex-shrink:0;width:18px;text-align:center}
+    .main{flex:1;margin-left:220px;padding:24px;display:flex;flex-direction:column;gap:16px}
     /* ── Content ──────────────────────────────────────────────── */
     .page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
     .page-title{font-size:1.1rem;font-weight:800}
@@ -85,15 +101,23 @@
     .quick-link{display:flex;align-items:center;justify-content:center;padding:9px 14px;border-radius:8px;border:1px solid var(--border);color:var(--muted);text-decoration:none;font-size:.75rem;font-weight:700;transition:all .15s}
     .quick-link:hover{color:var(--text);border-color:var(--border2);background:rgba(255,255,255,.05)}
     @media(max-width:1200px){.kpi-strip{grid-template-columns:repeat(3,1fr)}.main-grid{grid-template-columns:1fr}}
-    @media(max-width:860px){.kpi-strip{grid-template-columns:1fr 1fr}}
+    @media(max-width:860px){.main{margin-left:0;padding:14px}.sidebar{display:none}.kpi-strip{grid-template-columns:1fr 1fr}}
     ::-webkit-scrollbar{width:4px;height:4px}
     ::-webkit-scrollbar-track{background:transparent}
     ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
   </style>
-{% endblock %}
+  {% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
 
-{% block sst_content %}
-<div class="page-header">
+{% include "partials/sst_topbar.html" %}
+
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+
+  <main class="main">
+
+    <div class="page-header">
       <div>
         <div class="page-title">📈 Relatórios · Saúde Ocupacional</div>
         <div class="page-sub">Análise histórica e indicadores de segurança</div>
@@ -212,9 +236,10 @@
 
       </div>
     </div>
-{% endblock %}
 
-{% block sst_scripts %}
+  </main>
+</div>
+
 <script>
 let dadosGlobais = null;
 
@@ -380,4 +405,5 @@ function exportarCSV() {
 
 carregarRelatorio();
 </script>
-{% endblock %}
+</body>
+</html>

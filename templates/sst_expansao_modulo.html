@@ -1,9 +1,11 @@
-{% extends "base_sst.html" %}
-
-{% block sst_title %}{{ modulo_titulo }} — SolusCRT SST{% endblock %}
-
-{% block sst_head %}
-<style>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ modulo_titulo }} — SolusCRT SST</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
     :root {
       --bg: #06111a;
       --panel: rgba(7,25,38,.84);
@@ -21,11 +23,20 @@
     html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: Manrope, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.55; }
 
     /* ── Topbar ── */
+    .topbar { display: flex; align-items: center; gap: 14px; padding: 0 24px; height: 58px; border-bottom: 1px solid var(--line); background: rgba(6,16,25,.92); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100; }
+    .tb-logo { font-size: .74rem; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: var(--teal); }
     .tb-div { width: 1px; height: 20px; background: var(--line); }
+    .tb-sub { font-size: .78rem; color: var(--muted); font-weight: 600; }
+    .tb-nav { display: flex; gap: 2px; margin-left: 8px; overflow-x: auto; }
+    .tb-nav a { padding: 6px 12px; border-radius: 8px; font-size: .78rem; font-weight: 600; color: var(--muted); text-decoration: none; white-space: nowrap; }
+    .tb-nav a:hover, .tb-nav a.active { background: rgba(0,201,167,.1); color: var(--teal); }
+    .tb-actions { display: flex; gap: 8px; margin-left: auto; }
     .btn-main { padding: 8px 16px; border-radius: 10px; background: linear-gradient(135deg,#00c9a7,#0096ff); color: #04111a; font-weight: 800; font-size: .78rem; text-decoration: none; }
     .btn-ghost { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted); font-size: .78rem; text-decoration: none; font-weight: 600; }
 
     /* ── Layout ── */
+    .app { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 58px); }
+    .sidebar { padding: 20px 0; border-right: 1px solid var(--line); }
     .sidebar a { display: flex; align-items: center; gap: 10px; padding: 9px 20px; font-size: .82rem; font-weight: 600; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; }
     .sidebar a:hover { color: var(--text); }
     .sidebar a.active { color: var(--teal); border-left-color: var(--teal); background: rgba(0,201,167,.06); }
@@ -88,13 +99,21 @@
     .empty-sub { font-size: .82rem; }
 
     /* ── Responsive ── */
-    @media (max-width: 900px) { main { padding: 20px; } }
-    @media (max-width: 640px) { .hero { grid-template-columns: 1fr; } .kpi-strip { grid-template-columns: 1fr 1fr; } .fap-box { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .app { grid-template-columns: 1fr; } .sidebar { display: none; } main { padding: 20px; } }
+    @media (max-width: 640px) { .hero { grid-template-columns: 1fr; } .kpi-strip { grid-template-columns: 1fr 1fr; } .fap-box { grid-template-columns: 1fr; } .tb-nav { display: none; } }
   </style>
-{% endblock %}
+  {% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
 
-{% block sst_content %}
-<main>
+{% include "partials/sst_topbar.html" %}
+
+<div class="app">
+  <aside class="sidebar">
+    {% include "partials/sst_sidebar.html" %}
+  </aside>
+
+  <main>
     <div class="hero">
       <div>
         <div class="hero-eyebrow" style="color:var(--accent-color,var(--teal))">{{ modulo_area }}</div>
@@ -114,9 +133,8 @@
       <div class="loading"><div class="spinner"></div> Carregando dados do módulo...</div>
     </div>
   </main>
-{% endblock %}
+</div>
 
-{% block sst_scripts %}
 <script>
 const MODULO_ID   = "{{ modulo_id }}";
 const API_BASE    = "{{ api_base }}";
@@ -396,4 +414,5 @@ function renderMain(d) {
   await Promise.all([ loadKpis(), loadMain() ]);
 })();
 </script>
-{% endblock %}
+</body>
+</html>

@@ -15,8 +15,22 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{min-height:100%;font-family:'Manrope',sans-serif;background:radial-gradient(circle at top left,#0d3247 0,#041018 44%);color:var(--text);overflow-x:hidden}
 /* ── Layout ──────────────────────────────────────────────── */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:60;height:56px;display:flex;align-items:center;background:rgba(4,16,24,.92);border-bottom:1px solid var(--border);backdrop-filter:blur(18px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:220px;border-right:1px solid var(--border);height:100%}
+.tb-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));display:grid;place-items:center;font-weight:900;font-size:.82rem;color:#041018;flex-shrink:0}
+.tb-nome{font-size:.82rem;font-weight:800}
+.tb-sub{font-size:.62rem;color:var(--muted)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;margin-left:auto}
 .btn-ghost{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:.74rem;font-weight:800;text-decoration:none;border:1px solid var(--border);color:var(--muted);transition:all .15s;background:none;cursor:pointer;font-family:inherit}
 .btn-ghost:hover{color:var(--text);border-color:var(--border2);background:rgba(255,255,255,.05)}
+.app{display:flex;min-height:100vh;padding-top:56px}
+.sidebar{width:220px;flex-shrink:0;background:rgba(7,28,40,.72);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:56px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:.78rem;font-weight:600;color:var(--muted);text-decoration:none;border-left:2px solid transparent;transition:all .12s}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.07);border-left-color:var(--teal)}
+.sb-icon{font-size:.94rem;flex-shrink:0;width:18px;text-align:center}
+.main{flex:1;margin-left:220px;padding:24px;display:flex;flex-direction:column;gap:18px}
 /* ── Content ──────────────────────────────────────────────── */
 .page-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .page-title{font-size:1.1rem;font-weight:800}
@@ -54,7 +68,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .empty{padding:40px;text-align:center;color:var(--muted);font-size:.8rem}
 .error-banner{display:none;padding:12px 14px;border-radius:10px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.22);color:#fecaca;font-size:.78rem}
 @media(max-width:1200px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:860px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:860px){.main{margin-left:0;padding:14px}.sidebar{display:none}.kpi-row{grid-template-columns:repeat(2,1fr)}}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
