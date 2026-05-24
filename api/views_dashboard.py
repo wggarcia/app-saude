@@ -14,6 +14,7 @@ from .push_service import enviar_alerta_governamental, push_disponivel
 from .governanca import registrar_auditoria_institucional
 from .command_ai import build_command_ai_payload
 from .access_control import (
+    api_requer_operacao_ou_gerencia,
     contexto_navegacao_setorial,
     destino_por_perfil,
     perfil_principal,
@@ -397,6 +398,7 @@ def contrato_governo(request):
     })
 
 
+@api_requer_operacao_ou_gerencia
 def api_alertas_governo(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -433,6 +435,7 @@ def api_alertas_governo(request):
 
 
 @csrf_exempt
+@api_requer_operacao_ou_gerencia
 def api_criar_alerta_governo(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -496,6 +499,7 @@ def api_criar_alerta_governo(request):
 
 
 @csrf_exempt
+@api_requer_operacao_ou_gerencia
 def api_toggle_alerta_governo(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -532,6 +536,7 @@ def api_toggle_alerta_governo(request):
 
 
 @csrf_exempt
+@api_requer_operacao_ou_gerencia
 def api_fluxo_alerta_governo(request):
     empresa = _empresa_autenticada(request)
     if not empresa:

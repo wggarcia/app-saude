@@ -7,19 +7,27 @@ from .models import (
     TriagemHospital, InternacaoHospital, EvolucaoClinica,
 )
 from .views_dashboard import _empresa_autenticada
-from .access_control import api_requer_setor, get_setor
+from .access_control import (
+    api_requer_operacao_ou_gerencia,
+    api_requer_setor,
+    get_setor,
+    principal_pode_operacao_setorial,
+)
 
 
 def _e(req):
     empresa = _empresa_autenticada(req)
     if empresa and get_setor(empresa) not in ('hospital',):
         return None  # Block non-hospital empresas
+    if empresa and not principal_pode_operacao_setorial(req):
+        return None
     return empresa
 
 
 # ── Departamentos ──────────────────────────────────────────────────────────────
 @require_http_methods(["GET", "POST"])
 @api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_departamentos_hospital(request):
     e = _e(request)
     if not e:
@@ -45,6 +53,7 @@ def api_departamentos_hospital(request):
 
 @require_http_methods(["PUT", "DELETE"])
 @api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_departamento_hospital_detalhe(request, dep_id):
     e = _e(request)
     if not e:
@@ -67,6 +76,7 @@ def api_departamento_hospital_detalhe(request, dep_id):
 # ── Leitos ─────────────────────────────────────────────────────────────────────
 @require_http_methods(["GET", "POST"])
 @api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_leitos_hospital(request):
     e = _e(request)
     if not e:
@@ -106,6 +116,8 @@ def api_leitos_hospital(request):
 
 
 @require_http_methods(["PUT"])
+@api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_leito_status(request, leito_id):
     e = _e(request)
     if not e:
@@ -123,6 +135,7 @@ def api_leito_status(request, leito_id):
 # ── Pacientes ──────────────────────────────────────────────────────────────────
 @require_http_methods(["GET", "POST"])
 @api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_pacientes_hospital(request):
     e = _e(request)
     if not e:
@@ -158,6 +171,7 @@ def api_pacientes_hospital(request):
 # ── Triagem ────────────────────────────────────────────────────────────────────
 @require_http_methods(["GET", "POST"])
 @api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_triagens_hospital(request):
     e = _e(request)
     if not e:
@@ -198,6 +212,7 @@ def api_triagens_hospital(request):
 # ── Internações ────────────────────────────────────────────────────────────────
 @require_http_methods(["GET", "POST"])
 @api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_internacoes_hospital(request):
     e = _e(request)
     if not e:
@@ -244,6 +259,8 @@ def api_internacoes_hospital(request):
 
 
 @require_http_methods(["PUT"])
+@api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_internacao_status(request, internacao_id):
     e = _e(request)
     if not e:
@@ -264,6 +281,8 @@ def api_internacao_status(request, internacao_id):
 
 
 @require_http_methods(["GET", "POST"])
+@api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_evolucoes_internacao(request, internacao_id):
     e = _e(request)
     if not e:
@@ -290,6 +309,7 @@ def api_evolucoes_internacao(request, internacao_id):
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 @api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_hospital_ops_kpis(request):
     e = _e(request)
     if not e:
@@ -314,6 +334,7 @@ def api_hospital_ops_kpis(request):
 
 # ── PDFs ───────────────────────────────────────────────────────────────────────
 @api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_hospital_pdf_internacoes(request):
     from django.http import HttpResponse
     from .pdf_ops import gerar_pdf_internacoes_hospital
@@ -330,6 +351,7 @@ def api_hospital_pdf_internacoes(request):
 
 
 @api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_hospital_pdf_ficha_internacao(request, internacao_id):
     from django.http import HttpResponse
     from .pdf_ops import gerar_pdf_ficha_internacao

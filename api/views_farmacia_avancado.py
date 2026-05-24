@@ -4,6 +4,7 @@ from collections import defaultdict
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
+from .access_control import get_setor, principal_pode_operacao_setorial
 from .models import (
     PacienteFarmacia, ReceitaMedica, InventarioFarmacia, ItemInventario,
     DescarteItemFarmacia, ItemFarmacia, LoteMedicamento, MovimentoEstoque,
@@ -13,7 +14,14 @@ from .views_dashboard import _empresa_autenticada
 
 
 def _e(req):
-    return _empresa_autenticada(req)
+    empresa = _empresa_autenticada(req)
+    if not empresa:
+        return None
+    if get_setor(empresa) != "farmacia":
+        return None
+    if not principal_pode_operacao_setorial(req):
+        return None
+    return empresa
 
 
 # ── Pacientes ──────────────────────────────────────────────────────────────────

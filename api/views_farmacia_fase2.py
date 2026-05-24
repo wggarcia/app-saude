@@ -13,7 +13,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor
+from .access_control import get_setor, principal_pode_operacao_setorial
 from .models import (
     MedicamentoFarmacia, LoteMedicamento,
     TransferenciaFarmaciaMed, Rede, UnidadeRede,
@@ -31,6 +31,8 @@ def _empresa_autenticada(request):
             {"erro": f"Módulo não disponível para este plano. Seu módulo: {setor}"},
             status=403,
         )
+    if not principal_pode_operacao_setorial(request):
+        return JsonResponse({"erro": "Acesso restrito à operação/gerência da farmácia."}, status=403)
     return empresa
 
 

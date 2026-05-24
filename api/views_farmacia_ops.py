@@ -6,18 +6,27 @@ from .models import (
     PedidoCompraFarmacia, ItemPedidoCompra, DispensacaoMedicamento,
 )
 from .views_dashboard import _empresa_autenticada
-from .access_control import get_setor
+from .access_control import (
+    api_requer_operacao_ou_gerencia,
+    api_requer_setor,
+    get_setor,
+    principal_pode_operacao_setorial,
+)
 
 
 def _e(req):
     empresa = _empresa_autenticada(req)
     if empresa and get_setor(empresa) not in ('farmacia',):
         return None  # Block non-farmacia empresas
+    if empresa and not principal_pode_operacao_setorial(req):
+        return None
     return empresa
 
 
 # ── Fornecedores ───────────────────────────────────────────────────────────────
 @require_http_methods(["GET", "POST"])
+@api_requer_setor("farmacia")
+@api_requer_operacao_ou_gerencia
 def api_fornecedores_farmacia(request):
     e = _e(request)
     if not e:
@@ -43,6 +52,8 @@ def api_fornecedores_farmacia(request):
 
 
 @require_http_methods(["PUT", "DELETE"])
+@api_requer_setor("farmacia")
+@api_requer_operacao_ou_gerencia
 def api_fornecedor_farmacia_detalhe(request, fornecedor_id):
     e = _e(request)
     if not e:
@@ -64,6 +75,8 @@ def api_fornecedor_farmacia_detalhe(request, fornecedor_id):
 
 # ── Itens / Estoque ────────────────────────────────────────────────────────────
 @require_http_methods(["GET", "POST"])
+@api_requer_setor("farmacia")
+@api_requer_operacao_ou_gerencia
 def api_itens_farmacia(request):
     e = _e(request)
     if not e:
@@ -101,6 +114,8 @@ def api_itens_farmacia(request):
 
 
 @require_http_methods(["PUT", "DELETE"])
+@api_requer_setor("farmacia")
+@api_requer_operacao_ou_gerencia
 def api_item_farmacia_detalhe(request, item_id):
     e = _e(request)
     if not e:
@@ -122,6 +137,8 @@ def api_item_farmacia_detalhe(request, item_id):
 
 # ── Movimentos de Estoque ──────────────────────────────────────────────────────
 @require_http_methods(["GET", "POST"])
+@api_requer_setor("farmacia")
+@api_requer_operacao_ou_gerencia
 def api_movimentos_estoque(request):
     e = _e(request)
     if not e:
@@ -168,6 +185,8 @@ def api_movimentos_estoque(request):
 
 # ── Dispensações ───────────────────────────────────────────────────────────────
 @require_http_methods(["GET", "POST"])
+@api_requer_setor("farmacia")
+@api_requer_operacao_ou_gerencia
 def api_dispensacoes_farmacia(request):
     e = _e(request)
     if not e:
@@ -210,6 +229,8 @@ def api_dispensacoes_farmacia(request):
 
 # ── Pedidos de Compra ──────────────────────────────────────────────────────────
 @require_http_methods(["GET", "POST"])
+@api_requer_setor("farmacia")
+@api_requer_operacao_ou_gerencia
 def api_pedidos_compra_farmacia(request):
     e = _e(request)
     if not e:
@@ -253,6 +274,8 @@ def api_pedidos_compra_farmacia(request):
 
 
 @require_http_methods(["PUT"])
+@api_requer_setor("farmacia")
+@api_requer_operacao_ou_gerencia
 def api_pedido_compra_status(request, pedido_id):
     e = _e(request)
     if not e:
@@ -283,6 +306,8 @@ def api_pedido_compra_status(request, pedido_id):
 
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
+@api_requer_setor("farmacia")
+@api_requer_operacao_ou_gerencia
 def api_farmacia_ops_kpis(request):
     e = _e(request)
     if not e:
@@ -302,6 +327,8 @@ def api_farmacia_ops_kpis(request):
 
 
 # ── PDFs ───────────────────────────────────────────────────────────────────────
+@api_requer_setor("farmacia")
+@api_requer_operacao_ou_gerencia
 def api_farmacia_pdf_estoque(request):
     from django.http import HttpResponse
     from .pdf_ops import gerar_pdf_estoque_farmacia
@@ -315,6 +342,8 @@ def api_farmacia_pdf_estoque(request):
     return resp
 
 
+@api_requer_setor("farmacia")
+@api_requer_operacao_ou_gerencia
 def api_farmacia_pdf_dispensacoes(request):
     from django.http import HttpResponse
     from .pdf_ops import gerar_pdf_dispensacoes_farmacia

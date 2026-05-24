@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .access_control import api_requer_plataforma_ti, get_setor
+from .access_control import api_requer_plataforma_ti, get_setor, principal_pode_operacao_setorial
 from .models import (
     UnidadeSaude, EquipeSaude,
     NotificacaoCompulsoria, SurtoEpidemiologico,
@@ -24,6 +24,8 @@ from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 def _empresa_autenticada(request):
     empresa = _empresa_autenticada_base(request)
     if not empresa or get_setor(empresa) != "governo":
+        return None
+    if not principal_pode_operacao_setorial(request):
         return None
     return empresa
 

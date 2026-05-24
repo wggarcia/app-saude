@@ -32,7 +32,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 
-from .access_control import get_setor
+from .access_control import get_setor, principal_pode_operacao_setorial
 from .models import (
     AfastamentoSST,
     ASOOcupacional,
@@ -216,6 +216,8 @@ def _empresa_sst_autenticada(request):
     if not empresa:
         return None
     if get_setor(empresa) != "empresa":
+        return None
+    if not principal_pode_operacao_setorial(request):
         return None
     return empresa
 

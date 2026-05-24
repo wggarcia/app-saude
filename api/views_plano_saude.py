@@ -13,7 +13,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from .access_control import get_setor
+from .access_control import get_setor, principal_pode_operacao_setorial
 from .models import (
     BeneficiarioPlano, Empresa, GuiaAutorizacao,
     PlanoSaude, PrestadorPlanoSaude, Reembolso, Sinistro, RegistroSintoma,
@@ -44,6 +44,8 @@ def _ps_auth(request):
         return None, JsonResponse({"erro": "Não autenticado"}, status=401)
     if get_setor(empresa) != "plano_saude":
         return None, JsonResponse({"erro": "Módulo Plano de Saúde não disponível para este plano."}, status=403)
+    if not principal_pode_operacao_setorial(request):
+        return None, JsonResponse({"erro": "Acesso restrito à operação/gerência da operadora."}, status=403)
     return empresa, None
 
 

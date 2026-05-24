@@ -12,7 +12,12 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from .access_control import get_setor
+from .access_control import (
+    api_requer_operacao_ou_gerencia,
+    api_requer_setor,
+    get_setor,
+    principal_pode_operacao_setorial,
+)
 from .models import (
     LeitoHospitalar,
     TriagemManchester,
@@ -26,12 +31,16 @@ def _get_empresa(request):
     empresa = getattr(request, "empresa", None)
     if empresa and get_setor(empresa) != "hospital":
         return None
+    if empresa and not principal_pode_operacao_setorial(request):
+        return None
     return empresa
 
 
 # ── Dashboard / KPIs ─────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_hospital_dashboard(request):
     """GET — KPIs do módulo hospitalar para o dashboard Manchester."""
     empresa = _get_empresa(request)
@@ -112,6 +121,8 @@ def api_hospital_dashboard(request):
 # ── Leitos ────────────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_hospital_leitos(request):
     """GET lista leitos | POST cria leito | PUT atualiza leito."""
     empresa = _get_empresa(request)
@@ -203,6 +214,8 @@ def api_hospital_leitos(request):
 # ── Triagem Manchester ────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_hospital_triagem(request):
     """GET lista triagens (filtro: status, nivel) | POST registra nova triagem."""
     empresa = _get_empresa(request)
@@ -295,6 +308,8 @@ def api_hospital_triagem(request):
 # ── Pacientes Internados ──────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_hospital_pacientes(request):
     """GET lista pacientes internados (paginado) | POST interna novo paciente."""
     empresa = _get_empresa(request)
@@ -387,6 +402,8 @@ def api_hospital_pacientes(request):
 # ── Prescrições Hospitalares ──────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_hospital_prescricao(request):
     """GET lista prescrições do paciente | POST cria prescrição."""
     empresa = _get_empresa(request)

@@ -1,7 +1,10 @@
 from django.http import JsonResponse
 from .epidemiologia import build_panorama_payload
+from .access_control import api_requer_operacao_ou_gerencia, api_requer_setor
 
 
+@api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
 def api_hospital_painel(request):
     if not hasattr(request, "empresa"):
         return JsonResponse({"erro": "não autenticado"}, status=401)

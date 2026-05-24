@@ -382,6 +382,16 @@ def principal_e_operacao(request):
     return True
 
 
+def principal_pode_operacao_setorial(request):
+    """
+    Acesso operacional setorial:
+      - Operação (usuário de linha) pode operar o setor
+      - Gerência pode operar e supervisionar o setor
+    RH e TI ficam fora da operação por padrão (least privilege).
+    """
+    return principal_e_operacao(request) or principal_e_gerencia(request)
+
+
 def _destino_ti_por_setor(setor):
     if setor == "governo":
         return "/governo/plataforma/"
@@ -504,6 +514,20 @@ def api_requer_gerencia(view_func):
         if not principal_e_gerencia(request):
             return JsonResponse({
                 "erro": "Acesso restrito à gerência.",
+            }, status=403)
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def api_requer_operacao_ou_gerencia(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        empresa = getattr(request, "empresa", None)
+        if not empresa:
+            return JsonResponse({"erro": "Não autenticado"}, status=401)
+        if not principal_pode_operacao_setorial(request):
+            return JsonResponse({
+                "erro": "Acesso restrito à operação/gerência.",
             }, status=403)
         return view_func(request, *args, **kwargs)
     return wrapper

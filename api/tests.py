@@ -3666,6 +3666,42 @@ class PlataformaTiAccessTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         return client
 
+    def _empresa_setorial_com_usuarios(self, pacote_codigo, prefixo):
+        empresa = Empresa.objects.create(
+            nome=f"Empresa {prefixo}",
+            email=f"{prefixo}@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+            pacote_codigo=pacote_codigo,
+            max_dispositivos=10,
+            max_usuarios=10,
+        )
+        EmpresaUsuario.objects.create(
+            empresa=empresa,
+            nome=f"TI {prefixo}",
+            email=f"ti-{prefixo}@teste.com",
+            senha=make_password("senha123"),
+            cargo="TI",
+            ativo=True,
+        )
+        EmpresaUsuario.objects.create(
+            empresa=empresa,
+            nome=f"RH {prefixo}",
+            email=f"rh-{prefixo}@teste.com",
+            senha=make_password("senha123"),
+            cargo="RH",
+            ativo=True,
+        )
+        EmpresaUsuario.objects.create(
+            empresa=empresa,
+            nome=f"Gerência {prefixo}",
+            email=f"ger-{prefixo}@teste.com",
+            senha=make_password("senha123"),
+            cargo="Gerente Operacional",
+            ativo=True,
+        )
+        return empresa
+
     def test_usuario_sem_perfil_ti_nao_acessa_plataforma(self):
         client = self._login_client("rh@teste.com", device_id="dev-rh")
         resp_page = client.get("/gestao/plataforma/")
@@ -3788,6 +3824,39 @@ class PlataformaTiAccessTests(TestCase):
         client = self._login_client("farmacia-ti-user@teste.com", device_id="dev-farm-ti")
         resp_page = client.get("/gestao/plataforma/")
         self.assertEqual(resp_page.status_code, 200)
+
+    def test_api_farmacia_bloqueia_ti_e_rh_e_libera_gerencia(self):
+        self._empresa_setorial_com_usuarios("farmacia_rede_regional", "farm-api")
+
+        client_ti = self._login_client("ti-farm-api@teste.com", device_id="dev-farm-api-ti")
+        client_rh = self._login_client("rh-farm-api@teste.com", device_id="dev-farm-api-rh")
+        client_ger = self._login_client("ger-farm-api@teste.com", device_id="dev-farm-api-ger")
+
+        self.assertEqual(client_ti.get("/api/farmacia/dashboard").status_code, 403)
+        self.assertEqual(client_rh.get("/api/farmacia/dashboard").status_code, 403)
+        self.assertEqual(client_ger.get("/api/farmacia/dashboard").status_code, 200)
+
+    def test_api_hospital_bloqueia_ti_e_rh_e_libera_gerencia(self):
+        self._empresa_setorial_com_usuarios("hospital_medio", "hosp-api")
+
+        client_ti = self._login_client("ti-hosp-api@teste.com", device_id="dev-hosp-api-ti")
+        client_rh = self._login_client("rh-hosp-api@teste.com", device_id="dev-hosp-api-rh")
+        client_ger = self._login_client("ger-hosp-api@teste.com", device_id="dev-hosp-api-ger")
+
+        self.assertEqual(client_ti.get("/api/hospital/dashboard").status_code, 403)
+        self.assertEqual(client_rh.get("/api/hospital/dashboard").status_code, 403)
+        self.assertEqual(client_ger.get("/api/hospital/dashboard").status_code, 200)
+
+    def test_api_plano_saude_bloqueia_ti_e_rh_e_libera_gerencia(self):
+        self._empresa_setorial_com_usuarios("plano_saude_operadora", "plano-api")
+
+        client_ti = self._login_client("ti-plano-api@teste.com", device_id="dev-plano-api-ti")
+        client_rh = self._login_client("rh-plano-api@teste.com", device_id="dev-plano-api-rh")
+        client_ger = self._login_client("ger-plano-api@teste.com", device_id="dev-plano-api-ger")
+
+        self.assertEqual(client_ti.get("/api/plano-saude/dashboard").status_code, 403)
+        self.assertEqual(client_rh.get("/api/plano-saude/dashboard").status_code, 403)
+        self.assertEqual(client_ger.get("/api/plano-saude/dashboard").status_code, 200)
 
     def test_usuario_nao_ti_de_farmacia_nao_acessa_plataforma_ti(self):
         farmacia = Empresa.objects.create(
