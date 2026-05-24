@@ -247,21 +247,18 @@ def dashboard_governo(request):
 
 @ensure_csrf_cookie
 @requer_setor('farmacia')
-@requer_perfis('gerencia')
 def farmacia_gestao_page(request):
     return render(request, "farmacia_gestao.html", contexto_acesso_por_perfil(request))
 
 
 @ensure_csrf_cookie
 @requer_setor('hospital')
-@requer_perfis('gerencia')
 def hospital_gestao_page(request):
     return render(request, "hospital_gestao.html", contexto_acesso_por_perfil(request))
 
 
 @ensure_csrf_cookie
 @requer_setor('governo')
-@requer_perfis('gerencia')
 def governo_gestao_page(request):
     return render(request, "governo_gestao.html", contexto_acesso_por_perfil(request))
 
@@ -275,7 +272,6 @@ def governo_plataforma_page(request):
 
 @ensure_csrf_cookie
 @requer_setor('farmacia', 'hospital')
-@requer_perfis('gerencia')
 def rede_gestao_page(request):
     empresa = getattr(request, "empresa", None)
     setor = get_setor(empresa) if empresa else "farmacia"
@@ -284,7 +280,6 @@ def rede_gestao_page(request):
 
 @ensure_csrf_cookie
 @requer_setor('plano_saude')
-@requer_perfis('gerencia')
 def plano_saude_gestao_page(request):
     return render(request, "plano_saude_gestao.html", contexto_acesso_por_perfil(request))
 
