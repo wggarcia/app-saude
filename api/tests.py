@@ -3655,6 +3655,24 @@ class PlataformaTiAccessTests(TestCase):
             cargo="Gerente Operacional",
             ativo=True,
         )
+        self._grant_ti_access(self.empresa, self.usuario_ti, concedido_por="setup-ti")
+
+    def _grant_ti_access(self, empresa, usuario, concedido_por="teste"):
+        from .models import RBACAtribuicao, RBACPermissao
+
+        permissao, _ = RBACPermissao.objects.get_or_create(
+            codigo="plataforma_ti",
+            defaults={
+                "descricao": "Acesso exclusivo à Plataforma TI",
+                "modulo": "ti",
+            },
+        )
+        RBACAtribuicao.objects.update_or_create(
+            empresa=empresa,
+            usuario=usuario,
+            permissao=permissao,
+            defaults={"ativo": True, "concedido_por": concedido_por},
+        )
 
     def _login_client(self, email, senha="senha123", device_id="dev-ti"):
         client = Client()
@@ -3676,7 +3694,7 @@ class PlataformaTiAccessTests(TestCase):
             max_dispositivos=10,
             max_usuarios=10,
         )
-        EmpresaUsuario.objects.create(
+        usuario_ti = EmpresaUsuario.objects.create(
             empresa=empresa,
             nome=f"TI {prefixo}",
             email=f"ti-{prefixo}@teste.com",
@@ -3684,6 +3702,7 @@ class PlataformaTiAccessTests(TestCase):
             cargo="TI",
             ativo=True,
         )
+        self._grant_ti_access(empresa, usuario_ti, concedido_por=f"setup-{prefixo}")
         EmpresaUsuario.objects.create(
             empresa=empresa,
             nome=f"RH {prefixo}",
@@ -3812,7 +3831,7 @@ class PlataformaTiAccessTests(TestCase):
             ativo=True,
             pacote_codigo="farmacia_rede_regional",
         )
-        EmpresaUsuario.objects.create(
+        usuario_ti = EmpresaUsuario.objects.create(
             empresa=farmacia,
             nome="Tecnico Farmacia",
             email="farmacia-ti-user@teste.com",
@@ -3820,6 +3839,7 @@ class PlataformaTiAccessTests(TestCase):
             cargo="TI",
             ativo=True,
         )
+        self._grant_ti_access(farmacia, usuario_ti, concedido_por="teste-farmacia")
 
         client = self._login_client("farmacia-ti-user@teste.com", device_id="dev-farm-ti")
         resp_page = client.get("/gestao/plataforma/")
@@ -3915,6 +3935,16 @@ class PlataformaTiAccessTests(TestCase):
         )
         self.assertEqual(resp.status_code, 403)
         self.assertIn("Apenas RH", resp.json().get("erro", ""))
+
+    def test_usuario_operacao_nao_acessa_dashboard_executivo_api(self):
+        client = self._login_client("operacao@teste.com", device_id="dev-op-exec")
+        resp = client.get("/api/executive/dashboard/")
+        self.assertEqual(resp.status_code, 403)
+
+    def test_usuario_operacao_nao_executa_seed_demo_enterprise(self):
+        client = self._login_client("operacao@teste.com", device_id="dev-op-seed")
+        resp = client.post("/api/enterprise/seed-operational-demo")
+        self.assertEqual(resp.status_code, 403)
 
 
 # ════════════════════════════════════════════════════════════════════════════════

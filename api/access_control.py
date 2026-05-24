@@ -108,36 +108,6 @@ def _garantir_permissao_ti():
         return None
 
 
-def _usuario_tem_cargo_ti(usuario):
-    texto = _texto_normalizado(getattr(usuario, "cargo", ""))
-    if not texto:
-        return False
-    palavras = set(texto.replace("/", " ").replace("-", " ").split())
-    marcadores = {
-        "ti",
-        "tecnologia",
-        "suporte",
-        "infra",
-        "infraestrutura",
-        "devops",
-        "sistemas",
-        "seguranca",
-        "security",
-        "helpdesk",
-    }
-    if palavras & marcadores:
-        return True
-    return any(
-        trecho in texto
-        for trecho in (
-            "seguranca da informacao",
-            "seguranca informacao",
-            "tecnologia da informacao",
-            "tecnologia informacao",
-        )
-    )
-
-
 def _cargo_tem_marcador_rh(cargo):
     texto = _texto_normalizado(cargo)
     if not texto:
@@ -175,30 +145,6 @@ def _principal_tem_permissao(empresa, principal, permissao):
         return False
 
 
-def _atribuir_permissao_ti_por_cargo(empresa, principal):
-    if not empresa or not principal or principal.__class__.__name__ != "EmpresaUsuario":
-        return False
-    if not _usuario_tem_cargo_ti(principal):
-        return False
-    permissao = _garantir_permissao_ti()
-    if not permissao:
-        return False
-    try:
-        from .models import RBACAtribuicao
-        atribuicao, criada = RBACAtribuicao.objects.get_or_create(
-            empresa=empresa,
-            usuario=principal,
-            permissao=permissao,
-            defaults={"concedido_por": "auto:cargo_ti", "ativo": True},
-        )
-        if not criada and not atribuicao.ativo:
-            atribuicao.ativo = True
-            atribuicao.save(update_fields=["ativo", "atualizado_em"])
-        return True
-    except Exception:
-        return False
-
-
 def _empresa_tem_responsavel_ti(empresa):
     if not empresa:
         return False
@@ -224,11 +170,7 @@ def pode_acessar_plataforma_ti(request):
 
 
 def principal_tem_acesso_ti(empresa, principal):
-    if _principal_tem_permissao(empresa, principal, "plataforma_ti"):
-        return True
-    if _atribuir_permissao_ti_por_cargo(empresa, principal):
-        return True
-    return False
+    return _principal_tem_permissao(empresa, principal, "plataforma_ti")
 
 
 def acesso_plataforma_ti_em_bootstrap(request):

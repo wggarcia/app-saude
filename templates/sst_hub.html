@@ -182,7 +182,9 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
           <a class="chip" href="/sst/esocial/">🔗 Fila eSocial</a>
           <a class="chip" href="/sst/documentos/">📁 Ver documentos</a>
           <a class="chip" href="/sst/comunicacao/">💬 Comunicação SST</a>
+          {% if mostrar_link_ti %}
           <a class="chip" href="/gestao/plataforma/">🖥️ Plataforma TI</a>
+          {% endif %}
         </div>
       </article>
 
@@ -335,12 +337,14 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
         <div class="module-copy">Consolidação da fila de eventos, histórico de transmissões e checagem de aderência.</div>
         <a class="module-link" href="/sst/esocial/">Abrir módulo</a>
       </article>
+      {% if mostrar_link_ti %}
       <article class="module-card">
         <div class="module-top"><div class="module-icon">🖥️</div><div class="badge b-muted">Restrito</div></div>
         <div class="module-title">Plataforma TI</div>
         <div class="module-copy">Integrações, API keys, webhooks, segurança e trilha técnica isolada para o time de TI.</div>
         <a class="module-link" href="/gestao/plataforma/">Abrir módulo</a>
       </article>
+      {% endif %}
 
       <!-- ── Módulos SST Expansão ────────────────────────────── -->
       <article class="module-card" style="border-color:rgba(90,240,211,.22)">

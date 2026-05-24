@@ -1167,6 +1167,7 @@ def api_enterprise_premium_suite(request):
 
 
 @csrf_exempt
+@api_requer_gerencia
 def api_enterprise_seed_operational_demo(request):
     empresa = getattr(request, "empresa", None)
     if not empresa:
@@ -1323,6 +1324,7 @@ def reset_enterprise_demo(empresa):
 
 
 @csrf_exempt
+@api_requer_gerencia
 def api_enterprise_reset_demo(request):
     """
     POST /api/enterprise/reset-demo

@@ -167,6 +167,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'api.context_processors.public_settings',
+                'api.context_processors.profile_navigation',
             ],
         },
     },

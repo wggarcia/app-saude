@@ -4,9 +4,11 @@ Endpoint: GET /api/executive/dashboard/
 """
 from datetime import date, timedelta
 from django.http import JsonResponse
-from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
+from .access_control import api_requer_gerencia
+from .services.auth_session import empresa_autenticada_from_request
 
 
+@api_requer_gerencia
 def api_executive_dashboard(request):
     empresa = empresa_autenticada_from_request(request)
     if not empresa:
