@@ -15,9 +15,13 @@ from .governanca import registrar_auditoria_institucional
 from .command_ai import build_command_ai_payload
 from .access_control import (
     contexto_navegacao_setorial,
+    destino_por_perfil,
+    perfil_principal,
     principal_pode_configurar_ti,
     requer_gerencia_page,
+    requer_operacao_page,
     requer_plataforma_ti_page,
+    requer_rh_page,
     requer_setor,
 )
 from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
@@ -173,6 +177,13 @@ def _render_dashboard(request, variant):
     if empresa.tipo_conta != Empresa.TIPO_GOVERNO and variant == "governo":
         return redirect(_dashboard_url_por_setor(_setor_conta(empresa)))
 
+    principal = getattr(request, "principal", None)
+    perfil = perfil_principal(request)
+    if principal and principal.__class__.__name__ == "EmpresaUsuario" and perfil in {"ti", "rh", "gerencia"}:
+        destino = destino_por_perfil(request, empresa)
+        if destino and destino != request.path:
+            return redirect(destino)
+
     # acesso_governo gate removed — any tipo_conta == governo account has full access
 
     setor_conta = _setor_conta(empresa)
@@ -240,18 +251,21 @@ def dashboard_governo(request):
 
 @ensure_csrf_cookie
 @requer_setor('farmacia')
+@requer_operacao_page
 def farmacia_gestao_page(request):
     return render(request, "farmacia_gestao.html", contexto_navegacao_setorial(request, "farmacia"))
 
 
 @ensure_csrf_cookie
 @requer_setor('hospital')
+@requer_operacao_page
 def hospital_gestao_page(request):
     return render(request, "hospital_gestao.html", contexto_navegacao_setorial(request, "hospital"))
 
 
 @ensure_csrf_cookie
 @requer_setor('governo')
+@requer_operacao_page
 def governo_gestao_page(request):
     return render(request, "governo_gestao.html", contexto_navegacao_setorial(request, "governo"))
 
@@ -265,6 +279,7 @@ def governo_plataforma_page(request):
 
 @ensure_csrf_cookie
 @requer_setor('farmacia', 'hospital')
+@requer_operacao_page
 def rede_gestao_page(request):
     from .access_control import get_setor
     empresa = getattr(request, "empresa", None)
@@ -274,6 +289,7 @@ def rede_gestao_page(request):
 
 @ensure_csrf_cookie
 @requer_setor('plano_saude')
+@requer_operacao_page
 def plano_saude_gestao_page(request):
     return render(request, "plano_saude_gestao.html", contexto_navegacao_setorial(request, "plano_saude"))
 
@@ -295,7 +311,14 @@ def gerencia_executiva_page(request):
 
 
 @ensure_csrf_cookie
+@requer_rh_page
+def portal_rh_page(request):
+    return redirect("/usuarios/")
+
+
+@ensure_csrf_cookie
 @requer_setor('plano_saude')
+@requer_operacao_page
 def dashboard_plano_saude(request):
     return render(request, "dashboard_plano_saude.html")
 
@@ -755,9 +778,11 @@ def usuarios_empresa(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return redirect("/")
+    if perfil_principal(request) == "ti":
+        return redirect(destino_por_perfil(request, empresa))
     pode_configurar_ti = _principal_pode_configurar_ti(request, empresa)
     if not pode_configurar_ti:
-        return redirect(_dashboard_return_url(empresa))
+        return redirect(destino_por_perfil(request, empresa))
     return render(request, "usuarios_empresa.html", {
         "empresa_nome": empresa.nome,
         "tipo_conta": empresa.tipo_conta,

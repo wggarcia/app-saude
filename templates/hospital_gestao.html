@@ -282,8 +282,8 @@ tr:hover td{background:rgba(255,255,255,.018)}
   </a>
   {% endif %}
   {% if mostrar_link_rh %}
-  <a class="nav-link" href="/usuarios/" style="text-decoration:none">
-    <div class="nav-link-inner"><span>👤</span><span>Configurar TI (RH)</span></div>
+  <a class="nav-link" href="{{ rh_url|default:'/rh/' }}" style="text-decoration:none">
+    <div class="nav-link-inner"><span>👤</span><span>Portal RH</span></div>
   </a>
   {% endif %}
   {% endif %}

@@ -133,12 +133,19 @@ def _login_conta(request, portal_tipo=None):
         principal_nome,
     )
     try:
-        from .access_control import principal_tem_acesso_ti
+        from .access_control import destino_por_perfil
 
-        if principal_tem_acesso_ti(empresa, principal):
-            payload["destination"] = _destino_ti_empresa(empresa)
+        class _LoginRequestProxy:
+            pass
+
+        if principal_kind == "usuario_empresa":
+            req_proxy = _LoginRequestProxy()
+            req_proxy.empresa = empresa
+            req_proxy.principal = principal
+            payload["destination"] = destino_por_perfil(req_proxy, empresa)
     except Exception:
-        pass
+        if principal_kind == "usuario_empresa" and getattr(principal, "cargo", "").strip().lower() == "ti":
+            payload["destination"] = _destino_ti_empresa(empresa)
 
     response = JsonResponse(payload)
     return _aplicar_cookies_autenticacao(response, empresa, token)

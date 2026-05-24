@@ -102,7 +102,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener"><span>🖥️</span> Ambiente IT</a>
   {% endif %}
   {% if mostrar_link_rh %}
-  <a class="nav-link" href="/usuarios/"><span>👤</span> Configurar TI (RH)</a>
+  <a class="nav-link" href="{{ rh_url|default:'/rh/' }}"><span>👤</span> Portal RH</a>
   {% endif %}
   {% endif %}
   {% if mostrar_aba_gerencia %}

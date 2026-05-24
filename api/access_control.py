@@ -138,6 +138,26 @@ def _usuario_tem_cargo_ti(usuario):
     )
 
 
+def _cargo_tem_marcador_rh(cargo):
+    texto = _texto_normalizado(cargo)
+    if not texto:
+        return False
+    palavras = set(texto.replace("/", " ").replace("-", " ").split())
+    if "rh" in palavras:
+        return True
+    return any(
+        trecho in texto
+        for trecho in (
+            "recursos humanos",
+            "departamento pessoal",
+            "gestao de pessoas",
+            "gente e gestao",
+            "people",
+            "talentos",
+        )
+    )
+
+
 def _principal_tem_permissao(empresa, principal, permissao):
     if not empresa or not principal:
         return False
@@ -221,7 +241,7 @@ def requer_plataforma_ti_page(view_func):
         empresa = getattr(request, "empresa", None)
         if not empresa:
             return redirect("/login-empresa/")
-        if not pode_acessar_plataforma_ti(request):
+        if not (pode_acessar_plataforma_ti(request) or _gerencia_usuario_empresa(request)):
             setor = get_setor(empresa)
             return render(
                 request,
@@ -248,9 +268,9 @@ def api_requer_plataforma_ti(view_func):
         empresa = getattr(request, "empresa", None)
         if not empresa:
             return JsonResponse({"erro": "Não autenticado"}, status=401)
-        if not pode_acessar_plataforma_ti(request):
+        if not (pode_acessar_plataforma_ti(request) or _gerencia_usuario_empresa(request)):
             return JsonResponse({
-                "erro": "Acesso restrito à Plataforma TI. Entre com um usuário de TI (cargo TI/Suporte/Infra/DevOps) para continuar.",
+                "erro": "Acesso restrito à Plataforma TI. Entre com um usuário de TI ou gerência autorizada.",
             }, status=403)
         return view_func(request, *args, **kwargs)
     return wrapper
@@ -268,23 +288,7 @@ def _principal_gestor_ti(request):
     if getattr(principal, "is_admin", False):
         return True
 
-    cargo = _texto_normalizado(getattr(principal, "cargo", ""))
-    if not cargo:
-        return False
-    palavras = set(cargo.replace("/", " ").replace("-", " ").split())
-    if "rh" in palavras:
-        return True
-    return any(
-        trecho in cargo
-        for trecho in (
-            "recursos humanos",
-            "departamento pessoal",
-            "gestao de pessoas",
-            "gente e gestao",
-            "people",
-            "talentos",
-        )
-    )
+    return _cargo_tem_marcador_rh(getattr(principal, "cargo", ""))
 
 
 def principal_e_gerencia(request):
@@ -340,11 +344,90 @@ def principal_e_gerencia(request):
     )
 
 
+def principal_e_rh(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return False
+
+    principal = getattr(request, "principal", None) or empresa
+    if principal == empresa:
+        return False
+    if getattr(principal, "is_admin", False):
+        return False
+    if principal.__class__.__name__ != "EmpresaUsuario":
+        return False
+    if principal_e_gerencia(request):
+        return False
+    return _cargo_tem_marcador_rh(getattr(principal, "cargo", ""))
+
+
+def principal_e_ti(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return False
+    principal = getattr(request, "principal", None) or empresa
+    return principal_tem_acesso_ti(empresa, principal)
+
+
+def principal_e_operacao(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return False
+    if principal_e_gerencia(request):
+        return False
+    if principal_e_rh(request):
+        return False
+    if principal_e_ti(request):
+        return False
+    return True
+
+
+def _destino_ti_por_setor(setor):
+    if setor == "governo":
+        return "/governo/plataforma/"
+    return "/ti/"
+
+
+def _gerencia_usuario_empresa(request):
+    if not principal_e_gerencia(request):
+        return False
+    principal = getattr(request, "principal", None)
+    return bool(principal and principal.__class__.__name__ == "EmpresaUsuario")
+
+
+def perfil_principal(request):
+    if principal_e_gerencia(request):
+        return "gerencia"
+    if principal_e_rh(request):
+        return "rh"
+    if principal_e_ti(request):
+        return "ti"
+    return "operacao"
+
+
+def destino_por_perfil(request, empresa=None):
+    empresa_resolvida = empresa or getattr(request, "empresa", None)
+    if not empresa_resolvida:
+        return "/login-empresa/"
+    setor = get_setor(empresa_resolvida)
+    perfil = perfil_principal(request)
+    if perfil == "gerencia":
+        principal = getattr(request, "principal", None) or empresa_resolvida
+        if principal == empresa_resolvida:
+            return _destino_correto(setor)
+        return "/gerencia/"
+    if perfil == "rh":
+        return "/rh/"
+    if perfil == "ti":
+        return _destino_ti_por_setor(setor)
+    return _destino_correto(setor)
+
+
 def principal_pode_configurar_ti(request):
     """
     RH/Gerência pode cadastrar e gerenciar credenciais TI.
     """
-    return _principal_gestor_ti(request) or principal_e_gerencia(request)
+    return _principal_gestor_ti(request) or principal_e_gerencia(request) or principal_e_ti(request)
 
 
 def contexto_navegacao_setorial(request, setor=None):
@@ -354,20 +437,23 @@ def contexto_navegacao_setorial(request, setor=None):
     empresa = getattr(request, "empresa", None)
     setor_resolvido = setor or (get_setor(empresa) if empresa else "empresa")
 
-    acesso_ti = pode_acessar_plataforma_ti(request)
+    acesso_ti = principal_e_ti(request)
     acesso_gerencia = principal_e_gerencia(request)
-    acesso_rh = principal_pode_configurar_ti(request)
+    acesso_rh = principal_e_rh(request) or acesso_gerencia
 
     return {
         "setor_atual": setor_resolvido,
+        "perfil_principal": perfil_principal(request),
         "acesso_ti": acesso_ti,
         "acesso_gerencia": acesso_gerencia,
         "acesso_rh": acesso_rh,
-        "mostrar_link_ti": acesso_ti or acesso_gerencia or acesso_rh,
+        "acesso_operacao": principal_e_operacao(request),
+        "mostrar_link_ti": acesso_ti or acesso_gerencia,
         "mostrar_link_rh": acesso_rh,
         "mostrar_aba_gerencia": acesso_gerencia,
-        "portal_ti_url": "/governo/plataforma/" if setor_resolvido == "governo" else "/ti/",
+        "portal_ti_url": _destino_ti_por_setor(setor_resolvido),
         "gerencia_url": "/gerencia/",
+        "rh_url": "/rh/",
     }
 
 
@@ -378,8 +464,34 @@ def requer_gerencia_page(view_func):
         if not empresa:
             return redirect("/login-empresa/")
         if not principal_e_gerencia(request):
-            return redirect(_destino_correto(get_setor(empresa)))
+            return redirect(destino_por_perfil(request, empresa))
         return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def requer_rh_page(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        empresa = getattr(request, "empresa", None)
+        if not empresa:
+            return redirect("/login-empresa/")
+        if not (principal_e_rh(request) or principal_e_gerencia(request)):
+            return redirect(destino_por_perfil(request, empresa))
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def requer_operacao_page(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        empresa = getattr(request, "empresa", None)
+        if not empresa:
+            return redirect("/login-empresa/")
+
+        if principal_e_gerencia(request) or principal_e_operacao(request):
+            return view_func(request, *args, **kwargs)
+
+        return redirect(destino_por_perfil(request, empresa))
     return wrapper
 
 
@@ -403,7 +515,7 @@ def api_requer_plataforma_ti_ou_gestor(view_func):
         empresa = getattr(request, "empresa", None)
         if not empresa:
             return JsonResponse({"erro": "Não autenticado"}, status=401)
-        if not (pode_acessar_plataforma_ti(request) or _principal_gestor_ti(request)):
+        if not (pode_acessar_plataforma_ti(request) or _principal_gestor_ti(request) or _gerencia_usuario_empresa(request)):
             return JsonResponse({
                 "erro": "Acesso restrito à TI ou gestão autorizada.",
             }, status=403)

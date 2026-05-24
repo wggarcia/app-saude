@@ -50,7 +50,7 @@
 {# ── Conta & Plataforma ───────────────────────────────────────── #}
 <div class="sb-label">Conta</div>
 <a class="sb-link {% if p == '/sst/configuracoes/' %}active{% endif %}" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Config. SST</span></a>
-<a class="sb-link {% if '/usuarios/' in p %}active{% endif %}" href="/usuarios/"><span class="sb-icon">👤</span><span>Usuários</span></a>
-<a class="sb-link {% if '/gestao/plataforma/' in p %}active{% endif %}" href="/gestao/plataforma/"><span class="sb-icon">🖥️</span><span>Plataforma & API</span></a>
+<a class="sb-link {% if '/rh/' in p or '/usuarios/' in p %}active{% endif %}" href="/rh/"><span class="sb-icon">👤</span><span>Portal RH</span></a>
+<a class="sb-link {% if '/ti/' in p or '/gestao/plataforma/' in p %}active{% endif %}" href="/ti/"><span class="sb-icon">🖥️</span><span>Plataforma TI</span></a>
 <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
 {% endwith %}

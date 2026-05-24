@@ -33,6 +33,7 @@ from .access_control import (
     api_requer_plataforma_ti,
     api_requer_plataforma_ti_ou_gestor,
     api_requer_setor,
+    requer_operacao_page,
     requer_plataforma_ti_page,
     requer_setor,
 )
@@ -99,6 +100,7 @@ def _parse_json(request):
 
 
 @requer_setor("empresa")
+@requer_operacao_page
 def gestao_corporativa(request):
     empresa = _empresa_gestao(request)
     if not empresa:

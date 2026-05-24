@@ -3647,6 +3647,14 @@ class PlataformaTiAccessTests(TestCase):
             cargo="Operacao",
             ativo=True,
         )
+        self.usuario_gerencia = EmpresaUsuario.objects.create(
+            empresa=self.empresa,
+            nome="Usuário Gerência",
+            email="gerencia@teste.com",
+            senha=make_password("senha123"),
+            cargo="Gerente Operacional",
+            ativo=True,
+        )
 
     def _login_client(self, email, senha="senha123", device_id="dev-ti"):
         client = Client()
@@ -3683,6 +3691,44 @@ class PlataformaTiAccessTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json().get("destination"), "/ti/")
+
+    def test_login_usuario_rh_prioriza_destino_portal_rh(self):
+        client = Client()
+        resp = client.post(
+            "/api/login",
+            data=json.dumps({"email": "rh@teste.com", "senha": "senha123", "device_id": "dev-rh-destino", "device_name": "Browser"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json().get("destination"), "/rh/")
+
+    def test_login_usuario_gerencia_prioriza_destino_portal_gerencial(self):
+        client = Client()
+        resp = client.post(
+            "/api/login",
+            data=json.dumps({"email": "gerencia@teste.com", "senha": "senha123", "device_id": "dev-ger-destino", "device_name": "Browser"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json().get("destination"), "/gerencia/")
+
+    def test_usuario_ti_nao_acessa_gestao_operacional(self):
+        client = self._login_client("ti@teste.com", device_id="dev-ti-gestao")
+        resp = client.get("/gestao/")
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp["Location"], "/ti/")
+
+    def test_usuario_rh_nao_acessa_gestao_operacional(self):
+        client = self._login_client("rh@teste.com", device_id="dev-rh-gestao")
+        resp = client.get("/gestao/")
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp["Location"], "/rh/")
+
+    def test_usuario_operacao_nao_acessa_portal_rh(self):
+        client = self._login_client("operacao@teste.com", device_id="dev-op-rh")
+        resp = client.get("/rh/")
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp["Location"], "/dashboard-empresa/")
 
     def test_admin_principal_sem_perfil_ti_nao_acessa_plataforma(self):
         empresa_sem_ti = Empresa.objects.create(
