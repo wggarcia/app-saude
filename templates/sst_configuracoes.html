@@ -72,16 +72,10 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
 ::-webkit-scrollbar-thumb{background:rgba(0,201,167,.15);border-radius:2px}
 @media(max-width:768px){.form-grid{grid-template-columns:1fr}.form-grid.three{grid-template-columns:1fr 1fr}}
 </style>
-  {% include "partials/sst_unified_theme.html" %>
+  {% include "partials/sst_unified_theme.html" %}
 </head>
 <body>
-<header class="topbar">
-  <div class="tb-logo">
-    <div class="tb-icon">S</div>
-    <div><div class="tb-nome">SolusCRT</div><div class="tb-sub">SST · Saúde Ocupacional</div></div>
-  </div>
-  <div class="tb-empresa">Empresa: <strong>{{ empresa_nome }}</strong></div>
-</header>
+{% include "partials/sst_topbar.html" %}
 
 <div class="app">
   <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>

@@ -153,18 +153,11 @@ html,body{margin:0;overflow:hidden;height:100vh;background:var(--bg);color:var(-
 ::-webkit-scrollbar-thumb{background:rgba(0,201,167,.15);border-radius:2px}
 @keyframes fadeInUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 </style>
-  {% include "partials/sst_unified_theme.html" %>
+  {% include "partials/sst_unified_theme.html" %}
 </head>
 <body>
 
-<header class="topbar">
-  <div class="tb-logo">
-    <div class="tb-icon">S</div>
-    <div><div class="tb-nome">SolusCRT</div><div class="tb-sub">Comunicação SST</div></div>
-  </div>
-  <div class="tb-mid">📡 Comunicação</div>
-  <div class="tb-empresa">{{ empresa_nome }}</div>
-</header>
+{% include "partials/sst_topbar.html" %}
 
 <div class="app">
 

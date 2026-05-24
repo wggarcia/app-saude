@@ -120,41 +120,10 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
 @media(max-width:860px){.main{margin-left:0;padding:14px}.sidebar{display:none}.metrics{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.metrics,.modules{grid-template-columns:1fr}.tb-actions{display:none}}
 </style>
-  {% include "partials/sst_unified_theme.html" %>
+  {% include "partials/sst_unified_theme.html" %}
 </head>
 <body>
-<header class="topbar">
-  <div class="tb-logo">
-    <div class="tb-icon">S</div>
-    <div>
-      <div class="tb-nome">SolusCRT</div>
-      <div class="tb-sub">SST · {{ empresa_nome }}</div>
-    </div>
-  </div>
-  <nav class="tb-nav">
-    <a href="/dashboard-empresa/">Painel SST</a>
-    <a href="/sst/" class="active">Central SST</a>
-    <a href="/sst/funcionarios/">Funcionários</a>
-    <a href="/sst/asos/">ASO</a>
-    <a href="/sst/exames/">Exames</a>
-    <a href="/sst/afastamentos/">Afastamentos</a>
-    <a href="/sst/cats/">CAT / Acidentes</a>
-    <a href="/sst/documentos/">PGR · PCMSO · LTCAT</a>
-    <a href="/sst/esocial/">eSocial</a>
-    <a href="/sst/treinamentos/">Treinamentos NR</a>
-    <a href="/sst/epis/">EPI / EPC</a>
-    <a href="/sst/relatorios/">Relatórios</a>
-    <a href="/sst/ppp/">PPP</a>
-    <a href="/sst/laudos/">Laudos</a>
-    <a href="/sst/fap/">FAP</a>
-    <a href="/sst/laboratorios/">Laboratório</a>
-    <a href="/sst/rede-credenciada/">Rede Credenciada</a>
-  </nav>
-  <div class="tb-actions">
-    <a class="btn-main" href="/sst/asos/">+ Emitir ASO</a>
-    <a class="btn-ghost" href="/sst/cats/" style="border-color:rgba(239,68,68,.4);color:#f87171">+ Registrar CAT</a>
-  </div>
-</header>
+{% include "partials/sst_topbar.html" %}
 
 <div class="app">
   <aside class="sidebar">
@@ -182,6 +151,9 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
           <a class="chip" href="/sst/esocial/">🔗 Fila eSocial</a>
           <a class="chip" href="/sst/documentos/">📁 Ver documentos</a>
           <a class="chip" href="/sst/comunicacao/">💬 Comunicação SST</a>
+          {% if mostrar_aba_gerencia %}
+          <a class="chip" href="/gerencia/">🧭 Gerência Executiva</a>
+          {% endif %}
           {% if mostrar_link_ti %}
           <a class="chip" href="/gestao/plataforma/">🖥️ Plataforma TI</a>
           {% endif %}
@@ -337,6 +309,14 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
         <div class="module-copy">Consolidação da fila de eventos, histórico de transmissões e checagem de aderência.</div>
         <a class="module-link" href="/sst/esocial/">Abrir módulo</a>
       </article>
+      {% if mostrar_aba_gerencia %}
+      <article class="module-card">
+        <div class="module-top"><div class="module-icon">🧭</div><div class="badge b-warn">Executivo</div></div>
+        <div class="module-title">Gerência Executiva</div>
+        <div class="module-copy">Visão estratégica com indicadores consolidados, alertas críticos e governança para decisão de liderança.</div>
+        <a class="module-link" href="/gerencia/">Abrir módulo</a>
+      </article>
+      {% endif %}
       {% if mostrar_link_ti %}
       <article class="module-card">
         <div class="module-top"><div class="module-icon">🖥️</div><div class="badge b-muted">Restrito</div></div>

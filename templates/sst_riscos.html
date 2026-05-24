@@ -156,22 +156,11 @@ input[type=range]{padding:0;background:transparent;border:none;accent-color:var(
 .prio-baixa{background:#00e676}
 @media(max-width:860px){.sidebar{display:none}.main{margin-left:0}.tb-logo{min-width:auto;border-right:none}.tb-actions{padding-right:10px}}
 </style>
-  {% include "partials/sst_unified_theme.html" %>
+  {% include "partials/sst_unified_theme.html" %}
 </head>
 <body>
 
-<header class="topbar">
-  <div class="tb-logo">
-    <div class="tb-icon">S</div>
-    <div>
-      <div class="tb-nome">SolusCRT</div>
-      <div class="tb-sub">Central SST · Riscos e PGR</div>
-    </div>
-  </div>
-  <div class="tb-actions">
-    <a href="/sst/" class="btn-top">← Central SST</a>
-  </div>
-</header>
+{% include "partials/sst_topbar.html" %}
 
 <div class="app">
 <nav class="sidebar">{% include "partials/sst_sidebar.html" %}</nav>

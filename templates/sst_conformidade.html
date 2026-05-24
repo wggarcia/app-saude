@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Conformidade SST · SolusCRT</title>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+{% extends "base_sst.html" %}
+
+{% block sst_title %}Conformidade SST · SolusCRT{% endblock %}
+
+{% block sst_head %}
 <style>
 :root{
   --bg:#041018;--panel:#071c28;--border:rgba(126,225,195,.12);--border2:rgba(126,225,195,.22);
@@ -75,28 +73,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
 </style>
-  {% include "partials/sst_unified_theme.html" %>
-</head>
-<body>
+{% endblock %}
 
-<header class="topbar">
-  <div class="tb-logo">
-    <div class="tb-icon">S</div>
-    <div>
-      <div class="tb-nome">SolusCRT</div>
-      <div class="tb-sub">Conformidade SST</div>
-    </div>
-  </div>
-  <div class="tb-actions">
-    <a href="/sst/" class="btn-ghost">← Central SST</a>
-    <a href="/api/sst/conformidade/pdf" id="btnPdf" class="btn-ghost">📄 Exportar PDF</a>
-  </div>
-</header>
-
-<div class="app">
-  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
-
-  <main class="main">
+{% block sst_content %}
 
     <div class="page-header">
       <div>
@@ -180,9 +159,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </table>
     </div>
 
-  </main>
-</div>
+{% endblock %}
 
+{% block sst_scripts %}
 <script>
 let _dados = [];
 let _filtrado = [];
@@ -326,5 +305,4 @@ function renderTabela() {
 
 carregar();
 </script>
-</body>
-</html>
+{% endblock %}

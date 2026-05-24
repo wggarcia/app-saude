@@ -102,48 +102,15 @@
     @media (max-width: 900px) { .app { grid-template-columns: 1fr; } .sidebar { display: none; } main { padding: 20px; } }
     @media (max-width: 640px) { .hero { grid-template-columns: 1fr; } .kpi-strip { grid-template-columns: 1fr 1fr; } .fap-box { grid-template-columns: 1fr; } .tb-nav { display: none; } }
   </style>
-  {% include "partials/sst_unified_theme.html" %>
+  {% include "partials/sst_unified_theme.html" %}
 </head>
 <body>
 
-<header class="topbar">
-  <div class="tb-logo">SolusCRT</div>
-  <div class="tb-div"></div>
-  <div class="tb-sub">SST · <span id="nomeEmpresa">{{ empresa_nome }}</span></div>
-  <nav class="tb-nav">
-    <a href="/dashboard-empresa/">Painel SST</a>
-    <a href="/sst/">Central SST</a>
-    <a href="/sst/funcionarios/">Funcionários</a>
-    <a href="/sst/asos/">ASO</a>
-    <a href="/sst/cats/">CAT</a>
-    <a href="/sst/ppp/" {% if modulo_id == "ppp" %}class="active"{% endif %}>PPP</a>
-    <a href="/sst/laudos/" {% if modulo_id == "laudos" %}class="active"{% endif %}>Laudos</a>
-    <a href="/sst/fap/" {% if modulo_id == "fap" %}class="active"{% endif %}>FAP</a>
-    <a href="/sst/laboratorios/" {% if modulo_id == "laboratorio" %}class="active"{% endif %}>Laboratório</a>
-    <a href="/sst/rede-credenciada/" {% if modulo_id == "rede" %}class="active"{% endif %}>Rede</a>
-  </nav>
-  <div class="tb-actions">
-    <a class="btn-ghost" href="/sst/">← Central SST</a>
-  </div>
-</header>
+{% include "partials/sst_topbar.html" %}
 
 <div class="app">
   <aside class="sidebar">
-    <div class="sidebar-section">SST Base</div>
-    <a href="/sst/funcionarios/">👥 Funcionários</a>
-    <a href="/sst/asos/">📋 ASO</a>
-    <a href="/sst/exames/">🔬 Exames</a>
-    <a href="/sst/cats/">⚠️ CAT / Acidentes</a>
-    <a href="/sst/riscos/">🦺 Riscos e EPIs</a>
-    <a href="/sst/esocial/">🔗 eSocial</a>
-
-    <div class="sidebar-section" style="margin-top:14px;">Expansão SST</div>
-    <a href="/sst/ppp/" {% if modulo_id == "ppp" %}class="active"{% endif %}>📜 PPP</a>
-    <a href="/sst/laudos/" {% if modulo_id == "laudos" %}class="active"{% endif %}>📑 Laudos Técnicos</a>
-    <a href="/sst/fap/" {% if modulo_id == "fap" %}class="active"{% endif %}>📊 Gestão FAP</a>
-    <a href="/sst/laboratorios/" {% if modulo_id == "laboratorio" %}class="active"{% endif %}>🧪 Laboratório</a>
-    <a href="/sst/rede-credenciada/" {% if modulo_id == "rede" %}class="active"{% endif %}>🏥 Rede Credenciada</a>
-    <a href="/clinica/financeiro/" {% if modulo_id == "financeiro_clinica" %}class="active"{% endif %}>💰 Financeiro Clínica</a>
+    {% include "partials/sst_sidebar.html" %}
   </aside>
 
   <main>

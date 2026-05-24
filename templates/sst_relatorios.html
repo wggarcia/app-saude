@@ -106,22 +106,11 @@
     ::-webkit-scrollbar-track{background:transparent}
     ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
   </style>
-  {% include "partials/sst_unified_theme.html" %>
+  {% include "partials/sst_unified_theme.html" %}
 </head>
 <body>
 
-<header class="topbar">
-  <div class="tb-logo">
-    <div class="tb-icon">S</div>
-    <div>
-      <div class="tb-nome">SolusCRT</div>
-      <div class="tb-sub">Relatórios SST · {{ empresa_nome }}</div>
-    </div>
-  </div>
-  <div class="tb-actions">
-    <a href="/sst/" class="btn btn-ghost">← Central SST</a>
-  </div>
-</header>
+{% include "partials/sst_topbar.html" %}
 
 <div class="app">
   <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>

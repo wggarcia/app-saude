@@ -110,30 +110,18 @@ html,body{
 </style>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  function getCookie(name) {
-    const cookie = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith(name + "="));
-    return cookie ? cookie.split("=").slice(1).join("=") : "";
-  }
   const nomeCtx = "{{ empresa_nome|default:''|escapejs }}".trim();
-  let nomeCookie = "";
-  try {
-    nomeCookie = decodeURIComponent(getCookie("empresa_nome") || "").trim();
-  } catch (e) {
-    nomeCookie = (getCookie("empresa_nome") || "").trim();
-  }
-  const empresa = nomeCtx || nomeCookie;
-  const subTitulo = empresa
-    ? "SST · " + empresa
-    : "SST · Saúde e Segurança do Trabalho";
+  const empresa = nomeCtx;
+  const subTitulo = empresa ? "SST · " + empresa : "SST · Saúde e Segurança do Trabalho";
 
   document.querySelectorAll(".tb-nome").forEach((el) => {
     el.textContent = "SolusCRT";
   });
-  document.querySelectorAll(".tb-sub").forEach((el) => {
-    el.textContent = subTitulo;
-  });
+  if (empresa) {
+    document.querySelectorAll(".tb-sub").forEach((el) => {
+      el.textContent = subTitulo;
+    });
+  }
   document.querySelectorAll(".tb-empresa").forEach((el) => {
     if (!empresa) return;
     const strong = el.querySelector("strong");

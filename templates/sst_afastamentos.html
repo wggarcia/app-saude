@@ -235,34 +235,13 @@ body{min-height:100vh;overflow-x:hidden}
 .btn-submit:hover{opacity:.88}
 .btn-submit:disabled{opacity:.5;cursor:not-allowed}
 </style>
-  {% include "partials/sst_unified_theme.html" %>
+  {% include "partials/sst_unified_theme.html" %}
 </head>
 <body>
 <div class="toast" id="toast"></div>
 
 <!-- TOPBAR -->
-<header class="topbar">
-  <div class="tb-logo">
-    <div class="tb-icon">S</div>
-    <div class="tb-brand">
-      <div class="tb-nome">SolusCRT</div>
-      <div class="tb-sub">Saúde Ocupacional</div>
-    </div>
-  </div>
-  <nav class="tb-nav">
-    <a href="/dashboard-empresa/">Painel SST</a>
-    <a href="/sst/funcionarios/">Funcionários</a>
-    <a href="/sst/asos/">ASOs</a>
-    <a href="/sst/exames/">Exames</a>
-    <a href="/sst/afastamentos/" class="active">Afastamentos</a>
-    <a href="/sst/cats/">CATs</a>
-    <a href="/sst/documentos/">Documentos</a>
-    <a href="/sst/esocial/">eSocial</a>
-  </nav>
-  <div class="tb-actions">
-    
-  </div>
-</header>
+{% include "partials/sst_topbar.html" %}
 
 <!-- LAYOUT -->
 <div class="app">

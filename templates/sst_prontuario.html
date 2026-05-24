@@ -151,28 +151,12 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
 </style>
-  {% include "partials/sst_unified_theme.html" %>
+  {% include "partials/sst_unified_theme.html" %}
 </head>
 <body>
 
 <!-- ─── TOPBAR ─── -->
-<header class="topbar">
-  <div class="tb-logo">
-    <div class="tb-icon">S</div>
-    <div><div class="tb-nome">SST</div><div class="tb-sub">Saúde Ocupacional</div></div>
-  </div>
-  <nav class="tb-nav">
-    <div class="breadcrumb">
-      <a href="/sst/funcionarios/">&#8592; Funcionários</a>
-      <span>/</span>
-      <span id="bc-nome">{{ funcionario_nome }}</span>
-    </div>
-  </nav>
-  <div class="tb-actions">
-    <a href="/sst/asos/?busca={{ funcionario_nome }}" class="btn-action" style="font-size:.74rem;padding:6px 12px">Ver ASOs</a>
-    <a href="/logout/" class="btn-warn">Sair</a>
-  </div>
-</header>
+{% include "partials/sst_topbar.html" %}
 
 <!-- ─── SIDEBAR ─── -->
 <div class="app">

@@ -50,6 +50,9 @@
 {# ── Conta & Plataforma ───────────────────────────────────────── #}
 <div class="sb-label">Conta</div>
 <a class="sb-link {% if p == '/sst/configuracoes/' %}active{% endif %}" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Config. SST</span></a>
+{% if mostrar_aba_gerencia %}
+<a class="sb-link {% if '/gerencia/' in p %}active{% endif %}" href="/gerencia/"><span class="sb-icon">🧭</span><span>Gerência Executiva</span></a>
+{% endif %}
 {% if mostrar_link_rh %}
 <a class="sb-link {% if '/rh/' in p or '/usuarios/' in p %}active{% endif %}" href="/rh/"><span class="sb-icon">👤</span><span>Portal RH</span></a>
 {% endif %}

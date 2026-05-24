@@ -222,25 +222,12 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
 @media(max-width:860px){.main{margin-left:0;padding:14px}.sidebar{display:none}}
 @media(max-width:640px){.kpi-strip{grid-template-columns:1fr 1fr}.tabs-bar{flex-wrap:wrap;width:100%}}
 </style>
-  {% include "partials/sst_unified_theme.html" %>
+  {% include "partials/sst_unified_theme.html" %}
 </head>
 <body>
 
 <!-- ── Topbar ── -->
-<header class="topbar">
-  <div class="tb-logo">
-    <div class="tb-icon">S</div>
-    <div>
-      <div class="tb-nome">SolusCRT</div>
-      <div class="tb-sub">SST · Saúde &amp; Comunicação</div>
-    </div>
-  </div>
-  <div class="tb-empresa">Empresa: <strong>{{ empresa_nome }}</strong></div>
-  <div class="tb-actions">
-    <a class="btn-ghost" href="/dashboard-empresa/">← Painel SST</a>
-    <button class="btn-main" onclick="abrirModalMensagem()">+ Nova Mensagem</button>
-  </div>
-</header>
+{% include "partials/sst_topbar.html" %}
 
 <div class="app">
   <aside class="sidebar">

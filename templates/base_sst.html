@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block sst_title %}SolusCRT · SST{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  {% block sst_head %}{% endblock %}
+  {% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
+  {% include "partials/sst_topbar.html" %}
+
+  <div class="app">
+    {% block sst_sidebar %}
+    <aside class="sidebar">
+      {% include "partials/sst_sidebar.html" %}
+    </aside>
+    {% endblock %}
+
+    <main class="main">
+      {% block sst_content %}{% endblock %}
+    </main>
+  </div>
+
+  {% block sst_scripts %}{% endblock %}
+</body>
+</html>
