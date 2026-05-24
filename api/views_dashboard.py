@@ -302,6 +302,7 @@ def gerencia_executiva_page(request):
     if not empresa:
         return redirect("/")
     return render(request, "gerencia_executiva.html", {
+        "empresa_id": str(empresa.id),
         "empresa_nome": empresa.nome,
         "setor_label": _setor_label(_setor_conta(empresa)),
         "setor_conta": _setor_conta(empresa),

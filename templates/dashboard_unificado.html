@@ -913,6 +913,14 @@
       const payload = await response.json();
       sessionStorage.setItem("empresa_id", String(payload.empresa_id || ""));
       sessionStorage.setItem("tipo_conta", payload.tipo_conta || "empresa");
+      if (payload.tab_key) {
+        sessionStorage.setItem("tab_session_key", payload.tab_key);
+        const url = new URL(window.location.href);
+        if (url.searchParams.get("tab") !== payload.tab_key) {
+          url.searchParams.set("tab", payload.tab_key);
+          window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        }
+      }
       return payload;
     }
 
@@ -920,10 +928,6 @@
     localStorage.setItem("empresa_id", empresaId);
     function reconcileScopedSession(payload) {
       if (!payload) return;
-      if (payload.destination && payload.destination !== window.location.pathname) {
-        window.location.replace(payload.destination);
-        return;
-      }
       if (String(payload.empresa_id || "") !== String(empresaId || "")) {
         const reloadKey = "empresa_tab_sync_reload";
         if (sessionStorage.getItem(reloadKey) === "1") {

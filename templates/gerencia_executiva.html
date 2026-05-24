@@ -87,6 +87,62 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 </div>
 
 <script>
+const pageEmpresaId = "{{ empresa_id|escapejs }}";
+
+function getScopedValue(key) {
+  return sessionStorage.getItem(key) || localStorage.getItem(key) || "";
+}
+
+async function syncScopedAuth() {
+  const token = getScopedValue("auth_token") || getScopedValue("token");
+  if (!token) return null;
+  try {
+    const response = await fetch("/api/sessao/aba", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "same-origin",
+    });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    sessionStorage.setItem("empresa_id", String(payload.empresa_id || ""));
+    sessionStorage.setItem("tipo_conta", payload.tipo_conta || "empresa");
+    if (payload.tab_key) {
+      sessionStorage.setItem("tab_session_key", payload.tab_key);
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("tab") !== payload.tab_key) {
+        url.searchParams.set("tab", payload.tab_key);
+        window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+      }
+    }
+    return payload;
+  } catch (e) {
+    return null;
+  }
+}
+
+function reconcileScopedSession(payload) {
+  if (!payload) return;
+  if (String(payload.empresa_id || "") !== String(pageEmpresaId || "")) {
+    const reloadKey = "gerencia_tab_sync_reload";
+    if (sessionStorage.getItem(reloadKey) === "1") {
+      sessionStorage.removeItem(reloadKey);
+      return;
+    }
+    sessionStorage.setItem(reloadKey, "1");
+    window.location.reload();
+    return;
+  }
+  sessionStorage.removeItem("gerencia_tab_sync_reload");
+}
+
+syncScopedAuth().then(reconcileScopedSession);
+window.addEventListener("focus", () => {
+  syncScopedAuth().then(reconcileScopedSession);
+});
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) syncScopedAuth().then(reconcileScopedSession);
+});
+
 async function carregarGerencia(){
   try{
     const r = await fetch('/api/executive/dashboard/', {credentials:'same-origin'});

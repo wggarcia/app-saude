@@ -105,16 +105,28 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
     if (!token) {
       return null;
     }
-    const response = await fetch("/api/sessao/aba", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "same-origin",
-    });
-    if (!response.ok) return null;
-    const payload = await response.json();
-    sessionStorage.setItem("empresa_id", String(payload.empresa_id || ""));
-    sessionStorage.setItem("tipo_conta", payload.tipo_conta || "empresa");
-    return payload;
+    try {
+      const response = await fetch("/api/sessao/aba", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "same-origin",
+      });
+      if (!response.ok) return null;
+      const payload = await response.json();
+      sessionStorage.setItem("empresa_id", String(payload.empresa_id || ""));
+      sessionStorage.setItem("tipo_conta", payload.tipo_conta || "empresa");
+      if (payload.tab_key) {
+        sessionStorage.setItem("tab_session_key", payload.tab_key);
+        const url = new URL(window.location.href);
+        if (url.searchParams.get("tab") !== payload.tab_key) {
+          url.searchParams.set("tab", payload.tab_key);
+          window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        }
+      }
+      return payload;
+    } catch (e) {
+      return null;
+    }
   }
 
   function maybeReloadWithScopedSession(payload) {
@@ -127,7 +139,7 @@ h1{font-family:Newsreader,serif;font-size:clamp(3.2rem,5vw,5.2rem);line-height:.
         return;
       }
       sessionStorage.setItem(reloadKey, "1");
-      window.location.replace(currentUrl.pathname);
+      window.location.replace(currentUrl.pathname + currentUrl.search);
       return;
     }
     sessionStorage.removeItem("command_ai_tab_sync_reload");

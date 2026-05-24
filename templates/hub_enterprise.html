@@ -135,30 +135,35 @@
 </div>
 
 <script>
-// Tab isolation guard — re-syncs cookie when user switches back from another tab/login
+// Tab isolation guard — keeps this browser tab pinned to its own auth token.
 (function tabGuard() {
-  function cookieVal(name) {
-    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
-    return m ? m.pop() : '';
-  }
-  const reloadKey = "_tab_sync_hub";
   async function syncTab() {
-    const ssId = sessionStorage.getItem("empresa_id");
-    const ckId = cookieVal("empresa_id");
-    if (!ssId || ssId === ckId) return;
-    const token = sessionStorage.getItem("auth_token") || sessionStorage.getItem("token");
-    if (!token) return;
+    const token = sessionStorage.getItem("auth_token") || sessionStorage.getItem("token") || localStorage.getItem("auth_token") || localStorage.getItem("token");
+    if (!token) return null;
     try {
       const res = await fetch("/api/sessao/aba", {
-        method: "POST", headers: { Authorization: "Bearer " + token }, credentials: "same-origin",
+        method: "POST",
+        headers: { Authorization: "Bearer " + token },
+        credentials: "same-origin",
       });
-      if (!res.ok) return;
-      const p = await res.json();
-      if (sessionStorage.getItem(reloadKey) === "1") { sessionStorage.removeItem(reloadKey); return; }
-      sessionStorage.setItem(reloadKey, "1");
-      window.location.replace(p.destination || "/");
-    } catch (e) {}
+      if (!res.ok) return null;
+      const payload = await res.json();
+      sessionStorage.setItem("empresa_id", String(payload.empresa_id || ""));
+      sessionStorage.setItem("tipo_conta", payload.tipo_conta || "empresa");
+      if (payload.tab_key) {
+        sessionStorage.setItem("tab_session_key", payload.tab_key);
+        const url = new URL(window.location.href);
+        if (url.searchParams.get("tab") !== payload.tab_key) {
+          url.searchParams.set("tab", payload.tab_key);
+          window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        }
+      }
+      return payload;
+    } catch (e) {
+      return null;
+    }
   }
+
   syncTab();
   window.addEventListener("focus", syncTab);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) syncTab(); });

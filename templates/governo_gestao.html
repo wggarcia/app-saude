@@ -2113,6 +2113,41 @@ function _t(msg, tipo) {
   </div>
 </div>
 
-<script>(function tabGuard(){function cookieVal(n){var m=document.cookie.match("(^|;)\\s*"+n+"\\s*=\\s*([^;]+)");return m?m.pop():""}var rk="_tab_sync_gov";async function syncTab(){var ssId=sessionStorage.getItem("empresa_id");var ckId=cookieVal("empresa_id");if(!ssId||ssId===ckId)return;var token=sessionStorage.getItem("auth_token")||sessionStorage.getItem("token");if(!token)return;try{var res=await fetch("/api/sessao/aba",{method:"POST",headers:{Authorization:"Bearer "+token},credentials:"same-origin"});if(!res.ok)return;var p=await res.json();if(sessionStorage.getItem(rk)==="1"){sessionStorage.removeItem(rk);return}sessionStorage.setItem(rk,"1");var currentPath=window.location.pathname||"";var preserveCurrent=currentPath.indexOf("/gestao/")!==-1;if(preserveCurrent){sessionStorage.removeItem(rk);return}window.location.replace(p.destination||"/")}catch(e){}}syncTab();window.addEventListener("focus",syncTab);document.addEventListener("visibilitychange",function(){if(!document.hidden)syncTab()})}());</script>
+<script>
+(function tabGuard() {
+  async function syncTab() {
+    var token = sessionStorage.getItem("auth_token") || sessionStorage.getItem("token") || localStorage.getItem("auth_token") || localStorage.getItem("token");
+    if (!token) return null;
+    try {
+      var res = await fetch("/api/sessao/aba", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + token },
+        credentials: "same-origin"
+      });
+      if (!res.ok) return null;
+      var payload = await res.json();
+      sessionStorage.setItem("empresa_id", String(payload.empresa_id || ""));
+      sessionStorage.setItem("tipo_conta", payload.tipo_conta || "governo");
+      if (payload.tab_key) {
+        sessionStorage.setItem("tab_session_key", payload.tab_key);
+        var url = new URL(window.location.href);
+        if (url.searchParams.get("tab") !== payload.tab_key) {
+          url.searchParams.set("tab", payload.tab_key);
+          window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        }
+      }
+      return payload;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  syncTab();
+  window.addEventListener("focus", syncTab);
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) syncTab();
+  });
+}());
+</script>
 </body>
 </html>
