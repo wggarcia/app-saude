@@ -13,7 +13,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import (
     BeneficiarioPlano, Empresa, GuiaAutorizacao,
     PlanoSaude, PrestadorPlanoSaude, Reembolso, Sinistro, RegistroSintoma,
@@ -1561,6 +1561,7 @@ def _copart_dict(r):
     }
 
 
+@api_requer_feature("plano.coparticipacao")
 @csrf_exempt
 def api_ps_coparticipacao(request):
     empresa, err = _ps_auth(request)
@@ -1609,6 +1610,7 @@ def api_ps_coparticipacao(request):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_feature("plano.coparticipacao")
 @csrf_exempt
 def api_ps_coparticipacao_detalhe(request, regra_id):
     empresa, err = _ps_auth(request)
@@ -1667,6 +1669,7 @@ def _fatura_dict(f):
     }
 
 
+@api_requer_feature("plano.faturamento")
 @csrf_exempt
 def api_ps_faturamento(request):
     empresa, err = _ps_auth(request)

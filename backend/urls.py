@@ -482,6 +482,7 @@ from api.views_pagamento import (
     pendente,
     status_pagamento,
     planos_publicos,
+    api_plano_features,
 )
 from api.views_relatorios import (
     relatorio_pdf_funcionarios,
@@ -1137,6 +1138,7 @@ urlpatterns = [
     path('api/billing/status', api_billing_status),
     path('api/operacao/readiness', api_enterprise_readiness),
     path('api/planos-publicos', planos_publicos),
+    path('api/plano/features', api_plano_features),   # features + limites do plano ativo
     path('api/webhook', webhook),
     
 

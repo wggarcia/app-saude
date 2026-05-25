@@ -29,6 +29,7 @@ from .models import (
     PostoTrabalho, AgenteNocivoPostoTrabalho, FuncionarioPostoTrabalho,
 )
 from .views_dashboard import _empresa_autenticada
+from .access_control import api_requer_feature
 
 
 def _e(req):
@@ -329,7 +330,10 @@ def _gerar_xml_s2240(empresa, cfg, periodo=None, posto=None):
 
 
 # ─── API endpoints ─────────────────────────────────────────────────────────────
+# Todos os endpoints abaixo exigem a feature "sst.esocial" — disponível apenas
+# nos planos Enterprise, Corporativo e Nacional (a partir de R$ 4.900/mês).
 
+@api_requer_feature("sst.esocial")
 @require_http_methods(["GET", "POST"])
 def api_esocial_eventos(request):
     """Lista eventos ou registra novo evento manualmente."""
@@ -374,6 +378,7 @@ def api_esocial_eventos(request):
     return JsonResponse(_evt_dict(ev), status=201)
 
 
+@api_requer_feature("sst.esocial")
 def api_esocial_gerar_xml(request, evento_id):
     """Gera (ou regenera) o XML do evento e retorna para download."""
     e = _e(request)
@@ -427,6 +432,7 @@ def api_esocial_gerar_xml(request, evento_id):
     return JsonResponse({"xml": xml, "evento_id": ev.pk})
 
 
+@api_requer_feature("sst.esocial")
 def api_esocial_registrar_cat(request, cat_id):
     """Cria automaticamente um evento S-2210 para uma CAT e gera XML."""
     e = _e(request)
@@ -452,6 +458,7 @@ def api_esocial_registrar_cat(request, cat_id):
     return JsonResponse({"evento_id": ev.pk, "xml_tamanho": len(xml), "status": "pendente"}, status=201)
 
 
+@api_requer_feature("sst.esocial")
 def api_esocial_registrar_aso(request, aso_id):
     """Cria evento S-2220 para um ASO e gera XML."""
     e = _e(request)
@@ -474,6 +481,7 @@ def api_esocial_registrar_aso(request, aso_id):
     return JsonResponse({"evento_id": ev.pk, "xml_tamanho": len(xml), "status": "pendente"}, status=201)
 
 
+@api_requer_feature("sst.esocial")
 def api_esocial_registrar_afastamento(request, afastamento_id):
     """Cria evento S-2230 para um afastamento."""
     e = _e(request)
@@ -496,6 +504,7 @@ def api_esocial_registrar_afastamento(request, afastamento_id):
     return JsonResponse({"evento_id": ev.pk, "xml_tamanho": len(xml), "status": "pendente"}, status=201)
 
 
+@api_requer_feature("sst.esocial")
 def api_esocial_marcar_transmitido(request, evento_id):
     """Marca evento como transmitido e registra protocolo."""
     e = _e(request)
@@ -523,6 +532,7 @@ def api_esocial_marcar_transmitido(request, evento_id):
     return JsonResponse({"ok": True, "status": ev.status})
 
 
+@api_requer_feature("sst.esocial")
 def api_esocial_kpis(request):
     """KPIs da fila eSocial."""
     e = _e(request)
@@ -656,6 +666,7 @@ def _comp_dict(c):
 
 # ── eSocial Real Transmission ────────────────────────────────────────────────
 
+@api_requer_feature("sst.esocial")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_esocial_transmitir(request, evento_id):
@@ -683,6 +694,7 @@ def api_esocial_transmitir(request, evento_id):
     }, status=200 if ok else 422)
 
 
+@api_requer_feature("sst.esocial")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_esocial_transmitir_pendentes(request):
@@ -705,6 +717,7 @@ def api_esocial_transmitir_pendentes(request):
     })
 
 
+@api_requer_feature("sst.esocial")
 @csrf_exempt
 def api_esocial_certificado(request):
     """

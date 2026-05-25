@@ -1,147 +1,288 @@
+# ─── Feature sets por segmento ─────────────────────────────────────────────────
+# Cada feature identifica uma capacidade do produto que pode ser habilitada ou
+# bloqueada por plano. O formato é "segmento.funcionalidade".
+#
+# Regra geral: planos superiores incluem todas as features dos inferiores.
+# Limites (max_usuarios, max_unidades, etc.) são verificados separadamente.
+#
+# Para adicionar um novo gate numa view:
+#   from .access_control import api_requer_feature
+#   @api_requer_feature("segmento.funcionalidade")
+#   def minha_view(request): ...
+
+# ── SST / Empresa ────────────────────────────────────────────────────────────
+_SST_BASE = [
+    "sst.aso",              # ASO — Atestado de Saúde Ocupacional
+    "sst.epi",              # Controle de EPIs
+    "sst.treinamentos",     # Treinamentos NR básicos
+    "sst.dashboard",        # Dashboard SST
+    "sst.relatorios",       # Relatórios básicos exportáveis
+    "sst.funcionarios",     # Cadastro de funcionários
+]
+_SST_PROFISSIONAL = _SST_BASE + [
+    "sst.afastamentos",     # Gestão de afastamentos
+    "sst.agenda_medica",    # Agenda médica e exames
+    "sst.painel_rh",        # Painel de RH
+    "sst.alertas",          # Alertas automáticos de prazo
+]
+_SST_ENTERPRISE = _SST_PROFISSIONAL + [
+    "sst.esocial",          # eSocial S-2220, S-2240, S-2245
+    "sst.multi_unidade",    # Múltiplas unidades/filiais
+    "sst.laudos_tecnicos",  # Laudos técnicos (LTCat, LTIP)
+    "sst.pgr_ppra",         # PGR / PPRA / PCMSO
+    "sst.rbac",             # Governança RBAC de usuários
+]
+_SST_CORPORATIVO = _SST_ENTERPRISE + [
+    "sst.turnos",                   # Gestão de turnos
+    "sst.relatorio_consolidado",    # Relatórios consolidados multi-unidade
+]
+_SST_NACIONAL = _SST_CORPORATIVO + [
+    "sst.benchmarking",     # Benchmarking entre unidades
+    "sst.multi_estado",     # Presença multi-estado/regional
+]
+
+# ── Farmácia ─────────────────────────────────────────────────────────────────
+_FARMACIA_LOCAL = [
+    "farmacia.estoque",             # Controle de estoque
+    "farmacia.dispensacoes",        # Dispensações com rastreabilidade de lote
+    "farmacia.controlados",         # Registro conforme Portaria ANVISA 344
+    "farmacia.lotes",               # Alertas de vencimento de lotes
+    "farmacia.pedidos",             # Pedidos de compra integrados
+    "farmacia.epidemiologia",       # Alertas epidemiológicos regionais (App Cidadão)
+]
+_FARMACIA_REDE = _FARMACIA_LOCAL + [
+    "farmacia.multi_unidade",       # Visão consolidada multi-unidade (EXCLUSIVO REDE)
+    "farmacia.painel_central",      # Painel central de rede (EXCLUSIVO REDE)
+    "farmacia.transferencias",      # Transferências de estoque entre filiais (EXCLUSIVO REDE)
+    "farmacia.rastreabilidade_rede",# Rastreabilidade de lote por unidade (EXCLUSIVO REDE)
+]
+
+# ── Hospital ─────────────────────────────────────────────────────────────────
+_HOSPITAL_MEDIO = [
+    "hospital.leitos",              # Painel de leitos em tempo real
+    "hospital.internacoes",         # Internações ativas e altas
+    "hospital.triagem",             # Triagem Manchester digitalizada
+    "hospital.taxa_ocupacao",       # Taxa de ocupação por departamento
+    "hospital.epidemiologia",       # Alertas epidemiológicos (App Cidadão)
+]
+_HOSPITAL_REDE = _HOSPITAL_MEDIO + [
+    "hospital.multi_unidade",       # Gestão multi-unidade (EXCLUSIVO REDE)
+    "hospital.benchmarking",        # Benchmarking entre unidades (EXCLUSIVO REDE)
+    "hospital.painel_executivo",    # Painel executivo consolidado de rede (EXCLUSIVO REDE)
+]
+
+# ── Governo ──────────────────────────────────────────────────────────────────
+# Todos os planos de governo têm o mesmo conjunto de features.
+# Diferenças são apenas de escala (usuarios, municipios).
+_GOVERNO_TODOS = [
+    "governo.programas",        # Programas de saúde
+    "governo.indicadores",      # Indicadores com meta × resultado
+    "governo.planos_acao",      # Planos de ação com responsável e prazo
+    "governo.orcamento",        # Orçamento previsto × executado
+    "governo.sala_situacao",    # Sala de Situação Epidemiológica
+    "governo.app_cidadao",      # App Cidadão — envio exclusivo de alertas à população
+]
+
+# ── Plano de Saúde ───────────────────────────────────────────────────────────
+_PLANO_OPERADORA = [
+    "plano.beneficiarios",      # Gestão de beneficiários
+    "plano.guias",              # Guias de autorização com prazo ANS
+    "plano.sinistros",          # Sinistros — abertura, análise, encerramento
+    "plano.reembolsos",         # Reembolsos com prazo ANS rastreado
+    "plano.contratos",          # Contratos com histórico de utilização
+    "plano.ans_relatorios",     # Relatórios ANS-compatíveis
+    "plano.epidemiologia",      # Alertas de risco territorial por município (App Cidadão)
+]
+_PLANO_ENTERPRISE = _PLANO_OPERADORA + [
+    "plano.coparticipacao",         # Regras de coparticipação por contrato (EXCLUSIVO ENTERPRISE)
+    "plano.faturamento",            # Faturamento integrado (EXCLUSIVO ENTERPRISE)
+    "plano.sinistralidade_avancada",# Sinistralidade por segmento/produto (EXCLUSIVO ENTERPRISE)
+    "plano.api_integracao",         # API de integração com sistemas legados (EXCLUSIVO ENTERPRISE)
+]
+
+# ── Rede de Saúde (setor independente) ──────────────────────────────────────
+_REDE_TODOS = [
+    "rede.multi_unidade",
+    "rede.benchmarking",
+    "rede.kpis_consolidados",
+    "rede.transferencias",
+    "rede.sala_situacao",
+]
+
+# ─── Definição dos planos ────────────────────────────────────────────────────
+
 PACOTES_SAAS = {
     "empresa_starter_5": {
         "label": "Empresa Starter",
         "setor": "empresa",
-        "descricao": "Saude ocupacional e radar territorial para pequenas equipes.",
+        "descricao": "Compliance SST para pequenas empresas: ASOs, EPIs e treinamentos NR.",
         "usuarios": 5,
         "dispositivos": 5,
         "mensal": 799.00,
         "anual": 7990.00,
         "ciclos": ["mensal", "anual"],
+        "features": _SST_BASE,
+        "limites": {"max_usuarios": 5, "max_funcionarios": 50, "max_unidades": 1},
     },
     "empresa_profissional_25": {
         "label": "Empresa Profissional",
         "setor": "empresa",
-        "descricao": "Monitoramento B2B com dashboards, alertas e gestao de usuarios.",
+        "descricao": "Gestao SST profissional com painel RH, afastamentos, agenda medica e alertas.",
         "usuarios": 25,
         "dispositivos": 25,
         "mensal": 1990.00,
         "anual": 19900.00,
         "ciclos": ["mensal", "anual"],
+        "features": _SST_PROFISSIONAL,
+        "limites": {"max_usuarios": 25, "max_funcionarios": 250, "max_unidades": 1},
     },
     "empresa_enterprise_100": {
         "label": "Empresa Enterprise",
         "setor": "empresa",
-        "descricao": "Operacao corporativa multiunidade com inteligencia epidemiologica.",
+        "descricao": "SST corporativo multiunidade com eSocial, conformidade NR e governanca de acesso.",
         "usuarios": 100,
         "dispositivos": 100,
         "mensal": 4900.00,
         "anual": 49000.00,
         "ciclos": ["mensal", "anual"],
+        "features": _SST_ENTERPRISE,
+        "limites": {"max_usuarios": 100, "max_funcionarios": 1000, "max_unidades": 5},
     },
     "empresa_corporativo_250": {
         "label": "Empresa Corporativo",
         "setor": "empresa",
-        "descricao": "Cobertura corporativa nacional com muitas unidades e governanca de acesso.",
+        "descricao": "SST para grandes grupos: multiplas unidades, turnos, setores e relatorios consolidados.",
         "usuarios": 250,
         "dispositivos": 250,
         "mensal": 9900.00,
         "anual": 99000.00,
         "ciclos": ["mensal", "anual"],
+        "features": _SST_CORPORATIVO,
+        "limites": {"max_usuarios": 250, "max_funcionarios": 5000, "max_unidades": 20},
     },
     "empresa_nacional_500": {
         "label": "Empresa Nacional",
         "setor": "empresa",
-        "descricao": "Radar nacional para grupos empresariais com operacao em varios estados.",
+        "descricao": "Operacao SST nacional para grupos empresariais com presenca em varios estados.",
         "usuarios": 500,
         "dispositivos": 500,
         "mensal": 19900.00,
         "anual": 199000.00,
         "ciclos": ["mensal", "anual"],
+        "features": _SST_NACIONAL,
+        "limites": {"max_usuarios": 500, "max_funcionarios": 10000, "max_unidades": 50},
     },
     "empresa_nacional_1000": {
         "label": "Empresa Nacional 1000",
         "setor": "empresa",
-        "descricao": "Operacao enterprise ampliada com ate 1000 usuarios e maquinas autorizadas.",
+        "descricao": "SST enterprise para grandes corporacoes com ate 1000 usuarios e governanca total.",
         "usuarios": 1000,
         "dispositivos": 1000,
         "mensal": 35000.00,
         "anual": 350000.00,
         "ciclos": ["mensal", "anual"],
+        "features": _SST_NACIONAL,
+        "limites": {"max_usuarios": 1000, "max_funcionarios": 999999, "max_unidades": 999},
     },
     "farmacia_local": {
         "label": "Farmacia Local",
         "setor": "farmacia",
-        "descricao": "Focos por bairro para abastecimento preventivo de prateleiras.",
+        "descricao": "Controle de estoque, dispensacoes e vencimentos de medicamentos para farmacia local.",
         "usuarios": 5,
         "dispositivos": 5,
         "mensal": 699.00,
         "anual": 6990.00,
         "ciclos": ["mensal", "anual"],
+        "features": _FARMACIA_LOCAL,
+        "limites": {"max_usuarios": 5, "max_unidades": 1},
     },
     "farmacia_rede_regional": {
         "label": "Rede Farmaceutica Regional",
         "setor": "farmacia",
-        "descricao": "Inteligencia de demanda por regiao, sintomas e provaveis doencas.",
+        "descricao": "Rastreabilidade de lotes, pedidos de compra e gestao de controlados por rede de unidades.",
         "usuarios": 50,
         "dispositivos": 50,
         "mensal": 6000.00,
         "anual": 60000.00,
         "ciclos": ["mensal", "anual"],
+        "features": _FARMACIA_REDE,
+        "limites": {"max_usuarios": 50, "max_unidades": 999},
     },
     "hospital_medio": {
         "label": "Hospital Medio",
         "setor": "hospital",
-        "descricao": "Preparacao de pronto atendimento, leitos e pressao assistencial.",
+        "descricao": "Gestao de leitos, internacoes e triagem (Manchester) para hospitais de medio porte.",
         "usuarios": 50,
         "dispositivos": 50,
         "mensal": 12000.00,
         "anual": 120000.00,
         "ciclos": ["mensal", "anual"],
+        "features": _HOSPITAL_MEDIO,
+        "limites": {"max_usuarios": 50, "max_unidades": 1},
     },
     "hospital_rede": {
         "label": "Rede Hospitalar",
         "setor": "hospital",
-        "descricao": "Sala de situacao para rede hospitalar com risco territorial e SRAG.",
+        "descricao": "Gestao multi-unidade hospitalar com consolidacao de KPIs, leitos e indicadores por unidade.",
         "usuarios": 250,
         "dispositivos": 250,
         "mensal": 60000.00,
         "anual": 600000.00,
         "ciclos": ["mensal", "anual"],
+        "features": _HOSPITAL_REDE,
+        "limites": {"max_usuarios": 250, "max_unidades": 999},
     },
     "governo_municipio_pequeno": {
         "label": "Governo Municipio Pequeno",
         "setor": "governo",
-        "descricao": "Contrato anual fechado para vigilancia municipal e alertas oficiais.",
+        "descricao": "Gestao municipal de saude publica: programas, indicadores, planos de acao e orcamento.",
         "usuarios": 100,
         "dispositivos": 100,
         "mensal": 0.00,
         "anual": 120000.00,
         "ciclos": ["anual"],
         "populacao_cobertura": "ate 100 mil habitantes",
+        "features": _GOVERNO_TODOS,
+        "limites": {"max_usuarios": 100, "max_municipios": 1},
     },
     "governo_municipio_medio": {
         "label": "Governo Municipio Medio",
         "setor": "governo",
-        "descricao": "Contrato anual fechado para centro municipal de inteligencia epidemiologica.",
+        "descricao": "Centro municipal de gestao em saude com indicadores, planos de acao e relatorios de prestacao de contas.",
         "usuarios": 250,
         "dispositivos": 250,
         "mensal": 0.00,
         "anual": 360000.00,
         "ciclos": ["anual"],
         "populacao_cobertura": "100 mil a 800 mil habitantes",
+        "features": _GOVERNO_TODOS,
+        "limites": {"max_usuarios": 250, "max_municipios": 1},
     },
     "governo_capital_regiao": {
         "label": "Governo Capital / Regiao Metropolitana",
         "setor": "governo",
-        "descricao": "Contrato anual fechado para sala de controle epidemiologica multi-regional.",
+        "descricao": "Gestao multi-regional de saude publica com consolidacao de indicadores, programas e governanca de orcamento.",
         "usuarios": 500,
         "dispositivos": 500,
         "mensal": 0.00,
         "anual": 1200000.00,
         "ciclos": ["anual"],
         "populacao_cobertura": "capitais e regioes metropolitanas",
+        "features": _GOVERNO_TODOS,
+        "limites": {"max_usuarios": 500, "max_municipios": 50},
     },
     "governo_estado": {
         "label": "Governo Estadual",
         "setor": "governo",
-        "descricao": "Contrato anual fechado para vigilancia estadual integrada e governanca institucional.",
+        "descricao": "Gestao estadual integrada de saude: programas, indicadores, orcamento e governanca institucional por municipio.",
         "usuarios": 1000,
         "dispositivos": 1000,
         "mensal": 0.00,
         "anual": 3600000.00,
         "ciclos": ["anual"],
         "populacao_cobertura": "cobertura estadual",
+        "features": _GOVERNO_TODOS,
+        "limites": {"max_usuarios": 1000, "max_municipios": 999},
     },
     "rede_regional": {
         "label": "Rede de Saúde Regional",
@@ -152,6 +293,8 @@ PACOTES_SAAS = {
         "mensal": 8900.00,
         "anual": 89000.00,
         "ciclos": ["mensal", "anual"],
+        "features": _REDE_TODOS,
+        "limites": {"max_usuarios": 250, "max_unidades": 50},
     },
     "rede_nacional": {
         "label": "Rede de Saúde Nacional",
@@ -162,26 +305,32 @@ PACOTES_SAAS = {
         "mensal": 29900.00,
         "anual": 299000.00,
         "ciclos": ["mensal", "anual"],
+        "features": _REDE_TODOS,
+        "limites": {"max_usuarios": 1000, "max_unidades": 999},
     },
     "plano_saude_operadora": {
         "label": "Operadora de Plano de Saúde",
         "setor": "plano_saude",
-        "descricao": "Camada cooperativa para operadoras: integra carteira, regulacao, sinistros, prestadores e radar epidemiologico sem substituir o core legado.",
+        "descricao": "Gestao de beneficiarios, guias de autorizacao, sinistros e reembolsos com rastreabilidade total e relatorios ANS-compativeis.",
         "usuarios": 100,
         "dispositivos": 100,
         "mensal": 12000.00,
         "anual": 120000.00,
         "ciclos": ["mensal", "anual"],
+        "features": _PLANO_OPERADORA,
+        "limites": {"max_usuarios": 100},
     },
     "plano_saude_enterprise": {
         "label": "Operadora Enterprise",
         "setor": "plano_saude",
-        "descricao": "Cockpit multi-operadora com cooperacao via API, BI avancado, payment integrity e comando epidemiologico acima do legado existente.",
+        "descricao": "Plataforma enterprise para grandes operadoras: coparticipacao, faturamento, sinistralidade e integracao via API com sistemas legados.",
         "usuarios": 500,
         "dispositivos": 500,
         "mensal": 45000.00,
         "anual": 450000.00,
         "ciclos": ["mensal", "anual"],
+        "features": _PLANO_ENTERPRISE,
+        "limites": {"max_usuarios": 500},
     },
 }
 

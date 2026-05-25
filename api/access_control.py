@@ -8,6 +8,97 @@ from .services.auth_session import dono_autenticado_from_request
 TODOS_SETORES = ("empresa", "farmacia", "hospital", "governo", "rede", "plano_saude")
 
 
+# ─── Feature gating ──────────────────────────────────────────────────────────
+#
+# Uso em views:
+#   @api_requer_feature("sst.esocial")
+#   def minha_view(request): ...
+#
+# Verificação programática:
+#   if empresa_tem_feature(request.empresa, "plano.coparticipacao"):
+#       ...
+#
+# Verificação de limite:
+#   if not dentro_do_limite(request.empresa, "max_unidades", unidades_atuais):
+#       return JsonResponse({"erro": "Limite de unidades atingido"}, status=403)
+
+def get_features(empresa) -> set:
+    """Retorna o conjunto de features habilitadas para o plano desta empresa."""
+    pacote = detalhes_pacote(empresa.pacote_codigo)
+    return set(pacote.get("features", []))
+
+
+def get_limites(empresa) -> dict:
+    """Retorna os limites numéricos do plano desta empresa."""
+    pacote = detalhes_pacote(empresa.pacote_codigo)
+    return pacote.get("limites", {})
+
+
+def empresa_tem_feature(empresa, feature: str) -> bool:
+    """Verifica se a empresa tem acesso à feature pelo seu plano ativo."""
+    return feature in get_features(empresa)
+
+
+def dentro_do_limite(empresa, chave: str, valor_atual: int) -> bool:
+    """
+    Verifica se um valor está dentro do limite do plano.
+    Retorna True se não houver limite definido (ilimitado).
+    Exemplos de chave: 'max_usuarios', 'max_unidades', 'max_funcionarios'.
+    """
+    limite = get_limites(empresa).get(chave)
+    if limite is None:
+        return True  # sem limite declarado → ilimitado
+    return valor_atual < limite
+
+
+def api_requer_feature(feature: str):
+    """
+    Decorator para views de API. Retorna 403 se a feature não estiver no plano.
+    Inclui detalhes no response para o frontend mostrar modal de upgrade.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            empresa = getattr(request, "empresa", None)
+            if not empresa:
+                return JsonResponse({"erro": "Não autenticado"}, status=401)
+            if not empresa_tem_feature(empresa, feature):
+                pacote = detalhes_pacote(empresa.pacote_codigo)
+                return JsonResponse({
+                    "erro": "Funcionalidade não disponível no seu plano atual.",
+                    "feature_requerida": feature,
+                    "plano_atual": pacote.get("label", empresa.pacote_codigo),
+                    "setor": pacote.get("setor", ""),
+                    "upgrade_necessario": True,
+                }, status=403)
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def requer_feature(feature: str):
+    """
+    Decorator para views de página (HTML). Renderiza tela de bloqueio se a
+    feature não estiver no plano, em vez de redirecionar.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            empresa = getattr(request, "empresa", None)
+            if not empresa:
+                return redirect("/login-empresa/")
+            if not empresa_tem_feature(empresa, feature):
+                pacote = detalhes_pacote(empresa.pacote_codigo)
+                return render(request, "feature_restrita.html", {
+                    "feature_requerida": feature,
+                    "plano_atual": pacote.get("label", ""),
+                    "setor": pacote.get("setor", ""),
+                }, status=403)
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
 def get_setor(empresa):
     """Return the sector/module for this empresa based on its plan."""
     setor = detalhes_pacote(empresa.pacote_codigo).get("setor", "empresa")

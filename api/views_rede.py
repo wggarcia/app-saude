@@ -8,6 +8,7 @@ from .models import (
     PlanoSaude, BeneficiarioPlano, GuiaAutorizacao, ItemFarmacia,
     CarenciaBeneficiario,
 )
+from .access_control import api_requer_feature, get_setor
 
 
 def get_empresa(request):
@@ -36,13 +37,57 @@ def get_unidade(empresa):
         return None
 
 
+def _verificar_acesso_rede(request):
+    """
+    Verifica se o tenant tem acesso à funcionalidade multi-unidade.
+    - Setor 'farmacia': exige feature 'farmacia.multi_unidade' (plano Rede Regional)
+    - Setor 'rede': exige feature 'rede.multi_unidade' (qualquer plano de rede)
+    - Outros setores: bloqueado (rede é exclusiva para farmácia e setor rede)
+    Retorna (empresa, None) se OK, ou (None, JsonResponse) com erro.
+    """
+    from .access_control import empresa_tem_feature
+    from .planos import detalhes_pacote
+
+    empresa = get_empresa(request)
+    if not empresa:
+        return None, JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    setor = get_setor(empresa)
+
+    if setor == "farmacia":
+        if not empresa_tem_feature(empresa, "farmacia.multi_unidade"):
+            pacote = detalhes_pacote(empresa.pacote_codigo)
+            return None, JsonResponse({
+                "erro": "Rede multi-unidade disponível apenas no plano Rede Farmacêutica Regional.",
+                "feature_requerida": "farmacia.multi_unidade",
+                "plano_atual": pacote.get("label", ""),
+                "upgrade_necessario": True,
+            }, status=403)
+        return empresa, None
+
+    if setor == "rede":
+        if not empresa_tem_feature(empresa, "rede.multi_unidade"):
+            return None, JsonResponse({
+                "erro": "Acesso à rede não disponível no seu plano.",
+                "feature_requerida": "rede.multi_unidade",
+                "upgrade_necessario": True,
+            }, status=403)
+        return empresa, None
+
+    # Outros setores não têm acesso à funcionalidade de rede
+    return None, JsonResponse(
+        {"erro": f"Módulo de rede não disponível para o setor '{setor}'."},
+        status=403,
+    )
+
+
 # ─── REDE ────────────────────────────────────────────────────────────────────
 
 @csrf_exempt
 def api_redes(request):
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _verificar_acesso_rede(request)
+    if err:
+        return err
 
     if request.method == 'GET':
         unidade = get_unidade(empresa)
@@ -90,9 +135,9 @@ def api_redes(request):
 def api_rede_convidar(request):
     """Generate invite code or register a unit into the network."""
     import secrets
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _verificar_acesso_rede(request)
+    if err:
+        return err
 
     unidade = get_unidade(empresa)
     if not unidade or not unidade.rede:
@@ -138,9 +183,9 @@ def api_rede_entrar(request):
     """POST /api/rede/entrar/ — join a rede using an invite code."""
     if request.method != 'POST':
         return JsonResponse({'erro': 'Método não permitido'}, status=405)
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _verificar_acesso_rede(request)
+    if err:
+        return err
     try:
         data = json.loads(request.body)
     except Exception:
@@ -166,9 +211,9 @@ def api_rede_entrar(request):
 # ─── ESTOQUE CONSOLIDADO DA REDE ─────────────────────────────────────────────
 
 def api_rede_estoque(request):
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _verificar_acesso_rede(request)
+    if err:
+        return err
 
     unidade = get_unidade(empresa)
     if not unidade or not unidade.rede:
@@ -199,9 +244,9 @@ def api_rede_estoque(request):
 
 def api_rede_item_disponibilidade(request, nome_item):
     """Check availability of an item across all network units."""
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _verificar_acesso_rede(request)
+    if err:
+        return err
 
     unidade = get_unidade(empresa)
     if not unidade or not unidade.rede:
@@ -232,9 +277,9 @@ def api_rede_item_disponibilidade(request, nome_item):
 
 @csrf_exempt
 def api_transferencias(request):
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _verificar_acesso_rede(request)
+    if err:
+        return err
 
     unidade = get_unidade(empresa)
     if not unidade:

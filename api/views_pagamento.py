@@ -305,6 +305,35 @@ def _asaas_token_valido(request):
 
 # ── VIEWS ─────────────────────────────────────────────────────────────────────
 
+def api_plano_features(request):
+    """
+    GET /api/plano/features
+    Retorna o plano ativo, as features habilitadas e os limites da empresa autenticada.
+    Usado pelo frontend para habilitar/desabilitar elementos de UI por plano.
+    Resposta:
+    {
+      "plano": "empresa_enterprise_100",
+      "label": "Empresa Enterprise",
+      "setor": "empresa",
+      "features": ["sst.aso", "sst.esocial", ...],
+      "limites": {"max_usuarios": 100, "max_funcionarios": 1000, "max_unidades": 5}
+    }
+    """
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    from .access_control import get_features, get_limites
+    pacote = detalhes_pacote(empresa.pacote_codigo)
+    return JsonResponse({
+        "plano": empresa.pacote_codigo,
+        "label": pacote.get("label", empresa.pacote_codigo),
+        "setor": pacote.get("setor", ""),
+        "features": sorted(get_features(empresa)),
+        "limites": get_limites(empresa),
+    })
+
+
 @csrf_exempt
 def planos_publicos(request):
     pacotes = pacotes_por_setor(incluir_governo=False)
