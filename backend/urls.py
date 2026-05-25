@@ -23,7 +23,8 @@ from api.views import (
     insights_nacional,
     tela_cadastro, tela_login_empresa, tela_login_governo,
     registrar_sintoma_publico, app_resumo_publico, app_radar_local, app_mapa_publico, app_alertas_publicos, registrar_push_publico,
-    site_principal, apresentacao_comercial, documento_publico
+    site_principal, apresentacao_comercial, documento_publico,
+    calculadora_roi, pagina_plataforma,
 )
 
 from api.views_auth import registrar_empresa, login_empresa, login_portal_empresa, login_portal_governo, logout_empresa, logout_governo, logout_operacao, login_dono_saas, ativar_sessao_aba, ativar_trial
@@ -523,6 +524,8 @@ urlpatterns = [
 
     # 🔐 LOGIN
     path('', site_principal),
+    path('calculadora/', calculadora_roi),
+    path('plataforma/', pagina_plataforma),
     path('apresentacao/', apresentacao_comercial),
     path('privacidade/', documento_publico, {"slug": "privacidade"}),
     path('termos/', documento_publico, {"slug": "termos"}),
