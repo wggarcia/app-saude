@@ -520,7 +520,9 @@ function renderAfastamentos(afas) {
 // ─── INIT ───
 async function init() {
   try {
-    const res = await fetch('/api/sst/funcionarios/' + FUNC_ID + '/prontuario');
+    const res = await fetch('/api/sst/funcionarios/' + FUNC_ID + '/prontuario', {
+      headers: { "Authorization": "Bearer " + (sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || "") }
+    });
     if (!res.ok) throw new Error('Erro ' + res.status);
     const data = await res.json();
 

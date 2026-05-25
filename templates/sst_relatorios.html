@@ -245,12 +245,25 @@ let dadosGlobais = null;
 
 async function carregarRelatorio() {
   try {
-    const r = await fetch('/api/sst/relatorios', {credentials:'same-origin'});
-    if (!r.ok) return;
+    const r = await fetch('/api/sst/relatorios', {
+      headers: { "Authorization": "Bearer " + (sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || "") }
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      let msg;
+      if (r.status === 403 && err.upgrade_necessario)
+        msg = "🔒 Funcionalidade não disponível no seu plano atual.";
+      else if (r.status === 401)
+        msg = "⚠️ Sessão expirada. Faça login novamente.";
+      else
+        msg = "⚠️ Erro ao carregar dados (" + r.status + "). Tente recarregar a página.";
+      document.getElementById('geradoEm').textContent = msg;
+      return;
+    }
     const d = await r.json();
     dadosGlobais = d;
     renderTudo(d);
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error("[carregarRelatorio] Erro:", e); }
 }
 
 function renderTudo(d) {

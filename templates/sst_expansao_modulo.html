@@ -166,20 +166,39 @@ async function loadKpis() {
   if (!API_KPI) return;
   try {
     const r = await fetch(API_KPI, { headers: headers() });
-    if (!r.ok) return;
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      if (r.status === 403 && err.upgrade_necessario)
+        return _mostrarErroModulo("🔒 Funcionalidade não disponível no seu plano atual.");
+      if (r.status === 401)
+        return _mostrarErroModulo("⚠️ Sessão expirada. Faça login novamente.");
+      return _mostrarErroModulo("⚠️ Erro ao carregar dados (" + r.status + "). Tente recarregar a página.");
+    }
     const d = await r.json();
     renderKpis(d);
-  } catch (e) { console.warn("KPI load error", e); }
+  } catch (e) { console.error("[loadKpis] Erro:", e); }
 }
 
 async function loadMain() {
   if (!API_BASE) return;
   try {
     const r = await fetch(API_BASE, { headers: headers() });
-    if (!r.ok) return;
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      if (r.status === 403 && err.upgrade_necessario)
+        return _mostrarErroModulo("🔒 Funcionalidade não disponível no seu plano atual.");
+      if (r.status === 401)
+        return _mostrarErroModulo("⚠️ Sessão expirada. Faça login novamente.");
+      return _mostrarErroModulo("⚠️ Erro ao carregar dados (" + r.status + "). Tente recarregar a página.");
+    }
     const d = await r.json();
     renderMain(d);
-  } catch (e) { console.warn("Main load error", e); }
+  } catch (e) { console.error("[loadMain] Erro:", e); }
+}
+function _mostrarErroModulo(msg) {
+  const strip = document.getElementById("kpiStrip");
+  if (strip) strip.innerHTML = '<div style="padding:12px;color:#e57373">' + msg + '</div>';
+  else console.error(msg);
 }
 
 // ── Module-specific renderers ────────────────────────────────────────────────

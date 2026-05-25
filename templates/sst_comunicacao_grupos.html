@@ -489,7 +489,7 @@ function iniciarPolling(salaId) {
         renderMensagens();
         if (atFundo) scrollToBottom();
       }
-    } catch(e) {}
+    } catch(e) { console.error("[iniciarPolling] Erro ao buscar mensagens:", e); }
   }, 5000);
 }
 

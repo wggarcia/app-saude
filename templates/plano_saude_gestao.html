@@ -3002,7 +3002,7 @@ async function popularBeneficiariosCarencia() {
       var r = await fetch('/api/planos-saude/' + p.id + '/beneficiarios/', {credentials:'include'});
       var d = await r.json();
       (d.beneficiarios || []).forEach(function(b){ bens.push({id:b.id, nome:b.nome, plano:p.nome||p.nome_fantasia}); });
-    } catch(e) {}
+    } catch(e) { console.error("[popularBeneficiariosCarencia] Erro ao carregar plano " + p.id + ":", e); }
   }
   _todosBeeneficiarios = bens;
   sel.innerHTML = '<option value="">Selecione o beneficiário...</option>' +

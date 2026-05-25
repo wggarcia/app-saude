@@ -416,7 +416,7 @@ const EMP_ID = "{{ empresa_id|escapejs }}";
       method: "POST", credentials: "same-origin",
       headers: { Authorization: "Bearer " + token }
     });
-    if (!r.ok) return;
+    if (!r.ok) { console.error("[syncTab] Falha na sincronização de aba:", r.status); return; }
     const p = await r.json();
     sessionStorage.setItem("empresa_id", String(p.empresa_id || ""));
     if (p.tab_key) {
@@ -433,7 +433,7 @@ const EMP_ID = "{{ empresa_id|escapejs }}";
       sessionStorage.setItem(k, "1");
       location.reload();
     }
-  } catch(e) {}
+  } catch(e) { console.error("[syncTab] Erro:", e); }
 })();
 window.addEventListener("focus", function() {
   const token = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || "";

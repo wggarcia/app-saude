@@ -310,7 +310,20 @@ function renderDados(d) {
 
 async function carregarSSTUnidade() {
   try {
-    const r = await fetch('/api/sst/dashboard'); if (!r.ok) return;
+    const r = await fetch('/api/sst/dashboard');
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      let msg;
+      if (r.status === 403 && err.upgrade_necessario)
+        msg = "🔒 Funcionalidade não disponível no seu plano atual.";
+      else if (r.status === 401)
+        msg = "⚠️ Sessão expirada. Faça login novamente.";
+      else
+        msg = "⚠️ Erro ao carregar dados (" + r.status + "). Tente recarregar a página.";
+      const el = document.getElementById('sstContent');
+      if (el) el.innerHTML = '<div style="padding:10px;color:#e57373;font-size:.83rem">' + msg + '</div>';
+      return;
+    }
     const d = await r.json();
     const asos = d.asos_vencendo_30d||0;
     const asosV = d.asos_vencidos||0;
@@ -331,7 +344,7 @@ async function carregarSSTUnidade() {
         ${cats>0?`<div style="background:rgba(255,122,145,.1);border:1px solid rgba(255,122,145,.2);border-radius:10px;padding:10px 12px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase">CATs em aberto</div><div style="font-size:1.3rem;font-weight:800;color:var(--danger)">${cats}</div></div>`:''}
       </div>`;
     document.getElementById('sstCard').style.display='';
-  } catch(e){}
+  } catch(e) { console.error("[carregarSSTUnidade] Erro:", e); }
 }
 
 popularUnidades();

@@ -276,7 +276,15 @@ function fecharModal() { document.getElementById('modalRemover').classList.remov
 
 async function carregarResumo() {
   try {
-    const r = await fetch('/api/escalas/resumo'); if (!r.ok) return;
+    const r = await fetch('/api/escalas/resumo');
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      if (r.status === 403 && err.upgrade_necessario)
+        return _mostrarErroResumo("🔒 Funcionalidade não disponível no seu plano atual.");
+      if (r.status === 401)
+        return _mostrarErroResumo("⚠️ Sessão expirada. Faça login novamente.");
+      return _mostrarErroResumo("⚠️ Erro ao carregar dados (" + r.status + "). Tente recarregar a página.");
+    }
     const d = await r.json();
     document.getElementById('kpiEscalas').textContent = d.total_escalas;
     document.getElementById('kpiEmb').textContent = d.total_embarcados;
@@ -286,7 +294,11 @@ async function carregarResumo() {
       document.getElementById('kpiEmbD').textContent = Math.round(d.total_embarcados/tot*100)+'% do efetivo';
       document.getElementById('kpiFolgD').textContent = Math.round(d.total_folga/tot*100)+'% do efetivo';
     }
-  } catch(e){}
+  } catch(e) { console.error("[carregarResumo] Erro:", e); }
+}
+function _mostrarErroResumo(msg) {
+  ['kpiEscalas','kpiEmb','kpiFolg'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
+  console.error(msg);
 }
 
 async function carregarEscalas() {

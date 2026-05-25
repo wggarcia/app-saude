@@ -182,10 +182,20 @@ function addMensagens(novas) {
 async function carregarInicial() {
   try {
     const r = await fetch(`/api/corporativo/${CODIGO}/chat/mensagens/`);
-    if (!r.ok) return;
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      if (r.status === 401)
+        return _mostrarErroChatContainer("⚠️ Sessão expirada. Faça login novamente.");
+      return _mostrarErroChatContainer("⚠️ Erro ao carregar mensagens (" + r.status + "). Tente recarregar a página.");
+    }
     const d = await r.json();
     addMensagens(d.mensagens || []);
-  } catch(e) {}
+  } catch(e) { console.error("[carregarInicial] Erro:", e); }
+}
+function _mostrarErroChatContainer(msg) {
+  const container = document.getElementById("messages-container") || document.querySelector(".chat-messages");
+  if (container) container.innerHTML = '<div style="padding:16px;color:#e57373;text-align:center">' + msg + '</div>';
+  else console.error(msg);
 }
 
 // ── Poll for new messages every 3s ───────────────────────────
@@ -193,17 +203,17 @@ async function poll() {
   if (!ultimaMensagem) return;
   try {
     const r = await fetch(`/api/corporativo/${CODIGO}/chat/mensagens/?desde=${encodeURIComponent(ultimaMensagem)}`);
-    if (!r.ok) return;
+    if (!r.ok) { console.error("[poll] Erro ao buscar mensagens:", r.status); return; }
     const d = await r.json();
     if (d.mensagens && d.mensagens.length) addMensagens(d.mensagens);
-  } catch(e) {}
+  } catch(e) { console.error("[poll] Erro:", e); }
 }
 
 // ── Poll for active video session ────────────────────────────
 async function pollVideo() {
   try {
     const r = await fetch(`/api/corporativo/${CODIGO}/video/ativa/`);
-    if (!r.ok) return;
+    if (!r.ok) { console.error("[pollVideo] Erro:", r.status); return; }
     const d = await r.json();
     const banner = document.getElementById("video-banner");
     if (d.video) {
@@ -213,7 +223,7 @@ async function pollVideo() {
     } else {
       banner.classList.remove("show");
     }
-  } catch(e) {}
+  } catch(e) { console.error("[pollVideo] Erro:", e); }
 }
 
 // ── Send message ──────────────────────────────────────────────
@@ -235,7 +245,7 @@ async function enviar() {
       input.value = "";
       input.style.height = "auto";
     }
-  } catch(e) {}
+  } catch(e) { console.error("[enviar] Erro:", e); }
   enviando = false;
   document.getElementById("send-btn").disabled = false;
   input.focus();

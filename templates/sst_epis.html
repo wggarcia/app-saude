@@ -422,7 +422,7 @@ async function carregarFuncionarios() {
       op.textContent = f.nome || f.name;
       sel.appendChild(op);
     });
-  } catch(e) {}
+  } catch(e) { console.error("[carregarFuncionarios] Erro:", e); }
 }
 
 // ── KPIs ───────────────────────────────────────────────────────

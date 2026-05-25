@@ -1018,7 +1018,7 @@ async function carregarEstoque() {
     const d = await r.json();
     _estoque = d.unidades || [];
     calcularCobertura();
-  } catch(e) {}
+  } catch(e) { console.error("[carregarEstoque] Erro:", e); }
 }
 
 function calcularCobertura() {
@@ -1235,7 +1235,7 @@ async function carregarMensagens() {
     }
     preencherSelectUnidades('msg-dest', true);
     renderChatList();
-  } catch(e) {}
+  } catch(e) { console.error("[carregarMensagens] Erro:", e); }
 }
 
 function renderChatList() {
