@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Psicossocial NR-01 — SolusCRT SST</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#06111a; --panel:rgba(7,25,38,.84); --line:rgba(111,196,255,.10); --text:#e8f4ff; --muted:#7aa4c0; --teal:#00c9a7; --amber:#f59e0b; --red:#f87171; --green:#34d399; --purple:#a374ff; }
+    * { box-sizing:border-box; margin:0; }
+    html,body { min-height:100vh; background:var(--bg); color:var(--text); font-family:Manrope,"Segoe UI",sans-serif; font-size:15px; line-height:1.55; }
+    .topbar { display:flex; align-items:center; gap:14px; padding:0 24px; height:58px; border-bottom:1px solid var(--line); background:rgba(6,16,25,.92); backdrop-filter:blur(12px); position:sticky; top:0; z-index:100; }
+    .tb-logo { font-size:.74rem; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:var(--teal); }
+    .app { display:grid; grid-template-columns:220px 1fr; min-height:calc(100vh - 58px); }
+    .sidebar { padding:20px 0; border-right:1px solid var(--line); }
+    .sidebar a { display:flex; align-items:center; gap:10px; padding:9px 20px; font-size:.82rem; font-weight:600; color:var(--muted); text-decoration:none; border-left:3px solid transparent; }
+    .sidebar a:hover { color:var(--text); }
+    .sidebar a.active { color:var(--teal); border-left-color:var(--teal); background:rgba(0,201,167,.06); }
+    main { padding:28px 32px; max-width:1100px; }
+    .hero { margin-bottom:28px; }
+    .hero-eyebrow { font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.13em; color:var(--purple); margin-bottom:6px; }
+    .hero-title { font-size:1.65rem; font-weight:800; line-height:1.2; margin-bottom:10px; }
+    .hero-sub { font-size:.9rem; color:var(--muted); line-height:1.6; max-width:600px; }
+    .kpi-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:28px; }
+    .kpi-card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; border-top:2px solid var(--purple); }
+    .kpi-label { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+    .kpi-value { font-size:1.6rem; font-weight:800; margin-top:6px; }
+    .kpi-sub { font-size:.72rem; color:var(--muted); margin-top:3px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:20px; }
+    .section-title { font-size:.82rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 14px; }
+    .btn { padding:10px 18px; border-radius:10px; font-weight:700; font-size:.82rem; cursor:pointer; border:none; }
+    .btn-purple { background:linear-gradient(135deg,#a374ff,#6c3fc8); color:#fff; }
+    .btn-ghost { background:transparent; border:1px solid var(--line); color:var(--muted); text-decoration:none; padding:6px 12px; border-radius:8px; font-size:.78rem; font-weight:600; display:inline-block; cursor:pointer; }
+    .av-card { background:rgba(163,116,255,.06); border:1px solid rgba(163,116,255,.2); border-radius:12px; padding:16px; margin-bottom:12px; }
+    .av-titulo { font-weight:700; margin-bottom:4px; }
+    .av-meta { font-size:.78rem; color:var(--muted); margin-bottom:8px; }
+    .av-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .badge { display:inline-flex; align-items:center; padding:3px 9px; border-radius:999px; font-size:.68rem; font-weight:800; }
+    .b-ok { background:rgba(52,211,153,.12); color:#34d399; border:1px solid rgba(52,211,153,.25); }
+    .b-warn { background:rgba(245,158,11,.12); color:#f59e0b; border:1px solid rgba(245,158,11,.25); }
+    .b-muted { background:rgba(122,164,192,.1); color:var(--muted); border:1px solid var(--line); }
+    .b-purple { background:rgba(163,116,255,.12); color:#a374ff; border:1px solid rgba(163,116,255,.25); }
+    .loading { display:flex; align-items:center; gap:10px; color:var(--muted); font-size:.85rem; padding:20px; }
+    .spinner { width:18px; height:18px; border:2px solid var(--line); border-top-color:var(--purple); border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .empty { text-align:center; padding:40px; color:var(--muted); }
+    .score-bar-wrap { background:rgba(255,255,255,.05); border-radius:999px; height:8px; overflow:hidden; flex:1; }
+    .score-bar { height:100%; border-radius:999px; transition:width .5s; }
+    @media (max-width:900px) { .app { grid-template-columns:1fr; } .sidebar { display:none; } main { padding:20px; } }
+  </style>
+  {% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
+{% include "partials/sst_topbar.html" %}
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+  <main>
+    <div class="hero">
+      <div class="hero-eyebrow">SST · Saúde Mental</div>
+      <div class="hero-title">Psicossocial — NR-01</div>
+      <div class="hero-sub">Avalie os riscos psicossociais conforme a NR-01 (2024). Crie questionários anônimos, compartilhe via link com colaboradores e obtenha scores por categoria (carga de trabalho, autonomia, relacionamento e outros).</div>
+    </div>
+
+    <div class="kpi-strip" id="kpiStrip">
+      <div class="kpi-card"><div class="kpi-label">Carregando</div><div class="kpi-value">—</div></div>
+    </div>
+
+    <div class="panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div class="section-title" style="margin:0">Avaliações</div>
+        <button class="btn btn-purple" onclick="criarAvaliacao()">+ Nova Avaliação</button>
+      </div>
+      <div id="avaliacoesList"><div class="loading"><div class="spinner"></div> Carregando avaliações...</div></div>
+    </div>
+
+    <div class="panel" id="resultadosPanel" style="display:none">
+      <div class="section-title">Resultados — <span id="avTitulo">—</span></div>
+      <div id="resultadosContent"><div class="loading"><div class="spinner"></div> Carregando...</div></div>
+    </div>
+  </main>
+</div>
+
+<script>
+let avAtiva = null;
+
+function auth() { return sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || ""; }
+function headers() { return { "Authorization": "Bearer " + auth(), "Content-Type": "application/json" }; }
+
+function statusBadge(s) {
+  const map = { rascunho:"b-muted", ativa:"b-ok", encerrada:"b-warn", processada:"b-purple" };
+  return `<span class="badge ${map[s]||'b-muted'}">${s}</span>`;
+}
+
+function nivelCor(n) {
+  const map = { baixo:"var(--green)", medio:"var(--amber)", alto:"var(--red)", critico:"var(--red)" };
+  return map[n] || "var(--muted)";
+}
+
+async function loadKpis() {
+  try {
+    const r = await fetch("/api/sst/psicossocial/kpis/", { headers: headers() });
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById("kpiStrip").innerHTML = `
+      <div class="kpi-card" style="border-top-color:var(--purple)"><div class="kpi-label">Total Avaliações</div><div class="kpi-value">${d.total_avaliacoes}</div></div>
+      <div class="kpi-card" style="border-top-color:var(--green)"><div class="kpi-label">Ativas</div><div class="kpi-value" style="color:var(--green)">${d.ativas}</div></div>
+      <div class="kpi-card" style="border-top-color:var(--amber)"><div class="kpi-label">Encerradas</div><div class="kpi-value">${d.respondidas}</div></div>
+      <div class="kpi-card" style="border-top-color:var(--purple)"><div class="kpi-label">Score Médio</div><div class="kpi-value">${d.score_medio_empresa !== null ? d.score_medio_empresa + '/100' : '—'}</div></div>
+    `;
+  } catch(e) {}
+}
+
+async function loadAvaliacoes() {
+  try {
+    const r = await fetch("/api/sst/psicossocial/", { headers: headers() });
+    if (!r.ok) { document.getElementById("avaliacoesList").innerHTML = "<div class='empty'>Sem permissão ou erro ao carregar.</div>"; return; }
+    const d = await r.json();
+    if (!d.avaliacoes || d.avaliacoes.length === 0) {
+      document.getElementById("avaliacoesList").innerHTML = "<div class='empty'>Nenhuma avaliação criada ainda. Crie a primeira avaliação psicossocial.</div>";
+      return;
+    }
+    document.getElementById("avaliacoesList").innerHTML = d.avaliacoes.map(av => `
+      <div class="av-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+          <div class="av-titulo">${av.titulo}</div>
+          ${statusBadge(av.status)}
+        </div>
+        <div class="av-meta">${av.setor_alvo ? "Setor: " + av.setor_alvo + " · " : ""}${av.total_respondidos} respondentes · Início: ${av.data_inicio}${av.data_fim ? " · Fim: " + av.data_fim : ""}</div>
+        <div class="av-actions">
+          ${av.status === "rascunho" ? `<button class="btn-ghost" onclick="ativarAvaliacao(${av.id})">Ativar</button>` : ""}
+          ${av.status === "ativa" ? `<button class="btn-ghost" onclick="copiarLink('${av.link_token}')">Copiar Link</button>` : ""}
+          <button class="btn-ghost" onclick="verResultados(${av.id}, '${av.titulo.replace(/'/g,"\\'")}')">Resultados</button>
+          <a href="/api/sst/psicossocial/${av.id}/pdf/" target="_blank" class="btn-ghost">PDF</a>
+        </div>
+      </div>
+    `).join("");
+  } catch(e) { document.getElementById("avaliacoesList").innerHTML = "<div class='empty'>Erro ao carregar avaliações.</div>"; }
+}
+
+function copiarLink(token) {
+  const url = window.location.origin + "/api/sst/psicossocial/responder/" + token + "/";
+  navigator.clipboard.writeText(url).then(() => alert("Link copiado!\n" + url));
+}
+
+async function ativarAvaliacao(id) {
+  if (!confirm("Ativar esta avaliação? Certifique-se de que as questões estão configuradas.")) return;
+  const r = await fetch(`/api/sst/psicossocial/${id}/ativar/`, { method:"POST", headers: headers(), body:"{}" });
+  const d = await r.json();
+  if (d.ok) {
+    alert("Avaliação ativada!\nLink: " + window.location.origin + d.link_publico);
+    loadAvaliacoes(); loadKpis();
+  } else { alert(d.erro || "Erro ao ativar"); }
+}
+
+async function verResultados(id, titulo) {
+  avAtiva = id;
+  document.getElementById("avTitulo").textContent = titulo;
+  document.getElementById("resultadosPanel").style.display = "block";
+  document.getElementById("resultadosContent").innerHTML = "<div class='loading'><div class='spinner'></div> Calculando scores...</div>";
+
+  try {
+    const r = await fetch(`/api/sst/psicossocial/${id}/resultados/`, { headers: headers() });
+    const d = await r.json();
+
+    if (d.score_geral === null || d.score_geral === undefined) {
+      document.getElementById("resultadosContent").innerHTML = "<div class='empty'>Dados insuficientes para calcular resultados.</div>";
+      return;
+    }
+
+    const cor = nivelCor(d.nivel_risco);
+    const cats = d.categorias || {};
+    const catRows = Object.entries(cats).map(([k, v]) => {
+      const c = nivelCor(v.score >= 75 ? "baixo" : v.score >= 50 ? "medio" : v.score >= 25 ? "alto" : "critico");
+      return `
+        <div style="margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span style="font-size:.82rem; font-weight:600">${v.label}</span>
+            <span style="font-size:.82rem; font-weight:800; color:${c}">${v.score}/100</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="score-bar-wrap">
+              <div class="score-bar" style="width:${v.score}%; background:${c}"></div>
+            </div>
+            <span style="font-size:.72rem; color:var(--muted)">Likert: ${v.media_likert}</span>
+          </div>
+        </div>`;
+    }).join("");
+
+    document.getElementById("resultadosContent").innerHTML = `
+      <div style="margin-bottom:20px; text-align:center; padding:16px; background:rgba(163,116,255,.07); border-radius:12px; border:1px solid rgba(163,116,255,.2)">
+        <div style="font-size:.72rem; font-weight:800; text-transform:uppercase; color:var(--muted); margin-bottom:6px">Score Geral</div>
+        <div style="font-size:2.8rem; font-weight:800; color:${cor}">${d.score_geral}<span style="font-size:1.2rem; color:var(--muted)">/100</span></div>
+        <div style="font-size:.85rem; font-weight:700; color:${cor}; margin-top:4px">${(d.nivel_risco||"—").toUpperCase()}</div>
+        <div style="font-size:.78rem; color:var(--muted); margin-top:6px">${d.interpretacao}</div>
+        <div style="font-size:.75rem; color:var(--muted); margin-top:4px">${d.total_respondidos} respondentes</div>
+      </div>
+      <div style="font-size:.82rem; font-weight:800; text-transform:uppercase; color:var(--muted); margin-bottom:12px">Por Categoria</div>
+      ${catRows || "<div class='empty' style='padding:20px'>Nenhum dado por categoria disponível.</div>"}
+    `;
+  } catch(e) {
+    document.getElementById("resultadosContent").innerHTML = "<div class='empty'>Erro ao carregar resultados.</div>";
+  }
+}
+
+function criarAvaliacao() {
+  const titulo = prompt("Título da avaliação psicossocial:");
+  if (!titulo) return;
+  const setor = prompt("Setor alvo (deixe em branco para toda a empresa):", "") || "";
+  const hoje = new Date().toISOString().split("T")[0];
+  fetch("/api/sst/psicossocial/", {
+    method: "POST", headers: headers(),
+    body: JSON.stringify({ titulo, setor_alvo: setor, data_inicio: hoje, anonima: true }),
+  }).then(r => r.json()).then(d => {
+    if (d.ok) { alert("Avaliação criada! Adicione as questões e ative quando estiver pronta."); loadAvaliacoes(); loadKpis(); }
+    else { alert(d.erro || "Erro ao criar"); }
+  });
+}
+
+(async () => { await Promise.all([loadKpis(), loadAvaliacoes()]); })();
+</script>
+</body>
+</html>

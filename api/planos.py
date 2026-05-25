@@ -18,18 +18,21 @@ _SST_BASE = [
     "sst.dashboard",        # Dashboard SST
     "sst.relatorios",       # Relatórios básicos exportáveis
     "sst.funcionarios",     # Cadastro de funcionários
+    "sst.esocial",          # eSocial S-2220, S-2240, S-2245 (disponível desde Starter)
 ]
 _SST_PROFISSIONAL = _SST_BASE + [
     "sst.afastamentos",     # Gestão de afastamentos
     "sst.agenda_medica",    # Agenda médica e exames
     "sst.painel_rh",        # Painel de RH
     "sst.alertas",          # Alertas automáticos de prazo
+    "sst.cipa",             # CIPA — Comissão Interna de Prevenção de Acidentes
+    "sst.biometria",        # Biometria Facial para confirmação de entrega de EPI
+    "sst.psicossocial",     # Avaliação Psicossocial NR-01
+    "sst.pgr_ppra",         # PGR / PPRA / PCMSO automático
 ]
 _SST_ENTERPRISE = _SST_PROFISSIONAL + [
-    "sst.esocial",          # eSocial S-2220, S-2240, S-2245
     "sst.multi_unidade",    # Múltiplas unidades/filiais
     "sst.laudos_tecnicos",  # Laudos técnicos (LTCat, LTIP)
-    "sst.pgr_ppra",         # PGR / PPRA / PCMSO
     "sst.rbac",             # Governança RBAC de usuários
 ]
 _SST_CORPORATIVO = _SST_ENTERPRISE + [

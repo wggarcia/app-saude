@@ -287,6 +287,31 @@ from api.views_fap import (
     api_fap_historico, api_fap_kpis,
     sst_fap_page,
 )
+from api.views_pgr_pcmso import (
+    api_pgr_gerar, api_pgr_pdf,
+    api_pcmso_gerar, api_pcmso_pdf,
+    sst_pgr_page,
+)
+from api.views_cipa import (
+    api_cipa_comissoes, api_cipa_comissao_detalhe,
+    api_cipa_membros, api_cipa_reunioes,
+    api_cipa_reuniao_detalhe, api_cipa_ata_pdf,
+    api_cipa_kpis,
+    sst_cipa_page,
+)
+from api.views_biometria import (
+    api_biometria_cadastrar, api_biometria_detalhe,
+    api_biometria_confirmar_entrega, api_biometria_kpis,
+    sst_biometria_page,
+)
+from api.views_psicossocial import (
+    api_psicossocial_avaliacoes, api_psicossocial_detalhe,
+    api_psicossocial_ativar, api_psicossocial_questoes,
+    api_psicossocial_responder_publico,
+    api_psicossocial_resultados, api_psicossocial_pdf,
+    api_psicossocial_kpis,
+    sst_psicossocial_page,
+)
 from api.views_solicitacao_exame import (
     sst_solicitacoes_page,
     api_solicitacoes_exame,
@@ -1409,4 +1434,39 @@ urlpatterns = [
     path('api/ia/populacao', api_ia_populacao),
     path('api/ia/calibracao', api_ia_calibracao),
     path('api/ia/urgencias', api_ia_urgencias),
+
+    # ── PGR / PCMSO Automático ────────────────────────────────────────────────
+    path('sst/pgr/', sst_pgr_page),
+    path('api/sst/pgr/gerar/', api_pgr_gerar),
+    path('api/sst/pgr/<int:doc_id>/pdf/', api_pgr_pdf),
+    path('api/sst/pcmso/gerar/', api_pcmso_gerar),
+    path('api/sst/pcmso/<int:doc_id>/pdf/', api_pcmso_pdf),
+
+    # ── CIPA — NR-5 ──────────────────────────────────────────────────────────
+    path('sst/cipa/', sst_cipa_page),
+    path('api/sst/cipa/kpis/', api_cipa_kpis),
+    path('api/sst/cipa/comissoes/', api_cipa_comissoes),
+    path('api/sst/cipa/comissoes/<int:comissao_id>/', api_cipa_comissao_detalhe),
+    path('api/sst/cipa/comissoes/<int:comissao_id>/membros/', api_cipa_membros),
+    path('api/sst/cipa/comissoes/<int:comissao_id>/reunioes/', api_cipa_reunioes),
+    path('api/sst/cipa/reunioes/<int:reuniao_id>/', api_cipa_reuniao_detalhe),
+    path('api/sst/cipa/reunioes/<int:reuniao_id>/ata/pdf/', api_cipa_ata_pdf),
+
+    # ── Biometria Facial — EPI ────────────────────────────────────────────────
+    path('sst/biometria/', sst_biometria_page),
+    path('api/sst/biometria/kpis/', api_biometria_kpis),
+    path('api/sst/biometria/cadastrar/', api_biometria_cadastrar),
+    path('api/sst/biometria/<int:funcionario_id>/', api_biometria_detalhe),
+    path('api/sst/biometria/entregas/<int:entrega_id>/confirmar/', api_biometria_confirmar_entrega),
+
+    # ── Psicossocial NR-01 ────────────────────────────────────────────────────
+    path('sst/psicossocial/', sst_psicossocial_page),
+    path('api/sst/psicossocial/kpis/', api_psicossocial_kpis),
+    path('api/sst/psicossocial/', api_psicossocial_avaliacoes),
+    path('api/sst/psicossocial/<int:av_id>/', api_psicossocial_detalhe),
+    path('api/sst/psicossocial/<int:av_id>/ativar/', api_psicossocial_ativar),
+    path('api/sst/psicossocial/<int:av_id>/questoes/', api_psicossocial_questoes),
+    path('api/sst/psicossocial/<int:av_id>/resultados/', api_psicossocial_resultados),
+    path('api/sst/psicossocial/<int:av_id>/pdf/', api_psicossocial_pdf),
+    path('api/sst/psicossocial/responder/<str:token>/', api_psicossocial_responder_publico),
 ]

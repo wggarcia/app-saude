@@ -1656,6 +1656,8 @@ class EntregaEPI(models.Model):
     quantidade   = models.PositiveSmallIntegerField(default=1)
     data_devolucao = models.DateField(null=True, blank=True)
     observacoes  = models.TextField(blank=True, default="")
+    biometria_confirmada = models.BooleanField(default=False)
+    foto_entrega_base64  = models.TextField(blank=True, default="", help_text="Foto capturada no momento da entrega")
     criado_em    = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -5796,3 +5798,218 @@ class FAPEmpresa(models.Model):
 
     def __str__(self):
         return f"FAP {self.ano} — {self.empresa.nome} — {self.fap_valor}"
+
+
+# ─── CIPA — Comissão Interna de Prevenção de Acidentes ──────────────────────
+
+class ComissaoCIPA(models.Model):
+    STATUS_CHOICES = [
+        ("ativa", "Ativa"),
+        ("encerrada", "Encerrada"),
+        ("em_formacao", "Em Formação"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="comissoes_cipa")
+    mandato_inicio = models.DateField()
+    mandato_fim = models.DateField()
+    numero_membros_eleitos = models.PositiveSmallIntegerField(default=0)
+    numero_membros_indicados = models.PositiveSmallIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="em_formacao")
+    designacao_nr5 = models.BooleanField(
+        default=False,
+        help_text="Empresa com até 19 funcionários — designação em vez de eleição"
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-mandato_inicio"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+        ]
+
+    def __str__(self):
+        return f"CIPA {self.empresa.nome} ({self.mandato_inicio} – {self.mandato_fim})"
+
+
+class MembroCIPA(models.Model):
+    CARGO_CHOICES = [
+        ("presidente", "Presidente"),
+        ("vice_presidente", "Vice-Presidente"),
+        ("secretario", "Secretário"),
+        ("membro_eleito", "Membro Eleito"),
+        ("membro_indicado", "Membro Indicado"),
+    ]
+    TIPO_CHOICES = [
+        ("eleito", "Eleito"),
+        ("indicado", "Indicado"),
+    ]
+
+    comissao = models.ForeignKey(ComissaoCIPA, on_delete=models.CASCADE, related_name="membros")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="mandatos_cipa")
+    cargo = models.CharField(max_length=30, choices=CARGO_CHOICES)
+    tipo = models.CharField(max_length=15, choices=TIPO_CHOICES)
+    data_posse = models.DateField(null=True, blank=True)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["cargo"]
+
+    def __str__(self):
+        return f"{self.funcionario.nome} — {self.cargo} (CIPA {self.comissao_id})"
+
+
+class ReuniaoCIPA(models.Model):
+    TIPO_CHOICES = [
+        ("ordinaria", "Ordinária"),
+        ("extraordinaria", "Extraordinária"),
+    ]
+    STATUS_CHOICES = [
+        ("agendada", "Agendada"),
+        ("realizada", "Realizada"),
+        ("cancelada", "Cancelada"),
+    ]
+
+    comissao = models.ForeignKey(ComissaoCIPA, on_delete=models.CASCADE, related_name="reunioes")
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default="ordinaria")
+    data_reuniao = models.DateTimeField()
+    pauta = models.TextField(blank=True)
+    ata = models.TextField(blank=True)
+    local = models.CharField(max_length=200, blank=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default="agendada")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_reuniao"]
+
+    def __str__(self):
+        return f"Reunião CIPA {self.tipo} — {self.data_reuniao.date()} ({self.status})"
+
+
+class ParticipanteReuniaoCIPA(models.Model):
+    reuniao = models.ForeignKey(ReuniaoCIPA, on_delete=models.CASCADE, related_name="participantes")
+    funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="reunioes_cipa")
+    presente = models.BooleanField(default=True)
+    assinatura_token = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        unique_together = [("reuniao", "funcionario")]
+
+    def __str__(self):
+        return f"{self.funcionario.nome} — {'presente' if self.presente else 'ausente'}"
+
+
+# ─── Biometria Facial para EPI ───────────────────────────────────────────────
+
+class BiometriaFuncionario(models.Model):
+    funcionario = models.OneToOneField(
+        FuncionarioSST, on_delete=models.CASCADE, related_name="biometria"
+    )
+    foto_base64 = models.TextField(
+        help_text="Foto de referência em base64 (JPEG/PNG, max 500KB)"
+    )
+    hash_foto = models.CharField(
+        max_length=64, help_text="SHA-256 da foto original"
+    )
+    cadastrado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-cadastrado_em"]
+
+    def __str__(self):
+        return f"Biometria — {self.funcionario.nome}"
+
+
+# ─── Psicossocial NR-01 ──────────────────────────────────────────────────────
+
+class AvaliacaoPsicossocial(models.Model):
+    STATUS_CHOICES = [
+        ("rascunho", "Rascunho"),
+        ("ativa", "Ativa"),
+        ("encerrada", "Encerrada"),
+        ("processada", "Processada"),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="avaliacoes_psicossociais")
+    titulo = models.CharField(max_length=200)
+    descricao = models.TextField(blank=True)
+    setor_alvo = models.CharField(max_length=200, blank=True, help_text="Setor/departamento alvo")
+    data_inicio = models.DateField()
+    data_fim = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default="rascunho")
+    anonima = models.BooleanField(default=True)
+    link_token = models.CharField(
+        max_length=64, unique=True,
+        help_text="Token para acesso do colaborador"
+    )
+    total_enviados = models.PositiveIntegerField(default=0)
+    total_respondidos = models.PositiveIntegerField(default=0)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-data_inicio"]
+        indexes = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["link_token"]),
+        ]
+
+    def __str__(self):
+        return f"{self.titulo} — {self.empresa.nome} ({self.status})"
+
+
+class QuestaoAvaliacaoPsicossocial(models.Model):
+    CATEGORIA_CHOICES = [
+        ("carga_trabalho", "Carga de Trabalho"),
+        ("autonomia", "Autonomia e Controle"),
+        ("relacionamento", "Relacionamento Interpessoal"),
+        ("reconhecimento", "Reconhecimento e Recompensa"),
+        ("seguranca", "Segurança no Emprego"),
+        ("equilibrio", "Equilíbrio Trabalho-Vida"),
+        ("violencia", "Violência e Assédio"),
+    ]
+    ESCALA_CHOICES = [
+        ("likert5", "Likert 1-5"),
+        ("sim_nao", "Sim/Não"),
+    ]
+
+    avaliacao = models.ForeignKey(
+        AvaliacaoPsicossocial, on_delete=models.CASCADE, related_name="questoes"
+    )
+    texto = models.TextField()
+    categoria = models.CharField(max_length=30, choices=CATEGORIA_CHOICES)
+    ordem = models.PositiveSmallIntegerField(default=0)
+    escala = models.CharField(max_length=15, choices=ESCALA_CHOICES, default="likert5")
+
+    class Meta:
+        ordering = ["ordem"]
+
+    def __str__(self):
+        return f"Q{self.ordem}: {self.texto[:60]}"
+
+
+class RespostaPsicossocial(models.Model):
+    avaliacao = models.ForeignKey(
+        AvaliacaoPsicossocial, on_delete=models.CASCADE, related_name="respostas"
+    )
+    questao = models.ForeignKey(
+        QuestaoAvaliacaoPsicossocial, on_delete=models.CASCADE, related_name="respostas"
+    )
+    resposta_num = models.PositiveSmallIntegerField(null=True, blank=True)   # 1-5 para Likert
+    resposta_bool = models.BooleanField(null=True, blank=True)               # para sim/não
+    respondido_em = models.DateTimeField(auto_now_add=True)
+    # SEM FK para funcionário se anônima=True
+    funcionario = models.ForeignKey(
+        FuncionarioSST, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="respostas_psicossociais"
+    )
+
+    class Meta:
+        ordering = ["-respondido_em"]
+
+    def __str__(self):
+        return f"Resposta — questao {self.questao_id} — avaliação {self.avaliacao_id}"

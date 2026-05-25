@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>PGR / PCMSO — SolusCRT SST</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#06111a; --panel:rgba(7,25,38,.84); --line:rgba(111,196,255,.10); --text:#e8f4ff; --muted:#7aa4c0; --teal:#00c9a7; --amber:#f59e0b; --red:#f87171; --green:#34d399; }
+    * { box-sizing:border-box; margin:0; }
+    html,body { min-height:100vh; background:var(--bg); color:var(--text); font-family:Manrope,"Segoe UI",sans-serif; font-size:15px; line-height:1.55; }
+    .topbar { display:flex; align-items:center; gap:14px; padding:0 24px; height:58px; border-bottom:1px solid var(--line); background:rgba(6,16,25,.92); backdrop-filter:blur(12px); position:sticky; top:0; z-index:100; }
+    .tb-logo { font-size:.74rem; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:var(--teal); }
+    .tb-div { width:1px; height:20px; background:var(--line); }
+    .tb-sub { font-size:.78rem; color:var(--muted); font-weight:600; }
+    .app { display:grid; grid-template-columns:220px 1fr; min-height:calc(100vh - 58px); }
+    .sidebar { padding:20px 0; border-right:1px solid var(--line); }
+    .sidebar a { display:flex; align-items:center; gap:10px; padding:9px 20px; font-size:.82rem; font-weight:600; color:var(--muted); text-decoration:none; border-left:3px solid transparent; }
+    .sidebar a:hover { color:var(--text); }
+    .sidebar a.active { color:var(--teal); border-left-color:var(--teal); background:rgba(0,201,167,.06); }
+    main { padding:28px 32px; max-width:1100px; }
+    .hero { margin-bottom:28px; }
+    .hero-eyebrow { font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.13em; color:var(--teal); margin-bottom:6px; }
+    .hero-title { font-size:1.65rem; font-weight:800; line-height:1.2; margin-bottom:10px; }
+    .hero-sub { font-size:.9rem; color:var(--muted); line-height:1.6; max-width:580px; }
+    .kpi-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:28px; }
+    .kpi-card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; border-top:2px solid var(--teal); }
+    .kpi-label { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+    .kpi-value { font-size:1.6rem; font-weight:800; margin-top:6px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:20px; }
+    .section-title { font-size:.82rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 14px; }
+    .btn { padding:10px 18px; border-radius:10px; font-weight:700; font-size:.82rem; cursor:pointer; border:none; }
+    .btn-teal { background:linear-gradient(135deg,#00c9a7,#0096ff); color:#04111a; }
+    .btn-ghost { background:transparent; border:1px solid var(--line); color:var(--muted); }
+    .doc-card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .doc-info { flex:1; }
+    .doc-tipo { font-size:.72rem; font-weight:800; text-transform:uppercase; color:var(--teal); margin-bottom:4px; }
+    .doc-titulo { font-weight:700; margin-bottom:2px; }
+    .doc-meta { font-size:.78rem; color:var(--muted); }
+    .badge { display:inline-flex; align-items:center; padding:3px 9px; border-radius:999px; font-size:.68rem; font-weight:800; }
+    .b-ok { background:rgba(52,211,153,.12); color:#34d399; border:1px solid rgba(52,211,153,.25); }
+    .b-warn { background:rgba(245,158,11,.12); color:#f59e0b; border:1px solid rgba(245,158,11,.25); }
+    .b-muted { background:rgba(122,164,192,.1); color:var(--muted); border:1px solid var(--line); }
+    .loading { display:flex; align-items:center; gap:10px; color:var(--muted); font-size:.85rem; padding:20px; }
+    .spinner { width:18px; height:18px; border:2px solid var(--line); border-top-color:var(--teal); border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .empty { text-align:center; padding:40px; color:var(--muted); }
+    .actions { display:flex; gap:8px; }
+    @media (max-width:900px) { .app { grid-template-columns:1fr; } .sidebar { display:none; } main { padding:20px; } }
+  </style>
+  {% include "partials/sst_unified_theme.html" %}
+</head>
+<body>
+{% include "partials/sst_topbar.html" %}
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+  <main>
+    <div class="hero">
+      <div class="hero-eyebrow">SST · Documentação</div>
+      <div class="hero-title">PGR / PCMSO Automático</div>
+      <div class="hero-sub">Gere automaticamente o Programa de Gerenciamento de Riscos (PGR) e o Programa de Controle Médico de Saúde Ocupacional (PCMSO) com base nos dados cadastrados.</div>
+    </div>
+
+    <div class="kpi-strip" id="kpiStrip">
+      <div class="kpi-card"><div class="kpi-label">Carregando</div><div class="kpi-value">—</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="section-title">Ações Rápidas</div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+        <button class="btn btn-teal" onclick="gerarPGR()">+ Gerar PGR</button>
+        <button class="btn btn-teal" onclick="gerarPCMSO()">+ Gerar PCMSO</button>
+      </div>
+      <div id="statusMsg" style="display:none; padding:10px 14px; border-radius:8px; font-size:.85rem; margin-bottom:16px;"></div>
+
+      <div class="section-title">Documentos Gerados</div>
+      <div id="docList"><div class="loading"><div class="spinner"></div> Carregando...</div></div>
+    </div>
+  </main>
+</div>
+
+<script>
+function auth() { return sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || ""; }
+function headers() { return { "Authorization": "Bearer " + auth(), "Content-Type": "application/json" }; }
+
+function showMsg(txt, ok=true) {
+  const el = document.getElementById("statusMsg");
+  el.style.display = "block";
+  el.style.background = ok ? "rgba(52,211,153,.12)" : "rgba(248,113,113,.12)";
+  el.style.color = ok ? "#34d399" : "#f87171";
+  el.style.border = ok ? "1px solid rgba(52,211,153,.25)" : "1px solid rgba(248,113,113,.25)";
+  el.textContent = txt;
+  setTimeout(() => { el.style.display = "none"; }, 5000);
+}
+
+async function gerarPGR() {
+  showMsg("Gerando PGR...", true);
+  try {
+    const r = await fetch("/api/sst/pgr/gerar/", { method:"POST", headers: headers(), body: "{}" });
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      showMsg(`PGR gerado com sucesso! ID: ${d.data.id} · ${d.data.total_riscos} riscos · ${d.data.total_postos} postos.`);
+      loadDocs();
+    } else {
+      showMsg(d.erro || "Erro ao gerar PGR", false);
+    }
+  } catch(e) { showMsg("Erro de conexão", false); }
+}
+
+async function gerarPCMSO() {
+  showMsg("Gerando PCMSO...", true);
+  try {
+    const r = await fetch("/api/sst/pcmso/gerar/", { method:"POST", headers: headers(), body: "{}" });
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      showMsg(`PCMSO gerado com sucesso! ID: ${d.data.id} · ${d.data.total_funcionarios} funcionários.`);
+      loadDocs();
+    } else {
+      showMsg(d.erro || "Erro ao gerar PCMSO", false);
+    }
+  } catch(e) { showMsg("Erro de conexão", false); }
+}
+
+async function loadDocs() {
+  try {
+    const r = await fetch("/api/sst/documentos?tipo=PGR,PCMSO", { headers: headers() });
+    if (!r.ok) { document.getElementById("docList").innerHTML = "<div class='empty'>Sem permissão ou erro ao carregar.</div>"; return; }
+    const d = await r.json();
+    const docs = d.documentos || d.results || [];
+    const filtered = docs.filter(x => x.tipo === "PGR" || x.tipo === "PCMSO");
+    if (filtered.length === 0) {
+      document.getElementById("docList").innerHTML = "<div class='empty'>Nenhum PGR ou PCMSO gerado ainda.</div>";
+      return;
+    }
+    document.getElementById("docList").innerHTML = filtered.map(doc => `
+      <div class="doc-card">
+        <div class="doc-info">
+          <div class="doc-tipo">${doc.tipo}</div>
+          <div class="doc-titulo">${doc.titulo || doc.tipo}</div>
+          <div class="doc-meta">Emissão: ${doc.data_emissao || "—"} · Validade: ${doc.data_validade || "—"} · Resp: ${doc.responsavel_tecnico || "—"}</div>
+        </div>
+        <div class="actions">
+          <span class="badge ${doc.status === 'vigente' ? 'b-ok' : doc.status === 'vencido' ? 'b-warn' : 'b-muted'}">${doc.status}</span>
+          <a href="/api/sst/${doc.tipo.toLowerCase()}/${doc.id}/pdf/" target="_blank" class="btn btn-ghost btn-sm">PDF</a>
+        </div>
+      </div>
+    `).join("");
+  } catch(e) { document.getElementById("docList").innerHTML = "<div class='empty'>Erro ao carregar documentos.</div>"; }
+}
+
+async function loadKpis() {
+  try {
+    const r = await fetch("/api/sst/documentos", { headers: headers() });
+    if (!r.ok) return;
+    const d = await r.json();
+    const docs = d.documentos || [];
+    const pgrs = docs.filter(x => x.tipo === "PGR").length;
+    const pcmsos = docs.filter(x => x.tipo === "PCMSO").length;
+    const vigentes = docs.filter(x => (x.tipo === "PGR" || x.tipo === "PCMSO") && x.status === "vigente").length;
+    document.getElementById("kpiStrip").innerHTML = `
+      <div class="kpi-card"><div class="kpi-label">PGRs</div><div class="kpi-value">${pgrs}</div></div>
+      <div class="kpi-card"><div class="kpi-label">PCMSOs</div><div class="kpi-value">${pcmsos}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Vigentes</div><div class="kpi-value" style="color:var(--green)">${vigentes}</div></div>
+    `;
+  } catch(e) {}
+}
+
+(async () => { await Promise.all([loadKpis(), loadDocs()]); })();
+</script>
+</body>
+</html>
