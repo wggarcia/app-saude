@@ -884,14 +884,6 @@ def site_principal(request):
     return response
 
 
-def calculadora_roi(request):
-    return render(request, "calculadora.html")
-
-
-def pagina_plataforma(request):
-    return render(request, "plataforma.html")
-
-
 def apresentacao_comercial(request):
     language = _resolve_site_language(request)
     response = render(
