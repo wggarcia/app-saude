@@ -48,6 +48,8 @@ def dashboard_url_por_setor(setor):
         return "/dashboard-farmacia/"
     if setor == "hospital":
         return "/dashboard-hospital/"
+    if setor == "plano_saude":
+        return "/dashboard-plano-saude/"
     return "/dashboard-empresa/"
 
 
@@ -61,6 +63,7 @@ def setor_label(setor):
         "farmacia": "Farmácia",
         "hospital": "Hospital",
         "empresa": "Empresa",
+        "plano_saude": "Plano de Saúde",
     }.get(setor, "Empresa")
 
 
