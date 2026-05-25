@@ -3,346 +3,612 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Gerência Executiva | {{ empresa_nome }}</title>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Gerência | {{ empresa_nome }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#041018;--surface:#072030;--surface2:#0a2d45;
-  --accent:#00c2ff;--ok:#00e5b0;--warn:#ffb347;--danger:#ff4d6d;
-  --text:#e8f4ff;--muted:#7a9bb5;--border:rgba(255,255,255,.08);--card:rgba(255,255,255,.04)
+:root {
+  --bg: #040e18;
+  --panel: rgba(8,28,44,.92);
+  --panel2: rgba(6,22,36,.88);
+  --border: rgba(255,255,255,.07);
+  --border2: rgba(255,255,255,.12);
+  --text: #e4f0ff;
+  --muted: #6a8fa8;
+  --ok: #00d49a;
+  --warn: #f0ac30;
+  --danger: #f03860;
+  --info: #38b0f0;
+
+  {% if setor_conta == 'hospital' %}
+  --accent: #38b0f0;
+  --accent2: #0077cc;
+  --sector-bg: rgba(56,176,240,.08);
+  {% elif setor_conta == 'farmacia' %}
+  --accent: #00d49a;
+  --accent2: #008f68;
+  --sector-bg: rgba(0,212,154,.08);
+  {% elif setor_conta == 'governo' %}
+  --accent: #7c6cf0;
+  --accent2: #4838cc;
+  --sector-bg: rgba(124,108,240,.08);
+  {% elif setor_conta == 'plano_saude' %}
+  --accent: #f06840;
+  --accent2: #cc4418;
+  --sector-bg: rgba(240,104,64,.08);
+  {% else %}
+  --accent: #00c2ff;
+  --accent2: #0088cc;
+  --sector-bg: rgba(0,194,255,.08);
+  {% endif %}
 }
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-.wrapper{max-width:1240px;margin:0 auto;padding:24px}
-.header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-.eyebrow{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:var(--accent)}
-.title{font-size:22px;font-weight:800;margin-top:6px}
-.subtitle{font-size:12px;color:var(--muted);margin-top:3px}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:9px;
-  border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);
-  text-decoration:none;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
-.btn:hover{background:rgba(255,255,255,.1)}
-.btn.primary{background:linear-gradient(135deg,var(--accent),var(--ok));color:#041018;border:none}
-.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:0 0 18px}
-.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
-.kpi.ok::before{background:var(--ok)}
-.kpi.warn::before{background:var(--warn)}
-.kpi.danger::before{background:var(--danger)}
-.kpi-label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-.kpi-val{font-size:28px;font-weight:800;margin-top:8px}
-.kpi-sub{font-size:12px;color:var(--muted);margin-top:4px}
-.grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:14px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
-.card h3{font-size:14px;font-weight:800;margin-bottom:12px;color:var(--accent)}
-.list{display:grid;gap:8px}
-.row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;
-  border-radius:9px;background:rgba(255,255,255,.03);font-size:13px}
-.row .label{color:var(--muted)}
-.row .val{font-weight:800}
-.row .val.warn{color:var(--warn)}
-.row .val.danger{color:var(--danger)}
-.row .val.ok{color:var(--ok)}
-.links{display:grid;gap:8px}
-.link{padding:10px 12px;border-radius:10px;border:1px solid var(--border);
-  background:rgba(255,255,255,.03);color:var(--text);text-decoration:none;
-  font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
-.link:hover{background:rgba(255,255,255,.08)}
-@media(max-width:1050px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
-@media(max-width:640px){.kpi-grid{grid-template-columns:1fr}.wrapper{padding:16px}}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { min-height: 100%; }
+body {
+  font-family: Manrope, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* ── layout ─────────────────────────────────────────────────────── */
+.shell { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+
+/* ── topbar ──────────────────────────────────────────────────────── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  padding: 16px 28px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar-left { display: flex; align-items: center; gap: 14px; }
+.sector-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 99px;
+  background: var(--sector-bg);
+  border: 1px solid var(--accent);
+  font-size: .68rem; font-weight: 900; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--accent);
+  white-space: nowrap;
+}
+.topbar-title { font-size: 1rem; font-weight: 800; color: var(--text); }
+.topbar-sub { font-size: .72rem; color: var(--muted); margin-top: 1px; }
+.topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 9px;
+  border: 1px solid var(--border2);
+  background: rgba(255,255,255,.04);
+  color: var(--text); font-size: .78rem; font-weight: 700;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+  transition: background .15s;
+}
+.btn:hover { background: rgba(255,255,255,.09); }
+.btn.accent {
+  background: var(--accent); color: #040e18;
+  border-color: transparent; font-weight: 900;
+}
+.btn.accent:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; border-color: var(--border); }
+
+/* ── main ────────────────────────────────────────────────────────── */
+.main { padding: 24px 28px; display: grid; gap: 20px; }
+
+/* ── kpi strip ───────────────────────────────────────────────────── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.kpi {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px 16px;
+  position: relative; overflow: hidden;
+}
+.kpi::after {
+  content: ''; position: absolute;
+  bottom: 0; left: 0; right: 0; height: 2px;
+  background: var(--accent); opacity: .35;
+}
+.kpi.ok::after  { background: var(--ok); opacity: .8; }
+.kpi.warn::after { background: var(--warn); opacity: .8; }
+.kpi.crit::after { background: var(--danger); opacity: .8; }
+.kpi-eyebrow {
+  font-size: .65rem; font-weight: 900; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--muted); margin-bottom: 10px;
+}
+.kpi-num {
+  font-size: 2rem; font-weight: 900; line-height: 1;
+  color: var(--text);
+}
+.kpi.ok .kpi-num  { color: var(--ok); }
+.kpi.warn .kpi-num { color: var(--warn); }
+.kpi.crit .kpi-num { color: var(--danger); }
+.kpi-detail {
+  font-size: .72rem; color: var(--muted); margin-top: 6px;
+}
+
+/* ── body grid ───────────────────────────────────────────────────── */
+.body-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── card ────────────────────────────────────────────────────────── */
+.card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px;
+}
+.card-title {
+  font-size: .72rem; font-weight: 900; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--accent); margin-bottom: 14px;
+}
+
+/* ── situation list ──────────────────────────────────────────────── */
+.sit-list { display: grid; gap: 8px; }
+.sit-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 10px 12px;
+  background: rgba(255,255,255,.03); border-radius: 9px;
+  font-size: .82rem;
+}
+.sit-label { color: var(--muted); flex: 1; }
+.sit-val { font-weight: 800; white-space: nowrap; }
+.sit-val.ok    { color: var(--ok); }
+.sit-val.warn  { color: var(--warn); }
+.sit-val.crit  { color: var(--danger); }
+.sit-val.info  { color: var(--info); }
+
+/* ── sidebar ─────────────────────────────────────────────────────── */
+.sidebar { display: grid; gap: 14px; }
+
+/* ── nav links ───────────────────────────────────────────────────── */
+.nav-links { display: grid; gap: 7px; }
+.nav-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 13px; border-radius: 10px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border);
+  color: var(--text); text-decoration: none;
+  font-size: .8rem; font-weight: 700;
+  transition: background .15s, border-color .15s;
+}
+.nav-link:hover {
+  background: var(--sector-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.nav-link-icon { font-size: 1rem; flex-shrink: 0; }
+.nav-link-arrow { margin-left: auto; color: var(--muted); font-size: .75rem; }
+
+/* ── config list ─────────────────────────────────────────────────── */
+.cfg-list { display: grid; gap: 7px; }
+.cfg-link {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 10px 12px; border-radius: 9px;
+  background: rgba(255,255,255,.025);
+  border: 1px solid var(--border);
+  color: var(--muted); text-decoration: none;
+  font-size: .78rem; font-weight: 600;
+  transition: color .15s, background .15s;
+}
+.cfg-link:hover { color: var(--text); background: rgba(255,255,255,.05); }
+
+/* ── alerts mini ─────────────────────────────────────────────────── */
+.alert-list { display: grid; gap: 8px; }
+.alert-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 10px 12px; border-radius: 9px;
+  background: rgba(255,255,255,.03);
+  border-left: 3px solid var(--border2);
+  font-size: .79rem; line-height: 1.45;
+}
+.alert-item.crit { border-left-color: var(--danger); }
+.alert-item.warn { border-left-color: var(--warn); }
+.alert-item.ok   { border-left-color: var(--ok); }
+.alert-icon { font-size: .9rem; flex-shrink: 0; margin-top: 1px; }
+.alert-text { color: var(--muted); }
+.alert-text strong { display: block; color: var(--text); margin-bottom: 2px; }
+
+/* ── loading skeleton ────────────────────────────────────────────── */
+.skel {
+  background: rgba(255,255,255,.05); border-radius: 6px;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+@media(max-width:1100px) {
+  .body-grid { grid-template-columns: 1fr; }
+  .sidebar { grid-template-columns: 1fr 1fr; }
+}
+@media(max-width:820px) {
+  .kpi-row { grid-template-columns: repeat(2,1fr); }
+  .topbar { padding: 12px 16px; }
+  .main { padding: 16px; }
+  .sidebar { grid-template-columns: 1fr; }
+}
+@media(max-width:560px) {
+  .kpi-row { grid-template-columns: 1fr; }
+  .topbar-actions .btn:not(.accent) { display: none; }
+}
 </style>
 </head>
 <body>
-<div class="wrapper">
+<div class="shell">
 
-  <header class="header">
-    <div>
-      <div class="eyebrow">{{ setor_label }} &middot; Gerência Executiva</div>
-      <div class="title">{{ empresa_nome }}</div>
-      <div class="subtitle">Visão estratégica restrita &mdash; perfil gerência</div>
+  <!-- ── TOPBAR ──────────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="sector-badge">
+        {% if setor_conta == 'hospital' %}🏥 Hospital
+        {% elif setor_conta == 'farmacia' %}💊 Farmácia
+        {% elif setor_conta == 'governo' %}🏛️ Governo
+        {% elif setor_conta == 'plano_saude' %}📋 Plano de Saúde
+        {% else %}🛡️ SST
+        {% endif %}
+      </div>
+      <div>
+        <div class="topbar-title">{{ empresa_nome }}</div>
+        <div class="topbar-sub">Gerência Executiva &mdash; acesso restrito</div>
+      </div>
     </div>
-    <div class="actions">
-      <a class="btn" href="{{ return_url|default:'/dashboard/' }}">&#8592; Voltar ao Ambiente</a>
-      <a class="btn" href="/sala-decisao-ia/">Sala de Decisão IA</a>
-      <a class="btn primary" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener">Plataforma TI</a>
-      <a class="btn" href="{{ logout_url|default:'/logout/' }}">Sair</a>
+    <div class="topbar-actions">
+      <a class="btn" href="{{ return_url|default:'/dashboard/' }}">&#8592; Voltar</a>
+      <a class="btn" href="/sala-decisao-ia/">IA Decisão</a>
+      <a class="btn" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener">Plataforma TI</a>
+      <a class="btn accent" href="{{ return_url|default:'/dashboard/' }}">Meu Ambiente</a>
+      <a class="btn ghost" href="{{ logout_url|default:'/logout/' }}">Sair</a>
     </div>
   </header>
 
-  {% include "partials/enterprise_command_center.html" %}
-  {% include "partials/enterprise_premium_suite.html" %}
+  <!-- ── MAIN ────────────────────────────────────────────────── -->
+  <main class="main">
 
-  {# ── KPIs: cada setor vê APENAS os seus próprios indicadores ── #}
+    <!-- ── KPIs ── -->
+    <div class="kpi-row">
+      {% if setor_conta == 'empresa' %}
+        <div class="kpi"><div class="kpi-eyebrow">Funcionários Ativos</div><div class="kpi-num" id="k1">—</div><div class="kpi-detail" id="k1d">carregando</div></div>
+        <div class="kpi warn"><div class="kpi-eyebrow">ASOs Vencendo (30d)</div><div class="kpi-num" id="k2">—</div><div class="kpi-detail" id="k2d">carregando</div></div>
+        <div class="kpi crit"><div class="kpi-eyebrow">Treinamentos Vencidos</div><div class="kpi-num" id="k3">—</div><div class="kpi-detail" id="k3d">carregando</div></div>
+        <div class="kpi warn"><div class="kpi-eyebrow">Afastamentos Ativos</div><div class="kpi-num" id="k4">—</div><div class="kpi-detail" id="k4d">carregando</div></div>
+        <div class="kpi"><div class="kpi-eyebrow">Alertas SST</div><div class="kpi-num" id="k5">—</div><div class="kpi-detail" id="k5d">carregando</div></div>
 
-  {% if setor_conta == 'empresa' %}
-  <section class="kpi-grid">
-    <article class="kpi"><div class="kpi-label">Funcionários Ativos</div><div class="kpi-val" id="k1">—</div><div class="kpi-sub" id="k1s">—</div></article>
-    <article class="kpi warn"><div class="kpi-label">ASOs Vencendo (30d)</div><div class="kpi-val" id="k2">—</div><div class="kpi-sub" id="k2s">—</div></article>
-    <article class="kpi danger"><div class="kpi-label">Treinamentos Vencidos</div><div class="kpi-val" id="k3">—</div><div class="kpi-sub" id="k3s">—</div></article>
-    <article class="kpi warn"><div class="kpi-label">Afastamentos Ativos</div><div class="kpi-val" id="k4">—</div><div class="kpi-sub" id="k4s">—</div></article>
-    <article class="kpi danger"><div class="kpi-label">Alertas SST</div><div class="kpi-val" id="k5">—</div><div class="kpi-sub" id="k5s">—</div></article>
-  </section>
+      {% elif setor_conta == 'hospital' %}
+        <div class="kpi warn"><div class="kpi-eyebrow">Taxa de Ocupação</div><div class="kpi-num" id="k1">—</div><div class="kpi-detail" id="k1d">carregando</div></div>
+        <div class="kpi"><div class="kpi-eyebrow">Internações Ativas</div><div class="kpi-num" id="k2">—</div><div class="kpi-detail" id="k2d">carregando</div></div>
+        <div class="kpi ok"><div class="kpi-eyebrow">Leitos Disponíveis</div><div class="kpi-num" id="k3">—</div><div class="kpi-detail" id="k3d">carregando</div></div>
+        <div class="kpi"><div class="kpi-eyebrow">Triagens Hoje</div><div class="kpi-num" id="k4">—</div><div class="kpi-detail" id="k4d">carregando</div></div>
+        <div class="kpi crit"><div class="kpi-eyebrow">Alertas Clínicos</div><div class="kpi-num" id="k5">—</div><div class="kpi-detail" id="k5d">carregando</div></div>
 
-  {% elif setor_conta == 'hospital' %}
-  <section class="kpi-grid">
-    <article class="kpi warn"><div class="kpi-label">Taxa de Ocupação</div><div class="kpi-val" id="k1">—</div><div class="kpi-sub" id="k1s">—</div></article>
-    <article class="kpi"><div class="kpi-label">Internações Ativas</div><div class="kpi-val" id="k2">—</div><div class="kpi-sub" id="k2s">—</div></article>
-    <article class="kpi ok"><div class="kpi-label">Leitos Disponíveis</div><div class="kpi-val" id="k3">—</div><div class="kpi-sub" id="k3s">—</div></article>
-    <article class="kpi"><div class="kpi-label">Triagens Hoje</div><div class="kpi-val" id="k4">—</div><div class="kpi-sub" id="k4s">—</div></article>
-    <article class="kpi danger"><div class="kpi-label">Alertas Clínicos</div><div class="kpi-val" id="k5">—</div><div class="kpi-sub" id="k5s">—</div></article>
-  </section>
+      {% elif setor_conta == 'farmacia' %}
+        <div class="kpi ok"><div class="kpi-eyebrow">Dispensações no Mês</div><div class="kpi-num" id="k1">—</div><div class="kpi-detail" id="k1d">carregando</div></div>
+        <div class="kpi crit"><div class="kpi-eyebrow">Estoque Crítico</div><div class="kpi-num" id="k2">—</div><div class="kpi-detail" id="k2d">carregando</div></div>
+        <div class="kpi warn"><div class="kpi-eyebrow">Lotes Vencendo (30d)</div><div class="kpi-num" id="k3">—</div><div class="kpi-detail" id="k3d">carregando</div></div>
+        <div class="kpi"><div class="kpi-eyebrow">Pedidos em Aberto</div><div class="kpi-num" id="k4">—</div><div class="kpi-detail" id="k4d">carregando</div></div>
+        <div class="kpi crit"><div class="kpi-eyebrow">Alertas Farmácia</div><div class="kpi-num" id="k5">—</div><div class="kpi-detail" id="k5d">carregando</div></div>
 
-  {% elif setor_conta == 'farmacia' %}
-  <section class="kpi-grid">
-    <article class="kpi ok"><div class="kpi-label">Dispensações no Mês</div><div class="kpi-val" id="k1">—</div><div class="kpi-sub" id="k1s">—</div></article>
-    <article class="kpi danger"><div class="kpi-label">Estoque Crítico</div><div class="kpi-val" id="k2">—</div><div class="kpi-sub" id="k2s">—</div></article>
-    <article class="kpi warn"><div class="kpi-label">Lotes Vencendo (30d)</div><div class="kpi-val" id="k3">—</div><div class="kpi-sub" id="k3s">—</div></article>
-    <article class="kpi"><div class="kpi-label">Pedidos em Aberto</div><div class="kpi-val" id="k4">—</div><div class="kpi-sub" id="k4s">—</div></article>
-    <article class="kpi danger"><div class="kpi-label">Alertas Farmácia</div><div class="kpi-val" id="k5">—</div><div class="kpi-sub" id="k5s">—</div></article>
-  </section>
+      {% elif setor_conta == 'governo' %}
+        <div class="kpi crit"><div class="kpi-eyebrow">Alertas Epidemiológicos</div><div class="kpi-num" id="k1">—</div><div class="kpi-detail" id="k1d">carregando</div></div>
+        <div class="kpi ok"><div class="kpi-eyebrow">Programas Ativos</div><div class="kpi-num" id="k2">—</div><div class="kpi-detail" id="k2d">carregando</div></div>
+        <div class="kpi ok"><div class="kpi-eyebrow">Metas Atingidas</div><div class="kpi-num" id="k3">—</div><div class="kpi-detail" id="k3d">carregando</div></div>
+        <div class="kpi warn"><div class="kpi-eyebrow">Planos Atrasados</div><div class="kpi-num" id="k4">—</div><div class="kpi-detail" id="k4d">carregando</div></div>
+        <div class="kpi"><div class="kpi-eyebrow">Total Indicadores</div><div class="kpi-num" id="k5">—</div><div class="kpi-detail" id="k5d">carregando</div></div>
 
-  {% elif setor_conta == 'governo' %}
-  <section class="kpi-grid">
-    <article class="kpi danger"><div class="kpi-label">Alertas Epidemiológicos</div><div class="kpi-val" id="k1">—</div><div class="kpi-sub" id="k1s">—</div></article>
-    <article class="kpi"><div class="kpi-label">Registros Sintomas (24h)</div><div class="kpi-val" id="k2">—</div><div class="kpi-sub" id="k2s">—</div></article>
-    <article class="kpi ok"><div class="kpi-label">Programas Ativos</div><div class="kpi-val" id="k3">—</div><div class="kpi-sub" id="k3s">—</div></article>
-    <article class="kpi ok"><div class="kpi-label">Metas Atingidas</div><div class="kpi-val" id="k4">—</div><div class="kpi-sub" id="k4s">—</div></article>
-    <article class="kpi warn"><div class="kpi-label">Planos Atrasados</div><div class="kpi-val" id="k5">—</div><div class="kpi-sub" id="k5s">—</div></article>
-  </section>
+      {% elif setor_conta == 'plano_saude' %}
+        <div class="kpi ok"><div class="kpi-eyebrow">Beneficiários Ativos</div><div class="kpi-num" id="k1">—</div><div class="kpi-detail" id="k1d">carregando</div></div>
+        <div class="kpi warn"><div class="kpi-eyebrow">Guias Pendentes</div><div class="kpi-num" id="k2">—</div><div class="kpi-detail" id="k2d">carregando</div></div>
+        <div class="kpi"><div class="kpi-eyebrow">Sinistros em Análise</div><div class="kpi-num" id="k3">—</div><div class="kpi-detail" id="k3d">carregando</div></div>
+        <div class="kpi"><div class="kpi-eyebrow">Contratos Vigentes</div><div class="kpi-num" id="k4">—</div><div class="kpi-detail" id="k4d">carregando</div></div>
+        <div class="kpi crit"><div class="kpi-eyebrow">Reembolsos Pendentes</div><div class="kpi-num" id="k5">—</div><div class="kpi-detail" id="k5d">carregando</div></div>
+      {% endif %}
+    </div>
 
-  {% elif setor_conta == 'plano_saude' %}
-  <section class="kpi-grid">
-    <article class="kpi ok"><div class="kpi-label">Beneficiários Ativos</div><div class="kpi-val" id="k1">—</div><div class="kpi-sub" id="k1s">—</div></article>
-    <article class="kpi warn"><div class="kpi-label">Guias Pendentes</div><div class="kpi-val" id="k2">—</div><div class="kpi-sub" id="k2s">—</div></article>
-    <article class="kpi"><div class="kpi-label">Sinistros em Análise</div><div class="kpi-val" id="k3">—</div><div class="kpi-sub" id="k3s">—</div></article>
-    <article class="kpi"><div class="kpi-label">Contratos Ativos</div><div class="kpi-val" id="k4">—</div><div class="kpi-sub" id="k4s">—</div></article>
-    <article class="kpi danger"><div class="kpi-label">Reembolsos Pendentes</div><div class="kpi-val" id="k5">—</div><div class="kpi-sub" id="k5s">—</div></article>
-  </section>
-  {% endif %}
+    <!-- ── BODY ── -->
+    <div class="body-grid">
 
-  <section class="grid">
-    <article class="card">
-      <h3>Resumo Executivo</h3>
-      <div class="list" id="resumoList">
-        <div class="row"><span class="label">Carregando dados...</span><span class="val">&#8987;</span></div>
+      <!-- coluna principal -->
+      <div style="display:grid;gap:16px">
+
+        <!-- Situação do Ambiente -->
+        <div class="card">
+          <div class="card-title">Situação do Ambiente</div>
+          <div class="sit-list" id="situacaoList">
+            <div class="sit-row"><span class="sit-label skel" style="width:60%;height:14px">&nbsp;</span><span class="sit-val skel" style="width:50px;height:14px">&nbsp;</span></div>
+            <div class="sit-row"><span class="sit-label skel" style="width:45%;height:14px">&nbsp;</span><span class="sit-val skel" style="width:40px;height:14px">&nbsp;</span></div>
+            <div class="sit-row"><span class="sit-label skel" style="width:55%;height:14px">&nbsp;</span><span class="sit-val skel" style="width:55px;height:14px">&nbsp;</span></div>
+          </div>
+        </div>
+
+        <!-- Alertas -->
+        <div class="card">
+          <div class="card-title">Alertas Ativos</div>
+          <div class="alert-list" id="alertList">
+            <div class="alert-item"><span class="alert-text">Carregando alertas...</span></div>
+          </div>
+        </div>
+
       </div>
-    </article>
 
-    <aside class="card">
-      <h3>Acessos do Ambiente</h3>
-      <div class="links">
-        {% if setor_conta == 'empresa' %}
-        <a class="link" href="/sst/">&#127968; Hub SST</a>
-        <a class="link" href="/sst/funcionarios/">&#128101; Funcionários</a>
-        <a class="link" href="/sst/asos/">&#128203; ASOs &amp; Exames</a>
-        <a class="link" href="/sst/epis/">&#129510; EPIs</a>
-        <a class="link" href="/sst/afastamentos/">&#129658; Afastamentos</a>
-        <a class="link" href="/sst/relatorios/">&#128202; Relatórios SST</a>
+      <!-- sidebar -->
+      <div class="sidebar">
 
-        {% elif setor_conta == 'hospital' %}
-        <a class="link" href="/hospital/gestao/">&#127973; Gestão Hospitalar</a>
-        <a class="link" href="/hospital/gestao/#leitos">&#128716; Leitos</a>
-        <a class="link" href="/hospital/gestao/#triagem">&#128657; Triagem Manchester</a>
-        <a class="link" href="/hospital/gestao/#pacientes">&#128100; Pacientes Internados</a>
-        <a class="link" href="/hospital/gestao/#prescricoes">&#128138; Prescrições</a>
-        <a class="link" href="/rede/gestao/">&#127760; Rede Hospitalar</a>
+        <!-- Navegação do Ambiente -->
+        <div class="card">
+          <div class="card-title">Módulos do Ambiente</div>
+          <div class="nav-links">
+            {% if setor_conta == 'empresa' %}
+            <a class="nav-link" href="/sst/"><span class="nav-link-icon">🏠</span>Hub SST<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/sst/funcionarios/"><span class="nav-link-icon">👥</span>Funcionários<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/sst/asos/"><span class="nav-link-icon">📋</span>ASOs &amp; Exames<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/sst/treinamentos/"><span class="nav-link-icon">🎓</span>Treinamentos NR<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/sst/epis/"><span class="nav-link-icon">🦺</span>EPIs<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/sst/afastamentos/"><span class="nav-link-icon">🩺</span>Afastamentos<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/sst/cats/"><span class="nav-link-icon">⚠️</span>CATs<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/sst/relatorios/"><span class="nav-link-icon">📊</span>Relatórios SST<span class="nav-link-arrow">›</span></a>
 
-        {% elif setor_conta == 'farmacia' %}
-        <a class="link" href="/farmacia/gestao/">&#128138; Gestão Farmácia</a>
-        <a class="link" href="/farmacia/gestao/#estoque">&#128230; Estoque</a>
-        <a class="link" href="/farmacia/gestao/#dispensacao">&#128203; Dispensação</a>
-        <a class="link" href="/farmacia/gestao/#fornecedores">&#128666; Fornecedores</a>
-        <a class="link" href="/farmacia/gestao/#pedidos">&#128722; Pedidos de Compra</a>
-        <a class="link" href="/farmacia/gestao/#conformidade">&#9989; Conformidade ANVISA</a>
+            {% elif setor_conta == 'hospital' %}
+            <a class="nav-link" href="/hospital/gestao/"><span class="nav-link-icon">🏥</span>Gestão Hospitalar<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/hospital/gestao/#leitos"><span class="nav-link-icon">🛏</span>Leitos<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/hospital/gestao/#triagem"><span class="nav-link-icon">🚑</span>Triagem Manchester<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/hospital/gestao/#pacientes"><span class="nav-link-icon">👤</span>Pacientes Internados<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/hospital/gestao/#prescricoes"><span class="nav-link-icon">💊</span>Prescrições<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/hospital/gestao/#departamentos"><span class="nav-link-icon">🏢</span>Departamentos<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/rede/gestao/"><span class="nav-link-icon">🌐</span>Rede Hospitalar<span class="nav-link-arrow">›</span></a>
 
-        {% elif setor_conta == 'governo' %}
-        <a class="link" href="/dashboard-governo/">&#127963; Dashboard Governo</a>
-        <a class="link" href="/governo/gestao/">&#128202; Sala de Situação</a>
-        <a class="link" href="/governo/gestao/#alertas">&#128680; Alertas Epidemiológicos</a>
-        <a class="link" href="/governo/gestao/#programas">&#128203; Programas de Saúde</a>
-        <a class="link" href="/governo/gestao/#planos">&#9989; Planos de Ação</a>
-        <a class="link" href="/governo/plataforma/">&#128187; Plataforma Gov</a>
+            {% elif setor_conta == 'farmacia' %}
+            <a class="nav-link" href="/farmacia/gestao/"><span class="nav-link-icon">💊</span>Gestão Farmácia<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/farmacia/gestao/#estoque"><span class="nav-link-icon">📦</span>Estoque<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/farmacia/gestao/#dispensacao"><span class="nav-link-icon">📝</span>Dispensação<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/farmacia/gestao/#fornecedores"><span class="nav-link-icon">🚚</span>Fornecedores<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/farmacia/gestao/#pedidos"><span class="nav-link-icon">🛒</span>Pedidos de Compra<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/farmacia/gestao/#conformidade"><span class="nav-link-icon">✅</span>Conformidade ANVISA<span class="nav-link-arrow">›</span></a>
 
-        {% elif setor_conta == 'plano_saude' %}
-        <a class="link" href="/dashboard-plano-saude/">&#127973; Dashboard Operadora</a>
-        <a class="link" href="/plano-saude/gestao/">&#128202; Gestão Operadora</a>
-        <a class="link" href="/plano-saude/gestao/#beneficiarios">&#128101; Beneficiários</a>
-        <a class="link" href="/plano-saude/gestao/#guias">&#128203; Guias de Autorização</a>
-        <a class="link" href="/plano-saude/gestao/#sinistros">&#9888; Sinistros</a>
-        <a class="link" href="/plano-saude/gestao/#reembolsos">&#128179; Reembolsos</a>
-        {% endif %}
+            {% elif setor_conta == 'governo' %}
+            <a class="nav-link" href="/dashboard-governo/"><span class="nav-link-icon">🏛️</span>Painel Epidemiológico<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/governo/gestao/"><span class="nav-link-icon">📊</span>Sala de Situação<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/governo/gestao/#alertas"><span class="nav-link-icon">🚨</span>Alertas<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/governo/gestao/#programas"><span class="nav-link-icon">📋</span>Programas de Saúde<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/governo/gestao/#planos"><span class="nav-link-icon">✅</span>Planos de Ação<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/governo/gestao/#orcamento"><span class="nav-link-icon">💰</span>Orçamento<span class="nav-link-arrow">›</span></a>
+
+            {% elif setor_conta == 'plano_saude' %}
+            <a class="nav-link" href="/dashboard-plano-saude/"><span class="nav-link-icon">📋</span>Dashboard Operadora<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/plano-saude/gestao/#beneficiarios"><span class="nav-link-icon">👥</span>Beneficiários<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/plano-saude/gestao/#guias"><span class="nav-link-icon">📝</span>Guias de Autorização<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/plano-saude/gestao/#sinistros"><span class="nav-link-icon">⚠️</span>Sinistros<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/plano-saude/gestao/#reembolsos"><span class="nav-link-icon">💳</span>Reembolsos<span class="nav-link-arrow">›</span></a>
+            <a class="nav-link" href="/plano-saude/gestao/#contratos"><span class="nav-link-icon">📄</span>Contratos<span class="nav-link-arrow">›</span></a>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Configurações e Administração -->
+        <div class="card">
+          <div class="card-title">Administração</div>
+          <div class="cfg-list">
+            <a class="cfg-link" href="/usuarios/">👤 Usuários &amp; Acessos <span>›</span></a>
+            <a class="cfg-link" href="/seguranca/">🔐 Segurança <span>›</span></a>
+            <a class="cfg-link" href="/licencas/">📄 Licenças &amp; Plano <span>›</span></a>
+            <a class="cfg-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener">🖥️ Plataforma TI <span>↗</span></a>
+            <a class="cfg-link" href="/sala-decisao-ia/">🤖 Sala de Decisão IA <span>›</span></a>
+          </div>
+        </div>
+
       </div>
-    </aside>
-  </section>
-
+    </div>
+  </main>
 </div>
+
 <script>
 const SETOR = "{{ setor_conta|escapejs }}";
-const pageEmpresaId = "{{ empresa_id|escapejs }}";
+const EMP_ID = "{{ empresa_id|escapejs }}";
 
-async function syncScopedAuth() {
+/* ── tab session sync ──────────────────────────────────────────── */
+(async function syncTab() {
   const token = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || "";
-  if (!token) return null;
+  if (!token) return;
   try {
     const r = await fetch("/api/sessao/aba", {
-      method: "POST", headers: { Authorization: "Bearer " + token }, credentials: "same-origin",
+      method: "POST", credentials: "same-origin",
+      headers: { Authorization: "Bearer " + token }
     });
-    if (!r.ok) return null;
+    if (!r.ok) return;
     const p = await r.json();
     sessionStorage.setItem("empresa_id", String(p.empresa_id || ""));
     if (p.tab_key) {
       sessionStorage.setItem("tab_session_key", p.tab_key);
-      const url = new URL(window.location.href);
+      const url = new URL(location.href);
       if (url.searchParams.get("tab") !== p.tab_key) {
         url.searchParams.set("tab", p.tab_key);
-        window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        history.replaceState({}, "", url.pathname + url.search + url.hash);
       }
     }
-    return p;
-  } catch(e) { return null; }
-}
-syncScopedAuth().then(function(p) {
-  if (!p) return;
-  if (String(p.empresa_id || "") !== String(pageEmpresaId || "")) {
-    var k = "gerencia_sync_reload";
-    if (sessionStorage.getItem(k) === "1") { sessionStorage.removeItem(k); return; }
-    sessionStorage.setItem(k, "1");
-    window.location.reload();
-  }
+    if (String(p.empresa_id || "") !== String(EMP_ID || "")) {
+      const k = "ger_sync";
+      if (sessionStorage.getItem(k) === "1") { sessionStorage.removeItem(k); return; }
+      sessionStorage.setItem(k, "1");
+      location.reload();
+    }
+  } catch(e) {}
+})();
+window.addEventListener("focus", function() {
+  const token = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || "";
+  if (token) fetch("/api/sessao/aba", {method:"POST", credentials:"same-origin", headers:{Authorization:"Bearer "+token}}).catch(()=>{});
 });
-window.addEventListener("focus", function() { syncScopedAuth(); });
 
-function set(id, val, cls) {
-  var el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = (val !== undefined && val !== null) ? val : "—";
-  if (cls) { el.className = "val " + cls; }
+/* ── helpers ───────────────────────────────────────────────────── */
+function $k(id, val, cls) {
+  var n = document.getElementById(id); if (!n) return;
+  n.textContent = (val !== null && val !== undefined) ? String(val) : "—";
+  if (cls) n.className = "kpi-num " + cls;
 }
-function resumo(rows) {
-  document.getElementById("resumoList").innerHTML = rows.map(function(r) {
-    return '<div class="row"><span class="label">' + r[0] + '</span><span class="val' + (r[2] ? " " + r[2] : "") + '">' + r[1] + '</span></div>';
+function $d(id, val) {
+  var n = document.getElementById(id); if (!n) return;
+  n.textContent = val || "";
+}
+function color(v, danger, warn) {
+  if (v >= danger) return "crit";
+  if (v >= warn) return "warn";
+  return "ok";
+}
+
+function renderSituacao(rows) {
+  document.getElementById("situacaoList").innerHTML = rows.map(function(r) {
+    return '<div class="sit-row">'
+      + '<span class="sit-label">' + r[0] + '</span>'
+      + '<span class="sit-val ' + (r[2]||"") + '">' + r[1] + '</span>'
+      + '</div>';
   }).join("");
 }
 
+function renderAlertas(a) {
+  var list = document.getElementById("alertList");
+  if (!a || !a.total) {
+    list.innerHTML = '<div class="alert-item ok"><span class="alert-icon">✅</span>'
+      + '<span class="alert-text"><strong>Nenhum alerta ativo</strong>Ambiente operando normalmente.</span></div>';
+    return;
+  }
+  var items = [];
+  if (a.criticos > 0) items.push('<div class="alert-item crit"><span class="alert-icon">🔴</span>'
+    + '<span class="alert-text"><strong>' + a.criticos + ' alerta(s) crítico(s)</strong>Requer ação imediata.</span></div>');
+  if (a.alertas > 0) items.push('<div class="alert-item warn"><span class="alert-icon">🟡</span>'
+    + '<span class="alert-text"><strong>' + a.alertas + ' alerta(s) de atenção</strong>Monitorar e agir em breve.</span></div>');
+  if (a.infos > 0) items.push('<div class="alert-item"><span class="alert-icon">🔵</span>'
+    + '<span class="alert-text"><strong>' + a.infos + ' informativo(s)</strong>Sem ação urgente.</span></div>');
+  list.innerHTML = items.join("");
+}
+
+/* ── carrega dados ─────────────────────────────────────────────── */
 async function carregar() {
   try {
-    var r = await fetch("/api/executive/dashboard/", { credentials: "same-origin" });
+    var r = await fetch("/api/executive/dashboard/", {credentials:"same-origin"});
     if (!r.ok) throw new Error("HTTP " + r.status);
     var d = await r.json();
+    var a = d.alertas || {};
 
     if (SETOR === "empresa") {
-      var s = d.sst || {}, a = d.alertas || {};
-      set("k1", s.total_funcionarios || 0);
-      set("k1s", (s.afastados || 0) + " afastado(s)");
-      set("k2", s.aso_alertas || 0, s.aso_alertas > 0 ? "warn" : "ok");
-      set("k2s", "vencendo em 30 dias");
-      set("k3", s.treinamentos_vencidos || 0, s.treinamentos_vencidos > 0 ? "danger" : "ok");
-      set("k3s", "NRs com prazo vencido");
-      set("k4", s.afastados || 0, s.afastados > 0 ? "warn" : "ok");
-      set("k4s", (s.agendamentos_semana || 0) + " agendamentos esta semana");
-      set("k5", a.total || 0, a.criticos > 0 ? "danger" : "warn");
-      set("k5s", (a.criticos || 0) + " crítico(s)");
-      resumo([
-        ["Exames vencidos", s.exames_vencidos || 0, s.exames_vencidos > 0 ? "danger" : "ok"],
-        ["Treinamentos vencidos", s.treinamentos_vencidos || 0, s.treinamentos_vencidos > 0 ? "danger" : "ok"],
-        ["Afastamentos sem retorno", s.afastados || 0, s.afastados > 0 ? "warn" : "ok"],
-        ["ASOs vencendo 30d", s.aso_alertas || 0, s.aso_alertas > 0 ? "warn" : "ok"],
-        ["Agendamentos semana", s.agendamentos_semana || 0, ""],
-        ["Alertas críticos", a.criticos || 0, a.criticos > 0 ? "danger" : "ok"],
+      var s = d.sst || {};
+      $k("k1", s.total_funcionarios || 0);
+      $d("k1d", (s.afastados||0) + " afastado(s)");
+      $k("k2", s.aso_alertas || 0, s.aso_alertas > 0 ? "warn" : "ok");
+      $d("k2d", "vencendo nos próximos 30 dias");
+      $k("k3", s.treinamentos_vencidos || 0, s.treinamentos_vencidos > 0 ? "crit" : "ok");
+      $d("k3d", "NRs com prazo expirado");
+      $k("k4", s.afastados || 0, s.afastados > 0 ? "warn" : "ok");
+      $d("k4d", (s.agendamentos_semana||0) + " agendamentos esta semana");
+      $k("k5", a.total || 0, a.criticos > 0 ? "crit" : a.alertas > 0 ? "warn" : "ok");
+      $d("k5d", (a.criticos||0) + " crítico(s)");
+      renderSituacao([
+        ["Exames médicos vencidos", s.exames_vencidos||0, s.exames_vencidos > 0 ? "crit":"ok"],
+        ["Treinamentos NR vencidos", s.treinamentos_vencidos||0, s.treinamentos_vencidos > 0 ? "crit":"ok"],
+        ["Funcionários afastados", s.afastados||0, s.afastados > 0 ? "warn":"ok"],
+        ["ASOs vencendo (30 dias)", s.aso_alertas||0, s.aso_alertas > 0 ? "warn":"ok"],
+        ["Agendamentos esta semana", s.agendamentos_semana||0, "info"],
+        ["Alertas totais", a.total||0, a.criticos > 0 ? "crit": a.alertas > 0 ? "warn":"ok"],
       ]);
 
     } else if (SETOR === "hospital") {
-      var h = d.hospital || {}, a = d.alertas || {};
+      var h = d.hospital || {};
       var taxa = h.taxa_ocupacao || 0;
-      set("k1", taxa + "%", taxa > 85 ? "danger" : taxa > 70 ? "warn" : "ok");
-      set("k1s", (h.leitos_ocupados || 0) + " de " + (h.total_leitos || 0) + " leitos");
-      set("k2", h.internacoes_ativas || 0);
-      set("k2s", (h.altas_mes || 0) + " altas este mês");
-      set("k3", h.leitos_disponiveis || 0, h.leitos_disponiveis > 0 ? "ok" : "danger");
-      set("k3s", (h.leitos_manutencao || 0) + " em manutenção");
-      set("k4", h.triagens_hoje || 0);
-      set("k4s", "triagens registradas hoje");
-      set("k5", a.total || 0, a.criticos > 0 ? "danger" : "warn");
-      set("k5s", (a.criticos || 0) + " crítico(s)");
-      resumo([
-        ["Taxa de ocupação", taxa + "%", taxa > 85 ? "danger" : "ok"],
-        ["Internações ativas", h.internacoes_ativas || 0, ""],
-        ["Leitos disponíveis", h.leitos_disponiveis || 0, h.leitos_disponiveis > 0 ? "ok" : "danger"],
-        ["Leitos em manutenção", h.leitos_manutencao || 0, h.leitos_manutencao > 0 ? "warn" : "ok"],
-        ["Triagens hoje", h.triagens_hoje || 0, ""],
-        ["Alertas críticos", a.criticos || 0, a.criticos > 0 ? "danger" : "ok"],
+      $k("k1", taxa + "%", color(taxa, 85, 70));
+      $d("k1d", (h.leitos_ocupados||0) + " ocupados de " + (h.total_leitos||0));
+      $k("k2", h.internacoes_ativas || 0);
+      $d("k2d", (h.altas_mes||0) + " altas neste mês");
+      $k("k3", h.leitos_disponiveis || 0, h.leitos_disponiveis > 0 ? "ok":"crit");
+      $d("k3d", (h.leitos_manutencao||0) + " em manutenção");
+      $k("k4", h.triagens_hoje || 0);
+      $d("k4d", "triagens registradas hoje");
+      $k("k5", a.total || 0, a.criticos > 0 ? "crit": a.alertas > 0 ? "warn":"ok");
+      $d("k5d", (a.criticos||0) + " crítico(s)");
+      renderSituacao([
+        ["Taxa de ocupação hospitalar", taxa + "%", color(taxa,85,70)],
+        ["Internações ativas", h.internacoes_ativas||0, ""],
+        ["Leitos disponíveis", h.leitos_disponiveis||0, h.leitos_disponiveis > 0 ? "ok":"crit"],
+        ["Leitos em manutenção", h.leitos_manutencao||0, h.leitos_manutencao > 0 ? "warn":"ok"],
+        ["Triagens hoje", h.triagens_hoje||0, "info"],
+        ["Altas neste mês", h.altas_mes||0, "info"],
       ]);
 
     } else if (SETOR === "farmacia") {
-      var f = d.farmacia || {}, a = d.alertas || {};
-      set("k1", f.dispensacoes_mes || 0);
-      set("k1s", "dispensações este mês");
-      set("k2", f.estoque_critico || 0, f.estoque_critico > 0 ? "danger" : "ok");
-      set("k2s", (f.estoque_alerta || 0) + " em alerta");
-      set("k3", f.lotes_vencendo_30d || 0, f.lotes_vencendo_30d > 0 ? "warn" : "ok");
-      set("k3s", "lotes vencendo em 30 dias");
-      set("k4", f.pedidos_abertos || 0);
-      set("k4s", "pedidos de compra abertos");
-      set("k5", a.total || 0, a.criticos > 0 ? "danger" : "warn");
-      set("k5s", (a.criticos || 0) + " crítico(s)");
-      resumo([
-        ["Dispensações mês", f.dispensacoes_mes || 0, "ok"],
-        ["Estoque zerado", f.estoque_critico || 0, f.estoque_critico > 0 ? "danger" : "ok"],
-        ["Estoque em alerta", f.estoque_alerta || 0, f.estoque_alerta > 0 ? "warn" : "ok"],
-        ["Lotes vencendo 30d", f.lotes_vencendo_30d || 0, f.lotes_vencendo_30d > 0 ? "warn" : "ok"],
-        ["Pedidos abertos", f.pedidos_abertos || 0, ""],
-        ["Alertas críticos", a.criticos || 0, a.criticos > 0 ? "danger" : "ok"],
+      var f = d.farmacia || {};
+      $k("k1", f.dispensacoes_mes || 0, "ok");
+      $d("k1d", "dispensações este mês");
+      $k("k2", f.estoque_critico || 0, f.estoque_critico > 0 ? "crit":"ok");
+      $d("k2d", (f.estoque_alerta||0) + " itens em alerta");
+      $k("k3", f.lotes_vencendo_30d || 0, f.lotes_vencendo_30d > 0 ? "warn":"ok");
+      $d("k3d", "lotes vencendo em 30 dias");
+      $k("k4", f.pedidos_abertos || 0);
+      $d("k4d", "pedidos de compra em aberto");
+      $k("k5", a.total || 0, a.criticos > 0 ? "crit": a.alertas > 0 ? "warn":"ok");
+      $d("k5d", (a.criticos||0) + " crítico(s)");
+      renderSituacao([
+        ["Dispensações neste mês", f.dispensacoes_mes||0, "ok"],
+        ["Estoque zerado (ruptura)", f.estoque_critico||0, f.estoque_critico > 0 ? "crit":"ok"],
+        ["Estoque abaixo do mínimo", f.estoque_alerta||0, f.estoque_alerta > 0 ? "warn":"ok"],
+        ["Lotes vencendo (30 dias)", f.lotes_vencendo_30d||0, f.lotes_vencendo_30d > 0 ? "warn":"ok"],
+        ["Pedidos de compra abertos", f.pedidos_abertos||0, "info"],
+        ["Alertas totais", a.total||0, a.criticos > 0 ? "crit": a.alertas > 0 ? "warn":"ok"],
       ]);
 
     } else if (SETOR === "governo") {
-      var g = d.governo || {}, a = d.alertas || {};
-      set("k1", a.total || 0, a.criticos > 0 ? "danger" : "warn");
-      set("k1s", (a.criticos || 0) + " crítico(s)");
-      set("k2", "—");
-      set("k2s", "dados em tempo real no painel");
-      set("k3", g.programas_ativos || 0);
-      set("k3s", (g.programas_total || 0) + " total");
-      set("k4", g.metas_atingidas || 0, "ok");
-      set("k4s", "de " + (g.total_indicadores || 0) + " indicadores");
-      set("k5", g.planos_atrasados || 0, g.planos_atrasados > 0 ? "warn" : "ok");
-      set("k5s", (g.planos_pendentes || 0) + " pendentes · " + (g.planos_andamento || 0) + " em andamento");
-      resumo([
-        ["Alertas críticos", a.criticos || 0, a.criticos > 0 ? "danger" : "ok"],
-        ["Programas ativos", g.programas_ativos || 0, "ok"],
-        ["Metas atingidas", g.metas_atingidas || 0, "ok"],
-        ["Planos atrasados", g.planos_atrasados || 0, g.planos_atrasados > 0 ? "warn" : "ok"],
-        ["Planos em andamento", g.planos_andamento || 0, ""],
-        ["Total indicadores", g.total_indicadores || 0, ""],
+      var g = d.governo || {};
+      $k("k1", a.total || 0, a.criticos > 0 ? "crit": a.alertas > 0 ? "warn":"ok");
+      $d("k1d", (a.criticos||0) + " crítico(s)");
+      $k("k2", g.programas_ativos || 0, "ok");
+      $d("k2d", (g.programas_total||0) + " total cadastrados");
+      $k("k3", g.metas_atingidas || 0, "ok");
+      $d("k3d", "de " + (g.total_indicadores||0) + " indicadores");
+      $k("k4", g.planos_atrasados || 0, g.planos_atrasados > 0 ? "warn":"ok");
+      $d("k4d", (g.planos_pendentes||0) + " pendentes");
+      $k("k5", g.total_indicadores || 0);
+      $d("k5d", "indicadores monitorados");
+      renderSituacao([
+        ["Alertas epidemiológicos críticos", a.criticos||0, a.criticos > 0 ? "crit":"ok"],
+        ["Programas de saúde ativos", g.programas_ativos||0, "ok"],
+        ["Indicadores com meta atingida", g.metas_atingidas||0, "ok"],
+        ["Planos de ação atrasados", g.planos_atrasados||0, g.planos_atrasados > 0 ? "warn":"ok"],
+        ["Planos em andamento", g.planos_andamento||0, "info"],
+        ["Total de indicadores", g.total_indicadores||0, "info"],
       ]);
 
     } else if (SETOR === "plano_saude") {
-      var ps = d.plano_saude || {}, a = d.alertas || {};
-      set("k1", ps.beneficiarios_ativos || 0);
-      set("k1s", "beneficiários com plano ativo");
-      set("k2", ps.guias_pendentes || 0, ps.guias_pendentes > 0 ? "warn" : "ok");
-      set("k2s", "aguardando autorização");
-      set("k3", ps.sinistros_analise || 0);
-      set("k3s", "sinistros em análise");
-      set("k4", ps.total_contratos || 0);
-      set("k4s", "contratos vigentes");
-      set("k5", ps.reembolsos_pendentes || 0, ps.reembolsos_pendentes > 0 ? "danger" : "ok");
-      set("k5s", "aguardando processamento");
-      resumo([
-        ["Beneficiários ativos", ps.beneficiarios_ativos || 0, "ok"],
-        ["Guias pendentes", ps.guias_pendentes || 0, ps.guias_pendentes > 0 ? "warn" : "ok"],
-        ["Sinistros em análise", ps.sinistros_analise || 0, ""],
-        ["Contratos vigentes", ps.total_contratos || 0, ""],
-        ["Reembolsos pendentes", ps.reembolsos_pendentes || 0, ps.reembolsos_pendentes > 0 ? "danger" : "ok"],
-        ["Alertas críticos", a.criticos || 0, a.criticos > 0 ? "danger" : "ok"],
+      var ps = d.plano_saude || {};
+      $k("k1", ps.beneficiarios_ativos || 0, "ok");
+      $d("k1d", "beneficiários com plano ativo");
+      $k("k2", ps.guias_pendentes || 0, ps.guias_pendentes > 0 ? "warn":"ok");
+      $d("k2d", "guias aguardando autorização");
+      $k("k3", ps.sinistros_analise || 0);
+      $d("k3d", "sinistros em análise");
+      $k("k4", ps.total_contratos || 0);
+      $d("k4d", "contratos vigentes");
+      $k("k5", ps.reembolsos_pendentes || 0, ps.reembolsos_pendentes > 0 ? "crit":"ok");
+      $d("k5d", "reembolsos aguardando processamento");
+      renderSituacao([
+        ["Beneficiários ativos", ps.beneficiarios_ativos||0, "ok"],
+        ["Guias pendentes de autorização", ps.guias_pendentes||0, ps.guias_pendentes > 0 ? "warn":"ok"],
+        ["Sinistros em análise", ps.sinistros_analise||0, "info"],
+        ["Contratos vigentes", ps.total_contratos||0, "info"],
+        ["Reembolsos pendentes", ps.reembolsos_pendentes||0, ps.reembolsos_pendentes > 0 ? "crit":"ok"],
+        ["Alertas totais", a.total||0, a.criticos > 0 ? "crit":"ok"],
       ]);
     }
 
+    renderAlertas(a);
+
   } catch(e) {
-    document.getElementById("resumoList").innerHTML =
-      '<div class="row"><span class="label">Não foi possível carregar os dados.</span><span class="val warn">&#9888;</span></div>';
+    document.getElementById("situacaoList").innerHTML =
+      '<div class="sit-row"><span class="sit-label">Não foi possível carregar os dados.</span>'
+      + '<span class="sit-val warn">⚠️</span></div>';
+    document.getElementById("alertList").innerHTML =
+      '<div class="alert-item warn"><span class="alert-icon">⚠️</span>'
+      + '<span class="alert-text">Erro ao conectar com o servidor.</span></div>';
   }
 }
+
 carregar();
 </script>
 </body>
