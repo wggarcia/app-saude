@@ -91,10 +91,20 @@ function statusBadge(s) {
   return `<span class="badge ${map[s]||'b-muted'}">${s.replace("_"," ")}</span>`;
 }
 
+function showKpiErro(msg, upgrade) {
+  const cor = upgrade ? "var(--amber)" : "var(--red)";
+  document.getElementById("kpiStrip").innerHTML = `<div style="padding:14px;color:${cor};font-size:.85rem;border:1px solid ${cor};border-radius:10px;background:rgba(0,0,0,.2)">${upgrade ? "🔒" : "⚠️"} ${msg}</div>`;
+}
+
 async function loadKpis() {
   try {
     const r = await fetch("/api/sst/cipa/kpis/", { headers: headers() });
-    if (!r.ok) return;
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      if (r.status === 403 && err.upgrade_necessario) return showKpiErro("Este módulo requer o plano Profissional ou superior.", true);
+      if (r.status === 401) return showKpiErro("Sessão expirada. Faça login novamente.", false);
+      return showKpiErro("Erro ao carregar (" + r.status + "). Tente recarregar.", false);
+    }
     const d = await r.json();
     document.getElementById("kpiStrip").innerHTML = `
       <div class="kpi-card"><div class="kpi-label">Comissões</div><div class="kpi-value">${d.total_comissoes}</div></div>
@@ -102,7 +112,7 @@ async function loadKpis() {
       <div class="kpi-card"><div class="kpi-label">Reuniões no Ano</div><div class="kpi-value">${d.reunioes_no_ano}</div><div class="kpi-sub">${d.reunioes_realizadas_ano} realizadas</div></div>
       <div class="kpi-card"><div class="kpi-label">Próxima Reunião</div><div class="kpi-value" style="font-size:.9rem">${d.proxima_reuniao ? d.proxima_reuniao.data.substring(0,10) : "—"}</div></div>
     `;
-  } catch(e) {}
+  } catch(e) { showKpiErro("Erro de conexão. Verifique sua internet.", false); }
 }
 
 async function loadComissoes() {

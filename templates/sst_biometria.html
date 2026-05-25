@@ -71,10 +71,26 @@
 function auth() { return sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || ""; }
 function headers() { return { "Authorization": "Bearer " + auth(), "Content-Type": "application/json" }; }
 
+function showErro(msg, upgrade) {
+  const cor = upgrade ? "var(--amber)" : "var(--red)";
+  const ico = upgrade ? "🔒" : "⚠️";
+  const html = `<div style="padding:18px;color:${cor};font-size:.88rem;border:1px solid ${cor};border-radius:10px;background:rgba(0,0,0,.2)">${ico} ${msg}</div>`;
+  document.getElementById("kpiStrip").innerHTML = html;
+  document.getElementById("coberturaSection").innerHTML = "";
+  document.getElementById("entregasSection").innerHTML = "";
+}
+
 async function loadKpis() {
   try {
     const r = await fetch("/api/sst/biometria/kpis/", { headers: headers() });
-    if (!r.ok) return;
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      if (r.status === 403 && err.upgrade_necessario)
+        return showErro("Este módulo requer o plano Profissional ou superior. Fale com seu gerente de conta para fazer upgrade.", true);
+      if (r.status === 401)
+        return showErro("Sessão expirada. Faça login novamente.", false);
+      return showErro("Erro ao carregar dados (" + r.status + "). Tente recarregar a página.", false);
+    }
     const d = await r.json();
     document.getElementById("kpiStrip").innerHTML = `
       <div class="kpi-card"><div class="kpi-label">Total Funcionários</div><div class="kpi-value">${d.total_funcionarios}</div></div>
@@ -104,7 +120,7 @@ async function loadKpis() {
       <div style="font-size:.82rem; color:var(--muted); margin-top:4px;">Total de entregas no mês: ${d.total_entregas_mes}</div>
     `;
   } catch(e) {
-    document.getElementById("kpiStrip").innerHTML = "<div style='color:var(--muted); padding:10px;'>Erro ao carregar KPIs.</div>";
+    showErro("Erro de conexão. Verifique sua internet e tente novamente.", false);
   }
 }
 

@@ -99,7 +99,14 @@ function nivelCor(n) {
 async function loadKpis() {
   try {
     const r = await fetch("/api/sst/psicossocial/kpis/", { headers: headers() });
-    if (!r.ok) return;
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      const msg = (r.status === 403 && err.upgrade_necessario)
+        ? "🔒 Este módulo requer o plano Profissional ou superior."
+        : `⚠️ Erro ao carregar (${r.status}). Tente recarregar.`;
+      document.getElementById("kpiStrip").innerHTML = `<div style="padding:14px;color:var(--amber);font-size:.85rem;">${msg}</div>`;
+      return;
+    }
     const d = await r.json();
     document.getElementById("kpiStrip").innerHTML = `
       <div class="kpi-card" style="border-top-color:var(--purple)"><div class="kpi-label">Total Avaliações</div><div class="kpi-value">${d.total_avaliacoes}</div></div>
@@ -107,7 +114,7 @@ async function loadKpis() {
       <div class="kpi-card" style="border-top-color:var(--amber)"><div class="kpi-label">Encerradas</div><div class="kpi-value">${d.respondidas}</div></div>
       <div class="kpi-card" style="border-top-color:var(--purple)"><div class="kpi-label">Score Médio</div><div class="kpi-value">${d.score_medio_empresa !== null ? d.score_medio_empresa + '/100' : '—'}</div></div>
     `;
-  } catch(e) {}
+  } catch(e) { document.getElementById("kpiStrip").innerHTML = `<div style="padding:14px;color:var(--red);font-size:.85rem;">⚠️ Erro de conexão.</div>`; }
 }
 
 async function loadAvaliacoes() {
