@@ -14,19 +14,36 @@ def api_executive_dashboard(request):
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
+    from .access_control import get_setor
+    setor = get_setor(empresa)
     hoje = date.today()
     mes_ini = hoje.replace(day=1)
     mes_ant = (mes_ini - timedelta(days=1)).replace(day=1)
 
-    data = {
-        "empresa": empresa.nome,
-        "data": str(hoje),
-        "sst": _sst_kpis(empresa, hoje),
-        "farmacia": _farmacia_kpis(empresa, hoje, mes_ini, mes_ant),
-        "hospital": _hospital_kpis(empresa, hoje),
-        "governo": _governo_kpis(empresa, hoje),
-        "alertas": _alertas_resumo(empresa, hoje),
-    }
+    # ─── Retorna APENAS dados do setor desta empresa ──────────────────────────
+    # Um hospital não recebe dados de SST. Uma farmácia não recebe dados de
+    # governo. Cada ambiente é totalmente isolado.
+    data: dict = {"empresa": empresa.nome, "setor": setor, "data": str(hoje)}
+
+    if setor == "empresa":
+        data["sst"] = _sst_kpis(empresa, hoje)
+        data["alertas"] = _alertas_resumo_setor(empresa, hoje, setor)
+    elif setor == "farmacia":
+        data["farmacia"] = _farmacia_kpis(empresa, hoje, mes_ini, mes_ant)
+        data["alertas"] = _alertas_resumo_setor(empresa, hoje, setor)
+    elif setor == "hospital":
+        data["hospital"] = _hospital_kpis(empresa, hoje)
+        data["alertas"] = _alertas_resumo_setor(empresa, hoje, setor)
+    elif setor == "governo":
+        data["governo"] = _governo_kpis(empresa, hoje)
+        data["alertas"] = _alertas_resumo_setor(empresa, hoje, setor)
+    elif setor == "plano_saude":
+        data["plano_saude"] = _plano_saude_kpis(empresa, hoje, mes_ini, mes_ant)
+        data["alertas"] = _alertas_resumo_setor(empresa, hoje, setor)
+    else:
+        # fallback seguro — nunca mistura setores
+        data["alertas"] = {"total": 0, "criticos": 0, "alertas": 0, "infos": 0}
+
     return JsonResponse(data)
 
 
@@ -253,6 +270,67 @@ def _alertas_resumo(empresa, hoje):
             "criticos": sum(1 for a in todos if a["severidade"] == "critico"),
             "alertas": sum(1 for a in todos if a["severidade"] == "alerta"),
             "infos": sum(1 for a in todos if a["severidade"] == "info"),
+        }
+    except Exception:
+        return {"total": 0, "criticos": 0, "alertas": 0, "infos": 0}
+
+
+def _plano_saude_kpis(empresa, hoje, mes_ini, mes_ant):
+    """KPIs exclusivos do ambiente Plano de Saúde."""
+    try:
+        from .models import (
+            BeneficiarioPlano, GuiaAutorizacao, SinistroPlano,
+            ReembolsoPlano, ContratoPlano,
+        )
+        from django.db.models import Avg
+
+        beneficiarios_ativos = BeneficiarioPlano.objects.filter(
+            empresa=empresa, ativo=True
+        ).count()
+        guias_pendentes = GuiaAutorizacao.objects.filter(
+            empresa=empresa, status__in=["pendente", "em_analise"]
+        ).count()
+        sinistros_analise = SinistroPlano.objects.filter(
+            empresa=empresa, status__in=["aberto", "em_analise"]
+        ).count() if hasattr(SinistroPlano, "objects") else 0
+
+        # Sinistralidade simples: sinistros/mês vs contratos
+        total_contratos = ContratoPlano.objects.filter(empresa=empresa, ativo=True).count()
+
+        reembolsos_pendentes = ReembolsoPlano.objects.filter(
+            empresa=empresa, status="pendente"
+        ).count() if hasattr(ReembolsoPlano, "objects") else 0
+
+        return {
+            "beneficiarios_ativos": beneficiarios_ativos,
+            "guias_pendentes": guias_pendentes,
+            "sinistros_analise": sinistros_analise,
+            "total_contratos": total_contratos,
+            "reembolsos_pendentes": reembolsos_pendentes,
+        }
+    except Exception:
+        return {}
+
+
+def _alertas_resumo_setor(empresa, hoje, setor):
+    """Retorna resumo de alertas APENAS do setor da empresa."""
+    try:
+        from .views_alertas import (
+            _alertas_sst, _alertas_farmacia, _alertas_hospital, _alertas_governo,
+        )
+        mapa = {
+            "empresa": _alertas_sst,
+            "farmacia": _alertas_farmacia,
+            "hospital": _alertas_hospital,
+            "governo": _alertas_governo,
+        }
+        fn = mapa.get(setor)
+        todos = fn(empresa, hoje) if fn else []
+        return {
+            "total": len(todos),
+            "criticos": sum(1 for a in todos if a.get("severidade") == "critico"),
+            "alertas": sum(1 for a in todos if a.get("severidade") == "alerta"),
+            "infos": sum(1 for a in todos if a.get("severidade") == "info"),
         }
     except Exception:
         return {"total": 0, "criticos": 0, "alertas": 0, "infos": 0}

@@ -6,34 +6,48 @@
 <title>Gerência Executiva | {{ empresa_nome }}</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--ok:#00e5b0;--warn:#ffb347;--danger:#ff4d6d;--text:#e8f4ff;--muted:#7a9bb5;--border:rgba(255,255,255,.08);--card:rgba(255,255,255,.04)}
+:root{
+  --bg:#041018;--surface:#072030;--surface2:#0a2d45;
+  --accent:#00c2ff;--ok:#00e5b0;--warn:#ffb347;--danger:#ff4d6d;
+  --text:#e8f4ff;--muted:#7a9bb5;--border:rgba(255,255,255,.08);--card:rgba(255,255,255,.04)
+}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 .wrapper{max-width:1240px;margin:0 auto;padding:24px}
-.header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
-.title{font-size:24px;font-weight:800}
-.subtitle{font-size:13px;color:var(--muted);margin-top:3px}
-.actions{display:flex;gap:8px;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:9px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);text-decoration:none;font-size:12px;font-weight:700;cursor:pointer}
+.header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.eyebrow{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:var(--accent)}
+.title{font-size:22px;font-weight:800;margin-top:6px}
+.subtitle{font-size:12px;color:var(--muted);margin-top:3px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:9px;
+  border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);
+  text-decoration:none;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 .btn:hover{background:rgba(255,255,255,.1)}
 .btn.primary{background:linear-gradient(135deg,var(--accent),var(--ok));color:#041018;border:none}
-.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:16px 0}
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:0 0 18px}
 .kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
 .kpi.ok::before{background:var(--ok)}
 .kpi.warn::before{background:var(--warn)}
 .kpi.danger::before{background:var(--danger)}
 .kpi-label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-.kpi-val{font-size:30px;font-weight:800;margin-top:8px}
+.kpi-val{font-size:28px;font-weight:800;margin-top:8px}
 .kpi-sub{font-size:12px;color:var(--muted);margin-top:4px}
-.grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:8px}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:14px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
-.card h3{font-size:14px;font-weight:800;margin-bottom:10px}
+.card h3{font-size:14px;font-weight:800;margin-bottom:12px;color:var(--accent)}
 .list{display:grid;gap:8px}
-.row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:9px;background:rgba(255,255,255,.03);font-size:13px}
-.row span:last-child{font-weight:800}
+.row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;
+  border-radius:9px;background:rgba(255,255,255,.03);font-size:13px}
+.row .label{color:var(--muted)}
+.row .val{font-weight:800}
+.row .val.warn{color:var(--warn)}
+.row .val.danger{color:var(--danger)}
+.row .val.ok{color:var(--ok)}
 .links{display:grid;gap:8px}
-.link{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text);text-decoration:none;font-size:13px;font-weight:700}
+.link{padding:10px 12px;border-radius:10px;border:1px solid var(--border);
+  background:rgba(255,255,255,.03);color:var(--text);text-decoration:none;
+  font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
 .link:hover{background:rgba(255,255,255,.08)}
 @media(max-width:1050px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
 @media(max-width:640px){.kpi-grid{grid-template-columns:1fr}.wrapper{padding:16px}}
@@ -41,13 +55,15 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 </head>
 <body>
 <div class="wrapper">
+
   <header class="header">
     <div>
-      <div class="title">Gerência Executiva</div>
-      <div class="subtitle">{{ empresa_nome }} · {{ setor_label }} · visão estratégica restrita</div>
+      <div class="eyebrow">{{ setor_label }} &middot; Gerência Executiva</div>
+      <div class="title">{{ empresa_nome }}</div>
+      <div class="subtitle">Visão estratégica restrita &mdash; perfil gerência</div>
     </div>
     <div class="actions">
-      <a class="btn" href="{{ return_url|default:'/dashboard-empresa/' }}">Voltar ao Ambiente</a>
+      <a class="btn" href="{{ return_url|default:'/dashboard/' }}">&#8592; Voltar ao Ambiente</a>
       <a class="btn" href="/sala-decisao-ia/">Sala de Decisão IA</a>
       <a class="btn primary" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener">Plataforma TI</a>
       <a class="btn" href="{{ logout_url|default:'/logout/' }}">Sair</a>
@@ -57,137 +73,277 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
   {% include "partials/enterprise_command_center.html" %}
   {% include "partials/enterprise_premium_suite.html" %}
 
+  {# ── KPIs: cada setor vê APENAS os seus próprios indicadores ── #}
+
+  {% if setor_conta == 'empresa' %}
   <section class="kpi-grid">
-    <article class="kpi"><div class="kpi-label">Funcionários SST</div><div class="kpi-val" id="k1">—</div><div class="kpi-sub" id="k1s">—</div></article>
-    <article class="kpi ok"><div class="kpi-label">Dispensações mês</div><div class="kpi-val" id="k2">—</div><div class="kpi-sub" id="k2s">—</div></article>
-    <article class="kpi warn"><div class="kpi-label">Ocupação hospitalar</div><div class="kpi-val" id="k3">—</div><div class="kpi-sub" id="k3s">—</div></article>
-    <article class="kpi"><div class="kpi-label">Programas governo</div><div class="kpi-val" id="k4">—</div><div class="kpi-sub" id="k4s">—</div></article>
-    <article class="kpi danger"><div class="kpi-label">Alertas totais</div><div class="kpi-val" id="k5">—</div><div class="kpi-sub" id="k5s">—</div></article>
+    <article class="kpi"><div class="kpi-label">Funcionários Ativos</div><div class="kpi-val" id="k1">—</div><div class="kpi-sub" id="k1s">—</div></article>
+    <article class="kpi warn"><div class="kpi-label">ASOs Vencendo (30d)</div><div class="kpi-val" id="k2">—</div><div class="kpi-sub" id="k2s">—</div></article>
+    <article class="kpi danger"><div class="kpi-label">Treinamentos Vencidos</div><div class="kpi-val" id="k3">—</div><div class="kpi-sub" id="k3s">—</div></article>
+    <article class="kpi warn"><div class="kpi-label">Afastamentos Ativos</div><div class="kpi-val" id="k4">—</div><div class="kpi-sub" id="k4s">—</div></article>
+    <article class="kpi danger"><div class="kpi-label">Alertas SST</div><div class="kpi-val" id="k5">—</div><div class="kpi-sub" id="k5s">—</div></article>
   </section>
+
+  {% elif setor_conta == 'hospital' %}
+  <section class="kpi-grid">
+    <article class="kpi warn"><div class="kpi-label">Taxa de Ocupação</div><div class="kpi-val" id="k1">—</div><div class="kpi-sub" id="k1s">—</div></article>
+    <article class="kpi"><div class="kpi-label">Internações Ativas</div><div class="kpi-val" id="k2">—</div><div class="kpi-sub" id="k2s">—</div></article>
+    <article class="kpi ok"><div class="kpi-label">Leitos Disponíveis</div><div class="kpi-val" id="k3">—</div><div class="kpi-sub" id="k3s">—</div></article>
+    <article class="kpi"><div class="kpi-label">Triagens Hoje</div><div class="kpi-val" id="k4">—</div><div class="kpi-sub" id="k4s">—</div></article>
+    <article class="kpi danger"><div class="kpi-label">Alertas Clínicos</div><div class="kpi-val" id="k5">—</div><div class="kpi-sub" id="k5s">—</div></article>
+  </section>
+
+  {% elif setor_conta == 'farmacia' %}
+  <section class="kpi-grid">
+    <article class="kpi ok"><div class="kpi-label">Dispensações no Mês</div><div class="kpi-val" id="k1">—</div><div class="kpi-sub" id="k1s">—</div></article>
+    <article class="kpi danger"><div class="kpi-label">Estoque Crítico</div><div class="kpi-val" id="k2">—</div><div class="kpi-sub" id="k2s">—</div></article>
+    <article class="kpi warn"><div class="kpi-label">Lotes Vencendo (30d)</div><div class="kpi-val" id="k3">—</div><div class="kpi-sub" id="k3s">—</div></article>
+    <article class="kpi"><div class="kpi-label">Pedidos em Aberto</div><div class="kpi-val" id="k4">—</div><div class="kpi-sub" id="k4s">—</div></article>
+    <article class="kpi danger"><div class="kpi-label">Alertas Farmácia</div><div class="kpi-val" id="k5">—</div><div class="kpi-sub" id="k5s">—</div></article>
+  </section>
+
+  {% elif setor_conta == 'governo' %}
+  <section class="kpi-grid">
+    <article class="kpi danger"><div class="kpi-label">Alertas Epidemiológicos</div><div class="kpi-val" id="k1">—</div><div class="kpi-sub" id="k1s">—</div></article>
+    <article class="kpi"><div class="kpi-label">Registros Sintomas (24h)</div><div class="kpi-val" id="k2">—</div><div class="kpi-sub" id="k2s">—</div></article>
+    <article class="kpi ok"><div class="kpi-label">Programas Ativos</div><div class="kpi-val" id="k3">—</div><div class="kpi-sub" id="k3s">—</div></article>
+    <article class="kpi ok"><div class="kpi-label">Metas Atingidas</div><div class="kpi-val" id="k4">—</div><div class="kpi-sub" id="k4s">—</div></article>
+    <article class="kpi warn"><div class="kpi-label">Planos Atrasados</div><div class="kpi-val" id="k5">—</div><div class="kpi-sub" id="k5s">—</div></article>
+  </section>
+
+  {% elif setor_conta == 'plano_saude' %}
+  <section class="kpi-grid">
+    <article class="kpi ok"><div class="kpi-label">Beneficiários Ativos</div><div class="kpi-val" id="k1">—</div><div class="kpi-sub" id="k1s">—</div></article>
+    <article class="kpi warn"><div class="kpi-label">Guias Pendentes</div><div class="kpi-val" id="k2">—</div><div class="kpi-sub" id="k2s">—</div></article>
+    <article class="kpi"><div class="kpi-label">Sinistros em Análise</div><div class="kpi-val" id="k3">—</div><div class="kpi-sub" id="k3s">—</div></article>
+    <article class="kpi"><div class="kpi-label">Contratos Ativos</div><div class="kpi-val" id="k4">—</div><div class="kpi-sub" id="k4s">—</div></article>
+    <article class="kpi danger"><div class="kpi-label">Reembolsos Pendentes</div><div class="kpi-val" id="k5">—</div><div class="kpi-sub" id="k5s">—</div></article>
+  </section>
+  {% endif %}
 
   <section class="grid">
     <article class="card">
-      <h3>Resumo Executivo do Dia</h3>
+      <h3>Resumo Executivo</h3>
       <div class="list" id="resumoList">
-        <div class="row"><span>Carregando dados gerenciais...</span><span>⏳</span></div>
+        <div class="row"><span class="label">Carregando dados...</span><span class="val">&#8987;</span></div>
       </div>
     </article>
 
     <aside class="card">
-      <h3>Acessos Estratégicos</h3>
+      <h3>Acessos do Ambiente</h3>
       <div class="links">
-        <a class="link" href="/executive/">Dashboard Executivo Global</a>
-        <a class="link" href="/compliance/">Compliance & Auditoria</a>
-        <a class="link" href="/financeiro/">Financeiro Estratégico</a>
-        <a class="link" href="/governanca/">Governança</a>
-        <a class="link" href="/relatorio-executivo/">Relatório Executivo</a>
+        {% if setor_conta == 'empresa' %}
+        <a class="link" href="/sst/">&#127968; Hub SST</a>
+        <a class="link" href="/sst/funcionarios/">&#128101; Funcionários</a>
+        <a class="link" href="/sst/asos/">&#128203; ASOs &amp; Exames</a>
+        <a class="link" href="/sst/epis/">&#129510; EPIs</a>
+        <a class="link" href="/sst/afastamentos/">&#129658; Afastamentos</a>
+        <a class="link" href="/sst/relatorios/">&#128202; Relatórios SST</a>
+
+        {% elif setor_conta == 'hospital' %}
+        <a class="link" href="/hospital/gestao/">&#127973; Gestão Hospitalar</a>
+        <a class="link" href="/hospital/gestao/#leitos">&#128716; Leitos</a>
+        <a class="link" href="/hospital/gestao/#triagem">&#128657; Triagem Manchester</a>
+        <a class="link" href="/hospital/gestao/#pacientes">&#128100; Pacientes Internados</a>
+        <a class="link" href="/hospital/gestao/#prescricoes">&#128138; Prescrições</a>
+        <a class="link" href="/rede/gestao/">&#127760; Rede Hospitalar</a>
+
+        {% elif setor_conta == 'farmacia' %}
+        <a class="link" href="/farmacia/gestao/">&#128138; Gestão Farmácia</a>
+        <a class="link" href="/farmacia/gestao/#estoque">&#128230; Estoque</a>
+        <a class="link" href="/farmacia/gestao/#dispensacao">&#128203; Dispensação</a>
+        <a class="link" href="/farmacia/gestao/#fornecedores">&#128666; Fornecedores</a>
+        <a class="link" href="/farmacia/gestao/#pedidos">&#128722; Pedidos de Compra</a>
+        <a class="link" href="/farmacia/gestao/#conformidade">&#9989; Conformidade ANVISA</a>
+
+        {% elif setor_conta == 'governo' %}
+        <a class="link" href="/dashboard-governo/">&#127963; Dashboard Governo</a>
+        <a class="link" href="/governo/gestao/">&#128202; Sala de Situação</a>
+        <a class="link" href="/governo/gestao/#alertas">&#128680; Alertas Epidemiológicos</a>
+        <a class="link" href="/governo/gestao/#programas">&#128203; Programas de Saúde</a>
+        <a class="link" href="/governo/gestao/#planos">&#9989; Planos de Ação</a>
+        <a class="link" href="/governo/plataforma/">&#128187; Plataforma Gov</a>
+
+        {% elif setor_conta == 'plano_saude' %}
+        <a class="link" href="/dashboard-plano-saude/">&#127973; Dashboard Operadora</a>
+        <a class="link" href="/plano-saude/gestao/">&#128202; Gestão Operadora</a>
+        <a class="link" href="/plano-saude/gestao/#beneficiarios">&#128101; Beneficiários</a>
+        <a class="link" href="/plano-saude/gestao/#guias">&#128203; Guias de Autorização</a>
+        <a class="link" href="/plano-saude/gestao/#sinistros">&#9888; Sinistros</a>
+        <a class="link" href="/plano-saude/gestao/#reembolsos">&#128179; Reembolsos</a>
+        {% endif %}
       </div>
     </aside>
   </section>
-</div>
 
+</div>
 <script>
+const SETOR = "{{ setor_conta|escapejs }}";
 const pageEmpresaId = "{{ empresa_id|escapejs }}";
 
-function getScopedValue(key) {
-  return sessionStorage.getItem(key) || localStorage.getItem(key) || "";
-}
-
 async function syncScopedAuth() {
-  const token = getScopedValue("auth_token") || getScopedValue("token");
+  const token = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || "";
   if (!token) return null;
   try {
-    const response = await fetch("/api/sessao/aba", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "same-origin",
+    const r = await fetch("/api/sessao/aba", {
+      method: "POST", headers: { Authorization: "Bearer " + token }, credentials: "same-origin",
     });
-    if (!response.ok) return null;
-    const payload = await response.json();
-    sessionStorage.setItem("empresa_id", String(payload.empresa_id || ""));
-    sessionStorage.setItem("tipo_conta", payload.tipo_conta || "empresa");
-    if (payload.tab_key) {
-      sessionStorage.setItem("tab_session_key", payload.tab_key);
+    if (!r.ok) return null;
+    const p = await r.json();
+    sessionStorage.setItem("empresa_id", String(p.empresa_id || ""));
+    if (p.tab_key) {
+      sessionStorage.setItem("tab_session_key", p.tab_key);
       const url = new URL(window.location.href);
-      if (url.searchParams.get("tab") !== payload.tab_key) {
-        url.searchParams.set("tab", payload.tab_key);
+      if (url.searchParams.get("tab") !== p.tab_key) {
+        url.searchParams.set("tab", p.tab_key);
         window.history.replaceState({}, "", url.pathname + url.search + url.hash);
       }
     }
-    return payload;
-  } catch (e) {
-    return null;
-  }
+    return p;
+  } catch(e) { return null; }
 }
-
-function reconcileScopedSession(payload) {
-  if (!payload) return;
-  if (String(payload.empresa_id || "") !== String(pageEmpresaId || "")) {
-    const reloadKey = "gerencia_tab_sync_reload";
-    if (sessionStorage.getItem(reloadKey) === "1") {
-      sessionStorage.removeItem(reloadKey);
-      return;
-    }
-    sessionStorage.setItem(reloadKey, "1");
+syncScopedAuth().then(function(p) {
+  if (!p) return;
+  if (String(p.empresa_id || "") !== String(pageEmpresaId || "")) {
+    var k = "gerencia_sync_reload";
+    if (sessionStorage.getItem(k) === "1") { sessionStorage.removeItem(k); return; }
+    sessionStorage.setItem(k, "1");
     window.location.reload();
-    return;
   }
-  sessionStorage.removeItem("gerencia_tab_sync_reload");
+});
+window.addEventListener("focus", function() { syncScopedAuth(); });
+
+function set(id, val, cls) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = (val !== undefined && val !== null) ? val : "—";
+  if (cls) { el.className = "val " + cls; }
+}
+function resumo(rows) {
+  document.getElementById("resumoList").innerHTML = rows.map(function(r) {
+    return '<div class="row"><span class="label">' + r[0] + '</span><span class="val' + (r[2] ? " " + r[2] : "") + '">' + r[1] + '</span></div>';
+  }).join("");
 }
 
-syncScopedAuth().then(reconcileScopedSession);
-window.addEventListener("focus", () => {
-  syncScopedAuth().then(reconcileScopedSession);
-});
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) syncScopedAuth().then(reconcileScopedSession);
-});
+async function carregar() {
+  try {
+    var r = await fetch("/api/executive/dashboard/", { credentials: "same-origin" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    var d = await r.json();
 
-async function carregarGerencia(){
-  try{
-    const r = await fetch('/api/executive/dashboard/', {credentials:'same-origin'});
-    if(!r.ok){ throw new Error('Falha ao carregar'); }
-    const d = await r.json();
-    const sst = d.sst || {};
-    const farm = d.farmacia || {};
-    const hosp = d.hospital || {};
-    const gov = d.governo || {};
-    const alertas = d.alertas || {};
+    if (SETOR === "empresa") {
+      var s = d.sst || {}, a = d.alertas || {};
+      set("k1", s.total_funcionarios || 0);
+      set("k1s", (s.afastados || 0) + " afastado(s)");
+      set("k2", s.aso_alertas || 0, s.aso_alertas > 0 ? "warn" : "ok");
+      set("k2s", "vencendo em 30 dias");
+      set("k3", s.treinamentos_vencidos || 0, s.treinamentos_vencidos > 0 ? "danger" : "ok");
+      set("k3s", "NRs com prazo vencido");
+      set("k4", s.afastados || 0, s.afastados > 0 ? "warn" : "ok");
+      set("k4s", (s.agendamentos_semana || 0) + " agendamentos esta semana");
+      set("k5", a.total || 0, a.criticos > 0 ? "danger" : "warn");
+      set("k5s", (a.criticos || 0) + " crítico(s)");
+      resumo([
+        ["Exames vencidos", s.exames_vencidos || 0, s.exames_vencidos > 0 ? "danger" : "ok"],
+        ["Treinamentos vencidos", s.treinamentos_vencidos || 0, s.treinamentos_vencidos > 0 ? "danger" : "ok"],
+        ["Afastamentos sem retorno", s.afastados || 0, s.afastados > 0 ? "warn" : "ok"],
+        ["ASOs vencendo 30d", s.aso_alertas || 0, s.aso_alertas > 0 ? "warn" : "ok"],
+        ["Agendamentos semana", s.agendamentos_semana || 0, ""],
+        ["Alertas críticos", a.criticos || 0, a.criticos > 0 ? "danger" : "ok"],
+      ]);
 
-    document.getElementById('k1').textContent = sst.total_funcionarios ?? 0;
-    document.getElementById('k1s').textContent = `${sst.afastados ?? 0} afastados · ${sst.aso_alertas ?? 0} ASOs em alerta`;
+    } else if (SETOR === "hospital") {
+      var h = d.hospital || {}, a = d.alertas || {};
+      var taxa = h.taxa_ocupacao || 0;
+      set("k1", taxa + "%", taxa > 85 ? "danger" : taxa > 70 ? "warn" : "ok");
+      set("k1s", (h.leitos_ocupados || 0) + " de " + (h.total_leitos || 0) + " leitos");
+      set("k2", h.internacoes_ativas || 0);
+      set("k2s", (h.altas_mes || 0) + " altas este mês");
+      set("k3", h.leitos_disponiveis || 0, h.leitos_disponiveis > 0 ? "ok" : "danger");
+      set("k3s", (h.leitos_manutencao || 0) + " em manutenção");
+      set("k4", h.triagens_hoje || 0);
+      set("k4s", "triagens registradas hoje");
+      set("k5", a.total || 0, a.criticos > 0 ? "danger" : "warn");
+      set("k5s", (a.criticos || 0) + " crítico(s)");
+      resumo([
+        ["Taxa de ocupação", taxa + "%", taxa > 85 ? "danger" : "ok"],
+        ["Internações ativas", h.internacoes_ativas || 0, ""],
+        ["Leitos disponíveis", h.leitos_disponiveis || 0, h.leitos_disponiveis > 0 ? "ok" : "danger"],
+        ["Leitos em manutenção", h.leitos_manutencao || 0, h.leitos_manutencao > 0 ? "warn" : "ok"],
+        ["Triagens hoje", h.triagens_hoje || 0, ""],
+        ["Alertas críticos", a.criticos || 0, a.criticos > 0 ? "danger" : "ok"],
+      ]);
 
-    document.getElementById('k2').textContent = farm.dispensacoes_mes ?? 0;
-    document.getElementById('k2s').textContent = `${farm.pedidos_abertos ?? 0} pedidos abertos`;
+    } else if (SETOR === "farmacia") {
+      var f = d.farmacia || {}, a = d.alertas || {};
+      set("k1", f.dispensacoes_mes || 0);
+      set("k1s", "dispensações este mês");
+      set("k2", f.estoque_critico || 0, f.estoque_critico > 0 ? "danger" : "ok");
+      set("k2s", (f.estoque_alerta || 0) + " em alerta");
+      set("k3", f.lotes_vencendo_30d || 0, f.lotes_vencendo_30d > 0 ? "warn" : "ok");
+      set("k3s", "lotes vencendo em 30 dias");
+      set("k4", f.pedidos_abertos || 0);
+      set("k4s", "pedidos de compra abertos");
+      set("k5", a.total || 0, a.criticos > 0 ? "danger" : "warn");
+      set("k5s", (a.criticos || 0) + " crítico(s)");
+      resumo([
+        ["Dispensações mês", f.dispensacoes_mes || 0, "ok"],
+        ["Estoque zerado", f.estoque_critico || 0, f.estoque_critico > 0 ? "danger" : "ok"],
+        ["Estoque em alerta", f.estoque_alerta || 0, f.estoque_alerta > 0 ? "warn" : "ok"],
+        ["Lotes vencendo 30d", f.lotes_vencendo_30d || 0, f.lotes_vencendo_30d > 0 ? "warn" : "ok"],
+        ["Pedidos abertos", f.pedidos_abertos || 0, ""],
+        ["Alertas críticos", a.criticos || 0, a.criticos > 0 ? "danger" : "ok"],
+      ]);
 
-    const taxa = hosp.taxa_ocupacao ?? 0;
-    document.getElementById('k3').textContent = `${taxa}%`;
-    document.getElementById('k3s').textContent = `${hosp.internacoes_ativas ?? 0} internações ativas`;
+    } else if (SETOR === "governo") {
+      var g = d.governo || {}, a = d.alertas || {};
+      set("k1", a.total || 0, a.criticos > 0 ? "danger" : "warn");
+      set("k1s", (a.criticos || 0) + " crítico(s)");
+      set("k2", "—");
+      set("k2s", "dados em tempo real no painel");
+      set("k3", g.programas_ativos || 0);
+      set("k3s", (g.programas_total || 0) + " total");
+      set("k4", g.metas_atingidas || 0, "ok");
+      set("k4s", "de " + (g.total_indicadores || 0) + " indicadores");
+      set("k5", g.planos_atrasados || 0, g.planos_atrasados > 0 ? "warn" : "ok");
+      set("k5s", (g.planos_pendentes || 0) + " pendentes · " + (g.planos_andamento || 0) + " em andamento");
+      resumo([
+        ["Alertas críticos", a.criticos || 0, a.criticos > 0 ? "danger" : "ok"],
+        ["Programas ativos", g.programas_ativos || 0, "ok"],
+        ["Metas atingidas", g.metas_atingidas || 0, "ok"],
+        ["Planos atrasados", g.planos_atrasados || 0, g.planos_atrasados > 0 ? "warn" : "ok"],
+        ["Planos em andamento", g.planos_andamento || 0, ""],
+        ["Total indicadores", g.total_indicadores || 0, ""],
+      ]);
 
-    document.getElementById('k4').textContent = gov.programas_ativos ?? 0;
-    document.getElementById('k4s').textContent = `${gov.metas_atingidas ?? 0} metas atingidas`;
+    } else if (SETOR === "plano_saude") {
+      var ps = d.plano_saude || {}, a = d.alertas || {};
+      set("k1", ps.beneficiarios_ativos || 0);
+      set("k1s", "beneficiários com plano ativo");
+      set("k2", ps.guias_pendentes || 0, ps.guias_pendentes > 0 ? "warn" : "ok");
+      set("k2s", "aguardando autorização");
+      set("k3", ps.sinistros_analise || 0);
+      set("k3s", "sinistros em análise");
+      set("k4", ps.total_contratos || 0);
+      set("k4s", "contratos vigentes");
+      set("k5", ps.reembolsos_pendentes || 0, ps.reembolsos_pendentes > 0 ? "danger" : "ok");
+      set("k5s", "aguardando processamento");
+      resumo([
+        ["Beneficiários ativos", ps.beneficiarios_ativos || 0, "ok"],
+        ["Guias pendentes", ps.guias_pendentes || 0, ps.guias_pendentes > 0 ? "warn" : "ok"],
+        ["Sinistros em análise", ps.sinistros_analise || 0, ""],
+        ["Contratos vigentes", ps.total_contratos || 0, ""],
+        ["Reembolsos pendentes", ps.reembolsos_pendentes || 0, ps.reembolsos_pendentes > 0 ? "danger" : "ok"],
+        ["Alertas críticos", a.criticos || 0, a.criticos > 0 ? "danger" : "ok"],
+      ]);
+    }
 
-    document.getElementById('k5').textContent = alertas.total ?? 0;
-    document.getElementById('k5s').textContent = `${alertas.criticos ?? 0} críticos`;
-
-    const resumo = [
-      ['Exames SST vencidos', sst.exames_vencidos ?? 0],
-      ['Treinamentos vencidos', sst.treinamentos_vencidos ?? 0],
-      ['Estoque crítico farmácia', farm.estoque_critico ?? 0],
-      ['Lotes vencendo 30d', farm.lotes_vencendo_30d ?? 0],
-      ['Leitos em manutenção', hosp.leitos_manutencao ?? 0],
-      ['Planos de ação atrasados', gov.planos_atrasados ?? 0],
-      ['Alertas críticos', alertas.criticos ?? 0],
-    ];
-
-    document.getElementById('resumoList').innerHTML = resumo
-      .map(([label, valor]) => `<div class="row"><span>${label}</span><span>${valor}</span></div>`)
-      .join('');
-  }catch(e){
-    document.getElementById('resumoList').innerHTML = '<div class="row"><span>Não foi possível carregar o resumo executivo.</span><span>⚠️</span></div>';
+  } catch(e) {
+    document.getElementById("resumoList").innerHTML =
+      '<div class="row"><span class="label">Não foi possível carregar os dados.</span><span class="val warn">&#9888;</span></div>';
   }
 }
-carregarGerencia();
+carregar();
 </script>
 </body>
 </html>

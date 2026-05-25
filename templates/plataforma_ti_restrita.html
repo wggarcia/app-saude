@@ -41,13 +41,13 @@ p{font-size:.92rem;line-height:1.7;color:var(--muted)}
     <p>Esse ambiente foi isolado para operação de tecnologia da {{ empresa_nome }}. Para entrar, use um login próprio de TI com credenciais dedicadas.</p>
 
     <div class="pill-list">
-      <div class="pill">🔐 Integrações, APIs e webhooks ficam separados da operação diária do SST</div>
+      <div class="pill">🔐 Integrações, APIs e webhooks ficam separados da operação diária</div>
       <div class="pill">👤 Usuários comuns não acessam esta área</div>
-      <div class="pill">🧭 O restante do SST continua disponível normalmente</div>
+      <div class="pill">🧭 O restante do ambiente continua disponível normalmente</div>
     </div>
 
     <div class="actions">
-      <a class="btn btn-main" href="{{ return_url|default:'/sst/' }}">Voltar para {{ return_label|default:'Central SST' }}</a>
+      <a class="btn btn-main" href="{{ return_url|default:'/dashboard/' }}">Voltar para {{ return_label|default:'Meu Ambiente' }}</a>
       <a class="btn btn-ghost" href="/logout/">Entrar com outro usuário</a>
     </div>
   </main>
