@@ -143,7 +143,7 @@ Pontos:
 - Empresas: a partir de R$ 799/mes.
 - Farmacias: a partir de R$ 699/mes.
 - Hospitais: a partir de R$ 12.000/mes.
-- Governo: contrato anual fechado a partir de R$ 120.000/ano.
+- Governo: contrato anual fechado sob proposta tecnica institucional.
 
 ## Slide 13 - Frase de impacto
 

@@ -35,10 +35,10 @@ Governo nao deve ser vendido como mensalidade. O modelo correto e contrato anual
 
 | Pacote | Indicacao | Contrato anual |
 | --- | --- | ---: |
-| Governo Municipio Pequeno | ate 100 mil habitantes | R$ 120.000 |
-| Governo Municipio Medio | 100 mil a 800 mil habitantes | R$ 360.000 |
-| Governo Capital / Regiao Metropolitana | capital ou consorcio regional | R$ 1.200.000 |
-| Governo Estadual | cobertura estadual | R$ 3.600.000 |
+| Governo Municipio Pequeno | ate 100 mil habitantes | Sob proposta tecnica institucional |
+| Governo Municipio Medio | 100 mil a 800 mil habitantes | Sob proposta tecnica institucional |
+| Governo Capital / Regiao Metropolitana | capital ou consorcio regional | Sob proposta tecnica institucional |
+| Governo Estadual | cobertura estadual | Sob proposta tecnica institucional |
 
 ## Argumentos de valor
 

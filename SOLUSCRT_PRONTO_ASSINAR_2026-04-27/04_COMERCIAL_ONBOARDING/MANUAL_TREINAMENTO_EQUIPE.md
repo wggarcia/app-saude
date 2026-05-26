@@ -266,22 +266,22 @@ Pontos de seguranca:
 
 ### Farmacias
 
-- Farmacia Local: R$ 699/mes ou R$ 6.990/ano.
-- Rede Farmaceutica Regional: R$ 6.000/mes ou R$ 60.000/ano.
+- Farmacia Local: R$ 859/mes ou R$ 8.590/ano.
+- Rede Farmaceutica Regional: R$ 7.500/mes ou R$ 75.000/ano.
 
 ### Hospitais
 
-- Hospital Medio: R$ 12.000/mes ou R$ 120.000/ano.
-- Rede Hospitalar: R$ 60.000/mes ou R$ 600.000/ano.
+- Hospital Medio: R$ 7.250/mes ou R$ 87.000/ano.
+- Rede Hospitalar: R$ 36.250/mes ou R$ 435.000/ano.
 
 ### Governo
 
 Governo e somente contrato anual fechado:
 
-- Municipio pequeno: R$ 120.000/ano.
-- Municipio medio: R$ 360.000/ano.
-- Capital/regiao metropolitana: R$ 1.200.000/ano.
-- Estado: R$ 3.600.000/ano.
+- Municipio pequeno: sob proposta tecnica institucional.
+- Municipio medio: sob proposta tecnica institucional.
+- Capital/regiao metropolitana: sob proposta tecnica institucional.
+- Estado: sob proposta tecnica institucional.
 
 ## 11. Perguntas frequentes internas
 
