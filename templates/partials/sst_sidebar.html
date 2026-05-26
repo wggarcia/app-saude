@@ -29,6 +29,7 @@
 <div class="sb-label">Saúde & Comunicação</div>
 <a class="sb-link {% if p == '/sst/saude-comunicacao/' %}active{% endif %}" href="/sst/saude-comunicacao/"><span class="sb-icon">💚</span><span>Saúde & Comunicação</span></a>
 <a class="sb-link {% if p == '/sst/bem-estar/' %}active{% endif %}" href="/sst/bem-estar/"><span class="sb-icon">❤️</span><span>Bem-estar da Equipe</span></a>
+<a class="sb-link {% if p == '/sst/psicossocial/' %}active{% endif %}" href="/sst/psicossocial/"><span class="sb-icon">🧠</span><span>Psicossocial NR-01</span></a>
 <a class="sb-link {% if '/sst/comunicacao/' in p %}active{% endif %}" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação SST</span></a>
 
 {# ── Documentação & Governança ────────────────────────────────── #}
@@ -36,26 +37,25 @@
 <a class="sb-link {% if p == '/sst/documentos/' %}active{% endif %}" href="/sst/documentos/"><span class="sb-icon">📁</span><span>PGR · PCMSO · LTCAT</span></a>
 <a class="sb-link {% if p == '/sst/normas/' %}active{% endif %}" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
 <a class="sb-link {% if p == '/sst/conformidade/' %}active{% endif %}" href="/sst/conformidade/"><span class="sb-icon">🛡️</span><span>Conformidade</span></a>
-<a class="sb-link {% if p == '/sst/relatorios/' %}active{% endif %}" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
 
 {# ── Módulos Avançados ─────────────────────────────────────────── #}
 <div class="sb-label">Módulos Avançados</div>
 <a class="sb-link {% if p == '/sst/pgr/' %}active{% endif %}" href="/sst/pgr/"><span class="sb-icon">📄</span><span>PGR / PCMSO</span></a>
 <a class="sb-link {% if p == '/sst/cipa/' %}active{% endif %}" href="/sst/cipa/"><span class="sb-icon">🛡️</span><span>CIPA — NR-5</span></a>
 <a class="sb-link {% if p == '/sst/biometria/' %}active{% endif %}" href="/sst/biometria/"><span class="sb-icon">👁️</span><span>Biometria EPI</span></a>
-<a class="sb-link {% if p == '/sst/psicossocial/' %}active{% endif %}" href="/sst/psicossocial/"><span class="sb-icon">🧠</span><span>Psicossocial NR-01</span></a>
 <a class="sb-link {% if p == '/sst/ppp/' %}active{% endif %}" href="/sst/ppp/"><span class="sb-icon">🧾</span><span>PPP</span></a>
 <a class="sb-link {% if p == '/sst/laudos/' %}active{% endif %}" href="/sst/laudos/"><span class="sb-icon">🩺</span><span>Laudos Técnicos</span></a>
 <a class="sb-link {% if p == '/sst/fap/' %}active{% endif %}" href="/sst/fap/"><span class="sb-icon">📉</span><span>Gestão FAP</span></a>
 <a class="sb-link {% if p == '/sst/laboratorios/' %}active{% endif %}" href="/sst/laboratorios/"><span class="sb-icon">🧪</span><span>Laboratórios</span></a>
 <a class="sb-link {% if p == '/sst/rede-credenciada/' %}active{% endif %}" href="/sst/rede-credenciada/"><span class="sb-icon">🏥</span><span>Rede Credenciada</span></a>
-<a class="sb-link {% if p == '/clinica/financeiro/' %}active{% endif %}" href="/clinica/financeiro/"><span class="sb-icon">💳</span><span>Financeiro Clínica</span></a>
 
 {# ── Conta & Plataforma ───────────────────────────────────────── #}
 <div class="sb-label">Conta</div>
 <a class="sb-link {% if p == '/sst/configuracoes/' %}active{% endif %}" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Config. SST</span></a>
 {% if mostrar_aba_gerencia %}
 <a class="sb-link {% if '/gerencia/' in p %}active{% endif %}" href="/gerencia/"><span class="sb-icon">🧭</span><span>Gerência Executiva</span></a>
+<a class="sb-link {% if p == '/sst/relatorios/' %}active{% endif %}" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios Executivos</span></a>
+<a class="sb-link {% if p == '/clinica/financeiro/' %}active{% endif %}" href="/clinica/financeiro/"><span class="sb-icon">💳</span><span>Financeiro Executivo</span></a>
 {% endif %}
 {% if mostrar_link_rh %}
 <a class="sb-link {% if '/rh/' in p or '/usuarios/' in p %}active{% endif %}" href="/rh/"><span class="sb-icon">👤</span><span>Portal RH</span></a>

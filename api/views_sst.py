@@ -498,6 +498,20 @@ def api_asos(request):
 
     if request.method == "GET":
         from .views_solicitacao_exame import CATALOGO_EXAMES, PERFIS_EXAMES_FUNCAO
+        ev_map = {}
+        for ev in (
+            eSocialEventoSST.objects
+            .filter(empresa=empresa, tipo_evento="S-2220")
+            .exclude(referencia="")
+            .values("referencia", "status", "protocolo")
+            .order_by("-id")
+        ):
+            ref = str(ev.get("referencia") or "").strip()
+            if ref and ref not in ev_map:
+                ev_map[ref] = {
+                    "status": ev.get("status") or "nao_enviado",
+                    "protocolo": ev.get("protocolo") or "",
+                }
         qs = (
             ASOOcupacional.objects
             .filter(empresa=empresa)
@@ -528,7 +542,8 @@ def api_asos(request):
                     ],
                     "restricoes": a.restricoes,
                     "observacoes": a.observacoes,
-                    "status_esocial": "nao_enviado",
+                    "status_esocial": ev_map.get(str(a.id), {}).get("status", "nao_enviado"),
+                    "protocolo_esocial": ev_map.get(str(a.id), {}).get("protocolo", ""),
                 }
                 for a in page
             ],
@@ -794,6 +809,17 @@ def api_afastamentos_sst(request):
         return _sst_nao_autorizado()
 
     if request.method == "GET":
+        s2230_map = {}
+        for ev in (
+            eSocialEventoSST.objects
+            .filter(empresa=empresa, tipo_evento="S-2230")
+            .exclude(referencia="")
+            .values("id", "referencia", "status", "protocolo")
+            .order_by("-id")
+        ):
+            ref = str(ev.get("referencia") or "").strip()
+            if ref and ref not in s2230_map:
+                s2230_map[ref] = ev
         qs = (
             AfastamentoSST.objects
             .filter(empresa=empresa)
@@ -806,11 +832,18 @@ def api_afastamentos_sst(request):
                 {
                     "id": a.id,
                     "funcionario": a.funcionario.nome,
-                    "motivo": a.get_motivo_display(),
+                    "funcionario_id": a.funcionario_id,
+                    "motivo": a.motivo,
+                    "motivo_label": a.get_motivo_display(),
                     "cid": a.cid,
-                    "data_inicio": a.data_inicio.strftime("%d/%m/%Y"),
-                    "data_retorno": a.data_prevista_retorno.strftime("%d/%m/%Y") if a.data_prevista_retorno else None,
+                    "data_inicio": a.data_inicio.isoformat(),
+                    "data_inicio_br": a.data_inicio.strftime("%d/%m/%Y"),
+                    "data_retorno": (a.data_retorno_real or a.data_prevista_retorno).isoformat() if (a.data_retorno_real or a.data_prevista_retorno) else None,
+                    "data_retorno_br": (a.data_retorno_real or a.data_prevista_retorno).strftime("%d/%m/%Y") if (a.data_retorno_real or a.data_prevista_retorno) else None,
                     "status": a.status,
+                    "s2230_status": s2230_map.get(str(a.id), {}).get("status"),
+                    "s2230_evento_id": s2230_map.get(str(a.id), {}).get("id"),
+                    "s2230_enviado": (s2230_map.get(str(a.id), {}).get("status") in {"pendente", "transmitido", "retificado"}),
                 }
                 for a in page
             ],
@@ -883,7 +916,7 @@ def api_afastamento_retorno(request, afastamento_id):
                 return _dt.strptime(s, "%Y-%m-%d").date()
             except Exception:
                 return date.today()
-        af.data_retorno_real = _parse(data.get("data_retorno_real"))
+        af.data_retorno_real = _parse(data.get("data_retorno_real") or data.get("data_retorno"))
         af.status = "encerrado"
         af.save(update_fields=["data_retorno_real", "status", "atualizado_em"])
         # notifica funcionário
@@ -1740,6 +1773,111 @@ def api_epis_catalogo(request):
         )
         return JsonResponse({"id": epi.id, "nome": epi.nome}, status=201)
     return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+@csrf_exempt
+def api_epis_catalogo_lote(request):
+    """Importação em lote de EPIs via CSV."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "método não permitido"}, status=405)
+
+    arquivo = request.FILES.get("arquivo")
+    if not arquivo:
+        return JsonResponse({"erro": "Envie o arquivo CSV no campo 'arquivo'."}, status=400)
+
+    try:
+        conteudo = arquivo.read().decode("utf-8-sig")
+        leitor = csv.DictReader(io.StringIO(conteudo))
+    except Exception:
+        return JsonResponse({"erro": "Arquivo CSV inválido."}, status=400)
+
+    importados = 0
+    atualizados = 0
+    erros = []
+    tipo_map = {
+        "protecao auditiva": "auditiva",
+        "proteção auditiva": "auditiva",
+        "auditiva": "auditiva",
+        "protecao respiratoria": "respiratoria",
+        "proteção respiratória": "respiratoria",
+        "respiratoria": "respiratoria",
+        "respiratória": "respiratoria",
+        "protecao visual": "visual",
+        "proteção visual": "visual",
+        "visual": "visual",
+        "protecao de maos": "maos",
+        "proteção de mãos": "maos",
+        "maos": "maos",
+        "mãos": "maos",
+        "protecao de pes": "pes",
+        "proteção de pés": "pes",
+        "pes": "pes",
+        "pés": "pes",
+        "protecao de cabeca": "cabeca",
+        "proteção de cabeça": "cabeca",
+        "cabeca": "cabeca",
+        "cabeça": "cabeca",
+        "protecao contra quedas": "altura",
+        "proteção contra quedas": "altura",
+        "altura": "altura",
+        "protecao do corpo": "corpo",
+        "proteção do corpo": "corpo",
+        "corpo": "corpo",
+        "outro": "outro",
+    }
+
+    for idx, row in enumerate(leitor, start=2):
+        try:
+            nome = (row.get("nome") or row.get("epi") or "").strip()
+            if not nome:
+                erros.append(f"Linha {idx}: nome obrigatório.")
+                continue
+
+            tipo_raw = (row.get("tipo") or "outro").strip().lower()
+            tipo = tipo_map.get(tipo_raw, "outro")
+            ca_numero = (row.get("ca_numero") or row.get("ca") or "").strip()
+            validade_ca = (row.get("validade_ca") or row.get("validade") or "").strip() or None
+            fornecedor = (row.get("fornecedor") or "").strip()
+            descricao = (row.get("descricao") or row.get("observacoes") or "").strip()
+
+            epi_qs = EPIItem.objects.filter(
+                empresa=empresa,
+                nome__iexact=nome,
+                ca_numero__iexact=ca_numero,
+                ativo=True,
+            )
+            epi = epi_qs.first()
+            if epi:
+                epi.tipo = tipo
+                epi.validade_ca = validade_ca
+                epi.fornecedor = fornecedor
+                epi.descricao = descricao
+                epi.save()
+                atualizados += 1
+            else:
+                EPIItem.objects.create(
+                    empresa=empresa,
+                    nome=nome,
+                    tipo=tipo,
+                    ca_numero=ca_numero,
+                    validade_ca=validade_ca,
+                    fornecedor=fornecedor,
+                    descricao=descricao,
+                )
+                importados += 1
+        except Exception as ex:
+            erros.append(f"Linha {idx}: {ex}")
+
+    return JsonResponse({
+        "ok": True,
+        "importados": importados,
+        "atualizados": atualizados,
+        "erros": erros,
+        "total_linhas": importados + atualizados + len(erros),
+    })
 
 
 @csrf_exempt

@@ -346,7 +346,9 @@ body{min-height:100vh;overflow-x:hidden}
     <p class="modal-sub">Preencha os dados do novo afastamento. Certifique-se de que o funcionário está cadastrado no sistema.</p>
     <div class="mf">
       <label>Funcionário</label>
-      <input type="text" id="novoFuncionario" placeholder="Nome do funcionário...">
+      <select id="novoFuncionario">
+        <option value="">Selecione o funcionário...</option>
+      </select>
     </div>
     <div class="mf">
       <label>Motivo</label>
@@ -381,17 +383,21 @@ body{min-height:100vh;overflow-x:hidden}
 let todosAfastamentos = [];
 let filtroAtivo = '';
 let cidsSst = [];
+let funcionariosSst = [];
 
 function formatarData(s) {
   if (!s) return '—';
+  if (String(s).includes('/')) return s;
   const [y, m, d] = s.split('-');
   return `${d}/${m}/${y}`;
 }
 
 function calcularDias(inicio, retorno) {
   if (!inicio) return '—';
-  const d1 = new Date(inicio);
-  const d2 = retorno ? new Date(retorno) : new Date();
+  const d1 = new Date(String(inicio).includes('/') ? inicio.split('/').reverse().join('-') : inicio);
+  const d2 = retorno
+    ? new Date(String(retorno).includes('/') ? retorno.split('/').reverse().join('-') : retorno)
+    : new Date();
   const diff = Math.round((d2 - d1) / 86400000);
   return diff > 0 ? diff : 0;
 }
@@ -570,15 +576,29 @@ document.getElementById('novoMotivo').addEventListener('change',toggleCidAfastam
 function abrirModalNovo() { document.getElementById('modalNovo').classList.add('open'); toggleCidAfastamento(); }
 function fecharModalNovo() { document.getElementById('modalNovo').classList.remove('open'); }
 
+async function carregarFuncionarios() {
+  try {
+    const r = await fetch('/api/sst/funcionarios?all=1', { credentials: 'include' });
+    if (!r.ok) throw new Error('Erro ' + r.status);
+    const d = await r.json();
+    funcionariosSst = d.funcionarios || [];
+  } catch {
+    funcionariosSst = [];
+  }
+  const sel = document.getElementById('novoFuncionario');
+  sel.innerHTML = '<option value="">Selecione o funcionário...</option>' +
+    funcionariosSst.map(f => `<option value="${f.id}">${f.nome}</option>`).join('');
+}
+
 async function registrarAfastamento() {
   const payload = {
-    funcionario:  document.getElementById('novoFuncionario').value,
+    funcionario_id: parseInt(document.getElementById('novoFuncionario').value, 10),
     motivo:       document.getElementById('novoMotivo').value,
     cid:          document.getElementById('novoCid').value,
     data_inicio:  document.getElementById('novoInicio').value,
     data_retorno: document.getElementById('novoRetorno').value,
   };
-  if (!payload.funcionario || !payload.motivo || !payload.data_inicio) {
+  if (!payload.funcionario_id || !payload.motivo || !payload.data_inicio) {
     toast('Preencha os campos obrigatórios: funcionário, motivo e data de início.','warn');
     return;
   }
@@ -592,8 +612,11 @@ async function registrarAfastamento() {
     fecharModalNovo();
     await carregarAfastamentos();
   } catch {
+    const nome = document.querySelector(`#novoFuncionario option[value="${payload.funcionario_id}"]`)?.textContent || 'Funcionário';
     payload.id = Date.now();
     payload.status = 'ativo';
+    payload.funcionario = nome;
+    payload.s2230_enviado = false;
     todosAfastamentos.unshift(payload);
     fecharModalNovo();
     renderKPIs(todosAfastamentos);
@@ -629,7 +652,13 @@ async function carregarAfastamentos() {
     const r = await fetch('/api/sst/afastamentos?all=1', { credentials:'include' });
     if (!r.ok) throw new Error('Erro ' + r.status);
     const data = await r.json();
-    todosAfastamentos = data.afastamentos || [];
+    todosAfastamentos = (data.afastamentos || []).map(a => ({
+      ...a,
+      data_inicio: a.data_inicio || a.data_inicio_iso || null,
+      data_retorno: a.data_retorno || a.data_retorno_iso || null,
+      motivo: a.motivo || a.motivo_raw || 'outro',
+      s2230_enviado: Boolean(a.s2230_enviado),
+    }));
   } catch(err) {
     console.warn('API indisponível, usando dados demo.', err);
     todosAfastamentos = [
@@ -646,6 +675,7 @@ async function carregarAfastamentos() {
 
 carregarAfastamentos();
 carregarCidsSst();
+carregarFuncionarios();
 </script>
 </body>
 </html>

@@ -221,7 +221,8 @@ async function carregar() {
   document.getElementById('kIdx').textContent = (res.indice_conformidade ?? '—') + '%';
 
   // Gauge
-  const pct = parseFloat(res.indice_conformidade || 0);
+  const pctRaw = String(res.indice_conformidade ?? 0).replace(',', '.');
+  const pct = Number.isFinite(parseFloat(pctRaw)) ? parseFloat(pctRaw) : 0;
   document.getElementById('gaugeText').textContent = pct + '%';
   const r80 = 80, cx = 100, cy = 100;
   const startAngle = Math.PI;

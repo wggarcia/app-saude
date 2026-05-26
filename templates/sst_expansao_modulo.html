@@ -149,7 +149,10 @@ function auth() {
 }
 
 function headers() {
-  return { "Authorization": "Bearer " + auth(), "Content-Type": "application/json" };
+  const h = { "Content-Type": "application/json" };
+  const token = auth();
+  if (token) h["Authorization"] = "Bearer " + token;
+  return h;
 }
 
 function badge(text, cls) {
@@ -165,7 +168,7 @@ function fmt(val, prefix = "") {
 async function loadKpis() {
   if (!API_KPI) return;
   try {
-    const r = await fetch(API_KPI, { headers: headers() });
+    const r = await fetch(API_KPI, { credentials: "same-origin", headers: headers() });
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
       if (r.status === 403 && err.upgrade_necessario)
@@ -182,7 +185,7 @@ async function loadKpis() {
 async function loadMain() {
   if (!API_BASE) return;
   try {
-    const r = await fetch(API_BASE, { headers: headers() });
+    const r = await fetch(API_BASE, { credentials: "same-origin", headers: headers() });
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
       if (r.status === 403 && err.upgrade_necessario)
@@ -307,6 +310,9 @@ function renderMain(d) {
       return;
     }
     panel.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn-main" style="border:none;cursor:pointer" onclick="showRegistrarFap()">+ Registrar FAP</button>
+      </div>
       <div class="section-title">Histórico de FAP por Exercício</div>
       <table class="data-table">
         <thead><tr><th>Ano</th><th>FAP</th><th>Tipo</th><th>RAT Base</th><th>RAT Ajustado</th><th>Δ Anual (R$)</th></tr></thead>
@@ -328,10 +334,13 @@ function renderMain(d) {
   } else if (MODULO_ID === "ppp") {
     const ppps = d.ppps || [];
     if (ppps.length === 0) {
-      panel.innerHTML = `<div class="empty"><div class="empty-icon">📜</div><div class="empty-title">Nenhum PPP gerado</div><div class="empty-sub">Crie o primeiro PPP a partir do prontuário do funcionário.</div></div>`;
+      panel.innerHTML = `<div class="empty"><div class="empty-icon">📜</div><div class="empty-title">Nenhum PPP gerado</div><div class="empty-sub">Crie o primeiro PPP a partir do prontuário do funcionário.</div><button class="btn-main" style="margin-top:16px;display:inline-block;border:none;cursor:pointer;" onclick="showGerarPPP()">+ Gerar PPP</button></div>`;
       return;
     }
     panel.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn-main" style="border:none;cursor:pointer" onclick="showGerarPPP()">+ Gerar PPP</button>
+      </div>
       <div class="section-title">PPPs Gerados</div>
       <table class="data-table">
         <thead><tr><th>Funcionário</th><th>Cargo</th><th>Status</th><th>Agentes Nocivos</th><th>Data</th></tr></thead>
@@ -349,10 +358,13 @@ function renderMain(d) {
   } else if (MODULO_ID === "laudos") {
     const laudos = d.laudos || [];
     if (laudos.length === 0) {
-      panel.innerHTML = `<div class="empty"><div class="empty-icon">📑</div><div class="empty-title">Nenhum laudo cadastrado</div><div class="empty-sub">Cadastre o primeiro laudo técnico (LTCAT, LIP, PGR, PCMSO).</div></div>`;
+      panel.innerHTML = `<div class="empty"><div class="empty-icon">📑</div><div class="empty-title">Nenhum laudo cadastrado</div><div class="empty-sub">Cadastre o primeiro laudo técnico (LTCAT, LIP, PGR, PCMSO).</div><button class="btn-main" style="margin-top:16px;display:inline-block;border:none;cursor:pointer;" onclick="showCadastrarLaudo()">+ Cadastrar Laudo</button></div>`;
       return;
     }
     panel.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn-main" style="border:none;cursor:pointer" onclick="showCadastrarLaudo()">+ Cadastrar Laudo</button>
+      </div>
       <div class="section-title">Laudos Técnicos</div>
       <table class="data-table">
         <thead><tr><th>Tipo</th><th>Responsável</th><th>Vigência</th><th>Status</th><th>Assinado</th></tr></thead>
@@ -370,10 +382,13 @@ function renderMain(d) {
   } else if (MODULO_ID === "laboratorio") {
     const res = d.resultados || [];
     if (res.length === 0) {
-      panel.innerHTML = `<div class="empty"><div class="empty-icon">🧪</div><div class="empty-title">Nenhum resultado importado</div><div class="empty-sub">Importe resultados via CSV, API do laboratório, HL7 ou FHIR.</div></div>`;
+      panel.innerHTML = `<div class="empty"><div class="empty-icon">🧪</div><div class="empty-title">Nenhum resultado importado</div><div class="empty-sub">Importe resultados via CSV, API do laboratório, HL7 ou FHIR.</div><button class="btn-main" style="margin-top:16px;display:inline-block;border:none;cursor:pointer;" onclick="showImportarLaboratorio()">⬆ Importar CSV</button></div>`;
       return;
     }
     panel.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn-main" style="border:none;cursor:pointer" onclick="showImportarLaboratorio()">⬆ Importar CSV</button>
+      </div>
       <div class="section-title">Resultados Recentes</div>
       <table class="data-table">
         <thead><tr><th>Funcionário</th><th>Exame</th><th>Resultado</th><th>Criticidade</th><th>Coleta</th></tr></thead>
@@ -429,6 +444,116 @@ function renderMain(d) {
           </tr>`).join("")}
         </tbody>
       </table>`;
+  }
+}
+
+function _alerta(msg) {
+  window.alert(msg);
+}
+
+async function _postJson(url, body) {
+  const r = await fetch(url, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: headers(),
+    body: JSON.stringify(body || {}),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.erro || d.mensagem || ("Erro " + r.status));
+  return d;
+}
+
+async function showRegistrarFap() {
+  const ano = parseInt(window.prompt("Ano do exercício FAP (ex: 2026):", String(new Date().getFullYear())), 10);
+  const fap = parseFloat((window.prompt("Valor do FAP (0.5000 a 2.0000):", "1.0000") || "").replace(",", "."));
+  const folha = parseFloat((window.prompt("Folha salarial mensal (R$):", "100000") || "").replace(/\./g, "").replace(",", "."));
+  if (!ano || !fap || !folha) return;
+  try {
+    await _postJson("/api/sst/fap/registrar/", {
+      ano: ano,
+      fap_valor: fap,
+      folha_salarial_mensal: folha,
+    });
+    _alerta("FAP registrado com sucesso.");
+    await Promise.all([loadKpis(), loadMain()]);
+  } catch (e) {
+    _alerta(e.message || "Erro ao registrar FAP.");
+  }
+}
+
+async function _obterFuncionarios() {
+  const r = await fetch("/api/sst/funcionarios?all=1", { credentials: "same-origin", headers: headers() });
+  if (!r.ok) throw new Error("Não foi possível carregar funcionários.");
+  const d = await r.json();
+  return d.funcionarios || [];
+}
+
+async function showGerarPPP() {
+  try {
+    const funcs = await _obterFuncionarios();
+    if (!funcs.length) return _alerta("Cadastre ao menos 1 funcionário para gerar PPP.");
+    const preview = funcs.slice(0, 20).map(f => `${f.id} - ${f.nome}`).join("\n");
+    const escolhido = parseInt(window.prompt(`Informe o ID do funcionário para gerar PPP:\n\n${preview}`), 10);
+    if (!escolhido) return;
+    await _postJson("/api/sst/ppp/", { funcionario_id: escolhido });
+    _alerta("PPP gerado com sucesso.");
+    await Promise.all([loadKpis(), loadMain()]);
+  } catch (e) {
+    _alerta(e.message || "Erro ao gerar PPP.");
+  }
+}
+
+async function showCadastrarLaudo() {
+  const tipo = (window.prompt("Tipo do laudo (ltcat, lip, ltip, pgr, pcmso):", "ltcat") || "").trim().toLowerCase();
+  if (!tipo) return;
+  const setor = (window.prompt("Setor avaliado (opcional):", "") || "").trim();
+  const resp = (window.prompt("Responsável técnico (opcional):", "") || "").trim();
+  try {
+    await _postJson("/api/sst/laudos/", {
+      tipo: tipo,
+      setor: setor,
+      responsavel_tecnico: resp,
+      data_emissao: new Date().toISOString().split("T")[0],
+    });
+    _alerta("Laudo cadastrado com sucesso.");
+    await Promise.all([loadKpis(), loadMain()]);
+  } catch (e) {
+    _alerta(e.message || "Erro ao cadastrar laudo.");
+  }
+}
+
+function showImportarLaboratorio() {
+  let input = document.getElementById("lab-csv-input");
+  if (!input) {
+    input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv,text/csv";
+    input.id = "lab-csv-input";
+    input.style.display = "none";
+    input.addEventListener("change", importarLaboratorioCsv);
+    document.body.appendChild(input);
+  }
+  input.value = "";
+  input.click();
+}
+
+async function importarLaboratorioCsv(ev) {
+  const arquivo = ev.target.files && ev.target.files[0];
+  if (!arquivo) return;
+  const fd = new FormData();
+  fd.append("arquivo", arquivo);
+  try {
+    const r = await fetch("/api/sst/laboratorios/resultado/lote/", {
+      method: "POST",
+      credentials: "same-origin",
+      body: fd,
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.erro || ("Erro " + r.status));
+    _alerta(`Importação concluída: ${d.importados || 0} linha(s).`);
+    await Promise.all([loadKpis(), loadMain()]);
+  } catch (e) {
+    _alerta(e.message || "Erro ao importar CSV.");
   }
 }
 

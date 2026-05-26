@@ -53,6 +53,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 .ev-btn.primary:hover{opacity:.85}
 .aviso{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.15);border-radius:10px;font-size:.78rem;color:var(--muted);line-height:1.6}
 .aviso strong{color:#60a5fa;display:block;margin-bottom:2px}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);gap:10px;flex-wrap:wrap}
 .table-header h3{font-size:.8rem;font-weight:700}.table-header span{font-size:.72rem;color:var(--muted)}
@@ -125,6 +126,11 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       <div>ℹ️</div>
       <div><strong>eSocial SST — Geração e Transmissão de XML</strong>
       Gere o XML de cada evento (S-2210, S-2220, S-2230, S-2240) com um clique e faça download para submissão direta no portal <strong>esocial.gov.br</strong>. Após transmitir, registre o protocolo aqui para rastreabilidade completa.</div>
+    </div>
+    <div class="toolbar" style="margin-top:-4px">
+      <button class="ftab" onclick="transmitirPendentesReal()">📡 Transmitir Pendentes</button>
+      <button class="ftab" onclick="carregarCertificado()">🔐 Ver Certificado</button>
+      <span id="cert-status" style="font-size:.72rem;color:var(--muted)">certificado: verificando...</span>
     </div>
 
     <!-- Cards por tipo de evento -->
@@ -287,10 +293,66 @@ function renderTabela(){
       <td>
         <div class="row-actions">
           <button class="btn-row" onclick="verXml(${ev.id},'${ev.tipo_evento}')">📄 XML</button>
+          ${['pendente','erro'].includes(ev.status)?`<button class="btn-row btn-esocial" onclick="transmitirEventoReal(${ev.id},this)">📡 Transmitir</button>`:''}
           ${ev.status!=='transmitido'?`<button class="btn-row" onclick="abrirTransmitido(${ev.id})">✅ Transmitido</button>`:''}
         </div>
       </td>
     </tr>`).join("");
+}
+
+async function transmitirEventoReal(eventoId, btn){
+  const txtOrig = btn?.textContent || '📡 Transmitir';
+  if (btn) { btn.textContent = 'Transmitindo...'; btn.disabled = true; }
+  try {
+    const r = await fetch(`/api/sst/esocial/eventos/${eventoId}/transmitir/`, {
+      method: 'POST',
+      credentials: 'same-origin'
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.mensagem || d.erro || ('Erro ' + r.status));
+    _t(`Transmitido com sucesso. Protocolo: ${d.protocolo || 'n/d'}`, 'ok');
+    await carregar();
+  } catch (e) {
+    _t(e.message || 'Falha ao transmitir evento.', 'err');
+  } finally {
+    if (btn) { btn.textContent = txtOrig; btn.disabled = false; }
+  }
+}
+
+async function transmitirPendentesReal(){
+  try {
+    const r = await fetch('/api/sst/esocial/transmitir-pendentes/', {
+      method: 'POST',
+      credentials: 'same-origin'
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.erro || ('Erro ' + r.status));
+    _t(`Transmitidos: ${d.transmitidos || 0} · Erros: ${d.erros || 0}`, d.erros ? 'warn' : 'ok');
+    await carregar();
+  } catch (e) {
+    _t(e.message || 'Erro ao transmitir pendentes.', 'err');
+  }
+}
+
+async function carregarCertificado(){
+  const el = document.getElementById('cert-status');
+  if (!el) return;
+  try {
+    const r = await fetch('/api/sst/esocial/certificado/', { credentials:'same-origin' });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.erro || ('Erro ' + r.status));
+    if (!d.certificado_presente) {
+      el.textContent = 'certificado: não configurado';
+      el.style.color = '#fbbf24';
+      return;
+    }
+    const validade = d.certificado_validade || 'n/d';
+    el.textContent = `certificado: ${d.certificado_nome || 'PFX'} · validade ${validade} · ambiente ${d.esocial_ambiente || 'homologacao'}`;
+    el.style.color = d.validade_ok ? '#4ade80' : '#fbbf24';
+  } catch (e) {
+    el.textContent = 'certificado: erro ao consultar';
+    el.style.color = '#f87171';
+  }
 }
 
 async function verXml(id,tipo){
@@ -369,6 +431,7 @@ async function salvar(){
 }
 
 carregar();
+carregarCertificado();
 setInterval(carregar,60000);
 
 function _t(msg, tipo) {

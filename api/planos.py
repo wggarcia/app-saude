@@ -19,6 +19,7 @@ _SST_BASE = [
     "sst.relatorios",       # Relatórios básicos exportáveis
     "sst.funcionarios",     # Cadastro de funcionários
     "sst.esocial",          # eSocial S-2220, S-2240, S-2245 (disponível desde Starter)
+    "sst.psicossocial",     # Avaliação Psicossocial NR-01 (liberado para todos os planos SST)
 ]
 _SST_PROFISSIONAL = _SST_BASE + [
     "sst.afastamentos",     # Gestão de afastamentos
@@ -27,7 +28,6 @@ _SST_PROFISSIONAL = _SST_BASE + [
     "sst.alertas",          # Alertas automáticos de prazo
     "sst.cipa",             # CIPA — Comissão Interna de Prevenção de Acidentes
     "sst.biometria",        # Biometria Facial para confirmação de entrega de EPI
-    "sst.psicossocial",     # Avaliação Psicossocial NR-01
     "sst.pgr_ppra",         # PGR / PPRA / PCMSO automático
 ]
 _SST_ENTERPRISE = _SST_PROFISSIONAL + [
