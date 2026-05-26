@@ -154,6 +154,27 @@ html,body{margin:0;overflow:hidden;height:100vh;background:var(--bg);color:var(-
 @keyframes fadeInUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 </style>
   {% include "partials/sst_unified_theme.html" %}
+<style id="sst-comunicacao-layout-fix">
+/* Keep unified topbar, but preserve this page's 3-column workspace layout. */
+.app{
+  display:flex !important;
+  height:100vh !important;
+  padding-top:56px !important;
+}
+.sst-nav{
+  width:220px !important;
+}
+.ch-col{
+  margin-left:220px;
+  height:calc(100vh - 56px);
+}
+.main-area{
+  height:calc(100vh - 56px);
+}
+@media(max-width:860px){
+  .ch-col{margin-left:0}
+}
+</style>
 </head>
 <body>
 
