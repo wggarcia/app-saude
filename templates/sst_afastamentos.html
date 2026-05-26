@@ -654,6 +654,8 @@ async function carregarAfastamentos() {
     const data = await r.json();
     todosAfastamentos = (data.afastamentos || []).map(a => ({
       ...a,
+      funcionario: a.funcionario || a.funcionario_nome || '—',
+      cid: a.cid || '',
       data_inicio: a.data_inicio || a.data_inicio_iso || null,
       data_retorno: a.data_retorno || a.data_retorno_iso || null,
       motivo: a.motivo || a.motivo_raw || 'outro',

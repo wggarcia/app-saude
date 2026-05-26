@@ -676,12 +676,31 @@ async function gerarLink(){
 }
 
 async function enviarS2220(asoId,btn){
-  btn.textContent='Enviando...';btn.disabled=true;
-  const r=await fetch(`/api/sst/asos/${asoId}/esocial/`,{method:'POST',headers:{'Content-Type':'application/json'}});
-  const d=await r.json();
-  btn.textContent='📤 S-2220';btn.disabled=false;
-  if(r.ok){toast('Evento S-2220 gerado! Acesse eSocial para transmitir.');carregarAsos();}
-  else toast(d.erro||'Erro ao gerar S-2220','err');
+  btn.textContent='Gerando...';btn.disabled=true;
+  try{
+    const r=await fetch(`/api/sst/asos/${asoId}/esocial/`,{method:'POST',headers:{'Content-Type':'application/json'}});
+    const d=await r.json();
+    if(!r.ok){throw new Error(d.erro||'Erro ao gerar S-2220');}
+    const eventoId=d.evento_id||d.id;
+    if(!eventoId){
+      toast('S-2220 gerado, mas sem ID de evento. Verifique a fila eSocial.','err');
+      return;
+    }
+
+    btn.textContent='Transmitindo...';
+    const tx=await fetch(`/api/sst/esocial/eventos/${eventoId}/transmitir/`,{method:'POST',headers:{'Content-Type':'application/json'}});
+    const dt=await tx.json();
+    if(tx.ok&&dt.ok){
+      toast('S-2220 transmitido com sucesso para o eSocial.','ok');
+    }else{
+      toast((dt&&dt.mensagem)||'S-2220 gerado. Verifique a transmissão na fila eSocial.','err');
+    }
+    carregarAsos();
+  }catch(err){
+    toast(err.message||'Erro ao enviar S-2220','err');
+  }finally{
+    btn.textContent='📤 S-2220';btn.disabled=false;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

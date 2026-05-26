@@ -130,7 +130,9 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <div class="toolbar" style="margin-top:-4px">
       <button class="ftab" onclick="transmitirPendentesReal()">📡 Transmitir Pendentes</button>
       <button class="ftab" onclick="carregarCertificado()">🔐 Ver Certificado</button>
+      <button class="ftab" onclick="diagnosticarEsocial()">🧪 Validar gov.br</button>
       <span id="cert-status" style="font-size:.72rem;color:var(--muted)">certificado: verificando...</span>
+      <span id="diag-status" style="font-size:.72rem;color:var(--muted)"></span>
     </div>
 
     <!-- Cards por tipo de evento -->
@@ -352,6 +354,26 @@ async function carregarCertificado(){
   } catch (e) {
     el.textContent = 'certificado: erro ao consultar';
     el.style.color = '#f87171';
+  }
+}
+
+async function diagnosticarEsocial(){
+  const el = document.getElementById('diag-status');
+  if (!el) return;
+  el.textContent = 'diagnóstico: validando conexão...';
+  el.style.color = '#fbbf24';
+  try {
+    const r = await fetch('/api/sst/esocial/diagnostico/', { credentials:'same-origin' });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.mensagem || d.erro || ('Erro ' + r.status));
+    const amb = d?.detalhes?.ambiente || 'homologacao';
+    el.textContent = `diagnóstico: conexão gov.br OK (${amb})`;
+    el.style.color = '#4ade80';
+    _t('Conexão gov.br validada com sucesso.', 'ok');
+  } catch (e) {
+    el.textContent = `diagnóstico: falha (${e.message || 'erro desconhecido'})`;
+    el.style.color = '#f87171';
+    _t(e.message || 'Falha no diagnóstico eSocial.', 'err');
   }
 }
 

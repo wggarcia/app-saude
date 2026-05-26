@@ -47,8 +47,17 @@ _URLS = {
 }
 
 
-def _cfg_urls():
-    return _URLS.get(_ESOCIAL_AMBIENTE, _URLS["homologacao"])
+def _ambiente_normalizado(ambiente):
+    amb = (ambiente or "").strip().lower()
+    if amb in {"producao", "produção", "prod"}:
+        return "producao"
+    if amb in {"homologacao", "homologação", "hml", "teste"}:
+        return "homologacao"
+    return _ESOCIAL_AMBIENTE if _ESOCIAL_AMBIENTE in _URLS else "homologacao"
+
+
+def _cfg_urls(ambiente=None):
+    return _URLS.get(_ambiente_normalizado(ambiente), _URLS["homologacao"])
 
 
 # ── Certificate loading ───────────────────────────────────────────────────────
@@ -105,14 +114,14 @@ def _limpar_cert_files(*paths):
 
 # ── Token acquisition ─────────────────────────────────────────────────────────
 
-def _obter_token(cert_path, key_path):
+def _obter_token(cert_path, key_path, ambiente=None):
     """
     Authenticates with eSocial IDP using client certificate and returns Bearer token.
     Uses mTLS (mutual TLS) — the certificate proves the company's identity.
     """
     import requests as req
 
-    urls = _cfg_urls()
+    urls = _cfg_urls(ambiente)
     try:
         resp = req.post(
             urls["token"],
@@ -190,13 +199,14 @@ def transmitir_evento(evento):
     try:
         import requests as req
 
+        ambiente = getattr(cfg_sst, "esocial_ambiente", None)
         cert_path, key_path = _carregar_certificado(cfg_sst)
-        token = _obter_token(cert_path, key_path)
+        token = _obter_token(cert_path, key_path, ambiente=ambiente)
 
         cnpj = "".join(c for c in (cfg_sst.cnpj or "") if c.isdigit())[:14]
         payload = _montar_lote(evento, evento.xml_gerado, cnpj)
 
-        urls = _cfg_urls()
+        urls = _cfg_urls(ambiente)
         resp = req.post(
             urls["enviar"],
             json=payload,
@@ -248,6 +258,28 @@ def transmitir_evento(evento):
         logger.exception("Erro ao transmitir evento eSocial %s", evento.pk)
         return False, msg
 
+    finally:
+        if cert_path or key_path:
+            _limpar_cert_files(cert_path, key_path)
+
+
+def testar_conexao_esocial(cfg_sst):
+    """Valida certificado + autenticação OAuth no gov.br (sem transmitir eventos)."""
+    cert_path = key_path = None
+    try:
+        ambiente = getattr(cfg_sst, "esocial_ambiente", None)
+        cert_path, key_path = _carregar_certificado(cfg_sst)
+        token = _obter_token(cert_path, key_path, ambiente=ambiente)
+        if not token:
+            return False, "Token não retornado pelo gov.br", {"ambiente": _ambiente_normalizado(ambiente)}
+        return True, "Conexão autenticada com sucesso no gov.br", {
+            "ambiente": _ambiente_normalizado(ambiente),
+            "token_prefix": str(token)[:12],
+            "endpoint_token": _cfg_urls(ambiente)["token"],
+            "endpoint_envio": _cfg_urls(ambiente)["enviar"],
+        }
+    except Exception as e:
+        return False, str(e), {"ambiente": _ambiente_normalizado(getattr(cfg_sst, "esocial_ambiente", None))}
     finally:
         if cert_path or key_path:
             _limpar_cert_files(cert_path, key_path)

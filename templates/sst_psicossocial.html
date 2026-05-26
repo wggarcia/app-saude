@@ -129,7 +129,7 @@ function toast(msg, ok=true) {
 function showKpiErro(msg, upgrade) {
   const cor = upgrade ? "var(--amber)" : "var(--red)";
   const btnUpgrade = upgrade
-    ? `<button onclick="window.SolusCRT&&window.SolusCRT.upgrade.abrir('Psicossocial NR-01')" style="margin-top:10px;padding:8px 18px;border-radius:8px;border:none;background:linear-gradient(135deg,#00c9a7,#0096ff);color:#041018;font-size:.78rem;font-weight:800;cursor:pointer">Fazer Upgrade →</button>`
+    ? `<button onclick="window.SolusCRT&&window.SolusCRT.upgrade.abrir('Psicossocial NR-01')" style="margin-top:10px;padding:8px 18px;border-radius:8px;border:none;background:linear-gradient(135deg,#00c9a7,#0096ff);color:#041018;font-size:.78rem;font-weight:800;cursor:pointer">Ver planos →</button>`
     : "";
   document.getElementById("kpiStrip").innerHTML = `<div style="padding:14px;color:${cor};font-size:.82rem;border:1px solid ${cor};border-radius:10px;background:rgba(0,0,0,.2)">${upgrade ? "🔒" : "⚠️"} ${msg}${btnUpgrade}</div>`;
 }
@@ -150,7 +150,7 @@ async function loadKpis() {
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
       if (r.status === 403 && err.upgrade_necessario)
-        return showKpiErro("Este módulo requer o plano Profissional ou superior.", true);
+        return showKpiErro("Este módulo está indisponível para sua conta no momento.", true);
       if (r.status === 401)
         return showKpiErro("Sessão expirada. Faça login novamente.", false);
       return showKpiErro(`Erro ao carregar (${r.status}). Tente recarregar.`, false);
@@ -171,7 +171,7 @@ async function loadAvaliacoes() {
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
       if (r.status === 403 && err.upgrade_necessario) {
-        document.getElementById("avaliacoesList").innerHTML = `<div class="empty-state">🔒 Este módulo requer o plano Profissional ou superior.</div>`;
+        document.getElementById("avaliacoesList").innerHTML = `<div class="empty-state">🔒 Este módulo está indisponível para sua conta no momento.</div>`;
       } else {
         document.getElementById("avaliacoesList").innerHTML = `<div class="empty-state">⚠️ Sem permissão ou erro ao carregar (${r.status}).</div>`;
       }

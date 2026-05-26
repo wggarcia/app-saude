@@ -39,7 +39,14 @@ W, H = A4
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _empresa(request):
-    return getattr(request, "empresa", None)
+    empresa = getattr(request, "empresa", None)
+    if empresa:
+        return empresa
+    try:
+        from .views_dashboard import _empresa_autenticada
+        return _empresa_autenticada(request)
+    except Exception:
+        return None
 
 
 def _json(request):

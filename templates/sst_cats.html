@@ -146,7 +146,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
   <div class="modal">
     <h3>Registrar Comunicação de Acidente do Trabalho</h3>
     <div class="modal-sub">Preencha os dados do acidente. A CAT deve ser registrada até o 1º dia útil após o ocorrido.</div>
-    <div class="mf"><label>Funcionário Acidentado</label><input id="c-func" type="text" placeholder="Ex: Maria Santos"></div>
+    <div class="mf"><label>Funcionário Acidentado</label><input id="c-func" type="text" list="func-list" oninput="selecionarFuncionarioCat()" placeholder="Ex: Maria Santos"><datalist id="func-list"></datalist><input id="c-func-id" type="hidden"></div>
     <div class="mf-row">
       <div class="mf"><label>Tipo de Acidente</label><select id="c-tipo"><option value="tipico">Típico</option><option value="trajeto">De Trajeto</option><option value="doenca">Doença Ocupacional</option></select></div>
       <div class="mf"><label>Gravidade</label><select id="c-grav"><option value="leve">Leve</option><option value="moderado">Moderado</option><option value="grave">Grave</option><option value="fatal">Fatal</option></select></div>
@@ -183,7 +183,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 </div>
 
 <script>
-let _todos=[];let _filtro='todos';let _xmlEventoId=null;let _cidsSst=[];
+let _todos=[];let _filtro='todos';let _xmlEventoId=null;let _cidsSst=[];let _funcionarios=[];
 const esocialLabel={nao_enviado:'Pendente',pendente:'Pendente',transmitido:'Gerado',erro:'Erro',retificado:'Retificado'};
 const esocialCls={nao_enviado:'b-cinza',pendente:'b-amarelo',transmitido:'b-verde',erro:'b-vermelho',retificado:'b-azul'};
 const tipoLabel={tipico:'Típico',trajeto:'Trajeto',doenca:'Doença Ocup.'};
@@ -192,7 +192,12 @@ const gravCls={leve:'g-leve',moderado:'g-moderado',grave:'g-grave',fatal:'g-fata
 
 function toast(msg,tipo='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+(tipo==='ok'?'ok':'err');clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',3500);}
 
-function openModal(){document.getElementById("modal").classList.add("open");document.getElementById("c-data").value=new Date().toISOString().split("T")[0];toggleCidDoenca();}
+function openModal(){
+  document.getElementById("modal").classList.add("open");
+  document.getElementById("c-data").value=new Date().toISOString().split("T")[0];
+  document.getElementById("c-func-id").value='';
+  toggleCidDoenca();
+}
 function closeModal(){document.getElementById("modal").classList.remove("open")}
 document.getElementById("modal").addEventListener("click",e=>{if(e.target===document.getElementById("modal"))closeModal()});
 
@@ -200,6 +205,13 @@ function renderCidSelect(){
   const dl=document.getElementById("cid-list");
   if(!_cidsSst.length) return;
   dl.innerHTML=_cidsSst.flatMap(g=>g.itens.map(i=>`<option value="${i.codigo}">${i.codigo} — ${i.descricao}</option>`)).join("");
+}
+
+function toggleCidDoenca(){
+  const isDoenca=document.getElementById("c-tipo").value==="doenca";
+  const cid=document.getElementById("c-cid");
+  cid.disabled=!isDoenca&&_cidsSst.length>0;
+  if(!isDoenca)cid.value='';
 }
 
 async function carregarCidsSst(){
@@ -210,9 +222,34 @@ async function carregarCidsSst(){
     const d=await r.json();
     _cidsSst=d.grupos||[];
     renderCidSelect();
+    toggleCidDoenca();
   }catch(e){
     // silently ignore — user can still type CID manually
   }
+}
+
+function selecionarFuncionarioCat(){
+  const nome=(document.getElementById("c-func").value||"").trim().toLowerCase();
+  const hidden=document.getElementById("c-func-id");
+  hidden.value="";
+  if(!nome)return;
+  const exato=_funcionarios.find(f=>(f.nome||"").trim().toLowerCase()===nome);
+  if(exato){hidden.value=String(exato.id);return;}
+  const parcial=_funcionarios.find(f=>(f.nome||"").toLowerCase().includes(nome));
+  if(parcial)hidden.value=String(parcial.id);
+}
+
+async function carregarFuncionariosCat(){
+  try{
+    const r=await fetch("/api/sst/funcionarios?all=1",{credentials:"include"});
+    if(!r.ok)throw new Error("funcionarios_failed");
+    const d=await r.json();
+    _funcionarios=d.funcionarios||[];
+  }catch{
+    _funcionarios=[];
+  }
+  const dl=document.getElementById("func-list");
+  dl.innerHTML=_funcionarios.map(f=>`<option value="${f.nome}"></option>`).join("");
 }
 
 function closeXmlModal(){document.getElementById('modal-xml').classList.remove('open');_xmlEventoId=null;}
@@ -233,17 +270,26 @@ async function transmitirS2210(catId, btn){
     btn.textContent='📤 S-2210';btn.disabled=false;
     toast('Erro ao gerar S-2210. Tente novamente.','err');return;
   }
-  btn.textContent='📤 S-2210';btn.disabled=false;
-  if(!r.ok){toast((d&&d.erro)||'Erro ao gerar S-2210','err');return;}
+  if(!r.ok){
+    btn.textContent='📤 S-2210';btn.disabled=false;
+    toast((d&&d.erro)||'Erro ao gerar S-2210','err');
+    return;
+  }
   const eventoId=d.evento_id||d.id;
   _xmlEventoId=eventoId;
-  if(d.xml){
-    document.getElementById('xml-content').textContent=d.xml;
-    document.getElementById('xml-sub').textContent=`Evento S-2210 criado (ID: ${eventoId}). Acesse a aba eSocial para marcar como transmitido após envio ao portal.`;
-    document.getElementById('modal-xml').classList.add('open');
-  }else{
-    toast('S-2210 gerado! Acesse eSocial para transmitir.','ok');
+  try{
+    btn.textContent='Transmitindo...';
+    const tx=await fetch(`/api/sst/esocial/eventos/${eventoId}/transmitir/`,{method:'POST',headers:{'Content-Type':'application/json'}});
+    const dt=await tx.json();
+    if(tx.ok&&dt.ok){
+      toast('S-2210 transmitido com sucesso para o eSocial.','ok');
+    }else{
+      toast((dt&&dt.mensagem)||'S-2210 gerado. Verifique a transmissão na fila eSocial.','err');
+    }
+  }catch{
+    toast('S-2210 gerado. Não foi possível transmitir agora.','err');
   }
+  btn.textContent='📤 S-2210';btn.disabled=false;
   carregar();
 }
 
@@ -278,7 +324,7 @@ function renderTabela(){
     const esCls=esocialCls[c.status_esocial]||'b-cinza';
     const esLbl=esocialLabel[c.status_esocial]||'—';
     const isPending=["nao_enviado","pendente"].includes(c.status_esocial);
-    const hasXml=c.status_esocial==="transmitido"&&c.evento_id;
+    const hasXml=!!c.evento_id;
     return`<tr>
       <td><span class="grav-dot ${gravCls[c.gravidade]||'g-leve'}"></span>${gravLabel[c.gravidade]||c.gravidade}</td>
       <td><strong>${c.funcionario}</strong></td>
@@ -308,11 +354,12 @@ async function carregar(){
 async function salvar(){
   const btn=document.querySelector("#modal .btn-submit");btn.textContent="Salvando...";btn.disabled=true;
   const r=await fetch("/api/sst/cats",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+    funcionario_id:parseInt(document.getElementById("c-func-id").value||"0",10)||null,
     funcionario_nome:document.getElementById("c-func").value.trim(),
     tipo:document.getElementById("c-tipo").value,
     gravidade:document.getElementById("c-grav").value,
     data_acidente:document.getElementById("c-data").value,
-    houve_afastamento:!!document.getElementById("c-afas").value,
+    houve_afastamento:document.getElementById("c-afas").value==="1",
     cid:document.getElementById("c-cid").value.trim(),
     parte_corpo:document.getElementById("c-parte").value.trim(),
     local_acidente:document.getElementById("c-local").value.trim(),
@@ -325,6 +372,8 @@ async function salvar(){
 }
 carregar();
 carregarCidsSst();
+carregarFuncionariosCat();
+document.getElementById("c-tipo").addEventListener("change",toggleCidDoenca);
 </script>
 </body>
 </html>

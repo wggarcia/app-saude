@@ -51,6 +51,13 @@ def _cpf_limpo(cpf):
     return "".join(c for c in (cpf or "") if c.isdigit())[:11]
 
 
+def _tp_amb(cfg):
+    ambiente = ((getattr(cfg, "esocial_ambiente", "") or "").strip().lower())
+    if ambiente in {"producao", "produção", "prod"}:
+        return "1"
+    return "2"
+
+
 def _evento_id(tipo, cnpj, seq):
     return f"ID_{tipo.replace('-','')}_{_cnpj_limpo(cnpj)}_{date.today().strftime('%Y%m%d')}_{seq:05d}"
 
@@ -76,7 +83,7 @@ def _gerar_xml_s2210(cat, cfg):
     # ideEvento
     ide = SubElement(evt, "ideEvento")
     SubElement(ide, "indRetif").text = "1"
-    SubElement(ide, "tpAmb").text = "1"       # 1=produção, 2=homologação
+    SubElement(ide, "tpAmb").text = _tp_amb(cfg)
     SubElement(ide, "procEmi").text = "1"
     SubElement(ide, "verProc").text = "SolusCRT_1.0"
 
@@ -151,7 +158,7 @@ def _gerar_xml_s2220(aso, cfg):
 
     ide = SubElement(evt, "ideEvento")
     SubElement(ide, "indRetif").text = "1"
-    SubElement(ide, "tpAmb").text = "1"
+    SubElement(ide, "tpAmb").text = _tp_amb(cfg)
     SubElement(ide, "procEmi").text = "1"
     SubElement(ide, "verProc").text = "SolusCRT_1.0"
 
@@ -211,7 +218,7 @@ def _gerar_xml_s2230(afastamento, cfg):
 
     ide = SubElement(evt, "ideEvento")
     SubElement(ide, "indRetif").text = "1"
-    SubElement(ide, "tpAmb").text = "1"
+    SubElement(ide, "tpAmb").text = _tp_amb(cfg)
     SubElement(ide, "procEmi").text = "1"
     SubElement(ide, "verProc").text = "SolusCRT_1.0"
 
@@ -258,7 +265,7 @@ def _gerar_xml_s2240(empresa, cfg, periodo=None, posto=None):
 
     ide = SubElement(evt, "ideEvento")
     SubElement(ide, "indRetif").text = "1"
-    SubElement(ide, "tpAmb").text = "2"   # 2 = homologação | trocar para "1" em produção real
+    SubElement(ide, "tpAmb").text = _tp_amb(cfg)
     SubElement(ide, "procEmi").text = "1"
     SubElement(ide, "verProc").text = "SolusCRT_1.0"
     SubElement(ide, "perApur").text = periodo
@@ -268,7 +275,7 @@ def _gerar_xml_s2240(empresa, cfg, periodo=None, posto=None):
     SubElement(emp, "nrInsc").text = cnpj or "00000000000000"
 
     amb = SubElement(evt, "infoCondicAmb")
-    SubElement(amb, "tpAmb").text = "1"
+    SubElement(amb, "tpAmb").text = _tp_amb(cfg)
     SubElement(amb, "localAmb").text = "1"
 
     validade = SubElement(amb, "novaValidade")
@@ -446,15 +453,37 @@ def api_esocial_registrar_cat(request, cat_id):
     cfg = _cfg(e)
     xml = _gerar_xml_s2210(cat, cfg)
 
+    referencia = str(cat.pk)
+    existente = (
+        eSocialEventoSST.objects
+        .filter(empresa=e, tipo_evento="S-2210", referencia=referencia)
+        .order_by("-id")
+        .first()
+    )
+    if existente and existente.status in {"pendente", "enviado", "transmitido"}:
+        campos = []
+        if not existente.xml_gerado:
+            existente.xml_gerado = xml
+            campos.append("xml_gerado")
+        if campos:
+            existente.save(update_fields=campos)
+        if cat.status_esocial != existente.status:
+            cat.status_esocial = existente.status
+            cat.protocolo_esocial = existente.protocolo or ""
+            cat.save(update_fields=["status_esocial", "protocolo_esocial"])
+        return JsonResponse(
+            {"evento_id": existente.pk, "xml_tamanho": len(existente.xml_gerado or ""), "status": existente.status, "reutilizado": True},
+            status=200,
+        )
+
     ev = eSocialEventoSST.objects.create(
         empresa=e,
         tipo_evento="S-2210",
-        referencia=str(cat.pk),
+        referencia=referencia,
         xml_gerado=xml,
     )
     cat.status_esocial = "pendente"
     cat.save(update_fields=["status_esocial"])
-
     return JsonResponse({"evento_id": ev.pk, "xml_tamanho": len(xml), "status": "pendente"}, status=201)
 
 
@@ -472,10 +501,26 @@ def api_esocial_registrar_aso(request, aso_id):
     cfg = _cfg(e)
     xml = _gerar_xml_s2220(aso, cfg)
 
+    referencia = str(aso.pk)
+    existente = (
+        eSocialEventoSST.objects
+        .filter(empresa=e, tipo_evento="S-2220", referencia=referencia)
+        .order_by("-id")
+        .first()
+    )
+    if existente and existente.status in {"pendente", "enviado", "transmitido"}:
+        if not existente.xml_gerado:
+            existente.xml_gerado = xml
+            existente.save(update_fields=["xml_gerado"])
+        return JsonResponse(
+            {"evento_id": existente.pk, "xml_tamanho": len(existente.xml_gerado or ""), "status": existente.status, "reutilizado": True},
+            status=200,
+        )
+
     ev = eSocialEventoSST.objects.create(
         empresa=e,
         tipo_evento="S-2220",
-        referencia=str(aso.pk),
+        referencia=referencia,
         xml_gerado=xml,
     )
     return JsonResponse({"evento_id": ev.pk, "xml_tamanho": len(xml), "status": "pendente"}, status=201)
@@ -495,10 +540,26 @@ def api_esocial_registrar_afastamento(request, afastamento_id):
     cfg = _cfg(e)
     xml = _gerar_xml_s2230(af, cfg)
 
+    referencia = str(af.pk)
+    existente = (
+        eSocialEventoSST.objects
+        .filter(empresa=e, tipo_evento="S-2230", referencia=referencia)
+        .order_by("-id")
+        .first()
+    )
+    if existente and existente.status in {"pendente", "enviado", "transmitido"}:
+        if not existente.xml_gerado:
+            existente.xml_gerado = xml
+            existente.save(update_fields=["xml_gerado"])
+        return JsonResponse(
+            {"evento_id": existente.pk, "xml_tamanho": len(existente.xml_gerado or ""), "status": existente.status, "reutilizado": True},
+            status=200,
+        )
+
     ev = eSocialEventoSST.objects.create(
         empresa=e,
         tipo_evento="S-2230",
-        referencia=str(af.pk),
+        referencia=referencia,
         xml_gerado=xml,
     )
     return JsonResponse({"evento_id": ev.pk, "xml_tamanho": len(xml), "status": "pendente"}, status=201)
@@ -524,8 +585,9 @@ def api_esocial_marcar_transmitido(request, evento_id):
 
     # atualiza CAT se for S-2210
     if ev.tipo_evento == "S-2210" and ev.referencia.isdigit():
+        status_cat = "pendente" if ev.status == "enviado" else ev.status
         CATOcupacional.objects.filter(pk=int(ev.referencia), empresa=e).update(
-            status_esocial=ev.status,
+            status_esocial=status_cat,
             protocolo_esocial=ev.protocolo,
         )
 
@@ -681,10 +743,18 @@ def api_esocial_transmitir(request, evento_id):
         return JsonResponse({"erro": "Evento não encontrado"}, status=404)
 
     if ev.status == "transmitido":
-        return JsonResponse({"erro": "Evento já transmitido", "protocolo": ev.protocolo}, status=400)
+        return JsonResponse({"ok": True, "status": ev.status, "protocolo": ev.protocolo, "mensagem": "Evento já transmitido."}, status=200)
 
     from .esocial_transmissao import transmitir_evento
     ok, mensagem = transmitir_evento(ev)
+
+    # Espelha status/protocolo nos módulos SST vinculados
+    if ev.tipo_evento == "S-2210" and (ev.referencia or "").isdigit():
+        status_cat = "pendente" if ev.status == "enviado" else ev.status
+        CATOcupacional.objects.filter(pk=int(ev.referencia), empresa=e).update(
+            status_esocial=status_cat,
+            protocolo_esocial=ev.protocolo or "",
+        )
 
     return JsonResponse({
         "ok": ok,
@@ -807,3 +877,35 @@ def api_esocial_certificado(request):
             "certificado_validade": validade.strftime("%d/%m/%Y"),
             "esocial_ambiente": ambiente,
         })
+
+    return JsonResponse({"erro": "Método não permitido"}, status=405)
+
+
+@api_requer_feature("sst.esocial")
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_esocial_diagnostico(request):
+    """Diagnóstico de conectividade real com o gov.br via certificado da empresa."""
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    cfg = _cfg(e)
+    if not cfg or not getattr(cfg, "certificado_pfx_b64", None):
+        return JsonResponse({
+            "ok": False,
+            "mensagem": "Certificado digital não configurado. Envie o A1 em Configurações > eSocial.",
+            "detalhes": {"certificado_presente": False},
+        }, status=400)
+
+    from .esocial_transmissao import testar_conexao_esocial
+    ok, mensagem, detalhes = testar_conexao_esocial(cfg)
+    return JsonResponse({
+        "ok": ok,
+        "mensagem": mensagem,
+        "detalhes": {
+            **(detalhes or {}),
+            "certificado_nome": getattr(cfg, "certificado_nome", ""),
+            "certificado_validade": cfg.certificado_validade.strftime("%d/%m/%Y") if getattr(cfg, "certificado_validade", None) else None,
+        },
+    }, status=200 if ok else 422)

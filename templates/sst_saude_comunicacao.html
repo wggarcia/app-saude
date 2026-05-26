@@ -241,6 +241,11 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
       <div class="eyebrow">💚 Saúde &amp; Comunicação</div>
       <h1>Hub de saúde ocupacional e comunicação com trabalhadores</h1>
       <p>Monitore indicadores de saúde da equipe, distribua conteúdo de bem-estar, gerencie mensagens em massa, acompanhe alertas de saúde e apoio, e identifique conflitos culturais que possam impactar o ambiente de trabalho.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <a class="badge b-blue" href="/sst/bem-estar/" style="text-decoration:none">Bem-estar da Equipe ↗</a>
+        <a class="badge b-warn" href="/sst/psicossocial/" style="text-decoration:none">Psicossocial NR-01 ↗</a>
+        <span class="badge b-muted">Avaliações ativas: <strong style="margin-left:4px" id="k-psico-ativas">—</strong></span>
+      </div>
     </section>
 
     <!-- ── KPI strip ── -->
@@ -619,10 +624,12 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
           <div class="ph-actions">
             <select class="form-select" style="width:auto;font-size:.74rem" id="filtro-conflito" onchange="renderConflitos()">
               <option value="">Todos os tipos</option>
-              <option value="legal">Conformidade legal</option>
-              <option value="cultural">Barreira cultural</option>
-              <option value="operacional">Impacto operacional</option>
-              <option value="saude">Saúde e segurança</option>
+              <option value="comunicacao">Barreira de comunicação</option>
+              <option value="discriminacao">Discriminação / preconceito</option>
+              <option value="idioma">Diferença de idioma</option>
+              <option value="religiao">Diferença religiosa / cultural</option>
+              <option value="comportamento">Comportamento inadequado</option>
+              <option value="outro">Outro</option>
             </select>
             <button class="btn-main" style="font-size:.7rem;padding:6px 12px" onclick="abrirModalConflito()">+ Registrar conflito</button>
           </div>
@@ -750,10 +757,12 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
       <div class="form-field">
         <label class="form-label">Tipo</label>
         <select class="form-select" id="conf-tipo">
-          <option value="cultural">Barreira cultural</option>
-          <option value="legal">Conformidade legal</option>
-          <option value="operacional">Impacto operacional</option>
-          <option value="saude">Saúde e segurança</option>
+          <option value="comunicacao">Barreira de comunicação</option>
+          <option value="discriminacao">Discriminação / preconceito</option>
+          <option value="idioma">Diferença de idioma</option>
+          <option value="religiao">Diferença religiosa / cultural</option>
+          <option value="comportamento">Comportamento inadequado</option>
+          <option value="outro">Outro</option>
         </select>
       </div>
       <div class="form-field">
@@ -854,15 +863,31 @@ async function carregarPainel() {
     const dataS = rS.ok ? await rS.json() : {};
 
     const medias = data.medias || {};
-    const ibs = medias.humor != null ? Math.round((medias.humor / 5) * 100) : null;
+    const ibs = data.indice_bem_estar ?? (medias.humor != null ? Math.round((medias.humor / 5) * 100) : null);
     document.getElementById('k-ibs').textContent = ibs != null ? ibs + '%' : '—';
     document.getElementById('k-alertas').textContent = (data.apoios_pendentes ?? 0) + (data.conflitos_pendentes ?? 0);
     document.getElementById('k-msgs').textContent = data.total_checkins_7d ?? '—';
     document.getElementById('k-conflitos').textContent = data.conflitos_pendentes ?? '—';
-    document.getElementById('k-conteudos').textContent = '—';
+    document.getElementById('k-conteudos').textContent = (data.programas_saude || []).length;
 
     renderBemestarSetores(dataS.setores || []);
     renderDonut({ estresse: medias.estresse, burnout: data.burnout_alto_7d, ansiedade: medias.ansiedade });
+    renderAfastamentosCausas(data.afastamentos_causas || []);
+    renderProgramasSaude(data.programas_saude || []);
+    renderTriagem(data.triagens_recentes || []);
+    const resumo = data.resumo_periodo || {};
+    document.getElementById('s-consultas').textContent = resumo.consultas ?? '—';
+    document.getElementById('s-retornos').textContent = resumo.retornos ?? '—';
+    document.getElementById('s-absenteismo').textContent = resumo.absenteismo != null ? `${resumo.absenteismo}%` : '—';
+    document.getElementById('s-encaminhamentos').textContent = resumo.encaminhamentos ?? '—';
+
+    try {
+      const rp = await fetch('/api/sst/psicossocial/kpis/');
+      const dp = rp.ok ? await rp.json() : {};
+      document.getElementById('k-psico-ativas').textContent = dp.ativas ?? 0;
+    } catch (_) {
+      document.getElementById('k-psico-ativas').textContent = '—';
+    }
 
   } catch (_) {
     document.getElementById('bemestar-setores').innerHTML = '<div class="empty">Não foi possível carregar o painel de saúde agora.</div>';
@@ -876,7 +901,7 @@ function renderBemestarSetores(setores) {
     return;
   }
   wrap.innerHTML = setores.map(s => {
-    const pct = Math.min(s.indice ?? 0, 100);
+    const pct = Math.max(0, Math.min(s.indice ?? 0, 100));
     const color = pct >= 70
       ? 'linear-gradient(90deg,var(--teal),var(--green))'
       : pct >= 45
@@ -884,7 +909,7 @@ function renderBemestarSetores(setores) {
         : 'linear-gradient(90deg,var(--red),var(--amber))';
     return `<div class="prog-row">
       <div class="prog-label-row">
-        <span class="prog-label">${escHtml(s.setor)}</span>
+        <span class="prog-label">${escHtml(s.setor || s.nome || 'Sem setor')}</span>
         <span class="prog-pct">${pct}%</span>
       </div>
       <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:${pct}%;background:${color}"></div></div>
@@ -1202,21 +1227,36 @@ async function carregarAlertas() {
     const r = await fetch('/api/sst/wellness/alertas/');
     const data = r.ok ? await r.json() : {};
     // map apoios to alertas format
-    alertas = (data.apoios || []).map(a => ({
+    const apoios = (data.apoios || []).map(a => ({
       id: a.id,
       titulo: a['alias__nome'] || 'Colaborador',
       descricao: a.relato || '',
       setor: a['setor__nome'] || '',
       data: a.criado_em,
       severidade: a.deseja_contato ? 'alto' : 'moderado',
+      status: a.status || 'novo',
     }));
+    const burnout = (data.burnout || []).map(b => ({
+      id: `burnout-${b.id}`,
+      titulo: b['alias__nome'] || 'Colaborador',
+      descricao: `Risco de burnout ${b.risco_burnout}/5`,
+      setor: b['setor__nome'] || '',
+      data: b.semana_referencia,
+      severidade: b.risco_burnout >= 5 ? 'critico' : 'alto',
+      status: 'novo',
+    }));
+    alertas = [...apoios, ...burnout];
     alertasCarregados = true;
     renderAlertas();
     // burnout count
     const burnoutWrap = document.getElementById('burnout-count');
     if (burnoutWrap) burnoutWrap.textContent = data.burnout_alto ?? '—';
-    renderApoio([]);
-    renderTriagem([]);
+    renderApoio((data.apoios || []).map(a => ({
+      nome: a['alias__nome'] || 'Colaborador',
+      tipo: a.deseja_contato ? 'Contato solicitado' : 'Apoio monitorado',
+      contato: a['setor__nome'] || '',
+      disponivel: a.status !== 'concluido',
+    })));
   } catch (_) {
     document.getElementById('alertas-lista').innerHTML = '<div class="empty">Não foi possível carregar alertas.</div>';
   }
@@ -1252,10 +1292,10 @@ function renderAlertas() {
 
 async function encaminharAlerta(id) {
   try {
-    showToast('Encaminhe o apoio pelo Chat — acesse /sst/comunicacao/');
-    return;
-    alertasCarregados = false;
-    carregarAlertas();
+    const item = alertas.find(a => String(a.id) === String(id));
+    if (item) item.severidade = 'moderado';
+    showToast('Encaminhamento registrado. Continue no módulo de comunicação para contato da equipe.');
+    renderAlertas();
   } catch (e) {
     showToast('Erro ao encaminhar: ' + e.message, true);
   }
@@ -1312,10 +1352,12 @@ async function enviarTriagem() {
 // TAB 5 · CONFLITOS CULTURAIS
 // ════════════════════════════════════════════════════════
 const CONFLITO_TYPE_MAP = {
-  legal:       ['ct-legal',       'Conformidade legal'],
-  cultural:    ['ct-cultural',    'Barreira cultural'],
-  operacional: ['ct-operacional', 'Impacto operacional'],
-  saude:       ['ct-saude',       'Saúde e segurança'],
+  comunicacao:  ['ct-cultural',    'Barreira de comunicação'],
+  discriminacao:['ct-legal',       'Discriminação / preconceito'],
+  idioma:       ['ct-operacional', 'Diferença de idioma'],
+  religiao:     ['ct-saude',       'Diferença religiosa / cultural'],
+  comportamento:['ct-operacional', 'Comportamento inadequado'],
+  outro:        ['ct-cultural',    'Outro'],
 };
 
 const DEFAULT_RECOMENDACOES = [
@@ -1327,14 +1369,12 @@ const DEFAULT_RECOMENDACOES = [
 
 async function carregarConflitos() {
   try {
-    const filtro = document.getElementById('filtro-conflito')?.value || '';
-    const params = filtro ? '?status=' + filtro : '';
-    const r = await fetch('/api/sst/conflitos/' + params);
+    const r = await fetch('/api/sst/conflitos/');
     if (!r.ok) throw new Error(r.status);
     const data = await r.json();
     conflitos = (data.conflitos || []).map(c => ({
       id: c.id,
-      titulo: c.tipo,
+      titulo: c['alias__nome'] ? `Relato: ${c['alias__nome']}` : 'Conflito registrado',
       descricao: c.descricao,
       tipo: c.tipo,
       ambiente: c.ambiente,
@@ -1344,7 +1384,7 @@ async function carregarConflitos() {
       status: c.status,
       observacao_gestor: c.observacao_gestor,
       data: c.criado_em,
-      severidade: c.status === 'novo' ? 'alto' : 'moderado',
+      severidade: c.status === 'novo' ? 'alto' : c.status === 'em_analise' ? 'moderado' : 'baixo',
       recomendacoes: [],
     }));
     conflitosCarregados = true;
@@ -1378,7 +1418,7 @@ function renderConflitos() {
         <span class="conflito-tag ${typeClass}">${typeLabel}</span>
         ${c.setor ? `<span style="font-size:.68rem;color:var(--muted)">${escHtml(c.setor)}</span>` : ''}
         ${c.data ? `<span style="font-size:.68rem;color:var(--muted)">${fmtData(c.data)}</span>` : ''}
-        <span class="badge ${c.status === 'resolvido' ? 'b-ok' : c.status === 'em_mediacao' ? 'b-warn' : 'b-muted'}">${c.status === 'resolvido' ? 'Resolvido' : c.status === 'em_mediacao' ? 'Em mediação' : 'Aberto'}</span>
+        <span class="badge ${c.status === 'resolvido' ? 'b-ok' : c.status === 'em_analise' ? 'b-warn' : 'b-muted'}">${c.status === 'resolvido' ? 'Resolvido' : c.status === 'em_analise' ? 'Em análise' : 'Aberto'}</span>
         <button class="conflito-expand-btn" onclick="toggleRecom(this)">Ver recomendações</button>
       </div>
       <div class="conflito-recom">
@@ -1446,10 +1486,14 @@ async function salvarConflito() {
   const btn = document.getElementById('btn-modal-conf');
   btn.disabled = true; btn.textContent = 'Registrando…';
   try {
-    const r = await fetch('/api/sst/conflitos/' + (document.getElementById('conf-id')?.value || '') + '/atualizar/', {
+    const r = await fetch('/api/sst/conflitos/registrar/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-      body: JSON.stringify({ status: tipo, observacao_gestor: descricao })
+      body: JSON.stringify({
+        titulo,
+        tipo,
+        descricao: `[Severidade: ${severidade}] ${descricao}`,
+      })
     });
     if (!r.ok) throw new Error(r.status);
     fecharModal('modal-conflito');

@@ -222,7 +222,8 @@ async function carregar() {
 
   // Gauge
   const pctRaw = String(res.indice_conformidade ?? 0).replace(',', '.');
-  const pct = Number.isFinite(parseFloat(pctRaw)) ? parseFloat(pctRaw) : 0;
+  const pctParsed = Number.isFinite(parseFloat(pctRaw)) ? parseFloat(pctRaw) : 0;
+  const pct = Math.max(0, Math.min(100, pctParsed));
   document.getElementById('gaugeText').textContent = pct + '%';
   const r80 = 80, cx = 100, cy = 100;
   const startAngle = Math.PI;
@@ -252,7 +253,9 @@ function filtrar() {
   const setor = document.getElementById('filtroSetor').value;
 
   _filtrado = _dados.filter(f => {
-    if (busca && !f.nome.toLowerCase().includes(busca) && !f.cargo?.toLowerCase().includes(busca)) return false;
+    const nome = String(f.nome || '').toLowerCase();
+    const cargo = String(f.cargo || '').toLowerCase();
+    if (busca && !nome.includes(busca) && !cargo.includes(busca)) return false;
     if (status && f.status !== status) return false;
     if (setor && f.setor !== setor) return false;
     return true;

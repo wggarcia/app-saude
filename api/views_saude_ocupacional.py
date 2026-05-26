@@ -8,12 +8,15 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from .models import (
+    AfastamentoSST,
+    ASOOcupacional,
     CheckinDiarioCorporativo,
     CheckinSemanalCorporativo,
     ColaboradorAliasCorporativo,
     ConteudoSSTPublicado,
     EmpresaSetor,
     PedidoApoioCorporativo,
+    ProgramaCorporativo,
     RegistroConflitoCultural,
 )
 from .views_dashboard import _empresa_autenticada
@@ -73,23 +76,125 @@ def api_wellness_resumo(request):
     )
 
     apoios = PedidoApoioCorporativo.objects.filter(
-        empresa=empresa, status=PedidoApoioCorporativo.STATUS_NOVO
+        empresa=empresa,
+        status__in=[PedidoApoioCorporativo.STATUS_NOVO, PedidoApoioCorporativo.STATUS_EM_ANALISE]
     ).count()
 
     conflitos = RegistroConflitoCultural.objects.filter(
-        empresa=empresa, status=RegistroConflitoCultural.STATUS_NOVO
+        empresa=empresa,
+        status__in=[RegistroConflitoCultural.STATUS_NOVO, RegistroConflitoCultural.STATUS_EM_ANALISE]
     ).count()
 
     burnout_alto = CheckinSemanalCorporativo.objects.filter(
         empresa=empresa, semana_referencia__gte=hoje - timedelta(days=7), risco_burnout__gte=4
     ).count()
 
+    def _ravg(v):
+        return round(v, 1) if v else None
+
+    # Índice sintético (0-100): maiores humor/energia elevam, estresse/fadiga/ansiedade reduzem.
+    if total:
+        score_1a5 = (
+            (agg.get("humor") or 0) * 0.30
+            + (agg.get("energia") or 0) * 0.20
+            + (6 - (agg.get("estresse") or 0)) * 0.20
+            + (6 - (agg.get("fadiga") or 0)) * 0.15
+            + (6 - (agg.get("ansiedade") or 0)) * 0.15
+        )
+        indice_bem_estar = int(round(max(0, min(100, (score_1a5 / 5.0) * 100))))
+    else:
+        indice_bem_estar = None
+
+    ult_30 = hoje - timedelta(days=30)
+    ult_90 = hoje - timedelta(days=90)
+
+    consultas = ASOOcupacional.objects.filter(
+        empresa=empresa, data_emissao__gte=ult_30
+    ).count()
+    retornos_previstos = AfastamentoSST.objects.filter(
+        empresa=empresa,
+        status__in=[AfastamentoSST.STATUS_ATIVO, AfastamentoSST.STATUS_RETORNO_PROGRAMADO],
+        data_prevista_retorno__gte=hoje,
+        data_prevista_retorno__lte=hoje + timedelta(days=14),
+    ).count()
+    afastamentos_periodo = AfastamentoSST.objects.filter(
+        empresa=empresa, data_inicio__gte=ult_30
+    ).count()
+    total_func = max(1, ColaboradorAliasCorporativo.objects.filter(empresa=empresa, ativo=True).count())
+    absenteismo = round((afastamentos_periodo / total_func) * 100, 1)
+    encaminhamentos = PedidoApoioCorporativo.objects.filter(
+        empresa=empresa, status=PedidoApoioCorporativo.STATUS_ENCAMINHADO
+    ).count()
+
+    causas = (
+        AfastamentoSST.objects.filter(empresa=empresa, data_inicio__gte=ult_90)
+        .values("motivo")
+        .annotate(casos=Count("id"))
+        .order_by("-casos")[:6]
+    )
+    afastamentos_causas = []
+    for c in causas:
+        motivo = c.get("motivo") or "outro"
+        afastamentos_causas.append({
+            "causa": dict(AfastamentoSST.MOTIVO).get(motivo, motivo),
+            "cid": "",
+            "dias_perdidos": c["casos"] * 2,  # aproximação operacional para painel
+            "casos": c["casos"],
+        })
+
+    programas_qs = ProgramaCorporativo.objects.filter(
+        empresa=empresa,
+        tipo__in=[ProgramaCorporativo.TIPO_FADIGA, ProgramaCorporativo.TIPO_PSICOSSOCIAL, ProgramaCorporativo.TIPO_ERGONOMIA],
+    ).order_by("-atualizado_em")[:8]
+    programas_saude = []
+    for p in programas_qs:
+        if p.status == ProgramaCorporativo.STATUS_ATIVO:
+            adesao = 82
+        elif p.status == ProgramaCorporativo.STATUS_PAUSADO:
+            adesao = 49
+        else:
+            adesao = 31
+        programas_saude.append({
+            "nome": p.titulo,
+            "participantes": 0,
+            "adesao": adesao,
+        })
+
+    triagens_recentes = []
+    for ch in checkins.select_related("setor", "alias").order_by("-criado_em")[:12]:
+        pontuacao = (
+            ch.humor + ch.energia + (6 - ch.estresse) + (6 - ch.fadiga) + (6 - ch.ansiedade)
+        )
+        if pontuacao <= 13:
+            resultado = "critico"
+        elif pontuacao <= 18:
+            resultado = "atencao"
+        else:
+            resultado = "estavel"
+        triagens_recentes.append({
+            "funcionario": ch.alias.alias_publico if ch.apoio_solicitado else "Anônimo",
+            "setor": ch.setor.nome if ch.setor else "",
+            "data": ch.criado_em.isoformat() if ch.criado_em else None,
+            "resultado": resultado,
+            "pontuacao": pontuacao,
+        })
+
     return JsonResponse({
         "total_checkins_7d": total,
-        "medias": {k: round(v, 1) if v else None for k, v in agg.items()},
+        "indice_bem_estar": indice_bem_estar,
+        "medias": {k: _ravg(v) for k, v in agg.items()},
         "apoios_pendentes": apoios,
         "conflitos_pendentes": conflitos,
         "burnout_alto_7d": burnout_alto,
+        "resumo_periodo": {
+            "consultas": consultas,
+            "retornos": retornos_previstos,
+            "absenteismo": absenteismo,
+            "encaminhamentos": encaminhamentos,
+        },
+        "afastamentos_causas": afastamentos_causas,
+        "programas_saude": programas_saude,
+        "triagens_recentes": triagens_recentes,
     })
 
 
@@ -108,6 +213,7 @@ def api_wellness_por_setor(request):
         .annotate(
             total=Count("id"),
             humor=Avg("humor"),
+            energia=Avg("energia"),
             estresse=Avg("estresse"),
             fadiga=Avg("fadiga"),
             ansiedade=Avg("ansiedade"),
@@ -118,12 +224,21 @@ def api_wellness_por_setor(request):
     return JsonResponse({"setores": [
         {
             "id": s["setor__id"],
+            "setor": s["setor__nome"],
             "nome": s["setor__nome"],
             "total": s["total"],
             "humor": round(s["humor"], 1) if s["humor"] else None,
+            "energia": round(s["energia"], 1) if s["energia"] else None,
             "estresse": round(s["estresse"], 1) if s["estresse"] else None,
             "fadiga": round(s["fadiga"], 1) if s["fadiga"] else None,
             "ansiedade": round(s["ansiedade"], 1) if s["ansiedade"] else None,
+            "indice": int(round(max(0, min(100, (
+                ((s["humor"] or 0) * 0.30)
+                + ((s["energia"] or 0) * 0.20)
+                + ((6 - (s["estresse"] or 0)) * 0.20)
+                + ((6 - (s["fadiga"] or 0)) * 0.15)
+                + ((6 - (s["ansiedade"] or 0)) * 0.15)
+            ) / 5 * 100)))),
         }
         for s in por_setor
     ]})
@@ -138,18 +253,32 @@ def api_wellness_alertas(request):
 
     apoios = list(
         PedidoApoioCorporativo.objects
-        .filter(empresa=empresa, status=PedidoApoioCorporativo.STATUS_NOVO)
+        .filter(
+            empresa=empresa,
+            status__in=[PedidoApoioCorporativo.STATUS_NOVO, PedidoApoioCorporativo.STATUS_EM_ANALISE]
+        )
         .select_related("alias", "setor")
-        .values("id", "alias__alias_publico", "setor__nome", "relato", "criado_em", "deseja_contato")
+        .values("id", "alias__alias_publico", "setor__nome", "relato", "criado_em", "deseja_contato", "status")
         .order_by("-criado_em")[:20]
     )
 
     conflitos = list(
         RegistroConflitoCultural.objects
-        .filter(empresa=empresa, status=RegistroConflitoCultural.STATUS_NOVO)
+        .filter(
+            empresa=empresa,
+            status__in=[RegistroConflitoCultural.STATUS_NOVO, RegistroConflitoCultural.STATUS_EM_ANALISE]
+        )
         .select_related("alias", "setor")
         .values("id", "tipo", "ambiente", "descricao", "anonimo", "setor__nome", "criado_em")
         .order_by("-criado_em")[:20]
+    )
+
+    burnout = list(
+        CheckinSemanalCorporativo.objects
+        .filter(empresa=empresa, semana_referencia__gte=hoje - timedelta(days=14), risco_burnout__gte=4)
+        .select_related("alias", "setor")
+        .values("id", "alias__alias_publico", "setor__nome", "risco_burnout", "semana_referencia")
+        .order_by("-semana_referencia")[:20]
     )
 
     return JsonResponse({
@@ -170,6 +299,17 @@ def api_wellness_alertas(request):
             }
             for c in conflitos
         ],
+        "burnout": [
+            {
+                "id": b["id"],
+                "alias__nome": b.get("alias__alias_publico"),
+                "setor__nome": b.get("setor__nome"),
+                "risco_burnout": b["risco_burnout"],
+                "semana_referencia": b["semana_referencia"].strftime("%d/%m/%Y") if b["semana_referencia"] else None,
+            }
+            for b in burnout
+        ],
+        "burnout_alto": len(burnout),
     })
 
 
@@ -288,6 +428,53 @@ def api_conflito_atualizar(request, conflito_id):
         c.observacao_gestor = d["observacao_gestor"][:280]
     c.save(update_fields=["status", "observacao_gestor", "atualizado_em"])
     return JsonResponse({"ok": True})
+
+
+@require_http_methods(["POST"])
+def api_conflito_registrar(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+
+    alias = (
+        ColaboradorAliasCorporativo.objects
+        .filter(empresa=empresa, ativo=True)
+        .select_related("setor")
+        .order_by("-atualizado_em")
+        .first()
+    )
+    if not alias:
+        return JsonResponse({"erro": "cadastre ao menos um colaborador no app para registrar conflito"}, status=400)
+
+    try:
+        d = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    tipo = (d.get("tipo") or RegistroConflitoCultural.TIPO_OUTRO).strip().lower()
+    tipo_map = {
+        "legal": RegistroConflitoCultural.TIPO_COMPORTAMENTO,
+        "cultural": RegistroConflitoCultural.TIPO_COMUNICACAO,
+        "operacional": RegistroConflitoCultural.TIPO_COMPORTAMENTO,
+        "saude": RegistroConflitoCultural.TIPO_COMPORTAMENTO,
+    }
+    if tipo in tipo_map:
+        tipo = tipo_map[tipo]
+    tipos_validos = {k for k, _v in RegistroConflitoCultural.TIPO_CHOICES}
+    if tipo not in tipos_validos:
+        tipo = RegistroConflitoCultural.TIPO_OUTRO
+
+    c = RegistroConflitoCultural.objects.create(
+        empresa=empresa,
+        alias=alias,
+        setor=alias.setor,
+        tipo=tipo,
+        ambiente=d.get("ambiente", RegistroConflitoCultural.AMBIENTE_ONSHORE),
+        descricao=((d.get("titulo") or "") + " " + (d.get("descricao") or "")).strip()[:500],
+        paises_envolvidos=d.get("paises_envolvidos", "").strip()[:200],
+        anonimo=False,
+    )
+    return JsonResponse({"id": c.id, "ok": True}, status=201)
 
 
 # ─── colaborador: conteúdo (leitura no app) ───────────────────────────────────

@@ -234,22 +234,26 @@ function renderKpis(d) {
     sec.innerHTML = alerts.map(a => `<div class="alert ${a.nivel === "urgente" || a.nivel === "critico" ? "danger" : a.nivel === "atencao" ? "warn" : "info"}">${a.msg}</div>`).join("");
 
   } else if (MODULO_ID === "ppp") {
-    badgeText = `${d.total_ppps ?? 0} PPPs`;
+    const totalPpp = (d.ppps_finalizados || 0) + (d.ppps_rascunho || 0);
+    badgeText = `${totalPpp} PPPs`;
     kpis = [
-      { label: "Total PPPs",       value: d.total_ppps ?? "—",     sub: "" },
-      { label: "Finalizados",      value: d.finalizados ?? "—",    sub: "" },
-      { label: "Rascunho",         value: d.rascunho ?? "—",       sub: "" },
-      { label: "Sem PPP",          value: d.funcionarios_sem_ppp ?? "—", sub: "funcionários" },
+      { label: "Total PPPs",       value: totalPpp,                sub: "" },
+      { label: "Finalizados",      value: d.ppps_finalizados ?? "—", sub: "" },
+      { label: "Rascunho",         value: d.ppps_rascunho ?? "—",  sub: "" },
+      { label: "Sem PPP",          value: d.sem_ppp ?? "—",        sub: "funcionários" },
       { label: "Cobertura",        value: d.cobertura_pct ? d.cobertura_pct + "%" : "—", sub: "" },
     ];
   } else if (MODULO_ID === "laudos") {
-    badgeText = `${d.total ?? 0} laudos`;
+    const resumo = d.resumo_por_tipo || [];
+    const vigentes = resumo.filter(r => r.status_validade === "ok").length;
+    const vencidos = resumo.filter(r => r.status_validade === "vencido").length;
+    badgeText = `${d.total_laudos ?? 0} laudos`;
     kpis = [
-      { label: "Total Laudos",     value: d.total ?? "—",              sub: "" },
-      { label: "Vigentes",         value: d.vigentes ?? "—",           sub: "" },
-      { label: "Vencidos",         value: d.vencidos ?? "—",           sub: "", accent: "var(--red)" },
-      { label: "Vencendo (60d)",   value: d.alertas_vencimento ?? "—", sub: "", accent: "var(--amber)" },
-      { label: "Assinados",        value: d.assinados ?? "—",          sub: "" },
+      { label: "Total Laudos",     value: d.total_laudos ?? "—",            sub: "" },
+      { label: "Vigentes",         value: vigentes,                          sub: "" },
+      { label: "Vencidos",         value: vencidos,                          sub: "", accent: "var(--red)" },
+      { label: "Vencendo (60d)",   value: (d.alertas_atencao || []).length, sub: "", accent: "var(--amber)" },
+      { label: "Sem Laudo",        value: resumo.filter(r => r.status_validade === "sem_laudo").length, sub: "" },
     ];
   } else if (MODULO_ID === "laboratorio") {
     badgeText = `${d.total_resultados ?? 0} resultados`;
@@ -347,10 +351,10 @@ function renderMain(d) {
         <tbody>${ppps.map(p => `
           <tr>
             <td><strong>${p.funcionario_nome || "—"}</strong></td>
-            <td>${p.cargo_atual || "—"}</td>
+            <td>${p.cargo || "—"}</td>
             <td>${p.status === "finalizado" ? `<span class="badge b-ok">Finalizado</span>` : p.status === "rascunho" ? `<span class="badge b-warn">Rascunho</span>` : `<span class="badge b-muted">${p.status}</span>`}</td>
             <td>${(p.agentes_nocivos || []).length} agente(s)</td>
-            <td>${p.data_admissao || "—"}</td>
+            <td>${p.data_geracao || "—"}</td>
           </tr>`).join("")}
         </tbody>
       </table>`;
@@ -372,9 +376,9 @@ function renderMain(d) {
           <tr>
             <td><strong>${(l.tipo || "").toUpperCase()}</strong></td>
             <td>${l.responsavel_tecnico || "—"}</td>
-            <td>${l.data_vigencia_fim || "—"}</td>
+            <td>${l.data_vencimento || "—"}</td>
             <td>${l.status === "vigente" ? `<span class="badge b-ok">Vigente</span>` : l.status === "vencido" ? `<span class="badge b-danger">Vencido</span>` : `<span class="badge b-warn">${l.status}</span>`}</td>
-            <td>${l.assinado ? "✅" : "—"}</td>
+            <td>${l.status === "vigente" ? "✅" : "—"}</td>
           </tr>`).join("")}
         </tbody>
       </table>`;

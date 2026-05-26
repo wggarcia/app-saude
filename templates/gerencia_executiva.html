@@ -345,6 +345,13 @@ body {
           </div>
         </div>
 
+        <div class="card">
+          <div class="card-title">Decisão Assistida IA</div>
+          <div class="alert-list" id="iaInsights">
+            <div class="alert-item"><span class="alert-text">Analisando cenário operacional...</span></div>
+          </div>
+        </div>
+
       </div>
 
       <!-- sidebar -->
@@ -518,13 +525,37 @@ function renderGraficoExecutivo(items) {
     wrap.innerHTML = '<div class="sit-row"><span class="sit-label">Sem dados de gráfico no momento.</span><span class="sit-val">—</span></div>';
     return;
   }
+  function num(x) {
+    if (typeof x === "number" && Number.isFinite(x)) return x;
+    var s = String(x == null ? "" : x).trim().replace("%", "").replace(",", ".");
+    var n = parseFloat(s);
+    return Number.isFinite(n) ? n : 0;
+  }
   wrap.innerHTML = items.map(function(item){
-    var max = item.max && item.max > 0 ? item.max : 1;
-    var value = Number(item.value || 0);
+    var max = num(item.max);
+    if (max <= 0) max = 1;
+    var value = num(item.value);
+    if (value < 0) value = 0;
     var pct = Math.max(0, Math.min(100, (value / max) * 100));
     return '<div class="chart-row">'
       + '<div class="chart-meta"><span>' + item.label + '</span><strong>' + value + (item.suffix || "") + '</strong></div>'
       + '<div class="chart-track"><div class="chart-fill" style="width:' + pct + '%"></div></div>'
+      + '</div>';
+  }).join("");
+}
+
+function renderIaInsights(items) {
+  var wrap = document.getElementById("iaInsights");
+  if (!wrap) return;
+  if (!items || !items.length) {
+    wrap.innerHTML = '<div class="alert-item ok"><span class="alert-icon">🤖</span><span class="alert-text"><strong>IA sem pendências críticas</strong>Mantenha monitoramento diário e revisão semanal.</span></div>';
+    return;
+  }
+  wrap.innerHTML = items.map(function(item) {
+    var cls = item.nivel === "critico" ? "crit" : item.nivel === "atencao" ? "warn" : "ok";
+    return '<div class="alert-item ' + cls + '">'
+      + '<span class="alert-icon">' + (item.icone || "🤖") + '</span>'
+      + '<span class="alert-text"><strong>' + item.titulo + '</strong>' + item.acao + '</span>'
       + '</div>';
   }).join("");
 }
@@ -562,6 +593,11 @@ async function carregar() {
         { label: "Afastados", value: s.afastados||0, max: Math.max(s.total_funcionarios||1, 1) },
         { label: "ASO em alerta", value: s.aso_alertas||0, max: Math.max(s.total_funcionarios||1, 1) },
       ]);
+      renderIaInsights([
+        s.exames_vencidos > 0 ? {nivel: "critico", icone: "🧪", titulo: "Exames vencidos detectados", acao: "Priorize convocação imediata e bloqueie atividade crítica sem ASO válido."} : null,
+        s.treinamentos_vencidos > 0 ? {nivel: "atencao", icone: "🎓", titulo: "Treinamentos NR vencidos", acao: "Replaneje turmas em até 7 dias para reduzir risco legal."} : null,
+        {nivel: "ok", icone: "📈", titulo: "Foco executivo da semana", acao: "Acompanhe afastamentos abertos e gere plano preventivo por setor."},
+      ].filter(Boolean));
 
     } else if (SETOR === "hospital") {
       var h = d.hospital || {};
@@ -589,6 +625,11 @@ async function carregar() {
         { label: "Internações ativas", value: h.internacoes_ativas||0, max: Math.max(h.total_leitos||1, 1) },
         { label: "Leitos disponíveis", value: h.leitos_disponiveis||0, max: Math.max(h.total_leitos||1, 1) },
       ]);
+      renderIaInsights([
+        taxa >= 85 ? {nivel: "critico", icone: "🏥", titulo: "Ocupação acima do limite", acao: "Ative contingência de leitos e acelere fluxo de alta segura."} : null,
+        (h.leitos_manutencao||0) > 0 ? {nivel: "atencao", icone: "🛠", titulo: "Leitos em manutenção", acao: "Revisar SLA de manutenção para evitar pressão assistencial."} : null,
+        {nivel: "ok", icone: "🧠", titulo: "Próxima decisão recomendada", acao: "Cruze triagem Manchester com internamentos para ajustar escala médica."},
+      ].filter(Boolean));
 
     } else if (SETOR === "farmacia") {
       var f = d.farmacia || {};
@@ -615,6 +656,11 @@ async function carregar() {
         { label: "Estoque crítico", value: f.estoque_critico||0, max: Math.max((f.estoque_critico||0) + (f.estoque_alerta||0), 1) },
         { label: "Lotes vencendo", value: f.lotes_vencendo_30d||0, max: Math.max(f.lotes_vencendo_30d||1, 1) },
       ]);
+      renderIaInsights([
+        (f.estoque_critico||0) > 0 ? {nivel: "critico", icone: "📦", titulo: "Risco de ruptura de estoque", acao: "Priorize compra dos itens críticos e redistribuição entre unidades."} : null,
+        (f.lotes_vencendo_30d||0) > 0 ? {nivel: "atencao", icone: "⏳", titulo: "Lotes próximos do vencimento", acao: "Dispare campanha de giro e ajuste de sugestão de compra."} : null,
+        {nivel: "ok", icone: "💡", titulo: "Ação comercial orientada", acao: "Acompanhe itens de maior saída e ajuste margem por categoria."},
+      ].filter(Boolean));
 
     } else if (SETOR === "governo") {
       var g = d.governo || {};
@@ -641,6 +687,11 @@ async function carregar() {
         { label: "Metas atingidas", value: g.metas_atingidas||0, max: Math.max(g.total_indicadores||1, 1) },
         { label: "Planos atrasados", value: g.planos_atrasados||0, max: Math.max((g.planos_atrasados||0)+(g.planos_andamento||0), 1) },
       ]);
+      renderIaInsights([
+        (g.planos_atrasados||0) > 0 ? {nivel: "atencao", icone: "📋", titulo: "Planos de ação em atraso", acao: "Repriorize responsáveis e estabeleça checkpoint quinzenal."} : null,
+        (a.criticos||0) > 0 ? {nivel: "critico", icone: "🚨", titulo: "Alertas epidemiológicos críticos", acao: "Ative protocolo de resposta e comunicação à população."} : null,
+        {nivel: "ok", icone: "🏛️", titulo: "Foco de governança", acao: "Manter rotina de prestação de contas e auditoria de indicadores."},
+      ].filter(Boolean));
 
     } else if (SETOR === "plano_saude") {
       var ps = d.plano_saude || {};
@@ -667,6 +718,11 @@ async function carregar() {
         { label: "Guias pendentes", value: ps.guias_pendentes||0, max: Math.max((ps.guias_pendentes||0)+(ps.sinistros_analise||0), 1) },
         { label: "Reembolsos pendentes", value: ps.reembolsos_pendentes||0, max: Math.max(ps.reembolsos_pendentes||1, 1) },
       ]);
+      renderIaInsights([
+        (ps.reembolsos_pendentes||0) > 0 ? {nivel: "critico", icone: "💳", titulo: "Fila de reembolso elevada", acao: "Ajuste capacidade operacional para manter SLA ANS."} : null,
+        (ps.guias_pendentes||0) > 0 ? {nivel: "atencao", icone: "📝", titulo: "Guias aguardando autorização", acao: "Aplicar triagem automática por criticidade de procedimento."} : null,
+        {nivel: "ok", icone: "📊", titulo: "Diretriz executiva", acao: "Monitorar sinistralidade por contrato e renegociar rede de maior custo."},
+      ].filter(Boolean));
     }
 
     renderAlertas(a);
@@ -678,6 +734,7 @@ async function carregar() {
     document.getElementById("alertList").innerHTML =
       '<div class="alert-item warn"><span class="alert-icon">⚠️</span>'
       + '<span class="alert-text">Erro ao conectar com o servidor.</span></div>';
+    renderIaInsights([]);
   }
 }
 

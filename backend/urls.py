@@ -144,6 +144,7 @@ from api.views_esocial_sst import (
     api_esocial_transmitir,
     api_esocial_transmitir_pendentes,
     api_esocial_certificado,
+    api_esocial_diagnostico,
 )
 from api.views_alertas import api_alertas, alertas_page
 from api.views_executive import api_executive_dashboard, executive_dashboard_page
@@ -386,7 +387,7 @@ from api.views_saude_ocupacional import (
     sst_saude_comunicacao_page,
     api_wellness_resumo, api_wellness_por_setor, api_wellness_alertas,
     api_conteudos_listar, api_conteudos_criar, api_conteudos_remover,
-    api_conflitos_listar, api_conflito_atualizar,
+    api_conflitos_listar, api_conflito_atualizar, api_conflito_registrar,
     api_colab_conteudos, api_colab_conflito_registrar,
     api_colab_checkin_diario, api_colab_checkin_semanal,
 )
@@ -800,6 +801,7 @@ urlpatterns = [
     path('api/sst/conteudos/criar/', api_conteudos_criar),
     path('api/sst/conteudos/<int:conteudo_id>/remover/', api_conteudos_remover),
     path('api/sst/conflitos/', api_conflitos_listar),
+    path('api/sst/conflitos/registrar/', api_conflito_registrar),
     path('api/sst/conflitos/<int:conflito_id>/atualizar/', api_conflito_atualizar),
     path('api/colab/<str:codigo>/conteudos/', api_colab_conteudos),
     path('api/colab/<str:codigo>/conflito/', api_colab_conflito_registrar),
@@ -1056,6 +1058,7 @@ urlpatterns = [
     path('api/sst/esocial/eventos/<int:evento_id>/transmitir/', api_esocial_transmitir),
     path('api/sst/esocial/transmitir-pendentes/', api_esocial_transmitir_pendentes),
     path('api/sst/esocial/certificado/', api_esocial_certificado),
+    path('api/sst/esocial/diagnostico/', api_esocial_diagnostico),
     path('api/sst/esocial/eventos/<int:evento_id>/transmitido/', api_esocial_marcar_transmitido),
     path('api/sst/cats/<int:cat_id>/esocial/', api_esocial_registrar_cat),
     path('api/sst/asos/<int:aso_id>/esocial/', api_esocial_registrar_aso),

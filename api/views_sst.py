@@ -633,6 +633,17 @@ def api_cats(request):
         return _sst_nao_autorizado()
 
     if request.method == "GET":
+        s2210_map = {}
+        for ev in (
+            eSocialEventoSST.objects
+            .filter(empresa=empresa, tipo_evento="S-2210")
+            .exclude(referencia="")
+            .values("id", "referencia", "status", "protocolo")
+            .order_by("-id")
+        ):
+            ref = str(ev.get("referencia") or "").strip()
+            if ref and ref not in s2210_map:
+                s2210_map[ref] = ev
         qs = (
             CATOcupacional.objects
             .filter(empresa=empresa)
@@ -663,9 +674,10 @@ def api_cats(request):
                     "dias_afastamento": c.dias_afastamento,
                     "testemunha_nome": getattr(c, "testemunha_nome", ""),
                     "testemunha_telefone": getattr(c, "testemunha_telefone", ""),
-                    "status_esocial": c.status_esocial,
+                    "status_esocial": s2210_map.get(str(c.id), {}).get("status", c.status_esocial),
                     "numero_cat": c.numero_cat,
-                    "protocolo_esocial": c.protocolo_esocial,
+                    "protocolo_esocial": s2210_map.get(str(c.id), {}).get("protocolo") or c.protocolo_esocial,
+                    "evento_id": s2210_map.get(str(c.id), {}).get("id"),
                 }
                 for c in page
             ],
