@@ -197,7 +197,11 @@ async function loadMain() {
 }
 function _mostrarErroModulo(msg) {
   const strip = document.getElementById("kpiStrip");
-  if (strip) strip.innerHTML = '<div style="padding:12px;color:#e57373">' + msg + '</div>';
+  const isLock = msg.indexOf("🔒") !== -1;
+  const btnUpgrade = isLock
+    ? '<button onclick="window.SolusCRT&&window.SolusCRT.upgrade.abrir()" style="margin-left:10px;padding:6px 16px;border-radius:7px;border:none;background:linear-gradient(135deg,#00c9a7,#0096ff);color:#041018;font-size:.75rem;font-weight:800;cursor:pointer">Fazer Upgrade →</button>'
+    : "";
+  if (strip) strip.innerHTML = '<div style="padding:12px;color:' + (isLock ? "var(--amber,#f59e0b)" : "#e57373") + '">' + msg + btnUpgrade + '</div>';
   else console.error(msg);
 }
 

@@ -1,0 +1,447 @@
+{% comment %}
+Partial: upgrade_modal.html
+Incluir em qualquer template de gerência.
+Ativa via JS: window.SolusCRT.upgrade.abrir(featureLabel, planoAtual)
+Ou automaticamente quando qualquer fetch retorna {upgrade_necessario: true}
+{% endcomment %}
+
+<!-- ── Overlay do modal ──────────────────────────────────────────────── -->
+<div id="upgradeModalOverlay" style="
+  display:none;position:fixed;inset:0;z-index:9000;
+  background:rgba(0,0,0,.72);backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;padding:16px;
+" onclick="if(event.target===this)_upgradeFechar()">
+
+  <div id="upgradeModalBox" style="
+    background:#0d1e28;border:1px solid rgba(0,201,167,.18);
+    border-radius:20px;width:100%;max-width:860px;max-height:90vh;
+    overflow-y:auto;position:relative;
+    box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(0,201,167,.08);
+  ">
+
+    <!-- ── Cabeçalho ───────────────────────────────────────────────────── -->
+    <div style="
+      padding:24px 28px 0;
+      background:linear-gradient(135deg,rgba(0,201,167,.07),rgba(82,166,255,.05));
+      border-bottom:1px solid rgba(255,255,255,.06);
+    ">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px">
+        <div>
+          <div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#00c9a7;margin-bottom:6px">
+            SolusCRT · Upgrade de Plano
+          </div>
+          <div style="font-size:1.35rem;font-weight:900;color:#e2eeff;line-height:1.2" id="upgradeModalTitulo">
+            Desbloqueie mais recursos
+          </div>
+          <div style="font-size:.82rem;color:#7b90b0;margin-top:5px" id="upgradeModalSub">
+            Selecione o plano ideal e comece a usar imediatamente após a confirmação do pagamento.
+          </div>
+        </div>
+        <button onclick="_upgradeFechar()" style="
+          background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+          border-radius:8px;color:#7b90b0;font-size:1.1rem;cursor:pointer;
+          width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;
+        ">✕</button>
+      </div>
+
+      <!-- ── Plano atual ─────────────────────────────────────────────── -->
+      <div style="
+        display:inline-flex;align-items:center;gap:8px;
+        background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+        border-radius:8px;padding:6px 12px;margin-bottom:20px;font-size:.78rem;
+      ">
+        <span style="color:#7b90b0">Plano atual:</span>
+        <span id="upgradeModalPlanoAtual" style="color:#e2eeff;font-weight:700">—</span>
+      </div>
+    </div>
+
+    <!-- ── Step 1: Escolha do plano ─────────────────────────────────── -->
+    <div id="upgradeStep1" style="padding:24px 28px">
+
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7b90b0;margin-bottom:14px">
+        Escolha o plano
+      </div>
+
+      <!-- Cards de plano -->
+      <div id="upgradePlanosGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px">
+        <div style="color:#7b90b0;font-size:.82rem;padding:20px;text-align:center">
+          <div style="width:28px;height:28px;border:2px solid rgba(255,255,255,.1);border-top-color:#00c9a7;border-radius:50%;animation:upgSpin .7s linear infinite;margin:0 auto 10px"></div>
+          Carregando planos...
+        </div>
+      </div>
+
+      <!-- Ciclo -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+        <span style="font-size:.78rem;color:#7b90b0;font-weight:600">Ciclo de cobrança:</span>
+        <div style="display:flex;gap:6px">
+          <button id="upgBtnMensal" onclick="_upgradeCiclo('mensal')" style="
+            padding:6px 14px;border-radius:7px;font-size:.75rem;font-weight:700;
+            cursor:pointer;border:1px solid rgba(0,201,167,.5);
+            background:rgba(0,201,167,.15);color:#00c9a7;
+          ">Mensal</button>
+          <button id="upgBtnAnual" onclick="_upgradeCiclo('anual')" style="
+            padding:6px 14px;border-radius:7px;font-size:.75rem;font-weight:700;
+            cursor:pointer;border:1px solid rgba(255,255,255,.12);
+            background:rgba(255,255,255,.04);color:#7b90b0;
+          ">
+            Anual
+            <span style="
+              background:rgba(34,197,94,.15);color:#4ade80;
+              border-radius:4px;padding:1px 5px;font-size:.65rem;
+              margin-left:4px;font-weight:800;
+            ">−17%</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Resumo selecionado -->
+      <div id="upgradeResumo" style="display:none;
+        background:rgba(0,201,167,.06);border:1px solid rgba(0,201,167,.2);
+        border-radius:12px;padding:16px;margin-bottom:20px;
+      ">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:.7rem;color:#7b90b0;font-weight:600;text-transform:uppercase;letter-spacing:.07em">Selecionado</div>
+            <div id="upgradeResumoNome" style="font-size:1rem;font-weight:800;color:#e2eeff;margin-top:2px">—</div>
+          </div>
+          <div style="text-align:right">
+            <div id="upgradeResumoValor" style="font-size:1.4rem;font-weight:900;color:#00c9a7">—</div>
+            <div id="upgradeResumoCiclo" style="font-size:.72rem;color:#7b90b0;margin-top:1px">por mês</div>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="_upgradeProxPasso()" id="upgBtnProximo" style="
+        width:100%;padding:13px;border-radius:10px;border:none;
+        background:linear-gradient(135deg,#00c9a7,#0096ff);
+        color:#041018;font-size:.88rem;font-weight:900;cursor:pointer;
+        opacity:.4;transition:opacity .2s;
+      " disabled>Continuar →</button>
+    </div>
+
+    <!-- ── Step 2: Dados + aceite + pagamento ────────────────────────── -->
+    <div id="upgradeStep2" style="display:none;padding:24px 28px">
+
+      <button onclick="_upgradeVoltarPasso()" style="
+        background:none;border:none;color:#7b90b0;font-size:.78rem;
+        cursor:pointer;margin-bottom:16px;padding:0;display:flex;align-items:center;gap:5px;
+      ">← Voltar</button>
+
+      <div id="upgradeStep2Resumo" style="
+        background:rgba(0,201,167,.06);border:1px solid rgba(0,201,167,.2);
+        border-radius:12px;padding:14px;margin-bottom:20px;
+        display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+      ">
+        <div>
+          <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:#00c9a7;font-weight:800">Plano escolhido</div>
+          <div id="s2Nome" style="font-size:.95rem;font-weight:800;color:#e2eeff;margin-top:3px">—</div>
+        </div>
+        <div style="text-align:right">
+          <div id="s2Valor" style="font-size:1.2rem;font-weight:900;color:#00c9a7">—</div>
+          <div id="s2Ciclo" style="font-size:.7rem;color:#7b90b0;margin-top:1px">—</div>
+        </div>
+      </div>
+
+      <!-- CPF/CNPJ -->
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(226,238,255,.4);margin-bottom:6px">
+          CPF ou CNPJ do responsável financeiro *
+        </label>
+        <input id="upgCpfCnpj" type="text" placeholder="Ex.: 12.345.678/0001-00" maxlength="18"
+          oninput="_upgFmtCpfCnpj(this)"
+          style="
+            width:100%;padding:10px 13px;border-radius:8px;
+            border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);
+            color:#e2eeff;font-size:.88rem;outline:none;font-family:inherit;
+          "
+          onfocus="this.style.borderColor='#00c9a7'"
+          onblur="this.style.borderColor='rgba(255,255,255,.1)'"
+        >
+        <div id="upgCpfErro" style="color:#f87171;font-size:.72rem;margin-top:4px;display:none"></div>
+      </div>
+
+      <!-- Termos -->
+      <label style="
+        display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+        background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
+        border-radius:10px;padding:14px;margin-bottom:20px;
+      ">
+        <input type="checkbox" id="upgAceiteTermos" style="margin-top:2px;accent-color:#00c9a7;width:16px;height:16px;flex-shrink:0" onchange="_upgradeAtualizarBotao()">
+        <span style="font-size:.8rem;color:#7b90b0;line-height:1.5">
+          Declaro que sou o responsável legal pela contratação e autorizo o débito do valor acima no documento informado.
+          Estou ciente que o plano será ativado após a confirmação do pagamento e que os Termos de Uso da SolusCRT se aplicam a esta contratação.
+        </span>
+      </label>
+
+      <!-- Erro geral -->
+      <div id="upgErroGeral" style="
+        display:none;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);
+        border-radius:8px;padding:10px 14px;color:#f87171;font-size:.8rem;margin-bottom:14px;
+      "></div>
+
+      <!-- Botão pagar -->
+      <button id="upgBtnPagar" onclick="_upgradeIrPagar()" style="
+        width:100%;padding:15px;border-radius:12px;border:none;
+        background:linear-gradient(135deg,#00c9a7,#0096ff);
+        color:#041018;font-size:.92rem;font-weight:900;cursor:pointer;
+        opacity:.4;transition:opacity .2s;display:flex;align-items:center;justify-content:center;gap:8px;
+      " disabled>
+        <span id="upgBtnPagarLabel">🔒 Ir para o pagamento seguro</span>
+      </button>
+
+      <div style="
+        display:flex;align-items:center;justify-content:center;gap:8px;
+        margin-top:12px;font-size:.72rem;color:#7b90b0;
+      ">
+        <span>🛡️</span>
+        <span>Pagamento 100% seguro via Asaas · Pix, Cartão ou Boleto</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+@keyframes upgSpin{to{transform:rotate(360deg)}}
+</style>
+
+<script>
+(function(){
+  // ── Estado interno ──────────────────────────────────────────────────────
+  var _upgState = {
+    opcoes: [],
+    planoAtual: {},
+    ciclo: 'mensal',
+    planoSelecionado: null,
+    passo: 1,
+    carregando: false,
+  };
+
+  // ── Abre o modal ────────────────────────────────────────────────────────
+  function abrir(featureLabel, planoAtualLabel) {
+    var ov = document.getElementById('upgradeModalOverlay');
+    ov.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Reseta estado
+    _upgState.passo = 1;
+    _upgState.planoSelecionado = null;
+    _upgState.ciclo = 'mensal';
+    document.getElementById('upgradeStep1').style.display = 'block';
+    document.getElementById('upgradeStep2').style.display = 'none';
+    document.getElementById('upgradeResumo').style.display = 'none';
+    document.getElementById('upgBtnProximo').disabled = true;
+    document.getElementById('upgBtnProximo').style.opacity = '.4';
+    document.getElementById('upgradeResumoNome').textContent = '—';
+    document.getElementById('upgCpfCnpj').value = '';
+    document.getElementById('upgAceiteTermos').checked = false;
+    document.getElementById('upgBtnPagar').disabled = true;
+    document.getElementById('upgBtnPagar').style.opacity = '.4';
+    document.getElementById('upgErroGeral').style.display = 'none';
+
+    if (featureLabel) {
+      document.getElementById('upgradeModalTitulo').textContent = 'Desbloqueie: ' + featureLabel;
+    } else {
+      document.getElementById('upgradeModalTitulo').textContent = 'Desbloqueie mais recursos';
+    }
+
+    _carregarOpcoes();
+  }
+
+  function fechar() {
+    document.getElementById('upgradeModalOverlay').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  // ── Carrega planos via API ──────────────────────────────────────────────
+  function _carregarOpcoes() {
+    document.getElementById('upgradePlanosGrid').innerHTML = '<div style="color:#7b90b0;font-size:.82rem;padding:20px;text-align:center"><div style="width:28px;height:28px;border:2px solid rgba(255,255,255,.1);border-top-color:#00c9a7;border-radius:50%;animation:upgSpin .7s linear infinite;margin:0 auto 10px"></div>Carregando planos...</div>';
+
+    var token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token') || '';
+    fetch('/api/plano/upgrade/opcoes', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      _upgState.opcoes = d.opcoes || [];
+      _upgState.planoAtual = d.plano_atual || {};
+      document.getElementById('upgradeModalPlanoAtual').textContent = d.plano_atual ? d.plano_atual.label : '—';
+      _renderizarCards();
+    })
+    .catch(function(){
+      document.getElementById('upgradePlanosGrid').innerHTML = '<div style="color:#f87171;font-size:.82rem;padding:20px;text-align:center">⚠️ Erro ao carregar planos. Tente novamente.</div>';
+    });
+  }
+
+  function _renderizarCards() {
+    var ciclo = _upgState.ciclo;
+    var opcoes = _upgState.opcoes;
+    if (!opcoes.length) {
+      document.getElementById('upgradePlanosGrid').innerHTML = '<div style="color:#7b90b0;font-size:.82rem;padding:20px;text-align:center">Seu plano já está no nível máximo disponível.</div>';
+      return;
+    }
+
+    var html = opcoes.map(function(p){
+      var valor = ciclo === 'anual' ? p.anual : p.mensal;
+      var valorLabel = 'R$ ' + (valor/1).toLocaleString('pt-BR', {minimumFractionDigits:2});
+      var cicloLabel = ciclo === 'anual' ? '/ano' : '/mês';
+      var destaque = p.destaque;
+      var selecionado = _upgState.planoSelecionado && _upgState.planoSelecionado.codigo === p.codigo;
+
+      var borderColor = selecionado ? '#00c9a7' : (destaque ? 'rgba(0,201,167,.3)' : 'rgba(255,255,255,.07)');
+      var bg = selecionado ? 'rgba(0,201,167,.08)' : (destaque ? 'rgba(0,201,167,.04)' : 'rgba(255,255,255,.02)');
+
+      var includedHtml = p.features_incluidas.slice(0,5).map(function(f){
+        return '<div style="display:flex;align-items:baseline;gap:6px;font-size:.75rem;color:#7b90b0;margin-bottom:3px"><span style="color:#4ade80;flex-shrink:0">✓</span>' + f + '</div>';
+      }).join('');
+      if (p.features_incluidas.length > 5) {
+        includedHtml += '<div style="font-size:.72rem;color:#7b90b0;margin-top:4px">+' + (p.features_incluidas.length - 5) + ' mais recursos</div>';
+      }
+
+      return '<div onclick="_upgradeEscolherPlano(\'' + p.codigo + '\')" style="' +
+        'background:' + bg + ';border:2px solid ' + borderColor + ';border-radius:14px;' +
+        'padding:16px;cursor:pointer;transition:all .15s;position:relative;' +
+        '" ' + (destaque ? 'id="upgCard_' + p.codigo + '_destaque"' : '') + '>' +
+
+        (destaque ? '<div style="position:absolute;top:-1px;right:14px;background:linear-gradient(135deg,#00c9a7,#0096ff);color:#041018;font-size:.6rem;font-weight:900;padding:3px 9px;border-radius:0 0 7px 7px;text-transform:uppercase;letter-spacing:.07em">Recomendado</div>' : '') +
+
+        '<div style="font-size:.78rem;font-weight:800;color:#e2eeff;margin-bottom:4px">' + p.label + '</div>' +
+        '<div style="font-size:1.3rem;font-weight:900;color:#00c9a7;margin-bottom:2px">' + valorLabel + '</div>' +
+        '<div style="font-size:.65rem;color:#7b90b0;margin-bottom:12px">' + cicloLabel + ' · ' + p.usuarios + ' usuários · ' + (p.funcionarios === 999999 ? 'ilimitado' : p.funcionarios) + ' funcionários</div>' +
+        includedHtml +
+        (selecionado ? '<div style="margin-top:10px;background:rgba(0,201,167,.15);border-radius:6px;padding:4px;text-align:center;font-size:.7rem;font-weight:800;color:#00c9a7">✓ Selecionado</div>' : '') +
+        '</div>';
+    }).join('');
+
+    document.getElementById('upgradePlanosGrid').innerHTML = html;
+  }
+
+  window._upgradeEscolherPlano = function(codigo) {
+    _upgState.planoSelecionado = _upgState.opcoes.find(function(p){ return p.codigo === codigo; });
+    _renderizarCards();
+    _atualizarResumo();
+    document.getElementById('upgBtnProximo').disabled = false;
+    document.getElementById('upgBtnProximo').style.opacity = '1';
+  };
+
+  function _atualizarResumo() {
+    var p = _upgState.planoSelecionado;
+    if (!p) return;
+    var ciclo = _upgState.ciclo;
+    var valor = ciclo === 'anual' ? p.anual : p.mensal;
+    var valorLabel = 'R$ ' + (valor/1).toLocaleString('pt-BR', {minimumFractionDigits:2});
+    document.getElementById('upgradeResumoNome').textContent = p.label;
+    document.getElementById('upgradeResumoValor').textContent = valorLabel;
+    document.getElementById('upgradeResumoCiclo').textContent = ciclo === 'anual' ? 'por ano (cobrado uma vez)' : 'por mês (renovação automática)';
+    document.getElementById('upgradeResumo').style.display = 'block';
+  }
+
+  window._upgradeCiclo = function(ciclo) {
+    _upgState.ciclo = ciclo;
+    document.getElementById('upgBtnMensal').style.background = ciclo === 'mensal' ? 'rgba(0,201,167,.15)' : 'rgba(255,255,255,.04)';
+    document.getElementById('upgBtnMensal').style.color = ciclo === 'mensal' ? '#00c9a7' : '#7b90b0';
+    document.getElementById('upgBtnMensal').style.borderColor = ciclo === 'mensal' ? 'rgba(0,201,167,.5)' : 'rgba(255,255,255,.12)';
+    document.getElementById('upgBtnAnual').style.background = ciclo === 'anual' ? 'rgba(0,201,167,.15)' : 'rgba(255,255,255,.04)';
+    document.getElementById('upgBtnAnual').style.color = ciclo === 'anual' ? '#00c9a7' : '#7b90b0';
+    document.getElementById('upgBtnAnual').style.borderColor = ciclo === 'anual' ? 'rgba(0,201,167,.5)' : 'rgba(255,255,255,.12)';
+    _renderizarCards();
+    if (_upgState.planoSelecionado) _atualizarResumo();
+  };
+
+  window._upgradeProxPasso = function() {
+    if (!_upgState.planoSelecionado) return;
+    _upgState.passo = 2;
+    var p = _upgState.planoSelecionado;
+    var ciclo = _upgState.ciclo;
+    var valor = ciclo === 'anual' ? p.anual : p.mensal;
+    document.getElementById('s2Nome').textContent = p.label;
+    document.getElementById('s2Valor').textContent = 'R$ ' + (valor/1).toLocaleString('pt-BR', {minimumFractionDigits:2});
+    document.getElementById('s2Ciclo').textContent = ciclo === 'anual' ? 'cobrado anualmente' : 'cobrado mensalmente';
+    document.getElementById('upgradeStep1').style.display = 'none';
+    document.getElementById('upgradeStep2').style.display = 'block';
+  };
+
+  window._upgradeVoltarPasso = function() {
+    _upgState.passo = 1;
+    document.getElementById('upgradeStep2').style.display = 'none';
+    document.getElementById('upgradeStep1').style.display = 'block';
+  };
+
+  window._upgFmtCpfCnpj = function(input) {
+    var v = input.value.replace(/\D/g,'');
+    if (v.length <= 11) {
+      v = v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+    } else {
+      v = v.replace(/^(\d{2})(\d)/,'$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d)/,'.$1/$2').replace(/(\d{4})(\d)/,'$1-$2');
+    }
+    input.value = v;
+    window._upgradeAtualizarBotao();
+  };
+
+  window._upgradeAtualizarBotao = function() {
+    var cpf = document.getElementById('upgCpfCnpj').value.replace(/\D/g,'');
+    var aceite = document.getElementById('upgAceiteTermos').checked;
+    var ok = (cpf.length === 11 || cpf.length === 14) && aceite;
+    document.getElementById('upgBtnPagar').disabled = !ok;
+    document.getElementById('upgBtnPagar').style.opacity = ok ? '1' : '.4';
+    document.getElementById('upgCpfErro').style.display = 'none';
+  };
+
+  window._upgradeIrPagar = function() {
+    if (_upgState.carregando) return;
+    var cpf = document.getElementById('upgCpfCnpj').value.replace(/\D/g,'');
+    if (cpf.length !== 11 && cpf.length !== 14) {
+      document.getElementById('upgCpfErro').textContent = 'CPF deve ter 11 dígitos ou CNPJ 14 dígitos.';
+      document.getElementById('upgCpfErro').style.display = 'block';
+      return;
+    }
+    if (!document.getElementById('upgAceiteTermos').checked) return;
+    if (!_upgState.planoSelecionado) return;
+
+    _upgState.carregando = true;
+    document.getElementById('upgBtnPagarLabel').textContent = 'Processando...';
+    document.getElementById('upgBtnPagar').disabled = true;
+    document.getElementById('upgErroGeral').style.display = 'none';
+
+    var token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token') || '';
+    fetch('/api/plano/upgrade/checkout', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pacote_codigo: _upgState.planoSelecionado.codigo,
+        ciclo: _upgState.ciclo,
+        cpf_cnpj: cpf,
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      _upgState.carregando = false;
+      if (d.ok && d.checkout_url) {
+        // Redireciona para o checkout Asaas
+        window.location.href = d.checkout_url;
+      } else {
+        document.getElementById('upgErroGeral').textContent = d.erro || 'Erro ao processar pagamento. Tente novamente.';
+        document.getElementById('upgErroGeral').style.display = 'block';
+        document.getElementById('upgBtnPagarLabel').textContent = '🔒 Ir para o pagamento seguro';
+        document.getElementById('upgBtnPagar').disabled = false;
+        document.getElementById('upgBtnPagar').style.opacity = '1';
+      }
+    })
+    .catch(function(){
+      _upgState.carregando = false;
+      document.getElementById('upgErroGeral').textContent = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      document.getElementById('upgErroGeral').style.display = 'block';
+      document.getElementById('upgBtnPagarLabel').textContent = '🔒 Ir para o pagamento seguro';
+      document.getElementById('upgBtnPagar').disabled = false;
+      document.getElementById('upgBtnPagar').style.opacity = '1';
+    });
+  };
+
+  window._upgradeFechar = fechar;
+
+  // ── API pública global ──────────────────────────────────────────────────
+  window.SolusCRT = window.SolusCRT || {};
+  window.SolusCRT.upgrade = { abrir: abrir, fechar: fechar };
+
+})();
+</script>

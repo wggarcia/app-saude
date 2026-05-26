@@ -298,6 +298,9 @@ async function carregarResumo() {
 }
 function _mostrarErroResumo(msg) {
   ['kpiEscalas','kpiEmb','kpiFolg'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
+  if (msg.indexOf("🔒") !== -1 && window.SolusCRT && window.SolusCRT.upgrade) {
+    window.SolusCRT.upgrade.abrir();
+  }
   console.error(msg);
 }
 
@@ -510,5 +513,7 @@ async function atribuirColaborador() {
 carregarResumo();
 carregarEscalas();
 </script>
+
+{% include "partials/upgrade_modal.html" %}
 </body>
 </html>

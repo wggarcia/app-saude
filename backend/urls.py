@@ -509,6 +509,7 @@ from api.views_pagamento import (
     planos_publicos,
     api_plano_features,
 )
+from api.views_upgrade import api_upgrade_opcoes, api_upgrade_checkout
 from api.views_relatorios import (
     relatorio_pdf_funcionarios,
     relatorio_pdf_asos,
@@ -1332,6 +1333,10 @@ urlpatterns = [
     path('api/funcionario/comunicados', funcionario_comunicados),
     path('api/funcionario/comunicados/<int:comunicado_id>/lido', funcionario_comunicado_lido),
     path('api/funcionario/psicossocial/ativa/', funcionario_psicossocial_ativa),
+
+    # ── Upgrade self-service ──────────────────────────────────────────────────
+    path('api/plano/upgrade/opcoes', api_upgrade_opcoes),
+    path('api/plano/upgrade/checkout', api_upgrade_checkout),
 
     # ── Trial / Self-service Onboarding ──────────────────────────────────────
     path('api/gestao/trial', api_trial_status),

@@ -396,6 +396,20 @@ body {
             <a class="cfg-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener">🖥️ Plataforma TI <span>↗</span></a>
             <a class="cfg-link" href="/sala-decisao-ia/">🤖 Sala de Decisão IA <span>›</span></a>
           </div>
+          <!-- Upgrade de plano self-service -->
+          <div style="padding:12px 0 0">
+            <button onclick="window.SolusCRT&&window.SolusCRT.upgrade.abrir()" style="
+              display:flex;align-items:center;justify-content:center;gap:7px;
+              width:100%;padding:11px 14px;border-radius:10px;border:1px solid rgba(0,201,167,.35);
+              background:linear-gradient(135deg,rgba(0,201,167,.12),rgba(82,166,255,.08));
+              color:#00c9a7;font-size:.8rem;font-weight:800;cursor:pointer;
+              transition:all .15s;
+            "
+            onmouseover="this.style.background='linear-gradient(135deg,rgba(0,201,167,.2),rgba(82,166,255,.15))'"
+            onmouseout="this.style.background='linear-gradient(135deg,rgba(0,201,167,.12),rgba(82,166,255,.08))'">
+              ⚡ Upgrade de Plano
+            </button>
+          </div>
         </div>
 
       </div>
@@ -611,5 +625,7 @@ async function carregar() {
 
 carregar();
 </script>
+
+{% include "partials/upgrade_modal.html" %}
 </body>
 </html>

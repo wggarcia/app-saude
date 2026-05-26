@@ -251,9 +251,11 @@ async function carregarRelatorio() {
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
       let msg;
-      if (r.status === 403 && err.upgrade_necessario)
-        msg = "🔒 Funcionalidade não disponível no seu plano atual.";
-      else if (r.status === 401)
+      if (r.status === 403 && err.upgrade_necessario) {
+        document.getElementById('geradoEm').innerHTML = '🔒 Funcionalidade não disponível no seu plano atual. <button onclick="window.SolusCRT&&window.SolusCRT.upgrade.abrir(\'Relatórios SST Avançados\')" style="margin-left:10px;padding:6px 14px;border-radius:7px;border:none;background:linear-gradient(135deg,#00c9a7,#0096ff);color:#041018;font-size:.75rem;font-weight:800;cursor:pointer">Fazer Upgrade →</button>';
+        return;
+      }
+      if (r.status === 401)
         msg = "⚠️ Sessão expirada. Faça login novamente.";
       else
         msg = "⚠️ Erro ao carregar dados (" + r.status + "). Tente recarregar a página.";
