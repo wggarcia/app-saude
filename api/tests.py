@@ -102,10 +102,12 @@ class PlanosSaasTests(TestCase):
 
     def test_template_pagamento_entrega_valores_js_sem_virgula(self):
         html = render_to_string("pagamento.html", {"pacotes": pacotes_por_setor(incluir_governo=False)})
+        pacote_farmacia = PACOTES_SAAS["farmacia_rede_regional"]
+        valor_anual = f'{pacote_farmacia["anual"]:.6f}'
 
         self.assertIn('value="farmacia_rede_regional"', html)
-        self.assertIn('data-anual="60000.000000"', html)
-        self.assertNotIn('data-anual="60000,000000"', html)
+        self.assertIn(f'data-anual="{valor_anual}"', html)
+        self.assertNotIn(f'data-anual="{valor_anual.replace(".", ",")}"', html)
 
 
 class AuthDeviceTests(TestCase):
