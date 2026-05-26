@@ -517,3 +517,129 @@ def funcionario_dashboard(request):
             funcionario=func, lida=False
         ).count(),
     })
+
+
+# ── Comunicados SST ────────────────────────────────────────────────────────
+
+def funcionario_comunicados(request):
+    """GET /api/funcionario/comunicados — lista comunicados da empresa."""
+    if request.method != "GET":
+        return JsonResponse({"erro": "Use GET"}, status=405)
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+
+    from .models import ConteudoSSTPublicado
+
+    comunicados = ConteudoSSTPublicado.objects.filter(
+        empresa=func.empresa,
+        tipo=ConteudoSSTPublicado.TIPO_COMUNICADO,
+        ativo=True,
+    ).order_by("-publicado_em")[:50]
+
+    return JsonResponse({
+        "comunicados": [
+            {
+                "id": c.id,
+                "titulo": c.titulo,
+                "corpo": c.descricao,
+                "tipo": c.tipo,
+                "link": c.url_conteudo or "",
+                "remetente": c.publicado_por or "Empresa",
+                "criado_em": c.publicado_em.strftime("%Y-%m-%d %H:%M"),
+                # Comunicados do SaaS não têm campo lido por funcionário —
+                # retornamos False e deixamos o app marcar localmente
+                "lido": False,
+            }
+            for c in comunicados
+        ]
+    })
+
+
+@csrf_exempt
+def funcionario_comunicado_lido(request, comunicado_id):
+    """POST /api/funcionario/comunicados/<id>/lido — marca como lido (sem-op, apenas confirma)."""
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    return JsonResponse({"ok": True})
+
+
+# ── Psicossocial NR-01 — avaliação ativa ──────────────────────────────────
+
+def funcionario_psicossocial_ativa(request):
+    """GET /api/funcionario/psicossocial/ativa/ — retorna avaliação ativa + questões."""
+    if request.method != "GET":
+        return JsonResponse({"erro": "Use GET"}, status=405)
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+
+    from .models import AvaliacaoPsicossocial, QuestaoAvaliacaoPsicossocial, RespostaPsicossocial
+
+    av = AvaliacaoPsicossocial.objects.filter(
+        empresa=func.empresa, status="ativa"
+    ).order_by("-data_inicio").first()
+
+    if not av:
+        return JsonResponse({"erro": "Nenhuma avaliação ativa"}, status=404)
+
+    # Verifica se o funcionário já respondeu (por setor, se especificado)
+    # Como é anônimo, verificamos por sessão/device — aqui retornamos flag
+    # que o app controla localmente via SharedPreferences
+    questoes = QuestaoAvaliacaoPsicossocial.objects.filter(
+        avaliacao=av
+    ).order_by("ordem", "id")
+
+    return JsonResponse({
+        "id": av.id,
+        "titulo": av.titulo,
+        "descricao": av.descricao,
+        "link_token": av.link_token,
+        "anonima": av.anonima,
+        "setor_alvo": av.setor_alvo or "",
+        "total_respondidos": av.total_respondidos,
+        "ja_respondeu": False,  # controlado pelo app via SharedPreferences
+        "questoes": [
+            {
+                "id": q.id,
+                "texto": q.texto,
+                "categoria": q.categoria,
+                "obrigatoria": q.obrigatoria,
+                "ordem": q.ordem,
+            }
+            for q in questoes
+        ],
+    })
+
+
+# ── EPIs pendentes de confirmação biométrica ───────────────────────────────
+
+def funcionario_epis_pendentes(request):
+    """GET /api/funcionario/epis/pendentes-entrega — entregas sem confirmação biométrica."""
+    if request.method != "GET":
+        return JsonResponse({"erro": "Use GET"}, status=405)
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+
+    from .models import EntregaEPI
+
+    pendentes = EntregaEPI.objects.filter(
+        funcionario=func,
+        empresa=func.empresa,
+        biometria_confirmada=False,
+    ).select_related("epi").order_by("-data_entrega")[:20]
+
+    return JsonResponse({
+        "pendentes": [
+            {
+                "id": e.id,
+                "epi_nome": e.epi.nome,
+                "data_entrega": str(e.data_entrega),
+                "quantidade": e.quantidade,
+                "biometria_confirmada": e.biometria_confirmada,
+            }
+            for e in pendentes
+        ]
+    })

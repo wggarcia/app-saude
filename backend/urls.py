@@ -523,6 +523,8 @@ from api.views_funcionario_portal import (
     funcionario_notificacoes, funcionario_notificacao_lida,
     funcionario_notificacoes_limpar_lidas,
     funcionario_salvar_fcm_token,
+    funcionario_comunicados, funcionario_comunicado_lido,
+    funcionario_psicossocial_ativa, funcionario_epis_pendentes,
 )
 from api.views_bem_estar import (
     api_funcionario_checkin,
@@ -1325,7 +1327,11 @@ urlpatterns = [
     path('api/funcionario/meus-asos', funcionario_meus_asos),
     path('api/funcionario/meus-treinamentos', funcionario_meus_treinamentos),
     path('api/funcionario/meus-epis', funcionario_meus_epis),
+    path('api/funcionario/epis/pendentes-entrega', funcionario_epis_pendentes),
     path('api/funcionario/minhas-solicitacoes', funcionario_minhas_solicitacoes),
+    path('api/funcionario/comunicados', funcionario_comunicados),
+    path('api/funcionario/comunicados/<int:comunicado_id>/lido', funcionario_comunicado_lido),
+    path('api/funcionario/psicossocial/ativa/', funcionario_psicossocial_ativa),
 
     # ── Trial / Self-service Onboarding ──────────────────────────────────────
     path('api/gestao/trial', api_trial_status),

@@ -81,4 +81,32 @@ class FuncionarioSstService {
 
   static Future<Map<String, dynamic>> reunioes() =>
       _get('/api/funcionario/reunioes');
+
+  static Future<Map<String, dynamic>> comunicados() =>
+      _get('/api/funcionario/comunicados');
+
+  static Future<void> marcarComunicadoLido(int id) =>
+      _post('/api/funcionario/comunicados/$id/lido');
+
+  static Future<Map<String, dynamic>> confirmarEpiComFoto(
+      int entregaId, String fotoBase64) async {
+    final headers = await _headers();
+    final response = await http.post(
+      Uri.parse('${Config.baseUrl}/api/sst/biometria/entregas/$entregaId/confirmar/'),
+      headers: headers,
+      body: jsonEncode({'foto_base64': fotoBase64}),
+    );
+    if (response.statusCode == 401) {
+      await FuncionarioAuthService.logout();
+      appNavigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const TelaLoginFuncionario()),
+        (_) => false,
+      );
+      throw Exception('Sessão expirada. Faça login novamente.');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> episPendentesEntrega() =>
+      _get('/api/funcionario/epis/pendentes-entrega');
 }
