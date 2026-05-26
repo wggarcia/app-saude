@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RIS/PACS — Imagem — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#041018;--surface:#072030;--surface2:#0a2d45;
+  --accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;
+  --text:#e8f4ff;--muted:#7a9bb5;--radius:12px;
+  --card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:16px;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;flex-shrink:0}
+.topbar-logo{font-size:15px;font-weight:800;color:var(--accent)}
+.topbar-spacer{flex:1}
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;min-height:calc(100vh - 56px);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0;flex-shrink:0;overflow-y:auto}
+.nav-section{padding:10px 16px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:1px 8px;transition:.15s;cursor:pointer;border:none;background:none;width:calc(100% - 16px);font-family:Manrope,sans-serif}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link.active{box-shadow:inset 3px 0 0 var(--accent)}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.28)}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.content{padding:24px 28px;display:flex;flex-direction:column;gap:20px;flex:1}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:20px;font-weight:800}
+.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;border-left:4px solid var(--accent)}
+.kpi.kpi-ok{border-left-color:var(--ok)}.kpi.kpi-danger{border-left-color:var(--danger)}.kpi.kpi-warn{border-left-color:var(--warn)}
+.kpi-val{font-size:28px;font-weight:800;color:var(--accent)}
+.kpi.kpi-ok .kpi-val{color:var(--ok)}.kpi.kpi-danger .kpi-val{color:var(--danger)}.kpi.kpi-warn .kpi-val{color:var(--warn)}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:rgba(255,255,255,.02);white-space:nowrap}
+td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.018)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-muted{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.12);color:var(--ok);border:1px solid rgba(0,229,176,.25)}.btn-ok:hover{background:rgba(0,229,176,.2)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;min-width:440px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:18px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.form-group label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s;width:100%}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:100px}
+.form-group select option{background:var(--surface);color:var(--text)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px;padding-top:14px;border-top:1px solid var(--border)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+/* Modal tabs */
+.modal-tabs{display:flex;gap:2px;margin-bottom:16px;border-bottom:1px solid var(--border)}
+.modal-tab{padding:8px 14px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif}
+.modal-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+/* modalidade tabs */
+.mod-tabs{display:flex;gap:4px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--border)}
+.mod-pill{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:.15s;font-family:Manrope,sans-serif}
+.mod-pill.active,.mod-pill:hover{background:rgba(0,194,255,.12);border-color:rgba(0,194,255,.3);color:var(--accent)}
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--border)}
+.filter-bar input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.filter-bar input:focus{border-color:var(--accent)}
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{display:flex;align-items:flex-start;gap:10px;padding:14px 18px;border-radius:12px;min-width:260px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.5);border:1px solid transparent;pointer-events:all;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.toast-ok{background:#072030;border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast-error{background:#1a0812;border-color:rgba(255,77,109,.3);color:var(--danger)}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-logo">🏥 HospitalOS</div>
+  <div class="topbar-spacer"></div>
+  <a href="/hospital/gestao/" class="btn btn-ghost" style="font-size:12px;padding:6px 12px">⬅ Dashboard</a>
+  <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:6px 12px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px"><span>🩻</span> RIS / PACS</div>
+</header>
+<div class="layout">
+<aside class="sidebar">
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span><span>Prontuários</span></a>
+  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span><span>Bloco Cirúrgico</span></a>
+  <a class="nav-link" href="/hospital/lis/"><span>🔬</span><span>Laboratório</span></a>
+  <a class="nav-link active" href="/hospital/imagem/"><span>🩻</span><span>Imagem/PACS</span></a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><span>💊</span><span>Farmácia Hosp.</span></a>
+  <a class="nav-link" href="/hospital/faturamento-tiss/"><span>🧾</span><span>Faturamento TISS</span></a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span><span>Dashboard</span></a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span><span>Sair</span></a>
+  </div>
+</aside>
+<main class="main">
+<div class="content">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Imagem — RIS / PACS</div>
+      <div class="page-sub">Exames de imagem por modalidade, laudos e links PACS</div>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('modalSolicitar')">+ Solicitar Exame</button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kvTotal">—</div><div class="kpi-lbl">Total de Exames</div></div>
+    <div class="kpi kpi-warn"><div class="kpi-val" id="kvHoje">—</div><div class="kpi-lbl">Solicitados Hoje</div></div>
+    <div class="kpi kpi-danger"><div class="kpi-val" id="kvPendente">—</div><div class="kpi-lbl">Pendentes de Laudo</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-val" id="kvLaudados">—</div><div class="kpi-lbl">Laudados Hoje</div></div>
+  </div>
+
+  <!-- EXAMES por modalidade -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🩻 Exames por Modalidade</span>
+      <button class="btn btn-ghost btn-sm" onclick="loadExames()">↻ Atualizar</button>
+    </div>
+    <div class="mod-tabs" id="modTabs">
+      <button class="mod-pill active" data-mod="" onclick="setMod('')">Todos</button>
+      <button class="mod-pill" data-mod="rx" onclick="setMod('rx')">Raio-X</button>
+      <button class="mod-pill" data-mod="us" onclick="setMod('us')">Ultrassom</button>
+      <button class="mod-pill" data-mod="tc" onclick="setMod('tc')">Tomografia</button>
+      <button class="mod-pill" data-mod="rm" onclick="setMod('rm')">Ressonância</button>
+      <button class="mod-pill" data-mod="mg" onclick="setMod('mg')">Mamografia</button>
+      <button class="mod-pill" data-mod="ec" onclick="setMod('ec')">Ecocardiograma</button>
+      <button class="mod-pill" data-mod="out" onclick="setMod('out')">Outro</button>
+    </div>
+    <div class="filter-bar">
+      <input id="filterQ" placeholder="Buscar paciente, região, solicitante…" oninput="debounceFilter()" style="flex:1">
+      <select id="filterLaudado" onchange="loadExames()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none">
+        <option value="">Todos</option>
+        <option value="0">Sem laudo</option>
+        <option value="1">Laudados</option>
+      </select>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Paciente</th><th>Modalidade</th><th>Região</th><th>Solicitante</th><th>Laudo</th><th>PACS</th><th>Solicitado em</th><th>Laudado em</th><th>Ações</th>
+      </tr></thead>
+      <tbody id="exameBody"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+</main>
+</div>
+
+<!-- MODAL: Solicitar Exame RIS -->
+<div class="modal-bg" id="modalSolicitar">
+  <div class="modal">
+    <h3>🩻 Solicitar Exame de Imagem</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Paciente *</label>
+        <input id="solPac" placeholder="Nome do paciente">
+      </div>
+      <div class="form-group">
+        <label>Modalidade *</label>
+        <select id="solMod">
+          <option value="rx">Raio-X</option>
+          <option value="us">Ultrassom</option>
+          <option value="tc">Tomografia</option>
+          <option value="rm">Ressonância Magnética</option>
+          <option value="mg">Mamografia</option>
+          <option value="ec">Ecocardiograma</option>
+          <option value="out">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Região Anatômica *</label>
+        <input id="solRegiao" placeholder="Ex: Tórax, Abdome, Crânio…">
+      </div>
+      <div class="form-group">
+        <label>Solicitante *</label>
+        <input id="solSolic" placeholder="Nome do médico">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalSolicitar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="solicitarExame()">Solicitar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Laudo -->
+<div class="modal-bg" id="modalLaudo">
+  <div class="modal">
+    <h3>📋 Registrar Laudo</h3>
+    <input type="hidden" id="laudoExameId">
+    <div id="laudoPacInfo" style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">
+    </div>
+    <div class="form-group">
+      <label>Laudo Radiológico *</label>
+      <textarea id="laudoTexto" style="min-height:140px" placeholder="Descreva o achado radiológico, técnica utilizada, conclusão…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>URL do PACS / Link da Imagem</label>
+      <input id="laudoUrl" placeholder="https://pacs.hospital.com.br/estudo/…">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalLaudo')">Cancelar</button>
+      <button class="btn btn-ok" onclick="salvarLaudo()">Assinar Laudo</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script>
+const MOD_LABEL = {rx:'Raio-X',us:'Ultrassom',tc:'Tomografia',rm:'Ressonância',mg:'Mamografia',ec:'Ecocardiograma',out:'Outro'};
+let currentMod = '';
+let filterTimer = null;
+let todosExames = [];
+
+function debounceFilter(){
+  clearTimeout(filterTimer);
+  filterTimer = setTimeout(renderTable, 300);
+}
+
+function setMod(mod){
+  currentMod = mod;
+  document.querySelectorAll('.mod-pill').forEach(p=>{
+    p.classList.toggle('active', p.dataset.mod===mod);
+  });
+  loadExames();
+}
+
+async function loadKpis(){
+  const res = await fetch('/api/hospital/imagem/kpis/');
+  if(!res.ok) return;
+  const d = await res.json();
+  document.getElementById('kvTotal').textContent = d.total;
+  document.getElementById('kvHoje').textContent = d.solicitados_hoje;
+  document.getElementById('kvPendente').textContent = d.pendentes_laudo;
+  document.getElementById('kvLaudados').textContent = d.laudados_hoje;
+}
+
+async function loadExames(){
+  let url = '/api/hospital/imagem/?';
+  if(currentMod) url+=`modalidade=${currentMod}&`;
+  const laudado = document.getElementById('filterLaudado').value;
+  if(laudado!=='') url+=`laudado=${laudado}&`;
+  const q = document.getElementById('filterQ').value.trim();
+  if(q) url+=`q=${encodeURIComponent(q)}&`;
+  const res = await fetch(url);
+  if(!res.ok) return;
+  const {exames} = await res.json();
+  todosExames = exames;
+  renderTable();
+}
+
+function renderTable(){
+  const q = document.getElementById('filterQ').value.toLowerCase();
+  const items = q ? todosExames.filter(e=>
+    e.paciente_nome.toLowerCase().includes(q)||
+    (e.regiao_anatomica||'').toLowerCase().includes(q)||
+    (e.solicitante||'').toLowerCase().includes(q)
+  ) : todosExames;
+  const tbody = document.getElementById('exameBody');
+  if(!items.length){ tbody.innerHTML='<tr><td colspan="9" class="empty">Nenhum exame encontrado.</td></tr>'; return; }
+  tbody.innerHTML = items.map(e=>`
+    <tr>
+      <td style="font-weight:600">${e.paciente_nome}</td>
+      <td><span class="badge badge-info">${MOD_LABEL[e.modalidade]||e.modalidade}</span></td>
+      <td>${e.regiao_anatomica}</td>
+      <td>${e.solicitante}</td>
+      <td>${e.laudado ? '<span class="badge badge-ok">✓ Laudado</span>' : '<span class="badge badge-warn">Pendente</span>'}</td>
+      <td>${e.imagem_url ? `<a href="${e.imagem_url}" target="_blank" rel="noopener" class="badge badge-info" style="text-decoration:none">🔗 PACS</a>` : '<span class="badge badge-muted">—</span>'}</td>
+      <td style="color:var(--muted);font-size:12px">${e.solicitado_em}</td>
+      <td style="color:var(--muted);font-size:12px">${e.laudado_em||'—'}</td>
+      <td>
+        ${!e.laudado ? `<button class="btn btn-ok btn-sm" onclick="openLaudo(${e.id},'${e.paciente_nome.replace(/'/g,"\\'")}','${(e.modalidade_label||'').replace(/'/g,"\\'")}','${(e.regiao_anatomica||'').replace(/'/g,"\\'")}')">📋 Laudar</button>` : `<button class="btn btn-ghost btn-sm" onclick="openLaudo(${e.id},'${e.paciente_nome.replace(/'/g,"\\'")}','${(e.modalidade_label||'').replace(/'/g,"\\'")}','${(e.regiao_anatomica||'').replace(/'/g,"\\'")}')">✏️ Reeditar</button>`}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openLaudo(id, pac, mod, regiao){
+  document.getElementById('laudoExameId').value = id;
+  document.getElementById('laudoPacInfo').innerHTML = `<strong>${pac}</strong> — ${mod} · ${regiao}`;
+  document.getElementById('laudoTexto').value = '';
+  document.getElementById('laudoUrl').value = '';
+  openModal('modalLaudo');
+}
+
+async function solicitarExame(){
+  const pac = document.getElementById('solPac').value.trim();
+  const regiao = document.getElementById('solRegiao').value.trim();
+  const solic = document.getElementById('solSolic').value.trim();
+  if(!pac||!regiao||!solic){ toast('Preencha os campos obrigatórios','error'); return; }
+  const body = {
+    paciente_nome:pac, modalidade:document.getElementById('solMod').value,
+    regiao_anatomica:regiao, solicitante:solic,
+  };
+  const res = await fetch('/api/hospital/imagem/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.ok){ toast('Exame solicitado'); closeModal('modalSolicitar'); loadExames(); loadKpis(); }
+  else toast(d.erro||'Erro','error');
+}
+
+async function salvarLaudo(){
+  const id = document.getElementById('laudoExameId').value;
+  const laudo = document.getElementById('laudoTexto').value.trim();
+  if(!laudo){ toast('Laudo é obrigatório','error'); return; }
+  const body = {laudo, imagem_url:document.getElementById('laudoUrl').value.trim()};
+  const res = await fetch(`/api/hospital/imagem/${id}/laudo/`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.ok){ toast('Laudo registrado'); closeModal('modalLaudo'); loadExames(); loadKpis(); }
+  else toast(d.erro||'Erro','error');
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+function toast(msg,type='ok'){
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className=`toast toast-${type}`;
+  t.textContent=msg;
+  c.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+loadKpis(); loadExames();
+</script>
+</body>
+</html>

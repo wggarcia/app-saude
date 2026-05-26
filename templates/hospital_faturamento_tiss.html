@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Faturamento TISS — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#041018;--surface:#072030;--surface2:#0a2d45;
+  --accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;
+  --text:#e8f4ff;--muted:#7a9bb5;--radius:12px;
+  --card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:16px;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;flex-shrink:0}
+.topbar-logo{font-size:15px;font-weight:800;color:var(--accent)}
+.topbar-spacer{flex:1}
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;min-height:calc(100vh - 56px);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0;flex-shrink:0;overflow-y:auto}
+.nav-section{padding:10px 16px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:1px 8px;transition:.15s;cursor:pointer;border:none;background:none;width:calc(100% - 16px);font-family:Manrope,sans-serif}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link.active{box-shadow:inset 3px 0 0 var(--accent)}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.28)}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.content{padding:24px 28px;display:flex;flex-direction:column;gap:20px;flex:1}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:20px;font-weight:800}
+.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi-row-8{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;border-left:4px solid var(--accent)}
+.kpi.kpi-ok{border-left-color:var(--ok)}.kpi.kpi-danger{border-left-color:var(--danger)}.kpi.kpi-warn{border-left-color:var(--warn)}.kpi.kpi-info{border-left-color:#a78bfa}
+.kpi-val{font-size:24px;font-weight:800;color:var(--accent)}
+.kpi.kpi-ok .kpi-val{color:var(--ok)}.kpi.kpi-danger .kpi-val{color:var(--danger)}.kpi.kpi-warn .kpi-val{color:var(--warn)}.kpi.kpi-info .kpi-val{color:#a78bfa}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:rgba(255,255,255,.02);white-space:nowrap}
+td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.018)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-purple{background:rgba(167,139,250,.12);color:#a78bfa}
+.badge-muted{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.12);color:var(--ok);border:1px solid rgba(0,229,176,.25)}.btn-ok:hover{background:rgba(0,229,176,.2)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;min-width:440px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:18px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.form-group label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s;width:100%}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:var(--surface);color:var(--text)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px;padding-top:14px;border-top:1px solid var(--border)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--border)}
+.filter-bar input,.filter-bar select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent)}
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{display:flex;align-items:flex-start;gap:10px;padding:14px 18px;border-radius:12px;min-width:260px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.5);border:1px solid transparent;pointer-events:all;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.toast-ok{background:#072030;border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast-error{background:#1a0812;border-color:rgba(255,77,109,.3);color:var(--danger)}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-logo">🏥 HospitalOS</div>
+  <div class="topbar-spacer"></div>
+  <a href="/hospital/gestao/" class="btn btn-ghost" style="font-size:12px;padding:6px 12px">⬅ Dashboard</a>
+  <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:6px 12px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px"><span>🧾</span> Faturamento TISS</div>
+</header>
+<div class="layout">
+<aside class="sidebar">
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span><span>Prontuários</span></a>
+  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span><span>Bloco Cirúrgico</span></a>
+  <a class="nav-link" href="/hospital/lis/"><span>🔬</span><span>Laboratório</span></a>
+  <a class="nav-link" href="/hospital/imagem/"><span>🩻</span><span>Imagem/PACS</span></a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><span>💊</span><span>Farmácia Hosp.</span></a>
+  <a class="nav-link active" href="/hospital/faturamento-tiss/"><span>🧾</span><span>Faturamento TISS</span></a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span><span>Dashboard</span></a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span><span>Sair</span></a>
+  </div>
+</aside>
+<main class="main">
+<div class="content">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Faturamento TISS</div>
+      <div class="page-sub">Guias ANS — apresentação, aprovação, glosa e XML TISS</div>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('modalNovaGuia')">+ Nova Guia</button>
+  </div>
+
+  <!-- KPI financeiro -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kvApres">R$ —</div><div class="kpi-lbl">Apresentado no Mês</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-val" id="kvAprov">R$ —</div><div class="kpi-lbl">Aprovado no Mês</div></div>
+    <div class="kpi kpi-danger"><div class="kpi-val" id="kvGlosa">R$ —</div><div class="kpi-lbl">Glosado no Mês</div></div>
+    <div class="kpi kpi-warn"><div class="kpi-val" id="kvPercGlosa">—%</div><div class="kpi-lbl">% de Glosa</div></div>
+  </div>
+
+  <!-- KPI status -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+    <div class="kpi kpi-info"><div class="kpi-val" id="kvElab">—</div><div class="kpi-lbl">Elaboradas</div></div>
+    <div class="kpi kpi-warn"><div class="kpi-val" id="kvEnv">—</div><div class="kpi-lbl">Enviadas</div></div>
+    <div class="kpi kpi-danger"><div class="kpi-val" id="kvGlosadas">—</div><div class="kpi-lbl">Glosadas</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-val" id="kvPagas">—</div><div class="kpi-lbl">Pagas</div></div>
+  </div>
+
+  <!-- TABLE: guias -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📋 Guias TISS</span>
+      <button class="btn btn-ghost btn-sm" onclick="loadGuias()">↻ Atualizar</button>
+    </div>
+    <div class="filter-bar">
+      <input id="filterQ" placeholder="Beneficiário, nº guia, operadora…" oninput="debounceFilter()" style="flex:1;min-width:180px">
+      <select id="filterStatus" onchange="loadGuias()">
+        <option value="">Todos status</option>
+        <option value="elaborada">Elaborada</option>
+        <option value="enviada">Enviada</option>
+        <option value="glosada">Glosada</option>
+        <option value="paga">Paga</option>
+        <option value="recurso">Em Recurso</option>
+      </select>
+      <select id="filterTipo" onchange="loadGuias()">
+        <option value="">Todos tipos</option>
+        <option value="consulta">Consulta</option>
+        <option value="sadt">SADT</option>
+        <option value="internacao">Internação</option>
+        <option value="sp_sadt">SP/SADT</option>
+        <option value="resumo">Resumo</option>
+      </select>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Nº Guia</th><th>Tipo</th><th>Beneficiário</th><th>Operadora</th><th>Apresentado</th><th>Aprovado</th><th>Glosa</th><th>Status</th><th>Ações</th>
+      </tr></thead>
+      <tbody id="guiaBody"><tr><td colspan="9" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+</main>
+</div>
+
+<!-- MODAL: Nova Guia -->
+<div class="modal-bg" id="modalNovaGuia">
+  <div class="modal">
+    <h3>🧾 Nova Guia TISS</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tipo de Guia *</label>
+        <select id="ngTipo">
+          <option value="consulta">Consulta</option>
+          <option value="sadt">SADT</option>
+          <option value="internacao">Internação</option>
+          <option value="sp_sadt">SP/SADT</option>
+          <option value="resumo">Resumo de Internação</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Nº da Guia</label>
+        <input id="ngNumero" placeholder="Número da guia na operadora">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Beneficiário *</label>
+        <input id="ngBenef" placeholder="Nome do beneficiário">
+      </div>
+      <div class="form-group">
+        <label>Carteirinha</label>
+        <input id="ngCarteirinha" placeholder="Número da carteirinha">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Operadora</label>
+        <input id="ngOperadora" placeholder="Nome do plano/convênio">
+      </div>
+      <div class="form-group">
+        <label>Código Operadora (ANS)</label>
+        <input id="ngCodOp" placeholder="Ex: 353856">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>CID-10</label>
+        <input id="ngCid" placeholder="Ex: J18.9">
+      </div>
+      <div class="form-group">
+        <label>Valor Apresentado (R$) *</label>
+        <input id="ngValor" type="number" min="0" step="0.01" placeholder="0.00">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalNovaGuia')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovaGuia()">Criar Guia</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Atualizar status -->
+<div class="modal-bg" id="modalAtualizarGuia">
+  <div class="modal">
+    <h3>✏️ Atualizar Guia</h3>
+    <input type="hidden" id="editGuiaId">
+    <div id="editGuiaInfo" style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px"></div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="editStatus">
+        <option value="elaborada">Elaborada</option>
+        <option value="enviada">Enviada</option>
+        <option value="glosada">Glosada</option>
+        <option value="paga">Paga</option>
+        <option value="recurso">Em Recurso</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Valor Aprovado (R$)</label>
+        <input id="editAprovado" type="number" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>Valor Apresentado (R$)</label>
+        <input id="editApresentado" type="number" min="0" step="0.01" placeholder="0.00">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalAtualizarGuia')">Cancelar</button>
+      <button class="btn btn-primary" onclick="atualizarGuia()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script>
+const STATUS_BADGE = {
+  elaborada:'badge-info', enviada:'badge-warn', glosada:'badge-danger',
+  paga:'badge-ok', recurso:'badge-purple'
+};
+const STATUS_LABEL = {
+  elaborada:'Elaborada', enviada:'Enviada', glosada:'Glosada',
+  paga:'Paga', recurso:'Em Recurso'
+};
+const TIPO_LABEL = {
+  consulta:'Consulta', sadt:'SADT', internacao:'Internação',
+  sp_sadt:'SP/SADT', resumo:'Resumo'
+};
+let filterTimer = null;
+let todasGuias = [];
+
+function debounceFilter(){
+  clearTimeout(filterTimer);
+  filterTimer = setTimeout(renderTable, 300);
+}
+
+function fmt(v){ return 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2}); }
+
+async function loadKpis(){
+  const res = await fetch('/api/hospital/tiss/kpis/');
+  if(!res.ok) return;
+  const d = await res.json();
+  document.getElementById('kvApres').textContent = fmt(d.apresentado_mes);
+  document.getElementById('kvAprov').textContent = fmt(d.aprovado_mes);
+  document.getElementById('kvGlosa').textContent = fmt(d.glosa_mes);
+  document.getElementById('kvPercGlosa').textContent = d.perc_glosa + '%';
+  document.getElementById('kvElab').textContent = d.elaboradas;
+  document.getElementById('kvEnv').textContent = d.enviadas;
+  document.getElementById('kvGlosadas').textContent = d.glosadas;
+  document.getElementById('kvPagas').textContent = d.pagas;
+}
+
+async function loadGuias(){
+  const status = document.getElementById('filterStatus').value;
+  const tipo = document.getElementById('filterTipo').value;
+  const q = document.getElementById('filterQ').value.trim();
+  let url = '/api/hospital/tiss/?';
+  if(status) url+=`status=${status}&`;
+  if(tipo) url+=`tipo=${tipo}&`;
+  if(q) url+=`q=${encodeURIComponent(q)}&`;
+  const res = await fetch(url);
+  if(!res.ok) return;
+  const {guias} = await res.json();
+  todasGuias = guias;
+  renderTable();
+}
+
+function renderTable(){
+  const q = document.getElementById('filterQ').value.toLowerCase();
+  const items = q ? todasGuias.filter(g=>
+    g.beneficiario_nome.toLowerCase().includes(q)||
+    (g.numero_guia||'').toLowerCase().includes(q)||
+    (g.operadora_nome||'').toLowerCase().includes(q)
+  ) : todasGuias;
+  const tbody = document.getElementById('guiaBody');
+  if(!items.length){ tbody.innerHTML='<tr><td colspan="9" class="empty">Nenhuma guia encontrada.</td></tr>'; return; }
+  tbody.innerHTML = items.map(g=>`
+    <tr>
+      <td><span class="badge badge-muted">${g.numero_guia||'—'}</span></td>
+      <td><span class="badge badge-info">${TIPO_LABEL[g.tipo]||g.tipo}</span></td>
+      <td style="font-weight:600">${g.beneficiario_nome}</td>
+      <td>${g.operadora_nome||'—'}</td>
+      <td style="font-family:monospace">${fmt(g.valor_apresentado)}</td>
+      <td style="font-family:monospace;color:var(--ok)">${fmt(g.valor_aprovado)}</td>
+      <td>
+        ${g.valor_glosa > 0
+          ? `<span class="badge badge-danger">-${fmt(g.valor_glosa)} (${g.perc_glosa}%)</span>`
+          : '<span class="badge badge-ok">Sem glosa</span>'}
+      </td>
+      <td><span class="badge ${STATUS_BADGE[g.status]||'badge-muted'}">${STATUS_LABEL[g.status]||g.status}</span></td>
+      <td style="display:flex;gap:4px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="openEdit(${g.id},'${g.beneficiario_nome.replace(/'/g,"\\'")}','${g.numero_guia||''}','${g.status}',${g.valor_aprovado},${g.valor_apresentado})">✏️</button>
+        <a class="btn btn-ghost btn-sm" href="/api/hospital/tiss/${g.id}/xml/" target="_blank" title="Baixar XML TISS">📄 XML</a>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openEdit(id, benef, num, status, aprovado, apresentado){
+  document.getElementById('editGuiaId').value = id;
+  document.getElementById('editGuiaInfo').textContent = `${benef}${num ? ' · Guia '+num : ''}`;
+  document.getElementById('editStatus').value = status;
+  document.getElementById('editAprovado').value = aprovado;
+  document.getElementById('editApresentado').value = apresentado;
+  openModal('modalAtualizarGuia');
+}
+
+async function salvarNovaGuia(){
+  const benef = document.getElementById('ngBenef').value.trim();
+  const valor = parseFloat(document.getElementById('ngValor').value);
+  if(!benef){ toast('Beneficiário é obrigatório','error'); return; }
+  if(isNaN(valor)||valor<0){ toast('Valor apresentado inválido','error'); return; }
+  const body = {
+    tipo: document.getElementById('ngTipo').value,
+    numero_guia: document.getElementById('ngNumero').value.trim(),
+    beneficiario_nome: benef,
+    beneficiario_carteirinha: document.getElementById('ngCarteirinha').value.trim(),
+    operadora_nome: document.getElementById('ngOperadora').value.trim(),
+    operadora_codigo: document.getElementById('ngCodOp').value.trim(),
+    cid10: document.getElementById('ngCid').value.trim(),
+    valor_apresentado: valor,
+  };
+  const res = await fetch('/api/hospital/tiss/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.ok){ toast('Guia criada'); closeModal('modalNovaGuia'); loadGuias(); loadKpis(); }
+  else toast(d.erro||'Erro','error');
+}
+
+async function atualizarGuia(){
+  const id = document.getElementById('editGuiaId').value;
+  const body = {
+    status: document.getElementById('editStatus').value,
+    valor_aprovado: parseFloat(document.getElementById('editAprovado').value)||0,
+    valor_apresentado: parseFloat(document.getElementById('editApresentado').value)||0,
+  };
+  const res = await fetch(`/api/hospital/tiss/${id}/status/`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.ok){ toast('Guia atualizada'); closeModal('modalAtualizarGuia'); loadGuias(); loadKpis(); }
+  else toast(d.erro||'Erro','error');
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+function toast(msg,type='ok'){
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className=`toast toast-${type}`;
+  t.textContent=msg;
+  c.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+loadKpis(); loadGuias();
+</script>
+</body>
+</html>

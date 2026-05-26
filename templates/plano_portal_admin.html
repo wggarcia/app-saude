@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portal Beneficiario — Admin — Plano de Saude</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.search-input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;width:220px}
+.search-input::placeholder{color:var(--muted)}
+.filter-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:Manrope,sans-serif}
+.filter-sel option{background:#0a1a28}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.token-box{background:rgba(0,229,176,.08);border:1px solid rgba(0,229,176,.2);border-radius:8px;padding:12px 16px;margin-top:12px}
+.token-url{font-family:monospace;font-size:12px;color:var(--accent2);word-break:break-all}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:400px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--accent)}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.info-note{background:rgba(0,194,255,.06);border:1px solid rgba(0,194,255,.15);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">Plano de Saude</div>
+  <div class="nav-section">Navegacao</div>
+  <a class="nav-link" href="/plano-saude/gestao/"><span>&#127968;</span> Gestao Operacional</a>
+  <div class="nav-section">Comercial</div>
+  <a class="nav-link" href="/plano-saude/corretores/"><span>&#129309;</span> Corretores</a>
+  <div class="nav-section">Rede</div>
+  <a class="nav-link" href="/plano-saude/rede/"><span>&#127973;</span> Rede Credenciada</a>
+  <div class="nav-section">Regulatorio</div>
+  <a class="nav-link" href="/plano-saude/ans/"><span>&#128196;</span> Obrigacoes ANS</a>
+  <div class="nav-section">IA</div>
+  <a class="nav-link" href="/plano-saude/ia/"><span>&#129504;</span> IA Autorizacao</a>
+  <div class="nav-section">Beneficiarios</div>
+  <a class="nav-link active" href="/plano-saude/portal-admin/"><span>&#128279;</span> Portal Beneficiario</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>&#128682;</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Portal do Beneficiario — Admin</div>
+      <div class="page-sub">Gerencie o acesso dos beneficiarios ao portal self-service. Gere links personalizados por beneficiario.</div>
+    </div>
+    <button class="btn btn-ghost" onclick="carregarBeneficiarios()">&#8635; Atualizar</button>
+  </div>
+
+  <div class="info-note">
+    &#128279; Cada beneficiario recebe um link unico e seguro para acessar seus dados de plano, rede credenciada e autorizacoes.
+    Os links sao pessoais e intransferíveis. Voce pode gerar um novo link a qualquer momento — o anterior e invalidado automaticamente.
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">&#128101; Beneficiarios</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="search-input" id="searchInput" placeholder="Buscar por nome..." oninput="carregarBeneficiarios()">
+        <select class="filter-sel" id="portalFilter" onchange="carregarBeneficiarios()">
+          <option value="">Portal: Todos</option>
+          <option value="1">Com acesso ativo</option>
+          <option value="0">Sem acesso</option>
+        </select>
+      </div>
+    </div>
+    <div id="tabelaBenef"><div class="empty">Carregando...</div></div>
+  </div>
+</main>
+
+<!-- Modal Token Gerado -->
+<div class="modal-bg" id="modalToken">
+  <div class="modal">
+    <h3>&#10003; Link de Acesso Gerado</h3>
+    <div style="font-size:13px;margin-bottom:12px">Link gerado com sucesso para <strong id="modalTokenNome"></strong>.</div>
+    <div class="token-box">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">URL de acesso (valida ate <span id="modalTokenExpira"></span>):</div>
+      <div class="token-url" id="modalTokenUrl"></div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="copiarLink()">&#128203; Copiar Link</button>
+      <button class="btn btn-primary btn-sm" onclick="fecharModalToken()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let benefs = [];
+
+async function carregarBeneficiarios() {
+  const q = document.getElementById('searchInput').value.trim();
+  const portal = document.getElementById('portalFilter').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (portal) params.set('portal', portal);
+  try {
+    const r = await fetch('/api/plano-saude/portal/beneficiarios?' + params, {credentials:'include'});
+    const d = await r.json();
+    benefs = d.beneficiarios || [];
+    renderBenefs(benefs);
+  } catch(e) {
+    document.getElementById('tabelaBenef').innerHTML = '<div class="empty">Erro ao carregar beneficiarios.</div>';
+  }
+}
+
+function renderBenefs(lista) {
+  const el = document.getElementById('tabelaBenef');
+  if (!lista.length) {
+    el.innerHTML = '<div class="empty">Nenhum beneficiario encontrado.</div>';
+    return;
+  }
+  let html = `<table><thead><tr>
+    <th>Nome</th><th>Carteirinha</th><th>Plano</th><th>Situacao</th><th>Portal</th><th>Expira</th><th>Acao</th>
+  </tr></thead><tbody>`;
+  for (const b of lista) {
+    html += `<tr>
+      <td style="font-weight:700">${b.nome}</td>
+      <td>${b.numero_carteirinha || '—'}</td>
+      <td>${b.plano_nome}</td>
+      <td><span class="badge ${b.situacao === 'ativo' ? 'badge-ok' : 'badge-gray'}">${b.situacao}</span></td>
+      <td><span class="badge ${b.portal_ativo ? 'badge-info' : 'badge-gray'}">${b.portal_ativo ? 'Ativo' : 'Sem acesso'}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${b.portal_expira_em || '—'}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-primary btn-sm" onclick="gerarToken(${b.id}, '${b.nome.replace(/'/g,"\\'")}')">
+          ${b.portal_ativo ? '&#128257; Renovar' : '&#128279; Gerar Link'}
+        </button>
+        ${b.portal_token ? `<a class="btn btn-ghost btn-sm" href="/beneficiario/${b.portal_token}/" target="_blank">Ver Portal</a>` : ''}
+      </td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+async function gerarToken(benId, nome) {
+  const validade = prompt(`Validade do link em dias para ${nome} (padrao: 365):`, '365');
+  if (validade === null) return;
+  try {
+    const r = await fetch(`/api/plano-saude/portal/token/${benId}`, {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({validade_dias: parseInt(validade)||365})
+    });
+    const d = await r.json();
+    if (r.ok) {
+      const base = window.location.origin;
+      document.getElementById('modalTokenNome').textContent = nome;
+      document.getElementById('modalTokenUrl').textContent = base + d.portal_url;
+      document.getElementById('modalTokenExpira').textContent = d.expira_em;
+      document.getElementById('modalToken').classList.add('open');
+      carregarBeneficiarios();
+    } else { alert(d.erro || 'Erro ao gerar token.'); }
+  } catch(e) { alert('Erro de conexao.'); }
+}
+
+function fecharModalToken() { document.getElementById('modalToken').classList.remove('open'); }
+
+function copiarLink() {
+  const url = document.getElementById('modalTokenUrl').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = event.target;
+    btn.textContent = '&#10003; Copiado!';
+    setTimeout(() => { btn.innerHTML = '&#128203; Copiar Link'; }, 2000);
+  });
+}
+
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+
+window.addEventListener('DOMContentLoaded', carregarBeneficiarios);
+</script>
+</body>
+</html>

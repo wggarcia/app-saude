@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RAG / RDQA / PAS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border)}
+.tab-btn{padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.detail-panel{padding:20px;display:flex;flex-direction:column;gap:16px}
+.detail-panel h4{font-size:14px;font-weight:700;color:var(--accent)}
+.json-fields{display:flex;flex-direction:column;gap:12px}
+.json-field{display:flex;flex-direction:column;gap:6px}
+.json-field label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.json-field textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;resize:vertical;min-height:80px;transition:.15s}
+.json-field textarea:focus{border-color:var(--accent)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+@media(max-width:900px){.kpi-row{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Saúde Pública</div>
+  <a class="nav-link" href="/governo/pec/"><span>📋</span> PEC / e-SUS</a>
+  <a class="nav-link" href="/governo/farmacia-basica/"><span>💊</span> Farmácia Básica</a>
+  <a class="nav-link" href="/governo/regulacao/"><span>🏨</span> Regulação</a>
+  <a class="nav-link" href="/governo/faturamento-sus/"><span>💰</span> Faturamento SUS</a>
+  <a class="nav-link" href="/governo/teleconsulta/"><span>🖥️</span> Teleconsulta</a>
+  <a class="nav-link active" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
+  <a class="nav-link" href="/governo/esus/"><span>🔗</span> Integração e-SUS</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">RAG / RDQA / PAS</div>
+      <div class="page-sub">Relatórios de Gestão em Saúde — DigiSUS Gestor</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalNovo()">+ Novo Relatório</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiTotal">—</div><div class="kpi-lbl">Total de Relatórios</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiEnv">—</div><div class="kpi-lbl">Enviados ao DigiSUS</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiPend">—</div><div class="kpi-lbl">Pendentes de Envio</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="card">
+    <div class="tabs" style="padding:0 16px">
+      <button class="tab-btn active" onclick="setTab('pas')">PAS</button>
+      <button class="tab-btn" onclick="setTab('rdqa')">RDQA</button>
+      <button class="tab-btn" onclick="setTab('rag')">RAG</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-pas">
+      <table>
+        <thead><tr><th>Exercício</th><th>Tipo</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>
+        <tbody id="tbodyPas"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="tab-panel" id="tab-rdqa">
+      <table>
+        <thead><tr><th>Exercício</th><th>Quadrimestre</th><th>Tipo</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>
+        <tbody id="tbodyRdqa"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="tab-panel" id="tab-rag">
+      <table>
+        <thead><tr><th>Exercício</th><th>Tipo</th><th>Status</th><th>Enviado em</th><th>Atualizado</th><th>Ações</th></tr></thead>
+        <tbody id="tbodyRag"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Detail panel -->
+  <div class="card" id="panelDetalhe" style="display:none">
+    <div class="card-header">
+      <span class="card-title" id="detTitulo">Editar Relatório</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ok btn-sm" id="btnEnviarDigisus" onclick="enviarDigisus()">Enviar ao DigiSUS</button>
+        <button class="btn btn-primary btn-sm" onclick="salvarConteudo()">Salvar</button>
+        <button class="btn btn-ghost btn-sm" onclick="fecharDetalhe()">Fechar</button>
+      </div>
+    </div>
+    <div class="detail-panel">
+      <input type="hidden" id="detId">
+      <div class="json-fields" id="jsonFields"></div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal: Novo Relatório -->
+<div class="modal-bg" id="modalNovo">
+  <div class="modal">
+    <h3>Novo Relatório</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo *</label>
+        <select id="nTipo" onchange="toggleQuadrimestre()">
+          <option value="pas">PAS — Programação Anual</option>
+          <option value="rdqa">RDQA — Relatório Quadrimestral</option>
+          <option value="rag">RAG — Relatório Anual de Gestão</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Exercício (Ano) *</label>
+        <input id="nExercicio" type="number" min="2020" max="2099" value="">
+      </div>
+    </div>
+    <div class="form-group" id="grpQuad" style="display:none"><label>Quadrimestre</label>
+      <select id="nQuad">
+        <option value="1">1º Quadrimestre (Jan–Abr)</option>
+        <option value="2">2º Quadrimestre (Mai–Ago)</option>
+        <option value="3">3º Quadrimestre (Set–Dez)</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalNovo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovo()">Criar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let relatoriosCache = [];
+let tabAtual = "pas";
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+const CAMPOS_PAS = ["Objetivos e Metas Anuais", "Ações Programadas", "Orçamento Previsto", "Indicadores de Acompanhamento"];
+const CAMPOS_RDQA = ["Resultados Alcançados", "Metas do Quadrimestre", "Desvios e Justificativas", "Próximas Ações"];
+const CAMPOS_RAG = ["Sumário Executivo", "Resultados dos Indicadores", "Execução Orçamentária", "Metas ANS / Previne Brasil", "Destaques e Dificuldades", "Recomendações"];
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/governo/rag/kpis/");
+  document.getElementById("kpiTotal").textContent = d.total ?? "—";
+  document.getElementById("kpiEnv").textContent = d.enviados ?? "—";
+  document.getElementById("kpiPend").textContent = d.pendentes ?? "—";
+}
+
+async function carregarTodos() {
+  const d = await fetchJSON("/api/governo/rag/");
+  relatoriosCache = d.relatorios || [];
+  renderTab("pas");
+  renderTab("rdqa");
+  renderTab("rag");
+}
+
+function renderTab(tipo) {
+  const lista = relatoriosCache.filter(r => r.tipo === tipo);
+  const ids = { pas: "tbodyPas", rdqa: "tbodyRdqa", rag: "tbodyRag" };
+  const tbody = document.getElementById(ids[tipo]);
+  if (!lista.length) { tbody.innerHTML = `<tr><td colspan="6" class="empty">Nenhum relatório ${tipo.toUpperCase()} criado.</td></tr>`; return; }
+  if (tipo === "pas" || tipo === "rag") {
+    const cols = tipo === "pas" ? 5 : 6;
+    tbody.innerHTML = lista.map(r => `<tr>
+      <td><strong>${r.exercicio}</strong></td>
+      ${tipo === "rag" ? `<td>${r.tipo_label}</td>` : ""}
+      <td>${r.tipo_label}</td>
+      <td>${r.enviado_digisus ? '<span class="badge badge-ok">Enviado</span>' : '<span class="badge badge-warn">Elaborando</span>'}</td>
+      ${tipo === "rag" ? `<td>${r.enviado_em ? new Date(r.enviado_em).toLocaleDateString("pt-BR") : '—'}</td>` : ""}
+      <td>${new Date(r.atualizado_em).toLocaleDateString("pt-BR")}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="abrirDetalhe(${r.id})">Editar/Ver</button></td>
+    </tr>`).join("");
+  } else {
+    // rdqa
+    tbody.innerHTML = lista.map(r => `<tr>
+      <td><strong>${r.exercicio}</strong></td>
+      <td>${r.quadrimestre ? r.quadrimestre + 'º' : '—'}</td>
+      <td>${r.tipo_label}</td>
+      <td>${r.enviado_digisus ? '<span class="badge badge-ok">Enviado</span>' : '<span class="badge badge-warn">Elaborando</span>'}</td>
+      <td>${new Date(r.atualizado_em).toLocaleDateString("pt-BR")}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="abrirDetalhe(${r.id})">Editar/Ver</button></td>
+    </tr>`).join("");
+  }
+}
+
+function setTab(t) {
+  tabAtual = t;
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+  event.target.classList.add("active");
+  document.getElementById("tab-" + t).classList.add("active");
+}
+
+function abrirDetalhe(id) {
+  const r = relatoriosCache.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById("detId").value = id;
+  document.getElementById("detTitulo").textContent = `${r.tipo_label} — ${r.exercicio}${r.quadrimestre ? ' / ' + r.quadrimestre + 'º Quad.' : ''}`;
+  document.getElementById("btnEnviarDigisus").style.display = r.enviado_digisus ? "none" : "";
+  const campos = r.tipo === "pas" ? CAMPOS_PAS : r.tipo === "rdqa" ? CAMPOS_RDQA : CAMPOS_RAG;
+  const conteudo = r.conteudo || {};
+  document.getElementById("jsonFields").innerHTML = campos.map(campo => `
+    <div class="json-field">
+      <label>${campo}</label>
+      <textarea rows="4" data-campo="${campo}">${conteudo[campo] || ""}</textarea>
+    </div>`).join("");
+  document.getElementById("panelDetalhe").style.display = "";
+  document.getElementById("panelDetalhe").scrollIntoView({ behavior: "smooth" });
+}
+
+function fecharDetalhe() {
+  document.getElementById("panelDetalhe").style.display = "none";
+}
+
+async function salvarConteudo() {
+  const id = document.getElementById("detId").value;
+  const conteudo = {};
+  document.querySelectorAll("#jsonFields [data-campo]").forEach(ta => {
+    conteudo[ta.dataset.campo] = ta.value;
+  });
+  const d = await fetchJSON(`/api/governo/rag/${id}/atualizar/`, {
+    method: "POST", body: JSON.stringify({ conteudo })
+  });
+  if (d.ok) { carregarTodos(); alert("Relatório salvo."); }
+  else alert(d.erro || "Erro ao salvar.");
+}
+
+async function enviarDigisus() {
+  const id = document.getElementById("detId").value;
+  if (!confirm("Marcar este relatório como enviado ao DigiSUS Gestor?")) return;
+  await salvarConteudo();
+  const d = await fetchJSON(`/api/governo/rag/${id}/atualizar/`, {
+    method: "POST", body: JSON.stringify({ enviado_digisus: true })
+  });
+  if (d.ok) { carregarTodos(); carregarKpis(); fecharDetalhe(); alert("Relatório marcado como enviado ao DigiSUS."); }
+  else alert(d.erro || "Erro.");
+}
+
+function abrirModalNovo() {
+  document.getElementById("nExercicio").value = new Date().getFullYear();
+  toggleQuadrimestre();
+  document.getElementById("modalNovo").classList.add("open");
+}
+
+function toggleQuadrimestre() {
+  const tipo = document.getElementById("nTipo").value;
+  document.getElementById("grpQuad").style.display = tipo === "rdqa" ? "" : "none";
+}
+
+function fecharModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+async function salvarNovo() {
+  const tipo = document.getElementById("nTipo").value;
+  const exercicio = parseInt(document.getElementById("nExercicio").value);
+  if (!exercicio) { alert("Exercício é obrigatório."); return; }
+  const payload = { tipo, exercicio };
+  if (tipo === "rdqa") payload.quadrimestre = parseInt(document.getElementById("nQuad").value);
+  const d = await fetchJSON("/api/governo/rag/criar/", { method: "POST", body: JSON.stringify(payload) });
+  if (d.id) { fecharModal("modalNovo"); carregarTodos(); carregarKpis(); }
+  else alert(d.erro || "Erro ao criar.");
+}
+
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarKpis();
+carregarTodos();
+</script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portal do Beneficiario — {{ plano.nome }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f7ff;
+  --surface:#ffffff;
+  --surface2:#f5f9ff;
+  --accent:#0078c8;
+  --accent2:#00b89a;
+  --danger:#e53e3e;
+  --warn:#d97706;
+  --ok:#059669;
+  --text:#1a2e42;
+  --muted:#6b8ba4;
+  --radius:12px;
+  --border:#dce8f5;
+  --shadow:0 2px 12px rgba(0,120,200,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:64px;box-shadow:var(--shadow)}
+.logo{font-size:20px;font-weight:800;color:var(--accent);display:flex;align-items:center;gap:10px}
+.logo-sub{font-size:12px;font-weight:500;color:var(--muted);margin-left:2px}
+.header-right{display:flex;align-items:center;gap:12px}
+.badge-plan{background:rgba(0,120,200,.1);color:var(--accent);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700}
+.main{max-width:1100px;margin:0 auto;padding:28px 20px;display:flex;flex-direction:column;gap:24px}
+.carteirinha{background:linear-gradient(135deg,var(--accent) 0%,#004c88 100%);border-radius:18px;padding:28px 32px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;box-shadow:0 8px 32px rgba(0,120,200,.25)}
+.carteirinha-nome{font-size:22px;font-weight:800;margin-bottom:4px}
+.carteirinha-num{font-size:13px;opacity:.8;margin-bottom:12px}
+.carteirinha-info{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}
+.carteirinha-item{font-size:12px;opacity:.8}
+.carteirinha-item strong{display:block;font-size:14px;font-weight:700;opacity:1}
+.carteirinha-logo{font-size:48px;opacity:.25}
+.section-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700;color:var(--text)}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:var(--surface2)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);color:var(--text)}
+tr:hover td{background:var(--surface2)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(5,150,105,.1);color:var(--ok)}
+.badge-warn{background:rgba(217,119,6,.1);color:var(--warn)}
+.badge-danger{background:rgba(229,62,62,.1);color:var(--danger)}
+.badge-info{background:rgba(0,120,200,.1);color:var(--accent)}
+.badge-purple{background:rgba(109,40,217,.1);color:#6d28d9}
+.badge-gray{background:rgba(107,139,164,.1);color:var(--muted)}
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filter-sel{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:12px;font-family:Manrope,sans-serif}
+.search-input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;width:200px}
+.btn-filter{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:Manrope,sans-serif}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{background:rgba(0,120,200,.1);color:var(--accent);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.auth-item{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--border)}
+.auth-item:last-child{border-bottom:none}
+.auth-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.auth-icon.aprovada{background:rgba(5,150,105,.1);color:var(--ok)}
+.auth-icon.negada{background:rgba(229,62,62,.1);color:var(--danger)}
+.auth-icon.revisao{background:rgba(217,119,6,.1);color:var(--warn)}
+.auth-info{flex:1}
+.auth-title{font-size:13px;font-weight:700;color:var(--text)}
+.auth-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.contact-card{background:linear-gradient(135deg,var(--accent2) 0%,#006d59 100%);border-radius:16px;padding:24px 28px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.contact-title{font-size:18px;font-weight:800;margin-bottom:4px}
+.contact-sub{font-size:13px;opacity:.8}
+.btn-contact{background:rgba(255,255,255,.9);color:#006d59;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:Manrope,sans-serif;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-contact:hover{background:#fff}
+footer{background:var(--surface);border-top:1px solid var(--border);padding:20px 24px;text-align:center;font-size:12px;color:var(--muted);margin-top:32px}
+@media(max-width:700px){.carteirinha{flex-direction:column}.carteirinha-info{grid-template-columns:1fr}.carteirinha-logo{display:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span>&#127973;</span>
+    <div>
+      {{ empresa.nome }}
+      <div class="logo-sub">Portal do Beneficiario</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge-plan">{{ beneficiario.plano_tipo|default:"Plano de Saude" }}</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Carteirinha -->
+  <div class="carteirinha">
+    <div>
+      <div class="carteirinha-nome">{{ beneficiario.nome }}</div>
+      <div class="carteirinha-num">Carteirinha: {{ beneficiario.numero_carteirinha|default:"—" }}</div>
+      <div class="carteirinha-info">
+        <div class="carteirinha-item">
+          Plano
+          <strong>{{ plano.nome }}</strong>
+        </div>
+        <div class="carteirinha-item">
+          Vigencia
+          <strong>
+            {% if beneficiario.data_inicio_vigencia %}
+              {{ beneficiario.data_inicio_vigencia|date:"d/m/Y" }}
+              {% if beneficiario.data_fim_vigencia %} ate {{ beneficiario.data_fim_vigencia|date:"d/m/Y" }}{% endif %}
+            {% else %}—{% endif %}
+          </strong>
+        </div>
+        <div class="carteirinha-item">
+          Acomodacao
+          <strong>{{ beneficiario.get_acomodacao_display|default:"—" }}</strong>
+        </div>
+        <div class="carteirinha-item">
+          Status
+          <strong>{{ beneficiario.get_situacao_display }}</strong>
+        </div>
+      </div>
+    </div>
+    <div class="carteirinha-logo">&#127961;</div>
+  </div>
+
+  <!-- Rede Credenciada -->
+  <div>
+    <div class="section-title"><span>&#127973;</span> Rede Credenciada</div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Prestadores Disponiveis</div>
+        <form method="get" class="filter-bar">
+          <select name="tipo" class="filter-sel">
+            <option value="">Todos os tipos</option>
+            {% for t in tipos_rede %}
+            <option value="{{ t.tipo }}" {% if tipo_filtro == t.tipo %}selected{% endif %}>{{ t.label }}</option>
+            {% endfor %}
+          </select>
+          <input type="text" name="cidade" class="search-input" placeholder="Filtrar por cidade..." value="{{ cidade_filtro }}">
+          <button type="submit" class="btn-filter">Filtrar</button>
+          {% if tipo_filtro or cidade_filtro %}
+          <a href="?" class="btn-filter" style="background:var(--muted);text-decoration:none">Limpar</a>
+          {% endif %}
+        </form>
+      </div>
+      {% if rede %}
+      <table>
+        <thead>
+          <tr>
+            <th>Prestador</th>
+            <th>Tipo</th>
+            <th>Cidade/UF</th>
+            <th>Especialidades</th>
+            <th>Tabela</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rede %}
+          <tr>
+            <td style="font-weight:700">{{ r.nome }}</td>
+            <td>
+              <span class="badge {% if r.tipo == 'hospital' %}badge-danger{% elif r.tipo == 'clinica' %}badge-info{% elif r.tipo == 'laboratorio' %}badge-purple{% elif r.tipo == 'imagem' %}badge-ok{% else %}badge-gray{% endif %}">
+                {{ r.get_tipo_display }}
+              </span>
+            </td>
+            <td>{{ r.cidade|default:"—" }}{% if r.uf %}/{{ r.uf }}{% endif %}</td>
+            <td>
+              <div class="chips">
+                {% for esp in r.especialidades|slice:":3" %}
+                <span class="chip">{{ esp }}</span>
+                {% endfor %}
+                {% if r.especialidades|length > 3 %}
+                <span class="chip">+{{ r.especialidades|length|add:"-3" }}</span>
+                {% endif %}
+                {% if not r.especialidades %}—{% endif %}
+              </div>
+            </td>
+            <td>{{ r.tabela_preco|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">Nenhum prestador encontrado com os filtros selecionados.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Autorizacoes Recentes -->
+  {% if autorizacoes %}
+  <div>
+    <div class="section-title"><span>&#128203;</span> Autorizacoes Recentes</div>
+    <div class="card">
+      {% for ia in autorizacoes %}
+      <div class="auth-item">
+        <div class="auth-icon {{ ia.decisao }}">
+          {% if ia.decisao == 'aprovada' %}&#10003;
+          {% elif ia.decisao == 'negada' %}&#10007;
+          {% else %}&#8987;{% endif %}
+        </div>
+        <div class="auth-info">
+          <div class="auth-title">Guia {{ ia.numero_guia }}{% if ia.cid10 %} — CID: {{ ia.cid10 }}{% endif %}</div>
+          <div class="auth-sub">{{ ia.procedimento }} | {{ ia.criado_em|date:"d/m/Y H:i" }}</div>
+          {% if ia.justificativa_ia %}
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">{{ ia.justificativa_ia }}</div>
+          {% endif %}
+        </div>
+        <span class="badge {% if ia.decisao == 'aprovada' %}badge-ok{% elif ia.decisao == 'negada' %}badge-danger{% else %}badge-warn{% endif %}">
+          {{ ia.get_decisao_display }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Fale Conosco -->
+  <div class="contact-card">
+    <div>
+      <div class="contact-title">Precisa de ajuda?</div>
+      <div class="contact-sub">Nossa equipe de atendimento esta pronta para atender voce.</div>
+    </div>
+    <a href="mailto:atendimento@{{ empresa.nome|lower|cut:' ' }}.com.br" class="btn-contact">
+      &#128140; Fale Conosco
+    </a>
+  </div>
+
+</div>
+
+<footer>
+  &copy; {{ empresa.nome }} — Portal do Beneficiario. Acesso exclusivo mediante link personalizado.
+  Este portal e protegido e seu conteudo e pessoal e intransferivel.
+</footer>
+
+</body>
+</html>

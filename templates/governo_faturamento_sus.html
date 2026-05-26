@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Faturamento SUS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.info::before{background:#a78bfa}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.info .kpi-val{color:#a78bfa}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.comp-selector{display:flex;align-items:center;gap:12px}
+.comp-selector label{font-size:13px;font-weight:600;color:var(--muted)}
+.comp-selector input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;width:130px}
+.comp-selector input:focus{border-color:var(--accent)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Saúde Pública</div>
+  <a class="nav-link" href="/governo/pec/"><span>📋</span> PEC / e-SUS</a>
+  <a class="nav-link" href="/governo/farmacia-basica/"><span>💊</span> Farmácia Básica</a>
+  <a class="nav-link" href="/governo/regulacao/"><span>🏨</span> Regulação</a>
+  <a class="nav-link active" href="/governo/faturamento-sus/"><span>💰</span> Faturamento SUS</a>
+  <a class="nav-link" href="/governo/teleconsulta/"><span>🖥️</span> Teleconsulta</a>
+  <a class="nav-link" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
+  <a class="nav-link" href="/governo/esus/"><span>🔗</span> Integração e-SUS</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Faturamento SUS</div>
+      <div class="page-sub">BPA / APAC / AIH — competências e transmissão ao CNES/DATASUS</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalNovoLote()">+ Novo Lote</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiLotes">—</div><div class="kpi-lbl">Lotes na Competência</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiRegis">—</div><div class="kpi-lbl">Total Registros</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiValor">—</div><div class="kpi-lbl">Valor Aprovado</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiPend">—</div><div class="kpi-lbl">Lotes Pendentes</div></div>
+  </div>
+
+  <!-- Lotes -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Lotes de Faturamento</span>
+      <div class="comp-selector">
+        <label>Competência (AAAAMM):</label>
+        <input id="inputComp" type="text" placeholder="202501" maxlength="6" oninput="carregarLotes()">
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Competência</th>
+          <th>Tipo</th>
+          <th>CNES</th>
+          <th>Registros</th>
+          <th>Valor Aprovado</th>
+          <th>Criado em</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyLotes">
+        <tr><td colspan="8" class="empty">Carregando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Novo Lote -->
+<div class="modal-bg" id="modalNovoLote">
+  <div class="modal">
+    <h3>Novo Lote de Faturamento</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Competência (AAAAMM) *</label><input id="lComp" type="text" placeholder="202501" maxlength="6"></div>
+      <div class="form-group"><label>Tipo *</label>
+        <select id="lTipo">
+          <option value="bpa">BPA-C / BPA-I</option>
+          <option value="apac">APAC</option>
+          <option value="aih">AIH</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CNES do Estabelecimento</label><input id="lCnes" type="text" placeholder="0000000"></div>
+      <div class="form-group"><label>Total de Registros</label><input id="lRegs" type="number" min="0" value="0"></div>
+    </div>
+    <div class="form-group"><label>Valor Total Aprovado (R$)</label><input id="lValor" type="number" step="0.01" min="0" value="0"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalNovoLote')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarLote()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+function fmtMoney(v) {
+  return "R$ " + parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+}
+
+function compAtual() {
+  const d = new Date();
+  return String(d.getFullYear()) + String(d.getMonth() + 1).padStart(2, "0");
+}
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/governo/faturamento-sus/kpis/");
+  document.getElementById("kpiLotes").textContent = d.total_lotes ?? "—";
+  document.getElementById("kpiRegis").textContent = d.total_registros ?? "—";
+  document.getElementById("kpiValor").textContent = d.total_aprovado ? fmtMoney(d.total_aprovado) : "—";
+  document.getElementById("kpiPend").textContent = d.lotes_pendentes ?? "—";
+}
+
+async function carregarLotes() {
+  const comp = document.getElementById("inputComp").value.trim();
+  let url = "/api/governo/faturamento-sus/lotes/";
+  if (comp.length === 6) url += "?competencia=" + comp;
+  const d = await fetchJSON(url);
+  const tbody = document.getElementById("tbodyLotes");
+  const lotes = d.lotes || [];
+  if (!lotes.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhum lote encontrado.</td></tr>'; return; }
+  tbody.innerHTML = lotes.map(l => `<tr>
+    <td><strong>${l.competencia}</strong></td>
+    <td><span class="badge badge-info">${l.tipo_label}</span></td>
+    <td>${l.estabelecimento_cnes || '—'}</td>
+    <td>${l.total_registros.toLocaleString("pt-BR")}</td>
+    <td>${fmtMoney(l.total_aprovado)}</td>
+    <td>${new Date(l.criado_em).toLocaleDateString("pt-BR")}</td>
+    <td>${l.enviado_cnes
+      ? '<span class="badge badge-ok">Transmitido</span>'
+      : '<span class="badge badge-warn">Pendente</span>'}</td>
+    <td>${!l.enviado_cnes
+      ? `<button class="btn btn-ok btn-sm" onclick="transmitirLote(${l.id})">Transmitir</button>`
+      : '—'}</td>
+  </tr>`).join("");
+}
+
+async function transmitirLote(id) {
+  if (!confirm("Marcar este lote como transmitido ao CNES/DATASUS?")) return;
+  const d = await fetchJSON(`/api/governo/faturamento-sus/${id}/transmitir/`, { method: "POST", body: "{}" });
+  if (d.ok) { carregarLotes(); carregarKpis(); }
+  else alert(d.erro || "Erro ao transmitir.");
+}
+
+function abrirModalNovoLote() {
+  document.getElementById("lComp").value = compAtual();
+  document.getElementById("modalNovoLote").classList.add("open");
+}
+
+function fecharModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+async function salvarLote() {
+  const comp = document.getElementById("lComp").value.trim();
+  if (!comp || comp.length !== 6) { alert("Competência inválida (AAAAMM)."); return; }
+  const d = await fetchJSON("/api/governo/faturamento-sus/lotes/", {
+    method: "POST",
+    body: JSON.stringify({
+      competencia: comp,
+      tipo: document.getElementById("lTipo").value,
+      estabelecimento_cnes: document.getElementById("lCnes").value,
+      total_registros: parseInt(document.getElementById("lRegs").value) || 0,
+      total_aprovado: parseFloat(document.getElementById("lValor").value) || 0,
+    })
+  });
+  if (d.id) { fecharModal("modalNovoLote"); carregarLotes(); carregarKpis(); }
+  else alert(d.erro || "Erro ao salvar.");
+}
+
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+// Init: set competência atual and load
+document.getElementById("inputComp").value = compAtual();
+carregarKpis();
+carregarLotes();
+</script>
+</body>
+</html>

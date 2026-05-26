@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Corretores e Comissões — Plano de Saúde</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2);color:#ffc6d3}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.ok::before{background:var(--ok)}
+.kpi.info::before{background:#c084fc}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}
+.kpi.ok .kpi-val{color:var(--ok)}
+.kpi.info .kpi-val{color:#c084fc}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-ok:hover{background:rgba(0,229,176,.25)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:420px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px;color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group select option{background:#0a1a28}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.search-input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;width:220px}
+.search-input::placeholder{color:var(--muted)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+/* Drawer de comissões */
+.comissoes-drawer{display:none;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin:8px 16px 16px;padding:16px}
+.comissoes-drawer.open{display:block}
+.drawer-title{font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent2)}
+.bar-wrap{display:flex;align-items:center;gap:6px}
+.bar-track{flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px;background:var(--ok)}
+.alert-warn{background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--warn);display:flex;align-items:center;gap:8px}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.form-row{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">Plano de Saúde</div>
+  <div class="nav-section">Navegacao</div>
+  <a class="nav-link" href="/plano-saude/gestao/"><span>&#127968;</span> Gestao Operacional</a>
+  <div class="nav-section">Comercial</div>
+  <a class="nav-link active" href="/plano-saude/corretores/"><span>&#129309;</span> Corretores</a>
+  <div class="nav-section">Rede</div>
+  <a class="nav-link" href="/plano-saude/rede/"><span>&#127973;</span> Rede Credenciada</a>
+  <div class="nav-section">Regulatorio</div>
+  <a class="nav-link" href="/plano-saude/ans/"><span>&#128196;</span> Obrigacoes ANS</a>
+  <div class="nav-section">IA</div>
+  <a class="nav-link" href="/plano-saude/ia/"><span>&#129504;</span> IA Autorizacao</a>
+  <div class="nav-section">Beneficiarios</div>
+  <a class="nav-link" href="/plano-saude/portal-admin/"><span>&#128279;</span> Portal Beneficiario</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>&#128682;</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Corretores e Comissoes</div>
+      <div class="page-sub">Gerenciamento de corretoras parceiras, SUSEP e controle de comissoes por competencia.</div>
+    </div>
+    <button class="btn btn-primary" onclick="abrirModalNovaCorretora()">+ Nova Corretora</button>
+  </div>
+
+  <div class="kpi-row" id="kpiRow">
+    <div class="kpi"><div class="kpi-val" id="kpiCorretoras">—</div><div class="kpi-lbl">Corretoras Ativas</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiVidas">—</div><div class="kpi-lbl">Vidas Vendidas (Mes)</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiPagas">—</div><div class="kpi-lbl">Comissoes Pagas (Total)</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiAPagar">—</div><div class="kpi-lbl">A Pagar</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">&#129309; Corretoras Parceiras</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="search-input" id="searchInput" placeholder="Buscar corretora..." oninput="filtrarCorretoras()">
+        <select class="search-input" id="ativaFilter" style="width:120px" onchange="carregarCorretoras()">
+          <option value="">Todas</option>
+          <option value="1">Ativas</option>
+          <option value="0">Inativas</option>
+        </select>
+      </div>
+    </div>
+    <div id="tabelaCorretoras">
+      <div class="empty">Carregando...</div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal Nova Corretora -->
+<div class="modal-bg" id="modalCorretora">
+  <div class="modal">
+    <h3 id="modalCorretoraTitle">Nova Corretora</h3>
+    <input type="hidden" id="editCorretoraId">
+    <div class="form-row">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Razao Social *</label>
+        <input type="text" id="fRazao" placeholder="Nome da corretora">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>CNPJ</label>
+        <input type="text" id="fCnpj" placeholder="00.000.000/0001-00">
+      </div>
+      <div class="form-group">
+        <label>Registro SUSEP</label>
+        <input type="text" id="fSusep" placeholder="Ex: 12345">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Telefone</label>
+        <input type="text" id="fTelefone" placeholder="(11) 99999-0000">
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="fEmail" placeholder="contato@corretora.com">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="fAtiva">
+        <option value="true">Ativa</option>
+        <option value="false">Inativa</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalCorretora()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCorretora()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nova Comissao -->
+<div class="modal-bg" id="modalComissao">
+  <div class="modal">
+    <h3>Lancar Comissao</h3>
+    <input type="hidden" id="comissaoCorretoraId">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Competencia (AAAAMM) *</label>
+        <input type="text" id="cCompetencia" placeholder="202501">
+      </div>
+      <div class="form-group">
+        <label>Vidas Vendidas</label>
+        <input type="number" id="cVidas" value="0" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Receita Base (R$)</label>
+        <input type="number" id="cReceita" value="0" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>% Comissao</label>
+        <input type="number" id="cPercentual" value="0" step="0.01" min="0" max="100">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="cPago">
+        <option value="false">Pendente</option>
+        <option value="true">Pago</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalComissao()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarComissao()">Lancar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const EMPRESA_ID = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id");
+let corretoras = [];
+
+function fmt(v) {
+  return 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+async function carregarKPIs() {
+  try {
+    const r = await fetch('/api/plano-saude/corretoras/kpis', {credentials:'include'});
+    const d = await r.json();
+    document.getElementById('kpiCorretoras').textContent = d.total_corretoras_ativas ?? '—';
+    document.getElementById('kpiVidas').textContent = (d.vidas_vendidas_mes ?? '—').toLocaleString('pt-BR');
+    document.getElementById('kpiPagas').textContent = fmt(d.total_comissoes_pagas);
+    document.getElementById('kpiAPagar').textContent = fmt(d.total_comissoes_a_pagar);
+  } catch(e) {}
+}
+
+async function carregarCorretoras() {
+  const ativa = document.getElementById('ativaFilter').value;
+  let url = '/api/plano-saude/corretoras';
+  if (ativa) url += '?ativa=' + ativa;
+  try {
+    const r = await fetch(url, {credentials:'include'});
+    const d = await r.json();
+    corretoras = d.corretoras || [];
+    renderCorretoras(corretoras);
+  } catch(e) {
+    document.getElementById('tabelaCorretoras').innerHTML = '<div class="empty">Erro ao carregar corretoras.</div>';
+  }
+}
+
+function filtrarCorretoras() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  renderCorretoras(q ? corretoras.filter(c => c.razao_social.toLowerCase().includes(q)) : corretoras);
+}
+
+function renderCorretoras(lista) {
+  const el = document.getElementById('tabelaCorretoras');
+  if (!lista.length) { el.innerHTML = '<div class="empty">Nenhuma corretora encontrada.</div>'; return; }
+  let html = `<table>
+    <thead><tr>
+      <th>Razao Social</th><th>CNPJ</th><th>SUSEP</th><th>Contato</th><th>Status</th><th>Acoes</th>
+    </tr></thead><tbody>`;
+  for (const c of lista) {
+    html += `<tr>
+      <td style="font-weight:700">${c.razao_social}</td>
+      <td>${c.cnpj || '—'}</td>
+      <td>${c.susep || '—'}</td>
+      <td>${c.telefone || '—'}</td>
+      <td><span class="badge ${c.ativa ? 'badge-ok' : 'badge-gray'}">${c.ativa ? 'Ativa' : 'Inativa'}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="verComissoes(${c.id}, '${c.razao_social.replace(/'/g,"\\'")}')">Comissoes</button>
+        <button class="btn btn-ghost btn-sm" onclick="editarCorretora(${c.id})">Editar</button>
+      </td>
+    </tr>
+    <tr id="drawer-${c.id}" style="display:none"><td colspan="6" style="padding:0">
+      <div class="comissoes-drawer open" id="comissoesDrawer-${c.id}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="drawer-title">Comissoes — ${c.razao_social}</div>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalComissao(${c.id})">+ Lancamento</button>
+        </div>
+        <div id="listaComissoes-${c.id}"><div class="empty" style="padding:16px">Carregando...</div></div>
+      </div>
+    </td></tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+async function verComissoes(corId, nome) {
+  const drawer = document.getElementById(`drawer-${corId}`);
+  if (drawer.style.display === 'table-row') {
+    drawer.style.display = 'none';
+    return;
+  }
+  drawer.style.display = 'table-row';
+  const listEl = document.getElementById(`listaComissoes-${corId}`);
+  try {
+    const r = await fetch(`/api/plano-saude/corretoras/${corId}/comissoes`, {credentials:'include'});
+    const d = await r.json();
+    renderComissoes(listEl, d.comissoes || [], corId);
+  } catch(e) {
+    listEl.innerHTML = '<div class="empty">Erro ao carregar.</div>';
+  }
+}
+
+function renderComissoes(el, lista, corId) {
+  if (!lista.length) { el.innerHTML = '<div class="empty" style="padding:12px">Nenhuma comissao lancada.</div>'; return; }
+  let html = `<table>
+    <thead><tr><th>Comp.</th><th>Vidas</th><th>Receita Base</th><th>%</th><th>Valor Comissao</th><th>Status</th><th>Acoes</th></tr></thead>
+    <tbody>`;
+  for (const cm of lista) {
+    const pct = cm.valor_comissao / (cm.receita_base || 1) * 100;
+    html += `<tr>
+      <td>${cm.competencia}</td>
+      <td>${cm.vidas_vendidas}</td>
+      <td>${fmt(cm.receita_base)}</td>
+      <td>${cm.percentual_comissao}%</td>
+      <td style="font-weight:700">${fmt(cm.valor_comissao)}</td>
+      <td><span class="badge ${cm.pago ? 'badge-ok' : 'badge-warn'}">${cm.pago ? 'Pago' : 'Pendente'}</span></td>
+      <td>${!cm.pago ? `<button class="btn btn-ok btn-sm" onclick="marcarPago(${corId}, ${cm.id})">Marcar Pago</button>` : (cm.pago_em || '')}</td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+async function marcarPago(corId, cmId) {
+  if (!confirm('Confirmar pagamento desta comissao?')) return;
+  const r = await fetch(`/api/plano-saude/corretoras/${corId}/comissoes`, {
+    method:'PATCH',
+    credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body: JSON.stringify({comissao_id: cmId})
+  });
+  if (r.ok) {
+    carregarKPIs();
+    const listEl = document.getElementById(`listaComissoes-${corId}`);
+    const r2 = await fetch(`/api/plano-saude/corretoras/${corId}/comissoes`, {credentials:'include'});
+    const d = await r2.json();
+    renderComissoes(listEl, d.comissoes || [], corId);
+  }
+}
+
+function abrirModalNovaCorretora() {
+  document.getElementById('editCorretoraId').value = '';
+  document.getElementById('modalCorretoraTitle').textContent = 'Nova Corretora';
+  ['fRazao','fCnpj','fSusep','fTelefone','fEmail'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fAtiva').value = 'true';
+  document.getElementById('modalCorretora').classList.add('open');
+}
+
+function editarCorretora(id) {
+  const c = corretoras.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('editCorretoraId').value = id;
+  document.getElementById('modalCorretoraTitle').textContent = 'Editar Corretora';
+  document.getElementById('fRazao').value = c.razao_social;
+  document.getElementById('fCnpj').value = c.cnpj;
+  document.getElementById('fSusep').value = c.susep;
+  document.getElementById('fTelefone').value = c.telefone;
+  document.getElementById('fEmail').value = c.email;
+  document.getElementById('fAtiva').value = c.ativa ? 'true' : 'false';
+  document.getElementById('modalCorretora').classList.add('open');
+}
+
+function fecharModalCorretora() { document.getElementById('modalCorretora').classList.remove('open'); }
+
+async function salvarCorretora() {
+  const id = document.getElementById('editCorretoraId').value;
+  const body = {
+    razao_social: document.getElementById('fRazao').value,
+    cnpj: document.getElementById('fCnpj').value,
+    susep: document.getElementById('fSusep').value,
+    telefone: document.getElementById('fTelefone').value,
+    email: document.getElementById('fEmail').value,
+    ativa: document.getElementById('fAtiva').value === 'true',
+  };
+  const url = id ? `/api/plano-saude/corretoras/${id}` : '/api/plano-saude/corretoras';
+  const method = id ? 'PUT' : 'POST';
+  const r = await fetch(url, {
+    method, credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body: JSON.stringify(body)
+  });
+  if (r.ok) { fecharModalCorretora(); carregarCorretoras(); carregarKPIs(); }
+  else { const e = await r.json(); alert(e.erro || 'Erro ao salvar.'); }
+}
+
+function abrirModalComissao(corId) {
+  document.getElementById('comissaoCorretoraId').value = corId;
+  const hoje = new Date();
+  document.getElementById('cCompetencia').value = String(hoje.getFullYear()) + String(hoje.getMonth()+1).padStart(2,'0');
+  document.getElementById('cVidas').value = '0';
+  document.getElementById('cReceita').value = '0';
+  document.getElementById('cPercentual').value = '0';
+  document.getElementById('cPago').value = 'false';
+  document.getElementById('modalComissao').classList.add('open');
+}
+
+function fecharModalComissao() { document.getElementById('modalComissao').classList.remove('open'); }
+
+async function salvarComissao() {
+  const corId = document.getElementById('comissaoCorretoraId').value;
+  const body = {
+    competencia: document.getElementById('cCompetencia').value,
+    vidas_vendidas: parseInt(document.getElementById('cVidas').value)||0,
+    receita_base: parseFloat(document.getElementById('cReceita').value)||0,
+    percentual_comissao: parseFloat(document.getElementById('cPercentual').value)||0,
+    pago: document.getElementById('cPago').value === 'true',
+  };
+  const r = await fetch(`/api/plano-saude/corretoras/${corId}/comissoes`, {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body: JSON.stringify(body)
+  });
+  if (r.ok) {
+    fecharModalComissao();
+    carregarKPIs();
+    const listEl = document.getElementById(`listaComissoes-${corId}`);
+    if (listEl) {
+      const r2 = await fetch(`/api/plano-saude/corretoras/${corId}/comissoes`, {credentials:'include'});
+      const d = await r2.json();
+      renderComissoes(listEl, d.comissoes || [], parseInt(corId));
+    }
+  } else { const e = await r.json(); alert(e.erro || 'Erro ao salvar.'); }
+}
+
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  carregarKPIs();
+  carregarCorretoras();
+});
+</script>
+</body>
+</html>

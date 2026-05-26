@@ -1,0 +1,317 @@
+"""
+Plano de Saúde — Obrigações ANS (DIOPS + SIB).
+DIOPS: declaração trimestral de informações de saúde suplementar.
+SIB:   sistema de informação de beneficiários (mensal).
+"""
+import json
+from datetime import date
+from xml.etree.ElementTree import Element, SubElement, tostring
+from xml.dom import minidom
+
+from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+
+from .access_control import api_requer_gerencia, contexto_navegacao_setorial
+from .models import DIOPSDeclaracao, SIBRegistro
+from .views_dashboard import _empresa_autenticada
+
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+def _ps_auth(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return None, JsonResponse({"erro": "Não autenticado"}, status=401)
+    return empresa, None
+
+
+def _diops_dict(d):
+    return {
+        "id": d.id,
+        "trimestre": d.trimestre,
+        "registro_ans": d.registro_ans,
+        "receita_operacional": float(d.receita_operacional),
+        "despesa_assistencial": float(d.despesa_assistencial),
+        "despesa_administrativa": float(d.despesa_administrativa),
+        "resultado_periodo": float(d.resultado_periodo),
+        "vidas_ativas": d.vidas_ativas,
+        "status": d.status,
+        "status_label": dict(DIOPSDeclaracao.STATUS_CHOICES).get(d.status, d.status),
+        "xml_gerado": bool(d.xml_gerado),
+        "enviado_em": d.enviado_em.strftime("%d/%m/%Y %H:%M") if d.enviado_em else None,
+        "criado_em": d.criado_em.strftime("%d/%m/%Y"),
+    }
+
+
+def _sib_dict(s):
+    return {
+        "id": s.id,
+        "competencia": s.competencia,
+        "registro_ans": s.registro_ans,
+        "vidas_incluidas": s.vidas_incluidas,
+        "vidas_excluidas": s.vidas_excluidas,
+        "vidas_alteradas": s.vidas_alteradas,
+        "total_vidas": s.total_vidas,
+        "enviado": s.enviado,
+        "enviado_em": s.enviado_em.strftime("%d/%m/%Y %H:%M") if s.enviado_em else None,
+        "criado_em": s.criado_em.strftime("%d/%m/%Y"),
+    }
+
+
+def _gerar_xml_diops(d, empresa):
+    """Gera XML stub no formato DIOPS simplificado."""
+    root = Element("DIOPS")
+    root.set("versao", "3.0")
+    root.set("gerado_em", date.today().isoformat())
+
+    header = SubElement(root, "Header")
+    SubElement(header, "RegistroANS").text = d.registro_ans or "000000"
+    SubElement(header, "Trimestre").text = d.trimestre
+    SubElement(header, "NomeOperadora").text = empresa.nome
+
+    financeiro = SubElement(root, "DadosFinanceiros")
+    SubElement(financeiro, "ReceitaOperacional").text = str(d.receita_operacional)
+    SubElement(financeiro, "DespesaAssistencial").text = str(d.despesa_assistencial)
+    SubElement(financeiro, "DespesaAdministrativa").text = str(d.despesa_administrativa)
+    SubElement(financeiro, "ResultadoPeriodo").text = str(d.resultado_periodo)
+    SubElement(financeiro, "VidasAtivas").text = str(d.vidas_ativas)
+
+    # MLR — índice de sinistralidade
+    if d.receita_operacional > 0:
+        mlr = float(d.despesa_assistencial) / float(d.receita_operacional) * 100
+    else:
+        mlr = 0
+    SubElement(financeiro, "MLR").text = f"{mlr:.2f}"
+
+    raw = tostring(root, encoding="unicode")
+    try:
+        pretty = minidom.parseString(raw).toprettyxml(indent="  ")
+        # Remove a linha <?xml...?> duplicada quando já existe
+        lines = pretty.split("\n")
+        return "\n".join(lines)
+    except Exception:
+        return raw
+
+
+# ── page ─────────────────────────────────────────────────────────────────────
+
+def plano_ans_page(request):
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        from django.shortcuts import redirect
+        return redirect("/")
+    ctx = contexto_navegacao_setorial(request, "plano_saude")
+    ctx["empresa_id"] = str(empresa.id)
+    return render(request, "plano_ans_obrigacoes.html", ctx)
+
+
+# ── API: DIOPS ────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_diops_lista(request):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    if request.method == "GET":
+        qs = DIOPSDeclaracao.objects.filter(empresa=empresa)
+        status_filter = request.GET.get("status")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        return JsonResponse({"declaracoes": [_diops_dict(d) for d in qs]})
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        trimestre = (data.get("trimestre") or "").strip()
+        if not trimestre:
+            return JsonResponse({"erro": "trimestre obrigatório (AAAAQ)"}, status=400)
+        d = DIOPSDeclaracao.objects.create(
+            empresa=empresa,
+            trimestre=trimestre,
+            registro_ans=data.get("registro_ans", ""),
+            receita_operacional=float(data.get("receita_operacional") or 0),
+            despesa_assistencial=float(data.get("despesa_assistencial") or 0),
+            despesa_administrativa=float(data.get("despesa_administrativa") or 0),
+            resultado_periodo=float(data.get("resultado_periodo") or 0),
+            vidas_ativas=int(data.get("vidas_ativas") or 0),
+            status=data.get("status", "em_elaboracao"),
+        )
+        return JsonResponse({"declaracao": _diops_dict(d)}, status=201)
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@csrf_exempt
+def api_diops_detalhe(request, decl_id):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    try:
+        d = DIOPSDeclaracao.objects.get(id=decl_id, empresa=empresa)
+    except DIOPSDeclaracao.DoesNotExist:
+        return JsonResponse({"erro": "Declaração não encontrada"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({"declaracao": _diops_dict(d)})
+
+    if request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        for field in ("registro_ans", "status"):
+            if field in data:
+                setattr(d, field, data[field])
+        for field in ("receita_operacional", "despesa_assistencial", "despesa_administrativa", "resultado_periodo"):
+            if field in data:
+                setattr(d, field, float(data[field]))
+        if "vidas_ativas" in data:
+            d.vidas_ativas = int(data["vidas_ativas"])
+        # Marcar como enviada
+        if data.get("status") == "enviada" and not d.enviado_em:
+            d.enviado_em = timezone.now()
+        d.save()
+        return JsonResponse({"declaracao": _diops_dict(d)})
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+def api_diops_gerar_xml(request, decl_id):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    try:
+        d = DIOPSDeclaracao.objects.get(id=decl_id, empresa=empresa)
+    except DIOPSDeclaracao.DoesNotExist:
+        return JsonResponse({"erro": "Declaração não encontrada"}, status=404)
+
+    xml_content = _gerar_xml_diops(d, empresa)
+    d.xml_gerado = xml_content
+    if d.status == "em_elaboracao":
+        d.status = "validada"
+    d.save()
+
+    response = HttpResponse(xml_content, content_type="application/xml; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="DIOPS_{d.trimestre}_{empresa.id}.xml"'
+    return response
+
+
+# ── API: SIB ─────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+def api_sib_lista(request):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    if request.method == "GET":
+        qs = SIBRegistro.objects.filter(empresa=empresa)
+        return JsonResponse({"registros": [_sib_dict(s) for s in qs]})
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        competencia = (data.get("competencia") or "").strip()
+        if not competencia:
+            return JsonResponse({"erro": "competencia obrigatória (AAAAMM)"}, status=400)
+        incluidas = int(data.get("vidas_incluidas") or 0)
+        excluidas = int(data.get("vidas_excluidas") or 0)
+        alteradas = int(data.get("vidas_alteradas") or 0)
+        total_vidas = int(data.get("total_vidas") or 0)
+        s = SIBRegistro.objects.create(
+            empresa=empresa,
+            competencia=competencia,
+            registro_ans=data.get("registro_ans", ""),
+            vidas_incluidas=incluidas,
+            vidas_excluidas=excluidas,
+            vidas_alteradas=alteradas,
+            total_vidas=total_vidas,
+        )
+        return JsonResponse({"registro": _sib_dict(s)}, status=201)
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+@csrf_exempt
+def api_sib_detalhe(request, sib_id):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+    try:
+        s = SIBRegistro.objects.get(id=sib_id, empresa=empresa)
+    except SIBRegistro.DoesNotExist:
+        return JsonResponse({"erro": "Registro SIB não encontrado"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({"registro": _sib_dict(s)})
+
+    if request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        for field in ("vidas_incluidas", "vidas_excluidas", "vidas_alteradas", "total_vidas"):
+            if field in data:
+                setattr(s, field, int(data[field]))
+        if "registro_ans" in data:
+            s.registro_ans = data["registro_ans"]
+        if data.get("enviado"):
+            s.enviado = True
+            s.enviado_em = timezone.now()
+        s.save()
+        return JsonResponse({"registro": _sib_dict(s)})
+
+    return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+# ── API: KPIs ANS ─────────────────────────────────────────────────────────────
+
+def api_ans_kpis(request):
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    hoje = date.today()
+    mes_atual = hoje.strftime("%Y%m")
+
+    # DIOPS — pendentes (em elaboração ou validadas, mas não enviadas)
+    diops_pendentes = DIOPSDeclaracao.objects.filter(
+        empresa=empresa,
+        status__in=["em_elaboracao", "validada"],
+    ).count()
+    diops_enviadas = DIOPSDeclaracao.objects.filter(
+        empresa=empresa, status="enviada"
+    ).count()
+
+    # SIB do mês atual
+    sib_mes = SIBRegistro.objects.filter(
+        empresa=empresa, competencia=mes_atual
+    ).first()
+
+    # Prazo próximo: DIOPS (até dia 30 do mês após o trimestre), SIB (dia 10)
+    # Informamos como texto orientativo
+    if hoje.day <= 10:
+        prazo_sib = f"SIB vence dia 10/{hoje.month:02d}/{hoje.year} (hoje!)"
+    else:
+        proximo_mes = hoje.month % 12 + 1
+        ano = hoje.year if proximo_mes > 1 else hoje.year + 1
+        prazo_sib = f"SIB — próximo vence dia 10/{proximo_mes:02d}/{ano}"
+
+    return JsonResponse({
+        "diops_pendentes": diops_pendentes,
+        "diops_enviadas": diops_enviadas,
+        "sib_mes_atual": _sib_dict(sib_mes) if sib_mes else None,
+        "sib_mes_enviado": sib_mes.enviado if sib_mes else False,
+        "prazo_sib": prazo_sib,
+        "info_prazos": {
+            "diops": "Até dia 30 do mês seguinte ao trimestre de referência",
+            "sib": "Até dia 10 do mês seguinte à competência",
+        },
+    })

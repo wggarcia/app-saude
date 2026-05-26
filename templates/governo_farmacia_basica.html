@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Farmácia Básica UBS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-warn{background:rgba(255,179,71,.15);color:var(--warn);border:1px solid rgba(255,179,71,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.prog-bar{height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;margin-top:4px}
+.prog-fill{height:100%;border-radius:4px;background:var(--accent);transition:.4s}
+.prog-fill.danger{background:var(--danger)}.prog-fill.warn{background:var(--warn)}.prog-fill.ok{background:var(--ok)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+@media(max-width:900px){.kpi-row{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Saúde Pública</div>
+  <a class="nav-link" href="/governo/pec/"><span>📋</span> PEC / e-SUS</a>
+  <a class="nav-link active" href="/governo/farmacia-basica/"><span>💊</span> Farmácia Básica</a>
+  <a class="nav-link" href="/governo/regulacao/"><span>🏨</span> Regulação</a>
+  <a class="nav-link" href="/governo/faturamento-sus/"><span>💰</span> Faturamento SUS</a>
+  <a class="nav-link" href="/governo/teleconsulta/"><span>🖥️</span> Teleconsulta</a>
+  <a class="nav-link" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
+  <a class="nav-link" href="/governo/esus/"><span>🔗</span> Integração e-SUS</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Farmácia Básica UBS</div>
+      <div class="page-sub">Estoque RENAME e dispensação de medicamentos</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalDispensar()">+ Dispensar Medicamento</button>
+      <button class="btn btn-ghost" onclick="abrirModalNovoItem()">+ Novo Item</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiItens">—</div><div class="kpi-lbl">Itens em Estoque</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiAbaixo">—</div><div class="kpi-lbl">Abaixo do Mínimo</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiDispHoje">—</div><div class="kpi-lbl">Dispensações Hoje</div></div>
+  </div>
+
+  <!-- Estoque -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Estoque RENAME</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Cód. RENAME</th>
+          <th>Medicamento</th>
+          <th>Apresentação</th>
+          <th>Unidade</th>
+          <th>Estoque</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyItens">
+        <tr><td colspan="7" class="empty">Carregando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Dispensações recentes -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Dispensações Recentes</span>
+      <button class="btn btn-ghost btn-sm" onclick="carregarDispensacoes()">Atualizar</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data/Hora</th>
+          <th>Medicamento</th>
+          <th>Paciente</th>
+          <th>CNS</th>
+          <th>Qtd</th>
+          <th>Profissional</th>
+          <th>Receita</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyDisp">
+        <tr><td colspan="7" class="empty">Carregando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Dispensar -->
+<div class="modal-bg" id="modalDispensar">
+  <div class="modal">
+    <h3>Dispensar Medicamento</h3>
+    <div class="form-group"><label>Medicamento *</label>
+      <select id="dMed" onchange="atualizarEstoqueInfo()">
+        <option value="">Selecione…</option>
+      </select>
+    </div>
+    <div id="estoqueInfo" style="font-size:12px;color:var(--muted);margin-bottom:12px;margin-top:-8px"></div>
+    <div class="form-row">
+      <div class="form-group"><label>CNS do Cidadão</label><input id="dCns" type="text" placeholder="Cartão Nacional de Saúde"></div>
+      <div class="form-group"><label>Nome do Paciente *</label><input id="dPaciente" type="text" placeholder="Nome completo"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Quantidade *</label><input id="dQtd" type="number" min="1" value="1"></div>
+      <div class="form-group"><label>Número da Receita</label><input id="dReceita" type="text" placeholder="Ex: RX-2024-00123"></div>
+    </div>
+    <div class="form-group"><label>Profissional *</label><input id="dProf" type="text" placeholder="Nome do profissional"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalDispensar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarDispensacao()">Dispensar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo Item -->
+<div class="modal-bg" id="modalNovoItem">
+  <div class="modal">
+    <h3>Novo Item (Medicamento)</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Código RENAME</label><input id="niCod" type="text" placeholder="Ex: 01.01.01.001-0"></div>
+      <div class="form-group"><label>Apresentação</label><input id="niApres" type="text" placeholder="Ex: comprimido 500mg"></div>
+    </div>
+    <div class="form-group"><label>Descrição *</label><input id="niDesc" type="text" placeholder="Nome do medicamento"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Estoque Atual</label><input id="niEst" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Estoque Mínimo</label><input id="niMin" type="number" min="0" value="0"></div>
+    </div>
+    <div class="form-group"><label>Unidade de Saúde</label><input id="niUnidade" type="text" placeholder="Nome da UBS"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalNovoItem')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovoItem()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let itensCache = [];
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/governo/farmacia-basica/kpis/");
+  document.getElementById("kpiItens").textContent = d.total_itens ?? "—";
+  document.getElementById("kpiAbaixo").textContent = d.abaixo_minimo ?? "—";
+  document.getElementById("kpiDispHoje").textContent = d.dispensacoes_hoje ?? "—";
+}
+
+async function carregarItens() {
+  const d = await fetchJSON("/api/governo/farmacia-basica/itens/");
+  itensCache = d.itens || [];
+  const tbody = document.getElementById("tbodyItens");
+  if (!itensCache.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum item cadastrado.</td></tr>'; return; }
+  tbody.innerHTML = itensCache.map(i => {
+    const pct = i.estoque_minimo > 0 ? Math.min(100, Math.round(i.estoque_atual / i.estoque_minimo * 100)) : 100;
+    const cls = i.abaixo_minimo ? "danger" : pct < 150 ? "warn" : "ok";
+    const badge = i.abaixo_minimo
+      ? '<span class="badge badge-danger">Abaixo do Mínimo</span>'
+      : '<span class="badge badge-ok">Regular</span>';
+    return `<tr>
+      <td>${i.rename_codigo || '—'}</td>
+      <td><strong>${i.descricao}</strong></td>
+      <td>${i.apresentacao || '—'}</td>
+      <td>${i.unidade_saude || '—'}</td>
+      <td>
+        <span style="font-weight:700">${i.estoque_atual}</span>
+        <span style="color:var(--muted);font-size:11px"> / mín ${i.estoque_minimo}</span>
+        <div class="prog-bar" style="width:120px"><div class="prog-fill ${cls}" style="width:${Math.min(100,pct)}%"></div></div>
+      </td>
+      <td>${badge}</td>
+      <td><button class="btn btn-warn btn-sm" onclick="dispensarItem(${i.id})">Dispensar</button></td>
+    </tr>`;
+  }).join("");
+}
+
+async function carregarDispensacoes() {
+  const d = await fetchJSON("/api/governo/farmacia-basica/dispensacoes/");
+  const tbody = document.getElementById("tbodyDisp");
+  if (!d.dispensacoes || !d.dispensacoes.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma dispensação registrada.</td></tr>'; return; }
+  tbody.innerHTML = d.dispensacoes.map(d => `<tr>
+    <td>${new Date(d.dispensado_em).toLocaleString("pt-BR")}</td>
+    <td>${d.item_descricao}</td>
+    <td>${d.paciente_nome}</td>
+    <td>${d.cns_cidadao || '—'}</td>
+    <td>${d.quantidade}</td>
+    <td>${d.profissional}</td>
+    <td>${d.receita_numero || '—'}</td>
+  </tr>`).join("");
+}
+
+function dispensarItem(itemId) {
+  document.getElementById("dMed").value = itemId;
+  atualizarEstoqueInfo();
+  document.getElementById("modalDispensar").classList.add("open");
+}
+
+function abrirModalDispensar() {
+  // Populate select
+  const sel = document.getElementById("dMed");
+  sel.innerHTML = '<option value="">Selecione…</option>' +
+    itensCache.map(i => `<option value="${i.id}">${i.descricao} (${i.apresentacao || ''}) — estoque: ${i.estoque_atual}</option>`).join("");
+  document.getElementById("modalDispensar").classList.add("open");
+}
+
+function atualizarEstoqueInfo() {
+  const id = parseInt(document.getElementById("dMed").value);
+  const item = itensCache.find(i => i.id === id);
+  const info = document.getElementById("estoqueInfo");
+  if (item) {
+    info.textContent = `Estoque atual: ${item.estoque_atual} | Mínimo: ${item.estoque_minimo}`;
+    info.style.color = item.abaixo_minimo ? "var(--danger)" : "var(--ok)";
+  } else {
+    info.textContent = "";
+  }
+}
+
+function abrirModalNovoItem() {
+  document.getElementById("modalNovoItem").classList.add("open");
+}
+
+function fecharModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+async function salvarDispensacao() {
+  const item_id = parseInt(document.getElementById("dMed").value);
+  const paciente_nome = document.getElementById("dPaciente").value.trim();
+  const profissional = document.getElementById("dProf").value.trim();
+  const quantidade = parseInt(document.getElementById("dQtd").value);
+  if (!item_id || !paciente_nome || !profissional || !quantidade) { alert("Preencha todos os campos obrigatórios."); return; }
+  const d = await fetchJSON("/api/governo/farmacia-basica/dispensar/", {
+    method: "POST",
+    body: JSON.stringify({ item_id, paciente_nome, profissional, quantidade,
+      cns_cidadao: document.getElementById("dCns").value,
+      receita_numero: document.getElementById("dReceita").value })
+  });
+  if (d.id) { fecharModal("modalDispensar"); carregarItens(); carregarDispensacoes(); carregarKpis(); }
+  else alert(d.erro || "Erro ao dispensar.");
+}
+
+async function salvarNovoItem() {
+  const descricao = document.getElementById("niDesc").value.trim();
+  if (!descricao) { alert("Descrição é obrigatória."); return; }
+  const d = await fetchJSON("/api/governo/farmacia-basica/itens/", {
+    method: "POST",
+    body: JSON.stringify({
+      descricao,
+      rename_codigo: document.getElementById("niCod").value,
+      apresentacao: document.getElementById("niApres").value,
+      estoque_atual: parseInt(document.getElementById("niEst").value) || 0,
+      estoque_minimo: parseInt(document.getElementById("niMin").value) || 0,
+      unidade_saude: document.getElementById("niUnidade").value,
+    })
+  });
+  if (d.id) { fecharModal("modalNovoItem"); carregarItens(); carregarKpis(); }
+  else alert(d.erro || "Erro ao salvar.");
+}
+
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarKpis();
+carregarItens();
+carregarDispensacoes();
+</script>
+</body>
+</html>

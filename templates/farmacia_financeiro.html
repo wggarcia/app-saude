@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Financeiro / DRE — Farmácia</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:220px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2);color:#ffc6d3}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+.page-header{display:flex;align-items:center;justify-content:space-between}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.ok::before{background:var(--ok)}
+.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:24px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}
+.kpi.ok .kpi-val{color:var(--ok)}
+.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:20px}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus{border-color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+/* DRE form layout */
+.dre-layout{display:grid;grid-template-columns:380px 1fr;gap:20px}
+.dre-section{margin-bottom:16px}
+.dre-section-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.dre-calc-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:14px}
+.dre-calc-row.total{font-weight:800;font-size:16px;border-top:2px solid var(--border);margin-top:4px;padding-top:12px}
+.dre-calc-row.positive{color:var(--ok)}
+.dre-calc-row.negative{color:var(--danger)}
+.dre-calc-row.neutral{color:var(--accent)}
+/* CSS Bar Chart */
+.chart-container{padding:20px}
+.chart-bars{display:flex;align-items:flex-end;gap:6px;height:160px;margin-bottom:8px}
+.chart-bar-group{display:flex;flex-direction:column;align-items:center;flex:1;gap:3px}
+.bar-wrap{display:flex;align-items:flex-end;gap:2px;height:150px}
+.bar{border-radius:4px 4px 0 0;min-height:4px;transition:.3s;position:relative;cursor:pointer}
+.bar:hover::after{content:attr(data-val);position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:10px;white-space:nowrap;z-index:10;color:var(--text)}
+.bar-receita{background:var(--accent);width:12px}
+.bar-lucro{background:var(--ok);width:12px}
+.bar-loss{background:var(--danger);width:12px}
+.chart-lbl{font-size:9px;color:var(--muted);text-align:center;margin-top:4px}
+.chart-legend{display:flex;gap:16px;font-size:11px;color:var(--muted);margin-top:4px}
+.chart-legend span{display:flex;align-items:center;gap:4px}
+.chart-legend span::before{content:'';width:10px;height:10px;border-radius:2px;background:var(--accent)}
+.chart-legend .l-lucro::before{background:var(--ok)}
+@media(max-width:1100px){.dre-layout{grid-template-columns:1fr}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">💊 Farmácia</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/farmacia/">📊 Inteligência</a>
+  <a class="nav-link" href="/farmacia/gestao/">🏪 Gestão Operacional</a>
+  <div class="nav-section">Módulos PDV</div>
+  <a class="nav-link" href="/farmacia/pdv/">🖥️ PDV / Caixa</a>
+  <a class="nav-link" href="/farmacia/pbm/">💳 PBM / Convênios</a>
+  <a class="nav-link active" href="/farmacia/financeiro/">📈 Financeiro / DRE</a>
+  <a class="nav-link" href="/farmacia/delivery/">🛵 Delivery</a>
+  <div class="nav-section" style="margin-top:8px">Rede</div>
+  <a class="nav-link" href="/rede/gestao/">🌐 Rede &amp; Comunicação</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/">🚪 Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">DRE — Financeiro</div>
+      <div class="page-sub">Demonstração do Resultado do Exercício mensal</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <label style="font-size:13px;color:var(--muted)">Mês:</label>
+      <input type="month" id="mesSeletor" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none" onchange="carregarMes()">
+    </div>
+  </div>
+
+  <!-- KPIs calculados -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kReceitaLiquida">—</div><div class="kpi-lbl">Receita Líquida</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kLucroBruto">—</div><div class="kpi-lbl">Lucro Bruto</div></div>
+    <div class="kpi" id="kpiLucroLiquido"><div class="kpi-val" id="kLucroLiquido">—</div><div class="kpi-lbl">Lucro Líquido</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kMargem">—</div><div class="kpi-lbl">Margem Líquida</div></div>
+  </div>
+
+  <!-- DRE + Cálculo -->
+  <div class="dre-layout">
+    <!-- Formulário DRE -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📝 Lançamento DRE</span>
+        <button class="btn btn-primary btn-sm" onclick="salvarDRE()">💾 Salvar</button>
+      </div>
+      <div class="card-body">
+        <div class="dre-section">
+          <div class="dre-section-title">Receitas</div>
+          <div class="form-group"><label>Receita Bruta (R$)</label><input type="number" id="fReceitaBruta" step="0.01" value="0" oninput="calcularDRE()"></div>
+          <div class="form-group"><label>(-) Devoluções / Descontos (R$)</label><input type="number" id="fDevolucoes" step="0.01" value="0" oninput="calcularDRE()"></div>
+          <div class="form-group"><label>(-) Impostos / Tributos (R$)</label><input type="number" id="fImpostos" step="0.01" value="0" oninput="calcularDRE()"></div>
+        </div>
+        <div class="dre-section">
+          <div class="dre-section-title">Custos</div>
+          <div class="form-group"><label>(-) CMV — Custo das Mercadorias Vendidas (R$)</label><input type="number" id="fCMV" step="0.01" value="0" oninput="calcularDRE()"></div>
+        </div>
+        <div class="dre-section">
+          <div class="dre-section-title">Despesas Operacionais</div>
+          <div class="form-row">
+            <div class="form-group"><label>Pessoal / Salários (R$)</label><input type="number" id="fPessoal" step="0.01" value="0" oninput="calcularDRE()"></div>
+            <div class="form-group"><label>Aluguel (R$)</label><input type="number" id="fAluguel" step="0.01" value="0" oninput="calcularDRE()"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Despesas Operacionais (R$)</label><input type="number" id="fDespesasOp" step="0.01" value="0" oninput="calcularDRE()"></div>
+            <div class="form-group"><label>Outras Despesas (R$)</label><input type="number" id="fOutrasDespesas" step="0.01" value="0" oninput="calcularDRE()"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Observações</label>
+          <textarea id="fObservacoes" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resultado calculado -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">📊 Resultado do Exercício</span></div>
+      <div class="card-body">
+        <div class="dre-calc-row neutral">
+          <span>Receita Bruta</span>
+          <strong id="cReceitaBruta">R$ 0,00</strong>
+        </div>
+        <div class="dre-calc-row negative">
+          <span>(-) Devoluções</span>
+          <strong id="cDevolucoes">- R$ 0,00</strong>
+        </div>
+        <div class="dre-calc-row negative">
+          <span>(-) Impostos</span>
+          <strong id="cImpostos">- R$ 0,00</strong>
+        </div>
+        <div class="dre-calc-row total neutral">
+          <span>= Receita Líquida</span>
+          <strong id="cReceitaLiquida">R$ 0,00</strong>
+        </div>
+        <div style="height:16px"></div>
+        <div class="dre-calc-row negative">
+          <span>(-) CMV</span>
+          <strong id="cCMV">- R$ 0,00</strong>
+        </div>
+        <div class="dre-calc-row total positive">
+          <span>= Lucro Bruto</span>
+          <strong id="cLucroBruto">R$ 0,00</strong>
+        </div>
+        <div style="height:16px"></div>
+        <div class="dre-calc-row negative">
+          <span>(-) Pessoal</span>
+          <strong id="cPessoal">- R$ 0,00</strong>
+        </div>
+        <div class="dre-calc-row negative">
+          <span>(-) Aluguel</span>
+          <strong id="cAluguel">- R$ 0,00</strong>
+        </div>
+        <div class="dre-calc-row negative">
+          <span>(-) Despesas Operacionais</span>
+          <strong id="cDespesasOp">- R$ 0,00</strong>
+        </div>
+        <div class="dre-calc-row negative">
+          <span>(-) Outras Despesas</span>
+          <strong id="cOutras">- R$ 0,00</strong>
+        </div>
+        <div class="dre-calc-row total" id="cRowLucroLiquido">
+          <span>= Lucro Líquido</span>
+          <strong id="cLucroLiquido">R$ 0,00</strong>
+        </div>
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:13px">
+          <span style="color:var(--muted)">Margem Bruta</span>
+          <span id="cMargemBruta" style="font-weight:700">0,0%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px">
+          <span style="color:var(--muted)">Margem Líquida</span>
+          <span id="cMargemLiquida" style="font-weight:700">0,0%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráfico 12 meses -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📈 Histórico — Últimos 12 Meses</span>
+      <div class="chart-legend">
+        <span>Receita Líquida</span>
+        <span class="l-lucro">Lucro Líquido</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <div class="chart-bars" id="chartBars">
+        <div style="display:flex;align-items:center;color:var(--muted);font-size:13px;width:100%;justify-content:center">Sem dados</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela 12 meses -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">📋 Tabela — Últimos 12 Meses</span></div>
+    <table>
+      <thead><tr><th>Mês</th><th>Receita Bruta</th><th>Receita Líquida</th><th>Lucro Bruto</th><th>Lucro Líquido</th><th>Margem Líquida</th></tr></thead>
+      <tbody id="tbodyDRE"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const empresaId = sessionStorage.getItem('empresa_id') || localStorage.getItem('empresa_id');
+const headers = {'Content-Type':'application/json','X-Empresa-Id': empresaId || ''};
+
+function fmt(v){return 'R$ '+(+v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.')}
+function fmtPct(v){return (+(v||0)).toFixed(1)+'%'}
+function fmtMes(iso){if(!iso)return '—';const d=new Date(iso+'T12:00:00');return d.toLocaleDateString('pt-BR',{month:'short',year:'numeric'})}
+
+// Inicializar seletor de mês com mês atual
+const hoje = new Date();
+const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+document.getElementById('mesSeletor').value = mesAtual;
+
+function calcularDRE(){
+  const rb = +document.getElementById('fReceitaBruta').value||0;
+  const dev = +document.getElementById('fDevolucoes').value||0;
+  const imp = +document.getElementById('fImpostos').value||0;
+  const cmv = +document.getElementById('fCMV').value||0;
+  const pessoal = +document.getElementById('fPessoal').value||0;
+  const aluguel = +document.getElementById('fAluguel').value||0;
+  const desopx = +document.getElementById('fDespesasOp').value||0;
+  const outras = +document.getElementById('fOutrasDespesas').value||0;
+
+  const rl = rb - dev - imp;
+  const lb = rl - cmv;
+  const totalDesp = pessoal + aluguel + desopx + outras;
+  const ll = lb - totalDesp;
+  const margemBruta = rl ? (lb/rl*100) : 0;
+  const margemLiq = rl ? (ll/rl*100) : 0;
+
+  document.getElementById('cReceitaBruta').textContent = fmt(rb);
+  document.getElementById('cDevolucoes').textContent = '- '+fmt(dev);
+  document.getElementById('cImpostos').textContent = '- '+fmt(imp);
+  document.getElementById('cReceitaLiquida').textContent = fmt(rl);
+  document.getElementById('cCMV').textContent = '- '+fmt(cmv);
+  document.getElementById('cLucroBruto').textContent = fmt(lb);
+  document.getElementById('cPessoal').textContent = '- '+fmt(pessoal);
+  document.getElementById('cAluguel').textContent = '- '+fmt(aluguel);
+  document.getElementById('cDespesasOp').textContent = '- '+fmt(desopx);
+  document.getElementById('cOutras').textContent = '- '+fmt(outras);
+  document.getElementById('cLucroLiquido').textContent = fmt(ll);
+  document.getElementById('cRowLucroLiquido').className = 'dre-calc-row total ' + (ll >= 0 ? 'positive' : 'negative');
+  document.getElementById('cMargemBruta').textContent = fmtPct(margemBruta);
+  document.getElementById('cMargemLiquida').textContent = fmtPct(margemLiq);
+}
+
+async function carregarMes(){
+  const mesVal = document.getElementById('mesSeletor').value;
+  if(!mesVal)return;
+  const mesRef = mesVal+'-01';
+  try{
+    const r = await fetch(`/api/farmacia/dre/dashboard?mes_referencia=${mesRef}`, {headers});
+    const d = await r.json();
+    if(!d.ok)return;
+
+    // Atualizar KPIs
+    const k = d.kpis;
+    document.getElementById('kReceitaLiquida').textContent = fmt(k.receita_liquida);
+    document.getElementById('kLucroBruto').textContent = fmt(k.lucro_bruto);
+    document.getElementById('kLucroLiquido').textContent = fmt(k.lucro_liquido);
+    document.getElementById('kMargem').textContent = fmtPct(k.margem_liquida_pct);
+
+    // Colorir KPI lucro líquido
+    const kpiLl = document.getElementById('kpiLucroLiquido');
+    kpiLl.className = 'kpi ' + (k.lucro_liquido >= 0 ? 'ok' : 'danger');
+
+    // Preencher formulário
+    if(d.dre){
+      const dre = d.dre;
+      document.getElementById('fReceitaBruta').value = dre.receita_bruta;
+      document.getElementById('fDevolucoes').value = dre.devolucoes;
+      document.getElementById('fImpostos').value = dre.impostos;
+      document.getElementById('fCMV').value = dre.cmv;
+      document.getElementById('fPessoal').value = dre.despesas_pessoal;
+      document.getElementById('fAluguel').value = dre.despesas_aluguel;
+      document.getElementById('fDespesasOp').value = dre.despesas_operacionais;
+      document.getElementById('fOutrasDespesas').value = dre.outras_despesas;
+      document.getElementById('fObservacoes').value = dre.observacoes||'';
+    } else {
+      ['fReceitaBruta','fDevolucoes','fImpostos','fCMV','fPessoal','fAluguel','fDespesasOp','fOutrasDespesas'].forEach(id=>{document.getElementById(id).value=0});
+      document.getElementById('fObservacoes').value='';
+    }
+
+    calcularDRE();
+    renderizarGrafico(d.historico||[]);
+    renderizarTabela(d.historico||[]);
+  }catch(e){console.error(e)}
+}
+
+async function salvarDRE(){
+  const mesVal = document.getElementById('mesSeletor').value;
+  if(!mesVal){alert('Selecione o mês');return}
+  const body = {
+    mes_referencia: mesVal+'-01',
+    receita_bruta: +document.getElementById('fReceitaBruta').value||0,
+    devolucoes: +document.getElementById('fDevolucoes').value||0,
+    impostos: +document.getElementById('fImpostos').value||0,
+    cmv: +document.getElementById('fCMV').value||0,
+    despesas_pessoal: +document.getElementById('fPessoal').value||0,
+    despesas_aluguel: +document.getElementById('fAluguel').value||0,
+    despesas_operacionais: +document.getElementById('fDespesasOp').value||0,
+    outras_despesas: +document.getElementById('fOutrasDespesas').value||0,
+    observacoes: document.getElementById('fObservacoes').value
+  };
+  try{
+    const r = await fetch('/api/farmacia/dre/salvar', {method:'POST',headers,body:JSON.stringify(body)});
+    const d = await r.json();
+    if(d.ok){
+      alert('DRE salvo com sucesso!');
+      carregarMes();
+      carregarTabela12Meses();
+    }else{alert(d.erro||'Erro ao salvar')}
+  }catch(e){alert('Erro de conexão')}
+}
+
+function renderizarGrafico(historico){
+  const container = document.getElementById('chartBars');
+  if(!historico.length){
+    container.innerHTML='<div style="display:flex;align-items:center;color:var(--muted);font-size:13px;width:100%;justify-content:center">Sem dados para exibir</div>';
+    return;
+  }
+  // Encontrar valor máximo para escala
+  const maxVal = Math.max(...historico.map(h=>Math.max(Math.abs(h.receita_liquida||0), Math.abs(h.lucro_liquido||0))), 1);
+  const HEIGHT = 140;
+  container.innerHTML = historico.map(h=>{
+    const hReceita = Math.round((Math.abs(h.receita_liquida||0)/maxVal)*HEIGHT);
+    const hLucro = Math.round((Math.abs(h.lucro_liquido||0)/maxVal)*HEIGHT);
+    const lucroColor = (h.lucro_liquido||0) >= 0 ? 'var(--ok)' : 'var(--danger)';
+    return `<div class="chart-bar-group">
+      <div class="bar-wrap">
+        <div class="bar bar-receita" style="height:${hReceita}px" data-val="${fmt(h.receita_liquida||0)}"></div>
+        <div class="bar" style="height:${hLucro}px;background:${lucroColor};width:12px;border-radius:4px 4px 0 0" data-val="${fmt(h.lucro_liquido||0)}"></div>
+      </div>
+      <div class="chart-lbl">${fmtMes(h.mes)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderizarTabela(historico){
+  const tbody = document.getElementById('tbodyDRE');
+  if(!historico.length){tbody.innerHTML='<tr><td colspan="6" class="empty">Nenhum dado disponível</td></tr>';return}
+  tbody.innerHTML=[...historico].reverse().map(h=>{
+    const ll = h.lucro_liquido||0;
+    const badge = ll >= 0 ? 'badge-ok' : 'badge-danger';
+    return `<tr>
+      <td style="font-weight:600">${fmtMes(h.mes)}</td>
+      <td>${fmt(h.receita_bruta||0)}</td>
+      <td>${fmt(h.receita_liquida||0)}</td>
+      <td>${fmt(h.lucro_bruto||0)}</td>
+      <td><span class="badge ${badge}">${fmt(ll)}</span></td>
+      <td style="font-weight:700;color:${ll>=0?'var(--ok)':'var(--danger)'}">
+        ${fmtPct(h.margem_liquida_pct||0)}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function carregarTabela12Meses(){
+  try{
+    const r = await fetch('/api/farmacia/dre/lista', {headers});
+    const d = await r.json();
+    if(d.ok){renderizarTabela(d.dre_lista||[])}
+  }catch(e){console.error(e)}
+}
+
+// Carregar mês atual ao abrir
+carregarMes();
+carregarTabela12Meses();
+</script>
+</body>
+</html>

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PEC — Prontuário Eletrônico do Cidadão</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.info::before{background:#a78bfa}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.info .kpi-val{color:#a78bfa}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.layout-2col{display:grid;grid-template-columns:320px 1fr;gap:20px}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+tr.selected td{background:rgba(0,194,255,.06)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}.btn-ok:hover{background:rgba(0,229,176,.25)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.search-bar{display:flex;gap:8px;align-items:center}
+.search-bar input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;width:220px}
+.search-bar input:focus{border-color:var(--accent)}
+.patient-list{list-style:none;padding:8px}
+.patient-item{padding:10px 12px;border-radius:8px;cursor:pointer;transition:.15s;border:1px solid transparent;margin-bottom:4px}
+.patient-item:hover{background:rgba(0,194,255,.07)}
+.patient-item.active{background:rgba(0,194,255,.12);border-color:rgba(0,194,255,.2)}
+.patient-name{font-size:13px;font-weight:600}
+.patient-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.detail-section{padding:20px}
+.detail-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.field-item{display:flex;flex-direction:column;gap:3px}
+.field-key{font-size:11px;color:var(--muted);font-weight:600}
+.field-val{font-size:13px;font-weight:500}
+.timeline{display:flex;flex-direction:column;gap:12px;padding:16px}
+.tl-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:14px}
+.tl-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px}
+.tl-date{font-size:12px;font-weight:700;color:var(--accent)}
+.tl-prof{font-size:12px;color:var(--muted)}
+.tl-evolucao{font-size:13px;line-height:1.5;color:var(--text)}
+.tl-tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:72px}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.info-text{font-size:12px;color:var(--muted);line-height:1.5}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}.layout-2col{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Saúde Pública</div>
+  <a class="nav-link active" href="/governo/pec/"><span>📋</span> PEC / e-SUS</a>
+  <a class="nav-link" href="/governo/farmacia-basica/"><span>💊</span> Farmácia Básica</a>
+  <a class="nav-link" href="/governo/regulacao/"><span>🏨</span> Regulação</a>
+  <a class="nav-link" href="/governo/faturamento-sus/"><span>💰</span> Faturamento SUS</a>
+  <a class="nav-link" href="/governo/teleconsulta/"><span>🖥️</span> Teleconsulta</a>
+  <a class="nav-link" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
+  <a class="nav-link" href="/governo/esus/"><span>🔗</span> Integração e-SUS</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">PEC — Prontuário Eletrônico do Cidadão</div>
+      <div class="page-sub">e-SUS Atenção Básica — atendimentos UBS</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalPaciente()">+ Novo Paciente</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row" id="kpiRow">
+    <div class="kpi"><div class="kpi-val" id="kpiPac">—</div><div class="kpi-lbl">Pacientes Cadastrados</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiHoje">—</div><div class="kpi-lbl">Atendimentos Hoje</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiNaoEnv">—</div><div class="kpi-lbl">Não Enviados e-SUS</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiTotal">—</div><div class="kpi-lbl">Total Atendimentos</div></div>
+  </div>
+
+  <!-- 2-col layout: search/list + detail -->
+  <div class="layout-2col">
+    <!-- Left: search + list -->
+    <div class="card" style="height:calc(100vh - 280px);display:flex;flex-direction:column">
+      <div class="card-header">
+        <span class="card-title">Pacientes</span>
+        <div class="search-bar">
+          <input id="inputBusca" type="text" placeholder="Nome, CNS ou CPF…" oninput="buscarPacientes()">
+        </div>
+      </div>
+      <div style="flex:1;overflow-y:auto">
+        <ul class="patient-list" id="listaPacientes">
+          <li class="empty">Pesquise um paciente acima</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Right: detail -->
+    <div id="panelDetalhe" style="display:none;flex-direction:column;gap:16px">
+      <!-- Patient card -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title" id="detNome">—</span>
+          <button class="btn btn-ghost btn-sm" onclick="abrirModalAtendimento()">+ Novo Atendimento</button>
+        </div>
+        <div class="detail-section">
+          <div class="field-grid" id="detCampos"></div>
+          <div style="margin-top:8px">
+            <div class="field-key">Condições Crônicas</div>
+            <div class="field-val" id="detCronicas" style="margin-top:4px">—</div>
+          </div>
+          <div style="margin-top:12px">
+            <div class="field-key">Alergias</div>
+            <div class="field-val" id="detAlergias" style="margin-top:4px;color:var(--warn)">—</div>
+          </div>
+        </div>
+      </div>
+      <!-- Timeline -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Atendimentos</span>
+        </div>
+        <div class="timeline" id="timeline">
+          <div class="empty">Nenhum atendimento registrado.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal: Novo Paciente -->
+<div class="modal-bg" id="modalPaciente">
+  <div class="modal">
+    <h3>Novo Paciente</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome Completo *</label><input id="mPacNome" type="text" placeholder="Nome completo"></div>
+      <div class="form-group"><label>Data de Nascimento</label><input id="mPacDtNasc" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CNS</label><input id="mPacCns" type="text" placeholder="Cartão Nacional de Saúde"></div>
+      <div class="form-group"><label>CPF</label><input id="mPacCpf" type="text" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Sexo</label>
+        <select id="mPacSexo">
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+          <option value="O">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Telefone</label><input id="mPacTel" type="text" placeholder="(00) 00000-0000"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Unidade de Saúde</label><input id="mPacUnidade" type="text" placeholder="Nome da UBS"></div>
+      <div class="form-group"><label>Microárea</label><input id="mPacMicroarea" type="text" placeholder="Ex: 001"></div>
+    </div>
+    <div class="form-group"><label>ACS Responsável</label><input id="mPacAcs" type="text" placeholder="Nome do ACS"></div>
+    <div class="form-group"><label>Condições Crônicas</label><textarea id="mPacCronicas" placeholder="Ex: HAS, DM2, Obesidade…"></textarea></div>
+    <div class="form-group"><label>Alergias</label><textarea id="mPacAlergias" placeholder="Ex: Penicilina, AAS…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalPaciente')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPaciente()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo Atendimento -->
+<div class="modal-bg" id="modalAtendimento">
+  <div class="modal">
+    <h3>Novo Atendimento</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Profissional *</label><input id="mAtProf" type="text" placeholder="Nome do profissional"></div>
+      <div class="form-group"><label>CBO</label><input id="mAtCbo" type="text" placeholder="Ex: 225125"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Data *</label><input id="mAtData" type="date"></div>
+      <div class="form-group"><label>Turno</label>
+        <select id="mAtTurno">
+          <option value="M">Manhã</option>
+          <option value="T">Tarde</option>
+          <option value="N">Noite</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CID-10</label><input id="mAtCid" type="text" placeholder="Ex: J06.9"></div>
+      <div class="form-group"><label>Procedimento AB (CIAP-2)</label><input id="mAtProc" type="text" placeholder="Ex: A97"></div>
+    </div>
+    <div class="form-group"><label>Unidade de Saúde</label><input id="mAtUnidade" type="text" placeholder="Nome da UBS"></div>
+    <div class="form-group"><label>Evolução / Observações</label><textarea id="mAtEvolucao" style="min-height:100px" placeholder="Texto da evolução clínica…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalAtendimento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAtendimento()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let pacienteAtual = null;
+let buscaTimeout = null;
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json",
+                "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/governo/pec/kpis/");
+  document.getElementById("kpiPac").textContent = d.total_pacientes ?? "—";
+  document.getElementById("kpiHoje").textContent = d.atendimentos_hoje ?? "—";
+  document.getElementById("kpiNaoEnv").textContent = d.nao_enviados_esus ?? "—";
+  document.getElementById("kpiTotal").textContent = d.total_atendimentos ?? "—";
+}
+
+function buscarPacientes() {
+  clearTimeout(buscaTimeout);
+  buscaTimeout = setTimeout(async () => {
+    const q = document.getElementById("inputBusca").value.trim();
+    if (!q) { document.getElementById("listaPacientes").innerHTML = '<li class="empty">Pesquise um paciente acima</li>'; return; }
+    const d = await fetchJSON(`/api/governo/pec/?q=${encodeURIComponent(q)}`);
+    const ul = document.getElementById("listaPacientes");
+    if (!d.pacientes || d.pacientes.length === 0) { ul.innerHTML = '<li class="empty">Nenhum paciente encontrado.</li>'; return; }
+    ul.innerHTML = d.pacientes.map(p => `
+      <li class="patient-item" onclick="abrirPaciente(${p.id})" id="pi-${p.id}">
+        <div class="patient-name">${p.nome_completo}</div>
+        <div class="patient-meta">CNS: ${p.cns || '—'} | ${p.unidade_saude || '—'}</div>
+      </li>`).join("");
+  }, 300);
+}
+
+async function abrirPaciente(id) {
+  document.querySelectorAll(".patient-item").forEach(el => el.classList.remove("active"));
+  const el = document.getElementById("pi-" + id);
+  if (el) el.classList.add("active");
+  const [det, atends] = await Promise.all([
+    fetchJSON(`/api/governo/pec/${id}/`),
+    fetchJSON(`/api/governo/pec/${id}/atendimentos/`)
+  ]);
+  pacienteAtual = det;
+  renderDetalhe(det, atends.atendimentos || []);
+  document.getElementById("panelDetalhe").style.display = "flex";
+}
+
+function renderDetalhe(p, atends) {
+  document.getElementById("detNome").textContent = p.nome_completo;
+  document.getElementById("detCampos").innerHTML = `
+    <div class="field-item"><span class="field-key">CNS</span><span class="field-val">${p.cns || '—'}</span></div>
+    <div class="field-item"><span class="field-key">CPF</span><span class="field-val">${p.cpf || '—'}</span></div>
+    <div class="field-item"><span class="field-key">Nasc.</span><span class="field-val">${p.data_nascimento || '—'}</span></div>
+    <div class="field-item"><span class="field-key">Sexo</span><span class="field-val">${p.sexo}</span></div>
+    <div class="field-item"><span class="field-key">Telefone</span><span class="field-val">${p.telefone || '—'}</span></div>
+    <div class="field-item"><span class="field-key">Unidade</span><span class="field-val">${p.unidade_saude || '—'}</span></div>
+    <div class="field-item"><span class="field-key">Microárea</span><span class="field-val">${p.microarea || '—'}</span></div>
+    <div class="field-item"><span class="field-key">ACS</span><span class="field-val">${p.acs_responsavel || '—'}</span></div>
+  `;
+  document.getElementById("detCronicas").textContent = p.condicoes_cronicas || '—';
+  document.getElementById("detAlergias").textContent = p.alergias || 'Sem alergias registradas';
+  renderTimeline(atends);
+}
+
+function renderTimeline(atends) {
+  const tl = document.getElementById("timeline");
+  if (!atends.length) { tl.innerHTML = '<div class="empty">Nenhum atendimento registrado.</div>'; return; }
+  tl.innerHTML = atends.map(a => `
+    <div class="tl-item">
+      <div class="tl-header">
+        <span class="tl-date">${a.data_atendimento} — ${a.turno_label}</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${a.enviado_esus ? '<span class="badge badge-ok">Enviado e-SUS</span>' : '<span class="badge badge-warn">Pendente e-SUS</span>'}
+          ${!a.enviado_esus ? `<button class="btn btn-ok btn-sm" onclick="enviarEsus(${a.id})">Enviar ao e-SUS</button>` : ''}
+        </div>
+      </div>
+      <div class="tl-prof">${a.profissional} ${a.cbo ? '· CBO ' + a.cbo : ''}</div>
+      <div class="tl-evolucao" style="margin-top:6px">${a.texto_evolucao || '<em style="color:var(--muted)">Sem evolução registrada.</em>'}</div>
+      <div class="tl-tags">
+        ${a.cid10 ? `<span class="badge badge-info">CID ${a.cid10}</span>` : ''}
+        ${a.procedimento_ab ? `<span class="badge badge-info">AB ${a.procedimento_ab}</span>` : ''}
+        ${a.unidade_saude ? `<span style="font-size:11px;color:var(--muted)">${a.unidade_saude}</span>` : ''}
+      </div>
+    </div>`).join("");
+}
+
+async function enviarEsus(atendId) {
+  if (!confirm("Marcar atendimento como enviado ao e-SUS?")) return;
+  // Use the bulk send endpoint from views_governo_esus
+  await fetchJSON("/api/governo/esus/enviar/", { method: "POST", body: JSON.stringify({}) });
+  alert("Ficha marcada para envio ao e-SUS.");
+  if (pacienteAtual) abrirPaciente(pacienteAtual.id);
+  carregarKpis();
+}
+
+function abrirModalPaciente() {
+  document.getElementById("modalPaciente").classList.add("open");
+  document.getElementById("mAtData").value = new Date().toISOString().slice(0,10);
+}
+
+function abrirModalAtendimento() {
+  if (!pacienteAtual) { alert("Selecione um paciente primeiro."); return; }
+  document.getElementById("modalAtendimento").classList.add("open");
+  document.getElementById("mAtData").value = new Date().toISOString().slice(0,10);
+}
+
+function fecharModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+async function salvarPaciente() {
+  const nome = document.getElementById("mPacNome").value.trim();
+  if (!nome) { alert("Nome é obrigatório."); return; }
+  const payload = {
+    nome_completo: nome,
+    data_nascimento: document.getElementById("mPacDtNasc").value || null,
+    cns: document.getElementById("mPacCns").value,
+    cpf: document.getElementById("mPacCpf").value,
+    sexo: document.getElementById("mPacSexo").value,
+    telefone: document.getElementById("mPacTel").value,
+    unidade_saude: document.getElementById("mPacUnidade").value,
+    microarea: document.getElementById("mPacMicroarea").value,
+    acs_responsavel: document.getElementById("mPacAcs").value,
+    condicoes_cronicas: document.getElementById("mPacCronicas").value,
+    alergias: document.getElementById("mPacAlergias").value,
+  };
+  const d = await fetchJSON("/api/governo/pec/novo/", { method: "POST", body: JSON.stringify(payload) });
+  if (d.id) { fecharModal("modalPaciente"); carregarKpis(); alert("Paciente cadastrado com sucesso!"); }
+  else alert(d.erro || "Erro ao salvar.");
+}
+
+async function salvarAtendimento() {
+  const prof = document.getElementById("mAtProf").value.trim();
+  const data = document.getElementById("mAtData").value;
+  if (!prof || !data) { alert("Profissional e data são obrigatórios."); return; }
+  const payload = {
+    profissional: prof,
+    cbo: document.getElementById("mAtCbo").value,
+    data_atendimento: data,
+    turno: document.getElementById("mAtTurno").value,
+    cid10: document.getElementById("mAtCid").value,
+    procedimento_ab: document.getElementById("mAtProc").value,
+    unidade_saude: document.getElementById("mAtUnidade").value,
+    texto_evolucao: document.getElementById("mAtEvolucao").value,
+  };
+  const d = await fetchJSON(`/api/governo/pec/${pacienteAtual.id}/atendimentos/`, { method: "POST", body: JSON.stringify(payload) });
+  if (d.id) { fecharModal("modalAtendimento"); abrirPaciente(pacienteAtual.id); carregarKpis(); }
+  else alert(d.erro || "Erro ao salvar.");
+}
+
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarKpis();
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Acesso Invalido — Portal Beneficiario</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:#f0f7ff;color:#1a2e42;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border:1px solid #dce8f5;border-radius:16px;padding:48px 40px;max-width:480px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,120,200,.1)}
+.icon{font-size:64px;margin-bottom:20px}
+h1{font-size:22px;font-weight:800;color:#1a2e42;margin-bottom:10px}
+p{font-size:14px;color:#6b8ba4;line-height:1.6}
+.btn{display:inline-flex;align-items:center;gap:6px;margin-top:24px;padding:10px 24px;background:#0078c8;color:#fff;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;font-family:Manrope,sans-serif}
+</style>
+</head>
+<body>
+<div class="card">
+  {% if motivo == "expirado" %}
+  <div class="icon">&#8987;</div>
+  <h1>Link Expirado</h1>
+  <p>Seu link de acesso ao portal expirou. Entre em contato com a operadora para solicitar um novo link.</p>
+  {% else %}
+  <div class="icon">&#128274;</div>
+  <h1>Acesso Invalido</h1>
+  <p>O link que voce acessou e invalido ou nao existe. Verifique se o link esta correto ou solicite um novo link a sua operadora.</p>
+  {% endif %}
+  <a href="/" class="btn">&#8592; Voltar ao Inicio</a>
+</div>
+</body>
+</html>

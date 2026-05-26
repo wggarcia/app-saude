@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prontuário Eletrônico — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#041018;--surface:#072030;--surface2:#0a2d45;--surface3:#0d3555;
+  --accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;
+  --text:#e8f4ff;--muted:#7a9bb5;--radius:12px;
+  --card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07);
+  --manche-red:#ff4d6d;--manche-orange:#ff8c00;--manche-yellow:#ffd700;
+  --manche-green:#00e5b0;--manche-blue:#00c2ff;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:16px;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;flex-shrink:0}
+.topbar-logo{font-size:15px;font-weight:800;color:var(--accent);white-space:nowrap}
+.topbar-spacer{flex:1}
+.topbar-user{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:6px 12px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px}
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;min-height:calc(100vh - 56px);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0;flex-shrink:0;overflow-y:auto}
+.nav-section{padding:10px 16px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:1px 8px;transition:.15s;cursor:pointer;border:none;background:none;width:calc(100% - 16px);font-family:Manrope,sans-serif}
+.nav-link-inner{display:flex;align-items:center;gap:9px}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link.active{box-shadow:inset 3px 0 0 var(--accent)}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.28)}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.content{padding:24px 28px;display:flex;flex-direction:column;gap:20px;flex:1}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:20px;font-weight:800}
+.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:rgba(255,255,255,.02);white-space:nowrap}
+td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.018)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-muted{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.12);color:var(--ok);border:1px solid rgba(0,229,176,.25)}.btn-ok:hover{background:rgba(0,229,176,.2)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;min-width:440px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:18px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.form-group label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s;width:100%}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);background:rgba(0,194,255,.04)}
+.form-group textarea{resize:vertical;min-height:70px}
+.form-group select option{background:var(--surface);color:var(--text)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px;padding-top:14px;border-top:1px solid var(--border)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.search-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.search-bar input{flex:1;min-width:220px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 14px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.search-bar input:focus{border-color:var(--accent)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);overflow-x:auto}
+.tab-btn{padding:10px 16px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;font-family:Manrope,sans-serif;white-space:nowrap}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none;margin-top:16px}.tab-panel.active{display:block}
+.evo-list{display:flex;flex-direction:column;gap:8px}
+.evo-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px;border-left:3px solid var(--accent)}
+.evo-meta{font-size:11px;color:var(--muted);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap}
+.detail-panel{display:none}.detail-panel.open{display:block}
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{display:flex;align-items:flex-start;gap:10px;padding:14px 18px;border-radius:12px;min-width:260px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.5);border:1px solid transparent;pointer-events:all;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.toast-ok{background:#072030;border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast-error{background:#1a0812;border-color:rgba(255,77,109,.3);color:var(--danger)}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-logo">🏥 HospitalOS</div>
+  <div class="topbar-spacer"></div>
+  <a href="/hospital/gestao/" class="btn btn-ghost" style="font-size:12px;padding:6px 12px">⬅ Dashboard</a>
+  <div class="topbar-user"><span>📋</span> Prontuário</div>
+</header>
+<div class="layout">
+<aside class="sidebar">
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link active" href="/hospital/prontuario/"><div class="nav-link-inner"><span>📋</span><span>Prontuários</span></div></a>
+  <a class="nav-link" href="/hospital/cirurgia/"><div class="nav-link-inner"><span>🔪</span><span>Bloco Cirúrgico</span></div></a>
+  <a class="nav-link" href="/hospital/lis/"><div class="nav-link-inner"><span>🔬</span><span>Laboratório</span></div></a>
+  <a class="nav-link" href="/hospital/imagem/"><div class="nav-link-inner"><span>🩻</span><span>Imagem/PACS</span></div></a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><div class="nav-link-inner"><span>💊</span><span>Farmácia Hosp.</span></div></a>
+  <a class="nav-link" href="/hospital/faturamento-tiss/"><div class="nav-link-inner"><span>🧾</span><span>Faturamento TISS</span></div></a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><div class="nav-link-inner"><span>🏠</span><span>Dashboard</span></div></a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/" style="text-decoration:none"><div class="nav-link-inner"><span>🚪</span><span>Sair</span></div></a>
+  </div>
+</aside>
+<main class="main">
+<div class="content">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Prontuário Eletrônico</div>
+      <div class="page-sub">EMR — evoluções clínicas e prescrições hospitalares</div>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('modalNovoPront')">+ Novo Prontuário</button>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🔍 Buscar Paciente</span>
+    </div>
+    <div style="padding:14px 18px">
+      <div class="search-bar">
+        <input id="searchInput" placeholder="Nome ou CPF do paciente…" oninput="debounceSearch(this.value)">
+        <button class="btn btn-ghost" onclick="loadLista()">Buscar</button>
+      </div>
+    </div>
+    <div id="resultsList">
+      <table>
+        <thead><tr>
+          <th>Nº Prontuário</th><th>Paciente</th><th>CPF</th><th>Nascimento</th><th>Telefone</th><th>Cadastrado em</th><th></th>
+        </tr></thead>
+        <tbody id="listaBody"><tr><td colspan="7" class="empty">Busque por nome ou CPF do paciente.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div id="detailPanel" class="detail-panel">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title" id="detailTitle">Prontuário</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ok btn-sm" onclick="openModal('modalNovaEvo')">+ Evolução</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modalNovaPresc')">+ Prescrição</button>
+          <button class="btn btn-ghost btn-sm" onclick="closeDetail()">✕ Fechar</button>
+        </div>
+      </div>
+      <div style="padding:18px">
+        <div class="tabs">
+          <button class="tab-btn active" onclick="setDetailTab('dados')">👤 Dados Pessoais</button>
+          <button class="tab-btn" onclick="setDetailTab('evolucoes')">📝 Evoluções</button>
+          <button class="tab-btn" onclick="setDetailTab('prescricoes')">💊 Prescrições</button>
+        </div>
+
+        <!-- Tab: Dados -->
+        <div class="tab-panel active" id="tab-dados">
+          <div class="form-row" style="margin-top:16px">
+            <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Nome</span><div id="dNome" style="font-size:15px;font-weight:700;margin-top:4px">—</div></div>
+            <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">CPF</span><div id="dCpf" style="font-size:14px;margin-top:4px">—</div></div>
+            <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Nascimento</span><div id="dNasc" style="font-size:14px;margin-top:4px">—</div></div>
+            <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Sexo</span><div id="dSexo" style="font-size:14px;margin-top:4px">—</div></div>
+            <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Telefone</span><div id="dTel" style="font-size:14px;margin-top:4px">—</div></div>
+            <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Nº Prontuário</span><div id="dNum" style="font-size:14px;margin-top:4px">—</div></div>
+          </div>
+          <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="background:rgba(255,77,109,.05);border:1px solid rgba(255,77,109,.15);border-radius:10px;padding:12px">
+              <div style="font-size:11px;color:var(--danger);font-weight:700;margin-bottom:6px">⚠ ALERGIAS</div>
+              <div id="dAlergias" style="font-size:13px">—</div>
+            </div>
+            <div style="background:rgba(255,179,71,.05);border:1px solid rgba(255,179,71,.15);border-radius:10px;padding:12px">
+              <div style="font-size:11px;color:var(--warn);font-weight:700;margin-bottom:6px">🩺 COMORBIDADES</div>
+              <div id="dComorbidades" style="font-size:13px">—</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px">
+            <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px">OBSERVAÇÕES</div>
+            <div id="dObs" style="font-size:13px">—</div>
+          </div>
+        </div>
+
+        <!-- Tab: Evoluções -->
+        <div class="tab-panel" id="tab-evolucoes">
+          <div id="evoList" class="evo-list" style="margin-top:14px;max-height:420px;overflow-y:auto">
+            <div class="empty">Nenhuma evolução registrada.</div>
+          </div>
+        </div>
+
+        <!-- Tab: Prescrições -->
+        <div class="tab-panel" id="tab-prescricoes">
+          <table style="margin-top:14px">
+            <thead><tr>
+              <th>Medicamento</th><th>Dose</th><th>Via</th><th>Frequência</th><th>Duração</th><th>IA</th><th>Dispensado</th><th>Data</th>
+            </tr></thead>
+            <tbody id="prescBody"><tr><td colspan="8" class="empty">Nenhuma prescrição.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+</main>
+</div><!-- /layout -->
+
+<!-- MODAL: Novo Prontuário -->
+<div class="modal-bg" id="modalNovoPront">
+  <div class="modal">
+    <h3>📋 Novo Prontuário</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nome do Paciente *</label>
+        <input id="npNome" placeholder="Nome completo">
+      </div>
+      <div class="form-group">
+        <label>CPF</label>
+        <input id="npCpf" placeholder="000.000.000-00">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nascimento</label>
+        <input id="npNasc" type="date">
+      </div>
+      <div class="form-group">
+        <label>Sexo</label>
+        <select id="npSexo">
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+          <option value="O">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Telefone</label>
+        <input id="npTel" placeholder="(11) 00000-0000">
+      </div>
+      <div class="form-group">
+        <label>Nº Prontuário</label>
+        <input id="npNum" placeholder="Gerado automaticamente">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Alergias</label>
+      <textarea id="npAlergias" placeholder="Ex: Penicilina, AAS…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Comorbidades</label>
+      <textarea id="npComorbidades" placeholder="Ex: HAS, DM2…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalNovoPront')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovoPront()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nova Evolução -->
+<div class="modal-bg" id="modalNovaEvo">
+  <div class="modal">
+    <h3>📝 Nova Evolução</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Profissional *</label>
+        <input id="evoProfissional" placeholder="Nome do profissional">
+      </div>
+      <div class="form-group">
+        <label>CRM / COREN</label>
+        <input id="evoCrm" placeholder="Ex: CRM-SP 12345">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tipo</label>
+        <select id="evoTipo">
+          <option value="medica">Médica</option>
+          <option value="enfermagem">Enfermagem</option>
+          <option value="fisioterapia">Fisioterapia</option>
+          <option value="nutricao">Nutrição</option>
+          <option value="psicologia">Psicologia</option>
+          <option value="farmacia">Farmácia</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>CID-10</label>
+        <input id="evoCid" placeholder="Ex: J18.9">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Texto da Evolução *</label>
+      <textarea id="evoTexto" style="min-height:120px" placeholder="Descreva a evolução clínica do paciente…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalNovaEvo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEvolucao()">Registrar Evolução</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nova Prescrição -->
+<div class="modal-bg" id="modalNovaPresc">
+  <div class="modal">
+    <h3>💊 Nova Prescrição</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Profissional *</label>
+        <input id="prescProfissional" placeholder="Nome do médico">
+      </div>
+      <div class="form-group">
+        <label>Medicamento *</label>
+        <input id="prescMed" placeholder="Ex: Dipirona 500mg">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Dose *</label>
+        <input id="prescDose" placeholder="Ex: 1 comprimido">
+      </div>
+      <div class="form-group">
+        <label>Via *</label>
+        <input id="prescVia" placeholder="Ex: Oral, IV, IM…">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Frequência *</label>
+        <input id="prescFreq" placeholder="Ex: 8/8h, 1x ao dia">
+      </div>
+      <div class="form-group">
+        <label>Duração</label>
+        <input id="prescDur" placeholder="Ex: 7 dias">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalNovaPresc')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPrescricao()">Prescrever</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+const EID = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id");
+let currentProntId = null;
+let searchTimer = null;
+
+function debounceSearch(v){
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(()=>loadLista(v), 350);
+}
+
+async function loadLista(q=''){
+  const q2 = q || document.getElementById('searchInput').value;
+  const res = await fetch(`/api/hospital/prontuario/?q=${encodeURIComponent(q2)}`);
+  if(!res.ok) return;
+  const d = await res.json();
+  const tbody = document.getElementById('listaBody');
+  if(!d.prontuarios.length){
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum prontuário encontrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = d.prontuarios.map(p=>`
+    <tr>
+      <td><span class="badge badge-info">${p.numero_prontuario || '—'}</span></td>
+      <td style="font-weight:600">${p.paciente_nome}</td>
+      <td>${p.paciente_cpf || '—'}</td>
+      <td>${p.paciente_nascimento ? new Date(p.paciente_nascimento).toLocaleDateString('pt-BR') : '—'}</td>
+      <td>${p.paciente_telefone || '—'}</td>
+      <td style="color:var(--muted);font-size:12px">${p.criado_em}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openDetail(${p.id})">Abrir</button></td>
+    </tr>
+  `).join('');
+}
+
+async function openDetail(id){
+  const res = await fetch(`/api/hospital/prontuario/${id}/`);
+  if(!res.ok){ toast('Erro ao carregar prontuário','error'); return; }
+  const {prontuario:p} = await res.json();
+  currentProntId = p.id;
+  document.getElementById('detailTitle').textContent = `Prontuário — ${p.paciente_nome}`;
+  document.getElementById('dNome').textContent = p.paciente_nome;
+  document.getElementById('dCpf').textContent = p.paciente_cpf || '—';
+  document.getElementById('dNasc').textContent = p.paciente_nascimento ? new Date(p.paciente_nascimento).toLocaleDateString('pt-BR') : '—';
+  document.getElementById('dSexo').textContent = {M:'Masculino',F:'Feminino',O:'Outro'}[p.paciente_sexo] || '—';
+  document.getElementById('dTel').textContent = p.paciente_telefone || '—';
+  document.getElementById('dNum').textContent = p.numero_prontuario || '—';
+  document.getElementById('dAlergias').textContent = p.alergias || 'Nenhuma informada';
+  document.getElementById('dComorbidades').textContent = p.comorbidades || 'Nenhuma informada';
+  document.getElementById('dObs').textContent = p.observacoes || '—';
+  renderEvolucoes(p.evolucoes || []);
+  renderPrescricoes(p.prescricoes || []);
+  document.getElementById('detailPanel').classList.add('open');
+  setDetailTab('dados');
+  document.getElementById('detailPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function closeDetail(){
+  currentProntId = null;
+  document.getElementById('detailPanel').classList.remove('open');
+}
+
+function renderEvolucoes(evos){
+  const el = document.getElementById('evoList');
+  if(!evos.length){ el.innerHTML='<div class="empty">Nenhuma evolução registrada.</div>'; return; }
+  el.innerHTML = evos.map(e=>`
+    <div class="evo-item">
+      <div style="font-size:13px;line-height:1.6">${e.texto}</div>
+      <div class="evo-meta">
+        <span>👤 ${e.profissional}</span>
+        ${e.crm_coren ? `<span>${e.crm_coren}</span>` : ''}
+        <span class="badge badge-info">${e.tipo}</span>
+        ${e.cid10 ? `<span class="badge badge-muted">CID ${e.cid10}</span>` : ''}
+        <span style="margin-left:auto">${e.assinado_em}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderPrescricoes(prescs){
+  const tbody = document.getElementById('prescBody');
+  if(!prescs.length){ tbody.innerHTML='<tr><td colspan="8" class="empty">Nenhuma prescrição.</td></tr>'; return; }
+  tbody.innerHTML = prescs.map(p=>`
+    <tr>
+      <td style="font-weight:600">${p.medicamento}</td>
+      <td>${p.dose}</td>
+      <td>${p.via}</td>
+      <td>${p.frequencia}</td>
+      <td>${p.duracao || '—'}</td>
+      <td>${p.ia_aprovada===true ? '<span class="badge badge-ok">✓ IA</span>' : p.ia_aprovada===false ? '<span class="badge badge-danger">✗ IA</span>' : '<span class="badge badge-muted">—</span>'}</td>
+      <td>${p.dispensado ? '<span class="badge badge-ok">✓ Dispensado</span>' : '<span class="badge badge-warn">Pendente</span>'}</td>
+      <td style="color:var(--muted);font-size:12px">${p.prescrito_em}</td>
+    </tr>
+  `).join('');
+}
+
+function setDetailTab(t){
+  document.querySelectorAll('#detailPanel .tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active', ['dados','evolucoes','prescricoes'][i]===t);
+  });
+  ['dados','evolucoes','prescricoes'].forEach(id=>{
+    const el = document.getElementById('tab-'+id);
+    if(el) el.classList.toggle('active', id===t);
+  });
+  if(t==='evolucoes' && currentProntId) loadEvolucoes();
+  if(t==='prescricoes' && currentProntId) loadPrescricoes();
+}
+
+async function loadEvolucoes(){
+  const res = await fetch(`/api/hospital/prontuario/${currentProntId}/evolucoes/`);
+  if(!res.ok) return;
+  const {evolucoes} = await res.json();
+  renderEvolucoes(evolucoes);
+}
+
+async function loadPrescricoes(){
+  const res = await fetch(`/api/hospital/prontuario/${currentProntId}/prescricoes/`);
+  if(!res.ok) return;
+  const {prescricoes} = await res.json();
+  renderPrescricoes(prescricoes);
+}
+
+async function salvarNovoPront(){
+  const nome = document.getElementById('npNome').value.trim();
+  if(!nome){ toast('Nome do paciente é obrigatório','error'); return; }
+  const body = {
+    paciente_nome: nome,
+    paciente_cpf: document.getElementById('npCpf').value.trim(),
+    paciente_nascimento: document.getElementById('npNasc').value || null,
+    paciente_sexo: document.getElementById('npSexo').value,
+    paciente_telefone: document.getElementById('npTel').value.trim(),
+    numero_prontuario: document.getElementById('npNum').value.trim(),
+    alergias: document.getElementById('npAlergias').value.trim(),
+    comorbidades: document.getElementById('npComorbidades').value.trim(),
+  };
+  const res = await fetch('/api/hospital/prontuario/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.ok){ toast('Prontuário criado com sucesso'); closeModal('modalNovoPront'); loadLista(); }
+  else toast(d.erro||'Erro ao criar prontuário','error');
+}
+
+async function salvarEvolucao(){
+  if(!currentProntId){ toast('Selecione um prontuário primeiro','error'); return; }
+  const profissional = document.getElementById('evoProfissional').value.trim();
+  const texto = document.getElementById('evoTexto').value.trim();
+  if(!profissional || !texto){ toast('Profissional e texto são obrigatórios','error'); return; }
+  const body = {
+    profissional, texto,
+    crm_coren: document.getElementById('evoCrm').value.trim(),
+    tipo: document.getElementById('evoTipo').value,
+    cid10: document.getElementById('evoCid').value.trim(),
+  };
+  const res = await fetch(`/api/hospital/prontuario/${currentProntId}/evolucoes/`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.ok){ toast('Evolução registrada'); closeModal('modalNovaEvo'); loadEvolucoes(); setDetailTab('evolucoes'); }
+  else toast(d.erro||'Erro','error');
+}
+
+async function salvarPrescricao(){
+  if(!currentProntId){ toast('Selecione um prontuário primeiro','error'); return; }
+  const profissional = document.getElementById('prescProfissional').value.trim();
+  const medicamento = document.getElementById('prescMed').value.trim();
+  if(!profissional || !medicamento){ toast('Profissional e medicamento são obrigatórios','error'); return; }
+  const body = {
+    profissional, medicamento,
+    dose: document.getElementById('prescDose').value.trim(),
+    via: document.getElementById('prescVia').value.trim(),
+    frequencia: document.getElementById('prescFreq').value.trim(),
+    duracao: document.getElementById('prescDur').value.trim(),
+  };
+  const res = await fetch(`/api/hospital/prontuario/${currentProntId}/prescricoes/`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.ok){ toast('Prescrição registrada'); closeModal('modalNovaPresc'); loadPrescricoes(); setDetailTab('prescricoes'); }
+  else toast(d.erro||'Erro','error');
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+function toast(msg, type='ok'){
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(()=>t.remove(), 3500);
+}
+
+loadLista();
+</script>
+</body>
+</html>

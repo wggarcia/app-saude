@@ -431,6 +431,34 @@ from api.views_farmacia_ops import (
     api_pedidos_compra_farmacia, api_pedido_compra_status,
     api_farmacia_ops_kpis, api_farmacia_pdf_estoque, api_farmacia_pdf_dispensacoes,
 )
+from api.views_farmacia_pdv import (
+    farmacia_pdv_page,
+    api_pdv_sessao_atual,
+    api_pdv_abrir_sessao,
+    api_pdv_fechar_sessao,
+    api_pdv_registrar_venda,
+    api_pdv_historico,
+)
+from api.views_farmacia_pbm import (
+    farmacia_pbm_page,
+    api_pbm_convenios,
+    api_pbm_convenio_detalhe,
+    api_farmacia_popular_registros,
+    api_farmacia_popular_kpis,
+)
+from api.views_farmacia_dre import (
+    farmacia_financeiro_page,
+    api_dre_lista,
+    api_dre_salvar,
+    api_dre_dashboard,
+)
+from api.views_farmacia_ecommerce import (
+    farmacia_ecommerce_page,
+    api_delivery_pedidos,
+    api_delivery_novo,
+    api_delivery_atualizar_status,
+    api_delivery_kpis,
+)
 from api.views_hospital_fase3 import (
     api_fatura_paciente,
     api_fatura_acao,
@@ -464,6 +492,45 @@ from api.views_hospital_ops import (
     api_evolucoes_internacao, api_hospital_ops_kpis,
     api_hospital_pdf_internacoes, api_hospital_pdf_ficha_internacao,
 )
+from api.views_hospital_prontuario import (
+    hospital_prontuario_page,
+    api_prontuario_hospitalar,
+    api_prontuario_hospitalar_detalhe,
+    api_prontuario_evolucoes,
+    api_prontuario_prescricoes,
+)
+from api.views_hospital_cirurgia import (
+    hospital_cirurgia_page,
+    api_cirurgia,
+    api_cirurgia_agenda,
+    api_cirurgia_atualizar,
+    api_cirurgia_kpis,
+)
+from api.views_hospital_farmacia import (
+    hospital_farmacia_page,
+    api_farmacia_hosp,
+    api_farmacia_hosp_atualizar_estoque,
+    api_farmacia_hosp_kpis,
+)
+from api.views_hospital_lis import (
+    hospital_lis_page,
+    api_lis,
+    api_lis_resultado,
+    api_lis_kpis,
+)
+from api.views_hospital_imagem import (
+    hospital_imagem_page,
+    api_ris,
+    api_ris_laudar,
+    api_ris_kpis,
+)
+from api.views_hospital_tiss import (
+    hospital_tiss_page,
+    api_tiss,
+    api_tiss_atualizar_status,
+    api_tiss_kpis,
+    api_tiss_gerar_xml,
+)
 from api.views_governo_ops import (
     api_programas_gov, api_programa_gov_detalhe,
     api_indicadores_gov, api_indicador_gov_detalhe,
@@ -483,6 +550,54 @@ from api.views_governo_fase2 import (
     api_governo_plataforma_webhooks, api_governo_plataforma_seguranca,
     api_governo_plataforma_logs,
 )
+from api.views_governo_pec import (
+    governo_pec_page,
+    api_pec_kpis,
+    api_pec_lista,
+    api_pec_novo,
+    api_pec_detalhe,
+    api_pec_atendimentos,
+)
+from api.views_governo_farmacia_basica import (
+    governo_farmacia_basica_page,
+    api_farmacia_basica_kpis,
+    api_farmacia_basica_itens,
+    api_farmacia_basica_dispensar,
+    api_farmacia_basica_dispensacoes,
+)
+from api.views_governo_regulacao import (
+    governo_regulacao_page,
+    api_regulacao_kpis,
+    api_regulacao_lista,
+    api_regulacao_nova,
+    api_regulacao_atualizar,
+)
+from api.views_governo_faturamento import (
+    governo_faturamento_sus_page,
+    api_faturamento_sus_kpis,
+    api_faturamento_sus_lotes,
+    api_faturamento_sus_transmitir,
+)
+from api.views_governo_teleconsulta import (
+    governo_teleconsulta_page,
+    api_teleconsulta_kpis,
+    api_teleconsulta_lista,
+    api_teleconsulta_agendar,
+    api_teleconsulta_atualizar,
+)
+from api.views_governo_rag import (
+    governo_rag_page,
+    api_rag_kpis,
+    api_rag_lista,
+    api_rag_criar,
+    api_rag_atualizar,
+)
+from api.views_governo_esus import (
+    governo_esus_page,
+    api_esus_status,
+    api_esus_logs,
+    api_esus_enviar_fichas,
+)
 from api.views_rede import (
     api_redes, api_rede_convidar, api_rede_entrar, api_rede_estoque, api_rede_item_disponibilidade,
     api_transferencias, api_transferencia_detalhe,
@@ -491,6 +606,42 @@ from api.views_rede import (
     api_beneficiarios, api_beneficiario_detalhe,
     api_guias, api_guia_detalhe, api_plano_kpis,
     api_carencias, api_carencia_detalhe, api_portabilidade,
+)
+from api.views_plano_corretores import (
+    plano_corretores_page,
+    api_corretoras_lista,
+    api_corretora_detalhe,
+    api_corretora_comissoes,
+    api_corretoras_kpis,
+)
+from api.views_plano_rede import (
+    plano_rede_page,
+    api_plano_rede_lista,
+    api_plano_rede_novo,
+    api_plano_rede_detalhe,
+    api_plano_rede_kpis,
+)
+from api.views_plano_ans import (
+    plano_ans_page,
+    api_diops_lista,
+    api_diops_detalhe,
+    api_diops_gerar_xml,
+    api_sib_lista,
+    api_sib_detalhe,
+    api_ans_kpis,
+)
+from api.views_plano_ia import (
+    plano_ia_page,
+    api_ia_autorizacoes,
+    api_ia_analisar,
+    api_ia_revisar,
+    api_ia_kpis,
+)
+from api.views_plano_portal import (
+    plano_portal_admin_page,
+    api_portal_beneficiarios_lista,
+    api_portal_token_gerar,
+    plano_portal_beneficiario_page,
 )
 from api.epidemiologia import panorama_epidemiologico, exportar_briefing_governo
 from api.fontes_oficiais_brasil import api_brasil_fontes_oficiais
@@ -595,13 +746,37 @@ urlpatterns = [
     path('plano-saude/', dashboard_plano_saude),
     # Gestão operacional
     path('farmacia/gestao/', farmacia_gestao_page),
+    path('farmacia/pdv/', farmacia_pdv_page),
+    path('farmacia/pbm/', farmacia_pbm_page),
+    path('farmacia/financeiro/', farmacia_financeiro_page),
+    path('farmacia/delivery/', farmacia_ecommerce_page),
     path('hospital/gestao/', hospital_gestao_page),
+    path('hospital/prontuario/', hospital_prontuario_page),
+    path('hospital/cirurgia/', hospital_cirurgia_page),
+    path('hospital/lis/', hospital_lis_page),
+    path('hospital/imagem/', hospital_imagem_page),
+    path('hospital/farmacia-hospitalar/', hospital_farmacia_page),
+    path('hospital/faturamento-tiss/', hospital_tiss_page),
     path('governo/gestao/', governo_gestao_page),
+    path('governo/pec/', governo_pec_page),
+    path('governo/farmacia-basica/', governo_farmacia_basica_page),
+    path('governo/regulacao/', governo_regulacao_page),
+    path('governo/regulacao-assistencial/', governo_regulacao_page),
+    path('governo/faturamento-sus/', governo_faturamento_sus_page),
+    path('governo/teleconsulta/', governo_teleconsulta_page),
+    path('governo/rag/', governo_rag_page),
+    path('governo/esus/', governo_esus_page),
     path('governo/plataforma/', governo_plataforma_page),
     path('governo/ti/', governo_plataforma_page),
     path('governo/TI/', governo_plataforma_page),
     path('rede/gestao/', rede_gestao_page),
     path('plano-saude/gestao/', plano_saude_gestao_page),
+    path('plano-saude/corretores/', plano_corretores_page),
+    path('plano-saude/rede/', plano_rede_page),
+    path('plano-saude/ans/', plano_ans_page),
+    path('plano-saude/ia/', plano_ia_page),
+    path('plano-saude/portal-admin/', plano_portal_admin_page),
+    path('plano-saude/portal/<str:token>/', plano_portal_beneficiario_page),
     path('ti/', portal_ti_unificado),
     path('TI/', portal_ti_unificado),
     path('rh/', portal_rh_page),
@@ -966,6 +1141,26 @@ urlpatterns = [
     path('api/farmacia/fornecedores-gestao/', api_farmacia_fornecedores),
     path('api/farmacia/pedidos-gestao', api_farmacia_pedidos),
     path('api/farmacia/pedidos-gestao/', api_farmacia_pedidos),
+    # ── Farmácia PDV / Caixa ──────────────────────────────────
+    path('api/farmacia/pdv/sessao-atual', api_pdv_sessao_atual),
+    path('api/farmacia/pdv/abrir-sessao', api_pdv_abrir_sessao),
+    path('api/farmacia/pdv/fechar-sessao/<int:sessao_id>', api_pdv_fechar_sessao),
+    path('api/farmacia/pdv/venda/<int:sessao_id>', api_pdv_registrar_venda),
+    path('api/farmacia/pdv/historico', api_pdv_historico),
+    # ── Farmácia PBM / Convênios ──────────────────────────────────
+    path('api/farmacia/pbm/convenios', api_pbm_convenios),
+    path('api/farmacia/pbm/convenios/<int:conv_id>', api_pbm_convenio_detalhe),
+    path('api/farmacia/pbm/farmacia-popular', api_farmacia_popular_registros),
+    path('api/farmacia/pbm/kpis', api_farmacia_popular_kpis),
+    # ── Farmácia DRE / Financeiro ──────────────────────────────────
+    path('api/farmacia/dre/lista', api_dre_lista),
+    path('api/farmacia/dre/salvar', api_dre_salvar),
+    path('api/farmacia/dre/dashboard', api_dre_dashboard),
+    # ── Farmácia Delivery / E-commerce ──────────────────────────────────
+    path('api/farmacia/delivery/pedidos', api_delivery_pedidos),
+    path('api/farmacia/delivery/novo', api_delivery_novo),
+    path('api/farmacia/delivery/<int:pedido_id>/status', api_delivery_atualizar_status),
+    path('api/farmacia/delivery/kpis', api_delivery_kpis),
     # ── Farmácia Operacional ──────────────────────────────────
     path('api/farmacia/ops/kpis/', api_farmacia_ops_kpis),
     path('api/farmacia/fornecedores/', api_fornecedores_farmacia),
@@ -1054,6 +1249,28 @@ urlpatterns = [
     path('api/hospital/pacientes/<int:pac_id>/fatura/acao/', api_fatura_acao),
     path('api/hospital/pacientes/<int:pac_id>/fatura/itens/', api_itens_faturamento),
     path('api/hospital/faturamento/itens/<int:item_id>/', api_item_faturamento_detalhe),
+    # ── Hospital Paridade Competitiva: EMR, cirurgia, LIS, RIS/PACS, farmácia e TISS ──
+    path('api/hospital/prontuario/', api_prontuario_hospitalar),
+    path('api/hospital/prontuario/<int:pront_id>/', api_prontuario_hospitalar_detalhe),
+    path('api/hospital/prontuario/<int:pront_id>/evolucoes/', api_prontuario_evolucoes),
+    path('api/hospital/prontuario/<int:pront_id>/prescricoes/', api_prontuario_prescricoes),
+    path('api/hospital/cirurgia/', api_cirurgia),
+    path('api/hospital/cirurgia/agenda/', api_cirurgia_agenda),
+    path('api/hospital/cirurgia/kpis/', api_cirurgia_kpis),
+    path('api/hospital/cirurgia/<int:cir_id>/', api_cirurgia_atualizar),
+    path('api/hospital/farmacia/', api_farmacia_hosp),
+    path('api/hospital/farmacia/kpis/', api_farmacia_hosp_kpis),
+    path('api/hospital/farmacia/<int:item_id>/estoque/', api_farmacia_hosp_atualizar_estoque),
+    path('api/hospital/lis/', api_lis),
+    path('api/hospital/lis/kpis/', api_lis_kpis),
+    path('api/hospital/lis/<int:exame_id>/resultado/', api_lis_resultado),
+    path('api/hospital/imagem/', api_ris),
+    path('api/hospital/imagem/kpis/', api_ris_kpis),
+    path('api/hospital/imagem/<int:exame_id>/laudo/', api_ris_laudar),
+    path('api/hospital/tiss/', api_tiss),
+    path('api/hospital/tiss/kpis/', api_tiss_kpis),
+    path('api/hospital/tiss/<int:guia_id>/status/', api_tiss_atualizar_status),
+    path('api/hospital/tiss/<int:guia_id>/xml/', api_tiss_gerar_xml),
     # ── Rede / Network ───────────────────────────────────────────
     path('api/rede/', api_redes),
     path('api/rede/convidar/', api_rede_convidar),
@@ -1075,6 +1292,27 @@ urlpatterns = [
     path('api/plano-saude/carencias/', api_carencias),
     path('api/plano-saude/carencias/<int:carencia_id>/', api_carencia_detalhe),
     path('api/plano-saude/portabilidade/', api_portabilidade),
+    # ── Plano de Saúde Paridade Competitiva: corretores, rede, DIOPS/SIB, IA e portal ──
+    path('api/plano-saude/corretoras/kpis', api_corretoras_kpis),
+    path('api/plano-saude/corretoras', api_corretoras_lista),
+    path('api/plano-saude/corretoras/<int:cor_id>', api_corretora_detalhe),
+    path('api/plano-saude/corretoras/<int:cor_id>/comissoes', api_corretora_comissoes),
+    path('api/plano-saude/rede/kpis', api_plano_rede_kpis),
+    path('api/plano-saude/rede', api_plano_rede_lista),
+    path('api/plano-saude/rede/novo', api_plano_rede_novo),
+    path('api/plano-saude/rede/<int:rede_id>', api_plano_rede_detalhe),
+    path('api/plano-saude/ans/kpis', api_ans_kpis),
+    path('api/plano-saude/ans/diops', api_diops_lista),
+    path('api/plano-saude/ans/diops/<int:decl_id>', api_diops_detalhe),
+    path('api/plano-saude/ans/diops/<int:decl_id>/xml', api_diops_gerar_xml),
+    path('api/plano-saude/ans/sib', api_sib_lista),
+    path('api/plano-saude/ans/sib/<int:sib_id>', api_sib_detalhe),
+    path('api/plano-saude/ia/kpis', api_ia_kpis),
+    path('api/plano-saude/ia/autorizacoes', api_ia_autorizacoes),
+    path('api/plano-saude/ia/analisar', api_ia_analisar),
+    path('api/plano-saude/ia/<int:ia_id>/revisar', api_ia_revisar),
+    path('api/plano-saude/portal/beneficiarios', api_portal_beneficiarios_lista),
+    path('api/plano-saude/portal/token/<int:benef_id>', api_portal_token_gerar),
     path('api/governo/alertas', api_alertas_governo),
     # ── Governo Gestão ───────────────────────────────────────
     path('api/governo/ops/kpis/', api_governo_ops_kpis),
@@ -1126,6 +1364,34 @@ urlpatterns = [
     path('api/governo/plataforma/webhooks/', api_governo_plataforma_webhooks),
     path('api/governo/plataforma/seguranca/', api_governo_plataforma_seguranca),
     path('api/governo/plataforma/logs/', api_governo_plataforma_logs),
+    # ── Governo Paridade Competitiva: PEC, UBS, SISREG, SUS, teleconsulta, RAG/RDQA, e-SUS ──
+    path('api/governo/pec/kpis/', api_pec_kpis),
+    path('api/governo/pec/', api_pec_lista),
+    path('api/governo/pec/novo/', api_pec_novo),
+    path('api/governo/pec/<int:pac_id>/', api_pec_detalhe),
+    path('api/governo/pec/<int:pac_id>/atendimentos/', api_pec_atendimentos),
+    path('api/governo/farmacia-basica/kpis/', api_farmacia_basica_kpis),
+    path('api/governo/farmacia-basica/itens/', api_farmacia_basica_itens),
+    path('api/governo/farmacia-basica/dispensar/', api_farmacia_basica_dispensar),
+    path('api/governo/farmacia-basica/dispensacoes/', api_farmacia_basica_dispensacoes),
+    path('api/governo/regulacao-assistencial/kpis/', api_regulacao_kpis),
+    path('api/governo/regulacao-assistencial/', api_regulacao_lista),
+    path('api/governo/regulacao-assistencial/nova/', api_regulacao_nova),
+    path('api/governo/regulacao-assistencial/<int:reg_id>/atualizar/', api_regulacao_atualizar),
+    path('api/governo/faturamento-sus/kpis/', api_faturamento_sus_kpis),
+    path('api/governo/faturamento-sus/lotes/', api_faturamento_sus_lotes),
+    path('api/governo/faturamento-sus/<int:lote_id>/transmitir/', api_faturamento_sus_transmitir),
+    path('api/governo/teleconsulta/kpis/', api_teleconsulta_kpis),
+    path('api/governo/teleconsulta/', api_teleconsulta_lista),
+    path('api/governo/teleconsulta/agendar/', api_teleconsulta_agendar),
+    path('api/governo/teleconsulta/<int:tc_id>/atualizar/', api_teleconsulta_atualizar),
+    path('api/governo/rag/kpis/', api_rag_kpis),
+    path('api/governo/rag/', api_rag_lista),
+    path('api/governo/rag/criar/', api_rag_criar),
+    path('api/governo/rag/<int:rag_id>/atualizar/', api_rag_atualizar),
+    path('api/governo/esus/status/', api_esus_status),
+    path('api/governo/esus/logs/', api_esus_logs),
+    path('api/governo/esus/enviar/', api_esus_enviar_fichas),
     path('api/governanca/metodologia', api_metodologia_epidemiologica),
     path('api/governanca/matriz-decisao', api_matriz_decisao),
     path('api/governanca/auditoria', api_auditoria_institucional),

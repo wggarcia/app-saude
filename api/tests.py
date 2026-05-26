@@ -9,6 +9,7 @@ from django.contrib.auth.hashers import make_password
 from django.core.management import call_command
 from django.test import Client, TestCase, override_settings
 from django.template.loader import render_to_string
+from django.urls import resolve
 from django.utils import timezone
 
 from .maintenance import maintenance_report
@@ -108,6 +109,32 @@ class PlanosSaasTests(TestCase):
         self.assertIn('value="farmacia_rede_regional"', html)
         self.assertIn(f'data-anual="{valor_anual}"', html)
         self.assertNotIn(f'data-anual="{valor_anual.replace(".", ",")}"', html)
+
+    def test_feature_flags_cobrem_gaps_regulatorios_e_operacionais(self):
+        self.assertIn("farmacia.pbm", PACOTES_SAAS["farmacia_local"]["features"])
+        self.assertIn("farmacia.farmacia_popular", PACOTES_SAAS["farmacia_rede_regional"]["features"])
+        self.assertIn("hospital.emr", PACOTES_SAAS["hospital_medio"]["features"])
+        self.assertIn("hospital.tiss", PACOTES_SAAS["hospital_rede"]["features"])
+        self.assertIn("governo.esus_rnds", PACOTES_SAAS["governo_estado"]["features"])
+        self.assertIn("governo.faturamento_sus", PACOTES_SAAS["governo_estado"]["features"])
+        self.assertIn("plano.diops_sib", PACOTES_SAAS["plano_saude_operadora"]["features"])
+        self.assertIn("plano.portal_beneficiario", PACOTES_SAAS["plano_saude_enterprise"]["features"])
+
+    def test_modulos_de_paridade_competitiva_estao_roteados(self):
+        rotas = {
+            "/farmacia/pbm/": "farmacia_pbm_page",
+            "/api/farmacia/pbm/convenios": "api_pbm_convenios",
+            "/hospital/prontuario/": "hospital_prontuario_page",
+            "/api/hospital/prontuario/": "api_prontuario_hospitalar",
+            "/governo/pec/": "governo_pec_page",
+            "/api/governo/regulacao-assistencial/": "api_regulacao_lista",
+            "/plano-saude/ans/": "plano_ans_page",
+            "/api/plano-saude/ans/diops": "api_diops_lista",
+        }
+
+        for rota, view_name in rotas.items():
+            with self.subTest(rota=rota):
+                self.assertEqual(resolve(rota).func.__name__, view_name)
 
 
 class AuthDeviceTests(TestCase):

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teleconsulta Cidadão</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.info::before{background:#a78bfa}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.info .kpi-val{color:#a78bfa}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-teal{background:rgba(45,212,191,.12);color:#2dd4bf}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-teal{background:rgba(45,212,191,.15);color:#2dd4bf;border:1px solid rgba(45,212,191,.3)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.filter-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.filter-sel option{background:#072030}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:580px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Saúde Pública</div>
+  <a class="nav-link" href="/governo/pec/"><span>📋</span> PEC / e-SUS</a>
+  <a class="nav-link" href="/governo/farmacia-basica/"><span>💊</span> Farmácia Básica</a>
+  <a class="nav-link" href="/governo/regulacao/"><span>🏨</span> Regulação</a>
+  <a class="nav-link" href="/governo/faturamento-sus/"><span>💰</span> Faturamento SUS</a>
+  <a class="nav-link active" href="/governo/teleconsulta/"><span>🖥️</span> Teleconsulta</a>
+  <a class="nav-link" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
+  <a class="nav-link" href="/governo/esus/"><span>🔗</span> Integração e-SUS</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Teleconsulta Cidadão</div>
+      <div class="page-sub">Agenda de teleconsultas e salas virtuais</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalAgendar()">+ Agendar Teleconsulta</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiHoje">—</div><div class="kpi-lbl">Agendadas Hoje</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiEmCurso">—</div><div class="kpi-lbl">Em Curso</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiConclMes">—</div><div class="kpi-lbl">Concluídas no Mês</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiTotal">—</div><div class="kpi-lbl">Total Cadastrado</div></div>
+  </div>
+
+  <!-- Agenda -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Agenda de Teleconsultas</span>
+      <div style="display:flex;gap:8px">
+        <select id="filtroStatus" class="filter-sel" onchange="carregarLista()">
+          <option value="">Todos os status</option>
+          <option value="agendada">Agendadas</option>
+          <option value="em_curso">Em Curso</option>
+          <option value="concluida">Concluídas</option>
+          <option value="cancelada">Canceladas</option>
+        </select>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data / Hora</th>
+          <th>Paciente</th>
+          <th>CNS</th>
+          <th>Profissional</th>
+          <th>Especialidade</th>
+          <th>Status</th>
+          <th>Sala</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyLista">
+        <tr><td colspan="8" class="empty">Carregando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Agendar -->
+<div class="modal-bg" id="modalAgendar">
+  <div class="modal">
+    <h3>Agendar Teleconsulta</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome do Paciente *</label><input id="aPac" type="text" placeholder="Nome completo"></div>
+      <div class="form-group"><label>CNS</label><input id="aCns" type="text" placeholder="Cartão Nacional de Saúde"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Profissional *</label><input id="aProf" type="text" placeholder="Nome do médico/profissional"></div>
+      <div class="form-group"><label>Especialidade</label><input id="aEsp" type="text" placeholder="Ex: Clínica Geral"></div>
+    </div>
+    <div class="form-group"><label>Data e Hora *</label><input id="aDataHora" type="datetime-local"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalAgendar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAgendamento()">Agendar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Atualizar -->
+<div class="modal-bg" id="modalAtualizar">
+  <div class="modal">
+    <h3>Atualizar Teleconsulta</h3>
+    <input type="hidden" id="atuId">
+    <div class="form-group"><label>Status</label>
+      <select id="atuStatus">
+        <option value="agendada">Agendada</option>
+        <option value="em_curso">Em Curso</option>
+        <option value="concluida">Concluída</option>
+        <option value="cancelada">Cancelada</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Resumo da Consulta</label>
+      <textarea id="atuResumo" placeholder="Observações, diagnóstico, encaminhamentos…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalAtualizar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAtualizacao()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+const STATUS_BADGE = {
+  agendada: '<span class="badge badge-info">Agendada</span>',
+  em_curso: '<span class="badge badge-teal">Em Curso</span>',
+  concluida: '<span class="badge badge-ok">Concluída</span>',
+  cancelada: '<span class="badge" style="background:rgba(255,255,255,.08);color:var(--muted)">Cancelada</span>',
+};
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/governo/teleconsulta/kpis/");
+  document.getElementById("kpiHoje").textContent = d.agendadas_hoje ?? "—";
+  document.getElementById("kpiEmCurso").textContent = d.em_curso ?? "—";
+  document.getElementById("kpiConclMes").textContent = d.concluidas_mes ?? "—";
+  document.getElementById("kpiTotal").textContent = d.total ?? "—";
+}
+
+async function carregarLista() {
+  const status = document.getElementById("filtroStatus").value;
+  let url = "/api/governo/teleconsulta/";
+  if (status) url += "?status=" + status;
+  const d = await fetchJSON(url);
+  const tbody = document.getElementById("tbodyLista");
+  const tcs = d.teleconsultas || [];
+  if (!tcs.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma teleconsulta encontrada.</td></tr>'; return; }
+  tbody.innerHTML = tcs.map(t => {
+    const dt = new Date(t.data_hora);
+    const dtStr = dt.toLocaleDateString("pt-BR") + " " + dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return `<tr>
+      <td>${dtStr}</td>
+      <td><strong>${t.paciente_nome}</strong></td>
+      <td>${t.cns || '—'}</td>
+      <td>${t.profissional}</td>
+      <td>${t.especialidade || '—'}</td>
+      <td>${STATUS_BADGE[t.status] || t.status}</td>
+      <td>${t.link_sala
+        ? `<a href="${t.link_sala}" target="_blank" class="btn btn-teal btn-sm">Entrar na Sala</a>`
+        : '—'}</td>
+      <td>
+        ${t.status !== 'concluida' && t.status !== 'cancelada'
+          ? `<button class="btn btn-ghost btn-sm" onclick="abrirAtualizar(${t.id},'${t.status}',${JSON.stringify(t.resumo).replace(/"/g,'&quot;')})">Atualizar</button>`
+          : t.resumo ? `<span style="font-size:11px;color:var(--muted)" title="${t.resumo}">Ver resumo</span>` : '—'}
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function abrirModalAgendar() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  document.getElementById("aDataHora").value = now.toISOString().slice(0, 16);
+  document.getElementById("modalAgendar").classList.add("open");
+}
+
+function abrirAtualizar(id, status, resumo) {
+  document.getElementById("atuId").value = id;
+  document.getElementById("atuStatus").value = status;
+  document.getElementById("atuResumo").value = resumo || "";
+  document.getElementById("modalAtualizar").classList.add("open");
+}
+
+function fecharModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+async function salvarAgendamento() {
+  const pac = document.getElementById("aPac").value.trim();
+  const prof = document.getElementById("aProf").value.trim();
+  const dh = document.getElementById("aDataHora").value;
+  if (!pac || !prof || !dh) { alert("Preencha os campos obrigatórios."); return; }
+  const d = await fetchJSON("/api/governo/teleconsulta/agendar/", {
+    method: "POST",
+    body: JSON.stringify({
+      paciente_nome: pac,
+      cns: document.getElementById("aCns").value,
+      profissional: prof,
+      especialidade: document.getElementById("aEsp").value,
+      data_hora: dh,
+    })
+  });
+  if (d.id) {
+    fecharModal("modalAgendar");
+    carregarLista();
+    carregarKpis();
+    if (d.link_sala) alert("Teleconsulta agendada!\nLink da sala: " + d.link_sala);
+  } else alert(d.erro || "Erro ao agendar.");
+}
+
+async function salvarAtualizacao() {
+  const id = document.getElementById("atuId").value;
+  const d = await fetchJSON(`/api/governo/teleconsulta/${id}/atualizar/`, {
+    method: "POST",
+    body: JSON.stringify({
+      status: document.getElementById("atuStatus").value,
+      resumo: document.getElementById("atuResumo").value,
+    })
+  });
+  if (d.ok) { fecharModal("modalAtualizar"); carregarLista(); carregarKpis(); }
+  else alert(d.erro || "Erro ao atualizar.");
+}
+
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarKpis();
+carregarLista();
+</script>
+</body>
+</html>

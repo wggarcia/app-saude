@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LIS — Laboratório — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#041018;--surface:#072030;--surface2:#0a2d45;
+  --accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;
+  --text:#e8f4ff;--muted:#7a9bb5;--radius:12px;
+  --card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07);
+  --manche-red:#ff4d6d;--manche-orange:#ff8c00;--manche-yellow:#ffd700;
+  --manche-green:#00e5b0;--manche-blue:#00c2ff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:16px;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;flex-shrink:0}
+.topbar-logo{font-size:15px;font-weight:800;color:var(--accent)}
+.topbar-spacer{flex:1}
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;min-height:calc(100vh - 56px);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0;flex-shrink:0;overflow-y:auto}
+.nav-section{padding:10px 16px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:1px 8px;transition:.15s;cursor:pointer;border:none;background:none;width:calc(100% - 16px);font-family:Manrope,sans-serif}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link.active{box-shadow:inset 3px 0 0 var(--accent)}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.28)}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.content{padding:24px 28px;display:flex;flex-direction:column;gap:20px;flex:1}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:20px;font-weight:800}
+.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;border-left:4px solid var(--accent)}
+.kpi.kpi-ok{border-left-color:var(--ok)}.kpi.kpi-danger{border-left-color:var(--danger)}.kpi.kpi-warn{border-left-color:var(--warn)}
+.kpi-val{font-size:28px;font-weight:800;color:var(--accent)}
+.kpi.kpi-ok .kpi-val{color:var(--ok)}.kpi.kpi-danger .kpi-val{color:var(--danger)}.kpi.kpi-warn .kpi-val{color:var(--warn)}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:rgba(255,255,255,.02);white-space:nowrap}
+td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.018)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-muted{background:rgba(255,255,255,.06);color:var(--muted)}
+.badge-yellow{background:rgba(255,215,0,.12);color:#ffd700;border:1px solid rgba(255,215,0,.25)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.12);color:var(--ok);border:1px solid rgba(0,229,176,.25)}.btn-ok:hover{background:rgba(0,229,176,.2)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;min-width:440px;max-width:580px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:18px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.form-group label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s;width:100%}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px}
+.form-group select option{background:var(--surface);color:var(--text)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px;padding-top:14px;border-top:1px solid var(--border)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--border)}
+.filter-bar input,.filter-bar select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent)}
+/* Kanban */
+.kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.kanban-col{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:10px;padding:10px;min-height:200px}
+.kanban-col-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.kanban-card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px;font-size:12px}
+.kanban-card-pac{font-weight:700;margin-bottom:3px}
+.kanban-card-tipo{color:var(--muted);font-size:11px}
+.kanban-card-actions{margin-top:6px;display:flex;gap:4px}
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{display:flex;align-items:flex-start;gap:10px;padding:14px 18px;border-radius:12px;min-width:260px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.5);border:1px solid transparent;pointer-events:all;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.toast-ok{background:#072030;border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast-error{background:#1a0812;border-color:rgba(255,77,109,.3);color:var(--danger)}
+@media(max-width:1100px){.kanban{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.kanban{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-logo">🏥 HospitalOS</div>
+  <div class="topbar-spacer"></div>
+  <a href="/hospital/gestao/" class="btn btn-ghost" style="font-size:12px;padding:6px 12px">⬅ Dashboard</a>
+  <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:6px 12px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px"><span>🔬</span> Laboratório LIS</div>
+</header>
+<div class="layout">
+<aside class="sidebar">
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span><span>Prontuários</span></a>
+  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span><span>Bloco Cirúrgico</span></a>
+  <a class="nav-link active" href="/hospital/lis/"><span>🔬</span><span>Laboratório</span></a>
+  <a class="nav-link" href="/hospital/imagem/"><span>🩻</span><span>Imagem/PACS</span></a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><span>💊</span><span>Farmácia Hosp.</span></a>
+  <a class="nav-link" href="/hospital/faturamento-tiss/"><span>🧾</span><span>Faturamento TISS</span></a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span><span>Dashboard</span></a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span><span>Sair</span></a>
+  </div>
+</aside>
+<main class="main">
+<div class="content">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Laboratório — LIS</div>
+      <div class="page-sub">Fila de exames, resultados e status de análise</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" onclick="loadTodos()">↻ Atualizar</button>
+      <button class="btn btn-primary" onclick="openModal('modalSolicitar')">+ Solicitar Exame</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi kpi-warn"><div class="kpi-val" id="kvHoje">—</div><div class="kpi-lbl">Solicitados Hoje</div></div>
+    <div class="kpi kpi-danger"><div class="kpi-val" id="kvAguardando">—</div><div class="kpi-lbl">Aguardando Resultado</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-val" id="kvEntregues">—</div><div class="kpi-lbl">Entregues no Mês</div></div>
+    <div class="kpi"><div class="kpi-val" id="kvTotal">—</div><div class="kpi-lbl">Total na Fila</div></div>
+  </div>
+
+  <!-- KANBAN por status -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📊 Fila de Exames por Status</span>
+    </div>
+    <div style="padding:14px">
+      <div class="kanban" id="kanbanBoard"></div>
+    </div>
+  </div>
+
+  <!-- TABLE: todos -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📋 Todos os Exames</span>
+    </div>
+    <div class="filter-bar">
+      <input id="filterQ" placeholder="Buscar paciente ou exame…" oninput="debounceFilter()" style="flex:1;min-width:180px">
+      <select id="filterStatus" onchange="loadTodos()">
+        <option value="">Todos os status</option>
+        <option value="solicitado">Solicitado</option>
+        <option value="coletado">Coletado</option>
+        <option value="em_analise">Em análise</option>
+        <option value="resultado">Resultado disponível</option>
+        <option value="entregue">Entregue</option>
+      </select>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Paciente</th><th>Exame</th><th>TUSS</th><th>Solicitante</th><th>Status</th><th>Solicitado em</th><th>Resultado em</th><th>Ações</th>
+      </tr></thead>
+      <tbody id="exameBody"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+</main>
+</div>
+
+<!-- MODAL: Solicitar Exame -->
+<div class="modal-bg" id="modalSolicitar">
+  <div class="modal">
+    <h3>🔬 Solicitar Exame</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Paciente *</label>
+        <input id="solPac" placeholder="Nome do paciente">
+      </div>
+      <div class="form-group">
+        <label>Tipo de Exame *</label>
+        <input id="solTipo" placeholder="Ex: Hemograma completo">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Solicitante *</label>
+        <input id="solSolic" placeholder="Nome do médico solicitante">
+      </div>
+      <div class="form-group">
+        <label>Código TUSS</label>
+        <input id="solTuss" placeholder="Ex: 40303459">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Valores de Referência</label>
+      <textarea id="solRef" placeholder="Opcional — preencher se necessário"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalSolicitar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="solicitarExame()">Solicitar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Resultado -->
+<div class="modal-bg" id="modalResultado">
+  <div class="modal">
+    <h3>📄 Registrar Resultado</h3>
+    <input type="hidden" id="resExameId">
+    <div class="form-group">
+      <label>Status</label>
+      <select id="resStatus">
+        <option value="coletado">Coletado</option>
+        <option value="em_analise">Em análise</option>
+        <option value="resultado">Resultado disponível</option>
+        <option value="entregue">Entregue</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Resultado *</label>
+      <textarea id="resTexto" style="min-height:120px" placeholder="Descreva os resultados do exame…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Valores de Referência</label>
+      <textarea id="resRef" placeholder="Faixas de referência"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalResultado')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarResultado()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script>
+const STATUS_BADGE = {
+  solicitado:'badge-info', coletado:'badge-yellow', em_analise:'badge-warn',
+  resultado:'badge-ok', entregue:'badge-muted'
+};
+const STATUS_LABEL = {
+  solicitado:'Solicitado', coletado:'Coletado', em_analise:'Em análise',
+  resultado:'Resultado', entregue:'Entregue'
+};
+const STATUS_ORDER = ['solicitado','coletado','em_analise','resultado','entregue'];
+let filterTimer = null;
+let todosExames = [];
+
+function debounceFilter(){
+  clearTimeout(filterTimer);
+  filterTimer = setTimeout(renderTable, 300);
+}
+
+async function loadKpis(){
+  const res = await fetch('/api/hospital/lis/kpis/');
+  if(!res.ok) return;
+  const d = await res.json();
+  document.getElementById('kvHoje').textContent = d.solicitados_hoje;
+  document.getElementById('kvAguardando').textContent = d.aguardando_resultado;
+  document.getElementById('kvEntregues').textContent = d.entregues_mes;
+  let total = 0;
+  (d.por_status||[]).forEach(s=>total+=s.n);
+  document.getElementById('kvTotal').textContent = total;
+}
+
+async function loadTodos(){
+  const status = document.getElementById('filterStatus').value;
+  let url = '/api/hospital/lis/?';
+  if(status) url+=`status=${status}&`;
+  const q = document.getElementById('filterQ').value.trim();
+  if(q) url+=`q=${encodeURIComponent(q)}&`;
+  const res = await fetch(url);
+  if(!res.ok) return;
+  const {exames} = await res.json();
+  todosExames = exames;
+  renderTable();
+  renderKanban(exames);
+}
+
+function renderTable(){
+  const q = document.getElementById('filterQ').value.toLowerCase();
+  const items = q ? todosExames.filter(e=>
+    e.paciente_nome.toLowerCase().includes(q)||
+    e.tipo_exame.toLowerCase().includes(q)
+  ) : todosExames;
+  const tbody = document.getElementById('exameBody');
+  if(!items.length){ tbody.innerHTML='<tr><td colspan="8" class="empty">Nenhum exame encontrado.</td></tr>'; return; }
+  tbody.innerHTML = items.map(e=>`
+    <tr>
+      <td style="font-weight:600">${e.paciente_nome}</td>
+      <td>${e.tipo_exame}</td>
+      <td><span class="badge badge-muted">${e.codigo_tuss||'—'}</span></td>
+      <td>${e.solicitante}</td>
+      <td><span class="badge ${STATUS_BADGE[e.status]||'badge-muted'}">${STATUS_LABEL[e.status]||e.status}</span></td>
+      <td style="color:var(--muted);font-size:12px">${e.solicitado_em}</td>
+      <td style="color:var(--muted);font-size:12px">${e.resultado_em||'—'}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openResultado(${e.id},'${e.status}')">📄 Resultado</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderKanban(exames){
+  const cols = {};
+  STATUS_ORDER.forEach(s=>cols[s]=[]);
+  exames.forEach(e=>{
+    if(cols[e.status]) cols[e.status].push(e);
+    else cols[e.status] = [e];
+  });
+  const board = document.getElementById('kanbanBoard');
+  board.innerHTML = STATUS_ORDER.map(s=>`
+    <div class="kanban-col">
+      <div class="kanban-col-hdr">
+        <span>${STATUS_LABEL[s]}</span>
+        <span class="badge ${STATUS_BADGE[s]||'badge-muted'}">${cols[s].length}</span>
+      </div>
+      ${cols[s].length===0 ? '<div style="font-size:12px;color:var(--muted);text-align:center;padding:12px">Vazio</div>' :
+        cols[s].map(e=>`
+          <div class="kanban-card">
+            <div class="kanban-card-pac">${e.paciente_nome}</div>
+            <div class="kanban-card-tipo">${e.tipo_exame}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">${e.solicitado_em}</div>
+            <div class="kanban-card-actions">
+              <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:10px" onclick="openResultado(${e.id},'${e.status}')">→</button>
+            </div>
+          </div>
+        `).join('')}
+    </div>
+  `).join('');
+}
+
+function openResultado(id, status){
+  document.getElementById('resExameId').value = id;
+  document.getElementById('resStatus').value = status;
+  document.getElementById('resTexto').value = '';
+  document.getElementById('resRef').value = '';
+  openModal('modalResultado');
+}
+
+async function solicitarExame(){
+  const pac = document.getElementById('solPac').value.trim();
+  const tipo = document.getElementById('solTipo').value.trim();
+  const solic = document.getElementById('solSolic').value.trim();
+  if(!pac||!tipo||!solic){ toast('Preencha os campos obrigatórios','error'); return; }
+  const body = {
+    paciente_nome:pac, tipo_exame:tipo, solicitante:solic,
+    codigo_tuss:document.getElementById('solTuss').value.trim(),
+    valores_referencia:document.getElementById('solRef').value.trim(),
+  };
+  const res = await fetch('/api/hospital/lis/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.ok){ toast('Exame solicitado'); closeModal('modalSolicitar'); loadTodos(); loadKpis(); }
+  else toast(d.erro||'Erro','error');
+}
+
+async function salvarResultado(){
+  const id = document.getElementById('resExameId').value;
+  const body = {
+    status: document.getElementById('resStatus').value,
+    resultado: document.getElementById('resTexto').value.trim(),
+    valores_referencia: document.getElementById('resRef').value.trim(),
+  };
+  const res = await fetch(`/api/hospital/lis/${id}/resultado/`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.ok){ toast('Resultado registrado'); closeModal('modalResultado'); loadTodos(); loadKpis(); }
+  else toast(d.erro||'Erro','error');
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+function toast(msg,type='ok'){
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className=`toast toast-${type}`;
+  t.textContent=msg;
+  c.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+loadKpis(); loadTodos();
+</script>
+</body>
+</html>

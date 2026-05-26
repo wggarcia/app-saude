@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>e-SUS / RNDS — Integração</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.info-card{background:rgba(0,194,255,.06);border:1px solid rgba(0,194,255,.2);border-radius:var(--radius);padding:20px}
+.info-card-title{font-size:14px;font-weight:700;color:var(--accent);margin-bottom:10px}
+.info-card-body{font-size:13px;line-height:1.7;color:var(--text)}
+.info-card-body ul{padding-left:20px;margin-top:6px}
+.info-card-body li{margin-bottom:4px;color:var(--muted)}
+.status-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;gap:16px}
+.status-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.status-info{display:flex;flex-direction:column;gap:4px}
+.status-num{font-size:36px;font-weight:800}
+.status-num.warn{color:var(--warn)}.status-num.ok{color:var(--ok)}.status-num.danger{color:var(--danger)}
+.status-lbl{font-size:13px;color:var(--muted);font-weight:600}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+@media(max-width:900px){.kpi-row{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Saúde Pública</div>
+  <a class="nav-link" href="/governo/pec/"><span>📋</span> PEC / e-SUS</a>
+  <a class="nav-link" href="/governo/farmacia-basica/"><span>💊</span> Farmácia Básica</a>
+  <a class="nav-link" href="/governo/regulacao/"><span>🏨</span> Regulação</a>
+  <a class="nav-link" href="/governo/faturamento-sus/"><span>💰</span> Faturamento SUS</a>
+  <a class="nav-link" href="/governo/teleconsulta/"><span>🖥️</span> Teleconsulta</a>
+  <a class="nav-link" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
+  <a class="nav-link active" href="/governo/esus/"><span>🔗</span> Integração e-SUS</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Integração e-SUS / RNDS</div>
+      <div class="page-sub">Envio de fichas e monitoramento da integração nacional de saúde</div>
+    </div>
+    <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi warn"><div class="kpi-val" id="kpiPend">—</div><div class="kpi-lbl">Fichas Pendentes de Envio</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiHoje">—</div><div class="kpi-lbl">Enviadas Hoje</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiErros">—</div><div class="kpi-lbl">Erros</div></div>
+  </div>
+
+  <!-- Status / Envio -->
+  <div class="status-panel">
+    <div class="status-row">
+      <div>
+        <div class="status-info">
+          <span class="status-num warn" id="statusPend">—</span>
+          <span class="status-lbl">atendimentos aguardando envio ao e-SUS</span>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btnEnviar" onclick="enviarFichas()" style="font-size:14px;padding:12px 24px">
+        Enviar Fichas Pendentes
+      </button>
+    </div>
+    <div id="resultadoEnvio" style="display:none;font-size:13px;color:var(--ok);font-weight:600;margin-top:4px"></div>
+  </div>
+
+  <!-- Info RNDS -->
+  <div class="info-card">
+    <div class="info-card-title">Sobre a Integração com a RNDS</div>
+    <div class="info-card-body">
+      A integração completa com a Rede Nacional de Dados em Saúde (RNDS) exige, em ambiente de produção:
+      <ul>
+        <li>Certificado digital ICP-Brasil (A3) do estabelecimento de saúde cadastrado no CNES</li>
+        <li>Autenticação OAuth2 via Serviço de Autenticação da RNDS (CONASS/CONASEMS)</li>
+        <li>Serialização das fichas nos padrões FHIR R4 (HL7) conforme o Manual de Integração e-SUS</li>
+        <li>Endpoint: <code style="background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px">https://ehr.saude.gov.br/api/fhir/r4</code></li>
+      </ul>
+      <br>
+      O botão "Enviar Fichas Pendentes" neste ambiente marca as fichas como processadas (stub).
+      Para produção, configure o certificado e as credenciais de acesso junto ao seu administrador de TI.
+    </div>
+  </div>
+
+  <!-- Logs -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Log de Envios</span>
+      <button class="btn btn-ghost btn-sm" onclick="carregarLogs()">Atualizar</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Data / Hora</th>
+          <th>Tipo de Ficha</th>
+          <th>Registros</th>
+          <th>Status</th>
+          <th>Resposta RNDS</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyLogs">
+        <tr><td colspan="5" class="empty">Carregando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+const STATUS_BADGE = {
+  pendente: '<span class="badge badge-warn">Pendente</span>',
+  enviado: '<span class="badge badge-ok">Enviado</span>',
+  erro: '<span class="badge badge-danger">Erro</span>',
+};
+
+async function carregarStatus() {
+  const d = await fetchJSON("/api/governo/esus/status/");
+  document.getElementById("kpiPend").textContent = d.pendentes ?? "—";
+  document.getElementById("kpiHoje").textContent = d.enviados_hoje ?? "—";
+  document.getElementById("kpiErros").textContent = d.erros ?? "—";
+  document.getElementById("statusPend").textContent = d.pendentes ?? "—";
+}
+
+async function carregarLogs() {
+  const d = await fetchJSON("/api/governo/esus/logs/");
+  const tbody = document.getElementById("tbodyLogs");
+  const logs = d.logs || [];
+  if (!logs.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum log de envio registrado.</td></tr>'; return; }
+  tbody.innerHTML = logs.map(l => `<tr>
+    <td>${new Date(l.enviado_em).toLocaleString("pt-BR")}</td>
+    <td>${l.ficha_tipo}</td>
+    <td>${l.registros_enviados.toLocaleString("pt-BR")}</td>
+    <td>${STATUS_BADGE[l.status] || l.status}</td>
+    <td style="font-size:11px;color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+      ${l.resposta_rnds && l.resposta_rnds.stub
+        ? "Stub — integração RNDS não ativa"
+        : JSON.stringify(l.resposta_rnds || {}).slice(0, 80)}
+    </td>
+  </tr>`).join("");
+}
+
+async function enviarFichas() {
+  const btn = document.getElementById("btnEnviar");
+  btn.disabled = true;
+  btn.textContent = "Enviando…";
+  const d = await fetchJSON("/api/governo/esus/enviar/", { method: "POST", body: "{}" });
+  btn.disabled = false;
+  btn.textContent = "Enviar Fichas Pendentes";
+  const res = document.getElementById("resultadoEnvio");
+  res.style.display = "";
+  if (d.enviados !== undefined) {
+    res.textContent = d.mensagem || `${d.enviados} ficha(s) processada(s).`;
+    res.style.color = "var(--ok)";
+  } else {
+    res.textContent = d.erro || "Erro ao enviar.";
+    res.style.color = "var(--danger)";
+  }
+  carregarStatus();
+  carregarLogs();
+}
+
+carregarStatus();
+carregarLogs();
+</script>
+</body>
+</html>

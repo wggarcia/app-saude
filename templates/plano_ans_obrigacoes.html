@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Obrigacoes ANS — Plano de Saude</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.ok::before{background:var(--ok)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}
+.kpi.ok .kpi-val{color:var(--ok)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.tabs-bar{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:0}
+.tab-btn{padding:12px 24px;font-size:13px;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:Manrope,sans-serif;transition:.15s}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-btn:hover{color:var(--text)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.badge-purple{background:rgba(192,132,252,.12);color:#c084fc}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px;color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group select option{background:#0a1a28}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.info-card{background:rgba(0,194,255,.05);border:1px solid rgba(0,194,255,.15);border-radius:10px;padding:16px 20px}
+.info-card-title{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.info-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(0,194,255,.06);font-size:13px}
+.info-row:last-child{border-bottom:none}
+.info-row-label{color:var(--muted);font-weight:600}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.form-row{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">Plano de Saude</div>
+  <div class="nav-section">Navegacao</div>
+  <a class="nav-link" href="/plano-saude/gestao/"><span>&#127968;</span> Gestao Operacional</a>
+  <div class="nav-section">Comercial</div>
+  <a class="nav-link" href="/plano-saude/corretores/"><span>&#129309;</span> Corretores</a>
+  <div class="nav-section">Rede</div>
+  <a class="nav-link" href="/plano-saude/rede/"><span>&#127973;</span> Rede Credenciada</a>
+  <div class="nav-section">Regulatorio</div>
+  <a class="nav-link active" href="/plano-saude/ans/"><span>&#128196;</span> Obrigacoes ANS</a>
+  <div class="nav-section">IA</div>
+  <a class="nav-link" href="/plano-saude/ia/"><span>&#129504;</span> IA Autorizacao</a>
+  <div class="nav-section">Beneficiarios</div>
+  <a class="nav-link" href="/plano-saude/portal-admin/"><span>&#128279;</span> Portal Beneficiario</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>&#128682;</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Obrigacoes ANS</div>
+      <div class="page-sub">DIOPS (trimestral) e SIB (mensal) — conformidade regulatoria com a Agencia Nacional de Saude Suplementar.</div>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi warn"><div class="kpi-val" id="kpiDiopsPend">—</div><div class="kpi-lbl">DIOPS Pendentes</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiDiopsEnv">—</div><div class="kpi-lbl">DIOPS Enviados</div></div>
+    <div class="kpi" id="kpiSibMes"><div class="kpi-val" id="kpiSibStatus">—</div><div class="kpi-lbl">SIB Mes Atual</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start">
+    <div>
+      <div class="card">
+        <div class="tabs-bar">
+          <button class="tab-btn active" onclick="setTab('diops')">&#128203; DIOPS</button>
+          <button class="tab-btn" onclick="setTab('sib')">&#128101; SIB</button>
+        </div>
+
+        <!-- DIOPS Tab -->
+        <div class="tab-panel active" id="tab-diops">
+          <div class="card-header">
+            <div class="card-title">Declaracoes DIOPS — Trimestrais</div>
+            <button class="btn btn-primary btn-sm" onclick="abrirModalDiops()">+ Nova Declaracao</button>
+          </div>
+          <div id="tabelaDiops"><div class="empty">Carregando...</div></div>
+        </div>
+
+        <!-- SIB Tab -->
+        <div class="tab-panel" id="tab-sib">
+          <div class="card-header">
+            <div class="card-title">Registros SIB — Mensais</div>
+            <button class="btn btn-primary btn-sm" onclick="abrirModalSib()">+ Novo Registro</button>
+          </div>
+          <div id="tabelaSib"><div class="empty">Carregando...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="info-card">
+        <div class="info-card-title">&#8987; Prazos ANS</div>
+        <div class="info-row"><span class="info-row-label">DIOPS</span><span>Ate dia 30 do mes apos o trimestre</span></div>
+        <div class="info-row"><span class="info-row-label">SIB</span><span>Ate dia 10 do mes seguinte</span></div>
+        <div class="info-row"><span class="info-row-label">Multa DIOPS</span><span>R$ 1.000 a R$ 50.000/dia</span></div>
+        <div class="info-row"><span class="info-row-label">Multa SIB</span><span>R$ 2.000 a R$ 100.000</span></div>
+      </div>
+      <div style="margin-top:12px" class="info-card">
+        <div class="info-card-title">Prazo Atual</div>
+        <div style="font-size:13px;color:var(--text);margin-top:4px" id="prazoSibTexto">—</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal Nova Declaracao DIOPS -->
+<div class="modal-bg" id="modalDiops">
+  <div class="modal">
+    <h3 id="modalDiopsTitle">Nova Declaracao DIOPS</h3>
+    <input type="hidden" id="editDiopsId">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Trimestre * (AAAAQ)</label>
+        <input type="text" id="dTrimestre" placeholder="Ex: 20251 para 1T2025">
+      </div>
+      <div class="form-group">
+        <label>Registro ANS</label>
+        <input type="text" id="dRegistroAns" placeholder="XXXXXX">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Receita Operacional (R$)</label>
+        <input type="number" id="dReceita" value="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Despesa Assistencial (R$)</label>
+        <input type="number" id="dDespAssist" value="0" step="0.01">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Despesa Administrativa (R$)</label>
+        <input type="number" id="dDespAdmin" value="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Resultado do Periodo (R$)</label>
+        <input type="number" id="dResultado" value="0" step="0.01">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Vidas Ativas</label>
+        <input type="number" id="dVidas" value="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="dStatus">
+          <option value="em_elaboracao">Em elaboracao</option>
+          <option value="validada">Validada</option>
+          <option value="enviada">Enviada ANS</option>
+          <option value="retificada">Retificada</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalDiops()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarDiops()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Novo SIB -->
+<div class="modal-bg" id="modalSib">
+  <div class="modal">
+    <h3 id="modalSibTitle">Novo Registro SIB</h3>
+    <input type="hidden" id="editSibId">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Competencia * (AAAAMM)</label>
+        <input type="text" id="sCompetencia" placeholder="202501">
+      </div>
+      <div class="form-group">
+        <label>Registro ANS</label>
+        <input type="text" id="sRegistroAns" placeholder="XXXXXX">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Vidas Incluidas</label>
+        <input type="number" id="sIncluidas" value="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Vidas Excluidas</label>
+        <input type="number" id="sExcluidas" value="0" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Vidas Alteradas</label>
+        <input type="number" id="sAlteradas" value="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Total Vidas</label>
+        <input type="number" id="sTotal" value="0" min="0">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalSib()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarSib()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let diopsData = [];
+let sibData = [];
+let tabAtiva = 'diops';
+
+function setTab(tab) {
+  tabAtiva = tab;
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['diops','sib'][i] === tab));
+  document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', ['diops','sib'][i] === tab));
+}
+
+const STATUS_BADGE = {
+  em_elaboracao:'badge-warn', validada:'badge-info',
+  enviada:'badge-ok', retificada:'badge-purple'
+};
+const STATUS_LABEL = {
+  em_elaboracao:'Em elaboracao', validada:'Validada',
+  enviada:'Enviada ANS', retificada:'Retificada'
+};
+
+function fmt(v) { return 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+async function carregarKPIs() {
+  try {
+    const r = await fetch('/api/plano-saude/ans/kpis', {credentials:'include'});
+    const d = await r.json();
+    document.getElementById('kpiDiopsPend').textContent = d.diops_pendentes ?? '—';
+    document.getElementById('kpiDiopsEnv').textContent = d.diops_enviadas ?? '—';
+    const sib = d.sib_mes_atual;
+    document.getElementById('kpiSibStatus').textContent = sib ? (sib.enviado ? 'Enviado' : 'Pendente') : 'Sem Registro';
+    document.getElementById('kpiSibMes').className = `kpi ${sib?.enviado ? 'ok' : 'warn'}`;
+    if (d.prazo_sib) document.getElementById('prazoSibTexto').textContent = d.prazo_sib;
+  } catch(e) {}
+}
+
+async function carregarDiops() {
+  try {
+    const r = await fetch('/api/plano-saude/ans/diops', {credentials:'include'});
+    const d = await r.json();
+    diopsData = d.declaracoes || [];
+    renderDiops(diopsData);
+  } catch(e) { document.getElementById('tabelaDiops').innerHTML = '<div class="empty">Erro ao carregar.</div>'; }
+}
+
+function renderDiops(lista) {
+  const el = document.getElementById('tabelaDiops');
+  if (!lista.length) { el.innerHTML = '<div class="empty">Nenhuma declaracao DIOPS cadastrada.</div>'; return; }
+  let html = `<table><thead><tr>
+    <th>Trimestre</th><th>Receita Op.</th><th>Desp. Assist.</th><th>MLR</th><th>Vidas</th><th>Status</th><th>Acoes</th>
+  </tr></thead><tbody>`;
+  for (const d of lista) {
+    const mlr = d.receita_operacional > 0 ? (d.despesa_assistencial / d.receita_operacional * 100).toFixed(1) : '—';
+    const mlrColor = parseFloat(mlr) > 85 ? 'var(--danger)' : parseFloat(mlr) > 75 ? 'var(--warn)' : 'var(--ok)';
+    html += `<tr>
+      <td style="font-weight:700">${d.trimestre}</td>
+      <td>${fmt(d.receita_operacional)}</td>
+      <td>${fmt(d.despesa_assistencial)}</td>
+      <td style="font-weight:700;color:${mlrColor}">${mlr}%</td>
+      <td>${d.vidas_ativas.toLocaleString('pt-BR')}</td>
+      <td><span class="badge ${STATUS_BADGE[d.status]||'badge-gray'}">${STATUS_LABEL[d.status]||d.status}</span></td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="editarDiops(${d.id})">Editar</button>
+        <a class="btn btn-ghost btn-sm" href="/api/plano-saude/ans/diops/${d.id}/xml" download>XML</a>
+        ${d.status !== 'enviada' ? `<button class="btn btn-ok btn-sm" onclick="enviarDiops(${d.id})">Enviar ANS</button>` : ''}
+      </td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+async function carregarSib() {
+  try {
+    const r = await fetch('/api/plano-saude/ans/sib', {credentials:'include'});
+    const d = await r.json();
+    sibData = d.registros || [];
+    renderSib(sibData);
+  } catch(e) { document.getElementById('tabelaSib').innerHTML = '<div class="empty">Erro ao carregar.</div>'; }
+}
+
+function renderSib(lista) {
+  const el = document.getElementById('tabelaSib');
+  if (!lista.length) { el.innerHTML = '<div class="empty">Nenhum registro SIB cadastrado.</div>'; return; }
+  let html = `<table><thead><tr>
+    <th>Competencia</th><th>Incluidas</th><th>Excluidas</th><th>Alteradas</th><th>Total Vidas</th><th>Status</th><th>Acoes</th>
+  </tr></thead><tbody>`;
+  for (const s of lista) {
+    html += `<tr>
+      <td style="font-weight:700">${s.competencia}</td>
+      <td style="color:var(--ok)">+${s.vidas_incluidas}</td>
+      <td style="color:var(--danger)">-${s.vidas_excluidas}</td>
+      <td style="color:var(--warn)">${s.vidas_alteradas}</td>
+      <td style="font-weight:700">${s.total_vidas.toLocaleString('pt-BR')}</td>
+      <td><span class="badge ${s.enviado ? 'badge-ok' : 'badge-warn'}">${s.enviado ? 'Enviado' : 'Pendente'}</span></td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-ghost btn-sm" onclick="editarSib(${s.id})">Editar</button>
+        ${!s.enviado ? `<button class="btn btn-ok btn-sm" onclick="enviarSib(${s.id})">Enviar</button>` : (s.enviado_em||'')}
+      </td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function abrirModalDiops() {
+  document.getElementById('editDiopsId').value = '';
+  document.getElementById('modalDiopsTitle').textContent = 'Nova Declaracao DIOPS';
+  ['dTrimestre','dRegistroAns'].forEach(id => document.getElementById(id).value = '');
+  ['dReceita','dDespAssist','dDespAdmin','dResultado','dVidas'].forEach(id => document.getElementById(id).value = '0');
+  document.getElementById('dStatus').value = 'em_elaboracao';
+  document.getElementById('modalDiops').classList.add('open');
+}
+
+function editarDiops(id) {
+  const d = diopsData.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('editDiopsId').value = id;
+  document.getElementById('modalDiopsTitle').textContent = 'Editar Declaracao DIOPS';
+  document.getElementById('dTrimestre').value = d.trimestre;
+  document.getElementById('dRegistroAns').value = d.registro_ans;
+  document.getElementById('dReceita').value = d.receita_operacional;
+  document.getElementById('dDespAssist').value = d.despesa_assistencial;
+  document.getElementById('dDespAdmin').value = d.despesa_administrativa;
+  document.getElementById('dResultado').value = d.resultado_periodo;
+  document.getElementById('dVidas').value = d.vidas_ativas;
+  document.getElementById('dStatus').value = d.status;
+  document.getElementById('modalDiops').classList.add('open');
+}
+
+function fecharModalDiops() { document.getElementById('modalDiops').classList.remove('open'); }
+
+async function salvarDiops() {
+  const id = document.getElementById('editDiopsId').value;
+  const body = {
+    trimestre: document.getElementById('dTrimestre').value,
+    registro_ans: document.getElementById('dRegistroAns').value,
+    receita_operacional: parseFloat(document.getElementById('dReceita').value)||0,
+    despesa_assistencial: parseFloat(document.getElementById('dDespAssist').value)||0,
+    despesa_administrativa: parseFloat(document.getElementById('dDespAdmin').value)||0,
+    resultado_periodo: parseFloat(document.getElementById('dResultado').value)||0,
+    vidas_ativas: parseInt(document.getElementById('dVidas').value)||0,
+    status: document.getElementById('dStatus').value,
+  };
+  const url = id ? `/api/plano-saude/ans/diops/${id}` : '/api/plano-saude/ans/diops';
+  const method = id ? 'PUT' : 'POST';
+  const r = await fetch(url, {
+    method, credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body: JSON.stringify(body)
+  });
+  if (r.ok) { fecharModalDiops(); carregarDiops(); carregarKPIs(); }
+  else { const e = await r.json(); alert(e.erro || 'Erro.'); }
+}
+
+async function enviarDiops(id) {
+  if (!confirm('Marcar declaracao DIOPS como Enviada ANS?')) return;
+  const r = await fetch(`/api/plano-saude/ans/diops/${id}`, {
+    method:'PUT', credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body: JSON.stringify({status:'enviada'})
+  });
+  if (r.ok) { carregarDiops(); carregarKPIs(); }
+}
+
+function abrirModalSib() {
+  document.getElementById('editSibId').value = '';
+  document.getElementById('modalSibTitle').textContent = 'Novo Registro SIB';
+  const hoje = new Date();
+  document.getElementById('sCompetencia').value = String(hoje.getFullYear()) + String(hoje.getMonth()+1).padStart(2,'0');
+  document.getElementById('sRegistroAns').value = '';
+  ['sIncluidas','sExcluidas','sAlteradas','sTotal'].forEach(id => document.getElementById(id).value = '0');
+  document.getElementById('modalSib').classList.add('open');
+}
+
+function editarSib(id) {
+  const s = sibData.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('editSibId').value = id;
+  document.getElementById('modalSibTitle').textContent = 'Editar Registro SIB';
+  document.getElementById('sCompetencia').value = s.competencia;
+  document.getElementById('sRegistroAns').value = s.registro_ans;
+  document.getElementById('sIncluidas').value = s.vidas_incluidas;
+  document.getElementById('sExcluidas').value = s.vidas_excluidas;
+  document.getElementById('sAlteradas').value = s.vidas_alteradas;
+  document.getElementById('sTotal').value = s.total_vidas;
+  document.getElementById('modalSib').classList.add('open');
+}
+
+function fecharModalSib() { document.getElementById('modalSib').classList.remove('open'); }
+
+async function salvarSib() {
+  const id = document.getElementById('editSibId').value;
+  const body = {
+    competencia: document.getElementById('sCompetencia').value,
+    registro_ans: document.getElementById('sRegistroAns').value,
+    vidas_incluidas: parseInt(document.getElementById('sIncluidas').value)||0,
+    vidas_excluidas: parseInt(document.getElementById('sExcluidas').value)||0,
+    vidas_alteradas: parseInt(document.getElementById('sAlteradas').value)||0,
+    total_vidas: parseInt(document.getElementById('sTotal').value)||0,
+  };
+  const url = id ? `/api/plano-saude/ans/sib/${id}` : '/api/plano-saude/ans/sib';
+  const method = id ? 'PUT' : 'POST';
+  const r = await fetch(url, {
+    method, credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body: JSON.stringify(body)
+  });
+  if (r.ok) { fecharModalSib(); carregarSib(); carregarKPIs(); }
+  else { const e = await r.json(); alert(e.erro || 'Erro.'); }
+}
+
+async function enviarSib(id) {
+  if (!confirm('Confirmar envio do registro SIB para a ANS?')) return;
+  const r = await fetch(`/api/plano-saude/ans/sib/${id}`, {
+    method:'PUT', credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body: JSON.stringify({enviado: true})
+  });
+  if (r.ok) { carregarSib(); carregarKPIs(); }
+}
+
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  carregarKPIs();
+  carregarDiops();
+  carregarSib();
+});
+</script>
+</body>
+</html>

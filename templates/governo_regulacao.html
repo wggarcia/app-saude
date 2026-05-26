@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Regulação Assistencial</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.ok::before{background:var(--ok)}.kpi.warn::before{background:var(--warn)}.kpi.danger::before{background:var(--danger)}.kpi.info::before{background:#a78bfa}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.ok .kpi-val{color:var(--ok)}.kpi.warn .kpi-val{color:var(--warn)}.kpi.danger .kpi-val{color:var(--danger)}.kpi.info .kpi-val{color:#a78bfa}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filter-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none}
+.filter-sel:focus{border-color:var(--accent)}
+.filter-sel option{background:#072030}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-purple{background:rgba(167,139,250,.12);color:#a78bfa}
+.badge-teal{background:rgba(45,212,191,.12);color:#2dd4bf}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Saúde Pública</div>
+  <a class="nav-link" href="/governo/pec/"><span>📋</span> PEC / e-SUS</a>
+  <a class="nav-link" href="/governo/farmacia-basica/"><span>💊</span> Farmácia Básica</a>
+  <a class="nav-link active" href="/governo/regulacao/"><span>🏨</span> Regulação</a>
+  <a class="nav-link" href="/governo/faturamento-sus/"><span>💰</span> Faturamento SUS</a>
+  <a class="nav-link" href="/governo/teleconsulta/"><span>🖥️</span> Teleconsulta</a>
+  <a class="nav-link" href="/governo/rag/"><span>📊</span> RAG / RDQA / PAS</a>
+  <a class="nav-link" href="/governo/esus/"><span>🔗</span> Integração e-SUS</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Regulação Assistencial</div>
+      <div class="page-sub">Fila de regulação tipo SISREG — consultas, exames e internações</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalNova()">+ Nova Solicitação</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi warn"><div class="kpi-val" id="kpiAguard">—</div><div class="kpi-lbl">Aguardando</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kpiAgend">—</div><div class="kpi-lbl">Agendados</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiRealiz">—</div><div class="kpi-lbl">Realizados no Mês</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiUrg">—</div><div class="kpi-lbl">Urgentes/Emergências</div></div>
+  </div>
+
+  <!-- Fila -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Fila de Regulação</span>
+      <div class="filters">
+        <select id="filtroTipo" class="filter-sel" onchange="carregarFila()">
+          <option value="">Todos os tipos</option>
+          <option value="consulta_esp">Consulta Especializada</option>
+          <option value="exame">Exame</option>
+          <option value="internacao">Internação</option>
+          <option value="cirurgia">Cirurgia Eletiva</option>
+        </select>
+        <select id="filtroStatus" class="filter-sel" onchange="carregarFila()">
+          <option value="">Todos os status</option>
+          <option value="aguardando">Aguardando</option>
+          <option value="agendado">Agendado</option>
+          <option value="realizado">Realizado</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Prioridade</th>
+          <th>Paciente</th>
+          <th>CNS</th>
+          <th>Tipo</th>
+          <th>Especialidade / Procedimento</th>
+          <th>Unidade Origem</th>
+          <th>Solicitação</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyFila">
+        <tr><td colspan="9" class="empty">Carregando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Nova Solicitação -->
+<div class="modal-bg" id="modalNova">
+  <div class="modal">
+    <h3>Nova Solicitação de Regulação</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome do Paciente *</label><input id="nPac" type="text" placeholder="Nome completo"></div>
+      <div class="form-group"><label>CNS</label><input id="nCns" type="text" placeholder="Cartão Nacional de Saúde"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo *</label>
+        <select id="nTipo">
+          <option value="consulta_esp">Consulta Especializada</option>
+          <option value="exame">Exame</option>
+          <option value="internacao">Internação</option>
+          <option value="cirurgia">Cirurgia Eletiva</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Prioridade *</label>
+        <select id="nPrioridade">
+          <option value="normal">Normal</option>
+          <option value="urgente">Urgente</option>
+          <option value="emergen">Emergência</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Especialidade</label><input id="nEsp" type="text" placeholder="Ex: Cardiologia"></div>
+      <div class="form-group"><label>CID-10</label><input id="nCid" type="text" placeholder="Ex: I10"></div>
+    </div>
+    <div class="form-group"><label>Procedimento</label><input id="nProc" type="text" placeholder="Descrição do procedimento"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Unidade Origem *</label><input id="nOrigem" type="text" placeholder="UBS de referência"></div>
+      <div class="form-group"><label>Unidade Destino</label><input id="nDestino" type="text" placeholder="Hospital / Ambulatório"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalNova')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarSolicitacao()">Solicitar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Agendar -->
+<div class="modal-bg" id="modalAgendar">
+  <div class="modal">
+    <h3>Agendar / Atualizar Regulação</h3>
+    <input type="hidden" id="agendId">
+    <div class="form-group"><label>Novo Status</label>
+      <select id="agendStatus">
+        <option value="agendado">Agendado</option>
+        <option value="realizado">Realizado</option>
+        <option value="cancelado">Cancelado</option>
+        <option value="aguardando">Aguardando</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Data do Agendamento</label><input id="agendData" type="date"></div>
+    <div class="form-group"><label>Unidade Destino</label><input id="agendDestino" type="text" placeholder="Hospital / Ambulatório"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalAgendar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAgendamento()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+const PRIO_BADGE = {
+  normal: '<span class="badge badge-info">Normal</span>',
+  urgente: '<span class="badge badge-warn">Urgente</span>',
+  emergen: '<span class="badge badge-danger">Emergência</span>',
+};
+const STATUS_BADGE = {
+  aguardando: '<span class="badge badge-warn">Aguardando</span>',
+  agendado: '<span class="badge badge-info">Agendado</span>',
+  realizado: '<span class="badge badge-ok">Realizado</span>',
+  cancelado: '<span class="badge" style="background:rgba(255,255,255,.08);color:var(--muted)">Cancelado</span>',
+};
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/governo/regulacao-assistencial/kpis/");
+  document.getElementById("kpiAguard").textContent = d.aguardando ?? "—";
+  document.getElementById("kpiAgend").textContent = d.agendados ?? "—";
+  document.getElementById("kpiRealiz").textContent = d.realizados_mes ?? "—";
+  document.getElementById("kpiUrg").textContent = d.urgentes ?? "—";
+}
+
+async function carregarFila() {
+  const tipo = document.getElementById("filtroTipo").value;
+  const status = document.getElementById("filtroStatus").value;
+  let url = "/api/governo/regulacao-assistencial/";
+  const params = new URLSearchParams();
+  if (tipo) params.set("tipo", tipo);
+  if (status) params.set("status", status);
+  if (params.toString()) url += "?" + params.toString();
+  const d = await fetchJSON(url);
+  const tbody = document.getElementById("tbodyFila");
+  const regs = d.regulacoes || [];
+  if (!regs.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty">Nenhuma solicitação encontrada.</td></tr>'; return; }
+  // Sort by priority: emergen first
+  const order = { emergen: 0, urgente: 1, normal: 2 };
+  regs.sort((a, b) => (order[a.prioridade] ?? 3) - (order[b.prioridade] ?? 3));
+  tbody.innerHTML = regs.map(r => `<tr>
+    <td>${PRIO_BADGE[r.prioridade] || r.prioridade}</td>
+    <td><strong>${r.paciente_nome}</strong></td>
+    <td>${r.cns || '—'}</td>
+    <td>${r.tipo_label}</td>
+    <td>${r.especialidade || r.procedimento || '—'}</td>
+    <td>${r.unidade_origem}</td>
+    <td>${r.data_solicitacao}</td>
+    <td>${STATUS_BADGE[r.status] || r.status}</td>
+    <td>
+      ${r.status === 'aguardando' || r.status === 'agendado'
+        ? `<button class="btn btn-ok btn-sm" onclick="abrirAgendar(${r.id},'${r.status}','${r.data_agendamento||''}','${r.unidade_destino||''}')">Agendar/Atualizar</button>`
+        : '—'}
+    </td>
+  </tr>`).join("");
+}
+
+function abrirModalNova() {
+  document.getElementById("modalNova").classList.add("open");
+}
+
+function abrirAgendar(id, status, data, destino) {
+  document.getElementById("agendId").value = id;
+  document.getElementById("agendStatus").value = "agendado";
+  document.getElementById("agendData").value = data || "";
+  document.getElementById("agendDestino").value = destino || "";
+  document.getElementById("modalAgendar").classList.add("open");
+}
+
+function fecharModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+async function salvarSolicitacao() {
+  const pac = document.getElementById("nPac").value.trim();
+  const origem = document.getElementById("nOrigem").value.trim();
+  if (!pac || !origem) { alert("Paciente e unidade de origem são obrigatórios."); return; }
+  const d = await fetchJSON("/api/governo/regulacao-assistencial/nova/", {
+    method: "POST",
+    body: JSON.stringify({
+      paciente_nome: pac,
+      cns: document.getElementById("nCns").value,
+      tipo: document.getElementById("nTipo").value,
+      prioridade: document.getElementById("nPrioridade").value,
+      especialidade: document.getElementById("nEsp").value,
+      cid10: document.getElementById("nCid").value,
+      procedimento: document.getElementById("nProc").value,
+      unidade_origem: origem,
+      unidade_destino: document.getElementById("nDestino").value,
+    })
+  });
+  if (d.id) { fecharModal("modalNova"); carregarFila(); carregarKpis(); }
+  else alert(d.erro || "Erro ao salvar.");
+}
+
+async function salvarAgendamento() {
+  const id = document.getElementById("agendId").value;
+  const d = await fetchJSON(`/api/governo/regulacao-assistencial/${id}/atualizar/`, {
+    method: "POST",
+    body: JSON.stringify({
+      status: document.getElementById("agendStatus").value,
+      data_agendamento: document.getElementById("agendData").value || null,
+      unidade_destino: document.getElementById("agendDestino").value,
+    })
+  });
+  if (d.ok) { fecharModal("modalAgendar"); carregarFila(); carregarKpis(); }
+  else alert(d.erro || "Erro ao atualizar.");
+}
+
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
+
+carregarKpis();
+carregarFila();
+</script>
+</body>
+</html>

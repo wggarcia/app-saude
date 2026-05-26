@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rede Credenciada — Plano de Saúde</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2);color:#ffc6d3}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.ok::before{background:var(--ok)}
+.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}
+.kpi.ok .kpi-val{color:var(--ok)}
+.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-purple{background:rgba(192,132,252,.12);color:#c084fc}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filter-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:Manrope,sans-serif}
+.filter-sel option{background:#0a1a28}
+.search-input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px;width:200px}
+.search-input::placeholder{color:var(--muted)}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{background:rgba(0,194,255,.1);color:var(--accent);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:480px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px;color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group select option{background:#0a1a28}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.alert-warn{background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--warn);display:flex;align-items:center;gap:8px;margin:0 0 16px}
+.tipo-pills{display:flex;gap:6px;flex-wrap:wrap}
+.tipo-pill{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid var(--border);cursor:pointer;background:none;color:var(--muted);font-family:Manrope,sans-serif;transition:.15s}
+.tipo-pill.active,.tipo-pill:hover{background:rgba(0,194,255,.12);color:var(--accent);border-color:rgba(0,194,255,.3)}
+.toggle{position:relative;width:36px;height:20px;display:inline-block;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;inset:0;background:rgba(255,255,255,.1);border-radius:10px;cursor:pointer;transition:.2s}
+.toggle input:checked + .toggle-track{background:var(--ok)}
+.toggle-track:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked + .toggle-track:before{transform:translateX(16px)}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.form-row{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">Plano de Saude</div>
+  <div class="nav-section">Navegacao</div>
+  <a class="nav-link" href="/plano-saude/gestao/"><span>&#127968;</span> Gestao Operacional</a>
+  <div class="nav-section">Comercial</div>
+  <a class="nav-link" href="/plano-saude/corretores/"><span>&#129309;</span> Corretores</a>
+  <div class="nav-section">Rede</div>
+  <a class="nav-link active" href="/plano-saude/rede/"><span>&#127973;</span> Rede Credenciada</a>
+  <div class="nav-section">Regulatorio</div>
+  <a class="nav-link" href="/plano-saude/ans/"><span>&#128196;</span> Obrigacoes ANS</a>
+  <div class="nav-section">IA</div>
+  <a class="nav-link" href="/plano-saude/ia/"><span>&#129504;</span> IA Autorizacao</a>
+  <div class="nav-section">Beneficiarios</div>
+  <a class="nav-link" href="/plano-saude/portal-admin/"><span>&#128279;</span> Portal Beneficiario</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>&#128682;</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Rede Credenciada — Gestao</div>
+      <div class="page-sub">Hospitais, clinicas, laboratorios e centros de imagem credenciados. Controle de contratos e vigencias.</div>
+    </div>
+    <button class="btn btn-primary" onclick="abrirModalNovo()">+ Novo Credenciado</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiTotal">—</div><div class="kpi-lbl">Total Credenciados</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiAtivos">—</div><div class="kpi-lbl">Ativos</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiVencendo">—</div><div class="kpi-lbl">Contratos Vencendo (30d)</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiVencidos">—</div><div class="kpi-lbl">Contratos Vencidos</div></div>
+  </div>
+
+  <div id="alertaVencendo" style="display:none">
+    <div class="alert-warn">&#9888; Ha credenciados com contratos vencendo nos proximos 30 dias. Verifique a coluna "Contrato ate" na tabela abaixo.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div class="card-title">&#127973; Prestadores</div>
+        <div class="tipo-pills" id="tipoPills">
+          <button class="tipo-pill active" onclick="filtrarTipo('')" data-tipo="">Todos</button>
+          <button class="tipo-pill" onclick="filtrarTipo('hospital')" data-tipo="hospital">Hospital</button>
+          <button class="tipo-pill" onclick="filtrarTipo('clinica')" data-tipo="clinica">Clinica</button>
+          <button class="tipo-pill" onclick="filtrarTipo('laboratorio')" data-tipo="laboratorio">Laboratorio</button>
+          <button class="tipo-pill" onclick="filtrarTipo('imagem')" data-tipo="imagem">Imagem</button>
+          <button class="tipo-pill" onclick="filtrarTipo('odonto')" data-tipo="odonto">Odonto</button>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <input class="search-input" id="searchInput" placeholder="Buscar..." oninput="carregarRede()">
+        <select class="filter-sel" id="ufFilter" onchange="carregarRede()">
+          <option value="">UF</option>
+          <option value="AC">AC</option><option value="AL">AL</option><option value="AM">AM</option>
+          <option value="AP">AP</option><option value="BA">BA</option><option value="CE">CE</option>
+          <option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option>
+          <option value="MA">MA</option><option value="MG">MG</option><option value="MS">MS</option>
+          <option value="MT">MT</option><option value="PA">PA</option><option value="PB">PB</option>
+          <option value="PE">PE</option><option value="PI">PI</option><option value="PR">PR</option>
+          <option value="RJ">RJ</option><option value="RN">RN</option><option value="RO">RO</option>
+          <option value="RR">RR</option><option value="RS">RS</option><option value="SC">SC</option>
+          <option value="SE">SE</option><option value="SP">SP</option><option value="TO">TO</option>
+        </select>
+        <select class="filter-sel" id="ativoFilter" onchange="carregarRede()">
+          <option value="">Status</option>
+          <option value="1">Ativo</option>
+          <option value="0">Inativo</option>
+        </select>
+      </div>
+    </div>
+    <div id="tabelaRede"><div class="empty">Carregando...</div></div>
+  </div>
+</main>
+
+<!-- Modal Novo/Editar Credenciado -->
+<div class="modal-bg" id="modalRede">
+  <div class="modal">
+    <h3 id="modalRedeTitle">Novo Credenciado</h3>
+    <input type="hidden" id="editRedeId">
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Nome / Razao Social *</label>
+      <input type="text" id="rNome" placeholder="Nome do prestador">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tipo *</label>
+        <select id="rTipo">
+          <option value="hospital">Hospital</option>
+          <option value="clinica">Clinica</option>
+          <option value="laboratorio">Laboratorio</option>
+          <option value="imagem">Centro de Imagem</option>
+          <option value="odonto">Odontologia</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tabela de Preco</label>
+        <select id="rTabela">
+          <option value="CBHPM">CBHPM</option>
+          <option value="SUS">SUS</option>
+          <option value="propria">Tabela Propria</option>
+          <option value="AMB">AMB</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>CNPJ</label>
+        <input type="text" id="rCnpj" placeholder="00.000.000/0001-00">
+      </div>
+      <div class="form-group">
+        <label>CNES</label>
+        <input type="text" id="rCnes" placeholder="Codigo CNES">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Cidade</label>
+        <input type="text" id="rCidade" placeholder="Cidade">
+      </div>
+      <div class="form-group">
+        <label>UF</label>
+        <input type="text" id="rUf" placeholder="SP" maxlength="2" style="text-transform:uppercase">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Especialidades (separadas por virgula)</label>
+      <input type="text" id="rEspecialidades" placeholder="Cardiologia, Ortopedia, Neurologia">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Contrato Vigente Ate</label>
+        <input type="date" id="rContrato">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="rAtivo">
+          <option value="true">Ativo</option>
+          <option value="false">Inativo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalRede()">Cancelar</button>
+      <button class="btn btn-danger btn-sm" id="btnDeletar" style="display:none;margin-right:auto" onclick="deletarRede()">Remover</button>
+      <button class="btn btn-primary" onclick="salvarRede()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let tipoAtivo = '';
+let redeData = [];
+
+async function carregarKPIs() {
+  try {
+    const r = await fetch('/api/plano-saude/rede/kpis', {credentials:'include'});
+    const d = await r.json();
+    document.getElementById('kpiTotal').textContent = d.total_credenciados ?? '—';
+    document.getElementById('kpiAtivos').textContent = d.ativos ?? '—';
+    document.getElementById('kpiVencendo').textContent = d.contratos_vencendo_30d ?? '—';
+    document.getElementById('kpiVencidos').textContent = d.contratos_vencidos ?? '—';
+    if ((d.contratos_vencendo_30d || 0) > 0 || (d.contratos_vencidos || 0) > 0) {
+      document.getElementById('alertaVencendo').style.display = 'block';
+    }
+  } catch(e) {}
+}
+
+function filtrarTipo(tipo) {
+  tipoAtivo = tipo;
+  document.querySelectorAll('.tipo-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.tipo === tipo);
+  });
+  carregarRede();
+}
+
+async function carregarRede() {
+  const params = new URLSearchParams();
+  if (tipoAtivo) params.set('tipo', tipoAtivo);
+  const uf = document.getElementById('ufFilter').value;
+  if (uf) params.set('uf', uf);
+  const ativo = document.getElementById('ativoFilter').value;
+  if (ativo) params.set('ativo', ativo);
+  const q = document.getElementById('searchInput').value.trim();
+  if (q) params.set('q', q);
+  try {
+    const r = await fetch('/api/plano-saude/rede?' + params, {credentials:'include'});
+    const d = await r.json();
+    redeData = d.rede || [];
+    renderRede(redeData);
+  } catch(e) {
+    document.getElementById('tabelaRede').innerHTML = '<div class="empty">Erro ao carregar rede.</div>';
+  }
+}
+
+const TIPO_BADGE = {
+  hospital:'badge-danger', clinica:'badge-info', laboratorio:'badge-purple',
+  imagem:'badge-ok', odonto:'badge-warn', outro:'badge-gray'
+};
+
+function renderRede(lista) {
+  const el = document.getElementById('tabelaRede');
+  if (!lista.length) { el.innerHTML = '<div class="empty">Nenhum credenciado encontrado.</div>'; return; }
+  const hoje = new Date().toISOString().split('T')[0];
+  let html = `<table><thead><tr>
+    <th>Nome</th><th>Tipo</th><th>Cidade/UF</th><th>Especialidades</th>
+    <th>Tabela</th><th>Contrato ate</th><th>Ativo</th><th></th>
+  </tr></thead><tbody>`;
+  for (const r of lista) {
+    const vencendo = r.vencimento_proximo && r.ativo;
+    const vencido = r.contrato_vigente_ate && r.contrato_vigente_ate < hoje && r.ativo;
+    const contratoCell = r.contrato_vigente_ate
+      ? `<span style="color:${vencido ? 'var(--danger)' : vencendo ? 'var(--warn)' : 'inherit'}">${r.contrato_vigente_ate} ${vencido ? '&#9888;' : vencendo ? '&#9203;' : ''}</span>`
+      : '—';
+    const chips = (r.especialidades || []).slice(0,3).map(e => `<span class="chip">${e}</span>`).join('') +
+      (r.especialidades?.length > 3 ? `<span class="chip">+${r.especialidades.length-3}</span>` : '');
+    html += `<tr>
+      <td style="font-weight:700">${r.nome}</td>
+      <td><span class="badge ${TIPO_BADGE[r.tipo]||'badge-gray'}">${r.tipo_label}</span></td>
+      <td>${r.cidade || '—'}${r.uf ? '/' + r.uf : ''}</td>
+      <td><div class="chips">${chips || '—'}</div></td>
+      <td>${r.tabela_preco || '—'}</td>
+      <td>${contratoCell}</td>
+      <td><span class="badge ${r.ativo ? 'badge-ok' : 'badge-gray'}">${r.ativo ? 'Sim' : 'Nao'}</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="editarRede(${r.id})">Editar</button></td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function abrirModalNovo() {
+  document.getElementById('editRedeId').value = '';
+  document.getElementById('modalRedeTitle').textContent = 'Novo Credenciado';
+  ['rNome','rCnpj','rCnes','rCidade','rUf','rEspecialidades'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('rTipo').value = 'clinica';
+  document.getElementById('rTabela').value = 'CBHPM';
+  document.getElementById('rAtivo').value = 'true';
+  document.getElementById('rContrato').value = '';
+  document.getElementById('btnDeletar').style.display = 'none';
+  document.getElementById('modalRede').classList.add('open');
+}
+
+function editarRede(id) {
+  const r = redeData.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('editRedeId').value = id;
+  document.getElementById('modalRedeTitle').textContent = 'Editar Credenciado';
+  document.getElementById('rNome').value = r.nome;
+  document.getElementById('rTipo').value = r.tipo;
+  document.getElementById('rTabela').value = r.tabela_preco || 'CBHPM';
+  document.getElementById('rCnpj').value = r.cnpj || '';
+  document.getElementById('rCnes').value = r.cnes || '';
+  document.getElementById('rCidade').value = r.cidade || '';
+  document.getElementById('rUf').value = r.uf || '';
+  document.getElementById('rEspecialidades').value = (r.especialidades || []).join(', ');
+  document.getElementById('rContrato').value = r.contrato_vigente_ate || '';
+  document.getElementById('rAtivo').value = r.ativo ? 'true' : 'false';
+  document.getElementById('btnDeletar').style.display = 'inline-flex';
+  document.getElementById('modalRede').classList.add('open');
+}
+
+function fecharModalRede() { document.getElementById('modalRede').classList.remove('open'); }
+
+async function salvarRede() {
+  const id = document.getElementById('editRedeId').value;
+  const body = {
+    nome: document.getElementById('rNome').value,
+    tipo: document.getElementById('rTipo').value,
+    tabela_preco: document.getElementById('rTabela').value,
+    cnpj: document.getElementById('rCnpj').value,
+    cnes: document.getElementById('rCnes').value,
+    cidade: document.getElementById('rCidade').value,
+    uf: document.getElementById('rUf').value.toUpperCase(),
+    especialidades: document.getElementById('rEspecialidades').value,
+    contrato_vigente_ate: document.getElementById('rContrato').value || null,
+    ativo: document.getElementById('rAtivo').value === 'true',
+  };
+  const url = id ? `/api/plano-saude/rede/${id}` : '/api/plano-saude/rede/novo';
+  const method = id ? 'PUT' : 'POST';
+  const r = await fetch(url, {
+    method, credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body: JSON.stringify(body)
+  });
+  if (r.ok) { fecharModalRede(); carregarRede(); carregarKPIs(); }
+  else { const e = await r.json(); alert(e.erro || 'Erro ao salvar.'); }
+}
+
+async function deletarRede() {
+  const id = document.getElementById('editRedeId').value;
+  if (!id || !confirm('Remover este credenciado?')) return;
+  const r = await fetch(`/api/plano-saude/rede/${id}`, {
+    method:'DELETE', credentials:'include',
+    headers:{'X-CSRFToken':getCookie('csrftoken')}
+  });
+  if (r.ok) { fecharModalRede(); carregarRede(); carregarKPIs(); }
+}
+
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+
+window.addEventListener('DOMContentLoaded', () => { carregarKPIs(); carregarRede(); });
+</script>
+</body>
+</html>

@@ -52,6 +52,11 @@ _FARMACIA_LOCAL = [
     "farmacia.lotes",               # Alertas de vencimento de lotes
     "farmacia.pedidos",             # Pedidos de compra integrados
     "farmacia.epidemiologia",       # Alertas epidemiológicos regionais (App Cidadão)
+    "farmacia.pdv",                 # PDV / Caixa com TEF, Pix, Convênio
+    "farmacia.pbm",                 # PBM (convênios de medicamentos)
+    "farmacia.farmacia_popular",    # Farmácia Popular (convênio governo)
+    "farmacia.dre",                 # DRE / DFC / Conciliação financeira
+    "farmacia.delivery",            # E-commerce / Delivery integrado
 ]
 _FARMACIA_REDE = _FARMACIA_LOCAL + [
     "farmacia.multi_unidade",       # Visão consolidada multi-unidade (EXCLUSIVO REDE)
@@ -67,6 +72,13 @@ _HOSPITAL_MEDIO = [
     "hospital.triagem",             # Triagem Manchester digitalizada
     "hospital.taxa_ocupacao",       # Taxa de ocupação por departamento
     "hospital.epidemiologia",       # Alertas epidemiológicos (App Cidadão)
+    "hospital.emr",                 # Prontuário Eletrônico (EMR)
+    "hospital.lis",                 # Laboratório integrado (LIS)
+    "hospital.ris_pacs",            # Imagem médica RIS/PACS
+    "hospital.cirurgia",            # Bloco cirúrgico
+    "hospital.farmacia_hospitalar", # Farmácia hospitalar
+    "hospital.tiss",                # Faturamento SUS/TISS
+    "hospital.ia_autorizacao",      # IA para autorização clínica
 ]
 _HOSPITAL_REDE = _HOSPITAL_MEDIO + [
     "hospital.multi_unidade",       # Gestão multi-unidade (EXCLUSIVO REDE)
@@ -84,6 +96,13 @@ _GOVERNO_TODOS = [
     "governo.orcamento",        # Orçamento previsto × executado
     "governo.sala_situacao",    # Sala de Situação Epidemiológica
     "governo.app_cidadao",      # App Cidadão — envio exclusivo de alertas à população
+    "governo.pec",              # Prontuário Eletrônico do Cidadão (PEC)
+    "governo.esus_rnds",        # Integração e-SUS / RNDS
+    "governo.faturamento_sus",  # Faturamento SUS (APAC / AIH / BPA)
+    "governo.farmacia_basica",  # Farmácia Básica UBS / RENAME
+    "governo.regulacao",        # Regulação Assistencial (SISREG)
+    "governo.teleconsulta",     # Teleconsulta para cidadão
+    "governo.rag_rdqa",         # Relatórios RAG / RDQA / PAS
 ]
 
 # ── Plano de Saúde ───────────────────────────────────────────────────────────
@@ -95,6 +114,11 @@ _PLANO_OPERADORA = [
     "plano.contratos",          # Contratos com histórico de utilização
     "plano.ans_relatorios",     # Relatórios ANS-compatíveis
     "plano.epidemiologia",      # Alertas de risco territorial por município (App Cidadão)
+    "plano.corretores",         # Gestão de corretoras e comissões
+    "plano.rede_credenciada",   # Rede credenciada — gestão e negociação
+    "plano.diops_sib",          # DIOPS + SIB (obrigações ANS)
+    "plano.ia_autorizacao",     # IA para autorização de guias
+    "plano.portal_beneficiario",# Portal web do beneficiário
 ]
 _PLANO_ENTERPRISE = _PLANO_OPERADORA + [
     "plano.coparticipacao",         # Regras de coparticipação por contrato (EXCLUSIVO ENTERPRISE)

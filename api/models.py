@@ -6103,5 +6103,545 @@ class LogWhatsApp(models.Model):
         verbose_name = "Log WhatsApp"
         verbose_name_plural = "Logs WhatsApp"
 
+
+# ═════════════════════════════════════════════════════════════════════════════
+# FARMÁCIA — PDV / PBM / DRE / DELIVERY
+# ═════════════════════════════════════════════════════════════════════════════
+
+class PDVSessao(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="pdv_sessoes")
+    operador = models.CharField(max_length=120)
+    caixa_numero = models.PositiveSmallIntegerField(default=1)
+    abertura = models.DateTimeField(auto_now_add=True)
+    fechamento = models.DateTimeField(null=True, blank=True)
+    fundo_caixa = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_vendas = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    total_dinheiro = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    total_pix = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    total_cartao_debito = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    total_cartao_credito = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    total_convenio = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    ativa = models.BooleanField(default=True)
+    class Meta:
+        ordering = ["-abertura"]
     def __str__(self):
-        return f"Log {self.status} — {self.numero_destino} — {self.enviado_em:%d/%m/%Y %H:%M}"
+        return f"Sessão PDV #{self.id} — {self.empresa.nome}"
+
+
+class PDVVenda(models.Model):
+    PGTO_DINHEIRO = "dinheiro"; PGTO_PIX = "pix"; PGTO_DEBITO = "debito"
+    PGTO_CREDITO = "credito"; PGTO_CONVENIO = "convenio"
+    PGTOS = [(PGTO_DINHEIRO,"Dinheiro"),(PGTO_PIX,"Pix"),(PGTO_DEBITO,"Débito"),
+             (PGTO_CREDITO,"Crédito"),(PGTO_CONVENIO,"Convênio/PBM")]
+    sessao = models.ForeignKey(PDVSessao, on_delete=models.CASCADE, related_name="vendas")
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="pdv_vendas")
+    numero_cupom = models.CharField(max_length=40, blank=True)
+    forma_pagamento = models.CharField(max_length=20, choices=PGTOS, default=PGTO_DINHEIRO)
+    subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    desconto = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    troco = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cpf_cliente = models.CharField(max_length=14, blank=True)
+    cancelada = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-criado_em"]
+    def __str__(self):
+        return f"Venda #{self.id} — R${self.total}"
+
+
+class PDVItemVenda(models.Model):
+    venda = models.ForeignKey(PDVVenda, on_delete=models.CASCADE, related_name="itens")
+    codigo_barras = models.CharField(max_length=40, blank=True)
+    descricao = models.CharField(max_length=200)
+    lote = models.CharField(max_length=40, blank=True)
+    quantidade = models.DecimalField(max_digits=10, decimal_places=3, default=1)
+    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    desconto_item = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_item = models.DecimalField(max_digits=14, decimal_places=2)
+    controlado = models.BooleanField(default=False)
+    receita_numero = models.CharField(max_length=60, blank=True)
+
+
+class PBMConvenio(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="pbm_convenios")
+    nome = models.CharField(max_length=120)  # Funcional, Epharma, Onofre...
+    codigo_credenciado = models.CharField(max_length=60, blank=True)
+    percentual_desconto_padrao = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    def __str__(self):
+        return f"PBM {self.nome} — {self.empresa.nome}"
+
+
+class FarmaciaPopularRegistro(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="farmacia_popular")
+    mes_referencia = models.DateField()
+    medicamentos_dispensados = models.PositiveIntegerField(default=0)
+    valor_subsidiado = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    valor_copagamento = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    arquivos_transmitidos = models.BooleanField(default=False)
+    enviado_em = models.DateTimeField(null=True, blank=True)
+    class Meta:
+        ordering = ["-mes_referencia"]
+
+
+class DREFarmacia(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="dre_farmacia")
+    mes_referencia = models.DateField()
+    receita_bruta = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    devolucoes = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    impostos = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    cmv = models.DecimalField(max_digits=16, decimal_places=2, default=0)  # Custo Mercadorias
+    despesas_operacionais = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    despesas_pessoal = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    despesas_aluguel = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    outras_despesas = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    observacoes = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    class Meta:
+        ordering = ["-mes_referencia"]
+        unique_together = [["empresa", "mes_referencia"]]
+
+
+class PedidoDelivery(models.Model):
+    STATUS_CHOICES = [("aguardando","Aguardando"),("confirmado","Confirmado"),
+                      ("em_preparo","Em Preparo"),("saiu","Saiu para Entrega"),
+                      ("entregue","Entregue"),("cancelado","Cancelado")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="pedidos_delivery")
+    numero_pedido = models.CharField(max_length=40)
+    cliente_nome = models.CharField(max_length=120)
+    cliente_telefone = models.CharField(max_length=20)
+    cliente_endereco = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="aguardando")
+    origem = models.CharField(max_length=40, default="whatsapp")  # whatsapp, site, app
+    total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    observacoes = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    class Meta:
+        ordering = ["-criado_em"]
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# HOSPITAL — EMR / LIS / RIS / CIRURGIA / FARMÁCIA HOSPITALAR / TISS / IA
+# ═════════════════════════════════════════════════════════════════════════════
+
+class ProntuarioHospitalar(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="prontuarios_hospitalares")
+    numero_prontuario = models.CharField(max_length=40, blank=True)
+    paciente_nome = models.CharField(max_length=160)
+    paciente_cpf = models.CharField(max_length=14, blank=True)
+    paciente_nascimento = models.DateField(null=True, blank=True)
+    paciente_sexo = models.CharField(max_length=1, choices=[("M","M"),("F","F"),("O","O")], default="M")
+    paciente_telefone = models.CharField(max_length=20, blank=True)
+    alergias = models.TextField(blank=True)
+    comorbidades = models.TextField(blank=True)
+    observacoes = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    class Meta:
+        ordering = ["-criado_em"]
+    def __str__(self):
+        return f"Prontuário {self.paciente_nome} — {self.empresa.nome}"
+
+
+class EvolucaoProntuario(models.Model):
+    prontuario = models.ForeignKey(ProntuarioHospitalar, on_delete=models.CASCADE, related_name="evolucoes")
+    profissional = models.CharField(max_length=120)
+    crm_coren = models.CharField(max_length=40, blank=True)
+    tipo = models.CharField(max_length=30, default="medica")  # medica, enfermagem, fisioterapia...
+    texto = models.TextField()
+    cid10 = models.CharField(max_length=10, blank=True)
+    assinado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-assinado_em"]
+
+
+class PrescricaoProntuario(models.Model):
+    prontuario = models.ForeignKey(ProntuarioHospitalar, on_delete=models.CASCADE, related_name="prescricoes")
+    profissional = models.CharField(max_length=120)
+    medicamento = models.CharField(max_length=200)
+    dose = models.CharField(max_length=60)
+    via = models.CharField(max_length=40)
+    frequencia = models.CharField(max_length=60)
+    duracao = models.CharField(max_length=40, blank=True)
+    dispensado = models.BooleanField(default=False)
+    prescrito_em = models.DateTimeField(auto_now_add=True)
+    ia_aprovada = models.BooleanField(null=True, blank=True)  # IA autorização
+    ia_observacao = models.CharField(max_length=300, blank=True)
+    class Meta:
+        ordering = ["-prescrito_em"]
+
+
+class BlocoCirurgico(models.Model):
+    SITUACAO_CHOICES = [("agendada","Agendada"),("em_andamento","Em andamento"),
+                        ("concluida","Concluída"),("cancelada","Cancelada"),("suspensa","Suspensa")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="bloco_cirurgico_agendas")
+    prontuario = models.ForeignKey(ProntuarioHospitalar, null=True, blank=True, on_delete=models.SET_NULL)
+    paciente_nome = models.CharField(max_length=160)
+    tipo_cirurgia = models.CharField(max_length=200)
+    cid10 = models.CharField(max_length=10, blank=True)
+    cbhpm = models.CharField(max_length=20, blank=True)  # Classificação Brasileira de Procedimentos
+    cirurgiao = models.CharField(max_length=120)
+    anestesista = models.CharField(max_length=120, blank=True)
+    sala = models.CharField(max_length=40, blank=True)
+    data_hora = models.DateTimeField()
+    duracao_prevista_min = models.PositiveSmallIntegerField(default=60)
+    situacao = models.CharField(max_length=20, choices=SITUACAO_CHOICES, default="agendada")
+    relatorio_cirurgico = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-data_hora"]
+
+
+class FarmaciaHospitalarItem(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="farmacia_hospitalar")
+    descricao = models.CharField(max_length=200)
+    codigo_interno = models.CharField(max_length=60, blank=True)
+    apresentacao = models.CharField(max_length=80, blank=True)
+    principio_ativo = models.CharField(max_length=120, blank=True)
+    classe_terapeutica = models.CharField(max_length=80, blank=True)
+    controlado = models.BooleanField(default=False)
+    estoque_atual = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    estoque_minimo = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    unidade = models.CharField(max_length=20, default="un")
+    atualizado_em = models.DateTimeField(auto_now=True)
+    class Meta:
+        ordering = ["descricao"]
+
+
+class ExameLIS(models.Model):
+    STATUS_CHOICES = [("solicitado","Solicitado"),("coletado","Coletado"),
+                      ("em_analise","Em análise"),("resultado","Resultado disponível"),
+                      ("entregue","Entregue")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="exames_lis")
+    prontuario = models.ForeignKey(ProntuarioHospitalar, null=True, blank=True, on_delete=models.SET_NULL)
+    paciente_nome = models.CharField(max_length=160)
+    tipo_exame = models.CharField(max_length=120)
+    codigo_tuss = models.CharField(max_length=20, blank=True)
+    solicitante = models.CharField(max_length=120)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="solicitado")
+    resultado = models.TextField(blank=True)
+    valores_referencia = models.TextField(blank=True)
+    solicitado_em = models.DateTimeField(auto_now_add=True)
+    resultado_em = models.DateTimeField(null=True, blank=True)
+    class Meta:
+        ordering = ["-solicitado_em"]
+
+
+class ExameRIS(models.Model):
+    MODALIDADES = [("rx","Raio-X"),("us","Ultrassom"),("tc","Tomografia"),
+                   ("rm","Ressonância"),("mg","Mamografia"),("ec","Ecocardiograma"),("out","Outro")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="exames_ris")
+    prontuario = models.ForeignKey(ProntuarioHospitalar, null=True, blank=True, on_delete=models.SET_NULL)
+    paciente_nome = models.CharField(max_length=160)
+    modalidade = models.CharField(max_length=10, choices=MODALIDADES, default="rx")
+    regiao_anatomica = models.CharField(max_length=100)
+    solicitante = models.CharField(max_length=120)
+    laudo = models.TextField(blank=True)
+    imagem_url = models.URLField(blank=True)  # link PACS / storage
+    laudado_em = models.DateTimeField(null=True, blank=True)
+    solicitado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-solicitado_em"]
+
+
+class GuiaTISS(models.Model):
+    TIPO_CHOICES = [("consulta","Consulta"),("sadt","SADT"),("internacao","Internação"),
+                    ("sp_sadt","SP/SADT"),("resumo","Resumo de Internação")]
+    STATUS_CHOICES = [("elaborada","Elaborada"),("enviada","Enviada"),("glosada","Glosada"),
+                      ("paga","Paga"),("recurso","Em Recurso")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="guias_tiss")
+    numero_guia = models.CharField(max_length=60, blank=True)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default="consulta")
+    operadora_codigo = models.CharField(max_length=30, blank=True)
+    operadora_nome = models.CharField(max_length=120, blank=True)
+    beneficiario_nome = models.CharField(max_length=160)
+    beneficiario_carteirinha = models.CharField(max_length=40, blank=True)
+    cid10 = models.CharField(max_length=10, blank=True)
+    procedimentos = models.JSONField(default=list)
+    valor_apresentado = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    valor_aprovado = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="elaborada")
+    data_autorizacao = models.DateTimeField(null=True, blank=True)
+    xml_tiss = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-criado_em"]
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# GOVERNO — e-SUS / PEC / FATURAMENTO SUS / FARMÁCIA BÁSICA / REGULAÇÃO /
+#           TELECONSULTA / RAG-RDQA
+# ═════════════════════════════════════════════════════════════════════════════
+
+class ProntuarioCidadao(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="prontuarios_cidadao")
+    cns = models.CharField(max_length=18, blank=True)  # Cartão Nacional de Saúde
+    cpf = models.CharField(max_length=14, blank=True)
+    nome_completo = models.CharField(max_length=160)
+    data_nascimento = models.DateField(null=True, blank=True)
+    sexo = models.CharField(max_length=1, choices=[("M","M"),("F","F"),("O","O")], default="M")
+    telefone = models.CharField(max_length=20, blank=True)
+    unidade_saude = models.CharField(max_length=120, blank=True)
+    microarea = models.CharField(max_length=20, blank=True)
+    acs_responsavel = models.CharField(max_length=120, blank=True)
+    alergias = models.TextField(blank=True)
+    condicoes_cronicas = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    class Meta:
+        ordering = ["nome_completo"]
+
+
+class AtendimentoUBS(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="atendimentos_ubs")
+    prontuario = models.ForeignKey(ProntuarioCidadao, null=True, blank=True, on_delete=models.SET_NULL)
+    paciente_nome = models.CharField(max_length=160)
+    cns = models.CharField(max_length=18, blank=True)
+    profissional = models.CharField(max_length=120)
+    cbo = models.CharField(max_length=10, blank=True)  # Classificação Brasileira de Ocupações
+    procedimento_ab = models.CharField(max_length=20, blank=True)  # CIAP-2/AB
+    cid10 = models.CharField(max_length=10, blank=True)
+    unidade_saude = models.CharField(max_length=120, blank=True)
+    turno = models.CharField(max_length=1, choices=[("M","Manhã"),("T","Tarde"),("N","Noite")], default="M")
+    data_atendimento = models.DateField()
+    texto_evolucao = models.TextField(blank=True)
+    enviado_esus = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-data_atendimento"]
+
+
+class FarmaciaBasicaItem(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="farmacia_basica")
+    rename_codigo = models.CharField(max_length=20, blank=True)  # Código RENAME
+    descricao = models.CharField(max_length=200)
+    apresentacao = models.CharField(max_length=80, blank=True)
+    estoque_atual = models.PositiveIntegerField(default=0)
+    estoque_minimo = models.PositiveIntegerField(default=0)
+    unidade_saude = models.CharField(max_length=120, blank=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    class Meta:
+        ordering = ["descricao"]
+
+
+class DispensacaoFarmaciaBasica(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="dispensacoes_basica")
+    item = models.ForeignKey(FarmaciaBasicaItem, on_delete=models.CASCADE)
+    cns_cidadao = models.CharField(max_length=18, blank=True)
+    paciente_nome = models.CharField(max_length=160)
+    quantidade = models.PositiveIntegerField(default=1)
+    profissional = models.CharField(max_length=120)
+    receita_numero = models.CharField(max_length=40, blank=True)
+    dispensado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-dispensado_em"]
+
+
+class RegulacaoAssistencial(models.Model):
+    TIPO_CHOICES = [("consulta_esp","Consulta Especializada"),("exame","Exame"),
+                    ("internacao","Internação"),("cirurgia","Cirurgia Eletiva")]
+    STATUS_CHOICES = [("aguardando","Aguardando"),("agendado","Agendado"),
+                      ("realizado","Realizado"),("cancelado","Cancelado")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="regulacoes")
+    paciente_nome = models.CharField(max_length=160)
+    cns = models.CharField(max_length=18, blank=True)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default="consulta_esp")
+    especialidade = models.CharField(max_length=120, blank=True)
+    procedimento = models.CharField(max_length=200, blank=True)
+    cid10 = models.CharField(max_length=10, blank=True)
+    unidade_origem = models.CharField(max_length=120)
+    unidade_destino = models.CharField(max_length=120, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="aguardando")
+    data_solicitacao = models.DateField(auto_now_add=True)
+    data_agendamento = models.DateField(null=True, blank=True)
+    prioridade = models.CharField(max_length=10, choices=[("normal","Normal"),("urgente","Urgente"),("emergen","Emergência")], default="normal")
+    class Meta:
+        ordering = ["-data_solicitacao"]
+
+
+class FaturamentoSUSLote(models.Model):
+    COMP_CHOICES = [("bpa","BPA-C / BPA-I"),("apac","APAC"),("aih","AIH")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="faturamentos_sus")
+    competencia = models.CharField(max_length=6)  # AAAAMM
+    tipo = models.CharField(max_length=10, choices=COMP_CHOICES, default="bpa")
+    estabelecimento_cnes = models.CharField(max_length=10, blank=True)
+    total_registros = models.PositiveIntegerField(default=0)
+    total_aprovado = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    enviado_cnes = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-competencia"]
+
+
+class TeleconsultaGoverno(models.Model):
+    STATUS_CHOICES = [("agendada","Agendada"),("em_curso","Em curso"),
+                      ("concluida","Concluída"),("cancelada","Cancelada")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="teleconsultas_gov")
+    paciente_nome = models.CharField(max_length=160)
+    cns = models.CharField(max_length=18, blank=True)
+    profissional = models.CharField(max_length=120)
+    especialidade = models.CharField(max_length=80, blank=True)
+    data_hora = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="agendada")
+    link_sala = models.URLField(blank=True)
+    resumo = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-data_hora"]
+
+
+class RelatorioRAG(models.Model):
+    TIPO_CHOICES = [("pas","PAS — Programação Anual"),("rdqa","RDQA — Relatório Quadrimestral"),
+                    ("rag","RAG — Relatório Anual de Gestão")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="relatorios_rag")
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default="rag")
+    exercicio = models.PositiveSmallIntegerField()
+    quadrimestre = models.PositiveSmallIntegerField(null=True, blank=True)  # 1,2,3
+    conteudo = models.JSONField(default=dict)
+    enviado_digisus = models.BooleanField(default=False)
+    enviado_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    class Meta:
+        ordering = ["-exercicio", "-quadrimestre"]
+
+
+class LogESUS(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="logs_esus")
+    ficha_tipo = models.CharField(max_length=60)  # fichaIndividual, fichaAtendimento...
+    registros_enviados = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=20, default="pendente")
+    resposta_rnds = models.JSONField(default=dict, blank=True)
+    enviado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-enviado_em"]
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PLANO DE SAÚDE — CORRETORES / REDE CREDENCIADA / DIOPS / SIB / IA /
+#                  PORTAL BENEFICIÁRIO
+# ═════════════════════════════════════════════════════════════════════════════
+
+class CorretoraPlano(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="corretoras")
+    razao_social = models.CharField(max_length=160)
+    cnpj = models.CharField(max_length=18, blank=True)
+    susep = models.CharField(max_length=20, blank=True)  # Registro SUSEP
+    telefone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    ativa = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["razao_social"]
+
+
+class CorretoraComissao(models.Model):
+    corretora = models.ForeignKey(CorretoraPlano, on_delete=models.CASCADE, related_name="comissoes")
+    competencia = models.CharField(max_length=6)  # AAAAMM
+    vidas_vendidas = models.PositiveIntegerField(default=0)
+    receita_base = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    percentual_comissao = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    valor_comissao = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    pago = models.BooleanField(default=False)
+    pago_em = models.DateTimeField(null=True, blank=True)
+    class Meta:
+        ordering = ["-competencia"]
+
+
+class RedeCredenciadaPlano(models.Model):
+    TIPO_CHOICES = [("hospital","Hospital"),("clinica","Clínica"),("laboratorio","Laboratório"),
+                    ("imagem","Centro de Imagem"),("odonto","Odontologia"),("outro","Outro")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="rede_credenciada_plano")
+    nome = models.CharField(max_length=160)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default="clinica")
+    cnpj = models.CharField(max_length=18, blank=True)
+    cnes = models.CharField(max_length=10, blank=True)
+    cidade = models.CharField(max_length=80, blank=True)
+    uf = models.CharField(max_length=2, blank=True)
+    especialidades = models.JSONField(default=list)
+    tabela_preco = models.CharField(max_length=40, blank=True)  # CBHPM, SUS, própria
+    ativo = models.BooleanField(default=True)
+    contrato_vigente_ate = models.DateField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["nome"]
+
+
+class DIOPSDeclaracao(models.Model):
+    STATUS_CHOICES = [("em_elaboracao","Em elaboração"),("validada","Validada"),
+                      ("enviada","Enviada ANS"),("retificada","Retificada")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="diops_declaracoes")
+    trimestre = models.CharField(max_length=6)  # AAAAT (T=1-4)
+    registro_ans = models.CharField(max_length=10, blank=True)
+    receita_operacional = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    despesa_assistencial = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    despesa_administrativa = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    resultado_periodo = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    vidas_ativas = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="em_elaboracao")
+    xml_gerado = models.TextField(blank=True)
+    enviado_em = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-trimestre"]
+
+
+class SIBRegistro(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="sib_registros")
+    competencia = models.CharField(max_length=6)  # AAAAMM
+    registro_ans = models.CharField(max_length=10, blank=True)
+    vidas_incluidas = models.PositiveIntegerField(default=0)
+    vidas_excluidas = models.PositiveIntegerField(default=0)
+    vidas_alteradas = models.PositiveIntegerField(default=0)
+    total_vidas = models.PositiveIntegerField(default=0)
+    enviado = models.BooleanField(default=False)
+    enviado_em = models.DateTimeField(null=True, blank=True)
+    retorno_ans = models.JSONField(default=dict, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-competencia"]
+
+
+class IAAutorizacaoGuia(models.Model):
+    DECISAO_CHOICES = [("aprovada","Aprovada"),("negada","Negada"),("revisao","Revisão humana")]
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="ia_autorizacoes")
+    numero_guia = models.CharField(max_length=60)
+    beneficiario = models.CharField(max_length=160)
+    procedimento = models.CharField(max_length=200)
+    codigo_tuss = models.CharField(max_length=20, blank=True)
+    cid10 = models.CharField(max_length=10, blank=True)
+    decisao = models.CharField(max_length=20, choices=DECISAO_CHOICES, default="revisao")
+    score_confianca = models.FloatField(default=0.0)
+    justificativa_ia = models.TextField(blank=True)
+    revisada_por = models.CharField(max_length=120, blank=True)
+    decisao_final = models.CharField(max_length=20, choices=DECISAO_CHOICES, null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["-criado_em"]
+        verbose_name_plural = "Autorizações IA de guias"
+
+    def __str__(self):
+        return f"IA Guia {self.numero_guia} — {self.decisao} — {self.criado_em:%d/%m/%Y}"
+
+
+class PortalBeneficiarioToken(models.Model):
+    """Token de acesso ao portal do beneficiário (sem login)."""
+    beneficiario = models.OneToOneField(
+        BeneficiarioPlano,
+        on_delete=models.CASCADE,
+        related_name="portal_token",
+    )
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    expira_em = models.DateField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return f"Token portal — {self.beneficiario.nome}"

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Farmácia Hospitalar — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#041018;--surface:#072030;--surface2:#0a2d45;
+  --accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;
+  --text:#e8f4ff;--muted:#7a9bb5;--radius:12px;
+  --card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07);
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:16px;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;flex-shrink:0}
+.topbar-logo{font-size:15px;font-weight:800;color:var(--accent)}
+.topbar-spacer{flex:1}
+.layout{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;min-height:calc(100vh - 56px);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0;flex-shrink:0;overflow-y:auto}
+.nav-section{padding:10px 16px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:1px 8px;transition:.15s;cursor:pointer;border:none;background:none;width:calc(100% - 16px);font-family:Manrope,sans-serif}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link.active{box-shadow:inset 3px 0 0 var(--accent)}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.28)}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.content{padding:24px 28px;display:flex;flex-direction:column;gap:20px;flex:1}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:20px;font-weight:800}
+.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;border-left:4px solid var(--accent)}
+.kpi.kpi-ok{border-left-color:var(--ok)}.kpi.kpi-danger{border-left-color:var(--danger)}.kpi.kpi-warn{border-left-color:var(--warn)}
+.kpi-val{font-size:28px;font-weight:800;color:var(--accent)}
+.kpi.kpi-ok .kpi-val{color:var(--ok)}.kpi.kpi-danger .kpi-val{color:var(--danger)}.kpi.kpi-warn .kpi-val{color:var(--warn)}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:rgba(255,255,255,.02);white-space:nowrap}
+td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.018)}
+tr.row-alerta td{background:rgba(255,77,109,.04)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-purple{background:rgba(167,139,250,.12);color:#a78bfa}
+.badge-muted{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-danger{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.25)}.btn-danger:hover{background:rgba(255,77,109,.2)}
+.btn-ok{background:rgba(0,229,176,.12);color:var(--ok);border:1px solid rgba(0,229,176,.25)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;min-width:440px;max-width:580px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:18px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.form-group label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s;width:100%}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group select option{background:var(--surface);color:var(--text)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px;padding-top:14px;border-top:1px solid var(--border)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--border)}
+.filter-bar input,.filter-bar select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent)}
+/* Stock bar */
+.stock-bar-wrap{display:flex;align-items:center;gap:8px;min-width:120px}
+.stock-bar{flex:1;height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+.stock-bar-fill{height:100%;border-radius:4px;transition:width .5s}
+.stock-bar-fill.ok{background:var(--ok)}
+.stock-bar-fill.warn{background:var(--warn)}
+.stock-bar-fill.danger{background:var(--danger)}
+.stock-label{font-size:11px;font-weight:600;white-space:nowrap}
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{display:flex;align-items:flex-start;gap:10px;padding:14px 18px;border-radius:12px;min-width:260px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.5);border:1px solid transparent;pointer-events:all;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.toast-ok{background:#072030;border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast-error{background:#1a0812;border-color:rgba(255,77,109,.3);color:var(--danger)}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-logo">🏥 HospitalOS</div>
+  <div class="topbar-spacer"></div>
+  <a href="/hospital/gestao/" class="btn btn-ghost" style="font-size:12px;padding:6px 12px">⬅ Dashboard</a>
+  <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:6px 12px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px"><span>💊</span> Farmácia Hospitalar</div>
+</header>
+<div class="layout">
+<aside class="sidebar">
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span><span>Prontuários</span></a>
+  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span><span>Bloco Cirúrgico</span></a>
+  <a class="nav-link" href="/hospital/lis/"><span>🔬</span><span>Laboratório</span></a>
+  <a class="nav-link" href="/hospital/imagem/"><span>🩻</span><span>Imagem/PACS</span></a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link active" href="/hospital/farmacia-hospitalar/"><span>💊</span><span>Farmácia Hosp.</span></a>
+  <a class="nav-link" href="/hospital/faturamento-tiss/"><span>🧾</span><span>Faturamento TISS</span></a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span><span>Dashboard</span></a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span><span>Sair</span></a>
+  </div>
+</aside>
+<main class="main">
+<div class="content">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Farmácia Hospitalar</div>
+      <div class="page-sub">Controle de estoque, medicamentos controlados e alertas de ruptura</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" onclick="openModal('modalMovimentar')">↑↓ Movimentar Estoque</button>
+      <button class="btn btn-primary" onclick="openModal('modalNovoItem')">+ Novo Item</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kvTotal">—</div><div class="kpi-lbl">Total de Itens</div></div>
+    <div class="kpi kpi-danger"><div class="kpi-val" id="kvAbaixo">—</div><div class="kpi-lbl">Abaixo do Mínimo</div></div>
+    <div class="kpi kpi-warn"><div class="kpi-val" id="kvZerado">—</div><div class="kpi-lbl">Estoque Zerado</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-val" id="kvControlado">—</div><div class="kpi-lbl">Controlados (C1/C2)</div></div>
+  </div>
+
+  <!-- ITEM LIST -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📦 Estoque de Medicamentos</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" id="filtAbaixo" onchange="loadItens()"> Apenas abaixo do mínimo
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" id="filtControlado" onchange="loadItens()"> Apenas controlados
+        </label>
+      </div>
+    </div>
+    <div class="filter-bar">
+      <input id="filterQ" placeholder="Buscar medicamento, princípio ativo…" oninput="debounceFilter()" style="flex:1;min-width:180px">
+    </div>
+    <table>
+      <thead><tr>
+        <th>Medicamento</th><th>Princípio Ativo</th><th>Apresentação</th><th>Classe</th><th>Estoque</th><th>Status</th><th>Controlado</th><th>Ações</th>
+      </tr></thead>
+      <tbody id="itemBody"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+</main>
+</div>
+
+<!-- MODAL: Novo Item -->
+<div class="modal-bg" id="modalNovoItem">
+  <div class="modal">
+    <h3>💊 Novo Item — Farmácia Hospitalar</h3>
+    <div class="form-group">
+      <label>Descrição *</label>
+      <input id="niDesc" placeholder="Ex: Dipirona 500mg">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Código Interno</label>
+        <input id="niCodigo" placeholder="Ex: MED-001">
+      </div>
+      <div class="form-group">
+        <label>Apresentação</label>
+        <input id="niApres" placeholder="Ex: Comp. 500mg">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Princípio Ativo</label>
+        <input id="niPrinc" placeholder="Ex: Metamizol sódico">
+      </div>
+      <div class="form-group">
+        <label>Classe Terapêutica</label>
+        <input id="niClasse" placeholder="Ex: Analgésico">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Estoque Inicial</label>
+        <input id="niEsoque" type="number" min="0" step="0.001" value="0">
+      </div>
+      <div class="form-group">
+        <label>Estoque Mínimo</label>
+        <input id="niMinimo" type="number" min="0" step="0.001" value="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Unidade</label>
+        <select id="niUnidade">
+          <option value="un">Unidade (un)</option>
+          <option value="cp">Comprimido (cp)</option>
+          <option value="amp">Ampola (amp)</option>
+          <option value="fr">Frasco (fr)</option>
+          <option value="ml">Mililitro (ml)</option>
+          <option value="mg">Miligrama (mg)</option>
+          <option value="g">Grama (g)</option>
+        </select>
+      </div>
+      <div class="form-group" style="justify-content:center;padding-top:20px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="niControlado"> Medicamento Controlado
+        </label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalNovoItem')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovoItem()">Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Movimentar Estoque -->
+<div class="modal-bg" id="modalMovimentar">
+  <div class="modal">
+    <h3>↑↓ Movimentar Estoque</h3>
+    <div class="form-group">
+      <label>Item *</label>
+      <select id="movItem">
+        <option value="">Selecione o item…</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tipo *</label>
+        <select id="movTipo">
+          <option value="entrada">Entrada (recebimento)</option>
+          <option value="saida">Saída (dispensação)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Quantidade *</label>
+        <input id="movQtd" type="number" min="0.001" step="0.001" placeholder="0">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalMovimentar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="movimentarEstoque()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script>
+let todosItens = [];
+let filterTimer = null;
+
+function debounceFilter(){
+  clearTimeout(filterTimer);
+  filterTimer = setTimeout(renderItens, 300);
+}
+
+async function loadKpis(){
+  const res = await fetch('/api/hospital/farmacia/kpis/');
+  if(!res.ok) return;
+  const d = await res.json();
+  document.getElementById('kvTotal').textContent = d.total_itens;
+  document.getElementById('kvAbaixo').textContent = d.abaixo_minimo;
+  document.getElementById('kvZerado').textContent = d.zerados;
+  document.getElementById('kvControlado').textContent = d.controlados;
+}
+
+async function loadItens(){
+  const filtAbaixo = document.getElementById('filtAbaixo').checked ? '&abaixo_minimo=1' : '';
+  const filtCtrl = document.getElementById('filtControlado').checked ? '&controlado=1' : '';
+  const res = await fetch(`/api/hospital/farmacia/?q=${encodeURIComponent(document.getElementById('filterQ').value.trim())}${filtAbaixo}${filtCtrl}`);
+  if(!res.ok) return;
+  const {itens} = await res.json();
+  todosItens = itens;
+  renderItens();
+  populateMovSelect(itens);
+}
+
+function stockBarClass(item){
+  if(item.estoque_atual === 0) return 'danger';
+  if(item.abaixo_minimo) return 'warn';
+  return 'ok';
+}
+
+function stockPct(item){
+  if(!item.estoque_minimo) return 100;
+  return Math.min(100, Math.round(item.estoque_atual / item.estoque_minimo * 100));
+}
+
+function renderItens(){
+  const q = document.getElementById('filterQ').value.toLowerCase();
+  const items = q ? todosItens.filter(i=>
+    i.descricao.toLowerCase().includes(q) ||
+    (i.principio_ativo||'').toLowerCase().includes(q) ||
+    (i.codigo_interno||'').toLowerCase().includes(q)
+  ) : todosItens;
+
+  const tbody = document.getElementById('itemBody');
+  if(!items.length){ tbody.innerHTML='<tr><td colspan="8" class="empty">Nenhum item encontrado.</td></tr>'; return; }
+  tbody.innerHTML = items.map(i=>{
+    const pct = stockPct(i);
+    const cls = stockBarClass(i);
+    return `<tr class="${i.abaixo_minimo?'row-alerta':''}">
+      <td>
+        ${i.abaixo_minimo ? '<span style="color:var(--danger);margin-right:4px">⚠</span>' : ''}
+        <span style="font-weight:600">${i.descricao}</span>
+        ${i.codigo_interno ? `<div style="font-size:11px;color:var(--muted)">${i.codigo_interno}</div>` : ''}
+      </td>
+      <td style="color:var(--muted);font-size:12px">${i.principio_ativo||'—'}</td>
+      <td style="font-size:12px">${i.apresentacao||'—'}</td>
+      <td style="font-size:12px">${i.classe_terapeutica||'—'}</td>
+      <td>
+        <div class="stock-bar-wrap">
+          <div class="stock-bar"><div class="stock-bar-fill ${cls}" style="width:${pct}%"></div></div>
+          <span class="stock-label" style="color:var(--${cls==='ok'?'ok':cls==='warn'?'warn':'danger'})">${i.estoque_atual} ${i.unidade}</span>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">mín: ${i.estoque_minimo} ${i.unidade}</div>
+      </td>
+      <td>${i.abaixo_minimo ? '<span class="badge badge-danger">Abaixo do mínimo</span>' : i.estoque_atual===0 ? '<span class="badge badge-danger">Zerado</span>' : '<span class="badge badge-ok">Regular</span>'}</td>
+      <td>${i.controlado ? '<span class="badge badge-purple">🔒 Controlado</span>' : '<span class="badge badge-muted">Não</span>'}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="abrirMovItem(${i.id})">↑↓ Mov.</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function populateMovSelect(itens){
+  const sel = document.getElementById('movItem');
+  sel.innerHTML = '<option value="">Selecione o item…</option>' +
+    itens.map(i=>`<option value="${i.id}">${i.descricao} (${i.estoque_atual} ${i.unidade})</option>`).join('');
+}
+
+function abrirMovItem(id){
+  document.getElementById('movItem').value = id;
+  openModal('modalMovimentar');
+}
+
+async function salvarNovoItem(){
+  const desc = document.getElementById('niDesc').value.trim();
+  if(!desc){ toast('Descrição é obrigatória','error'); return; }
+  const body = {
+    descricao: desc,
+    codigo_interno: document.getElementById('niCodigo').value.trim(),
+    apresentacao: document.getElementById('niApres').value.trim(),
+    principio_ativo: document.getElementById('niPrinc').value.trim(),
+    classe_terapeutica: document.getElementById('niClasse').value.trim(),
+    estoque_atual: parseFloat(document.getElementById('niEsoque').value)||0,
+    estoque_minimo: parseFloat(document.getElementById('niMinimo').value)||0,
+    unidade: document.getElementById('niUnidade').value,
+    controlado: document.getElementById('niControlado').checked,
+  };
+  const res = await fetch('/api/hospital/farmacia/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.ok){ toast('Item cadastrado'); closeModal('modalNovoItem'); loadItens(); loadKpis(); }
+  else toast(d.erro||'Erro','error');
+}
+
+async function movimentarEstoque(){
+  const itemId = document.getElementById('movItem').value;
+  const tipo = document.getElementById('movTipo').value;
+  const qtd = parseFloat(document.getElementById('movQtd').value);
+  if(!itemId){ toast('Selecione um item','error'); return; }
+  if(!qtd || qtd<=0){ toast('Quantidade deve ser positiva','error'); return; }
+  const res = await fetch(`/api/hospital/farmacia/${itemId}/estoque/`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({tipo, quantidade:qtd})
+  });
+  const d = await res.json();
+  if(d.ok){ toast(`Estoque ${tipo} registrado`); closeModal('modalMovimentar'); loadItens(); loadKpis(); }
+  else toast(d.erro||'Erro','error');
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+function toast(msg,type='ok'){
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className=`toast toast-${type}`;
+  t.textContent=msg;
+  c.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+loadKpis(); loadItens();
+</script>
+</body>
+</html>

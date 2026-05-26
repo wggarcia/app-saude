@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Delivery / E-commerce — Farmácia</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:220px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2);color:#ffc6d3}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+.page-header{display:flex;align-items:center;justify-content:space-between}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.ok::before{background:var(--ok)}
+.kpi.info::before{background:#a78bfa}
+.kpi-val{font-size:28px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}
+.kpi.ok .kpi-val{color:var(--ok)}
+.kpi.info .kpi-val{color:#a78bfa}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-purple{background:rgba(167,139,250,.12);color:#a78bfa}
+.badge-muted{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.btn-ok{background:rgba(0,229,176,.12);color:var(--ok);border:1px solid rgba(0,229,176,.25)}
+.btn-ok:hover{background:rgba(0,229,176,.2)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:420px;max-width:580px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:72px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+/* Filtros */
+.filtros{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filtros input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.filtros input:focus,.filtros select:focus{border-color:var(--accent)}
+.filtros select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+/* Kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kanban-col{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.kanban-col-header{padding:12px 16px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border)}
+.kanban-col-header.h-aguardando{background:rgba(255,179,71,.06);color:var(--warn)}
+.kanban-col-header.h-preparo{background:rgba(0,194,255,.06);color:var(--accent)}
+.kanban-col-header.h-saiu{background:rgba(167,139,250,.06);color:#a78bfa}
+.kanban-col-header.h-entregue{background:rgba(0,229,176,.06);color:var(--ok)}
+.kanban-cards{padding:10px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.kanban-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px}
+.kanban-card-num{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px}
+.kanban-card-nome{font-size:13px;font-weight:600;margin-bottom:2px}
+.kanban-card-tel{font-size:12px;color:var(--muted);margin-bottom:6px}
+.kanban-card-total{font-size:14px;font-weight:800;color:var(--accent);margin-bottom:8px}
+.kanban-card-actions{display:flex;gap:4px;flex-wrap:wrap}
+.kanban-empty{padding:20px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:1200px){.kanban{grid-template-columns:repeat(2,1fr)}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.kanban{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">💊 Farmácia</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/farmacia/">📊 Inteligência</a>
+  <a class="nav-link" href="/farmacia/gestao/">🏪 Gestão Operacional</a>
+  <div class="nav-section">Módulos PDV</div>
+  <a class="nav-link" href="/farmacia/pdv/">🖥️ PDV / Caixa</a>
+  <a class="nav-link" href="/farmacia/pbm/">💳 PBM / Convênios</a>
+  <a class="nav-link" href="/farmacia/financeiro/">📈 Financeiro / DRE</a>
+  <a class="nav-link active" href="/farmacia/delivery/">🛵 Delivery</a>
+  <div class="nav-section" style="margin-top:8px">Rede</div>
+  <a class="nav-link" href="/rede/gestao/">🌐 Rede &amp; Comunicação</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/">🚪 Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Delivery &amp; E-commerce</div>
+      <div class="page-sub">Gestão de pedidos de entrega e canais digitais</div>
+    </div>
+    <button class="btn btn-primary" onclick="abrirModalNovoPedido()">+ Novo Pedido</button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row" id="kpiRow">
+    <div class="kpi"><div class="kpi-val" id="kPedidosHoje">—</div><div class="kpi-lbl">Pedidos Hoje</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kEmPreparo">—</div><div class="kpi-lbl">Em Preparo</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kEntregues">—</div><div class="kpi-lbl">Entregues Hoje</div></div>
+    <div class="kpi info"><div class="kpi-val" id="kTicket">—</div><div class="kpi-lbl">Ticket Médio</div></div>
+  </div>
+
+  <!-- Kanban -->
+  <div class="kanban" id="kanbanView">
+    <div class="kanban-col">
+      <div class="kanban-col-header h-aguardando">⏳ Aguardando <span id="cntAguardando"></span></div>
+      <div class="kanban-cards" id="colAguardando"><div class="kanban-empty">Nenhum pedido</div></div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-header h-preparo">🔧 Em Preparo <span id="cntPreparo"></span></div>
+      <div class="kanban-cards" id="colPreparo"><div class="kanban-empty">Nenhum pedido</div></div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-header h-saiu">🛵 Saiu para Entrega <span id="cntSaiu"></span></div>
+      <div class="kanban-cards" id="colSaiu"><div class="kanban-empty">Nenhum pedido</div></div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-header h-entregue">✅ Entregue <span id="cntEntregue"></span></div>
+      <div class="kanban-cards" id="colEntregue"><div class="kanban-empty">Nenhum pedido</div></div>
+    </div>
+  </div>
+
+  <!-- Tabela completa -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📋 Todos os Pedidos</span>
+      <div class="filtros">
+        <input type="text" id="filtroQ" placeholder="Buscar cliente ou pedido…" oninput="carregarPedidosTabela()">
+        <select id="filtroStatus" onchange="carregarPedidosTabela()">
+          <option value="">Todos os status</option>
+          <option value="aguardando">Aguardando</option>
+          <option value="confirmado">Confirmado</option>
+          <option value="em_preparo">Em Preparo</option>
+          <option value="saiu">Saiu para Entrega</option>
+          <option value="entregue">Entregue</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+        <select id="filtroOrigem" onchange="carregarPedidosTabela()">
+          <option value="">Todas as origens</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="site">Site</option>
+          <option value="app">App</option>
+          <option value="telefone">Telefone</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="carregarPedidosTabela()">🔄</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Pedido</th><th>Cliente</th><th>Telefone</th><th>Origem</th><th>Total</th><th>Status</th><th>Horário</th><th>Ações</th></tr></thead>
+      <tbody id="tbodyPedidos"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Novo Pedido -->
+<div class="modal-bg" id="modalNovoPedido">
+  <div class="modal">
+    <h3>🛵 Novo Pedido de Delivery</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nome do Cliente *</label>
+        <input type="text" id="pClienteNome" placeholder="Nome completo">
+      </div>
+      <div class="form-group">
+        <label>Telefone *</label>
+        <input type="tel" id="pClienteTel" placeholder="(11) 90000-0000">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Endereço de Entrega</label>
+      <textarea id="pClienteEnd" rows="2" placeholder="Rua, número, bairro, complemento…"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Origem</label>
+        <select id="pOrigem">
+          <option value="whatsapp">WhatsApp</option>
+          <option value="site">Site</option>
+          <option value="app">App</option>
+          <option value="telefone">Telefone</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Valor Total (R$)</label>
+        <input type="number" id="pTotal" step="0.01" value="0" min="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Observações / Itens do Pedido</label>
+      <textarea id="pObs" rows="3" placeholder="Descreva os produtos, posologia, observações especiais…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalNovoPedido')">Cancelar</button>
+      <button class="btn btn-primary" onclick="criarPedido()">Criar Pedido</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Atualizar Status -->
+<div class="modal-bg" id="modalStatus">
+  <div class="modal">
+    <h3>🔄 Atualizar Status do Pedido</h3>
+    <input type="hidden" id="statusPedidoId">
+    <div style="font-weight:600;font-size:15px;margin-bottom:16px" id="statusPedidoNum"></div>
+    <div class="form-group">
+      <label>Novo Status *</label>
+      <select id="novoStatus">
+        <option value="aguardando">⏳ Aguardando</option>
+        <option value="confirmado">✔️ Confirmado</option>
+        <option value="em_preparo">🔧 Em Preparo</option>
+        <option value="saiu">🛵 Saiu para Entrega</option>
+        <option value="entregue">✅ Entregue</option>
+        <option value="cancelado">❌ Cancelado</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Observação (opcional)</label>
+      <textarea id="statusObs" rows="2"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalStatus')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarStatus()">Atualizar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const empresaId = sessionStorage.getItem('empresa_id') || localStorage.getItem('empresa_id');
+const headers = {'Content-Type':'application/json','X-Empresa-Id': empresaId || ''};
+
+function fmt(v){return 'R$ '+(+v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.')}
+function fmtHora(iso){if(!iso)return '—';return new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+function fmtData(iso){if(!iso)return '—';return new Date(iso).toLocaleDateString('pt-BR')}
+
+const STATUS_BADGE = {
+  aguardando: '<span class="badge badge-warn">⏳ Aguardando</span>',
+  confirmado: '<span class="badge badge-info">✔️ Confirmado</span>',
+  em_preparo: '<span class="badge badge-info">🔧 Em Preparo</span>',
+  saiu: '<span class="badge badge-purple">🛵 Saiu</span>',
+  entregue: '<span class="badge badge-ok">✅ Entregue</span>',
+  cancelado: '<span class="badge badge-danger">❌ Cancelado</span>',
+};
+
+const ORIGEM_LABEL = {whatsapp:'💬 WhatsApp',site:'🌐 Site',app:'📱 App',telefone:'📞 Telefone'};
+
+async function carregarKpis(){
+  try{
+    const r = await fetch('/api/farmacia/delivery/kpis', {headers});
+    const d = await r.json();
+    if(!d.ok)return;
+    const k = d.kpis;
+    document.getElementById('kPedidosHoje').textContent = k.pedidos_hoje;
+    document.getElementById('kEmPreparo').textContent = k.em_preparo;
+    document.getElementById('kEntregues').textContent = k.entregues_hoje;
+    document.getElementById('kTicket').textContent = fmt(k.ticket_medio);
+  }catch(e){console.error(e)}
+}
+
+async function carregarKanban(){
+  try{
+    const r = await fetch('/api/farmacia/delivery/pedidos?limit=200', {headers});
+    const d = await r.json();
+    const pedidos = d.pedidos || [];
+
+    const cols = {
+      aguardando: [],
+      confirmado: [],
+      em_preparo: [],
+      saiu: [],
+      entregue: [],
+    };
+    pedidos.forEach(p=>{
+      if(p.status === 'cancelado')return;
+      if(cols[p.status] !== undefined) cols[p.status].push(p);
+    });
+
+    // Agrupar confirmado com aguardando no kanban
+    const kanbanCols = {
+      aguardando: [...cols.aguardando, ...cols.confirmado],
+      em_preparo: cols.em_preparo,
+      saiu: cols.saiu,
+      entregue: cols.entregue,
+    };
+
+    const colIds = {aguardando:'colAguardando',em_preparo:'colPreparo',saiu:'colSaiu',entregue:'colEntregue'};
+    const cntIds = {aguardando:'cntAguardando',em_preparo:'cntPreparo',saiu:'cntSaiu',entregue:'cntEntregue'};
+
+    Object.entries(kanbanCols).forEach(([status, lista])=>{
+      const el = document.getElementById(colIds[status]);
+      const cnt = document.getElementById(cntIds[status]);
+      if(cnt) cnt.textContent = lista.length ? `(${lista.length})` : '';
+      if(!lista.length){el.innerHTML='<div class="kanban-empty">Nenhum pedido</div>';return}
+
+      const nextStatus = {aguardando:'em_preparo',em_preparo:'saiu',saiu:'entregue',entregue:null};
+      const nextLabel = {aguardando:'Iniciar Preparo',em_preparo:'Saiu para Entrega',saiu:'Confirmar Entrega',entregue:null};
+
+      el.innerHTML = lista.slice(0,10).map(p=>{
+        const next = nextStatus[status];
+        const nextBtn = next ? `<button class="btn btn-ok btn-sm" onclick="avancarStatus(${p.id},'${next}')">→ ${nextLabel[status]}</button>` : '';
+        return `<div class="kanban-card">
+          <div class="kanban-card-num">${p.numero_pedido}</div>
+          <div class="kanban-card-nome">${p.cliente_nome}</div>
+          <div class="kanban-card-tel">${ORIGEM_LABEL[p.origem]||p.origem} · ${p.cliente_telefone}</div>
+          <div class="kanban-card-total">${fmt(p.total)}</div>
+          <div class="kanban-card-actions">
+            ${nextBtn}
+            <button class="btn btn-ghost btn-sm" onclick="abrirModalStatus(${p.id},'${p.numero_pedido}','${p.status}')">✏️</button>
+            ${status!=='entregue'?`<button class="btn btn-danger btn-sm" onclick="avancarStatus(${p.id},'cancelado')">✕</button>`:''}
+          </div>
+        </div>`;
+      }).join('');
+    });
+  }catch(e){console.error(e)}
+}
+
+async function carregarPedidosTabela(){
+  const q = document.getElementById('filtroQ').value;
+  const status = document.getElementById('filtroStatus').value;
+  const origem = document.getElementById('filtroOrigem').value;
+  let url = '/api/farmacia/delivery/pedidos?limit=100';
+  if(q) url += `&q=${encodeURIComponent(q)}`;
+  if(status) url += `&status=${status}`;
+  if(origem) url += `&origem=${origem}`;
+  try{
+    const r = await fetch(url, {headers});
+    const d = await r.json();
+    const tbody = document.getElementById('tbodyPedidos');
+    const pedidos = d.pedidos||[];
+    if(!pedidos.length){tbody.innerHTML='<tr><td colspan="8" class="empty">Nenhum pedido encontrado</td></tr>';return}
+    tbody.innerHTML = pedidos.map(p=>`
+      <tr>
+        <td style="font-weight:700">${p.numero_pedido}</td>
+        <td>${p.cliente_nome}</td>
+        <td style="color:var(--muted)">${p.cliente_telefone}</td>
+        <td>${ORIGEM_LABEL[p.origem]||p.origem}</td>
+        <td style="font-weight:700;color:var(--ok)">${fmt(p.total)}</td>
+        <td>${STATUS_BADGE[p.status]||p.status}</td>
+        <td style="font-size:12px;color:var(--muted)">${fmtData(p.criado_em)} ${fmtHora(p.criado_em)}</td>
+        <td style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" onclick="abrirModalStatus(${p.id},'${p.numero_pedido}','${p.status}')">✏️ Status</button>
+        </td>
+      </tr>`).join('');
+  }catch(e){console.error(e)}
+}
+
+function abrirModalNovoPedido(){
+  document.getElementById('pClienteNome').value='';
+  document.getElementById('pClienteTel').value='';
+  document.getElementById('pClienteEnd').value='';
+  document.getElementById('pOrigem').value='whatsapp';
+  document.getElementById('pTotal').value='0';
+  document.getElementById('pObs').value='';
+  document.getElementById('modalNovoPedido').classList.add('open');
+}
+
+async function criarPedido(){
+  const nome = document.getElementById('pClienteNome').value.trim();
+  const tel = document.getElementById('pClienteTel').value.trim();
+  if(!nome){alert('Informe o nome do cliente');return}
+  if(!tel){alert('Informe o telefone do cliente');return}
+  const body = {
+    cliente_nome: nome,
+    cliente_telefone: tel,
+    cliente_endereco: document.getElementById('pClienteEnd').value,
+    origem: document.getElementById('pOrigem').value,
+    total: +document.getElementById('pTotal').value||0,
+    observacoes: document.getElementById('pObs').value,
+  };
+  try{
+    const r = await fetch('/api/farmacia/delivery/novo', {method:'POST',headers,body:JSON.stringify(body)});
+    const d = await r.json();
+    if(d.ok){
+      fecharModal('modalNovoPedido');
+      carregarTudo();
+    }else{alert(d.erro||'Erro ao criar pedido')}
+  }catch(e){alert('Erro de conexão')}
+}
+
+function abrirModalStatus(id, numero, statusAtual){
+  document.getElementById('statusPedidoId').value = id;
+  document.getElementById('statusPedidoNum').textContent = `Pedido ${numero}`;
+  document.getElementById('novoStatus').value = statusAtual;
+  document.getElementById('statusObs').value = '';
+  document.getElementById('modalStatus').classList.add('open');
+}
+
+async function salvarStatus(){
+  const id = document.getElementById('statusPedidoId').value;
+  const status = document.getElementById('novoStatus').value;
+  const obs = document.getElementById('statusObs').value;
+  try{
+    const r = await fetch(`/api/farmacia/delivery/${id}/status`, {method:'POST',headers,body:JSON.stringify({status,observacoes:obs})});
+    const d = await r.json();
+    if(d.ok){fecharModal('modalStatus');carregarTudo()}
+    else{alert(d.erro||'Erro ao atualizar')}
+  }catch(e){alert('Erro de conexão')}
+}
+
+async function avancarStatus(id, status){
+  const labels = {em_preparo:'Em Preparo',saiu:'Saiu para Entrega',entregue:'Entregue',cancelado:'Cancelado'};
+  if(!confirm(`Confirmar: alterar para "${labels[status]||status}"?`))return;
+  try{
+    const r = await fetch(`/api/farmacia/delivery/${id}/status`, {method:'POST',headers,body:JSON.stringify({status})});
+    const d = await r.json();
+    if(d.ok){carregarTudo()}
+    else{alert(d.erro||'Erro ao atualizar')}
+  }catch(e){alert('Erro de conexão')}
+}
+
+function fecharModal(id){document.getElementById(id).classList.remove('open')}
+
+document.querySelectorAll('.modal-bg').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')});
+});
+
+function carregarTudo(){
+  carregarKpis();
+  carregarKanban();
+  carregarPedidosTabela();
+}
+
+carregarTudo();
+// Auto-refresh a cada 60 segundos para manter kanban atualizado
+setInterval(carregarTudo, 60000);
+</script>
+</body>
+</html>
