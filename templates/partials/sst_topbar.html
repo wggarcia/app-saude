@@ -1,10 +1,11 @@
 {% with p=request.path %}
+{% firstof empresa_nome request.empresa.nome "Saúde e Segurança do Trabalho" as sst_empresa_label %}
 <header class="topbar">
   <div class="tb-logo">
     <div class="tb-icon">S</div>
     <div>
       <div class="tb-nome" id="tb-nome">SolusCRT</div>
-      <div class="tb-sub">SST · {{ empresa_nome|default:"Saúde e Segurança do Trabalho" }}</div>
+      <div class="tb-sub">SST · {{ sst_empresa_label }}</div>
     </div>
   </div>
   <nav class="tb-nav">

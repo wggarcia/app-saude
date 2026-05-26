@@ -95,29 +95,18 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'M
 </head>
 <body>
 
-<header class="header topbar">
-  <a class="logo" href="/sst/">
-    <div class="logo-icon">S</div>
-    <div>
-      <div class="logo-name">SolusCRT</div>
-      <div class="logo-sub">Central SST · Normas NR</div>
-    </div>
-  </a>
-  <div class="header-right">
-    <a class="hbtn" href="/sst/treinamentos/">🎓 Treinamentos</a>
-    <a class="hbtn" href="/sst/relatorios/">📈 Relatórios</a>
-    <a class="hbtn" href="https://www.gov.br/trabalho-e-emprego/pt-br/acesso-a-informacao/participacao-social/conselhos-e-orgaos-colegiados/ctpp-nrs/normas-regulamentadoras-nrs" target="_blank">🔗 MTE Oficial</a>
-    <a class="hbtn" href="/logout/" style="color:var(--red)">Sair</a>
-  </div>
-</header>
+{% include "partials/sst_topbar.html" %}
 
 <div class="app">
   <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
 
   <main class="main">
-    <div style="margin-bottom:20px">
-      <h1 style="font-size:1.3rem;font-weight:900;margin-bottom:4px">📚 Normas Regulamentadoras</h1>
-      <p style="color:var(--muted);font-size:.82rem">Todas as 37 NRs do Ministério do Trabalho · consulta técnica para profissionais de SST</p>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:20px;flex-wrap:wrap">
+      <div>
+        <h1 style="font-size:1.3rem;font-weight:900;margin-bottom:4px">📚 Normas Regulamentadoras</h1>
+        <p style="color:var(--muted);font-size:.82rem">Todas as 37 NRs do Ministério do Trabalho · consulta técnica para profissionais de SST</p>
+      </div>
+      <a class="hbtn" href="https://www.gov.br/trabalho-e-emprego/pt-br/acesso-a-informacao/participacao-social/conselhos-e-orgaos-colegiados/ctpp-nrs/normas-regulamentadoras-nrs" target="_blank">🔗 MTE Oficial</a>
     </div>
 
     <div class="kpi-row">

@@ -615,5 +615,10 @@ def api_psicossocial_kpis(request):
 
 def sst_psicossocial_page(request):
     """Página Psicossocial — renderiza template."""
-    from django.shortcuts import render
-    return render(request, "sst_psicossocial.html")
+    from django.shortcuts import render, redirect
+    from .views_sst import _empresa_sst_autenticada
+
+    empresa = _empresa_sst_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_psicossocial.html", {"empresa_nome": empresa.nome})

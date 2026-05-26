@@ -239,5 +239,10 @@ def api_biometria_kpis(request):
 
 def sst_biometria_page(request):
     """Página Biometria — renderiza template."""
-    from django.shortcuts import render
-    return render(request, "sst_biometria.html")
+    from django.shortcuts import render, redirect
+    from .views_sst import _empresa_sst_autenticada
+
+    empresa = _empresa_sst_autenticada(request)
+    if not empresa:
+        return redirect("/login-empresa/")
+    return render(request, "sst_biometria.html", {"empresa_nome": empresa.nome})
