@@ -6013,3 +6013,95 @@ class RespostaPsicossocial(models.Model):
 
     def __str__(self):
         return f"Resposta — questao {self.questao_id} — avaliação {self.avaliacao_id}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WHITE LABEL — Configuração de Marca
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ConfiguracaoMarca(models.Model):
+    """Personalização visual (white label) por empresa."""
+
+    empresa = models.OneToOneField(
+        Empresa, on_delete=models.CASCADE, related_name="configuracao_marca"
+    )
+    logo_url = models.URLField(blank=True, default="")
+    cor_primaria = models.CharField(max_length=7, default="#00c9a7")   # teal padrão
+    cor_secundaria = models.CharField(max_length=7, default="#1f6ff2") # azul padrão
+    nome_marca = models.CharField(max_length=80, blank=True, default="")
+    mostrar_powered_by = models.BooleanField(default=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuração de Marca"
+        verbose_name_plural = "Configurações de Marca"
+
+    def __str__(self):
+        return f"Marca — {self.empresa.nome}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WHATSAPP — Integração e Logs
+# ─────────────────────────────────────────────────────────────────────────────
+
+class IntegracaoWhatsApp(models.Model):
+    """Configuração de integração WhatsApp (Z-API ou Evolution API) por empresa."""
+
+    PROVIDER_ZAPI = "z-api"
+    PROVIDER_EVOLUTION = "evolution"
+    PROVIDERS = [
+        (PROVIDER_ZAPI, "Z-API"),
+        (PROVIDER_EVOLUTION, "Evolution API"),
+    ]
+
+    empresa = models.OneToOneField(
+        Empresa, on_delete=models.CASCADE, related_name="integracao_whatsapp"
+    )
+    provider = models.CharField(max_length=20, choices=PROVIDERS, default=PROVIDER_ZAPI)
+    instance_id = models.CharField(max_length=120, blank=True, default="")
+    token = models.CharField(max_length=255, blank=True, default="")
+    numero_remetente = models.CharField(max_length=20, blank=True, default="")
+    ativo = models.BooleanField(default=False)
+
+    # Quais eventos disparam notificações
+    notif_aso = models.BooleanField(default=True)
+    notif_treinamento = models.BooleanField(default=True)
+    notif_epi = models.BooleanField(default=True)
+    notif_cat = models.BooleanField(default=True)
+    notif_psicossocial = models.BooleanField(default=True)
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Integração WhatsApp"
+        verbose_name_plural = "Integrações WhatsApp"
+
+    def __str__(self):
+        return f"WhatsApp ({self.provider}) — {self.empresa.nome}"
+
+
+class LogWhatsApp(models.Model):
+    """Registro de cada mensagem enviada via WhatsApp."""
+
+    STATUS_OK = "ok"
+    STATUS_ERRO = "erro"
+    STATUS_CHOICES = [(STATUS_OK, "Enviado"), (STATUS_ERRO, "Erro")]
+
+    empresa = models.ForeignKey(
+        Empresa, on_delete=models.CASCADE, related_name="logs_whatsapp"
+    )
+    numero_destino = models.CharField(max_length=20)
+    mensagem = models.TextField()
+    evento = models.CharField(max_length=60, default="manual")   # aso_vencendo, etc.
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_OK)
+    resposta_api = models.JSONField(default=dict, blank=True)
+    enviado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-enviado_em"]
+        verbose_name = "Log WhatsApp"
+        verbose_name_plural = "Logs WhatsApp"
+
+    def __str__(self):
+        return f"Log {self.status} — {self.numero_destino} — {self.enviado_em:%d/%m/%Y %H:%M}"

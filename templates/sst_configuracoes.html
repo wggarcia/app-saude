@@ -67,6 +67,24 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
 .toast{position:fixed;bottom:24px;right:24px;z-index:999;padding:12px 20px;border-radius:10px;font-size:.82rem;font-weight:700;background:rgba(0,201,167,.12);border:1px solid rgba(0,201,167,.3);color:var(--teal);opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none}
 .toast.show{opacity:1;transform:translateY(0)}
 .toast.error{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.3);color:var(--red)}
+.color-row{display:flex;align-items:center;gap:10px}
+.color-preview{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);flex-shrink:0;cursor:pointer;transition:transform .15s}
+.color-preview:hover{transform:scale(1.08)}
+.logo-preview{max-height:60px;max-width:200px;border-radius:8px;border:1px solid var(--border);object-fit:contain;background:rgba(255,255,255,.04);padding:4px 8px}
+.wz-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:8px;background:rgba(0,201,167,.04);border:1px solid var(--border);margin-bottom:8px}
+.wz-toggle-label{font-size:.82rem;color:var(--text)}
+.wz-toggle-sub{font-size:.7rem;color:var(--muted);margin-top:2px}
+.wz-log-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:.78rem}
+.wz-log-row:last-child{border-bottom:none}
+.badge{padding:3px 10px;border-radius:999px;font-size:.68rem;font-weight:800;text-transform:uppercase}
+.badge-ok{background:rgba(0,201,167,.12);color:var(--teal);border:1px solid rgba(0,201,167,.25)}
+.badge-erro{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.25)}
+.toggle-switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.1);border-radius:24px;transition:.3s;border:1px solid var(--border)}
+.toggle-slider:before{position:absolute;content:"";height:18px;width:18px;left:2px;bottom:2px;background:#aaa;border-radius:50%;transition:.3s}
+.toggle-switch input:checked+.toggle-slider{background:rgba(0,201,167,.3);border-color:var(--teal)}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(18px);background:var(--teal)}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(0,201,167,.15);border-radius:2px}
@@ -93,6 +111,8 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
       <button class="tab-btn" onclick="switchTab('alertas',this)">🔔 Alertas de Vencimento</button>
       <button class="tab-btn" onclick="switchTab('empresa',this)">🏢 Dados da Empresa</button>
       <button class="tab-btn" onclick="switchTab('esocial',this);carregarCertificado()">🔐 eSocial</button>
+      <button class="tab-btn" onclick="switchTab('marca',this);carregarMarca()">🎨 Marca Branca</button>
+      <button class="tab-btn" onclick="switchTab('whatsapp',this);carregarWhatsApp()">💬 WhatsApp</button>
     </div>
 
     <!-- TAB 1: SESMT -->
@@ -263,6 +283,176 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
         </div>
       </div>
     </div>
+    <!-- TAB 5: Marca Branca (White Label) -->
+    <div class="tab-panel" id="tab-marca">
+      <div class="card">
+        <div class="card-title">🎨 Marca Branca (White Label)</div>
+        <div class="card-sub">Personalize a plataforma com a identidade visual da sua empresa. As alterações aparecem para todos os usuários do seu ambiente.</div>
+
+        <div class="section-label">Identidade Visual</div>
+        <div class="form-grid">
+          <div class="mf form-col-full">
+            <label>Nome da Marca <span class="mf-optional">deixe em branco para usar "SolusCRT"</span></label>
+            <input type="text" id="marca_nome" placeholder="Ex: MedSafe SST, SeguraTech...">
+          </div>
+          <div class="mf form-col-full">
+            <label>URL do Logotipo <span class="mf-optional">PNG/SVG com fundo transparente recomendado</span></label>
+            <input type="url" id="marca_logo_url" placeholder="https://seu-cdn.com/logo.png" oninput="previewLogo()">
+            <img id="marca_logo_preview" class="logo-preview" src="" alt="" style="display:none;margin-top:8px">
+          </div>
+        </div>
+
+        <hr class="section-sep">
+        <div class="section-label">Paleta de Cores</div>
+        <div class="form-grid">
+          <div class="mf">
+            <label>Cor Primária</label>
+            <div class="color-row">
+              <input type="color" id="marca_cor_primaria_picker" value="#00c9a7" style="width:36px;height:36px;padding:2px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer" oninput="sincronizarCor('primaria')">
+              <input type="text" id="marca_cor_primaria" value="#00c9a7" maxlength="7" placeholder="#00c9a7" style="flex:1" oninput="sincronizarCorHex('primaria')">
+              <div class="color-preview" id="prev_primaria" style="background:#00c9a7" onclick="document.getElementById('marca_cor_primaria_picker').click()"></div>
+            </div>
+          </div>
+          <div class="mf">
+            <label>Cor Secundária</label>
+            <div class="color-row">
+              <input type="color" id="marca_cor_secundaria_picker" value="#1f6ff2" style="width:36px;height:36px;padding:2px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer" oninput="sincronizarCor('secundaria')">
+              <input type="text" id="marca_cor_secundaria" value="#1f6ff2" maxlength="7" placeholder="#1f6ff2" style="flex:1" oninput="sincronizarCorHex('secundaria')">
+              <div class="color-preview" id="prev_secundaria" style="background:#1f6ff2" onclick="document.getElementById('marca_cor_secundaria_picker').click()"></div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="section-sep">
+        <div class="section-label">Opções</div>
+        <div class="check-row">
+          <input type="checkbox" id="marca_powered_by" checked>
+          <label for="marca_powered_by">Exibir "Powered by SolusCRT" no rodapé dos documentos</label>
+        </div>
+
+        <div class="info-card alerta" style="margin-top:16px">
+          <div class="info-card-title">Como aplicar</div>
+          <div class="info-card-body">
+            As cores e o nome da marca são aplicados automaticamente ao topbar e a todos os módulos SST.
+            Para o logotipo, hospede a imagem em um CDN público (ex: AWS S3, Cloudinary, Imgur) e cole a URL acima.
+            Dimensão recomendada: <strong>240×60 px</strong>, fundo transparente.
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-sec" onclick="redefinirMarca()">Restaurar Padrão</button>
+          <button class="btn-save" onclick="salvarMarca()">Salvar Marca</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: WhatsApp Notifications -->
+    <div class="tab-panel" id="tab-whatsapp">
+      <div class="card">
+        <div class="card-title">💬 Notificações via WhatsApp</div>
+        <div class="card-sub">Integre com Z-API ou Evolution API para enviar alertas automáticos de vencimentos, CATs e muito mais diretamente no WhatsApp dos responsáveis.</div>
+
+        <div class="section-label">Provedor de Integração</div>
+        <div class="form-grid">
+          <div class="mf">
+            <label>Provedor</label>
+            <select id="wz_provider" onchange="atualizarHintProvedor()">
+              <option value="z-api">Z-API</option>
+              <option value="evolution">Evolution API (self-hosted)</option>
+            </select>
+          </div>
+          <div class="mf">
+            <label id="wz_instance_label">Instance ID</label>
+            <input type="text" id="wz_instance_id" placeholder="Ex: 3ABC123DEF...">
+          </div>
+          <div class="mf">
+            <label id="wz_token_label">Token</label>
+            <input type="password" id="wz_token" placeholder="Token / API Key" autocomplete="new-password">
+          </div>
+          <div class="mf">
+            <label>Número Remetente <span class="mf-optional">DDI + DDD + Número</span></label>
+            <input type="text" id="wz_numero" placeholder="5511999999999">
+          </div>
+        </div>
+
+        <div id="wz_hint" class="info-card dispensado" style="margin-top:14px;margin-bottom:4px">
+          <div class="info-card-title">Z-API</div>
+          <div class="info-card-body">
+            Acesse <strong>z-api.io</strong>, crie uma instância e escaneie o QR Code. Cole o <strong>Instance ID</strong> e o <strong>Token</strong> acima.
+            O número remetente é o celular vinculado à instância.
+          </div>
+        </div>
+
+        <div class="form-actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn-sec" onclick="testarConexao()">🔌 Testar Conexão</button>
+          <div id="wz_status" style="font-size:.78rem;color:var(--muted);align-self:center;padding-left:8px"></div>
+        </div>
+
+        <hr class="section-sep">
+        <div class="section-label">Notificações Automáticas</div>
+
+        <div class="wz-toggle-row">
+          <div><div class="wz-toggle-label">⚕️ ASO vencendo</div><div class="wz-toggle-sub">Alerta quando ASO do funcionário vence nos próximos dias</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="wz_notif_aso" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="wz-toggle-row">
+          <div><div class="wz-toggle-label">📋 Treinamento vencendo</div><div class="wz-toggle-sub">Alerta de renovação de treinamentos NR próximos do vencimento</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="wz_notif_treinamento" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="wz-toggle-row">
+          <div><div class="wz-toggle-label">🦺 EPI pendente de entrega</div><div class="wz-toggle-sub">Aviso quando há entrega de EPI aguardando assinatura</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="wz_notif_epi" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="wz-toggle-row">
+          <div><div class="wz-toggle-label">🚨 CAT registrada</div><div class="wz-toggle-sub">Notificação imediata ao registrar uma Comunicação de Acidente</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="wz_notif_cat" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="wz-toggle-row">
+          <div><div class="wz-toggle-label">🧠 Psicossocial disponível</div><div class="wz-toggle-sub">Aviso quando avaliação psicossocial ativa estiver aguardando respostas</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="wz_notif_psicossocial" checked><span class="toggle-slider"></span></label>
+        </div>
+
+        <hr class="section-sep">
+        <div class="section-label">Ativar / Desativar</div>
+        <div class="check-row">
+          <input type="checkbox" id="wz_ativo">
+          <label for="wz_ativo">Integração WhatsApp <strong>ativa</strong> — envios automáticos habilitados</label>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-save" onclick="salvarWhatsApp()">Salvar Configuração WhatsApp</button>
+        </div>
+      </div>
+
+      <!-- Envio manual de teste -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">Envio de Teste</div>
+        <div class="card-sub">Envie uma mensagem de teste para verificar se a integração está funcionando corretamente.</div>
+        <div class="form-grid">
+          <div class="mf">
+            <label>Número de Destino (DDI+DDD+Número)</label>
+            <input type="text" id="wz_teste_numero" placeholder="5511999999999">
+          </div>
+          <div class="mf">
+            <label>Mensagem <span class="mf-optional">opcional</span></label>
+            <input type="text" id="wz_teste_msg" placeholder="Deixe em branco para mensagem padrão">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-sec" onclick="enviarTeste()">📤 Enviar Mensagem de Teste</button>
+        </div>
+      </div>
+
+      <!-- Histórico de logs -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">Histórico de Envios</div>
+        <div class="card-sub">Últimos 50 registros de mensagens enviadas pelo sistema.</div>
+        <div id="wz_logs_container" style="margin-top:12px">
+          <div style="color:var(--muted);font-size:.78rem">Carregando...</div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -485,6 +675,238 @@ async function uploadCertificado() {
   } finally {
     btn.textContent = 'Salvar Certificado'; btn.disabled = false;
   }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// MARCA BRANCA (WHITE LABEL)
+// ═════════════════════════════════════════════════════════════════════════════
+
+async function carregarMarca() {
+  try {
+    const r = await fetch('/api/gestao/marca/');
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('marca_nome').value = d.nome_marca || '';
+    document.getElementById('marca_logo_url').value = d.logo_url || '';
+    document.getElementById('marca_cor_primaria').value = d.cor_primaria || '#00c9a7';
+    document.getElementById('marca_cor_secundaria').value = d.cor_secundaria || '#1f6ff2';
+    document.getElementById('marca_cor_primaria_picker').value = d.cor_primaria || '#00c9a7';
+    document.getElementById('marca_cor_secundaria_picker').value = d.cor_secundaria || '#1f6ff2';
+    document.getElementById('prev_primaria').style.background = d.cor_primaria || '#00c9a7';
+    document.getElementById('prev_secundaria').style.background = d.cor_secundaria || '#1f6ff2';
+    document.getElementById('marca_powered_by').checked = d.mostrar_powered_by !== false;
+    previewLogo();
+  } catch(e) { /* silencioso */ }
+}
+
+function previewLogo() {
+  const url = document.getElementById('marca_logo_url').value.trim();
+  const img = document.getElementById('marca_logo_preview');
+  if (url) { img.src = url; img.style.display = ''; img.onerror = () => { img.style.display='none'; }; }
+  else img.style.display = 'none';
+}
+
+function sincronizarCor(tipo) {
+  const val = document.getElementById('marca_cor_' + tipo + '_picker').value;
+  document.getElementById('marca_cor_' + tipo).value = val;
+  document.getElementById('prev_' + tipo).style.background = val;
+}
+
+function sincronizarCorHex(tipo) {
+  const val = document.getElementById('marca_cor_' + tipo).value;
+  if (/^#[0-9a-fA-F]{6}$/.test(val) || /^#[0-9a-fA-F]{3}$/.test(val)) {
+    document.getElementById('marca_cor_' + tipo + '_picker').value = val;
+    document.getElementById('prev_' + tipo).style.background = val;
+  }
+}
+
+async function salvarMarca() {
+  const btn = event.target;
+  btn.textContent = 'Salvando...'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/gestao/marca/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({
+        nome_marca: document.getElementById('marca_nome').value.trim(),
+        logo_url: document.getElementById('marca_logo_url').value.trim(),
+        cor_primaria: document.getElementById('marca_cor_primaria').value.trim(),
+        cor_secundaria: document.getElementById('marca_cor_secundaria').value.trim(),
+        mostrar_powered_by: document.getElementById('marca_powered_by').checked,
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.erro || 'Erro ao salvar', true); return; }
+    showToast('✓ Marca salva com sucesso — recarregue a página para ver as mudanças');
+  } catch(e) { showToast('Erro: ' + e.message, true); }
+  finally { btn.textContent = 'Salvar Marca'; btn.disabled = false; }
+}
+
+async function redefinirMarca() {
+  if (!confirm('Restaurar cores e nome padrão SolusCRT?')) return;
+  document.getElementById('marca_nome').value = '';
+  document.getElementById('marca_logo_url').value = '';
+  document.getElementById('marca_cor_primaria').value = '#00c9a7';
+  document.getElementById('marca_cor_secundaria').value = '#1f6ff2';
+  document.getElementById('marca_cor_primaria_picker').value = '#00c9a7';
+  document.getElementById('marca_cor_secundaria_picker').value = '#1f6ff2';
+  document.getElementById('prev_primaria').style.background = '#00c9a7';
+  document.getElementById('prev_secundaria').style.background = '#1f6ff2';
+  document.getElementById('marca_powered_by').checked = true;
+  previewLogo();
+  await salvarMarca.call({ target: document.querySelector('[onclick="salvarMarca()"]') || document.createElement('button') });
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// WHATSAPP NOTIFICATIONS
+// ═════════════════════════════════════════════════════════════════════════════
+
+const WZ_HINTS = {
+  'z-api': {
+    titulo: 'Z-API',
+    corpo: 'Acesse <strong>z-api.io</strong>, crie uma instância e escaneie o QR Code. Cole o <strong>Instance ID</strong> e o <strong>Token</strong> acima. O número remetente é o celular vinculado.',
+    instanceLabel: 'Instance ID',
+    tokenLabel: 'Token',
+  },
+  'evolution': {
+    titulo: 'Evolution API',
+    corpo: 'Cole a <strong>URL base</strong> do seu servidor Evolution no campo Instance ID (ex: https://evo.minhaempresa.com). Use a <strong>API Key</strong> global como token. O número remetente é o nome da instância configurada no Evolution.',
+    instanceLabel: 'URL Base do Servidor',
+    tokenLabel: 'API Key',
+  }
+};
+
+function atualizarHintProvedor() {
+  const prov = document.getElementById('wz_provider').value;
+  const h = WZ_HINTS[prov] || WZ_HINTS['z-api'];
+  document.getElementById('wz_hint').querySelector('.info-card-title').textContent = h.titulo;
+  document.getElementById('wz_hint').querySelector('.info-card-body').innerHTML = h.corpo;
+  document.getElementById('wz_instance_label').textContent = h.instanceLabel;
+  document.getElementById('wz_token_label').textContent = h.tokenLabel;
+}
+
+async function carregarWhatsApp() {
+  try {
+    const r = await fetch('/api/gestao/whatsapp/');
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('wz_provider').value = d.provider || 'z-api';
+    document.getElementById('wz_instance_id').value = d.instance_id || '';
+    document.getElementById('wz_token').placeholder = d.token_configurado ? '(token já configurado — deixe em branco para manter)' : 'Token / API Key';
+    document.getElementById('wz_numero').value = d.numero_remetente || '';
+    document.getElementById('wz_ativo').checked = !!d.ativo;
+    document.getElementById('wz_notif_aso').checked = d.notif_aso !== false;
+    document.getElementById('wz_notif_treinamento').checked = d.notif_treinamento !== false;
+    document.getElementById('wz_notif_epi').checked = d.notif_epi !== false;
+    document.getElementById('wz_notif_cat').checked = d.notif_cat !== false;
+    document.getElementById('wz_notif_psicossocial').checked = d.notif_psicossocial !== false;
+    atualizarHintProvedor();
+    carregarLogs();
+  } catch(e) { /* silencioso */ }
+}
+
+async function testarConexao() {
+  const btn = event.target;
+  const status = document.getElementById('wz_status');
+  btn.textContent = 'Testando...'; btn.disabled = true; status.textContent = '';
+  try {
+    const r = await fetch('/api/gestao/whatsapp/testar/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    });
+    const d = await r.json();
+    if (r.ok) {
+      status.textContent = '✅ ' + (d.mensagem || 'Conectado!');
+      status.style.color = 'var(--teal)';
+    } else {
+      status.textContent = '❌ ' + (d.erro || 'Falha');
+      status.style.color = 'var(--red)';
+    }
+  } catch(e) {
+    status.textContent = '❌ Erro de rede';
+    status.style.color = 'var(--red)';
+  } finally {
+    btn.textContent = '🔌 Testar Conexão'; btn.disabled = false;
+  }
+}
+
+async function salvarWhatsApp() {
+  const btn = event.target;
+  btn.textContent = 'Salvando...'; btn.disabled = true;
+  const token = document.getElementById('wz_token').value.trim();
+  const body = {
+    provider: document.getElementById('wz_provider').value,
+    instance_id: document.getElementById('wz_instance_id').value.trim(),
+    numero_remetente: document.getElementById('wz_numero').value.trim(),
+    ativo: document.getElementById('wz_ativo').checked,
+    notif_aso: document.getElementById('wz_notif_aso').checked,
+    notif_treinamento: document.getElementById('wz_notif_treinamento').checked,
+    notif_epi: document.getElementById('wz_notif_epi').checked,
+    notif_cat: document.getElementById('wz_notif_cat').checked,
+    notif_psicossocial: document.getElementById('wz_notif_psicossocial').checked,
+  };
+  if (token) body.token = token;
+  try {
+    const r = await fetch('/api/gestao/whatsapp/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.erro || 'Erro ao salvar', true); return; }
+    showToast('✓ Configuração WhatsApp salva');
+    document.getElementById('wz_token').value = '';
+  } catch(e) { showToast('Erro: ' + e.message, true); }
+  finally { btn.textContent = 'Salvar Configuração WhatsApp'; btn.disabled = false; }
+}
+
+async function enviarTeste() {
+  const btn = event.target;
+  const numero = document.getElementById('wz_teste_numero').value.trim();
+  if (!numero) { showToast('Informe o número de destino', true); return; }
+  btn.textContent = 'Enviando...'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/gestao/whatsapp/enviar/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({
+        numero,
+        mensagem: document.getElementById('wz_teste_msg').value.trim()
+      })
+    });
+    const d = await r.json();
+    if (r.ok) { showToast('✓ ' + (d.mensagem || 'Enviado!')); carregarLogs(); }
+    else showToast(d.erro || 'Erro ao enviar', true);
+  } catch(e) { showToast('Erro: ' + e.message, true); }
+  finally { btn.textContent = '📤 Enviar Mensagem de Teste'; btn.disabled = false; }
+}
+
+async function carregarLogs() {
+  const cont = document.getElementById('wz_logs_container');
+  if (!cont) return;
+  try {
+    const r = await fetch('/api/gestao/whatsapp/logs/');
+    if (!r.ok) { cont.innerHTML = '<div style="color:var(--muted);font-size:.78rem">Erro ao carregar logs.</div>'; return; }
+    const d = await r.json();
+    if (!d.logs || !d.logs.length) {
+      cont.innerHTML = '<div style="color:var(--muted);font-size:.78rem">Nenhum envio registrado ainda.</div>';
+      return;
+    }
+    cont.innerHTML = d.logs.map(l => `
+      <div class="wz-log-row">
+        <span class="badge badge-${l.status}">${l.status === 'ok' ? '✓ Enviado' : '✗ Erro'}</span>
+        <div>
+          <div style="font-weight:600">${escHtml(l.mensagem)}</div>
+          <div style="color:var(--muted);font-size:.7rem">${escHtml(l.evento)} · ${escHtml(l.numero_destino)}</div>
+        </div>
+        <span style="color:var(--muted);font-size:.7rem;white-space:nowrap">${l.enviado_em}</span>
+      </div>
+    `).join('');
+  } catch(e) { cont.innerHTML = '<div style="color:var(--muted);font-size:.78rem">Erro ao carregar logs.</div>'; }
+}
+
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
 </body>

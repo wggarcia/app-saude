@@ -510,6 +510,8 @@ from api.views_pagamento import (
     api_plano_features,
 )
 from api.views_upgrade import api_upgrade_opcoes, api_upgrade_checkout
+from api.views_white_label import api_marca, api_marca_publica
+from api.views_whatsapp import api_whatsapp, api_whatsapp_testar, api_whatsapp_enviar, api_whatsapp_logs
 from api.views_relatorios import (
     relatorio_pdf_funcionarios,
     relatorio_pdf_asos,
@@ -1337,6 +1339,16 @@ urlpatterns = [
     # ── Upgrade self-service ──────────────────────────────────────────────────
     path('api/plano/upgrade/opcoes', api_upgrade_opcoes),
     path('api/plano/upgrade/checkout', api_upgrade_checkout),
+
+    # ── White Label (Marca Branca) ────────────────────────────────────────────
+    path('api/gestao/marca/', api_marca),
+    path('api/gestao/marca/publica/', api_marca_publica),
+
+    # ── WhatsApp Notifications ────────────────────────────────────────────────
+    path('api/gestao/whatsapp/', api_whatsapp),
+    path('api/gestao/whatsapp/testar/', api_whatsapp_testar),
+    path('api/gestao/whatsapp/enviar/', api_whatsapp_enviar),
+    path('api/gestao/whatsapp/logs/', api_whatsapp_logs),
 
     # ── Trial / Self-service Onboarding ──────────────────────────────────────
     path('api/gestao/trial', api_trial_status),

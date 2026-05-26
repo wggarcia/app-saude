@@ -1,11 +1,12 @@
 {% with p=request.path %}
 {% firstof empresa_nome request.empresa.nome "Saúde e Segurança do Trabalho" as sst_empresa_label %}
 <header class="topbar">
-  <div class="tb-logo">
-    <div class="tb-icon">S</div>
+  <div class="tb-logo" id="tb-logo-wrap">
+    <div class="tb-icon" id="tb-icon">S</div>
+    <img id="tb-logo-img" src="" alt="" style="display:none;height:32px;max-width:120px;object-fit:contain;border-radius:4px">
     <div>
       <div class="tb-nome" id="tb-nome">SolusCRT</div>
-      <div class="tb-sub">SST · {{ sst_empresa_label }}</div>
+      <div class="tb-sub" id="tb-sub">SST · {{ sst_empresa_label }}</div>
     </div>
   </div>
   <nav class="tb-nav">
@@ -39,3 +40,45 @@
 </header>
 {% endwith %}
 {% include "partials/upgrade_modal.html" %}
+<script>
+(function(){
+  // ── White Label: aplica branding da empresa ao topbar ───────────────────
+  const _empId = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id");
+  if (!_empId || _empId === "null" || _empId === "undefined") return;
+
+  fetch("/api/gestao/marca/publica/?empresa_id=" + encodeURIComponent(_empId))
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(cfg){
+      if (!cfg) return;
+
+      // Nome da marca
+      if (cfg.nome_marca) {
+        const el = document.getElementById("tb-nome");
+        if (el) el.textContent = cfg.nome_marca;
+      }
+
+      // Logo
+      if (cfg.logo_url) {
+        const icon = document.getElementById("tb-icon");
+        const img  = document.getElementById("tb-logo-img");
+        if (icon) icon.style.display = "none";
+        if (img) { img.src = cfg.logo_url; img.style.display = ""; }
+      }
+
+      // Cores primária e secundária via CSS vars
+      if (cfg.cor_primaria || cfg.cor_secundaria) {
+        const root = document.documentElement;
+        if (cfg.cor_primaria)   root.style.setProperty("--teal", cfg.cor_primaria);
+        if (cfg.cor_secundaria) root.style.setProperty("--blue", cfg.cor_secundaria);
+      }
+
+      // "Powered by SolusCRT" — mostrar/ocultar nos rodapés
+      if (!cfg.mostrar_powered_by) {
+        document.querySelectorAll(".powered-by-soluscrt").forEach(function(el){
+          el.style.display = "none";
+        });
+      }
+    })
+    .catch(function(){});
+})();
+</script>
