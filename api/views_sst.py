@@ -375,6 +375,133 @@ def api_sst_dashboard(request):
     })
 
 
+def api_sst_contexto_integrado(request):
+    """
+    Contexto unificado para sincronizar informacoes entre abas SST.
+    Retorna KPIs compactos para navegacao lateral, cards rapidos e IA operacional.
+    """
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    hoje = date.today()
+    em_30d = hoje + timedelta(days=30)
+    ano_atual = hoje.year
+
+    func_ativos = FuncionarioSST.objects.filter(empresa=empresa, ativo=True)
+    total_func_ativos = func_ativos.count()
+
+    asos_qs = ASOOcupacional.objects.filter(empresa=empresa)
+    asos_vencidos = asos_qs.filter(data_validade__lt=hoje).count()
+    asos_vencendo_30d = asos_qs.filter(
+        data_validade__gte=hoje, data_validade__lte=em_30d
+    ).count()
+
+    exames_qs = ExameOcupacional.objects.filter(empresa=empresa)
+    exames_atrasados = exames_qs.filter(status="vencido").count()
+
+    cats_abertas = CATOcupacional.objects.filter(
+        empresa=empresa, status_esocial__in=("nao_enviado", "pendente", "erro")
+    ).count()
+
+    afas_ativos = AfastamentoSST.objects.filter(empresa=empresa, status="ativo").count()
+
+    esocial_qs = eSocialEventoSST.objects.filter(empresa=empresa)
+    esocial_erros = esocial_qs.filter(status="erro").count()
+    esocial_pendentes = esocial_qs.filter(status__in=("pendente", "enviado")).count()
+
+    trein_vencidos = TreinamentoNR.objects.filter(
+        empresa=empresa,
+        data_validade__isnull=False,
+        data_validade__lt=hoje,
+    ).count()
+
+    epis_ativos_ids = set(
+        EntregaEPI.objects.filter(
+            empresa=empresa,
+            data_devolucao__isnull=True,
+        ).values_list("funcionario_id", flat=True)
+    )
+    sem_epi = max(total_func_ativos - len(epis_ativos_ids), 0)
+
+    conformes = 0
+    for f in func_ativos.only("id"):
+        aso = asos_qs.filter(funcionario=f).order_by("-data_emissao").first()
+        aso_ok = bool(aso and (aso.data_validade is None or aso.data_validade >= hoje))
+        exame_vencido = exames_qs.filter(funcionario=f, status="vencido").exists()
+        epi_ok = f.id in epis_ativos_ids
+        trein_ok = TreinamentoNR.objects.filter(
+            empresa=empresa, funcionario=f, data_validade__gte=hoje
+        ).exists()
+        if aso_ok and not exame_vencido and epi_ok and trein_ok:
+            conformes += 1
+    indice_conformidade = round((conformes / max(total_func_ativos, 1)) * 100, 1) if total_func_ativos else 0.0
+
+    # Modelos de expansao SST
+    from .models import (
+        AvaliacaoPsicossocial,
+        FAPEmpresa,
+        LaudoTecnicoSST,
+        PPPFuncionario,
+        ResultadoExameLaboratorio,
+    )
+
+    psicossocial_ativas = AvaliacaoPsicossocial.objects.filter(
+        empresa=empresa, status="ativa"
+    ).count()
+    ppp_pendentes = PPPFuncionario.objects.filter(
+        empresa=empresa, status="rascunho"
+    ).count()
+    laudos_pendentes = LaudoTecnicoSST.objects.filter(
+        empresa=empresa, status__in=("rascunho", "vencido")
+    ).count()
+    fap_ano_atual = FAPEmpresa.objects.filter(empresa=empresa, ano=ano_atual).count()
+    laboratorio_alertas = ResultadoExameLaboratorio.objects.filter(
+        empresa=empresa, criticidade__in=("atencao", "critico")
+    ).count()
+
+    prioridade_legal = []
+    if esocial_erros:
+        prioridade_legal.append(f"{esocial_erros} erro(s) no eSocial")
+    if esocial_pendentes:
+        prioridade_legal.append(f"{esocial_pendentes} pendencia(s) de transmissao eSocial")
+    if cats_abertas:
+        prioridade_legal.append(f"{cats_abertas} CAT(s) em aberto")
+    prioridade_atencao = [
+        f"{asos_vencidos} ASO(s) vencido(s)" if asos_vencidos else "",
+        f"{exames_atrasados} exame(s) atrasado(s)" if exames_atrasados else "",
+        f"{sem_epi} funcionario(s) sem EPI ativo" if sem_epi else "",
+    ]
+    prioridade_atencao = [msg for msg in prioridade_atencao if msg]
+
+    return JsonResponse({
+        "empresa_nome": empresa.nome,
+        "gerado_em": timezone.now().isoformat(),
+        "kpis": {
+            "funcionarios_ativos": total_func_ativos,
+            "asos_vencidos": asos_vencidos,
+            "asos_vencendo_30d": asos_vencendo_30d,
+            "exames_atrasados": exames_atrasados,
+            "cats_abertas": cats_abertas,
+            "afastamentos_ativos": afas_ativos,
+            "esocial_erros": esocial_erros,
+            "esocial_pendentes": esocial_pendentes,
+            "treinamentos_vencidos": trein_vencidos,
+            "epis_sem_entrega": sem_epi,
+            "conformidade_indice": indice_conformidade,
+            "psicossocial_ativas": psicossocial_ativas,
+            "ppp_pendentes": ppp_pendentes,
+            "laudos_pendentes": laudos_pendentes,
+            "laboratorio_alertas": laboratorio_alertas,
+            "fap_ano_atual": fap_ano_atual,
+        },
+        "prioridades": {
+            "legal": prioridade_legal,
+            "atencao": prioridade_atencao,
+        },
+    })
+
+
 # ── Funcionários ─────────────────────────────────────────────────────────────
 
 @csrf_exempt

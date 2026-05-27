@@ -212,6 +212,74 @@ html,body{
   border-left-color:var(--sst-teal) !important;
   background:rgba(0,201,167,.08) !important;
 }
+.sb-link.risk-warn{
+  box-shadow:inset -2px 0 0 rgba(240,191,107,.28);
+}
+.sb-link.risk-danger{
+  box-shadow:inset -2px 0 0 rgba(248,113,113,.36);
+}
+.sb-group{
+  margin:2px 0 !important;
+}
+.sb-group-summary{
+  list-style:none !important;
+  cursor:pointer !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  padding:0 !important;
+}
+.sb-group-summary::-webkit-details-marker{
+  display:none !important;
+}
+.sb-group .sb-label{
+  width:100% !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+}
+.sb-group .sb-label::after{
+  content:"▸";
+  font-size:.68rem;
+  color:var(--sst-muted);
+  transition:transform .15s ease;
+  margin-left:8px;
+}
+.sb-group[open] .sb-label::after{
+  transform:rotate(90deg);
+}
+.sb-group-body{
+  display:flex !important;
+  flex-direction:column !important;
+}
+.sb-badge{
+  margin-left:auto;
+  min-width:22px;
+  height:18px;
+  padding:0 6px;
+  border-radius:999px;
+  border:1px solid var(--sst-line);
+  background:rgba(255,255,255,.05);
+  color:var(--sst-muted);
+  font-size:.63rem;
+  font-weight:800;
+  line-height:16px;
+  text-align:center;
+  display:none;
+}
+.sb-badge.show{
+  display:inline-block;
+}
+.sb-badge.warn{
+  color:#f0bf6b;
+  border-color:rgba(240,191,107,.35);
+  background:rgba(240,191,107,.12);
+}
+.sb-badge.danger{
+  color:#f87171;
+  border-color:rgba(248,113,113,.35);
+  background:rgba(248,113,113,.12);
+}
 .main{
   margin-left:220px !important;
 }
@@ -251,6 +319,181 @@ document.addEventListener("DOMContentLoaded", function () {
     if (empresa) {
       el.textContent = empresa;
     }
+  });
+
+  const GROUP_STATE_KEY = "sst_sidebar_groups_v2";
+  function loadGroupState() {
+    try { return JSON.parse(localStorage.getItem(GROUP_STATE_KEY) || "{}"); }
+    catch (_e) { return {}; }
+  }
+  function saveGroupState() {
+    const state = {};
+    document.querySelectorAll(".sb-group").forEach((grp, idx) => {
+      const k = grp.getAttribute("data-sst-group-key") || `g${idx}`;
+      state[k] = !!grp.open;
+    });
+    try { localStorage.setItem(GROUP_STATE_KEY, JSON.stringify(state)); } catch (_e) {}
+  }
+  function setupGroupState() {
+    const groups = Array.from(document.querySelectorAll(".sb-group"));
+    const saved = loadGroupState();
+    let usedSaved = false;
+    groups.forEach((grp, idx) => {
+      const k = grp.getAttribute("data-sst-group-key") || `g${idx}`;
+      if (Object.prototype.hasOwnProperty.call(saved, k)) {
+        grp.open = !!saved[k];
+        usedSaved = true;
+      }
+      grp.addEventListener("toggle", saveGroupState);
+    });
+    if (usedSaved) return;
+    let opened = false;
+    groups.forEach((grp) => {
+      const hasActive = !!grp.querySelector(".sb-link.active");
+      grp.open = hasActive;
+      if (hasActive) opened = true;
+    });
+    if (!opened && groups.length) groups[0].open = true;
+    saveGroupState();
+  }
+  setupGroupState();
+
+  // Contexto integrado SST para sincronizar abas e sidebar
+  const CTX_KEY = "sst_contexto_integrado_v1";
+  const CH_NAME = "sst-contexto-sync";
+  const bc = ("BroadcastChannel" in window) ? new BroadcastChannel(CH_NAME) : null;
+
+  function authHeaders() {
+    const token = sessionStorage.getItem("auth_token") || sessionStorage.getItem("token") || localStorage.getItem("auth_token") || localStorage.getItem("token") || "";
+    return token ? { "Authorization": "Bearer " + token } : {};
+  }
+  function readContext() {
+    try { return JSON.parse(sessionStorage.getItem(CTX_KEY) || "{}"); }
+    catch (_e) { return {}; }
+  }
+  function writeContext(payload) {
+    try { sessionStorage.setItem(CTX_KEY, JSON.stringify(payload || {})); } catch (_e) {}
+  }
+  function pickValueByKey(kpis, keyExpr) {
+    if (!kpis || !keyExpr) return 0;
+    const keys = String(keyExpr).split("|").map((s) => s.trim()).filter(Boolean);
+    for (const k of keys) {
+      const v = Number(kpis[k] || 0);
+      if (v > 0) return v;
+    }
+    const fallbackKey = keys[0];
+    return Number(kpis[fallbackKey] || 0);
+  }
+  function applySidebarBadges(ctx) {
+    const kpis = (ctx && ctx.kpis) || {};
+    document.querySelectorAll("[data-sst-badge]").forEach((el) => {
+      const expr = el.getAttribute("data-sst-badge") || "";
+      const fmt = (el.getAttribute("data-sst-format") || "").toLowerCase();
+      const v = pickValueByKey(kpis, expr);
+      const num = Number.isFinite(v) ? v : 0;
+
+      const parent = el.closest(".sb-link");
+      if (parent) parent.classList.remove("risk-warn", "risk-danger");
+
+      if (num <= 0) {
+        el.textContent = "";
+        el.classList.remove("show", "warn", "danger");
+        return;
+      }
+
+      let text = String(num);
+      if (fmt === "pct") text = `${num}%`;
+      el.textContent = text;
+      el.classList.add("show");
+      el.classList.remove("warn", "danger");
+
+      if (num >= 10) el.classList.add("danger");
+      else if (num >= 1) el.classList.add("warn");
+
+      if (parent) {
+        const sev = (parent.getAttribute("data-sst-severity") || "").toLowerCase();
+        if (sev === "critical" && num >= 1) {
+          parent.classList.add("risk-danger");
+        } else if (sev === "attention" && num >= 1) {
+          parent.classList.add("risk-warn");
+        } else if (num >= 10) {
+          parent.classList.add("risk-danger");
+        } else if (num >= 1) {
+          parent.classList.add("risk-warn");
+        }
+      }
+    });
+  }
+
+  async function refreshContext(options) {
+    const force = options && options.force;
+    const current = readContext();
+    const currentTs = Date.parse((current && current.gerado_em) || "");
+    const fresh = currentTs && (Date.now() - currentTs < 2 * 60 * 1000);
+    if (!force && fresh) {
+      applySidebarBadges(current);
+      return current;
+    }
+
+    try {
+      const res = await fetch("/api/sst/contexto-integrado/", {
+        credentials: "same-origin",
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error("Falha ao buscar contexto integrado SST");
+      const data = await res.json();
+      writeContext(data);
+      applySidebarBadges(data);
+      if (bc) bc.postMessage({ type: "context-updated", payload: data });
+      window.dispatchEvent(new CustomEvent("sst:context-updated", { detail: data }));
+      return data;
+    } catch (_err) {
+      applySidebarBadges(current);
+      return current;
+    }
+  }
+
+  if (bc) {
+    bc.onmessage = (ev) => {
+      if (ev && ev.data && ev.data.type === "context-updated") {
+        const payload = ev.data.payload || {};
+        writeContext(payload);
+        applySidebarBadges(payload);
+        window.dispatchEvent(new CustomEvent("sst:context-updated", { detail: payload }));
+      }
+    };
+  }
+
+  window.SSTContext = {
+    get: readContext,
+    refresh: refreshContext,
+    publish: function (payload) {
+      writeContext(payload || {});
+      applySidebarBadges(payload || {});
+      if (bc) bc.postMessage({ type: "context-updated", payload: payload || {} });
+      window.dispatchEvent(new CustomEvent("sst:context-updated", { detail: payload || {} }));
+    },
+  };
+
+  const nativeFetch = window.fetch ? window.fetch.bind(window) : null;
+  if (nativeFetch) {
+    window.fetch = async function patchedSstFetch(input, init) {
+      const reqUrl = typeof input === "string" ? input : (input && input.url) || "";
+      const method = ((init && init.method) || "GET").toUpperCase();
+      const isSstMutation = reqUrl.includes("/api/sst/") && ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+      const response = await nativeFetch(input, init);
+      if (isSstMutation && response && response.ok) {
+        setTimeout(function () { refreshContext({ force: true }); }, 180);
+      }
+      return response;
+    };
+  }
+
+  applySidebarBadges(readContext());
+  refreshContext({ force: false });
+  setInterval(function () { refreshContext({ force: false }); }, 120000);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") refreshContext({ force: false });
   });
 });
 </script>

@@ -77,6 +77,7 @@ from api.views_corporativo import (
 )
 from api.views_sst import (
     api_sst_dashboard,
+    api_sst_contexto_integrado,
     api_funcionarios, api_funcionario_detalhe,
     api_asos,
     api_cats,
@@ -919,6 +920,8 @@ urlpatterns = [
     path('sst/comunicacao/grupos/', painel_grupos),
     # 🏥 SST / Saúde Ocupacional — API
     path('api/sst/dashboard', api_sst_dashboard),
+    path('api/sst/contexto-integrado', api_sst_contexto_integrado),
+    path('api/sst/contexto-integrado/', api_sst_contexto_integrado),
     path('api/sst/funcionarios', api_funcionarios),
     path('api/sst/funcionarios/', api_funcionarios),
     path('api/sst/funcionarios/<int:funcionario_id>', api_funcionario_detalhe),

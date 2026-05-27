@@ -1,65 +1,84 @@
 {% with p=request.path %}
-{# ── Painel / Hub ─────────────────────────────────────────────── #}
-<a class="sb-link {% if p == '/dashboard-empresa/' %}active{% endif %}" href="/dashboard-empresa/">
+<a class="sb-link {% if p == '/dashboard-empresa/' or p == '/sst/' %}active{% endif %}" href="/dashboard-empresa/">
   <span class="sb-icon">📊</span><span>Painel SST</span>
 </a>
 
-{# ── Operação Diária ──────────────────────────────────────────── #}
-<div class="sb-label">Operação Diária</div>
-<a class="sb-link {% if '/sst/funcionarios/' in p %}active{% endif %}" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span></a>
-<a class="sb-link {% if p == '/sst/solicitacoes/' %}active{% endif %}" href="/sst/solicitacoes/"><span class="sb-icon">📨</span><span>Solicitações</span></a>
-<a class="sb-link {% if p == '/sst/exames/agendar/' %}active{% endif %}" href="/sst/exames/agendar/"><span class="sb-icon">📅</span><span>Agendamentos</span></a>
-<a class="sb-link {% if p == '/sst/asos/' %}active{% endif %}" href="/sst/asos/"><span class="sb-icon">📋</span><span>ASO e Pedidos</span></a>
-<a class="sb-link {% if p == '/sst/exames/' %}active{% endif %}" href="/sst/exames/"><span class="sb-icon">🔬</span><span>Exames</span></a>
+<details class="sb-group" data-sst-group data-sst-group-key="nucleo-operacional">
+  <summary class="sb-group-summary">
+    <span class="sb-label">Núcleo Operacional</span>
+  </summary>
+  <div class="sb-group-body">
+    <a class="sb-link {% if '/sst/funcionarios/' in p %}active{% endif %}" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span><span class="sb-badge" data-sst-badge="funcionarios_ativos"></span></a>
+    <a class="sb-link {% if p == '/sst/asos/' %}active{% endif %}" href="/sst/asos/" data-sst-severity="attention"><span class="sb-icon">📋</span><span>ASO e Pedidos</span><span class="sb-badge" data-sst-badge="asos_vencidos|asos_vencendo_30d"></span></a>
+    <a class="sb-link {% if p == '/sst/exames/' %}active{% endif %}" href="/sst/exames/" data-sst-severity="critical"><span class="sb-icon">🔬</span><span>Exames</span><span class="sb-badge" data-sst-badge="exames_atrasados"></span></a>
+    <a class="sb-link {% if p == '/sst/exames/agendar/' %}active{% endif %}" href="/sst/exames/agendar/"><span class="sb-icon">📅</span><span>Agendamentos</span></a>
+    <a class="sb-link {% if p == '/sst/solicitacoes/' %}active{% endif %}" href="/sst/solicitacoes/"><span class="sb-icon">📨</span><span>Solicitações</span></a>
+  </div>
+</details>
 
-{# ── Eventos Críticos ─────────────────────────────────────────── #}
-<div class="sb-label">Eventos Críticos</div>
-<a class="sb-link {% if p == '/sst/afastamentos/' %}active{% endif %}" href="/sst/afastamentos/"><span class="sb-icon">🏥</span><span>Afastamentos</span></a>
-<a class="sb-link {% if p == '/sst/cats/' %}active{% endif %}" href="/sst/cats/"><span class="sb-icon">⚠️</span><span>CAT / Acidentes</span></a>
-<a class="sb-link {% if p == '/sst/esocial/' %}active{% endif %}" href="/sst/esocial/"><span class="sb-icon">🔗</span><span>eSocial SST</span></a>
+<details class="sb-group" data-sst-group data-sst-group-key="legal-regulatorio">
+  <summary class="sb-group-summary">
+    <span class="sb-label">Legal e Regulatório</span>
+  </summary>
+  <div class="sb-group-body">
+    <a class="sb-link {% if p == '/sst/afastamentos/' %}active{% endif %}" href="/sst/afastamentos/" data-sst-severity="critical"><span class="sb-icon">🏥</span><span>Afastamentos</span><span class="sb-badge" data-sst-badge="afastamentos_ativos"></span></a>
+    <a class="sb-link {% if p == '/sst/cats/' %}active{% endif %}" href="/sst/cats/" data-sst-severity="critical"><span class="sb-icon">⚠️</span><span>CAT / Acidentes</span><span class="sb-badge" data-sst-badge="cats_abertas"></span></a>
+    <a class="sb-link {% if p == '/sst/esocial/' %}active{% endif %}" href="/sst/esocial/" data-sst-severity="critical"><span class="sb-icon">🔗</span><span>eSocial SST</span><span class="sb-badge" data-sst-badge="esocial_erros|esocial_pendentes"></span></a>
+    <a class="sb-link {% if p == '/sst/postos/' %}active{% endif %}" href="/sst/postos/" data-sst-severity="attention"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
+    <a class="sb-link {% if p == '/sst/ppp/' %}active{% endif %}" href="/sst/ppp/" data-sst-severity="attention"><span class="sb-icon">🧾</span><span>PPP</span><span class="sb-badge" data-sst-badge="ppp_pendentes"></span></a>
+    <a class="sb-link {% if p == '/sst/fap/' %}active{% endif %}" href="/sst/fap/"><span class="sb-icon">📉</span><span>Gestão FAP</span></a>
+  </div>
+</details>
 
-{# ── Prevenção ────────────────────────────────────────────────── #}
-<div class="sb-label">Prevenção</div>
-<a class="sb-link {% if p == '/sst/riscos/' %}active{% endif %}" href="/sst/riscos/"><span class="sb-icon">🔴</span><span>Riscos e PGR</span></a>
-<a class="sb-link {% if p == '/sst/postos/' %}active{% endif %}" href="/sst/postos/"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
-<a class="sb-link {% if p == '/sst/epis/' %}active{% endif %}" href="/sst/epis/"><span class="sb-icon">🦺</span><span>EPI e EPC</span></a>
-<a class="sb-link {% if p == '/sst/treinamentos/' %}active{% endif %}" href="/sst/treinamentos/"><span class="sb-icon">🎓</span><span>Treinamentos NR</span></a>
+<details class="sb-group" data-sst-group data-sst-group-key="prevencao-saude">
+  <summary class="sb-group-summary">
+    <span class="sb-label">Prevenção e Saúde</span>
+  </summary>
+  <div class="sb-group-body">
+    <a class="sb-link {% if p == '/sst/riscos/' %}active{% endif %}" href="/sst/riscos/"><span class="sb-icon">🔴</span><span>Riscos e PGR</span></a>
+    <a class="sb-link {% if p == '/sst/epis/' %}active{% endif %}" href="/sst/epis/" data-sst-severity="attention"><span class="sb-icon">🦺</span><span>EPI e EPC</span><span class="sb-badge" data-sst-badge="epis_sem_entrega"></span></a>
+    <a class="sb-link {% if p == '/sst/treinamentos/' %}active{% endif %}" href="/sst/treinamentos/" data-sst-severity="attention"><span class="sb-icon">🎓</span><span>Treinamentos NR</span><span class="sb-badge" data-sst-badge="treinamentos_vencidos"></span></a>
+    <a class="sb-link {% if p == '/sst/saude-comunicacao/' %}active{% endif %}" href="/sst/saude-comunicacao/"><span class="sb-icon">💚</span><span>Saúde & Comunicação</span></a>
+    <a class="sb-link {% if p == '/sst/bem-estar/' %}active{% endif %}" href="/sst/bem-estar/"><span class="sb-icon">❤️</span><span>Bem-estar da Equipe</span></a>
+    <a class="sb-link {% if p == '/sst/psicossocial/' %}active{% endif %}" href="/sst/psicossocial/" data-sst-severity="attention"><span class="sb-icon">🧠</span><span>Psicossocial NR-01</span><span class="sb-badge" data-sst-badge="psicossocial_ativas"></span></a>
+    <a class="sb-link {% if '/sst/comunicacao/' in p %}active{% endif %}" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação SST</span></a>
+  </div>
+</details>
 
-{# ── Saúde & Comunicação ──────────────────────────────────────── #}
-<div class="sb-label">Saúde & Comunicação</div>
-<a class="sb-link {% if p == '/sst/saude-comunicacao/' %}active{% endif %}" href="/sst/saude-comunicacao/"><span class="sb-icon">💚</span><span>Saúde & Comunicação</span></a>
-<a class="sb-link {% if p == '/sst/bem-estar/' %}active{% endif %}" href="/sst/bem-estar/"><span class="sb-icon">❤️</span><span>Bem-estar da Equipe</span></a>
-<a class="sb-link {% if p == '/sst/psicossocial/' %}active{% endif %}" href="/sst/psicossocial/"><span class="sb-icon">🧠</span><span>Psicossocial NR-01</span></a>
-<a class="sb-link {% if '/sst/comunicacao/' in p %}active{% endif %}" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação SST</span></a>
+<details class="sb-group" data-sst-group data-sst-group-key="governanca-gestao">
+  <summary class="sb-group-summary">
+    <span class="sb-label">Governança e Gestão</span>
+  </summary>
+  <div class="sb-group-body">
+    <a class="sb-link {% if p == '/sst/documentos/' %}active{% endif %}" href="/sst/documentos/"><span class="sb-icon">📁</span><span>PGR · PCMSO · LTCAT</span></a>
+    <a class="sb-link {% if p == '/sst/normas/' %}active{% endif %}" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
+    <a class="sb-link {% if p == '/sst/conformidade/' %}active{% endif %}" href="/sst/conformidade/"><span class="sb-icon">🛡️</span><span>Conformidade</span><span class="sb-badge" data-sst-badge="conformidade_indice" data-sst-format="pct"></span></a>
+    <a class="sb-link {% if p == '/sst/pgr/' %}active{% endif %}" href="/sst/pgr/"><span class="sb-icon">📄</span><span>PGR / PCMSO</span></a>
+    <a class="sb-link {% if p == '/sst/cipa/' %}active{% endif %}" href="/sst/cipa/"><span class="sb-icon">🛡️</span><span>CIPA — NR-5</span></a>
+    <a class="sb-link {% if p == '/sst/biometria/' %}active{% endif %}" href="/sst/biometria/"><span class="sb-icon">👁️</span><span>Biometria EPI</span></a>
+    <a class="sb-link {% if p == '/sst/laudos/' %}active{% endif %}" href="/sst/laudos/"><span class="sb-icon">🩺</span><span>Laudos Técnicos</span><span class="sb-badge" data-sst-badge="laudos_pendentes"></span></a>
+    <a class="sb-link {% if p == '/sst/laboratorios/' %}active{% endif %}" href="/sst/laboratorios/"><span class="sb-icon">🧪</span><span>Laboratórios</span><span class="sb-badge" data-sst-badge="laboratorio_alertas"></span></a>
+    <a class="sb-link {% if p == '/sst/rede-credenciada/' %}active{% endif %}" href="/sst/rede-credenciada/"><span class="sb-icon">🏥</span><span>Rede Credenciada</span></a>
+    {% if mostrar_aba_gerencia %}
+    <a class="sb-link {% if '/gerencia/' in p %}active{% endif %}" href="/gerencia/"><span class="sb-icon">🧭</span><span>Gerência Executiva</span></a>
+    {% endif %}
+    <a class="sb-link {% if p == '/sst/relatorios/' %}active{% endif %}" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
+  </div>
+</details>
 
-{# ── Documentação & Governança ────────────────────────────────── #}
-<div class="sb-label">Documentação</div>
-<a class="sb-link {% if p == '/sst/documentos/' %}active{% endif %}" href="/sst/documentos/"><span class="sb-icon">📁</span><span>PGR · PCMSO · LTCAT</span></a>
-<a class="sb-link {% if p == '/sst/normas/' %}active{% endif %}" href="/sst/normas/"><span class="sb-icon">📚</span><span>Normas NR</span></a>
-<a class="sb-link {% if p == '/sst/conformidade/' %}active{% endif %}" href="/sst/conformidade/"><span class="sb-icon">🛡️</span><span>Conformidade</span></a>
-
-{# ── Módulos Avançados ─────────────────────────────────────────── #}
-<div class="sb-label">Módulos Avançados</div>
-<a class="sb-link {% if p == '/sst/pgr/' %}active{% endif %}" href="/sst/pgr/"><span class="sb-icon">📄</span><span>PGR / PCMSO</span></a>
-<a class="sb-link {% if p == '/sst/cipa/' %}active{% endif %}" href="/sst/cipa/"><span class="sb-icon">🛡️</span><span>CIPA — NR-5</span></a>
-<a class="sb-link {% if p == '/sst/biometria/' %}active{% endif %}" href="/sst/biometria/"><span class="sb-icon">👁️</span><span>Biometria EPI</span></a>
-<a class="sb-link {% if p == '/sst/ppp/' %}active{% endif %}" href="/sst/ppp/"><span class="sb-icon">🧾</span><span>PPP</span></a>
-<a class="sb-link {% if p == '/sst/laudos/' %}active{% endif %}" href="/sst/laudos/"><span class="sb-icon">🩺</span><span>Laudos Técnicos</span></a>
-<a class="sb-link {% if p == '/sst/fap/' %}active{% endif %}" href="/sst/fap/"><span class="sb-icon">📉</span><span>Gestão FAP</span></a>
-<a class="sb-link {% if p == '/sst/laboratorios/' %}active{% endif %}" href="/sst/laboratorios/"><span class="sb-icon">🧪</span><span>Laboratórios</span></a>
-<a class="sb-link {% if p == '/sst/rede-credenciada/' %}active{% endif %}" href="/sst/rede-credenciada/"><span class="sb-icon">🏥</span><span>Rede Credenciada</span></a>
-
-{# ── Conta & Plataforma ───────────────────────────────────────── #}
-<div class="sb-label">Conta</div>
-<a class="sb-link {% if p == '/sst/configuracoes/' %}active{% endif %}" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Config. SST</span></a>
-{% if mostrar_aba_gerencia %}
-<a class="sb-link {% if '/gerencia/' in p %}active{% endif %}" href="/gerencia/"><span class="sb-icon">🧭</span><span>Gerência Executiva</span></a>
-{% endif %}
-{% if mostrar_link_rh %}
-<a class="sb-link {% if '/rh/' in p or '/usuarios/' in p %}active{% endif %}" href="/rh/"><span class="sb-icon">👤</span><span>Portal RH</span></a>
-{% endif %}
-{% if mostrar_link_ti %}
-<a class="sb-link {% if '/ti/' in p or '/gestao/plataforma/' in p %}active{% endif %}" href="/ti/"><span class="sb-icon">🖥️</span><span>Plataforma TI</span></a>
-{% endif %}
-<a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
+<details class="sb-group" data-sst-group data-sst-group-key="conta-plataforma">
+  <summary class="sb-group-summary">
+    <span class="sb-label">Conta e Plataforma</span>
+  </summary>
+  <div class="sb-group-body">
+    <a class="sb-link {% if p == '/sst/configuracoes/' %}active{% endif %}" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Config. SST</span></a>
+    {% if mostrar_link_rh %}
+    <a class="sb-link {% if '/rh/' in p or '/usuarios/' in p %}active{% endif %}" href="/rh/"><span class="sb-icon">👤</span><span>Portal RH</span></a>
+    {% endif %}
+    {% if mostrar_link_ti %}
+    <a class="sb-link {% if '/ti/' in p or '/gestao/plataforma/' in p %}active{% endif %}" href="/ti/"><span class="sb-icon">🖥️</span><span>Plataforma TI</span></a>
+    {% endif %}
+    <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>
+  </div>
+</details>
 {% endwith %}
