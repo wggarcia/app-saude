@@ -30,6 +30,7 @@ def _paginar(request, qs, limit_default=100, limit_max=500):
 from django.db.models import Count
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from .access_control import get_setor, principal_pode_operacao_setorial
