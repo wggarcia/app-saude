@@ -15,6 +15,7 @@ Endpoints:
 """
 from datetime import date, timedelta
 from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 import json
 
 
@@ -84,6 +85,7 @@ def _laudo_dict(laudo):
     }
 
 
+@csrf_exempt
 def api_laudos_lista(request):
     empresa = _empresa(request)
     if not empresa:
@@ -118,6 +120,7 @@ def api_laudos_lista(request):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@csrf_exempt
 def api_laudos_criar(request):
     empresa = _empresa(request)
     if not empresa:
@@ -165,6 +168,7 @@ def api_laudos_criar(request):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@csrf_exempt
 def api_laudo_detalhe(request, laudo_id):
     empresa = _empresa(request)
     if not empresa:
@@ -186,6 +190,7 @@ def api_laudo_detalhe(request, laudo_id):
         return JsonResponse({"erro": str(e)}, status=404)
 
 
+@csrf_exempt
 def api_laudo_assinar(request, laudo_id):
     empresa = _empresa(request)
     if not empresa:
@@ -205,6 +210,7 @@ def api_laudo_assinar(request, laudo_id):
         return JsonResponse({"erro": str(e)}, status=404)
 
 
+@csrf_exempt
 def api_laudo_pdf(request, laudo_id):
     empresa = _empresa(request)
     if not empresa:
@@ -335,6 +341,7 @@ def api_laudo_pdf(request, laudo_id):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@csrf_exempt
 def api_laudos_kpis(request):
     """Painel de validade dos laudos — alertas de vencimento."""
     empresa = _empresa(request)

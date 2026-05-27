@@ -13,6 +13,7 @@ Endpoints:
 from datetime import date, timedelta
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count, Q
 import json
 
@@ -141,10 +142,14 @@ def _historico_cargos(funcionario, empresa):
 # VIEWS
 # ──────────────────────────────────────────────
 
+@csrf_exempt
 def api_ppp_lista(request):
     empresa = _empresa(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=403)
+
+    if request.method == "POST":
+        return api_ppp_criar(request)
 
     try:
         from .models import PPPFuncionario
@@ -166,6 +171,7 @@ def api_ppp_lista(request):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@csrf_exempt
 def api_ppp_criar(request):
     """Gera PPP automaticamente a partir dos dados existentes (ASO, S2240, exames)."""
     empresa = _empresa(request)
@@ -213,6 +219,7 @@ def api_ppp_criar(request):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@csrf_exempt
 def api_ppp_detalhe(request, ppp_id):
     empresa = _empresa(request)
     if not empresa:
@@ -232,6 +239,7 @@ def api_ppp_detalhe(request, ppp_id):
         return JsonResponse({"erro": str(e)}, status=404)
 
 
+@csrf_exempt
 def api_ppp_finalizar(request, ppp_id):
     """Marca PPP como finalizado — pronto para entrega ao trabalhador."""
     empresa = _empresa(request)
@@ -252,6 +260,7 @@ def api_ppp_finalizar(request, ppp_id):
         return JsonResponse({"erro": str(e)}, status=404)
 
 
+@csrf_exempt
 def api_ppp_pdf(request, ppp_id):
     """Gera PDF do PPP conforme layout da IN INSS 128/2022."""
     empresa = _empresa(request)
@@ -411,6 +420,7 @@ def api_ppp_pdf(request, ppp_id):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@csrf_exempt
 def api_ppp_kpis(request):
     """Painel de cobertura PPP da empresa."""
     empresa = _empresa(request)
