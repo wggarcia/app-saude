@@ -228,11 +228,11 @@ tr:hover td{background:rgba(255,107,157,.03)}
   <details class="nav-group" data-nav-group data-group-key="plano-dedicados">
     <summary><div class="nav-section">Módulos Dedicados</div></summary>
     <div class="nav-group-body">
-      <a class="nav-link" href="/plano-saude/corretores/" style="text-decoration:none"><span>🤝</span> Corretoras</a>
-      <a class="nav-link" href="/plano-saude/rede/" style="text-decoration:none"><span>🏥</span> Rede Credenciada</a>
-      <a class="nav-link" href="/plano-saude/ans/" style="text-decoration:none"><span>📋</span> ANS / DIOPS / SIB</a>
-      <a class="nav-link" href="/plano-saude/ia/" style="text-decoration:none"><span>🤖</span> IA — Autorização</a>
-      <a class="nav-link" href="/plano-saude/portal-admin/" style="text-decoration:none"><span>👤</span> Portal Beneficiário</a>
+      <button class="nav-link" onclick="openModulePanel('/plano-saude/corretores/','🤝 Corretoras')"><span>🤝</span> Corretoras</button>
+      <button class="nav-link" onclick="openModulePanel('/plano-saude/rede/','🏥 Rede Credenciada')"><span>🏥</span> Rede Credenciada</button>
+      <button class="nav-link" onclick="openModulePanel('/plano-saude/ans/','📋 ANS / DIOPS / SIB')"><span>📋</span> ANS / DIOPS / SIB</button>
+      <button class="nav-link" onclick="openModulePanel('/plano-saude/ia/','🤖 IA — Autorização')"><span>🤖</span> IA — Autorização</button>
+      <button class="nav-link" onclick="openModulePanel('/plano-saude/portal-admin/','👤 Portal Beneficiário')"><span>👤</span> Portal Beneficiário</button>
     </div>
   </details>
 
@@ -4013,6 +4013,59 @@ function showToastPS(msg, tipo='ok') {
     });
   });
 }());
+</script>
+
+<!-- ── Module Side Panel ───────────────────────────────────────── -->
+<style>
+.mod-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s ease}
+.mod-backdrop.open{opacity:1;pointer-events:all}
+.mod-panel{position:fixed;top:0;right:0;bottom:0;left:220px;z-index:301;background:#07101a;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.61,.36,1);box-shadow:-8px 0 48px rgba(0,0,0,.6)}
+.mod-panel.open{transform:translateX(0)}
+.mod-header{display:flex;align-items:center;gap:12px;height:52px;padding:0 18px;border-bottom:1px solid rgba(255,107,157,.14);flex-shrink:0;background:rgba(4,12,20,.95);backdrop-filter:blur(14px)}
+.mod-header-logo{font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#FF6B9D}
+.mod-header-sep{width:1px;height:18px;background:rgba(255,107,157,.15)}
+.mod-header-title{font-size:.85rem;font-weight:800;color:#e8f4f1;flex:1}
+.mod-btn-back{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;border:1px solid rgba(255,107,157,.2);background:transparent;color:#7fa2b1;font-size:.74rem;font-weight:700;cursor:pointer;transition:all .15s}
+.mod-btn-back:hover{color:#e8f4f1;border-color:rgba(255,107,157,.4);background:rgba(255,107,157,.06)}
+.mod-btn-close{width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,107,157,.15);background:transparent;color:#7fa2b1;font-size:1rem;cursor:pointer;display:grid;place-items:center;transition:all .15s;flex-shrink:0}
+.mod-btn-close:hover{background:rgba(248,113,113,.12);color:#f87171;border-color:rgba(248,113,113,.3)}
+.mod-panel iframe{flex:1;border:none;width:100%;background:#07101a}
+</style>
+<div class="mod-backdrop" id="modBackdrop"></div>
+<aside class="mod-panel" id="modPanel">
+  <div class="mod-header">
+    <span class="mod-header-logo">SolusCRT</span>
+    <span class="mod-header-sep"></span>
+    <span class="mod-header-title" id="modPanelTitle">Módulo</span>
+    <button class="mod-btn-back" onclick="closeModulePanel()">← Voltar à Gestão</button>
+    <button class="mod-btn-close" onclick="closeModulePanel()" title="Fechar (Esc)">✕</button>
+  </div>
+  <iframe id="modPanelIframe" src="" title="Módulo" allow="same-origin"></iframe>
+</aside>
+<script>
+function openModulePanel(url, title) {
+  var panel = document.getElementById('modPanel');
+  var backdrop = document.getElementById('modBackdrop');
+  var iframe = document.getElementById('modPanelIframe');
+  var titleEl = document.getElementById('modPanelTitle');
+  if (!panel) return;
+  titleEl.textContent = title || 'Módulo';
+  iframe.src = url;
+  panel.classList.add('open');
+  backdrop.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModulePanel() {
+  var panel = document.getElementById('modPanel');
+  var backdrop = document.getElementById('modBackdrop');
+  var iframe = document.getElementById('modPanelIframe');
+  if (!panel) return;
+  panel.classList.remove('open');
+  backdrop.classList.remove('open');
+  document.body.style.overflow = '';
+  setTimeout(function(){ if (iframe) iframe.src = ''; }, 320);
+}
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModulePanel(); });
 </script>
 </body>
 </html>

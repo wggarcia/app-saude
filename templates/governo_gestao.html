@@ -138,13 +138,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <details class="nav-group" data-nav-group data-group-key="governo-clinicos">
     <summary><div class="nav-section">Módulos Clínicos SUS</div></summary>
     <div class="nav-group-body">
-      <a class="nav-link" href="/governo/pec/" style="text-decoration:none"><span>📋</span> Prontuário Eletrônico (PEC)</a>
-      <a class="nav-link" href="/governo/esus/" style="text-decoration:none"><span>🔗</span> e-SUS / RNDS</a>
-      <a class="nav-link" href="/governo/faturamento-sus/" style="text-decoration:none"><span>💰</span> Faturamento SUS</a>
-      <a class="nav-link" href="/governo/farmacia-basica/" style="text-decoration:none"><span>💊</span> Farmácia Básica UBS</a>
-      <a class="nav-link" href="/governo/regulacao/" style="text-decoration:none"><span>🏨</span> Regulação SISREG</a>
-      <a class="nav-link" href="/governo/teleconsulta/" style="text-decoration:none"><span>📹</span> Teleconsulta</a>
-      <a class="nav-link" href="/governo/rag/" style="text-decoration:none"><span>📄</span> RAG / RDQA / PAS</a>
+      <button class="nav-link" onclick="openModulePanel('/governo/pec/','📋 Prontuário Eletrônico (PEC)')"><span>📋</span> Prontuário Eletrônico (PEC)</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/esus/','🔗 e-SUS / RNDS')"><span>🔗</span> e-SUS / RNDS</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/faturamento-sus/','💰 Faturamento SUS')"><span>💰</span> Faturamento SUS</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/farmacia-basica/','💊 Farmácia Básica UBS')"><span>💊</span> Farmácia Básica UBS</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/regulacao/','🏨 Regulação SISREG')"><span>🏨</span> Regulação SISREG</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/teleconsulta/','📹 Teleconsulta')"><span>📹</span> Teleconsulta</button>
+      <button class="nav-link" onclick="openModulePanel('/governo/rag/','📄 RAG / RDQA / PAS')"><span>📄</span> RAG / RDQA / PAS</button>
     </div>
   </details>
 
@@ -2219,6 +2219,59 @@ function _t(msg, tipo) {
     if (!document.hidden) syncTab();
   });
 }());
+</script>
+
+<!-- ── Module Side Panel ───────────────────────────────────────── -->
+<style>
+.mod-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s ease}
+.mod-backdrop.open{opacity:1;pointer-events:all}
+.mod-panel{position:fixed;top:0;right:0;bottom:0;left:220px;z-index:301;background:#061019;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.61,.36,1);box-shadow:-8px 0 48px rgba(0,0,0,.6)}
+.mod-panel.open{transform:translateX(0)}
+.mod-header{display:flex;align-items:center;gap:12px;height:52px;padding:0 18px;border-bottom:1px solid rgba(0,229,176,.14);flex-shrink:0;background:rgba(4,12,20,.95);backdrop-filter:blur(14px)}
+.mod-header-logo{font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#00e5b0}
+.mod-header-sep{width:1px;height:18px;background:rgba(0,229,176,.15)}
+.mod-header-title{font-size:.85rem;font-weight:800;color:#e8f4f1;flex:1}
+.mod-btn-back{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;border:1px solid rgba(0,229,176,.2);background:transparent;color:#7fa2b1;font-size:.74rem;font-weight:700;cursor:pointer;transition:all .15s}
+.mod-btn-back:hover{color:#e8f4f1;border-color:rgba(0,229,176,.4);background:rgba(0,229,176,.06)}
+.mod-btn-close{width:32px;height:32px;border-radius:8px;border:1px solid rgba(0,229,176,.15);background:transparent;color:#7fa2b1;font-size:1rem;cursor:pointer;display:grid;place-items:center;transition:all .15s;flex-shrink:0}
+.mod-btn-close:hover{background:rgba(248,113,113,.12);color:#f87171;border-color:rgba(248,113,113,.3)}
+.mod-panel iframe{flex:1;border:none;width:100%;background:#061019}
+</style>
+<div class="mod-backdrop" id="modBackdrop"></div>
+<aside class="mod-panel" id="modPanel">
+  <div class="mod-header">
+    <span class="mod-header-logo">SolusCRT</span>
+    <span class="mod-header-sep"></span>
+    <span class="mod-header-title" id="modPanelTitle">Módulo</span>
+    <button class="mod-btn-back" onclick="closeModulePanel()">← Voltar à Gestão</button>
+    <button class="mod-btn-close" onclick="closeModulePanel()" title="Fechar (Esc)">✕</button>
+  </div>
+  <iframe id="modPanelIframe" src="" title="Módulo" allow="same-origin"></iframe>
+</aside>
+<script>
+function openModulePanel(url, title) {
+  var panel = document.getElementById('modPanel');
+  var backdrop = document.getElementById('modBackdrop');
+  var iframe = document.getElementById('modPanelIframe');
+  var titleEl = document.getElementById('modPanelTitle');
+  if (!panel) return;
+  titleEl.textContent = title || 'Módulo';
+  iframe.src = url;
+  panel.classList.add('open');
+  backdrop.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModulePanel() {
+  var panel = document.getElementById('modPanel');
+  var backdrop = document.getElementById('modBackdrop');
+  var iframe = document.getElementById('modPanelIframe');
+  if (!panel) return;
+  panel.classList.remove('open');
+  backdrop.classList.remove('open');
+  document.body.style.overflow = '';
+  setTimeout(function(){ if (iframe) iframe.src = ''; }, 320);
+}
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModulePanel(); });
 </script>
 </body>
 </html>
