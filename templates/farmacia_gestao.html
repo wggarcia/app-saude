@@ -1649,6 +1649,11 @@ function setTab(tab) {
   else if (tab === 'rede') carregarRede();
   else if (tab === 'ia') carregarIA();
 }
+var _setTabOrig = setTab;
+setTab = function(tab) {
+  _setTabOrig(tab);
+  openOpsPanel(tab);
+};
 
 // ── Lotes ─────────────────────────────────────────────────────
 async function carregarLotes() {
@@ -2241,11 +2246,78 @@ function _t(msg, tipo) {
 }());
 </script>
 
+<!-- ── Ops Panel (tab content slide-in) ──────────────────── -->
+<style>
+.ops-panel{position:fixed;top:0;right:0;bottom:0;left:220px;z-index:298;background:#041018;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.61,.36,1);box-shadow:-8px 0 48px rgba(0,0,0,.6)}
+.ops-panel.open{transform:translateX(0)}
+.ops-ph{display:flex;align-items:center;gap:10px;height:52px;padding:0 18px;border-bottom:1px solid rgba(39,211,190,.16);flex-shrink:0;background:rgba(4,12,20,.96);backdrop-filter:blur(14px)}
+.ops-ph-logo{font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#27D3BE}
+.ops-ph-sep{width:1px;height:18px;background:rgba(39,211,190,.16)}
+.ops-ph-title{font-size:.85rem;font-weight:800;color:#e8f4f1;flex:1}
+.ops-back{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;border:1px solid rgba(39,211,190,.16);background:transparent;color:#7fa2b1;font-size:.74rem;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
+.ops-back:hover{color:#e8f4f1;border-color:#27D3BE;background:rgba(39,211,190,.06)}
+.ops-close{width:32px;height:32px;border-radius:8px;border:1px solid rgba(39,211,190,.16);background:transparent;color:#7fa2b1;cursor:pointer;display:grid;place-items:center;font-size:.9rem;transition:all .15s;flex-shrink:0}
+.ops-close:hover{background:rgba(248,113,113,.12);color:#f87171;border-color:rgba(248,113,113,.3)}
+.ops-body{flex:1;overflow-y:auto;padding:0 24px 32px}
+.ops-body .tabs{position:sticky;top:0;z-index:10;padding:12px 0 8px;background:#041018}
+</style>
+<div class="ops-panel" id="opsPanel">
+  <div class="ops-ph">
+    <span class="ops-ph-logo">SolusCRT</span>
+    <span class="ops-ph-sep"></span>
+    <span class="ops-ph-title" id="opsPanelTitle">Operacional</span>
+    <button class="ops-back" onclick="closeOpsPanel()">← Voltar à Gestão</button>
+    <button class="ops-close" onclick="closeOpsPanel()" title="Fechar (Esc)">✕</button>
+  </div>
+  <div class="ops-body" id="opsPanelBody"></div>
+</div>
+<script>
+(function(){
+  var TAB_LABELS = {};
+  // Build tab labels from existing tab-btn/tab-btn-side elements
+  document.querySelectorAll('.tab-btn[onclick], .tab-btn-side[onclick]').forEach(function(b){
+    var m = (b.getAttribute('onclick')||'').match(/setTab\(['"](\w+)['"]\)/);
+    if(m) TAB_LABELS[m[1]] = b.textContent.trim();
+  });
+
+  function openOpsPanel(tab) {
+    var panel = document.getElementById('opsPanel');
+    if (!panel) return;
+    var titleEl = document.getElementById('opsPanelTitle');
+    if (titleEl && tab) titleEl.textContent = TAB_LABELS[tab] || tab;
+    panel.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeOpsPanel() {
+    var panel = document.getElementById('opsPanel');
+    if (!panel) return;
+    panel.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  window.openOpsPanel = openOpsPanel;
+  window.closeOpsPanel = closeOpsPanel;
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var body = document.getElementById('opsPanelBody');
+    if (!body) return;
+    // Move .tabs bar (hospital has horizontal tab bar)
+    var tabsBar = document.querySelector('main .tabs, .main .tabs');
+    if (tabsBar) body.appendChild(tabsBar);
+    // Move all tab-panel divs into ops-panel
+    document.querySelectorAll('.tab-panel').forEach(function(el){ body.appendChild(el); });
+  });
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') { closeOpsPanel(); if(window.closeModulePanel) closeModulePanel(); }
+  });
+}());
+</script>
+
 <!-- ── Module Side Panel ───────────────────────────────────────── -->
 <style>
 .mod-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s ease}
 .mod-backdrop.open{opacity:1;pointer-events:all}
-.mod-panel{position:fixed;top:0;right:0;bottom:0;left:220px;z-index:301;background:#071c28;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.61,.36,1);box-shadow:-8px 0 48px rgba(0,0,0,.6)}
+.mod-panel{position:fixed;top:0;right:0;bottom:0;left:0;z-index:301;background:#071c28;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,.61,.36,1);box-shadow:-8px 0 48px rgba(0,0,0,.6)}
 .mod-panel.open{transform:translateX(0)}
 .mod-header{display:flex;align-items:center;gap:12px;height:52px;padding:0 18px;border-bottom:1px solid rgba(39,211,190,.14);flex-shrink:0;background:rgba(4,16,24,.95);backdrop-filter:blur(14px)}
 .mod-header-logo{font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#27D3BE}
