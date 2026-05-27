@@ -148,7 +148,7 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
     <div class="modal-sub">Preencha os dados do acidente. A CAT deve ser registrada até o 1º dia útil após o ocorrido.</div>
     <div class="mf"><label>Funcionário Acidentado</label><input id="c-func" type="text" list="func-list" oninput="selecionarFuncionarioCat()" placeholder="Ex: Maria Santos"><datalist id="func-list"></datalist><input id="c-func-id" type="hidden"></div>
     <div class="mf-row">
-      <div class="mf"><label>Tipo de Acidente</label><select id="c-tipo"><option value="tipico">Típico</option><option value="trajeto">De Trajeto</option><option value="doenca">Doença Ocupacional</option></select></div>
+      <div class="mf"><label>Tipo de Acidente</label><select id="c-tipo" onchange="toggleCidDoenca()"><option value="tipico">Típico</option><option value="trajeto">De Trajeto</option><option value="doenca">Doença Ocupacional</option></select></div>
       <div class="mf"><label>Gravidade</label><select id="c-grav"><option value="leve">Leve</option><option value="moderado">Moderado</option><option value="grave">Grave</option><option value="fatal">Fatal</option></select></div>
     </div>
     <div class="mf-row">
@@ -208,9 +208,14 @@ function renderCidSelect(){
 }
 
 function toggleCidDoenca(){
+  // CID-10 is required for all CAT types (eSocial S-2210); keep field always enabled.
+  // Show the occupation-disease hint when type is "doença".
   const isDoenca=document.getElementById("c-tipo").value==="doenca";
   const cid=document.getElementById("c-cid");
-  cid.disabled=!isDoenca&&_cidsSst.length>0;
+  cid.disabled=false;
+  cid.placeholder=isDoenca
+    ?"Doença ocupacional — ex: M54.5, Z57.5, Dorsalgia"
+    :"CID da lesão — ex: S60, T14, Contusão de mão";
   if(!isDoenca)cid.value='';
 }
 

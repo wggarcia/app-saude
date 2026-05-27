@@ -7,6 +7,7 @@ from django.views.decorators.http import require_http_methods
 
 from .models import (
     ColaboradorAliasCorporativo,
+    FuncionarioSST,
     MensagemChat,
     SalaChat,
     SessaoVideo,
@@ -16,25 +17,46 @@ from .views_dashboard import _empresa_autenticada
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
-def _get_or_create_sala_direta(empresa, alias):
-    sala, _ = SalaChat.objects.get_or_create(
+def _resolve_nome_alias(alias_publico):
+    """Resolve 'sst-{id}' alias codes to real FuncionarioSST names."""
+    if alias_publico and alias_publico.startswith("sst-"):
+        try:
+            func = FuncionarioSST.objects.filter(id=int(alias_publico[4:])).first()
+            if func:
+                return func.nome
+        except (ValueError, Exception):
+            pass
+    return alias_publico
+
+
+def _get_or_create_sala_direta(empresa, alias, nome_display=None):
+    nome = nome_display or _resolve_nome_alias(alias.alias_publico)
+    sala, created = SalaChat.objects.get_or_create(
         empresa=empresa,
         alias=alias,
-        defaults={"tipo": SalaChat.TIPO_DIRETO, "nome": alias.alias_publico},
+        defaults={"tipo": SalaChat.TIPO_DIRETO, "nome": nome},
     )
+    # Update name if sala was created with the raw alias code
+    if not created and sala.nome == alias.alias_publico and nome != alias.alias_publico:
+        sala.nome = nome
+        sala.save(update_fields=["nome"])
     return sala
 
 
 def _sala_json(sala):
     ultima = sala.mensagens.last()
     nao_lidas = sala.mensagens.filter(origem=MensagemChat.ORIGEM_COLABORADOR, lida=False).count()
+    nome = sala.nome or (sala.alias.alias_publico if sala.alias else "Grupo")
+    # Resolve sst-{id} alias codes to real employee names for display
+    if sala.alias:
+        nome = _resolve_nome_alias(sala.alias.alias_publico) if nome == sala.alias.alias_publico else nome
     return {
         "id": sala.id,
         "tipo": sala.tipo,
-        "nome": sala.nome or (sala.alias.alias_publico if sala.alias else "Grupo"),
+        "nome": nome,
         "alias_codigo": sala.alias.alias_publico if sala.alias else None,
         "ultima_mensagem": ultima.texto[:80] if ultima else None,
-        "ultima_mensagem_em": ultima.criado_em.isoformat() if ultima else None,
+        "ultima_atividade": ultima.criado_em.isoformat() if ultima else None,
         "nao_lidas": nao_lidas,
     }
 
@@ -90,10 +112,31 @@ def api_listar_salas(request):
 
 
 def api_colaboradores_comunicacao(request):
-    """GET → lista de ColaboradorAliasCorporativo da empresa para o modal Nova Conversa"""
+    """GET → lista de funcionários SST (nomes reais) para o modal Nova Conversa"""
     empresa = _empresa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+
+    # Prefer FuncionarioSST so the manager sees real employee names
+    funcionarios = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).order_by("nome")
+    if funcionarios.exists():
+        colaboradores = []
+        for func in funcionarios:
+            # Stable alias code derived from the SST employee ID
+            alias_code = f"sst-{func.id}"
+            alias, _ = ColaboradorAliasCorporativo.objects.get_or_create(
+                empresa=empresa,
+                alias_publico=alias_code,
+            )
+            colaboradores.append({
+                "id": alias.id,
+                "alias_codigo": alias_code,
+                "nome": func.nome,
+                "cargo": func.cargo or "",
+            })
+        return JsonResponse({"colaboradores": colaboradores})
+
+    # Fallback: use existing anonymous aliases when no SST employees exist
     aliases = ColaboradorAliasCorporativo.objects.filter(
         empresa=empresa, ativo=True
     ).select_related("cargo")

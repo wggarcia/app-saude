@@ -553,7 +553,7 @@ function renderCidSelectAfastamento(){
 function toggleCidAfastamento(){
   const isDoenca=document.getElementById('novoMotivo').value==='doenca_ocupacional';
   const sel=document.getElementById('novoCid');
-  sel.disabled=!isDoenca||!cidsSst.length;
+  sel.disabled=!isDoenca;  // Enabled for doença ocupacional regardless of list loading state
   if(!isDoenca)sel.value='';
 }
 async function carregarCidsSst(){
@@ -567,8 +567,8 @@ async function carregarCidsSst(){
     toggleCidAfastamento();
   }catch{
     const sel=document.getElementById('novoCid');
-    sel.innerHTML='<option value="">Não foi possível carregar a lista CID SST</option>';
-    sel.disabled=true;
+    sel.innerHTML='<option value="">Erro ao carregar lista CID — verifique conexão</option>';
+    toggleCidAfastamento();  // Still control enabled state based on type selection
   }
 }
 document.getElementById('novoMotivo').addEventListener('change',toggleCidAfastamento);

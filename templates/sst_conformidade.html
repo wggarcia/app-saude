@@ -99,7 +99,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="gauge-section">
       <div>
         <svg viewBox="0 0 200 110" width="200" height="110">
-          <path fill="none" stroke="rgba(255,255,255,.08)" stroke-width="16" stroke-linecap="round" d="M 20 100 A 80 80 0 0 1 180 100"/>
+          <path fill="none" stroke="rgba(255,255,255,.08)" stroke-width="16" stroke-linecap="round" d="M 20 100 A 80 80 0 0 0 180 100"/>
           <path fill="none" stroke="url(#gaugeGrad)" stroke-width="16" stroke-linecap="round" id="gaugePath" d="M 20 100 A 80 80 0 0 1 20 100"/>
           <defs>
             <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -204,7 +204,7 @@ async function carregar() {
     document.getElementById('kCrit').textContent = '0';
     document.getElementById('kIdx').textContent = '0%';
     document.getElementById('gaugeText').textContent = '0%';
-    document.getElementById('gaugePath').setAttribute('d', 'M 20 100 A 80 80 0 0 1 20.01 100');
+    document.getElementById('gaugePath').setAttribute('d', 'M 20 100 A 80 80 0 0 0 20.001 100');
     document.getElementById('tbody').innerHTML = '<tr><td colspan="10" class="empty">Não foi possível carregar a conformidade agora.</td></tr>';
     document.getElementById('countLabel').textContent = '0 funcionário(s)';
     mostrarErro(error.message || 'Falha ao carregar a conformidade.');
@@ -220,23 +220,23 @@ async function carregar() {
   document.getElementById('kCrit').textContent = res.criticos ?? '—';
   document.getElementById('kIdx').textContent = (res.indice_conformidade ?? '—') + '%';
 
-  // Gauge
+  // Gauge — upper semicircle (sweep=0, counterclockwise/upward)
   const pctRaw = String(res.indice_conformidade ?? 0).replace(',', '.');
   const pctParsed = Number.isFinite(parseFloat(pctRaw)) ? parseFloat(pctRaw) : 0;
   const pct = Math.max(0, Math.min(100, pctParsed));
   document.getElementById('gaugeText').textContent = pct + '%';
   const r80 = 80, cx = 100, cy = 100;
-  const startAngle = Math.PI;
-  const endAngle = Math.PI + (Math.PI * pct / 100);
-  const x1 = cx + r80 * Math.cos(startAngle);
-  const y1 = cy + r80 * Math.sin(startAngle);
-  const x2 = cx + r80 * Math.cos(endAngle);
-  const y2 = cy + r80 * Math.sin(endAngle);
-  const large = pct > 50 ? 1 : 0;
+  // Arc goes left→right through the TOP (counterclockwise in SVG, sweep=0)
+  // Start: left point (20, 100); angle decreases from π to 0 as pct goes 0→100
+  const x1 = cx - r80;  // = 20
+  const y1 = cy;         // = 100
+  const angle = Math.PI * (1 - pct / 100);
+  const x2 = cx + r80 * Math.cos(angle);
+  const y2 = cy - r80 * Math.sin(angle);  // subtract: SVG y-axis is inverted vs. math
   document.getElementById('gaugePath').setAttribute('d',
     pct === 0
-      ? `M ${x1} ${y1} A ${r80} ${r80} 0 0 1 ${x1+0.01} ${y1}`
-      : `M ${x1} ${y1} A ${r80} ${r80} 0 ${large} 1 ${x2} ${y2}`
+      ? `M ${x1} ${y1} A ${r80} ${r80} 0 0 0 ${x1 + 0.001} ${y1}`
+      : `M ${x1} ${y1} A ${r80} ${r80} 0 0 0 ${x2.toFixed(3)} ${y2.toFixed(3)}`
   );
 
   // Setores únicos
