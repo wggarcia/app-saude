@@ -266,7 +266,7 @@ PACOTES_SAAS = {
     "governo_municipio_pequeno": {
         "label": "Governo Municipio Pequeno",
         "setor": "governo",
-        "descricao": "Saude publica municipal completa: PEC, e-SUS/RNDS, faturamento SUS, farmacia basica, regulacao, teleconsulta e RAG.",
+        "descricao": "Contratacao via licitacao publica. PEC, e-SUS/RNDS, faturamento SUS, farmacia basica, regulacao, teleconsulta e RAG. Proposta tecnica sob demanda.",
         "usuarios": 100,
         "dispositivos": 100,
         "mensal": 0.00,
@@ -279,7 +279,7 @@ PACOTES_SAAS = {
     "governo_municipio_medio": {
         "label": "Governo Municipio Medio",
         "setor": "governo",
-        "descricao": "Gestao municipal de saude com PEC integrado, faturamento SUS, regulacao assistencial e relatorios ANS/RDQA.",
+        "descricao": "Contratacao via licitacao publica. Gestao municipal de saude com PEC, faturamento SUS, regulacao assistencial e relatorios RDQA. Proposta tecnica sob demanda.",
         "usuarios": 250,
         "dispositivos": 250,
         "mensal": 0.00,
@@ -292,7 +292,7 @@ PACOTES_SAAS = {
     "governo_capital_regiao": {
         "label": "Governo Capital / Regiao Metropolitana",
         "setor": "governo",
-        "descricao": "Gestao multi-regional de saude publica com consolidacao de indicadores, sala de situacao e governanca orcamentaria.",
+        "descricao": "Contratacao via licitacao publica. Gestao multi-regional de saude publica com PEC, sala de situacao e governanca orcamentaria. Proposta tecnica sob demanda.",
         "usuarios": 500,
         "dispositivos": 500,
         "mensal": 0.00,
@@ -305,7 +305,7 @@ PACOTES_SAAS = {
     "governo_estado": {
         "label": "Governo Estadual",
         "setor": "governo",
-        "descricao": "Gestao estadual integrada de saude publica: PEC, e-SUS, faturamento SUS, regulacao e governanca por municipio.",
+        "descricao": "Contratacao via licitacao publica. Gestao estadual integrada: PEC, e-SUS/RNDS, faturamento SUS, regulacao e governanca por municipio. Proposta tecnica sob demanda.",
         "usuarios": 1000,
         "dispositivos": 1000,
         "mensal": 0.00,
