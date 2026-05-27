@@ -4116,16 +4116,7 @@ function showToastPS(msg, tipo='ok') {
 </aside>
 <script>
 function openModulePanel(url, title) {
-  var panel = document.getElementById('modPanel');
-  var backdrop = document.getElementById('modBackdrop');
-  var iframe = document.getElementById('modPanelIframe');
-  var titleEl = document.getElementById('modPanelTitle');
-  if (!panel) return;
-  titleEl.textContent = title || 'Módulo';
-  iframe.src = url;
-  panel.classList.add('open');
-  backdrop.classList.add('open');
-  document.body.style.overflow = 'hidden';
+  window.location.href = url;
 }
 function closeModulePanel() {
   var panel = document.getElementById('modPanel');
