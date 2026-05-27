@@ -492,7 +492,7 @@ from api.views_hospital_ops import (
     api_leitos_hospital, api_leito_status,
     api_pacientes_hospital, api_triagens_hospital,
     api_internacoes_hospital, api_internacao_status,
-    api_evolucoes_internacao, api_hospital_ops_kpis,
+    api_evolucoes_internacao, api_hospital_ops_kpis, api_hospital_contexto_integrado,
     api_hospital_pdf_internacoes, api_hospital_pdf_ficha_internacao,
 )
 from api.views_hospital_prontuario import (
@@ -1223,6 +1223,7 @@ urlpatterns = [
     path('api/hospital/prescricao', api_hospital_prescricao),
     # ── Hospital Operacional ─────────────────────────────────
     path('api/hospital/ops/kpis/', api_hospital_ops_kpis),
+    path('api/hospital/contexto-integrado/', api_hospital_contexto_integrado),
     path('api/hospital/departamentos/', api_departamentos_hospital),
     path('api/hospital/departamentos/<int:dep_id>/', api_departamento_hospital_detalhe),
     path('api/hospital/leitos/', api_leitos_hospital),

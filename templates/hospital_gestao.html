@@ -275,6 +275,9 @@ tr:hover td{background:rgba(255,255,255,.018)}
       <button class="nav-link" id="nav-prescricoes" onclick="setTab('prescricoes')">
         <div class="nav-link-inner"><span>💊</span><span>Prescrições</span></div>
       </button>
+      <button class="nav-link" id="nav-orquestracao" onclick="setTab('orquestracao')">
+        <div class="nav-link-inner"><span>🧠</span><span>Comando 360</span></div>
+      </button>
     </div>
   </details>
 
@@ -439,6 +442,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
         <button class="tab-btn" id="tabBtn-alta" onclick="setTab('alta')">📄 Alta Hospitalar</button>
         <button class="tab-btn" id="tabBtn-faturamento" onclick="setTab('faturamento')">💰 Faturamento</button>
         <button class="tab-btn" id="tabBtn-analytics" onclick="setTab('analytics')">📊 Analytics</button>
+        <button class="tab-btn" id="tabBtn-orquestracao" onclick="setTab('orquestracao')">🧠 Comando 360</button>
       </div>
 
       <!-- ══════ TAB: LEITOS ══════ -->
@@ -792,6 +796,41 @@ tr:hover td{background:rgba(255,255,255,.018)}
             <div class="card-header"><span class="card-title">🧪 Exames por Tipo</span></div>
             <div id="anaExamesTipo" style="font-size:13px"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- ══════ TAB: COMANDO 360 ══════ -->
+      <div class="tab-panel" id="tab-orquestracao">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <div class="kpi-card"><div class="kpi-val" id="orcParidade">—%</div><div class="kpi-lbl">🏁 Paridade Enterprise</div></div>
+          <div class="kpi-card"><div class="kpi-val danger" id="orcCriticos">—</div><div class="kpi-lbl">🚨 Prioridades Críticas</div></div>
+          <div class="kpi-card"><div class="kpi-val warn" id="orcGlosa">—%</div><div class="kpi-lbl">💸 Glosa TISS no mês</div></div>
+          <div class="kpi-card"><div class="kpi-val" id="orcPendExame">—</div><div class="kpi-lbl">🧪 Exames pendentes + sem laudo</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-bottom:16px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">🎯 Prioridades Automáticas (IA operacional)</span></div>
+            <div id="orcPrioridades" style="padding:10px 14px"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">⚡ Ações Rápidas</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px">
+              <button class="btn btn-ghost" onclick="setTab('triagem')">Ir para Triagem</button>
+              <button class="btn btn-ghost" onclick="setTab('internacoes')">Ir para Internações</button>
+              <button class="btn btn-ghost" onclick="setTab('exames')">Ir para Exames</button>
+              <button class="btn btn-ghost" onclick="setTab('faturamento')">Ir para Faturamento</button>
+              <button class="btn btn-ghost" onclick="setTab('analytics')">Ir para Analytics</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">📌 Status dos Módulos Hospitalares</span></div>
+          <table>
+            <thead><tr><th>Módulo</th><th>Status</th></tr></thead>
+            <tbody id="orcModulos"><tr><td colspan="2" class="empty">Carregando…</td></tr></tbody>
+          </table>
         </div>
       </div>
 
@@ -2125,7 +2164,7 @@ function popularSelectDeps(sid) {
 // ══════════════════════════════════════════════════════════════
 // TAB NAVIGATION
 // ══════════════════════════════════════════════════════════════
-const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes','uti','cirurgias','exames','alta','faturamento','analytics'];
+const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes','uti','cirurgias','exames','alta','faturamento','analytics','orquestracao'];
 
 function scrollMainToTop() {
   const main = document.querySelector('.main');
@@ -2157,6 +2196,7 @@ function setTab(tab) {
   else if (tab==='alta') carregarAltaTab();
   else if (tab==='faturamento') carregarFaturamento();
   else if (tab==='analytics') carregarAnalytics();
+  else if (tab==='orquestracao') carregarOrquestracao();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2639,6 +2679,71 @@ async function carregarAnalytics() {
           <span>${tipoLabel[r.tipo]||r.tipo}</span>
           <span style="color:var(--text-muted)">${r.n}</span>
         </div>`).join('');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// HOSPITAL ENTERPRISE — COMANDO 360 (contexto integrado)
+// ══════════════════════════════════════════════════════════════
+function _orcBadgeNivel(nivel) {
+  if (nivel === 'critico') return '<span class="badge badge-danger">Crítico</span>';
+  if (nivel === 'alto') return '<span class="badge badge-warn">Alto</span>';
+  if (nivel === 'ok') return '<span class="badge badge-ok">Estável</span>';
+  return `<span class="badge badge-info">${nivel || 'Info'}</span>`;
+}
+
+function _orcBadgeModuloStatus(st) {
+  if (st === 'ativo') return '<span class="badge badge-ok">Ativo</span>';
+  if (st === 'implantacao') return '<span class="badge badge-warn">Em implantação</span>';
+  return `<span class="badge badge-muted">${st || '—'}</span>`;
+}
+
+async function carregarOrquestracao() {
+  const d = await api('/api/hospital/contexto-integrado/');
+  if (!d) return;
+
+  const k = d.kpis || {};
+  const prioridades = d.prioridades || [];
+  const modulos = d.modulos || [];
+
+  const criticos = prioridades.filter(p => p.nivel === 'critico').length;
+  const pendEx = (k.lis_pendentes || 0) + (k.ris_sem_laudo || 0);
+
+  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setText('orcParidade', `${d.indice_paridade_enterprise ?? 0}%`);
+  setText('orcCriticos', criticos);
+  setText('orcGlosa', `${k.glosa_mes_pct ?? 0}%`);
+  setText('orcPendExame', pendEx);
+
+  const boxPrio = document.getElementById('orcPrioridades');
+  if (boxPrio) {
+    if (!prioridades.length) {
+      boxPrio.innerHTML = '<p style="color:var(--muted)">Sem prioridades no momento.</p>';
+    } else {
+      boxPrio.innerHTML = prioridades.map((p) => `
+        <div style="padding:10px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.03);margin-bottom:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+            <strong style="font-size:12px">${p.modulo || 'Operação'}</strong>
+            ${_orcBadgeNivel(p.nivel)}
+          </div>
+          <div style="font-size:13px;color:var(--text)">${p.acao || ''}</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  const tbMod = document.getElementById('orcModulos');
+  if (tbMod) {
+    if (!modulos.length) {
+      tbMod.innerHTML = '<tr><td colspan="2" class="empty">Sem módulos para exibir</td></tr>';
+    } else {
+      tbMod.innerHTML = modulos.map((m) => `
+        <tr>
+          <td>${m.nome || '—'}</td>
+          <td>${_orcBadgeModuloStatus(m.status)}</td>
+        </tr>
+      `).join('');
+    }
   }
 }
 

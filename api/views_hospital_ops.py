@@ -1,10 +1,15 @@
 import json
+from datetime import timedelta
+from django.db.models import F, Q, Sum
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from .models import (
     DepartamentoHospital, LeitoHospital, PacienteHospital,
     TriagemHospital, InternacaoHospital, EvolucaoClinica,
+    ProntuarioHospitalar, EvolucaoProntuario, PrescricaoProntuario,
+    BlocoCirurgico, FarmaciaHospitalarItem, ExameLIS, ExameRIS, GuiaTISS,
+    ResultadoExame, MonitoramentoUTI, FaturaHospitalar,
 )
 from .views_dashboard import _empresa_autenticada
 from .access_control import (
@@ -368,3 +373,164 @@ def api_hospital_pdf_ficha_internacao(request, internacao_id):
     resp = HttpResponse(buf.read(), content_type="application/pdf")
     resp["Content-Disposition"] = f'inline; filename="internacao_{internacao_id}.pdf"'
     return resp
+
+
+@api_requer_setor("hospital")
+@api_requer_operacao_ou_gerencia
+def api_hospital_contexto_integrado(request):
+    """
+    Contexto integrado enterprise do hospital.
+    Consolida operação, clínica, exames, cirurgia, farmácia e faturamento
+    para suportar decisão executiva em uma única chamada.
+    """
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    hoje = timezone.localdate()
+    inicio_7d = hoje - timedelta(days=7)
+    inicio_30d = hoje - timedelta(days=30)
+    inicio_mes = hoje.replace(day=1)
+
+    # Operação núcleo
+    total_leitos = LeitoHospital.objects.filter(empresa=e).count()
+    leitos_ocupados = LeitoHospital.objects.filter(empresa=e, status="ocupado").count()
+    taxa_ocupacao = round((leitos_ocupados / total_leitos) * 100, 1) if total_leitos else 0.0
+    internacoes_ativas = InternacaoHospital.objects.filter(empresa=e, status="ativa").count()
+    triagens_criticas = TriagemHospital.objects.filter(
+        empresa=e, prioridade__in=["vermelho", "laranja"]
+    ).count()
+
+    # Prontuário / clínico
+    prontuarios_total = ProntuarioHospitalar.objects.filter(empresa=e).count()
+    evolucoes_7d = EvolucaoProntuario.objects.filter(
+        prontuario__empresa=e,
+        assinado_em__date__gte=inicio_7d,
+    ).count()
+    prescricoes_24h = PrescricaoProntuario.objects.filter(
+        prontuario__empresa=e,
+        prescrito_em__date__gte=(hoje - timedelta(days=1)),
+    ).count()
+
+    # Diagnóstico integrado
+    lis_pendentes = ExameLIS.objects.filter(
+        empresa=e, status__in=["solicitado", "coletado", "em_analise"]
+    ).count()
+    ris_sem_laudo = ExameRIS.objects.filter(
+        empresa=e
+    ).filter(Q(laudo__isnull=True) | Q(laudo="")).count()
+    resultados_criticos_nao_lidos = ResultadoExame.objects.filter(
+        pedido__empresa=e,
+        interpretacao="critico",
+        visualizado_em__isnull=True,
+    ).count()
+
+    # Centro cirúrgico / farmácia
+    cirurgias_andamento = BlocoCirurgico.objects.filter(
+        empresa=e, situacao="em_andamento"
+    ).count()
+    cirurgias_agendadas_7d = BlocoCirurgico.objects.filter(
+        empresa=e,
+        situacao="agendada",
+        data_hora__date__gte=hoje,
+        data_hora__date__lte=(hoje + timedelta(days=7)),
+    ).count()
+    farmacia_ruptura = FarmaciaHospitalarItem.objects.filter(empresa=e, estoque_atual__lte=0).count()
+    farmacia_abaixo_minimo = FarmaciaHospitalarItem.objects.filter(
+        empresa=e, estoque_atual__lte=F("estoque_minimo")
+    ).count()
+
+    # Faturamento / TISS
+    tiss_elaboradas = GuiaTISS.objects.filter(empresa=e, status="elaborada").count()
+    tiss_glosadas = GuiaTISS.objects.filter(empresa=e, status="glosada").count()
+    tiss_mes = GuiaTISS.objects.filter(empresa=e, criado_em__date__gte=inicio_mes).aggregate(
+        apresentado=Sum("valor_apresentado"),
+        aprovado=Sum("valor_aprovado"),
+    )
+    tiss_apresentado_mes = float(tiss_mes["apresentado"] or 0)
+    tiss_aprovado_mes = float(tiss_mes["aprovado"] or 0)
+    glosa_mes = round(max(tiss_apresentado_mes - tiss_aprovado_mes, 0), 2)
+    glosa_pct = round((glosa_mes / tiss_apresentado_mes) * 100, 1) if tiss_apresentado_mes else 0.0
+
+    faturas_enviadas = FaturaHospitalar.objects.filter(
+        empresa=e, status="enviada"
+    ).count()
+    faturas_pagas_30d = FaturaHospitalar.objects.filter(
+        empresa=e, status="paga", data_pagamento__date__gte=inicio_30d
+    ).count()
+
+    # UTI risco elevado
+    uti_alto_risco = 0
+    for m in MonitoramentoUTI.objects.filter(
+        paciente__empresa=e, registrado_em__date__gte=inicio_7d
+    ).select_related("paciente")[:800]:
+        if m.sofa_total is not None and m.sofa_total >= 8:
+            uti_alto_risco += 1
+
+    # Status por módulo competitivo
+    modulos = [
+        {"nome": "Painel de leitos em tempo real", "status": "ativo" if total_leitos else "implantacao"},
+        {"nome": "Triagem Manchester digital", "status": "ativo" if TriagemHospital.objects.filter(empresa=e).exists() else "implantacao"},
+        {"nome": "Prontuário eletrônico (EMR)", "status": "ativo" if prontuarios_total else "implantacao"},
+        {"nome": "LIS integrado", "status": "ativo" if ExameLIS.objects.filter(empresa=e).exists() else "implantacao"},
+        {"nome": "RIS/PACS (imagem)", "status": "ativo" if ExameRIS.objects.filter(empresa=e).exists() else "implantacao"},
+        {"nome": "Centro cirúrgico", "status": "ativo" if BlocoCirurgico.objects.filter(empresa=e).exists() else "implantacao"},
+        {"nome": "Farmácia hospitalar", "status": "ativo" if FarmaciaHospitalarItem.objects.filter(empresa=e).exists() else "implantacao"},
+        {"nome": "Faturamento TISS/SUS", "status": "ativo" if GuiaTISS.objects.filter(empresa=e).exists() else "implantacao"},
+    ]
+    ativos = sum(1 for m in modulos if m["status"] == "ativo")
+    indice_paridade = round((ativos / len(modulos)) * 100, 1) if modulos else 0.0
+
+    prioridades = []
+    if taxa_ocupacao >= 90:
+        prioridades.append({"nivel": "critico", "acao": "Abrir leitos de retaguarda e acelerar altas com critério clínico.", "modulo": "Leitos/Internação"})
+    elif taxa_ocupacao >= 80:
+        prioridades.append({"nivel": "alto", "acao": "Ativar plano de contingência de ocupação e gestão de giro de leitos.", "modulo": "Leitos"})
+
+    if triagens_criticas > 0:
+        prioridades.append({"nivel": "alto", "acao": f"Reforçar equipe de pronto atendimento. {triagens_criticas} triagens vermelho/laranja.", "modulo": "Triagem"})
+
+    if resultados_criticos_nao_lidos > 0:
+        prioridades.append({"nivel": "critico", "acao": f"Validar imediatamente {resultados_criticos_nao_lidos} resultados críticos não visualizados.", "modulo": "Exames/LIS"})
+
+    if glosa_pct >= 12:
+        prioridades.append({"nivel": "alto", "acao": f"Taxa de glosa em {glosa_pct}%. Revisar codificação TUSS/CBHPM e documentação.", "modulo": "Faturamento TISS"})
+
+    if farmacia_ruptura > 0:
+        prioridades.append({"nivel": "alto", "acao": f"{farmacia_ruptura} item(ns) em ruptura de estoque. Acionar compra emergencial.", "modulo": "Farmácia Hospitalar"})
+
+    if uti_alto_risco > 0:
+        prioridades.append({"nivel": "alto", "acao": f"{uti_alto_risco} registro(s) UTI com SOFA >= 8 na semana.", "modulo": "UTI"})
+
+    if not prioridades:
+        prioridades.append({"nivel": "ok", "acao": "Operação estável no momento. Manter rotina de auditoria clínica e financeira.", "modulo": "Comando 360"})
+
+    return JsonResponse({
+        "empresa_nome": e.nome,
+        "gerado_em": timezone.now().isoformat(),
+        "indice_paridade_enterprise": indice_paridade,
+        "kpis": {
+            "taxa_ocupacao": taxa_ocupacao,
+            "internacoes_ativas": internacoes_ativas,
+            "triagens_criticas": triagens_criticas,
+            "prontuarios_total": prontuarios_total,
+            "evolucoes_7d": evolucoes_7d,
+            "prescricoes_24h": prescricoes_24h,
+            "lis_pendentes": lis_pendentes,
+            "ris_sem_laudo": ris_sem_laudo,
+            "resultados_criticos_nao_lidos": resultados_criticos_nao_lidos,
+            "cirurgias_em_andamento": cirurgias_andamento,
+            "cirurgias_agendadas_7d": cirurgias_agendadas_7d,
+            "farmacia_ruptura": farmacia_ruptura,
+            "farmacia_abaixo_minimo": farmacia_abaixo_minimo,
+            "tiss_elaboradas": tiss_elaboradas,
+            "tiss_glosadas": tiss_glosadas,
+            "glosa_mes_valor": glosa_mes,
+            "glosa_mes_pct": glosa_pct,
+            "faturas_enviadas": faturas_enviadas,
+            "faturas_pagas_30d": faturas_pagas_30d,
+            "uti_alto_risco": uti_alto_risco,
+        },
+        "modulos": modulos,
+        "prioridades": prioridades,
+    })
