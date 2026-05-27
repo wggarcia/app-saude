@@ -16,6 +16,13 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
 .nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
 .nav-link span{font-size:16px}
+.nav-group{margin:3px 0}
+.nav-group summary{list-style:none;cursor:pointer}
+.nav-group summary::-webkit-details-marker{display:none}
+.nav-group .nav-section{display:flex;align-items:center;justify-content:space-between;padding-right:16px}
+.nav-group .nav-section::after{content:"▸";font-size:11px;color:var(--muted);transition:transform .15s ease}
+.nav-group[open] .nav-section::after{transform:rotate(90deg)}
+.nav-group-body{display:flex;flex-direction:column}
 .sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
 .nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
 .nav-link-logout:hover{background:rgba(255,77,109,.2);color:#ffc6d3}
@@ -91,46 +98,64 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <aside class="sidebar">
   <div class="logo">💊 Farmácia</div>
-  <div class="nav-section">Navegação</div>
-  <a class="nav-link" href="/farmacia/"><span>📊</span> Inteligência</a>
-  <a class="nav-link" href="/farmacia/gestao/"><span>🏪</span> Gestão Operacional</a>
-  <div class="nav-section">Rede de Farmácias</div>
-  <a class="nav-link" href="/rede/gestao/"><span>🌐</span> Rede &amp; Comunicação</a>
-  {% if mostrar_link_ti or mostrar_link_rh %}
-  <div class="nav-section">Tecnologia</div>
-  {% if mostrar_link_ti %}
-  <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener"><span>🖥️</span> Ambiente IT</a>
+  <details class="nav-group" data-nav-group data-group-key="farmacia-principal" open>
+    <summary><div class="nav-section">Navegação</div></summary>
+    <div class="nav-group-body">
+      <a class="nav-link" href="/farmacia/"><span>📊</span> Inteligência</a>
+      <a class="nav-link active" href="/farmacia/gestao/"><span>🏪</span> Gestão Operacional</a>
+      <a class="nav-link" href="/rede/gestao/"><span>🌐</span> Rede &amp; Comunicação</a>
+    </div>
+  </details>
+
+  <details class="nav-group" data-nav-group data-group-key="farmacia-operacao" open>
+    <summary><div class="nav-section">Operação</div></summary>
+    <div class="nav-group-body">
+      <button class="tab-btn active" onclick="setTab('estoque')"><span>📦</span> Estoque</button>
+      <button class="tab-btn" onclick="setTab('dispensacoes')"><span>💊</span> Dispensações</button>
+      <button class="tab-btn" onclick="setTab('movimentos')"><span>↕️</span> Movimentos</button>
+      <button class="tab-btn" onclick="setTab('fornecedores')"><span>🏭</span> Fornecedores</button>
+      <button class="tab-btn" onclick="setTab('pedidos')"><span>🛒</span> Pedidos de Compra</button>
+      <button class="tab-btn" onclick="setTab('lotes')"><span>🏷️</span> Lotes / Validade</button>
+      <button class="tab-btn" onclick="setTab('pacientes')"><span>👥</span> Pacientes</button>
+      <button class="tab-btn" onclick="setTab('receitas')"><span>📋</span> Receitas</button>
+      <button class="tab-btn" onclick="setTab('inventario')"><span>🔍</span> Inventário</button>
+      <button class="tab-btn" onclick="setTab('descarte')"><span>🗑️</span> Descarte</button>
+      <button class="tab-btn" onclick="setTab('relatorios')"><span>📊</span> Relatórios</button>
+      <button class="tab-btn" onclick="setTab('conformidade')"><span>🛡️</span> Conformidade</button>
+      <button class="tab-btn" onclick="setTab('auditoria')"><span>📝</span> Auditoria</button>
+      <button class="tab-btn" onclick="setTab('rede')"><span>🌐</span> Rede</button>
+      <button class="tab-btn" onclick="setTab('ia')"><span>🤖</span> IA & Analytics</button>
+    </div>
+  </details>
+
+  <details class="nav-group" data-nav-group data-group-key="farmacia-avancado">
+    <summary><div class="nav-section">Módulos Avançados</div></summary>
+    <div class="nav-group-body">
+      <a class="nav-link" href="/farmacia/pdv/" style="text-decoration:none"><span>🖥️</span> PDV / Caixa</a>
+      <a class="nav-link" href="/farmacia/pbm/" style="text-decoration:none"><span>💳</span> PBM / Convênios</a>
+      <a class="nav-link" href="/farmacia/financeiro/" style="text-decoration:none"><span>📊</span> DRE / Financeiro</a>
+      <a class="nav-link" href="/farmacia/delivery/" style="text-decoration:none"><span>🛵</span> E-commerce / Delivery</a>
+      <a class="nav-link" href="/rede/gestao/" style="text-decoration:none"><span>🌐</span> Rede de Farmácias</a>
+    </div>
+  </details>
+
+  {% if mostrar_link_ti or mostrar_link_rh or mostrar_aba_gerencia %}
+  <details class="nav-group" data-nav-group data-group-key="farmacia-governanca">
+    <summary><div class="nav-section">Governança</div></summary>
+    <div class="nav-group-body">
+      {% if mostrar_link_ti %}
+      <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener"><span>🖥️</span> Ambiente IT</a>
+      {% endif %}
+      {% if mostrar_link_rh %}
+      <a class="nav-link" href="{{ rh_url|default:'/rh/' }}"><span>👤</span> Portal RH</a>
+      {% endif %}
+      {% if mostrar_aba_gerencia %}
+      <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}"><span>📈</span> Painel Gerencial</a>
+      {% endif %}
+    </div>
+  </details>
   {% endif %}
-  {% if mostrar_link_rh %}
-  <a class="nav-link" href="{{ rh_url|default:'/rh/' }}"><span>👤</span> Portal RH</a>
-  {% endif %}
-  {% endif %}
-  {% if mostrar_aba_gerencia %}
-  <div class="nav-section">Gerência</div>
-  <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}"><span>📈</span> Painel Gerencial</a>
-  {% endif %}
-  <div class="nav-section" style="margin-top:8px">Módulos</div>
-  <button class="tab-btn active" onclick="setTab('estoque')"><span>📦</span> Estoque</button>
-  <button class="tab-btn" onclick="setTab('dispensacoes')"><span>💊</span> Dispensações</button>
-  <button class="tab-btn" onclick="setTab('movimentos')"><span>↕️</span> Movimentos</button>
-  <button class="tab-btn" onclick="setTab('fornecedores')"><span>🏭</span> Fornecedores</button>
-  <button class="tab-btn" onclick="setTab('pedidos')"><span>🛒</span> Pedidos de Compra</button>
-  <button class="tab-btn" onclick="setTab('lotes')"><span>🏷️</span> Lotes / Validade</button>
-  <button class="tab-btn" onclick="setTab('pacientes')"><span>👥</span> Pacientes</button>
-  <button class="tab-btn" onclick="setTab('receitas')"><span>📋</span> Receitas</button>
-  <button class="tab-btn" onclick="setTab('inventario')"><span>🔍</span> Inventário</button>
-  <button class="tab-btn" onclick="setTab('descarte')"><span>🗑️</span> Descarte</button>
-  <button class="tab-btn" onclick="setTab('relatorios')"><span>📊</span> Relatórios</button>
-  <button class="tab-btn" onclick="setTab('conformidade')"><span>🛡️</span> Conformidade</button>
-  <button class="tab-btn" onclick="setTab('auditoria')"><span>📝</span> Auditoria</button>
-  <button class="tab-btn" onclick="setTab('rede')"><span>🌐</span> Rede</button>
-  <button class="tab-btn" onclick="setTab('ia')"><span>🤖</span> IA & Analytics</button>
-  <div class="nav-section" style="margin-top:8px">Módulos Avançados</div>
-  <a class="nav-link" href="/farmacia/pdv/" style="text-decoration:none"><span>🖥️</span> PDV / Caixa</a>
-  <a class="nav-link" href="/farmacia/pbm/" style="text-decoration:none"><span>💳</span> PBM / Convênios</a>
-  <a class="nav-link" href="/farmacia/financeiro/" style="text-decoration:none"><span>📊</span> DRE / Financeiro</a>
-  <a class="nav-link" href="/farmacia/delivery/" style="text-decoration:none"><span>🛵</span> E-commerce / Delivery</a>
-  <a class="nav-link" href="/rede/gestao/" style="text-decoration:none"><span>🌐</span> Rede de Farmácias</a>
+
   <div class="sidebar-footer">
     <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
   </div>
@@ -2135,6 +2160,49 @@ function _t(msg, tipo) {
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 3500);
 }
+</script>
+<script>
+(function initFarmaciaSidebarGroups() {
+  const key = 'sidebar_groups_farmacia_v1';
+  const groups = Array.from(document.querySelectorAll('.nav-group[data-nav-group]'));
+  if (!groups.length) return;
+
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(key) || '{}'); } catch (_e) { saved = {}; }
+
+  let appliedSaved = false;
+  groups.forEach((grp, idx) => {
+    const gk = grp.getAttribute('data-group-key') || `g${idx}`;
+    if (Object.prototype.hasOwnProperty.call(saved, gk)) {
+      grp.open = !!saved[gk];
+      appliedSaved = true;
+    }
+    grp.addEventListener('toggle', () => {
+      const st = {};
+      groups.forEach((g, i) => { st[g.getAttribute('data-group-key') || `g${i}`] = !!g.open; });
+      localStorage.setItem(key, JSON.stringify(st));
+    });
+  });
+
+  if (!appliedSaved) {
+    let opened = false;
+    groups.forEach((grp, idx) => {
+      const hasActive = !!grp.querySelector('.nav-link.active, .tab-btn.active, .tab-btn-side.active');
+      grp.open = hasActive;
+      if (hasActive) opened = true;
+      if (!hasActive && idx > 0) grp.open = false;
+    });
+    if (!opened && groups.length) groups[0].open = true;
+  }
+
+  document.querySelectorAll('.nav-group .nav-link, .nav-group .tab-btn, .nav-group .tab-btn-side').forEach((el) => {
+    el.addEventListener('click', () => {
+      const grp = el.closest('.nav-group');
+      if (!grp) return;
+      grp.open = true;
+    });
+  });
+}());
 </script>
 <script>
 (function tabGuard() {

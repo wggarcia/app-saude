@@ -41,6 +41,13 @@ body::before{
 .nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
 .nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
 .nav-link span{font-size:16px}
+.nav-group{margin:3px 0}
+.nav-group summary{list-style:none;cursor:pointer}
+.nav-group summary::-webkit-details-marker{display:none}
+.nav-group .nav-section{display:flex;align-items:center;justify-content:space-between;padding-right:16px}
+.nav-group .nav-section::after{content:"▸";font-size:11px;color:var(--muted);transition:transform .15s ease}
+.nav-group[open] .nav-section::after{transform:rotate(90deg)}
+.nav-group-body{display:flex;flex-direction:column}
 .tab-btn-side{
   display:flex;align-items:center;gap:10px;padding:10px 20px;
   font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;
@@ -223,27 +230,38 @@ select option{background:#0b1822}
 <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════════════ -->
 <aside class="sidebar">
   <div class="logo">🖥️ Plataforma TI Gov</div>
+  <details class="nav-group" data-nav-group data-group-key="govti-principal" open>
+    <summary><div class="nav-section">Navegação</div></summary>
+    <div class="nav-group-body">
+      <a class="nav-link" href="/governo/"><span>📊</span> Monitoramento</a>
+      <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão</a>
+      <a class="nav-link" href="/logout-governo/"><span>🚪</span> Sair</a>
+    </div>
+  </details>
 
-  <div class="nav-section">Navegação</div>
-  <a class="nav-link" href="/governo/"><span>📊</span> Monitoramento</a>
-  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão</a>
-  <a class="nav-link" href="/logout-governo/"><span>🚪</span> Sair</a>
+  <details class="nav-group" data-nav-group data-group-key="govti-operacoes" open>
+    <summary><div class="nav-section">Operações</div></summary>
+    <div class="nav-group-body">
+      <button class="tab-btn-side active" onclick="setTab('painel')"><span>📊</span> Painel Central</button>
+      <button class="tab-btn-side" onclick="setTab('vigilancia')"><span>🦠</span> Vigilância Epidem.</button>
+      <button class="tab-btn-side" onclick="setTab('regulacao')"><span>🏥</span> Regulação de Leitos</button>
+      <button class="tab-btn-side" onclick="setTab('producao')"><span>📋</span> Produção &amp; Previne</button>
+      <button class="tab-btn-side" onclick="setTab('urgencia')"><span>🚨</span> Urgência &amp; Emerg.</button>
+      <button class="tab-btn-side" onclick="setTab('contratos')"><span>📄</span> Contratos</button>
+    </div>
+  </details>
 
-  <div class="nav-section" style="margin-top:8px">Operações</div>
-  <button class="tab-btn-side active" onclick="setTab('painel')"><span>📊</span> Painel Central</button>
-  <button class="tab-btn-side" onclick="setTab('vigilancia')"><span>🦠</span> Vigilância Epidem.</button>
-  <button class="tab-btn-side" onclick="setTab('regulacao')"><span>🏥</span> Regulação de Leitos</button>
-  <button class="tab-btn-side" onclick="setTab('producao')"><span>📋</span> Produção &amp; Previne</button>
-  <button class="tab-btn-side" onclick="setTab('urgencia')"><span>🚨</span> Urgência &amp; Emerg.</button>
-  <button class="tab-btn-side" onclick="setTab('contratos')"><span>📄</span> Contratos</button>
-
-  <div class="nav-section" style="margin-top:8px">Plataforma TI</div>
-  <button class="tab-btn-side" onclick="setTab('integracoes')"><span>🔗</span> Integrações Gov</button>
-  <button class="tab-btn-side" onclick="setTab('apikeys')"><span>🔑</span> API Keys</button>
-  <button class="tab-btn-side" onclick="setTab('webhooks')"><span>📡</span> Webhooks</button>
-  <button class="tab-btn-side" onclick="setTab('seguranca')"><span>🛡️</span> Segurança &amp; LGPD</button>
-  <button class="tab-btn-side" onclick="setTab('conformidade')"><span>📋</span> Conformidade</button>
-  <button class="tab-btn-side" onclick="setTab('logs')"><span>📊</span> Logs</button>
+  <details class="nav-group" data-nav-group data-group-key="govti-plataforma">
+    <summary><div class="nav-section">Plataforma TI</div></summary>
+    <div class="nav-group-body">
+      <button class="tab-btn-side" onclick="setTab('integracoes')"><span>🔗</span> Integrações Gov</button>
+      <button class="tab-btn-side" onclick="setTab('apikeys')"><span>🔑</span> API Keys</button>
+      <button class="tab-btn-side" onclick="setTab('webhooks')"><span>📡</span> Webhooks</button>
+      <button class="tab-btn-side" onclick="setTab('seguranca')"><span>🛡️</span> Segurança &amp; LGPD</button>
+      <button class="tab-btn-side" onclick="setTab('conformidade')"><span>📋</span> Conformidade</button>
+      <button class="tab-btn-side" onclick="setTab('logs')"><span>📊</span> Logs</button>
+    </div>
+  </details>
 </aside>
 
 <!-- ══ MAIN ══════════════════════════════════════════════════════════════════════ -->
@@ -1961,8 +1979,47 @@ function showToast(id,msg,type){
   el._t=setTimeout(()=>{el.className='toast';},4000);
 }
 
+function initGovTiSidebarGroups(){
+  const key='sidebar_groups_govti_v1';
+  const groups=Array.from(document.querySelectorAll('.nav-group[data-nav-group]'));
+  if(!groups.length) return;
+
+  let saved={};
+  try{saved=JSON.parse(localStorage.getItem(key)||'{}');}catch(_e){saved={};}
+
+  let appliedSaved=false;
+  groups.forEach((grp,idx)=>{
+    const gk=grp.getAttribute('data-group-key')||`g${idx}`;
+    if(Object.prototype.hasOwnProperty.call(saved,gk)){ grp.open=!!saved[gk]; appliedSaved=true; }
+    grp.addEventListener('toggle',()=>{
+      const st={};
+      groups.forEach((g,i)=>{st[g.getAttribute('data-group-key')||`g${i}`]=!!g.open;});
+      localStorage.setItem(key,JSON.stringify(st));
+    });
+  });
+
+  if(!appliedSaved){
+    let opened=false;
+    groups.forEach((grp,idx)=>{
+      const hasActive=!!grp.querySelector('.nav-link.active,.tab-btn.active,.tab-btn-side.active');
+      grp.open=hasActive;
+      if(hasActive) opened=true;
+      if(!hasActive&&idx>0) grp.open=false;
+    });
+    if(!opened&&groups.length) groups[0].open=true;
+  }
+
+  document.querySelectorAll('.nav-group .nav-link,.nav-group .tab-btn,.nav-group .tab-btn-side').forEach((el)=>{
+    el.addEventListener('click',()=>{
+      const grp=el.closest('.nav-group');
+      if(grp) grp.open=true;
+    });
+  });
+}
+
 // ── INIT ────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
+  initGovTiSidebarGroups();
   loadPainel();
   // set competência to current month
   const today=new Date();

@@ -15,6 +15,13 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
 .nav-link:hover,.nav-link.active{background:rgba(255,107,157,.1);color:var(--accent)}
 .nav-link span{font-size:16px}
+.nav-group{margin:3px 0}
+.nav-group summary{list-style:none;cursor:pointer}
+.nav-group summary::-webkit-details-marker{display:none}
+.nav-group .nav-section{display:flex;align-items:center;justify-content:space-between;padding-right:16px}
+.nav-group .nav-section::after{content:"▸";font-size:11px;color:var(--muted);transition:transform .15s ease}
+.nav-group[open] .nav-section::after{transform:rotate(90deg)}
+.nav-group-body{display:flex;flex-direction:column}
 .sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
 .nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
 .nav-link-logout:hover{background:rgba(255,77,109,.2);color:#ffc6d3}
@@ -158,61 +165,77 @@ tr:hover td{background:rgba(255,107,157,.03)}
 
 <aside class="sidebar">
   <div class="logo">Operadora Cooperativa</div>
-  <div class="nav-section">Navegacao</div>
-  <a class="nav-link" href="/dashboard-plano-saude/"><span>&#128202;</span> Radar Epi</a>
-  <a class="nav-link active" href="/plano-saude/gestao/"><span>&#127973;</span> Gestao Operacional</a>
-  {% if mostrar_link_ti or mostrar_link_rh %}
-  <div class="nav-section">Tecnologia</div>
-  {% if mostrar_link_ti %}
-  <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener"><span>&#128421;</span> Ambiente IT</a>
-  {% endif %}
-  {% if mostrar_link_rh %}
-  <a class="nav-link" href="{{ rh_url|default:'/rh/' }}"><span>&#128100;</span> Portal RH</a>
-  {% endif %}
-  {% endif %}
-  {% if mostrar_aba_gerencia %}
-  <div class="nav-section">Gerencia</div>
-  <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}"><span>&#128200;</span> Painel Gerencial</a>
-  {% endif %}
-  <div class="nav-section" style="margin-top:8px">&#9889; Visao &amp; Performance</div>
-  <button class="tab-btn active" onclick="setTab('visao')"><span>&#127968;</span> Visao Geral</button>
-  <button class="tab-btn" onclick="setTab('dashboard')"><span>&#128202;</span> Dashboard Exec.</button>
-  <div class="nav-section">&#127973; Operacional</div>
-  <button class="tab-btn" onclick="setTab('beneficiarios')"><span>&#128101;</span> Beneficiarios</button>
-  <button class="tab-btn" onclick="setTab('planos')"><span>&#128203;</span> Planos</button>
-  <button class="tab-btn" onclick="setTab('guias')"><span>&#128221;</span> Guias</button>
-  <button class="tab-btn" onclick="setTab('sla')"><span>&#9203;</span> Regulacao &amp; SLA</button>
-  <button class="tab-btn" onclick="setTab('fila')"><span>&#9201;</span> Fila Clinica</button>
-  <div class="nav-section">&#127760; Rede Credenciada</div>
-  <button class="tab-btn" onclick="setTab('prestadores')"><span>&#127973;</span> Rede Credenciada</button>
-  <button class="tab-btn" onclick="setTab('portal')"><span>&#128279;</span> Portal Prestador</button>
-  <button class="tab-btn" onclick="setTab('integracoes')"><span>&#129309;</span> Cooperacao</button>
-  <div class="nav-section">&#128200; Financeiro</div>
-  <button class="tab-btn" onclick="setTab('faturamento')"><span>&#128200;</span> Faturamento</button>
-  <button class="tab-btn" onclick="setTab('coparticipacao')"><span>&#128181;</span> Coparticipacao</button>
-  <button class="tab-btn" onclick="setTab('reembolsos')"><span>&#128176;</span> Reembolsos</button>
-  <button class="tab-btn" onclick="setTab('glosas')"><span>&#128466;</span> Glosas</button>
-  <button class="tab-btn" onclick="setTab('sinistros')"><span>&#9877;&#65039;</span> Sinistros</button>
-  <div class="nav-section">&#129504; IA &amp; Analytics</div>
-  <button class="tab-btn" onclick="setTab('sinistralidade')"><span>&#129504;</span> Sinistralidade IA</button>
-  <button class="tab-btn" onclick="setTab('auditoria')"><span>&#128269;</span> Auditoria Medica</button>
-  <div class="nav-section">&#128203; Compliance ANS</div>
-  <button class="tab-btn" onclick="setTab('carencias')"><span>&#8987;</span> Carencias</button>
-  <button class="tab-btn" onclick="setTab('portabilidade')"><span>&#128257;</span> Portabilidade</button>
-  <button class="tab-btn" onclick="setTab('regulatorio')"><span>&#128196;</span> Relatorios ANS</button>
-  <div class="nav-section">&#128172; Relacionamento</div>
-  <button class="tab-btn" onclick="setTab('comunicacao')"><span>&#128172;</span> Comunicacao</button>
-  <button class="tab-btn" onclick="setTab('programas')"><span>&#127973;</span> Prog. Saude</button>
-  <div class="nav-section">&#127968; Especialidades</div>
-  <button class="tab-btn" onclick="setTab('telemedicina')"><span>&#128241;</span> Telemedicina</button>
-  <button class="tab-btn" onclick="setTab('odontologia')"><span>&#129463;</span> Odontologia</button>
-  <button class="tab-btn" onclick="setTab('contratos')"><span>&#128209;</span> Contratos Corp.</button>
-  <div class="nav-section" style="margin-top:8px">Módulos Dedicados</div>
-  <a class="nav-link" href="/plano-saude/corretores/" style="text-decoration:none"><span>🤝</span> Corretoras</a>
-  <a class="nav-link" href="/plano-saude/rede/" style="text-decoration:none"><span>🏥</span> Rede Credenciada</a>
-  <a class="nav-link" href="/plano-saude/ans/" style="text-decoration:none"><span>📋</span> ANS / DIOPS / SIB</a>
-  <a class="nav-link" href="/plano-saude/ia/" style="text-decoration:none"><span>🤖</span> IA — Autorização</a>
-  <a class="nav-link" href="/plano-saude/portal-admin/" style="text-decoration:none"><span>👤</span> Portal Beneficiário</a>
+  <details class="nav-group" data-nav-group data-group-key="plano-principal" open>
+    <summary><div class="nav-section">Navegação</div></summary>
+    <div class="nav-group-body">
+      <a class="nav-link" href="/dashboard-plano-saude/"><span>&#128202;</span> Radar Epi</a>
+      <a class="nav-link active" href="/plano-saude/gestao/"><span>&#127973;</span> Gestao Operacional</a>
+      {% if mostrar_link_ti %}
+      <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener"><span>&#128421;</span> Ambiente IT</a>
+      {% endif %}
+      {% if mostrar_link_rh %}
+      <a class="nav-link" href="{{ rh_url|default:'/rh/' }}"><span>&#128100;</span> Portal RH</a>
+      {% endif %}
+      {% if mostrar_aba_gerencia %}
+      <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}"><span>&#128200;</span> Painel Gerencial</a>
+      {% endif %}
+    </div>
+  </details>
+
+  <details class="nav-group" data-nav-group data-group-key="plano-core" open>
+    <summary><div class="nav-section">Core Operacional</div></summary>
+    <div class="nav-group-body">
+      <button class="tab-btn active" onclick="setTab('visao')"><span>&#127968;</span> Visao Geral</button>
+      <button class="tab-btn" onclick="setTab('dashboard')"><span>&#128202;</span> Dashboard Exec.</button>
+      <button class="tab-btn" onclick="setTab('beneficiarios')"><span>&#128101;</span> Beneficiarios</button>
+      <button class="tab-btn" onclick="setTab('planos')"><span>&#128203;</span> Planos</button>
+      <button class="tab-btn" onclick="setTab('guias')"><span>&#128221;</span> Guias</button>
+      <button class="tab-btn" onclick="setTab('sla')"><span>&#9203;</span> Regulacao &amp; SLA</button>
+      <button class="tab-btn" onclick="setTab('fila')"><span>&#9201;</span> Fila Clinica</button>
+    </div>
+  </details>
+
+  <details class="nav-group" data-nav-group data-group-key="plano-rede-fin">
+    <summary><div class="nav-section">Rede e Financeiro</div></summary>
+    <div class="nav-group-body">
+      <button class="tab-btn" onclick="setTab('prestadores')"><span>&#127973;</span> Rede Credenciada</button>
+      <button class="tab-btn" onclick="setTab('portal')"><span>&#128279;</span> Portal Prestador</button>
+      <button class="tab-btn" onclick="setTab('integracoes')"><span>&#129309;</span> Cooperacao</button>
+      <button class="tab-btn" onclick="setTab('faturamento')"><span>&#128200;</span> Faturamento</button>
+      <button class="tab-btn" onclick="setTab('coparticipacao')"><span>&#128181;</span> Coparticipacao</button>
+      <button class="tab-btn" onclick="setTab('reembolsos')"><span>&#128176;</span> Reembolsos</button>
+      <button class="tab-btn" onclick="setTab('glosas')"><span>&#128466;</span> Glosas</button>
+      <button class="tab-btn" onclick="setTab('sinistros')"><span>&#9877;&#65039;</span> Sinistros</button>
+    </div>
+  </details>
+
+  <details class="nav-group" data-nav-group data-group-key="plano-intel-comp">
+    <summary><div class="nav-section">IA, Compliance e Relacionamento</div></summary>
+    <div class="nav-group-body">
+      <button class="tab-btn" onclick="setTab('sinistralidade')"><span>&#129504;</span> Sinistralidade IA</button>
+      <button class="tab-btn" onclick="setTab('auditoria')"><span>&#128269;</span> Auditoria Medica</button>
+      <button class="tab-btn" onclick="setTab('carencias')"><span>&#8987;</span> Carencias</button>
+      <button class="tab-btn" onclick="setTab('portabilidade')"><span>&#128257;</span> Portabilidade</button>
+      <button class="tab-btn" onclick="setTab('regulatorio')"><span>&#128196;</span> Relatorios ANS</button>
+      <button class="tab-btn" onclick="setTab('comunicacao')"><span>&#128172;</span> Comunicacao</button>
+      <button class="tab-btn" onclick="setTab('programas')"><span>&#127973;</span> Prog. Saude</button>
+      <button class="tab-btn" onclick="setTab('telemedicina')"><span>&#128241;</span> Telemedicina</button>
+      <button class="tab-btn" onclick="setTab('odontologia')"><span>&#129463;</span> Odontologia</button>
+      <button class="tab-btn" onclick="setTab('contratos')"><span>&#128209;</span> Contratos Corp.</button>
+    </div>
+  </details>
+
+  <details class="nav-group" data-nav-group data-group-key="plano-dedicados">
+    <summary><div class="nav-section">Módulos Dedicados</div></summary>
+    <div class="nav-group-body">
+      <a class="nav-link" href="/plano-saude/corretores/" style="text-decoration:none"><span>🤝</span> Corretoras</a>
+      <a class="nav-link" href="/plano-saude/rede/" style="text-decoration:none"><span>🏥</span> Rede Credenciada</a>
+      <a class="nav-link" href="/plano-saude/ans/" style="text-decoration:none"><span>📋</span> ANS / DIOPS / SIB</a>
+      <a class="nav-link" href="/plano-saude/ia/" style="text-decoration:none"><span>🤖</span> IA — Autorização</a>
+      <a class="nav-link" href="/plano-saude/portal-admin/" style="text-decoration:none"><span>👤</span> Portal Beneficiário</a>
+    </div>
+  </details>
+
   <div class="sidebar-footer">
     <a class="nav-link nav-link-logout" href="/logout/"><span>&#128682;</span> Sair</a>
   </div>
@@ -3948,6 +3971,48 @@ function showToastPS(msg, tipo='ok') {
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 3500);
 }
+
+(function initPlanoSidebarGroups() {
+  const key = 'sidebar_groups_plano_v1';
+  const groups = Array.from(document.querySelectorAll('.nav-group[data-nav-group]'));
+  if (!groups.length) return;
+
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(key) || '{}'); } catch (_e) { saved = {}; }
+
+  let appliedSaved = false;
+  groups.forEach((grp, idx) => {
+    const gk = grp.getAttribute('data-group-key') || `g${idx}`;
+    if (Object.prototype.hasOwnProperty.call(saved, gk)) {
+      grp.open = !!saved[gk];
+      appliedSaved = true;
+    }
+    grp.addEventListener('toggle', () => {
+      const st = {};
+      groups.forEach((g, i) => { st[g.getAttribute('data-group-key') || `g${i}`] = !!g.open; });
+      localStorage.setItem(key, JSON.stringify(st));
+    });
+  });
+
+  if (!appliedSaved) {
+    let opened = false;
+    groups.forEach((grp, idx) => {
+      const hasActive = !!grp.querySelector('.nav-link.active, .tab-btn.active, .tab-btn-side.active');
+      grp.open = hasActive;
+      if (hasActive) opened = true;
+      if (!hasActive && idx > 0) grp.open = false;
+    });
+    if (!opened && groups.length) groups[0].open = true;
+  }
+
+  document.querySelectorAll('.nav-group .nav-link, .nav-group .tab-btn, .nav-group .tab-btn-side').forEach((el) => {
+    el.addEventListener('click', () => {
+      const grp = el.closest('.nav-group');
+      if (!grp) return;
+      grp.open = true;
+    });
+  });
+}());
 </script>
 </body>
 </html>

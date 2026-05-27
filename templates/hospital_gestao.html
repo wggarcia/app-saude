@@ -43,6 +43,13 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .nav-link-inner{display:flex;align-items:center;gap:9px}
 .nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
 .nav-link.active{box-shadow:inset 3px 0 0 var(--accent)}
+.nav-group{margin:3px 0}
+.nav-group summary{list-style:none;cursor:pointer}
+.nav-group summary::-webkit-details-marker{display:none}
+.nav-group .nav-section{display:flex;align-items:center;justify-content:space-between;padding-right:12px}
+.nav-group .nav-section::after{content:"▸";font-size:11px;color:var(--muted);transition:transform .15s ease}
+.nav-group[open] .nav-section::after{transform:rotate(90deg)}
+.nav-group-body{display:flex;flex-direction:column}
 .nav-badge{background:var(--danger);color:#fff;font-size:10px;font-weight:700;border-radius:10px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px}
 .nav-badge.warn{background:var(--warn);color:#041018}
 .nav-badge.ok{background:var(--ok);color:#041018}
@@ -244,71 +251,81 @@ tr:hover td{background:rgba(255,255,255,.018)}
 <div class="layout">
 <!-- SIDEBAR -->
 <aside class="sidebar">
-  <div class="nav-section">Operacional</div>
-  <button class="nav-link active" id="nav-leitos" onclick="setTab('leitos')">
-    <div class="nav-link-inner"><span>🛏</span><span>Leitos</span></div>
-    <span class="nav-badge ok" id="nb-disp" style="display:none">0</span>
-  </button>
-  <button class="nav-link" id="nav-triagem" onclick="setTab('triagem')">
-    <div class="nav-link-inner"><span>🚨</span><span>Triagem</span></div>
-    <span class="nav-badge" id="nb-triage" style="display:none">0</span>
-  </button>
-  <button class="nav-link" id="nav-internacoes" onclick="setTab('internacoes')">
-    <div class="nav-link-inner"><span>📋</span><span>Internações</span></div>
-    <span class="nav-badge warn" id="nb-int" style="display:none">0</span>
-  </button>
-  <button class="nav-link" id="nav-pacientes" onclick="setTab('pacientes')">
-    <div class="nav-link-inner"><span>👤</span><span>Pacientes</span></div>
-  </button>
-  <div class="nav-section" style="margin-top:8px">Configuração</div>
-  <button class="nav-link" id="nav-departamentos" onclick="setTab('departamentos')">
-    <div class="nav-link-inner"><span>🏢</span><span>Departamentos</span></div>
-  </button>
-  <button class="nav-link" id="nav-prescricoes" onclick="setTab('prescricoes')">
-    <div class="nav-link-inner"><span>💊</span><span>Prescrições</span></div>
-  </button>
-  <div class="nav-section" style="margin-top:8px">Módulos Clínicos</div>
-  <a class="nav-link" href="/hospital/prontuario/" style="text-decoration:none">
-    <div class="nav-link-inner"><span>📋</span><span>Prontuário (EMR)</span></div>
-  </a>
-  <a class="nav-link" href="/hospital/lis/" style="text-decoration:none">
-    <div class="nav-link-inner"><span>🧪</span><span>Laboratório (LIS)</span></div>
-  </a>
-  <a class="nav-link" href="/hospital/imagem/" style="text-decoration:none">
-    <div class="nav-link-inner"><span>🩻</span><span>Imagem (RIS/PACS)</span></div>
-  </a>
-  <a class="nav-link" href="/hospital/cirurgia/" style="text-decoration:none">
-    <div class="nav-link-inner"><span>🔪</span><span>Bloco Cirúrgico</span></div>
-  </a>
-  <a class="nav-link" href="/hospital/farmacia-hospitalar/" style="text-decoration:none">
-    <div class="nav-link-inner"><span>💊</span><span>Farmácia Hosp.</span></div>
-  </a>
-  <a class="nav-link" href="/hospital/faturamento-tiss/" style="text-decoration:none">
-    <div class="nav-link-inner"><span>💰</span><span>Faturamento TISS</span></div>
-  </a>
-  <div class="nav-section" style="margin-top:8px">Rede</div>
-  <a class="nav-link" href="/rede/gestao/" style="text-decoration:none">
-    <div class="nav-link-inner"><span>🌐</span><span>Rede Hospitalar</span></div>
-  </a>
-  {% if mostrar_link_ti or mostrar_link_rh %}
-  <div class="nav-section" style="margin-top:8px">Tecnologia</div>
-  {% if mostrar_link_ti %}
-  <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener" style="text-decoration:none">
-    <div class="nav-link-inner"><span>🖥️</span><span>Ambiente IT</span></div>
-  </a>
-  {% endif %}
-  {% if mostrar_link_rh %}
-  <a class="nav-link" href="{{ rh_url|default:'/rh/' }}" style="text-decoration:none">
-    <div class="nav-link-inner"><span>👤</span><span>Portal RH</span></div>
-  </a>
-  {% endif %}
-  {% endif %}
-  {% if mostrar_aba_gerencia %}
-  <div class="nav-section">Gerência</div>
-  <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}" style="text-decoration:none">
-    <div class="nav-link-inner"><span>📈</span><span>Painel Gerencial</span></div>
-  </a>
-  {% endif %}
+  <details class="nav-group" data-nav-group data-group-key="hospital-operacional" open>
+    <summary><div class="nav-section">Operacional</div></summary>
+    <div class="nav-group-body">
+      <button class="nav-link active" id="nav-leitos" onclick="setTab('leitos')">
+        <div class="nav-link-inner"><span>🛏</span><span>Leitos</span></div>
+        <span class="nav-badge ok" id="nb-disp" style="display:none">0</span>
+      </button>
+      <button class="nav-link" id="nav-triagem" onclick="setTab('triagem')">
+        <div class="nav-link-inner"><span>🚨</span><span>Triagem</span></div>
+        <span class="nav-badge" id="nb-triage" style="display:none">0</span>
+      </button>
+      <button class="nav-link" id="nav-internacoes" onclick="setTab('internacoes')">
+        <div class="nav-link-inner"><span>📋</span><span>Internações</span></div>
+        <span class="nav-badge warn" id="nb-int" style="display:none">0</span>
+      </button>
+      <button class="nav-link" id="nav-pacientes" onclick="setTab('pacientes')">
+        <div class="nav-link-inner"><span>👤</span><span>Pacientes</span></div>
+      </button>
+      <button class="nav-link" id="nav-departamentos" onclick="setTab('departamentos')">
+        <div class="nav-link-inner"><span>🏢</span><span>Departamentos</span></div>
+      </button>
+      <button class="nav-link" id="nav-prescricoes" onclick="setTab('prescricoes')">
+        <div class="nav-link-inner"><span>💊</span><span>Prescrições</span></div>
+      </button>
+    </div>
+  </details>
+
+  <details class="nav-group" data-nav-group data-group-key="hospital-clinicos">
+    <summary><div class="nav-section">Módulos Clínicos</div></summary>
+    <div class="nav-group-body">
+      <a class="nav-link" href="/hospital/prontuario/" style="text-decoration:none">
+        <div class="nav-link-inner"><span>📋</span><span>Prontuário (EMR)</span></div>
+      </a>
+      <a class="nav-link" href="/hospital/lis/" style="text-decoration:none">
+        <div class="nav-link-inner"><span>🧪</span><span>Laboratório (LIS)</span></div>
+      </a>
+      <a class="nav-link" href="/hospital/imagem/" style="text-decoration:none">
+        <div class="nav-link-inner"><span>🩻</span><span>Imagem (RIS/PACS)</span></div>
+      </a>
+      <a class="nav-link" href="/hospital/cirurgia/" style="text-decoration:none">
+        <div class="nav-link-inner"><span>🔪</span><span>Bloco Cirúrgico</span></div>
+      </a>
+      <a class="nav-link" href="/hospital/farmacia-hospitalar/" style="text-decoration:none">
+        <div class="nav-link-inner"><span>💊</span><span>Farmácia Hosp.</span></div>
+      </a>
+      <a class="nav-link" href="/hospital/faturamento-tiss/" style="text-decoration:none">
+        <div class="nav-link-inner"><span>💰</span><span>Faturamento TISS</span></div>
+      </a>
+    </div>
+  </details>
+
+  <details class="nav-group" data-nav-group data-group-key="hospital-gestao">
+    <summary><div class="nav-section">Rede e Gestão</div></summary>
+    <div class="nav-group-body">
+      <a class="nav-link" href="/rede/gestao/" style="text-decoration:none">
+        <div class="nav-link-inner"><span>🌐</span><span>Rede Hospitalar</span></div>
+      </a>
+      {% if mostrar_link_ti %}
+      <a class="nav-link" href="{{ portal_ti_url|default:'/ti/' }}" target="_blank" rel="noopener" style="text-decoration:none">
+        <div class="nav-link-inner"><span>🖥️</span><span>Ambiente IT</span></div>
+      </a>
+      {% endif %}
+      {% if mostrar_link_rh %}
+      <a class="nav-link" href="{{ rh_url|default:'/rh/' }}" style="text-decoration:none">
+        <div class="nav-link-inner"><span>👤</span><span>Portal RH</span></div>
+      </a>
+      {% endif %}
+      {% if mostrar_aba_gerencia %}
+      <a class="nav-link" href="{{ gerencia_url|default:'/gerencia/' }}" style="text-decoration:none">
+        <div class="nav-link-inner"><span>📈</span><span>Painel Gerencial</span></div>
+      </a>
+      {% endif %}
+    </div>
+  </details>
+
   <div class="sidebar-footer">
     <a class="nav-link nav-link-logout" href="/logout/" style="text-decoration:none">
       <div class="nav-link-inner"><span>🚪</span><span>Sair</span></div>
@@ -2804,6 +2821,49 @@ async function salvarResultado() {
     toast('Resultado lançado com sucesso!', 'ok');
   }
 }
+</script>
+<script>
+(function initHospitalSidebarGroups() {
+  const key = 'sidebar_groups_hospital_v1';
+  const groups = Array.from(document.querySelectorAll('.nav-group[data-nav-group]'));
+  if (!groups.length) return;
+
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(key) || '{}'); } catch (_e) { saved = {}; }
+
+  let appliedSaved = false;
+  groups.forEach((grp, idx) => {
+    const gk = grp.getAttribute('data-group-key') || `g${idx}`;
+    if (Object.prototype.hasOwnProperty.call(saved, gk)) {
+      grp.open = !!saved[gk];
+      appliedSaved = true;
+    }
+    grp.addEventListener('toggle', () => {
+      const st = {};
+      groups.forEach((g, i) => { st[g.getAttribute('data-group-key') || `g${i}`] = !!g.open; });
+      localStorage.setItem(key, JSON.stringify(st));
+    });
+  });
+
+  if (!appliedSaved) {
+    let opened = false;
+    groups.forEach((grp, idx) => {
+      const hasActive = !!grp.querySelector('.nav-link.active, .tab-btn.active, .tab-btn-side.active');
+      grp.open = hasActive;
+      if (hasActive) opened = true;
+      if (!hasActive && idx > 0) grp.open = false;
+    });
+    if (!opened && groups.length) groups[0].open = true;
+  }
+
+  document.querySelectorAll('.nav-group .nav-link, .nav-group .tab-btn, .nav-group .tab-btn-side').forEach((el) => {
+    el.addEventListener('click', () => {
+      const grp = el.closest('.nav-group');
+      if (!grp) return;
+      grp.open = true;
+    });
+  });
+}());
 </script>
 <script>
 (function tabGuard() {

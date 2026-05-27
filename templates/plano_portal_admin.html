@@ -15,6 +15,13 @@ body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-h
 .nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
 .nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
 .nav-link span{font-size:16px}
+.nav-group{margin:3px 0}
+.nav-group summary{list-style:none;cursor:pointer}
+.nav-group summary::-webkit-details-marker{display:none}
+.nav-group .nav-section{display:flex;align-items:center;justify-content:space-between;padding-right:16px}
+.nav-group .nav-section::after{content:"▸";font-size:11px;color:var(--muted);transition:transform .15s ease}
+.nav-group[open] .nav-section::after{transform:rotate(90deg)}
+.nav-group-body{display:flex;flex-direction:column}
 .sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
 .nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
 .main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
@@ -63,18 +70,17 @@ tr:hover td{background:rgba(0,194,255,.03)}
 
 <aside class="sidebar">
   <div class="logo">Plano de Saude</div>
-  <div class="nav-section">Navegacao</div>
-  <a class="nav-link" href="/plano-saude/gestao/"><span>&#127968;</span> Gestao Operacional</a>
-  <div class="nav-section">Comercial</div>
-  <a class="nav-link" href="/plano-saude/corretores/"><span>&#129309;</span> Corretores</a>
-  <div class="nav-section">Rede</div>
-  <a class="nav-link" href="/plano-saude/rede/"><span>&#127973;</span> Rede Credenciada</a>
-  <div class="nav-section">Regulatorio</div>
-  <a class="nav-link" href="/plano-saude/ans/"><span>&#128196;</span> Obrigacoes ANS</a>
-  <div class="nav-section">IA</div>
-  <a class="nav-link" href="/plano-saude/ia/"><span>&#129504;</span> IA Autorizacao</a>
-  <div class="nav-section">Beneficiarios</div>
-  <a class="nav-link active" href="/plano-saude/portal-admin/"><span>&#128279;</span> Portal Beneficiario</a>
+  <details class="nav-group" data-nav-group data-group-key="planoportal-principal" open>
+    <summary><div class="nav-section">Navegação</div></summary>
+    <div class="nav-group-body">
+      <a class="nav-link" href="/plano-saude/gestao/"><span>&#127968;</span> Gestao Operacional</a>
+      <a class="nav-link" href="/plano-saude/corretores/"><span>&#129309;</span> Corretores</a>
+      <a class="nav-link" href="/plano-saude/rede/"><span>&#127973;</span> Rede Credenciada</a>
+      <a class="nav-link" href="/plano-saude/ans/"><span>&#128196;</span> Obrigacoes ANS</a>
+      <a class="nav-link" href="/plano-saude/ia/"><span>&#129504;</span> IA Autorizacao</a>
+      <a class="nav-link active" href="/plano-saude/portal-admin/"><span>&#128279;</span> Portal Beneficiario</a>
+    </div>
+  </details>
   <div class="sidebar-footer">
     <a class="nav-link nav-link-logout" href="/logout/"><span>&#128682;</span> Sair</a>
   </div>
@@ -211,7 +217,43 @@ function getCookie(name) {
   return v ? v.pop() : '';
 }
 
-window.addEventListener('DOMContentLoaded', carregarBeneficiarios);
+function initPlanoPortalSidebarGroups() {
+  const key = 'sidebar_groups_plano_portal_v1';
+  const groups = Array.from(document.querySelectorAll('.nav-group[data-nav-group]'));
+  if (!groups.length) return;
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(key) || '{}'); } catch (_e) { saved = {}; }
+
+  let appliedSaved = false;
+  groups.forEach((grp, idx) => {
+    const gk = grp.getAttribute('data-group-key') || `g${idx}`;
+    if (Object.prototype.hasOwnProperty.call(saved, gk)) {
+      grp.open = !!saved[gk];
+      appliedSaved = true;
+    }
+    grp.addEventListener('toggle', () => {
+      const st = {};
+      groups.forEach((g, i) => { st[g.getAttribute('data-group-key') || `g${i}`] = !!g.open; });
+      localStorage.setItem(key, JSON.stringify(st));
+    });
+  });
+
+  if (!appliedSaved) {
+    let opened = false;
+    groups.forEach((grp, idx) => {
+      const hasActive = !!grp.querySelector('.nav-link.active, .tab-btn.active, .tab-btn-side.active');
+      grp.open = hasActive;
+      if (hasActive) opened = true;
+      if (!hasActive && idx > 0) grp.open = false;
+    });
+    if (!opened && groups.length) groups[0].open = true;
+  }
+}
+
+window.addEventListener('DOMContentLoaded', function () {
+  initPlanoPortalSidebarGroups();
+  carregarBeneficiarios();
+});
 </script>
 </body>
 </html>
