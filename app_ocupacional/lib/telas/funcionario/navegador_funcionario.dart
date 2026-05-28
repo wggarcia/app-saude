@@ -9,10 +9,22 @@ import 'tela_meu_perfil.dart';
 import 'tela_meus_asos.dart';
 import 'tela_meus_epis.dart';
 import 'tela_meus_treinamentos.dart';
+import 'tela_minhas_solicitacoes.dart';
 import 'tela_bem_estar.dart';
 import 'tela_notificacoes.dart';
 import 'tela_psicossocial.dart';
+import 'tela_reunioes.dart';
 import 'tela_login_funcionario.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NavegadorFuncionario — 5 abas principais (padrão mobile)
+//
+//  0 · Início      — Dashboard com KPIs e alertas
+//  1 · Minha SST   — ASO · Solicitações · EPIs · Treinamentos (sub-tabs)
+//  2 · Comunicados — Comunicados SST · Reuniões (sub-tabs)
+//  3 · Saúde       — Bem-estar + Psicossocial NR-01
+//  4 · Perfil      — Meu Perfil + Notificações
+// ─────────────────────────────────────────────────────────────────────────────
 
 class NavegadorFuncionario extends StatefulWidget {
   const NavegadorFuncionario({
@@ -35,15 +47,8 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
   int _naoLidosComunicados = 0;
   Timer? _timer;
 
-  // ── índices das abas ────────────────────────────────────────────────────
-  static const _iInicio = 0;
-  static const _iAso = 1;
-  static const _iEpis = 2;
-  static const _iTreinamentos = 3;
-  static const _iComunicados = 4;
-  static const _iBemEstar = 5;
-  static const _iAvisos = 6;
-  static const _iPerfil = 7;
+  // índice da aba Perfil — usado para acionar _pollBadges ao navegar para ela
+  static const _iPerfil = 4;
 
   @override
   void initState() {
@@ -66,10 +71,9 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
       ]);
       if (!mounted) return;
       final notif = results[0];
-      final com = results[1];
+      final com   = results[1];
       setState(() {
         _naoLidasNotif = (notif['nao_lidas'] as int?) ?? 0;
-        // Conta comunicados não lidos da lista
         final lista = (com['comunicados'] ?? com['mensagens'] ?? []) as List;
         _naoLidosComunicados =
             lista.where((c) => (c as Map)['lido'] == false).length;
@@ -98,25 +102,46 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
         cargo: widget.cargo,
         empresaNome: widget.empresaNome,
       ),
-      // 1 ─ ASO
-      const TelaMeusAsos(),
-      // 2 ─ EPIs + Biometria
-      const TelaMeusEpis(),
-      // 3 ─ Treinamentos
-      const TelaMeusTreinamentos(),
-      // 4 ─ Comunicados SST
-      const TelaComunicados(),
-      // 5 ─ Bem-estar + Psicossocial
+      // 1 ─ Minha SST (ASO · Solicitações · EPIs · Treinamentos)
+      const _MinhaSST(),
+      // 2 ─ Comunicados (Comunicados · Reuniões)
+      const _ComunicadosEReuniones(),
+      // 3 ─ Saúde (Bem-estar + FAB Psicossocial)
       const _BemEstarComPsico(),
-      // 6 ─ Avisos / Notificações
-      TelaNotificacoes(onLidas: _onNotificacoesLidas),
-      // 7 ─ Perfil
-      const TelaMeuPerfil(),
+      // 4 ─ Perfil + Notificações
+      _PerfilComAvisos(
+        naoLidas: _naoLidasNotif,
+        onLidas: _onNotificacoesLidas,
+      ),
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.nome),
+        title: Row(
+          children: [
+            Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withAlpha(30),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(
+                Icons.health_and_safety_outlined,
+                size: 16,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                widget.nome,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             onPressed: _pollBadges,
@@ -135,34 +160,22 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
         selectedIndex: _idx,
         onDestinationSelected: (v) {
           setState(() => _idx = v);
-          if (v == _iAvisos) _pollBadges();
+          if (v == _iPerfil) _pollBadges();
         },
         destinations: [
           // 0 ─ Início
           const NavigationDestination(
-            icon: Icon(Icons.home_outlined),
+            icon:         Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Início',
           ),
-          // 1 ─ ASO
+          // 1 ─ Minha SST
           const NavigationDestination(
-            icon: Icon(Icons.assignment_outlined),
-            selectedIcon: Icon(Icons.assignment),
-            label: 'ASO',
+            icon:         Icon(Icons.medical_information_outlined),
+            selectedIcon: Icon(Icons.medical_information),
+            label: 'Minha SST',
           ),
-          // 2 ─ EPIs
-          const NavigationDestination(
-            icon: Icon(Icons.security_outlined),
-            selectedIcon: Icon(Icons.security),
-            label: 'EPIs',
-          ),
-          // 3 ─ Treinamentos
-          const NavigationDestination(
-            icon: Icon(Icons.school_outlined),
-            selectedIcon: Icon(Icons.school),
-            label: 'Treinamentos',
-          ),
-          // 4 ─ Comunicados
+          // 2 ─ Comunicados
           NavigationDestination(
             icon: Badge(
               isLabelVisible: _naoLidosComunicados > 0,
@@ -176,30 +189,24 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
             ),
             label: 'Comunicados',
           ),
-          // 5 ─ Bem-estar
+          // 3 ─ Saúde
           const NavigationDestination(
-            icon: Icon(Icons.favorite_outline),
+            icon:         Icon(Icons.favorite_outline),
             selectedIcon: Icon(Icons.favorite),
-            label: 'Saúde Mental',
+            label: 'Saúde',
           ),
-          // 6 ─ Avisos
+          // 4 ─ Perfil
           NavigationDestination(
             icon: Badge(
               isLabelVisible: _naoLidasNotif > 0,
               label: Text('$_naoLidasNotif'),
-              child: const Icon(Icons.notifications_outlined),
+              child: const Icon(Icons.person_outline),
             ),
             selectedIcon: Badge(
               isLabelVisible: _naoLidasNotif > 0,
               label: Text('$_naoLidasNotif'),
-              child: const Icon(Icons.notifications),
+              child: const Icon(Icons.person),
             ),
-            label: 'Avisos',
-          ),
-          // 7 ─ Perfil
-          const NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
             label: 'Perfil',
           ),
         ],
@@ -208,22 +215,95 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
   }
 }
 
-/// Tela composta: Bem-estar + acesso à avaliação Psicossocial NR-01
+// ─────────────────────────────────────────────────────────────────────────────
+// Aba 1 — Minha SST:  ASO · Exames · EPIs · Treinamentos
+// ─────────────────────────────────────────────────────────────────────────────
+class _MinhaSST extends StatelessWidget {
+  const _MinhaSST();
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 4,
+      child: Scaffold(
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight - 8),
+          child: Material(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: const TabBar(
+              isScrollable: false,
+              labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              unselectedLabelStyle: TextStyle(fontSize: 12),
+              tabs: [
+                Tab(icon: Icon(Icons.assignment_outlined, size: 18), text: 'ASO'),
+                Tab(icon: Icon(Icons.science_outlined,    size: 18), text: 'Exames'),
+                Tab(icon: Icon(Icons.security_outlined,   size: 18), text: 'EPIs'),
+                Tab(icon: Icon(Icons.school_outlined,     size: 18), text: 'Treinamentos'),
+              ],
+            ),
+          ),
+        ),
+        body: const TabBarView(
+          children: [
+            TelaMeusAsos(),
+            TelaMinhasSolicitacoes(),
+            TelaMeusEpis(),
+            TelaMeusTreinamentos(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Aba 2 — Comunicados + Reuniões
+// ─────────────────────────────────────────────────────────────────────────────
+class _ComunicadosEReuniones extends StatelessWidget {
+  const _ComunicadosEReuniones();
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight - 8),
+          child: Material(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: const TabBar(
+              tabs: [
+                Tab(icon: Icon(Icons.campaign_outlined,  size: 18), text: 'Comunicados'),
+                Tab(icon: Icon(Icons.videocam_outlined,  size: 18), text: 'Reuniões'),
+              ],
+            ),
+          ),
+        ),
+        body: const TabBarView(
+          children: [
+            TelaComunicados(),
+            TelaReunioesFunc(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Aba 3 — Saúde: Bem-estar + FAB Psicossocial NR-01
+// ─────────────────────────────────────────────────────────────────────────────
 class _BemEstarComPsico extends StatelessWidget {
   const _BemEstarComPsico();
 
   static const _purple = Color(0xFF8B5CF6);
-  static const _surface = Color(0xFF102A32);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // Aba padrão de Bem-estar (usa DefaultTabController)
           const TelaBemEstar(),
-
-          // FAB flutuante para acessar Psicossocial
           Positioned(
             right: 16,
             bottom: 16,
@@ -236,11 +316,72 @@ class _BemEstarComPsico extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w800)),
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (_) => const TelaPsicossocial()),
+                MaterialPageRoute(builder: (_) => const TelaPsicossocial()),
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Aba 4 — Perfil + Notificações (seção expansível)
+// ─────────────────────────────────────────────────────────────────────────────
+class _PerfilComAvisos extends StatefulWidget {
+  const _PerfilComAvisos({required this.naoLidas, required this.onLidas});
+  final int naoLidas;
+  final VoidCallback onLidas;
+
+  @override
+  State<_PerfilComAvisos> createState() => _PerfilComAvisosState();
+}
+
+class _PerfilComAvisosState extends State<_PerfilComAvisos>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tc = TabController(length: 2, vsync: this);
+
+  @override
+  void dispose() {
+    _tc.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight - 8),
+        child: Material(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: TabBar(
+            controller: _tc,
+            tabs: [
+              const Tab(icon: Icon(Icons.person_outline, size: 18), text: 'Perfil'),
+              Tab(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Badge(
+                      isLabelVisible: widget.naoLidas > 0,
+                      label: Text('${widget.naoLidas}'),
+                      child: const Icon(Icons.notifications_outlined, size: 18),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text('Avisos', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      body: TabBarView(
+        controller: _tc,
+        children: [
+          const TelaMeuPerfil(),
+          TelaNotificacoes(onLidas: widget.onLidas),
         ],
       ),
     );

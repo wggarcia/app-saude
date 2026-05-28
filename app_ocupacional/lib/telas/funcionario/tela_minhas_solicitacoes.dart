@@ -66,15 +66,11 @@ class _TelaMinhasSolicitacoesState extends State<TelaMinhasSolicitacoes> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Meus Exames'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _carregar,
-            tooltip: 'Atualizar',
-          ),
-        ],
+      // AppBar removido — tela integrada no TabBarView do NavegadorFuncionario
+      floatingActionButton: FloatingActionButton.small(
+        onPressed: _carregar,
+        tooltip: 'Atualizar',
+        child: const Icon(Icons.refresh),
       ),
       body: _buildBody(),
     );

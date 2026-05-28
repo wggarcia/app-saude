@@ -236,7 +236,6 @@ class _EpisTab extends StatelessWidget {
   final List<Map<String, dynamic>> epis;
   final _EpiStatus Function(Map<String, dynamic>) statusFn;
 
-  static const _teal = Color(0xFF27D3BE);
   static const _surface = Color(0xFF102A32);
 
   @override

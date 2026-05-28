@@ -196,7 +196,7 @@ class _TelaComunicadosState extends State<TelaComunicados> {
               decoration: BoxDecoration(
                 color: lido
                     ? _surface
-                    : _surface.withRed((_surface.red + 8).clamp(0, 255)),
+                    : const Color(0xFF152E38),
                 borderRadius: BorderRadius.circular(16),
                 border: Border(
                   left: BorderSide(
