@@ -7,11 +7,12 @@ import '../config.dart';
 import 'fcm_service.dart';
 
 class FuncionarioAuthService {
-  static const _tokenKey = 'funcionario_token';
-  static const _emailKey = 'funcionario_email';
-  static const _nomeKey = 'funcionario_nome';
-  static const _cargoKey = 'funcionario_cargo';
+  static const _tokenKey   = 'funcionario_token';
+  static const _emailKey   = 'funcionario_email';
+  static const _nomeKey    = 'funcionario_nome';
+  static const _cargoKey   = 'funcionario_cargo';
   static const _empresaKey = 'funcionario_empresa';
+  static const _funcIdKey  = 'funcionario_id';
 
   /// Login com email + senha (novo)
   static Future<Map<String, dynamic>> login(
@@ -83,10 +84,16 @@ class FuncionarioAuthService {
     await prefs.setString(_nomeKey, data['nome']?.toString() ?? '');
     await prefs.setString(_cargoKey, data['cargo']?.toString() ?? '');
     await prefs.setString(_empresaKey, data['empresa_nome']?.toString() ?? '');
+    final fid = data['funcionario_id'];
+    if (fid != null) await prefs.setInt(_funcIdKey, fid as int);
   }
 
   static Future<String?> token() async =>
       (await SharedPreferences.getInstance()).getString(_tokenKey);
+
+  /// Retorna o ID numérico do funcionário autenticado (salvo no login).
+  static Future<int?> funcId() async =>
+      (await SharedPreferences.getInstance()).getInt(_funcIdKey);
 
   static Future<String?> emailSalvo() async =>
       (await SharedPreferences.getInstance()).getString(_emailKey);
@@ -108,5 +115,6 @@ class FuncionarioAuthService {
     await prefs.remove(_nomeKey);
     await prefs.remove(_cargoKey);
     await prefs.remove(_empresaKey);
+    await prefs.remove(_funcIdKey);
   }
 }

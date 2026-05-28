@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../../servicos/funcionario_auth_service.dart';
 import '../../servicos/funcionario_sst_service.dart';
+import 'tela_chat_funcionario.dart';
 import 'tela_comunicados.dart';
 import 'tela_dashboard_funcionario.dart';
 import 'tela_meu_perfil.dart';
+import 'tela_meus_afastamentos.dart';
 import 'tela_meus_asos.dart';
 import 'tela_meus_epis.dart';
 import 'tela_meus_treinamentos.dart';
@@ -216,7 +218,7 @@ class _NavegadorFuncionarioState extends State<NavegadorFuncionario> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Aba 1 — Minha SST:  ASO · Exames · EPIs · Treinamentos
+// Aba 1 — Minha SST:  ASO · Exames · EPIs · Treinamentos · Afastamentos
 // ─────────────────────────────────────────────────────────────────────────────
 class _MinhaSST extends StatelessWidget {
   const _MinhaSST();
@@ -224,21 +226,23 @@ class _MinhaSST extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight - 8),
           child: Material(
             color: Theme.of(context).scaffoldBackgroundColor,
             child: const TabBar(
-              isScrollable: false,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
               labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
               unselectedLabelStyle: TextStyle(fontSize: 12),
               tabs: [
-                Tab(icon: Icon(Icons.assignment_outlined, size: 18), text: 'ASO'),
-                Tab(icon: Icon(Icons.science_outlined,    size: 18), text: 'Exames'),
-                Tab(icon: Icon(Icons.security_outlined,   size: 18), text: 'EPIs'),
-                Tab(icon: Icon(Icons.school_outlined,     size: 18), text: 'Treinamentos'),
+                Tab(icon: Icon(Icons.assignment_outlined,    size: 18), text: 'ASO'),
+                Tab(icon: Icon(Icons.science_outlined,       size: 18), text: 'Exames'),
+                Tab(icon: Icon(Icons.security_outlined,      size: 18), text: 'EPIs'),
+                Tab(icon: Icon(Icons.school_outlined,        size: 18), text: 'Treinamentos'),
+                Tab(icon: Icon(Icons.work_off_outlined,      size: 18), text: 'Afastamentos'),
               ],
             ),
           ),
@@ -249,6 +253,7 @@ class _MinhaSST extends StatelessWidget {
             TelaMinhasSolicitacoes(),
             TelaMeusEpis(),
             TelaMeusTreinamentos(),
+            TelaMeusAfastamentos(),
           ],
         ),
       ),
@@ -265,7 +270,7 @@ class _ComunicadosEReuniones extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight - 8),
@@ -273,8 +278,9 @@ class _ComunicadosEReuniones extends StatelessWidget {
             color: Theme.of(context).scaffoldBackgroundColor,
             child: const TabBar(
               tabs: [
-                Tab(icon: Icon(Icons.campaign_outlined,  size: 18), text: 'Comunicados'),
-                Tab(icon: Icon(Icons.videocam_outlined,  size: 18), text: 'Reuniões'),
+                Tab(icon: Icon(Icons.campaign_outlined,   size: 18), text: 'Comunicados'),
+                Tab(icon: Icon(Icons.videocam_outlined,   size: 18), text: 'Reuniões'),
+                Tab(icon: Icon(Icons.chat_bubble_outline, size: 18), text: 'Chat RH'),
               ],
             ),
           ),
@@ -283,6 +289,7 @@ class _ComunicadosEReuniones extends StatelessWidget {
           children: [
             TelaComunicados(),
             TelaReunioesFunc(),
+            TelaChatFuncionario(),
           ],
         ),
       ),

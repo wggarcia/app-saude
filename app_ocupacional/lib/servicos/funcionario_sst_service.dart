@@ -109,4 +109,46 @@ class FuncionarioSstService {
 
   static Future<Map<String, dynamic>> episPendentesEntrega() =>
       _get('/api/funcionario/epis/pendentes-entrega');
+
+  // ── Novos endpoints ────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> meusAfastamentos() =>
+      _get('/api/funcionario/meus-afastamentos');
+
+  static Future<Map<String, dynamic>> minhaBiometria() =>
+      _get('/api/funcionario/minha-biometria');
+
+  /// Busca mensagens do chat (colaborador-side) usando alias sst-{id}.
+  static Future<Map<String, dynamic>> chatMensagens(
+    String aliasCodigo, {
+    String? desde,
+  }) async {
+    final path = desde != null
+        ? '/api/corporativo/$aliasCodigo/chat/mensagens/?desde=${Uri.encodeComponent(desde)}'
+        : '/api/corporativo/$aliasCodigo/chat/mensagens/';
+    // chat colaborador não usa JWT — usa apenas o alias code na URL
+    final response = await http.get(
+      Uri.parse('${Config.baseUrl}$path'),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Erro ao carregar mensagens (${response.statusCode})');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  /// Envia mensagem no chat (colaborador-side).
+  static Future<Map<String, dynamic>> chatEnviar(
+    String aliasCodigo,
+    String texto,
+  ) async {
+    final response = await http.post(
+      Uri.parse('${Config.baseUrl}/api/corporativo/$aliasCodigo/chat/enviar/'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'texto': texto}),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Erro ao enviar mensagem (${response.statusCode})');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
 }

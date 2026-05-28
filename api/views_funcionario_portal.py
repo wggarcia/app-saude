@@ -643,3 +643,72 @@ def funcionario_epis_pendentes(request):
             for e in pendentes
         ]
     })
+
+
+def funcionario_meus_afastamentos(request):
+    """GET /api/funcionario/meus-afastamentos — afastamentos do funcionário autenticado."""
+    if request.method != "GET":
+        return JsonResponse({"erro": "Use GET"}, status=405)
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+
+    from .models import AfastamentoSST
+
+    MOTIVO_LABEL = {
+        "acidente_trabalho":  "Acidente de Trabalho",
+        "doenca_ocupacional": "Doença Ocupacional",
+        "doenca_comum":       "Doença Comum",
+        "licenca_maternidade":"Licença Maternidade",
+        "licenca_paternidade":"Licença Paternidade",
+        "outro":              "Outro",
+    }
+    STATUS_LABEL = {
+        "ativo":               "Em afastamento",
+        "retorno_programado":  "Retorno programado",
+        "encerrado":           "Encerrado",
+    }
+
+    qs = AfastamentoSST.objects.filter(
+        funcionario=func, empresa=func.empresa
+    ).order_by("-data_inicio")[:30]
+
+    return JsonResponse({
+        "afastamentos": [
+            {
+                "id":                   a.id,
+                "motivo":               a.motivo,
+                "motivo_label":         MOTIVO_LABEL.get(a.motivo, a.motivo),
+                "cid":                  a.cid or "",
+                "data_inicio":          str(a.data_inicio),
+                "data_prevista_retorno":str(a.data_prevista_retorno) if a.data_prevista_retorno else None,
+                "data_retorno_real":    str(a.data_retorno_real) if a.data_retorno_real else None,
+                "status":               a.status,
+                "status_label":         STATUS_LABEL.get(a.status, a.status),
+                "observacoes":          a.observacoes or "",
+            }
+            for a in qs
+        ]
+    })
+
+
+def funcionario_minha_biometria(request):
+    """GET /api/funcionario/minha-biometria — status da biometria do funcionário autenticado."""
+    if request.method != "GET":
+        return JsonResponse({"erro": "Use GET"}, status=405)
+    func = _autenticar_funcionario(request)
+    if not func:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+
+    from .models import BiometriaFuncionario
+
+    try:
+        bio = BiometriaFuncionario.objects.get(funcionario=func, ativo=True)
+        return JsonResponse({
+            "cadastrada": True,
+            "hash_foto":  bio.hash_foto,
+            "cadastrado_em":  str(bio.cadastrado_em.date()),
+            "atualizado_em":  str(bio.atualizado_em.date()),
+        })
+    except BiometriaFuncionario.DoesNotExist:
+        return JsonResponse({"cadastrada": False})

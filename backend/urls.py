@@ -682,7 +682,9 @@ from api.views_funcionario_portal import (
     funcionario_salvar_fcm_token,
     funcionario_comunicados, funcionario_comunicado_lido,
     funcionario_psicossocial_ativa, funcionario_epis_pendentes,
+    funcionario_meus_afastamentos, funcionario_minha_biometria,
 )
+
 from api.views_bem_estar import (
     api_funcionario_checkin,
     api_empresa_bem_estar_resumo,
@@ -1608,6 +1610,8 @@ urlpatterns = [
     path('api/funcionario/meus-epis', funcionario_meus_epis),
     path('api/funcionario/epis/pendentes-entrega', funcionario_epis_pendentes),
     path('api/funcionario/minhas-solicitacoes', funcionario_minhas_solicitacoes),
+    path('api/funcionario/meus-afastamentos', funcionario_meus_afastamentos),
+    path('api/funcionario/minha-biometria', funcionario_minha_biometria),
     path('api/funcionario/comunicados', funcionario_comunicados),
     path('api/funcionario/comunicados/<int:comunicado_id>/lido', funcionario_comunicado_lido),
     path('api/funcionario/psicossocial/ativa/', funcionario_psicossocial_ativa),

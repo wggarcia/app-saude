@@ -14,6 +14,8 @@ class TelaMeuPerfil extends StatefulWidget {
 class _TelaMeuPerfilState extends State<TelaMeuPerfil> {
   Map<String, dynamic>? _perfil;
   List<dynamic> _epis = const [];
+  bool? _biometriaCadastrada;   // null = carregando, true/false = resultado
+  String? _biometriaData;       // data de cadastro se existir
   String? _erro;
   bool _loading = true;
 
@@ -27,18 +29,23 @@ class _TelaMeuPerfilState extends State<TelaMeuPerfil> {
     setState(() {
       _loading = true;
       _erro = null;
+      _biometriaCadastrada = null;
     });
     try {
       final results = await Future.wait([
         FuncionarioSstService.perfil(),
         FuncionarioSstService.epis().catchError((_) => <String, dynamic>{}),
+        FuncionarioSstService.minhaBiometria().catchError((_) => <String, dynamic>{}),
       ]);
       if (!mounted) return;
       final perfilData = results[0];
-      final episData = results[1];
+      final episData   = results[1];
+      final bioData    = results[2];
       setState(() {
         _perfil = perfilData;
-        _epis = (episData['epis'] as List<dynamic>? ?? []);
+        _epis   = (episData['epis'] as List<dynamic>? ?? []);
+        _biometriaCadastrada = bioData['cadastrada'] as bool?;
+        _biometriaData       = bioData['cadastrado_em']?.toString();
       });
     } catch (e) {
       if (!mounted) return;
@@ -194,6 +201,13 @@ class _TelaMeuPerfilState extends State<TelaMeuPerfil> {
             const SizedBox(height: 12),
           ],
 
+          // ── Biometria facial ──
+          _BiometriaCard(
+            cadastrada: _biometriaCadastrada,
+            cadastradaEm: _biometriaData,
+          ),
+          const SizedBox(height: 12),
+
           // ── Logout ──
           const SizedBox(height: 8),
           FilledButton.icon(
@@ -284,6 +298,84 @@ class _Secao extends StatelessWidget {
               ],
             );
           }),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Card de status de biometria facial ───────────────────────────────────────
+class _BiometriaCard extends StatelessWidget {
+  const _BiometriaCard({this.cadastrada, this.cadastradaEm});
+  final bool?   cadastrada;
+  final String? cadastradaEm;
+
+  @override
+  Widget build(BuildContext context) {
+    // Ainda carregando
+    if (cadastrada == null) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF102A32),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.face_outlined, size: 16, color: Colors.white38),
+            SizedBox(width: 8),
+            Text('Biometria facial',
+                style: TextStyle(color: Colors.white38, fontSize: 12)),
+            SizedBox(width: 8),
+            SizedBox(
+              width: 12, height: 12,
+              child: CircularProgressIndicator(strokeWidth: 1.5,
+                  color: Colors.white24),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final ok     = cadastrada == true;
+    final cor    = ok ? const Color(0xFF27D3BE) : const Color(0xFFFFB454);
+    final icone  = ok ? Icons.face_retouching_natural : Icons.face_outlined;
+    final titulo = ok ? 'Biometria facial cadastrada' : 'Biometria facial não cadastrada';
+    final sub    = ok
+        ? (cadastradaEm != null ? 'Cadastrada em $cadastradaEm' : 'Foto de referência registrada')
+        : 'Procure o RH para cadastrar sua foto de referência';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: cor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cor.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icone, color: cor, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(titulo,
+                    style: TextStyle(
+                        color: cor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13)),
+                const SizedBox(height: 2),
+                Text(sub,
+                    style: const TextStyle(
+                        color: Colors.white54, fontSize: 11)),
+              ],
+            ),
+          ),
+          Icon(
+            ok ? Icons.check_circle : Icons.info_outline,
+            color: cor, size: 18,
+          ),
         ],
       ),
     );
