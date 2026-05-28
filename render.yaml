@@ -102,7 +102,7 @@ services:
     name: sst-alertas-email
     env: python
     plan: starter
-    buildCommand: "./build.sh"
+    buildCommand: "./build_cron.sh"
     schedule: "0 11 * * *"
     startCommand: "python manage.py sst_alertas_email"
     envVars:
@@ -142,7 +142,7 @@ services:
     name: trial-expiry-emails
     env: python
     plan: starter
-    buildCommand: "./build.sh"
+    buildCommand: "./build_cron.sh"
     schedule: "0 12 * * *"
     startCommand: "python manage.py trial_expiry_emails"
     envVars:
@@ -180,7 +180,7 @@ services:
     name: sla-breach-alertas
     env: python
     plan: starter
-    buildCommand: "./build.sh"
+    buildCommand: "./build_cron.sh"
     schedule: "0 11,17 * * *"
     startCommand: "python manage.py sla_breach_alertas"
     envVars:
