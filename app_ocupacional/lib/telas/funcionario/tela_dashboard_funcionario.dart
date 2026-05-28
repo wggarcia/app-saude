@@ -255,16 +255,16 @@ class _ResumoCard extends StatelessWidget {
         ? Theme.of(context).colorScheme.error.withAlpha(30)
         : null,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, size: 22,
               color: destaque ? Colors.redAccent : null),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(titulo,
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(valor,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

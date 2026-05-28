@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../servicos/funcionario_auth_service.dart';
@@ -21,12 +22,40 @@ class _TelaLoginFuncionarioState extends State<TelaLoginFuncionario> {
   @override
   void initState() {
     super.initState();
-    // pré-preenche e-mail salvo
-    FuncionarioAuthService.emailSalvo().then((e) {
-      if (e != null && e.isNotEmpty && mounted) {
-        _email.text = e;
-      }
-    });
+    _verificarSessao();
+  }
+
+  /// Se já existe token + dados salvos, vai direto para o dashboard.
+  Future<void> _verificarSessao() async {
+    final token = await FuncionarioAuthService.token();
+    if (token == null || token.isEmpty) {
+      // Sem sessão — apenas pré-preenche o e-mail
+      final e = await FuncionarioAuthService.emailSalvo();
+      if (e != null && e.isNotEmpty && mounted) _email.text = e;
+      return;
+    }
+    final dados = await FuncionarioAuthService.dadosSalvos();
+    final nome  = dados['nome'] ?? '';
+    if (nome.isEmpty || !mounted) {
+      final e = await FuncionarioAuthService.emailSalvo();
+      if (e != null && e.isNotEmpty && mounted) _email.text = e;
+      return;
+    }
+    // Sessão válida — navega diretamente para o dashboard
+    if (!mounted) return;
+    _irParaDashboard(nome, dados['cargo'] ?? '-', dados['empresa'] ?? '-');
+  }
+
+  void _irParaDashboard(String nome, String cargo, String empresa) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => NavegadorFuncionario(
+          nome: nome,
+          cargo: cargo,
+          empresaNome: empresa,
+        ),
+      ),
+    );
   }
 
   @override
@@ -149,6 +178,36 @@ class _TelaLoginFuncionarioState extends State<TelaLoginFuncionario> {
                     fontSize: 11,
                   ),
                 ),
+                // ── Debug quick-login (apenas em debug mode) ────────────────
+                if (kDebugMode) ...[
+                  const SizedBox(height: 20),
+                  const Divider(color: Colors.white12),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: _loading ? null : () async {
+                      setState(() { _loading = true; _erro = null; });
+                      try {
+                        final payload = await FuncionarioAuthService.login(
+                          'luiz@app.local', 'Luiz@2026');
+                        if (!mounted) return;
+                        _irParaDashboard(
+                          payload['nome']?.toString() ?? 'Luiz Oliveira',
+                          payload['cargo']?.toString() ?? '-',
+                          payload['empresa_nome']?.toString() ?? '-',
+                        );
+                      } catch (e) {
+                        if (mounted) setState(() {
+                          _erro = e.toString().replaceFirst('Exception: ', '');
+                          _loading = false;
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.developer_mode, size: 14),
+                    label: const Text('DEBUG: Luiz Oliveira',
+                        style: TextStyle(fontSize: 11)),
+                    style: TextButton.styleFrom(foregroundColor: Colors.white24),
+                  ),
+                ],
               ],
             ),
           ),
