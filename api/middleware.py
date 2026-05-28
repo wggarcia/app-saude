@@ -356,3 +356,44 @@ class EmpresaMiddleware:
                 secure=not settings.DEBUG,
             )
         return response
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fetch 401 interceptor — injeta script em toda resposta HTML para redirecionar
+# ao login quando a sessão expirar (token JWT vencido).
+# ─────────────────────────────────────────────────────────────────────────────
+
+_FETCH_INTERCEPTOR = b"""
+<script>
+(function(){
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts){
+    return _origFetch.apply(this, arguments).then(function(res){
+      if(res.status === 401){
+        var tipo = document.cookie.match(/tipo_conta=([^;]+)/);
+        var destino = (tipo && tipo[1]==='governo') ? '/login-governo/' : '/login-empresa/';
+        window.location.href = destino;
+        return new Response(null, {status: 401});
+      }
+      return res;
+    });
+  };
+})();
+</script>
+"""
+
+class FetchAuthInterceptorMiddleware:
+    """
+    Injeta um interceptor de fetch em respostas HTML para redirecionar ao login
+    quando qualquer chamada de API retornar 401 (sessão/token expirado).
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        ct = response.get("Content-Type", "")
+        if "text/html" in ct and hasattr(response, "content") and b"</body>" in response.content:
+            response.content = response.content.replace(b"</body>", _FETCH_INTERCEPTOR + b"</body>", 1)
+        return response

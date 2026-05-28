@@ -15,7 +15,7 @@ services:
       - key: DJANGO_DEBUG
         value: "false"
       - key: JWT_EXP_HOURS
-        value: "12"
+        value: "48"
       - key: CORS_ALLOW_ALL_ORIGINS
         value: "false"
       - key: DJANGO_ALLOWED_HOSTS
