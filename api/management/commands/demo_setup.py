@@ -38,7 +38,12 @@ class Command(BaseCommand):
         parser.add_argument(
             "--apply",
             action="store_true",
-            help="Aplica as mudanças (sem esta flag só faz preview).",
+            help="Reseta o banco local e cria os 5 demos do zero (uso local).",
+        )
+        parser.add_argument(
+            "--upsert",
+            action="store_true",
+            help="Cria as contas demo se não existirem; ignora se já existirem (seguro em produção).",
         )
 
     def out(self, msg, style=None):
@@ -48,7 +53,17 @@ class Command(BaseCommand):
             self.stdout.write(msg)
 
     def handle(self, *args, **options):
-        apply = options["apply"]
+        apply  = options["apply"]
+        upsert = options["upsert"]
+
+        if upsert:
+            self.out(f"\n{'='*60}")
+            self.out("  demo_setup --upsert  (produção — idempotente)")
+            self.out(f"{'='*60}\n")
+            with transaction.atomic():
+                self._upsert_demos()
+            return
+
         mode = "APLICANDO" if apply else "PREVIEW (use --apply para executar)"
         self.out(f"\n{'='*60}")
         self.out(f"  demo_setup — {mode}")
@@ -146,6 +161,35 @@ class Command(BaseCommand):
         self.out("  ✅ Demo setup concluído!", self.style.SUCCESS)
         self.out("="*60 + "\n", self.style.SUCCESS)
         self._imprimir_resumo()
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # UPSERT — idempotente, seguro em produção
+    # ─────────────────────────────────────────────────────────────────────────
+    def _upsert_demos(self):
+        """Cria cada conta demo apenas se o e-mail ainda não existir no banco."""
+        from api.models import Empresa
+
+        demos = [
+            ("demo.sst@soluscrt.com",     self._criar_empresa_sst,     self._criar_dados_sst),
+            ("demo.farmacia@soluscrt.com", self._criar_empresa_farmacia, self._criar_dados_farmacia),
+            ("demo.hospital@soluscrt.com", self._criar_empresa_hospital, self._criar_dados_hospital),
+            ("demo.governo@soluscrt.com",  self._criar_empresa_governo,  self._criar_dados_governo),
+            ("demo.plano@soluscrt.com",    self._criar_empresa_plano,    self._criar_dados_plano),
+        ]
+
+        criados = 0
+        for email, criar_fn, dados_fn in demos:
+            if Empresa.objects.filter(email=email).exists():
+                self.out(f"  ↷  {email} já existe — ignorando")
+            else:
+                e = criar_fn()
+                dados_fn(e)
+                self.out(f"  ✅ {email} criado", self.style.SUCCESS)
+                criados += 1
+
+        self._recria_dono_saas()
+
+        self.out(f"\n  {criados} conta(s) demo criada(s). ✅\n", self.style.SUCCESS)
 
     # ── Empresa SST ──────────────────────────────────────────────────────────
     def _criar_empresa_sst(self):
