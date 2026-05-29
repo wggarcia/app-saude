@@ -594,21 +594,21 @@ class Command(BaseCommand):
             for nome, ean, forma, categoria in medicamentos:
                 item = ItemFarmacia.objects.create(
                     empresa=empresa,
-                    nome=nome, ean=ean,
-                    forma_farmaceutica=forma,
+                    nome=nome,
+                    codigo=ean,
                     categoria=categoria,
+                    unidade_medida=forma,
                     estoque_atual=50 + len(nome),
                     estoque_minimo=10,
-                    preco_venda=round(2.50 + len(nome) * 0.3, 2),
-                    preco_custo=round(1.20 + len(nome) * 0.15, 2),
                     ativo=True,
                 )
                 LoteMedicamento.objects.create(
                     empresa=empresa, item=item,
                     numero_lote=f"LOT{len(nome):04d}",
-                    quantidade=50 + len(nome),
+                    quantidade_inicial=50 + len(nome),
+                    quantidade_atual=50 + len(nome),
                     data_fabricacao=datetime.date(2025, 1, 1),
-                    data_vencimento=datetime.date(2027, 6, 30),
+                    data_validade=datetime.date(2027, 6, 30),
                 )
         except Exception as ex:
             self.out(f"     ⚠ Farmácia dados parciais: {ex}")
@@ -643,7 +643,7 @@ class Command(BaseCommand):
             dept_objs = []
             for nome_dept, sigla in depts:
                 d = DepartamentoHospital.objects.create(
-                    empresa=empresa, nome=nome_dept, sigla=sigla,
+                    empresa=empresa, nome=nome_dept, tipo=sigla,
                     capacidade_leitos=20, ativo=True,
                 )
                 dept_objs.append(d)
@@ -655,10 +655,9 @@ class Command(BaseCommand):
                     LeitoHospital.objects.create(
                         empresa=empresa,
                         departamento=dept,
-                        numero=f"{dept.sigla[:3].upper()}-{i:02d}",
-                        tipo="adulto" if dept.sigla != "pediatria" else "pediatrico",
+                        numero=f"{dept.tipo[:3].upper()}-{i:02d}",
+                        tipo="adulto" if dept.tipo != "pediatria" else "pediatrico",
                         status=status_cycle[i % len(status_cycle)],
-                        ativo=True,
                     )
         except Exception as ex:
             self.out(f"     ⚠ Hospital leitos parciais: {ex}")
@@ -672,7 +671,7 @@ class Command(BaseCommand):
             for nome, cpf, nasc in pacientes:
                 PacienteHospital.objects.create(
                     empresa=empresa, nome=nome, cpf=cpf,
-                    data_nascimento=nasc, ativo=True,
+                    data_nascimento=nasc,
                 )
         except Exception as ex:
             self.out(f"     ⚠ Hospital pacientes parciais: {ex}")
@@ -697,10 +696,10 @@ class Command(BaseCommand):
             for nome, categoria, val_atual, meta, unidade in indicadores:
                 IndicadorSaudeGov.objects.create(
                     empresa=empresa,
-                    nome=nome, categoria=categoria,
+                    nome=nome, tipo=categoria,
                     valor_atual=val_atual, meta=meta,
                     unidade=unidade,
-                    periodo=str(HOJE.year),
+                    periodo_referencia=str(HOJE.year),
                 )
         except Exception as ex:
             self.out(f"     ⚠ Governo indicadores parciais: {ex}")
@@ -715,10 +714,10 @@ class Command(BaseCommand):
             for nome, categoria, status in programas:
                 ProgramaSaudeGov.objects.create(
                     empresa=empresa,
-                    nome=nome, categoria=categoria,
+                    nome=nome,
                     status=status,
-                    descricao=f"Programa demo para demonstração: {nome}",
-                    meta_beneficiarios=5000,
+                    descricao=f"Programa demo: {nome}",
+                    populacao_alvo=5000,
                 )
         except Exception as ex:
             self.out(f"     ⚠ Governo programas parciais: {ex}")
@@ -734,9 +733,8 @@ class Command(BaseCommand):
                 UnidadeSaude.objects.create(
                     empresa=empresa,
                     nome=nome, tipo=tipo,
-                    cidade=cidade, estado=estado,
+                    municipio=cidade, uf=estado,
                     latitude=float(lat), longitude=float(lon),
-                    ativa=True,
                 )
         except Exception as ex:
             self.out(f"     ⚠ Governo unidades parciais: {ex}")
@@ -746,26 +744,24 @@ class Command(BaseCommand):
             AlertaGovernamental.objects.create(
                 empresa=empresa,
                 titulo="Aumento de casos de Dengue — Zona Norte",
-                corpo="Registrado aumento de 40% nos casos confirmados de Dengue na Zona Norte na última semana. Reforce medidas preventivas.",
-                nivel_alerta="alto",
-                doenca="dengue",
+                mensagem="Registrado aumento de 40% nos casos confirmados de Dengue na Zona Norte na última semana. Reforce medidas preventivas.",
+                nivel="alto",
                 estado="SP",
                 cidade="São Paulo",
                 bairro="Zona Norte",
                 ativo=True,
-                publicado=True,
+                status="publicado",
             )
             AlertaGovernamental.objects.create(
                 empresa=empresa,
                 titulo="Surto de Influenza — Zona Leste",
-                corpo="Elevação no índice de síndrome gripal na Zona Leste. Vacinação disponível nas UBSs.",
-                nivel_alerta="medio",
-                doenca="influenza",
+                mensagem="Elevação no índice de síndrome gripal na Zona Leste. Vacinação disponível nas UBSs.",
+                nivel="moderado",
                 estado="SP",
                 cidade="São Paulo",
                 bairro="Zona Leste",
                 ativo=True,
-                publicado=True,
+                status="publicado",
             )
         except Exception as ex:
             self.out(f"     ⚠ Governo alertas parciais: {ex}")
@@ -800,7 +796,7 @@ class Command(BaseCommand):
                     bairro=base["bairro"],
                     latitude=base["latitude"] + lat_jitter,
                     longitude=base["longitude"] + lon_jitter,
-                    origem=RegistroSintoma.ORIGEM_CIDADAO,
+                    origem_dado='cidadao',
                 )
         except Exception as ex:
             self.out(f"     ⚠ Governo sintomas pop parciais: {ex}")
@@ -825,9 +821,7 @@ class Command(BaseCommand):
             for nome, codigo, mensalidade in planos:
                 p = PlanoSaude.objects.create(
                     empresa=empresa,
-                    nome=nome, codigo=codigo,
-                    mensalidade=mensalidade,
-                    ativo=True,
+                    nome=nome,
                 )
                 plano_objs.append(p)
 
@@ -841,11 +835,9 @@ class Command(BaseCommand):
             ]
             for nome, cpf, nasc in beneficiarios:
                 BeneficiarioPlano.objects.create(
-                    empresa=empresa,
                     plano=plano_objs[len(nome) % len(plano_objs)],
                     nome=nome, cpf=cpf,
                     data_nascimento=nasc,
-                    ativo=True,
                 )
         except Exception as ex:
             self.out(f"     ⚠ Plano dados parciais: {ex}")
@@ -860,9 +852,8 @@ class Command(BaseCommand):
             for nome, tipo, cidade, estado in prestadores:
                 PrestadorPlanoSaude.objects.create(
                     empresa=empresa,
-                    nome=nome, tipo=tipo,
+                    nome_fantasia=nome, tipo=tipo,
                     cidade=cidade, estado=estado,
-                    ativo=True,
                 )
         except Exception as ex:
             self.out(f"     ⚠ Plano prestadores parciais: {ex}")
