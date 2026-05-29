@@ -4,7 +4,7 @@ services:
     env: python
     plan: starter
     buildCommand: "./build.sh"
-    preDeployCommand: "python manage.py migrate --noinput && python manage.py bootstrap_acessos && python manage.py demo_setup --upsert"
+    preDeployCommand: "python manage.py migrate --noinput && python manage.py bootstrap_acessos && python manage.py demo_setup --upsert && python manage.py demo_setup --refresh-dados"
     startCommand: "./start.sh"
     healthCheckPath: /api/public/resumo
     envVars:

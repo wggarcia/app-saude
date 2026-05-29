@@ -45,6 +45,12 @@ class Command(BaseCommand):
             action="store_true",
             help="Cria as contas demo se não existirem; ignora se já existirem (seguro em produção).",
         )
+        parser.add_argument(
+            "--refresh-dados",
+            action="store_true",
+            help="Recria APENAS os dados demo (funcionários, EPIs, etc.) nas contas existentes. "
+                 "Não deleta nem recria as contas. Seguro em produção.",
+        )
 
     def out(self, msg, style=None):
         if style:
@@ -53,8 +59,16 @@ class Command(BaseCommand):
             self.stdout.write(msg)
 
     def handle(self, *args, **options):
-        apply  = options["apply"]
-        upsert = options["upsert"]
+        apply         = options["apply"]
+        upsert        = options["upsert"]
+        refresh_dados = options["refresh_dados"]
+
+        if refresh_dados:
+            self.out(f"\n{'='*60}")
+            self.out("  demo_setup --refresh-dados  (produção — atualiza dados)")
+            self.out(f"{'='*60}\n")
+            self._refresh_dados_demos()
+            return
 
         if upsert:
             self.out(f"\n{'='*60}")
@@ -199,6 +213,73 @@ class Command(BaseCommand):
         self._recria_dono_saas()
 
         self.out(f"\n  {criados} conta(s) demo criada(s). ✅\n", self.style.SUCCESS)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # REFRESH DADOS — recria dados sem deletar contas
+    # ─────────────────────────────────────────────────────────────────────────
+    def _refresh_dados_demos(self):
+        """
+        Para cada conta demo existente:
+          1. Deleta todos os dados demo relacionados (funcionários, EPIs, etc.)
+             via cascade (mantém Empresa + EmpresaUsuario intactos)
+          2. Recria todos os dados com a versão mais recente
+
+        Seguro em produção — não toca em e-mails, senhas ou planos.
+        """
+        from api.models import (
+            Empresa, FuncionarioSST, EPIItem, RiscoOcupacional,
+            DocumentoSST, SolicitacaoExame, ComissaoCIPA,
+            ClinicaCredenciada, VinculoClinicaEmpresa,
+            PostoTrabalho, ConfiguracaoSST,
+        )
+
+        demos_mapa = {
+            "demo.sst@soluscrt.com":      self._criar_dados_sst,
+            "demo.farmacia@soluscrt.com":  self._criar_dados_farmacia,
+            "demo.hospital@soluscrt.com":  self._criar_dados_hospital,
+            "demo.governo@soluscrt.com":   self._criar_dados_governo,
+            "demo.plano@soluscrt.com":     self._criar_dados_plano,
+        }
+
+        for email, dados_fn in demos_mapa.items():
+            empresa = Empresa.objects.filter(email=email).first()
+            if not empresa:
+                self.out(f"  ⚠  {email} não encontrada — pulando", self.style.WARNING)
+                continue
+
+            self.out(f"\n  🔄 Limpando dados de {email}...", self.style.WARNING)
+            # Deleta dados relacionados (cascade cuida do resto)
+            FuncionarioSST.objects.filter(empresa=empresa).delete()
+            EPIItem.objects.filter(empresa=empresa).delete()
+            RiscoOcupacional.objects.filter(empresa=empresa).delete()
+            DocumentoSST.objects.filter(empresa=empresa).delete()
+            SolicitacaoExame.objects.filter(empresa=empresa).delete()
+            ComissaoCIPA.objects.filter(empresa=empresa).delete()
+            PostoTrabalho.objects.filter(empresa=empresa).delete()
+            VinculoClinicaEmpresa.objects.filter(empresa_contratante=empresa).delete()
+            # Clínicas credenciadas demo (CNPJ com padrão fixo)
+            ClinicaCredenciada.objects.filter(
+                cnpj__in=[
+                    "11.222.333/0001-44",
+                    "03.773.700/0001-55",
+                    "44.555.666/0001-77",
+                ]
+            ).delete()
+            try:
+                ConfiguracaoSST.objects.filter(empresa=empresa).delete()
+            except Exception:
+                pass
+
+            self.out(f"  📥 Recriando dados para {email}...")
+            try:
+                with transaction.atomic():
+                    dados_fn(empresa)
+                self.out(f"  ✅ {email} — dados atualizados", self.style.SUCCESS)
+            except Exception as exc:
+                self.out(f"  ⚠ {email} falhou (parcial): {exc}", self.style.WARNING)
+
+        self._recria_dono_saas()
+        self.out(f"\n  ✅ Refresh concluído!\n", self.style.SUCCESS)
 
     # ── Empresa SST ──────────────────────────────────────────────────────────
     def _criar_empresa_sst(self):
