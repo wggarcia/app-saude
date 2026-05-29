@@ -183,7 +183,11 @@ class Command(BaseCommand):
                 self.out(f"  ↷  {email} já existe — ignorando")
             else:
                 e = criar_fn()
-                dados_fn(e)
+                try:
+                    with transaction.atomic():
+                        dados_fn(e)
+                except Exception as exc:
+                    self.out(f"  ⚠ dados demo para {email} falharam (parcial): {exc}", self.style.WARNING)
                 self.out(f"  ✅ {email} criado", self.style.SUCCESS)
                 criados += 1
 
@@ -557,12 +561,14 @@ class Command(BaseCommand):
 
         # Bem-estar checkin
         try:
-            CheckinBemEstar.objects.create(
-                funcionario=luiz,
-                humor="bom",
-                saude_fisica=3, saude_mental=3,
-                nivel_estresse=3, satisfacao_trabalho=3,
-            )
+            with transaction.atomic():
+                CheckinBemEstar.objects.create(
+                    empresa=empresa,
+                    funcionario=luiz,
+                    humor="bom",
+                    saude_fisica=3, saude_mental=3,
+                    nivel_estresse=3, satisfacao_trabalho=3,
+                )
         except Exception:
             pass
 
