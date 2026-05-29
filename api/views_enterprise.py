@@ -316,9 +316,10 @@ def _seed_farmacia(empresa):
     ]
     for pf_r, med_r, crm_r, val_r in receitas_extra:
         _, created = ReceitaMedica.objects.get_or_create(
-            empresa=empresa, paciente=pf_r, medicamento=med_r,
+            empresa=empresa, paciente=pf_r, medicamento_descricao=med_r,
             defaults={"medico_nome": "Dr. Demo Extra", "medico_crm": crm_r,
-                      "posologia": "1x ao dia", "validade_dias": val_r, "status": "ativa"},
+                      "posologia": "1x ao dia", "data_emissao": hoje,
+                      "data_validade": hoje + timedelta(days=val_r), "status": "ativa"},
         )
         if created:
             criados.append(f"receita_extra_{med_r[:10]}")
@@ -539,7 +540,38 @@ def _seed_hospital(empresa):  # noqa: C901
         if created:
             criados.append(f"prescricao_{med_p[:15]}")
 
-    # ── 5. UnidadeRede + PlanoSaude + BeneficiarioPlano + GuiaAutorizacao ──────
+    # ── 5. Modelos legados — exigidos pelos testes ──────────────────────────────
+    leito_legacy, created = LeitoHospitalar.objects.get_or_create(
+        empresa=empresa,
+        numero="E-DEMO-01",
+        defaults={"ala": "Emergencia Demo", "tipo": "emergencia", "status": "ocupado",
+                  "paciente_nome": "Paciente Hospital Demo",
+                  "data_internacao": hoje, "previsao_alta": hoje + timedelta(days=2)},
+    )
+    if created: criados.append("leito_hospitalar_legacy")
+
+    paciente_internado, created = PacienteInternado.objects.get_or_create(
+        empresa=empresa,
+        cpf="000.000.000-92",
+        defaults={"nome": "Paciente Hospital Demo", "data_internacao": hoje,
+                  "leito": leito_legacy, "diagnostico_cid": "R07",
+                  "medico_responsavel": "Dr. Demo Emergencia",
+                  "convenio": "Plano Demo", "status": "internado"},
+    )
+    if created: criados.append("paciente_internado_legacy")
+
+    if pacientes:
+        prescricao_hosp, created = PrescricaoHospitalar.objects.get_or_create(
+            empresa=empresa,
+            paciente=paciente_internado,
+            data=hoje,
+            defaults={"medico_nome": "Dr. Demo Emergencia", "medico_crm": "CRM/SP 000002",
+                      "status": "ativa",
+                      "medicamentos": [{"nome": "Dipirona 1g", "dose": "1 ampola", "via": "EV", "frequencia": "6/6h"}]},
+        )
+        if created: criados.append("prescricao_hospitalar_legacy")
+
+    # ── 6. UnidadeRede + PlanoSaude + BeneficiarioPlano + GuiaAutorizacao ──────
     #       → receita capacidade: 8 guias / alvo=8 → 100%
     try:
         unidade_rede, created = UnidadeRede.objects.get_or_create(
@@ -1752,7 +1784,7 @@ def _seed_plano_saude(empresa):
     prestadores_extra_data = [
         ("PR-LAB-004", "Laboratorio Central Demo",      PrestadorPlanoSaude.TIPO_LABORATORIO,  "Santo Andre", "SP", 8,  92, True),
         ("PR-IMG-005", "Clinica de Imagem Demo",        PrestadorPlanoSaude.TIPO_IMAGEM,       "Sao Paulo",   "SP", 12, 89, True),
-        ("PR-PA-006",  "Pronto Atendimento Demo",       PrestadorPlanoSaude.TIPO_PRONTO_ATEND, "Campinas",    "SP", 4,  95, False),
+        ("PR-PA-006",  "Pronto Atendimento Demo",       PrestadorPlanoSaude.TIPO_PRONTO_ATENDIMENTO, "Campinas",    "SP", 4,  95, False),
         ("PR-HC-007",  "Homecare Especializado Demo",   PrestadorPlanoSaude.TIPO_HOMECARE,     "Sao Paulo",   "SP", 48, 87, True),
     ]
     for idx_pe, (cod_pe, nome_pe, tipo_pe, cid_pe, uf_pe, sla_pe, score_pe, portal_pe) in enumerate(prestadores_extra_data, 4):
@@ -1827,7 +1859,7 @@ def _seed_plano_saude(empresa):
                 "prestador": "Prestador Demo Extra", "medico": "Dr. Demo Plano",
                 "data_atendimento": hoje - timedelta(days=5 + ben_idx_se),
                 "valor_total": val_se,
-                "valor_pago": pago_se if pago_se else None,
+                "valor_pago": pago_se if pago_se else "0.00",
                 "observacao": "Sinistro demo expansao plano saude.",
             },
         )
@@ -1851,8 +1883,8 @@ def _seed_plano_saude(empresa):
             defaults={
                 "tipo_despesa": tipo_re, "status": status_re,
                 "valor_solicitado": sol_re,
-                "valor_aprovado": apr_re if apr_re else None,
-                "valor_pago": pago_re_v if pago_re_v else None,
+                "valor_aprovado": apr_re if apr_re else "0.00",
+                "valor_pago": pago_re_v if pago_re_v else "0.00",
                 "data_pagamento": data_pag_re,
                 "banco": "Banco Demo", "agencia": "0001", "conta": "99999-9",
                 "descricao": f"Reembolso livre escolha {num_re}",
