@@ -2070,6 +2070,128 @@ def _seed_governo(empresa):  # noqa: C901
     return criados
 
 
+def _seed_wellbeing_corporativo(empresa):
+    """Seed corporate wellbeing data required by /api/rede/kpis.
+
+    Creates EmpresaUnidade, FuncionarioSST, ColaboradorAliasCorporativo,
+    CheckinDiarioCorporativo (30 days) and CheckinSemanalCorporativo (4 weeks).
+    Called for ALL demo empresas after sector-specific seeding so the Rede KPIs
+    dashboard is always populated regardless of setor.
+    """
+    hoje = timezone.localdate()
+    criados = []
+
+    # ── 1. Duas unidades corporativas ────────────────────────────────────────
+    unidades_nomes = [("Sede Demo", "SEDE"), ("Filial Demo", "FILIAL")]
+    unidades = []
+    for nome_u, cod_u in unidades_nomes:
+        u, created = EmpresaUnidade.objects.get_or_create(
+            empresa=empresa,
+            nome=nome_u,
+            defaults={"codigo": cod_u, "ativo": True},
+        )
+        unidades.append(u)
+        if created:
+            criados.append(f"unidade_{cod_u.lower()}")
+
+    # ── 2. Funcionarios vinculados as unidades (3 por unidade) ───────────────
+    funcionarios_data = [
+        ("000.999.001-00", "Alice Demo Corp",    "Analista RH",              "Recursos Humanos", "F"),
+        ("000.999.002-00", "Bruno Demo Corp",    "Gerente Operacional",       "Operacoes",        "M"),
+        ("000.999.003-00", "Carla Demo Corp",    "Coordenadora Adm",         "Administrativo",   "F"),
+        ("000.999.004-00", "Daniel Demo Corp",   "Supervisor TI",            "Tecnologia",       "M"),
+        ("000.999.005-00", "Eva Demo Corp",      "Analista Financeira",      "Financeiro",       "F"),
+        ("000.999.006-00", "Felipe Demo Corp",   "Assistente Operacional",   "Operacoes",        "M"),
+    ]
+    for idx, (cpf, nome, cargo, setor_str, sexo) in enumerate(funcionarios_data):
+        u = unidades[idx % len(unidades)]
+        _, created = FuncionarioSST.objects.get_or_create(
+            empresa=empresa,
+            cpf=cpf,
+            defaults={
+                "nome": nome,
+                "cargo": cargo,
+                "setor": setor_str,
+                "sexo": sexo,
+                "unidade": u,
+                "ativo": True,
+                "data_admissao": hoje - timedelta(days=365 + idx * 30),
+            },
+        )
+        if created:
+            criados.append(f"func_corp_{idx + 1}")
+
+    # ── 3. Aliases para os check-ins anonimos ────────────────────────────────
+    aliases = []
+    for idx in range(len(funcionarios_data)):
+        u = unidades[idx % len(unidades)]
+        alias, created = ColaboradorAliasCorporativo.objects.get_or_create(
+            empresa=empresa,
+            alias_publico=f"ALIAS-CORP-{idx + 1:02d}-DEMO",
+            defaults={"unidade": u, "ativo": True},
+        )
+        aliases.append(alias)
+        if created:
+            criados.append(f"alias_corp_{idx + 1}")
+
+    # ── 4. 30 dias de checkins diarios (bulk_create ignore_conflicts) ─────────
+    # Sequencias ciclicas para gerar scores realistas (~3.8/5)
+    humor_seq    = [4, 4, 3, 5, 4, 3, 4, 5, 4, 4, 3, 4, 5, 4, 3, 4, 4, 5, 3, 4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 4]
+    energia_seq  = [3, 4, 4, 5, 3, 4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4, 4, 5, 3, 4, 4, 3, 5, 4, 4, 3, 4, 4, 5]
+    estresse_seq = [2, 2, 3, 1, 2, 3, 2, 1, 2, 2, 3, 2, 1, 2, 3, 2, 2, 1, 3, 2, 2, 3, 1, 2, 2, 3, 2, 1, 2, 2]
+    sono_seq     = [4, 4, 3, 5, 4, 4, 3, 5, 4, 3, 4, 4, 5, 4, 3, 4, 4, 5, 4, 3, 4, 5, 4, 4, 3, 4, 4, 5, 3, 4]
+
+    checkins_diarios = []
+    for day_offset in range(29, -1, -1):
+        data_ref = hoje - timedelta(days=day_offset)
+        for a_idx, alias in enumerate(aliases):
+            u = unidades[a_idx % len(unidades)]
+            checkins_diarios.append(CheckinDiarioCorporativo(
+                empresa=empresa,
+                alias=alias,
+                unidade=u,
+                data_referencia=data_ref,
+                humor=humor_seq[(day_offset + a_idx * 3) % 30],
+                energia=energia_seq[(day_offset + a_idx * 5) % 30],
+                estresse=estresse_seq[(day_offset + a_idx * 7) % 30],
+                sono=sono_seq[(day_offset + a_idx * 11) % 30],
+            ))
+    if checkins_diarios:
+        CheckinDiarioCorporativo.objects.bulk_create(
+            checkins_diarios, ignore_conflicts=True
+        )
+        criados.append(f"checkins_diarios_{len(checkins_diarios)}")
+
+    # ── 5. 4 semanas de checkins semanais ────────────────────────────────────
+    semana_ini = hoje - timedelta(days=hoje.weekday())  # segunda-feira corrente
+    checkins_semanais = []
+    for week in range(4):
+        semana_ref = semana_ini - timedelta(weeks=week)
+        for a_idx, alias in enumerate(aliases):
+            u = unidades[a_idx % len(unidades)]
+            # ~25% alto risco (risco_burnout >= 4) para burnout_pct realista
+            rb = 4 if (week + a_idx) % 4 == 0 else 2
+            checkins_semanais.append(CheckinSemanalCorporativo(
+                empresa=empresa,
+                alias=alias,
+                unidade=u,
+                semana_referencia=semana_ref,
+                risco_burnout=rb,
+                bem_estar_geral=4,
+                carga_emocional=2,
+                seguranca_psicologica=4,
+                apoio_percebido=4,
+                pressao_trabalho=3,
+            ))
+    if checkins_semanais:
+        CheckinSemanalCorporativo.objects.bulk_create(
+            checkins_semanais, ignore_conflicts=True
+        )
+        criados.append(f"checkins_semanais_{len(checkins_semanais)}")
+
+    return criados
+
+
 def seed_enterprise_operational_demo(empresa):
     setor = get_setor(empresa)
     if setor == "farmacia":
@@ -2084,6 +2206,8 @@ def seed_enterprise_operational_demo(empresa):
         criados = _seed_governo(empresa)
     else:
         criados = []
+    # Wellbeing corporativo — necessario para /api/rede/kpis em todas as contas demo
+    criados += _seed_wellbeing_corporativo(empresa)
     return {"setor": setor, "criados": criados, "total_criado": len(criados)}
 
 
