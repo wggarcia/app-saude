@@ -868,13 +868,20 @@ class Command(BaseCommand):
     # ─────────────────────────────────────────────────────────────────────────
     def _recria_dono_saas(self):
         from api.models import DonoSaaS
-        DonoSaaS.objects.create(
-            nome="Operação SolusCRT",
+        dono, created = DonoSaaS.objects.get_or_create(
             email="owner@soluscrt.com",
-            senha=make_password("Owner@SolusCRT2026"),
-            ativo=True,
+            defaults={
+                "nome": "Operação SolusCRT",
+                "senha": make_password("Owner@SolusCRT2026"),
+                "ativo": True,
+            },
         )
-        self.out(f"  ✓ DonoSaaS recriado", self.style.SUCCESS)
+        if not created:
+            # Garante que está ativo mesmo se já existia
+            if not dono.ativo:
+                dono.ativo = True
+                dono.save(update_fields=["ativo"])
+        self.out(f"  ✓ DonoSaaS {'criado' if created else 'já existe'}", self.style.SUCCESS)
 
     # ─────────────────────────────────────────────────────────────────────────
     # RESUMO FINAL
