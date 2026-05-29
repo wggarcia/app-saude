@@ -68,8 +68,21 @@ from .models import (
     RiscoOcupacional,
     PlanoAcaoSST,
     CampanhaVacinacao,
+    CheckinBemEstar,
+    ClinicaCredenciada,
+    ComissaoCIPA,
+    CredencialAppFuncionario,
+    MembroCIPA,
+    NotificacaoFuncionario,
+    ParticipanteReuniaoCIPA,
+    PostoTrabalho,
+    AgenteNocivoPostoTrabalho,
+    FuncionarioPostoTrabalho,
+    ReuniaoCIPA,
     Sinistro,
+    SolicitacaoExame,
     TreinamentoNR,
+    VinculoClinicaEmpresa,
     TriagemHospital,
     TriagemManchester,
     TransferenciaEstoque,
@@ -771,6 +784,279 @@ def _seed_empresa(empresa):
         )
         if created:
             criados.append(f"agendamento_{tipo}")
+
+    # ── Pedidos de Exame (SolicitacaoExame) ──────────────────────────────────
+    import json as _json
+    pedidos_exame = [
+        (funcionarios[0], "periodico",
+         ["Audiometria", "Hemograma Completo", "Glicemia", "Acuidade Visual"],
+         "pendente", False, "ASO periódico anual — Operador Demo. Verificar histórico audiométrico.", None),
+        (funcionarios[1], "admissional",
+         ["Audiometria", "Espirometria", "Hemograma", "Raio-X Tórax PA"],
+         "agendado", False, "Admissional — novo operador de produção. Agendado para Clínica Demo.",
+         hoje + timedelta(days=5)),
+        (funcionarios[2], "periodico",
+         ["Audiometria", "Hemograma Completo", "ECG", "Glicemia"],
+         "realizado", False, "Periódico realizado. Laudo em análise pelo médico coordenador.",
+         hoje - timedelta(days=10)),
+        (funcionarios[3], "mudanca_risco",
+         ["Avaliação Ergonômica", "Hemograma", "Acuidade Visual"],
+         "pendente", True, "⚠️ URGENTE — mudança de setor para Manutenção (maior grau de risco).", None),
+        (funcionarios[4], "retorno_trabalho",
+         ["Hemograma Completo", "Glicemia", "Acuidade Visual"],
+         "realizado", False, "Retorno ao trabalho após afastamento por doença comum.",
+         hoje - timedelta(days=6)),
+        (funcionarios[5], "demissional",
+         ["Hemograma", "Glicemia", "Acuidade Visual", "ECG"],
+         "agendado", False, "Demissional — encerramento de contrato em 30 dias.",
+         hoje + timedelta(days=20)),
+    ]
+    for func, tipo_aso, exames_l, status_p, urgente_p, obs_p, data_ag in pedidos_exame:
+        _, created = SolicitacaoExame.objects.get_or_create(
+            empresa=empresa,
+            funcionario=func,
+            tipo_aso=tipo_aso,
+            defaults={
+                "exames": _json.dumps(exames_l, ensure_ascii=False),
+                "status": status_p,
+                "urgente": urgente_p,
+                "observacoes": obs_p,
+                "data_agendamento": data_ag,
+                "clinica_nome_externo": "Clínica Ocupacional Demo",
+                "clinica_email_externo": "clinica@demo.soluscrt.com",
+            },
+        )
+        if created:
+            criados.append(f"solicitacao_exame_{tipo_aso}")
+
+    # ── CIPA ─────────────────────────────────────────────────────────────────
+    import datetime as _datetime
+    cipa, cipa_created = ComissaoCIPA.objects.get_or_create(
+        empresa=empresa,
+        mandato_inicio=hoje - timedelta(days=200),
+        defaults={
+            "mandato_fim": hoje + timedelta(days=165),
+            "numero_membros_eleitos": 4,
+            "numero_membros_indicados": 2,
+            "status": "ativa",
+            "designacao_nr5": False,
+        },
+    )
+    if cipa_created:
+        criados.append("cipa")
+        cargos_cipa = [
+            (funcionarios[0], "presidente",      "eleito"),
+            (funcionarios[1], "vice_presidente", "indicado"),
+            (funcionarios[2], "secretario",      "eleito"),
+            (funcionarios[3], "membro_eleito",   "eleito"),
+            (funcionarios[4], "membro_indicado", "indicado"),
+            (funcionarios[5], "membro_eleito",   "eleito"),
+        ]
+        for func, cargo_c, tipo_c in cargos_cipa:
+            try:
+                MembroCIPA.objects.create(
+                    comissao=cipa, funcionario=func, cargo=cargo_c, tipo=tipo_c,
+                    data_posse=hoje - timedelta(days=200), ativo=True,
+                )
+                criados.append(f"membro_cipa_{cargo_c}")
+            except Exception:
+                pass
+
+        # Reuniões
+        reuniao_realizada = ReuniaoCIPA.objects.create(
+            comissao=cipa, tipo="ordinaria",
+            data_reuniao=_datetime.datetime.combine(hoje - timedelta(days=30), _datetime.time(9, 0)),
+            local="Sala de Reuniões — Demo",
+            pauta="1. Análise de acidentes\n2. Revisão PGR\n3. Inspeções programadas",
+            ata="Reunião realizada com quórum mínimo. Identificados 2 pontos de melhoria.",
+            status="realizada",
+        )
+        criados.append("reuniao_cipa_realizada")
+        reuniao_agendada = ReuniaoCIPA.objects.create(
+            comissao=cipa, tipo="ordinaria",
+            data_reuniao=_datetime.datetime.combine(hoje + timedelta(days=15), _datetime.time(9, 0)),
+            local="Sala de Reuniões — Demo",
+            pauta="1. Relatório de EPIs\n2. Quase-acidentes\n3. SIPAT 2026",
+            status="agendada",
+        )
+        criados.append("reuniao_cipa_agendada")
+
+        for func in funcionarios[:5]:
+            try:
+                ParticipanteReuniaoCIPA.objects.create(
+                    reuniao=reuniao_realizada, funcionario=func, presente=True,
+                )
+            except Exception:
+                pass
+
+    # ── Credenciais APP (2 funcionários) ──────────────────────────────────────
+    app_credentials = [
+        (funcionarios[0], "colaborador.demo@app.local", "ColabDemo@2026"),
+        (funcionarios[1], "ana.demo@app.local",         "AnaDemo@2026"),
+    ]
+    for func, email_app, senha_app in app_credentials:
+        from django.contrib.auth.hashers import make_password as _mkpwd
+        _, created = CredencialAppFuncionario.objects.get_or_create(
+            funcionario=func,
+            defaults={"email": email_app, "senha": _mkpwd(senha_app), "ativo": True},
+        )
+        if created:
+            criados.append("credencial_app")
+
+    # ── Notificações APP ──────────────────────────────────────────────────────
+    notifs_demo = [
+        (funcionarios[0], "EPI aguardando confirmação",
+         "Você recebeu 3 EPIs. Confirme o recebimento no APP.",
+         "epi", False),
+        (funcionarios[0], "ASO periódico solicitado 🔬",
+         "Pedido de exame periódico gerado. Compareça à clínica em jejum.",
+         "exame", False),
+        (funcionarios[0], "Treinamento NR-10 vencido ⚠️",
+         "Segurança em Eletricidade venceu há 30 dias. Contate o RH.",
+         "treinamento", False),
+        (funcionarios[0], "Reunião CIPA — 15 dias 📅",
+         f"Próxima reunião ordinária em {(hoje + timedelta(days=15)).strftime('%d/%m/%Y')} às 09h.",
+         "cipa", False),
+        (funcionarios[1], "Exame admissional agendado 📋",
+         "Seu exame admissional está agendado. Apresente-se em jejum de 8h.",
+         "exame", False),
+    ]
+    for func, titulo_n, corpo_n, cat_n, lida_n in notifs_demo:
+        try:
+            NotificacaoFuncionario.objects.create(
+                funcionario=func, titulo=titulo_n, corpo=corpo_n,
+                categoria=cat_n, lida=lida_n,
+            )
+            criados.append("notificacao_app")
+        except Exception:
+            pass
+
+    # ── Check-ins de bem-estar ────────────────────────────────────────────────
+    checkins_demo = [
+        (funcionarios[0], "bom",    4, 4, 2, 4),
+        (funcionarios[1], "otimo",  5, 5, 1, 5),
+        (funcionarios[2], "neutro", 3, 3, 3, 3),
+        (funcionarios[3], "ruim",   2, 2, 4, 2),
+        (funcionarios[4], "bom",    4, 3, 2, 4),
+        (funcionarios[5], "neutro", 3, 3, 3, 3),
+    ]
+    for func, humor, sf, sm, ne, st in checkins_demo:
+        try:
+            from django.db import transaction as _tx
+            with _tx.atomic():
+                CheckinBemEstar.objects.create(
+                    empresa=empresa, funcionario=func,
+                    humor=humor, saude_fisica=sf, saude_mental=sm,
+                    nivel_estresse=ne, satisfacao_trabalho=st,
+                )
+            criados.append("checkin_bem_estar")
+        except Exception:
+            pass
+
+    # ── Postos de trabalho + EPCs ─────────────────────────────────────────────
+    postos_demo = [
+        ("Operador de Produção — Linha Demo", "Produção",
+         "Operação de prensas e linha de montagem"),
+        ("Técnico de Manutenção Elétrica",    "Manutenção",
+         "Manutenção preventiva/corretiva de painéis elétricos"),
+    ]
+    posto_objs_d = []
+    for nome_p, setor_p, desc_p in postos_demo:
+        p, created = PostoTrabalho.objects.get_or_create(
+            empresa=empresa, nome=nome_p,
+            defaults={
+                "setor": setor_p, "descricao": desc_p,
+                "responsavel_tecnico": "Eng. Marcos Demo Segurança",
+                "responsavel_registro": "CREA/SP 987654",
+                "data_laudo": hoje - timedelta(days=30),
+                "vigencia_inicio": (hoje - timedelta(days=30)).strftime("%Y-%m"),
+                "ativo": True,
+            },
+        )
+        posto_objs_d.append(p)
+        if created:
+            criados.append("posto_trabalho")
+
+    agentes_por_posto_d = [
+        [("fisico", "01.01.001", "Ruído contínuo — prensas hidráulicas",
+          "Sonômetro ABNT NBR ISO 9612", "87 dB(A)", "85 dB(A) NR-15",
+          "Enclausuramento acústico e damper de vibração instalados", True,
+          "Protetor Auditivo Plug Espuma (CA Demo)", "43210", True)],
+        [("fisico", "01.04.001", "Risco elétrico — painéis média tensão",
+          "Mapeamento risco NR-10", "13,8 kV", "≤1.000V c/ EPC",
+          "Bloqueio LOTO obrigatório; barreiras dielétricas nos painéis", True,
+          "Luva Dielétrica Classe 0; Botina Antiestática (CA Demo)", "87654", True)],
+    ]
+    for posto, agentes_l in zip(posto_objs_d, agentes_por_posto_d):
+        for ag in agentes_l:
+            try:
+                AgenteNocivoPostoTrabalho.objects.get_or_create(
+                    posto=posto, cod_agente=ag[1],
+                    defaults=dict(
+                        tipo_agente=ag[0], dsc_agente=ag[2],
+                        tec_medicao=ag[3], intensidade=ag[4], limite_tolerancia=ag[5],
+                        epc_descricao=ag[6], epc_eficaz=ag[7],
+                        epi_descricao=ag[8], epi_ca=ag[9], epi_eficaz=ag[10],
+                    ),
+                )
+                criados.append("agente_nocivo")
+            except Exception:
+                pass
+
+    if posto_objs_d:
+        for func in funcionarios[:2]:
+            try:
+                FuncionarioPostoTrabalho.objects.get_or_create(
+                    funcionario=func,
+                    posto=posto_objs_d[0],
+                    data_inicio=func.data_admissao or hoje - timedelta(days=90),
+                )
+                criados.append("funcionario_posto")
+            except Exception:
+                pass
+
+    # ── Clínica credenciada demo ──────────────────────────────────────────────
+    try:
+        clinica_demo, created = ClinicaCredenciada.objects.get_or_create(
+            cnpj="00.100.200/0001-DEMO",
+            defaults={
+                "nome": "Clínica Medicina Ocupacional Demo",
+                "tipo": "clinica_ocupacional",
+                "especialidades": ["audiometria", "espirometria", "hemograma", "acuidade_visual", "ecg"],
+                "cidade": "São Paulo", "uf": "SP", "cep": "01310-000",
+                "endereco": "Av. Demo Empresarial, 1000 — Centro",
+                "telefone": "(11) 3000-1000",
+                "email": "clinica@demo.soluscrt.com",
+                "responsavel_tecnico": "Dr. Demo Ocupacional",
+                "crm": "CRM/SP 000001",
+                "horario_atendimento": "Seg–Sex 07h–18h",
+                "aceita_agendamento_online": True,
+                "tempo_medio_laudo_dias": 2,
+                "avaliacao_media": "4.9",
+                "total_avaliacoes": 99,
+                "status_credenciamento": "ativo",
+                "ativa": True,
+            },
+        )
+        if created:
+            criados.append("clinica_credenciada")
+            try:
+                VinculoClinicaEmpresa.objects.get_or_create(
+                    clinica=empresa,
+                    empresa_contratante=empresa,
+                    defaults={
+                        "empresa_nome": clinica_demo.nome,
+                        "empresa_email_convite": clinica_demo.email,
+                        "status": "ativo",
+                        "observacoes": "Clínica credenciada demo — SolusCRT",
+                    },
+                )
+                criados.append("vinculo_clinica")
+            except Exception:
+                pass
+    except Exception:
+        pass
+
     return criados
 
 

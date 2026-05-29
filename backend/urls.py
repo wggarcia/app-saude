@@ -323,6 +323,8 @@ from api.views_solicitacao_exame import (
     clinica_solicitacoes_page,
     api_clinica_solicitacoes,
     api_clinica_solicitacao_acao,
+    api_link_resultado,
+    clinica_resultado_page,
 )
 from api.views_gestao import (
     gestao_corporativa,
@@ -933,6 +935,10 @@ urlpatterns = [
     path('api/sst/solicitacoes-exame/', api_solicitacoes_exame),
     path('api/sst/solicitacoes-exame/<int:sol_id>', api_solicitacao_detalhe),
     path('api/sst/solicitacoes-exame/<int:sol_id>/', api_solicitacao_detalhe),
+    path('api/sst/solicitacoes-exame/<int:sol_id>/link-resultado', api_link_resultado),
+    path('api/sst/solicitacoes-exame/<int:sol_id>/link-resultado/', api_link_resultado),
+    path('clinica/resultado/<int:sol_id>/<str:token>/', clinica_resultado_page),
+    path('clinica/resultado/<int:sol_id>/<str:token>', clinica_resultado_page),
     path('api/sst/clinicas-disponiveis', api_clinicas_disponiveis),
     path('api/sst/clinicas-disponiveis/', api_clinicas_disponiveis),
     path('api/sst/cats', api_cats),

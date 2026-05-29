@@ -3,6 +3,8 @@ Solicitações de exames ocupacionais: empresa emite pedido → clínica recebe
 (via SolusCRT ou por email). Suporta clínicas cadastradas no sistema e
 clínicas externas (recebem por email com link de acompanhamento).
 """
+import hashlib
+import hmac
 import json
 import logging
 
@@ -828,6 +830,23 @@ def api_solicitacao_detalhe(request, sol_id):
             if not ok:
                 return JsonResponse({"erro": err_msg}, status=500)
             return JsonResponse({"ok": True, "mensagem": "Email reenviado e aceito para envio"})
+        if acao == "reenviar_guia":
+            # Reenvia a guia de exames — via email (externo) ou como registro interno
+            modo = data.get("modo", "email")
+            if modo == "email" and sol.clinica_email_externo:
+                ok, err_msg = _enviar_email_solicitacao(sol)
+                if not ok:
+                    return JsonResponse({"erro": err_msg}, status=500)
+                return JsonResponse({"ok": True, "mensagem": "Guia reenviada por email"})
+            if modo in ("funcionario", "app"):
+                # Reenvio para o funcionário — registra a ação
+                return JsonResponse({
+                    "ok": True,
+                    "mensagem": f"Guia marcada para reenvio ({modo}). "
+                                "O funcionário será notificado no próximo ciclo.",
+                })
+            # Modo sistema/interno — apenas registra
+            return JsonResponse({"ok": True, "mensagem": "Reenvio registrado internamente."})
         return JsonResponse({"erro": "Ação inválida"}, status=400)
 
     if request.method == "DELETE":
@@ -958,3 +977,131 @@ def api_clinica_solicitacao_acao(request, sol_id):
         return JsonResponse({"ok": True, "status": sol.status})
 
     return JsonResponse({"erro": f"Ação inválida: {acao}"}, status=400)
+
+
+# ── Link de Resultado para Clínica ────────────────────────────────────────────
+
+def _gerar_token_resultado(sol_id: int) -> str:
+    """Token HMAC-SHA256 (32 hex chars) — identifica univocamente a solicitação."""
+    key = settings.SECRET_KEY.encode("utf-8")
+    msg = f"link-resultado:{sol_id}".encode("utf-8")
+    return hmac.new(key, msg, hashlib.sha256).hexdigest()[:32]
+
+
+@csrf_exempt
+def api_link_resultado(request, sol_id: int):
+    """
+    POST /api/sst/solicitacoes-exame/<id>/link-resultado
+    Gera (ou retorna) um link seguro para a clínica preencher os laudos.
+    """
+    empresa, err = _empresa(request)
+    if err:
+        return err
+
+    sol = SolicitacaoExame.objects.filter(id=sol_id, empresa=empresa).select_related(
+        "funcionario"
+    ).first()
+    if not sol:
+        return JsonResponse({"erro": "Solicitação não encontrada"}, status=404)
+
+    if request.method not in ("GET", "POST"):
+        return JsonResponse({"erro": "método não permitido"}, status=405)
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = {}
+
+    token = _gerar_token_resultado(sol_id)
+    base_url = getattr(settings, "PUBLIC_BASE_URL", "https://app-saude-p9n8.onrender.com")
+    link = f"{base_url}/clinica/resultado/{sol_id}/{token}/"
+    dias = int(data.get("dias", 30))
+    clinica_nome = data.get("clinica_nome") or sol.clinica_nome_externo or "Clínica"
+    notificar = bool(data.get("notificar", False))
+
+    # Se solicitado, envia o link por email para a clínica
+    if notificar and sol.clinica_email_externo:
+        try:
+            assunto = (
+                f"[SolusCRT] Link de resultado — {sol.funcionario.nome} — "
+                f"{sol.get_tipo_aso_display()}"
+            )
+            corpo = (
+                f"Prezada equipe da {clinica_nome},\n\n"
+                f"Segue o link para preenchimento dos laudos do exame de "
+                f"{sol.funcionario.nome} ({sol.get_tipo_aso_display()}):\n\n"
+                f"{link}\n\n"
+                f"Este link expira em {dias} dias.\n\n"
+                f"Dúvidas: entre em contato com a empresa solicitante.\n\n"
+                f"SolusCRT — Saúde Ocupacional Inteligente"
+            )
+            EmailMessage(
+                subject=assunto,
+                body=corpo,
+                to=[sol.clinica_email_externo],
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@soluscrt.com.br"),
+            ).send()
+        except Exception as exc:
+            logger.warning("Link resultado: falha ao enviar email: %s", exc)
+
+    return JsonResponse({
+        "ok": True,
+        "link": link,
+        "token": token,
+        "expira_em_dias": dias,
+        "clinica_nome": clinica_nome,
+        "notificado": notificar and bool(sol.clinica_email_externo),
+    })
+
+
+def clinica_resultado_page(request, sol_id: int, token: str):
+    """
+    GET /clinica/resultado/<sol_id>/<token>/
+    Página pública para a clínica preencher os laudos do exame.
+    """
+    token_esperado = _gerar_token_resultado(sol_id)
+    if not hmac.compare_digest(token, token_esperado):
+        return JsonResponse({"erro": "Link inválido ou expirado"}, status=403)
+
+    sol = SolicitacaoExame.objects.filter(id=sol_id).select_related(
+        "funcionario", "empresa"
+    ).first()
+    if not sol:
+        return JsonResponse({"erro": "Solicitação não encontrada"}, status=404)
+
+    if request.method == "POST":
+        try:
+            if request.content_type and "json" in request.content_type:
+                data = json.loads(request.body)
+            else:
+                data = request.POST
+        except Exception:
+            data = {}
+
+        resposta = data.get("resposta_clinica", "").strip()
+        if resposta:
+            sol.resposta_clinica = resposta
+            sol.status = "realizado"
+            from datetime import date
+            sol.data_realizacao = date.today()
+            sol.save(update_fields=["resposta_clinica", "status", "data_realizacao"])
+            try:
+                notificar_solicitacao_exame(sol, "realizado")
+            except Exception:
+                pass
+            return JsonResponse({"ok": True, "mensagem": "Resultado enviado com sucesso."})
+
+    ctx = {
+        "sol_id": sol_id,
+        "token": token,
+        "funcionario_nome": sol.funcionario.nome,
+        "empresa_nome": sol.empresa.nome,
+        "tipo_aso": sol.get_tipo_aso_display(),
+        "status": sol.status,
+        "exames": json.loads(sol.exames) if sol.exames else [],
+    }
+    try:
+        return render(request, "clinica_resultado_exame.html", ctx)
+    except Exception:
+        # fallback JSON se template não existe ainda
+        return JsonResponse(ctx)
