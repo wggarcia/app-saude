@@ -288,89 +288,342 @@ def _seed_farmacia(empresa):
     )
     if created:
         criados.append("descarte")
+
+    # ── Expansão para atingir 100% nas 4 capacidades ─────────────────────────
+    # clinica: pacientes + receitas >= 8 (alvo=8)
+    pacientes_extra = [
+        ("000.000.001-01", "Beatriz Furtado Demo", "F", 10950, "beatriz@demo.local"),
+        ("000.000.001-02", "Carlos Mendes Demo",   "M", 14600, ""),
+        ("000.000.001-03", "Diana Castro Demo",    "F", 21900, "diana@demo.local"),
+        ("000.000.001-04", "Eduardo Lima Demo",    "M", 18250, ""),
+    ]
+    pacientes_farm = [paciente]
+    for cpf_f, nome_f, sexo_f, nasc_f, email_f in pacientes_extra:
+        pf, created = PacienteFarmacia.objects.get_or_create(
+            empresa=empresa, cpf=cpf_f,
+            defaults={"nome": nome_f, "sexo": sexo_f,
+                      "data_nascimento": hoje - timedelta(days=nasc_f),
+                      "email": email_f, "telefone": "(11) 99000-0001", "ativo": True},
+        )
+        pacientes_farm.append(pf)
+        if created:
+            criados.append(f"paciente_extra_{cpf_f[-2:]}")
+
+    receitas_extra = [
+        (pacientes_farm[1], "Metformina 500mg", "CRM/SP 000099", 30),
+        (pacientes_farm[2], "Losartana 50mg",   "CRM/SP 000099", 30),
+        (pacientes_farm[3], "AAS 100mg",        "CRM/SP 000099", 30),
+    ]
+    for pf_r, med_r, crm_r, val_r in receitas_extra:
+        _, created = ReceitaMedica.objects.get_or_create(
+            empresa=empresa, paciente=pf_r, medicamento=med_r,
+            defaults={"medico_nome": "Dr. Demo Extra", "medico_crm": crm_r,
+                      "posologia": "1x ao dia", "validade_dias": val_r, "status": "ativa"},
+        )
+        if created:
+            criados.append(f"receita_extra_{med_r[:10]}")
+
+    # dispensacao: >= 10 (alvo=10) — adiciona 8 dispensacoes extra
+    for idx_d in range(8):
+        pf_d = pacientes_farm[idx_d % len(pacientes_farm)]
+        _, created = Dispensacao.objects.get_or_create(
+            empresa=empresa,
+            paciente_cpf=pf_d.cpf,
+            prescricao_numero=f"REC-EXT-{idx_d+1:03d}",
+            defaults={
+                "paciente_nome": pf_d.nome,
+                "medico_crm": "CRM/SP 000099",
+                "medicamentos": [{"nome": "Paracetamol 500mg", "quantidade": 10}],
+                "valor_total": 15 + idx_d,
+                "convenio": "Particular",
+                "status": "dispensada",
+                "observacoes": f"Dispensacao extra demo #{idx_d+1}",
+            },
+        )
+        if created:
+            criados.append(f"dispensacao_extra_{idx_d+1}")
+
+    # rastreabilidade: lotes + inventarios >= 6 (alvo=6) — adiciona 3 lotes + 1 inventario
+    for idx_l in range(3):
+        _, created = LoteMedicamento.objects.get_or_create(
+            empresa=empresa, item=item,
+            numero_lote=f"LOTE-EXT-{idx_l+1:03d}",
+            defaults={
+                "fabricante": "Industria Demo Extra",
+                "data_fabricacao": hoje - timedelta(days=30 + idx_l * 10),
+                "data_validade": hoje + timedelta(days=300 - idx_l * 30),
+                "quantidade_inicial": 50, "quantidade_atual": 50 - idx_l * 5,
+                "nota_fiscal": f"NF-EXT-{idx_l+1:03d}",
+                "fornecedor": fornecedor,
+            },
+        )
+        if created:
+            criados.append(f"lote_ext_{idx_l+1}")
+
+    inv2, created = InventarioFarmacia.objects.get_or_create(
+        empresa=empresa,
+        descricao="Inventario parcial modulo gestao demo",
+        defaults={"responsavel": "Operacao Demo 2", "observacoes": "Segundo inventario demo — contagem ciclica."},
+    )
+    if created:
+        criados.append("inventario_2")
+
     return criados
 
 
-def _seed_hospital(empresa):
+def _seed_hospital(empresa):  # noqa: C901
+    """Seed hospital demo data to reach 100% on all 4 enterprise capacidades.
+
+    Targets (from _suite_hospital):
+    - porta_entrada (TriagemManchester + TriagemHospital) >= 10  alvo=10
+    - leitos        (LeitoHospital + DepartamentoHospital)  >= 12  alvo=12
+    - cuidado       (InternacaoHospital + PrescricaoMedica) >= 12  alvo=12
+    - receita       (GuiaAutorizacao via unidade__empresa)  >= 8   alvo=8
+    """
     hoje = timezone.localdate()
     agora = timezone.now()
     criados = []
-    dep, created = DepartamentoHospital.objects.get_or_create(
-        empresa=empresa,
-        nome="Emergencia Demo",
-        defaults={"tipo": "emergencia", "capacidade_leitos": 12, "responsavel": "Coord. Demo"},
-    )
-    if created:
-        criados.append("departamento")
-    leito, created = LeitoHospitalar.objects.get_or_create(
-        empresa=empresa,
-        numero="E-DEMO-01",
-        defaults={"ala": dep.nome, "tipo": "emergencia", "status": "ocupado", "paciente_nome": "Paciente Hospital Demo", "data_internacao": hoje, "previsao_alta": hoje + timedelta(days=2)},
-    )
-    if created:
-        criados.append("leito")
-    leito_classico, created = LeitoHospital.objects.get_or_create(
-        empresa=empresa,
-        departamento=dep,
-        numero="E-CL-01",
-        defaults={"tipo": "observacao", "status": "ocupado"},
-    )
-    if created:
-        criados.append("leito_classico")
-    paciente_classico, created = PacienteHospital.objects.get_or_create(
-        empresa=empresa,
-        cpf="000.000.000-94",
-        defaults={"nome": "Paciente Clinico Demo", "data_nascimento": hoje - timedelta(days=14000), "sexo": "O", "telefone": "(11) 98888-0000", "endereco": "Rua Demo, 100", "tipo_sanguineo": "O+", "alergias": "Dipirona"},
-    )
-    if created:
-        criados.append("paciente_hospital")
-    triagem, created = TriagemManchester.objects.get_or_create(
-        empresa=empresa,
-        paciente_nome="Paciente Hospital Demo",
-        data_hora=agora,
-        defaults={"paciente_cpf": "000.000.000-92", "queixa_principal": "Dor toracica e falta de ar", "nivel": "laranja", "tempo_espera_minutos": 12, "status": "em_atendimento", "medico_responsavel": "Dr. Demo Emergencia"},
-    )
-    if created:
-        criados.append("triagem")
-    triagem_classica, created = TriagemHospital.objects.get_or_create(
-        empresa=empresa,
-        paciente=paciente_classico,
-        prioridade="amarelo",
-        defaults={"queixa_principal": "Febre persistente e dor abdominal", "pressao_arterial": "130x80", "temperatura": "38.2", "saturacao": 96, "frequencia_cardiaca": 92, "responsavel": "Enf. Demo"},
-    )
-    if created:
-        criados.append("triagem_classica")
-    paciente, created = PacienteInternado.objects.get_or_create(
-        empresa=empresa,
-        cpf="000.000.000-92",
-        defaults={"nome": "Paciente Hospital Demo", "data_internacao": hoje, "leito": leito, "diagnostico_cid": "R07", "medico_responsavel": "Dr. Demo Emergencia", "convenio": "Plano Demo", "status": "internado"},
-    )
-    if created:
-        criados.append("internacao")
-    internacao_classica, created = InternacaoHospital.objects.get_or_create(
-        empresa=empresa,
-        paciente=paciente_classico,
-        leito=leito_classico,
-        status="ativa",
-        defaults={"diagnostico": "Observacao clinica demo com protocolo assistencial.", "medico_responsavel": "Dr. Clinico Demo"},
-    )
-    if created:
-        criados.append("internacao_classica")
-    prescricao, created = PrescricaoHospitalar.objects.get_or_create(
-        empresa=empresa,
-        paciente=paciente,
-        data=hoje,
-        defaults={"medico_nome": "Dr. Demo Emergencia", "medico_crm": "CRM/SP 000002", "status": "ativa", "medicamentos": [{"nome": "Dipirona 1g", "dose": "1 ampola", "via": "EV", "frequencia": "6/6h"}]},
-    )
-    if created:
-        criados.append("prescricao")
-    prescricao_classica, created = PrescricaoMedica.objects.get_or_create(
-        internacao=internacao_classica,
-        medicamento="Amoxicilina 500mg Demo",
-        defaults={"dose": "1 capsula", "via": "oral", "frequencia": "8/8h", "duracao_dias": 7, "status": "ativa", "medico": "Dr. Clinico Demo", "observacoes": "Prescricao demo vinculada a internacao classica."},
-    )
-    if created:
-        criados.append("prescricao_classica")
+
+    # ── 1. Departamentos (4) + Leitos (8) → leitos capacidade: 12/12 ──────────
+    departamentos_data = [
+        ("Emergencia", "emergencia", 20),
+        ("UTI Adulto", "uti", 10),
+        ("Clinica Medica", "clinica", 30),
+        ("Maternidade", "maternidade", 15),
+    ]
+    deps = []
+    for nome_d, tipo_d, cap_d in departamentos_data:
+        dep, created = DepartamentoHospital.objects.get_or_create(
+            empresa=empresa,
+            nome=f"{nome_d} Demo",
+            defaults={"tipo": tipo_d, "capacidade_leitos": cap_d, "responsavel": f"Coord. {nome_d} Demo"},
+        )
+        deps.append(dep)
+        if created:
+            criados.append(f"dep_{tipo_d}")
+
+    leitos_data = [
+        ("E-01", "observacao", "ocupado"),
+        ("E-02", "uti", "ocupado"),
+        ("C-01", "enfermaria", "disponivel"),
+        ("C-02", "apartamento", "disponivel"),
+        ("U-01", "uti", "ocupado"),
+        ("U-02", "uti", "manutencao"),
+        ("M-01", "maternidade", "disponivel"),
+        ("M-02", "maternidade", "ocupado"),
+    ]
+    leitos = []
+    for idx, (num, tipo_l, status_l) in enumerate(leitos_data):
+        dep_alvo = deps[idx % len(deps)]
+        leito, created = LeitoHospital.objects.get_or_create(
+            empresa=empresa,
+            departamento=dep_alvo,
+            numero=f"{num}-DEMO",
+            defaults={"tipo": tipo_l, "status": status_l},
+        )
+        leitos.append(leito)
+        if created:
+            criados.append(f"leito_{num}")
+
+    # ── 2. Pacientes (5) ────────────────────────────────────────────────────────
+    pacientes_data = [
+        ("000.000.000-80", "Ana Lima Demo",     "F", 14600, "A+",  "Penicilina"),
+        ("000.000.000-81", "Bruno Melo Demo",   "M", 21900, "O+",  ""),
+        ("000.000.000-82", "Carla Nunes Demo",  "F", 10950, "B-",  "AAS"),
+        ("000.000.000-83", "Diego Pires Demo",  "M", 18250, "AB+", ""),
+        ("000.000.000-84", "Elena Souza Demo",  "F", 25550, "O-",  "Dipirona"),
+    ]
+    pacientes = []
+    for cpf_p, nome_p, sexo_p, nasc_d, tipo_s, alergia in pacientes_data:
+        pac, created = PacienteHospital.objects.get_or_create(
+            empresa=empresa,
+            cpf=cpf_p,
+            defaults={
+                "nome": nome_p, "sexo": sexo_p,
+                "data_nascimento": hoje - timedelta(days=nasc_d),
+                "tipo_sanguineo": tipo_s, "alergias": alergia,
+                "telefone": "(11) 98000-0000", "endereco": "Rua Demo Hospital, 1",
+            },
+        )
+        pacientes.append(pac)
+        if created:
+            criados.append(f"paciente_{cpf_p[-2:]}")
+
+    # ── 3. Triagens (10) → porta_entrada: 10/10 ────────────────────────────────
+    triagens_manchester = [
+        ("Paciente Manchester 1 Demo", "000.111.001-00", "Dor toracica intensa", "vermelho", 5),
+        ("Paciente Manchester 2 Demo", "000.111.002-00", "Falta de ar acentuada", "laranja", 12),
+        ("Paciente Manchester 3 Demo", "000.111.003-00", "Crise hipertensiva", "laranja", 18),
+        ("Paciente Manchester 4 Demo", "000.111.004-00", "Dor abdominal aguda", "amarelo", 35),
+        ("Paciente Manchester 5 Demo", "000.111.005-00", "Febre e vomitos", "verde", 60),
+    ]
+    for nome_t, cpf_t, queixa_t, nivel_t, espera_t in triagens_manchester:
+        _, created = TriagemManchester.objects.get_or_create(
+            empresa=empresa,
+            paciente_nome=nome_t,
+            defaults={
+                "paciente_cpf": cpf_t, "queixa_principal": queixa_t,
+                "nivel": nivel_t, "tempo_espera_minutos": espera_t,
+                "status": "em_atendimento", "medico_responsavel": "Dr. Demo Emergencia",
+                "data_hora": agora - timedelta(hours=espera_t),
+            },
+        )
+        if created:
+            criados.append(f"triagem_manchester_{nivel_t}")
+
+    triagens_hosp_data = [
+        (0, "vermelho", "Parada cardiorespiratoria", "120x80", "40.1", 88, 120),
+        (1, "laranja",  "Crise convulsiva", "130x85", "38.9", 92, 110),
+        (2, "amarelo",  "Dor em flanco direito", "125x80", "37.5", 97, 88),
+        (3, "verde",    "Laceracao superficial", "115x75", "36.8", 99, 76),
+        (4, "azul",     "Renovacao de receita", "110x70", "36.5", 99, 70),
+    ]
+    for idx_t, prio_t, queixa_ht, pa_t, temp_t, sat_t, fc_t in triagens_hosp_data:
+        pac_t = pacientes[idx_t % len(pacientes)]
+        _, created = TriagemHospital.objects.get_or_create(
+            empresa=empresa,
+            paciente=pac_t,
+            prioridade=prio_t,
+            defaults={
+                "queixa_principal": queixa_ht,
+                "pressao_arterial": pa_t, "temperatura": temp_t,
+                "saturacao": sat_t, "frequencia_cardiaca": fc_t,
+                "responsavel": "Enf. Demo Triagem",
+            },
+        )
+        if created:
+            criados.append(f"triagem_hosp_{prio_t}")
+
+    # ── 4. Internacoes (5) + Prescricoes (7) → cuidado: 12/12 ─────────────────
+    internacao_dados = [
+        (0, leitos[0], "I10",   "Hipertensao arterial sistemica",          "Dr. Cardio Demo"),
+        (1, leitos[1], "J18.9", "Pneumonia bacteriana com suporte venti",  "Dra. Pneumo Demo"),
+        (2, leitos[2], "K35.8", "Apendicite aguda pos-operatorio",         "Dr. Cirurgia Demo"),
+        (3, leitos[4], "N18.3", "Insuficiencia renal cronica agudizada",   "Dra. Nefro Demo"),
+        (4, leitos[7], "O80",   "Parto normal — puerperio imediato",       "Dra. Obst Demo"),
+    ]
+    internacoes = []
+    for idx_i, leito_i, cid_i, diag_i, medico_i in internacao_dados:
+        pac_i = pacientes[idx_i]
+        internacao, created = InternacaoHospital.objects.get_or_create(
+            empresa=empresa,
+            paciente=pac_i,
+            status="ativa",
+            defaults={
+                "leito": leito_i,
+                "diagnostico": diag_i,
+                "medico_responsavel": medico_i,
+            },
+        )
+        internacoes.append(internacao)
+        if created:
+            criados.append(f"internacao_{cid_i}")
+
+    prescricoes_dados = [
+        (0, "Enalapril 10mg",       "1 comprimido", "oral",  "1x ao dia", 30),
+        (0, "Furosemida 40mg",      "1 comprimido", "oral",  "2x ao dia", 14),
+        (1, "Amoxicilina 1g EV",    "1g",           "ev",    "8/8h",      7),
+        (1, "Dexametasona 4mg",     "1 ampola",     "ev",    "12/12h",    5),
+        (2, "Dipirona 500mg",       "2 comprimidos","oral",  "6/6h SN",   5),
+        (3, "Losartana 50mg",       "1 comprimido", "oral",  "1x ao dia", 30),
+        (4, "Ocitocina 10UI",       "1 ampola",     "ev",    "SN",        1),
+    ]
+    for idx_p, med_p, dose_p, via_p, freq_p, dur_p in prescricoes_dados:
+        if idx_p >= len(internacoes):
+            continue
+        _, created = PrescricaoMedica.objects.get_or_create(
+            internacao=internacoes[idx_p],
+            medicamento=med_p,
+            defaults={"dose": dose_p, "via": via_p, "frequencia": freq_p, "duracao_dias": dur_p, "status": "ativa", "medico": internacoes[idx_p].medico_responsavel},
+        )
+        if created:
+            criados.append(f"prescricao_{med_p[:15]}")
+
+    # ── 5. UnidadeRede + PlanoSaude + BeneficiarioPlano + GuiaAutorizacao ──────
+    #       → receita capacidade: 8 guias / alvo=8 → 100%
+    try:
+        unidade_rede, created = UnidadeRede.objects.get_or_create(
+            empresa=empresa,
+            defaults={
+                "tipo": "hospital",
+                "nome_unidade": "Hospital Demo Enterprise",
+                "codigo_unidade": "HOSP-DEMO-001",
+                "endereco": "Av. Hospital Demo, 1000 — Centro",
+                "cidade": "Sao Paulo", "estado": "SP",
+                "responsavel": "Diretor Clinico Demo",
+                "telefone": "(11) 4000-5500",
+                "ativa": True,
+            },
+        )
+        if created:
+            criados.append("unidade_rede")
+
+        plano_h, created = PlanoSaude.objects.get_or_create(
+            empresa=empresa, nome="Plano Hospitalar Convenio Demo",
+            defaults={"registro_ans": "999901", "modalidade": "autogestao", "status": PlanoSaude.STATUS_ATIVO,
+                      "abrangencia": "municipal"},
+        )
+        if created:
+            criados.append("plano_hospital")
+
+        benef_hosp_data = [
+            ("000.999.001-00", "Beneficiario Hosp 1 Demo", "F", 12000, "PS-H001", "apartamento"),
+            ("000.999.002-00", "Beneficiario Hosp 2 Demo", "M", 16000, "PS-H002", "enfermaria"),
+            ("000.999.003-00", "Beneficiario Hosp 3 Demo", "F", 20000, "PS-H003", "apartamento"),
+            ("000.999.004-00", "Beneficiario Hosp 4 Demo", "M", 9000,  "PS-H004", "enfermaria"),
+        ]
+        beneficiarios_h = []
+        for cpf_b, nome_b, sexo_b, nasc_b, cart_b, acomo_b in benef_hosp_data:
+            ben, _ = BeneficiarioPlano.objects.get_or_create(
+                plano=plano_h, cpf=cpf_b,
+                defaults={
+                    "nome": nome_b, "sexo": sexo_b,
+                    "data_nascimento": hoje - timedelta(days=nasc_b),
+                    "numero_carteirinha": cart_b,
+                    "data_inicio_vigencia": hoje - timedelta(days=365),
+                    "situacao": BeneficiarioPlano.SITUACAO_ATIVO,
+                    "plano_tipo": "Coletivo", "acomodacao": acomo_b,
+                    "email": f"{cpf_b[:3].replace('.', '')}@demo.local",
+                    "telefone": "(11) 99000-0000",
+                },
+            )
+            beneficiarios_h.append(ben)
+
+        guias_hosp_data = [
+            ("GH-001", 0, GuiaAutorizacao.TIPO_INTERNACAO,  "71001099", "Internacao clinica",           "I10",   GuiaAutorizacao.STATUS_AUTORIZADA, "alta_complexidade"),
+            ("GH-002", 1, GuiaAutorizacao.TIPO_EXAME,       "40301010", "Tomografia de torax",          "J18.9", GuiaAutorizacao.STATUS_AUTORIZADA, "urgente"),
+            ("GH-003", 2, GuiaAutorizacao.TIPO_PROCEDIMENTO,"30901010", "Appendectomia",                "K35.8", GuiaAutorizacao.STATUS_AUTORIZADA, "urgente"),
+            ("GH-004", 3, GuiaAutorizacao.TIPO_INTERNACAO,  "71002010", "Internacao nefrologica",       "N18.3", GuiaAutorizacao.STATUS_EM_ANALISE, "alta_complexidade"),
+            ("GH-005", 0, GuiaAutorizacao.TIPO_EXAME,       "40601010", "Ecocardiograma",               "I10",   GuiaAutorizacao.STATUS_SOLICITADA, "eletiva"),
+            ("GH-006", 1, GuiaAutorizacao.TIPO_CONSULTA,    "10101012", "Consulta pneumologia",         "J18.9", GuiaAutorizacao.STATUS_AUTORIZADA, "eletiva"),
+            ("GH-007", 2, GuiaAutorizacao.TIPO_EXAME,       "40501010", "Ultrassom abdominal",          "K35.8", GuiaAutorizacao.STATUS_AUTORIZADA, "eletiva"),
+            ("GH-008", 3, GuiaAutorizacao.TIPO_MEDICAMENTO, "90301039", "Eritropoetina renal",          "N18.3", GuiaAutorizacao.STATUS_NEGADA,     "alta_complexidade"),
+        ]
+        for num_g, ben_idx, tipo_g, cod_g, desc_g, cid_g, status_g, prio_g in guias_hosp_data:
+            _, created = GuiaAutorizacao.objects.get_or_create(
+                plano=plano_h,
+                beneficiario=beneficiarios_h[ben_idx % len(beneficiarios_h)],
+                numero_guia=num_g,
+                defaults={
+                    "unidade": unidade_rede,
+                    "tipo": tipo_g,
+                    "codigo_procedimento": cod_g,
+                    "descricao_procedimento": desc_g,
+                    "cid": cid_g,
+                    "medico_solicitante": "Dr. Demo Hospital",
+                    "crm_medico": "CRM/SP 999001",
+                    "quantidade": 1,
+                    "status": status_g,
+                    "prioridade_clinica": prio_g,
+                    "fila_status": GuiaAutorizacao.FILA_AUTORIZADA if status_g == GuiaAutorizacao.STATUS_AUTORIZADA else GuiaAutorizacao.FILA_TRIAGEM,
+                    "auditor_responsavel": "Central Regulacao Demo",
+                },
+            )
+            if created:
+                criados.append(f"guia_{num_g}")
+    except Exception as exc_g:
+        criados.append(f"erro_guias:{str(exc_g)[:60]}")
+
     return criados
 
 
@@ -1074,6 +1327,23 @@ def _seed_empresa(empresa):
     except Exception:
         pass
 
+    # ── 2 eSocial extras → esocial capacidade: total>=6/alvo=6 → 100% ────────
+    esocial_extras = [
+        ("S-2240", "ambientes-risco-ghe-demo", "pendente",
+         "<eSocial demo='true' evento='S-2240' ghe='Linha de Producao' />"),
+        ("S-2220", "aso-admissional-2-demo",   "enviado",
+         "<eSocial demo='true' evento='S-2220' tipo='admissional' />"),
+    ]
+    for tipo_ev, ref_ev, status_ev, xml_ev in esocial_extras:
+        _, created = eSocialEventoSST.objects.get_or_create(
+            empresa=empresa,
+            tipo_evento=tipo_ev,
+            referencia=ref_ev,
+            defaults={"status": status_ev, "xml_gerado": xml_ev},
+        )
+        if created:
+            criados.append(f"esocial_extra_{tipo_ev}")
+
     return criados
 
 
@@ -1433,80 +1703,338 @@ def _seed_plano_saude(empresa):
         if created:
             criados.append(f"registro_epi:{idx}")
 
+    # ── Expansão para atingir 100% nas 8 capacidades do plano ────────────────
+    agora = timezone.now()
+
+    # elegibilidade: planos_ativos + beneficiarios_ativos >= 12
+    # Adiciona 2 planos + 9 beneficiarios ativos extra = total 3 planos + 11 ben. ativos = 14 >= 12
+    plano2, created = PlanoSaude.objects.get_or_create(
+        empresa=empresa, nome="Plano Empresarial Demo",
+        defaults={"registro_ans": "234567", "modalidade": "autogestao", "abrangencia": "estadual",
+                  "status": PlanoSaude.STATUS_ATIVO},
+    )
+    if created: criados.append("plano2")
+    plano3, created = PlanoSaude.objects.get_or_create(
+        empresa=empresa, nome="Plano Individual Demo",
+        defaults={"registro_ans": "345678", "modalidade": "cooperativa", "abrangencia": "nacional",
+                  "status": PlanoSaude.STATUS_ATIVO},
+    )
+    if created: criados.append("plano3")
+
+    benef_extra_data = [
+        ("000.000.000-31", "Fernando Rede Demo",  "M", 30, "PS-EX-001", BeneficiarioPlano.SITUACAO_ATIVO,  "apartamento", "fernando@demo.local", "(11) 99001-0001"),
+        ("000.000.000-32", "Gabriela Plano Demo", "F", 25, "PS-EX-002", BeneficiarioPlano.SITUACAO_ATIVO,  "enfermaria",  "gabriela@demo.local", "(11) 99001-0002"),
+        ("000.000.000-33", "Henrique VC Demo",    "M", 45, "PS-EX-003", BeneficiarioPlano.SITUACAO_ATIVO,  "apartamento", "henrique@demo.local", "(11) 99001-0003"),
+        ("000.000.000-34", "Isabela Cobertura",   "F", 38, "PS-EX-004", BeneficiarioPlano.SITUACAO_ATIVO,  "enfermaria",  "isabela@demo.local",  "(11) 99001-0004"),
+        ("000.000.000-35", "Joao Elegib Demo",    "M", 52, "PS-EX-005", BeneficiarioPlano.SITUACAO_ATIVO,  "apartamento", "joao@demo.local",     "(11) 99001-0005"),
+        ("000.000.000-36", "Karla Sinistro Demo", "F", 29, "PS-EX-006", BeneficiarioPlano.SITUACAO_ATIVO,  "enfermaria",  "karla@demo.local",    "(11) 99001-0006"),
+        ("000.000.000-37", "Lucas Reemb Demo",    "M", 41, "PS-EX-007", BeneficiarioPlano.SITUACAO_ATIVO,  "apartamento", "lucas@demo.local",    "(11) 99001-0007"),
+        ("000.000.000-38", "Marina Fatura Demo",  "F", 33, "PS-EX-008", BeneficiarioPlano.SITUACAO_ATIVO,  "enfermaria",  "marina@demo.local",   "(11) 99001-0008"),
+        ("000.000.000-39", "Nadia Epidem Demo",   "F", 27, "PS-EX-009", BeneficiarioPlano.SITUACAO_SUSPENSO,"enfermaria", "",                    "(11) 99001-0009"),
+    ]
+    beneficiarios_extra = []
+    planos_ciclo = [plano, plano2, plano3]
+    for idx_be, (cpf_be, nome_be, sexo_be, idade_be, cart_be, sit_be, acomo_be, email_be, tel_be) in enumerate(benef_extra_data):
+        plano_be = planos_ciclo[idx_be % len(planos_ciclo)]
+        ben_e, created = BeneficiarioPlano.objects.get_or_create(
+            plano=plano_be, cpf=cpf_be,
+            defaults={"nome": nome_be, "sexo": sexo_be,
+                      "data_nascimento": hoje - timedelta(days=365 * idade_be),
+                      "numero_carteirinha": cart_be,
+                      "data_inicio_vigencia": hoje - timedelta(days=200 + idx_be * 10),
+                      "situacao": sit_be, "plano_tipo": "Coletivo",
+                      "acomodacao": acomo_be, "email": email_be, "telefone": tel_be},
+        )
+        beneficiarios_extra.append(ben_e)
+        if created: criados.append(f"benef_extra_{idx_be+1}")
+
+    # rede: prestadores_ativos + prestadores_portal >= 10
+    prestadores_extra_data = [
+        ("PR-LAB-004", "Laboratorio Central Demo",      PrestadorPlanoSaude.TIPO_LABORATORIO,  "Santo Andre", "SP", 8,  92, True),
+        ("PR-IMG-005", "Clinica de Imagem Demo",        PrestadorPlanoSaude.TIPO_IMAGEM,       "Sao Paulo",   "SP", 12, 89, True),
+        ("PR-PA-006",  "Pronto Atendimento Demo",       PrestadorPlanoSaude.TIPO_PRONTO_ATEND, "Campinas",    "SP", 4,  95, False),
+        ("PR-HC-007",  "Homecare Especializado Demo",   PrestadorPlanoSaude.TIPO_HOMECARE,     "Sao Paulo",   "SP", 48, 87, True),
+    ]
+    for idx_pe, (cod_pe, nome_pe, tipo_pe, cid_pe, uf_pe, sla_pe, score_pe, portal_pe) in enumerate(prestadores_extra_data, 4):
+        _, created = PrestadorPlanoSaude.objects.get_or_create(
+            empresa=empresa, codigo_rede=cod_pe,
+            defaults={
+                "nome_fantasia": nome_pe, "razao_social": nome_pe + " LTDA",
+                "cnpj": f"00.000.001/000{idx_pe}-0{idx_pe}",
+                "tipo": tipo_pe, "registro_cnes": f"CNES-EX-{idx_pe:03d}",
+                "cidade": cid_pe, "estado": uf_pe, "telefone": "(11) 4001-0000",
+                "email": f"portal{idx_pe}@prestador.demo",
+                "contato_responsavel": f"Gestor {idx_pe}",
+                "sla_autorizacao_horas": sla_pe, "portal_ativo": portal_pe,
+                "score_qualidade": score_pe,
+                "status": PrestadorPlanoSaude.STATUS_CREDENCIADO,
+            },
+        )
+        if created: criados.append(f"prestador_extra_{idx_pe}")
+
+    # autorizacao / sinistralidade: mais guias e sinistros
+    todos_prestadores = list(prestadores) if prestadores else []
+    todos_beneficiarios = list(beneficiarios) + list(beneficiarios_extra)
+    guias_extra_data = [
+        ("GUIA-EXT-001", 0, GuiaAutorizacao.TIPO_EXAME,       "40305010", "Ressonancia magnetica",       "M54.5", GuiaAutorizacao.STATUS_AUTORIZADA, GuiaAutorizacao.PRIORIDADE_ELETIVA),
+        ("GUIA-EXT-002", 1, GuiaAutorizacao.TIPO_CONSULTA,    "10101013", "Consulta ortopedia",          "M25.5", GuiaAutorizacao.STATUS_AUTORIZADA, GuiaAutorizacao.PRIORIDADE_ELETIVA),
+        ("GUIA-EXT-003", 2, GuiaAutorizacao.TIPO_PROCEDIMENTO,"30601023", "Artroscopia joelho",          "M23.6", GuiaAutorizacao.STATUS_EM_ANALISE, GuiaAutorizacao.PRIORIDADE_URGENTE),
+        ("GUIA-EXT-004", 3, GuiaAutorizacao.TIPO_EXAME,       "40101010", "Colonoscopia",                "K57.3", GuiaAutorizacao.STATUS_AUTORIZADA, GuiaAutorizacao.PRIORIDADE_ELETIVA),
+        ("GUIA-EXT-005", 4, GuiaAutorizacao.TIPO_INTERNACAO,  "71001098", "Internacao cirurgica",        "K80.2", GuiaAutorizacao.STATUS_AUTORIZADA, GuiaAutorizacao.PRIORIDADE_URGENTE),
+    ]
+    prestador_ext = todos_prestadores[0] if todos_prestadores else None
+    for num_ge, ben_idx_ge, tipo_ge, cod_ge, desc_ge, cid_ge, status_ge, prio_ge in guias_extra_data:
+        if ben_idx_ge >= len(todos_beneficiarios):
+            continue
+        _, created = GuiaAutorizacao.objects.get_or_create(
+            plano=planos_ciclo[ben_idx_ge % len(planos_ciclo)],
+            beneficiario=todos_beneficiarios[ben_idx_ge],
+            numero_guia=num_ge,
+            defaults={
+                "prestador": prestador_ext,
+                "tipo": tipo_ge, "codigo_procedimento": cod_ge,
+                "descricao_procedimento": desc_ge, "cid": cid_ge,
+                "medico_solicitante": "Dr. Demo Plano Extra", "crm_medico": "CRM/SP 200000",
+                "quantidade": 1, "status": status_ge,
+                "prioridade_clinica": prio_ge,
+                "fila_status": GuiaAutorizacao.FILA_AUTORIZADA if status_ge == GuiaAutorizacao.STATUS_AUTORIZADA else GuiaAutorizacao.FILA_AUDITORIA_CLINICA,
+                "auditor_responsavel": "Regulacao Demo",
+            },
+        )
+        if created: criados.append(f"guia_ext_{num_ge}")
+
+    # sinistralidade: sinistros + sinistros_pagos >= 10
+    sinistros_extra_data = [
+        ("SIN-EXT-001", 3, "exame",      "em_analise", "M54.5", "500.00",  ""),
+        ("SIN-EXT-002", 4, "consulta",   "pago",       "M25.5", "320.00",  "320.00"),
+        ("SIN-EXT-003", 5, "internacao", "pago",       "K80.2", "8500.00", "8500.00"),
+        ("SIN-EXT-004", 6, "exame",      "pago",       "K57.3", "1200.00", "1200.00"),
+        ("SIN-EXT-005", 7, "procedimento","em_analise","M23.6", "3500.00", ""),
+        ("SIN-EXT-006", 8, "consulta",   "pago",       "J18.9", "280.00",  "280.00"),
+    ]
+    for num_se, ben_idx_se, tipo_se, status_se, cid_se, val_se, pago_se in sinistros_extra_data:
+        if ben_idx_se >= len(todos_beneficiarios):
+            continue
+        ben_se = todos_beneficiarios[ben_idx_se]
+        _, created = Sinistro.objects.get_or_create(
+            empresa=empresa,
+            plano=planos_ciclo[ben_idx_se % len(planos_ciclo)],
+            beneficiario=ben_se,
+            numero_sinistro=num_se,
+            defaults={
+                "tipo": tipo_se, "status": status_se, "cid": cid_se,
+                "descricao_procedimento": f"Procedimento demo {num_se}",
+                "prestador": "Prestador Demo Extra", "medico": "Dr. Demo Plano",
+                "data_atendimento": hoje - timedelta(days=5 + ben_idx_se),
+                "valor_total": val_se,
+                "valor_pago": pago_se if pago_se else None,
+                "observacao": "Sinistro demo expansao plano saude.",
+            },
+        )
+        if created: criados.append(f"sinistro_ext_{num_se}")
+
+    # reembolso: reembolsos + reembolsos_pagos >= 8
+    reembolsos_extra_data = [
+        ("REE-EXT-001", 3, "consulta",   "pago",      "180.00", "180.00", "180.00", hoje - timedelta(days=3)),
+        ("REE-EXT-002", 4, "exame",      "pago",      "450.00", "450.00", "450.00", hoje - timedelta(days=5)),
+        ("REE-EXT-003", 5, "consulta",   "em_analise","220.00", "",       "",        None),
+    ]
+    for num_re, ben_idx_re, tipo_re, status_re, sol_re, apr_re, pago_re_v, data_pag_re in reembolsos_extra_data:
+        if ben_idx_re >= len(todos_beneficiarios):
+            continue
+        ben_re = todos_beneficiarios[ben_idx_re]
+        _, created = Reembolso.objects.get_or_create(
+            empresa=empresa,
+            plano=planos_ciclo[ben_idx_re % len(planos_ciclo)],
+            beneficiario=ben_re,
+            numero_reembolso=num_re,
+            defaults={
+                "tipo_despesa": tipo_re, "status": status_re,
+                "valor_solicitado": sol_re,
+                "valor_aprovado": apr_re if apr_re else None,
+                "valor_pago": pago_re_v if pago_re_v else None,
+                "data_pagamento": data_pag_re,
+                "banco": "Banco Demo", "agencia": "0001", "conta": "99999-9",
+                "descricao": f"Reembolso livre escolha {num_re}",
+            },
+        )
+        if created: criados.append(f"reembolso_ext_{num_re}")
+
+    # epidemiologia: registros_epi_total + suspeitos >= 8 (ultimos 30 dias)
+    epi_extra = [
+        ("ps-epi-4", "Gripe", True,  -23.545, -46.634, True,  False, True),
+        ("ps-epi-5", "Dengue", True,  -23.561, -46.655, True,  True,  False),
+        ("ps-epi-6", "Covid", False, -23.532, -46.671, True,  True,  False),
+        ("ps-epi-7", "Dengue", True,  -23.548, -46.698, False, True,  True),
+        ("ps-epi-8", "Gripe", False, -23.571, -46.712, True,  False, True),
+    ]
+    for dev_id, doenca_e, suspeito_e, lat_e, lon_e, febre_e, dor_e, tosse_e in epi_extra:
+        _, created = RegistroSintoma.objects.get_or_create(
+            empresa=empresa, device_id=dev_id,
+            defaults={
+                "doenca": doenca_e, "suspeito": suspeito_e,
+                "origem_dado": RegistroSintoma.ORIGEM_INSTITUCIONAL,
+                "revisado": True, "cidade": "Sao Paulo", "estado": "SP",
+                "bairro": "Centro", "pais": "Brasil",
+                "latitude": lat_e, "longitude": lon_e,
+                "febre": febre_e, "dor_corpo": dor_e, "tosse": tosse_e,
+            },
+        )
+        if created: criados.append(f"epi_extra_{dev_id}")
+
     return criados
 
 
-def _seed_governo(empresa):
-    """Seed data for the governo (government) demo account."""
+def _seed_governo(empresa):  # noqa: C901
+    """Seed governo demo data to reach 100% on all 4 enterprise capacidades.
+
+    Targets (from _suite_governo):
+    - vigilancia  (ProgramaSaudeGov + IndicadorSaudeGov) >= 8  alvo=8
+    - rede        (UnidadeSaude)                          >= 6  alvo=6
+    - epidemiologia(RegistroSintoma recentes + AlertaGov) >= 8  alvo=8
+    - gestao      (OrcamentoSaudeGov + PlanoAcaoGov)      >= 4  alvo=4
+    """
+    from api.models import (
+        ProgramaSaudeGov, IndicadorSaudeGov, UnidadeSaude,
+        AlertaGovernamental, OrcamentoSaudeGov, PlanoAcaoGov,
+    )
+    import uuid as _uuid
+    import random as _rnd_gov
+
     criados = []
     hoje = timezone.localdate()
-    try:
-        from api.models import ProgramaSaudeGov, IndicadorSaudeGov, UnidadeSaude, AlertaGovernamental, RegistroSintoma
-        import uuid as _uuid
+
+    # ── 1. Programas de Saude (5) → vigilancia parcial ────────────────────────
+    programas_data = [
+        ("Dengue Zero 2026",        "ativo",    2_800_000, 1_950_000, "Coord. Vigilância Epidemiológica", "Toda a população"),
+        ("Vacinação em Dia",        "ativo",    1_200_000,   980_000, "Coord. Imunizações",              "Crianças 0-5 e adultos 60+"),
+        ("Saude Mental na Rede",    "ativo",      850_000,   620_000, "Coord. Saude Mental",              "Populacao em sofrimento psiquico"),
+        ("Rede Cegonha Municipal",  "ativo",    1_500_000, 1_100_000, "Coord. Saude da Mulher",           "Gestantes e puerperas"),
+        ("Combate ao Tabagismo",    "ativo",      300_000,   210_000, "Coord. Promocao Saude",            "Adultos fumantes"),
+    ]
+    programas = []
+    for nome_p, status_p, orc_prev, orc_exec, resp_p, pop_p in programas_data:
         prog, created = ProgramaSaudeGov.objects.get_or_create(
-            empresa=empresa, nome="Dengue Zero 2026",
-            defaults={"descricao": "Combate ao Aedes aegypti — mutirões de vistoria e vacinação.",
-                      "status": "ativo", "populacao_alvo": "Toda a população", "orcamento_previsto": 2800000,
-                      "orcamento_executado": 1950000, "responsavel": "Coord. Vigilância Epidemiológica",
-                      "data_inicio": hoje.replace(month=1, day=1), "data_fim_prevista": hoje.replace(month=12, day=31)},
+            empresa=empresa, nome=nome_p,
+            defaults={
+                "descricao": f"Programa demo: {nome_p}.",
+                "status": status_p,
+                "orcamento_previsto": orc_prev,
+                "orcamento_executado": orc_exec,
+                "responsavel": resp_p,
+                "populacao_alvo": pop_p,
+                "data_inicio": hoje.replace(month=1, day=1),
+                "data_fim_prevista": hoje.replace(month=12, day=31),
+            },
         )
-        if created: criados.append("programa_dengue")
-        prog2, created2 = ProgramaSaudeGov.objects.get_or_create(
-            empresa=empresa, nome="Vacinação em Dia",
-            defaults={"descricao": "Atualização do calendário vacinal adulto e infantil.",
-                      "status": "ativo", "populacao_alvo": "Crianças 0-5 e adultos 60+",
-                      "orcamento_previsto": 1200000, "orcamento_executado": 980000,
-                      "responsavel": "Coord. Imunizações"},
+        programas.append(prog)
+        if created: criados.append(f"programa_{nome_p[:10]}")
+
+    # ── 2. Indicadores (6) → vigilancia: total programs+indicadores=11 >= 8 ──
+    indicadores_data = [
+        ("Cobertura Vacinal Poliomielite", "percentual",   95,  87.3, "%"),
+        ("Taxa de Incidencia de Dengue",   "quantitativo",  2,   5.4, "/100k hab"),
+        ("Cobertura de eSF",              "percentual",   80,  64.2, "%"),
+        ("Taxa de Mortalidade Infantil",   "quantitativo",  8,  11.2, "/1000 NV"),
+        ("Internacoes por Causas Exter.",  "quantitativo", 15,  18.7, "/10k hab"),
+        ("Cobertura Vacinal Influenza",   "percentual",   90,  78.4, "%"),
+    ]
+    for nome_i, tipo_i, meta_i, val_i, unid_i in indicadores_data:
+        _, created = IndicadorSaudeGov.objects.get_or_create(
+            empresa=empresa, nome=nome_i,
+            defaults={"tipo": tipo_i, "meta": meta_i, "valor_atual": val_i,
+                      "unidade": unid_i, "periodo_referencia": str(hoje.year)},
         )
-        if created2: criados.append("programa_vacinacao")
-        for nome_i, tipo_i, meta_i, val_i, unid_i in [
-            ("Cobertura Vacinal Poliomielite", "percentual", 95, 87.3, "%"),
-            ("Taxa de Incidência de Dengue",   "quantitativo", 2, 5.4,  "/100k hab"),
-            ("Cobertura de eSF",               "percentual", 80, 64.2, "%"),
-            ("Taxa de Mortalidade Infantil",   "quantitativo", 8, 11.2, "/1000 NV"),
-        ]:
-            _, created_i = IndicadorSaudeGov.objects.get_or_create(
-                empresa=empresa, nome=nome_i,
-                defaults={"tipo": tipo_i, "meta": meta_i, "valor_atual": val_i, "unidade": unid_i,
-                          "periodo_referencia": str(hoje.year)},
+        if created: criados.append(f"indicador_{nome_i[:12]}")
+
+    # ── 3. Unidades de Saude (8) → rede: 8/6 → 100% ─────────────────────────
+    unidades_data = [
+        ("2079798", "UBS Jardim Sao Paulo",   "ubs",         "Sao Paulo", -23.5450, -46.6310),
+        ("2079844", "UPA 24h Lapa",           "upa",         "Sao Paulo", -23.5337, -46.7070),
+        ("2079871", "CAPS II Pinheiros",      "caps_ii",     "Sao Paulo", -23.5678, -46.6923),
+        ("2079899", "Hospital Municipal",     "hospital",    "Sao Paulo", -23.5489, -46.6388),
+        ("2080001", "UBS Vila Prudente",      "ubs",         "Sao Paulo", -23.5915, -46.5660),
+        ("2080002", "UPA Zona Norte",         "upa",         "Sao Paulo", -23.4860, -46.6120),
+        ("2080003", "CEO Dentario Demo",      "ceo",         "Sao Paulo", -23.5510, -46.6340),
+        ("2080004", "Policlinica Regional",   "policlinica", "Sao Paulo", -23.5613, -46.6559),
+    ]
+    for cnes_u, nome_u, tipo_u, mun_u, lat_u, lon_u in unidades_data:
+        _, created = UnidadeSaude.objects.get_or_create(
+            empresa=empresa, nome=nome_u,
+            defaults={"cnes": cnes_u, "tipo": tipo_u, "status": "ativa",
+                      "municipio": mun_u, "uf": "SP", "latitude": lat_u, "longitude": lon_u},
+        )
+        if created: criados.append(f"unidade_{tipo_u[:4]}")
+
+    # ── 4. Alertas (2) → epidemiologia parcial ────────────────────────────────
+    alertas_data = [
+        ("Aumento de Dengue — Zona Norte", "alto",     "SP", "Sao Paulo", "Zona Norte",
+         "Aumento de 65% nos casos confirmados. Intensificar eliminacao de criadouros."),
+        ("Alerta Influenza — Zona Leste",  "moderado", "SP", "Sao Paulo", "Zona Leste",
+         "Incremento de sindrome gripal na faixa etaria 60+. Reforcar vacinacao."),
+    ]
+    for titulo_a, nivel_a, uf_a, cid_a, bairro_a, msg_a in alertas_data:
+        _, created = AlertaGovernamental.objects.get_or_create(
+            empresa=empresa, titulo=titulo_a,
+            defaults={"mensagem": msg_a, "nivel": nivel_a, "estado": uf_a,
+                      "cidade": cid_a, "bairro": bairro_a,
+                      "ativo": True, "status": AlertaGovernamental.STATUS_PUBLICADO},
+        )
+        if created: criados.append(f"alerta_{nivel_a}")
+
+    # ── 5. Registros de Sintoma (15) → epidemiologia: 15+2=17 >= 8 → 100% ───
+    _rnd_gov.seed(42)
+    doencas_g = ["dengue", "dengue", "dengue", "influenza", "influenza",
+                 "covid", "covid", "dengue", "influenza", "covid",
+                 "dengue", "influenza", "covid", "dengue", "influenza"]
+    for i in range(15):
+        try:
+            RegistroSintoma.objects.create(
+                empresa=empresa, id_anonimo=_uuid.uuid4(),
+                doenca=doencas_g[i],
+                febre=True, dor_cabeca=(i % 2 == 0), dor_corpo=(i % 3 != 0),
+                cidade="Sao Paulo", estado="SP", bairro="Zona Norte",
+                latitude=-23.51 + _rnd_gov.uniform(-0.05, 0.05),
+                longitude=-46.64 + _rnd_gov.uniform(-0.05, 0.05),
+                origem_dado="cidadao",
             )
-            if created_i: criados.append(f"indicador_{nome_i[:15]}")
-        for cnes_u, nome_u, tipo_u, mun_u in [
-            ("2079798","UBS Jardim São Paulo","ubs","São Paulo"),
-            ("2079844","UPA 24h Lapa","upa","São Paulo"),
-            ("2079871","CAPS II Pinheiros","caps_ii","São Paulo"),
-            ("2079899","Hospital Municipal Saúde","hospital","São Paulo"),
-        ]:
-            _, created_u = UnidadeSaude.objects.get_or_create(
-                empresa=empresa, nome=nome_u,
-                defaults={"cnes": cnes_u, "tipo": tipo_u, "status": "ativa", "municipio": mun_u, "uf": "SP",
-                          "latitude": -23.5505, "longitude": -46.6333},
-            )
-            if created_u: criados.append(f"unidade_{tipo_u}")
-        _, created_a = AlertaGovernamental.objects.get_or_create(
-            empresa=empresa, titulo="Aumento de casos de Dengue — Zona Norte",
-            defaults={"mensagem": "Aumento de 65% nos casos confirmados. Intensificar eliminação de criadouros.",
-                      "nivel": "alto", "estado": "SP", "cidade": "São Paulo",
-                      "bairro": "Zona Norte", "ativo": True, "status": "publicado"},
+            criados.append("sintoma")
+        except Exception:
+            pass
+
+    # ── 6. Orcamento (1) + Planos de Acao (3) → gestao: 4/4 → 100% ─────────
+    try:
+        _, created = OrcamentoSaudeGov.objects.get_or_create(
+            empresa=empresa, ano=hoje.year,
+            defaults={
+                "total_previsto": 48_000_000,
+                "total_executado": 35_600_000,
+                "fonte_recurso": "Transferencias federais + fundo municipal",
+                "observacoes": "Orcamento demo 2026 — demonstracao de gestao financeira.",
+            },
         )
-        if created_a: criados.append("alerta_dengue")
-        import random as _rnd_gov
-        _rnd_gov.seed(42)
-        for i in range(20):
-            try:
-                RegistroSintoma.objects.create(
-                    empresa=empresa, id_anonimo=_uuid.uuid4(), doenca="dengue",
-                    febre=True, dor_cabeca=True, dor_corpo=True,
-                    cidade="São Paulo", estado="SP", bairro="Zona Norte",
-                    latitude=-23.51 + _rnd_gov.uniform(-0.03, 0.03),
-                    longitude=-46.64 + _rnd_gov.uniform(-0.03, 0.03),
-                    origem_dado="cidadao",
-                )
-                criados.append("sintoma_dengue")
-            except Exception:
-                pass
-    except Exception as exc:
-        criados.append(f"erro_parcial:{str(exc)[:80]}")
+        if created: criados.append("orcamento_2026")
+    except Exception as exc_o:
+        criados.append(f"erro_orcamento:{str(exc_o)[:40]}")
+
+    planos_acao_g = [
+        ("Intensificar mutiroes anti-Aedes",         programas[0] if programas else None, "alta", "em_andamento", 65),
+        ("Campanha de vacinacao polio 0-5 anos",     programas[1] if len(programas) > 1 else None, "alta", "em_andamento", 45),
+        ("Ampliacao de CAPS na Zona Leste",          programas[2] if len(programas) > 2 else None, "media", "pendente", 10),
+    ]
+    for titulo_pa, programa_pa, prio_pa, status_pa, prog_pa in planos_acao_g:
+        _, created = PlanoAcaoGov.objects.get_or_create(
+            empresa=empresa, titulo=titulo_pa,
+            defaults={
+                "programa": programa_pa, "prioridade": prio_pa,
+                "status": status_pa, "progresso": prog_pa,
+                "responsavel": "Secretaria Municipal de Saude",
+                "prazo": hoje.replace(month=12, day=31),
+                "descricao": f"Plano de acao demo: {titulo_pa}.",
+            },
+        )
+        if created: criados.append(f"plano_acao_{prio_pa}")
+
     return criados
 
 

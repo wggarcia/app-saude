@@ -10,6 +10,7 @@ from api.models import (
     AcaoCorporativa,
     AfastamentoSST,
     AgendamentoSST,
+    AlertaGovernamental,
     BeneficiarioPlano,
     CampanhaVacinacao,
     CATOcupacional,
@@ -69,6 +70,7 @@ from api.models import (
     TriagemHospital,
     TriagemManchester,
     UnidadeRede,
+    UnidadeSaude,
 )
 
 
@@ -1493,6 +1495,76 @@ def _suite_plano_saude(empresa):
     }
 
 
+def _status_etapas_governo(empresa):
+    hoje = timezone.localdate()
+    janela_30 = hoje - timedelta(days=30)
+    programas = ProgramaSaudeGov.objects.filter(empresa=empresa).count()
+    indicadores = IndicadorSaudeGov.objects.filter(empresa=empresa).count()
+    unidades = UnidadeSaude.objects.filter(empresa=empresa).count()
+    alertas = AlertaGovernamental.objects.filter(empresa=empresa).count()
+    sintomas_rec = RegistroSintoma.objects.filter(
+        empresa=empresa, data_registro__date__gte=janela_30
+    ).count()
+    orcamentos = OrcamentoSaudeGov.objects.filter(empresa=empresa).count()
+    planos_acao = PlanoAcaoGov.objects.filter(empresa=empresa).count()
+    return {
+        "Cadastrar programa de saude": _etapa_status(programas),
+        "Definir indicador": _etapa_status(indicadores),
+        "Mapear unidade de saude": _etapa_status(unidades),
+        "Emitir alerta sanitario": _etapa_status(alertas),
+        "Monitorar epidemiologia": _etapa_status(sintomas_rec),
+        "Planejar orcamento": _etapa_status(orcamentos),
+        "Criar plano de acao": _etapa_status(planos_acao),
+        "Gerar relatorio": _etapa_status(programas + indicadores),
+    }
+
+
+def _suite_governo(empresa):
+    hoje = timezone.localdate()
+    janela_30 = hoje - timedelta(days=30)
+    programas = ProgramaSaudeGov.objects.filter(empresa=empresa).count()
+    indicadores = IndicadorSaudeGov.objects.filter(empresa=empresa).count()
+    unidades = UnidadeSaude.objects.filter(empresa=empresa).count()
+    alertas = AlertaGovernamental.objects.filter(empresa=empresa, ativo=True).count()
+    sintomas_rec = RegistroSintoma.objects.filter(
+        empresa=empresa, data_registro__date__gte=janela_30
+    ).count()
+    orcamentos = OrcamentoSaudeGov.objects.filter(empresa=empresa).count()
+    planos_acao = PlanoAcaoGov.objects.filter(empresa=empresa).count()
+    return {
+        "headline": "Cockpit de saude publica: programas, indicadores, rede SUS e vigilancia epidemiologica integrados.",
+        "diferencial": "Conecta gestao de programas, rede de unidades, alertas sanitarios, sinais epidemiologicos e orcamento em um unico painel de governo.",
+        "processos": [
+            {
+                "nome": "Gestao de programas e indicadores",
+                "descricao": "Define metas, monitora resultados e fundamenta decisao baseada em dados populacionais.",
+                "etapas": [
+                    {"ordem": 1, "titulo": "Cadastrar programa de saude", "descricao": "Cria programa com meta, populacao e orcamento.", "acao_label": "Programas", "acao": "tab:programas"},
+                    {"ordem": 2, "titulo": "Definir indicador", "descricao": "Vincula indicador ao programa com meta e periodicidade.", "acao_label": "Indicadores", "acao": "tab:indicadores"},
+                    {"ordem": 3, "titulo": "Planejar orcamento", "descricao": "Registra previsto e executado por competencia.", "acao_label": "Orcamento", "acao": "tab:orcamento"},
+                    {"ordem": 4, "titulo": "Criar plano de acao", "descricao": "Conecta acao corretiva ao programa e indicador.", "acao_label": "Planos de acao", "acao": "tab:planos_acao"},
+                ],
+            },
+            {
+                "nome": "Vigilancia epidemiologica e rede SUS",
+                "descricao": "Monitora surtos, mapeia unidades e emite alertas sanitarios em tempo real.",
+                "etapas": [
+                    {"ordem": 1, "titulo": "Mapear unidade de saude", "descricao": "Cadastra UBS, UPA, CAPS e hospitais com CNES e localizacao.", "acao_label": "Unidades de saude", "acao": "tab:unidades"},
+                    {"ordem": 2, "titulo": "Emitir alerta sanitario", "descricao": "Publica alerta com nivel, regiao e orientacao a populacao.", "acao_label": "Alertas", "acao": "tab:alertas"},
+                    {"ordem": 3, "titulo": "Monitorar epidemiologia", "descricao": "Acompanha sinais territoriais e identifica clusters de doenca.", "acao_label": "Mapa epidemiologico", "acao": "link:/dashboard-governo/"},
+                    {"ordem": 4, "titulo": "Gerar relatorio", "descricao": "Exporta indicadores, programas e orcamento para prestacao de contas.", "acao_label": "Relatorio", "acao": "link:/api/governo/relatorio/"},
+                ],
+            },
+        ],
+        "capacidades": [
+            _capacidade("vigilancia", "Programas e indicadores de saude", "Programas, metas, indicadores e baseline epidemiologico.", programas + indicadores, 8, ["DATASUS", "e-SUS APS"], "Cadastrar programas prioritarios e vincular indicadores com metas."),
+            _capacidade("rede", "Rede de unidades SUS", "UBS, UPA, CAPS, hospitais — cobertura, localizacao e monitoramento.", unidades, 6, ["CNES/DATASUS", "MapaSaude"], "Cadastrar unidades com CNES, capacidade e regiao de cobertura."),
+            _capacidade("epidemiologia", "Vigilancia e alertas sanitarios", "Sinais territoriais, suspeitos, alertas ativos e monitoramento de surtos.", sintomas_rec + alertas, 8, ["SINAN", "InfoDengue"], "Ativar monitoramento de sinais e emitir alertas sanitarios por regiao."),
+            _capacidade("gestao", "Orcamento e planos de acao", "Gestao financeira da saude, execucao orcamentaria e planos de acao corretiva.", orcamentos + planos_acao, 4, ["SIOPS", "SCTIE"], "Cadastrar orcamento e planos de acao por programa e indicador."),
+        ],
+    }
+
+
 def build_enterprise_premium_suite_payload(empresa):
     setor = get_setor(empresa)
     if setor == "farmacia":
@@ -1507,6 +1579,9 @@ def build_enterprise_premium_suite_payload(empresa):
     elif setor == "plano_saude":
         suite = _suite_plano_saude(empresa)
         status_map = _status_etapas_plano_saude(empresa)
+    elif setor == "governo":
+        suite = _suite_governo(empresa)
+        status_map = _status_etapas_governo(empresa)
     else:
         suite = {
             "headline": "Suite enterprise integrada por ambiente.",
