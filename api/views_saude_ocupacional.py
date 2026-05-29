@@ -113,7 +113,7 @@ def api_wellness_resumo(request):
     ).count()
     retornos_previstos = AfastamentoSST.objects.filter(
         empresa=empresa,
-        status__in=[AfastamentoSST.STATUS_ATIVO, AfastamentoSST.STATUS_RETORNO_PROGRAMADO],
+        status__in=["ativo", "retorno_programado"],
         data_prevista_retorno__gte=hoje,
         data_prevista_retorno__lte=hoje + timedelta(days=14),
     ).count()
