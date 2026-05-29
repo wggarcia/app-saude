@@ -1419,6 +1419,80 @@ def _seed_plano_saude(empresa):
     return criados
 
 
+def _seed_governo(empresa):
+    """Seed data for the governo (government) demo account."""
+    criados = []
+    hoje = timezone.localdate()
+    try:
+        from api.models import ProgramaSaudeGov, IndicadorSaudeGov, UnidadeSaude, AlertaGovernamental, RegistroSintoma
+        import uuid as _uuid
+        prog, created = ProgramaSaudeGov.objects.get_or_create(
+            empresa=empresa, nome="Dengue Zero 2026",
+            defaults={"descricao": "Combate ao Aedes aegypti — mutirões de vistoria e vacinação.",
+                      "status": "ativo", "populacao_alvo": "Toda a população", "orcamento_previsto": 2800000,
+                      "orcamento_executado": 1950000, "responsavel": "Coord. Vigilância Epidemiológica",
+                      "data_inicio": hoje.replace(month=1, day=1), "data_fim_prevista": hoje.replace(month=12, day=31)},
+        )
+        if created: criados.append("programa_dengue")
+        prog2, created2 = ProgramaSaudeGov.objects.get_or_create(
+            empresa=empresa, nome="Vacinação em Dia",
+            defaults={"descricao": "Atualização do calendário vacinal adulto e infantil.",
+                      "status": "ativo", "populacao_alvo": "Crianças 0-5 e adultos 60+",
+                      "orcamento_previsto": 1200000, "orcamento_executado": 980000,
+                      "responsavel": "Coord. Imunizações"},
+        )
+        if created2: criados.append("programa_vacinacao")
+        for nome_i, tipo_i, meta_i, val_i, unid_i in [
+            ("Cobertura Vacinal Poliomielite", "percentual", 95, 87.3, "%"),
+            ("Taxa de Incidência de Dengue",   "quantitativo", 2, 5.4,  "/100k hab"),
+            ("Cobertura de eSF",               "percentual", 80, 64.2, "%"),
+            ("Taxa de Mortalidade Infantil",   "quantitativo", 8, 11.2, "/1000 NV"),
+        ]:
+            _, created_i = IndicadorSaudeGov.objects.get_or_create(
+                empresa=empresa, nome=nome_i,
+                defaults={"tipo": tipo_i, "meta": meta_i, "valor_atual": val_i, "unidade": unid_i,
+                          "periodo_referencia": str(hoje.year)},
+            )
+            if created_i: criados.append(f"indicador_{nome_i[:15]}")
+        for cnes_u, nome_u, tipo_u, mun_u in [
+            ("2079798","UBS Jardim São Paulo","ubs","São Paulo"),
+            ("2079844","UPA 24h Lapa","upa","São Paulo"),
+            ("2079871","CAPS II Pinheiros","caps_ii","São Paulo"),
+            ("2079899","Hospital Municipal Saúde","hospital","São Paulo"),
+        ]:
+            _, created_u = UnidadeSaude.objects.get_or_create(
+                empresa=empresa, nome=nome_u,
+                defaults={"cnes": cnes_u, "tipo": tipo_u, "status": "ativa", "municipio": mun_u, "uf": "SP",
+                          "latitude": -23.5505, "longitude": -46.6333},
+            )
+            if created_u: criados.append(f"unidade_{tipo_u}")
+        _, created_a = AlertaGovernamental.objects.get_or_create(
+            empresa=empresa, titulo="Aumento de casos de Dengue — Zona Norte",
+            defaults={"mensagem": "Aumento de 65% nos casos confirmados. Intensificar eliminação de criadouros.",
+                      "nivel": "alto", "estado": "SP", "cidade": "São Paulo",
+                      "bairro": "Zona Norte", "ativo": True, "status": "publicado"},
+        )
+        if created_a: criados.append("alerta_dengue")
+        import random as _rnd_gov
+        _rnd_gov.seed(42)
+        for i in range(20):
+            try:
+                RegistroSintoma.objects.create(
+                    empresa=empresa, id_anonimo=_uuid.uuid4(), doenca="dengue",
+                    febre=True, dor_cabeca=True, dor_corpo=True,
+                    cidade="São Paulo", estado="SP", bairro="Zona Norte",
+                    latitude=-23.51 + _rnd_gov.uniform(-0.03, 0.03),
+                    longitude=-46.64 + _rnd_gov.uniform(-0.03, 0.03),
+                    origem_dado="cidadao",
+                )
+                criados.append("sintoma_dengue")
+            except Exception:
+                pass
+    except Exception as exc:
+        criados.append(f"erro_parcial:{str(exc)[:80]}")
+    return criados
+
+
 def seed_enterprise_operational_demo(empresa):
     setor = get_setor(empresa)
     if setor == "farmacia":
@@ -1429,6 +1503,8 @@ def seed_enterprise_operational_demo(empresa):
         criados = _seed_empresa(empresa)
     elif setor == "plano_saude":
         criados = _seed_plano_saude(empresa)
+    elif setor == "governo":
+        criados = _seed_governo(empresa)
     else:
         criados = []
     return {"setor": setor, "criados": criados, "total_criado": len(criados)}
@@ -1455,6 +1531,7 @@ def api_enterprise_premium_suite(request):
 @csrf_exempt
 @api_requer_gerencia
 def api_enterprise_seed_operational_demo(request):
+    import traceback as _tb
     empresa = getattr(request, "empresa", None)
     if not empresa:
         return JsonResponse({"erro": "Nao autenticado"}, status=401)
@@ -1465,8 +1542,19 @@ def api_enterprise_seed_operational_demo(request):
             "erro": "Seed demo desativado neste ambiente. Use homologacao ou habilite ALLOW_ENTERPRISE_DEMO_MUTATIONS.",
         }, status=403)
 
-    resultado = seed_enterprise_operational_demo(empresa)
-    resultado["suite"] = build_enterprise_premium_suite_payload(empresa)
+    try:
+        resultado = seed_enterprise_operational_demo(empresa)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).error("seed_enterprise_operational_demo error: %s\n%s", exc, _tb.format_exc())
+        return JsonResponse({"erro": str(exc), "detalhe": _tb.format_exc()[-500:]}, status=500)
+
+    try:
+        resultado["suite"] = build_enterprise_premium_suite_payload(empresa)
+    except Exception as exc:
+        resultado["suite"] = {}
+        resultado["suite_erro"] = str(exc)
+
     return JsonResponse(resultado)
 
 

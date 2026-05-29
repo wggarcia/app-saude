@@ -210,18 +210,24 @@
     const note = document.getElementById("epsSeedNote");
     btn.disabled = true;
     btn.textContent = "Implantando...";
+    note.textContent = "";
     try {
       const res = await fetch("/api/enterprise/seed-operational-demo", {method: "POST"});
-      if (!res.ok) throw new Error("seed_failed");
-      const payload = await res.json();
-      render(payload.suite || lastPayload || {});
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        note.textContent = payload.erro || `Erro ${res.status} — tente novamente.`;
+        btn.textContent = "▶ Implantar demo";
+        btn.disabled = false;
+        return;
+      }
+      if (payload.suite) render(payload.suite);
       note.textContent = payload.total_criado
-        ? `Demo criado: ${payload.criados.join(", ")}.`
-        : "Estrutura de demo ja estava implantada.";
+        ? `✅ Demo implantado: ${payload.total_criado} registros criados.`
+        : "✅ Estrutura de demo ja estava implantada.";
       btn.textContent = "▶ Implantar demo";
       btn.disabled = false;
     } catch (error) {
-      note.textContent = "Nao foi possivel executar a implantacao rapida agora.";
+      note.textContent = "Erro de rede — verifique a conexao e tente novamente.";
       btn.textContent = "▶ Implantar demo";
       btn.disabled = false;
     }
