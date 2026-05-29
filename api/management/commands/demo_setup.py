@@ -220,35 +220,36 @@ class Command(BaseCommand):
     def _refresh_dados_demos(self):
         """
         Para cada conta demo existente:
-          1. Deleta todos os dados demo relacionados (funcionários, EPIs, etc.)
-             via cascade (mantém Empresa + EmpresaUsuario intactos)
-          2. Recria todos os dados com a versão mais recente
+          1. Deleta todos os dados demo relacionados (via cascade, por segmento)
+             Mantém Empresa + EmpresaUsuario intactos.
+          2. Recria todos os dados com a versão mais recente.
 
         Seguro em produção — não toca em e-mails, senhas ou planos.
         """
         from api.models import (
-            Empresa, FuncionarioSST, EPIItem, RiscoOcupacional,
+            Empresa,
+            # SST
+            FuncionarioSST, EPIItem, RiscoOcupacional,
             DocumentoSST, SolicitacaoExame, ComissaoCIPA,
             ClinicaCredenciada, VinculoClinicaEmpresa,
             PostoTrabalho, ConfiguracaoSST,
+            # Farmácia
+            FornecedorFarmacia, ItemFarmacia, PacienteFarmacia,
+            InventarioFarmacia, PedidoCompraFarmacia,
+            # Hospital
+            DepartamentoHospital, PacienteHospital,
+            # Governo
+            ProgramaSaudeGov, IndicadorSaudeGov, UnidadeSaude,
+            AlertaGovernamental, SerieEpidemiologica, RegistroSintoma,
+            # Plano
+            PlanoSaude, PrestadorPlanoSaude,
         )
+        try:
+            from api.models import OrcamentoSaudeGov, PlanoAcaoGov, AtoNormativoGov
+        except ImportError:
+            OrcamentoSaudeGov = PlanoAcaoGov = AtoNormativoGov = None
 
-        demos_mapa = {
-            "demo.sst@soluscrt.com":      self._criar_dados_sst,
-            "demo.farmacia@soluscrt.com":  self._criar_dados_farmacia,
-            "demo.hospital@soluscrt.com":  self._criar_dados_hospital,
-            "demo.governo@soluscrt.com":   self._criar_dados_governo,
-            "demo.plano@soluscrt.com":     self._criar_dados_plano,
-        }
-
-        for email, dados_fn in demos_mapa.items():
-            empresa = Empresa.objects.filter(email=email).first()
-            if not empresa:
-                self.out(f"  ⚠  {email} não encontrada — pulando", self.style.WARNING)
-                continue
-
-            self.out(f"\n  🔄 Limpando dados de {email}...", self.style.WARNING)
-            # Deleta dados relacionados (cascade cuida do resto)
+        def _limpar_sst(empresa):
             FuncionarioSST.objects.filter(empresa=empresa).delete()
             EPIItem.objects.filter(empresa=empresa).delete()
             RiscoOcupacional.objects.filter(empresa=empresa).delete()
@@ -257,18 +258,87 @@ class Command(BaseCommand):
             ComissaoCIPA.objects.filter(empresa=empresa).delete()
             PostoTrabalho.objects.filter(empresa=empresa).delete()
             VinculoClinicaEmpresa.objects.filter(empresa_contratante=empresa).delete()
-            # Clínicas credenciadas demo (CNPJ com padrão fixo)
             ClinicaCredenciada.objects.filter(
-                cnpj__in=[
-                    "11.222.333/0001-44",
-                    "03.773.700/0001-55",
-                    "44.555.666/0001-77",
-                ]
+                cnpj__in=["11.222.333/0001-44", "03.773.700/0001-55", "44.555.666/0001-77"]
             ).delete()
             try:
                 ConfiguracaoSST.objects.filter(empresa=empresa).delete()
             except Exception:
                 pass
+
+        def _limpar_farmacia(empresa):
+            # cascade: ItemFarmacia → LoteMedicamento, MovimentoEstoque,
+            #          ReceitaMedica, DispensacaoMedicamento, ItemPedidoCompra
+            #          InventarioFarmacia → ItemInventario
+            InventarioFarmacia.objects.filter(empresa=empresa).delete()
+            PedidoCompraFarmacia.objects.filter(empresa=empresa).delete()
+            ItemFarmacia.objects.filter(empresa=empresa).delete()
+            PacienteFarmacia.objects.filter(empresa=empresa).delete()
+            FornecedorFarmacia.objects.filter(empresa=empresa).delete()
+            try:
+                from api.models import DescarteItemFarmacia
+                DescarteItemFarmacia.objects.filter(empresa=empresa).delete()
+            except Exception:
+                pass
+
+        def _limpar_hospital(empresa):
+            # cascade: DepartamentoHospital → LeitoHospital → InternacaoHospital
+            #          PacienteHospital → TriagemHospital, InternacaoHospital
+            PacienteHospital.objects.filter(empresa=empresa).delete()
+            DepartamentoHospital.objects.filter(empresa=empresa).delete()
+
+        def _limpar_governo(empresa):
+            if OrcamentoSaudeGov:
+                OrcamentoSaudeGov.objects.filter(empresa=empresa).delete()
+            if PlanoAcaoGov:
+                PlanoAcaoGov.objects.filter(empresa=empresa).delete()
+            if AtoNormativoGov:
+                AtoNormativoGov.objects.filter(empresa=empresa).delete()
+            IndicadorSaudeGov.objects.filter(empresa=empresa).delete()
+            ProgramaSaudeGov.objects.filter(empresa=empresa).delete()
+            AlertaGovernamental.objects.filter(empresa=empresa).delete()
+            RegistroSintoma.objects.filter(empresa=empresa).delete()
+            UnidadeSaude.objects.filter(empresa=empresa).delete()
+            try:
+                from api.models import TeleconsultaGoverno
+                TeleconsultaGoverno.objects.filter(empresa=empresa).delete()
+            except Exception:
+                pass
+            try:
+                SerieEpidemiologica.objects.filter(empresa=empresa).delete()
+            except Exception:
+                pass
+
+        def _limpar_plano(empresa):
+            # cascade: PlanoSaude → BeneficiarioPlano → GuiaAutorizacao, Sinistro, Reembolso
+            PlanoSaude.objects.filter(empresa=empresa).delete()
+            PrestadorPlanoSaude.objects.filter(empresa=empresa).delete()
+            try:
+                from api.models import CarenciaBeneficiario, CoparticipacaoRegra, FaturamentoBeneficiario, RedeCredenciadaPlano
+                RedeCredenciadaPlano.objects.filter(empresa=empresa).delete()
+                FaturamentoBeneficiario.objects.filter(empresa=empresa).delete()
+            except Exception:
+                pass
+
+        demos_mapa = {
+            "demo.sst@soluscrt.com":      (_limpar_sst,      self._criar_dados_sst),
+            "demo.farmacia@soluscrt.com":  (_limpar_farmacia, self._criar_dados_farmacia),
+            "demo.hospital@soluscrt.com":  (_limpar_hospital, self._criar_dados_hospital),
+            "demo.governo@soluscrt.com":   (_limpar_governo,  self._criar_dados_governo),
+            "demo.plano@soluscrt.com":     (_limpar_plano,    self._criar_dados_plano),
+        }
+
+        for email, (limpar_fn, dados_fn) in demos_mapa.items():
+            empresa = Empresa.objects.filter(email=email).first()
+            if not empresa:
+                self.out(f"  ⚠  {email} não encontrada — pulando", self.style.WARNING)
+                continue
+
+            self.out(f"\n  🔄 Limpando dados de {email}...", self.style.WARNING)
+            try:
+                limpar_fn(empresa)
+            except Exception as exc:
+                self.out(f"  ⚠ Limpeza parcial para {email}: {exc}", self.style.WARNING)
 
             self.out(f"  📥 Recriando dados para {email}...")
             try:
@@ -1342,288 +1412,1136 @@ class Command(BaseCommand):
     # ─────────────────────────────────────────────────────────────────────────
     # DADOS DEMO — Farmácia
     # ─────────────────────────────────────────────────────────────────────────
-    def _criar_dados_farmacia(self, empresa):
-        from api.models import ItemFarmacia, LoteMedicamento, FornecedorFarmacia
+    def _criar_dados_farmacia(self, empresa):  # noqa: C901
+        from api.models import (
+            ItemFarmacia, LoteMedicamento, FornecedorFarmacia,
+            PacienteFarmacia, ReceitaMedica, DispensacaoMedicamento,
+            MovimentoEstoque, PedidoCompraFarmacia, ItemPedidoCompra,
+            InventarioFarmacia, ItemInventario, DescarteItemFarmacia,
+        )
 
-        try:
-            medicamentos = [
-                ("Paracetamol 750mg", "7896714800036", "comprimido", "Analgésico"),
-                ("Ibuprofeno 600mg", "7896714800037", "comprimido", "Anti-inflamatório"),
-                ("Amoxicilina 500mg", "7896714800038", "cápsula", "Antibiótico"),
-                ("Atorvastatina 20mg", "7896714800039", "comprimido", "Cardiovascular"),
-                ("Metformina 850mg", "7896714800040", "comprimido", "Antidiabético"),
-                ("Omeprazol 20mg", "7896714800041", "cápsula", "Antiulceroso"),
-                ("Dipirona 500mg", "7896714800042", "comprimido", "Analgésico"),
-                ("Losartana 50mg", "7896714800043", "comprimido", "Anti-hipertensivo"),
-            ]
-            for nome, ean, forma, categoria in medicamentos:
-                item = ItemFarmacia.objects.create(
-                    empresa=empresa,
-                    nome=nome,
-                    codigo=ean,
-                    categoria=categoria,
-                    unidade_medida=forma,
-                    estoque_atual=50 + len(nome),
-                    estoque_minimo=10,
-                    ativo=True,
+        # ── 1. Fornecedores ─────────────────────────────────────────────────
+        fornecedores_data = [
+            ("Distribuidora MedFarma Ltda",        "12.345.678/0001-90", "contato@medfarma.com.br",       "(11) 3344-5566"),
+            ("EMS Distribuidora de Medicamentos",  "33.066.064/0001-17", "vendas@ems.com.br",             "(11) 4133-2000"),
+            ("Cimed Industrial Ltda",              "07.601.774/0001-84", "distribuicao@cimed.com.br",     "(35) 3215-5100"),
+            ("Profarma Distribuidora",             "04.394.387/0001-14", "comercial@profarma.com.br",     "(21) 3503-2200"),
+            ("Precision Rx Distribuidora",         "55.123.456/0001-33", "pedidos@precisionrx.com.br",    "(11) 5098-7700"),
+        ]
+        forn_objs = []
+        for nome_f, cnpj_f, email_f, tel_f in fornecedores_data:
+            try:
+                f = FornecedorFarmacia.objects.create(
+                    empresa=empresa, nome=nome_f, cnpj=cnpj_f,
+                    contato=email_f, email=email_f, telefone=tel_f, ativo=True,
                 )
+                forn_objs.append(f)
+            except Exception:
+                forn_objs.append(None)
+
+        forn1 = forn_objs[0]
+        forn2 = forn_objs[1] if len(forn_objs) > 1 else forn1
+        forn3 = forn_objs[2] if len(forn_objs) > 2 else forn1
+
+        # ── 2. Medicamentos / Itens (40 itens) ──────────────────────────────
+        # (nome, codigo, categoria, unidade, estoque_atual, estoque_minimo, fornecedor)
+        itens_data = [
+            # Analgésicos/Antitérmicos
+            ("Paracetamol 750mg",               "7891058010283", "medicamento", "comprimido",  200, 50, forn1),
+            ("Dipirona Sódica 500mg",            "7896714800042", "medicamento", "comprimido",  180, 40, forn1),
+            ("Ibuprofeno 600mg",                 "7896714800037", "medicamento", "comprimido",  150, 30, forn2),
+            ("Nimesulida 100mg",                 "7891058023801", "medicamento", "comprimido",  100, 25, forn2),
+            ("Cetoprofeno 100mg",                "7898166710123", "medicamento", "cápsula",      80, 20, forn2),
+            # Antibióticos
+            ("Amoxicilina 500mg",                "7896714800038", "medicamento", "cápsula",     120, 30, forn1),
+            ("Azitromicina 500mg",               "7891058045611", "medicamento", "comprimido",   90, 20, forn1),
+            ("Ciprofloxacino 500mg",             "7891217100192", "medicamento", "comprimido",   75, 15, forn3),
+            ("Amoxicilina + Clavulanato 875mg",  "7896658240130", "medicamento", "comprimido",   60, 15, forn3),
+            # Cardiovasculares
+            ("Atorvastatina 20mg",               "7896714800039", "medicamento", "comprimido",  160, 40, forn2),
+            ("Losartana Potássica 50mg",          "7896714800043", "medicamento", "comprimido",  190, 45, forn2),
+            ("Anlodipino 5mg",                   "7891058054490", "medicamento", "comprimido",  140, 35, forn1),
+            ("Enalapril 10mg",                   "7891058010177", "medicamento", "comprimido",  130, 30, forn1),
+            ("Carvedilol 25mg",                  "7896714800051", "medicamento", "comprimido",   85, 20, forn2),
+            ("AAS 100mg (Aspirina)",             "7891058010145", "medicamento", "comprimido",  220, 50, forn1),
+            # Antidiabéticos
+            ("Metformina 850mg",                 "7896714800040", "medicamento", "comprimido",  175, 40, forn2),
+            ("Glibenclamida 5mg",                "7891058016827", "medicamento", "comprimido",   95, 20, forn2),
+            ("Sitagliptina 100mg",               "7896714800062", "medicamento", "comprimido",   50, 12, forn3),
+            # Antiulcerosos/GI
+            ("Omeprazol 20mg",                   "7896714800041", "medicamento", "cápsula",     200, 50, forn1),
+            ("Pantoprazol 40mg",                 "7896714800059", "medicamento", "comprimido",  155, 35, forn1),
+            ("Ranitidina 150mg",                 "7891058017275", "medicamento", "comprimido",   80, 20, forn2),
+            ("Domperidona 10mg",                 "7891058025966", "medicamento", "comprimido",   90, 20, forn2),
+            # Respiratórios
+            ("Salbutamol 100mcg Spray",          "7896660680090", "medicamento", "frasco",       35, 10, forn3),
+            ("Budesonida 200mcg Spray",          "7896660680101", "medicamento", "frasco",       28, 8,  forn3),
+            ("Loratadina 10mg",                  "7891058011426", "medicamento", "comprimido",  160, 35, forn1),
+            ("Desloratadina 5mg",                "7896714800073", "medicamento", "comprimido",  110, 25, forn2),
+            # Psicotrópicos
+            ("Fluoxetina 20mg",                  "7896714800084", "medicamento", "cápsula",      60, 15, forn3),
+            ("Sertralina 50mg",                  "7896714800091", "medicamento", "comprimido",   55, 12, forn3),
+            ("Clonazepam 2mg",                   "7896714800108", "medicamento", "comprimido",   40, 10, forn3),
+            ("Alprazolam 0,5mg",                 "7896714800115", "medicamento", "comprimido",   30, 8,  forn3),
+            # Vitaminas/Suplementos
+            ("Vitamina D3 2000 UI",              "7896714800122", "medicamento", "cápsula",     180, 40, forn1),
+            ("Vitamina C 1g Efervescente",       "7891058030069", "medicamento", "comprimido",  250, 50, forn1),
+            ("Sulfato Ferroso 40mg",             "7891058010252", "medicamento", "comprimido",  120, 30, forn2),
+            ("Ácido Fólico 5mg",                 "7891058010269", "medicamento", "comprimido",   90, 20, forn2),
+            # Materiais / Insumos
+            ("Luva Procedimento M (cx 100)",     "7890001000001", "material",    "caixa",        25, 5,  forn1),
+            ("Seringa 5ml c/ Agulha (cx 100)",   "7890001000002", "material",    "caixa",        30, 8,  forn1),
+            ("Curativo Adesivo (cx 100)",         "7890001000003", "material",    "caixa",        40, 10, forn2),
+            ("Álcool 70% 1L",                    "7890001000004", "insumo",      "litro",        50, 15, forn2),
+            ("Soro Fisiológico 0,9% 500ml",      "7890001000005", "insumo",      "frasco",       60, 20, forn1),
+        ]
+
+        item_objs = []
+        for nome_i, cod_i, cat_i, unid_i, est_i, esmin_i, forn_i in itens_data:
+            try:
+                it = ItemFarmacia.objects.create(
+                    empresa=empresa, fornecedor=forn_i,
+                    nome=nome_i, codigo=cod_i, categoria=cat_i,
+                    unidade_medida=unid_i,
+                    estoque_atual=est_i, estoque_minimo=esmin_i, ativo=True,
+                )
+                item_objs.append(it)
+            except Exception:
+                item_objs.append(None)
+
+        # ── 3. Lotes ─────────────────────────────────────────────────────────
+        import random as _rnd
+        _rnd.seed(99)
+        for idx, it in enumerate(item_objs):
+            if not it:
+                continue
+            # Lote principal — validade normal
+            try:
                 LoteMedicamento.objects.create(
-                    empresa=empresa, item=item,
-                    numero_lote=f"LOT{len(nome):04d}",
-                    quantidade_inicial=50 + len(nome),
-                    quantidade_atual=50 + len(nome),
-                    data_fabricacao=datetime.date(2025, 1, 1),
-                    data_validade=datetime.date(2027, 6, 30),
+                    empresa=empresa, item=it,
+                    numero_lote=f"L{idx+1:03d}2025A",
+                    quantidade_inicial=it.estoque_atual,
+                    quantidade_atual=it.estoque_atual,
+                    data_fabricacao=datetime.date(2024, _rnd.randint(1, 12), 1),
+                    data_validade=datetime.date(2027, _rnd.randint(1, 12), 30),
                 )
-        except Exception as ex:
-            self.out(f"     ⚠ Farmácia dados parciais: {ex}")
+            except Exception:
+                pass
+            # Lote secundário — vencendo / vencido (para alertas)
+            if idx % 5 == 0:
+                try:
+                    LoteMedicamento.objects.create(
+                        empresa=empresa, item=it,
+                        numero_lote=f"L{idx+1:03d}2023B",
+                        quantidade_inicial=20,
+                        quantidade_atual=20,
+                        data_fabricacao=datetime.date(2022, 6, 1),
+                        data_validade=datetime.date(2026, 4, 30),  # vencido
+                    )
+                except Exception:
+                    pass
 
+        # ── 4. Pacientes ──────────────────────────────────────────────────────
+        pacientes_farm = [
+            ("Ana Lima Ferreira",       "111.222.333-01", datetime.date(1958, 3, 15), "F", "(11)99111-1111", "HAS; DM2", "Losartana 50mg; Metformina 850mg"),
+            ("João Carlos Souza",       "222.333.444-02", datetime.date(1945, 7, 20), "M", "(11)99222-2222", "Cardiopatia isquêmica", "AAS 100mg; Atorvastatina 20mg; Enalapril"),
+            ("Maria Aparecida Costa",   "333.444.555-03", datetime.date(1962, 11, 8), "F", "(11)99333-3333", "Hipotireoidismo; HAS", "Losartana; Vitamina D3"),
+            ("Pedro Henrique Alves",    "444.555.666-04", datetime.date(1978, 4, 2),  "M", "(11)99444-4444", "", "Omeprazol 20mg"),
+            ("Fernanda Silva Santos",   "555.666.777-05", datetime.date(1990, 9, 22), "F", "(11)99555-5555", "Depressão; ansiedade", "Fluoxetina 20mg; Clonazepam"),
+            ("Carlos Eduardo Lima",     "666.777.888-06", datetime.date(1985, 6, 14), "M", "(11)99666-6666", "Rinite alérgica", "Loratadina 10mg"),
+            ("Beatriz Nunes Torres",    "777.888.999-07", datetime.date(1970, 1, 30), "F", "(11)99777-7777", "DM2; Obesidade", "Metformina; Sitagliptina"),
+            ("Roberto Melo Barros",     "888.999.000-08", datetime.date(1952, 8, 5),  "M", "(11)99888-8888", "DPOC; HAS; Dislipidemia", "Salbutamol; Budesonida; Losartana"),
+            ("Juliana Pires Moura",     "999.000.111-09", datetime.date(1995, 12, 18),"F", "(11)99999-9999", "Asma leve persistente", "Salbutamol; Fluticasona"),
+            ("Antônio José Ribeiro",    "000.111.222-10", datetime.date(1940, 5, 10), "M", "(11)90000-0000", "IC; FA; DM2", "Carvedilol; AAS; Metformina; Furosemida"),
+        ]
+        pac_objs = []
+        for nome_p, cpf_p, nasc_p, sexo_p, tel_p, cond_p, med_p in pacientes_farm:
+            try:
+                p = PacienteFarmacia.objects.create(
+                    empresa=empresa, nome=nome_p, cpf=cpf_p,
+                    data_nascimento=nasc_p, sexo=sexo_p, telefone=tel_p,
+                    condicoes_cronicas=cond_p,
+                    medicamentos_uso_continuo=med_p, ativo=True,
+                )
+                pac_objs.append(p)
+            except Exception:
+                pac_objs.append(None)
+
+        # ── 5. Receitas e Dispensações ────────────────────────────────────────
+        receitas_data = [
+            # (paciente_idx, item_idx, tipo, numero, medico, crm, data_em, posologia, status, qtd)
+            (0, 10, "simples", "REC-2026-001", "Dr. Marcos Cardoso",  "CRM/SP 12345", datetime.date(2026, 3, 1), "1 cp ao dia", "dispensada", 2),
+            (0, 15, "simples", "REC-2026-002", "Dr. Marcos Cardoso",  "CRM/SP 12345", datetime.date(2026, 3, 1), "1 cp 2x ao dia jejum", "dispensada", 2),
+            (1, 9,  "simples", "REC-2026-003", "Dra. Ana Cardio",     "CRM/SP 22345", datetime.date(2026, 2, 15), "1 cp ao dia à noite", "dispensada", 3),
+            (1, 14, "simples", "REC-2026-004", "Dra. Ana Cardio",     "CRM/SP 22345", datetime.date(2026, 2, 15), "1 cp ao dia", "pendente",   2),
+            (4, 26, "especial_amarela","REC-2026-005","Dra. Vera Psiq","CRM/SP 33456", datetime.date(2026, 4, 10), "1 cp ao dia pela manhã", "dispensada", 1),
+            (4, 28, "especial_amarela","REC-2026-006","Dra. Vera Psiq","CRM/SP 33456", datetime.date(2026, 4, 10), "1/2 cp à noite", "pendente",   1),
+            (6, 15, "simples", "REC-2026-007", "Dr. João Endo",       "CRM/SP 44567", datetime.date(2026, 3, 20), "1 cp 2x ao dia", "dispensada", 2),
+            (6, 17, "simples", "REC-2026-008", "Dr. João Endo",       "CRM/SP 44567", datetime.date(2026, 3, 20), "1 cp ao dia", "dispensada",  1),
+            (7, 22, "simples", "REC-2026-009", "Dr. Paulo Pneumo",    "CRM/SP 55678", datetime.date(2026, 4, 5),  "2 jatos 4x ao dia", "dispensada", 2),
+            (2, 0,  "simples", "REC-2026-010", "Dra. Carla Clínica",  "CRM/SP 66789", datetime.date(2026, 5, 2),  "1 cp de 6h em 6h por 5 dias", "pendente", 1),
+            (5, 24, "simples", "REC-2026-011", "Dr. Fernando Alergo", "CRM/SP 77890", datetime.date(2026, 5, 10), "1 cp ao dia à noite", "pendente", 2),
+        ]
+        for pac_idx, item_idx, tipo_r, num_r, med_r, crm_r, data_em_r, pos_r, status_r, qtd_r in receitas_data:
+            pac_obj = pac_objs[pac_idx] if pac_idx < len(pac_objs) else None
+            item_obj = item_objs[item_idx] if item_idx < len(item_objs) else None
+            if not item_obj:
+                continue
+            try:
+                rec = ReceitaMedica.objects.create(
+                    empresa=empresa,
+                    paciente=pac_obj,
+                    paciente_nome=pac_obj.nome if pac_obj else "",
+                    paciente_cpf=pac_obj.cpf if pac_obj else "",
+                    tipo=tipo_r, numero_receita=num_r,
+                    medico_nome=med_r, medico_crm=crm_r,
+                    data_emissao=data_em_r,
+                    data_validade=datetime.date(data_em_r.year, data_em_r.month, data_em_r.day)
+                    + datetime.timedelta(days=30),
+                    item=item_obj,
+                    quantidade=qtd_r, posologia=pos_r,
+                    status=status_r,
+                )
+                if status_r == "dispensada":
+                    disp = DispensacaoMedicamento.objects.create(
+                        empresa=empresa, item=item_obj,
+                        paciente_nome=pac_obj.nome if pac_obj else "Paciente",
+                        paciente_cpf=pac_obj.cpf if pac_obj else "",
+                        quantidade=qtd_r,
+                        responsavel="Farm. Responsável Demo",
+                    )
+                    rec.dispensacao = disp
+                    rec.save(update_fields=["dispensacao"])
+            except Exception:
+                pass
+
+        # ── 6. Movimentos de Estoque ──────────────────────────────────────────
+        movs_data = [
+            # (item_idx, tipo, qtd, motivo, responsavel)
+            (0,  "entrada",  100, "Recebimento NF 12345 — MedFarma",   "Farm. Juliana Demo"),
+            (1,  "entrada",   80, "Recebimento NF 12346 — MedFarma",   "Farm. Juliana Demo"),
+            (5,  "entrada",   60, "Recebimento NF 12347 — MedFarma",   "Farm. Juliana Demo"),
+            (9,  "entrada",   70, "Recebimento NF 12348 — EMS",        "Farm. Juliana Demo"),
+            (0,  "saida",     10, "Dispensação REC-2026-010",          "Farm. Juliana Demo"),
+            (9,  "saida",      5, "Dispensação REC-2026-003",          "Farm. Juliana Demo"),
+            (15, "saida",     30, "Dispensação dispensações mensais",  "Farm. Juliana Demo"),
+            (34, "ajuste",    -5, "Ajuste inventário — diferença contada", "Farm. Juliana Demo"),
+            (5,  "vencimento",-20,"Descarte lote L0062023B — vencido", "Farm. Juliana Demo"),
+        ]
+        for item_idx, tipo_mv, qtd_mv, motivo_mv, resp_mv in movs_data:
+            item_obj = item_objs[item_idx] if item_idx < len(item_objs) else None
+            if not item_obj:
+                continue
+            try:
+                ant = item_obj.estoque_atual
+                post = ant + qtd_mv
+                MovimentoEstoque.objects.create(
+                    empresa=empresa, item=item_obj, tipo=tipo_mv,
+                    quantidade=qtd_mv, estoque_anterior=ant, estoque_posterior=post,
+                    motivo=motivo_mv, responsavel=resp_mv,
+                )
+            except Exception:
+                pass
+
+        # ── 7. Pedidos de Compra ──────────────────────────────────────────────
         try:
-            FornecedorFarmacia.objects.create(
-                empresa=empresa,
-                nome="Distribuidora MedFarma Ltda",
-                cnpj="12.345.678/0001-90",
-                contato="contato@medfarma.com.br",
-                ativo=True,
+            ped1 = PedidoCompraFarmacia.objects.create(
+                empresa=empresa, fornecedor=forn1, status="recebido",
+                observacoes="Pedido mensal rotina — NF recebida e conferida.",
             )
+            for it, qtd in [(item_objs[0], 100), (item_objs[1], 80), (item_objs[5], 60)]:
+                if it:
+                    ItemPedidoCompra.objects.create(pedido=ped1, item=it, quantidade_solicitada=qtd, quantidade_recebida=qtd)
+        except Exception:
+            pass
+        try:
+            ped2 = PedidoCompraFarmacia.objects.create(
+                empresa=empresa, fornecedor=forn2, status="aprovado",
+                observacoes="Pedido quinzenal cardiovasculares.",
+            )
+            for it, qtd in [(item_objs[9], 70), (item_objs[10], 80), (item_objs[13], 50)]:
+                if it:
+                    ItemPedidoCompra.objects.create(pedido=ped2, item=it, quantidade_solicitada=qtd, quantidade_recebida=0)
+        except Exception:
+            pass
+        try:
+            ped3 = PedidoCompraFarmacia.objects.create(
+                empresa=empresa, fornecedor=forn3, status="enviado",
+                observacoes="Reposição urgente psicotrópicos — estoque crítico.",
+            )
+            for it, qtd in [(item_objs[26], 40), (item_objs[27], 35), (item_objs[28], 30)]:
+                if it:
+                    ItemPedidoCompra.objects.create(pedido=ped3, item=it, quantidade_solicitada=qtd, quantidade_recebida=0)
         except Exception:
             pass
 
-        self.out(f"     ✓ Dados demo Farmácia criados", self.style.SUCCESS)
+        # ── 8. Inventário ─────────────────────────────────────────────────────
+        try:
+            from django.utils import timezone as _tz
+            inv = InventarioFarmacia.objects.create(
+                empresa=empresa,
+                descricao="Inventário Mensal — Maio 2026",
+                status="concluido",
+                responsavel="Farm. Juliana Demo",
+                concluido_em=_tz.now(),
+                observacoes="Diferença de -5 unidades em Álcool 70% corrigida.",
+            )
+            for it in item_objs[:15]:
+                if not it:
+                    continue
+                try:
+                    delta = _rnd.randint(-2, 0)
+                    ItemInventario.objects.create(
+                        inventario=inv, item=it,
+                        estoque_sistema=it.estoque_atual,
+                        estoque_contado=it.estoque_atual + delta,
+                        diferenca=delta, ajustado=(delta != 0),
+                    )
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # ── 9. Descarte ───────────────────────────────────────────────────────
+        if item_objs[5]:
+            try:
+                DescarteItemFarmacia.objects.create(
+                    empresa=empresa, item=item_objs[5],
+                    motivo="vencimento", quantidade=20,
+                    responsavel="Farm. Juliana Demo",
+                    observacoes="Lote L0062023B vencido em 30/04/2026. ABNT NBR 10.004.",
+                )
+            except Exception:
+                pass
+
+        self.out(
+            f"     ✓ Farmácia: {len([x for x in item_objs if x])} itens | "
+            f"{len([x for x in pac_objs if x])} pacientes | "
+            f"3 pedidos de compra | inventário concluído",
+            self.style.SUCCESS,
+        )
 
     # ─────────────────────────────────────────────────────────────────────────
     # DADOS DEMO — Hospital
     # ─────────────────────────────────────────────────────────────────────────
     def _criar_dados_hospital(self, empresa):
-        from api.models import LeitoHospital, DepartamentoHospital, PacienteHospital
-
+        from api.models import (
+            LeitoHospital, DepartamentoHospital, PacienteHospital,
+            TriagemHospital, InternacaoHospital,
+        )
         try:
-            depts = [
-                ("UTI", "UTI"),
-                ("Clínica Médica", "clinica"),
-                ("Cirurgia", "cirurgia"),
-                ("Pediatria", "pediatria"),
-                ("Maternidade", "maternidade"),
-            ]
-            dept_objs = []
-            for nome_dept, sigla in depts:
+            from api.models import PrescricaoMedica, EvolucaoClinica
+        except ImportError:
+            PrescricaoMedica = EvolucaoClinica = None
+
+        # ── 1. Departamentos ─────────────────────────────────────────────────
+        dept_cfg = [
+            # (nome, tipo, capacidade, responsavel)
+            ("UTI Adulto",                "UTI",        10, "Dr. Renato Souza — CRM/SP 11001"),
+            ("Clínica Médica",            "clinica",    20, "Dra. Cristina Alves — CRM/SP 11002"),
+            ("Cirurgia Geral",            "cirurgia",   15, "Dr. Fábio Menezes — CRM/SP 11003"),
+            ("Pediatria",                 "pediatria",  12, "Dra. Luciana Ferreira — CRM/SP 11004"),
+            ("Maternidade / Obstetrícia", "maternidade",10, "Dra. Patrícia Costa — CRM/SP 11005"),
+            ("Pronto-Socorro",            "outro",      16, "Dr. Alexandre Lima — CRM/SP 11006"),
+            ("Oncologia",                 "outro",       8, "Dra. Márcia Rocha — CRM/SP 11007"),
+            ("Neurologia / Neurocirug.",  "outro",       6, "Dr. Eduardo Pinto — CRM/SP 11008"),
+        ]
+        dept_objs = []
+        for nome_d, tipo_d, cap_d, resp_d in dept_cfg:
+            try:
                 d = DepartamentoHospital.objects.create(
-                    empresa=empresa, nome=nome_dept, tipo=sigla,
-                    capacidade_leitos=20, ativo=True,
+                    empresa=empresa, nome=nome_d, tipo=tipo_d,
+                    capacidade_leitos=cap_d, responsavel=resp_d, ativo=True,
                 )
                 dept_objs.append(d)
+            except Exception:
+                dept_objs.append(None)
 
-            # Leitos
-            status_cycle = ["ocupado", "ocupado", "disponivel", "ocupado", "higienizacao"]
-            for dept in dept_objs:
-                for i in range(1, 6):
-                    LeitoHospital.objects.create(
-                        empresa=empresa,
-                        departamento=dept,
-                        numero=f"{dept.tipo[:3].upper()}-{i:02d}",
-                        tipo="adulto" if dept.tipo != "pediatria" else "pediatrico",
-                        status=status_cycle[i % len(status_cycle)],
+        # ── 2. Leitos (totalizando ~50) ──────────────────────────────────────
+        # Cada depto recebe leitos com status variados
+        leito_status_ciclo = ["ocupado","ocupado","ocupado","disponivel","manutencao","reservado","ocupado","disponivel"]
+        leito_tipo_map = {
+            "UTI":        ("uti",       10),
+            "clinica":    ("adulto",    20),
+            "cirurgia":   ("adulto",    15),
+            "pediatria":  ("pediatrico",12),
+            "maternidade":("adulto",    10),
+            "outro":      ("adulto",    16),
+        }
+        leito_objs_por_dept = {}   # dept_idx → [leito_obj, ...]
+        leito_num_global = 1
+        for di, dept in enumerate(dept_objs):
+            if not dept:
+                leito_objs_por_dept[di] = []
+                continue
+            tipo_l, qtd_l = leito_tipo_map.get(dept.tipo, ("adulto", 6))
+            # Reduza a qtd para o demo (max 8 por depto)
+            qtd_l = min(qtd_l, 8)
+            leitos_dept = []
+            for i in range(qtd_l):
+                sigla = dept.nome[:3].upper().replace(" ", "")
+                num_l = f"{sigla}{leito_num_global:03d}"
+                st_l  = leito_status_ciclo[(leito_num_global + i) % len(leito_status_ciclo)]
+                try:
+                    lo = LeitoHospital.objects.create(
+                        empresa=empresa, departamento=dept,
+                        numero=num_l, tipo=tipo_l, status=st_l,
                     )
-        except Exception as ex:
-            self.out(f"     ⚠ Hospital leitos parciais: {ex}")
+                    leitos_dept.append(lo)
+                except Exception:
+                    leitos_dept.append(None)
+                leito_num_global += 1
+            leito_objs_por_dept[di] = leitos_dept
 
-        try:
-            pacientes = [
-                ("José da Silva", "123.456.789-00", datetime.date(1958, 3, 10)),
-                ("Maria Aparecida Santos", "234.567.890-11", datetime.date(1945, 7, 22)),
-                ("Pedro Henrique Costa", "345.678.901-22", datetime.date(1982, 11, 5)),
-            ]
-            for nome, cpf, nasc in pacientes:
-                PacienteHospital.objects.create(
-                    empresa=empresa, nome=nome, cpf=cpf,
-                    data_nascimento=nasc,
+        # ── 3. Pacientes (15) ────────────────────────────────────────────────
+        pacientes_hosp = [
+            # (nome, cpf, nasc, sexo, telefone, tipo_sang, alergias, endereco)
+            ("José Antônio da Silva",     "101.202.303-10", datetime.date(1958,  3, 10), "M", "(11)99100-1001", "O+",  "Penicilina", "Rua das Flores, 10 — Centro"),
+            ("Maria Aparecida Santos",    "202.303.404-20", datetime.date(1945,  7, 22), "F", "(11)99200-2002", "A+",  "",           "Av. Brasil, 200 — Jardim"),
+            ("Pedro Henrique Costa",      "303.404.505-30", datetime.date(1982, 11,  5), "M", "(11)99300-3003", "B+",  "Dipirona",   "Rua 7 de Setembro, 30"),
+            ("Fernanda Lima Torres",      "404.505.606-40", datetime.date(1990,  6, 18), "F", "(11)99400-4004", "AB-", "",           "Rua XV de Novembro, 45"),
+            ("Carlos Eduardo Mendes",     "505.606.707-50", datetime.date(1970,  2, 28), "M", "(11)99500-5005", "A-",  "Látex",      "Av. Paulista, 1000"),
+            ("Ana Paula Rodrigues",       "606.707.808-60", datetime.date(1995,  9,  3), "F", "(11)99600-6006", "O-",  "",           "Rua Augusta, 500"),
+            ("Roberto Carlos Barros",     "707.808.909-70", datetime.date(1952,  4, 15), "M", "(11)99700-7007", "B-",  "AAS",        "Rua Consolação, 77"),
+            ("Juliana Pires Moura",       "808.909.010-80", datetime.date(2001,  1, 30), "F", "(11)99800-8008", "O+",  "",           "Av. Santo Amaro, 300"),
+            ("Marcos Vinícius Pinto",     "909.010.111-90", datetime.date(1969, 12,  5), "M", "(11)99900-9009", "A+",  "",           "Rua Vergueiro, 600"),
+            ("Beatriz Alves Cunha",       "010.111.212-01", datetime.date(1988,  8, 22), "F", "(11)90100-0010", "AB+", "Contraste",  "Rua Bela Vista, 88"),
+            ("Diego Rocha Ferreira",      "111.212.313-11", datetime.date(1978,  5, 10), "M", "(11)90200-0011", "O+",  "",           "Av. Rebouças, 120"),
+            ("Cristiane Torres Melo",     "212.313.414-12", datetime.date(1965, 11, 19), "F", "(11)90300-0012", "A+",  "Sulfas",     "Rua da Consolação, 300"),
+            ("Alexandre Oliveira Neto",   "313.414.515-13", datetime.date(2005,  3,  7), "M", "(11)90400-0013", "B+",  "",           "Rua Boa Vista, 15"),
+            ("Patrícia Costa Souza",      "414.515.616-14", datetime.date(1983,  7, 14), "F", "(11)90500-0014", "O-",  "",           "Av. Indianópolis, 45"),
+            ("Antônio José Ribeiro",      "515.616.717-15", datetime.date(1940,  5, 20), "M", "(11)90600-0015", "A-",  "Penicilina", "Rua Funchal, 800"),
+        ]
+        pac_objs = []
+        for nome_p, cpf_p, nasc_p, sexo_p, tel_p, tsang_p, alergia_p, end_p in pacientes_hosp:
+            try:
+                p = PacienteHospital.objects.create(
+                    empresa=empresa, nome=nome_p, cpf=cpf_p,
+                    data_nascimento=nasc_p, sexo=sexo_p, telefone=tel_p,
+                    tipo_sanguineo=tsang_p, alergias=alergia_p, endereco=end_p,
                 )
-        except Exception as ex:
-            self.out(f"     ⚠ Hospital pacientes parciais: {ex}")
+                pac_objs.append(p)
+            except Exception:
+                pac_objs.append(None)
 
-        self.out(f"     ✓ Dados demo Hospital criados", self.style.SUCCESS)
+        # ── 4. Triagens ───────────────────────────────────────────────────────
+        triagens_data = [
+            # (pac_idx, prioridade, queixa, pa, temp, sat, fc, responsavel)
+            (0, "vermelho", "Dor torácica intensa irradiando para MSE, sudorese, náuseas — suspeita de IAM", "180/110", 37.2, 92, 110, "Enf. Ana Lima"),
+            (1, "laranja",  "Dispneia progressiva, edema MMII, crepitações à ausculta bilateral",           "160/100", 36.8,  95,  98, "Enf. Carlos Melo"),
+            (2, "amarelo",  "Dor abdominal em FID, Blumberg positivo, suspeita de apendicite aguda",        "120/80",  38.1,  98,  88, "Enf. Ana Lima"),
+            (3, "verde",    "Febre há 3 dias, tosse produtiva, mialgia — síndrome gripal",                  "110/70",  38.5,  97,  92, "Enf. Beatriz Torres"),
+            (4, "amarelo",  "Crise hipertensiva — PA 200/120, cefaleia intensa, sem déficit focal",         "200/120", 36.5,  97, 105, "Enf. Carlos Melo"),
+            (5, "azul",     "Consulta de rotina — retirada de pontos após procedimento ambulatorial",       "120/75",  36.2,  99,  72, "Enf. Ana Lima"),
+            (6, "laranja",  "Rebaixamento de consciência, Glasgow 10, HGT 42 mg/dL — hipoglicemia grave",   "90/60",   36.0,  94, 115, "Enf. Beatriz Torres"),
+            (7, "verde",    "Náuseas, vômitos repetidos, desidratação leve — gastroenterite aguda",         "105/65",  37.8,  98,  90, "Enf. Carlos Melo"),
+        ]
+        triagem_objs = []
+        for pac_idx, prior, queixa, pa, temp, sat, fc, resp in triagens_data:
+            pac = pac_objs[pac_idx] if pac_idx < len(pac_objs) else None
+            if not pac:
+                triagem_objs.append(None)
+                continue
+            try:
+                t = TriagemHospital.objects.create(
+                    empresa=empresa, paciente=pac, prioridade=prior,
+                    queixa_principal=queixa, pressao_arterial=pa,
+                    temperatura=temp, saturacao=sat, frequencia_cardiaca=fc,
+                    responsavel=resp,
+                )
+                triagem_objs.append(t)
+            except Exception:
+                triagem_objs.append(None)
+
+        # ── 5. Internações com prescrições e evoluções ────────────────────────
+        # Pega leitos ocupados dos deptos 0 (UTI) e 1 (Clínica Médica)
+        leitos_uti    = [l for l in leito_objs_por_dept.get(0, []) if l and l.status == "ocupado"]
+        leitos_clinica= [l for l in leito_objs_por_dept.get(1, []) if l and l.status == "ocupado"]
+        leitos_cirur  = [l for l in leito_objs_por_dept.get(2, []) if l and l.status == "ocupado"]
+
+        internacoes_data = [
+            # (pac_idx, leito_lista_idx, leito_lista, diag, medico, status)
+            (0,  0, leitos_uti,     "IAM com supra de ST anterior — submetido a angioplastia primária", "Dr. Renato Souza — CRM/SP 11001",    "ativa"),
+            (1,  1, leitos_uti,     "Insuficiência Cardíaca Descompensada — fração de ejeção 25%",      "Dr. Renato Souza — CRM/SP 11001",    "ativa"),
+            (2,  0, leitos_clinica, "Pneumonia Bacteriana — lobar direita — CID J18.1",                 "Dra. Cristina Alves — CRM/SP 11002", "ativa"),
+            (4,  1, leitos_clinica, "Crise Hipertensiva — controle PA e investigação órgão-alvo",       "Dra. Cristina Alves — CRM/SP 11002", "ativa"),
+            (6,  0, leitos_cirur,   "Apendicite Aguda — pós-apendicectomia videolaparoscópica",         "Dr. Fábio Menezes — CRM/SP 11003",   "alta"),
+            (9,  1, leitos_cirur,   "Colecistite Aguda Calculosa — colecistectomia laparoscópica",      "Dr. Fábio Menezes — CRM/SP 11003",   "ativa"),
+            (14, 2, leitos_uti,     "AVC Isquêmico extenso hemisfério esquerdo — CID I63.3",            "Dr. Eduardo Pinto — CRM/SP 11008",   "ativa"),
+        ]
+        intern_objs = []
+        for pac_idx, leito_idx, leito_lista, diag, med, status_i in internacoes_data:
+            pac   = pac_objs[pac_idx] if pac_idx < len(pac_objs) else None
+            leito = leito_lista[leito_idx] if leito_idx < len(leito_lista) else None
+            if not pac:
+                intern_objs.append(None)
+                continue
+            try:
+                inn = InternacaoHospital.objects.create(
+                    empresa=empresa, paciente=pac, leito=leito,
+                    diagnostico=diag, medico_responsavel=med, status=status_i,
+                )
+                intern_objs.append(inn)
+            except Exception:
+                intern_objs.append(None)
+
+        # Prescrições para internações ativas
+        prescricoes_data = [
+            # (intern_idx, medicamento, dose, via, freq, duracao, status, medico)
+            (0, "AAS 100mg",              "100mg",    "oral",       "1x ao dia",    30, "ativa", "Dr. Renato Souza"),
+            (0, "Clopidogrel 75mg",       "75mg",     "oral",       "1x ao dia",    30, "ativa", "Dr. Renato Souza"),
+            (0, "Heparina Sódica 5000 UI","5000 UI",  "ev",         "6/6h",          7, "ativa", "Dr. Renato Souza"),
+            (0, "Nitroglicerina",         "5 mcg/min","ev",         "contínuo SN",   2, "ativa", "Dr. Renato Souza"),
+            (1, "Furosemida 40mg",        "40mg",     "ev",         "12/12h",        5, "ativa", "Dr. Renato Souza"),
+            (1, "Espironolactona 25mg",   "25mg",     "oral",       "1x ao dia",    30, "ativa", "Dr. Renato Souza"),
+            (1, "Carvedilol 12,5mg",      "12,5mg",   "oral",       "12/12h",       30, "ativa", "Dr. Renato Souza"),
+            (2, "Amoxicilina+Clavulanato","875/125mg","oral",       "12/12h",        7, "ativa", "Dra. Cristina Alves"),
+            (2, "Azitromicina 500mg",     "500mg",    "oral",       "1x ao dia",     5, "ativa", "Dra. Cristina Alves"),
+            (2, "Paracetamol 750mg",      "750mg",    "oral",       "6/6h SN",       7, "ativa", "Dra. Cristina Alves"),
+            (3, "Captopril 25mg",         "25mg",     "sublingual", "SN crise HAS",  0, "ativa", "Dra. Cristina Alves"),
+            (3, "Losartana 100mg",        "100mg",    "oral",       "1x ao dia",    30, "ativa", "Dra. Cristina Alves"),
+            (5, "Dipirona 500mg",         "500mg",    "oral",       "6/6h SN",       5, "concluida","Dr. Fábio Menezes"),
+            (5, "Metronidazol 500mg",     "500mg",    "ev",         "8/8h",          5, "concluida","Dr. Fábio Menezes"),
+            (6, "Alteplase",              "0,9mg/kg", "ev",         "dose única",    1, "concluida","Dr. Eduardo Pinto"),
+            (6, "AAS 100mg",              "100mg",    "oral",       "1x ao dia",    90, "ativa", "Dr. Eduardo Pinto"),
+            (6, "Atorvastatina 80mg",     "80mg",     "oral",       "1x ao dia",    90, "ativa", "Dr. Eduardo Pinto"),
+        ]
+        if PrescricaoMedica:
+            for intern_idx, med_nome, dose, via, freq, dur, st_p, med_resp in prescricoes_data:
+                inn = intern_objs[intern_idx] if intern_idx < len(intern_objs) else None
+                if not inn:
+                    continue
+                try:
+                    PrescricaoMedica.objects.create(
+                        internacao=inn, medicamento=med_nome, dose=dose,
+                        via=via, frequencia=freq,
+                        duracao_dias=dur if dur > 0 else None,
+                        status=st_p, medico=med_resp,
+                    )
+                except Exception:
+                    pass
+
+        # Evoluções clínicas
+        evolucoes_data = [
+            (0, "Paciente estável pós-angioplastia. Dor torácica revertida. ECG sem supra. Monitorização contínua.", "Dr. Renato Souza"),
+            (0, "Enzimas cardíacas em queda. Mantém anticoagulação. Aguarda ecocardiograma.", "Dr. Renato Souza"),
+            (1, "Melhora de dispneia após diurético IV. Redução de edema. Pressão controlada.", "Dr. Renato Souza"),
+            (2, "Febre cedeu. Saturação 97% RA. Iniciou antibioticoterapia oral.", "Dra. Cristina Alves"),
+            (3, "PA 140/90 após ajuste de medicação. Sem cefaleia. Aguarda avaliação cardiológica.", "Dra. Cristina Alves"),
+            (4, "Alta hospitalar em boas condições gerais. Retorno ambulatorial em 7 dias.", "Dr. Fábio Menezes"),
+            (6, "Sem novas crises convulsivas. Fisioterapia motora iniciada. NIHSS 8.", "Dr. Eduardo Pinto"),
+        ]
+        if EvolucaoClinica:
+            for intern_idx, desc, resp in evolucoes_data:
+                inn = intern_objs[intern_idx] if intern_idx < len(intern_objs) else None
+                if not inn:
+                    continue
+                try:
+                    EvolucaoClinica.objects.create(
+                        internacao=inn, descricao=desc, responsavel=resp,
+                    )
+                except Exception:
+                    pass
+
+        n_pac   = len([p for p in pac_objs if p])
+        n_intern = len([i for i in intern_objs if i])
+        self.out(
+            f"     ✓ Hospital: 8 departs | ~50 leitos | {n_pac} pacientes | "
+            f"{n_intern} internações | triagens | prescrições | evoluções",
+            self.style.SUCCESS,
+        )
 
     # ─────────────────────────────────────────────────────────────────────────
     # DADOS DEMO — Governo
     # ─────────────────────────────────────────────────────────────────────────
     def _criar_dados_governo(self, empresa):
-        from api.models import (IndicadorSaudeGov, ProgramaSaudeGov,
-                                 UnidadeSaude, AlertaGovernamental,
-                                 SerieEpidemiologica, RegistroSintoma)
-
+        from api.models import (
+            IndicadorSaudeGov, ProgramaSaudeGov,
+            UnidadeSaude, AlertaGovernamental, RegistroSintoma,
+        )
         try:
-            indicadores = [
-                ("Cobertura Vacinal COVID-19", "vacinacao", 78.5, 90.0, "%"),
-                ("Taxa de Internação por Dengue", "dengue", 4.2, 2.0, "/100k"),
-                ("Consultas APS por habitante", "aps", 3.1, 4.0, "cons/hab"),
-                ("Taxa de Mortalidade Infantil", "mortalidade", 11.2, 8.0, "/1000 NV"),
-            ]
-            for nome, categoria, val_atual, meta, unidade in indicadores:
+            from api.models import OrcamentoSaudeGov, PlanoAcaoGov, AtoNormativoGov
+        except ImportError:
+            OrcamentoSaudeGov = PlanoAcaoGov = AtoNormativoGov = None
+        try:
+            from api.models import SerieEpidemiologica
+        except ImportError:
+            SerieEpidemiologica = None
+
+        import uuid as _uuid
+
+        # ── 1. Programas de saúde (8) ────────────────────────────────────────
+        programas_cfg = [
+            # (nome, descricao, status, pop_alvo, orc_prev, orc_exec, responsavel, inicio, fim)
+            ("Dengue Zero 2026",
+             "Combate ao Aedes aegypti — mutirões de vistoria, eliminação de criadouros e vacinação.",
+             "ativo", "Toda a população municipal", 2_800_000, 1_950_000,
+             "Coord. Vigilância Epidemiológica",
+             datetime.date(2026, 1, 1), datetime.date(2026, 12, 31)),
+            ("Saúde da Família — Expansão 2026",
+             "Implantação de 12 novas equipes eSF em regiões de alta vulnerabilidade social.",
+             "ativo", "Populações sem cobertura eSF", 4_500_000, 2_100_000,
+             "Dep. Atenção Básica",
+             datetime.date(2026, 3, 1), datetime.date(2027, 2, 28)),
+            ("Vacinação em Dia",
+             "Campanha de atualização do calendário vacinal adulto e infantil — todas as UBSs.",
+             "ativo", "Crianças 0–5 anos e adultos 60+", 1_200_000, 980_000,
+             "Coord. Imunizações",
+             datetime.date(2026, 2, 1), datetime.date(2026, 11, 30)),
+            ("Saúde Mental na APS",
+             "Implantação do matriciamento CAPS–eSF em todos os municípios. Redução de internações psiquiátricas.",
+             "ativo", "Adultos com transtornos mentais comuns", 3_100_000, 890_000,
+             "Dep. Saúde Mental",
+             datetime.date(2026, 1, 15), datetime.date(2026, 12, 31)),
+            ("Controle da Hipertensão Arterial",
+             "Rastreamento e tratamento de HAS — aferição gratuita nas UBSs e farmácias populares.",
+             "ativo", "Adultos acima de 18 anos", 1_800_000, 1_200_000,
+             "Coord. DCNT",
+             datetime.date(2025, 7, 1), datetime.date(2026, 6, 30)),
+            ("Redução da Mortalidade Infantil",
+             "Fortalecimento da atenção pré-natal e puericultura nos primeiros 1000 dias.",
+             "planejamento", "Gestantes e crianças < 1 ano", 900_000, 0,
+             "Dep. Saúde da Mulher e Criança",
+             datetime.date(2026, 7, 1), datetime.date(2028, 6, 30)),
+            ("Programa Oncologia Rede",
+             "Rastreamento de câncer de mama e colo do útero — mamografias e preventivos.",
+             "ativo", "Mulheres 25–64 anos", 2_200_000, 1_100_000,
+             "Coord. Oncologia",
+             datetime.date(2025, 9, 1), datetime.date(2026, 8, 31)),
+            ("Saúde do Trabalhador — CEREST",
+             "Vigilância em saúde do trabalhador — fiscalização, PCMSO, CIPA e notificações SINAN.",
+             "concluido", "Trabalhadores formais e informais", 600_000, 580_000,
+             "CEREST Regional",
+             datetime.date(2025, 1, 1), datetime.date(2025, 12, 31)),
+        ]
+        prog_objs = []
+        for nome_pg, desc_pg, st_pg, pop_pg, orc_prev, orc_exec, resp_pg, dt_ini, dt_fim in programas_cfg:
+            try:
+                pg = ProgramaSaudeGov.objects.create(
+                    empresa=empresa, nome=nome_pg, descricao=desc_pg,
+                    status=st_pg, populacao_alvo=pop_pg,
+                    orcamento_previsto=orc_prev, orcamento_executado=orc_exec,
+                    responsavel=resp_pg, data_inicio=dt_ini, data_fim_prevista=dt_fim,
+                )
+                prog_objs.append(pg)
+            except Exception:
+                prog_objs.append(None)
+
+        # ── 2. Indicadores (12) ──────────────────────────────────────────────
+        # tipo: quantitativo | percentual | indice
+        indicadores_cfg = [
+            # (nome, tipo_ind, meta, valor_atual, unidade, periodo, prog_idx)
+            ("Cobertura Vacinal Poliomielite",        "percentual", 95.0,  87.3,  "%",         "2026",   2),
+            ("Cobertura Vacinal COVID-19 (dose 3)",   "percentual", 90.0,  73.8,  "%",         "2026",   2),
+            ("Taxa de Incidência de Dengue",          "quantitativo",2.0,   5.4,  "/100k hab", "2026",   0),
+            ("Internações por Dengue",                "quantitativo",50.0, 189.0, "internações","2026",  0),
+            ("Cobertura de eSF",                      "percentual", 80.0,  64.2,  "%",         "2026",   1),
+            ("Consultas APS por Habitante/Ano",       "quantitativo",4.0,   3.1,  "cons/hab",  "2026",   1),
+            ("Taxa de Mortalidade Infantil",          "quantitativo",8.0,  11.2,  "/1000 NV",  "2025",   5),
+            ("Prevalência de HAS controlada",         "percentual", 60.0,  47.5,  "%",         "2026",   4),
+            ("Rastreamento Ca Mama (mamografia)",     "percentual", 70.0,  52.4,  "%",         "2025",   6),
+            ("Casos Notificados Saúde Mental (CAPS)", "quantitativo",1200.0,980.0,"casos/mês", "2026",   3),
+            ("Acidente de Trabalho Grave Notificado", "quantitativo",50.0,  72.0, "casos",     "2025",   7),
+            ("Índice de Satisfação UBS (pesquisa)",   "indice",     4.0,   3.6,  "0–5",       "2026",   1),
+        ]
+        for nome_i, tipo_i, meta_i, val_i, unid_i, period_i, prog_idx in indicadores_cfg:
+            prog = prog_objs[prog_idx] if prog_idx < len(prog_objs) else None
+            try:
                 IndicadorSaudeGov.objects.create(
-                    empresa=empresa,
-                    nome=nome, tipo=categoria,
-                    valor_atual=val_atual, meta=meta,
-                    unidade=unidade,
-                    periodo_referencia=str(HOJE.year),
+                    empresa=empresa, programa=prog,
+                    nome=nome_i, tipo=tipo_i, meta=meta_i,
+                    valor_atual=val_i, unidade=unid_i,
+                    periodo_referencia=period_i,
                 )
-        except Exception as ex:
-            self.out(f"     ⚠ Governo indicadores parciais: {ex}")
+            except Exception:
+                pass
 
-        try:
-            programas = [
-                ("Programa Dengue Zero", "epidemiologia", "em_andamento"),
-                ("Saúde da Família — Expansão 2026", "atenção_primária", "em_andamento"),
-                ("Vacinação em Dia", "vacinacao", "ativo"),
-                ("Saúde Mental na APS", "saude_mental", "planejamento"),
-            ]
-            for nome, categoria, status in programas:
-                ProgramaSaudeGov.objects.create(
-                    empresa=empresa,
-                    nome=nome,
-                    status=status,
-                    descricao=f"Programa demo: {nome}",
-                    populacao_alvo=5000,
+        # ── 3. Unidades de saúde (12) ────────────────────────────────────────
+        unidades_cfg = [
+            # (cnes, nome, tipo, status, municipio, uf, bairro, tel, pop_ref, leitos_sus, leitos_uti, diretor)
+            ("2079798", "UBS Jardim São Paulo",     "ubs",         "ativa", "São Paulo","SP","Jardim São Paulo","(11)3392-1100", 18000, 0, 0, "Dra. Fernanda Castro"),
+            ("2079802", "UBS Vila Madalena",        "ubs",         "ativa", "São Paulo","SP","Vila Madalena",   "(11)3819-2200", 15000, 0, 0, "Dr. Paulo Mendes"),
+            ("2079815", "UBS Capão Redondo",        "ubs",         "ativa", "São Paulo","SP","Capão Redondo",   "(11)5843-3300", 22000, 0, 0, "Dra. Renata Lima"),
+            ("2079830", "UBS Ermelino Matarazzo",   "ubs",         "ativa", "São Paulo","SP","Ermelino Mat.",   "(11)2272-4400", 20000, 0, 0, "Dr. Cláudio Nunes"),
+            ("2079844", "UPA 24h Lapa",             "upa",         "ativa", "São Paulo","SP","Lapa",            "(11)3675-5500", 60000, 0, 0, "Dr. André Cardoso"),
+            ("2079858", "UPA 24h Santo André",      "upa",         "ativa", "Santo André","SP","Centro",        "(11)4433-6600", 80000, 0, 0, "Dra. Sônia Araújo"),
+            ("2079871", "CAPS II Pinheiros",        "caps_ii",     "ativa", "São Paulo","SP","Pinheiros",       "(11)3814-7700", 12000, 0, 0, "Psic. Vera Melo"),
+            ("2079885", "CAPS AD Zona Sul",         "caps_ad",     "ativa", "São Paulo","SP","Zona Sul",        "(11)5011-8800",  8000, 0, 0, "Dr. Ricardo Torres"),
+            ("2079899", "Hospital Municipal Saúde", "hospital",    "ativa", "São Paulo","SP","Santana",         "(11)2976-9900",120000,240,20, "Dr. Marcelo Bastos"),
+            ("2079903", "Policlínica Centro",       "policlinica", "ativa", "São Paulo","SP","Centro",          "(11)3151-0010", 45000, 0, 0, "Dra. Elisa Freitas"),
+            ("2079917", "CEREST Regional SP",       "cerest",      "ativa", "São Paulo","SP","Bela Vista",      "(11)3241-1111",200000, 0, 0, "Enf. Marcos Souza"),
+            ("2079931", "Lab Público Central",      "laboratorio", "ativa", "São Paulo","SP","Ipiranga",        "(11)6950-2222", 90000, 0, 0, "Farm. Ana Torres"),
+        ]
+        unidade_objs = []
+        for cnes_u, nome_u, tipo_u, st_u, mun_u, uf_u, bairro_u, tel_u, pop_u, lei_sus, lei_uti, dir_u in unidades_cfg:
+            try:
+                import random as _rnd_gov
+                lat_base = {"São Paulo": -23.5505, "Santo André": -23.6639}
+                lon_base = {"São Paulo": -46.6333, "Santo André": -46.5310}
+                u = UnidadeSaude.objects.create(
+                    empresa=empresa, cnes=cnes_u, nome=nome_u,
+                    tipo=tipo_u, status=st_u, municipio=mun_u, uf=uf_u,
+                    bairro=bairro_u, telefone=tel_u,
+                    populacao_referenciada=pop_u,
+                    leitos_sus=lei_sus, leitos_uti=lei_uti,
+                    diretor=dir_u,
+                    latitude=lat_base.get(mun_u, -23.55),
+                    longitude=lon_base.get(mun_u, -46.63),
                 )
-        except Exception as ex:
-            self.out(f"     ⚠ Governo programas parciais: {ex}")
+                unidade_objs.append(u)
+            except Exception:
+                unidade_objs.append(None)
 
-        try:
-            unidades = [
-                ("UBS Centro", "ubs", "São Paulo", "SP", "-23.5505", "-46.6333"),
-                ("UBS Vila Nova", "ubs", "São Paulo", "SP", "-23.5600", "-46.6400"),
-                ("UPA Zona Leste", "upa", "São Paulo", "SP", "-23.5700", "-46.5200"),
-                ("Hospital Municipal", "hospital", "São Paulo", "SP", "-23.5475", "-46.6361"),
-            ]
-            for nome, tipo, cidade, estado, lat, lon in unidades:
-                UnidadeSaude.objects.create(
-                    empresa=empresa,
-                    nome=nome, tipo=tipo,
-                    municipio=cidade, uf=estado,
-                    latitude=float(lat), longitude=float(lon),
+        # ── 4. Alertas epidemiológicos (5) ────────────────────────────────────
+        alertas_cfg = [
+            ("Surto de Dengue — Zona Norte SP",
+             "Aumento de 65% nos casos confirmados de dengue na Zona Norte na última quinzena. Casos de dengue hemorrágica notificados. Intensificar eliminação de criadouros.",
+             "alto", "SP", "São Paulo", "Zona Norte"),
+            ("Surto de Influenza A (H3N2) — Grande SP",
+             "Laboratório Central confirma circulação de H3N2. Vacinação anti-influenza disponível nas UBSs. Grupos de risco devem se vacinar.",
+             "moderado", "SP", "São Paulo", "Zona Leste"),
+            ("Alerta Calor Extremo — Risco de Desidratação",
+             "Temperaturas acima de 38°C previstas para os próximos 7 dias. Idosos e crianças em risco. Hidratação frequente recomendada.",
+             "moderado", "SP", "São Paulo", ""),
+            ("Monkeypox — Caso Confirmado Zona Sul",
+             "Confirmado caso de mpox na Zona Sul. Investigação epidemiológica em andamento. Comunicantes rastreados. Sem risco de surto no momento.",
+             "baixo", "SP", "São Paulo", "Zona Sul"),
+            ("Coqueluche — Surto em Creche Municipal",
+             "Cluster de coqueluche confirmado em creche. 8 crianças menores de 1 ano afetadas. Bloqueio vacinal em andamento.",
+             "alto", "SP", "São Paulo", "Pirituba"),
+        ]
+        for titulo_a, msg_a, nivel_a, estado_a, cidade_a, bairro_a in alertas_cfg:
+            try:
+                AlertaGovernamental.objects.create(
+                    empresa=empresa, titulo=titulo_a, mensagem=msg_a,
+                    nivel=nivel_a, estado=estado_a, cidade=cidade_a,
+                    bairro=bairro_a, ativo=True, status="publicado",
                 )
-        except Exception as ex:
-            self.out(f"     ⚠ Governo unidades parciais: {ex}")
+            except Exception:
+                pass
 
-        try:
-            # Alertas epidemiológicos
-            AlertaGovernamental.objects.create(
-                empresa=empresa,
-                titulo="Aumento de casos de Dengue — Zona Norte",
-                mensagem="Registrado aumento de 40% nos casos confirmados de Dengue na Zona Norte na última semana. Reforce medidas preventivas.",
-                nivel="alto",
-                estado="SP",
-                cidade="São Paulo",
-                bairro="Zona Norte",
-                ativo=True,
-                status="publicado",
-            )
-            AlertaGovernamental.objects.create(
-                empresa=empresa,
-                titulo="Surto de Influenza — Zona Leste",
-                mensagem="Elevação no índice de síndrome gripal na Zona Leste. Vacinação disponível nas UBSs.",
-                nivel="moderado",
-                estado="SP",
-                cidade="São Paulo",
-                bairro="Zona Leste",
-                ativo=True,
-                status="publicado",
-            )
-        except Exception as ex:
-            self.out(f"     ⚠ Governo alertas parciais: {ex}")
+        # ── 5. Orçamento (2 anos) ─────────────────────────────────────────────
+        if OrcamentoSaudeGov:
+            for ano_o, prev_o, exec_o, fonte_o in [
+                (2025, 185_000_000, 181_200_000, "Fundo Municipal de Saúde — SUS + Tesouro Municipal"),
+                (2026, 198_000_000,  95_400_000, "Fundo Municipal de Saúde — SUS + Tesouro Municipal"),
+            ]:
+                try:
+                    OrcamentoSaudeGov.objects.get_or_create(
+                        empresa=empresa, ano=ano_o,
+                        defaults=dict(
+                            total_previsto=prev_o, total_executado=exec_o,
+                            fonte_recurso=fonte_o,
+                        )
+                    )
+                except Exception:
+                    pass
 
-        # Registros de sintomas (simulação população)
-        try:
-            import random, uuid
-            sintomas_base = [
-                {"febre": True, "dor_cabeca": True, "dor_corpo": True,
-                 "cidade": "São Paulo", "estado": "SP", "bairro": "Zona Norte",
-                 "latitude": -23.51, "longitude": -46.64, "doenca": "dengue"},
-                {"tosse": True, "falta_ar": True,
-                 "cidade": "São Paulo", "estado": "SP", "bairro": "Zona Leste",
-                 "latitude": -23.57, "longitude": -46.52, "doenca": "influenza"},
+        # ── 6. Planos de ação (6) ─────────────────────────────────────────────
+        if PlanoAcaoGov:
+            planos_acao_cfg = [
+                # (titulo, desc, responsavel, prioridade, status, prog_idx, progresso, prazo)
+                ("Mutirão de vistoria contra dengue — 3000 imóveis",
+                 "Agentes de endemias percorrerão 3000 imóveis por semana nas zonas vermelhas.",
+                 "Coord. Vigilância Epidemiológica", "alta", "em_andamento", 0, 65,
+                 datetime.date(2026, 7, 31)),
+                ("Implantação 6 novas equipes eSF — Capão Redondo",
+                 "Contratação e implantação de 6 equipes completas com médico, enfermeiro e ACS.",
+                 "Dep. Atenção Básica", "alta", "em_andamento", 1, 40,
+                 datetime.date(2026, 9, 30)),
+                ("Campanha vacinação polio — meta 95%",
+                 "Intensificação da vacinação nas UBSs e pontos de vacinação volante.",
+                 "Coord. Imunizações", "alta", "em_andamento", 2, 72,
+                 datetime.date(2026, 6, 30)),
+                ("Capacitar 80 profissionais APS em saúde mental",
+                 "Matriciamento CAPS–eSF: 80 profissionais capacitados para manejo de TMC.",
+                 "Dep. Saúde Mental", "media", "em_andamento", 3, 55,
+                 datetime.date(2026, 8, 31)),
+                ("Implantar 500 pontos de aferição de PA gratuita",
+                 "Parcerias com farmácias e supermercados para aferição gratuita de pressão arterial.",
+                 "Coord. DCNT", "media", "pendente", 4, 10,
+                 datetime.date(2026, 10, 31)),
+                ("Relatório final CEREST 2025 — publicação",
+                 "Elaboração e publicação do relatório anual de saúde do trabalhador.",
+                 "CEREST Regional", "baixa", "concluido", 7, 100,
+                 datetime.date(2026, 3, 31)),
             ]
-            random.seed(42)
-            for i in range(40):
-                base = sintomas_base[i % 2].copy()
-                lat_jitter = random.uniform(-0.03, 0.03)
-                lon_jitter = random.uniform(-0.03, 0.03)
+            for titulo_pa, desc_pa, resp_pa, prio_pa, st_pa, prog_idx_pa, prog_pct, prazo_pa in planos_acao_cfg:
+                prog_pa = prog_objs[prog_idx_pa] if prog_idx_pa < len(prog_objs) else None
+                try:
+                    PlanoAcaoGov.objects.create(
+                        empresa=empresa, programa=prog_pa,
+                        titulo=titulo_pa, descricao=desc_pa,
+                        responsavel=resp_pa, prioridade=prio_pa,
+                        status=st_pa, progresso=prog_pct, prazo=prazo_pa,
+                    )
+                except Exception:
+                    pass
+
+        # ── 7. Atos normativos (3) ────────────────────────────────────────────
+        if AtoNormativoGov:
+            atos_cfg = [
+                ("portaria", "001/2026", "Portaria que define critérios de rastreamento da Dengue no Município",
+                 "Estabelece fluxos de vigilância epidemiológica e notificação de dengue.",
+                 datetime.date(2026, 1, 10), "vigente", "Secretaria Municipal de Saúde", prog_objs[0] if prog_objs else None),
+                ("resolucao", "012/2025", "Resolução que regulamenta o matriciamento CAPS–eSF",
+                 "Define protocolos de apoio matricial em saúde mental na Atenção Básica.",
+                 datetime.date(2025, 6, 15), "vigente", "Conselho Municipal de Saúde", prog_objs[3] if len(prog_objs) > 3 else None),
+                ("nota_tecnica", "007/2026", "Nota Técnica sobre manejo clínico da dengue grave",
+                 "Orientações técnicas para unidades hospitalares no manejo de dengue com sinais de alarme.",
+                 datetime.date(2026, 3, 1), "vigente", "Dep. Vigilância em Saúde", prog_objs[0] if prog_objs else None),
+            ]
+            for tipo_at, num_at, tit_at, em_at, dt_pub, st_at, org_at, prog_at in atos_cfg:
+                try:
+                    AtoNormativoGov.objects.create(
+                        empresa=empresa, tipo=tipo_at, numero=num_at,
+                        titulo=tit_at, ementa=em_at, data_publicacao=dt_pub,
+                        data_vigencia=dt_pub, status=st_at,
+                        orgao_emissor=org_at, programa=prog_at,
+                    )
+                except Exception:
+                    pass
+
+        # ── 8. Registros de sintomas (60 pontos) ─────────────────────────────
+        import random as _rnd_s
+        _rnd_s.seed(42)
+        clusters = [
+            dict(doenca="dengue",   febre=True, dor_cabeca=True, dor_corpo=True,
+                 cidade="São Paulo", estado="SP", bairro="Zona Norte",
+                 lat=-23.51, lon=-46.64, origem="cidadao"),
+            dict(doenca="influenza",febre=True, tosse=True, falta_ar=False,
+                 cidade="São Paulo", estado="SP", bairro="Zona Leste",
+                 lat=-23.57, lon=-46.52, origem="cidadao"),
+            dict(doenca="dengue",   febre=True, dor_cabeca=True, dor_corpo=True,
+                 cidade="São Paulo", estado="SP", bairro="Pirituba",
+                 lat=-23.50, lon=-46.73, origem="unidade_saude"),
+            dict(doenca="influenza",febre=True, tosse=True, falta_ar=True,
+                 cidade="Santo André", estado="SP", bairro="Centro",
+                 lat=-23.66, lon=-46.53, origem="cidadao"),
+        ]
+        for i in range(60):
+            cl = clusters[i % len(clusters)].copy()
+            try:
                 RegistroSintoma.objects.create(
                     empresa=empresa,
-                    id_anonimo=uuid.uuid4(),
-                    doenca=base.pop("doenca"),
-                    febre=base.pop("febre", False),
-                    tosse=base.pop("tosse", False),
-                    falta_ar=base.pop("falta_ar", False),
-                    dor_cabeca=base.pop("dor_cabeca", False),
-                    dor_corpo=base.pop("dor_corpo", False),
-                    cidade=base["cidade"],
-                    estado=base["estado"],
-                    bairro=base["bairro"],
-                    latitude=base["latitude"] + lat_jitter,
-                    longitude=base["longitude"] + lon_jitter,
-                    origem_dado='cidadao',
+                    id_anonimo=_uuid.uuid4(),
+                    doenca=cl["doenca"],
+                    febre=cl.get("febre", False),
+                    tosse=cl.get("tosse", False),
+                    falta_ar=cl.get("falta_ar", False),
+                    dor_cabeca=cl.get("dor_cabeca", False),
+                    dor_corpo=cl.get("dor_corpo", False),
+                    cidade=cl["cidade"],
+                    estado=cl["estado"],
+                    bairro=cl["bairro"],
+                    latitude=cl["lat"] + _rnd_s.uniform(-0.04, 0.04),
+                    longitude=cl["lon"] + _rnd_s.uniform(-0.04, 0.04),
+                    origem_dado=cl["origem"],
                 )
-        except Exception as ex:
-            self.out(f"     ⚠ Governo sintomas pop parciais: {ex}")
+            except Exception:
+                pass
 
-        self.out(f"     ✓ Dados demo Governo criados", self.style.SUCCESS)
+        n_prog  = len([p for p in prog_objs if p])
+        n_unid  = len([u for u in unidade_objs if u])
+        self.out(
+            f"     ✓ Governo: {n_prog} programas | 12 indicadores | {n_unid} unidades | "
+            f"5 alertas | planos de ação | orçamento | atos normativos | 60 registros sintomas",
+            self.style.SUCCESS,
+        )
 
     # ─────────────────────────────────────────────────────────────────────────
     # DADOS DEMO — Plano de Saúde
     # ─────────────────────────────────────────────────────────────────────────
     def _criar_dados_plano(self, empresa):
-        from api.models import (PlanoSaude, BeneficiarioPlano,
-                                 RedeCredenciadaPlano, PrestadorPlanoSaude)
-
+        from api.models import (
+            PlanoSaude, BeneficiarioPlano, PrestadorPlanoSaude,
+            GuiaAutorizacao, Sinistro, Reembolso,
+        )
         try:
-            planos = [
-                ("Básico Ambulatorial", "basico", 189.90),
-                ("Essencial Ambulatorial + Exames", "essencial", 389.50),
-                ("Premium Hospitalar", "premium", 689.00),
-                ("Master Odonto + Hospital", "master", 989.00),
-            ]
-            plano_objs = []
-            for nome, codigo, mensalidade in planos:
-                p = PlanoSaude.objects.create(
-                    empresa=empresa,
-                    nome=nome,
-                )
-                plano_objs.append(p)
+            from api.models import CarenciaBeneficiario, CoparticipacaoRegra, FaturamentoBeneficiario, RedeCredenciadaPlano
+        except ImportError:
+            CarenciaBeneficiario = CoparticipacaoRegra = FaturamentoBeneficiario = RedeCredenciadaPlano = None
 
-            # Beneficiários
-            beneficiarios = [
-                ("Carlos Eduardo Mendes", "100.200.300-44", datetime.date(1975, 5, 12)),
-                ("Patrícia Souza Lima", "200.300.400-55", datetime.date(1983, 9, 28)),
-                ("Roberto Alves Teixeira", "300.400.500-66", datetime.date(1990, 2, 14)),
-                ("Juliana Moreira Costa", "400.500.600-77", datetime.date(1995, 12, 3)),
-                ("Marcos Vinícius Pinto", "500.600.700-88", datetime.date(1969, 7, 19)),
-            ]
-            for nome, cpf, nasc in beneficiarios:
-                BeneficiarioPlano.objects.create(
-                    plano=plano_objs[len(nome) % len(plano_objs)],
-                    nome=nome, cpf=cpf,
-                    data_nascimento=nasc,
-                )
-        except Exception as ex:
-            self.out(f"     ⚠ Plano dados parciais: {ex}")
+        from django.utils import timezone as _tz_plano
 
-        try:
-            prestadores = [
-                ("Clínica São Lucas", "clínica", "São Paulo", "SP"),
-                ("Lab Análises Médicas Central", "laboratorio", "São Paulo", "SP"),
-                ("Hospital e Maternidade Santa Cruz", "hospital", "São Paulo", "SP"),
-                ("Clínica Odonto Premium", "odontologia", "São Paulo", "SP"),
-            ]
-            for nome, tipo, cidade, estado in prestadores:
-                PrestadorPlanoSaude.objects.create(
-                    empresa=empresa,
-                    nome_fantasia=nome, tipo=tipo,
-                    cidade=cidade, estado=estado,
+        # ── 1. Planos (6) ─────────────────────────────────────────────────────
+        planos_cfg = [
+            # (nome, registro_ans, cnpj, modalidade, abrangencia, status)
+            ("Básico Ambulatorial",          "434561", "12.345.678/0001-01", "cooperativa",  "municipal", "ativo"),
+            ("Essencial Ambulatorial+Exames","434562", "12.345.678/0001-01", "cooperativa",  "estadual",  "ativo"),
+            ("Clínico Hospitalar Enfermaria","434563", "12.345.678/0001-01", "cooperativa",  "estadual",  "ativo"),
+            ("Premium Hospitalar Apartamento","434564","12.345.678/0001-01", "cooperativa",  "nacional",  "ativo"),
+            ("Master Odonto + Hospital",     "434565", "12.345.678/0001-01", "cooperativa",  "nacional",  "ativo"),
+            ("Empresarial Coletivo",         "434566", "12.345.678/0001-01", "autogestao",   "nacional",  "ativo"),
+        ]
+        plano_objs = []
+        for nome_pl, ans_pl, cnpj_pl, mod_pl, abr_pl, st_pl in planos_cfg:
+            try:
+                pl = PlanoSaude.objects.create(
+                    empresa=empresa, nome=nome_pl, registro_ans=ans_pl,
+                    cnpj=cnpj_pl, modalidade=mod_pl, abrangencia=abr_pl,
+                    status=st_pl,
+                    telefone="(11)4000-1234",
+                    email="operadora@demo.com.br",
                 )
-        except Exception as ex:
-            self.out(f"     ⚠ Plano prestadores parciais: {ex}")
+                plano_objs.append(pl)
+            except Exception:
+                plano_objs.append(None)
 
-        self.out(f"     ✓ Dados demo Plano de Saúde criados", self.style.SUCCESS)
+        if not any(plano_objs):
+            self.out(f"     ⚠ Plano: nenhum plano criado", self.style.WARNING)
+            return
+
+        # ── 2. Regras de Coparticipação ───────────────────────────────────────
+        if CoparticipacaoRegra:
+            copars = [
+                ("consulta",   20.0,   0,    None),
+                ("exame",      15.0,   0,    200),
+                ("internacao",  0.0,   0,    None),
+                ("cirurgia",    0.0,   0,    None),
+                ("terapia",    30.0,   0,    300),
+                ("urgencia",    0.0,   0,    None),
+            ]
+            for pl in plano_objs:
+                if not pl:
+                    continue
+                for tipo_c, pct_c, fixo_c, teto_c in copars:
+                    try:
+                        CoparticipacaoRegra.objects.get_or_create(
+                            plano=pl, tipo_atendimento=tipo_c,
+                            defaults=dict(percentual=pct_c, valor_fixo=fixo_c, teto_mensal=teto_c, ativo=True),
+                        )
+                    except Exception:
+                        pass
+
+        # ── 3. Prestadores (15) ───────────────────────────────────────────────
+        prestadores_cfg = [
+            # (cod_rede, nome_fantasia, razao_social, cnpj, tipo, cnes, especialidades, cidade, estado, tel, sla, score)
+            ("PREST001","Hospital São Camilo",           "Hosp. São Camilo S/A",      "01.111.222/0001-01","hospital",          "2079000","Clínica Geral; Cirurgia; UTI; Cardiologia","São Paulo","SP","(11)3888-1111",48,92),
+            ("PREST002","Hospital e Maternidade Santa Cruz","Santa Cruz S/A",         "02.222.333/0001-02","hospital",          "2079100","Obstetrícia; Neonatologia; Cirurgia",       "São Paulo","SP","(11)3889-2222",48,90),
+            ("PREST003","Hospital Albert Einstein",      "Hosp. Israelita A.E. S/A",  "03.333.444/0001-03","hospital",          "2079200","Alta Complexidade; Oncologia; Transplante",  "São Paulo","SP","(11)2151-3333",24,98),
+            ("PREST004","Clínica São Lucas",             "Clínica São Lucas Ltda",    "04.444.555/0001-04","clinica",           "2079300","Cardiologia; Ortopedia; Dermatologia",       "São Paulo","SP","(11)3033-4444",72,88),
+            ("PREST005","Clínica Médica Saúde Total",    "Saúde Total Ltda",          "05.555.666/0001-05","clinica",           "2079400","Clínica Geral; Ginecologia; Pediatria",      "São Paulo","SP","(11)4033-5555",72,85),
+            ("PREST006","Clínica Odonto Premium",        "Odonto Premium Ltda",       "06.666.777/0001-06","clinica",           "2079500","Odontologia Geral; Ortodontia; Implantes",   "São Paulo","SP","(11)3120-6666",72,87),
+            ("PREST007","Laboratório Central de Análises","Lab Central S/A",          "07.777.888/0001-07","laboratorio",       "2079600","Hematologia; Bioquímica; Imunologia; PCR",   "São Paulo","SP","(11)3254-7777",24,95),
+            ("PREST008","Labo Diagnose",                 "Labo Diagnose Ltda",        "08.888.999/0001-08","laboratorio",       "2079700","Análises Clínicas; Microbiologia; Citologia","São Paulo","SP","(11)3222-8888",24,91),
+            ("PREST009","Clínica de Imagem Avançada",    "Imagem Avançada S/A",       "09.999.000/0001-09","imagem",            "2079800","Tomografia; Ressonância; Mamografia; ECO",   "São Paulo","SP","(11)3100-9999",48,93),
+            ("PREST010","Eco-Cardio Centro",             "Ecocardiologia Centro Ltda","10.000.111/0001-10","imagem",            "2079810","Ecocardiograma; Holter; MAPA; Ergometria",   "São Paulo","SP","(11)3010-0010",48,90),
+            ("PREST011","UPA Lapa Credenciada",          "UPA Lapa S/A",              "11.111.222/0001-11","pronto_atendimento","2079820","Urgência e Emergência 24h",                   "São Paulo","SP","(11)3675-0011",  4,82),
+            ("PREST012","PA Guarulhos 24h",              "PA Guarulhos S/A",          "12.222.333/0001-12","pronto_atendimento","2079830","Pronto Atendimento 24h",                     "Guarulhos","SP","(11)2443-0012",  4,80),
+            ("PREST013","Home Care BemViver",            "BemViver Saúde Ltda",       "13.333.444/0001-13","homecare",          "2079840","Home Care; Enfermagem; Fisioterapia Domiciliar","São Paulo","SP","(11)4100-0013",72,89),
+            ("PREST014","Clínica Fisio & Reab",          "Fisio Reab Ltda",           "14.444.555/0001-14","clinica",           "2079850","Fisioterapia; Fonoaudiologia; Psicologia",   "São Paulo","SP","(11)3922-0014",72,86),
+            ("PREST015","Oncovida Clínica Oncológica",   "Oncovida Ltda",             "15.555.666/0001-15","clinica",           "2079860","Oncologia; Hematologia; Quimioterapia",      "São Paulo","SP","(11)3044-0015",24,94),
+        ]
+        prest_objs = []
+        for cod_r, nom_f, raz_s, cnpj_pr, tipo_pr, cnes_pr, espec_pr, cid_pr, est_pr, tel_pr, sla_pr, score_pr in prestadores_cfg:
+            try:
+                pr = PrestadorPlanoSaude.objects.create(
+                    empresa=empresa, codigo_rede=cod_r,
+                    nome_fantasia=nom_f, razao_social=raz_s, cnpj=cnpj_pr,
+                    tipo=tipo_pr, registro_cnes=cnes_pr, especialidades=espec_pr,
+                    cidade=cid_pr, estado=est_pr, telefone=tel_pr,
+                    sla_autorizacao_horas=sla_pr, score_qualidade=score_pr,
+                    portal_ativo=True, status="credenciado",
+                )
+                prest_objs.append(pr)
+            except Exception:
+                prest_objs.append(None)
+
+        # ── 4. Beneficiários (25) ─────────────────────────────────────────────
+        benef_cfg = [
+            # (nome, cpf, nasc, sexo, tel, carteirinha, dt_inicio, plano_idx, tipo_pl, acomod, situacao)
+            ("Carlos Eduardo Mendes",   "100.200.300-01", datetime.date(1975,  5, 12), "M","(11)9100-0001","0001-00001-0",datetime.date(2020, 1,1),3,"Premium","apartamento","ativo"),
+            ("Patrícia Souza Lima",     "200.300.400-02", datetime.date(1983,  9, 28), "F","(11)9200-0002","0001-00002-0",datetime.date(2021, 3,1),2,"Clínico Hosp.","enfermaria","ativo"),
+            ("Roberto Alves Teixeira",  "300.400.500-03", datetime.date(1990,  2, 14), "M","(11)9300-0003","0001-00003-0",datetime.date(2022, 6,1),1,"Essencial","enfermaria","ativo"),
+            ("Juliana Moreira Costa",   "400.500.600-04", datetime.date(1995, 12,  3), "F","(11)9400-0004","0001-00004-0",datetime.date(2023, 1,1),0,"Básico","enfermaria","ativo"),
+            ("Marcos Vinícius Pinto",   "500.600.700-05", datetime.date(1969,  7, 19), "M","(11)9500-0005","0001-00005-0",datetime.date(2019, 7,1),4,"Master","apartamento","ativo"),
+            ("Ana Beatriz Rodrigues",   "600.700.800-06", datetime.date(1988, 11, 11), "F","(11)9600-0006","0001-00006-0",datetime.date(2021, 4,1),2,"Clínico Hosp.","enfermaria","ativo"),
+            ("Fernando Lima Torres",    "700.800.900-07", datetime.date(1972,  8, 25), "M","(11)9700-0007","0001-00007-0",datetime.date(2020, 8,1),3,"Premium","apartamento","ativo"),
+            ("Cristiane Melo Santos",   "800.900.010-08", datetime.date(1965,  3, 30), "F","(11)9800-0008","0001-00008-0",datetime.date(2018,12,1),4,"Master","apartamento","ativo"),
+            ("Diego Rocha Ferreira",    "900.010.120-09", datetime.date(1980,  6,  5), "M","(11)9900-0009","0001-00009-0",datetime.date(2022, 2,1),5,"Empresarial","apartamento","ativo"),
+            ("Beatriz Nunes Torres",    "010.120.230-10", datetime.date(1970,  1, 20), "F","(11)9010-0010","0001-00010-0",datetime.date(2020,10,1),2,"Clínico Hosp.","enfermaria","ativo"),
+            ("Alexandre Oliveira Neto", "120.230.340-11", datetime.date(1992,  4, 17), "M","(11)9120-0011","0001-00011-0",datetime.date(2023, 5,1),0,"Básico","enfermaria","ativo"),
+            ("Patrícia Costa Souza",    "230.340.450-12", datetime.date(1978, 10,  8), "F","(11)9230-0012","0001-00012-0",datetime.date(2021, 9,1),1,"Essencial","enfermaria","ativo"),
+            ("Antônio José Ribeiro",    "340.450.560-13", datetime.date(1960,  5, 22), "M","(11)9340-0013","0001-00013-0",datetime.date(2017, 1,1),4,"Master","apartamento","ativo"),
+            ("Mariana Lima Barros",     "450.560.670-14", datetime.date(1997,  7, 14), "F","(11)9450-0014","0001-00014-0",datetime.date(2024, 1,1),0,"Básico","enfermaria","ativo"),
+            ("José Antônio da Silva",   "560.670.780-15", datetime.date(1955,  3, 10), "M","(11)9560-0015","0001-00015-0",datetime.date(2016, 6,1),3,"Premium","apartamento","ativo"),
+            ("Maria Aparecida Santos",  "670.780.890-16", datetime.date(1945,  7, 22), "F","(11)9670-0016","0001-00016-0",datetime.date(2015, 1,1),4,"Master","apartamento","ativo"),
+            ("Pedro Henrique Costa",    "780.890.900-17", datetime.date(1982, 11,  5), "M","(11)9780-0017","0001-00017-0",datetime.date(2022, 7,1),2,"Clínico Hosp.","enfermaria","ativo"),
+            ("Fernanda Lima Souza",     "890.900.010-18", datetime.date(2000,  2, 28), "F","(11)9890-0018","0001-00018-0",datetime.date(2023, 3,1),1,"Essencial","enfermaria","ativo"),
+            ("Luiz Carlos Pereira",     "901.010.120-19", datetime.date(1986,  9,  3), "M","(11)9901-0019","0001-00019-0",datetime.date(2021,11,1),5,"Empresarial","apartamento","ativo"),
+            ("Sandra Regina Alves",     "012.120.230-20", datetime.date(1974,  4, 16), "F","(11)9012-0020","0001-00020-0",datetime.date(2020, 5,1),2,"Clínico Hosp.","enfermaria","ativo"),
+            ("Bruno Henrique Moura",    "123.230.340-21", datetime.date(1993,  8, 21), "M","(11)9123-0021","0001-00021-0",datetime.date(2023, 8,1),0,"Básico","enfermaria","ativo"),
+            ("Vanessa Aparecida Rocha", "234.340.450-22", datetime.date(1987, 12, 12), "F","(11)9234-0022","0001-00022-0",datetime.date(2022, 4,1),1,"Essencial","enfermaria","suspenso"),
+            ("Rafael Souza Barbosa",    "345.450.560-23", datetime.date(1975,  6,  7), "M","(11)9345-0023","0001-00023-0",datetime.date(2019, 2,1),3,"Premium","apartamento","ativo"),
+            ("Camila Torres Mendes",    "456.560.670-24", datetime.date(1998,  1, 25), "F","(11)9456-0024","0001-00024-0",datetime.date(2024, 6,1),5,"Empresarial","apartamento","ativo"),
+            ("Eduardo Lima Pinto",      "567.670.780-25", datetime.date(1968, 10, 30), "M","(11)9567-0025","0001-00025-0",datetime.date(2018, 8,1),4,"Master","apartamento","cancelado"),
+        ]
+        benef_objs = []
+        for (nome_b, cpf_b, nasc_b, sexo_b, tel_b, cart_b, dt_ini_b,
+             pl_idx, tipo_pl_b, acom_b, sit_b) in benef_cfg:
+            plano_b = plano_objs[pl_idx] if pl_idx < len(plano_objs) else None
+            if not plano_b:
+                benef_objs.append(None)
+                continue
+            try:
+                b = BeneficiarioPlano.objects.create(
+                    plano=plano_b, nome=nome_b, cpf=cpf_b,
+                    data_nascimento=nasc_b, sexo=sexo_b, telefone=tel_b,
+                    numero_carteirinha=cart_b, data_inicio_vigencia=dt_ini_b,
+                    plano_tipo=tipo_pl_b, acomodacao=acom_b, situacao=sit_b,
+                )
+                benef_objs.append(b)
+            except Exception:
+                benef_objs.append(None)
+
+        # ── 5. Carências ──────────────────────────────────────────────────────
+        if CarenciaBeneficiario:
+            novatos = [b for b in benef_objs if b and b.data_inicio_vigencia and b.data_inicio_vigencia.year >= 2023]
+            for b in novatos[:6]:
+                for tipo_car, dias_car in [("consulta",30),("exame",60),("internacao",180),("parto",300)]:
+                    try:
+                        CarenciaBeneficiario.objects.get_or_create(
+                            beneficiario=b, tipo_procedimento=tipo_car,
+                            defaults=dict(empresa=empresa, data_inicio=b.data_inicio_vigencia, dias_carencia=dias_car),
+                        )
+                    except Exception:
+                        pass
+
+        # ── 6. Guias de autorização (12) ──────────────────────────────────────
+        guias_cfg = [
+            # (benef_idx, prest_idx, tipo, num, cod_proc, desc, cid, medico, crm, qtd, valor_est, status, prioridade, fila)
+            (0,  0,"internacao","G2026-001","03.01.01.017","Angioplastia Transluminal Coronariana","I21.0","Dr. Roberto Cardoso","CRM/SP 20001",1, 18000,"autorizada","eletiva","autorizada"),
+            (1,  0,"internacao","G2026-002","03.01.01.018","Internação Clínica — ICC Descompensada","I50.0","Dra. Ana Paula Melo","CRM/SP 20002",5,  4500,"autorizada","eletiva","autorizada"),
+            (2,  3,"exame",    "G2026-003","02.04.03.188","Tomografia Computadorizada de Tórax",   "J18.1","Dr. Paulo Ferreira","CRM/SP 20003",1,  1200,"autorizada","eletiva","autorizada"),
+            (4,  6,"exame",    "G2026-004","02.02.03.099","Ressonância Magnética de Coluna Lombar","M54.5","Dra. Carla Lima",   "CRM/SP 20004",1,  2800,"em_analise","eletiva","auditoria_clinica"),
+            (5,  2,"internacao","G2026-005","03.02.02.022","Histerectomia por Via Laparoscópica",   "N80.0","Dr. Marco Oliveira","CRM/SP 20005",1,  9500,"autorizada","eletiva","autorizada"),
+            (6,  3,"consulta", "G2026-006","01.01.01.006","Consulta Cardiologista — pós-IAM",      "I21.9","Dr. Roberto Cardoso","CRM/SP 20001",3,   450,"autorizada","eletiva","autorizada"),
+            (7,  8,"exame",    "G2026-007","02.11.07.014","Densitometria Óssea",                   "M81.0","Dra. Beatriz Couto","CRM/SP 20006",1,   380,"solicitada","eletiva","triagem"),
+            (9,  0,"procedimento","G2026-008","04.01.01.025","Colecistectomia Videolaparoscópica",  "K80.1","Dr. Fábio Menezes","CRM/SP 11003",1, 12000,"autorizada","urgente","autorizada"),
+            (10, 3,"consulta", "G2026-009","01.01.01.007","Consulta Ortopedista — dor crônica",    "M17.1","Dr. Edu Santos",   "CRM/SP 20007",2,   300,"negada","eletiva","negada"),
+            (12, 2,"medicamento","G2026-010","06.05.99.001","Trastuzumabe 440mg — Ca Mama HER2+",  "C50.9","Dra. Márcia Rocha","CRM/SP 11007",6, 28000,"em_analise","alta_complexidade","auditoria_medica"),
+            (14, 0,"internacao","G2026-011","03.01.06.010","Reabilitação AVC — Unidade Internada",  "I63.3","Dr. Eduardo Pinto","CRM/SP 11008",14, 7000,"autorizada","urgente","autorizada"),
+            (3,  6,"exame",    "G2026-012","02.02.01.014","Eletrocardiograma + Holter 24h",        "R00.0","Dra. Ana Cardio",  "CRM/SP 20008",1,   220,"solicitada","eletiva","triagem"),
+        ]
+        guia_objs = []
+        for (bi, pi, tipo_g, num_g, cod_g, desc_g, cid_g, med_g, crm_g,
+             qtd_g, val_g, st_g, prior_g, fila_g) in guias_cfg:
+            benef = benef_objs[bi] if bi < len(benef_objs) else None
+            prest = prest_objs[pi] if pi < len(prest_objs) else None
+            if not benef:
+                guia_objs.append(None)
+                continue
+            plano_g = benef.plano
+            num_aut  = f"AUT{num_g[2:]}" if st_g == "autorizada" else ""
+            val_auth = datetime.date(2026, 12, 31) if st_g == "autorizada" else None
+            try:
+                g = GuiaAutorizacao.objects.create(
+                    plano=plano_g, beneficiario=benef, prestador=prest, unidade=None,
+                    tipo=tipo_g, numero_guia=num_g, codigo_procedimento=cod_g,
+                    descricao_procedimento=desc_g, cid=cid_g,
+                    medico_solicitante=med_g, crm_medico=crm_g,
+                    quantidade=qtd_g, valor_estimado=val_g,
+                    status=st_g, prioridade_clinica=prior_g, fila_status=fila_g,
+                    numero_autorizacao=num_aut, validade_autorizacao=val_auth,
+                    auditor_responsavel="Dr. Luís Auditor — CRM/SP 99001" if st_g in ("autorizada","negada") else "",
+                )
+                guia_objs.append(g)
+            except Exception:
+                guia_objs.append(None)
+
+        # ── 7. Sinistros (10) ─────────────────────────────────────────────────
+        sinistros_cfg = [
+            # (benef_idx, guia_idx, tipo, num_sin, cid, desc, prestador_str, medico, dt_atend, val_tot, val_pago, status)
+            (0, 0, "internacao","SIN-2026-001","I21.0","Angioplastia Coronariana — IAM com supra ST","Hospital São Camilo","Dr. Roberto Cardoso",datetime.date(2026,1,15), 18500, 18500,"pago"),
+            (1, 1, "internacao","SIN-2026-002","I50.0","Internação ICC — 5 dias UTI cardiológica",   "Hospital São Camilo","Dra. Ana Paula Melo", datetime.date(2026,2,8),  5200,  5200,"pago"),
+            (2, 2, "exame",    "SIN-2026-003","J18.1","Tomografia Computadorizada de Tórax",         "Clínica Imagem Av.","Dr. Paulo Ferreira",  datetime.date(2026,3,2),  1300,  1300,"pago"),
+            (5, 4, "procedimento","SIN-2026-004","N80.0","Histerectomia Laparoscópica + 2d internação","Hospital São Camilo","Dr. Marco Oliveira",datetime.date(2026,2,20),10200, 10200,"pago"),
+            (6, 5, "consulta", "SIN-2026-005","I21.9","Consulta cardiológica — 3 sessões",           "Clínica São Lucas","Dr. Roberto Cardoso",  datetime.date(2026,3,10),  450,   450,"pago"),
+            (9, 7, "procedimento","SIN-2026-006","K80.1","Colecistectomia laparoscópica",             "Hospital São Camilo","Dr. Fábio Menezes",  datetime.date(2026,4,5), 12800, 12800,"pago"),
+            (14,10,"internacao","SIN-2026-007","I63.3","Reabilitação AVC — 14 dias internado",       "Hospital São Camilo","Dr. Eduardo Pinto",  datetime.date(2026,4,20), 9800,  9800,"aprovado"),
+            (4, None,"consulta","SIN-2026-008","K74.6","Consulta gastroenterologista — hepatite C",  "Clínica Médica S.T.","Dr. João Gastro",    datetime.date(2026,5,3),   280,     0,"em_analise"),
+            (12,None,"medicamento","SIN-2026-009","C50.9","Quimioterapia — Trastuzumabe ciclo 1/6",  "Oncovida","Dra. Márcia Rocha",              datetime.date(2026,5,10),28000,     0,"em_analise"),
+            (7, None,"urgencia","SIN-2026-010","J45.9","Atendimento de urgência — crise asmática",   "UPA Lapa","Dr. André Cardoso",              datetime.date(2026,5,15),  820,   820,"pago"),
+        ]
+        sinistro_objs = []
+        for (bi, gi, tipo_s, num_s, cid_s, desc_s, prest_s, med_s, dt_s,
+             val_tot_s, val_pag_s, st_s) in sinistros_cfg:
+            benef = benef_objs[bi] if bi < len(benef_objs) else None
+            guia  = guia_objs[gi] if gi is not None and gi < len(guia_objs) else None
+            if not benef:
+                sinistro_objs.append(None)
+                continue
+            try:
+                s = Sinistro.objects.create(
+                    empresa=empresa, plano=benef.plano, beneficiario=benef,
+                    guia=guia, numero_sinistro=num_s, tipo=tipo_s, status=st_s,
+                    cid=cid_s, descricao_procedimento=desc_s,
+                    prestador=prest_s, medico=med_s, data_atendimento=dt_s,
+                    valor_total=val_tot_s, valor_pago=val_pag_s,
+                )
+                sinistro_objs.append(s)
+            except Exception:
+                sinistro_objs.append(None)
+
+        # ── 8. Reembolsos (5) ─────────────────────────────────────────────────
+        reembolsos_cfg = [
+            # (benef_idx, sin_idx, tipo_desp, num_reemb, val_sol, val_apr, val_pago, status, dt_pag, desc)
+            (3, None,"consulta","REM-2026-001", 350, 280,  280,"pago",  datetime.date(2026,3,20),"Consulta oftalmologista — não credenciado"),
+            (6, None,"exame",  "REM-2026-002", 420, 420,  420,"pago",  datetime.date(2026,4,10),"Audiometria — serviço não credenciado"),
+            (11,None,"terapia","REM-2026-003", 800, 600,    0,"aprovado",None,                   "Psicoterapia — 8 sessões — profissional não credenciado"),
+            (15,None,"consulta","REM-2026-004", 250,   0,   0,"negado", None,                    "Consulta em cirurgia plástica estética — não coberta"),
+            (18,None,"exame",  "REM-2026-005",1800,1800, 1800,"pago",  datetime.date(2026,5,8),"Ressonância fora da rede em outro estado"),
+        ]
+        for (bi, si, tipo_d, num_r, val_sol, val_apr, val_pag, st_r, dt_pag, desc_r) in reembolsos_cfg:
+            benef = benef_objs[bi] if bi < len(benef_objs) else None
+            sin   = sinistro_objs[si] if si is not None and si < len(sinistro_objs) else None
+            if not benef:
+                continue
+            try:
+                Reembolso.objects.create(
+                    empresa=empresa, plano=benef.plano, beneficiario=benef, sinistro=sin,
+                    numero_reembolso=num_r, tipo_despesa=tipo_d, status=st_r,
+                    valor_solicitado=val_sol, valor_aprovado=val_apr, valor_pago=val_pag,
+                    data_pagamento=dt_pag, descricao=desc_r,
+                    banco="Banco do Brasil", agencia="0001-9", conta="12345-6",
+                )
+            except Exception:
+                pass
+
+        # ── 9. Faturas de beneficiários (amostra — meses recentes) ────────────
+        if FaturamentoBeneficiario:
+            competencias_fat = ["2026-03","2026-04","2026-05"]
+            mensalidades_map = {0:689.00, 1:489.00, 2:389.50, 3:189.90, 4:989.00, 5:550.00}
+            for bi, benef in enumerate(benef_objs[:10]):
+                if not benef or benef.situacao != "ativo":
+                    continue
+                mens = mensalidades_map.get(bi % 6, 389.00)
+                for comp in competencias_fat:
+                    ano_c, mes_c = int(comp[:4]), int(comp[5:])
+                    vencto = datetime.date(ano_c, mes_c, 10)
+                    st_fat = "pago" if comp < "2026-05" else "pendente"
+                    try:
+                        FaturamentoBeneficiario.objects.create(
+                            empresa=empresa, beneficiario=benef, plano=benef.plano,
+                            competencia=comp, valor_mensalidade=mens,
+                            valor_coparticipacao=0, valor_total=mens,
+                            status=st_fat, vencimento=vencto,
+                            pago_em=vencto if st_fat == "pago" else None,
+                        )
+                    except Exception:
+                        pass
+
+        n_pl  = len([p for p in plano_objs if p])
+        n_bn  = len([b for b in benef_objs if b])
+        n_pr  = len([p for p in prest_objs if p])
+        n_gu  = len([g for g in guia_objs if g])
+        n_si  = len([s for s in sinistro_objs if s])
+        self.out(
+            f"     ✓ Plano: {n_pl} planos | {n_bn} beneficiários | {n_pr} prestadores | "
+            f"{n_gu} guias | {n_si} sinistros | 5 reembolsos | faturas",
+            self.style.SUCCESS,
+        )
 
     # ─────────────────────────────────────────────────────────────────────────
     # DONO SAAS
@@ -1651,23 +2569,38 @@ class Command(BaseCommand):
     def _imprimir_resumo(self):
         self.out("📋 CREDENCIAIS DOS AMBIENTES DEMO", self.style.MIGRATE_HEADING)
         self.out("")
-        self.out("┌─────────────────────────────────────────────────────────┐")
-        self.out("│  AMBIENTE           EMAIL                    SENHA      │")
-        self.out("├─────────────────────────────────────────────────────────┤")
-        self.out("│  SST (empresa)      demo.sst@soluscrt.com   Demo@SST2026│")
-        self.out("│  Farmácia           demo.farmacia@soluscrt  Demo@Farm202│")
-        self.out("│  Hospital           demo.hospital@soluscrt  Demo@Hosp202│")
-        self.out("│  Governo            demo.governo@soluscrt   Demo@Gov2026│")
-        self.out("│  Plano de Saúde     demo.plano@soluscrt     Demo@Plano20│")
-        self.out("│  DonoSaaS           owner@soluscrt.com      Owner@...   │")
-        self.out("├─────────────────────────────────────────────────────────┤")
-        self.out("│  APP TRABALHADOR (SST)                                  │")
-        self.out("│  Luiz Oliveira      luiz@app.local          Luiz@2026   │")
-        self.out("│  Carlos Lima        carlos@app.local        Carlos@2026  │")
-        self.out("├─────────────────────────────────────────────────────────┤")
-        self.out("│  DEMO SST — dados de demonstração                       │")
-        self.out("│  12 funcionários   35 EPIs c/ CAs válidos               │")
-        self.out("│  7 riscos PGR      6 pedidos de exame                   │")
-        self.out("│  CIPA ativa        3 clínicas credenciadas              │")
-        self.out("│  Docs: PGR, PCMSO, LTCAT, PPP, Laudo Insalubridade     │")
-        self.out("└─────────────────────────────────────────────────────────┘")
+        self.out("┌──────────────────────────────────────────────────────────────┐")
+        self.out("│  AMBIENTE           EMAIL                       SENHA        │")
+        self.out("├──────────────────────────────────────────────────────────────┤")
+        self.out("│  SST (empresa)      demo.sst@soluscrt.com       Demo@SST2026 │")
+        self.out("│  Farmácia           demo.farmacia@soluscrt.com  Demo@Farm2026│")
+        self.out("│  Hospital           demo.hospital@soluscrt.com  Demo@Hosp2026│")
+        self.out("│  Governo            demo.governo@soluscrt.com   Demo@Gov2026 │")
+        self.out("│  Plano de Saúde     demo.plano@soluscrt.com     Demo@Plano26 │")
+        self.out("│  DonoSaaS           owner@soluscrt.com          Owner@...    │")
+        self.out("├──────────────────────────────────────────────────────────────┤")
+        self.out("│  APP TRABALHADOR (SST)                                       │")
+        self.out("│  Luiz Oliveira      luiz@app.local              Luiz@2026    │")
+        self.out("│  Carlos Lima        carlos@app.local            Carlos@2026  │")
+        self.out("├──────────────────────────────────────────────────────────────┤")
+        self.out("│  DEMO SST                                                    │")
+        self.out("│  12 funcionários   35 EPIs c/ CAs válidos                   │")
+        self.out("│  7 riscos PGR      6 pedidos de exame   CIPA ativa          │")
+        self.out("│  3 clínicas        Docs: PGR, PCMSO, LTCAT, PPP, Insalub.  │")
+        self.out("├──────────────────────────────────────────────────────────────┤")
+        self.out("│  DEMO FARMÁCIA                                               │")
+        self.out("│  40 itens/medicamentos   5 fornecedores   10 pacientes       │")
+        self.out("│  11 receitas   3 pedidos de compra   inventário   descartes  │")
+        self.out("├──────────────────────────────────────────────────────────────┤")
+        self.out("│  DEMO HOSPITAL                                               │")
+        self.out("│  8 departamentos   ~50 leitos   15 pacientes                 │")
+        self.out("│  8 triagens   7 internações   prescrições   evoluções        │")
+        self.out("├──────────────────────────────────────────────────────────────┤")
+        self.out("│  DEMO GOVERNO                                                │")
+        self.out("│  8 programas   12 indicadores   12 unidades de saúde        │")
+        self.out("│  5 alertas   6 planos de ação   orçamento   60 sintomas     │")
+        self.out("├──────────────────────────────────────────────────────────────┤")
+        self.out("│  DEMO PLANO DE SAÚDE                                         │")
+        self.out("│  6 planos   25 beneficiários   15 prestadores               │")
+        self.out("│  12 guias   10 sinistros   5 reembolsos   faturas            │")
+        self.out("└──────────────────────────────────────────────────────────────┘")
