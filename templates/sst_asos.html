@@ -222,11 +222,14 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
       <div class="table-wrap">
         <div class="table-header">
           <h3>Pedidos de exame</h3>
-          <div class="filter-tabs">
-            <button class="ftab active" onclick="filtrarPedido('',this)">Todos</button>
-            <button class="ftab" onclick="filtrarPedido('pendente',this)">Pendentes</button>
-            <button class="ftab" onclick="filtrarPedido('agendado',this)">Agendados</button>
-            <button class="ftab" onclick="filtrarPedido('realizado',this)">Realizados</button>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div class="filter-tabs">
+              <button class="ftab active" onclick="filtrarPedido('',this)">Todos</button>
+              <button class="ftab" onclick="filtrarPedido('pendente',this)">Pendentes</button>
+              <button class="ftab" onclick="filtrarPedido('agendado',this)">Agendados</button>
+              <button class="ftab" onclick="filtrarPedido('realizado',this)">Realizados</button>
+            </div>
+            <button class="btn-main" onclick="abrirModalPedido()" style="font-size:.74rem;padding:6px 14px">+ Novo Pedido de Exame</button>
           </div>
         </div>
         <table class="tbl">
@@ -376,10 +379,26 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
         <select id="p-perfil-funcao">
           <option value="">Selecionar pacote por função/cargo...</option>
         </select>
+        <select id="p-perfil-nr" onchange="aplicarPerfilNR()" style="flex:1;min-width:160px;background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px 10px;font-size:.8rem;font-family:inherit">
+          <option value="">Ou por NR exigida...</option>
+          <option value="NR-07">NR-07 — PCMSO</option>
+          <option value="NR-09">NR-09 — Riscos Ambientais</option>
+          <option value="NR-10">NR-10 — Eletricidade</option>
+          <option value="NR-12">NR-12 — Máquinas e Equipamentos</option>
+          <option value="NR-15">NR-15 — Insalubridade</option>
+          <option value="NR-16">NR-16 — Periculosidade</option>
+          <option value="NR-17">NR-17 — Ergonomia</option>
+          <option value="NR-18">NR-18 — Construção Civil</option>
+          <option value="NR-20">NR-20 — Inflamáveis e Explosivos</option>
+          <option value="NR-32">NR-32 — Saúde Hospitalar</option>
+          <option value="NR-33">NR-33 — Espaço Confinado</option>
+          <option value="NR-35">NR-35 — Trabalho em Altura</option>
+          <option value="NR-36">NR-36 — Abate e Processamento</option>
+        </select>
         <button class="perfil-btn" type="button" onclick="aplicarPerfilPedido(false)">Adicionar sugeridos</button>
         <button class="perfil-btn sec" type="button" onclick="aplicarPerfilPedido(true)">Substituir</button>
       </div>
-      <div class="perfil-hint" id="p-perfil-hint">Escolha o funcionário para sugerir exames por cargo/função ou marque manualmente os exames feitos no ASO.</div>
+      <div class="perfil-hint" id="p-perfil-hint">Escolha o funcionário para sugerir exames por cargo/função, selecione a NR exigida ou marque manualmente os exames.</div>
       <input class="exames-busca" id="exameBusca" placeholder="Ex: audiometria, hemograma, ECG, toxicológico..." oninput="filtrarExames(this.value)">
       <div id="selecionadosStrip" class="selecionados-strip"><span style="color:var(--muted);font-size:.7rem;padding:4px">Nenhum exame selecionado</span></div>
       <div id="catalogoContainer" style="max-height:260px;overflow-y:auto"></div>
@@ -387,28 +406,41 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 
     <div class="mf">
       <label>Como enviar</label>
-      <div class="modo-tabs">
+      <div class="modo-tabs" style="grid-template-columns:repeat(5,1fr)">
         <div class="modo-card active" id="modo-sistema" onclick="setModo('sistema')">
           <div class="mc-icon">🏥</div>
-          <div class="mc-title">Clínica no SolusCRT</div>
-          <div class="mc-sub">Clínica vinculada à sua empresa</div>
+          <div class="mc-title">Clínica SolusCRT</div>
+          <div class="mc-sub">Clínica vinculada recebe digitalmente</div>
         </div>
         <div class="modo-card" id="modo-email" onclick="setModo('email')">
           <div class="mc-icon">📧</div>
-          <div class="mc-title">Enviar por Email</div>
-          <div class="mc-sub">Clínica recebe o pedido por email</div>
+          <div class="mc-title">Email para Clínica</div>
+          <div class="mc-sub">Clínica sem SolusCRT recebe por email</div>
         </div>
         <div class="modo-card" id="modo-interno" onclick="setModo('interno')">
-          <div class="mc-icon">📋</div>
-          <div class="mc-title">Pedido Interno</div>
-          <div class="mc-sub">Registro sem envio — entregue pessoalmente</div>
+          <div class="mc-icon">🏢</div>
+          <div class="mc-title">Interno / SESMT</div>
+          <div class="mc-sub">Exame realizado internamente</div>
+        </div>
+        <div class="modo-card" id="modo-funcionario" onclick="setModo('funcionario')">
+          <div class="mc-icon">🖨</div>
+          <div class="mc-title">Guia para Imprimir</div>
+          <div class="mc-sub">Funcionário imprime e leva à clínica</div>
+        </div>
+        <div class="modo-card" id="modo-app" onclick="setModo('app')">
+          <div class="mc-icon">📱</div>
+          <div class="mc-title">APP do Trabalhador</div>
+          <div class="mc-sub">Funcionário recebe no aplicativo</div>
         </div>
       </div>
 
       <div id="campos-sistema">
         <div class="mf"><label>Clínica vinculada *</label><select id="p-clinica-sistema"><option value="">Nenhuma clínica vinculada</option></select></div>
         <div class="aviso aviso-info" id="aviso-sem-clinica" style="display:none">
-          <span>💡</span><div><strong>Sem clínicas vinculadas.</strong> Vincule uma clínica em <a href="/gestao/plataforma/" style="color:var(--teal)">Plataforma & API</a> ou use "Enviar por Email".</div>
+          <span>💡</span><div><strong>Sem clínicas vinculadas.</strong> Vincule uma clínica em <a href="/gestao/plataforma/" style="color:var(--teal)">Plataforma & API</a> ou use "Email para Clínica".</div>
+        </div>
+        <div class="aviso aviso-info" style="margin-top:8px">
+          <span>🔗</span><div>Após enviar, um <strong>link de resultado</strong> será gerado automaticamente para a clínica preencher os laudos diretamente no sistema.</div>
         </div>
       </div>
       <div id="campos-email" style="display:none">
@@ -417,22 +449,69 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
           <div class="mf"><label>Email da clínica *</label><input type="email" id="p-clinica-email" placeholder="contato@clinica.com.br"></div>
         </div>
         <div class="aviso aviso-info">
-          <span>📧</span><div>A clínica receberá um email com dados do funcionário, exames e instruções. <strong>Não precisa estar no SolusCRT.</strong></div>
+          <span>📧</span><div>A clínica receberá um email com dados do funcionário, exames solicitados e um <strong>link para enviar os resultados</strong> diretamente ao sistema. <strong>Não precisa estar no SolusCRT.</strong></div>
         </div>
       </div>
       <div id="campos-interno" style="display:none">
         <div class="aviso aviso-info">
-          <span>📋</span><div>O pedido ficará salvo no sistema. Imprima e entregue pessoalmente à clínica.</div>
+          <span>🏢</span><div>Pedido registrado para o SESMT ou ambulatório interno. O médico do trabalho emitirá o ASO diretamente no sistema após a realização.</div>
         </div>
+      </div>
+      <div id="campos-funcionario" style="display:none">
+        <div class="aviso aviso-info">
+          <span>🖨</span><div>Uma <strong>guia de exames</strong> em PDF será gerada com a lista de exames a realizar, instruções de preparo e dados do funcionário. Ele imprime e apresenta à clínica de sua escolha.</div>
+        </div>
+        <div class="mf-check" style="margin-top:8px"><input type="checkbox" id="p-enviar-email-func" checked><label for="p-enviar-email-func">Enviar guia também por e-mail ao funcionário (se cadastrado)</label></div>
+      </div>
+      <div id="campos-app" style="display:none">
+        <div class="aviso aviso-info">
+          <span>📱</span><div>O funcionário receberá uma <strong>notificação no APP SolusCRT</strong> com a lista de exames, orientações de preparo e prazo para realização. Disponível no APP do Trabalhador.</div>
+        </div>
+        <div class="mf-check" style="margin-top:8px"><input type="checkbox" id="p-guia-app" checked><label for="p-guia-app">Incluir guia em PDF também no APP (para apresentar à clínica)</label></div>
       </div>
     </div>
 
     <div class="mf"><label>Observações / instruções de preparo</label><textarea id="p-obs" placeholder="Ex: Jejum de 12h, trazer RG e CTPS, não usar protetor auricular 14h antes da audiometria..."></textarea></div>
-    <div class="mf-check"><input type="checkbox" id="p-urgente"><label for="p-urgente">⚡ Urgente — sinalizar prioridade à clínica</label></div>
+    <div class="mf-check"><input type="checkbox" id="p-urgente"><label for="p-urgente">⚡ Urgente — sinalizar prioridade</label></div>
+    <div class="mf-check"><input type="checkbox" id="p-gerar-link-resultado" checked><label for="p-gerar-link-resultado">🔗 Gerar link de resultado para a clínica enviar laudos ao sistema</label></div>
 
     <div class="modal-acts">
       <button class="btn-cancel" onclick="fecharModalPedido()">Cancelar</button>
       <button class="btn-submit" id="btnSalvarPedido" onclick="salvarPedido()">Enviar Pedido</button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     MODAL: Link de Resultado para Clínica
+═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-link-resultado">
+  <div class="modal">
+    <h3>🔗 Link de Resultado para Clínica</h3>
+    <div class="modal-sub">Gere um link seguro para a clínica enviar os laudos dos exames diretamente ao sistema — sem precisar ter conta no SolusCRT.</div>
+    <div id="link-resultado-form">
+      <div class="aviso aviso-info" style="margin-bottom:12px">
+        <span>📋</span><div>A clínica acessa o link, preenche os resultados de cada exame e o laudo fica disponível automaticamente na página do funcionário.</div>
+      </div>
+      <div class="mf-row">
+        <div class="mf"><label>Validade do link (dias)</label><input id="lr-dias" type="number" value="30" min="1" max="180"></div>
+        <div class="mf"><label>Nome / identificação da clínica</label><input id="lr-clinica" type="text" placeholder="Ex: Clínica Ocupacional Central"></div>
+      </div>
+      <div class="mf-check"><input type="checkbox" id="lr-notif-email" checked><label for="lr-notif-email">Notificar a empresa por email quando os resultados forem enviados</label></div>
+      <div class="modal-acts">
+        <button class="btn-cancel" onclick="fecharModalLinkResultado()">Cancelar</button>
+        <button class="btn-submit-roxo" onclick="confirmarLinkResultado()">Gerar Link</button>
+      </div>
+    </div>
+    <div id="link-resultado-result" style="display:none">
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">✅ Link gerado! Envie para a clínica:</div>
+      <div class="link-box" id="lr-link-box" style="word-break:break-all;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:12px;font-size:.78rem;font-family:monospace;margin-bottom:8px"></div>
+      <button class="copy-btn" onclick="copiarLinkResultado()">📋 Copiar Link</button>
+      <div style="margin-top:10px;font-size:.74rem;color:var(--muted)" id="lr-info"></div>
+      <div class="modal-acts" style="margin-top:12px">
+        <button class="btn-cancel" onclick="fecharModalLinkResultado()">Fechar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -860,6 +939,8 @@ function renderTabelaPedidos(){
       <td><span class="badge ${SB[s.status]||'b-cinza'}">${SL[s.status]||s.status}</span></td>
       <td><div class="row-actions">
         ${!s.clinica_id&&s.clinica_email_externo?`<button class="btn-row" onclick="reenviarEmail(${s.id})">${emailActionLabel(s)}</button>`:''}
+        <button class="btn-row" onclick="gerarLinkResultado(${s.id})" title="Gerar link para clínica enviar laudos">🔗 Link de Resultado</button>
+        ${s.modo==='funcionario'||s.modo==='app'?`<button class="btn-row" onclick="reenviarGuia(${s.id},${JSON.stringify(s.modo)})" title="Reenviar guia ao funcionário">📤 Reenviar Guia</button>`:''}
         ${s.status==='pendente'?`<button class="btn-row danger" onclick="cancelarPedido(${s.id})">Cancelar</button>`:''}
       </div></td>
     </tr>`).join('');
@@ -978,12 +1059,39 @@ function removeExame(nome){
 // ── Modo de envio ─────────────────────────────────────────────────────────────
 function setModo(m){
   _modo=m;
-  ['sistema','email','interno'].forEach(x=>{
+  ['sistema','email','interno','funcionario','app'].forEach(x=>{
     document.getElementById(`modo-${x}`).classList.toggle('active',x===m);
     document.getElementById(`campos-${x}`).style.display=x===m?'block':'none';
   });
   const btn=document.getElementById('btnSalvarPedido');
-  btn.textContent=m==='email'?'Salvar e Enviar Email':m==='sistema'?'Enviar à Clínica':'Salvar Pedido';
+  const labels={sistema:'Enviar à Clínica',email:'Salvar e Enviar Email',interno:'Salvar Pedido Interno',funcionario:'Gerar Guia para Funcionário',app:'Enviar ao APP do Trabalhador'};
+  btn.textContent=labels[m]||'Enviar Pedido';
+}
+
+function aplicarPerfilNR(){
+  const nr=document.getElementById('p-perfil-nr').value;
+  if(!nr)return;
+  // Mapa NR → exames sugeridos
+  const nrExames={
+    'NR-07':['Hemograma completo','Urinálise','Acuidade visual (Snellen)','Audiometria tonal'],
+    'NR-09':['Hemograma completo','Função hepática (TGO/TGP)','Urinálise','Espirometria'],
+    'NR-10':['Eletroencefalograma (EEG)','Acuidade visual','Avaliação neurológica'],
+    'NR-12':['Acuidade visual (Snellen)','Audiometria tonal','Avaliação ortopédica'],
+    'NR-15':['Audiometria tonal','Espirometria','Hemograma completo','Função hepática (TGO/TGP)','Dosagem de chumbo no sangue'],
+    'NR-16':['Eletroencefalograma (EEG)','Hemograma completo','Avaliação psicológica'],
+    'NR-17':['Avaliação ergonômica (DORT)','Acuidade visual (Snellen)','Avaliação ortopédica'],
+    'NR-18':['Audiometria tonal','Acuidade visual (Snellen)','Hemograma completo','Espirometria'],
+    'NR-20':['Hemograma completo','Função hepática (TGO/TGP)','Avaliação neurológica'],
+    'NR-32':['Hemograma completo','Sorologia Hepatite B','Sorologia HIV','PPD/IGRA','Vacinação Hepatite B'],
+    'NR-33':['Espirometria','Avaliação neurológica','Hemograma completo','Avaliação psicológica'],
+    'NR-35':['Acuidade visual (Snellen)','Avaliação neurológica','Avaliação psicológica','Eletroencefalograma (EEG)'],
+    'NR-36':['Hemograma completo','Sorologia Hepatite B','Urinálise','Audiometria tonal'],
+  };
+  const sugeridos=nrExames[nr]||[];
+  sugeridos.forEach(e=>_selecionados.add(e));
+  renderSelecionados();
+  document.getElementById('p-perfil-hint').textContent=`${sugeridos.length} exames sugeridos para ${nr} adicionados.`;
+  document.getElementById('p-perfil-nr').value='';
 }
 
 async function salvarPedido(){
@@ -1040,6 +1148,57 @@ async function reenviarEmail(id){
     const d=await r.json();
     if(!r.ok){toast(d.erro||'Erro ao enviar','err');return;}
     toast(d.mensagem||'Email reenviado para processamento!');carregarPedidos();
+  }catch(e){toast('Erro de conexão','err');}
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Link de Resultado para Clínica
+// ══════════════════════════════════════════════════════════════════════════════
+let _linkResultadoPedidoId=null;
+function gerarLinkResultado(id){
+  _linkResultadoPedidoId=id;
+  document.getElementById('lr-dias').value='30';
+  document.getElementById('lr-clinica').value='';
+  document.getElementById('lr-notif-email').checked=true;
+  document.getElementById('link-resultado-form').style.display='';
+  document.getElementById('link-resultado-result').style.display='none';
+  document.getElementById('modal-link-resultado').classList.add('open');
+}
+function fecharModalLinkResultado(){document.getElementById('modal-link-resultado').classList.remove('open');}
+document.getElementById('modal-link-resultado').addEventListener('click',e=>{if(e.target===document.getElementById('modal-link-resultado'))fecharModalLinkResultado();});
+
+async function confirmarLinkResultado(){
+  if(!_linkResultadoPedidoId)return;
+  const dias=parseInt(document.getElementById('lr-dias').value)||30;
+  const clinica=document.getElementById('lr-clinica').value.trim();
+  const notif=document.getElementById('lr-notif-email').checked;
+  try{
+    const r=await fetch(`/api/sst/solicitacoes-exame/${_linkResultadoPedidoId}/link-resultado`,{
+      method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({dias_validade:dias,clinica_nome:clinica,notificar_empresa:notif})
+    });
+    const d=await r.json();
+    if(!r.ok){toast(d.erro||'Erro ao gerar link','err');return;}
+    document.getElementById('lr-link-box').textContent=d.url||d.link||'';
+    document.getElementById('lr-info').textContent=`Válido por ${dias} dias. ${clinica?`Clínica: ${clinica}.`:''} ${notif?'Você será notificado ao receber os laudos.':''}`;
+    document.getElementById('link-resultado-form').style.display='none';
+    document.getElementById('link-resultado-result').style.display='';
+  }catch(e){toast('Erro de conexão','err');}
+}
+function copiarLinkResultado(){
+  const txt=document.getElementById('lr-link-box').textContent;
+  navigator.clipboard.writeText(txt).then(()=>toast('Link copiado!')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('Link copiado!');
+  });
+}
+
+async function reenviarGuia(id,modo){
+  try{
+    const r=await fetch(`/api/sst/solicitacoes-exame/${id}`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'reenviar_guia',modo})});
+    const d=await r.json();
+    if(!r.ok){toast(d.erro||'Erro ao reenviar','err');return;}
+    toast(d.mensagem||`Guia reenviada via ${modo==='app'?'APP':'email'}!`);
   }catch(e){toast('Erro de conexão','err');}
 }
 
