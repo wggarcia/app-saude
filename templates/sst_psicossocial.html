@@ -116,8 +116,8 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 <script>
 let avAtiva = null;
 
-function auth() { return sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || ""; }
-function headers() { return { "Authorization": "Bearer " + auth(), "Content-Type": "application/json" }; }
+function auth() { return sessionStorage.getItem("auth_token") || sessionStorage.getItem("token") || localStorage.getItem("auth_token") || localStorage.getItem("token") || ""; }
+function headers() { const h = { "Content-Type": "application/json" }; const t = auth(); if (t) h["Authorization"] = "Bearer " + t; return h; }
 
 function toast(msg, ok=true) {
   const el = document.getElementById("toast");
@@ -146,7 +146,7 @@ function nivelCor(n) {
 
 async function loadKpis() {
   try {
-    const r = await fetch("/api/sst/psicossocial/kpis/", { headers: headers() });
+    const r = await fetch("/api/sst/psicossocial/kpis/", { credentials: 'include', headers: headers() });
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
       if (r.status === 403 && err.upgrade_necessario)
@@ -167,7 +167,7 @@ async function loadKpis() {
 
 async function loadAvaliacoes() {
   try {
-    const r = await fetch("/api/sst/psicossocial/", { headers: headers() });
+    const r = await fetch("/api/sst/psicossocial/", { credentials: 'include', headers: headers() });
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
       if (r.status === 403 && err.upgrade_necessario) {
@@ -208,7 +208,7 @@ function copiarLink(token) {
 async function ativarAvaliacao(id) {
   if (!confirm("Ativar esta avaliação? Certifique-se de que as questões estão configuradas.")) return;
   try {
-    const r = await fetch(`/api/sst/psicossocial/${id}/ativar/`, { method:"POST", headers: headers(), body:"{}" });
+    const r = await fetch(`/api/sst/psicossocial/${id}/ativar/`, { method:"POST", credentials: 'include', headers: headers(), body:"{}" });
     const d = await r.json();
     if (d.ok) {
       toast("Avaliação ativada com sucesso!");
@@ -225,7 +225,7 @@ async function verResultados(id, titulo) {
   document.getElementById("resultadosPanel").scrollIntoView({ behavior:"smooth", block:"start" });
 
   try {
-    const r = await fetch(`/api/sst/psicossocial/${id}/resultados/`, { headers: headers() });
+    const r = await fetch(`/api/sst/psicossocial/${id}/resultados/`, { credentials: 'include', headers: headers() });
     if (!r.ok) {
       document.getElementById("resultadosContent").innerHTML = `<div class="empty-state">⚠️ Erro ao carregar resultados (${r.status}).</div>`;
       return;
@@ -276,7 +276,7 @@ function criarAvaliacao() {
   const setor = prompt("Setor alvo (deixe em branco para toda a empresa):", "") || "";
   const hoje = new Date().toISOString().split("T")[0];
   fetch("/api/sst/psicossocial/", {
-    method: "POST", headers: headers(),
+    method: "POST", credentials: 'include', headers: headers(),
     body: JSON.stringify({ titulo, setor_alvo: setor, data_inicio: hoje, anonima: true }),
   }).then(r => r.json()).then(d => {
     if (d.ok) { toast("Avaliação criada! Configure as questões e ative quando estiver pronta."); loadAvaliacoes(); loadKpis(); }

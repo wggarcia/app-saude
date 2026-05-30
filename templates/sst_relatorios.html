@@ -246,7 +246,7 @@ let dadosGlobais = null;
 async function carregarRelatorio() {
   try {
     const r = await fetch('/api/sst/relatorios', {
-      headers: { "Authorization": "Bearer " + (sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || "") }
+      credentials: 'include'
     });
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));

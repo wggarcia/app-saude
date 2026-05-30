@@ -85,9 +85,20 @@ class WhatsAppService:
         r = requests.post(url, json=payload, timeout=_HTTP_TIMEOUT)
         if r.status_code in (200, 201):
             data = r.json()
-            if data.get("zaapId") or data.get("messageId"):
+            # Z-API success indicators vary by version
+            if data.get("zaapId") or data.get("messageId") or data.get("id"):
                 return True, None
-            return False, data.get("error", "Resposta inesperada da Z-API")
+            err = data.get("error") or data.get("message") or ""
+            if err:
+                return False, f"Z-API: {err}"
+            # Some Z-API versions return empty body on success
+            return True, None
+        if r.status_code == 401:
+            return False, "Z-API: Token inválido — verifique o Token no painel Z-API."
+        if r.status_code == 404:
+            return False, "Z-API: Instance ID não encontrado. Verifique a instância em z-api.io."
+        if r.status_code == 405:
+            return False, "Z-API: Instância desconectada. Escaneie o QR Code novamente em z-api.io."
         return False, f"Z-API HTTP {r.status_code}: {r.text[:200]}"
 
     def _status_zapi(self) -> Tuple[bool, str]:
@@ -95,15 +106,33 @@ class WhatsAppService:
             f"https://api.z-api.io/instances/{self.integracao.instance_id}"
             f"/token/{self.integracao.token}/status"
         )
-        r = requests.get(url, timeout=_HTTP_TIMEOUT)
-        if r.status_code == 200:
-            data = r.json()
-            connected = data.get("connected", False)
-            smartphoneConnected = data.get("smartphoneConnected", False)
-            if connected and smartphoneConnected:
-                return True, "Conectado ✓"
-            return False, "Instância desconectada — verifique o QR Code no Z-API"
-        return False, f"Z-API HTTP {r.status_code}"
+        try:
+            r = requests.get(url, timeout=_HTTP_TIMEOUT)
+        except requests.exceptions.ConnectionError:
+            return False, "Não foi possível conectar à Z-API. Verifique sua conexão ou se o Instance ID está correto."
+        except requests.exceptions.Timeout:
+            return False, "Timeout ao conectar com a Z-API. Tente novamente."
+
+        if r.status_code == 401:
+            return False, "Token Z-API inválido — verifique o campo Token no painel Z-API."
+        if r.status_code == 404:
+            return False, "Instance ID não encontrado na Z-API. Crie ou verifique a instância em z-api.io."
+        if r.status_code != 200:
+            return False, f"Z-API retornou HTTP {r.status_code}. Verifique as credenciais."
+
+        data = r.json()
+        connected = data.get("connected", False)
+        smartphone = data.get("smartphoneConnected", False)
+
+        if connected:
+            if not smartphone:
+                return True, "Conectado ✓ (WhatsApp Web ativo — o celular pode estar offline)"
+            return True, "Conectado ✓ (WhatsApp e celular online)"
+
+        return False, (
+            "Instância desconectada — acesse z-api.io, abra sua instância "
+            "e escaneie o QR Code com o WhatsApp do número remetente."
+        )
 
     # ── Evolution API ─────────────────────────────────────────────────────────
 

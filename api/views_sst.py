@@ -1538,6 +1538,16 @@ def api_prontuario_funcionario(request, funcionario_id):
     if ultimo_aso and ultimo_aso["dias_restantes"] is not None:
         proximo_vencimento = ultimo_aso["dias_restantes"]
 
+    # App Ocupacional — verifica se funcionário tem credencial
+    from .models import CredencialAppFuncionario
+    try:
+        cred_app = CredencialAppFuncionario.objects.get(funcionario=func, ativo=True)
+        app_registrado = True
+        app_email = cred_app.email
+    except CredencialAppFuncionario.DoesNotExist:
+        app_registrado = False
+        app_email = None
+
     return JsonResponse({
         "funcionario": {
             "id": func.id,
@@ -1564,6 +1574,61 @@ def api_prontuario_funcionario(request, funcionario_id):
         "exames": exames_out,
         "cats": cats_out,
         "afastamentos": afas_out,
+        "app": {
+            "registrado": app_registrado,
+            "email": app_email,
+        },
+    })
+
+
+# ── Convite App Ocupacional ───────────────────────────────────────────────────
+
+@csrf_exempt
+def api_convidar_app_funcionario(request, funcionario_id):
+    """
+    POST /api/sst/funcionarios/<id>/convidar-app
+    Envia um email de convite ao funcionário para registrar-se no App Ocupacional.
+    Body (opcional): { "email": "email_do_funcionario@ex.com" }
+    """
+    if request.method != "POST":
+        return JsonResponse({"erro": "Use POST"}, status=405)
+
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return _sst_nao_autorizado()
+
+    func = FuncionarioSST.objects.filter(id=funcionario_id, empresa=empresa).first()
+    if not func:
+        return JsonResponse({"erro": "Funcionário não encontrado"}, status=404)
+
+    # Verifica se já tem app registrado
+    from .models import CredencialAppFuncionario
+    try:
+        cred = CredencialAppFuncionario.objects.get(funcionario=func, ativo=True)
+        return JsonResponse({
+            "status": "ja_registrado",
+            "mensagem": f"Este funcionário já possui acesso ao app (e-mail: {cred.email}).",
+            "email": cred.email,
+        })
+    except CredencialAppFuncionario.DoesNotExist:
+        pass
+
+    # Obtém o email de destino do body ou do funcionário
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except Exception:
+        body = {}
+
+    email_destino = (body.get("email") or "").strip()
+    if not email_destino or "@" not in email_destino:
+        return JsonResponse({"erro": "Informe o e-mail do funcionário para enviar o convite."}, status=400)
+
+    from .email_service import enviar_convite_app_funcionario
+    enviar_convite_app_funcionario(func, empresa, email_destino)
+
+    return JsonResponse({
+        "status": "ok",
+        "mensagem": f"Convite enviado para {email_destino}. O funcionário deve baixar o App Ocupacional SolusCRT e cadastrar-se com o CPF.",
     })
 
 

@@ -775,3 +775,120 @@ def enviar_email_novo_beneficiario(empresa, beneficiario) -> None:
         html=html,
         text=text,
     )
+
+
+# ── Convite App Ocupacional ao Funcionário ────────────────────────────────────
+
+def enviar_convite_app_funcionario(funcionario, empresa, email_destino: str) -> None:
+    """
+    Envia ao funcionário um convite para registrar-se no App Ocupacional SolusCRT.
+    O email inclui instruções de cadastro e link para download.
+
+    Args:
+        funcionario: instância de FuncionarioSST
+        empresa: instância de Empresa (a empresa SST)
+        email_destino: endereço de email do funcionário
+    """
+    nome_func = funcionario.nome
+    nome_empresa = empresa.nome
+    cpf_formatado = (funcionario.cpf or "—")
+
+    html = f"""<!DOCTYPE html>
+<html lang="pt-br">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{{margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2eeff}}
+.wrap{{max-width:600px;margin:0 auto;padding:32px 20px}}
+.logo{{font-size:22px;font-weight:900;color:#00c9a7;letter-spacing:-0.5px;margin-bottom:32px}}
+.card{{background:#111827;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:32px}}
+h1{{font-size:22px;font-weight:800;margin:0 0 8px}}
+.sub{{color:#7b90b0;font-size:14px;margin-bottom:24px}}
+.step{{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px}}
+.step-num{{min-width:28px;height:28px;background:rgba(0,201,167,.15);border:1px solid rgba(0,201,167,.3);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  color:#00c9a7;font-weight:800;font-size:13px;flex-shrink:0;margin-top:2px;text-align:center;line-height:28px}}
+.step-title{{font-weight:700;margin-bottom:3px;font-size:14px}}
+.step-desc{{color:#7b90b0;font-size:13px}}
+.badge{{display:inline-block;padding:6px 14px;background:rgba(0,201,167,.12);
+  border:1px solid rgba(0,201,167,.25);border-radius:8px;color:#00c9a7;
+  font-family:monospace;font-size:14px;font-weight:700;letter-spacing:.5px;margin:4px 0}}
+.footer{{margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,.07);
+  font-size:12px;color:#7b90b0;text-align:center}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">SolusCRT</div>
+  <div class="card">
+    <h1>📱 Acesse seu App Ocupacional</h1>
+    <p class="sub">
+      <strong>{nome_empresa}</strong> convidou você a acessar o <strong>App Ocupacional SolusCRT</strong>
+      — veja seus ASOs, exames, EPIs e treinamentos diretamente no celular.
+    </p>
+
+    <p style="font-size:14px;color:#b0c4d8;margin-bottom:20px">
+      Olá, <strong>{nome_func}</strong>! Para acessar o aplicativo, siga os passos abaixo:
+    </p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">Baixe o App Ocupacional SolusCRT</div>
+        <div class="step-desc">Disponível na App Store (iOS). Procure por <em>"SolusCRT Ocupacional"</em>.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">Faça seu cadastro com seu CPF</div>
+        <div class="step-desc">
+          No app, toque em <strong>"Primeiro acesso"</strong> e informe seu CPF:<br>
+          <span class="badge">{cpf_formatado}</span>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">Crie seu email e senha</div>
+        <div class="step-desc">
+          Defina um e-mail e uma senha de acesso. Guarde-os com segurança — você usará para entrar sempre.
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div>
+        <div class="step-title">Pronto! Acesse seus documentos</div>
+        <div class="step-desc">
+          Consulte seus ASOs, laudos de exames, treinamentos e comprovantes de entrega de EPI em qualquer lugar.
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Este convite foi enviado pela empresa <strong>{nome_empresa}</strong> via SolusCRT.<br>
+      Se você não esperava este email, ignore-o com segurança.
+    </div>
+  </div>
+</div>
+</body>
+</html>"""
+
+    text = (
+        f"Olá, {nome_func}!\n\n"
+        f"{nome_empresa} convidou você a acessar o App Ocupacional SolusCRT.\n\n"
+        f"COMO CADASTRAR:\n"
+        f"1. Baixe o App Ocupacional SolusCRT na App Store.\n"
+        f"2. Toque em 'Primeiro acesso' e informe seu CPF: {cpf_formatado}\n"
+        f"3. Crie um e-mail e senha de acesso.\n"
+        f"4. Pronto! Consulte seus ASOs, exames, EPIs e treinamentos.\n\n"
+        f"Dúvidas? Fale com o RH de {nome_empresa}.\n\n"
+        f"— SolusCRT"
+    )
+    _send(
+        subject=f"📱 {nome_empresa} convidou você para o App Ocupacional SolusCRT",
+        to=email_destino,
+        html=html,
+        text=text,
+    )

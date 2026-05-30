@@ -110,8 +110,8 @@ html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:va
 <script>
 let comissaoAtiva = null;
 
-function auth() { return sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token") || ""; }
-function headers() { return { "Authorization": "Bearer " + auth(), "Content-Type": "application/json" }; }
+function auth() { return sessionStorage.getItem("auth_token") || sessionStorage.getItem("token") || localStorage.getItem("auth_token") || localStorage.getItem("token") || ""; }
+function headers() { const h = { "Content-Type": "application/json" }; const t = auth(); if (t) h["Authorization"] = "Bearer " + t; return h; }
 
 function toast(msg, ok=true) {
   const el = document.getElementById("toast");
@@ -135,7 +135,7 @@ function showKpiErro(msg, upgrade) {
 
 async function loadKpis() {
   try {
-    const r = await fetch("/api/sst/cipa/kpis/", { headers: headers() });
+    const r = await fetch("/api/sst/cipa/kpis/", { credentials: 'include', headers: headers() });
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
       if (r.status === 403 && err.upgrade_necessario) return showKpiErro("Este módulo requer o plano Profissional ou superior.", true);
@@ -154,7 +154,7 @@ async function loadKpis() {
 
 async function loadComissoes() {
   try {
-    const r = await fetch("/api/sst/cipa/comissoes/", { headers: headers() });
+    const r = await fetch("/api/sst/cipa/comissoes/", { credentials: 'include', headers: headers() });
     if (!r.ok) {
       document.getElementById("comissoesList").innerHTML = `<div class="empty-state">⚠️ Sem permissão ou erro ao carregar (${r.status}).</div>`;
       return;
@@ -189,7 +189,7 @@ async function verReunioesComissao(cid, label) {
   document.getElementById("reunioesList").innerHTML = `<div class="loading"><div class="spinner"></div> Carregando reuniões...</div>`;
 
   try {
-    const r = await fetch(`/api/sst/cipa/comissoes/${cid}/reunioes/`, { headers: headers() });
+    const r = await fetch(`/api/sst/cipa/comissoes/${cid}/reunioes/`, { credentials: 'include', headers: headers() });
     if (!r.ok) {
       document.getElementById("reunioesList").innerHTML = `<div class="empty-state">⚠️ Erro ao carregar reuniões (${r.status}).</div>`;
       return;
@@ -224,7 +224,7 @@ function criarComissao() {
   const fim = prompt("Data de fim do mandato (YYYY-MM-DD):");
   if (!fim) return;
   fetch("/api/sst/cipa/comissoes/", {
-    method: "POST", headers: headers(),
+    method: "POST", credentials: 'include', headers: headers(),
     body: JSON.stringify({ mandato_inicio: inicio, mandato_fim: fim }),
   }).then(r => r.json()).then(d => {
     if (d.ok) { toast("Comissão criada com sucesso!"); loadComissoes(); loadKpis(); }
@@ -239,7 +239,7 @@ function criarReuniao() {
   const tipo = prompt("Tipo (ordinaria / extraordinaria):", "ordinaria") || "ordinaria";
   const local = prompt("Local:", "") || "";
   fetch(`/api/sst/cipa/comissoes/${comissaoAtiva}/reunioes/`, {
-    method: "POST", headers: headers(),
+    method: "POST", credentials: 'include', headers: headers(),
     body: JSON.stringify({ data_reuniao: data, tipo, local }),
   }).then(r => r.json()).then(d => {
     if (d.ok) { toast("Reunião criada!"); verReunioesComissao(comissaoAtiva, document.getElementById("comissaoSelecionadaLabel").textContent); }
