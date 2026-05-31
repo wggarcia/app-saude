@@ -1137,6 +1137,7 @@ class eSocialEventoSST(models.Model):
         ("S-2220", "S-2220 — Monitoramento da Saúde do Trabalhador"),
         ("S-2230", "S-2230 — Afastamento Temporário"),
         ("S-2240", "S-2240 — Condições Ambientais do Trabalho"),
+        ("S-2245", "S-2245 — Treinamentos, Capacitações e Exercícios Simulados"),
     ]
     STATUS = [
         ("pendente", "Pendente"),
@@ -1613,7 +1614,10 @@ class ConfiguracaoSST(models.Model):
     atualizado_em           = models.DateTimeField(auto_now=True)
     # eSocial digital certificate (PKCS#12 stored as base64)
     certificado_pfx_b64     = models.TextField(blank=True, default="")
-    certificado_senha       = models.CharField(max_length=255, blank=True, default="")
+    certificado_senha       = models.CharField(max_length=255, blank=True, default="",
+                                               help_text="Legado — use certificado_senha_cripto")
+    certificado_senha_cripto = models.TextField(blank=True, default="",
+                                                help_text="Senha do certificado A1/A3 (Fernet-encrypted)")
     certificado_validade    = models.DateField(null=True, blank=True)
     certificado_nome        = models.CharField(max_length=200, blank=True, default="")
     esocial_ambiente        = models.CharField(
@@ -1624,6 +1628,34 @@ class ConfiguracaoSST(models.Model):
 
     def __str__(self):
         return f"Config SST — {self.empresa.nome}"
+
+    # ── Fernet para senha do certificado ──────────────────────────────────────
+
+    @staticmethod
+    def _fernet():
+        from cryptography.fernet import Fernet
+        from django.conf import settings
+        import base64, hashlib
+        chave = hashlib.sha256(settings.SECRET_KEY.encode()).digest()
+        return Fernet(base64.urlsafe_b64encode(chave))
+
+    def set_certificado_senha(self, senha_plain: str):
+        """Criptografa e salva a senha do certificado A1/A3."""
+        if senha_plain:
+            self.certificado_senha_cripto = self._fernet().encrypt(senha_plain.encode()).decode()
+            self.certificado_senha = ""  # limpa campo legado
+        else:
+            self.certificado_senha_cripto = ""
+
+    def get_certificado_senha(self) -> str:
+        """Descriptografa e retorna a senha do certificado. Retrocompat com campo legado."""
+        if self.certificado_senha_cripto:
+            try:
+                return self._fernet().decrypt(self.certificado_senha_cripto.encode()).decode()
+            except Exception:
+                pass
+        # Fallback para campo legado (plain-text de empresas antigas)
+        return self.certificado_senha
 
 
 class EPIItem(models.Model):
@@ -6583,6 +6615,35 @@ class RedeCredenciadaPlano(models.Model):
 class DIOPSDeclaracao(models.Model):
     STATUS_CHOICES = [("em_elaboracao","Em elaboração"),("validada","Validada"),
                       ("enviada","Enviada ANS"),("retificada","Retificada")]
+
+    # Tipo da operadora — conforme tabela ANS IN 77/2022
+    TIPO_OPERADORA_CHOICES = [
+        ("1", "Medicina de Grupo"),
+        ("2", "Cooperativa Médica"),
+        ("3", "Autogestão"),
+        ("4", "Filantrópica"),
+        ("5", "Seguradora Especializada"),
+        ("6", "Administradora de Benefícios"),
+    ]
+    # Modalidade assistencial ANS
+    MODALIDADE_CHOICES = [
+        ("01", "Ambulatorial"),
+        ("02", "Hospitalar com Obstetrícia"),
+        ("03", "Hospitalar sem Obstetrícia"),
+        ("04", "Odontológico"),
+        ("05", "Referência — Ambulatorial + Hospitalar"),
+        ("06", "Referência — Ambulatorial + Hospitalar + Odontológico"),
+    ]
+    # Abrangência geográfica
+    ABRANGENCIA_CHOICES = [
+        ("1", "Municipal"),
+        ("2", "Grupo de Municípios"),
+        ("3", "Estadual"),
+        ("4", "Grupo de Estados"),
+        ("5", "Nacional"),
+        ("6", "Internacional"),
+    ]
+
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="diops_declaracoes")
     trimestre = models.CharField(max_length=6)  # AAAAT (T=1-4)
     registro_ans = models.CharField(max_length=10, blank=True)
@@ -6591,6 +6652,23 @@ class DIOPSDeclaracao(models.Model):
     despesa_administrativa = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     resultado_periodo = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     vidas_ativas = models.PositiveIntegerField(default=0)
+    # Campos DIOPS 3.0 reais — específicos por operadora
+    tipo_operadora = models.CharField(
+        max_length=1, choices=TIPO_OPERADORA_CHOICES, default="1",
+        help_text="Tipo de operadora conforme ANS — IN 77/2022 FIP1",
+    )
+    modalidade_assistencial = models.CharField(
+        max_length=2, choices=MODALIDADE_CHOICES, default="02",
+        help_text="Modalidade assistencial principal do plano",
+    )
+    abrangencia_geografica = models.CharField(
+        max_length=1, choices=ABRANGENCIA_CHOICES, default="5",
+        help_text="Abrangência geográfica de comercialização",
+    )
+    codigo_produto_ans = models.CharField(
+        max_length=20, blank=True, default="",
+        help_text="Código do produto registrado na ANS (FIP5)",
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="em_elaboracao")
     xml_gerado = models.TextField(blank=True)
     enviado_em = models.DateTimeField(null=True, blank=True)
@@ -6625,16 +6703,23 @@ class IAAutorizacaoGuia(models.Model):
     cid10 = models.CharField(max_length=10, blank=True)
     decisao = models.CharField(max_length=20, choices=DECISAO_CHOICES, default="revisao")
     score_confianca = models.FloatField(default=0.0)
+    scores_por_classe = models.JSONField(default=dict, blank=True)
     justificativa_ia = models.TextField(blank=True)
+    features_utilizadas = models.JSONField(default=dict, blank=True)
+    modelo_versao = models.CharField(max_length=80, blank=True, default="Ensemble RF+GB SolusCRT v2")
     revisada_por = models.CharField(max_length=120, blank=True)
     decisao_final = models.CharField(max_length=20, choices=DECISAO_CHOICES, null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
     class Meta:
         ordering = ["-criado_em"]
         verbose_name_plural = "Autorizações IA de guias"
+        indexes = [
+            models.Index(fields=["empresa", "decisao"]),
+            models.Index(fields=["empresa", "decisao_final"]),
+        ]
 
     def __str__(self):
-        return f"IA Guia {self.numero_guia} — {self.decisao} — {self.criado_em:%d/%m/%Y}"
+        return f"IA Guia {self.numero_guia} — {self.decisao} ({self.score_confianca:.0%}) — {self.criado_em:%d/%m/%Y}"
 
 
 class PortalBeneficiarioToken(models.Model):
@@ -6654,3 +6739,306 @@ class PortalBeneficiarioToken(models.Model):
 
     def __str__(self):
         return f"Token portal — {self.beneficiario.nome}"
+
+
+# ─── Credenciais de Integrações Governamentais (por empresa) ─────────────────
+
+class CredenciaisIntegracoes(models.Model):
+    """
+    Credenciais de integrações governamentais por empresa (tenant).
+
+    SEGURANÇA: campos de senha são armazenados criptografados com Fernet
+    (chave derivada do SECRET_KEY do Django). Nunca em plain text.
+
+    Quem cadastra: o próprio cliente, no painel da SolusCRT.
+    Quem usa: SolusCRT na hora de transmitir (SNGPC, DIOPS, eSocial).
+    """
+
+    empresa = models.OneToOneField(
+        Empresa, on_delete=models.CASCADE, related_name="credenciais_integracoes"
+    )
+
+    # ── SNGPC / ANVISA ────────────────────────────────────────────────────────
+    sngpc_usuario      = models.CharField(max_length=120, blank=True, default="",
+                                          help_text="Usuário cadastrado no portal SNGPC ANVISA")
+    sngpc_senha_cripto = models.TextField(blank=True, default="",
+                                          help_text="Senha SNGPC criptografada (Fernet)")
+    sngpc_ambiente     = models.CharField(
+        max_length=20,
+        choices=[("homologacao", "Homologação ANVISA"), ("producao", "Produção ANVISA")],
+        default="homologacao",
+    )
+    sngpc_ativo        = models.BooleanField(default=False)
+    sngpc_ultima_transmissao = models.DateTimeField(null=True, blank=True)
+    sngpc_ultimo_protocolo   = models.CharField(max_length=100, blank=True, default="")
+
+    # ── ANS / SIPWeb (DIOPS) ──────────────────────────────────────────────────
+    ans_usuario        = models.CharField(max_length=120, blank=True, default="",
+                                          help_text="Usuário do SIPWeb ANS")
+    ans_senha_cripto   = models.TextField(blank=True, default="",
+                                          help_text="Senha SIPWeb ANS criptografada (Fernet)")
+    ans_registro       = models.CharField(max_length=10, blank=True, default="",
+                                          help_text="Número de registro da operadora na ANS")
+    ans_ambiente       = models.CharField(
+        max_length=20,
+        choices=[("homologacao", "Homologação ANS"), ("producao", "Produção ANS")],
+        default="homologacao",
+    )
+    ans_ativo          = models.BooleanField(default=False)
+    ans_ultima_transmissao = models.DateTimeField(null=True, blank=True)
+
+    # ── SUS / DATASUS (Governo — prestador SUS, faturamento BPA/APAC/AIH) ─────
+    sus_cnes            = models.CharField(max_length=7, blank=True, default="",
+                                           help_text="CNES do estabelecimento prestador SUS")
+    sus_login_scnes     = models.CharField(max_length=120, blank=True, default="",
+                                           help_text="Login SCNES/DATASUS do prestador")
+    sus_senha_cripto    = models.TextField(blank=True, default="",
+                                           help_text="Senha SCNES criptografada (Fernet)")
+    sus_ibge            = models.CharField(max_length=7, blank=True, default="",
+                                           help_text="Código IBGE do município")
+    sus_uf              = models.CharField(max_length=2, blank=True, default="",
+                                           help_text="UF do estabelecimento (para rotear endpoint estadual)")
+    sus_ambiente        = models.CharField(
+        max_length=20,
+        choices=[("homologacao", "Homologação DATASUS"), ("producao", "Produção DATASUS")],
+        default="homologacao",
+    )
+    sus_ativo           = models.BooleanField(default=False)
+    sus_ultima_transmissao = models.DateTimeField(null=True, blank=True)
+    sus_ultimo_protocolo   = models.CharField(max_length=100, blank=True, default="")
+
+    # ── RNDS / e-SUS (Governo — prefeitura/secretaria de saúde) ───────────────
+    # Requer certificado ICP-Brasil A1/A3 emitido em nome da prefeitura
+    rnds_cpf_gestor         = models.CharField(max_length=14, blank=True, default="",
+                                               help_text="CPF do gestor municipal habilitado no RNDS")
+    rnds_cnes               = models.CharField(max_length=7, blank=True, default="",
+                                               help_text="CNES da unidade de saúde emissora")
+    rnds_ibge               = models.CharField(max_length=7, blank=True, default="",
+                                               help_text="Código IBGE do município")
+    rnds_certificado_pfx_b64 = models.TextField(blank=True, default="",
+                                                help_text="Certificado ICP-Brasil A1/A3 (PKCS#12 base64)")
+    rnds_certificado_senha_cripto = models.TextField(blank=True, default="",
+                                                     help_text="Senha do certificado RNDS (Fernet)")
+    rnds_ambiente           = models.CharField(
+        max_length=20,
+        choices=[("homologacao", "Homologação RNDS"), ("producao", "Produção RNDS")],
+        default="homologacao",
+    )
+    rnds_ativo              = models.BooleanField(default=False)
+    rnds_ultima_transmissao = models.DateTimeField(null=True, blank=True)
+
+    # ── NF-e / SEFAZ ──────────────────────────────────────────────────────────
+    # Certificado e-CNPJ A1/A3 para emissão de NF-e (diferente do ICP-Brasil RNDS)
+    nfe_certificado_pfx_b64      = models.TextField(blank=True, default="")
+    nfe_certificado_senha_cripto = models.TextField(blank=True, default="")
+    nfe_cnpj_emitente  = models.CharField(max_length=14, blank=True, default="")
+    nfe_ie             = models.CharField(max_length=20, blank=True, default="", verbose_name="Inscrição Estadual")
+    nfe_uf             = models.CharField(max_length=2,  blank=True, default="")
+    nfe_municipio_ibge = models.CharField(max_length=7,  blank=True, default="", verbose_name="Código IBGE do município")
+    nfe_serie          = models.CharField(max_length=3,  blank=True, default="001")
+    nfe_crt            = models.CharField(max_length=1,  blank=True, default="3",
+                             verbose_name="Código Regime Tributário",
+                             help_text="1=Simples Nacional, 3=Regime Normal")
+    nfe_ambiente       = models.CharField(max_length=1,  blank=True, default="2",
+                             choices=[("1", "Produção"), ("2", "Homologação")])
+    nfe_ativo          = models.BooleanField(default=False)
+    nfe_ultima_transmissao = models.DateTimeField(null=True, blank=True)
+
+    # ── Metadados ─────────────────────────────────────────────────────────────
+    atualizado_em   = models.DateTimeField(auto_now=True)
+    atualizado_por  = models.CharField(max_length=120, blank=True, default="")
+
+    class Meta:
+        verbose_name = "Credenciais de Integrações"
+        verbose_name_plural = "Credenciais de Integrações"
+
+    def __str__(self):
+        return f"Credenciais — {self.empresa.nome}"
+
+    # ── Helpers de criptografia ───────────────────────────────────────────────
+
+    @staticmethod
+    def _fernet():
+        from cryptography.fernet import Fernet
+        from django.conf import settings
+        import base64, hashlib
+        # Deriva chave Fernet de 32 bytes a partir do SECRET_KEY
+        chave = hashlib.sha256(settings.SECRET_KEY.encode()).digest()
+        return Fernet(base64.urlsafe_b64encode(chave))
+
+    def set_sngpc_senha(self, senha_plain: str):
+        """Criptografa e salva a senha SNGPC."""
+        if senha_plain:
+            self.sngpc_senha_cripto = self._fernet().encrypt(senha_plain.encode()).decode()
+        else:
+            self.sngpc_senha_cripto = ""
+
+    def get_sngpc_senha(self) -> str:
+        """Descriptografa e retorna a senha SNGPC."""
+        if not self.sngpc_senha_cripto:
+            return ""
+        try:
+            return self._fernet().decrypt(self.sngpc_senha_cripto.encode()).decode()
+        except Exception:
+            return ""
+
+    def set_ans_senha(self, senha_plain: str):
+        """Criptografa e salva a senha ANS."""
+        if senha_plain:
+            self.ans_senha_cripto = self._fernet().encrypt(senha_plain.encode()).decode()
+        else:
+            self.ans_senha_cripto = ""
+
+    def get_ans_senha(self) -> str:
+        """Descriptografa e retorna a senha ANS."""
+        if not self.ans_senha_cripto:
+            return ""
+        try:
+            return self._fernet().decrypt(self.ans_senha_cripto.encode()).decode()
+        except Exception:
+            return ""
+
+    def set_sus_senha(self, senha_plain: str):
+        if senha_plain:
+            self.sus_senha_cripto = self._fernet().encrypt(senha_plain.encode()).decode()
+        else:
+            self.sus_senha_cripto = ""
+
+    def get_sus_senha(self) -> str:
+        if not self.sus_senha_cripto:
+            return ""
+        try:
+            return self._fernet().decrypt(self.sus_senha_cripto.encode()).decode()
+        except Exception:
+            return ""
+
+    def set_rnds_certificado_senha(self, senha_plain: str):
+        if senha_plain:
+            self.rnds_certificado_senha_cripto = self._fernet().encrypt(senha_plain.encode()).decode()
+        else:
+            self.rnds_certificado_senha_cripto = ""
+
+    def get_rnds_certificado_senha(self) -> str:
+        if not self.rnds_certificado_senha_cripto:
+            return ""
+        try:
+            return self._fernet().decrypt(self.rnds_certificado_senha_cripto.encode()).decode()
+        except Exception:
+            return ""
+
+    def sngpc_configurado(self) -> bool:
+        return bool(self.sngpc_usuario and self.sngpc_senha_cripto and self.sngpc_ativo)
+
+    def ans_configurado(self) -> bool:
+        return bool(self.ans_usuario and self.ans_senha_cripto and self.ans_ativo)
+
+    def sus_configurado(self) -> bool:
+        return bool(self.sus_cnes and self.sus_login_scnes and self.sus_senha_cripto and self.sus_ativo)
+
+    def rnds_configurado(self) -> bool:
+        return bool(self.rnds_cpf_gestor and self.rnds_certificado_pfx_b64 and self.rnds_ativo)
+
+    def set_nfe_certificado_senha(self, senha_plain: str):
+        if senha_plain:
+            self.nfe_certificado_senha_cripto = self._fernet().encrypt(senha_plain.encode()).decode()
+        else:
+            self.nfe_certificado_senha_cripto = ""
+
+    def get_nfe_certificado_senha(self) -> str:
+        if not self.nfe_certificado_senha_cripto:
+            return ""
+        try:
+            return self._fernet().decrypt(self.nfe_certificado_senha_cripto.encode()).decode()
+        except Exception:
+            return ""
+
+    def nfe_configurado(self) -> bool:
+        return bool(
+            self.nfe_certificado_pfx_b64
+            and self.nfe_cnpj_emitente
+            and self.nfe_uf
+            and self.nfe_ativo
+        )
+
+
+class NotaFiscalEletronica(models.Model):
+    """
+    NF-e — Nota Fiscal Eletrônica (modelo 55) / NFC-e (modelo 65).
+
+    Emissão real via SEFAZ por UF usando e-CNPJ A1/A3 do emitente.
+    Credenciais armazenadas em CredenciaisIntegracoes.nfe_* por empresa.
+
+    Ref: Manual de Orientação ao Contribuinte — NF-e v4.0 (ENCAT)
+    """
+    MODELO_CHOICES   = [("55", "NF-e (Nota Fiscal Eletrônica)"), ("65", "NFC-e (Nota Fiscal Consumidor)")]
+    AMBIENTE_CHOICES = [("1", "Produção"), ("2", "Homologação")]
+    STATUS_CHOICES   = [
+        ("rascunho",    "Rascunho"),
+        ("assinada",    "Assinada — aguardando envio"),
+        ("autorizada",  "Autorizada pela SEFAZ"),
+        ("cancelada",   "Cancelada"),
+        ("denegada",    "Denegada pela SEFAZ"),
+        ("erro",        "Erro de transmissão"),
+    ]
+    FORMA_PAG = [
+        ("01", "Dinheiro"), ("02", "Cheque"), ("03", "Cartão de Crédito"),
+        ("04", "Cartão de Débito"), ("05", "Crédito Loja"), ("10", "Vale Alimentação"),
+        ("11", "Vale Refeição"), ("12", "Vale Presente"), ("13", "Vale Combustível"),
+        ("15", "Boleto Bancário"), ("90", "Sem Pagamento"), ("99", "Outros"),
+    ]
+
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="notas_fiscais")
+    numero           = models.PositiveIntegerField()
+    serie            = models.CharField(max_length=3, default="001")
+    modelo           = models.CharField(max_length=2, choices=MODELO_CHOICES, default="55")
+    chave_acesso     = models.CharField(max_length=44, blank=True, unique=True)
+    protocolo        = models.CharField(max_length=20, blank=True)
+
+    # Emitente (espelhado de CredenciaisIntegracoes no momento da emissão)
+    cnpj_emitente    = models.CharField(max_length=14)
+    nome_emitente    = models.CharField(max_length=60, blank=True)
+    ie_emitente      = models.CharField(max_length=20, blank=True)
+    uf_emitente      = models.CharField(max_length=2, blank=True)
+
+    # Destinatário
+    cpf_cnpj_destinatario = models.CharField(max_length=14, blank=True)
+    nome_destinatario     = models.CharField(max_length=60, blank=True)
+    email_destinatario    = models.CharField(max_length=60, blank=True)
+
+    # Operação
+    natureza_operacao = models.CharField(max_length=60, default="VENDA DE PRODUTO")
+    cfop              = models.CharField(max_length=4, default="5102")
+    forma_pagamento   = models.CharField(max_length=2, choices=FORMA_PAG, default="99")
+
+    # Valores
+    valor_produtos   = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    valor_frete      = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    valor_desconto   = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    valor_total      = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
+    # Itens (lista de dicts: cProd, xProd, NCM, CFOP, uCom, qCom, vUnCom, vProd)
+    itens            = models.JSONField(default=list, blank=True)
+
+    # Status e XML
+    status           = models.CharField(max_length=20, choices=STATUS_CHOICES, default="rascunho")
+    ambiente         = models.CharField(max_length=1, choices=AMBIENTE_CHOICES, default="2")
+    mensagem_sefaz   = models.TextField(blank=True)
+    xml_assinado     = models.TextField(blank=True)
+    xml_autorizado   = models.TextField(blank=True)
+
+    # Timestamps
+    data_emissao     = models.DateTimeField(auto_now_add=False, default=None, null=True, blank=True)
+    autorizada_em    = models.DateTimeField(null=True, blank=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering         = ["-data_emissao"]
+        unique_together  = ("empresa", "serie", "numero")
+        indexes          = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "data_emissao"]),
+        ]
+
+    def __str__(self):
+        return f"NF-e {self.serie}/{self.numero:09d} — {self.empresa.nome}"

@@ -5,8 +5,6 @@ SIB:   sistema de informação de beneficiários (mensal).
 """
 import json
 from datetime import date
-from xml.etree.ElementTree import Element, SubElement, tostring
-from xml.dom import minidom
 
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
@@ -14,8 +12,9 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from .access_control import api_requer_gerencia, contexto_navegacao_setorial
-from .models import DIOPSDeclaracao, SIBRegistro
+from .models import CredenciaisIntegracoes, DIOPSDeclaracao, SIBRegistro
 from .views_dashboard import _empresa_autenticada
+from .views_diops_real import gerar_diops_3_0
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -59,40 +58,6 @@ def _sib_dict(s):
         "criado_em": s.criado_em.strftime("%d/%m/%Y"),
     }
 
-
-def _gerar_xml_diops(d, empresa):
-    """Gera XML stub no formato DIOPS simplificado."""
-    root = Element("DIOPS")
-    root.set("versao", "3.0")
-    root.set("gerado_em", date.today().isoformat())
-
-    header = SubElement(root, "Header")
-    SubElement(header, "RegistroANS").text = d.registro_ans or "000000"
-    SubElement(header, "Trimestre").text = d.trimestre
-    SubElement(header, "NomeOperadora").text = empresa.nome
-
-    financeiro = SubElement(root, "DadosFinanceiros")
-    SubElement(financeiro, "ReceitaOperacional").text = str(d.receita_operacional)
-    SubElement(financeiro, "DespesaAssistencial").text = str(d.despesa_assistencial)
-    SubElement(financeiro, "DespesaAdministrativa").text = str(d.despesa_administrativa)
-    SubElement(financeiro, "ResultadoPeriodo").text = str(d.resultado_periodo)
-    SubElement(financeiro, "VidasAtivas").text = str(d.vidas_ativas)
-
-    # MLR — índice de sinistralidade
-    if d.receita_operacional > 0:
-        mlr = float(d.despesa_assistencial) / float(d.receita_operacional) * 100
-    else:
-        mlr = 0
-    SubElement(financeiro, "MLR").text = f"{mlr:.2f}"
-
-    raw = tostring(root, encoding="unicode")
-    try:
-        pretty = minidom.parseString(raw).toprettyxml(indent="  ")
-        # Remove a linha <?xml...?> duplicada quando já existe
-        lines = pretty.split("\n")
-        return "\n".join(lines)
-    except Exception:
-        return raw
 
 
 # ── page ─────────────────────────────────────────────────────────────────────
@@ -182,6 +147,11 @@ def api_diops_detalhe(request, decl_id):
 
 
 def api_diops_gerar_xml(request, decl_id):
+    """
+    Gera e faz download do XML DIOPS 3.0 real (conforme IN ANS nº 77/2022).
+    Usa gerar_diops_3_0 — mesmo gerador da transmissão real.
+    GET /api/plano-saude/ans/diops/<id>/xml/
+    """
     empresa, err = _ps_auth(request)
     if err:
         return err
@@ -190,7 +160,7 @@ def api_diops_gerar_xml(request, decl_id):
     except DIOPSDeclaracao.DoesNotExist:
         return JsonResponse({"erro": "Declaração não encontrada"}, status=404)
 
-    xml_content = _gerar_xml_diops(d, empresa)
+    xml_content = gerar_diops_3_0(d, empresa)
     d.xml_gerado = xml_content
     if d.status == "em_elaboracao":
         d.status = "validada"
@@ -269,6 +239,117 @@ def api_sib_detalhe(request, sib_id):
         return JsonResponse({"registro": _sib_dict(s)})
 
     return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+
+# ── API: SIB Transmissão ──────────────────────────────────────────────────────
+
+_SIB_ENDPOINT = {
+    "producao":    "https://sipweb.ans.gov.br/sipweb/sib/envio",
+    "homologacao": "https://sipweb-hml.ans.gov.br/sipweb/sib/envio",
+}
+
+
+@csrf_exempt
+def api_sib_transmitir(request, sib_id):
+    """
+    Transmite registro SIB ao webservice ANS SIPWeb.
+
+    Com credenciais ANS configuradas: POST real ao SIPWeb (multipart/form-data).
+    Sem credenciais: orienta configuração — NÃO marca como enviado.
+
+    POST /api/plano-saude/ans/sib/<id>/transmitir/
+    """
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não suportado"}, status=405)
+
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    try:
+        s = SIBRegistro.objects.get(id=sib_id, empresa=empresa)
+    except SIBRegistro.DoesNotExist:
+        return JsonResponse({"erro": "Registro SIB não encontrado"}, status=404)
+
+    if s.enviado:
+        return JsonResponse({"erro": "Registro já foi transmitido à ANS."}, status=400)
+
+    cred = CredenciaisIntegracoes.objects.filter(empresa=empresa).first()
+    if not cred or not cred.ans_configurado():
+        return JsonResponse({
+            "ok":    False,
+            "erro":  "Credenciais ANS SIPWeb não configuradas.",
+            "instrucao": (
+                "Configure usuário e senha ANS SIPWeb em "
+                "POST /api/integracoes/credenciais/ans/ — "
+                "credenciais obtidas diretamente na ANS pelo Registro de Operadora."
+            ),
+            "link": "/api/integracoes/credenciais/",
+        }, status=400)
+
+    try:
+        import requests as req
+
+        ambiente = cred.ans_ambiente or "homologacao"
+        url      = _SIB_ENDPOINT.get(ambiente, _SIB_ENDPOINT["homologacao"])
+
+        # Payload SIB conforme layout ANS
+        payload = {
+            "registroANS":    s.registro_ans or cred.ans_registro,
+            "competencia":    s.competencia,
+            "vidasIncluidas": s.vidas_incluidas,
+            "vidasExcluidas": s.vidas_excluidas,
+            "vidasAlteradas": s.vidas_alteradas,
+            "totalVidas":     s.total_vidas,
+        }
+
+        resp = req.post(
+            url,
+            json=payload,
+            auth=(cred.ans_usuario, cred.get_ans_senha()),
+            timeout=60,
+            verify=True,
+        )
+
+        retorno = {}
+        try:
+            retorno = resp.json()
+        except Exception:
+            retorno = {"texto": resp.text[:500]}
+
+        if resp.status_code in (200, 201):
+            s.enviado    = True
+            s.enviado_em = timezone.now()
+            s.retorno_ans = retorno
+            s.save(update_fields=["enviado", "enviado_em", "retorno_ans"])
+
+            # Atualiza data de última transmissão ANS
+            cred.ans_ultima_transmissao = timezone.now()
+            cred.save(update_fields=["ans_ultima_transmissao"])
+
+            protocolo = retorno.get("protocolo") or retorno.get("nrProtocolo", "")
+            return JsonResponse({
+                "ok":         True,
+                "sib_id":     s.id,
+                "competencia": s.competencia,
+                "protocolo":  protocolo,
+                "modo":       "ans_real",
+                "ambiente":   ambiente,
+                "mensagem":   f"SIB {s.competencia} transmitido à ANS com sucesso.",
+            })
+
+        else:
+            return JsonResponse({
+                "ok":          False,
+                "status_http": resp.status_code,
+                "erro":        f"ANS SIPWeb retornou HTTP {resp.status_code}: {resp.text[:400]}",
+                "retorno":     retorno,
+            }, status=502)
+
+    except Exception as ex:
+        import logging
+        logging.getLogger(__name__).exception("Erro ao transmitir SIB %s", s.id)
+        return JsonResponse({"ok": False, "erro": str(ex)[:400]}, status=500)
 
 
 # ── API: KPIs ANS ─────────────────────────────────────────────────────────────

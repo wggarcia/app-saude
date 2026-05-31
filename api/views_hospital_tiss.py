@@ -1,6 +1,7 @@
 """
 Hospital — Faturamento TISS (ANS)
-  • GuiaTISS — guias TISS, valor apresentado vs aprovado, glosa, XML stub
+  • GuiaTISS — guias TISS, valor apresentado vs aprovado, glosa
+  • XML TISS 3.05.00 real (conforme padrão ANS — cabecalho, corpo, epilogo SHA-1)
 """
 import json
 import xml.etree.ElementTree as ET
@@ -255,10 +256,245 @@ def api_tiss_kpis(request):
     })
 
 
-# ─── API: Gerar XML TISS (stub) ───────────────────────────────────────────────
+# ─── TISS 3.05.00 — Gerador XML completo ────────────────────────────────────
+
+_NS_TISS = "http://www.ans.gov.br/padroes/tiss/schemas"
+_VERSAO_TISS = "3.05.00"
+
+# Mapa tipo da guia → tipoTransacao TISS
+_TIPO_TRANSACAO = {
+    "consulta":   "SOLICITACAO_PROCEDIMENTO_AMBULATORIAL",
+    "sadt":       "SOLICITACAO_PROCEDIMENTO_AMBULATORIAL",
+    "sp_sadt":    "SOLICITACAO_PROCEDIMENTO_AMBULATORIAL",
+    "internacao": "SOLICITACAO_AUTORIZACAO_INTERNACAO",
+    "resumo":     "ENVIO_LOTE_GUIAS",
+}
+
+
+def _tiss_elem(parent, tag, text=None):
+    el = ET.SubElement(parent, f"ans:{tag}")
+    if text is not None:
+        el.text = str(text)
+    return el
+
+
+def _fmt_valor(v):
+    try:
+        return f"{float(v):.2f}"
+    except Exception:
+        return "0.00"
+
+
+def gerar_xml_tiss_3_05(guia: GuiaTISS, empresa) -> str:
+    """
+    Gera XML TISS 3.05.00 completo conforme Resolução Normativa ANS nº 305/2012
+    e suas atualizações (Componente Organizacional — leiaute TISS 3.05.00).
+
+    Estrutura:
+      mensagemTISS
+        cabecalho
+          identificacaoTransacao (tipoTransacao, sequencialTransacao, dataHora, versao)
+          origem (identificacaoPrestador)
+          destino (registroANS)
+          Padrao
+        prestadorParaOperadora
+          loteGuiasSP       (para ambulatorial/SP-SADT/consulta)
+          ou
+          loteGuiasInternacao (para internação)
+        epilogo
+          hash (SHA-1 do cabecalho+corpo)
+    """
+    import hashlib
+    from datetime import date, datetime
+
+    agora = datetime.now()
+    data_str = agora.strftime("%Y-%m-%d")
+    hora_str = agora.strftime("%H:%M:%S")
+    seq = str(guia.pk).zfill(10)
+
+    tipo_transacao = _TIPO_TRANSACAO.get(guia.tipo, "SOLICITACAO_PROCEDIMENTO_AMBULATORIAL")
+    nome_empresa = (getattr(empresa, "nome", "") or "")[:80]
+    codigo_prestador = (getattr(empresa, "codigo_prestador_tiss", "") or getattr(empresa, "cnpj", "") or "")
+    cnes_prestador = (getattr(empresa, "cnes", "") or "")
+
+    # ── Root ─────────────────────────────────────────────────────────────────
+    root = ET.Element("ans:mensagemTISS")
+    root.set("xmlns:ans", _NS_TISS)
+    root.set("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
+    root.set("xsi:schemaLocation", f"{_NS_TISS} tissV3_05_00.xsd")
+
+    # ── Cabeçalho ────────────────────────────────────────────────────────────
+    cab = _tiss_elem(root, "cabecalho")
+    id_trans = _tiss_elem(cab, "identificacaoTransacao")
+    _tiss_elem(id_trans, "tipoTransacao", tipo_transacao)
+    _tiss_elem(id_trans, "sequencialTransacao", seq)
+    _tiss_elem(id_trans, "dataRegistroTransacao", data_str)
+    _tiss_elem(id_trans, "horaRegistroTransacao", hora_str)
+    _tiss_elem(id_trans, "versaoLeiaute", _VERSAO_TISS)
+
+    origem = _tiss_elem(cab, "origem")
+    id_prest = _tiss_elem(origem, "identificacaoPrestador")
+    _tiss_elem(id_prest, "codigoPrestadorNaOperadora", codigo_prestador)
+    _tiss_elem(id_prest, "nomeContratado", nome_empresa)
+    if cnes_prestador:
+        _tiss_elem(id_prest, "CNES", cnes_prestador)
+
+    destino = _tiss_elem(cab, "destino")
+    _tiss_elem(destino, "registroANS", guia.operadora_codigo or "000000")
+    _tiss_elem(destino, "nomeOperadora", guia.operadora_nome or "")
+
+    _tiss_elem(cab, "Padrao", "TISS")
+
+    # ── Corpo ─────────────────────────────────────────────────────────────────
+    corpo = _tiss_elem(root, "prestadorParaOperadora")
+
+    if guia.tipo == "internacao":
+        _gerar_guia_internacao(corpo, guia, codigo_prestador, nome_empresa, cnes_prestador, data_str)
+    else:
+        _gerar_guia_sp_sadt(corpo, guia, codigo_prestador, nome_empresa, cnes_prestador, data_str)
+
+    # ── Epílogo com hash SHA-1 ────────────────────────────────────────────────
+    # Hash calculado sobre o conteúdo serializado até este ponto (cabecalho + corpo)
+    conteudo_para_hash = ET.tostring(root, encoding="unicode")
+    sha1 = hashlib.sha1(conteudo_para_hash.encode("utf-8")).hexdigest().upper()
+
+    epilogo = _tiss_elem(root, "epilogo")
+    _tiss_elem(epilogo, "hash", sha1)
+
+    xml_raw = ET.tostring(root, encoding="unicode", xml_declaration=False)
+    return f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_raw}'
+
+
+def _gerar_guia_sp_sadt(corpo, guia, codigo_prestador, nome_empresa, cnes_prestador, data_str):
+    """Guia SP/SADT para ambulatorial (consultas, exames, terapias)."""
+    lote = _tiss_elem(corpo, "loteGuiasSP")
+    _tiss_elem(lote, "numeroLote", str(guia.pk).zfill(10))
+
+    g = _tiss_elem(lote, "guiaSP")
+
+    # Cabeçalho da guia
+    cab = _tiss_elem(g, "cabecalhoGuia")
+    _tiss_elem(cab, "registroANS", guia.operadora_codigo or "000000")
+    _tiss_elem(cab, "nrGuiaPrestador", guia.numero_guia or str(guia.pk))
+    if guia.data_autorizacao:
+        _tiss_elem(cab, "nrGuiaOperadora", guia.numero_guia or str(guia.pk))
+
+    # Dados do beneficiário
+    ben = _tiss_elem(g, "dadosBeneficiario")
+    _tiss_elem(ben, "numeroCNS", guia.beneficiario_carteirinha or "")
+    _tiss_elem(ben, "nomeBeneficiario", guia.beneficiario_nome[:70])
+    _tiss_elem(ben, "numeroCarteira", guia.beneficiario_carteirinha or "")
+
+    # Dados do solicitante
+    sol = _tiss_elem(g, "dadosSolicitante")
+    cont = _tiss_elem(sol, "contratadoSolicitante")
+    _tiss_elem(cont, "codigoPrestadorNaOperadora", codigo_prestador)
+    _tiss_elem(cont, "nomeContratado", nome_empresa)
+    if cnes_prestador:
+        _tiss_elem(cont, "CNES", cnes_prestador)
+    _tiss_elem(sol, "dataSolicitacao", data_str)
+
+    # Dados da solicitação clínica
+    sol_clin = _tiss_elem(g, "dadosSolicitacaoExame")
+    _tiss_elem(sol_clin, "caraterAtendimento", "01")  # 01=Eletivo
+    if guia.cid10:
+        _tiss_elem(sol_clin, "codigoCID10", guia.cid10[:4])
+    _tiss_elem(sol_clin, "indicacaoAcidente", "9")  # 9=Não acidente
+
+    # Procedimentos solicitados
+    procs_sol = _tiss_elem(sol_clin, "procedimentosSolicitados")
+    for i, proc in enumerate((guia.procedimentos or []), 1):
+        ps = _tiss_elem(procs_sol, "procedimentoSolicitado")
+        _tiss_elem(ps, "codigoTabela", str(proc.get("tabela", "22")))
+        _tiss_elem(ps, "codigoProcedimento", str(proc.get("codigo", "0")))
+        _tiss_elem(ps, "descricaoProcedimento", str(proc.get("descricao", ""))[:200])
+        _tiss_elem(ps, "quantidadeSolicitada", str(proc.get("quantidade", 1)))
+
+    # Dados de atendimento (execução)
+    atend = _tiss_elem(g, "dadosAtendimento")
+    _tiss_elem(atend, "codigoTransacao", "1")
+    _tiss_elem(atend, "tipoAtendimento", "01")  # 01=Consulta/SADT
+    _tiss_elem(atend, "indicadorAcidente", "9")
+    _tiss_elem(atend, "dataInicioFaturamento", data_str)
+    _tiss_elem(atend, "dataFimFaturamento", data_str)
+    _tiss_elem(atend, "tipoSaida", "3")  # 3=Alta
+
+    procs_exec = _tiss_elem(atend, "procedimentosExecutados")
+    valor_total = 0.0
+    for i, proc in enumerate((guia.procedimentos or []), 1):
+        pe = _tiss_elem(procs_exec, "procedimentoExecutado")
+        _tiss_elem(pe, "sequencialItem", str(i))
+        _tiss_elem(pe, "codigoTabela", str(proc.get("tabela", "22")))
+        _tiss_elem(pe, "codigoProcedimento", str(proc.get("codigo", "0")))
+        _tiss_elem(pe, "descricaoProcedimento", str(proc.get("descricao", ""))[:200])
+        qtd = int(proc.get("quantidade", 1))
+        val_unit = float(proc.get("valor_unitario", 0))
+        val_total_item = qtd * val_unit
+        _tiss_elem(pe, "quantidadeExecutada", str(qtd))
+        _tiss_elem(pe, "valorUnitario", _fmt_valor(val_unit))
+        _tiss_elem(pe, "valorTotal", _fmt_valor(val_total_item))
+        valor_total += val_total_item
+
+    # Usa valor_apresentado se existir; caso contrário usa soma dos procedimentos
+    val_final = float(guia.valor_apresentado) if float(guia.valor_apresentado) > 0 else valor_total
+    vt = _tiss_elem(g, "valorTotal")
+    _tiss_elem(vt, "valorTotalGeral", _fmt_valor(val_final))
+
+
+def _gerar_guia_internacao(corpo, guia, codigo_prestador, nome_empresa, cnes_prestador, data_str):
+    """Guia de Internação (SOLICITACAO_AUTORIZACAO_INTERNACAO)."""
+    lote = _tiss_elem(corpo, "loteGuiasInternacao")
+    _tiss_elem(lote, "numeroLote", str(guia.pk).zfill(10))
+
+    g = _tiss_elem(lote, "guiaInternacao")
+
+    cab = _tiss_elem(g, "cabecalhoGuia")
+    _tiss_elem(cab, "registroANS", guia.operadora_codigo or "000000")
+    _tiss_elem(cab, "nrGuiaPrestador", guia.numero_guia or str(guia.pk))
+
+    ben = _tiss_elem(g, "dadosBeneficiario")
+    _tiss_elem(ben, "numeroCNS", guia.beneficiario_carteirinha or "")
+    _tiss_elem(ben, "nomeBeneficiario", guia.beneficiario_nome[:70])
+    _tiss_elem(ben, "numeroCarteira", guia.beneficiario_carteirinha or "")
+
+    sol = _tiss_elem(g, "dadosSolicitante")
+    cont = _tiss_elem(sol, "contratadoSolicitante")
+    _tiss_elem(cont, "codigoPrestadorNaOperadora", codigo_prestador)
+    _tiss_elem(cont, "nomeContratado", nome_empresa)
+    if cnes_prestador:
+        _tiss_elem(cont, "CNES", cnes_prestador)
+    _tiss_elem(sol, "dataSolicitacao", data_str)
+
+    dad_int = _tiss_elem(g, "dadosInternacao")
+    _tiss_elem(dad_int, "caraterInternacao", "01")  # 01=Eletivo
+    if guia.cid10:
+        _tiss_elem(dad_int, "codigoCID10Principal", guia.cid10[:4])
+    _tiss_elem(dad_int, "tipoInternacao", "01")  # 01=Clínica
+    _tiss_elem(dad_int, "regimeInternacao", "01")  # 01=Enfermaria
+    _tiss_elem(dad_int, "dataInicioFaturamento", data_str)
+
+    procs = _tiss_elem(dad_int, "procedimentosSolicitados")
+    for proc in (guia.procedimentos or []):
+        ps = _tiss_elem(procs, "procedimentoSolicitado")
+        _tiss_elem(ps, "codigoTabela", str(proc.get("tabela", "22")))
+        _tiss_elem(ps, "codigoProcedimento", str(proc.get("codigo", "0")))
+        _tiss_elem(ps, "descricaoProcedimento", str(proc.get("descricao", ""))[:200])
+        _tiss_elem(ps, "quantidadeSolicitada", str(proc.get("quantidade", 1)))
+
+    val_final = float(guia.valor_apresentado)
+    vt = _tiss_elem(g, "valorTotal")
+    _tiss_elem(vt, "valorTotalGeral", _fmt_valor(val_final))
+
+
+# ─── API: Gerar XML TISS 3.05.00 ─────────────────────────────────────────────
 
 @require_http_methods(["GET"])
 def api_tiss_gerar_xml(request, guia_id):
+    """
+    Gera XML TISS 3.05.00 completo conforme Resolução Normativa ANS nº 305/2012.
+    Suporta guias SP/SADT (ambulatorial), consultas e internações.
+    GET /api/hospital/tiss/<guia_id>/xml/
+    """
     empresa = _empresa(request)
     if isinstance(empresa, JsonResponse):
         return empresa
@@ -268,48 +504,12 @@ def api_tiss_gerar_xml(request, guia_id):
     except GuiaTISS.DoesNotExist:
         return JsonResponse({"erro": "Guia não encontrada"}, status=404)
 
-    # Build a minimal TISS 3.05 XML stub
-    root = ET.Element("ans:mensagemTISS")
-    root.set("xmlns:ans", "http://www.ans.gov.br/padroes/tiss/schemas")
-    root.set("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
+    xml_out = gerar_xml_tiss_3_05(guia, empresa)
 
-    cabecalho = ET.SubElement(root, "ans:cabecalho")
-    ET.SubElement(cabecalho, "ans:identificacaoTransacao").text = str(guia.id)
-    ET.SubElement(cabecalho, "ans:dataRegistroTransacao").text = guia.criado_em.strftime("%Y-%m-%d")
-    ET.SubElement(cabecalho, "ans:tipoTransacao").text = guia.tipo.upper()
-
-    prestador = ET.SubElement(cabecalho, "ans:prestadorSolicitante")
-    ET.SubElement(prestador, "ans:codigoPrestadorNaOperadora").text = getattr(empresa, "codigo_ans", "")
-    ET.SubElement(prestador, "ans:nomeContratado").text = getattr(empresa, "nome", "")
-
-    operadora = ET.SubElement(cabecalho, "ans:operadoraSaude")
-    ET.SubElement(operadora, "ans:registro").text = guia.operadora_codigo
-    ET.SubElement(operadora, "ans:nomeFantasia").text = guia.operadora_nome
-
-    corpo = ET.SubElement(root, "ans:prestadorParaOperadora")
-    guia_elem = ET.SubElement(corpo, "ans:guia")
-    ET.SubElement(guia_elem, "ans:numeroGuiaPrestador").text = guia.numero_guia or str(guia.id)
-    ET.SubElement(guia_elem, "ans:nomeBeneficiario").text = guia.beneficiario_nome
-    ET.SubElement(guia_elem, "ans:numeroCNS").text = guia.beneficiario_carteirinha
-    ET.SubElement(guia_elem, "ans:codigoCID").text = guia.cid10
-    ET.SubElement(guia_elem, "ans:valorApresentado").text = str(guia.valor_apresentado)
-    ET.SubElement(guia_elem, "ans:valorAprovado").text = str(guia.valor_aprovado)
-
-    for proc in (guia.procedimentos or []):
-        pe = ET.SubElement(guia_elem, "ans:procedimento")
-        ET.SubElement(pe, "ans:codigoTabela").text = str(proc.get("tabela", "22"))
-        ET.SubElement(pe, "ans:codigoProcedimento").text = str(proc.get("codigo", ""))
-        ET.SubElement(pe, "ans:descricao").text = str(proc.get("descricao", ""))
-        ET.SubElement(pe, "ans:quantidade").text = str(proc.get("quantidade", 1))
-        ET.SubElement(pe, "ans:valorUnitario").text = str(proc.get("valor_unitario", 0))
-
-    xml_str = ET.tostring(root, encoding="unicode", xml_declaration=False)
-    xml_out = f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}'
-
-    # Persist XML on guia
+    # Persiste XML na guia
     guia.xml_tiss = xml_out
     guia.save(update_fields=["xml_tiss"])
 
     response = HttpResponse(xml_out, content_type="application/xml; charset=utf-8")
-    response["Content-Disposition"] = f'attachment; filename="guia_tiss_{guia.id}.xml"'
+    response["Content-Disposition"] = f'attachment; filename="TISS3_{guia.numero_guia or guia.id}.xml"'
     return response

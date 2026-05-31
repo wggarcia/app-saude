@@ -862,12 +862,12 @@ def api_esocial_certificado(request):
             return JsonResponse({"erro": f"Certificado inválido ou senha incorreta: {ex}"}, status=400)
 
         cfg.certificado_pfx_b64 = pfx_b64_str
-        cfg.certificado_senha = senha
+        cfg.set_certificado_senha(senha)  # Fernet encryption
         cfg.certificado_validade = validade
         cfg.certificado_nome = nome_cert[:200]
         cfg.esocial_ambiente = ambiente
         cfg.save(update_fields=[
-            "certificado_pfx_b64", "certificado_senha",
+            "certificado_pfx_b64", "certificado_senha_cripto", "certificado_senha",
             "certificado_validade", "certificado_nome", "esocial_ambiente",
         ])
 

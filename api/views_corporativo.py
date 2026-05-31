@@ -421,11 +421,96 @@ def api_corporativo_rh_resumo(request):
 
 @csrf_exempt
 def api_corporativo_rh_sincronizar(request):
-    """POST /api/corporativo/rh/sincronizar/ — trigger RH sync (placeholder)"""
+    """
+    Sincroniza dados SST → corporativo para a empresa autenticada.
+
+    Reconcilia FuncionarioSST com a visão corporativa:
+    - Conta ativos, desligados no mês, ASOs vencidos e ausentes
+    - Identifica funcionários sem nenhum ASO cadastrado
+    - Retorna diagnóstico acionável para o RH
+
+    POST /api/corporativo/rh/sincronizar/
+    """
     empresa = _empresa_corporativa_autenticada(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     if request.method != "POST":
         return JsonResponse({"erro": "método não permitido"}, status=405)
-    # In production, would trigger a Celery task to sync with HR system
-    return JsonResponse({"ok": True, "mensagem": "Sincronização enfileirada — aguarde até 2 minutos"})
+
+    hoje = date.today()
+
+    from .models import ASOOcupacional, eSocialEventoSST
+
+    # ── Funcionários SST ─────────────────────────────────────────────────────
+    todos_func      = FuncionarioSST.objects.filter(empresa=empresa)
+    ativos          = todos_func.filter(ativo=True)
+    total_ativos    = ativos.count()
+    total_inativos  = todos_func.filter(ativo=False).count()
+
+    # Admissões e desligamentos no mês atual
+    mes_inicio = hoje.replace(day=1)
+    admissoes_mes   = ativos.filter(data_admissao__gte=mes_inicio).count()
+    desligamentos_mes = todos_func.filter(
+        ativo=False, data_demissao__gte=mes_inicio
+    ).count()
+
+    # ── ASOs ─────────────────────────────────────────────────────────────────
+    func_ids_com_aso = ASOOcupacional.objects.filter(
+        empresa=empresa
+    ).values_list("funcionario_id", flat=True).distinct()
+
+    sem_aso = ativos.exclude(pk__in=func_ids_com_aso).count()
+
+    asos_vencidos = ASOOcupacional.objects.filter(
+        empresa=empresa,
+        funcionario__ativo=True,
+        data_validade__lt=hoje,
+        data_validade__isnull=False,
+    ).count()
+
+    asos_vencendo_30d = ASOOcupacional.objects.filter(
+        empresa=empresa,
+        funcionario__ativo=True,
+        data_validade__gte=hoje,
+        data_validade__lte=hoje + timedelta(days=30),
+    ).count()
+
+    # ── eSocial ───────────────────────────────────────────────────────────────
+    esocial_pendentes = eSocialEventoSST.objects.filter(
+        empresa=empresa, status="pendente"
+    ).count()
+    esocial_erros = eSocialEventoSST.objects.filter(
+        empresa=empresa, status="erro"
+    ).count()
+
+    # ── Score de conformidade SST ─────────────────────────────────────────────
+    problemas = sem_aso + asos_vencidos + esocial_erros
+    score_sst = max(0, 100 - (problemas * 5)) if total_ativos > 0 else 100
+
+    return JsonResponse({
+        "ok":               True,
+        "sincronizado_em":  hoje.isoformat(),
+        "funcionarios": {
+            "total_ativos":      total_ativos,
+            "total_inativos":    total_inativos,
+            "admissoes_mes":     admissoes_mes,
+            "desligamentos_mes": desligamentos_mes,
+        },
+        "asos": {
+            "sem_aso":            sem_aso,
+            "vencidos":           asos_vencidos,
+            "vencendo_30_dias":   asos_vencendo_30d,
+        },
+        "esocial": {
+            "pendentes":  esocial_pendentes,
+            "com_erro":   esocial_erros,
+        },
+        "score_conformidade_sst": score_sst,
+        "alertas": [
+            *([f"{sem_aso} funcionário(s) sem nenhum ASO cadastrado."] if sem_aso else []),
+            *([f"{asos_vencidos} ASO(s) vencido(s)."] if asos_vencidos else []),
+            *([f"{asos_vencendo_30d} ASO(s) vencendo em até 30 dias."] if asos_vencendo_30d else []),
+            *([f"{esocial_pendentes} evento(s) eSocial pendente(s)."] if esocial_pendentes else []),
+            *([f"{esocial_erros} evento(s) eSocial com erro."] if esocial_erros else []),
+        ],
+    })

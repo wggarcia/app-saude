@@ -148,6 +148,13 @@ from api.views_esocial_sst import (
     api_esocial_certificado,
     api_esocial_diagnostico,
 )
+from api.views_esocial_s2245 import (
+    api_esocial_s2245_listar,
+    api_esocial_s2245_gerar,
+    api_esocial_s2245_transmitir,
+    api_esocial_s2245_xml,
+    api_esocial_s2245_lote,
+)
 from api.views_alertas import api_alertas, alertas_page
 from api.views_executive import api_executive_dashboard, executive_dashboard_page
 from api.views_rede import api_rede_kpis, dashboard_rede_page
@@ -307,6 +314,13 @@ from api.views_biometria import (
     api_biometria_cadastrar, api_biometria_detalhe,
     api_biometria_confirmar_entrega, api_biometria_kpis,
     sst_biometria_page,
+)
+from api.views_biometria_facial import (
+    api_biometria_cadastrar_facial,
+    api_biometria_verificar_facial,
+    api_biometria_confirmar_epi_facial,
+    api_biometria_apagar_lgpd,
+    api_biometria_status_facial,
 )
 from api.views_psicossocial import (
     api_psicossocial_avaliacoes, api_psicossocial_detalhe,
@@ -634,7 +648,13 @@ from api.views_plano_ans import (
     api_diops_gerar_xml,
     api_sib_lista,
     api_sib_detalhe,
+    api_sib_transmitir,
     api_ans_kpis,
+)
+from api.views_diops_real import (
+    api_diops_gerar_real,
+    api_diops_download_xml,
+    api_diops_transmitir_ans,
 )
 from api.views_plano_ia import (
     plano_ia_page,
@@ -642,6 +662,36 @@ from api.views_plano_ia import (
     api_ia_analisar,
     api_ia_revisar,
     api_ia_kpis,
+)
+from api.views_ia_autorizacao_ml import (
+    api_ia_analisar_ml,
+    api_ia_retreinar,
+    api_ia_modelo_info,
+)
+from api.views_sngpc_transmissao import (
+    api_sngpc_gerar_xml,
+    api_sngpc_transmitir,
+    api_sngpc_download,
+)
+from api.views_credenciais import (
+    api_credenciais_status,
+    api_credenciais_sngpc_salvar,
+    api_credenciais_testar_sngpc,
+    api_credenciais_ans_salvar,
+    api_credenciais_ans_testar,
+    api_credenciais_sus_salvar,
+    api_credenciais_sus_testar,
+    api_credenciais_rnds_salvar,
+    api_credenciais_rnds_testar,
+    api_credenciais_nfe_salvar,
+    api_credenciais_nfe_testar,
+    api_credenciais_revogar,
+)
+from api.views_nfe import (
+    api_nfe_status,
+    api_nfe_lista,
+    api_nfe_emitir,
+    api_nfe_xml_download,
 )
 from api.views_plano_portal import (
     plano_portal_admin_page,
@@ -1075,6 +1125,12 @@ urlpatterns = [
     path('api/sst/esocial/eventos/<int:evento_id>/transmitido/', api_esocial_marcar_transmitido),
     path('api/sst/cats/<int:cat_id>/esocial/', api_esocial_registrar_cat),
     path('api/sst/asos/<int:aso_id>/esocial/', api_esocial_registrar_aso),
+    # ── eSocial S-2245 (Treinamentos NR) ─────────────────────────────────────
+    path('api/sst/esocial/s2245/', api_esocial_s2245_listar),
+    path('api/sst/esocial/s2245/lote/', api_esocial_s2245_lote),
+    path('api/sst/esocial/s2245/<int:treinamento_id>/gerar/', api_esocial_s2245_gerar),
+    path('api/sst/esocial/s2245/<int:evento_id>/transmitir/', api_esocial_s2245_transmitir),
+    path('api/sst/esocial/s2245/<int:evento_id>/xml/', api_esocial_s2245_xml),
     path('api/sst/afastamentos/<int:afastamento_id>/esocial/', api_esocial_registrar_afastamento),
     # ── Compartilhamento de ASO ───────────────────────────────────────────────
     path('api/sst/asos/<int:aso_id>/compartilhar/', api_aso_compartilhamentos),
@@ -1325,12 +1381,43 @@ urlpatterns = [
     path('api/plano-saude/ans/diops', api_diops_lista),
     path('api/plano-saude/ans/diops/<int:decl_id>', api_diops_detalhe),
     path('api/plano-saude/ans/diops/<int:decl_id>/xml', api_diops_gerar_xml),
+    # ── DIOPS 3.0 Real ────────────────────────────────────────────────────────
+    path('api/plano-saude/ans/diops/<int:declaracao_id>/gerar-real/', api_diops_gerar_real),
+    path('api/plano-saude/ans/diops/<int:declaracao_id>/download/', api_diops_download_xml),
+    path('api/plano-saude/ans/diops/<int:declaracao_id>/transmitir/', api_diops_transmitir_ans),
     path('api/plano-saude/ans/sib', api_sib_lista),
     path('api/plano-saude/ans/sib/<int:sib_id>', api_sib_detalhe),
+    path('api/plano-saude/ans/sib/<int:sib_id>/transmitir/', api_sib_transmitir),
     path('api/plano-saude/ia/kpis', api_ia_kpis),
     path('api/plano-saude/ia/autorizacoes', api_ia_autorizacoes),
     path('api/plano-saude/ia/analisar', api_ia_analisar),
+    # ── IA ML Real ────────────────────────────────────────────────────────────
+    path('api/plano-saude/ia/analisar-ml/', api_ia_analisar_ml),
+    path('api/plano-saude/ia/retreinar/', api_ia_retreinar),
+    path('api/plano-saude/ia/modelo-info/', api_ia_modelo_info),
     path('api/plano-saude/ia/<int:ia_id>/revisar', api_ia_revisar),
+    # ── SNGPC Transmissão ANVISA Real ─────────────────────────────────────────
+    path('api/farmacia/sngpc/gerar/', api_sngpc_gerar_xml),
+    path('api/farmacia/sngpc/transmitir/', api_sngpc_transmitir),
+    path('api/farmacia/sngpc/download/', api_sngpc_download),
+    # ── Credenciais de Integrações (por empresa/tenant) ───────────────────────
+    path('api/integracoes/credenciais/', api_credenciais_status),
+    path('api/integracoes/credenciais/sngpc/', api_credenciais_sngpc_salvar),
+    path('api/integracoes/credenciais/sngpc/testar/', api_credenciais_testar_sngpc),
+    path('api/integracoes/credenciais/ans/', api_credenciais_ans_salvar),
+    path('api/integracoes/credenciais/ans/testar/', api_credenciais_ans_testar),
+    path('api/integracoes/credenciais/sus/', api_credenciais_sus_salvar),
+    path('api/integracoes/credenciais/sus/testar/', api_credenciais_sus_testar),
+    path('api/integracoes/credenciais/rnds/', api_credenciais_rnds_salvar),
+    path('api/integracoes/credenciais/rnds/testar/', api_credenciais_rnds_testar),
+    path('api/integracoes/credenciais/nfe/', api_credenciais_nfe_salvar),
+    path('api/integracoes/credenciais/nfe/testar/', api_credenciais_nfe_testar),
+    path('api/integracoes/credenciais/revogar/', api_credenciais_revogar),
+    # NF-e / SEFAZ
+    path('api/nfe/', api_nfe_lista),
+    path('api/nfe/status/', api_nfe_status),
+    path('api/nfe/emitir/', api_nfe_emitir),
+    path('api/nfe/<int:nfe_id>/xml/', api_nfe_xml_download),
     path('api/plano-saude/portal/beneficiarios', api_portal_beneficiarios_lista),
     path('api/plano-saude/portal/token/<int:benef_id>', api_portal_token_gerar),
     path('api/governo/alertas', api_alertas_governo),
@@ -1763,12 +1850,18 @@ urlpatterns = [
     path('api/sst/cipa/reunioes/<int:reuniao_id>/', api_cipa_reuniao_detalhe),
     path('api/sst/cipa/reunioes/<int:reuniao_id>/ata/pdf/', api_cipa_ata_pdf),
 
-    # ── Biometria Facial — EPI ────────────────────────────────────────────────
+    # ── Biometria Foto-confirmação (legado) ───────────────────────────────────
     path('sst/biometria/', sst_biometria_page),
     path('api/sst/biometria/kpis/', api_biometria_kpis),
     path('api/sst/biometria/cadastrar/', api_biometria_cadastrar),
     path('api/sst/biometria/<int:funcionario_id>/', api_biometria_detalhe),
     path('api/sst/biometria/entregas/<int:entrega_id>/confirmar/', api_biometria_confirmar_entrega),
+    # ── Biometria Facial REAL (ArcFace DeepFace) ─────────────────────────────
+    path('api/sst/biometria/facial/status/', api_biometria_status_facial),
+    path('api/sst/biometria/<int:funcionario_id>/cadastrar-facial/', api_biometria_cadastrar_facial),
+    path('api/sst/biometria/<int:funcionario_id>/verificar/', api_biometria_verificar_facial),
+    path('api/sst/biometria/<int:funcionario_id>/apagar-lgpd/', api_biometria_apagar_lgpd),
+    path('api/sst/epi/entregas/<int:entrega_id>/confirmar-facial/', api_biometria_confirmar_epi_facial),
 
     # ── Psicossocial NR-01 ────────────────────────────────────────────────────
     path('sst/psicossocial/', sst_psicossocial_page),

@@ -77,7 +77,8 @@ def _carregar_certificado(cfg_esocial):
         )
 
     pfx_b64 = cfg_esocial.certificado_pfx_b64
-    senha = cfg_esocial.certificado_senha
+    # Usa senha criptografada (Fernet) com fallback para campo legado plain-text
+    senha = cfg_esocial.get_certificado_senha()
 
     if not pfx_b64:
         raise ValueError("Certificado digital não configurado para esta empresa.")
