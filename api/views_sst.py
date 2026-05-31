@@ -384,6 +384,9 @@ def api_sst_contexto_integrado(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
         return _sst_nao_autorizado()
+    # Defesa extra: evita NameError em releases antigas onde o import global
+    # de timezone pode ter sido removido em merge/cherry-pick.
+    from django.utils import timezone as dj_timezone
 
     hoje = date.today()
     em_30d = hoje + timedelta(days=30)
@@ -477,7 +480,7 @@ def api_sst_contexto_integrado(request):
 
     return JsonResponse({
         "empresa_nome": empresa.nome,
-        "gerado_em": timezone.now().isoformat(),
+        "gerado_em": dj_timezone.now().isoformat(),
         "kpis": {
             "funcionarios_ativos": total_func_ativos,
             "asos_vencidos": asos_vencidos,

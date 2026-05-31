@@ -119,6 +119,12 @@ def _demo_mutations_enabled(empresa=None):
 def _seed_farmacia(empresa):
     hoje = timezone.localdate()
     criados = []
+    receita_field_names = {f.name for f in ReceitaMedica._meta.fields}
+    receita_medicamento_field = (
+        "medicamento_descricao"
+        if "medicamento_descricao" in receita_field_names
+        else "medicamento"
+    )
     fornecedor, created = FornecedorFarmacia.objects.get_or_create(
         empresa=empresa,
         nome="Fornecedor Demo Enterprise",
@@ -315,11 +321,17 @@ def _seed_farmacia(empresa):
         (pacientes_farm[3], "AAS 100mg",        "CRM/SP 000099", 30),
     ]
     for pf_r, med_r, crm_r, val_r in receitas_extra:
+        receita_lookup = {"empresa": empresa, "paciente": pf_r, receita_medicamento_field: med_r}
         _, created = ReceitaMedica.objects.get_or_create(
-            empresa=empresa, paciente=pf_r, medicamento_descricao=med_r,
-            defaults={"medico_nome": "Dr. Demo Extra", "medico_crm": crm_r,
-                      "posologia": "1x ao dia", "data_emissao": hoje,
-                      "data_validade": hoje + timedelta(days=val_r), "status": "ativa"},
+            **receita_lookup,
+            defaults={
+                "medico_nome": "Dr. Demo Extra",
+                "medico_crm": crm_r,
+                "posologia": "1x ao dia",
+                "data_emissao": hoje,
+                "data_validade": hoje + timedelta(days=val_r),
+                "status": "ativa",
+            },
         )
         if created:
             criados.append(f"receita_extra_{med_r[:10]}")

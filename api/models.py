@@ -1356,7 +1356,16 @@ class AfastamentoSST(models.Model):
         ("licenca_paternidade", "Licença Paternidade"),
         ("outro", "Outro"),
     ]
-    STATUS = [("ativo", "Ativo"), ("encerrado", "Encerrado"), ("retorno_programado", "Retorno Programado")]
+    # Constantes nomeadas para evitar regressao em imports/refs do tipo
+    # AfastamentoSST.STATUS_ATIVO em views antigas.
+    STATUS_ATIVO = "ativo"
+    STATUS_ENCERRADO = "encerrado"
+    STATUS_RETORNO_PROGRAMADO = "retorno_programado"
+    STATUS = [
+        (STATUS_ATIVO, "Ativo"),
+        (STATUS_ENCERRADO, "Encerrado"),
+        (STATUS_RETORNO_PROGRAMADO, "Retorno Programado"),
+    ]
 
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="afastamentos_sst")
     funcionario = models.ForeignKey(FuncionarioSST, on_delete=models.CASCADE, related_name="afastamentos")
@@ -1366,7 +1375,7 @@ class AfastamentoSST(models.Model):
     data_inicio = models.DateField()
     data_prevista_retorno = models.DateField(null=True, blank=True)
     data_retorno_real = models.DateField(null=True, blank=True)
-    status = models.CharField(max_length=30, choices=STATUS, default="ativo")
+    status = models.CharField(max_length=30, choices=STATUS, default=STATUS_ATIVO)
     observacoes = models.TextField(blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
