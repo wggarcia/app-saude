@@ -200,6 +200,13 @@ else:
         }
     }
 
+# ── Multi-tenant RLS ──────────────────────────────────────────────────────────
+# Envolve cada requisição HTTP em uma única transação PostgreSQL.
+# Isso garante que o SET LOCAL app.empresa_id (definido no EmpresaMiddleware)
+# fique ativo durante toda a request e seja limpo automaticamente no COMMIT,
+# sem risco de vazar entre conexões reutilizadas (conn_max_age=600).
+ATOMIC_REQUESTS = True
+
 LANGUAGE_CODE = 'pt-br'
 TIME_ZONE = 'America/Sao_Paulo'
 

@@ -13,6 +13,29 @@ from .models import Empresa, EmpresaUsuario, DonoSaaS, DispositivoAutorizado
 
 logger = logging.getLogger(__name__)
 SESSION_IDLE_TIMEOUT = timedelta(minutes=15) if settings.DEBUG else timedelta(hours=8)
+
+
+def _rls_set_empresa(empresa_id: int) -> None:
+    """
+    Ativa o tenant boundary RLS para esta requisição.
+
+    Usa set_config(name, value, is_local=true) — equivale a SET LOCAL no PostgreSQL.
+    Com ATOMIC_REQUESTS=True o valor fica ativo durante toda a transação e é
+    limpo automaticamente no COMMIT, sem risco de vazar entre requisições.
+
+    Em SQLite (dev local) retorna silenciosamente sem erro.
+    """
+    from django.db import connection
+    if connection.vendor != "postgresql":
+        return
+    try:
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT set_config('app.empresa_id', %s, true)",
+                [str(empresa_id)],
+            )
+    except Exception:
+        pass  # nunca quebra a requisição por falha de RLS
 SESSION_TOUCH_INTERVAL = timedelta(minutes=1)
 COOKIE_MAX_AGE = 7 * 24 * 60 * 60
 
@@ -307,6 +330,12 @@ class EmpresaMiddleware:
             _touch_sessao_principal(principal)
             request.empresa = empresa
             request.principal = principal
+
+            # ── RLS: define tenant boundary para toda a transação desta requisição
+            # set_config('app.empresa_id', value, is_local=true) equivale a SET LOCAL —
+            # reverte automaticamente no COMMIT (requer ATOMIC_REQUESTS = True).
+            _rls_set_empresa(empresa.id)
+
             if token_from_tab:
                 request._tab_auth_token = token
 
