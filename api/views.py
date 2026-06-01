@@ -1922,7 +1922,9 @@ def listar_sintomas(request):
 # ================= RESUMOS =================
 
 def resumo_municipios(request):
-    empresa = getattr(request, "empresa", None) or _empresa_app_publico()
+    # Dados epidemiológicos são sempre da empresa pública (app da população).
+    # Governo, Hospital, Farmácia e Plano de Saúde leem os mesmos dados.
+    empresa = _empresa_app_publico()
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
 
@@ -1959,7 +1961,9 @@ from django.db.models import Sum
 from django.db.models import Count, Q
 
 def detectar_surtos(request):
-    empresa = getattr(request, "empresa", None) or _empresa_app_publico()
+    # Dados epidemiológicos são sempre da empresa pública (app da população).
+    # Governo, Hospital, Farmácia e Plano de Saúde leem os mesmos dados.
+    empresa = _empresa_app_publico()
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
 
@@ -2034,7 +2038,9 @@ def detectar_surtos(request):
 # ================= PREVISÃO =================
 
 def prever_surtos(request):
-    empresa = getattr(request, "empresa", None) or _empresa_app_publico()
+    # Dados epidemiológicos são sempre da empresa pública (app da população).
+    # Governo, Hospital, Farmácia e Plano de Saúde leem os mesmos dados.
+    empresa = _empresa_app_publico()
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
 
@@ -2157,7 +2163,9 @@ def relatorio_regioes(request):
 
 
 def relatorio_municipios(request):
-    empresa = getattr(request, "empresa", None) or _empresa_app_publico()
+    # Dados epidemiológicos são sempre da empresa pública (app da população).
+    # Governo, Hospital, Farmácia e Plano de Saúde leem os mesmos dados.
+    empresa = _empresa_app_publico()
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
 
@@ -2191,7 +2199,9 @@ def calcular_risco(total, crescimento):
 
 
 def resumo_doencas(request):
-    empresa = getattr(request, "empresa", None) or _empresa_app_publico()
+    # Dados epidemiológicos são sempre da empresa pública (app da população).
+    # Governo, Hospital, Farmácia e Plano de Saúde leem os mesmos dados.
+    empresa = _empresa_app_publico()
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
 
@@ -2230,7 +2240,9 @@ def diagnostico_ia(request):
 from .utils import treinar_modelo, prever_com_aprendizado
 
 def diagnostico_ia_avancado(request):
-    empresa = getattr(request, "empresa", None) or _empresa_app_publico()
+    # Dados epidemiológicos são sempre da empresa pública (app da população).
+    # Governo, Hospital, Farmácia e Plano de Saúde leem os mesmos dados.
+    empresa = _empresa_app_publico()
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
 
@@ -2283,7 +2295,9 @@ def classificar_padrao(dados, setor: str = "governo"):
     return grupo, classificacao[:300]
 
 def resumo_estados(request):
-    empresa = getattr(request, "empresa", None) or _empresa_app_publico()
+    # Dados epidemiológicos são sempre da empresa pública (app da população).
+    # Governo, Hospital, Farmácia e Plano de Saúde leem os mesmos dados.
+    empresa = _empresa_app_publico()
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
     dados = RegistroSintoma.objects.filter(empresa=empresa).values("estado").annotate(total=Count("id"))
@@ -2303,7 +2317,9 @@ def gerar_alerta(total, grupo):
     return "NORMAL", "Situação controlada"
 
 def mapa_casos(request):
-    empresa = getattr(request, "empresa", None) or _empresa_app_publico()
+    # Dados epidemiológicos são sempre da empresa pública (app da população).
+    # Governo, Hospital, Farmácia e Plano de Saúde leem os mesmos dados.
+    empresa = _empresa_app_publico()
     from api.middleware import _rls_set_empresa as _set_rls
     _set_rls(empresa.id)
 
