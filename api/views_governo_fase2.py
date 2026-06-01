@@ -17,6 +17,8 @@ from .models import (
     NotificacaoCompulsoria, SurtoEpidemiologico,
     RegulacaoLeito, ProducaoAmbulatorial,
     MetaPrevine, ContratoGestao, AtendimentoUrgencia,
+    ApiKeyEmpresa, UsoApiEmpresa, SubscricaoEvento,
+    AuditoriaInstitucional, EmpresaUsuario,
 )
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 
@@ -1097,12 +1099,44 @@ def api_governo_plataforma_chaves(request):
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     try:
         if request.method == "POST":
-            import secrets
-            nova_chave = secrets.token_urlsafe(32)
-            return JsonResponse({"chave": nova_chave, "criado": True})
-        return JsonResponse({"chaves": [], "total": 0, "ativas": 0, "chamadas_hoje": 0, "taxa_sucesso": 100})
-    except Exception:
-        return JsonResponse({"disponivel": False}, status=500)
+            dados = json.loads(request.body or "{}")
+            nome = (dados.get("nome") or "Chave API").strip()[:100]
+            key = ApiKeyEmpresa.objects.create(empresa=empresa, nome=nome)
+            AuditoriaInstitucional.objects.create(
+                empresa=empresa, acao="api_key_criada",
+                objeto_tipo="ApiKeyEmpresa", objeto_id=str(key.id),
+                detalhes={"nome": nome},
+            )
+            return JsonResponse({"chave": key.chave, "id": key.id, "nome": key.nome, "criado": True}, status=201)
+
+        # GET — lista chaves com uso de hoje
+        hoje = date.today().strftime("%Y-%m")
+        keys = ApiKeyEmpresa.objects.filter(empresa=empresa).order_by("-criado_em")
+        chamadas_hoje = (
+            UsoApiEmpresa.objects.filter(empresa=empresa, ano_mes=hoje)
+            .aggregate(total=Sum("chamadas"))["total"] or 0
+        )
+        ativas = keys.filter(ativa=True).count()
+        return JsonResponse({
+            "chaves": [
+                {
+                    "id": k.id,
+                    "nome": k.nome,
+                    "chave_prefixo": k.chave[:8] + "••••••••",
+                    "ativa": k.ativa,
+                    "total_chamadas": k.total_chamadas,
+                    "ultimo_uso_em": k.ultimo_uso_em.isoformat() if k.ultimo_uso_em else None,
+                    "criado_em": k.criado_em.strftime("%d/%m/%Y"),
+                }
+                for k in keys
+            ],
+            "total": keys.count(),
+            "ativas": ativas,
+            "chamadas_hoje": chamadas_hoje,
+            "taxa_sucesso": 100,
+        })
+    except Exception as ex:
+        return JsonResponse({"disponivel": False, "erro": str(ex)[:200]}, status=500)
 
 
 @api_requer_plataforma_ti
@@ -1112,10 +1146,49 @@ def api_governo_plataforma_webhooks(request):
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     try:
         if request.method == "POST":
-            return JsonResponse({"criado": True})
-        return JsonResponse({"webhooks": []})
-    except Exception:
-        return JsonResponse({"disponivel": False}, status=500)
+            dados = json.loads(request.body or "{}")
+            url = (dados.get("url_destino") or "").strip()
+            pattern = (dados.get("tipo_evento_pattern") or "*").strip()
+            if not url:
+                return JsonResponse({"erro": "url_destino é obrigatório"}, status=400)
+            import secrets
+            sub = SubscricaoEvento.objects.create(
+                empresa=empresa,
+                tipo_evento_pattern=pattern,
+                url_destino=url,
+                secret_hmac=secrets.token_hex(32),
+                ativo=True,
+            )
+            AuditoriaInstitucional.objects.create(
+                empresa=empresa, acao="webhook_criado",
+                objeto_tipo="SubscricaoEvento", objeto_id=str(sub.id),
+                detalhes={"url": url, "pattern": pattern},
+            )
+            return JsonResponse({
+                "id": sub.id,
+                "url_destino": sub.url_destino,
+                "tipo_evento_pattern": sub.tipo_evento_pattern,
+                "secret_hmac": sub.secret_hmac,
+                "criado": True,
+            }, status=201)
+
+        # GET — lista webhooks cadastrados
+        subs = SubscricaoEvento.objects.filter(empresa=empresa).order_by("-criado_em")
+        return JsonResponse({
+            "webhooks": [
+                {
+                    "id": s.id,
+                    "url_destino": s.url_destino,
+                    "tipo_evento_pattern": s.tipo_evento_pattern,
+                    "ativo": s.ativo,
+                    "criado_em": s.criado_em.strftime("%d/%m/%Y"),
+                }
+                for s in subs
+            ],
+            "total": subs.count(),
+        })
+    except Exception as ex:
+        return JsonResponse({"disponivel": False, "erro": str(ex)[:200]}, status=500)
 
 
 @api_requer_plataforma_ti
@@ -1124,18 +1197,55 @@ def api_governo_plataforma_seguranca(request):
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     try:
+        # LGPD checklist — verificado contra dados reais
+        tem_dpo = EmpresaUsuario.objects.filter(
+            empresa=empresa, ativo=True,
+            cargo__icontains="dpo"
+        ).exists() or EmpresaUsuario.objects.filter(
+            empresa=empresa, ativo=True,
+            cargo__icontains="encarregado"
+        ).exists()
+
+        tem_mapeamento = AuditoriaInstitucional.objects.filter(
+            empresa=empresa, acao__icontains="mapeamento_dados"
+        ).exists()
+
+        tem_ripd = AuditoriaInstitucional.objects.filter(
+            empresa=empresa, acao__icontains="ripd"
+        ).exists()
+
+        tem_acordo = AuditoriaInstitucional.objects.filter(
+            empresa=empresa, acao__icontains="acordo_ministerio"
+        ).exists()
+
+        # Sessões ativas (últimas 8 horas)
+        oito_horas = timezone.now() - timedelta(hours=8)
+        sessoes = EmpresaUsuario.objects.filter(
+            empresa=empresa, ativo=True,
+            sessao_ativa_em__gte=oito_horas,
+        ).values("id", "nome", "email", "sessao_ativa_em")
+
         return JsonResponse({
             "lgpd_checklist": [
-                {"item": "Encarregado DPO nomeado",                          "ok": False},
-                {"item": "Mapeamento de dados sensíveis concluído",          "ok": False},
-                {"item": "Relatório de Impacto (RIPD) elaborado",            "ok": False},
-                {"item": "Acordo de processamento com Ministério da Saúde",  "ok": False},
+                {"item": "Encarregado DPO nomeado",                         "ok": tem_dpo},
+                {"item": "Mapeamento de dados sensíveis concluído",         "ok": tem_mapeamento},
+                {"item": "Relatório de Impacto (RIPD) elaborado",           "ok": tem_ripd},
+                {"item": "Acordo de processamento com Ministério da Saúde", "ok": tem_acordo},
             ],
-            "sessoes_ativas": [],
-            "2fa_ativo": False,
+            "sessoes_ativas": [
+                {
+                    "usuario_id": s["id"],
+                    "nome": s["nome"],
+                    "email": s["email"],
+                    "ativo_desde": s["sessao_ativa_em"].isoformat() if s["sessao_ativa_em"] else None,
+                }
+                for s in sessoes
+            ],
+            "total_sessoes_ativas": sessoes.count(),
+            "2fa_ativo": False,  # 2FA implementável como próximo passo
         })
-    except Exception:
-        return JsonResponse({"disponivel": False}, status=500)
+    except Exception as ex:
+        return JsonResponse({"disponivel": False, "erro": str(ex)[:200]}, status=500)
 
 
 @api_requer_plataforma_ti
@@ -1144,6 +1254,29 @@ def api_governo_plataforma_logs(request):
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     try:
-        return JsonResponse({"logs": [], "total": 0})
-    except Exception:
-        return JsonResponse({"disponivel": False}, status=500)
+        limite = min(int(request.GET.get("limite", 50)), 200)
+        acao_filtro = request.GET.get("acao", "")
+
+        qs = AuditoriaInstitucional.objects.filter(empresa=empresa)
+        if acao_filtro:
+            qs = qs.filter(acao__icontains=acao_filtro)
+
+        logs = qs.order_by("-criado_em")[:limite]
+        return JsonResponse({
+            "logs": [
+                {
+                    "id": l.id,
+                    "acao": l.acao,
+                    "objeto_tipo": l.objeto_tipo or "—",
+                    "objeto_id": l.objeto_id or "—",
+                    "principal_nome": l.principal_nome or "sistema",
+                    "ip": l.ip,
+                    "data": l.criado_em.strftime("%d/%m/%Y %H:%M"),
+                    "detalhes": l.detalhes,
+                }
+                for l in logs
+            ],
+            "total": qs.count(),
+        })
+    except Exception as ex:
+        return JsonResponse({"disponivel": False, "erro": str(ex)[:200]}, status=500)
