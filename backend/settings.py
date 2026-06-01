@@ -116,6 +116,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'api.middleware.EmpresaMiddleware',
+    'api.middleware.SegmentoAccessMiddleware',   # isolamento por segmento (SST/Farmácia/Hospital/Governo/Plano)
     'api.middleware.FetchAuthInterceptorMiddleware',
     'api.views_api_versioning.EnterpriseAPIMiddleware',
 ]

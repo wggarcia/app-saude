@@ -187,7 +187,8 @@ from api.views_feature_store import (
 from api.views_governanca import (
     api_governanca_semanal, api_governanca_burn_multiple,
     api_governanca_pricing_valor, api_governanca_ml_fairness,
-    api_governanca_causal_impact, governanca_page,
+    api_governanca_causal_impact, api_governanca_registrar_caixa,
+    governanca_page,
 )
 from api.views_api_versioning import api_circuit_breaker_status, api_rate_limit_status
 from api.views_contratos import (
@@ -667,6 +668,7 @@ from api.views_governo_odontologia import (
     api_ceo_producao,
     api_ceo_fechar_producao,
     api_ceo_transmitir,
+    api_ceo_bpa_download,
     api_ceo_procedimentos,
     api_ceo_kpis,
 )
@@ -1852,6 +1854,8 @@ urlpatterns = [
     path('api/governanca/ml-fairness/', api_governanca_ml_fairness),
     path('api/governanca/causal-impact', api_governanca_causal_impact),
     path('api/governanca/causal-impact/', api_governanca_causal_impact),
+    path('api/governanca/caixa',         api_governanca_registrar_caixa),
+    path('api/governanca/caixa/',        api_governanca_registrar_caixa),
 
     # Hub Enterprise — filtrado por setor, isolamento total entre ambientes
     path('hub/', hub_view),
@@ -2118,6 +2122,8 @@ urlpatterns = [
     path('api/governo/ceo/producao/<int:prod_id>/fechar/',       api_ceo_fechar_producao),
     path('api/governo/ceo/producao/<int:prod_id>/transmitir',    api_ceo_transmitir),
     path('api/governo/ceo/producao/<int:prod_id>/transmitir/',   api_ceo_transmitir),
+    path('api/governo/ceo/producao/<int:prod_id>/bpa-download',  api_ceo_bpa_download),
+    path('api/governo/ceo/producao/<int:prod_id>/bpa-download/', api_ceo_bpa_download),
 
     # ── CCIH — Controle de Infecção Hospitalar (ANVISA RDC 36/2008) ──────────
     path('api/hospital/ccih/kpis',                               api_ccih_kpis),

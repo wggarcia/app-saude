@@ -411,6 +411,92 @@ _FETCH_INTERCEPTOR = b"""
 </script>
 """
 
+class SegmentoAccessMiddleware:
+    """
+    Isolamento de segmento por prefixo de URL.
+
+    A SolusCRT tem 5 SaaS distintos — cada cliente assina UM segmento.
+    Um cliente de Farmácia não pode acessar endpoints de Hospital, e vice-versa.
+
+    Esta middleware garante esse isolamento verificando o prefixo da URL contra
+    o setor do plano contratado pela empresa autenticada.
+
+    Prefixos → setor obrigatório:
+        /api/hospital/*    → hospital
+        /api/farmacia/*    → farmacia
+        /api/governo/*     → governo
+        /api/plano-saude/* → plano_saude
+        /api/plano/*       → plano_saude
+        /api/sst/*         → empresa
+        /api/rede/*        → rede
+
+    Rotas de infraestrutura (/api/governanca/, /api/financeiro/, etc.) são
+    protegidas pelos seus próprios decorators (dono_autenticado_from_request)
+    e NÃO são alteradas aqui.
+    """
+
+    # Mapa de prefixo URL → setor obrigatório
+    _PREFIXO_SETOR = (
+        ("/api/hospital/",    "hospital"),
+        ("/api/farmacia/",    "farmacia"),
+        ("/api/governo/",     "governo"),
+        ("/api/plano-saude/", "plano_saude"),
+        ("/api/plano/",       "plano_saude"),
+        ("/api/sst/",         "empresa"),
+        ("/api/rede/",        "rede"),
+    )
+
+    # Subprefixos que são exceção dentro de /api/plano/ (autenticação própria)
+    _EXCECOES_PLANO = {
+        "/api/planos-publicos",  # catálogo público de planos (sem auth)
+        "/api/planos-saude",     # listagem pública
+    }
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        path = request.path_info
+
+        # Determina se esta URL exige um setor específico
+        setor_obrigatorio = None
+        for prefixo, setor in self._PREFIXO_SETOR:
+            if path.startswith(prefixo) or path == prefixo.rstrip("/"):
+                setor_obrigatorio = setor
+                break
+
+        if setor_obrigatorio is None:
+            # URL não está numa namespace de segmento — passa direto
+            return self.get_response(request)
+
+        # Se não há empresa autenticada, deixa o fluxo normal tratar (retornará 401)
+        empresa = getattr(request, "empresa", None)
+        if not empresa:
+            return self.get_response(request)
+
+        # Verifica o setor da empresa
+        from .access_control import get_setor
+        setor_empresa = get_setor(empresa)
+
+        if setor_empresa != setor_obrigatorio:
+            import json
+            from django.http import JsonResponse
+            return JsonResponse(
+                {
+                    "erro": (
+                        f"Módulo '{setor_obrigatorio}' não faz parte do seu plano. "
+                        f"Seu segmento: '{setor_empresa}'. "
+                        f"Cada cliente da SolusCRT acessa apenas o segmento contratado."
+                    ),
+                    "setor_empresa": setor_empresa,
+                    "setor_requerido": setor_obrigatorio,
+                },
+                status=403,
+            )
+
+        return self.get_response(request)
+
+
 class FetchAuthInterceptorMiddleware:
     """
     Injeta um interceptor de fetch em respostas HTML para redirecionar ao login

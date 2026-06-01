@@ -1790,6 +1790,13 @@ def registrar_sintoma_publico(request):
         }, status=400)
 
     empresa = _empresa_app_publico()
+    # ── RLS: define o tenant boundary para o endpoint público ──────────────
+    # A política de isolamento (migration 0085) exige que app.empresa_id esteja
+    # definido antes de qualquer INSERT em api_registrosintoma.  No fluxo
+    # autenticado isso é feito pelo middleware; aqui precisamos fazer
+    # manualmente, pois /api/public/ é rota livre (sem sessão de usuário).
+    from api.middleware import _rls_set_empresa as _set_rls
+    _set_rls(empresa.id)
     if simulacao_autorizada:
         geo = {
             "bairro": (dados.get("bairro") or "Centro").strip(),
@@ -2296,6 +2303,10 @@ def mapa_casos(request):
 
 
 def app_resumo_publico(request):
+    # ── RLS: garante visibilidade dos registros públicos ─────────────────────
+    from api.middleware import _rls_set_empresa as _set_rls
+    _emp_pub = _empresa_app_publico()
+    _set_rls(_emp_pub.id)
     agora = timezone.now()
     ultimas_24h = RegistroSintoma.objects.filter(data_registro__gte=agora - timedelta(hours=24))
     ultimos_7d = RegistroSintoma.objects.filter(data_registro__gte=agora - timedelta(days=7))
@@ -2349,6 +2360,10 @@ def app_resumo_publico(request):
 
 
 def app_radar_local(request):
+    # ── RLS: garante visibilidade dos registros públicos ─────────────────────
+    from api.middleware import _rls_set_empresa as _set_rls
+    _emp_pub = _empresa_app_publico()
+    _set_rls(_emp_pub.id)
     latitude = request.GET.get("latitude")
     longitude = request.GET.get("longitude")
     cidade = request.GET.get("cidade")
@@ -2449,6 +2464,10 @@ def app_radar_local(request):
 
 
 def app_mapa_publico(request):
+    # ── RLS: garante visibilidade dos registros públicos ─────────────────────
+    from api.middleware import _rls_set_empresa as _set_rls
+    _emp_pub = _empresa_app_publico()
+    _set_rls(_emp_pub.id)
     agora = timezone.now()
     base = RegistroSintoma.objects.filter(
         data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS),
@@ -2576,6 +2595,10 @@ def app_mapa_publico(request):
 
 
 def app_alertas_publicos(request):
+    # ── RLS: garante visibilidade dos alertas do setor público ──────────────
+    from api.middleware import _rls_set_empresa as _set_rls
+    _emp_pub = _empresa_app_publico()
+    _set_rls(_emp_pub.id)
     cidade = request.GET.get("cidade")
     estado = request.GET.get("estado")
     bairro = request.GET.get("bairro")

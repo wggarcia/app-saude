@@ -49,12 +49,18 @@ def _burn_multiple(mrr_atual, mrr_anterior, burn_mensal_estimado):
 
 
 def _arr_waterfall():
-    """ARR Waterfall: novo + expansão - contração - churn."""
+    """
+    ARR Waterfall: novo + expansão − contração − churn.
+
+    Expansão e contração calculadas a partir de FinanceiroEventoSaaS:
+    - tipo_evento "upgrade"   → cliente subiu de plano → ARR expansion
+    - tipo_evento "downgrade" → cliente baixou de plano → ARR contraction
+    O campo `valor` armazena o delta de MRR registrado no evento.
+    """
     try:
-        from .models import Empresa
+        from .models import Empresa, FinanceiroEventoSaaS
         hoje = date.today()
         mes_atual = hoje.replace(day=1)
-        mes_anterior = (mes_atual - timedelta(days=1)).replace(day=1)
 
         novos = Empresa.objects.filter(
             ativo=True,
@@ -68,16 +74,32 @@ def _arr_waterfall():
         )
         arr_churn = sum(_ticket_mensal(e["pacote_codigo"]) * 12 for e in churned.values("pacote_codigo"))
 
+        # Expansão: upgrades de plano no mês atual — valor = delta de MRR positivo
+        expansao_qs = FinanceiroEventoSaaS.objects.filter(
+            tipo_evento="upgrade",
+            criado_em__date__gte=mes_atual,
+        ).aggregate(total=Sum("valor"))
+        arr_expansao = float(expansao_qs["total"] or 0) * 12
+
+        # Contração: downgrades de plano no mês atual — valor = delta de MRR (negativo ou positivo)
+        contracao_qs = FinanceiroEventoSaaS.objects.filter(
+            tipo_evento="downgrade",
+            criado_em__date__gte=mes_atual,
+        ).aggregate(total=Sum("valor"))
+        arr_contracao = abs(float(contracao_qs["total"] or 0)) * 12
+
+        arr_liquido = arr_novos + arr_expansao - arr_contracao - arr_churn
+
         return {
-            "arr_novos": arr_novos,
-            "arr_expansao": 0,       # requer histórico de plano — placeholder
-            "arr_contracao": 0,
-            "arr_churn": arr_churn,
-            "arr_liquido": arr_novos - arr_churn,
-            "nota": "Expansão/contração requer histórico de mudança de plano",
+            "arr_novos": round(arr_novos, 2),
+            "arr_expansao": round(arr_expansao, 2),
+            "arr_contracao": round(arr_contracao, 2),
+            "arr_churn": round(arr_churn, 2),
+            "arr_liquido": round(arr_liquido, 2),
+            "mes_referencia": mes_atual.isoformat(),
         }
     except Exception:
-        return {"arr_novos": 0, "arr_churn": 0, "arr_liquido": 0}
+        return {"arr_novos": 0, "arr_expansao": 0, "arr_contracao": 0, "arr_churn": 0, "arr_liquido": 0}
 
 
 def _pricing_por_valor():
@@ -231,8 +253,24 @@ def _causal_impact(empresa):
         return {"nota": "Dados insuficientes para análise de impacto causal"}
 
 
+def _caixa_atual():
+    """
+    Retorna o saldo de caixa mais recente registrado pelo DonoSaaS.
+    Se não há registro, retorna (None, "sem_registro").
+    """
+    try:
+        from .models import CaixaPlataformaSaaS
+        entrada = CaixaPlataformaSaaS.objects.first()   # ordenado por -data_referencia
+        if entrada:
+            return float(entrada.saldo), entrada.data_referencia.isoformat()
+        return None, "sem_registro"
+    except Exception:
+        return None, "erro"
+
+
 def api_governanca_semanal(request):
-    if not dono_autenticado_from_request(request):
+    dono = dono_autenticado_from_request(request)
+    if not dono:
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
 
     arr_anual, mrr, clientes = _arr_atual()
@@ -246,10 +284,17 @@ def api_governanca_semanal(request):
     mrr_anterior = mrr - (waterfall["arr_novos"] / 12) + (waterfall["arr_churn"] / 12)
     bm, bm_grade = _burn_multiple(mrr, mrr_anterior, burn_mensal_est)
 
-    # Runway
-    caixa_estimado = mrr * 6  # placeholder — sem dados reais de caixa
+    # Caixa real (registrado pelo dono) ou estimativa explicitamente rotulada
+    caixa_real, caixa_data = _caixa_atual()
+    if caixa_real is not None:
+        caixa = caixa_real
+        caixa_fonte = f"real — saldo em {caixa_data}"
+    else:
+        caixa = mrr * 6
+        caixa_fonte = "estimativa (6x MRR) — registre o saldo real via POST /api/governanca/caixa/"
+
     burn_liquido = max(burn_mensal_est - mrr, 0)
-    runway_meses = round(caixa_estimado / burn_liquido) if burn_liquido > 0 else 999
+    runway_meses = round(caixa / burn_liquido) if burn_liquido > 0 else 999
 
     hoje = date.today()
     semana = hoje.isocalendar()[1]
@@ -263,11 +308,13 @@ def api_governanca_semanal(request):
         pauta.append({"prioridade": 2, "topico": "Sem novos clientes no mês", "acao": "Revisar pipeline e acelerar demos", "owner": "Sales"})
     if bm and bm > 2:
         pauta.append({"prioridade": 2, "topico": f"Burn Multiple em {bm}x", "acao": "Revisar alocação de headcount e CAC", "owner": "CEO/CFO"})
+    if caixa_real is None:
+        pauta.append({"prioridade": 3, "topico": "Caixa sem registro real", "acao": "Registre o saldo de caixa via POST /api/governanca/caixa/ para runway preciso", "owner": "CFO"})
     if not pauta:
         pauta.append({"prioridade": 3, "topico": "Métricas dentro do esperado", "acao": "Manter cadência de crescimento e execução", "owner": "Time"})
 
     return JsonResponse({
-        "empresa": empresa.nome,
+        "plataforma": "SolusCRT",
         "semana": f"S{semana}/{hoje.year}",
         "gerado_em": str(hoje),
         "kpis_semana": {
@@ -279,6 +326,8 @@ def api_governanca_semanal(request):
             "burn_multiple": bm,
             "burn_multiple_grade": bm_grade,
             "runway_meses": runway_meses,
+            "caixa": round(caixa, 2),
+            "caixa_fonte": caixa_fonte,
         },
         "arr_waterfall": waterfall,
         "pauta_executiva": pauta,
@@ -369,6 +418,70 @@ def api_governanca_causal_impact(request):
         "empresa_id": empresa.id,
         **_causal_impact(empresa),
     })
+
+
+def api_governanca_registrar_caixa(request):
+    """
+    POST /api/governanca/caixa/
+    Registra o saldo real de caixa da plataforma.
+    Body: {"saldo": 150000.00, "data_referencia": "2026-06-01", "observacao": "Extrato Banco X"}
+
+    GET /api/governanca/caixa/
+    Retorna o histórico de registros de caixa.
+    """
+    from django.views.decorators.csrf import csrf_exempt
+    import json
+    from .models import CaixaPlataformaSaaS
+
+    dono = dono_autenticado_from_request(request)
+    if not dono:
+        return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
+
+    if request.method == "GET":
+        entradas = CaixaPlataformaSaaS.objects.all()[:24]  # últimos 24 registros
+        return JsonResponse({
+            "registros": [
+                {
+                    "id": e.id,
+                    "saldo": float(e.saldo),
+                    "data_referencia": e.data_referencia.isoformat(),
+                    "observacao": e.observacao,
+                    "criado_em": e.criado_em.isoformat(),
+                }
+                for e in entradas
+            ],
+        })
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    saldo = data.get("saldo")
+    data_ref = data.get("data_referencia")
+
+    if saldo is None:
+        return JsonResponse({"erro": "Campo obrigatório: saldo"}, status=400)
+    if data_ref is None:
+        return JsonResponse({"erro": "Campo obrigatório: data_referencia (YYYY-MM-DD)"}, status=400)
+
+    try:
+        saldo = float(saldo)
+    except (TypeError, ValueError):
+        return JsonResponse({"erro": "saldo deve ser numérico"}, status=400)
+
+    entrada = CaixaPlataformaSaaS.objects.create(
+        saldo=saldo,
+        data_referencia=data_ref,
+        observacao=data.get("observacao", ""),
+    )
+    return JsonResponse({
+        "ok": True,
+        "id": entrada.id,
+        "saldo": float(entrada.saldo),
+        "data_referencia": entrada.data_referencia.isoformat(),
+        "mensagem": "Saldo de caixa registrado. O painel de governança usará este valor para cálculo de runway.",
+    }, status=201)
 
 
 def governanca_page(request):

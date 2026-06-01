@@ -230,7 +230,22 @@ def api_financeiro_metricas(request):
     payback_meses = round(cac_estimado / ticket_medio, 1) if ticket_medio > 0 else 0
     ltv_cac = round(ltv / cac_estimado, 1) if cac_estimado > 0 else 0
     burn_multiple = round(burn_mensal / mrr, 2) if mrr > 0 else 0
-    runway_meses = round(mrr * 6 / burn_mensal, 0) if burn_mensal > 0 else 0
+
+    # Caixa: usa saldo real registrado pelo DonoSaaS ou estimativa rotulada 6x MRR
+    try:
+        from .models import CaixaPlataformaSaaS
+        entrada_caixa = CaixaPlataformaSaaS.objects.first()
+        if entrada_caixa:
+            caixa = float(entrada_caixa.saldo)
+            caixa_fonte = f"real — {entrada_caixa.data_referencia}"
+        else:
+            caixa = mrr * 6
+            caixa_fonte = "estimativa_6x_mrr"
+    except Exception:
+        caixa = mrr * 6
+        caixa_fonte = "estimativa_6x_mrr"
+
+    runway_meses = round(caixa / burn_mensal, 0) if burn_mensal > 0 else 0
 
     return JsonResponse({
         "gerado_em": str(date.today()),
@@ -255,6 +270,8 @@ def api_financeiro_metricas(request):
             "burn_mensal": round(burn_mensal, 2),
             "burn_fonte": burn_fonte,
             "burn_multiple": burn_multiple,
+            "caixa": round(caixa, 2),
+            "caixa_fonte": caixa_fonte,
             "runway_meses_est": runway_meses,
         },
         "distribuicao_planos": dist_planos,

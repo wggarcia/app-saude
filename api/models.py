@@ -613,6 +613,25 @@ class FinanceiroEventoSaaS(models.Model):
         return f"{self.empresa.nome} - {self.tipo_evento}"
 
 
+class CaixaPlataformaSaaS(models.Model):
+    """
+    Saldo de caixa real da plataforma SolusCRT — inserido manualmente pelo DonoSaaS.
+    Usado pelo painel de governança para calcular runway real em vez de estimativa.
+    """
+    saldo = models.DecimalField(max_digits=14, decimal_places=2, help_text="Saldo total em caixa (R$)")
+    data_referencia = models.DateField(help_text="Data a que se refere o saldo informado")
+    observacao = models.TextField(blank=True, default="")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_referencia"]
+        verbose_name = "Caixa da Plataforma SaaS"
+        verbose_name_plural = "Registros de Caixa da Plataforma SaaS"
+
+    def __str__(self):
+        return f"Caixa R$ {self.saldo:,.2f} em {self.data_referencia}"
+
+
 class DonoAuditoriaAcao(models.Model):
     dono = models.ForeignKey(DonoSaaS, on_delete=models.CASCADE, related_name="auditorias")
     empresa = models.ForeignKey(Empresa, on_delete=models.SET_NULL, null=True, blank=True, related_name="auditorias_dono")

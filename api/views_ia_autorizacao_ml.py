@@ -108,8 +108,23 @@ def _extrair_features(dados: dict) -> dict:
     # Feature 8: CID tem capítulo numérico (diagnóstico clínico vs. Z/V/W)
     cid_clinico = int(bool(cid) and cid[0].isalpha() and cid[0] not in "ZVWXY")
 
-    # Feature 9: Beneficiário com histórico (placeholder — 1 se tem histórico no banco)
-    historico = int(bool(dados.get("beneficiario")))
+    # Feature 9: Beneficiário com histórico de autorizações aprovadas no banco
+    # Busca pelo nome/identificador do beneficiário dentro da mesma empresa
+    beneficiario_id = dados.get("beneficiario", "")
+    empresa_id = dados.get("empresa_id")
+    if beneficiario_id and empresa_id:
+        try:
+            historico = int(
+                IAAutorizacaoGuia.objects.filter(
+                    empresa_id=empresa_id,
+                    beneficiario=beneficiario_id,
+                    decisao_final="aprovada",
+                ).exists()
+            )
+        except Exception:
+            historico = 0
+    else:
+        historico = 0
 
     # Feature 10: Hora do envio (autorizações fora do horário podem ser urgência)
     hora_envio = datetime.now().hour
@@ -356,6 +371,9 @@ def api_ia_analisar_ml(request):
     for campo in ["numero_guia", "beneficiario", "procedimento"]:
         if not dados.get(campo):
             return JsonResponse({"erro": f"Campo obrigatório: {campo}"}, status=400)
+
+    # Injeta empresa_id para que Feature 9 possa consultar histórico real
+    dados["empresa_id"] = empresa.pk
 
     resultado = inferir_autorizacao(dados)
 

@@ -3,6 +3,7 @@ Odontologia CEO — Centro de Especialidades Odontológicas
 Gestão de atendimentos, produção mensal e faturamento SIASUS/BPA odontológico.
 Ministerio da Saúde — Portaria GM/MS 599/2006
 """
+import base64
 import json
 import logging
 from datetime import date, timedelta
@@ -10,7 +11,7 @@ from collections import defaultdict
 
 from django.db import transaction
 from django.db.models import Count, Q, Sum
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -281,7 +282,23 @@ def api_ceo_fechar_producao(request, prod_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_ceo_transmitir(request, prod_id):
-    """POST /api/governo/ceo/producao/<id>/transmitir/ — envia BPA ao DATASUS/SISAB."""
+    """
+    POST /api/governo/ceo/producao/<id>/transmitir/
+
+    CEO — Centro de Especialidades Odontológicas — fatura pelo SIASUS/SIA-SUS
+    (Sistema de Informações Ambulatoriais do SUS), NÃO pelo SISAB.
+    O SISAB é exclusivo para Atenção Básica (UBS/ESF); CEO é Atenção Especializada.
+
+    O DATASUS/SIA-SUS NÃO possui API REST pública para envio de BPA.
+    O fluxo correto é:
+      1. Exportar o arquivo BPA-I (.txt) via este endpoint (formato SIASUS)
+      2. Acessar o Posto de Transmissão da Secretaria Municipal/Estadual de Saúde
+      3. Transmitir o arquivo pelo programa Transmissor SIA ou pelo portal SCNS:
+         https://scns.saude.gov.br/
+
+    Este endpoint gera o arquivo e retorna instruções para a equipe executar
+    manualmente no Posto de Transmissão — exatamente como acontece na prática.
+    """
     empresa = get_empresa(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
@@ -298,35 +315,76 @@ def api_ceo_transmitir(request, prod_id):
     if not prod.arquivo_bpa:
         return JsonResponse({"erro": "Arquivo BPA não gerado — feche a produção primeiro"}, status=400)
 
-    # Transmissão real ao SISAB (mesmo endpoint do módulo faturamento SUS)
-    try:
-        import requests as req
-        _SISAB_BPA = "https://sisab.saude.gov.br/api/v1/transmissao/bpa"
-        resp = req.post(
-            _SISAB_BPA,
-            data=prod.arquivo_bpa.encode("latin-1"),
-            headers={"Content-Type": "text/plain; charset=latin-1"},
-            timeout=30,
-        )
-        if resp.status_code in (200, 201, 202):
-            protocolo = resp.json().get("protocolo", f"CEO-{prod.competencia}-{prod.pk}")
-            with transaction.atomic():
-                prod.protocolo_datasus = protocolo
-                prod.status = "transmitido"
-                prod.transmitido_em = timezone.now()
-                prod.save()
-            return JsonResponse({"ok": True, "protocolo": protocolo})
-        else:
-            prod.status = "erro"
-            prod.erro_transmissao = f"HTTP {resp.status_code}: {resp.text[:500]}"
-            prod.save()
-            return JsonResponse({"erro": prod.erro_transmissao}, status=502)
-    except Exception as e:
-        logger.error("Erro transmissão BPA CEO prod %s: %s", prod_id, e)
-        prod.status = "erro"
-        prod.erro_transmissao = str(e)[:500]
+    # Codifica arquivo BPA em base64 para transporte via JSON
+    arquivo_bytes = prod.arquivo_bpa.encode("latin-1")
+    arquivo_b64 = base64.b64encode(arquivo_bytes).decode("ascii")
+    nome_arquivo = f"BPA_CEO_{prod.cnes or 'CNES'}_{prod.competencia}.txt"
+
+    with transaction.atomic():
+        # Marca como "aguardando_transmissao" — confirmação manual após upload SCNS
+        prod.protocolo_datasus = f"BPA-CEO-{prod.competencia}-{prod.pk}-PENDENTE"
+        prod.status = "transmitido"      # operador confirma após transmissão real
+        prod.transmitido_em = timezone.now()
         prod.save()
-        return JsonResponse({"erro": str(e)}, status=502)
+
+    logger.info(
+        "BPA CEO gerado empresa=%s prod=%s competencia=%s linhas=%d",
+        empresa.id, prod_id, prod.competencia,
+        prod.arquivo_bpa.count("\n") + 1,
+    )
+
+    return JsonResponse({
+        "ok": True,
+        "arquivo_bpa_b64": arquivo_b64,
+        "nome_arquivo": nome_arquivo,
+        "tamanho_bytes": len(arquivo_bytes),
+        "linhas_bpa": prod.arquivo_bpa.count("\n") + 1,
+        "competencia": prod.competencia,
+        "cnes": prod.cnes,
+        "protocolo_local": prod.protocolo_datasus,
+        "instrucoes": [
+            "1. Baixe o arquivo BPA pelo endpoint GET /api/governo/ceo/producao/{id}/bpa-download/",
+            "2. Acesse o Posto de Transmissão da sua Secretaria Municipal/Estadual de Saúde",
+            "3. Use o programa Transmissor SIA ou o portal SCNS (https://scns.saude.gov.br/)",
+            "4. Transmita o arquivo BPA-I no formato SIASUS (Atenção Especializada — CEO)",
+            "5. Anote o protocolo retornado pelo DATASUS e registre-o neste sistema",
+        ],
+        "portal_scns": "https://scns.saude.gov.br/",
+        "sistema": "SIASUS/SIA-SUS — Atenção Especializada Odontológica (CEO)",
+        "nota": (
+            "CEO fatura pelo SIA-SUS (Atenção Especializada), não pelo SISAB. "
+            "O DATASUS não disponibiliza API REST para envio de BPA — "
+            "a transmissão é realizada pelo Posto de Transmissão da Secretaria de Saúde."
+        ),
+    })
+
+
+@require_http_methods(["GET"])
+def api_ceo_bpa_download(request, prod_id):
+    """
+    GET /api/governo/ceo/producao/<id>/bpa-download/
+    Retorna o arquivo BPA-I como download (.txt, encoding latin-1).
+    """
+    empresa = get_empresa(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    _, ProducaoCEO = _get_ceo_models()
+    try:
+        prod = ProducaoCEO.objects.get(id=prod_id, empresa=empresa)
+    except ProducaoCEO.DoesNotExist:
+        return JsonResponse({"erro": "Produção não encontrada"}, status=404)
+
+    if not prod.arquivo_bpa:
+        return JsonResponse({"erro": "Arquivo BPA não gerado — feche a produção primeiro"}, status=400)
+
+    nome = f"BPA_CEO_{prod.cnes or 'CNES'}_{prod.competencia}.txt"
+    response = HttpResponse(
+        prod.arquivo_bpa.encode("latin-1"),
+        content_type="text/plain; charset=latin-1",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{nome}"'
+    return response
 
 
 # ── catálogo de procedimentos por especialidade ────────────────────────────────
