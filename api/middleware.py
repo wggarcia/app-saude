@@ -15,13 +15,32 @@ logger = logging.getLogger(__name__)
 SESSION_IDLE_TIMEOUT = timedelta(minutes=15) if settings.DEBUG else timedelta(hours=8)
 
 
+def _rls_clear_empresa() -> None:
+    """
+    Limpa app.empresa_id no início de cada request.
+
+    Com conn_max_age=600 as conexões são reutilizadas entre requests. Se a request
+    anterior definiu app.empresa_id via SET SESSION, o valor vazaria para a próxima
+    request na mesma conexão. Esta função reseta o valor para string vazia (''),
+    que o NULLIF(..., '') converte para NULL — desbloqueando queries sem tenant.
+    """
+    from django.db import connection
+    if connection.vendor != "postgresql":
+        return
+    try:
+        with connection.cursor() as cur:
+            cur.execute("SELECT set_config('app.empresa_id', '', false)")
+    except Exception:
+        pass
+
+
 def _rls_set_empresa(empresa_id: int) -> None:
     """
     Ativa o tenant boundary RLS para esta requisição.
 
-    Usa set_config(name, value, is_local=true) — equivale a SET LOCAL no PostgreSQL.
-    Com ATOMIC_REQUESTS=True o valor fica ativo durante toda a transação e é
-    limpo automaticamente no COMMIT, sem risco de vazar entre requisições.
+    Usa is_local=False (SET SESSION) em vez de SET LOCAL — necessário com psycopg3,
+    cujo modo "autobegin" não garante persistência de SET LOCAL entre cursors.
+    O valor é limpo no início de cada request por _rls_clear_empresa().
 
     Em SQLite (dev local) retorna silenciosamente sem erro.
     """
@@ -31,7 +50,7 @@ def _rls_set_empresa(empresa_id: int) -> None:
     try:
         with connection.cursor() as cur:
             cur.execute(
-                "SELECT set_config('app.empresa_id', %s, true)",
+                "SELECT set_config('app.empresa_id', %s, false)",
                 [str(empresa_id)],
             )
     except Exception:
@@ -160,6 +179,9 @@ class EmpresaMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Limpa qualquer valor de app.empresa_id que tenha vazado de uma request
+        # anterior na mesma conexão reutilizada (conn_max_age=600).
+        _rls_clear_empresa()
 
         rotas_livres_exatas = {
             "/",

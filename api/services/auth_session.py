@@ -94,13 +94,19 @@ def _liberar_dispositivos_ociosos(empresa):
 
 
 def _rls_set_empresa_auth(empresa_id: int) -> None:
-    """Define app.empresa_id para queries RLS durante o fluxo de autenticação."""
+    """
+    Define app.empresa_id (SET SESSION) para queries RLS durante o fluxo de autenticação.
+
+    Usa is_local=False (SET SESSION) — necessário com psycopg3, cujo modo "autobegin"
+    não garante persistência de SET LOCAL entre cursors dentro do mesmo atomic().
+    O valor é limpo no início de cada request pelo _rls_clear_empresa() do middleware.
+    """
     from django.db import connection
     if connection.vendor != "postgresql":
         return
     try:
         with connection.cursor() as cur:
-            cur.execute("SELECT set_config('app.empresa_id', %s, true)", [str(empresa_id)])
+            cur.execute("SELECT set_config('app.empresa_id', %s, false)", [str(empresa_id)])
     except Exception:
         pass  # nunca quebra o login por falha de RLS
 
