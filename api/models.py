@@ -6289,15 +6289,25 @@ class ProntuarioHospitalar(models.Model):
 
 
 class EvolucaoProntuario(models.Model):
-    prontuario = models.ForeignKey(ProntuarioHospitalar, on_delete=models.CASCADE, related_name="evolucoes")
+    prontuario   = models.ForeignKey(ProntuarioHospitalar, on_delete=models.CASCADE, related_name="evolucoes")
     profissional = models.CharField(max_length=120)
-    crm_coren = models.CharField(max_length=40, blank=True)
-    tipo = models.CharField(max_length=30, default="medica")  # medica, enfermagem, fisioterapia...
-    texto = models.TextField()
-    cid10 = models.CharField(max_length=10, blank=True)
-    assinado_em = models.DateTimeField(auto_now_add=True)
+    crm_coren    = models.CharField(max_length=40, blank=True)
+    tipo         = models.CharField(max_length=30, default="medica")  # medica, enfermagem, fisioterapia...
+    texto        = models.TextField()
+    cid10        = models.CharField(max_length=10, blank=True)
+    assinado_em  = models.DateTimeField(auto_now_add=True)
+
+    # ── Assinatura Digital ICP-Brasil (CFM Res. 2.299/2021) ──────────────────
+    assinatura_icp        = models.TextField(blank=True, default="",
+                                              help_text="Assinatura PKCS#7 / CAdES em base64")
+    assinatura_hash       = models.CharField(max_length=128, blank=True, default="",
+                                              help_text="SHA-256 do texto assinado (hex)")
+    assinado_digitalmente = models.BooleanField(default=False)
+    assinado_digitalmente_em = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         ordering = ["-assinado_em"]
+        indexes  = [models.Index(fields=["prontuario", "assinado_digitalmente"])]
 
 
 class PrescricaoProntuario(models.Model):

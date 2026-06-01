@@ -653,6 +653,28 @@ from api.views_farmacia_magistral import (
     api_magistral_controle_qualidade,
     api_magistral_kpis,
 )
+from api.views_governo_sipni import (
+    api_sipni_status,
+    api_sipni_historico,
+    api_sipni_transmitir,
+    api_sipni_reprocessar,
+    api_sipni_kpis,
+)
+from api.views_hospital_assinatura import (
+    api_assinatura_pendentes,
+    api_assinatura_assinar,
+    api_assinatura_assinar_lote,
+    api_assinatura_verificar,
+    api_assinatura_kpis,
+)
+from api.views_governo_cnes import (
+    api_cnes_buscar,
+    api_cnes_detalhe,
+    api_cnes_sincronizar,
+    api_cnes_sincronizar_todas,
+    api_cnes_status,
+    api_cnes_kpis,
+)
 from api.views_rede import (
     api_redes, api_rede_convidar, api_rede_entrar, api_rede_estoque, api_rede_item_disponibilidade,
     api_transferencias, api_transferencia_detalhe,
@@ -1970,4 +1992,42 @@ urlpatterns = [
     path('api/sst/psicossocial/<int:av_id>/resultados/', api_psicossocial_resultados),
     path('api/sst/psicossocial/<int:av_id>/pdf/', api_psicossocial_pdf),
     path('api/sst/psicossocial/responder/<str:token>/', api_psicossocial_responder_publico),
+
+    # ── SIPNI — Imunizações via RNDS ─────────────────────────────────────────
+    path('api/governo/sipni/status',                            api_sipni_status),
+    path('api/governo/sipni/status/',                           api_sipni_status),
+    path('api/governo/sipni/historico',                         api_sipni_historico),
+    path('api/governo/sipni/historico/',                        api_sipni_historico),
+    path('api/governo/sipni/transmitir',                        api_sipni_transmitir),
+    path('api/governo/sipni/transmitir/',                       api_sipni_transmitir),
+    path('api/governo/sipni/reprocessar/<int:tx_id>',           api_sipni_reprocessar),
+    path('api/governo/sipni/reprocessar/<int:tx_id>/',          api_sipni_reprocessar),
+    path('api/governo/sipni/kpis',                              api_sipni_kpis),
+    path('api/governo/sipni/kpis/',                             api_sipni_kpis),
+
+    # ── Assinatura Digital de Prontuário (CFM Res. 2.299/2021) ───────────────
+    path('api/hospital/assinatura/kpis',                        api_assinatura_kpis),
+    path('api/hospital/assinatura/kpis/',                       api_assinatura_kpis),
+    path('api/hospital/assinatura/pendentes',                   api_assinatura_pendentes),
+    path('api/hospital/assinatura/pendentes/',                  api_assinatura_pendentes),
+    path('api/hospital/assinatura/assinar-lote',                api_assinatura_assinar_lote),
+    path('api/hospital/assinatura/assinar-lote/',               api_assinatura_assinar_lote),
+    path('api/hospital/assinatura/assinar/<int:evolucao_id>',   api_assinatura_assinar),
+    path('api/hospital/assinatura/assinar/<int:evolucao_id>/',  api_assinatura_assinar),
+    path('api/hospital/assinatura/verificar/<int:evolucao_id>', api_assinatura_verificar),
+    path('api/hospital/assinatura/verificar/<int:evolucao_id>/', api_assinatura_verificar),
+
+    # ── CNES — Sincronização com DATASUS ─────────────────────────────────────
+    path('api/governo/cnes/buscar',                             api_cnes_buscar),
+    path('api/governo/cnes/buscar/',                            api_cnes_buscar),
+    path('api/governo/cnes/sincronizar',                        api_cnes_sincronizar),
+    path('api/governo/cnes/sincronizar/',                       api_cnes_sincronizar),
+    path('api/governo/cnes/sincronizar-todas',                  api_cnes_sincronizar_todas),
+    path('api/governo/cnes/sincronizar-todas/',                 api_cnes_sincronizar_todas),
+    path('api/governo/cnes/status',                             api_cnes_status),
+    path('api/governo/cnes/status/',                            api_cnes_status),
+    path('api/governo/cnes/kpis',                               api_cnes_kpis),
+    path('api/governo/cnes/kpis/',                              api_cnes_kpis),
+    path('api/governo/cnes/<str:codigo_cnes>',                  api_cnes_detalhe),
+    path('api/governo/cnes/<str:codigo_cnes>/',                 api_cnes_detalhe),
 ]
