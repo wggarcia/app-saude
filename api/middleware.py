@@ -179,10 +179,6 @@ class EmpresaMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Limpa qualquer valor de app.empresa_id que tenha vazado de uma request
-        # anterior na mesma conexão reutilizada (conn_max_age=600).
-        _rls_clear_empresa()
-
         rotas_livres_exatas = {
             "/",
             "/login-empresa/",
@@ -320,6 +316,10 @@ class EmpresaMiddleware:
 
         try:
             data = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
+            # ── RLS: define tenant boundary antes de qualquer query de DB.
+            # O JWT já contém empresa_id sem precisar de query.
+            # SET SESSION garante persistência com psycopg3 (sem is_local).
+            _rls_set_empresa(data["empresa_id"])
 
             empresa = Empresa.objects.get(id=data["empresa_id"])
             principal_kind = data.get("principal_kind")
@@ -352,11 +352,6 @@ class EmpresaMiddleware:
             _touch_sessao_principal(principal)
             request.empresa = empresa
             request.principal = principal
-
-            # ── RLS: define tenant boundary para toda a transação desta requisição
-            # set_config('app.empresa_id', value, is_local=true) equivale a SET LOCAL —
-            # reverte automaticamente no COMMIT (requer ATOMIC_REQUESTS = True).
-            _rls_set_empresa(empresa.id)
 
             if token_from_tab:
                 request._tab_auth_token = token
