@@ -7042,3 +7042,607 @@ class NotaFiscalEletronica(models.Model):
 
     def __str__(self):
         return f"NF-e {self.serie}/{self.numero:09d} — {self.empresa.nome}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SIGTAP — Tabela de Procedimentos, Medicamentos e OPM do SUS
+# Tabela compartilhada (sem FK empresa) — mesmos dados para todos os tenants.
+# Importada via management command `import_sigtap`.
+# ══════════════════════════════════════════════════════════════════════════════
+
+class ProcedimentoSIGTAP(models.Model):
+    """
+    Tabela de Procedimentos SUS — SIGTAP/DATASUS.
+
+    Competência no formato AAAAMM (ex: '202601').
+    Complexidade: AB = Atenção Básica, MC = Média Complexidade,
+                  AC = Alta Complexidade, SE = Sem Especialidade.
+    Instrumento: BPA-I, BPA-C, APAC, AIH, PTS, PAB, SAD.
+    """
+    COMPLEXIDADE = [
+        ("AB", "Atenção Básica"),
+        ("MC", "Média Complexidade"),
+        ("AC", "Alta Complexidade"),
+        ("SE", "Sem Especialidade"),
+    ]
+    INSTRUMENTO = [
+        ("BPA-I", "BPA Individual"),
+        ("BPA-C", "BPA Consolidado"),
+        ("APAC",  "APAC"),
+        ("AIH",   "AIH"),
+        ("PTS",   "Plano Terapêutico Singular"),
+        ("PAB",   "Piso Atenção Básica"),
+        ("SAD",   "Serviço de Atenção Domiciliar"),
+        ("RAAS",  "RAAS — Saúde Mental / Atenção Domiciliar"),
+    ]
+
+    codigo               = models.CharField(max_length=10, unique=True, db_index=True,
+                                            help_text="Código SIGTAP de 10 dígitos (ex: 0101010010)")
+    descricao            = models.CharField(max_length=255, db_index=True)
+    grupo                = models.CharField(max_length=2, blank=True, default="")
+    subgrupo             = models.CharField(max_length=2, blank=True, default="")
+    forma_organizacao    = models.CharField(max_length=2, blank=True, default="")
+    competencia          = models.CharField(max_length=6, db_index=True,
+                                            help_text="Competência AAAAMM da última atualização")
+    complexidade         = models.CharField(max_length=4, choices=COMPLEXIDADE, blank=True, default="")
+    instrumento_registro = models.CharField(max_length=6, choices=INSTRUMENTO, blank=True, default="")
+    # Valores em R$ (ponto fixo — centavos convertidos na importação)
+    valor_sh             = models.DecimalField(max_digits=12, decimal_places=2, default=0,
+                                               help_text="Valor Hospitalar (SH)")
+    valor_sa             = models.DecimalField(max_digits=12, decimal_places=2, default=0,
+                                               help_text="Valor Ambulatorial (SA)")
+    valor_sp             = models.DecimalField(max_digits=12, decimal_places=2, default=0,
+                                               help_text="Valor Profissional (SP)")
+    valor_total          = models.DecimalField(max_digits=12, decimal_places=2, default=0,
+                                               help_text="Valor Total = SH + SA + SP")
+    quantidade_maxima    = models.PositiveIntegerField(default=0,
+                                                       help_text="Quantidade máxima permitida por BPA")
+    exige_autorizacao    = models.BooleanField(default=False)
+    ativo                = models.BooleanField(default=True)
+    atualizado_em        = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering  = ["codigo"]
+        indexes   = [
+            models.Index(fields=["grupo", "subgrupo"]),
+            models.Index(fields=["complexidade"]),
+            models.Index(fields=["instrumento_registro"]),
+            models.Index(fields=["ativo"]),
+        ]
+        verbose_name        = "Procedimento SIGTAP"
+        verbose_name_plural = "Procedimentos SIGTAP"
+
+    def __str__(self):
+        return f"{self.codigo} — {self.descricao}"
+
+    @property
+    def codigo_formatado(self):
+        """Ex: 01.001.01.001-0 — exibe nos formulários."""
+        c = self.codigo.zfill(10)
+        return f"{c[0:2]}.{c[2:5]}.{c[5:7]}.{c[7:10]}"
+
+
+class ProcedimentoSIGTAPCID(models.Model):
+    """CIDs compatíveis com um procedimento SIGTAP (N:M)."""
+    procedimento = models.ForeignKey(
+        ProcedimentoSIGTAP, on_delete=models.CASCADE, related_name="cids"
+    )
+    cid = models.CharField(max_length=10, db_index=True,
+                           help_text="CID-10 sem ponto (ex: J180)")
+
+    class Meta:
+        unique_together = [("procedimento", "cid")]
+        indexes         = [models.Index(fields=["cid"])]
+        verbose_name        = "CID por Procedimento SIGTAP"
+        verbose_name_plural = "CIDs por Procedimento SIGTAP"
+
+    def __str__(self):
+        return f"{self.procedimento.codigo} × {self.cid}"
+
+
+class SIGTAPImportacao(models.Model):
+    """Registro histórico de cada importação da tabela SIGTAP."""
+    competencia        = models.CharField(max_length=6, unique=True,
+                                          help_text="Competência AAAAMM importada")
+    total_procedimentos = models.PositiveIntegerField(default=0)
+    total_cids          = models.PositiveIntegerField(default=0)
+    importado_em        = models.DateTimeField(auto_now_add=True)
+    importado_por       = models.CharField(max_length=120, default="system")
+    sucesso             = models.BooleanField(default=True)
+    observacao          = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering     = ["-competencia"]
+        verbose_name = "Importação SIGTAP"
+
+    def __str__(self):
+        return f"SIGTAP {self.competencia} — {self.total_procedimentos} proc."
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CAPS / Saúde Mental — RAPS (Rede de Atenção Psicossocial)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class UnidadeCAPS(models.Model):
+    """
+    Centro de Atenção Psicossocial vinculado à empresa (secretaria municipal).
+    Tipos conforme Portaria MS 3.088/2011.
+    """
+    TIPO_CAPS = [
+        ("caps_i",    "CAPS I — Municípios 20k–70k hab."),
+        ("caps_ii",   "CAPS II — Municípios >70k hab."),
+        ("caps_iii",  "CAPS III — 24h, municípios >200k hab."),
+        ("caps_ad",   "CAPS AD — Álcool e outras drogas"),
+        ("caps_ad_iii", "CAPS AD III — 24h"),
+        ("caps_i_infanto", "CAPSi — Infância e adolescência"),
+    ]
+    empresa     = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="caps")
+    nome        = models.CharField(max_length=160)
+    tipo        = models.CharField(max_length=20, choices=TIPO_CAPS, default="caps_i")
+    cnes        = models.CharField(max_length=7, blank=True, default="",
+                                   help_text="Código CNES da unidade")
+    municipio   = models.CharField(max_length=100, blank=True, default="")
+    uf          = models.CharField(max_length=2, blank=True, default="")
+    endereco    = models.CharField(max_length=255, blank=True, default="")
+    telefone    = models.CharField(max_length=20, blank=True, default="")
+    ativo       = models.BooleanField(default=True)
+    criado_em   = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering            = ["nome"]
+        verbose_name        = "Unidade CAPS"
+        verbose_name_plural = "Unidades CAPS"
+        indexes             = [models.Index(fields=["empresa", "ativo"])]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} — {self.nome}"
+
+
+class AtendimentoSaudeMental(models.Model):
+    """
+    Atendimento registrado em um CAPS.
+    Gera produção para o RAAS (Registro das Ações Ambulatoriais em Saúde).
+    """
+    MODALIDADE = [
+        ("individual",    "Atendimento Individual"),
+        ("grupo",         "Atendimento em Grupo"),
+        ("familia",       "Atendimento Familiar"),
+        ("visita_dom",    "Visita Domiciliar"),
+        ("acolhimento",   "Acolhimento"),
+        ("leito_noturno", "Leito Noturno (CAPS III)"),
+        ("intensivo",     "Acompanhamento Intensivo"),
+        ("semi_intensivo","Acompanhamento Semi-Intensivo"),
+        ("nao_intensivo", "Acompanhamento Não-Intensivo"),
+    ]
+    caps              = models.ForeignKey(UnidadeCAPS, on_delete=models.CASCADE,
+                                          related_name="atendimentos")
+    empresa           = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                          related_name="atendimentos_saude_mental")
+    paciente_nome     = models.CharField(max_length=160)
+    cns               = models.CharField(max_length=18, blank=True, default="",
+                                         help_text="Cartão Nacional de Saúde")
+    cpf               = models.CharField(max_length=11, blank=True, default="")
+    data_nascimento   = models.DateField(null=True, blank=True)
+    cid_principal     = models.CharField(max_length=10, blank=True, default="",
+                                          help_text="CID-10 — ex: F20 (esquizofrenia)")
+    cid_secundario    = models.CharField(max_length=10, blank=True, default="")
+    modalidade        = models.CharField(max_length=20, choices=MODALIDADE, default="individual")
+    profissional      = models.CharField(max_length=120, blank=True, default="")
+    cbo_profissional  = models.CharField(max_length=6, blank=True, default="",
+                                          help_text="Código CBO do profissional (para RAAS)")
+    data_atendimento  = models.DateField()
+    competencia       = models.CharField(max_length=6,
+                                          help_text="Competência AAAAMM para faturamento")
+    procedimento_sigtap = models.CharField(max_length=10, blank=True, default="",
+                                            help_text="Código SIGTAP do procedimento realizado")
+    observacoes       = models.TextField(blank=True, default="")
+    enviado_raas      = models.BooleanField(default=False)
+    criado_em         = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering            = ["-data_atendimento"]
+        verbose_name        = "Atendimento Saúde Mental"
+        verbose_name_plural = "Atendimentos Saúde Mental"
+        indexes             = [
+            models.Index(fields=["empresa", "competencia"]),
+            models.Index(fields=["caps", "data_atendimento"]),
+            models.Index(fields=["enviado_raas"]),
+        ]
+
+    def __str__(self):
+        return f"{self.paciente_nome} — {self.modalidade} ({self.data_atendimento})"
+
+
+class EncaminhamentoRAPS(models.Model):
+    """
+    Encaminhamento dentro da Rede de Atenção Psicossocial.
+    Origem → Destino (ex: UBS → CAPS II → hospital psiquiátrico → residência terapêutica).
+    """
+    DESTINO_TIPO = [
+        ("caps",         "CAPS"),
+        ("ubs",          "UBS / ESF"),
+        ("hospital",     "Hospital Psiquiátrico"),
+        ("residencia",   "Residência Terapêutica"),
+        ("ceo",          "CEO — Odontologia"),
+        ("ambulatorio",  "Ambulatório Especializado"),
+        ("urgencia",     "SAMU / UPA / Pronto-Socorro"),
+        ("outro",        "Outro"),
+    ]
+    STATUS = [
+        ("pendente",   "Pendente"),
+        ("aceito",     "Aceito pelo destino"),
+        ("realizado",  "Realizado"),
+        ("cancelado",  "Cancelado"),
+    ]
+    empresa           = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                          related_name="encaminhamentos_raps")
+    paciente_nome     = models.CharField(max_length=160)
+    cns               = models.CharField(max_length=18, blank=True, default="")
+    origem_descricao  = models.CharField(max_length=160,
+                                          help_text="Nome da unidade de origem")
+    destino_tipo      = models.CharField(max_length=20, choices=DESTINO_TIPO, default="caps")
+    destino_descricao = models.CharField(max_length=160,
+                                          help_text="Nome da unidade de destino")
+    cid               = models.CharField(max_length=10, blank=True, default="")
+    motivo            = models.TextField(blank=True, default="")
+    status            = models.CharField(max_length=20, choices=STATUS, default="pendente")
+    data_encaminhamento = models.DateField()
+    data_realizacao     = models.DateField(null=True, blank=True)
+    criado_em           = models.DateTimeField(auto_now_add=True)
+    atualizado_em       = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering            = ["-data_encaminhamento"]
+        verbose_name        = "Encaminhamento RAPS"
+        verbose_name_plural = "Encaminhamentos RAPS"
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "data_encaminhamento"]),
+        ]
+
+    def __str__(self):
+        return f"{self.paciente_nome}: {self.origem_descricao} → {self.destino_descricao} ({self.status})"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SIPNI — Sistema de Informação do Programa Nacional de Imunizações
+# Fecha o loop: empresa registra vacina → governo transmite ao SIPNI
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TransmissaoSIPNI(models.Model):
+    """
+    Lote de transmissão de registros de vacinação ao SIPNI.
+    Cada registro individual vem de RegistroVacinacao (SST) ou
+    RegistroVacinaçãoCidadão (governo).
+    """
+    STATUS = [
+        ("pendente",    "Pendente"),
+        ("transmitido", "Transmitido"),
+        ("erro",        "Erro na transmissão"),
+        ("parcial",     "Parcialmente transmitido"),
+    ]
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                         related_name="transmissoes_sipni")
+    competencia      = models.CharField(max_length=6, help_text="Competência AAAAMM")
+    total_registros  = models.PositiveIntegerField(default=0)
+    transmitidos     = models.PositiveIntegerField(default=0)
+    erros            = models.PositiveIntegerField(default=0)
+    status           = models.CharField(max_length=20, choices=STATUS, default="pendente")
+    resposta_sipni   = models.JSONField(default=dict, blank=True)
+    protocolo        = models.CharField(max_length=60, blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    transmitido_em   = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering            = ["-competencia", "-criado_em"]
+        verbose_name        = "Transmissão SIPNI"
+        verbose_name_plural = "Transmissões SIPNI"
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "competencia"]),
+        ]
+
+    def __str__(self):
+        return f"SIPNI {self.competencia} — {self.total_registros} reg. ({self.status})"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Farmácia Magistral — Manipulação
+# Segmento separado: RDC 67/2007 ANVISA, fórmulas, matérias-primas, laudos
+# ══════════════════════════════════════════════════════════════════════════════
+
+class MateriaPrimaFarmacia(models.Model):
+    """Insumo/matéria-prima para manipulação. Controle de lote e validade."""
+    CATEGORIA = [
+        ("ativo",       "Princípio Ativo"),
+        ("excipiente",  "Excipiente"),
+        ("capsulas",    "Cápsulas / Cápsulas gelatinosas"),
+        ("base",        "Base / Veículo"),
+        ("conservante", "Conservante"),
+        ("embalagem",   "Embalagem primária"),
+        ("outro",       "Outro"),
+    ]
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                         related_name="materias_primas")
+    nome             = models.CharField(max_length=200)
+    sinonimos        = models.CharField(max_length=300, blank=True, default="",
+                                        help_text="Sinônimos separados por ;")
+    cas_numero       = models.CharField(max_length=20, blank=True, default="",
+                                        help_text="Número CAS da substância")
+    categoria        = models.CharField(max_length=20, choices=CATEGORIA, default="ativo")
+    unidade_medida   = models.CharField(max_length=10, default="g",
+                                        help_text="g, mL, unid, mg, kg")
+    estoque_atual    = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    estoque_minimo   = models.DecimalField(max_digits=12, decimal_places=3, default=0)
+    fornecedor       = models.CharField(max_length=120, blank=True, default="")
+    controlado_anvisa = models.BooleanField(default=False,
+                                             help_text="Sujeito à Portaria SVS/MS 344/98")
+    ativo            = models.BooleanField(default=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together     = [("empresa", "nome")]
+        ordering            = ["nome"]
+        verbose_name        = "Matéria-Prima"
+        verbose_name_plural = "Matérias-Primas"
+        indexes             = [models.Index(fields=["empresa", "ativo"])]
+
+    def __str__(self):
+        return f"{self.nome} ({self.get_categoria_display()})"
+
+    @property
+    def estoque_critico(self):
+        return self.estoque_atual <= self.estoque_minimo
+
+
+class LoteMateriaPrima(models.Model):
+    """Lote de matéria-prima — rastreabilidade exigida pela RDC 67/2007."""
+    STATUS = [
+        ("quarentena",  "Em quarentena — aguardando laudo"),
+        ("aprovado",    "Aprovado pelo farmacêutico"),
+        ("rejeitado",   "Rejeitado — fora de especificação"),
+        ("consumido",   "Totalmente consumido"),
+        ("vencido",     "Vencido"),
+    ]
+    materia_prima    = models.ForeignKey(MateriaPrimaFarmacia, on_delete=models.CASCADE,
+                                          related_name="lotes")
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                          related_name="lotes_materia_prima")
+    numero_lote      = models.CharField(max_length=50)
+    fornecedor       = models.CharField(max_length=120, blank=True, default="")
+    nota_fiscal      = models.CharField(max_length=60, blank=True, default="")
+    quantidade_inicial = models.DecimalField(max_digits=12, decimal_places=3)
+    quantidade_disponivel = models.DecimalField(max_digits=12, decimal_places=3)
+    data_fabricacao  = models.DateField(null=True, blank=True)
+    data_validade    = models.DateField()
+    data_entrada     = models.DateField()
+    status           = models.CharField(max_length=20, choices=STATUS, default="quarentena")
+    laudo_coa        = models.TextField(blank=True, default="",
+                                         help_text="Laudo do Certificado de Análise (CoA) — texto ou referência")
+    aprovado_por     = models.CharField(max_length=120, blank=True, default="",
+                                         help_text="CRF e nome do farmacêutico responsável")
+    aprovado_em      = models.DateTimeField(null=True, blank=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together     = [("empresa", "materia_prima", "numero_lote")]
+        ordering            = ["data_validade"]
+        verbose_name        = "Lote de Matéria-Prima"
+        verbose_name_plural = "Lotes de Matéria-Prima"
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["data_validade"]),
+        ]
+
+    def __str__(self):
+        return f"Lote {self.numero_lote} — {self.materia_prima.nome} (val: {self.data_validade})"
+
+    @property
+    def vencido(self):
+        from datetime import date
+        return self.data_validade < date.today()
+
+
+class FormulaMagistral(models.Model):
+    """
+    Fórmula padrão da farmácia — base para ordens de manipulação.
+    Cada fórmula define a composição, método e especificações.
+    """
+    FORMA_FARMACEUTICA = [
+        ("capsula",      "Cápsula"),
+        ("creme",        "Creme"),
+        ("gel",          "Gel"),
+        ("solucao",      "Solução"),
+        ("suspensao",    "Suspensão"),
+        ("xarope",       "Xarope"),
+        ("supositorio",  "Supositório"),
+        ("pomada",       "Pomada"),
+        ("loção",        "Loção"),
+        ("colírio",      "Colírio"),
+        ("comprimido",   "Comprimido"),
+        ("sachê",        "Sachê"),
+        ("spray",        "Spray"),
+        ("outro",        "Outra forma farmacêutica"),
+    ]
+    empresa              = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                              related_name="formulas_magistrais")
+    nome                 = models.CharField(max_length=200,
+                                             help_text="Nome ou código interno da fórmula")
+    forma_farmaceutica   = models.CharField(max_length=20, choices=FORMA_FARMACEUTICA,
+                                             default="capsula")
+    concentracao         = models.CharField(max_length=100, blank=True, default="",
+                                             help_text="Ex: 50mg/cáp, 1%")
+    quantidade_padrao    = models.DecimalField(max_digits=10, decimal_places=3, default=1,
+                                               help_text="Quantidade padrão de unidades por fórmula")
+    unidade_padrao       = models.CharField(max_length=10, default="unid")
+    prazo_validade_dias  = models.PositiveSmallIntegerField(default=30,
+                                                             help_text="Prazo de validade do produto manipulado (dias)")
+    composicao           = models.JSONField(default=list,
+                                             help_text='[{"materia_prima_id": 1, "quantidade": 0.5, "unidade": "g"}, ...]')
+    metodo_manipulacao   = models.TextField(blank=True, default="",
+                                             help_text="Procedimento padrão de manipulação")
+    controle_especial    = models.BooleanField(default=False,
+                                                help_text="Exige receituário especial (B1, B2, C1, etc.)")
+    ativo                = models.BooleanField(default=True)
+    versao               = models.PositiveSmallIntegerField(default=1)
+    criado_em            = models.DateTimeField(auto_now_add=True)
+    atualizado_em        = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering            = ["nome"]
+        verbose_name        = "Fórmula Magistral"
+        verbose_name_plural = "Fórmulas Magistrais"
+        indexes             = [
+            models.Index(fields=["empresa", "ativo"]),
+            models.Index(fields=["forma_farmaceutica"]),
+        ]
+
+    def __str__(self):
+        return f"{self.nome} — {self.get_forma_farmaceutica_display()} {self.concentracao}"
+
+
+class OrdemManipulacao(models.Model):
+    """
+    Ordem de Manipulação (OM) — documento central da farmácia magistral.
+    Rastreável desde a receita até a entrega, conforme RDC 67/2007.
+    """
+    STATUS = [
+        ("aguardando",   "Aguardando manipulação"),
+        ("em_manipulacao","Em manipulação"),
+        ("controle",     "Em controle de qualidade"),
+        ("aprovado",     "Aprovado — aguardando entrega"),
+        ("entregue",     "Entregue ao paciente"),
+        ("cancelado",    "Cancelado"),
+    ]
+    empresa              = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                              related_name="ordens_manipulacao")
+    formula              = models.ForeignKey(FormulaMagistral, on_delete=models.PROTECT,
+                                              related_name="ordens")
+    numero_om            = models.CharField(max_length=30, unique=True,
+                                             help_text="Número sequencial da OM")
+    paciente_nome        = models.CharField(max_length=160)
+    paciente_cpf         = models.CharField(max_length=11, blank=True, default="")
+    prescrito_por        = models.CharField(max_length=120, blank=True, default="",
+                                             help_text="Nome e CRM/CRO do prescritor")
+    crm_prescritor       = models.CharField(max_length=20, blank=True, default="")
+    data_prescricao      = models.DateField(null=True, blank=True)
+    quantidade           = models.DecimalField(max_digits=10, decimal_places=3, default=1)
+    unidade              = models.CharField(max_length=10, default="unid")
+    numero_lote_produto  = models.CharField(max_length=50, blank=True, default="",
+                                             help_text="Lote do produto manipulado final")
+    data_manipulacao     = models.DateField(null=True, blank=True)
+    data_validade_produto = models.DateField(null=True, blank=True)
+    manipulado_por       = models.CharField(max_length=120, blank=True, default="",
+                                             help_text="Nome do técnico/farmacêutico que manipulou")
+    aprovado_por         = models.CharField(max_length=120, blank=True, default="",
+                                             help_text="Farmacêutico responsável pelo controle de qualidade")
+    status               = models.CharField(max_length=20, choices=STATUS, default="aguardando")
+    observacoes          = models.TextField(blank=True, default="")
+    criado_em            = models.DateTimeField(auto_now_add=True)
+    atualizado_em        = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering            = ["-criado_em"]
+        verbose_name        = "Ordem de Manipulação"
+        verbose_name_plural = "Ordens de Manipulação"
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "data_manipulacao"]),
+            models.Index(fields=["numero_om"]),
+        ]
+
+    def __str__(self):
+        return f"OM {self.numero_om} — {self.formula.nome} ({self.paciente_nome})"
+
+
+class ControleQualidadeMagistral(models.Model):
+    """
+    Registro de controle de qualidade de uma Ordem de Manipulação.
+    Exigido pela RDC 67/2007 — deve ser assinado pelo farmacêutico.
+    """
+    RESULTADO = [
+        ("aprovado",  "Aprovado — dentro das especificações"),
+        ("reprovado", "Reprovado — fora de especificação"),
+        ("pendente",  "Pendente de análise"),
+    ]
+    ordem_manipulacao  = models.OneToOneField(OrdemManipulacao, on_delete=models.CASCADE,
+                                               related_name="controle_qualidade")
+    empresa            = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                           related_name="controles_qualidade_magistral")
+    aspecto_visual     = models.CharField(max_length=200, blank=True, default="",
+                                           help_text="Cor, odor, homogeneidade, etc.")
+    peso_medio         = models.DecimalField(max_digits=8, decimal_places=3, null=True, blank=True,
+                                              help_text="Peso médio verificado (mg ou g)")
+    variacao_peso_pct  = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True,
+                                              help_text="Variação de peso (%) — limite RDC 67: ±7,5%")
+    ph                 = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    resultado          = models.CharField(max_length=20, choices=RESULTADO, default="pendente")
+    farmaceutico       = models.CharField(max_length=120, blank=True, default="")
+    crf_farmaceutico   = models.CharField(max_length=20, blank=True, default="")
+    data_controle      = models.DateField(null=True, blank=True)
+    observacoes        = models.TextField(blank=True, default="")
+    criado_em          = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering            = ["-criado_em"]
+        verbose_name        = "Controle de Qualidade Magistral"
+        verbose_name_plural = "Controles de Qualidade Magistral"
+        indexes             = [models.Index(fields=["empresa", "resultado"])]
+
+    def __str__(self):
+        return f"CQ {self.ordem_manipulacao.numero_om} — {self.get_resultado_display()}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RNDS Hospital — Sumário de Alta e Registro de Atendimento Clínico
+# Obrigatório para interoperabilidade com SUS (RNDS/DATASUS)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TransmissaoRNDSHospital(models.Model):
+    """
+    Registro de cada envio ao RNDS pelo módulo hospitalar.
+    Tipos: IPS-BR (Sumário de Alta) e RAC (Registro de Atendimento Clínico).
+    """
+    TIPO = [
+        ("ips_br", "IPS-BR — Sumário de Alta Hospitalar"),
+        ("rac",    "RAC — Registro de Atendimento Clínico"),
+    ]
+    STATUS = [
+        ("pendente",    "Pendente"),
+        ("transmitido", "Transmitido com sucesso"),
+        ("erro",        "Erro na transmissão"),
+        ("reprocessar", "Aguardando reprocessamento"),
+    ]
+    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE,
+                                          related_name="transmissoes_rnds_hospital")
+    tipo             = models.CharField(max_length=10, choices=TIPO, default="ips_br")
+    # Referência ao prontuário ou internação de origem
+    internacao_id    = models.PositiveIntegerField(null=True, blank=True,
+                                                    help_text="ID da InternacaoHospital ou ProntuarioHospitalar")
+    paciente_nome    = models.CharField(max_length=160, blank=True, default="")
+    cns_paciente     = models.CharField(max_length=18, blank=True, default="")
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    bundle_fhir      = models.JSONField(default=dict, blank=True,
+                                         help_text="Bundle FHIR R4 enviado ao RNDS")
+    status           = models.CharField(max_length=20, choices=STATUS, default="pendente")
+    protocolo_rnds   = models.CharField(max_length=100, blank=True, default="")
+    resposta_rnds    = models.JSONField(default=dict, blank=True)
+    tentativas       = models.PositiveSmallIntegerField(default=0)
+    ultimo_erro      = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    transmitido_em   = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering            = ["-criado_em"]
+        verbose_name        = "Transmissão RNDS Hospital"
+        verbose_name_plural = "Transmissões RNDS Hospital"
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "tipo"]),
+            models.Index(fields=["cns_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} — {self.paciente_nome} ({self.status})"
