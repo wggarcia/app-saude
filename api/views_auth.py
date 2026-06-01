@@ -99,7 +99,7 @@ def _login_conta(request, portal_tipo=None):
         autorizado, device_id, dispositivos_em_uso, erro_dispositivo = _registrar_dispositivo_login(empresa, request, dados)
     except Exception as _exc_reg:
         logger.exception(
-            "LOGIN 500 — registrar_dispositivo_login falhou | empresa_id=%s email=%s | %s",
+            "LOGIN 500 [registrar_dispositivo_login] empresa_id=%s email=%s tipo=%s",
             getattr(empresa, "id", "?"), email, type(_exc_reg).__name__,
         )
         raise
@@ -129,7 +129,15 @@ def _login_conta(request, portal_tipo=None):
                 "acao": "force_login",
             }, status=409)
 
-    session_key = _ativar_sessao(principal, device_id)
+    try:
+        session_key = _ativar_sessao(principal, device_id)
+    except Exception as _exc_sess:
+        logger.exception(
+            "LOGIN 500 [ativar_sessao] empresa_id=%s email=%s tipo=%s",
+            getattr(empresa, "id", "?"), email, type(_exc_sess).__name__,
+        )
+        raise
+
     token = _criar_token(empresa, session_key, principal_kind, principal_id, device_id=device_id)
     clear_login_rate_limit(request)
     payload = _payload_resposta(

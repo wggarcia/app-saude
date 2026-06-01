@@ -1922,8 +1922,11 @@ def listar_sintomas(request):
 # ================= RESUMOS =================
 
 def resumo_municipios(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
 
-    dados = RegistroSintoma.objects.values("cidade", "estado", "grupo").annotate(total=Count("id"))
+    dados = RegistroSintoma.objects.filter(empresa=empresa).values("cidade", "estado", "grupo").annotate(total=Count("id"))
 
     resultado = []
 
@@ -1956,8 +1959,11 @@ from django.db.models import Sum
 from django.db.models import Count, Q
 
 def detectar_surtos(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
 
-    dados = RegistroSintoma.objects.values("cidade", "estado").annotate(
+    dados = RegistroSintoma.objects.filter(empresa=empresa).values("cidade", "estado").annotate(
 
         total=Count("id"),
 
@@ -2028,18 +2034,20 @@ def detectar_surtos(request):
 # ================= PREVISÃO =================
 
 def prever_surtos(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
 
     agora = timezone.now()
     h24 = agora - timedelta(hours=24)
     h48 = agora - timedelta(hours=48)
 
     ultimas_24h = RegistroSintoma.objects.filter(
-        data_registro__gte=h24
+        empresa=empresa, data_registro__gte=h24
     ).values("cidade", "estado").annotate(total=Count("id"))
 
     ultimas_48h = RegistroSintoma.objects.filter(
-        data_registro__gte=h48,
-        data_registro__lt=h24
+        empresa=empresa, data_registro__gte=h48, data_registro__lt=h24
     ).values("cidade", "estado").annotate(total=Count("id"))
 
     mapa_48h = {(d["cidade"], d["estado"]): d["total"] for d in ultimas_48h}
@@ -2149,7 +2157,11 @@ def relatorio_regioes(request):
 
 
 def relatorio_municipios(request):
-    dados = RegistroSintoma.objects.values(
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+
+    dados = RegistroSintoma.objects.filter(empresa=empresa).values(
         "cidade", "estado"
     ).annotate(total=Count("id"))
 
@@ -2179,8 +2191,11 @@ def calcular_risco(total, crescimento):
 
 
 def resumo_doencas(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
 
-    registros = RegistroSintoma.objects.all()
+    registros = RegistroSintoma.objects.filter(empresa=empresa)
 
     dados = analisar_doencas(registros)
 
@@ -2215,10 +2230,13 @@ def diagnostico_ia(request):
 from .utils import treinar_modelo, prever_com_aprendizado
 
 def diagnostico_ia_avancado(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
 
     dados = json.loads(request.body or "{}")
 
-    registros = RegistroSintoma.objects.all()
+    registros = RegistroSintoma.objects.filter(empresa=empresa)
 
     modelo = treinar_modelo(registros)
 
@@ -2265,7 +2283,10 @@ def classificar_padrao(dados, setor: str = "governo"):
     return grupo, classificacao[:300]
 
 def resumo_estados(request):
-    dados = RegistroSintoma.objects.values("estado").annotate(total=Count("id"))
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    dados = RegistroSintoma.objects.filter(empresa=empresa).values("estado").annotate(total=Count("id"))
     return JsonResponse(list(dados), safe=False)
 
 def gerar_alerta(total, grupo):
@@ -2282,8 +2303,11 @@ def gerar_alerta(total, grupo):
     return "NORMAL", "Situação controlada"
 
 def mapa_casos(request):
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
 
-    dados = RegistroSintoma.objects.all()
+    dados = RegistroSintoma.objects.filter(empresa=empresa)
 
     resultado = []
 

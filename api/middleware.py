@@ -35,8 +35,12 @@ def _rls_set_empresa(empresa_id: int) -> None:
                 "SELECT set_config('app.empresa_id', %s, false)",
                 [str(empresa_id)],
             )
-    except Exception:
-        pass  # nunca quebra a requisição por falha de RLS
+    except Exception as exc:
+        # Loga mas não quebra a requisição — o RLS do banco ainda protege
+        logger.error(
+            "RLS set_empresa falhou empresa_id=%s tipo=%s: %s",
+            empresa_id, type(exc).__name__, exc,
+        )
 SESSION_TOUCH_INTERVAL = timedelta(minutes=1)
 COOKIE_MAX_AGE = 7 * 24 * 60 * 60
 

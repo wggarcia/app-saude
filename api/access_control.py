@@ -1,9 +1,12 @@
+import logging
 import unicodedata
 from functools import wraps
 from django.shortcuts import redirect, render
 from django.http import JsonResponse
 from .planos import detalhes_pacote
 from .services.auth_session import dono_autenticado_from_request
+
+logger = logging.getLogger(__name__)
 
 TODOS_SETORES = ("empresa", "farmacia", "hospital", "governo", "rede", "plano_saude")
 
@@ -600,8 +603,14 @@ def requer_permissao(permissao):
                     ).exists()
                     if not tem:
                         return JsonResponse({"erro": f"Permissão necessária: {permissao}"}, status=403)
-                except Exception:
-                    pass  # tabela ainda não existe — deixa passar
+                except Exception as exc:
+                    from django.db import ProgrammingError
+                    if isinstance(exc.__cause__, ProgrammingError) or isinstance(exc, ProgrammingError):
+                        # Tabela RBAC ainda não existe (migration incompleta) — deixa passar
+                        pass
+                    else:
+                        logger.error("RBAC check falhou permissao=%s: %s", permissao, exc)
+                        return JsonResponse({"erro": "Erro ao verificar permissão"}, status=403)
             return view_func(request, *args, **kwargs)
         return wrapper
     return decorator
