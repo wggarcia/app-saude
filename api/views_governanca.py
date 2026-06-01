@@ -317,17 +317,38 @@ def api_governanca_pricing_valor(request):
     if not dono_autenticado_from_request(request):
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
     return JsonResponse({
-        "empresa": empresa.nome,
         **_pricing_por_valor(),
         "scoring_leads": _scoring_leads(),
     })
 
 
+def _get_empresa_param(request):
+    """
+    Resolve empresa_id do query param para endpoints de governança do DonoSaaS.
+    Retorna (empresa, None) ou (None, JsonResponse de erro).
+    """
+    from .models import Empresa
+    empresa_id = request.GET.get("empresa_id")
+    if not empresa_id:
+        return None, JsonResponse(
+            {"erro": "Parâmetro empresa_id obrigatório. Ex: ?empresa_id=42"},
+            status=400,
+        )
+    try:
+        return Empresa.objects.get(id=int(empresa_id)), None
+    except (Empresa.DoesNotExist, ValueError, TypeError):
+        return None, JsonResponse({"erro": "Empresa não encontrada"}, status=404)
+
+
 def api_governanca_ml_fairness(request):
     if not dono_autenticado_from_request(request):
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
+    empresa, err = _get_empresa_param(request)
+    if err:
+        return err
     return JsonResponse({
         "empresa": empresa.nome,
+        "empresa_id": empresa.id,
         "modelos": _ml_fairness(empresa),
         "framework_fairness": {
             "metricas_avaliadas": ["precisao_global", "taxa_erro_por_grupo"],
@@ -340,8 +361,12 @@ def api_governanca_ml_fairness(request):
 def api_governanca_causal_impact(request):
     if not dono_autenticado_from_request(request):
         return JsonResponse({"erro": "Acesso restrito ao operador da plataforma"}, status=403)
+    empresa, err = _get_empresa_param(request)
+    if err:
+        return err
     return JsonResponse({
         "empresa": empresa.nome,
+        "empresa_id": empresa.id,
         **_causal_impact(empresa),
     })
 
