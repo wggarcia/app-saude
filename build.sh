@@ -7,6 +7,8 @@ PYTHON_BIN="${PYTHON_BIN:-python}"
 "$PYTHON_BIN" manage.py collectstatic --noinput
 
 if [ "${SKIP_BUILD_MIGRATIONS:-false}" != "true" ]; then
-  "$PYTHON_BIN" manage.py migrate --noinput
-  "$PYTHON_BIN" manage.py bootstrap_acessos
+  # Migrations e bootstrap devem rodar com DATABASE_URL (usuário owner),
+  # nunca com APP_DATABASE_URL (usuário restrito/RLS).
+  APP_DATABASE_URL= "$PYTHON_BIN" manage.py migrate --noinput
+  APP_DATABASE_URL= "$PYTHON_BIN" manage.py bootstrap_acessos
 fi
