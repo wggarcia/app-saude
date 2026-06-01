@@ -15,32 +15,14 @@ logger = logging.getLogger(__name__)
 SESSION_IDLE_TIMEOUT = timedelta(minutes=15) if settings.DEBUG else timedelta(hours=8)
 
 
-def _rls_clear_empresa() -> None:
-    """
-    Limpa app.empresa_id no início de cada request.
-
-    Com conn_max_age=600 as conexões são reutilizadas entre requests. Se a request
-    anterior definiu app.empresa_id via SET SESSION, o valor vazaria para a próxima
-    request na mesma conexão. Esta função reseta o valor para string vazia (''),
-    que o NULLIF(..., '') converte para NULL — desbloqueando queries sem tenant.
-    """
-    from django.db import connection
-    if connection.vendor != "postgresql":
-        return
-    try:
-        with connection.cursor() as cur:
-            cur.execute("SELECT set_config('app.empresa_id', '', false)")
-    except Exception:
-        pass
-
-
 def _rls_set_empresa(empresa_id: int) -> None:
     """
     Ativa o tenant boundary RLS para esta requisição.
 
-    Usa is_local=False (SET SESSION) em vez de SET LOCAL — necessário com psycopg3,
-    cujo modo "autobegin" não garante persistência de SET LOCAL entre cursors.
-    O valor é limpo no início de cada request por _rls_clear_empresa().
+    Usa is_local=False (SET SESSION) — necessário com psycopg3, cujo modo
+    "autobegin" não garante persistência de SET LOCAL entre cursors dentro
+    do mesmo atomic(). Deve ser chamado antes de qualquer query de banco
+    que toque tabelas protegidas por RLS.
 
     Em SQLite (dev local) retorna silenciosamente sem erro.
     """

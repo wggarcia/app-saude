@@ -99,7 +99,6 @@ def _rls_set_empresa_auth(empresa_id: int) -> None:
 
     Usa is_local=False (SET SESSION) — necessário com psycopg3, cujo modo "autobegin"
     não garante persistência de SET LOCAL entre cursors dentro do mesmo atomic().
-    O valor é limpo no início de cada request pelo _rls_clear_empresa() do middleware.
     """
     from django.db import connection
     if connection.vendor != "postgresql":
