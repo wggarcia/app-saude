@@ -8415,3 +8415,708 @@ class RegistroParto(models.Model):
 
     def __str__(self):
         return f"Parto {self.get_tipo_parto_display()} — {self.mae_nome} ({self.data_parto:%d/%m/%Y})"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# HEMOTERAPIA — ANVISA RDC 34/2014
+# ══════════════════════════════════════════════════════════════════════════════
+
+class BolsaSangue(models.Model):
+    """Rastreabilidade de bolsas de sangue e hemocomponentes (RDC 34/2014)."""
+    TIPO_CHOICES = [
+        ("st",   "Sangue Total"),
+        ("ch",   "Concentrado de Hemácias"),
+        ("cp",   "Concentrado de Plaquetas"),
+        ("pfc",  "Plasma Fresco Congelado"),
+        ("crp",  "Crioprecipitado"),
+        ("cg",   "Concentrado de Granulócitos"),
+        ("alb",  "Albumina"),
+        ("ig",   "Imunoglobulina"),
+    ]
+    ABO_CHOICES = [("A","A"),("B","B"),("AB","AB"),("O","O"),("","Não tipado")]
+    RH_CHOICES  = [("+","Positivo"),("-","Negativo"),("","Não determinado")]
+    STATUS = [
+        ("disponivel",  "Disponível"),
+        ("reservada",   "Reservada"),
+        ("transfundida","Transfundida"),
+        ("descartada",  "Descartada"),
+        ("vencida",     "Vencida"),
+        ("quarentena",  "Em Quarentena"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="bolsas_sangue")
+    codigo_bolsa     = models.CharField(max_length=40, verbose_name="Código da bolsa")
+    tipo             = models.CharField(max_length=4,  choices=TIPO_CHOICES)
+    tipo_abo         = models.CharField(max_length=2,  choices=ABO_CHOICES, blank=True, default="")
+    fator_rh         = models.CharField(max_length=1,  choices=RH_CHOICES,  blank=True, default="")
+    volume_ml        = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                         verbose_name="Volume (mL)")
+    doador_codigo    = models.CharField(max_length=30, blank=True, default="")
+    coletada_em      = models.DateField(null=True, blank=True)
+    processada_em    = models.DateField(null=True, blank=True)
+    validade         = models.DateField()
+    status           = models.CharField(max_length=15, choices=STATUS, default="disponivel")
+    # Rastreabilidade ISBT 128
+    isbt128          = models.CharField(max_length=30, blank=True, default="",
+                                         verbose_name="ISBT-128")
+    obs              = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Bolsa de Sangue"
+        verbose_name_plural = "Bolsas de Sangue"
+        ordering            = ["-coletada_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "tipo"]),
+            models.Index(fields=["empresa", "validade"]),
+            models.Index(fields=["codigo_bolsa"]),
+        ]
+
+    def __str__(self):
+        return f"{self.codigo_bolsa} — {self.get_tipo_display()} {self.tipo_abo}{self.fator_rh}"
+
+
+class SolicitacaoHemoterapia(models.Model):
+    """Solicitação de transfusão de hemocomponente para paciente."""
+    URGENCIA = [
+        ("eletiva",    "Eletiva"),
+        ("urgente",    "Urgente"),
+        ("emergencia", "Emergência"),
+    ]
+    STATUS = [
+        ("solicitada",  "Solicitada"),
+        ("reservada",   "Reservada"),
+        ("transfundida","Transfundida"),
+        ("cancelada",   "Cancelada"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="solicitacoes_hemoterapia")
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    cns_paciente     = models.CharField(max_length=18, blank=True, default="")
+    tipo_abo         = models.CharField(max_length=2,  blank=True, default="")
+    fator_rh         = models.CharField(max_length=1,  blank=True, default="")
+    tipo_hemocomponente = models.CharField(max_length=4, choices=BolsaSangue.TIPO_CHOICES)
+    quantidade       = models.PositiveSmallIntegerField(default=1)
+    urgencia         = models.CharField(max_length=12, choices=URGENCIA, default="eletiva")
+    cid10            = models.CharField(max_length=10, blank=True, default="")
+    medico_solicitante = models.CharField(max_length=150, blank=True, default="")
+    crm_medico       = models.CharField(max_length=20,  blank=True, default="")
+    leito            = models.CharField(max_length=20,  blank=True, default="")
+    justificativa    = models.TextField(blank=True, default="")
+    status           = models.CharField(max_length=15, choices=STATUS, default="solicitada")
+    data_solicitacao = models.DateField(auto_now_add=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Solicitação Hemoterapia"
+        verbose_name_plural = "Solicitações Hemoterapia"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "urgencia"]),
+            models.Index(fields=["cpf_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"Sol. Hemo — {self.paciente_nome} ({self.get_tipo_hemocomponente_display()})"
+
+
+class TransfusaoPaciente(models.Model):
+    """Registro de transfusão realizada — vinculada a bolsa e solicitação."""
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="transfusoes")
+    solicitacao      = models.ForeignKey(SolicitacaoHemoterapia, on_delete=models.PROTECT,
+                                          related_name="transfusoes", null=True, blank=True)
+    bolsa            = models.ForeignKey(BolsaSangue, on_delete=models.PROTECT,
+                                          related_name="transfusoes")
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    data_inicio      = models.DateTimeField()
+    data_fim         = models.DateTimeField(null=True, blank=True)
+    volume_ml        = models.PositiveSmallIntegerField(null=True, blank=True)
+    enfermeiro       = models.CharField(max_length=150, blank=True, default="")
+    coren            = models.CharField(max_length=20,  blank=True, default="")
+    medico_responsavel = models.CharField(max_length=150, blank=True, default="")
+    houve_reacao     = models.BooleanField(default=False)
+    obs              = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Transfusão"
+        verbose_name_plural = "Transfusões"
+        ordering            = ["-data_inicio"]
+        indexes             = [
+            models.Index(fields=["empresa", "data_inicio"]),
+            models.Index(fields=["cpf_paciente"]),
+            models.Index(fields=["empresa", "houve_reacao"]),
+        ]
+
+    def __str__(self):
+        return f"Transfusão — {self.paciente_nome} ({self.data_inicio:%d/%m/%Y})"
+
+
+class ReacaoTransfusional(models.Model):
+    """Reação adversa à transfusão — notificação ANVISA NOTIVISA (RDC 34/2014, art. 83)."""
+    TIPO_REACAO = [
+        ("febre",           "Reação Febril Não Hemolítica"),
+        ("alergica_leve",   "Reação Alérgica Leve (urticária)"),
+        ("alergica_grave",  "Reação Alérgica Grave (anafilaxia)"),
+        ("hemolitica_aguda","Hemólise Aguda Intravascular"),
+        ("hemolitica_tardia","Hemólise Tardia"),
+        ("sobrecarga",      "Sobrecarga Circulatória (TACO)"),
+        ("trali",           "Lesão Pulmonar (TRALI)"),
+        ("contaminacao",    "Contaminação Bacteriana"),
+        ("outro",           "Outro"),
+    ]
+    GRAVIDADE = [
+        ("leve",    "Leve"),
+        ("moderada","Moderada"),
+        ("grave",   "Grave"),
+        ("fatal",   "Fatal"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="reacoes_transfusionais")
+    transfusao       = models.OneToOneField(TransfusaoPaciente, on_delete=models.CASCADE,
+                                             related_name="reacao", null=True, blank=True)
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    tipo_reacao      = models.CharField(max_length=25, choices=TIPO_REACAO)
+    gravidade        = models.CharField(max_length=10, choices=GRAVIDADE)
+    data_reacao      = models.DateTimeField()
+    descricao        = models.TextField()
+    conduta          = models.TextField(blank=True, default="")
+    notificado_anvisa = models.BooleanField(default=False)
+    protocolo_notivisa = models.CharField(max_length=40, blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Reação Transfusional"
+        verbose_name_plural = "Reações Transfusionais"
+        ordering            = ["-data_reacao"]
+        indexes             = [
+            models.Index(fields=["empresa", "data_reacao"]),
+            models.Index(fields=["empresa", "gravidade"]),
+            models.Index(fields=["empresa", "notificado_anvisa"]),
+        ]
+
+    def __str__(self):
+        return f"Reação {self.get_tipo_reacao_display()} — {self.paciente_nome}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ONCOLOGIA — Alta Complexidade / APAC SUS
+# ══════════════════════════════════════════════════════════════════════════════
+
+class ProtocoloOncologico(models.Model):
+    """Catálogo de protocolos quimioterápicos (INCA / PCDT oncologia)."""
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="protocolos_oncologicos")
+    codigo           = models.CharField(max_length=30, verbose_name="Código do protocolo")
+    nome             = models.CharField(max_length=120)  # ex. FOLFOX-6
+    indicacao_cid    = models.CharField(max_length=20, blank=True, default="",
+                                         verbose_name="CID-10 indicação principal")
+    via              = models.CharField(max_length=20, blank=True, default="",
+                                         verbose_name="Via de administração")  # EV, VO, SC
+    ciclos_total     = models.PositiveSmallIntegerField(null=True, blank=True)
+    intervalo_dias   = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                         verbose_name="Intervalo entre ciclos (dias)")
+    drogas           = models.JSONField(default=list,
+                                        verbose_name="Drogas (lista: nome, dose, unidade, dia)")
+    ativo            = models.BooleanField(default=True)
+    obs              = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Protocolo Oncológico"
+        verbose_name_plural = "Protocolos Oncológicos"
+        ordering            = ["nome"]
+        indexes             = [
+            models.Index(fields=["empresa", "ativo"]),
+            models.Index(fields=["indicacao_cid"]),
+        ]
+        unique_together = [["empresa", "codigo"]]
+
+    def __str__(self):
+        return f"{self.codigo} — {self.nome}"
+
+
+class CicloQuimioterapia(models.Model):
+    """Ciclo de quimioterapia realizado em paciente oncológico."""
+    STATUS = [
+        ("agendado",    "Agendado"),
+        ("em_curso",    "Em Curso"),
+        ("concluido",   "Concluído"),
+        ("suspenso",    "Suspenso/Adiado"),
+        ("cancelado",   "Cancelado"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="ciclos_quimio")
+    protocolo        = models.ForeignKey(ProtocoloOncologico, on_delete=models.PROTECT,
+                                          related_name="ciclos")
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    cns_paciente     = models.CharField(max_length=18, blank=True, default="")
+    cid10_principal  = models.CharField(max_length=10)
+    numero_ciclo     = models.PositiveSmallIntegerField(verbose_name="Número do ciclo")
+    data_inicio      = models.DateField()
+    data_fim         = models.DateField(null=True, blank=True)
+    status           = models.CharField(max_length=12, choices=STATUS, default="agendado")
+    medico_oncologista = models.CharField(max_length=150, blank=True, default="")
+    crm              = models.CharField(max_length=20, blank=True, default="")
+    # Superfície corporal para cálculo de dose
+    peso_kg          = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    altura_cm        = models.DecimalField(max_digits=4, decimal_places=0, null=True, blank=True)
+    sc_m2            = models.DecimalField(max_digits=5, decimal_places=4, null=True, blank=True,
+                                            verbose_name="Superfície corporal (m²)")
+    obs              = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Ciclo de Quimioterapia"
+        verbose_name_plural = "Ciclos de Quimioterapia"
+        ordering            = ["-data_inicio"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "data_inicio"]),
+            models.Index(fields=["cpf_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"Ciclo {self.numero_ciclo} — {self.protocolo.codigo} — {self.paciente_nome}"
+
+
+class APACOncologia(models.Model):
+    """APAC de Quimioterapia/Radioterapia para faturamento SUS (SIA-SUS)."""
+    STATUS = [
+        ("elaborando",  "Elaborando"),
+        ("submetida",   "Submetida ao SUS"),
+        ("aprovada",    "Aprovada"),
+        ("glosada",     "Glosada"),
+        ("cancelada",   "Cancelada"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="apacs_oncologia")
+    numero_apac      = models.CharField(max_length=20, blank=True, default="",
+                                         verbose_name="Número APAC")
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    cns_paciente     = models.CharField(max_length=18, blank=True, default="")
+    cid10_principal  = models.CharField(max_length=10)
+    cid10_secundario = models.CharField(max_length=10, blank=True, default="")
+    procedimento_principal = models.CharField(max_length=10, blank=True, default="",
+                                               verbose_name="Procedimento SIGTAP")
+    ciclo_referencia = models.ForeignKey(CicloQuimioterapia, on_delete=models.PROTECT,
+                                          related_name="apacs", null=True, blank=True)
+    competencia      = models.CharField(max_length=6, verbose_name="Competência AAAAMM")
+    valor_solicitado = models.DecimalField(max_digits=12, decimal_places=2,
+                                            null=True, blank=True)
+    valor_aprovado   = models.DecimalField(max_digits=12, decimal_places=2,
+                                            null=True, blank=True)
+    status           = models.CharField(max_length=12, choices=STATUS, default="elaborando")
+    motivo_glosa     = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "APAC Oncologia"
+        verbose_name_plural = "APACs Oncologia"
+        ordering            = ["-competencia"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "competencia"]),
+            models.Index(fields=["cns_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"APAC {self.numero_apac or 'rascunho'} — {self.paciente_nome}"
+
+
+class ToxicidadeQuimio(models.Model):
+    """Registro de toxicidade CTCAE v5.0 — grau 1 a 5."""
+    GRAU = [
+        (1, "Grau 1 — Leve"),
+        (2, "Grau 2 — Moderada"),
+        (3, "Grau 3 — Grave"),
+        (4, "Grau 4 — Risco de vida"),
+        (5, "Grau 5 — Fatal"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="toxicidades_quimio")
+    ciclo            = models.ForeignKey(CicloQuimioterapia, on_delete=models.CASCADE,
+                                          related_name="toxicidades")
+    categoria        = models.CharField(max_length=60,
+                                         verbose_name="Categoria CTCAE")  # ex. Neutropenia, Náusea
+    grau             = models.PositiveSmallIntegerField(choices=GRAU)
+    data_registro    = models.DateField()
+    conduta          = models.TextField(blank=True, default="")
+    dose_reduzida    = models.BooleanField(default=False,
+                                            verbose_name="Dose reduzida por toxicidade?")
+    ciclo_suspenso   = models.BooleanField(default=False,
+                                            verbose_name="Ciclo suspenso por toxicidade?")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Toxicidade Quimioterapia"
+        verbose_name_plural = "Toxicidades Quimioterapia"
+        ordering            = ["-data_registro"]
+        indexes             = [
+            models.Index(fields=["empresa", "data_registro"]),
+            models.Index(fields=["empresa", "grau"]),
+        ]
+
+    def __str__(self):
+        return f"Tox Grau {self.grau} — {self.categoria} — {self.ciclo.paciente_nome}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TUSS + ROL ANS + NIP — Plano de Saúde
+# ══════════════════════════════════════════════════════════════════════════════
+
+class ProcedimentoTUSS(models.Model):
+    """Catálogo TUSS — Terminologia Unificada da Saúde Suplementar (ANS)."""
+    SEGMENTO = [
+        ("consulta",      "Consulta"),
+        ("exame",         "Exame / Diagnóstico"),
+        ("terapia",       "Terapia / Procedimento"),
+        ("cirurgia",      "Cirurgia"),
+        ("internacao",    "Internação"),
+        ("urgencia",      "Urgência/Emergência"),
+        ("saude_mental",  "Saúde Mental"),
+        ("odontologia",   "Odontologia"),
+        ("obstetricia",   "Obstetrícia"),
+        ("fisioterapia",  "Fisioterapia"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="procedimentos_tuss")
+    codigo_tuss      = models.CharField(max_length=20, verbose_name="Código TUSS")
+    descricao        = models.CharField(max_length=255)
+    segmento         = models.CharField(max_length=20, choices=SEGMENTO)
+    # Cobertura obrigatória ANS
+    cobertura_obrigatoria = models.BooleanField(default=False,
+                                                 verbose_name="Cobertura obrigatória ANS")
+    prazo_atendimento = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                          verbose_name="Prazo garantia (dias úteis)")
+    # Valor de referência CBHPM / AMB
+    valor_referencia = models.DecimalField(max_digits=10, decimal_places=2,
+                                            null=True, blank=True)
+    ativo            = models.BooleanField(default=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Procedimento TUSS"
+        verbose_name_plural = "Procedimentos TUSS"
+        ordering            = ["codigo_tuss"]
+        indexes             = [
+            models.Index(fields=["empresa", "segmento"]),
+            models.Index(fields=["empresa", "cobertura_obrigatoria"]),
+            models.Index(fields=["codigo_tuss"]),
+        ]
+        unique_together = [["empresa", "codigo_tuss"]]
+
+    def __str__(self):
+        return f"{self.codigo_tuss} — {self.descricao}"
+
+
+class CoberturaRolANS(models.Model):
+    """Rol de Procedimentos ANS — cobertura mínima obrigatória (RN 465/2021)."""
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="coberturas_rol_ans")
+    procedimento     = models.ForeignKey(ProcedimentoTUSS, on_delete=models.CASCADE,
+                                          related_name="coberturas")
+    cid10_indicacao  = models.CharField(max_length=10, blank=True, default="",
+                                         verbose_name="CID-10 indicação")
+    indicacao_clinica = models.CharField(max_length=255, blank=True, default="")
+    # Prazos máximos de atendimento (RN 259/2011, RN 566/2022)
+    prazo_consulta_dias_uteis   = models.PositiveSmallIntegerField(null=True, blank=True)
+    prazo_exame_dias_uteis      = models.PositiveSmallIntegerField(null=True, blank=True)
+    prazo_cirurgia_dias_corridos = models.PositiveSmallIntegerField(null=True, blank=True)
+    dut_disponivel   = models.BooleanField(default=False,
+                                            verbose_name="DUT disponível?")
+    ativa            = models.BooleanField(default=True)
+    vigencia_inicio  = models.DateField(null=True, blank=True)
+    vigencia_fim     = models.DateField(null=True, blank=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Cobertura Rol ANS"
+        verbose_name_plural = "Coberturas Rol ANS"
+        ordering            = ["procedimento__codigo_tuss"]
+        indexes             = [
+            models.Index(fields=["empresa", "ativa"]),
+            models.Index(fields=["cid10_indicacao"]),
+        ]
+
+    def __str__(self):
+        return f"Rol ANS — {self.procedimento.codigo_tuss} ({self.indicacao_clinica[:40]})"
+
+
+class DiretrizUtilizacao(models.Model):
+    """DUT — Diretriz de Utilização para procedimentos especiais (ANS RN 465/2021, Anexo II)."""
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="diretrizes_utilizacao")
+    procedimento     = models.ForeignKey(ProcedimentoTUSS, on_delete=models.CASCADE,
+                                          related_name="diretrizes")
+    titulo           = models.CharField(max_length=200)
+    criterios_acesso = models.TextField(verbose_name="Critérios de acesso / inclusão")
+    criterios_exclusao = models.TextField(blank=True, default="")
+    documentos_necessarios = models.TextField(blank=True, default="",
+                                               verbose_name="Documentos necessários (lista)")
+    numero_resolucao = models.CharField(max_length=20, blank=True, default="",
+                                         verbose_name="Resolução ANS")
+    vigencia_inicio  = models.DateField(null=True, blank=True)
+    ativa            = models.BooleanField(default=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Diretriz de Utilização"
+        verbose_name_plural = "Diretrizes de Utilização"
+        ordering            = ["titulo"]
+        indexes             = [
+            models.Index(fields=["empresa", "ativa"]),
+        ]
+
+    def __str__(self):
+        return f"DUT — {self.titulo}"
+
+
+class NotificacaoNIP(models.Model):
+    """NIP — Notificação Intermediária de Pendência (ANS RN 389/2015)."""
+    TIPO_CHOICES = [
+        ("autorizacao",  "Negativa/Demora de Autorização"),
+        ("reembolso",    "Reembolso não realizado"),
+        ("cobranca",     "Cobrança indevida"),
+        ("rede",         "Rede credenciada"),
+        ("contrato",     "Contratual"),
+        ("outros",       "Outros"),
+    ]
+    STATUS = [
+        ("aberta",       "Aberta"),
+        ("em_analise",   "Em Análise"),
+        ("respondida",   "Respondida"),
+        ("encerrada_favoravel",  "Encerrada Favorável ao Beneficiário"),
+        ("encerrada_improcedente","Encerrada Improcedente"),
+        ("convertida_rap","Convertida em RAP"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="notificacoes_nip")
+    numero_nip       = models.CharField(max_length=30, blank=True, default="",
+                                         verbose_name="Número NIP (ANS)")
+    beneficiario_nome = models.CharField(max_length=160)
+    cpf_beneficiario = models.CharField(max_length=11, blank=True, default="")
+    carteirinha      = models.CharField(max_length=30, blank=True, default="")
+    tipo             = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    descricao        = models.TextField(verbose_name="Descrição da reclamação")
+    data_abertura    = models.DateField(auto_now_add=True)
+    prazo_resposta   = models.DateField(null=True, blank=True,
+                                         verbose_name="Prazo resposta ANS (5 dias úteis)")
+    status           = models.CharField(max_length=30, choices=STATUS, default="aberta")
+    procedimento     = models.ForeignKey(ProcedimentoTUSS, on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name="nips")
+    obs_interna      = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Notificação NIP"
+        verbose_name_plural = "Notificações NIP"
+        ordering            = ["-data_abertura"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "tipo"]),
+            models.Index(fields=["empresa", "prazo_resposta"]),
+            models.Index(fields=["cpf_beneficiario"]),
+        ]
+
+    def __str__(self):
+        return f"NIP {self.numero_nip or 'rascunho'} — {self.beneficiario_nome}"
+
+
+class RespostaNIP(models.Model):
+    """Resposta da operadora à NIP dentro do prazo ANS."""
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="respostas_nip")
+    nip              = models.OneToOneField(NotificacaoNIP, on_delete=models.CASCADE,
+                                             related_name="resposta")
+    data_resposta    = models.DateField()
+    respondido_por   = models.CharField(max_length=150)
+    conteudo         = models.TextField(verbose_name="Conteúdo da resposta")
+    aceite_beneficiario = models.BooleanField(null=True, blank=True,
+                                               verbose_name="Beneficiário aceitou resolução?")
+    documento_comprobatorio = models.CharField(max_length=200, blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Resposta NIP"
+        verbose_name_plural = "Respostas NIP"
+
+    def __str__(self):
+        return f"Resposta NIP {self.nip.numero_nip} — {self.data_resposta}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ACS — Agente Comunitário de Saúde + Visitas Domiciliares (e-SUS AB / CDS)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class AgenteComunidadeSaude(models.Model):
+    """Cadastro do ACS com microárea, USF e família vinculada (e-SUS CDS)."""
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="agentes_acs")
+    nome             = models.CharField(max_length=160)
+    cpf              = models.CharField(max_length=11, blank=True, default="")
+    cns              = models.CharField(max_length=18, blank=True, default="")
+    registro         = models.CharField(max_length=30, blank=True, default="",
+                                         verbose_name="Número de registro")
+    cnes_usf         = models.CharField(max_length=7,  blank=True, default="",
+                                         verbose_name="CNES da USF")
+    ine_equipe       = models.CharField(max_length=10, blank=True, default="",
+                                         verbose_name="INE da equipe")
+    microarea        = models.CharField(max_length=10, blank=True, default="",
+                                         verbose_name="Micro-área")
+    municipio_ibge   = models.CharField(max_length=7,  blank=True, default="",
+                                         verbose_name="Cód. IBGE município")
+    ativo            = models.BooleanField(default=True)
+    data_admissao    = models.DateField(null=True, blank=True)
+    obs              = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Agente Comunitário de Saúde"
+        verbose_name_plural = "Agentes Comunitários de Saúde"
+        ordering            = ["nome"]
+        indexes             = [
+            models.Index(fields=["empresa", "ativo"]),
+            models.Index(fields=["empresa", "microarea"]),
+            models.Index(fields=["cnes_usf"]),
+        ]
+
+    def __str__(self):
+        return f"ACS {self.nome} — Microárea {self.microarea}"
+
+
+class VisitaDomiciliar(models.Model):
+    """Ficha de Visita Domiciliar e-SUS AB / CDS (Portaria MS 1.412/2013)."""
+    MOTIVO = [
+        ("cadastramento",       "Cadastramento/Atualização"),
+        ("visita_rotineira",    "Visita de Rotina"),
+        ("acompanhamento",      "Acompanhamento de Condicionalidades"),
+        ("busca_ativa",         "Busca Ativa"),
+        ("pre_natal",           "Pré-natal"),
+        ("puericultura",        "Puericultura"),
+        ("pessoa_idosa",        "Atenção à Pessoa Idosa"),
+        ("portador_doenca_cronica","Portador de Doença Crônica"),
+        ("saude_mental",        "Saúde Mental"),
+        ("domiciliado",         "Acamado/Domiciliado"),
+        ("egresso_internacao",  "Egresso de Internação"),
+        ("obito",               "Verificação de Óbito"),
+        ("outro",               "Outro"),
+    ]
+    DESFECHO = [
+        ("visita_realizada",    "Visita Realizada"),
+        ("ausente",             "Ausente"),
+        ("recusou",             "Recusou Atendimento"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="visitas_domiciliares")
+    acs              = models.ForeignKey(AgenteComunidadeSaude, on_delete=models.PROTECT,
+                                          related_name="visitas")
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    cns_paciente     = models.CharField(max_length=18, blank=True, default="")
+    data_visita      = models.DateField()
+    turno            = models.CharField(max_length=1,
+                                         choices=[("M","Manhã"),("T","Tarde"),("N","Noite")],
+                                         default="M")
+    motivo           = models.CharField(max_length=30, choices=MOTIVO)
+    desfecho         = models.CharField(max_length=20, choices=DESFECHO,
+                                         default="visita_realizada")
+    # Dados clínicos da visita
+    peso_kg          = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    pa_sistolica     = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                         verbose_name="PA sistólica")
+    pa_diastolica    = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                         verbose_name="PA diastólica")
+    glicemia         = models.DecimalField(max_digits=6, decimal_places=1, null=True, blank=True,
+                                            verbose_name="Glicemia (mg/dL)")
+    gestante         = models.BooleanField(default=False)
+    ig_semanas       = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                         verbose_name="IG semanas (se gestante)")
+    # e-SUS / SISAB
+    uuid_esus        = models.CharField(max_length=40, blank=True, default="",
+                                         verbose_name="UUID e-SUS")
+    transmitido_esus = models.BooleanField(default=False)
+    obs              = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Visita Domiciliar"
+        verbose_name_plural = "Visitas Domiciliares"
+        ordering            = ["-data_visita"]
+        indexes             = [
+            models.Index(fields=["empresa", "data_visita"]),
+            models.Index(fields=["empresa", "motivo"]),
+            models.Index(fields=["empresa", "transmitido_esus"]),
+            models.Index(fields=["acs", "data_visita"]),
+            models.Index(fields=["cpf_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"Visita {self.data_visita} — {self.paciente_nome} ({self.get_motivo_display()})"
+
+
+class FichaAcompanhamento(models.Model):
+    """Ficha de Acompanhamento de Família/Indivíduo — CDS/e-SUS (SIAB herdeiro)."""
+    CONDICAO = [
+        ("hipertensao",     "Hipertensão Arterial"),
+        ("diabetes",        "Diabetes Mellitus"),
+        ("tuberculose",     "Tuberculose"),
+        ("hanseníase",      "Hanseníase"),
+        ("gestante",        "Gestante"),
+        ("cancer",          "Câncer"),
+        ("saude_mental",    "Saúde Mental"),
+        ("deficiencia",     "Deficiência"),
+        ("usuario_drogas",  "Usuário de Álcool/Drogas"),
+        ("acamado",         "Acamado"),
+        ("domiciliado",     "Domiciliado"),
+        ("outro",           "Outro"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="fichas_acompanhamento")
+    acs              = models.ForeignKey(AgenteComunidadeSaude, on_delete=models.PROTECT,
+                                          related_name="fichas", null=True, blank=True)
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    cns_paciente     = models.CharField(max_length=18, blank=True, default="")
+    data_nascimento  = models.DateField(null=True, blank=True)
+    condicao_saude   = models.CharField(max_length=20, choices=CONDICAO,
+                                         verbose_name="Condição de saúde monitorada")
+    # Endereço
+    logradouro       = models.CharField(max_length=200, blank=True, default="")
+    numero           = models.CharField(max_length=10,  blank=True, default="")
+    bairro           = models.CharField(max_length=100, blank=True, default="")
+    municipio_ibge   = models.CharField(max_length=7,   blank=True, default="")
+    microarea        = models.CharField(max_length=10,  blank=True, default="")
+    # Acompanhamento
+    em_acompanhamento = models.BooleanField(default=True)
+    data_inicio_acomp = models.DateField(null=True, blank=True)
+    data_fim_acomp    = models.DateField(null=True, blank=True)
+    obs              = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Ficha de Acompanhamento"
+        verbose_name_plural = "Fichas de Acompanhamento"
+        ordering            = ["paciente_nome"]
+        indexes             = [
+            models.Index(fields=["empresa", "condicao_saude"]),
+            models.Index(fields=["empresa", "em_acompanhamento"]),
+            models.Index(fields=["empresa", "microarea"]),
+            models.Index(fields=["cpf_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"Ficha — {self.paciente_nome} ({self.get_condicao_saude_display()})"
