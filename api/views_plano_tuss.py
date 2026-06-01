@@ -17,23 +17,54 @@ from .services.auth_session import empresa_autenticada_from_request as get_empre
 
 logger = logging.getLogger(__name__)
 
-# Seed TUSS mínimo (Rol ANS RN 465/2021 — exemplos por segmento)
+# ── Seed TUSS — Rol ANS RN 465/2021 (atualização 2023) ─────────────────────────
+# Fonte: ANS — Rol de Procedimentos e Eventos em Saúde (RN 465/2021)
+#   https://www.ans.gov.br/planos-de-saude-e-operadoras/espaco-do-consumidor/rol-de-procedimentos
+# Prazo de atendimento: RN 259/2011 e RN 566/2022 (dias úteis, exceto cirurgia=dias corridos)
+# Operadores devem sincronizar a tabela completa com o arquivo TUSS da ANS (.xlsx).
+#
+# Formato: (codigo_tuss, descricao, segmento, cobertura_obrigatoria, prazo_dias_uteis, valor_ref)
 _TUSS_SEED = [
-    ("10101012", "Consulta em consultório",                    "consulta",   True,  7, None),
-    ("20101001", "Hemograma completo",                         "exame",      True,  3, None),
-    ("20102038", "Glicemia em jejum",                          "exame",      True,  3, None),
-    ("20103051", "Tomografia computadorizada do crânio",       "exame",      True, 10, None),
-    ("40304361", "Apendicectomia",                             "cirurgia",   True, 21, None),
-    ("30901030", "Radioterapia conformacional",                "terapia",    True, 30, None),
-    ("20201068", "Ecocardiograma",                             "exame",      True,  7, None),
-    ("10301012", "Consulta psiquiátrica",                      "saude_mental", True, 10, None),
-    ("40101006", "Parto normal",                               "obstetricia",True, None, None),
-    ("40101014", "Cesariana",                                  "obstetricia",True, None, None),
-    ("40601138", "Hemodiálise",                                "terapia",    True, None, None),
-    ("20501012", "Ressonância magnética de crânio",            "exame",      True, 10, None),
-    ("30102015", "Fisioterapia motora",                        "fisioterapia",True, 10, None),
-    ("87000502", "Internação clínica",                         "internacao", True, None, None),
-    ("30719005", "Quimioterapia antineoplásica",               "terapia",    True, None, None),
+    # Consultas
+    ("10101012", "Consulta médica em consultório",              "consulta",    True,  7,  None),
+    ("10102012", "Consulta médica em pronto-socorro",           "urgencia",    True,  None, None),
+    ("10301012", "Consulta em psiquiatria",                     "saude_mental",True, 10,  None),
+    ("10701079", "Consulta em geriatria",                       "consulta",    True,  7,  None),
+    # Exames laboratoriais
+    ("40304361", "Hemograma com contagem de plaquetas",         "exame",       True,  3,  None),
+    ("40304590", "Glicose (jejum)",                             "exame",       True,  3,  None),
+    ("40304752", "HbA1c — Hemoglobina glicada",                 "exame",       True,  3,  None),
+    ("40304442", "Colesterol total",                            "exame",       True,  3,  None),
+    ("40308680", "TSH — Hormônio tireotrófico",                 "exame",       True,  3,  None),
+    ("40308095", "PSA — Antígeno prostático específico",        "exame",       True,  3,  None),
+    # Imagem
+    ("40901203", "Radiografia do tórax (2 incidências)",        "exame",       True,  3,  None),
+    ("40901220", "Ultrassonografia obstétrica",                 "exame",       True,  3,  None),
+    ("40901263", "Mamografia bilateral",                        "exame",       True,  3,  None),
+    ("41301012", "Tomografia do crânio sem contraste",          "exame",       True, 10,  None),
+    ("41201049", "Ressonância magnética do crânio sem contraste","exame",      True, 10,  None),
+    ("41301098", "Tomografia do tórax com contraste",           "exame",       True, 10,  None),
+    ("40901271", "Ecocardiograma transtorácico",                "exame",       True,  7,  None),
+    # Procedimentos / terapia
+    ("30719005", "Quimioterapia antineoplásica sistêmica",      "terapia",     True, None, None),
+    ("30721013", "Radioterapia por fótons — campo simples",     "terapia",     True, 30,  None),
+    ("31005017", "Hemodiálise",                                 "terapia",     True, None, None),
+    ("20101015", "Fisioterapia — sessão individual",            "fisioterapia",True, 10,  None),
+    ("20101023", "Fonoaudiologia — sessão individual",          "terapia",     True, 10,  None),
+    ("20101031", "Terapia ocupacional — sessão individual",     "terapia",     True, 10,  None),
+    ("20101058", "Psicoterapia individual",                     "saude_mental",True, 10,  None),
+    # Cirurgias
+    ("31309186", "Apendicectomia",                             "cirurgia",    True, 21,  None),
+    ("31309208", "Colecistectomia videolaparoscópica",          "cirurgia",    True, 21,  None),
+    ("31309321", "Cesariana",                                   "obstetricia", True, None, None),
+    ("31309240", "Parto normal",                                "obstetricia", True, None, None),
+    ("30724027", "Artroplastia total do quadril",               "cirurgia",    True, 21,  None),
+    ("30724051", "Artroplastia total do joelho",                "cirurgia",    True, 21,  None),
+    # Internação
+    ("90010470", "Diária de internação em enfermaria",          "internacao",  True, None, None),
+    ("90010500", "Diária de UTI adulto",                        "internacao",  True, None, None),
+    # Urgência/Emergência
+    ("90020030", "Atendimento de urgência/emergência ambulatorial", "urgencia",True, None, None),
 ]
 
 

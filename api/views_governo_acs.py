@@ -1,16 +1,29 @@
 """
 ACS — Agente Comunitário de Saúde + Visitas Domiciliares + Fichas de Acompanhamento
 e-SUS Atenção Básica / CDS — Portaria MS 1.412/2013.
-Integração SISAB (transmissão de fichas de visita).
+
+Transmissão ao SISAB:
+  O SISAB NÃO disponibiliza REST API pública para sistemas externos.
+  A integração oficial é feita pelo software PEC (Prontuário Eletrônico do Cidadão)
+  através do protocolo Thrift / envio local → sincronização nacional.
+
+  Este módulo implementa a abordagem oficial para sistemas externos:
+    1. Geração do arquivo CDS JSON (FichaVisitaDomiciliarMestre) no padrão
+       e-SUS AB — Documentação Técnica UFSC/DAB/MS
+    2. Download do arquivo JSON pelo operador
+    3. Importação no PEC via: Configurações → Importar CDS
+  Ref: https://integracao.esusab.ufsc.br/ledi/documentacao/
+       Portaria GM/MS 1.412/2013 | Manual e-SUS AB v3.x
 """
 import json
 import logging
+import time
 import uuid
 from datetime import date, timedelta
 
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
@@ -270,64 +283,169 @@ def api_visita_detalhe(request, visita_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_visitas_transmitir_esus(request):
-    """POST /api/governo/acs/visitas/transmitir-esus/ — envia fichas pendentes ao SISAB."""
+    """
+    POST /api/governo/acs/visitas/transmitir-esus/
+
+    Gera arquivo CDS JSON (FichaVisitaDomiciliarMestre) no padrão oficial
+    e-SUS AB para importação no PEC (Prontuário Eletrônico do Cidadão).
+
+    Retorna JSON com:
+      - cds_json_b64: arquivo CDS em base64 (para download)
+      - instrucoes: passo a passo de importação no PEC
+
+    Para download direto: GET /api/governo/acs/visitas/exportar-cds/
+    """
     empresa = get_empresa(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
 
     _, VisitaDomiciliar, _ = _get_acs_models()
 
+    body     = json.loads(request.body) if request.body else {}
+    data_ini = body.get("data_inicio")
+
     pendentes = VisitaDomiciliar.objects.filter(
         empresa=empresa,
         transmitido_esus=False,
-        desfecho="visita_realizada",
-    )
+    ).select_related("acs")
 
-    # Opcional: filtro de data_inicio
-    data_ini = (request.body and json.loads(request.body) or {}).get("data_inicio")
     if data_ini:
         pendentes = pendentes.filter(data_visita__gte=data_ini)
 
-    count = pendentes.count()
-    if count == 0:
-        return JsonResponse({"ok": True, "transmitidas": 0, "mensagem": "Nenhuma ficha pendente"})
+    total = pendentes.count()
+    if total == 0:
+        return JsonResponse({"ok": True, "fichas": 0, "mensagem": "Nenhuma ficha pendente para exportação"})
 
-    fichas = [
-        {
-            "uuid": v.uuid_esus,
-            "cns_acs": v.acs.cns,
-            "cnes": v.acs.cnes_usf,
-            "ine": v.acs.ine_equipe,
-            "data": v.data_visita.isoformat(),
-            "turno": v.turno,
-            "motivo": v.motivo,
-            "desfecho": v.desfecho,
-            "cns_paciente": v.cns_paciente,
-        }
-        for v in pendentes.select_related("acs")[:500]
-    ]
+    cds = _gerar_cds_fichas_visita(list(pendentes[:500]), empresa)
+    cds_bytes = json.dumps(cds, ensure_ascii=False, indent=2).encode("utf-8")
+    cds_b64   = __import__("base64").b64encode(cds_bytes).decode()
 
+    # Marca como "cds_gerado" — não marcamos transmitido_esus=True até importação confirmada
+    return JsonResponse({
+        "ok": True,
+        "fichas": total,
+        "uuid_lote": cds["uuidLoteOrigem"],
+        "cds_json_b64": cds_b64,
+        "status": "cds_gerado_pendente_importacao_pec",
+        "instrucoes": [
+            "1. Baixe o arquivo CDS via GET /api/governo/acs/visitas/exportar-cds/",
+            "2. No PEC da sua UBS: Configurações → Transmissão de Dados → Importar CDS",
+            "3. Selecione o arquivo JSON exportado",
+            "4. Aguarde confirmação de importação no PEC",
+            "5. Após importação, confirme via PATCH das visitas com {\"transmitido_esus\": true}",
+        ],
+        "referencia": "e-SUS AB — FichaVisitaDomiciliarMestre | https://integracao.esusab.ufsc.br/",
+    })
+
+
+@require_http_methods(["GET"])
+def api_visitas_exportar_cds(request):
+    """GET /api/governo/acs/visitas/exportar-cds/ — baixa arquivo CDS JSON para importação no PEC."""
+    empresa = get_empresa(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    _, VisitaDomiciliar, _ = _get_acs_models()
+
+    data_ini = request.GET.get("data_inicio")
+    qs = VisitaDomiciliar.objects.filter(
+        empresa=empresa, transmitido_esus=False
+    ).select_related("acs")
+    if data_ini:
+        qs = qs.filter(data_visita__gte=data_ini)
+
+    visitas = list(qs[:500])
+    cds = _gerar_cds_fichas_visita(visitas, empresa)
+
+    filename = f"esus_cds_visitas_{date.today().isoformat()}.json"
+    response = HttpResponse(
+        json.dumps(cds, ensure_ascii=False, indent=2).encode("utf-8"),
+        content_type="application/json; charset=utf-8",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+# Mapeamentos e-SUS CDS — turno, motivo, desfecho
+_TURNO_CDS    = {"M": 1, "T": 2, "N": 3}
+_MOTIVO_CDS   = {
+    "cadastramento":        [1],   # Cadastramento/Atualização
+    "visita_rotineira":     [2],   # Visita de Rotina
+    "acompanhamento":       [3],   # Acompanhamento
+    "busca_ativa":          [4],   # Busca Ativa
+    "pre_natal":            [5],   # Pré-natal
+    "puericultura":         [6],   # Puericultura
+    "pessoa_idosa":         [7],   # Atenção à Pessoa Idosa
+    "portador_doenca_cronica": [8],
+    "saude_mental":         [9],
+    "domiciliado":          [10],
+    "egresso_internacao":   [11],
+    "obito":                [12],  # Verificação de Óbito
+    "outro":                [13],
+}
+_DESFECHO_CDS = {
+    "visita_realizada": 1,
+    "ausente":          2,
+    "recusou":          3,
+}
+
+
+def _gerar_cds_fichas_visita(visitas, empresa):
+    """
+    Gera estrutura FichaVisitaDomiciliarMestre conforme documentação técnica
+    e-SUS AB (UFSC/DAB/MS) para importação no PEC.
+
+    Formato: https://integracao.esusab.ufsc.br/ledi/documentacao/
+    """
+    # Pega info do primeiro ACS para cabeçalho (lote por UBS/equipe)
+    cnes_usf  = visitas[0].acs.cnes_usf  if visitas else ""
+    ine_equipe = visitas[0].acs.ine_equipe if visitas else ""
     try:
-        import requests as req
-        payload = {
-            "municipio_ibge": empresa.municipio_ibge if hasattr(empresa, "municipio_ibge") else "",
-            "fichas_visita": fichas,
-        }
-        resp = req.post(
-            "https://sisab.saude.gov.br/api/v1/transmissao/ficha-visita",
-            json=payload,
-            timeout=30,
-        )
-        if resp.status_code in (200, 201, 202):
-            protocolo = resp.json().get("protocolo", f"SISAB-{date.today().isoformat()}")
-            ids = list(pendentes.values_list("id", flat=True)[:500])
-            VisitaDomiciliar.objects.filter(id__in=ids).update(transmitido_esus=True)
-            return JsonResponse({"ok": True, "transmitidas": len(ids), "protocolo": protocolo})
-        else:
-            return JsonResponse({"erro": f"SISAB HTTP {resp.status_code}"}, status=502)
-    except Exception as e:
-        logger.error("Erro SISAB transmissão ACS: %s", e)
-        return JsonResponse({"erro": str(e)}, status=502)
+        from .models import CredenciaisIntegracoes
+        cred = CredenciaisIntegracoes.objects.filter(empresa=empresa).first()
+        ibge = (getattr(cred, "sus_ibge", "") or getattr(cred, "rnds_ibge", "")) if cred else ""
+    except Exception:
+        ibge = ""
+
+    filhos = []
+    for v in visitas:
+        motivos_raw = _MOTIVO_CDS.get(v.motivo, [13])
+        filhos.append({
+            "uuid":          v.uuid_esus or str(uuid.uuid4()),
+            "turno":         _TURNO_CDS.get(v.turno, 1),
+            # statusVisita: 1=Visita Realizada, 2=Fora da Microárea, 3=Busca Ativa
+            "statusVisita":  _DESFECHO_CDS.get(v.desfecho, 1),
+            "motivoVisita": {
+                "motivoVisita": motivos_raw,
+            },
+            # Dados do cidadão
+            "cnsCidadao":         v.cns_paciente or "",
+            "cpfCidadao":         v.cpf_paciente or "",
+            "nomeCidadao":        v.paciente_nome,
+            # Gestante
+            **({"gestantePuerperaFlag": True} if v.gestante else {}),
+            # Dados clínicos opcionais
+            **({"pesoAcompanhamentoNutricional": float(v.peso_kg)} if v.peso_kg else {}),
+            **({"pressaoArterialMmHg": f"{v.pa_sistolica}x{v.pa_diastolica}"} if v.pa_sistolica else {}),
+            # Profissional / ACS
+            "profissionalCNS":   v.acs.cns or "",
+            "profissionalNome":  v.acs.nome,
+            "microArea":         v.acs.microarea or "",
+            "dataVisita":        v.data_visita.isoformat(),
+        })
+
+    return {
+        # Cabeçalho do lote CDS
+        "uuidLoteOrigem":       str(uuid.uuid4()),
+        "cnesUnidadeSaude":     cnes_usf,
+        "codigoIbgeMunicipio":  ibge,
+        "ineEquipeSaude":       ine_equipe,
+        # dataEnvio em ms (timestamp Unix)
+        "dataEnvio":            int(time.time() * 1000),
+        "versaoEsusab":         "3.2",
+        "sistemaOrigem":        "SolusCRT",
+        "fichasVisitaDomiciliarChild": filhos,
+    }
 
 
 # ── Fichas de Acompanhamento ───────────────────────────────────────────────────

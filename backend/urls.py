@@ -738,6 +738,7 @@ from api.views_hospital_hemoterapia import (
     api_hemo_transfusoes,
     api_hemo_reacoes,
     api_hemo_notificar_anvisa,
+    api_hemo_notivisa_download,
     api_hemo_kpis,
 )
 from api.views_hospital_oncologia import (
@@ -765,6 +766,7 @@ from api.views_governo_acs import (
     api_visitas_lista,
     api_visita_detalhe,
     api_visitas_transmitir_esus,
+    api_visitas_exportar_cds,
     api_fichas_acompanhamento,
     api_ficha_detalhe,
     api_acs_kpis,
@@ -2234,8 +2236,10 @@ urlpatterns = [
     path('api/hospital/hemoterapia/transfusoes/',               api_hemo_transfusoes),
     path('api/hospital/hemoterapia/reacoes',                    api_hemo_reacoes),
     path('api/hospital/hemoterapia/reacoes/',                   api_hemo_reacoes),
-    path('api/hospital/hemoterapia/reacoes/<int:reacao_id>/notificar-anvisa',  api_hemo_notificar_anvisa),
-    path('api/hospital/hemoterapia/reacoes/<int:reacao_id>/notificar-anvisa/', api_hemo_notificar_anvisa),
+    path('api/hospital/hemoterapia/reacoes/<int:reacao_id>/notificar-anvisa',          api_hemo_notificar_anvisa),
+    path('api/hospital/hemoterapia/reacoes/<int:reacao_id>/notificar-anvisa/',         api_hemo_notificar_anvisa),
+    path('api/hospital/hemoterapia/reacoes/<int:reacao_id>/notificar-anvisa/download', api_hemo_notivisa_download),
+    path('api/hospital/hemoterapia/reacoes/<int:reacao_id>/notificar-anvisa/download/',api_hemo_notivisa_download),
     path('api/hospital/hemoterapia/kpis',                       api_hemo_kpis),
     path('api/hospital/hemoterapia/kpis/',                      api_hemo_kpis),
 
@@ -2284,6 +2288,8 @@ urlpatterns = [
     path('api/governo/acs/visitas/',                            api_visitas_lista),
     path('api/governo/acs/visitas/transmitir-esus',             api_visitas_transmitir_esus),
     path('api/governo/acs/visitas/transmitir-esus/',            api_visitas_transmitir_esus),
+    path('api/governo/acs/visitas/exportar-cds',                api_visitas_exportar_cds),
+    path('api/governo/acs/visitas/exportar-cds/',               api_visitas_exportar_cds),
     path('api/governo/acs/visitas/<int:visita_id>',             api_visita_detalhe),
     path('api/governo/acs/visitas/<int:visita_id>/',            api_visita_detalhe),
     path('api/governo/acs/fichas',                              api_fichas_acompanhamento),

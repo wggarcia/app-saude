@@ -1,15 +1,27 @@
 """
 Hemoterapia — Banco de Sangue
 Rastreabilidade de bolsas, solicitações de transfusão, registro de reações adversas
-e notificação ANVISA NOTIVISA (RDC 34/2014).
+e notificação ANVISA (RDC 34/2014).
+
+Notificação de Reação Transfusional:
+  O sistema NOTIVISA/ANVISA NÃO disponibiliza REST API pública para integração
+  direta. A notificação é realizada via:
+    1. Geração de arquivo XML no padrão NOTIVISA (eSNVS — Esquema XML de Notificação
+       de Vigilância Sanitária, publicado por ANVISA)
+    2. Download do XML pelo operador
+    3. Importação manual em https://notivisa.anvisa.gov.br (perfil "Notificador")
+  O status "notificado_anvisa" é marcado True somente após confirmação manual.
+  Ref: ANVISA — Manual NOTIVISA Hemovigilância (RDC 34/2014, art. 83)
 """
+import base64
 import json
 import logging
+import xml.etree.ElementTree as ET
 from datetime import date, timedelta
 
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -351,7 +363,18 @@ def api_hemo_reacoes(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_hemo_notificar_anvisa(request, reacao_id):
-    """POST /api/hospital/hemoterapia/reacoes/<id>/notificar-anvisa/"""
+    """
+    POST /api/hospital/hemoterapia/reacoes/<id>/notificar-anvisa/
+
+    Gera XML de notificação no padrão NOTIVISA/eSNVS (ANVISA) para
+    Hemovigilância (RDC 34/2014, art. 83).
+
+    IMPORTANTE: O NOTIVISA não disponibiliza REST API pública.
+    Este endpoint gera o arquivo XML e retorna as instruções para
+    importação manual em https://notivisa.anvisa.gov.br.
+    O operador deve baixar o XML em /notificar-anvisa/download/<id>/
+    e importar no portal NOTIVISA com seu login de notificador.
+    """
     empresa = get_empresa(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
@@ -363,35 +386,131 @@ def api_hemo_notificar_anvisa(request, reacao_id):
         return JsonResponse({"erro": "Não encontrada"}, status=404)
 
     if reacao.notificado_anvisa:
-        return JsonResponse({"ok": True, "protocolo": reacao.protocolo_notivisa,
-                             "mensagem": "Já notificado ao NOTIVISA"})
+        return JsonResponse({
+            "ok": True,
+            "protocolo": reacao.protocolo_notivisa,
+            "mensagem": "Notificação já registrada.",
+        })
 
-    # Integração NOTIVISA — ANVISA
+    # Gera XML NOTIVISA (eSNVS — Hemovigilância RDC 34/2014)
+    xml_bytes = _gerar_xml_notivisa(reacao, empresa)
+    xml_b64   = base64.b64encode(xml_bytes).decode()
+
+    # Armazena o XML gerado no campo protocolo como marcador (sem REST)
+    reacao.protocolo_notivisa = f"NOTIVISA-PENDENTE-{reacao.id}"
+    # Nota: notificado_anvisa permanece False até confirmação manual
+    reacao.save()
+
+    return JsonResponse({
+        "ok": True,
+        "status": "xml_gerado_pendente_importacao",
+        "protocolo_provisorio": reacao.protocolo_notivisa,
+        "xml_base64": xml_b64,
+        "instrucoes": [
+            "1. Baixe o XML via GET /api/hospital/hemoterapia/reacoes/<id>/notificar-anvisa/download/",
+            "2. Acesse https://notivisa.anvisa.gov.br com seu login de notificador habilitado",
+            "3. Menu: Notificação → Hemovigilância → Importar Arquivo XML",
+            "4. Após importação bem-sucedida, registre o protocolo NOTIVISA aqui via PATCH "
+            "   com {\"notificado_anvisa\": true, \"protocolo_notivisa\": \"PROTOCOLO_NOTIVISA\"}",
+        ],
+        "portal_notivisa": "https://notivisa.anvisa.gov.br",
+        "referencia": "RDC ANVISA 34/2014 art. 83 — Hemovigilância",
+    })
+
+
+@require_http_methods(["GET"])
+def api_hemo_notivisa_download(request, reacao_id):
+    """GET /api/hospital/hemoterapia/reacoes/<id>/notificar-anvisa/download/ — baixa XML NOTIVISA."""
+    empresa = get_empresa(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    _, _, _, ReacaoTransfusional = _get_hemo_models()
     try:
-        import requests as req
-        payload = {
-            "tipo_reacao": reacao.tipo_reacao,
-            "gravidade": reacao.gravidade,
-            "data_reacao": reacao.data_reacao.isoformat(),
-            "descricao": reacao.descricao,
-            "cnes": "",
-        }
-        resp = req.post(
-            "https://notivisa.anvisa.gov.br/api/v1/notificacao/hemovigilancia",
-            json=payload,
-            timeout=20,
-        )
-        if resp.status_code in (200, 201, 202):
-            protocolo = resp.json().get("protocolo", f"NOTIVISA-{reacao.id}")
-            reacao.notificado_anvisa = True
-            reacao.protocolo_notivisa = protocolo
-            reacao.save()
-            return JsonResponse({"ok": True, "protocolo": protocolo})
-        else:
-            return JsonResponse({"erro": f"NOTIVISA HTTP {resp.status_code}"}, status=502)
-    except Exception as e:
-        logger.error("Erro NOTIVISA reação %s: %s", reacao_id, e)
-        return JsonResponse({"erro": str(e)}, status=502)
+        reacao = ReacaoTransfusional.objects.get(id=reacao_id, empresa=empresa)
+    except ReacaoTransfusional.DoesNotExist:
+        return JsonResponse({"erro": "Não encontrada"}, status=404)
+
+    xml_bytes = _gerar_xml_notivisa(reacao, empresa)
+    filename  = f"notivisa_hemovigilancia_{reacao.id}_{date.today().isoformat()}.xml"
+    response  = HttpResponse(xml_bytes, content_type="application/xml; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+def _gerar_xml_notivisa(reacao, empresa):
+    """
+    Gera XML de Notificação de Reação Transfusional no padrão eSNVS/NOTIVISA.
+    Esquema: ANVISA eSNVS — Hemovigilância (RDC 34/2014)
+    Referência de campos: Manual NOTIVISA Hemovigilância v2.0 (ANVISA/GGTES)
+    """
+    # Mapeamento tipo_reacao → código NOTIVISA
+    _TIPO_NOTIVISA = {
+        "febre":            "1",   # Reação Febril Não Hemolítica
+        "alergica_leve":    "2",   # Reação Alérgica Leve
+        "alergica_grave":   "3",   # Reação Alérgica Grave / Anafilaxia
+        "hemolitica_aguda": "4",   # Hemólise Aguda Intravascular
+        "hemolitica_tardia":"5",   # Hemólise Tardia Extravascular
+        "sobrecarga":       "6",   # Sobrecarga Circulatória Associada à Transfusão (TACO)
+        "trali":            "7",   # Lesão Pulmonar Aguda Relacionada à Transfusão (TRALI)
+        "contaminacao":     "8",   # Contaminação Bacteriana
+        "outro":            "99",
+    }
+    _GRAV_NOTIVISA = {"leve": "1", "moderada": "2", "grave": "3", "fatal": "4"}
+
+    cnes = ""
+    try:
+        from .models import CredenciaisIntegracoes
+        cred = CredenciaisIntegracoes.objects.filter(empresa=empresa).first()
+        cnes = getattr(cred, "sus_cnes", "") or getattr(cred, "rnds_cnes", "") if cred else ""
+    except Exception:
+        pass
+
+    root = ET.Element("notificacao", attrib={
+        "xmlns":   "http://anvisa.gov.br/esnvs/hemovigilancia",
+        "versao":  "2.0",
+        "sistema": "SolusCRT",
+    })
+
+    # Cabeçalho
+    cab = ET.SubElement(root, "cabecalho")
+    ET.SubElement(cab, "dataNotificacao").text = date.today().isoformat()
+    ET.SubElement(cab, "tipoNotificacao").text  = "hemovigilancia"
+    ET.SubElement(cab, "cnesEstabelecimento").text = cnes
+    ET.SubElement(cab, "nomeEstabelecimento").text  = empresa.nome
+
+    # Paciente
+    pac = ET.SubElement(root, "paciente")
+    ET.SubElement(pac, "nome").text  = reacao.paciente_nome
+    ET.SubElement(pac, "cpf").text   = reacao.cpf_paciente or ""
+
+    # Reação transfusional
+    rt = ET.SubElement(root, "reacaoTransfusional")
+    ET.SubElement(rt, "dataReacao").text       = (
+        reacao.data_reacao.date().isoformat()
+        if hasattr(reacao.data_reacao, "date")
+        else str(reacao.data_reacao)
+    )
+    ET.SubElement(rt, "tipoReacao").text        = _TIPO_NOTIVISA.get(reacao.tipo_reacao, "99")
+    ET.SubElement(rt, "tipoReacaoDescricao").text = reacao.get_tipo_reacao_display()
+    ET.SubElement(rt, "gravidade").text          = _GRAV_NOTIVISA.get(reacao.gravidade, "1")
+    ET.SubElement(rt, "gravidadeDescricao").text  = reacao.get_gravidade_display()
+    ET.SubElement(rt, "descricaoClinica").text     = reacao.descricao
+    ET.SubElement(rt, "condutaTomada").text        = reacao.conduta or ""
+
+    # Bolsa (se vinculada)
+    if reacao.transfusao:
+        bolsa = ET.SubElement(root, "hemocomponente")
+        b = reacao.transfusao.bolsa
+        ET.SubElement(bolsa, "codigoBolsa").text = b.codigo_bolsa
+        ET.SubElement(bolsa, "isbt128").text      = b.isbt128 or ""
+        ET.SubElement(bolsa, "tipo").text          = b.tipo
+        ET.SubElement(bolsa, "grupoABO").text      = b.tipo_abo
+        ET.SubElement(bolsa, "fatorRh").text        = b.fator_rh
+        ET.SubElement(bolsa, "dataColetaBolsa").text = b.coletada_em.isoformat() if b.coletada_em else ""
+        ET.SubElement(bolsa, "validadeBolsa").text   = b.validade.isoformat()
+
+    return ET.tostring(root, encoding="utf-8", xml_declaration=True)
 
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────

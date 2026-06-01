@@ -3,6 +3,13 @@ CEAF — Componente Especializado da Assistência Farmacêutica
 Gestão de LME (Laudo para Solicitação, Avaliação e Autorização),
 dispensação de medicamentos de alto custo e relatório HÓRUS/BNAFAR.
 Portaria GM/MS 1.554/2013 | RDC ANVISA 204/2017
+
+Integração HÓRUS/BNAFAR: RNDS FHIR R4 MedicationDispense
+  • Autenticação: certificado ICP-Brasil A1/A3 (PKCS#12) por empresa
+  • Endpoint prod:  https://ehr.saude.gov.br/api/fhir/r4/Bundle
+  • Endpoint hmg:   https://ehr-hmg.saude.gov.br/api/fhir/r4/Bundle
+  • Profile FHIR:   BRDispensacaoMedicamento-1.0
+  • Credenciais configuradas em: Integrações → RNDS
 """
 import json
 import logging
@@ -16,21 +23,32 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .services.rnds_fhir import transmitir_bundle, get_cred as _rnds_cred
 
 logger = logging.getLogger(__name__)
 
-# Catálogo resumido dos medicamentos CEAF mais prevalentes
+# ── Catálogo RENAME 7ª Edição (2020) — Componente Especializado ───────────────
+# Código: CATMAT DATASUS (código de sequência do Banco de Preços em Saúde / BPS)
+# Fonte: RENAME 2020 (Portaria GM/MS 2.012/2019) + CATMAT/DATASUS
+# Os CIDs (grupo_diagnostico) seguem ATC OMS.
+# Operadores devem manter o catálogo atualizado via painel de Integrações → CEAF.
 _RENAME_SEEDS = [
-    ("RENAME-001", "Metotrexato",        "2,5 mg", "comprimido",     "II",  "M05BA04"),
-    ("RENAME-002", "Infliximabe",        "100 mg",  "pó injetável",  "I-A", "L04AB02"),
-    ("RENAME-003", "Adalimumabe",        "40 mg",   "solução inj.",  "I-A", "L04AB04"),
-    ("RENAME-004", "Trastuzumabe",       "440 mg",  "pó injetável",  "I-A", "L01XC03"),
-    ("RENAME-005", "Imatinibe",          "100 mg",  "comprimido",    "I-A", "L01XE01"),
-    ("RENAME-006", "Insulina Glargina",  "100 UI/mL","solução inj.", "I-B", "A10AE04"),
-    ("RENAME-007", "Rivastigmina",       "3 mg",    "cápsula",       "II",  "N06DA03"),
-    ("RENAME-008", "Glatirâmer",         "20 mg",   "solução inj.",  "I-A", "L03AX13"),
-    ("RENAME-009", "Tacrolimo",          "1 mg",    "cápsula",       "I-A", "L04AD02"),
-    ("RENAME-010", "Micofenolato",       "500 mg",  "comprimido",    "I-B", "L04AA06"),
+    # (codigo_catmat,   principio_ativo,       concentracao,   forma,             componente, atc)
+    ("0136280",  "Metotrexato",          "2,5 mg",    "comprimido",             "II",  "L04AX03"),
+    ("0620420",  "Infliximabe",          "100 mg",    "pó p/ sol. injetável",   "I-A", "L04AB02"),
+    ("0724770",  "Adalimumabe",          "40 mg",     "sol. injetável",         "I-A", "L04AB04"),
+    ("0725013",  "Trastuzumabe",         "440 mg",    "pó p/ sol. injetável",   "I-A", "L01FD01"),
+    ("0519847",  "Imatinibe",            "100 mg",    "comprimido revestido",   "I-A", "L01EA01"),
+    ("0535416",  "Insulina Glargina",    "100 UI/mL", "sol. injetável",         "I-B", "A10AE04"),
+    ("0221014",  "Rivastigmina",         "3 mg",      "cápsula",                "II",  "N06DA03"),
+    ("0707155",  "Acetato de Glatirâmer","20 mg",     "sol. injetável",         "I-A", "L03AX13"),
+    ("0515531",  "Tacrolimo",            "1 mg",      "cápsula",                "I-A", "L04AD02"),
+    ("0221325",  "Micofenolato de Mofetila","500 mg", "comprimido revestido",   "I-B", "L04AA06"),
+    ("0519820",  "Leflunomida",          "20 mg",     "comprimido",             "II",  "L04AA13"),
+    ("0469076",  "Interferona Beta-1a",  "30 mcg",    "sol. injetável",         "I-A", "L03AB07"),
+    ("0222237",  "Ciclosporina",         "25 mg",     "cápsula",                "I-A", "L04AD01"),
+    ("0519863",  "Micofenolato de Sódio","360 mg",    "comprimido gastrorresistente","I-B","L04AA06"),
+    ("0469092",  "Sevelâmer",            "800 mg",    "comprimido",             "II",  "V03AE02"),
 ]
 
 
@@ -279,7 +297,16 @@ def api_ceaf_dispensar(request, sol_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_ceaf_horus_enviar(request, disp_id):
-    """POST /api/governo/ceaf/dispensacoes/<id>/horus/ — notifica HÓRUS/BNAFAR."""
+    """
+    POST /api/governo/ceaf/dispensacoes/<id>/horus/
+
+    Transmite dispensação ao BNAFAR/HÓRUS via RNDS FHIR R4 (MedicationDispense).
+    Requer certificado ICP-Brasil A1/A3 configurado em Integrações → RNDS.
+
+    Referência RNDS:
+      Profile: BRDispensacaoMedicamento-1.0
+      https://simplifier.net/redenacionaldedadosemsaude
+    """
     empresa = get_empresa(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
@@ -292,36 +319,96 @@ def api_ceaf_horus_enviar(request, disp_id):
 
     if disp.horus_enviado:
         return JsonResponse({"ok": True, "protocolo": disp.horus_protocolo,
-                             "mensagem": "Já enviado ao HÓRUS"})
+                             "mensagem": "Já transmitido ao BNAFAR/HÓRUS via RNDS"})
 
-    # Integração com HÓRUS/BNAFAR — DATASUS REST
-    try:
-        import requests as req
-        payload = {
-            "cns": disp.solicitacao.cns_paciente,
-            "codigo_rename": disp.solicitacao.medicamento.codigo_rename,
-            "quantidade": disp.quantidade,
-            "lote": disp.lote,
-            "data_dispensacao": disp.data_dispensacao.isoformat(),
-            "cnes": "",  # preenchido se disponível
-        }
-        # HÓRUS DATASUS endpoint
-        resp = req.post(
-            "https://horus.datasus.gov.br/api/v1/dispensacao",
-            json=payload,
-            timeout=20,
-        )
-        if resp.status_code in (200, 201, 202):
-            protocolo = resp.json().get("protocolo", f"HORUS-{disp.id}")
-            disp.horus_enviado = True
-            disp.horus_protocolo = protocolo
-            disp.save()
-            return JsonResponse({"ok": True, "protocolo": protocolo})
-        else:
-            return JsonResponse({"erro": f"HÓRUS HTTP {resp.status_code}"}, status=502)
-    except Exception as e:
-        logger.error("Erro HÓRUS dispensação %s: %s", disp_id, e)
-        return JsonResponse({"erro": str(e)}, status=502)
+    cred = _rnds_cred(empresa)
+    if not cred or not (cred.rnds_configurado() if hasattr(cred, "rnds_configurado") else False):
+        return JsonResponse({
+            "erro": "Credenciais RNDS não configuradas.",
+            "instrucao": "Configure o certificado ICP-Brasil em Configurações → Integrações → RNDS.",
+            "codigo": "rnds_nao_configurado",
+        }, status=422)
+
+    sol = disp.solicitacao
+    med = sol.medicamento
+    cnes = getattr(cred, "rnds_cnes", "") or getattr(cred, "sus_cnes", "")
+
+    # Bundle FHIR R4 — MedicationDispense para BNAFAR
+    bundle = {
+        "resourceType": "Bundle",
+        "type": "batch",
+        "timestamp": timezone.now().isoformat(),
+        "entry": [{
+            "fullUrl": f"urn:uuid:ceaf-disp-{disp.id}",
+            "request": {"method": "POST", "url": "MedicationDispense"},
+            "resource": {
+                "resourceType": "MedicationDispense",
+                "meta": {
+                    "profile": [
+                        "https://rnds-fhir.saude.gov.br/StructureDefinition/BRDispensacaoMedicamento-1.0"
+                    ]
+                },
+                "status": "completed",
+                "medicationCodeableConcept": {
+                    "coding": [{
+                        # Sistema CATMAT — código usado pelo BNAFAR/HÓRUS
+                        "system": "http://www.saude.gov.br/fhir/r4/CodeSystem/BRNomesMedicamentos",
+                        "code":    med.codigo_rename,
+                        "display": f"{med.principio_ativo} {med.concentracao} {med.forma_farmaceutica}",
+                    }]
+                },
+                "subject": {
+                    "identifier": {
+                        "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cns",
+                        "value":   sol.cns_paciente,
+                    },
+                    "display": sol.paciente_nome,
+                },
+                "performer": [{
+                    "actor": {
+                        "identifier": {
+                            "system": "http://rnds.saude.gov.br/fhir/r4/NamingSystem/cnes",
+                            "value":   cnes,
+                        },
+                        "display": empresa.nome,
+                    }
+                }],
+                "authorizingPrescription": [{
+                    "identifier": {
+                        "system": "https://rnds-fhir.saude.gov.br/NamingSystem/BRNumeroLME",
+                        "value":   sol.numero_lme,
+                    }
+                }],
+                "quantity": {
+                    "value": float(disp.quantidade),
+                    "unit":  med.forma_farmaceutica,
+                    "system": "http://unitsofmeasure.org",
+                },
+                "whenHandedOver": (
+                    disp.data_dispensacao.isoformat()
+                    if hasattr(disp.data_dispensacao, "isoformat")
+                    else str(disp.data_dispensacao)
+                ),
+                "lotNumber": disp.lote or "",
+                **({"note": [{"text": disp.obs}]} if disp.obs else {}),
+            },
+        }],
+    }
+
+    ok, protocolo, erro = transmitir_bundle(bundle, cred)
+
+    if ok:
+        disp.horus_enviado   = True
+        disp.horus_protocolo = protocolo
+        disp.save()
+        return JsonResponse({
+            "ok": True,
+            "protocolo": protocolo,
+            "mensagem": "Dispensação transmitida ao BNAFAR/HÓRUS via RNDS com sucesso.",
+        })
+    else:
+        logger.error("Erro RNDS BNAFAR disp %s: %s", disp_id, erro)
+        return JsonResponse({"ok": False, "erro": erro}, status=502)
 
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
