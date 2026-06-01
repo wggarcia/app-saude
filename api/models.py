@@ -7656,3 +7656,762 @@ class TransmissaoRNDSHospital(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_display()} — {self.paciente_nome} ({self.status})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPME — Órteses, Próteses e Materiais Especiais
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class CatalogoOPME(models.Model):
+    """Catálogo de OPME com código ANVISA e referências de preço SIGTAP."""
+    TIPO = [
+        ("ortese",    "Órtese"),
+        ("protese",   "Prótese"),
+        ("material",  "Material Especial"),
+        ("implante",  "Implante"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="catalogo_opme")
+    codigo_anvisa    = models.CharField(max_length=20, blank=True, default="",
+                                         verbose_name="Código ANVISA / Registro")
+    codigo_sigtap    = models.CharField(max_length=10, blank=True, default="",
+                                         verbose_name="Código SIGTAP")
+    descricao        = models.CharField(max_length=300)
+    tipo             = models.CharField(max_length=15, choices=TIPO, default="material")
+    fabricante       = models.CharField(max_length=150, blank=True, default="")
+    referencia       = models.CharField(max_length=100, blank=True, default="",
+                                         help_text="Referência / modelo do fabricante")
+    preco_maximo     = models.DecimalField(max_digits=12, decimal_places=2, null=True,
+                                            blank=True, verbose_name="Preço máximo (SIGTAP/CBHPM)")
+    ativo            = models.BooleanField(default=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Catálogo OPME"
+        verbose_name_plural = "Catálogo OPME"
+        ordering            = ["descricao"]
+        indexes             = [
+            models.Index(fields=["empresa", "tipo"]),
+            models.Index(fields=["empresa", "codigo_anvisa"]),
+        ]
+
+    def __str__(self):
+        return f"{self.descricao} ({self.get_tipo_display()})"
+
+
+class AutorizacaoOPME(models.Model):
+    """Autorização prévia de OPME para procedimento cirúrgico."""
+    STATUS = [
+        ("solicitada",  "Solicitada"),
+        ("aprovada",    "Aprovada"),
+        ("negada",      "Negada"),
+        ("parcial",     "Aprovada Parcialmente"),
+        ("cancelada",   "Cancelada"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="autorizacoes_opme")
+    internacao       = models.ForeignKey("InternacaoHospital", on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name="opmes")
+    cirurgia_id      = models.PositiveIntegerField(null=True, blank=True,
+                                                    help_text="ID do procedimento cirúrgico")
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    medico_solicitante = models.CharField(max_length=150)
+    crm_medico       = models.CharField(max_length=20, blank=True, default="")
+    cid10            = models.CharField(max_length=6, blank=True, default="")
+    status           = models.CharField(max_length=15, choices=STATUS, default="solicitada")
+    justificativa    = models.TextField(blank=True, default="")
+    observacao_auditoria = models.TextField(blank=True, default="")
+    numero_protocolo = models.CharField(max_length=50, blank=True, default="")
+    solicitado_em    = models.DateTimeField(auto_now_add=True)
+    respondido_em    = models.DateTimeField(null=True, blank=True)
+    validade_ate     = models.DateField(null=True, blank=True,
+                                         help_text="Validade da autorização")
+
+    class Meta:
+        verbose_name        = "Autorização OPME"
+        verbose_name_plural = "Autorizações OPME"
+        ordering            = ["-solicitado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "cpf_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"OPME {self.numero_protocolo or self.pk} — {self.paciente_nome} ({self.status})"
+
+
+class ItemAutorizacaoOPME(models.Model):
+    """Item individual de uma autorização OPME (pode ter múltiplos itens)."""
+    STATUS_ITEM = [
+        ("aprovado",  "Aprovado"),
+        ("negado",    "Negado"),
+        ("pendente",  "Pendente"),
+    ]
+    autorizacao      = models.ForeignKey(AutorizacaoOPME, on_delete=models.CASCADE,
+                                          related_name="itens")
+    opme             = models.ForeignKey(CatalogoOPME, on_delete=models.PROTECT,
+                                          related_name="autorizacoes")
+    quantidade       = models.PositiveIntegerField(default=1)
+    quantidade_aprovada = models.PositiveIntegerField(default=0)
+    status           = models.CharField(max_length=15, choices=STATUS_ITEM, default="pendente")
+    motivo_negativa  = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name = "Item Autorização OPME"
+
+    def __str__(self):
+        return f"{self.opme.descricao} × {self.quantidade}"
+
+
+class ImplantavelRegistro(models.Model):
+    """Rastreabilidade pós-cirúrgica de implantáveis (ANVISA RDC 27/2008)."""
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="implantaveis")
+    autorizacao      = models.ForeignKey(AutorizacaoOPME, on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name="implantaveis")
+    opme             = models.ForeignKey(CatalogoOPME, on_delete=models.PROTECT,
+                                          related_name="implantados")
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    numero_serie     = models.CharField(max_length=100, blank=True, default="")
+    lote_fabricante  = models.CharField(max_length=100, blank=True, default="")
+    data_implante    = models.DateField()
+    medico_implantador = models.CharField(max_length=150)
+    crm_medico       = models.CharField(max_length=20, blank=True, default="")
+    hospital         = models.CharField(max_length=200, blank=True, default="")
+    observacoes      = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Implantável Registrado"
+        verbose_name_plural = "Implantáveis Registrados"
+        ordering            = ["-data_implante"]
+        indexes             = [
+            models.Index(fields=["empresa", "cpf_paciente"]),
+            models.Index(fields=["empresa", "opme"]),
+        ]
+
+    def __str__(self):
+        return f"{self.opme.descricao} — {self.paciente_nome} ({self.data_implante})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Odontologia CEO (Centro de Especialidades Odontológicas) — Governo
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class AtendimentoCEO(models.Model):
+    """Atendimento odontológico especializado no CEO para faturamento SIASUS/BPA."""
+    ESPECIALIDADE = [
+        ("periodontia",      "Periodontia"),
+        ("endodontia",       "Endodontia"),
+        ("cirurgia",         "Cirurgia Oral"),
+        ("protese",          "Prótese Dentária"),
+        ("ortodontia",       "Ortodontia Social"),
+        ("diagnostico",      "Diagnóstico Bucal (Oncologia)"),
+        ("atencao_basica",   "Atenção Básica Referenciada"),
+    ]
+    STATUS = [
+        ("agendado",    "Agendado"),
+        ("atendido",    "Atendido"),
+        ("faltou",      "Faltou"),
+        ("cancelado",   "Cancelado"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="atendimentos_ceo")
+    # Dados do paciente
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    cns_paciente     = models.CharField(max_length=18, blank=True, default="")
+    data_nascimento  = models.DateField(null=True, blank=True)
+    # Dados do atendimento
+    especialidade    = models.CharField(max_length=30, choices=ESPECIALIDADE)
+    codigo_sigtap    = models.CharField(max_length=10, blank=True, default="",
+                                         verbose_name="Código do procedimento SIGTAP")
+    descricao_procedimento = models.CharField(max_length=300, blank=True, default="")
+    cid10            = models.CharField(max_length=6, blank=True, default="")
+    dente            = models.CharField(max_length=10, blank=True, default="",
+                                         help_text="Número do dente (FDI) ou região")
+    face             = models.CharField(max_length=20, blank=True, default="",
+                                         help_text="Face dentária tratada")
+    profissional     = models.CharField(max_length=150)
+    cro              = models.CharField(max_length=20, blank=True, default="",
+                                         verbose_name="CRO do cirurgião-dentista")
+    data_atendimento = models.DateField()
+    status           = models.CharField(max_length=15, choices=STATUS, default="agendado")
+    observacoes      = models.TextField(blank=True, default="")
+    # Referência e contra-referência
+    unidade_origem   = models.CharField(max_length=200, blank=True, default="",
+                                         help_text="UBS/USF que referenciou")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Atendimento CEO"
+        verbose_name_plural = "Atendimentos CEO"
+        ordering            = ["-data_atendimento"]
+        indexes             = [
+            models.Index(fields=["empresa", "data_atendimento"]),
+            models.Index(fields=["empresa", "especialidade"]),
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["cns_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"{self.paciente_nome} — {self.get_especialidade_display()} ({self.data_atendimento})"
+
+
+class ProducaoCEO(models.Model):
+    """Consolidado mensal de produção CEO para transmissão ao SIASUS/BPA."""
+    STATUS = [
+        ("aberto",      "Em aberto"),
+        ("fechado",     "Fechado"),
+        ("transmitido", "Transmitido"),
+        ("erro",        "Erro na transmissão"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="producoes_ceo")
+    competencia      = models.CharField(max_length=6, verbose_name="Competência (AAAAMM)")
+    cnes             = models.CharField(max_length=7, blank=True, default="",
+                                         verbose_name="CNES da unidade")
+    total_atendimentos = models.PositiveIntegerField(default=0)
+    total_procedimentos = models.PositiveIntegerField(default=0)
+    valor_total      = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    arquivo_bpa      = models.TextField(blank=True, default="",
+                                         help_text="Conteúdo do arquivo BPA gerado")
+    protocolo_datasus = models.CharField(max_length=100, blank=True, default="")
+    status           = models.CharField(max_length=15, choices=STATUS, default="aberto")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    transmitido_em   = models.DateTimeField(null=True, blank=True)
+    erro_transmissao = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name        = "Produção CEO"
+        verbose_name_plural = "Produções CEO"
+        ordering            = ["-competencia"]
+        unique_together     = [["empresa", "competencia", "cnes"]]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "competencia"]),
+        ]
+
+    def __str__(self):
+        return f"Produção CEO {self.competencia} — {self.empresa} ({self.status})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CCIH — Controle de Infecção Hospitalar (ANVISA RDC 36/2008)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class InfeccaoHospitalar(models.Model):
+    """Registro de Infecção Relacionada à Assistência à Saúde (IRAS)."""
+    TOPOGRAFIA = [
+        ("ics",     "ICS — Infecção Primária de Corrente Sanguínea"),
+        ("itu_rc",  "ITU-RC — Infecção do Trato Urinário Relacionada a Cateter"),
+        ("pav",     "PAV — Pneumonia Associada à Ventilação"),
+        ("iss",     "ISC — Infecção de Sítio Cirúrgico"),
+        ("outras",  "Outras Infecções"),
+    ]
+    AGENTE = [
+        ("staphylococcus_aureus",         "Staphylococcus aureus"),
+        ("mrsa",                          "MRSA — S. aureus Resistente à Meticilina"),
+        ("klebsiella_pneumoniae",         "Klebsiella pneumoniae"),
+        ("kpc",                           "KPC — Klebsiella Resistente a Carbapenêmicos"),
+        ("acinetobacter",                 "Acinetobacter baumannii"),
+        ("pseudomonas_aeruginosa",        "Pseudomonas aeruginosa"),
+        ("candida",                       "Candida spp."),
+        ("escherichia_coli",              "Escherichia coli"),
+        ("vre",                           "VRE — Enterococo Resistente à Vancomicina"),
+        ("outro",                         "Outro"),
+    ]
+    STATUS = [
+        ("suspeita",   "Suspeita"),
+        ("confirmada", "Confirmada"),
+        ("descartada", "Descartada"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="infeccoes_hospitalares")
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    internacao_id    = models.PositiveIntegerField(null=True, blank=True)
+    leito            = models.CharField(max_length=30, blank=True, default="")
+    setor            = models.CharField(max_length=100, blank=True, default="")
+    topografia       = models.CharField(max_length=15, choices=TOPOGRAFIA)
+    agente           = models.CharField(max_length=40, choices=AGENTE, default="outro")
+    agente_descricao = models.CharField(max_length=200, blank=True, default="",
+                                         help_text="Descrição livre quando agente=outro")
+    status           = models.CharField(max_length=15, choices=STATUS, default="suspeita")
+    # Resistência antimicrobiana
+    perfil_resistencia = models.JSONField(default=dict, blank=True,
+                                           help_text="Antibiograma e resistências detectadas")
+    data_diagnostico = models.DateField()
+    data_alta        = models.DateField(null=True, blank=True)
+    obito            = models.BooleanField(default=False,
+                                            help_text="Óbito relacionado à infecção")
+    notificado_anvisa = models.BooleanField(default=False)
+    observacoes      = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Infecção Hospitalar (IRAS)"
+        verbose_name_plural = "Infecções Hospitalares (IRAS)"
+        ordering            = ["-data_diagnostico"]
+        indexes             = [
+            models.Index(fields=["empresa", "data_diagnostico"]),
+            models.Index(fields=["empresa", "topografia"]),
+            models.Index(fields=["empresa", "agente"]),
+            models.Index(fields=["empresa", "status"]),
+        ]
+
+    def __str__(self):
+        return f"IRAS {self.get_topografia_display()} — {self.paciente_nome} ({self.data_diagnostico})"
+
+
+class ProtocoloIsolamento(models.Model):
+    """Protocolo de isolamento ativo para paciente colonizado/infectado."""
+    TIPO = [
+        ("contato",     "Contato"),
+        ("goticular",   "Gotícula"),
+        ("aerossol",    "Aerossol"),
+        ("reverso",     "Reverso / Protetor"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="protocolos_isolamento")
+    infeccao         = models.ForeignKey(InfeccaoHospitalar, on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name="isolamentos")
+    paciente_nome    = models.CharField(max_length=160)
+    leito            = models.CharField(max_length=30)
+    tipo             = models.CharField(max_length=15, choices=TIPO)
+    motivo           = models.CharField(max_length=300,
+                                         help_text="Microrganismo ou indicação clínica")
+    ativo            = models.BooleanField(default=True)
+    iniciado_em      = models.DateTimeField(auto_now_add=True)
+    encerrado_em     = models.DateTimeField(null=True, blank=True)
+    encerrado_por    = models.CharField(max_length=150, blank=True, default="")
+
+    class Meta:
+        verbose_name        = "Protocolo de Isolamento"
+        verbose_name_plural = "Protocolos de Isolamento"
+        ordering            = ["-iniciado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "ativo"]),
+            models.Index(fields=["empresa", "tipo"]),
+        ]
+
+    def __str__(self):
+        return f"Isolamento {self.get_tipo_display()} — {self.paciente_nome} ({'ativo' if self.ativo else 'encerrado'})"
+
+
+class IndicadorCCIH(models.Model):
+    """Indicadores mensais CCIH para relatório ANVISA."""
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="indicadores_ccih")
+    competencia      = models.CharField(max_length=6, verbose_name="Competência AAAAMM")
+    # Densidade de incidência por 1.000 pacientes-dia
+    di_ics           = models.DecimalField(max_digits=6, decimal_places=2, default=0,
+                                            verbose_name="DI ICS /1000 pac-dia")
+    di_itu_rc        = models.DecimalField(max_digits=6, decimal_places=2, default=0,
+                                            verbose_name="DI ITU-RC /1000 cat-dia")
+    di_pav           = models.DecimalField(max_digits=6, decimal_places=2, default=0,
+                                            verbose_name="DI PAV /1000 VM-dia")
+    taxa_isc         = models.DecimalField(max_digits=6, decimal_places=2, default=0,
+                                            verbose_name="Taxa ISC %")
+    # Denominadores
+    total_paciente_dia = models.PositiveIntegerField(default=0)
+    total_cateter_dia  = models.PositiveIntegerField(default=0)
+    total_vm_dia       = models.PositiveIntegerField(default=0)
+    total_cirurgias    = models.PositiveIntegerField(default=0)
+    total_infeccoes    = models.PositiveIntegerField(default=0)
+    obs              = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Indicador CCIH"
+        verbose_name_plural = "Indicadores CCIH"
+        unique_together     = [["empresa", "competencia"]]
+        ordering            = ["-competencia"]
+
+    def __str__(self):
+        return f"CCIH {self.competencia} — {self.empresa}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CEAF — Componente Especializado da Assistência Farmacêutica
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class MedicamentoCEAF(models.Model):
+    """Catálogo de medicamentos do Componente Especializado (Relação Nacional — RENAME)."""
+    COMPONENTE = [
+        ("I-A",  "Componente I-A — Financiamento Federal/Estadual"),
+        ("I-B",  "Componente I-B — Financiamento Federal"),
+        ("II",   "Componente II — Financiamento Estadual"),
+        ("III",  "Componente III — Financiamento Municipal"),
+    ]
+    codigo_rename    = models.CharField(max_length=20, unique=True,
+                                         verbose_name="Código RENAME")
+    principio_ativo  = models.CharField(max_length=300)
+    concentracao     = models.CharField(max_length=100, blank=True, default="")
+    forma_farmaceutica = models.CharField(max_length=100, blank=True, default="")
+    componente       = models.CharField(max_length=5, choices=COMPONENTE)
+    grupo_diagnostico = models.CharField(max_length=200, blank=True, default="",
+                                          help_text="CID principal de indicação")
+    cids_validos     = models.TextField(blank=True, default="",
+                                         help_text="Lista de CIDs separados por vírgula")
+    dose_padrao      = models.CharField(max_length=200, blank=True, default="")
+    ativo            = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name        = "Medicamento CEAF"
+        verbose_name_plural = "Medicamentos CEAF"
+        ordering            = ["principio_ativo"]
+
+    def __str__(self):
+        return f"{self.principio_ativo} {self.concentracao} ({self.componente})"
+
+
+class SolicitacaoCEAF(models.Model):
+    """LME — Laudo para Solicitação, Avaliação e Autorização de Medicamento do CEAF."""
+    STATUS = [
+        ("em_analise",  "Em análise"),
+        ("aprovada",    "Aprovada"),
+        ("negada",      "Negada"),
+        ("renovacao",   "Aguardando Renovação"),
+        ("suspensa",    "Suspensa"),
+        ("encerrada",   "Encerrada"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="solicitacoes_ceaf")
+    medicamento      = models.ForeignKey(MedicamentoCEAF, on_delete=models.PROTECT,
+                                          related_name="solicitacoes")
+    # Dados do paciente
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11)
+    cns_paciente     = models.CharField(max_length=18, blank=True, default="")
+    data_nascimento  = models.DateField(null=True, blank=True)
+    # Dados clínicos
+    cid10_principal  = models.CharField(max_length=6)
+    cid10_secundario = models.CharField(max_length=6, blank=True, default="")
+    medico_solicitante = models.CharField(max_length=150)
+    crm_medico       = models.CharField(max_length=20, blank=True, default="")
+    dose_prescrita   = models.CharField(max_length=200, blank=True, default="")
+    duracao_tratamento = models.CharField(max_length=100, blank=True, default="")
+    justificativa    = models.TextField(blank=True, default="")
+    # Controle de prazo
+    status           = models.CharField(max_length=15, choices=STATUS, default="em_analise")
+    numero_lme       = models.CharField(max_length=50, blank=True, default="",
+                                         verbose_name="Número LME")
+    data_solicitacao = models.DateField(auto_now_add=True)
+    data_validade    = models.DateField(null=True, blank=True,
+                                         help_text="Validade da autorização")
+    obs_farmaceutico = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Solicitação CEAF (LME)"
+        verbose_name_plural = "Solicitações CEAF (LME)"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "cpf_paciente"]),
+            models.Index(fields=["empresa", "medicamento"]),
+        ]
+
+    def __str__(self):
+        return f"LME {self.numero_lme or self.pk} — {self.paciente_nome} ({self.medicamento.principio_ativo})"
+
+
+class DispensacaoCEAF(models.Model):
+    """Dispensação de medicamento CEAF com rastreabilidade HÓRUS."""
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="dispensacoes_ceaf")
+    solicitacao      = models.ForeignKey(SolicitacaoCEAF, on_delete=models.PROTECT,
+                                          related_name="dispensacoes")
+    data_dispensacao = models.DateField()
+    quantidade       = models.PositiveIntegerField(default=1)
+    lote             = models.CharField(max_length=50, blank=True, default="")
+    validade_lote    = models.DateField(null=True, blank=True)
+    fabricante       = models.CharField(max_length=150, blank=True, default="")
+    farmaceutico     = models.CharField(max_length=150, blank=True, default="")
+    crf_farmaceutico = models.CharField(max_length=20, blank=True, default="")
+    horus_enviado    = models.BooleanField(default=False,
+                                            verbose_name="Enviado ao HÓRUS/BNAFAR")
+    horus_protocolo  = models.CharField(max_length=100, blank=True, default="")
+    obs              = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Dispensação CEAF"
+        verbose_name_plural = "Dispensações CEAF"
+        ordering            = ["-data_dispensacao"]
+        indexes             = [
+            models.Index(fields=["empresa", "data_dispensacao"]),
+            models.Index(fields=["empresa", "horus_enviado"]),
+        ]
+
+    def __str__(self):
+        return f"Dispensação CEAF {self.data_dispensacao} — {self.solicitacao.paciente_nome}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Portabilidade ANS Formal (RN 438/2018)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class SolicitacaoPortabilidade(models.Model):
+    """Processo formal de portabilidade de beneficiário entre operadoras (RN 438/2018)."""
+    STATUS = [
+        ("iniciada",           "Iniciada"),
+        ("documentacao",       "Aguardando Documentação"),
+        ("analise_operadora",  "Em Análise pela Operadora"),
+        ("aprovada",           "Aprovada"),
+        ("negada",             "Negada"),
+        ("cancelada",          "Cancelada pelo Beneficiário"),
+        ("concluida",          "Concluída"),
+    ]
+    TIPO = [
+        ("saida",  "Portabilidade de Saída"),
+        ("entrada","Portabilidade de Entrada"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="portabilidades")
+    tipo             = models.CharField(max_length=10, choices=TIPO, default="saida")
+    # Beneficiário
+    beneficiario_nome = models.CharField(max_length=160)
+    cpf_beneficiario  = models.CharField(max_length=11)
+    cns_beneficiario  = models.CharField(max_length=18, blank=True, default="")
+    numero_carteirinha = models.CharField(max_length=50, blank=True, default="")
+    plano_origem     = models.CharField(max_length=200, blank=True, default="")
+    registro_ans_origem = models.CharField(max_length=20, blank=True, default="",
+                                            verbose_name="Registro ANS da operadora de origem")
+    plano_destino    = models.CharField(max_length=200, blank=True, default="")
+    registro_ans_destino = models.CharField(max_length=20, blank=True, default="",
+                                             verbose_name="Registro ANS da operadora de destino")
+    # Prazos ANS (RN 438)
+    data_solicitacao = models.DateField(auto_now_add=True)
+    prazo_resposta   = models.DateField(null=True, blank=True,
+                                         help_text="Prazo para resposta (10 dias úteis — RN 438)")
+    data_resposta    = models.DateField(null=True, blank=True)
+    data_efetivacao  = models.DateField(null=True, blank=True,
+                                         help_text="Data de efetivação da portabilidade")
+    # Carências
+    carencias_cumpridas = models.BooleanField(default=False)
+    declaracao_carencia = models.TextField(blank=True, default="",
+                                            help_text="Declaração de carências cumpridas emitida")
+    status           = models.CharField(max_length=25, choices=STATUS, default="iniciada")
+    motivo_negativa  = models.TextField(blank=True, default="")
+    numero_protocolo = models.CharField(max_length=60, blank=True, default="")
+    obs              = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Portabilidade ANS"
+        verbose_name_plural = "Portabilidades ANS"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "tipo"]),
+            models.Index(fields=["cpf_beneficiario"]),
+        ]
+
+    def __str__(self):
+        return f"Portabilidade {self.numero_protocolo or self.pk} — {self.beneficiario_nome} ({self.status})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NTEP — Nexo Técnico Epidemiológico (SST)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TabelaNTEP(models.Model):
+    """Mapeamento CID-10 × CNAE com presunção de nexo (Decreto 6.042/2007)."""
+    cid10            = models.CharField(max_length=6, verbose_name="CID-10")
+    cnae             = models.CharField(max_length=7, verbose_name="CNAE 2.0")
+    descricao_cid    = models.CharField(max_length=300, blank=True, default="")
+    descricao_cnae   = models.CharField(max_length=300, blank=True, default="")
+    grupo_cnae       = models.CharField(max_length=2, blank=True, default="",
+                                         help_text="Grupo CNAE (2 dígitos)")
+    nexo_presumido   = models.BooleanField(default=True,
+                                            help_text="True = presunção relativa de nexo")
+    ativo            = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name        = "Tabela NTEP"
+        verbose_name_plural = "Tabela NTEP"
+        unique_together     = [["cid10", "cnae"]]
+        indexes             = [
+            models.Index(fields=["cid10"]),
+            models.Index(fields=["cnae"]),
+            models.Index(fields=["grupo_cnae"]),
+        ]
+
+    def __str__(self):
+        return f"NTEP {self.cid10} × {self.cnae}"
+
+
+class AlertaNTEP(models.Model):
+    """Alerta gerado quando CAT ou afastamento tem CID com nexo NTEP presumido."""
+    ORIGEM = [
+        ("cat",         "CAT — Comunicação de Acidente de Trabalho"),
+        ("afastamento", "Afastamento B91"),
+        ("aso",         "ASO — Atestado de Saúde Ocupacional"),
+    ]
+    STATUS = [
+        ("novo",        "Novo"),
+        ("analisado",   "Em análise"),
+        ("confirmado",  "Nexo confirmado"),
+        ("contestado",  "Nexo contestado"),
+        ("encerrado",   "Encerrado"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="alertas_ntep")
+    ntep             = models.ForeignKey(TabelaNTEP, on_delete=models.PROTECT,
+                                          related_name="alertas")
+    origem           = models.CharField(max_length=15, choices=ORIGEM)
+    origem_id        = models.PositiveIntegerField(help_text="ID do registro de origem (CAT/afastamento/ASO)")
+    funcionario_nome = models.CharField(max_length=160)
+    cpf_funcionario  = models.CharField(max_length=11, blank=True, default="")
+    cid10            = models.CharField(max_length=6)
+    cnae_empresa     = models.CharField(max_length=7, blank=True, default="")
+    status           = models.CharField(max_length=15, choices=STATUS, default="novo")
+    # Contestação
+    justificativa_contestacao = models.TextField(blank=True, default="")
+    pericias_realizadas       = models.TextField(blank=True, default="")
+    # Risco: se confirmado, pode gerar ação regressiva do INSS
+    risco_acao_regressiva     = models.BooleanField(default=True)
+    valor_estimado_risco      = models.DecimalField(max_digits=12, decimal_places=2,
+                                                     null=True, blank=True)
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Alerta NTEP"
+        verbose_name_plural = "Alertas NTEP"
+        ordering            = ["-criado_em"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "cid10"]),
+            models.Index(fields=["empresa", "origem"]),
+        ]
+
+    def __str__(self):
+        return f"NTEP {self.cid10}/{self.cnae_empresa} — {self.funcionario_nome} ({self.status})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Centro Obstétrico / Maternidade
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class Partograma(models.Model):
+    """Registro gráfico do trabalho de parto (OMS, 1994)."""
+    STATUS = [
+        ("ativo",     "Em andamento"),
+        ("concluido", "Concluído"),
+        ("cesariana", "Evoluiu para Cesariana"),
+        ("pausa",     "Pausado / Transferido"),
+    ]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="partogramas")
+    paciente_nome    = models.CharField(max_length=160)
+    cpf_paciente     = models.CharField(max_length=11, blank=True, default="")
+    cns_paciente     = models.CharField(max_length=18, blank=True, default="")
+    data_nascimento  = models.DateField(null=True, blank=True)
+    internacao_id    = models.PositiveIntegerField(null=True, blank=True)
+    # Admissão
+    data_internacao  = models.DateTimeField()
+    ig_semanas       = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                         verbose_name="Idade gestacional (semanas)")
+    numero_gestacoes = models.PositiveSmallIntegerField(default=1, verbose_name="G")
+    numero_partos    = models.PositiveSmallIntegerField(default=0, verbose_name="P")
+    numero_abortos   = models.PositiveSmallIntegerField(default=0, verbose_name="A")
+    # Avaliação inicial
+    dilatacao_inicial = models.PositiveSmallIntegerField(default=0,
+                                                          verbose_name="Dilatação inicial (cm)")
+    apresentacao     = models.CharField(max_length=30, blank=True, default="",
+                                         help_text="Cefálica / Pélvica / Córmica")
+    situacao_fetal   = models.CharField(max_length=30, blank=True, default="")
+    # Evoluções do partograma (lista de pontos horários)
+    evolucoes        = models.JSONField(default=list,
+                                         help_text="[{hora, dilatacao, altura, bcf, contraccao, observacao}]")
+    # Desfecho
+    status           = models.CharField(max_length=15, choices=STATUS, default="ativo")
+    medico_responsavel = models.CharField(max_length=150, blank=True, default="")
+    crm_medico       = models.CharField(max_length=20, blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+    atualizado_em    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = "Partograma"
+        verbose_name_plural = "Partogramas"
+        ordering            = ["-data_internacao"]
+        indexes             = [
+            models.Index(fields=["empresa", "status"]),
+            models.Index(fields=["empresa", "data_internacao"]),
+            models.Index(fields=["cpf_paciente"]),
+        ]
+
+    def __str__(self):
+        return f"Partograma — {self.paciente_nome} ({self.data_internacao:%d/%m/%Y %H:%M})"
+
+
+class RegistroParto(models.Model):
+    """Registro do parto com dados para DNV e sistema de informação perinatal."""
+    TIPO_PARTO = [
+        ("normal",        "Parto Normal"),
+        ("forceps",       "Fórceps"),
+        ("cesariana",     "Cesariana"),
+        ("cesariana_ur",  "Cesariana de Urgência"),
+    ]
+    APGAR = [(i, str(i)) for i in range(11)]
+    empresa          = models.ForeignKey("Empresa", on_delete=models.CASCADE,
+                                          related_name="registros_parto")
+    partograma       = models.OneToOneField(Partograma, on_delete=models.SET_NULL,
+                                             null=True, blank=True, related_name="registro_parto")
+    mae_nome         = models.CharField(max_length=160)
+    cpf_mae          = models.CharField(max_length=11, blank=True, default="")
+    cns_mae          = models.CharField(max_length=18, blank=True, default="")
+    tipo_parto       = models.CharField(max_length=15, choices=TIPO_PARTO)
+    data_parto       = models.DateTimeField()
+    ig_semanas       = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                         verbose_name="IG parto (semanas)")
+    # Neonato
+    rn_nome          = models.CharField(max_length=160, blank=True, default="",
+                                         verbose_name="Nome do recém-nascido")
+    sexo_rn          = models.CharField(max_length=1, choices=[("M","M"),("F","F"),("I","I")],
+                                         blank=True, default="I")
+    peso_rn          = models.DecimalField(max_digits=6, decimal_places=1, null=True, blank=True,
+                                            verbose_name="Peso RN (g)")
+    comprimento_rn   = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True,
+                                            verbose_name="Comprimento RN (cm)")
+    capurro          = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                         verbose_name="Capurro (semanas)")
+    apgar_1min       = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                         choices=APGAR,
+                                                         verbose_name="APGAR 1 minuto")
+    apgar_5min       = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                         choices=APGAR,
+                                                         verbose_name="APGAR 5 minutos")
+    apgar_10min      = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                         choices=APGAR,
+                                                         verbose_name="APGAR 10 minutos")
+    rn_vivo          = models.BooleanField(default=True)
+    # DNV
+    dnv_numero       = models.CharField(max_length=30, blank=True, default="",
+                                         verbose_name="Número DNV")
+    dnv_emitida      = models.BooleanField(default=False,
+                                            verbose_name="DNV emitida")
+    # Equipe
+    medico_responsavel = models.CharField(max_length=150, blank=True, default="")
+    crm_medico       = models.CharField(max_length=20, blank=True, default="")
+    obs              = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = "Registro de Parto"
+        verbose_name_plural = "Registros de Parto"
+        ordering            = ["-data_parto"]
+        indexes             = [
+            models.Index(fields=["empresa", "data_parto"]),
+            models.Index(fields=["empresa", "tipo_parto"]),
+            models.Index(fields=["cpf_mae"]),
+        ]
+
+    def __str__(self):
+        return f"Parto {self.get_tipo_parto_display()} — {self.mae_nome} ({self.data_parto:%d/%m/%Y})"

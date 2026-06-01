@@ -653,6 +653,62 @@ from api.views_farmacia_magistral import (
     api_magistral_controle_qualidade,
     api_magistral_kpis,
 )
+from api.views_hospital_opme import (
+    api_opme_catalogo,
+    api_opme_catalogo_detalhe,
+    api_opme_autorizacoes,
+    api_opme_autorizacao_acao,
+    api_opme_implantaveis,
+    api_opme_kpis,
+)
+from api.views_governo_odontologia import (
+    api_ceo_atendimentos,
+    api_ceo_atendimento_detalhe,
+    api_ceo_producao,
+    api_ceo_fechar_producao,
+    api_ceo_transmitir,
+    api_ceo_procedimentos,
+    api_ceo_kpis,
+)
+from api.views_hospital_ccih import (
+    api_ccih_infeccoes,
+    api_ccih_infeccao_detalhe,
+    api_ccih_isolamentos,
+    api_ccih_isolamento_encerrar,
+    api_ccih_indicadores,
+    api_ccih_kpis,
+)
+from api.views_governo_ceaf import (
+    api_ceaf_medicamentos,
+    api_ceaf_solicitacoes,
+    api_ceaf_solicitacao_detalhe,
+    api_ceaf_dispensar,
+    api_ceaf_horus_enviar,
+    api_ceaf_kpis,
+)
+from api.views_plano_portabilidade import (
+    api_portabilidade_lista,
+    api_portabilidade_detalhe,
+    api_portabilidade_acao,
+    api_portabilidade_declaracao,
+    api_portabilidade_kpis,
+)
+from api.views_sst_ntep import (
+    api_ntep_tabela,
+    api_ntep_verificar,
+    api_ntep_alertas,
+    api_ntep_alerta_detalhe,
+    api_ntep_scan_cats,
+    api_ntep_kpis,
+)
+from api.views_hospital_obstetrico import (
+    api_obstetrico_partogramas,
+    api_obstetrico_partograma_detalhe,
+    api_obstetrico_partos,
+    api_obstetrico_parto_detalhe,
+    api_obstetrico_dnv,
+    api_obstetrico_kpis,
+)
 from api.views_governo_sipni import (
     api_sipni_status,
     api_sipni_historico,
@@ -1992,6 +2048,104 @@ urlpatterns = [
     path('api/sst/psicossocial/<int:av_id>/resultados/', api_psicossocial_resultados),
     path('api/sst/psicossocial/<int:av_id>/pdf/', api_psicossocial_pdf),
     path('api/sst/psicossocial/responder/<str:token>/', api_psicossocial_responder_publico),
+
+    # ── OPME — Órteses, Próteses e Materiais Especiais ───────────────────────
+    path('api/hospital/opme/kpis',                               api_opme_kpis),
+    path('api/hospital/opme/kpis/',                              api_opme_kpis),
+    path('api/hospital/opme/catalogo',                           api_opme_catalogo),
+    path('api/hospital/opme/catalogo/',                          api_opme_catalogo),
+    path('api/hospital/opme/catalogo/<int:item_id>',             api_opme_catalogo_detalhe),
+    path('api/hospital/opme/catalogo/<int:item_id>/',            api_opme_catalogo_detalhe),
+    path('api/hospital/opme/autorizacoes',                       api_opme_autorizacoes),
+    path('api/hospital/opme/autorizacoes/',                      api_opme_autorizacoes),
+    path('api/hospital/opme/autorizacoes/<int:aut_id>/acao',     api_opme_autorizacao_acao),
+    path('api/hospital/opme/autorizacoes/<int:aut_id>/acao/',    api_opme_autorizacao_acao),
+    path('api/hospital/opme/implantaveis',                       api_opme_implantaveis),
+    path('api/hospital/opme/implantaveis/',                      api_opme_implantaveis),
+
+    # ── Odontologia CEO (Centro de Especialidades Odontológicas) ─────────────
+    path('api/governo/ceo/kpis',                                 api_ceo_kpis),
+    path('api/governo/ceo/kpis/',                                api_ceo_kpis),
+    path('api/governo/ceo/procedimentos',                        api_ceo_procedimentos),
+    path('api/governo/ceo/procedimentos/',                       api_ceo_procedimentos),
+    path('api/governo/ceo/atendimentos',                         api_ceo_atendimentos),
+    path('api/governo/ceo/atendimentos/',                        api_ceo_atendimentos),
+    path('api/governo/ceo/atendimentos/<int:atend_id>',          api_ceo_atendimento_detalhe),
+    path('api/governo/ceo/atendimentos/<int:atend_id>/',         api_ceo_atendimento_detalhe),
+    path('api/governo/ceo/producao',                             api_ceo_producao),
+    path('api/governo/ceo/producao/',                            api_ceo_producao),
+    path('api/governo/ceo/producao/<int:prod_id>/fechar',        api_ceo_fechar_producao),
+    path('api/governo/ceo/producao/<int:prod_id>/fechar/',       api_ceo_fechar_producao),
+    path('api/governo/ceo/producao/<int:prod_id>/transmitir',    api_ceo_transmitir),
+    path('api/governo/ceo/producao/<int:prod_id>/transmitir/',   api_ceo_transmitir),
+
+    # ── CCIH — Controle de Infecção Hospitalar (ANVISA RDC 36/2008) ──────────
+    path('api/hospital/ccih/kpis',                               api_ccih_kpis),
+    path('api/hospital/ccih/kpis/',                              api_ccih_kpis),
+    path('api/hospital/ccih/infeccoes',                          api_ccih_infeccoes),
+    path('api/hospital/ccih/infeccoes/',                         api_ccih_infeccoes),
+    path('api/hospital/ccih/infeccoes/<int:ih_id>',              api_ccih_infeccao_detalhe),
+    path('api/hospital/ccih/infeccoes/<int:ih_id>/',             api_ccih_infeccao_detalhe),
+    path('api/hospital/ccih/isolamentos',                        api_ccih_isolamentos),
+    path('api/hospital/ccih/isolamentos/',                       api_ccih_isolamentos),
+    path('api/hospital/ccih/isolamentos/<int:iso_id>/encerrar',  api_ccih_isolamento_encerrar),
+    path('api/hospital/ccih/isolamentos/<int:iso_id>/encerrar/', api_ccih_isolamento_encerrar),
+    path('api/hospital/ccih/indicadores',                        api_ccih_indicadores),
+    path('api/hospital/ccih/indicadores/',                       api_ccih_indicadores),
+
+    # ── CEAF — Componente Especializado da Assistência Farmacêutica ──────────
+    path('api/governo/ceaf/kpis',                                api_ceaf_kpis),
+    path('api/governo/ceaf/kpis/',                               api_ceaf_kpis),
+    path('api/governo/ceaf/medicamentos',                        api_ceaf_medicamentos),
+    path('api/governo/ceaf/medicamentos/',                       api_ceaf_medicamentos),
+    path('api/governo/ceaf/solicitacoes',                        api_ceaf_solicitacoes),
+    path('api/governo/ceaf/solicitacoes/',                       api_ceaf_solicitacoes),
+    path('api/governo/ceaf/solicitacoes/<int:sol_id>',           api_ceaf_solicitacao_detalhe),
+    path('api/governo/ceaf/solicitacoes/<int:sol_id>/',          api_ceaf_solicitacao_detalhe),
+    path('api/governo/ceaf/solicitacoes/<int:sol_id>/dispensar', api_ceaf_dispensar),
+    path('api/governo/ceaf/solicitacoes/<int:sol_id>/dispensar/',api_ceaf_dispensar),
+    path('api/governo/ceaf/dispensacoes/<int:disp_id>/horus',    api_ceaf_horus_enviar),
+    path('api/governo/ceaf/dispensacoes/<int:disp_id>/horus/',   api_ceaf_horus_enviar),
+
+    # ── Portabilidade ANS Formal (RN 438/2018) ───────────────────────────────
+    path('api/plano-saude/portabilidade-ans/kpis',                           api_portabilidade_kpis),
+    path('api/plano-saude/portabilidade-ans/kpis/',                          api_portabilidade_kpis),
+    path('api/plano-saude/portabilidade-ans',                                api_portabilidade_lista),
+    path('api/plano-saude/portabilidade-ans/',                               api_portabilidade_lista),
+    path('api/plano-saude/portabilidade-ans/<int:sol_id>',                   api_portabilidade_detalhe),
+    path('api/plano-saude/portabilidade-ans/<int:sol_id>/',                  api_portabilidade_detalhe),
+    path('api/plano-saude/portabilidade-ans/<int:sol_id>/acao',              api_portabilidade_acao),
+    path('api/plano-saude/portabilidade-ans/<int:sol_id>/acao/',             api_portabilidade_acao),
+    path('api/plano-saude/portabilidade-ans/<int:sol_id>/declaracao',        api_portabilidade_declaracao),
+    path('api/plano-saude/portabilidade-ans/<int:sol_id>/declaracao/',       api_portabilidade_declaracao),
+
+    # ── NTEP — Nexo Técnico Epidemiológico (SST / Decreto 6.042/2007) ────────
+    path('api/sst/ntep/kpis',                                    api_ntep_kpis),
+    path('api/sst/ntep/kpis/',                                   api_ntep_kpis),
+    path('api/sst/ntep/tabela',                                  api_ntep_tabela),
+    path('api/sst/ntep/tabela/',                                 api_ntep_tabela),
+    path('api/sst/ntep/verificar',                               api_ntep_verificar),
+    path('api/sst/ntep/verificar/',                              api_ntep_verificar),
+    path('api/sst/ntep/alertas',                                 api_ntep_alertas),
+    path('api/sst/ntep/alertas/',                                api_ntep_alertas),
+    path('api/sst/ntep/alertas/<int:alerta_id>',                 api_ntep_alerta_detalhe),
+    path('api/sst/ntep/alertas/<int:alerta_id>/',                api_ntep_alerta_detalhe),
+    path('api/sst/ntep/scan-cats',                               api_ntep_scan_cats),
+    path('api/sst/ntep/scan-cats/',                              api_ntep_scan_cats),
+
+    # ── Centro Obstétrico / Maternidade ──────────────────────────────────────
+    path('api/hospital/obstetrico/kpis',                                      api_obstetrico_kpis),
+    path('api/hospital/obstetrico/kpis/',                                     api_obstetrico_kpis),
+    path('api/hospital/obstetrico/partogramas',                               api_obstetrico_partogramas),
+    path('api/hospital/obstetrico/partogramas/',                              api_obstetrico_partogramas),
+    path('api/hospital/obstetrico/partogramas/<int:pt_id>',                   api_obstetrico_partograma_detalhe),
+    path('api/hospital/obstetrico/partogramas/<int:pt_id>/',                  api_obstetrico_partograma_detalhe),
+    path('api/hospital/obstetrico/partos',                                    api_obstetrico_partos),
+    path('api/hospital/obstetrico/partos/',                                   api_obstetrico_partos),
+    path('api/hospital/obstetrico/partos/<int:parto_id>',                     api_obstetrico_parto_detalhe),
+    path('api/hospital/obstetrico/partos/<int:parto_id>/',                    api_obstetrico_parto_detalhe),
+    path('api/hospital/obstetrico/partos/<int:parto_id>/dnv',                 api_obstetrico_dnv),
+    path('api/hospital/obstetrico/partos/<int:parto_id>/dnv/',                api_obstetrico_dnv),
 
     # ── SIPNI — Imunizações via RNDS ─────────────────────────────────────────
     path('api/governo/sipni/status',                            api_sipni_status),
