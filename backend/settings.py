@@ -176,7 +176,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# APP_DATABASE_URL  → usuário restrito soluscrt_app (sujeito ao RLS, para queries da app)
+# DATABASE_URL      → usuário superuser / dono do banco (bypassa RLS, usado em migrations
+#                     e cron jobs que não passam pelo EmpresaMiddleware)
+#
+# Se APP_DATABASE_URL não estiver definida (cron jobs, preDeployCommand com override),
+# o Django usa DATABASE_URL normalmente — sem quebrar nada.
+_APP_DB_URL = os.environ.get("APP_DATABASE_URL") or ""
+DATABASE_URL = _APP_DB_URL or os.environ.get("DATABASE_URL")
+
 if DATABASE_URL:
     import dj_database_url
 
