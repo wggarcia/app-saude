@@ -93,7 +93,21 @@ def _liberar_dispositivos_ociosos(empresa):
     ).update(ativo=False)
 
 
+def _rls_set_empresa_auth(empresa_id: int) -> None:
+    """Define app.empresa_id para queries RLS durante o fluxo de autenticação."""
+    from django.db import connection
+    if connection.vendor != "postgresql":
+        return
+    try:
+        with connection.cursor() as cur:
+            cur.execute("SELECT set_config('app.empresa_id', %s, true)", [str(empresa_id)])
+    except Exception:
+        pass  # nunca quebra o login por falha de RLS
+
+
 def registrar_dispositivo_login(empresa, request, dados):
+    # ── RLS: define o tenant boundary antes de qualquer acesso a DispositivoAutorizado
+    _rls_set_empresa_auth(empresa.id)
     device_id = resolver_device_id(request, dados)
     _liberar_dispositivos_ociosos(empresa)
     dispositivos_ativos = DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True)
