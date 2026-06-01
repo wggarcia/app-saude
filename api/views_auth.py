@@ -1,5 +1,6 @@
 from django.views.decorators.csrf import csrf_exempt
 import json
+import logging
 import os
 from django.conf import settings
 from django.http import JsonResponse
@@ -28,6 +29,7 @@ from .services.auth_session import (
     ativar_sessao as _ativar_sessao,
 )
 
+logger = logging.getLogger(__name__)
 
 def _provisionar_dono_por_ambiente(email, senha):
     env_email = os.environ.get("SOLUSCRT_BOOTSTRAP_OWNER_EMAIL", "").strip().lower()
@@ -93,7 +95,14 @@ def _login_conta(request, portal_tipo=None):
     if not senha_ok:
         return JsonResponse({"status": "erro", "mensagem": "Senha incorreta"}, status=401)
 
-    autorizado, device_id, dispositivos_em_uso, erro_dispositivo = _registrar_dispositivo_login(empresa, request, dados)
+    try:
+        autorizado, device_id, dispositivos_em_uso, erro_dispositivo = _registrar_dispositivo_login(empresa, request, dados)
+    except Exception as _exc_reg:
+        logger.exception(
+            "LOGIN 500 — registrar_dispositivo_login falhou | empresa_id=%s email=%s | %s",
+            getattr(empresa, "id", "?"), email, type(_exc_reg).__name__,
+        )
+        raise
     if not autorizado:
         return JsonResponse({"status": "erro", "mensagem": erro_dispositivo}, status=403)
 
