@@ -4144,6 +4144,34 @@ class PlanoSaudeEnterpriseBaseTests(TestCase):
         return self.client.delete(url)
 
 
+class CarenciasTests(PlanoSaudeEnterpriseBaseTests):
+    """GET/POST /api/plano-saude/carencias/"""
+
+    def test_lista_e_criacao_de_carencia_funcionam(self):
+        resp_post = self._post("/api/plano-saude/carencias/", {
+            "beneficiario_id": self.benef.pk,
+            "tipo_procedimento": "consulta",
+            "data_inicio": date.today().isoformat(),
+            "dias_carencia": 15,
+            "observacoes": "Carência inicial",
+        })
+        self.assertEqual(resp_post.status_code, 201, msg=resp_post.content)
+        payload_post = resp_post.json()
+        self.assertTrue(payload_post.get("ok"))
+        self.assertIn("id", payload_post)
+
+        resp_get = self._get("/api/plano-saude/carencias/")
+        self.assertEqual(resp_get.status_code, 200, msg=resp_get.content)
+        payload_get = resp_get.json()
+        self.assertIn("carencias", payload_get)
+        self.assertEqual(len(payload_get["carencias"]), 1)
+        carencia = payload_get["carencias"][0]
+        self.assertEqual(carencia["beneficiario_nome"], self.benef.nome)
+        self.assertEqual(carencia["plano_nome"], self.plano.nome)
+        self.assertEqual(carencia["tipo_procedimento"], "consulta")
+        self.assertEqual(carencia["dias_carencia"], 15)
+
+
 class DashboardExecTests(PlanoSaudeEnterpriseBaseTests):
     """GET /api/plano-saude/dashboard-exec/"""
 

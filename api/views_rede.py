@@ -1,4 +1,5 @@
 import json
+from datetime import date, datetime
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
@@ -35,6 +36,22 @@ def get_unidade(empresa):
         return UnidadeRede.objects.get(empresa=empresa)
     except UnidadeRede.DoesNotExist:
         return None
+
+
+def _parse_date_or_none(value):
+    if not value:
+        return None
+    if isinstance(value, date):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, str):
+        for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:
+                continue
+    return None
 
 
 def _verificar_acesso_rede(request):
@@ -640,13 +657,14 @@ def api_carencias(request):
             qs = qs.filter(beneficiario__plano_id=plano_id)
         if beneficiario_id:
             qs = qs.filter(beneficiario_id=beneficiario_id)
-        hoje = date.today()
         return JsonResponse({'carencias': [{
             'id': c.id,
             'beneficiario_id': c.beneficiario_id,
             'beneficiario_nome': c.beneficiario.nome,
             'beneficiario_carteirinha': c.beneficiario.numero_carteirinha,
-            'plano_nome': c.beneficiario.plano.nome_fantasia if c.beneficiario.plano else '—',
+            'plano_nome': getattr(c.beneficiario.plano, 'nome', None)
+                          or getattr(c.beneficiario.plano, 'nome_fantasia', None)
+                          or '—',
             'tipo_procedimento': c.tipo_procedimento,
             'tipo_label': c.get_tipo_procedimento_display(),
             'data_inicio': c.data_inicio.isoformat(),
@@ -663,7 +681,7 @@ def api_carencias(request):
             return JsonResponse({'erro': 'JSON inválido'}, status=400)
         ben_id = data.get('beneficiario_id')
         tipo = data.get('tipo_procedimento')
-        data_inicio = data.get('data_inicio')
+        data_inicio = _parse_date_or_none(data.get('data_inicio'))
         dias = int(data.get('dias_carencia', 0))
         if not ben_id or not tipo or not data_inicio:
             return JsonResponse({'erro': 'beneficiario_id, tipo_procedimento e data_inicio são obrigatórios'}, status=400)
