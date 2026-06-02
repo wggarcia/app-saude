@@ -35,15 +35,24 @@ const _grupos = [
     subtitulo: 'Dengue, Zika, Chikungunya, Febre Amarela',
     cor: Color(0xFFFF9F43),
     sintomas: [
-      _Sintoma('febre', 'Febre', 'Temperatura elevada — principal sinal de dengue'),
-      _Sintoma('calafrios', 'Calafrios', 'Frio intenso mesmo com febre — malaria, dengue'),
-      _Sintoma('dor_cabeca', 'Dor de cabeca', 'Cefaleia intensa — presente em 90% das arboviroses'),
-      _Sintoma('dor_corpo', 'Dor no corpo', 'Mialgia generalizada — dengue, chikungunya'),
-      _Sintoma('dor_articular', 'Dor nas articulacoes', 'Artralgia intensa — chikungunya, zika, dengue'),
-      _Sintoma('exantema', 'Manchas na pele', 'Rash / exantema — dengue, zika, chikungunya, sarampo'),
-      _Sintoma('conjuntivite', 'Olhos vermelhos', 'Hiperemia ocular — patognomonico de Zika'),
-      _Sintoma('vomito_nausea', 'Vomito ou nausea', 'Sinal de alerta em dengue — procure atendimento'),
-      _Sintoma('dor_abdominal', 'Dor abdominal', 'Sinal de alarme — dengue grave, leptospirose'),
+      _Sintoma(
+          'febre', 'Febre', 'Temperatura elevada — principal sinal de dengue'),
+      _Sintoma('calafrios', 'Calafrios',
+          'Frio intenso mesmo com febre — malaria, dengue'),
+      _Sintoma('dor_cabeca', 'Dor de cabeca',
+          'Cefaleia intensa — presente em 90% das arboviroses'),
+      _Sintoma('dor_corpo', 'Dor no corpo',
+          'Mialgia generalizada — dengue, chikungunya'),
+      _Sintoma('dor_articular', 'Dor nas articulacoes',
+          'Artralgia intensa — chikungunya, zika, dengue'),
+      _Sintoma('exantema', 'Manchas na pele',
+          'Rash / exantema — dengue, zika, chikungunya, sarampo'),
+      _Sintoma('conjuntivite', 'Olhos vermelhos',
+          'Hiperemia ocular — patognomonico de Zika'),
+      _Sintoma('vomito_nausea', 'Vomito ou nausea',
+          'Sinal de alerta em dengue — procure atendimento'),
+      _Sintoma('dor_abdominal', 'Dor abdominal',
+          'Sinal de alarme — dengue grave, leptospirose'),
     ],
   ),
   _Grupo(
@@ -52,11 +61,15 @@ const _grupos = [
     subtitulo: 'Gripe, COVID-19, RSV, Resfriado',
     cor: Color(0xFF54A0FF),
     sintomas: [
-      _Sintoma('tosse', 'Tosse', 'Sinal respiratorio — gripe, COVID, resfriado'),
-      _Sintoma('falta_ar', 'Falta de ar', 'Dispneia — gripe grave, COVID, pneumonia'),
-      _Sintoma('dor_garganta', 'Dor de garganta', 'Faringite — gripe, COVID, estreptococo'),
+      _Sintoma(
+          'tosse', 'Tosse', 'Sinal respiratorio — gripe, COVID, resfriado'),
+      _Sintoma('falta_ar', 'Falta de ar',
+          'Dispneia — gripe grave, COVID, pneumonia'),
+      _Sintoma('dor_garganta', 'Dor de garganta',
+          'Faringite — gripe, COVID, estreptococo'),
       _Sintoma('coriza', 'Coriza / nariz escorrendo', 'Resfriado, gripe, RSV'),
-      _Sintoma('perda_olfato_paladar', 'Perda de olfato ou paladar', 'Quase patognomonico de COVID-19'),
+      _Sintoma('perda_olfato_paladar', 'Perda de olfato ou paladar',
+          'Quase patognomonico de COVID-19'),
     ],
   ),
   _Grupo(
@@ -65,9 +78,12 @@ const _grupos = [
     subtitulo: 'Sintomas inespecificos e gastrointestinais',
     cor: Color(0xFF1DD1A1),
     sintomas: [
-      _Sintoma('cansaco', 'Cansaco intenso', 'Fadiga — presente em diversas infeccoes'),
-      _Sintoma('diarreia', 'Diarreia', 'Gastroenterite, rotavirus, dengue grave'),
-      _Sintoma('ictericia', 'Pele ou olhos amarelos', 'Ictericia — febre amarela, leptospirose, hepatite'),
+      _Sintoma('cansaco', 'Cansaco intenso',
+          'Fadiga — presente em diversas infeccoes'),
+      _Sintoma(
+          'diarreia', 'Diarreia', 'Gastroenterite, rotavirus, dengue grave'),
+      _Sintoma('ictericia', 'Pele ou olhos amarelos',
+          'Ictericia — febre amarela, leptospirose, hepatite'),
     ],
   ),
   _Grupo(
@@ -76,15 +92,19 @@ const _grupos = [
     subtitulo: 'Procure atendimento medico imediatamente',
     cor: Color(0xFFFF6B6B),
     sintomas: [
-      _Sintoma('rigidez_nuca', 'Rigidez na nuca', 'MENINGITE — emergencia — ligue 192 ou va ao pronto-socorro'),
-      _Sintoma('manchas_hemorragicas', 'Manchas roxas / sangramento', 'Petequias — dengue hemorragico, meningite — urgencia'),
+      _Sintoma('rigidez_nuca', 'Rigidez na nuca',
+          'MENINGITE — emergencia — ligue 192 ou va ao pronto-socorro'),
+      _Sintoma('manchas_hemorragicas', 'Manchas roxas / sangramento',
+          'Petequias — dengue hemorragico, meningite — urgencia'),
     ],
   ),
 ];
 
 // ─── Tela principal ───────────────────────────────────────────────────────────
 class TelaSintomas extends StatefulWidget {
-  const TelaSintomas({super.key});
+  const TelaSintomas({super.key, this.onSintomasEnviados});
+
+  final VoidCallback? onSintomasEnviados;
 
   @override
   State<TelaSintomas> createState() => _TelaSintomasState();
@@ -97,8 +117,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
   bool _loading = false;
   Map<String, dynamic>? _lastResult;
 
-  int get _totalSelecionados =>
-      _sintomas.values.where((v) => v).length;
+  int get _totalSelecionados => _sintomas.values.where((v) => v).length;
 
   @override
   void initState() {
@@ -190,6 +209,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
           duration: const Duration(seconds: 5),
         ),
       );
+      widget.onSintomasEnviados?.call();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -204,29 +224,21 @@ class _TelaSintomasState extends State<TelaSintomas> {
     try {
       return await LocationService.getCurrentLocationForSubmission();
     } catch (e) {
-      if (!mounted) return null;
-      final mensagem = e.toString().replaceFirst('Exception: ', '');
-      final abrir = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('GPS necessario'),
-          content: Text(
-            '$mensagem\n\nO app nao usa localizacao antiga para proteger o mapa.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Abrir ajustes'),
-            ),
-          ],
-        ),
+      final base = await RegiaoBaseService.obterRegiaoBase();
+      final fallback = await LocationService.getBestEffortLocation(
+        fallbackRegion: base,
       );
-      if (abrir == true) await LocationService.abrirAjustesLocalizacao();
-      return null;
+      if (mounted && fallback.source != 'current') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'GPS atual instavel. O envio foi registrado com a melhor regiao disponivel e menor peso no mapa.',
+            ),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+      return fallback;
     }
   }
 
@@ -324,8 +336,8 @@ class _HeaderCard extends StatelessWidget {
               ),
               if (total > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: const Color(0xFF39D0C3),
                     borderRadius: BorderRadius.circular(999),
@@ -345,8 +357,8 @@ class _HeaderCard extends StatelessWidget {
           const Text(
             'Envio anonimo e voluntario. Sem cadastro nominal. '
             'Contribui para o monitoramento epidemiologico da sua regiao.',
-            style: TextStyle(
-                color: Color(0xFF9FC5D9), height: 1.45, fontSize: 14),
+            style:
+                TextStyle(color: Color(0xFF9FC5D9), height: 1.45, fontSize: 14),
           ),
         ],
       ),
@@ -381,10 +393,9 @@ class _GrupoExpansion extends StatefulWidget {
 class _GrupoExpansionState extends State<_GrupoExpansion> {
   bool _expanded = false;
 
-  int get _selecionados =>
-      widget.grupo.sintomas
-          .where((s) => widget.sintomas[s.key] ?? false)
-          .length;
+  int get _selecionados => widget.grupo.sintomas
+      .where((s) => widget.sintomas[s.key] ?? false)
+      .length;
 
   @override
   Widget build(BuildContext context) {
@@ -405,10 +416,8 @@ class _GrupoExpansionState extends State<_GrupoExpansion> {
         child: ExpansionTile(
           initiallyExpanded: _expanded,
           onExpansionChanged: (v) => setState(() => _expanded = v),
-          tilePadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          childrenPadding:
-              const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           leading: Container(
             width: 42,
             height: 42,
@@ -441,8 +450,8 @@ class _GrupoExpansionState extends State<_GrupoExpansion> {
               if (sel > 0)
                 Container(
                   margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: cor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(999),
@@ -468,11 +477,9 @@ class _GrupoExpansionState extends State<_GrupoExpansion> {
                 sintoma: sintoma,
                 value: widget.sintomas[sintoma.key] ?? false,
                 cor: cor,
-                onChanged: (v) =>
-                    widget.onSintomaChanged(sintoma.key, v),
+                onChanged: (v) => widget.onSintomaChanged(sintoma.key, v),
               ),
-              if (sintoma.key == 'febre' &&
-                  (widget.sintomas['febre'] ?? false))
+              if (sintoma.key == 'febre' && (widget.sintomas['febre'] ?? false))
                 _DropdownIntensidade(
                   label: 'Intensidade da febre',
                   value: widget.intensidadeFebre,
@@ -492,8 +499,7 @@ class _GrupoExpansionState extends State<_GrupoExpansion> {
                     _OpcaoDropdown('leve', 'Leve — nao atrapalha atividades'),
                     _OpcaoDropdown(
                         'moderada', 'Moderada — dificulta atividades'),
-                    _OpcaoDropdown(
-                        'intensa', 'Intensa — incapacitante'),
+                    _OpcaoDropdown('intensa', 'Intensa — incapacitante'),
                   ],
                   onChanged: widget.onIntensidadeArticularChanged,
                 ),
@@ -572,8 +578,7 @@ class _DropdownIntensidade extends StatelessWidget {
         initialValue: value,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle:
-              const TextStyle(color: Color(0xFF9FC5D9), fontSize: 13),
+          labelStyle: const TextStyle(color: Color(0xFF9FC5D9), fontSize: 13),
           filled: true,
           fillColor: const Color(0xFF112E43),
           border: OutlineInputBorder(
@@ -649,11 +654,9 @@ class _BotaoEnviar extends StatelessWidget {
         ),
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(54),
-          backgroundColor: total > 0
-              ? const Color(0xFF39D0C3)
-              : const Color(0xFF1A3A50),
-          foregroundColor:
-              total > 0 ? Colors.black : Colors.white38,
+          backgroundColor:
+              total > 0 ? const Color(0xFF39D0C3) : const Color(0xFF1A3A50),
+          foregroundColor: total > 0 ? Colors.black : Colors.white38,
         ),
       ),
     );

@@ -18,14 +18,8 @@ class TelaHome extends StatefulWidget {
 
 class _TelaHomeState extends State<TelaHome> {
   int currentIndex = 0;
+  int _mapRefreshSeed = 0;
   bool _locationPrimerShown = false;
-
-  final List<Widget> _pages = const [
-    TelaPainelCidadao(),
-    TelaSintomas(),
-    TelaMapa(),
-    TelaAlertas(),
-  ];
 
   @override
   void initState() {
@@ -80,13 +74,18 @@ class _TelaHomeState extends State<TelaHome> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[currentIndex],
+      body: _pageForIndex(currentIndex),
       bottomNavigationBar: NavigationBar(
         height: 74,
         backgroundColor: const Color(0xFF0B2333),
         selectedIndex: currentIndex,
         onDestinationSelected: (value) {
-          setState(() => currentIndex = value);
+          setState(() {
+            currentIndex = value;
+            if (value == 2) {
+              _mapRefreshSeed++;
+            }
+          });
         },
         destinations: const [
           NavigationDestination(
@@ -112,6 +111,28 @@ class _TelaHomeState extends State<TelaHome> {
         ],
       ),
     );
+  }
+
+  Widget _pageForIndex(int index) {
+    switch (index) {
+      case 1:
+        return TelaSintomas(
+          onSintomasEnviados: () {
+            if (!mounted) return;
+            setState(() {
+              currentIndex = 2;
+              _mapRefreshSeed++;
+            });
+          },
+        );
+      case 2:
+        return TelaMapa(key: ValueKey(_mapRefreshSeed));
+      case 3:
+        return const TelaAlertas();
+      case 0:
+      default:
+        return const TelaPainelCidadao();
+    }
   }
 }
 
@@ -224,8 +245,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
       final dismissedKeys = await AlertaInboxService.loadRadarDismissedKeys();
       final alertasFiltrados = alertas.where((item) {
         return !dismissedKeys.contains(
-          AlertaInboxService.alertKey(
-              Map<String, dynamic>.from(item as Map)),
+          AlertaInboxService.alertKey(Map<String, dynamic>.from(item as Map)),
         );
       }).toList();
       if (!mounted) {
@@ -347,8 +367,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
       _dismissedKeys = {..._dismissedKeys, key};
       alertasPublicos = alertasPublicos.where((item) {
         return !_dismissedKeys.contains(
-          AlertaInboxService.alertKey(
-              Map<String, dynamic>.from(item as Map)),
+          AlertaInboxService.alertKey(Map<String, dynamic>.from(item as Map)),
         );
       }).toList();
     });
@@ -387,8 +406,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
             resumo?['alerta_publico'] as Map<String, dynamic>? ??
             {};
     final alertaPublicoFeatured = alertaPublico.isNotEmpty &&
-            !_dismissedKeys
-                .contains(AlertaInboxService.alertKey(alertaPublico))
+            !_dismissedKeys.contains(AlertaInboxService.alertKey(alertaPublico))
         ? alertaPublico
         : null;
     final alertaPublicoEfetivo = alertaPublicoFeatured ??
@@ -465,9 +483,8 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                 if (!loading)
                   _PublicAlertCard(
                     alerta: alertaPublicoEfetivo,
-                    onDismiss: alertaPublicoEfetivo.isNotEmpty
-                        ? _dismissAlerta
-                        : null,
+                    onDismiss:
+                        alertaPublicoEfetivo.isNotEmpty ? _dismissAlerta : null,
                   ),
                 const SizedBox(height: 16),
                 if (!loading && alertasPublicos.isNotEmpty)
@@ -685,8 +702,7 @@ class _PublicAlertCard extends StatelessWidget {
       'moderada' => const Color(0xFF8A6A14),
       _ => const Color(0xFF165C46),
     };
-    final temConteudo =
-        alerta.isNotEmpty && alerta['titulo'] != null;
+    final temConteudo = alerta.isNotEmpty && alerta['titulo'] != null;
 
     return Stack(
       children: [
