@@ -377,7 +377,7 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
 
 <script>
 const FUNC_ID = {{ funcionario_id }};
-const FUNC_NOME_INICIAL = {{ funcionario_nome|safe|default:"''" }};
+const FUNC_NOME_INICIAL = "{{ funcionario_nome|escapejs }}";
 
 async function solicitarAssinaturaProntuario(){
   const r = await fetch('/api/sst/assinaturas/', {
@@ -592,7 +592,7 @@ async function init() {
     clearTimeout(timer);
     console.error('Erro ao carregar prontuário:', err);
     const aborted = err && err.name === 'AbortError';
-    document.getElementById('id-nome').textContent = '{{ funcionario_nome }}';
+    document.getElementById('id-nome').textContent = FUNC_NOME_INICIAL;
     document.getElementById('id-cargo').textContent = aborted
       ? 'Tempo limite excedido — recarregue a página.'
       : 'Erro ao carregar dados do servidor.';
