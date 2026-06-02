@@ -61,6 +61,7 @@ class PublicApiService {
   static Future<List<dynamic>> fetchMapa({
     String? cidade,
     String? estado,
+    String? bairro,
   }) async {
     final query = <String, dynamic>{};
     if (cidade != null && cidade.isNotEmpty) {
@@ -68,6 +69,9 @@ class PublicApiService {
     }
     if (estado != null && estado.isNotEmpty) {
       query['estado'] = estado;
+    }
+    if (bairro != null && bairro.isNotEmpty) {
+      query['bairro'] = bairro;
     }
 
     final response =

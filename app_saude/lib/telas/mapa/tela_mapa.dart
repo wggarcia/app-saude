@@ -87,6 +87,49 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
     }
   }
 
+  String? _cleanLocationValue(dynamic value) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
+  }
+
+  bool _hasBaseRegion(Map<String, dynamic>? base) {
+    return _cleanLocationValue(base?['cidade']) != null &&
+        _cleanLocationValue(base?['estado']) != null;
+  }
+
+  Future<List<dynamic>> _carregarMapaTerritorial(
+      Map<String, dynamic> local) async {
+    final estado = _cleanLocationValue(local['estado']);
+    final cidade = _cleanLocationValue(local['cidade']);
+    final bairro = _cleanLocationValue(local['bairro']);
+
+    final tentativas = <Map<String, String?>>[];
+    if (estado != null && cidade != null && bairro != null) {
+      tentativas.add({'estado': estado, 'cidade': cidade, 'bairro': bairro});
+    }
+    if (estado != null && cidade != null) {
+      tentativas.add({'estado': estado, 'cidade': cidade, 'bairro': null});
+    }
+    if (estado != null) {
+      tentativas.add({'estado': estado, 'cidade': null, 'bairro': null});
+    }
+    if (tentativas.isEmpty) {
+      return PublicApiService.fetchMapa();
+    }
+
+    for (final tentativa in tentativas) {
+      final mapa = await PublicApiService.fetchMapa(
+        estado: tentativa['estado'],
+        cidade: tentativa['cidade'],
+        bairro: tentativa['bairro'],
+      );
+      if (mapa.isNotEmpty) {
+        return mapa;
+      }
+    }
+    return const [];
+  }
+
   Future<void> _load() async {
     setState(() {
       loading = true;
@@ -99,10 +142,6 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
         fallbackRegion: base,
       );
       final temGpsAtual = location.source == 'current';
-      final modo = temGpsAtual ? 'atual' : modoSalvo;
-      if (temGpsAtual && modoSalvo != 'atual') {
-        await RegiaoBaseService.salvarModoMonitoramento('atual');
-      }
       final radarAtual = await PublicApiService.fetchRadarLocal(
         latitude: location.latitude,
         longitude: location.longitude,
@@ -115,6 +154,13 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
         );
       }
       final updatedBase = await RegiaoBaseService.obterRegiaoBase();
+      final temBase = _hasBaseRegion(updatedBase);
+      final modo = ((modoSalvo == 'atual' && temGpsAtual) || !temBase)
+          ? 'atual'
+          : 'base';
+      if (modo != modoSalvo) {
+        await RegiaoBaseService.salvarModoMonitoramento(modo);
+      }
       final radarPreferido = await _resolverRadarPreferido(
         modo: modo,
         radarAtual: radarAtual,
@@ -122,18 +168,10 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
       );
       final localPreferido =
           radarPreferido['local'] as Map<String, dynamic>? ?? {};
-      final estadoMapa = localPreferido['estado']?.toString();
-      final temRecorteEstado =
-          estadoMapa != null && estadoMapa.trim().isNotEmpty;
       List<dynamic> mapa;
       List<dynamic> alertas;
       try {
-        mapa = await PublicApiService.fetchMapa();
-        if (mapa.isEmpty && temRecorteEstado) {
-          mapa = await PublicApiService.fetchMapa(
-            estado: estadoMapa,
-          );
-        }
+        mapa = await _carregarMapaTerritorial(localPreferido);
       } catch (_) {
         mapa = const [];
       }
@@ -159,12 +197,12 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
         radarLocal = radarPreferido;
         this.radarAtual = radarAtual;
         regiaoBase = updatedBase;
-        localizacaoAtual = temGpsAtual ? location : null;
+        localizacaoAtual = modo == 'atual' && temGpsAtual ? location : null;
         alertasPublicos = alertas;
         modoMonitoramento = modo;
         loading = false;
         notice = mapaSeguro.isEmpty
-            ? 'Ainda nao ha focos publicos recentes para exibir no mapa.'
+            ? 'Ainda nao ha focos publicos recentes neste territorio.'
             : null;
       });
     } catch (err) {
@@ -270,6 +308,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
       }
       setState(() => localizacaoAtual = location);
       await RegiaoBaseService.salvarModoMonitoramento('atual');
+      await _load();
       if (!mounted) {
         return;
       }

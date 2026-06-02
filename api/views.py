@@ -2543,10 +2543,13 @@ def app_mapa_publico(request):
     )
     cidade = request.GET.get("cidade")
     estado = request.GET.get("estado")
+    bairro = request.GET.get("bairro")
     if cidade:
         base = base.filter(cidade=cidade)
     if estado:
         base = base.filter(estado__in=_state_terms(estado))
+    if bairro:
+        base = base.filter(bairro=bairro)
 
     hotspots_por_dia = (
         base.annotate(day=TruncDate("data_registro"))

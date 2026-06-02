@@ -4,9 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class RegiaoBaseService {
   static const _key = 'soluscrt_regiao_base_v1';
-  static const _modoKey = 'soluscrt_monitoramento_modo_v1';
+  static const _modoKey = 'soluscrt_monitoramento_modo_v2';
   static Map<String, dynamic>? _memoryBase;
-  static String _memoryMode = 'atual';
+  static String _memoryMode = 'base';
 
   static Future<void> registrarObservacao({
     required Map<String, dynamic> local,
@@ -173,7 +173,8 @@ class RegiaoBaseService {
   static Future<String> obterModoMonitoramento() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(_modoKey) ?? _memoryMode;
+      final modo = prefs.getString(_modoKey) ?? _memoryMode;
+      return modo == 'atual' ? 'atual' : 'base';
     } catch (_) {
       return _memoryMode;
     }

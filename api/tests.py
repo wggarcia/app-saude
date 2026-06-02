@@ -2246,6 +2246,42 @@ class PublicApiTests(TestCase):
         self.assertIn("doencas_provaveis", hotspot)
         self.assertTrue(hotspot["doencas_provaveis"])
 
+    def test_mapa_publico_filtra_por_bairro(self):
+        empresa = Empresa.objects.create(
+            nome="Populacao Bairro",
+            email="populacao-bairro@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        RegistroSintoma.objects.create(
+            empresa=empresa,
+            febre=True,
+            latitude=-22.9068,
+            longitude=-43.1729,
+            cidade="Rio de Janeiro",
+            estado="RJ",
+            bairro="Centro",
+            grupo="Arbovirose",
+        )
+        RegistroSintoma.objects.create(
+            empresa=empresa,
+            tosse=True,
+            latitude=-22.9846,
+            longitude=-43.2048,
+            cidade="Rio de Janeiro",
+            estado="RJ",
+            bairro="Copacabana",
+            grupo="Respiratorio",
+        )
+
+        response = Client().get(
+            "/api/public/mapa?estado=RJ&cidade=Rio%20de%20Janeiro&bairro=Centro"
+        )
+        bairros = {item["bairro"] for item in response.json()["hotspots"]}
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(bairros, {"Centro"})
+
     def test_probabilidades_nao_puxam_hantavirose_em_quadro_generico_sem_respiratorio(self):
         probabilidades = epidemiologia._build_disease_probabilities(
             {
