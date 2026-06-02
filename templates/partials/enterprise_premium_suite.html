@@ -246,7 +246,7 @@
   document.getElementById("epsResetBtn")?.addEventListener("click", async () => {
     const btn = document.getElementById("epsResetBtn");
     const note = document.getElementById("epsSeedNote");
-    if (!confirm("Zerar todos os dados de demonstracao? Esta acao nao pode ser desfeita.")) return;
+    if (!confirm("Limpar todos os dados do ambiente? Esta acao nao pode ser desfeita.")) return;
     btn.disabled = true;
     btn.textContent = "Zerando...";
     try {
