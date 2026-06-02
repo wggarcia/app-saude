@@ -1978,6 +1978,7 @@ urlpatterns = [
     path('validar-assinatura/<str:token>/', pagina_validar_assinatura),
     path('api/public/sst/validar/<str:token>', api_public_validar_assinatura_sst),
     path('api/public/sst/assinar/<str:token>', api_public_assinar_sst),
+    path('api/public/sst/assinaturas/<str:token>/assinar/', api_public_assinar_sst),
 
     # ── Plano de Saúde ────────────────────────────────────────────────────────
     path('api/plano-saude/dashboard', api_ps_dashboard),

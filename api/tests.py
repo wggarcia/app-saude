@@ -4897,3 +4897,59 @@ class SLABreachCronTests(PlanoSaudeEnterpriseBaseTests):
         out = StringIO()
         call_command("sla_breach_alertas", f"--empresa-id={outra.pk}", "--dry-run", stdout=out)
         self.assertIn("0 breach(es)", out.getvalue())
+
+
+class AssinaturaSSTTests(TestCase):
+    def test_fluxo_publico_assina_e_valida_aso(self):
+        from datetime import date
+        from django.test import RequestFactory
+        from .models import ASOOcupacional, AssinaturaDocumentoSST, FuncionarioSST
+        from .views_assinatura_sst import api_sst_assinaturas
+
+        empresa = Empresa.objects.create(
+            nome="Empresa Assinatura",
+            email="assinatura-sst@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        funcionario = FuncionarioSST.objects.create(
+            empresa=empresa,
+            nome="Colaborador Assinatura",
+            cpf="000",
+            cargo="Operador",
+            setor="Produção",
+            ativo=True,
+        )
+        aso = ASOOcupacional.objects.create(
+            empresa=empresa,
+            funcionario=funcionario,
+            tipo="periodico",
+            data_emissao=date.today(),
+            data_validade=date.today(),
+            resultado="apto",
+        )
+
+        request = RequestFactory().post(
+            "/api/sst/assinaturas/",
+            data=json.dumps({"tipo_documento": "aso", "objeto_id": aso.id}),
+            content_type="application/json",
+        )
+        request.empresa = empresa
+        response = api_sst_assinaturas(request)
+
+        self.assertEqual(response.status_code, 201)
+        token = json.loads(response.content)["assinatura"]["token"]
+        self.assertEqual(self.client.get(f"/assinatura/sst/{token}/").status_code, 200)
+
+        sign_response = self.client.post(
+            f"/api/public/sst/assinaturas/{token}/assinar/",
+            data=json.dumps({"nome": "Colaborador Assinatura", "cpf": "000", "aceite": True}),
+            content_type="application/json",
+        )
+        self.assertEqual(sign_response.status_code, 200)
+
+        assinatura = AssinaturaDocumentoSST.objects.get(token=token)
+        self.assertEqual(assinatura.status, "assinado")
+        self.assertTrue(assinatura.hash_documento)
+        self.assertTrue(assinatura.hash_assinatura)
+        self.assertTrue(self.client.get(f"/api/public/sst/validar/{token}").json()["valida"])

@@ -650,6 +650,7 @@ function renderTabelaAso(){
         <button class="btn-row" onclick="renovarAso('${funcId}')">Renovar</button>
         <a class="btn-row" href="/api/sst/asos/${a.id}/pdf" target="_blank">📄 PDF</a>
         <button class="btn-row btn-share" onclick="openShareModal(${a.id},'${esc(a.funcionario).replace(/'/g,"\\'")}')">🔗 Compartilhar</button>
+        <button class="btn-row" onclick="solicitarAssinatura('aso',${a.id})">✍️ Assinar</button>
         ${s2220Btn}
       </div></td>
     </tr>`;
@@ -659,6 +660,17 @@ function renderTabelaAso(){
 function renovarAso(funcId){
   openModalAso();
   if(funcId) setTimeout(()=>{document.getElementById('a-func-id').value=funcId;},50);
+}
+
+async function solicitarAssinatura(tipo, id){
+  const r = await fetch('/api/sst/assinaturas/', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({tipo_documento:tipo,objeto_id:id})
+  });
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok){alert(d.erro || 'Não foi possível criar a assinatura.');return;}
+  window.open(d.assinatura.link_assinatura, '_blank');
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
