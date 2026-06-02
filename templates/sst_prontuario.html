@@ -425,25 +425,37 @@ function setTab(name, btn) {
 }
 
 // ─── RENDER FUNCIONÁRIO ───
+// Setters tolerantes a elementos ausentes: um id que não exista (ex.: 'bc-nome'
+// de um breadcrumb removido) não pode mais abortar todo o render do prontuário.
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+function setHTML(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = value;
+}
+
 function renderFuncionario(f) {
   document.title = 'SolusCRT · Prontuário — ' + f.nome;
-  document.getElementById('bc-nome').textContent = f.nome;
-  document.getElementById('id-nome').textContent = f.nome;
-  document.getElementById('id-cargo').textContent = f.cargo + (f.setor ? ' · ' + f.setor : '');
-  document.getElementById('id-matricula').textContent = f.matricula || '—';
-  document.getElementById('id-cpf').textContent = f.cpf || '—';
-  document.getElementById('id-setor').textContent = f.setor || '—';
-  document.getElementById('id-admissao').textContent = f.data_admissao || '—';
+  setText('bc-nome', f.nome);
+  setText('id-nome', f.nome);
+  setText('id-cargo', f.cargo + (f.setor ? ' · ' + f.setor : ''));
+  setText('id-matricula', f.matricula || '—');
+  setText('id-cpf', f.cpf || '—');
+  setText('id-setor', f.setor || '—');
+  setText('id-admissao', f.data_admissao || '—');
 
   const gr = f.classe_risco || '';
   const grLabel = f.classe_risco_label || ('Grau ' + gr);
-  document.getElementById('id-risco-badge').innerHTML = '<span class="badge ' + (riscoCls[gr] || 'b-cinza') + '">' + grLabel + '</span>';
-  document.getElementById('id-status-badge').innerHTML = f.ativo
+  setHTML('id-risco-badge', '<span class="badge ' + (riscoCls[gr] || 'b-cinza') + '">' + grLabel + '</span>');
+  setHTML('id-status-badge', f.ativo
     ? '<span class="badge b-verde">Ativo</span>'
-    : '<span class="badge b-vermelho">Inativo</span>';
+    : '<span class="badge b-vermelho">Inativo</span>');
 
   const nomeEnc = encodeURIComponent(f.nome);
-  document.getElementById('btn-emitir-aso').href = '/sst/asos/?novo=' + nomeEnc;
+  const btnAso = document.getElementById('btn-emitir-aso');
+  if (btnAso) btnAso.href = '/sst/asos/?novo=' + nomeEnc;
 }
 
 // ─── RENDER KPIs ───
