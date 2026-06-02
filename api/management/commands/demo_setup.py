@@ -60,14 +60,21 @@ class Command(BaseCommand):
             self.stdout.write(msg)
 
     def handle(self, *args, **options):
-        if getattr(settings, "IS_PRODUCTION", False):
-            raise CommandError(
-                "demo_setup nao pode ser executado em producao. Use staging/homologacao para demos."
-            )
-
         apply         = options["apply"]
         upsert        = options["upsert"]
         refresh_dados = options["refresh_dados"]
+
+        # Em produção apenas --upsert é permitido: ele provisiona, de forma
+        # idempotente, as contas de demonstração exigidas pela revisão da
+        # App Store / Play Store (Guideline 2.1) — sem apagar nem recriar
+        # dados existentes. Operações destrutivas (--apply) e de mutação de
+        # dados (--refresh-dados) permanecem bloqueadas em produção.
+        if getattr(settings, "IS_PRODUCTION", False) and not upsert:
+            raise CommandError(
+                "Em producao apenas 'demo_setup --upsert' e permitido "
+                "(provisiona contas de demonstracao de forma idempotente). "
+                "Use staging/homologacao para --apply ou --refresh-dados."
+            )
 
         if refresh_dados:
             self.out(f"\n{'='*60}")

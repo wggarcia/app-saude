@@ -18,6 +18,26 @@ SESSION_IDLE_TIMEOUT = timedelta(minutes=15) if settings.DEBUG else timedelta(ho
 COOKIE_SECURE = not settings.DEBUG
 DEVICE_IDLE_TIMEOUT = SESSION_IDLE_TIMEOUT
 
+# Contas de demonstração (App Store / Google Play / avaliadores).
+# Estas contas são compartilhadas por múltiplos revisores em dispositivos
+# diferentes ao mesmo tempo, então NÃO podem ficar presas no bloqueio de
+# sessão única nem no limite de dispositivos — caso contrário o avaliador
+# recebe 409 "sessao_em_uso" / 403 "limite de dispositivos" e não consegue
+# logar (causa da rejeição Apple Guideline 2.1).
+DEMO_LOGIN_EMAILS = frozenset({
+    "demo.sst@soluscrt.com",
+    "demo.farmacia@soluscrt.com",
+    "demo.hospital@soluscrt.com",
+    "demo.governo@soluscrt.com",
+    "demo.plano@soluscrt.com",
+})
+
+
+def is_demo_account(empresa) -> bool:
+    """True se a empresa for um ambiente de demonstração para avaliadores."""
+    email = (getattr(empresa, "email", "") or "").strip().lower()
+    return email in DEMO_LOGIN_EMAILS
+
 
 def destino_conta(empresa):
     if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
@@ -130,7 +150,7 @@ def registrar_dispositivo_login(empresa, request, dados):
             pass
         return True, device_id, DispositivoAutorizado.objects.filter(empresa=empresa, ativo=True).count(), None
 
-    if dispositivos_ativos.count() >= empresa.max_dispositivos:
+    if dispositivos_ativos.count() >= empresa.max_dispositivos and not is_demo_account(empresa):
         if dados and dados.get("force_login") is True:
             antigo = dispositivos_ativos.order_by("ultimo_acesso").first()
             if antigo:
@@ -167,6 +187,10 @@ def registrar_dispositivo_login(empresa, request, dados):
 
 
 def validar_sessao_principal(principal, device_id):
+    # Contas de demonstração nunca ficam presas no bloqueio de sessão única:
+    # vários avaliadores (Apple/Google) usam a mesma conta simultaneamente.
+    if is_demo_account(principal):
+        return True, None
     if principal.sessao_ativa_chave and principal.sessao_ativa_device_id and principal.sessao_ativa_device_id != device_id:
         if principal.sessao_ativa_em and timezone.now() - principal.sessao_ativa_em > SESSION_IDLE_TIMEOUT:
             limpar_sessao_principal(principal)

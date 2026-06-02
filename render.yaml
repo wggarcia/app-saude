@@ -4,7 +4,7 @@ services:
     env: python
     plan: starter
     buildCommand: "./build.sh"
-    preDeployCommand: "APP_DATABASE_URL= python manage.py migrate --noinput && APP_DATABASE_URL= python manage.py bootstrap_acessos"
+    preDeployCommand: "APP_DATABASE_URL= python manage.py migrate --noinput && APP_DATABASE_URL= python manage.py bootstrap_acessos && (APP_DATABASE_URL= python manage.py demo_setup --upsert || true)"
     startCommand: "./start.sh"
     healthCheckPath: /api/public/resumo
     envVars:
