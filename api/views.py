@@ -1228,47 +1228,61 @@ def documento_publico(request, slug):
 STATE_ALIASES = {
     "AC": "Acre",
     "AL": "Alagoas",
-    "AP": "Amapa",
+    "AP": "Amapá",
     "AM": "Amazonas",
     "BA": "Bahia",
-    "CE": "Ceara",
+    "CE": "Ceará",
     "DF": "Distrito Federal",
-    "ES": "Espirito Santo",
-    "GO": "Goias",
-    "MA": "Maranhao",
+    "ES": "Espírito Santo",
+    "GO": "Goiás",
+    "MA": "Maranhão",
     "MT": "Mato Grosso",
     "MS": "Mato Grosso do Sul",
     "MG": "Minas Gerais",
-    "PA": "Para",
-    "PB": "Paraiba",
-    "PR": "Parana",
+    "PA": "Pará",
+    "PB": "Paraíba",
+    "PR": "Paraná",
     "PE": "Pernambuco",
-    "PI": "Piaui",
+    "PI": "Piauí",
     "RJ": "Rio de Janeiro",
     "RN": "Rio Grande do Norte",
     "RS": "Rio Grande do Sul",
-    "RO": "Rondonia",
+    "RO": "Rondônia",
     "RR": "Roraima",
     "SC": "Santa Catarina",
-    "SP": "Sao Paulo",
+    "SP": "São Paulo",
     "SE": "Sergipe",
     "TO": "Tocantins",
 }
 
 
 def _state_terms(value):
+    import unicodedata
+
+    def _normalize_term(term):
+        base = (term or "").strip()
+        if not base:
+            return ""
+        return "".join(
+            ch for ch in unicodedata.normalize("NFD", base.lower())
+            if unicodedata.category(ch) != "Mn"
+        )
+
     raw = (value or "").strip()
     if not raw:
         return []
     upper = raw.upper()
+    normalized_raw = _normalize_term(raw)
     terms = {raw, upper}
     alias = STATE_ALIASES.get(upper)
     if alias:
         terms.add(alias)
+        terms.add(_normalize_term(alias).title())
     for uf, name in STATE_ALIASES.items():
-        if raw.lower() == name.lower():
+        if normalized_raw == _normalize_term(name):
             terms.add(uf)
             terms.add(name)
+            terms.add(_normalize_term(name).title())
     return list(terms)
 
 
