@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import re
 import zipfile
 from collections import defaultdict
 from io import BytesIO, StringIO, TextIOWrapper
@@ -52,6 +53,26 @@ FONTES_CSV_CONFIG = {
         "periodo_comp_col": "COMP",  # YYYYMM
         "valor_col": "LEITOS_SUS",  # soma de leitos SUS instalados
     },
+    "vacinacao": {
+        # Particoes Spark com nome rotativo (UUID muda a cada publicacao) e
+        # listagem de bucket bloqueada -> a URL e resolvida em tempo de execucao
+        # extraindo as particoes vigentes da pagina oficial do recurso.
+        "resource_page": "https://dadosabertos.saude.gov.br/dataset/covid-19-vacinacao/resource/301983f2-aa50-4977-8fec-cfab0806cb0b",
+        "url_pattern": r"https://s3\.sa-east-1\.amazonaws\.com/ckan\.saude\.gov\.br/SIPNI/COVID/[^\"'\\ ]+?\.csv",
+        "delimiter": ";",
+        "encoding": "latin-1",
+        "indicador": "doses_covid_sipni_amostra",
+        "unidade": "doses",
+        "fonte_nome": "SI-PNI / Vacinacao COVID-19",
+        "versao_fonte": "SIPNI-COVID",
+        "ibge_cols": ["paciente_endereco_coIbgeMunicipio"],
+        "municipio_cols": ["paciente_endereco_nmMunicipio"],
+        "uf_cols": ["paciente_endereco_uf"],
+        "uf_from_ibge": False,
+        "periodo_date_col": "vacina_dataAplicacao",
+        "periodo_date_fmt": "iso",  # YYYY-MM-DD
+        "valor_col": None,  # cada linha = 1 dose aplicada
+    },
 }
 
 # Fontes oficiais publicadas apenas em .csv.zip (incompativel com HTTP Range).
@@ -96,7 +117,35 @@ def _periodo_de_data(valor, fmt):
     valor = (valor or "").strip()
     if fmt == "ddmmyyyy" and len(valor) == 8 and valor.isdigit():
         return f"{valor[4:8]}-{valor[2:4]}"
+    if fmt == "iso" and len(valor) >= 7 and valor[4:5] == "-":
+        return valor[:7]
     return None
+
+
+def _resolver_url(config):
+    """Resolve a URL final da fonte.
+
+    Suporta fontes com URL fixa e fontes dinamicas (particoes Spark com nome
+    rotativo), cujas URLs vigentes sao extraidas da pagina oficial do recurso.
+    """
+    url = config.get("url")
+    if url:
+        return url
+
+    page = config.get("resource_page")
+    pattern = config.get("url_pattern")
+    if page and pattern:
+        response = requests.get(page, timeout=30)
+        response.raise_for_status()
+        matches = sorted(set(re.findall(pattern, response.text)))
+        if matches:
+            return matches[0]
+        raise ValueError(
+            "Nao foi possivel resolver a URL dinamica da fonte: nenhuma particao "
+            "encontrada na pagina oficial do recurso."
+        )
+
+    raise ValueError("Fonte sem URL fixa nem resolver dinamico configurado.")
 
 
 def _periodo_de_comp(valor):
@@ -139,8 +188,9 @@ def _localizar_periodo(row, config):
 
 
 def _processar_csv_oficial(execucao, fonte_id, config, *, max_bytes, max_linhas):
+    url = _resolver_url(config)
     response = requests.get(
-        config["url"],
+        url,
         headers={"Range": f"bytes=0-{max_bytes - 1}"},
         timeout=30,
     )
@@ -183,7 +233,7 @@ def _processar_csv_oficial(execucao, fonte_id, config, *, max_bytes, max_linhas)
                 "versao_fonte": config["versao_fonte"],
                 "metadados": {
                     "tipo": "amostra_controlada",
-                    "fonte_url": config["url"],
+                    "fonte_url": url,
                 },
             },
         )
@@ -199,7 +249,7 @@ def _processar_csv_oficial(execucao, fonte_id, config, *, max_bytes, max_linhas)
     execucao.metadados = {
         **execucao.metadados,
         "fonte_amostra": {
-            "url": config["url"],
+            "url": url,
             "http_status": response.status_code,
             "content_range": response.headers.get("content-range"),
             "max_bytes": max_bytes,

@@ -174,11 +174,12 @@ OPENDATASUS_DATASUS_MANIFEST = [
             "relacao entre cobertura e risco",
         ],
         "periodicidade_recomendada": "semanal ou mensal",
-        "estrategia": "publicado em arquivos segmentados por UF de grande volume (SI-PNI/RNDS); coleta exige worker assincrono com janela operacional e cuidado LGPD.",
+        "estrategia": "particoes Spark com nome rotativo; a URL vigente e resolvida em tempo de execucao a partir da pagina oficial do recurso e amostrada por HTTP Range, agregando doses por municipio/mes sem armazenar microdados",
         "risco_operacional": "medio",
-        "motivo_cuidado": "arquivos grandes e segmentados, incompativeis com amostragem inline; necessidade de cuidado LGPD em granularidades menores",
-        "fonte_exata_inicial": "https://opendatasus.saude.gov.br/dataset/covid-19-vacinacao",
-        "status": "requer_worker_assincrono",
+        "motivo_cuidado": "arquivos de grande volume e cuidado LGPD em granularidades menores; processado como amostra controlada, nao no carregamento do painel",
+        "fonte_exata_inicial": "https://dadosabertos.saude.gov.br/dataset/covid-19-vacinacao",
+        "recurso_inicial": "resolvido dinamicamente: SIPNI/COVID/completo/part-*.csv",
+        "status": "download_habilitado",
     },
 ]
 
@@ -209,8 +210,8 @@ def _catalogo_opendatasus_datasus():
             "sim_mortalidade": "habilitado: amostra controlada via HTTP Range sobre o CSV oficial DO*OPEN (obitos)",
             "sih_internacoes": "habilitado: amostra controlada via HTTP Range sobre o CSV de Leitos SUS/CNES (capacidade hospitalar)",
             "sinan_agravos": "habilitado: worker baixa e descompacta o .csv.zip oficial em streaming, agregando dengue por municipio/semana",
-            "vacinacao": "pendente: particoes Spark com nomes rotativos e listagem de bucket bloqueada; requer resolver link dinamico do portal",
-            "microdados_completos": "bloqueados ate existir fila assíncrona, storage e janela operacional",
+            "vacinacao": "habilitado: resolver dinamico extrai a particao vigente da pagina oficial e amostra por HTTP Range, agregando doses por municipio/mes",
+            "microdados_completos": "persistencia de microdados brutos permanece bloqueada: gravamos somente agregados",
         },
     }
 
@@ -579,14 +580,19 @@ def panorama_brasil_oficial_payload(force=False):
                 "entrega": "notificacoes de dengue por municipio/semana epidemiologica via download e descompactacao controlada do zip oficial",
             },
             {
+                "nome": "SI-PNI/Vacinacao COVID-19 (resolver dinamico)",
+                "status": "ativo",
+                "entrega": "doses aplicadas por municipio/mes, com a particao vigente resolvida da pagina oficial e amostrada por HTTP Range",
+            },
+            {
                 "nome": "OpenDataSUS/DATASUS historico institucional",
                 "status": "manifesto_seguro",
                 "entrega": "catalogo de microdados, regras de coleta segura e preparo para jobs assíncronos",
             },
         ],
         "lacunas_controladas": [
-            "Vacinacao (SI-PNI/COVID) e publicada em particoes Spark com nomes rotativos e listagem de bucket bloqueada; a ingestao exige resolver o link dinamico do portal a cada publicacao.",
             "Internacoes individuais (RD/SIH microdados) so existem como DBC na FTP do DATASUS; usamos a capacidade instalada (CNES) como camada oficial de pressao hospitalar.",
+            "Amostras controladas leem um recorte inicial de cada fonte; a cobertura nacional completa exige ampliar os limites de bytes/linhas em janelas operacionais dedicadas.",
             "Perfis sociodemograficos completos exigem bases oficiais e governanca LGPD.",
         ],
     }
