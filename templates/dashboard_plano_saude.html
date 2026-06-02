@@ -858,7 +858,7 @@
     const stateFilter = document.getElementById("stateFilter");
     const cityFilter = document.getElementById("cityFilter");
 
-    const map = L.map("map", { zoomControl: false, preferCanvas: true, minZoom: 3, maxZoom: 18, worldCopyJump: true, maxBounds: [[-60, -90], [15, -25]], maxBoundsViscosity: 0.18 }).setView([-15.7, -47.9], 4);
+    const map = L.map("map", { zoomControl: false, preferCanvas: true, minZoom: 2, maxZoom: 18, worldCopyJump: true }).setView([-15.7, -47.9], 4);
     L.control.zoom({ position: "bottomright" }).addTo(map);
 
     let mapUserMoved = false;
