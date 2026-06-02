@@ -110,6 +110,16 @@ class RegistroSintoma(models.Model):
     fonte_referencia = models.CharField(max_length=160, null=True, blank=True)
     revisado = models.BooleanField(default=False)
 
+    class Meta:
+        indexes = [
+            # Filtro dominante dos painéis epidemiológicos: empresa (RLS) + janela temporal.
+            models.Index(fields=["empresa", "data_registro"], name="regsintoma_emp_data_idx"),
+            # Agregações por território (estado/cidade/bairro) dentro do tenant.
+            models.Index(fields=["empresa", "estado", "cidade"], name="regsintoma_emp_geo_idx"),
+            # Recortes globais por janela temporal (linha do tempo / baseline).
+            models.Index(fields=["data_registro"], name="regsintoma_data_idx"),
+        ]
+
     def __str__(self):
         return f"Sintoma {self.id_anonimo}"
 

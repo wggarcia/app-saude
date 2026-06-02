@@ -1894,7 +1894,8 @@
         .sort((a, b) => a.response_priority - b.response_priority || b.surveillance_index - a.surveillance_index);
       updateMetrics(areas);
       renderBriefing();
-      loadOfficialBrazil();
+      // loadOfficialBrazil() consulta fontes externas (DATASUS/IBGE/Fiocruz) com
+      // cache de 15 min no servidor — roda em intervalo próprio, fora do loop de 30s.
       loadGovernmentAlerts();
       renderCoverage();
       renderThreshold();
@@ -1960,7 +1961,11 @@
 
     updatePanels();
     loadPanorama();
-    setInterval(loadPanorama, 15000);
+    loadOfficialBrazil();
+    // Painel epidemiológico: 30s (alinhado ao cache de 45s do servidor).
+    setInterval(loadPanorama, 30000);
+    // Fontes oficiais externas: 5 min (cache de 15 min no servidor torna polling rápido inútil).
+    setInterval(loadOfficialBrazil, 300000);
   </script>
 </body>
 </html>

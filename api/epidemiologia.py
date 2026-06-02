@@ -128,7 +128,11 @@ DISEASE_WEIGHTS = {
 }
 
 _PANORAMA_CACHE = {"created_at": 0.0, "payload": None}
-_CACHE_TTL_SECONDS = 15
+# TTL maior que o intervalo de polling dos painéis (15s) para que os requests
+# concorrentes reaproveitem o payload já calculado em vez de refazer as 4
+# agregações pesadas a cada ciclo. O cache é invalidado em tempo real por
+# clear_panorama_cache() quando um novo registro chega.
+_CACHE_TTL_SECONDS = 45
 PUBLIC_APP_EMAIL = "populacao@soluscrt.com"
 
 
