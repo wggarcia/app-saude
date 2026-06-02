@@ -1805,11 +1805,6 @@ def registrar_sintoma_publico(request):
         return JsonResponse({"erro": "latitude/longitude inválidos"}, status=400)
 
     simulacao_autorizada = settings.DEBUG and request.headers.get("X-Solus-Simulation") == "true"
-    if location_source != "current" and not simulacao_autorizada:
-        return JsonResponse({
-            "erro": "envio exige GPS atual confirmado pelo aparelho",
-            "codigo": "gps_atual_obrigatorio",
-        }, status=400)
 
     empresa = _empresa_app_publico()
     # ── RLS: define o tenant boundary para o endpoint público ──────────────
@@ -1830,6 +1825,11 @@ def registrar_sintoma_publico(request):
         geo = obter_endereco(latitude, longitude)
     grupo, classificacao = classificar_padrao(dados)
     confianca, motivos_suspeita, ip, device_id = _score_suspeita(empresa, request, dados)
+    if location_source != "current":
+        # Mantem o fluxo resiliente para versões antigas do app e cenários de
+        # GPS degradado, sem dar o mesmo peso epidemiológico de um GPS atual.
+        confianca = min(confianca, 0.6)
+        motivos_suspeita.append("localizacao_nao_confirmada")
     permitido, motivo_bloqueio = _bloqueio_envio_publico(
         empresa,
         ip,
