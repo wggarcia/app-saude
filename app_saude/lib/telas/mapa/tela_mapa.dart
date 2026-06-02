@@ -27,6 +27,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
   bool radarExpanded = false;
   String? notice;
   bool _refreshingInBackground = false;
+  double _currentZoom = 4.2;
   // 'rua' = OpenStreetMap | 'satelite' = ESRI World Imagery
   String _tipoMapa = 'rua';
 
@@ -127,11 +128,11 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
       List<dynamic> mapa;
       List<dynamic> alertas;
       try {
-        mapa = await PublicApiService.fetchMapa(
-          estado: estadoMapa,
-        );
-        if (mapa.isEmpty && !temRecorteEstado) {
-          mapa = await PublicApiService.fetchMapa();
+        mapa = await PublicApiService.fetchMapa();
+        if (mapa.isEmpty && temRecorteEstado) {
+          mapa = await PublicApiService.fetchMapa(
+            estado: estadoMapa,
+          );
         }
       } catch (_) {
         mapa = const [];
@@ -162,8 +163,8 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
         alertasPublicos = alertas;
         modoMonitoramento = modo;
         loading = false;
-        notice = mapaSeguro.isEmpty && temRecorteEstado
-            ? 'Ainda nao ha focos publicos recentes para o seu estado no momento. O mapa nao mistura outros estados para evitar leitura errada.'
+        notice = mapaSeguro.isEmpty
+            ? 'Ainda nao ha focos publicos recentes para exibir no mapa.'
             : null;
       });
     } catch (err) {
@@ -220,6 +221,35 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
       safe.add(item);
     }
     return safe;
+  }
+
+  LatLng? _centerFromHotspots() {
+    if (hotspots.isEmpty) {
+      return null;
+    }
+    var latitude = 0.0;
+    var longitude = 0.0;
+    for (final item in hotspots) {
+      latitude += item['latitude'] as double;
+      longitude += item['longitude'] as double;
+    }
+    return LatLng(latitude / hotspots.length, longitude / hotspots.length);
+  }
+
+  double _circleRadius(double total) {
+    if (_currentZoom <= 5.8) {
+      return (14 + total.clamp(1, 120) * 3.4).clamp(18, 58).toDouble();
+    }
+    if (_currentZoom <= 8.8) {
+      return (24 + total.clamp(1, 100) * 2.5).clamp(28, 92).toDouble();
+    }
+    return (42 + total.clamp(1, 80) * 1.8).clamp(46, 150).toDouble();
+  }
+
+  double _markerSize() {
+    if (_currentZoom <= 5.8) return 42;
+    if (_currentZoom <= 8.8) return 58;
+    return 104;
   }
 
   Future<void> _alterarModo(String modo) async {
@@ -298,19 +328,18 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final regiaoLatitude = _toDouble(regiaoBase?['latitude']);
     final regiaoLongitude = _toDouble(regiaoBase?['longitude']);
+    final hotspotCenter = _centerFromHotspots();
+    final isNationalScale = _currentZoom <= 5.8;
+    final isRegionalScale = _currentZoom <= 8.8;
     final center = localizacaoAtual != null
         ? LatLng(localizacaoAtual!.latitude, localizacaoAtual!.longitude)
-        : hotspots.isNotEmpty
-            ? LatLng(
-                hotspots.first['latitude'] as double,
-                hotspots.first['longitude'] as double,
-              )
-            : regiaoLatitude != null && regiaoLongitude != null
+        : hotspotCenter ??
+            (regiaoLatitude != null && regiaoLongitude != null
                 ? LatLng(
                     regiaoLatitude,
                     regiaoLongitude,
                   )
-                : const LatLng(-14.235, -51.9253);
+                : const LatLng(-14.235, -51.9253));
     final localAtual = radarAtual?['local'] as Map<String, dynamic>? ?? {};
     final estaForaDaBase = RegiaoBaseService.estaForaDaRegiaoBase(
       regiaoBase: regiaoBase,
@@ -318,9 +347,9 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
     );
     final zoom = localizacaoAtual != null
         ? 12.2
-        : regiaoBase != null || hotspots.isNotEmpty
+        : regiaoBase != null && hotspots.length <= 1
             ? 10.2
-            : 4.2;
+            : 4.8;
     final userPoint = localizacaoAtual == null
         ? null
         : LatLng(localizacaoAtual!.latitude, localizacaoAtual!.longitude);
@@ -334,22 +363,25 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
           item['latitude'] as double,
           item['longitude'] as double,
         ),
-        radius: (42 + total.clamp(1, 80) * 1.8).clamp(46, 150).toDouble(),
-        color: visual.color.withValues(alpha: 0.18),
-        borderColor: visual.color.withValues(alpha: 0.42),
-        borderStrokeWidth: 2,
+        radius: _circleRadius(total),
+        color: visual.color.withValues(alpha: isNationalScale ? 0.28 : 0.18),
+        borderColor: visual.color.withValues(alpha: 0.52),
+        borderStrokeWidth: isNationalScale ? 2.6 : 2,
       );
     }).toList();
+    final markerSize = _markerSize();
     final markers = hotspots
         .map(
           (item) => Marker(
-            width: 104,
-            height: 104,
+            width: markerSize,
+            height: markerSize,
             point: LatLng(
               item['latitude'] as double,
               item['longitude'] as double,
             ),
-            child: _HotspotMarker(item: item),
+            child: isNationalScale || isRegionalScale
+                ? _CompactHotspotMarker(item: item)
+                : _HotspotMarker(item: item),
           ),
         )
         .toList();
@@ -390,9 +422,18 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
               options: MapOptions(
                 initialCenter: center,
                 initialZoom: zoom,
+                minZoom: 3.2,
+                maxZoom: 18.4,
                 interactionOptions: const InteractionOptions(
                   flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                 ),
+                onPositionChanged: (camera, hasGesture) {
+                  if (!hasGesture) return;
+                  final nextZoom = camera.zoom;
+                  if (nextZoom == null) return;
+                  if ((nextZoom - _currentZoom).abs() < 0.25) return;
+                  setState(() => _currentZoom = nextZoom);
+                },
               ),
               children: [
                 TileLayer(
@@ -400,6 +441,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
                       ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
                       : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.soluscrt.saude',
+                  minNativeZoom: 2,
                   maxNativeZoom: 19,
                 ),
                 CircleLayer(circles: circles),
@@ -1042,6 +1084,43 @@ class _CollapsibleRadarSheet extends StatelessWidget {
               secondChild: const SizedBox.shrink(),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactHotspotMarker extends StatelessWidget {
+  const _CompactHotspotMarker({required this.item});
+
+  final Map<String, dynamic> item;
+
+  @override
+  Widget build(BuildContext context) {
+    final visual = _FocusVisual.fromItem(item);
+    final total = item['indice_ativo'] ?? item['total'] ?? 0;
+    return Tooltip(
+      message:
+          '${item['cidade'] ?? 'Regiao'} / ${item['estado'] ?? 'BR'} | foco $total',
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xEEFFFFFF),
+          border: Border.all(color: visual.color, width: 3),
+          boxShadow: [
+            BoxShadow(
+              color: visual.color.withValues(alpha: 0.42),
+              blurRadius: 16,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Center(
+          child: Icon(
+            visual.icon,
+            color: visual.color,
+            size: 22,
+          ),
         ),
       ),
     );
