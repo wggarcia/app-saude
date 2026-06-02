@@ -10,7 +10,7 @@ from django.db.models.functions import TruncDate
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 
-from .models import RegistroSintoma
+from .models import Empresa, RegistroSintoma
 from .utils_cidades import carregar_base
 
 
@@ -129,6 +129,28 @@ DISEASE_WEIGHTS = {
 
 _PANORAMA_CACHE = {"created_at": 0.0, "payload": None}
 _CACHE_TTL_SECONDS = 15
+PUBLIC_APP_EMAIL = "populacao@soluscrt.com"
+
+
+def clear_panorama_cache():
+    _PANORAMA_CACHE["created_at"] = 0.0
+    _PANORAMA_CACHE["payload"] = None
+
+
+def _public_population_empresa():
+    return Empresa.objects.filter(email=PUBLIC_APP_EMAIL).first()
+
+
+def _scope_public_population_queryset(queryset):
+    empresa = _public_population_empresa()
+    if not empresa:
+        return queryset
+    try:
+        from api.middleware import _rls_set_empresa
+        _rls_set_empresa(empresa.id)
+    except Exception:
+        pass
+    return queryset.filter(empresa=empresa)
 _CITY_TO_UF = None
 FOCUS_STABILITY_DAYS = 10
 FOCUS_DECAY_WINDOW_DAYS = 30
@@ -591,6 +613,7 @@ def _build_layer_queryset(group_fields):
         .exclude(latitude__isnull=True)
         .exclude(longitude__isnull=True)
     )
+    queryset = _scope_public_population_queryset(queryset)
 
     for field in group_fields:
         queryset = queryset.exclude(**{f"{field}__isnull": True}).exclude(**{field: ""})

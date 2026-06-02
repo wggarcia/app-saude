@@ -12,7 +12,7 @@ from api.utils_ia import classificar_padrao
 from api.utils_geo import obter_endereco
 from api.utils_auth import validar_token
 from api.models import Empresa, RegistroSintoma
-from api.epidemiologia import _build_disease_probabilities
+from api.epidemiologia import _build_disease_probabilities, clear_panorama_cache
 from django.db.models import Count, Avg, Q
 from django.db.models.functions import TruncDate
 from django.contrib.auth.hashers import check_password, make_password
@@ -1902,6 +1902,7 @@ def registrar_sintoma_publico(request):
         confianca=confianca,
         suspeito=confianca < 0.75,
     )
+    clear_panorama_cache()
 
     return JsonResponse({
         "status": "ok",
