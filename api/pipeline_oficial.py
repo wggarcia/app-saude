@@ -7,13 +7,185 @@ from io import StringIO
 import requests
 from django.utils import timezone
 
-from .fontes_oficiais_brasil import OPENDATASUS_DATASUS_MANIFEST
+from .fontes_oficiais_brasil import OPENDATASUS_DATASUS_MANIFEST, UF_CODES
 from .models import FonteOficialAgregado, FonteOficialExecucao
 
 
 MANIFEST_BY_ID = {item["id"]: item for item in OPENDATASUS_DATASUS_MANIFEST}
 
 SIVEP_GRIPE_2026_CSV_URL = "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SRAG/2026/INFLUD26-23-03-2026.csv"
+
+# Fontes oficiais publicadas como CSV puro em S3 (suporte a HTTP Range) que podem
+# ser amostradas de forma controlada pelo mesmo mecanismo do SIVEP-Gripe.
+# Cada config descreve como localizar territorio, periodo e valor sem baixar o
+# arquivo completo. URLs verificadas em https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/.
+FONTES_CSV_CONFIG = {
+    "sim_mortalidade": {
+        "url": "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SIM/DO24OPEN.csv",
+        "delimiter": ";",
+        "encoding": "latin-1",
+        "indicador": "obitos_sim_amostra",
+        "unidade": "obitos",
+        "fonte_nome": "SIM / Mortalidade",
+        "versao_fonte": "DO24OPEN",
+        "ibge_cols": ["CODMUNRES", "CODMUNOCOR"],
+        "municipio_cols": [],
+        "uf_cols": [],
+        "uf_from_ibge": True,
+        "periodo_date_col": "DTOBITO",
+        "periodo_date_fmt": "ddmmyyyy",
+        "valor_col": None,  # cada linha = 1 obito
+    },
+    "sih_internacoes": {
+        "url": "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/Leitos_SUS/Leitos_2025.csv",
+        "delimiter": ",",
+        "encoding": "latin-1",
+        "indicador": "leitos_sus_disponiveis",
+        "unidade": "leitos_sus",
+        "fonte_nome": "Leitos SUS / CNES (capacidade hospitalar)",
+        "versao_fonte": "Leitos_2025",
+        "ibge_cols": [],
+        "municipio_cols": ["MUNICIPIO"],
+        "uf_cols": ["UF"],
+        "uf_from_ibge": False,
+        "periodo_comp_col": "COMP",  # YYYYMM
+        "valor_col": "LEITOS_SUS",  # soma de leitos SUS instalados
+    },
+}
+
+
+def _numero(valor):
+    try:
+        return float(str(valor).strip().replace(",", "."))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _primeiro_valor(row, cols):
+    for col in cols or []:
+        valor = (row.get(col) or "").strip()
+        if valor:
+            return valor
+    return ""
+
+
+def _periodo_de_data(valor, fmt):
+    valor = (valor or "").strip()
+    if fmt == "ddmmyyyy" and len(valor) == 8 and valor.isdigit():
+        return f"{valor[4:8]}-{valor[2:4]}"
+    return None
+
+
+def _periodo_de_comp(valor):
+    valor = (valor or "").strip()
+    if len(valor) == 6 and valor.isdigit():
+        return f"{valor[0:4]}-{valor[4:6]}"
+    return valor or "competencia_nao_informada"
+
+
+def _localizar_territorio(row, config):
+    codigo_ibge = _primeiro_valor(row, config.get("ibge_cols"))
+    if config.get("uf_from_ibge") and len(codigo_ibge) >= 2 and codigo_ibge[:2].isdigit():
+        uf = UF_CODES.get(int(codigo_ibge[:2]), "")
+    else:
+        uf = _primeiro_valor(row, config.get("uf_cols")).upper()
+    cidade = _primeiro_valor(row, config.get("municipio_cols"))
+    return uf, cidade, codigo_ibge
+
+
+def _localizar_periodo(row, config):
+    if config.get("periodo_date_col"):
+        periodo = _periodo_de_data(
+            row.get(config["periodo_date_col"]),
+            config.get("periodo_date_fmt"),
+        )
+        if periodo:
+            return periodo
+    if config.get("periodo_comp_col"):
+        return _periodo_de_comp(row.get(config["periodo_comp_col"]))
+    return "periodo_nao_informado"
+
+
+def _processar_csv_oficial(execucao, fonte_id, config, *, max_bytes, max_linhas):
+    response = requests.get(
+        config["url"],
+        headers={"Range": f"bytes=0-{max_bytes - 1}"},
+        timeout=30,
+    )
+    response.raise_for_status()
+    content = response.content.decode(config.get("encoding", "latin-1"), errors="ignore")
+    lines = content.splitlines()
+    if len(lines) > 1 and not content.endswith(("\n", "\r")):
+        lines = lines[:-1]
+
+    reader = csv.DictReader(StringIO("\n".join(lines)), delimiter=config["delimiter"])
+    target_uf = (execucao.uf or "").strip().upper()
+    aggregations = defaultdict(float)
+    registros = 0
+
+    for row in reader:
+        if registros >= max_linhas:
+            break
+        uf, cidade, codigo_ibge = _localizar_territorio(row, config)
+        if target_uf and target_uf != (uf or "").upper():
+            continue
+        periodo = _localizar_periodo(row, config)
+        valor_col = config.get("valor_col")
+        incremento = _numero(row.get(valor_col)) if valor_col else 1
+        aggregations[(uf or "", cidade or "", codigo_ibge or "", periodo)] += incremento
+        registros += 1
+
+    agregados = 0
+    for (uf, cidade, codigo_ibge, periodo), total in aggregations.items():
+        FonteOficialAgregado.objects.update_or_create(
+            fonte_id=fonte_id,
+            indicador=config["indicador"],
+            codigo_ibge=codigo_ibge or None,
+            estado=uf or None,
+            cidade=cidade or None,
+            periodo=periodo,
+            defaults={
+                "valor": round(total, 2),
+                "unidade": config["unidade"],
+                "fonte_nome": config["fonte_nome"],
+                "versao_fonte": config["versao_fonte"],
+                "metadados": {
+                    "tipo": "amostra_controlada",
+                    "fonte_url": config["url"],
+                },
+            },
+        )
+        agregados += 1
+
+    execucao.status = FonteOficialExecucao.STATUS_CONCLUIDA
+    execucao.registros_lidos = registros
+    execucao.agregados_gerados = agregados
+    execucao.mensagem = (
+        f"Amostra controlada {config['fonte_nome']} processada com sucesso. "
+        "Foram gravados somente agregados oficiais, sem armazenar microdados brutos."
+    )
+    execucao.metadados = {
+        **execucao.metadados,
+        "fonte_amostra": {
+            "url": config["url"],
+            "http_status": response.status_code,
+            "content_range": response.headers.get("content-range"),
+            "max_bytes": max_bytes,
+            "max_linhas": max_linhas,
+        },
+    }
+    execucao.finalizado_em = timezone.now()
+    execucao.save(
+        update_fields=[
+            "status",
+            "registros_lidos",
+            "agregados_gerados",
+            "mensagem",
+            "metadados",
+            "finalizado_em",
+        ]
+    )
+    return execucao
 
 
 def _parse_sivep_blocks(
@@ -275,10 +447,22 @@ def preparar_execucao_fonte_oficial(
             max_blocos=min(max(max_blocos, 1), 20),
         )
 
+    config = FONTES_CSV_CONFIG.get(fonte_id)
+    if config:
+        return _processar_csv_oficial(
+            execucao,
+            fonte_id,
+            config,
+            max_bytes=min(max(max_bytes, 20_000), 3_000_000),
+            max_linhas=min(max(max_linhas, 10), 20_000),
+        )
+
     execucao.status = FonteOficialExecucao.STATUS_FALHOU
     execucao.mensagem = (
-        "Download de microdados ainda nao habilitado. Ative somente apos definir fonte, "
-        "limites de volume, armazenamento e janela de execucao."
+        "Esta fonte oficial e publicada apenas em formato comprimido (.csv.zip) ou em "
+        "arquivos segmentados de grande volume, incompativeis com a amostragem por HTTP "
+        "Range. A coleta exige um worker assincrono dedicado de descompactacao/ingestao. "
+        "Arboviroses notificadas (SINAN) ja sao cobertas em tempo real pela camada InfoDengue."
     )
     execucao.finalizado_em = timezone.now()
     execucao.save(update_fields=["status", "mensagem", "finalizado_em"])
