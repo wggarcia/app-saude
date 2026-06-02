@@ -223,9 +223,68 @@ class Command(BaseCommand):
                 self.out(f"  ✅ {email} criado", self.style.SUCCESS)
                 criados += 1
 
+        # Garante as credenciais de login do APP do trabalhador mesmo quando a
+        # empresa SST já existe (o bloco de dados acima é pulado nesse caso, e
+        # as credenciais luiz@app.local / carlos@app.local vivem dentro dele).
+        # Sem isso, os avaliadores da App Store recebem 404 "E-mail não
+        # encontrado" (causa da rejeição Apple Guideline 2.1).
+        self._garantir_credenciais_app()
+
         self._recria_dono_saas()
 
         self.out(f"\n  {criados} conta(s) demo criada(s). ✅\n", self.style.SUCCESS)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # CREDENCIAIS DO APP DO TRABALHADOR — idempotente, seguro em produção
+    # ─────────────────────────────────────────────────────────────────────────
+    def _garantir_credenciais_app(self):
+        """Garante que luiz@app.local e carlos@app.local existam e tenham a
+        senha conhecida, vinculados a funcionários da empresa demo SST.
+
+        Idempotente: cria o que faltar e reseta a senha das credenciais para o
+        valor publicado (necessário para a revisão da App Store / Play Store).
+        """
+        from api.models import Empresa, FuncionarioSST, CredencialAppFuncionario
+
+        empresa = Empresa.objects.filter(email="demo.sst@soluscrt.com").first()
+        if not empresa:
+            self.out("  ⚠ empresa demo SST inexistente — não há onde criar credenciais app", self.style.WARNING)
+            return
+
+        # (cpf, nome, cargo, setor, email_app, senha_app)
+        trabalhadores = [
+            ("111.222.333-44", "Luiz Oliveira",      "Técnico de Segurança do Trabalho", "Produção",
+             "luiz@app.local",   "Luiz@2026"),
+            ("333.444.555-66", "Carlos Alberto Lima", "Operador de Produção",            "Produção",
+             "carlos@app.local", "Carlos@2026"),
+        ]
+
+        for cpf, nome, cargo, setor, email_app, senha_app in trabalhadores:
+            func = FuncionarioSST.objects.filter(empresa=empresa, cpf=cpf).first()
+            if not func:
+                func = FuncionarioSST.objects.filter(empresa=empresa, nome=nome).first()
+            if not func:
+                func = FuncionarioSST.objects.create(
+                    empresa=empresa, ativo=True, nome=nome, cpf=cpf,
+                    cargo=cargo, setor=setor,
+                )
+            elif not func.ativo:
+                func.ativo = True
+                func.save(update_fields=["ativo"])
+
+            cred = CredencialAppFuncionario.objects.filter(email=email_app).first()
+            if cred:
+                cred.funcionario = func
+                cred.senha = make_password(senha_app)
+                cred.ativo = True
+                cred.save(update_fields=["funcionario", "senha", "ativo"])
+                self.out(f"  ~ {email_app} (senha redefinida)", self.style.SUCCESS)
+            else:
+                CredencialAppFuncionario.objects.create(
+                    funcionario=func, email=email_app,
+                    senha=make_password(senha_app), ativo=True,
+                )
+                self.out(f"  ✅ {email_app} criado", self.style.SUCCESS)
 
     # ─────────────────────────────────────────────────────────────────────────
     # REFRESH DADOS — recria dados sem deletar contas
