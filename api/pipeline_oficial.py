@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import csv
+import zipfile
 from collections import defaultdict
-from io import StringIO
+from io import BytesIO, StringIO, TextIOWrapper
 
 import requests
 from django.utils import timezone
@@ -53,6 +54,28 @@ FONTES_CSV_CONFIG = {
     },
 }
 
+# Fontes oficiais publicadas apenas em .csv.zip (incompativel com HTTP Range).
+# Exigem um worker que baixe o zip completo (com teto de tamanho), descompacte
+# em streaming e agregue sem persistir microdados brutos.
+FONTES_ZIP_CONFIG = {
+    "sinan_agravos": {
+        "url": "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SINAN/Dengue/csv/DENGBR25.csv.zip",
+        "delimiter": ",",
+        "encoding": "latin-1",
+        "indicador": "dengue_notificacoes_sinan",
+        "unidade": "notificacoes",
+        "fonte_nome": "SINAN / Dengue",
+        "versao_fonte": "DENGBR25",
+        "ibge_cols": ["ID_MUNICIP", "ID_MN_RESI"],
+        "municipio_cols": [],
+        "uf_cols": [],
+        "uf_from_ibge": True,
+        "periodo_sem_col": "SEM_NOT",  # YYYYWW (semana epidemiologica)
+        "valor_col": None,  # cada linha = 1 notificacao
+        "max_download_bytes": 250_000_000,  # teto de seguranca para o zip
+    },
+}
+
 
 def _numero(valor):
     try:
@@ -83,6 +106,13 @@ def _periodo_de_comp(valor):
     return valor or "competencia_nao_informada"
 
 
+def _periodo_de_semana(valor):
+    valor = (valor or "").strip()
+    if len(valor) == 6 and valor.isdigit():
+        return f"{valor[0:4]}-S{valor[4:6]}"
+    return valor or "semana_nao_informada"
+
+
 def _localizar_territorio(row, config):
     codigo_ibge = _primeiro_valor(row, config.get("ibge_cols"))
     if config.get("uf_from_ibge") and len(codigo_ibge) >= 2 and codigo_ibge[:2].isdigit():
@@ -101,6 +131,8 @@ def _localizar_periodo(row, config):
         )
         if periodo:
             return periodo
+    if config.get("periodo_sem_col"):
+        return _periodo_de_semana(row.get(config["periodo_sem_col"]))
     if config.get("periodo_comp_col"):
         return _periodo_de_comp(row.get(config["periodo_comp_col"]))
     return "periodo_nao_informado"
@@ -382,6 +414,100 @@ def _processar_sivep_amostra(
     return execucao
 
 
+def _processar_zip_oficial(execucao, fonte_id, config, *, max_linhas, max_download_bytes):
+    # Baixa o zip completo com teto de tamanho, descompacta em streaming e agrega.
+    # Nada de microdados brutos e persistido: somente contagens/somas por territorio/periodo.
+    with requests.get(config["url"], stream=True, timeout=300) as response:
+        response.raise_for_status()
+        buffer = BytesIO()
+        baixado = 0
+        for chunk in response.iter_content(chunk_size=1 << 20):
+            if not chunk:
+                continue
+            baixado += len(chunk)
+            if baixado > max_download_bytes:
+                raise ValueError(
+                    f"Arquivo zip excede o teto de seguranca de {max_download_bytes} bytes."
+                )
+            buffer.write(chunk)
+
+    buffer.seek(0)
+    arquivo_zip = zipfile.ZipFile(buffer)
+    membro = next((n for n in arquivo_zip.namelist() if n.lower().endswith(".csv")), None)
+    if not membro:
+        raise ValueError("Arquivo zip oficial nao contem CSV interno.")
+
+    target_uf = (execucao.uf or "").strip().upper()
+    aggregations = defaultdict(float)
+    registros = 0
+
+    with arquivo_zip.open(membro) as raw:
+        texto = TextIOWrapper(raw, encoding=config.get("encoding", "latin-1"), errors="ignore")
+        reader = csv.DictReader(texto, delimiter=config["delimiter"])
+        for row in reader:
+            if registros >= max_linhas:
+                break
+            uf, cidade, codigo_ibge = _localizar_territorio(row, config)
+            if target_uf and target_uf != (uf or "").upper():
+                continue
+            periodo = _localizar_periodo(row, config)
+            valor_col = config.get("valor_col")
+            incremento = _numero(row.get(valor_col)) if valor_col else 1
+            aggregations[(uf or "", cidade or "", codigo_ibge or "", periodo)] += incremento
+            registros += 1
+
+    agregados = 0
+    for (uf, cidade, codigo_ibge, periodo), total in aggregations.items():
+        FonteOficialAgregado.objects.update_or_create(
+            fonte_id=fonte_id,
+            indicador=config["indicador"],
+            codigo_ibge=codigo_ibge or None,
+            estado=uf or None,
+            cidade=cidade or None,
+            periodo=periodo,
+            defaults={
+                "valor": round(total, 2),
+                "unidade": config["unidade"],
+                "fonte_nome": config["fonte_nome"],
+                "versao_fonte": config["versao_fonte"],
+                "metadados": {
+                    "tipo": "amostra_controlada_zip",
+                    "fonte_url": config["url"],
+                },
+            },
+        )
+        agregados += 1
+
+    execucao.status = FonteOficialExecucao.STATUS_CONCLUIDA
+    execucao.registros_lidos = registros
+    execucao.agregados_gerados = agregados
+    execucao.mensagem = (
+        f"Coleta controlada {config['fonte_nome']} (.csv.zip) processada com sucesso. "
+        "Zip descompactado em streaming; gravados somente agregados oficiais, sem microdados brutos."
+    )
+    execucao.metadados = {
+        **execucao.metadados,
+        "fonte_amostra": {
+            "url": config["url"],
+            "membro": membro,
+            "bytes_baixados": baixado,
+            "max_linhas": max_linhas,
+        },
+    }
+    execucao.finalizado_em = timezone.now()
+    execucao.save(
+        update_fields=[
+            "status",
+            "registros_lidos",
+            "agregados_gerados",
+            "mensagem",
+            "metadados",
+            "finalizado_em",
+        ]
+    )
+    return execucao
+
+
 def preparar_execucao_fonte_oficial(
     fonte_id: str,
     *,
@@ -457,12 +583,24 @@ def preparar_execucao_fonte_oficial(
             max_linhas=min(max(max_linhas, 10), 20_000),
         )
 
+    zip_config = FONTES_ZIP_CONFIG.get(fonte_id)
+    if zip_config:
+        return _processar_zip_oficial(
+            execucao,
+            fonte_id,
+            zip_config,
+            # Default da CLI e 1000; para o zip usamos um piso maior porque a fonte
+            # nacional nao e ordenada por UF (amostra inicial ja cobre as 27 UFs).
+            max_linhas=min(max(max_linhas, 50_000), 3_000_000),
+            max_download_bytes=zip_config.get("max_download_bytes", 250_000_000),
+        )
+
     execucao.status = FonteOficialExecucao.STATUS_FALHOU
     execucao.mensagem = (
-        "Esta fonte oficial e publicada apenas em formato comprimido (.csv.zip) ou em "
-        "arquivos segmentados de grande volume, incompativeis com a amostragem por HTTP "
-        "Range. A coleta exige um worker assincrono dedicado de descompactacao/ingestao. "
-        "Arboviroses notificadas (SINAN) ja sao cobertas em tempo real pela camada InfoDengue."
+        "Esta fonte oficial e publicada em arquivos segmentados de grande volume com nomes "
+        "rotativos (particoes Spark) e listagem de bucket bloqueada, o que impede a coleta "
+        "deterministica por HTTP Range. A ingestao exige resolver o link de download dinamico "
+        "do portal a cada publicacao (worker dedicado)."
     )
     execucao.finalizado_em = timezone.now()
     execucao.save(update_fields=["status", "mensagem", "finalizado_em"])
