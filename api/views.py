@@ -2679,49 +2679,93 @@ def app_mapa_publico(request):
     return JsonResponse({"hotspots": resultado}, safe=False)
 
 
+def _filtrar_alertas_publicos(queryset, estado=None, cidade=None, bairro=None, incluir_gerais=True):
+    if estado:
+        estado_filter = Q(estado__in=_state_terms(estado))
+        if incluir_gerais:
+            estado_filter |= Q(estado__isnull=True) | Q(estado="")
+        queryset = queryset.filter(estado_filter)
+    if cidade:
+        cidade_filter = Q(cidade=cidade)
+        if incluir_gerais:
+            cidade_filter |= Q(cidade__isnull=True) | Q(cidade="")
+        queryset = queryset.filter(cidade_filter)
+    if bairro:
+        bairro_filter = Q(bairro=bairro)
+        if incluir_gerais:
+            bairro_filter |= Q(bairro__isnull=True) | Q(bairro="")
+        queryset = queryset.filter(bairro_filter)
+    return queryset
+
+
+def _payload_alerta_publico(alerta):
+    return {
+        "id": alerta.id,
+        "titulo": alerta.titulo,
+        "mensagem": alerta.mensagem,
+        "estado": alerta.estado,
+        "cidade": alerta.cidade,
+        "bairro": alerta.bairro,
+        "nivel": alerta.nivel,
+        "protocolo": alerta.protocolo,
+        "criado_em": alerta.criado_em.isoformat(),
+    }
+
+
+def _dedupe_alertas_publicos(alertas):
+    unicos = {}
+    for alerta in sorted(alertas, key=lambda item: item.criado_em, reverse=True):
+        chave = (
+            alerta.protocolo
+            or f"{alerta.titulo}|{alerta.mensagem}|{alerta.estado}|{alerta.cidade}|{alerta.bairro}"
+        )
+        atual = unicos.get(chave)
+        if atual is None or alerta.criado_em >= atual.criado_em:
+            unicos[chave] = alerta
+    return sorted(unicos.values(), key=lambda item: item.criado_em, reverse=True)
+
+
 def app_alertas_publicos(request):
     # ── RLS: garante visibilidade dos alertas do setor público ──────────────
     from api.middleware import _rls_set_empresa as _set_rls
     _emp_pub = _empresa_app_publico()
-    _set_rls(_emp_pub.id)
     cidade = request.GET.get("cidade")
     estado = request.GET.get("estado")
     bairro = request.GET.get("bairro")
     incluir_gerais = request.GET.get("incluir_gerais", "1").lower() not in {"0", "false", "nao", "não"}
 
-    alertas = AlertaGovernamental.objects.filter(
-        ativo=True,
-        status=AlertaGovernamental.STATUS_PUBLICADO,
-    ).order_by("-criado_em")
-    if estado:
-        estado_filter = Q(estado__in=_state_terms(estado))
-        if incluir_gerais:
-            estado_filter |= Q(estado__isnull=True) | Q(estado="")
-        alertas = alertas.filter(estado_filter)
-    if cidade:
-        cidade_filter = Q(cidade=cidade)
-        if incluir_gerais:
-            cidade_filter |= Q(cidade__isnull=True) | Q(cidade="")
-        alertas = alertas.filter(cidade_filter)
-    if bairro:
-        bairro_filter = Q(bairro=bairro)
-        if incluir_gerais:
-            bairro_filter |= Q(bairro__isnull=True) | Q(bairro="")
-        alertas = alertas.filter(bairro_filter)
+    alertas_coletados = []
+    empresas_publicaveis = list(
+        Empresa.objects.filter(
+            Q(id=_emp_pub.id) | Q(tipo_conta=Empresa.TIPO_GOVERNO)
+        ).values_list("id", flat=True)
+    )
+    if _emp_pub.id not in empresas_publicaveis:
+        empresas_publicaveis.insert(0, _emp_pub.id)
+
+    for empresa_id in empresas_publicaveis:
+        _set_rls(empresa_id)
+        queryset = AlertaGovernamental.objects.filter(
+            empresa_id=empresa_id,
+            ativo=True,
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+        ).order_by("-criado_em")
+        queryset = _filtrar_alertas_publicos(
+            queryset,
+            estado=estado,
+            cidade=cidade,
+            bairro=bairro,
+            incluir_gerais=incluir_gerais,
+        )
+        alertas_coletados.extend(list(queryset[:12]))
+
+    _set_rls(_emp_pub.id)
+    alertas = _dedupe_alertas_publicos(alertas_coletados)[:12]
 
     return JsonResponse({
         "alertas": [
-            {
-                "id": alerta.id,
-                "titulo": alerta.titulo,
-                "mensagem": alerta.mensagem,
-                "estado": alerta.estado,
-                "cidade": alerta.cidade,
-                "bairro": alerta.bairro,
-                "nivel": alerta.nivel,
-                "criado_em": alerta.criado_em.isoformat(),
-            }
-            for alerta in alertas[:12]
+            _payload_alerta_publico(alerta)
+            for alerta in alertas
         ]
     })
 

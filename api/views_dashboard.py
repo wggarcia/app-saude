@@ -71,6 +71,83 @@ def _principal_label(request):
     return "sistema"
 
 
+def _empresa_publica_app():
+    from .views import _empresa_app_publico
+    return _empresa_app_publico()
+
+
+def _sincronizar_alerta_no_app_publico(alerta):
+    if not alerta.protocolo or not alerta.empresa_id:
+        return None
+
+    empresa_publica = _empresa_publica_app()
+    if alerta.empresa_id == empresa_publica.id:
+        return alerta
+
+    from api.middleware import _rls_set_empresa
+
+    empresa_origem_id = alerta.empresa_id
+    _rls_set_empresa(empresa_publica.id)
+    try:
+        espelho = (
+            AlertaGovernamental.objects
+            .filter(empresa=empresa_publica, protocolo=alerta.protocolo)
+            .order_by("-id")
+            .first()
+        )
+        dados = {
+            "titulo": alerta.titulo,
+            "mensagem": alerta.mensagem,
+            "estado": alerta.estado,
+            "cidade": alerta.cidade,
+            "bairro": alerta.bairro,
+            "nivel": alerta.nivel,
+            "ativo": alerta.ativo,
+            "status": alerta.status,
+            "justificativa": alerta.justificativa,
+            "criado_por": alerta.criado_por,
+            "revisado_por": alerta.revisado_por,
+            "aprovado_por": alerta.aprovado_por,
+            "aprovado_em": alerta.aprovado_em,
+            "publicado_em": alerta.publicado_em,
+            "revogado_em": alerta.revogado_em,
+        }
+        if espelho is None:
+            espelho = AlertaGovernamental.objects.create(
+                empresa=empresa_publica,
+                protocolo=alerta.protocolo,
+                **dados,
+            )
+        else:
+            for campo, valor in dados.items():
+                setattr(espelho, campo, valor)
+            espelho.save(update_fields=[*dados.keys()])
+        return espelho
+    finally:
+        _rls_set_empresa(empresa_origem_id)
+
+
+def _remover_alerta_do_app_publico(alerta):
+    if not alerta.protocolo or not alerta.empresa_id:
+        return
+
+    empresa_publica = _empresa_publica_app()
+    if alerta.empresa_id == empresa_publica.id:
+        return
+
+    from api.middleware import _rls_set_empresa
+
+    empresa_origem_id = alerta.empresa_id
+    _rls_set_empresa(empresa_publica.id)
+    try:
+        AlertaGovernamental.objects.filter(
+            empresa=empresa_publica,
+            protocolo=alerta.protocolo,
+        ).delete()
+    finally:
+        _rls_set_empresa(empresa_origem_id)
+
+
 def _principal_pode_configurar_ti(request, empresa):
     if not empresa:
         return False
@@ -488,6 +565,8 @@ def api_criar_alerta_governo(request):
             "escopo": {"estado": alerta.estado, "cidade": alerta.cidade, "bairro": alerta.bairro},
         },
     )
+    if publicar_agora:
+        _sincronizar_alerta_no_app_publico(alerta)
     push_resultado = enviar_alerta_governamental(alerta) if publicar_agora else {"status": "aguardando_aprovacao", "enviados": 0}
     return JsonResponse({
         "status": "ok",
@@ -527,6 +606,7 @@ def api_toggle_alerta_governo(request):
         alerta.status = AlertaGovernamental.STATUS_REVOGADO
         alerta.revogado_em = timezone.now()
     alerta.save(update_fields=["ativo", "status", "publicado_em", "revogado_em"])
+    _sincronizar_alerta_no_app_publico(alerta)
     registrar_auditoria_institucional(
         request,
         "alerta_governo_toggle",
@@ -602,6 +682,7 @@ def api_fluxo_alerta_governo(request):
             return JsonResponse({"erro": "somente alertas revogados podem ser excluidos"}, status=400)
         alerta_id = alerta.id
         protocolo = alerta.protocolo
+        _remover_alerta_do_app_publico(alerta)
         registrar_auditoria_institucional(
             request,
             "alerta_governo_excluir",
@@ -623,6 +704,8 @@ def api_fluxo_alerta_governo(request):
         alerta.justificativa = justificativa
 
     alerta.save(update_fields=update_fields)
+    if acao in {"publicar", "revogar"}:
+        _sincronizar_alerta_no_app_publico(alerta)
     registrar_auditoria_institucional(
         request,
         f"alerta_governo_{acao}",

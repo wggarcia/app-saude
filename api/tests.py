@@ -2491,6 +2491,43 @@ class GovernanceTests(TestCase):
         self.assertEqual(alerta.status, AlertaGovernamental.STATUS_PUBLICADO)
         self.assertTrue(alerta.ativo)
 
+    def test_fluxo_alerta_publicado_espelha_para_app_publico(self):
+        criado = self.client.post(
+            "/api/governo/alertas/criar",
+            data=json.dumps({
+                "titulo": "Alerta para o app",
+                "mensagem": "Comunicado oficial para a populacao",
+                "nivel": "alto",
+            }),
+            content_type="application/json",
+        )
+        alerta_id = criado.json()["alerta_id"]
+        self.client.post(
+            "/api/governo/alertas/fluxo",
+            data=json.dumps({"alerta_id": alerta_id, "acao": "aprovar"}),
+            content_type="application/json",
+        )
+        publicar = self.client.post(
+            "/api/governo/alertas/fluxo",
+            data=json.dumps({"alerta_id": alerta_id, "acao": "publicar"}),
+            content_type="application/json",
+        )
+
+        alerta = AlertaGovernamental.objects.get(id=alerta_id)
+        empresa_publica = Empresa.objects.get(email="populacao@soluscrt.com")
+        espelho = AlertaGovernamental.objects.filter(
+            empresa=empresa_publica,
+            protocolo=alerta.protocolo,
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+            ativo=True,
+        )
+        response_publico = Client().get("/api/public/alertas")
+
+        self.assertEqual(publicar.status_code, 200)
+        self.assertTrue(espelho.exists())
+        self.assertEqual(len(response_publico.json()["alertas"]), 1)
+        self.assertEqual(response_publico.json()["alertas"][0]["titulo"], "Alerta para o app")
+
     def test_header_bearer_invalido_nao_gera_erro_no_middleware(self):
         response = self.client.post(
             "/api/governo/alertas/criar",
