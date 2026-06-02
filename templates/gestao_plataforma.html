@@ -2556,7 +2556,7 @@ async function loadRH() {
     const tvRate = document.getElementById('rhTaxaTurnover');
     if (tvRate) tvRate.style.color = taxa > 20 ? 'var(--danger)' : taxa > 10 ? 'var(--warn)' : 'var(--ok)';
   } else {
-    // Show demo data when endpoint not yet available
+    // Mantem a tela vazia quando a API nao responde
     set('rhHeadcount', '—');
     set('rhAtivos', '—');
     renderRhPipelineLog();
@@ -2593,7 +2593,7 @@ async function processarImportacaoRH() {
   const bar = document.getElementById('rhImportBar');
   if (progress) progress.style.display = 'block';
 
-  // Simulate progress
+  // Atualiza o progresso da importacao
   let pct = 0;
   const timer = setInterval(() => { pct = Math.min(pct + 15, 90); if (bar) bar.style.width = pct + '%'; }, 200);
 

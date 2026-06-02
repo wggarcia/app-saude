@@ -3152,60 +3152,34 @@ async function loadDashboard() {
       document.getElementById('dashNPSDelta').textContent = npsLabel + ' · ' + (r.nps_respondentes || 0) + ' respondentes';
       document.getElementById('dashNPSDelta').className = 'exec-delta ' + (r.nps >= 50 ? 'up' : 'flat');
     }
-    renderarGraficoBenef(r.crescimento_beneficiarios || _getMockCrescimento());
+    renderarGraficoBenef(r.crescimento_beneficiarios || []);
     renderarMLRPlanos(r.mlr_por_plano || []);
     renderarMLRMensal(r.mlr_mensal || []);
     renderarTopProc(r.top_procedimentos || []);
   } catch(e) {
-    // fallback com dados demo
-    renderarGraficoBenef(_getMockCrescimento());
-    renderarMLRPlanos(_getMockMLRPlanos());
-    renderarMLRMensal(_getMockMLRMensal());
-    renderarTopProc(_getMockTopProc());
-    document.getElementById('dashMLR').textContent = '82.4%';
-    document.getElementById('dashMLRDelta').textContent = '✓ Dentro da meta ANS';
-    document.getElementById('dashMLRDelta').className = 'exec-delta up';
-    document.getElementById('dashPMPM').textContent = 'R$ 487';
-    document.getElementById('dashPMPMDelta').textContent = '▲ +2.3% vs mes ant.';
-    document.getElementById('dashPMPMDelta').className = 'exec-delta down';
-    document.getElementById('dashMRR').textContent = 'R$ 1,24M';
-    document.getElementById('dashMRRDelta').textContent = '▲ +8.7% crescimento';
-    document.getElementById('dashMRRDelta').className = 'exec-delta up';
-    document.getElementById('dashNPS').textContent = '67';
-    document.getElementById('dashNPSDelta').textContent = 'Bom · 342 respondentes';
-    document.getElementById('dashNPSDelta').className = 'exec-delta up';
+    renderarGraficoBenef([]);
+    renderarMLRPlanos([]);
+    renderarMLRMensal([]);
+    renderarTopProc([]);
+    document.getElementById('dashMLR').textContent = '—';
+    document.getElementById('dashMLRDelta').textContent = 'Sem dados ao vivo';
+    document.getElementById('dashMLRDelta').className = 'exec-delta flat';
+    document.getElementById('dashPMPM').textContent = '—';
+    document.getElementById('dashPMPMDelta').textContent = 'Sem dados ao vivo';
+    document.getElementById('dashPMPMDelta').className = 'exec-delta flat';
+    document.getElementById('dashMRR').textContent = '—';
+    document.getElementById('dashMRRDelta').textContent = 'Sem dados ao vivo';
+    document.getElementById('dashMRRDelta').className = 'exec-delta flat';
+    document.getElementById('dashNPS').textContent = '—';
+    document.getElementById('dashNPSDelta').textContent = 'Sem dados ao vivo';
+    document.getElementById('dashNPSDelta').className = 'exec-delta flat';
   }
-}
-
-function _getMockCrescimento() {
-  const meses = ['Jun','Jul','Ago','Set','Out','Nov','Dez','Jan','Fev','Mar','Abr','Mai'];
-  return meses.map((m,i) => ({mes: m, valor: 2100 + i*87 + Math.round(Math.random()*60)}));
-}
-function _getMockMLRPlanos() {
-  return [
-    {nome:'Empresarial Plus', valor:79.2, max:100},
-    {nome:'Individual Bronze', valor:91.1, max:100},
-    {nome:'Familiar Silver', valor:83.7, max:100},
-    {nome:'Senior Premium', valor:87.4, max:100},
-  ];
-}
-function _getMockMLRMensal() {
-  const meses=['Jan','Fev','Mar','Abr','Mai','Jun'];
-  return meses.map((m,i) => ({mes:m, valor:78+i*1.2+Math.random()*4}));
-}
-function _getMockTopProc() {
-  return [
-    {codigo:'30701173', nome:'Ressonancia Magnetica', custo:42800},
-    {codigo:'22030018', nome:'Internacao Clinica', custo:38500},
-    {codigo:'30602017', nome:'Tomografia Computadorizada', custo:28100},
-    {codigo:'30404035', nome:'Cateterismo', custo:24700},
-    {codigo:'31303153', nome:'Colecistectomia', custo:19900},
-  ];
 }
 
 function renderarGraficoBenef(dados) {
   const el = document.getElementById('chartBeneficiarios');
-  if (!el || !dados.length) return;
+  if (!el) return;
+  if (!dados.length) { el.innerHTML = '<div class="empty">Sem dados ao vivo</div>'; return; }
   const max = Math.max(...dados.map(d=>d.valor));
   el.innerHTML = dados.slice(-6).map(d => `
     <div class="chart-bar-row">
@@ -3217,6 +3191,7 @@ function renderarGraficoBenef(dados) {
 function renderarMLRPlanos(dados) {
   const el = document.getElementById('chartMLRPlanos');
   if (!el) return;
+  if (!dados.length) { el.innerHTML = '<div class="empty">Sem dados ao vivo</div>'; return; }
   el.innerHTML = dados.map(d => {
     const cor = d.valor > 85 ? 'var(--danger)' : d.valor > 78 ? 'var(--warn)' : 'var(--ok)';
     return `<div class="chart-bar-row">
@@ -3229,6 +3204,7 @@ function renderarMLRPlanos(dados) {
 function renderarMLRMensal(dados) {
   const el = document.getElementById('chartMLRMensal');
   if (!el) return;
+  if (!dados.length) { el.innerHTML = '<div class="empty">Sem dados ao vivo</div>'; return; }
   el.innerHTML = dados.map(d => {
     const cor = d.valor > 85 ? 'var(--danger)' : d.valor > 78 ? 'var(--warn)' : 'var(--ok)';
     return `<div class="chart-bar-row">
@@ -3243,6 +3219,7 @@ function renderarMLRMensal(dados) {
 function renderarTopProc(dados) {
   const el = document.getElementById('chartTopProc');
   if (!el) return;
+  if (!dados.length) { el.innerHTML = '<div class="empty">Sem dados ao vivo</div>'; return; }
   const max = dados.length ? Math.max(...dados.map(d=>d.custo)) : 1;
   el.innerHTML = dados.map(d => `
     <div class="chart-bar-row">
@@ -3361,15 +3338,13 @@ async function loadSLA() {
     if (r.geral_pct !== undefined) document.getElementById('slaGeral').textContent = r.geral_pct.toFixed(0)+'%';
     document.getElementById('slaBreachCount').textContent = (r.breaches||[]).length;
   } catch(e) {
-    // demo data
-    const mockTipos = _SLA_TIPOS.map((t,i) => ({...t, total:30+i*12, no_prazo:28+i*10}));
-    renderSLAGuias(mockTipos);
-    renderSLABreaches(_getMockBreaches());
-    document.getElementById('slaConsultaOk').textContent = '94%';
-    document.getElementById('slaExameOk').textContent = '88%';
-    document.getElementById('slaUrg').textContent = '2';
-    document.getElementById('slaGeral').textContent = '91%';
-    document.getElementById('slaBreachCount').textContent = '3';
+    renderSLAGuias([]);
+    renderSLABreaches([]);
+    document.getElementById('slaConsultaOk').textContent = '—';
+    document.getElementById('slaExameOk').textContent = '—';
+    document.getElementById('slaUrg').textContent = '—';
+    document.getElementById('slaGeral').textContent = '—';
+    document.getElementById('slaBreachCount').textContent = '0';
   }
 }
 function renderSLAGuias(lista) {
@@ -3387,13 +3362,6 @@ function renderSLAGuias(lista) {
       <div class="sla-count" style="color:${cor}">${t.no_prazo}/${t.total}</div>
     </div>`;
   }).join('');
-}
-function _getMockBreaches() {
-  return [
-    {id:'GUI-4412', beneficiario:'Carlos Menezes', tipo:'Internacao eletiva', prazo:'21 dias', aberto_ha:'24 dias', prestador:'Hospital Santa Cruz'},
-    {id:'GUI-4389', beneficiario:'Ana Ferreira', tipo:'Exame complexidade', prazo:'10 dias', aberto_ha:'11 dias', prestador:'Lab BioMedic'},
-    {id:'GUI-4401', beneficiario:'Pedro Lima', tipo:'Consulta urgencia', prazo:'4h', aberto_ha:'6h', prestador:'UPA Norte'},
-  ];
 }
 function renderSLABreaches(lista) {
   const tb = document.getElementById('slaBreachTabela');
@@ -3427,26 +3395,14 @@ async function loadAuditoria() {
     document.getElementById('auditMedio').textContent = r.medio_count || 0;
     document.getElementById('auditEconomia').textContent = fmtMoeda(r.economia_estimada || 0);
   } catch(e) {
-    const mockBenef = [
-      {nome:'Roberto Alves', plano:'Senior Premium', score:94, fatores:['Alta frequencia','Multiplos medicos','Procedimentos duplicados']},
-      {nome:'Claudia Santos', plano:'Individual Bronze', score:78, fatores:['Pico de internacoes','CID recorrente']},
-      {nome:'Marcos Teixeira', plano:'Familiar Silver', score:71, fatores:['Guias sem CID']},
-    ];
-    _auditDados = mockBenef;
-    renderAuditRiscos(mockBenef);
-    renderAuditPadroes([
-      {nome:'Fracionamento de procedimentos', count:12, impacto:'Alto'},
-      {nome:'Guias sem CID correspondente', count:28, impacto:'Medio'},
-      {nome:'Duplicidade de cobranças', count:5, impacto:'Alto'},
-    ]);
-    renderAuditProc([
-      {codigo:'30701173', nome:'Ressonancia Magnetica', esperada:'2.1%', real:'4.8%', desvio:'+128%', custo_extra:'R$ 18.400', status:'Investigar'},
-      {codigo:'40301523', nome:'Consulta Especialista', esperada:'12%', real:'19%', desvio:'+58%', custo_extra:'R$ 9.200', status:'Monitorar'},
-    ]);
-    document.getElementById('auditCritico').textContent = '3';
-    document.getElementById('auditAlto').textContent = '11';
-    document.getElementById('auditMedio').textContent = '24';
-    document.getElementById('auditEconomia').textContent = 'R$ 47K';
+    _auditDados = [];
+    renderAuditRiscos([]);
+    renderAuditPadroes([]);
+    renderAuditProc([]);
+    document.getElementById('auditCritico').textContent = '0';
+    document.getElementById('auditAlto').textContent = '0';
+    document.getElementById('auditMedio').textContent = '0';
+    document.getElementById('auditEconomia').textContent = '—';
   }
 }
 function renderAuditRiscos(lista) {
@@ -3644,16 +3600,7 @@ async function loadComm() {
     const r = await api('/api/plano-saude/comunicacao/?tipo=' + _commTab);
     renderCommLista(r.contatos || []);
   } catch(e) {
-    const mockBenef = [
-      {id:1,nome:'Ana Paula Ribeiro',sub:'Plano Familiar Silver',avatar:'👩'},
-      {id:2,nome:'Carlos Eduardo',sub:'Senior Premium',avatar:'👨'},
-      {id:3,nome:'Maria Jose Silva',sub:'Empresarial Plus',avatar:'👩'},
-    ];
-    const mockPrest = [
-      {id:10,nome:'Hospital Santa Cruz',sub:'Clinica Geral · Credenciado',avatar:'🏥'},
-      {id:11,nome:'Lab BioMedic',sub:'Laboratorio · Credenciado',avatar:'🔬'},
-    ];
-    renderCommLista(_commTab==='benef' ? mockBenef : mockPrest);
+    renderCommLista([]);
   }
 }
 function renderCommLista(lista) {

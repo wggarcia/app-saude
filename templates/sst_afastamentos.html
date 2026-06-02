@@ -530,12 +530,9 @@ async function confirmarRetorno() {
     fecharModal();
     await carregarAfastamentos();
   } catch {
-    // fallback demo
-    const af = todosAfastamentos.find(a => a.id == id);
-    if (af) { af.status = 'encerrado'; af.data_retorno = data; }
     fecharModal();
-    renderKPIs(todosAfastamentos);
-    filtrarTabela();
+    toast('Não foi possível confirmar o retorno agora.', 'err');
+    await carregarAfastamentos();
   } finally {
     btn.disabled = false;
     btn.textContent = 'Confirmar Retorno';
@@ -612,15 +609,9 @@ async function registrarAfastamento() {
     fecharModalNovo();
     await carregarAfastamentos();
   } catch {
-    const nome = document.querySelector(`#novoFuncionario option[value="${payload.funcionario_id}"]`)?.textContent || 'Funcionário';
-    payload.id = Date.now();
-    payload.status = 'ativo';
-    payload.funcionario = nome;
-    payload.s2230_enviado = false;
-    todosAfastamentos.unshift(payload);
     fecharModalNovo();
-    renderKPIs(todosAfastamentos);
-    filtrarTabela();
+    toast('Não foi possível registrar o afastamento agora.', 'err');
+    await carregarAfastamentos();
   }
 }
 
@@ -662,14 +653,9 @@ async function carregarAfastamentos() {
       s2230_enviado: Boolean(a.s2230_enviado),
     }));
   } catch(err) {
-    console.warn('API indisponível, usando dados demo.', err);
-    todosAfastamentos = [
-      { id:1, funcionario:'Carlos Eduardo Lima',   motivo:'acidente_trabalho',  cid:'S60.0', data_inicio:'2025-03-10', data_retorno:null,         status:'ativo'              },
-      { id:2, funcionario:'Fernanda Costa',        motivo:'doenca_comum',       cid:'J06.9', data_inicio:'2025-04-01', data_retorno:'2025-04-15', status:'encerrado'          },
-      { id:3, funcionario:'João Marcos Souza',     motivo:'doenca_ocupacional', cid:'M54.5', data_inicio:'2025-02-20', data_retorno:'2025-05-10', status:'retorno_programado' },
-      { id:4, funcionario:'Ana Paula Ferreira',    motivo:'doenca_comum',       cid:'A09',   data_inicio:'2025-01-08', data_retorno:'2025-01-14', status:'encerrado'          },
-      { id:5, funcionario:'Roberto Alves',         motivo:'acidente_trabalho',  cid:'T14.0', data_inicio:'2025-04-22', data_retorno:null,         status:'ativo'              },
-    ];
+    console.warn('API indisponível ao carregar afastamentos.', err);
+    todosAfastamentos = [];
+    toast('Não foi possível carregar os afastamentos agora.', 'err');
   }
   renderKPIs(todosAfastamentos);
   filtrarTabela();

@@ -413,16 +413,9 @@ async function carregarExames() {
     const data = await resp.json();
     todosExames = data.exames || [];
   } catch (err) {
-    console.warn('API indisponível, usando dados de demonstração.', err);
-    todosExames = [
-      { id:1, funcionario:'Ana Paula Ferreira',  cargo:'Operadora de Máquinas', tipo_exame:'Admissional',   data_realizacao:'2024-03-12', data_validade:'2025-03-12', resultado:'Apto', status:'vencido'   },
-      { id:2, funcionario:'Carlos Eduardo Lima',  cargo:'Técnico de Segurança',  tipo_exame:'Periódico',     data_realizacao:'2024-11-05', data_validade:'2025-11-05', resultado:'Apto', status:'realizado' },
-      { id:3, funcionario:'Fernanda Costa',       cargo:'Analista Contábil',     tipo_exame:'Periódico',     data_realizacao:null,         data_validade:null,          resultado:null,   status:'pendente'  },
-      { id:4, funcionario:'João Marcos Souza',    cargo:'Auxiliar de Produção',  tipo_exame:'Demissional',   data_realizacao:'2025-01-20', data_validade:'2026-01-20', resultado:'Apto', status:'realizado' },
-      { id:5, funcionario:'Mariana Oliveira',     cargo:'Supervisora de RH',     tipo_exame:'Mudança Função',data_realizacao:null,         data_validade:null,          resultado:null,   status:'pendente'  },
-      { id:6, funcionario:'Roberto Alves',        cargo:'Operador Logístico',    tipo_exame:'Admissional',   data_realizacao:'2023-06-01', data_validade:'2024-06-01', resultado:'Apto', status:'vencido'   },
-      { id:7, funcionario:'Sandra Mendes',        cargo:'Coordenadora Qualidade',tipo_exame:'Periódico',     data_realizacao:'2025-02-28', data_validade:'2026-02-28', resultado:'Apto', status:'realizado' },
-    ];
+    console.warn('API indisponível ao carregar exames.', err);
+    todosExames = [];
+    _t('Não foi possível carregar os exames agora.', 'err');
   }
   renderKPIs(todosExames);
   filtrarTabela();
