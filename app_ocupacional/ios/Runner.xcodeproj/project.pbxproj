@@ -15,12 +15,12 @@
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		847B7C3F8E0758106A360023 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 48A09C4C1F98AECD00DE999C /* Pods_Runner.framework */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
-		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		9BF530072FBCE0AF00834D36 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 9BF530062FBCE0AF00834D36 /* GoogleService-Info.plist */; };
 		9BF530082FBCE0AF00834D36 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 9BF530062FBCE0AF00834D36 /* GoogleService-Info.plist */; };
 		9BF5300A2FBCE26F00834D36 /* GoogleService-Info 2.plist in Resources */ = {isa = PBXBuildFile; fileRef = 9BF530092FBCE26F00834D36 /* GoogleService-Info 2.plist */; };
 		9BF5300B2FBCE26F00834D36 /* GoogleService-Info 2.plist in Resources */ = {isa = PBXBuildFile; fileRef = 9BF530092FBCE26F00834D36 /* GoogleService-Info 2.plist */; };
+		A1B2C3D42FBC000100111111 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D52FBC000100111111 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,6 +72,7 @@
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9BF530062FBCE0AF00834D36 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		9BF530092FBCE26F00834D36 /* GoogleService-Info 2.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info 2.plist"; sourceTree = "<group>"; };
+		A1B2C3D52FBC000100111111 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		DE61AC144F4E9D00ABF7414A /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -166,6 +167,7 @@
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
 				97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */,
 				97C147021CF9000F007C117D /* Info.plist */,
+				A1B2C3D52FBC000100111111 /* PrivacyInfo.xcprivacy */,
 				1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */,
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
@@ -277,6 +279,7 @@
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				9BF5300B2FBCE26F00834D36 /* GoogleService-Info 2.plist in Resources */,
 				9BF530072FBCE0AF00834D36 /* GoogleService-Info.plist in Resources */,
+				A1B2C3D42FBC000100111111 /* PrivacyInfo.xcprivacy in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 			);
@@ -306,6 +309,22 @@
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
+		};
+		3A4B5C6D7E8F9A1B2C3D4E5F /* Compile Asset Catalog */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${SRCROOT}/Runner/Assets.xcassets",
+			);
+			name = "Compile Asset Catalog";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "ICON_DIR=\"${SRCROOT}/Runner/Assets.xcassets/AppIcon.appiconset\"\nAPP_DIR=\"${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}\"\nmkdir -p \"$APP_DIR\"\nOUTPUT=$(\"${DEVELOPER_DIR}/usr/bin/actool\" --output-format human-readable-text --notices --warnings --output-partial-info-plist \"${DERIVED_FILE_DIR}/assetcatalog_generated_info.plist\" --app-icon \"${ASSETCATALOG_COMPILER_APPICON_NAME}\" --compress-pngs --enable-on-demand-resources YES --development-region \"${DEVELOPMENT_LANGUAGE}\" --target-device iphone --target-device ipad --minimum-deployment-target \"${IPHONEOS_DEPLOYMENT_TARGET}\" --platform \"${PLATFORM_NAME}\" --compile \"$APP_DIR\" \"${SRCROOT}/Runner/Assets.xcassets\" 2>&1) || true\necho \"$OUTPUT\" | grep -v \"AssetCatalogSimulatorAgent\" | grep -v \"FIFOs\" | grep -v \"handshak\" || true\ncp \"$ICON_DIR/Icon-App-60x60@2x.png\" \"$APP_DIR/AppIcon60x60@2x.png\" || true\ncp \"$ICON_DIR/Icon-App-60x60@3x.png\" \"$APP_DIR/AppIcon60x60@3x.png\" || true\ncp \"$ICON_DIR/Icon-App-76x76@1x.png\" \"$APP_DIR/AppIcon76x76~ipad.png\" || true\ncp \"$ICON_DIR/Icon-App-76x76@2x.png\" \"$APP_DIR/AppIcon76x76@2x~ipad.png\" || true\ncp \"$ICON_DIR/Icon-App-83.5x83.5@2x.png\" \"$APP_DIR/AppIcon83.5x83.5@2x~ipad.png\" || true\nexit 0\n";
 		};
 		3B06AD1E1E4923F5004D2608 /* Thin Binary */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -393,22 +412,6 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
-		};
-		3A4B5C6D7E8F9A1B2C3D4E5F /* Compile Asset Catalog */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${SRCROOT}/Runner/Assets.xcassets",
-			);
-			name = "Compile Asset Catalog";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "OUTPUT=$(\"${DEVELOPER_DIR}/usr/bin/actool\" --output-format human-readable-text --notices --warnings --output-partial-info-plist \"${DERIVED_FILE_DIR}/assetcatalog_generated_info.plist\" --app-icon \"${ASSETCATALOG_COMPILER_APPICON_NAME}\" --compress-pngs --enable-on-demand-resources YES --development-region \"${DEVELOPMENT_LANGUAGE}\" --target-device iphone --target-device ipad --minimum-deployment-target \"${IPHONEOS_DEPLOYMENT_TARGET}\" --platform \"${PLATFORM_NAME}\" --compile \"${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}\" \"${SRCROOT}/Runner/Assets.xcassets\" 2>&1) || true\necho \"$OUTPUT\" | grep -v \"AssetCatalogSimulatorAgent\" | grep -v \"FIFOs\" | grep -v \"handshak\" || true\nexit 0\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -519,12 +522,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_ASSET_PATHS = Runner/Assets.xcassets;
 				DEVELOPMENT_TEAM = 3K2E6MP3S3;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "MEU RH";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -708,12 +713,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_ASSET_PATHS = Runner/Assets.xcassets;
 				DEVELOPMENT_TEAM = 3K2E6MP3S3;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "MEU RH";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -734,12 +741,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_ASSET_PATHS = Runner/Assets.xcassets;
 				DEVELOPMENT_TEAM = 3K2E6MP3S3;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "MEU RH";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

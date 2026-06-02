@@ -196,10 +196,13 @@ class _TelaLoginFuncionarioState extends State<TelaLoginFuncionario> {
                           payload['empresa_nome']?.toString() ?? '-',
                         );
                       } catch (e) {
-                        if (mounted) setState(() {
-                          _erro = e.toString().replaceFirst('Exception: ', '');
-                          _loading = false;
-                        });
+                        if (mounted) {
+                          setState(() {
+                            _erro =
+                                e.toString().replaceFirst('Exception: ', '');
+                            _loading = false;
+                          });
+                        }
                       }
                     },
                     icon: const Icon(Icons.developer_mode, size: 14),
