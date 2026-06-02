@@ -200,6 +200,7 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
           <a href="/sst/cats/" class="btn-action">Registrar CAT</a>
           <a id="btn-pdf-prontuario" href="/api/sst/funcionarios/{{ funcionario_id }}/prontuario/pdf" target="_blank" class="btn-action">📄 Baixar Prontuário PDF</a>
           <a id="btn-pdf-epi" href="/api/sst/epis/ficha/{{ funcionario_id }}/pdf" target="_blank" class="btn-action">🦺 Ficha EPI PDF</a>
+          <button class="btn-action" onclick="solicitarAssinaturaProntuario()">✍️ Assinar Prontuário</button>
         </div>
       </div>
     </div>
@@ -378,6 +379,17 @@ html,body{min-height:100%;font-family:'Manrope',system-ui,sans-serif;background:
 const FUNC_ID = {{ funcionario_id }};
 const FUNC_NOME_INICIAL = {{ funcionario_nome|safe|default:"''" }};
 
+async function solicitarAssinaturaProntuario(){
+  const r = await fetch('/api/sst/assinaturas/', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({tipo_documento:'prontuario',objeto_id:FUNC_ID})
+  });
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok){alert(d.erro || 'Não foi possível criar a assinatura.');return;}
+  window.open(d.assinatura.link_assinatura, '_blank');
+}
+
 // ─── HELPERS ───
 function diasBadge(dias) {
   if (dias === null || dias === undefined) return '<span class="badge b-cinza">Sem validade</span>';
@@ -550,10 +562,22 @@ function renderAfastamentos(afas) {
 
 // ─── INIT ───
 async function init() {
+  // Timeout defensivo: evita que a página fique "carregando 100%" para sempre
+  // caso a requisição trave (rede instável / worker ocupado).
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
   try {
     const res = await fetch('/api/sst/funcionarios/' + FUNC_ID + '/prontuario', {
-      credentials: 'include'
+      credentials: 'include',
+      signal: ctrl.signal
     });
+    clearTimeout(timer);
+
+    // Sessão expirada/sem permissão: leva ao login em vez de travar a tela.
+    if (res.status === 401 || res.status === 403) {
+      window.location.href = '/login-empresa/';
+      return;
+    }
     if (!res.ok) throw new Error('Erro ' + res.status);
     const data = await res.json();
 
@@ -565,9 +589,13 @@ async function init() {
     renderAfastamentos(data.afastamentos || []);
     renderAppStatus(data.app || {});
   } catch (err) {
+    clearTimeout(timer);
     console.error('Erro ao carregar prontuário:', err);
+    const aborted = err && err.name === 'AbortError';
     document.getElementById('id-nome').textContent = '{{ funcionario_nome }}';
-    document.getElementById('id-cargo').textContent = 'Erro ao carregar dados do servidor.';
+    document.getElementById('id-cargo').textContent = aborted
+      ? 'Tempo limite excedido — recarregue a página.'
+      : 'Erro ao carregar dados do servidor.';
     document.getElementById('app-status-label').textContent = 'Não foi possível verificar o status do app.';
   }
 }
