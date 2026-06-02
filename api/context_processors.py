@@ -6,6 +6,7 @@ def public_settings(request):
         "MAPBOX_ACCESS_TOKEN": settings.MAPBOX_ACCESS_TOKEN,
         "GOOGLE_MAPS_BROWSER_KEY": settings.GOOGLE_MAPS_BROWSER_KEY,
         "PUBLIC_BASE_URL": settings.PUBLIC_BASE_URL,
+        "ALLOW_ENTERPRISE_DEMO_MUTATIONS": getattr(settings, "ALLOW_ENTERPRISE_DEMO_MUTATIONS", False),
     }
 
 

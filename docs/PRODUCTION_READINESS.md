@@ -42,6 +42,7 @@ Depois de mover os secrets, rotacione chaves que ja ficaram em arquivos locais o
 - Ter ambiente de staging separado antes do ambiente oficial.
 - Executar `python manage.py migrate --noinput` durante deploy.
 - Executar `python manage.py collectstatic --noinput` durante deploy.
+- Manter mutacoes de demo desativadas em producao; usar homologacao para demonstracoes.
 
 ## 3. App store
 

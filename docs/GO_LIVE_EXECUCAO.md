@@ -26,6 +26,8 @@ Start Command: ./start.sh
 Health Check Path: /api/public/resumo
 ```
 
+Observacao: producao nao deve executar `demo_setup` nem expor mutacoes de demonstracao. Demonstracoes interativas ficam no ambiente de homologacao.
+
 3. Preencher segredos no Render usando `.env.production.example` como referencia.
 
 4. Rotacionar chaves se houver qualquer chance de exposicao:

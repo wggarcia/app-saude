@@ -40,6 +40,8 @@ O Blueprint ja define:
 - `healthCheckPath: /api/public/resumo`
 - `DATABASE_URL` conectado ao Postgres gerenciado
 
+Em producao, o deploy nao executa mais `demo_setup` nem recria dados de demonstracao. As contas demo ficam restritas a staging/homologacao.
+
 ## 3. Servico manual ja existente
 
 Se o servico foi criado manualmente e nao por Blueprint, configure no painel:
@@ -65,6 +67,8 @@ SKIP_BUILD_MIGRATIONS=true
 ```
 
 Se o plano atual nao permitir pre-deploy command, remova `SKIP_BUILD_MIGRATIONS` ou defina `SKIP_BUILD_MIGRATIONS=false`. Nesse modo, o `build.sh` roda `migrate` e `bootstrap_acessos` durante o build para manter compatibilidade.
+
+Nao habilite mutacoes de demo em producao. Se precisar de demonstracao comercial, use um ambiente separado de homologacao.
 
 ## 4. Variaveis obrigatorias
 

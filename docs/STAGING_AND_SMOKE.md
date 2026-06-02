@@ -69,6 +69,8 @@ O comando `bootstrap_acessos` agora suporta criar contas piloto de:
 
 Isso evita staging "verde pela metade", em que o smoke exige perfis que o bootstrap nao provisiona.
 
+As contas demo e os comandos de seed/reset ficam restritos a staging/homologacao. Producao deve permanecer com dados reais e sem regeneracao automatica de demo.
+
 ## 4. Rodar smoke remoto
 
 ```bash

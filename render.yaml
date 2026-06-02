@@ -4,7 +4,7 @@ services:
     env: python
     plan: starter
     buildCommand: "./build.sh"
-    preDeployCommand: "APP_DATABASE_URL= python manage.py migrate --noinput && APP_DATABASE_URL= python manage.py bootstrap_acessos && (APP_DATABASE_URL= python manage.py demo_setup --upsert || true) && (APP_DATABASE_URL= python manage.py demo_setup --refresh-dados || true)"
+    preDeployCommand: "APP_DATABASE_URL= python manage.py migrate --noinput && APP_DATABASE_URL= python manage.py bootstrap_acessos"
     startCommand: "./start.sh"
     healthCheckPath: /api/public/resumo
     envVars:
@@ -31,7 +31,7 @@ services:
       - key: SKIP_BUILD_MIGRATIONS
         value: "true"
       - key: ALLOW_ENTERPRISE_DEMO_MUTATIONS
-        value: "true"
+        value: "false"
       # ── Email transacional da plataforma SaaS ─────────────────────────────
       # Um único remetente (noreply@soluscrt.com.br) envia em nome de TODOS os
       # clientes. Os dados do cliente ficam no conteúdo do email.

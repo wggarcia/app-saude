@@ -15,7 +15,7 @@
     <div class="eps-growth-card"><span>Etapas Feitas</span><strong>--</strong></div>
     <div class="eps-growth-card"><span>Pendentes</span><strong>--</strong></div>
     <div class="eps-growth-card"><span>Sinais Reais</span><strong>--</strong></div>
-    <div class="eps-growth-card"><span>Pronto Demo</span><strong>--</strong></div>
+    <div class="eps-growth-card"><span>Pronto para uso</span><strong>--</strong></div>
   </div>
   <div class="eps-body">
     <div>
@@ -31,18 +31,27 @@
       </div>
     </div>
     <aside class="eps-actions">
+      {% if ALLOW_ENTERPRISE_DEMO_MUTATIONS %}
       <div class="eps-demo-header">
-        <span class="eps-section-title" style="margin-bottom:0">Implantação Rápida</span>
-        <label class="eps-toggle-wrap" title="Ativar / Desativar modo demo">
+        <span class="eps-section-title" style="margin-bottom:0">Operação controlada</span>
+        <label class="eps-toggle-wrap" title="Ativar ou desativar a área de demonstração">
           <input type="checkbox" id="epsDemoToggle" checked>
           <span class="eps-toggle-track"><span class="eps-toggle-thumb"></span></span>
         </label>
       </div>
       <div id="epsDemoBlock">
-        <button type="button" class="eps-seed" id="epsSeedBtn">▶ Implantar demo</button>
-        <button type="button" class="eps-reset" id="epsResetBtn">🗑 Zerar demo</button>
-        <small class="eps-seed-note" id="epsSeedNote">Cria dados iniciais controlados para demonstrar o fluxo completo.</small>
+        <button type="button" class="eps-seed" id="epsSeedBtn">▶ Implantar ambiente</button>
+        <button type="button" class="eps-reset" id="epsResetBtn">🗑 Limpar ambiente</button>
+        <small class="eps-seed-note" id="epsSeedNote">Cria dados iniciais controlados para demonstracoes em homologacao.</small>
       </div>
+      {% else %}
+      <div class="eps-demo-header">
+        <span class="eps-section-title" style="margin-bottom:0">Operação real</span>
+      </div>
+      <div id="epsDemoBlock">
+        <small class="eps-seed-note" id="epsSeedNote">Este ambiente usa dados reais. Ferramentas de demonstracao ficam restritas a homologacao.</small>
+      </div>
+      {% endif %}
       <strong>Proximas automacoes</strong>
       <div id="epsActions" class="eps-action-list"></div>
     </aside>
@@ -150,7 +159,7 @@
       <div class="eps-growth-card"><span>Etapas Feitas</span><strong>${escapeHtml(crescimento.etapas_feitas ?? 0)}/${escapeHtml(crescimento.etapas_total ?? 0)}</strong></div>
       <div class="eps-growth-card"><span>Pendentes</span><strong>${escapeHtml(crescimento.etapas_pendentes ?? 0)}</strong></div>
       <div class="eps-growth-card"><span>Sinais Reais</span><strong>${escapeHtml(crescimento.sinais_reais ?? 0)}</strong></div>
-      <div class="eps-growth-card"><span>Pronto Demo</span><strong>${crescimento.pronto_demo ? "Sim" : "Nao"}</strong></div>
+      <div class="eps-growth-card"><span>Pronto para uso</span><strong>${crescimento.pronto_demo ? "Sim" : "Nao"}</strong></div>
     `;
     document.getElementById("epsProcesses").innerHTML = (payload.processos || []).map((processo, processIndex) => `
       <article class="eps-flow">
@@ -216,19 +225,19 @@
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
         note.textContent = payload.erro || `Erro ${res.status} — tente novamente.`;
-        btn.textContent = "▶ Implantar demo";
+        btn.textContent = "▶ Implantar ambiente";
         btn.disabled = false;
         return;
       }
       if (payload.suite) render(payload.suite);
       note.textContent = payload.total_criado
-        ? `✅ Demo implantado: ${payload.total_criado} registros criados.`
-        : "✅ Estrutura de demo ja estava implantada.";
-      btn.textContent = "▶ Implantar demo";
+        ? `✅ Ambiente implantado: ${payload.total_criado} registros criados.`
+        : "✅ Estrutura de ambiente ja estava implantada.";
+      btn.textContent = "▶ Implantar ambiente";
       btn.disabled = false;
     } catch (error) {
       note.textContent = "Erro de rede — verifique a conexao e tente novamente.";
-      btn.textContent = "▶ Implantar demo";
+      btn.textContent = "▶ Implantar ambiente";
       btn.disabled = false;
     }
   });
@@ -245,13 +254,13 @@
       if (!res.ok) throw new Error("reset_failed");
       const payload = await res.json();
       render(payload.suite || lastPayload || {});
-      note.textContent = `Demo zerado: ${payload.removidos || 0} registros removidos. Pronto para dados reais.`;
-      btn.textContent = "🗑 Zerar demo";
+      note.textContent = `Ambiente limpo: ${payload.removidos || 0} registros removidos. Pronto para dados reais.`;
+      btn.textContent = "🗑 Limpar ambiente";
       btn.disabled = false;
       loadSuite();
     } catch (error) {
-      note.textContent = "Nao foi possivel zerar o demo agora.";
-      btn.textContent = "🗑 Zerar demo";
+      note.textContent = "Nao foi possivel limpar o ambiente agora.";
+      btn.textContent = "🗑 Limpar ambiente";
       btn.disabled = false;
     }
   });
@@ -266,7 +275,7 @@
   // Restore state from localStorage
   try {
     const stored = localStorage.getItem("eps_demo_ativo");
-    if (stored === "0") { demoToggle.checked = false; applyToggleState(false); }
+    if (demoToggle && stored === "0") { demoToggle.checked = false; applyToggleState(false); }
   } catch(e){}
   demoToggle?.addEventListener("change", () => applyToggleState(demoToggle.checked));
 

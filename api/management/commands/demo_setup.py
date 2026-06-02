@@ -18,7 +18,8 @@ APP do trabalhador (SST):
 
 import datetime
 from django.contrib.auth.hashers import make_password
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
+from django.conf import settings
 from django.db import transaction
 
 
@@ -32,7 +33,7 @@ HOJE = datetime.date.today()
 
 
 class Command(BaseCommand):
-    help = "Reseta o banco local e cria 5 ambientes de demonstração limpos."
+    help = "Reseta o banco local ou monta 5 ambientes de demonstração para homologacao."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -43,13 +44,13 @@ class Command(BaseCommand):
         parser.add_argument(
             "--upsert",
             action="store_true",
-            help="Cria as contas demo se não existirem; ignora se já existirem (seguro em produção).",
+            help="Cria as contas demo se nao existirem; ignora se ja existirem (uso em homologacao).",
         )
         parser.add_argument(
             "--refresh-dados",
             action="store_true",
-            help="Recria APENAS os dados demo (funcionários, EPIs, etc.) nas contas existentes. "
-                 "Não deleta nem recria as contas. Seguro em produção.",
+            help="Recria APENAS os dados demo (funcionarios, EPIs, etc.) nas contas existentes. "
+                 "Nao deleta nem recria as contas. Uso em homologacao.",
         )
 
     def out(self, msg, style=None):
@@ -59,20 +60,25 @@ class Command(BaseCommand):
             self.stdout.write(msg)
 
     def handle(self, *args, **options):
+        if getattr(settings, "IS_PRODUCTION", False):
+            raise CommandError(
+                "demo_setup nao pode ser executado em producao. Use staging/homologacao para demos."
+            )
+
         apply         = options["apply"]
         upsert        = options["upsert"]
         refresh_dados = options["refresh_dados"]
 
         if refresh_dados:
             self.out(f"\n{'='*60}")
-            self.out("  demo_setup --refresh-dados  (produção — atualiza dados)")
+            self.out("  demo_setup --refresh-dados  (homologacao — atualiza dados)")
             self.out(f"{'='*60}\n")
             self._refresh_dados_demos()
             return
 
         if upsert:
             self.out(f"\n{'='*60}")
-            self.out("  demo_setup --upsert  (produção — idempotente)")
+            self.out("  demo_setup --upsert  (homologacao — idempotente)")
             self.out(f"{'='*60}\n")
             with transaction.atomic():
                 self._upsert_demos()

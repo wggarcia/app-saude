@@ -105,12 +105,9 @@ _DEMO_EMPRESAS_EMAILS = {
 
 
 def _demo_mutations_enabled(empresa=None):
-    """Retorna True se mutations de demo estao permitidas.
-
-    Contas demo oficiais (demo.*@soluscrt.com) sempre podem executar seed,
-    independente da variavel de ambiente — que só é relevante para contas
-    comuns em ambientes de homologacao.
-    """
+    """Retorna True se mutacoes de demonstracao estao permitidas fora de producao."""
+    if getattr(settings, "IS_PRODUCTION", False):
+        return False
     if empresa is not None and getattr(empresa, "email", None) in _DEMO_EMPRESAS_EMAILS:
         return True
     return bool(getattr(settings, "ALLOW_ENTERPRISE_DEMO_MUTATIONS", True))
@@ -2558,7 +2555,7 @@ def api_enterprise_seed_operational_demo(request):
         return JsonResponse({"erro": "Metodo nao permitido"}, status=405)
     if not _demo_mutations_enabled(empresa):
         return JsonResponse({
-            "erro": "Seed demo desativado neste ambiente. Use homologacao ou habilite ALLOW_ENTERPRISE_DEMO_MUTATIONS.",
+            "erro": "Seed demo desativado neste ambiente. Use homologacao ou ajuste a configuracao fora de producao.",
         }, status=403)
 
     try:
@@ -2730,7 +2727,7 @@ def api_enterprise_reset_demo(request):
         return JsonResponse({"erro": "Metodo nao permitido"}, status=405)
     if not _demo_mutations_enabled(empresa):
         return JsonResponse({
-            "erro": "Reset demo desativado neste ambiente. Use homologacao ou habilite ALLOW_ENTERPRISE_DEMO_MUTATIONS.",
+            "erro": "Reset demo desativado neste ambiente. Use homologacao ou ajuste a configuracao fora de producao.",
         }, status=403)
 
     resultado = reset_enterprise_demo(empresa)
