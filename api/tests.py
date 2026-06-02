@@ -2301,7 +2301,7 @@ class PublicApiTests(TestCase):
         self.assertEqual(primeiro.json()["status"], "ok")
         self.assertEqual(segundo.json()["status"], "ok")
 
-    def test_envio_publico_rejeita_localizacao_que_nao_e_atual(self):
+    def test_envio_publico_aceita_localizacao_que_nao_e_atual_com_confianca_reduzida(self):
         payload = {
             "febre": True,
             "latitude": -22.9068,
@@ -2315,8 +2315,11 @@ class PublicApiTests(TestCase):
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()["codigo"], "gps_atual_obrigatorio")
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "ok")
+        self.assertLessEqual(body["confianca"], 0.6)
+        self.assertIn("localizacao_nao_confirmada", body["motivos_suspeita"])
 
     def test_alerta_governamental_so_aparece_quando_publicado(self):
         governo = Empresa.objects.create(
