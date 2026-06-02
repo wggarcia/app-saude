@@ -15,7 +15,7 @@ class TelaMapa extends StatefulWidget {
 
 class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
   final MapController _mapController = MapController();
-  List<dynamic> hotspots = const [];
+  List<Map<String, dynamic>> hotspots = const [];
   Map<String, dynamic>? radarLocal;
   Map<String, dynamic>? radarAtual;
   Map<String, dynamic>? regiaoBase;
@@ -152,8 +152,9 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
       if (!mounted) {
         return;
       }
+      final mapaSeguro = _sanitizeHotspots(mapa);
       setState(() {
-        hotspots = mapa;
+        hotspots = mapaSeguro;
         radarLocal = radarPreferido;
         this.radarAtual = radarAtual;
         regiaoBase = updatedBase;
@@ -161,7 +162,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
         alertasPublicos = alertas;
         modoMonitoramento = modo;
         loading = false;
-        notice = mapa.isEmpty && temRecorteEstado
+        notice = mapaSeguro.isEmpty && temRecorteEstado
             ? 'Ainda nao ha focos publicos recentes para o seu estado no momento. O mapa nao mistura outros estados para evitar leitura errada.'
             : null;
       });
@@ -171,7 +172,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
       }
       final fallback = await _carregarMapaBasico();
       setState(() {
-        hotspots = fallback;
+        hotspots = _sanitizeHotspots(fallback);
         radarLocal = null;
         radarAtual = null;
         regiaoBase = null;
@@ -190,6 +191,35 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
     } catch (_) {
       return const [];
     }
+  }
+
+  double? _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value.trim().replaceAll(',', '.'));
+    }
+    return null;
+  }
+
+  List<Map<String, dynamic>> _sanitizeHotspots(List<dynamic> rawHotspots) {
+    final safe = <Map<String, dynamic>>[];
+    for (final raw in rawHotspots) {
+      if (raw is! Map) continue;
+      final item = Map<String, dynamic>.from(raw);
+      final latitude = _toDouble(item['latitude']);
+      final longitude = _toDouble(item['longitude']);
+      if (latitude == null || longitude == null) continue;
+      if (latitude < -90 ||
+          latitude > 90 ||
+          longitude < -180 ||
+          longitude > 180) {
+        continue;
+      }
+      item['latitude'] = latitude;
+      item['longitude'] = longitude;
+      safe.add(item);
+    }
+    return safe;
   }
 
   Future<void> _alterarModo(String modo) async {
@@ -266,17 +296,19 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final regiaoLatitude = _toDouble(regiaoBase?['latitude']);
+    final regiaoLongitude = _toDouble(regiaoBase?['longitude']);
     final center = localizacaoAtual != null
         ? LatLng(localizacaoAtual!.latitude, localizacaoAtual!.longitude)
         : hotspots.isNotEmpty
             ? LatLng(
-                (hotspots.first['latitude'] as num).toDouble(),
-                (hotspots.first['longitude'] as num).toDouble(),
+                hotspots.first['latitude'] as double,
+                hotspots.first['longitude'] as double,
               )
-            : regiaoBase != null
+            : regiaoLatitude != null && regiaoLongitude != null
                 ? LatLng(
-                    (regiaoBase!['latitude'] as num).toDouble(),
-                    (regiaoBase!['longitude'] as num).toDouble(),
+                    regiaoLatitude,
+                    regiaoLongitude,
                   )
                 : const LatLng(-14.235, -51.9253);
     final localAtual = radarAtual?['local'] as Map<String, dynamic>? ?? {};
@@ -292,16 +324,15 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
     final userPoint = localizacaoAtual == null
         ? null
         : LatLng(localizacaoAtual!.latitude, localizacaoAtual!.longitude);
-    final circles = hotspots.whereType<Map>().map((raw) {
-      final item = Map<String, dynamic>.from(raw);
+    final circles = hotspots.map((item) {
       final visual = _FocusVisual.fromItem(item);
       final total = (item['indice_ativo'] as num?)?.toDouble() ??
           (item['total'] as num?)?.toDouble() ??
           1;
       return CircleMarker(
         point: LatLng(
-          (item['latitude'] as num).toDouble(),
-          (item['longitude'] as num).toDouble(),
+          item['latitude'] as double,
+          item['longitude'] as double,
         ),
         radius: (42 + total.clamp(1, 80) * 1.8).clamp(46, 150).toDouble(),
         color: visual.color.withValues(alpha: 0.18),
@@ -315,10 +346,10 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
             width: 104,
             height: 104,
             point: LatLng(
-              (item['latitude'] as num).toDouble(),
-              (item['longitude'] as num).toDouble(),
+              item['latitude'] as double,
+              item['longitude'] as double,
             ),
-            child: _HotspotMarker(item: item as Map<String, dynamic>),
+            child: _HotspotMarker(item: item),
           ),
         )
         .toList();
@@ -338,15 +369,12 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
         title: const Text('Mapa de risco'),
         actions: [
           IconButton(
-            tooltip:
-                _tipoMapa == 'rua' ? 'Ver satélite' : 'Ver mapa de ruas',
+            tooltip: _tipoMapa == 'rua' ? 'Ver satélite' : 'Ver mapa de ruas',
             icon: Icon(
-              _tipoMapa == 'rua'
-                  ? Icons.satellite_alt
-                  : Icons.map_outlined,
+              _tipoMapa == 'rua' ? Icons.satellite_alt : Icons.map_outlined,
             ),
-            onPressed: () =>
-                setState(() => _tipoMapa = _tipoMapa == 'rua' ? 'satelite' : 'rua'),
+            onPressed: () => setState(
+                () => _tipoMapa = _tipoMapa == 'rua' ? 'satelite' : 'rua'),
           ),
           IconButton(
             onPressed: _load,
@@ -456,7 +484,7 @@ class _MapHeroPanel extends StatelessWidget {
   });
 
   final Map<String, dynamic>? radarLocal;
-  final List<dynamic> hotspots;
+  final List<Map<String, dynamic>> hotspots;
   final String modoMonitoramento;
   final ValueChanged<String> onChangedModo;
 

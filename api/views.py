@@ -1517,28 +1517,53 @@ def _bloqueio_envio_publico(empresa, ip, device_id, dados=None, geo=None):
     dados = dados or {}
     geo = geo or {}
 
-    if ip:
-        duplicado_contextual = RegistroSintoma.objects.filter(
-            empresa=empresa,
-            ip=ip,
-            data_registro__gte=janela_curta,
-            cidade=geo.get("cidade"),
-            estado=geo.get("estado"),
-            febre=bool(dados.get("febre", False)),
-            tosse=bool(dados.get("tosse", False)),
-            dor_corpo=bool(dados.get("dor_corpo", False)),
-            cansaco=bool(dados.get("cansaco", False)),
-            falta_ar=bool(dados.get("falta_ar", False)),
-        ).exists()
-        if duplicado_contextual:
-            return False, "Sinal semelhante ja considerado recentemente nesta rede e territorio."
+    sintomas_contexto = {
+        "cidade": geo.get("cidade"),
+        "estado": geo.get("estado"),
+        "febre": bool(dados.get("febre", False)),
+        "tosse": bool(dados.get("tosse", False)),
+        "dor_corpo": bool(dados.get("dor_corpo", False)),
+        "cansaco": bool(dados.get("cansaco", False)),
+        "falta_ar": bool(dados.get("falta_ar", False)),
+    }
 
+    # Primeiro protege contra repeticao muito proxima do mesmo aparelho.
+    # O bloqueio por IP isolado era agressivo demais em redes movel/NAT.
+    if device_id:
+        duplicado_device = RegistroSintoma.objects.filter(
+            empresa=empresa,
+            device_id=device_id,
+            data_registro__gte=janela_curta,
+            **sintomas_contexto,
+        ).exists()
+        if duplicado_device:
+            return False, "Sinal semelhante ja considerado recentemente deste aparelho."
+
+        envios_device_6h = RegistroSintoma.objects.filter(
+            empresa=empresa,
+            device_id=device_id,
+            data_registro__gte=janela_curta,
+        ).count()
+        if envios_device_6h >= 3:
+            return False, "Limite de envio por aparelho atingido nas ultimas horas."
+
+        envios_device_24h = RegistroSintoma.objects.filter(
+            empresa=empresa,
+            device_id=device_id,
+            data_registro__gte=janela_longa,
+        ).count()
+        if envios_device_24h >= 8:
+            return False, "Limite diario de envios deste aparelho atingido."
+
+    if ip:
+        # Em redes compartilhadas muitos aparelhos podem sair pelo mesmo IP.
+        # Portanto, so tratamos IP como anomalia em volumes realmente altos.
         envios_ip_6h = RegistroSintoma.objects.filter(
             empresa=empresa,
             ip=ip,
             data_registro__gte=janela_curta,
         ).count()
-        if envios_ip_6h >= 12:
+        if envios_ip_6h >= 80:
             return False, "Volume recente alto nesta rede. Tente novamente mais tarde."
 
         envios_ip_24h = RegistroSintoma.objects.filter(
@@ -1546,25 +1571,8 @@ def _bloqueio_envio_publico(empresa, ip, device_id, dados=None, geo=None):
             ip=ip,
             data_registro__gte=janela_longa,
         ).count()
-        if envios_ip_24h >= 35:
+        if envios_ip_24h >= 220:
             return False, "Limite diario de envios desta rede atingido."
-
-    if device_id:
-        envios_device_6h = RegistroSintoma.objects.filter(
-            empresa=empresa,
-            device_id=device_id,
-            data_registro__gte=janela_curta,
-        ).count()
-        if envios_device_6h >= 1:
-            return False, "Ja recebemos um envio recente deste aparelho. Tente novamente mais tarde."
-
-        envios_device_24h = RegistroSintoma.objects.filter(
-            empresa=empresa,
-            device_id=device_id,
-            data_registro__gte=janela_longa,
-        ).count()
-        if envios_device_24h >= 3:
-            return False, "Limite diario de envios deste aparelho atingido."
 
     return True, None
 
@@ -2513,6 +2521,10 @@ def app_mapa_publico(request):
         data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS),
         latitude__isnull=False,
         longitude__isnull=False,
+        latitude__gte=-90,
+        latitude__lte=90,
+        longitude__gte=-180,
+        longitude__lte=180,
     )
     cidade = request.GET.get("cidade")
     estado = request.GET.get("estado")
@@ -2529,6 +2541,18 @@ def app_mapa_publico(request):
 
     areas = {}
     for row in hotspots_por_dia:
+        latitude_media = row.get("latitude_media")
+        longitude_media = row.get("longitude_media")
+        if latitude_media is None or longitude_media is None:
+            continue
+        try:
+            latitude_media = float(latitude_media)
+            longitude_media = float(longitude_media)
+        except (TypeError, ValueError):
+            continue
+        if not (-90 <= latitude_media <= 90 and -180 <= longitude_media <= 180):
+            continue
+
         key = (row["cidade"], row["estado"], row["bairro"])
         peso = _peso_temporal_publico(row["day"], agora)
         area = areas.setdefault(key, {
@@ -2542,10 +2566,12 @@ def app_mapa_publico(request):
             "peso_geo": 0,
         })
         total = row["total"] or 0
+        if total <= 0:
+            continue
         area["total"] += total
         area["indice_ativo"] += total * peso
-        area["latitude_soma"] += float(row["latitude_media"]) * total
-        area["longitude_soma"] += float(row["longitude_media"]) * total
+        area["latitude_soma"] += latitude_media * total
+        area["longitude_soma"] += longitude_media * total
         area["peso_geo"] += total
 
     hotspots = sorted(areas.values(), key=lambda item: item["indice_ativo"], reverse=True)[:250]
@@ -2612,6 +2638,10 @@ def app_mapa_publico(request):
         indice_ativo = round(item["indice_ativo"], 2)
         nivel = "alto" if indice_ativo >= 45 else "moderado" if indice_ativo >= 20 else "atencao" if indice_ativo >= 8 else "baixo"
         peso_geo = max(item["peso_geo"], 1)
+        latitude = round(item["latitude_soma"] / peso_geo, 6)
+        longitude = round(item["longitude_soma"] / peso_geo, 6)
+        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+            continue
         resultado.append({
             "cidade": item["cidade"],
             "estado": item["estado"],
@@ -2621,8 +2651,8 @@ def app_mapa_publico(request):
             "raw_total": item["total"],
             "indice_ativo": indice_ativo,
             "percentual_ativo": round((indice_ativo / total_indice_mapa) * 100, 2),
-            "latitude": round(item["latitude_soma"] / peso_geo, 6),
-            "longitude": round(item["longitude_soma"] / peso_geo, 6),
+            "latitude": latitude,
+            "longitude": longitude,
             "grupo_dominante": doenca_top or perfil_sindromico,
             "perfil_sindromico": perfil_sindromico,
             "doenca_dominante": doenca_top,
