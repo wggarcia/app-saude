@@ -17,6 +17,7 @@ from django.db.models import Count, Avg, Q
 from django.db.models.functions import TruncDate
 from django.contrib.auth.hashers import check_password, make_password
 from collections import defaultdict
+from copy import deepcopy
 from datetime import datetime, timedelta
 
 # ============================
@@ -35,8 +36,8 @@ SITE_LANGUAGE_META = {
 
 SITE_TRANSLATIONS = {
     "pt": {
-        "title": "SolusCRT Saude | 5 ambientes para Governo, Farmacia, Hospital, SST e Plano de Saude",
-        "description": "Cinco ambientes privados para Governo, Farmacia, Hospital, SST e Plano de Saude, com apps distintos, IA territorial e uma narrativa comercial pronta para assinatura, proposta ou contrato.",
+        "title": "SolusCRT Saude | monitoramento epidemiologico com IA para 5 mercados",
+        "description": "Monitoramento epidemiologico com IA para antecipar risco, apoiar decisao e gerar assinatura em Governo, Farmacia, Hospital, SST e Plano de Saude.",
         "brand": "SolusCRT Saude",
         "nav": {
             "diferencial": "Por que assinam",
@@ -45,13 +46,13 @@ SITE_TRANSLATIONS = {
             "app": "Apps",
             "contato": "Contato",
         },
-        "nav_note": "Cinco ambientes privados. Uma marca pronta para contratos e recorrencia.",
+        "nav_note": "Radar epidemiologico e IA no topo. Cinco mercados prontos para assinar.",
         "language_aria": "Selecionar idioma",
-        "hero_eyebrow": "Cinco ambientes privados. Uma arquitetura comercial pronta para cada decisor.",
-        "hero_title": "Cinco ambientes privados para cada decisor em saude.",
-        "hero_title_desktop_lines": ["Cinco ambientes", "privados para", "cada decisor", "em saude."],
-        "hero_title_lines": ["Cinco ambientes", "privados para", "cada decisor", "em saude."],
-        "hero_lead": "O SolusCRT Saude nao empurra o mesmo painel para todo mundo. Ele apresenta cinco ambientes comerciais independentes: Governo, Farmacia, Hospital, SST e Plano de Saude. Cada um entra em uma experiencia com linguagem, rotina, privacidade e oferta propria. O resultado e uma primeira impressao que transmite maturidade, reduz objecao e acelera a vontade de assinar.",
+        "hero_eyebrow": "Monitoramento epidemiologico em tempo real. IA para antecipar o pico.",
+        "hero_title": "Monitoramento epidemiologico com IA que antecipa decisao.",
+        "hero_title_desktop_lines": ["Monitoramento", "epidemiologico", "com IA que", "antecipa decisao."],
+        "hero_title_lines": ["Monitoramento", "epidemiologico", "com IA que", "antecipa decisao."],
+        "hero_lead": "O SolusCRT cruza sinais da populacao, fontes oficiais e IA para mostrar onde o risco cresce primeiro e onde agir antes do pico. Governo, Farmacia, Hospital, SST e Plano de Saude entram como os cinco mercados que compram essa inteligencia e a transformam em assinatura ou contrato.",
         "actions": {
             "presentation": "Ver apresentacao comercial",
             "app": "Conhecer os apps",
@@ -62,52 +63,52 @@ SITE_TRANSLATIONS = {
             "signup": "Criar conta gratis",
         },
         "proofs": [
-            {"title": "Governo", "text": "Sala de situacao, alertas e autoridade territorial para contratos B2G com leitura executiva."},
-            {"title": "Farmacia", "text": "Demanda antecipada, compra mais segura e menos ruptura para loja, rede ou distribuidor."},
-            {"title": "Hospital", "text": "Leitos, triagem, equipes e capacidade assistencial preparados antes do pico."},
-            {"title": "SST", "text": "Assinatura recorrente com app do funcionario, bem-estar e conformidade em fluxo proprio."},
-            {"title": "Plano de Saude", "text": "Operadora com beneficiarios, guias, sinistros, reembolsos e radar territorial no mesmo ambiente."},
+            {"title": "Sinais da populacao", "text": "Captura colaborativa sem registro nominal para enxergar tendencia antes da confirmacao oficial."},
+            {"title": "Fontes oficiais", "text": "IBGE, InfoDengue, InfoGripe e DATASUS com lastro para leitura territorial."},
+            {"title": "IA preditiva", "text": "Classifica sinais, cruza variaveis e destaca risco antes do pico ganhar forca."},
+            {"title": "Mapa territorial", "text": "Mostra onde agir primeiro com leitura executiva e contexto local."},
+            {"title": "5 mercados", "text": "Governo, Farmacia, Hospital, SST e Plano de Saude entram como portas de receita."},
         ],
-        "chips": ["Governo", "Farmacia", "Hospital", "SST", "Plano de Saude", "App da populacao"],
+        "chips": ["Monitoramento", "IA", "Territorio", "Governo", "Farmacia", "Hospital"],
         "metrics": [
-            {"value": "5 ambientes", "text": "Cada segmento entra em uma experiencia comercial que parece feita para a sua propria rotina"},
-            {"value": "2 apps distintos", "text": "App da populacao para inteligencia territorial e app do funcionario para o ambiente SST"},
-            {"value": "IA + serie temporal", "text": "Mais tempo para comunicar, comprar, preparar equipes ou proteger capacidade antes do pico"},
+            {"value": "Sinais + fontes + IA", "text": "O motor cruza entrada colaborativa, fonte oficial e inferencia para antecipar risco"},
+            {"value": "5 mercados", "text": "Governo, Farmacia, Hospital, SST e Plano de Saude viram canais de venda"},
+            {"value": "2 apps distintos", "text": "App da populacao para territorio e app do funcionario para SST"},
             {"value": "LGPD por arquitetura", "text": "Segregacao, auditoria e controle de acesso tratados como parte central da confianca"},
         ],
         "differential": {
-            "title": "Quando cada decisor se reconhece no ambiente certo, a venda fica mais curta e a operacao mais clara.",
-            "lead": "O diferencial do SolusCRT nao esta apenas no que ele mostra. Esta em como ele organiza a conversa comercial: um produto generico obriga o cliente a traduzir valor. O SolusCRT ja entrega a leitura, a linguagem e a promessa certas para cada segmento.",
-            "traditional_title": "Oferta generica",
+            "title": "A IA da SolusCRT transforma sinais dispersos em decisao antes do pico.",
+            "lead": "A forca do produto esta em ler milhares de sinais fracos, cruzar territorio, sintomas, fontes brasileiras e comportamento temporal para mostrar onde agir primeiro. Os cinco segmentos entram depois como mercados onde essa inteligencia vira receita.",
+            "traditional_title": "Vigilancia tradicional",
             "traditional_items": [
-                "O mesmo discurso tenta servir governo, farmacia, hospital, SST e operadora ao mesmo tempo.",
-                "O comprador precisa traduzir sozinho onde esta o valor para a sua rotina, seu contrato e sua privacidade.",
-                "Quando a proposta parece improvisada, a conversa perde forca antes mesmo da demo ficar memoravel.",
+                "Depende de notificacao, consolidacao e publicacao, o que costuma atrasar a leitura do risco.",
+                "Entrega historico e confirmacao, mas chega tarde para compras, escala, comunicacao e resposta local.",
+                "Sem IA e sem cruzamento territorial, o comprador nao enxerga a janela de acao com a mesma clareza.",
             ],
-            "solus_title": "Arquitetura comercial SolusCRT",
+            "solus_title": "Capa SolusCRT com IA",
             "solus_items": [
-                "Cada segmento abre um ambiente que fala a sua lingua, mostra a sua rotina e deixa claro o seu tipo de compra.",
-                "A inteligencia territorial aparece onde ela gera decisao: governo, farmacia, hospital e plano de saude.",
-                "O SST fica separado, com assinatura propria, app do funcionario e experiencia ocupacional sem mistura de contexto.",
+                "Recebe sinais sem cadastro nominal pela populacao, com localizacao atual e controle antifraude.",
+                "Identifica crescimento, predominancia de sintomas e risco territorial antes da confirmacao oficial.",
+                "Entrega a decisao para o mercado certo: governo, farmacia, hospital, SST ou plano de saude.",
             ],
         },
-        "ecosystem_title": "Cinco ambientes comercializados como produtos de verdade.",
-        "ecosystem_lead": "O visitante nao precisa traduzir a plataforma. Ele reconhece seu setor, seu risco, seu fluxo e seu modelo de compra logo na primeira tela. Governo, Farmacia, Hospital, SST e Plano de Saude aparecem com valor proprio, linguagem coerente e fronteiras claras.",
+        "ecosystem_title": "Cinco mercados para uma mesma inteligencia epidemiologica.",
+        "ecosystem_lead": "O visitante entende primeiro o motor: monitoramento epidemiologico com IA. Depois, reconhece o proprio mercado e o proprio contrato: Governo, Farmacia, Hospital, SST e Plano de Saude.",
         "slides": [
-            {"small": "Governo", "title": "Autoridade territorial com governanca", "text": "Sala de situacao epidemiologica para comunicar melhor, agir antes e sustentar resposta publica com presenca institucional."},
-            {"small": "Farmacia", "title": "Demanda antecipada com margem protegida", "text": "Gestao farmaceutica conectada ao territorio para reduzir ruptura, planejar compras e crescer com previsibilidade."},
-            {"small": "Hospital", "title": "Capacidade assistencial preparada", "text": "Leitos, triagem, internacoes e equipes organizados antes de a pressao ganhar velocidade no atendimento."},
-            {"small": "SST", "title": "Assinatura ocupacional com adesao real", "text": "SST completo, app do funcionario e bem-estar anonimo em uma jornada mais fluida, segura e pronta para renovar."},
-            {"small": "Plano de Saude", "title": "Operadora com gestao e epidemiologia", "text": "Beneficiarios, contratos, guias, sinistros, reembolsos e radar territorial em um ambiente proprio para operadoras."},
+            {"small": "Governo", "title": "Sala de situacao com IA", "text": "Leitura territorial para comunicar, priorizar e agir antes do pico com governanca institucional."},
+            {"small": "Farmacia", "title": "Demanda antecipada", "text": "Radar territorial para compra, estoque e ruptura antes de a falta de produto bater no caixa."},
+            {"small": "Hospital", "title": "Pressao assistencial", "text": "Capacidade, triagem e equipes organizadas a partir da tendencia epidemiologica."},
+            {"small": "SST", "title": "Conformidade ocupacional", "text": "ASO, CAT, eSocial e bem-estar com leitura preventiva e contexto proprio."},
+            {"small": "Plano de Saude", "title": "Operacao e sinistros", "text": "Beneficiarios, autorizacoes, sinistros e reembolsos com radar territorial integrado."},
         ],
         "platform": {
-            "title_html": "Cinco ofertas.<br>Cinco caminhos claros para assinar.",
-            "lead": "Cada cliente precisa entender em segundos se entra por assinatura, trial, proposta comercial ou contrato institucional. Aqui o caminho fica claro desde o primeiro clique.",
+            "title_html": "Uma IA epidemiologica.<br>Cinco mercados prontos para assinar.",
+            "lead": "A mesma inteligencia explica o risco, o territorio e o momento de agir. Depois disso, cada mercado entra por assinatura, trial, proposta comercial ou contrato institucional.",
             "cards": [
                 {
                     "title": "SST & Clinicas Ocupacionais",
                     "badge": "Assinatura recorrente",
-                    "text": "Uma assinatura que organiza a rotina, valoriza o colaborador e reduz atrito operacional sem misturar SST com epidemiologia.",
+                    "text": "Aplique a IA epidemiologica para dar contexto ao SST, reduzir atrito e vender conformidade com valor claro.",
                     "price": "R$ 799",
                     "caption": "/mes · assinatura recorrente com trial",
                     "cta": "Comecar com teste",
@@ -115,7 +116,7 @@ SITE_TRANSLATIONS = {
                 {
                     "title": "Farmacia & Rede Farmaceutica",
                     "badge": "Operacao por loja ou rede",
-                    "text": "Um ambiente para antecipar demanda, proteger margem e fazer a farmacia se preparar antes da ruptura.",
+                    "text": "Um ambiente para antecipar demanda, proteger margem e fazer a farmacia se preparar antes da ruptura com radar epidemiologico.",
                     "price": "R$ 859",
                     "caption": "/mes · por loja ou operacao",
                     "cta": "Solicitar demonstracao",
@@ -123,7 +124,7 @@ SITE_TRANSLATIONS = {
                 {
                     "title": "Hospital & Rede Assistencial",
                     "badge": "Estrutura ou rede",
-                    "text": "Uma plataforma para proteger capacidade assistencial, organizar fluxo e preparar equipe antes da pressao.",
+                    "text": "Uma plataforma para proteger capacidade assistencial, organizar fluxo e preparar equipe antes da pressao com leitura territorial.",
                     "price": "R$ 7.250",
                     "caption": "/mes · por estrutura ou rede",
                     "cta": "Solicitar proposta",
@@ -131,7 +132,7 @@ SITE_TRANSLATIONS = {
                 {
                     "title": "Governo & Vigilancia Publica",
                     "badge": "Contrato institucional",
-                    "text": "Escolha a SolusCRT Saude para integrar vigilancia territorial, e-SUS/RNDS, faturamento SUS, auditoria e governanca LGPD em uma operacao publica unica e confiavel.",
+                    "text": "Escolha a SolusCRT Saude para integrar vigilancia territorial, IA, e-SUS/RNDS, faturamento SUS, auditoria e governanca LGPD em uma operacao publica unica e confiavel.",
                     "price": "Sob proposta",
                     "caption": "licitacao e proposta tecnica institucional",
                     "cta": "Falar com especialista",
@@ -139,7 +140,7 @@ SITE_TRANSLATIONS = {
                 {
                     "title": "Operadora de Plano de Saude",
                     "badge": "Operadora especializada",
-                    "text": "Gestao completa para operadoras: beneficiarios, contratos, guias de autorizacao, sinistros, reembolsos e dashboard epidemiologico com mapa de calor territorial. 100 usuarios e 100 maquinas autorizadas.",
+                    "text": "Gestao completa para operadoras: beneficiarios, contratos, guias de autorizacao, sinistros, reembolsos e dashboard epidemiologico com mapa de calor territorial.",
                     "price": "R$ 36.250",
                     "caption": "/mes · anual R$ 435.000 · por operadora",
                     "cta": "Solicitar proposta",
@@ -147,17 +148,19 @@ SITE_TRANSLATIONS = {
             ],
         },
         "enterprise": {
-            "eyebrow": "Ambiente SST — Empresas e Clinicas Ocupacionais",
-            "title": "O SST que deixa de parecer obrigacao e passa a parecer cuidado bem operado.",
-            "lead": "O ambiente SST do SolusCRT foi pensado para empresas e clinicas ocupacionais que querem mais do que cumprir regra. Elas querem transmitir organizacao, reduzir atrito, fortalecer a relacao com o colaborador e transformar conformidade em uma experiencia que o comprador percebe valor logo na proposta.",
+            "eyebrow": "Mercado e assinatura",
+            "title": "Cinco segmentos, um motor de monitoramento epidemiologico com IA.",
+            "lead": "A plataforma nao existe para empurrar o mesmo argumento para todo mundo. Ela foi organizada para que cada cliente reconheca o seu proprio caso de uso, o seu tipo de compra e a sua melhor porta de entrada, sempre a partir do monitoramento epidemiologico e da IA.",
             "items": [
-                {"title": "SST que transmite controle", "text": "ASO digital, CAT, afastamentos, exames, treinamentos NR, EPI/EPC, riscos, PGR e eSocial integrados em uma operacao mais clara, confiavel e pronta para auditoria."},
-                {"title": "Bem-estar que protege sem expor", "text": "A empresa passa a enxergar tendencias reais de humor, saude e estresse sem invadir a privacidade individual do colaborador."},
-                {"title": "App do funcionario que reduz atrito", "text": "O colaborador acessa seu ASO, recebe notificacoes, envia check-ins e percebe cuidado ativo em uma experiencia simples e moderna."},
+                {"title": "Governo", "text": "Sala de situacao, alertas, auditoria e leitura territorial para uniao, estados e municipios com contrato institucional."},
+                {"title": "Farmacia", "text": "Previsibilidade de demanda, compras, lotes e ruptura para loja, rede ou distribuidor com leitura regional."},
+                {"title": "Hospital", "text": "Leitos, triagem, equipes e capacidade assistencial preparados antes da pressao chegar ao pronto atendimento."},
+                {"title": "SST", "text": "ASO, CAT, eSocial, exames, PGR, bem-estar anonimo e app do trabalhador em um ambiente proprio e recorrente."},
+                {"title": "Plano de Saude", "text": "Beneficiarios, contratos, guias, sinistros, reembolsos e radar territorial em uma operacao especializada."},
             ],
             "metrics": [
-                {"value": "37 NRs", "text": "Base tecnica para unir conformidade e imagem de maturidade operacional"},
-                {"value": "eSocial SST", "text": "Menos correria documental, mais visibilidade para a gestao e mais controle percebido"},
+                {"value": "IA + territorio", "text": "o motor cruza sinais, fontes oficiais e comportamento temporal"},
+                {"value": "5 segmentos", "text": "cada decisor entra no proprio caso de uso e no proprio contrato"},
                 {"value": "15 dias gratis", "text": "Entrada rapida para experimentar valor real antes da assinatura"},
             ],
         },
@@ -172,7 +175,7 @@ SITE_TRANSLATIONS = {
         "values": {
             "eyebrow": "Confianca SolusCRT",
             "title": "Confianca para assinar, implantar e renovar.",
-            "lead": "A SolusCRT precisa convencer no comercial e sustentar essa promessa na operacao. Por isso, produto, privacidade, linguagem e governanca foram desenhados para vender bem sem parecer improvisados.",
+            "lead": "A SolusCRT precisa convencer no comercial e sustentar essa promessa na operacao. Por isso, monitoramento, IA, privacidade, linguagem e governanca foram desenhados para vender bem sem parecer improvisados.",
             "items": [
                 {"title": "Vida em primeiro lugar", "text": "Todo indicador, alerta e mapa existe para reduzir atraso, orientar cuidado e apoiar decisoes que preservem pessoas."},
                 {"title": "Verdade antes de impacto", "text": "Separar sinal precoce, dado oficial e inferencia de IA e um compromisso para evitar conclusoes falsas."},
@@ -185,7 +188,7 @@ SITE_TRANSLATIONS = {
         "app": {
             "eyebrow": "Dois apps, dois contextos",
             "title": "App da populacao para territorio. App do funcionario para SST.",
-            "lead": "Um app gratuito coleta sintomas sem cadastro nominal, mostra radar local e recebe alertas oficiais para alimentar governo, farmacia, hospital e plano de saude com inteligencia territorial. O outro pertence ao ambiente SST: libera ASO digital, notificacoes, solicitacoes e check-ins de bem-estar anonimos.",
+            "lead": "O app gratuito coleta sintomas sem cadastro nominal, mostra radar local e recebe alertas oficiais para alimentar a inteligencia territorial. O outro pertence ao ambiente SST: libera ASO digital, notificacoes, solicitacoes e check-ins de bem-estar anonimos.",
             "app_store": "Baixar na App Store",
             "google_play": "Ver no Google Play",
             "note": "O app do funcionario e ativado por contrato dentro do ambiente SST. O app listado nas lojas e o app da populacao.",
@@ -197,10 +200,10 @@ SITE_TRANSLATIONS = {
             ],
         },
         "cta": {
-            "title": "Quando cada ambiente fala a lingua certa, a decisao de assinar chega mais rapido.",
-            "lead": "Se o seu cliente e governo, farmacia, hospital, SST ou operadora, a SolusCRT ja chega pronta com narrativa, produto e governanca coerentes. A apresentacao comercial mostra como cada frente sustenta valor, assinatura ou contrato no modelo certo.",
+            "title": "Quando o monitoramento mostra o risco primeiro, a compra avanca mais rapido.",
+            "lead": "Se o seu cliente quer IA epidemiologica para governo, farmacia, hospital, SST ou operadora, o SolusCRT ja chega com narrativa, produto e governanca coerentes. Os cinco mercados entram como formas de monetizar essa inteligencia.",
         },
-        "footer": "SolusCRT Saude. Cinco ambientes privados para Governo, Farmacia, Hospital, SST, Plano de Saude e dois apps com papeis distintos.",
+        "footer": "SolusCRT Saude. Monitoramento epidemiologico com IA para Governo, Farmacia, Hospital, SST e Plano de Saude.",
         "footer_links": {
             "privacy": "Privacidade",
             "terms": "Termos",
@@ -572,13 +575,13 @@ PRESENTATION_TRANSLATIONS = {
         "footer_note": "Use o scroll para avancar pelos slides.",
         "vision": {
             "eyebrow": "Visao",
-            "title": "Uma plataforma de saude com cinco ambientes privados.",
-            "body": "O SolusCRT Saude foi desenhado para que cada decisor se reconheca no produto logo no primeiro contato. Governo encontra comando territorial. Farmacia encontra previsibilidade de demanda. Hospital encontra preparo assistencial. SST encontra organizacao ocupacional, app do funcionario e bem-estar protegido. Operadoras de Plano de Saude encontram gestao completa de beneficiarios, sinistros, reembolsos e dashboard epidemiologico. Sao cinco ambientes privados, com identidade propria, unidos por uma mesma promessa de confianca.",
-            "labels": {"resp": "Respiratorio", "deng": "Arbovirose", "covid": "Viral"},
+            "title": "Monitoramento epidemiologico com IA que antecipa o pico.",
+            "body": "O SolusCRT cruza sinais da populacao, fontes oficiais e inferencia de IA para mostrar onde o risco cresce primeiro e onde agir antes da curva subir. Governo, Farmacia, Hospital, SST e Plano de Saude entram depois como os cinco mercados que compram essa inteligencia e a transformam em assinatura ou contrato.",
+            "labels": {"resp": "Sinais", "deng": "IA", "covid": "Risco"},
         },
         "problem": {
             "eyebrow": "Problema",
-            "title": "Quando tudo parece generico, cada segmento perde tempo, margem, capacidade ou confianca.",
+            "title": "Quando o monitoramento chega tarde, cada segmento perde tempo, margem, capacidade ou confianca.",
             "cards": [
                 {"title": "Governo governa no retrovisor", "text": "Secretarias e gestores dependem de fontes dispersas, planilhas e leitura tardia para decidir alerta, comunicacao e resposta territorial."},
                 {"title": "Farmacia compra depois da ruptura", "text": "Sem radar epidemiologico territorial, a demanda por medicamentos e insumos aparece primeiro no caixa ou na falta de estoque."},
@@ -588,7 +591,7 @@ PRESENTATION_TRANSLATIONS = {
         },
         "solution": {
             "eyebrow": "Solucao",
-            "title": "Cada segmento entra em um ambiente que fala a sua lingua e protege seus dados.",
+            "title": "A IA transforma sinais dispersos em decisao antes do pico.",
             "body": "O SolusCRT separa contratos, acessos, indicadores e experiencia por segmento. Governo, farmacia e hospital usam inteligencia epidemiologica territorial com a linguagem do seu setor. SST opera como ambiente independente de gestao ocupacional, com assinatura propria, trial de 15 dias e app do funcionario.",
             "cards": [
                 {"title": "Governo", "text": "Sala de situacao, alertas, auditoria, matriz de decisao e leitura territorial para uniao, estados e municipios."},
@@ -599,20 +602,20 @@ PRESENTATION_TRANSLATIONS = {
         },
         "ecosystem": {
             "eyebrow": "Ecossistema",
-            "title": "Uma plataforma. Cinco ambientes que fazem sentido logo no primeiro olhar.",
+            "title": "Uma plataforma. Cinco mercados para a mesma IA.",
             "cards": [
-                {"title": "Governo", "text": "Uma sala de situacao epidemiologica feita para autoridade publica, leitura territorial e resposta institucional na esfera federal, estadual e municipal."},
-                {"title": "Farmacia", "text": "Gestao farmaceutica, FEFO, lotes, ruptura, compras e inteligencia territorial para antecipar demanda por loja ou rede."},
+                {"title": "Governo", "text": "Uma sala de situacao epidemiologica feita para autoridade publica, leitura territorial e resposta institucional."},
+                {"title": "Farmacia", "text": "Gestao farmaceutica, FEFO, lotes, ruptura, compras e inteligencia territorial para antecipar demanda."},
                 {"title": "Hospital", "text": "Gestao de leitos, atendimento, triagem, internacao, pressao assistencial e equipes conectadas ao radar epidemiologico."},
-                {"title": "SST e Empresas", "text": "SST completo, bem-estar anonimo, app do funcionario, dashboard de funcionarios, KPIs de absenteismo e integracao eSocial SST em uma experiencia pronta para assinatura."},
-                {"title": "Plano de Saude", "text": "Gestao completa para operadoras: beneficiarios, contratos, guias de autorizacao, sinistros, reembolsos e dashboard epidemiologico com mapa de calor territorial. 100 usuarios e 100 maquinas autorizadas."},
+                {"title": "SST e Empresas", "text": "SST completo, bem-estar anonimo, app do funcionario e integracao eSocial SST em uma experiencia pronta para assinatura."},
+                {"title": "Plano de Saude", "text": "Gestao completa para operadoras: beneficiarios, contratos, guias, sinistros, reembolsos e mapa de calor territorial."},
             ],
         },
         "differential": {
             "eyebrow": "Diferencial",
-            "title": "Nao e um unico produto empurrado para todos. E um ecossistema pronto para cinco frentes que colaboram entre si.",
-            "body": "O SolusCRT respeita a forma como cada segmento decide. Governo precisa autoridade e governanca. Farmacia precisa previsibilidade e margem. Hospital precisa preparo e capacidade. SST precisa implantacao fluida, assinatura recorrente e uma experiencia que o colaborador percebe. Operadoras de Plano de Saude precisam de gestao especializada de beneficiarios, guias, sinistros e inteligencia territorial.",
-            "quote": "Governo enxerga inteligencia territorial. Farmacia enxerga demanda futura. Hospital enxerga preparo assistencial. SST enxerga conformidade com experiencia humana. Plano de Saude enxerga gestao de operadora com epidemiologia.",
+            "title": "A IA da SolusCRT transforma sinais dispersos em decisao antes do pico.",
+            "body": "O SolusCRT cruza milhares de sinais fracos, territorio, sintomas, fontes brasileiras e comportamento temporal para mostrar onde agir primeiro. Governo, Farmacia, Hospital, SST e Plano de Saude entram depois como mercados que monetizam essa inteligencia.",
+            "quote": "Sinais viram risco. Risco vira decisao. Decisao vira contrato.",
         },
         "governance": {
             "eyebrow": "Governanca",
@@ -824,6 +827,362 @@ PRESENTATION_TRANSLATIONS = {
 }
 
 
+def _commercial_site_copy(language, site):
+    if language != "pt":
+        return site
+    site = deepcopy(site)
+    site["title"] = "SolusCRT Saude | plataforma comercial para Governo, Farmacia, Hospital, SST e Plano de Saude"
+    site["description"] = "Uma vitrine comercial pronta para demonstracao, proposta e assinatura, com cinco ambientes privados por segmento, dois apps e governanca LGPD."
+    site["nav"]["diferencial"] = "Por que comprar"
+    site["nav"]["ecossistema"] = "Segmentos"
+    site["nav"]["valores"] = "Confianca"
+    site["nav"]["app"] = "Apps"
+    site["nav"]["contato"] = "Contato"
+    site["nav_note"] = "Uma plataforma. Cinco segmentos. Um caminho claro para compra."
+    site["hero_eyebrow"] = "Pronta para demonstracao comercial."
+    site["hero_title"] = "Uma plataforma comercial para cada decisor em saude."
+    site["hero_title_desktop_lines"] = [
+        "Uma plataforma",
+        "comercial para",
+        "cada decisor",
+        "em saude.",
+    ]
+    site["hero_title_lines"] = [
+        "Uma plataforma",
+        "comercial para",
+        "cada decisor",
+        "em saude.",
+    ]
+    site["hero_lead"] = (
+        "Em vez de um painel unico e tecnico, a home mostra cinco ambientes que o cliente reconhece de imediato: "
+        "Governo, Farmacia, Hospital, SST e Plano de Saude. Cada setor entra com linguagem propria, proposta clara "
+        "e caminho de compra objetivo."
+    )
+    site["actions"]["presentation"] = "Ver apresentacao comercial"
+    site["actions"]["app"] = "Conhecer os apps"
+    site["actions"]["sales"] = "Agendar demonstracao"
+    site["actions"]["open_presentation"] = "Abrir apresentacao"
+    site["actions"]["meeting"] = "Falar com comercial"
+    site["actions"]["login"] = "Acesso cliente"
+    site["actions"]["signup"] = "Solicitar demo"
+    site["proofs"] = [
+        {
+            "title": "Governo",
+            "text": "Sala de situacao, alertas e governanca territorial para contratos B2G com leitura executiva.",
+        },
+        {
+            "title": "Farmacia",
+            "text": "Previsibilidade de demanda, compra mais segura e menos ruptura para loja ou rede.",
+        },
+        {
+            "title": "Hospital",
+            "text": "Leitos, triagem, equipes e capacidade assistencial preparados antes do pico.",
+        },
+        {
+            "title": "SST",
+            "text": "Assinatura recorrente com app do trabalhador, bem-estar e conformidade em um fluxo proprio.",
+        },
+        {
+            "title": "Plano de Saude",
+            "text": "Operadora com beneficiarios, guias, sinistros, reembolsos e radar territorial no mesmo ambiente.",
+        },
+    ]
+    site["chips"] = [
+        "Governo",
+        "Farmacia",
+        "Hospital",
+        "SST",
+        "Plano de Saude",
+        "Demo comercial",
+    ]
+    site["metrics"] = [
+        {
+            "value": "5 segmentos",
+            "text": "Cada decisor entra numa experiencia pensada para sua rotina e seu contrato",
+        },
+        {
+            "value": "2 apps separados",
+            "text": "App da populacao para territorio e app do trabalhador para SST",
+        },
+        {
+            "value": "LGPD por arquitetura",
+            "text": "Segregacao, auditoria e controle de acesso tratados como parte central da confianca",
+        },
+        {
+            "value": "15 dias gratis",
+            "text": "Entrada rapida para provar valor antes da assinatura",
+        },
+    ]
+    site["differential"]["title"] = (
+        "Quando o cliente se reconhece no ambiente certo, a conversa encurta e a compra avanca."
+    )
+    site["differential"]["lead"] = (
+        "A proposta certa reduz explicacao, diminui objecao e acelera demo, negociacao e assinatura. O SolusCRT "
+        "organiza a conversa por segmento para que cada cliente veja o valor sem precisar traduzir a plataforma."
+    )
+    site["differential"]["traditional_title"] = "Oferta generica"
+    site["differential"]["traditional_items"] = [
+        "O mesmo discurso tenta servir governo, farmacia, hospital, SST e operadora ao mesmo tempo.",
+        "O comprador precisa traduzir sozinho onde esta o valor para sua rotina e seu contrato.",
+        "Quando a proposta parece improvisada, a venda perde forca antes da demo ficar memoravel.",
+    ]
+    site["differential"]["solus_title"] = "Arquitetura comercial SolusCRT"
+    site["differential"]["solus_items"] = [
+        "Cada segmento abre um ambiente com linguagem, rotina e caminho de compra proprios.",
+        "A prova de valor aparece no ponto certo: Governo, Farmacia, Hospital, SST e Plano de Saude.",
+        "O SST fica separado, com assinatura propria, app do trabalhador e experiencia ocupacional sem mistura de contexto.",
+    ]
+    site["ecosystem_title"] = "Cinco ambientes comercializados como produtos de verdade."
+    site["ecosystem_lead"] = (
+        "O visitante nao precisa traduzir a plataforma. Ele reconhece seu setor, seu risco e seu modelo de compra logo "
+        "na primeira tela."
+    )
+    site["slides"] = [
+        {
+            "small": "Governo",
+            "title": "Autoridade territorial com governanca",
+            "text": "Sala de situacao para comunicar melhor, agir antes e sustentar resposta publica com clareza.",
+        },
+        {
+            "small": "Farmacia",
+            "title": "Previsibilidade de demanda",
+            "text": "Gestao para reduzir ruptura, planejar compras e crescer com mais previsibilidade.",
+        },
+        {
+            "small": "Hospital",
+            "title": "Capacidade assistencial preparada",
+            "text": "Leitos, triagem, equipes e fluxo organizados antes da pressao ganhar velocidade.",
+        },
+        {
+            "small": "SST",
+            "title": "Conformidade com adesao",
+            "text": "SST completo, app do trabalhador e bem-estar em uma jornada mais fluida e comercialmente clara.",
+        },
+        {
+            "small": "Plano de Saude",
+            "title": "Operacao especializada",
+            "text": "Beneficiarios, contratos, guias, sinistros, reembolsos e radar territorial em um ambiente proprio.",
+        },
+    ]
+    site["platform"]["title_html"] = "Cinco ofertas.<br>Cinco caminhos claros para compra."
+    site["platform"]["lead"] = (
+        "Cada cliente entra por assinatura, demo ou proposta sem precisar adivinhar qual e o proximo passo."
+    )
+    site["platform"]["cards"] = [
+        {
+            "title": "SST & Clinicas Ocupacionais",
+            "badge": "Assinatura recorrente",
+            "text": "Uma assinatura que organiza a rotina, valoriza o colaborador e reduz atrito operacional.",
+            "price": "R$ 799",
+            "caption": "/mes · assinatura recorrente com trial",
+            "cta": "Comecar com teste",
+        },
+        {
+            "title": "Farmacia & Rede Farmaceutica",
+            "badge": "Operacao por loja ou rede",
+            "text": "Um ambiente para antecipar demanda, proteger margem e preparar a farmacia antes da ruptura.",
+            "price": "R$ 859",
+            "caption": "/mes · por loja ou operacao",
+            "cta": "Solicitar demonstracao",
+        },
+        {
+            "title": "Hospital & Rede Assistencial",
+            "badge": "Estrutura ou rede",
+            "text": "Uma plataforma para proteger capacidade assistencial, ordenar fluxo e preparar equipes antes da pressao.",
+            "price": "R$ 7.250",
+            "caption": "/mes · por estrutura ou rede",
+            "cta": "Solicitar proposta",
+        },
+        {
+            "title": "Governo & Vigilancia Publica",
+            "badge": "Contrato institucional",
+            "text": "Unifique vigilancia territorial, e-SUS/RNDS, faturamento SUS, auditoria e governanca LGPD em uma operacao publica unica.",
+            "price": "Sob proposta",
+            "caption": "licitacao e proposta tecnica institucional",
+            "cta": "Falar com especialista",
+        },
+        {
+            "title": "Operadora de Plano de Saude",
+            "badge": "Operadora especializada",
+            "text": "Gestao completa para operadoras: beneficiarios, contratos, guias, sinistros, reembolsos e leitura territorial.",
+            "price": "R$ 36.250",
+            "caption": "/mes · anual R$ 435.000 · por operadora",
+            "cta": "Solicitar proposta",
+        },
+    ]
+    site["enterprise"]["eyebrow"] = "Mercado e assinatura"
+    site["enterprise"]["title"] = "Cinco segmentos, cinco motivos claros para assinar."
+    site["enterprise"]["lead"] = (
+        "A plataforma nao existe para empurrar o mesmo argumento para todo mundo. Ela foi organizada para que cada "
+        "cliente reconheca o seu proprio caso de uso, o seu tipo de compra e a sua melhor porta de entrada."
+    )
+    site["enterprise"]["items"] = [
+        {
+            "title": "Governo",
+            "text": "Sala de situacao, alertas, auditoria e leitura territorial para uniao, estados e municipios com contrato institucional.",
+        },
+        {
+            "title": "Farmacia",
+            "text": "Previsibilidade de demanda, compras, lotes e ruptura para loja, rede ou distribuidor com leitura regional.",
+        },
+        {
+            "title": "Hospital",
+            "text": "Leitos, triagem, equipes e capacidade assistencial preparados antes da pressao chegar ao pronto atendimento.",
+        },
+        {
+            "title": "SST",
+            "text": "ASO, CAT, eSocial, exames, PGR, bem-estar anonimo e app do trabalhador em um ambiente proprio e recorrente.",
+        },
+        {
+            "title": "Plano de Saude",
+            "text": "Beneficiarios, contratos, guias, sinistros, reembolsos e radar territorial em uma operacao especializada.",
+        },
+    ]
+    site["enterprise"]["metrics"] = [
+        {"value": "5 segmentos", "text": "cada decisor encontra um ambiente com linguagem, risco e compra proprios"},
+        {"value": "2 apps separados", "text": "app da populacao para territorio e app do trabalhador para SST"},
+        {"value": "15 dias gratis", "text": "entrada rapida para experimentar valor real antes da assinatura"},
+    ]
+    site["matrix"] = [
+        {
+            "label": "Governo",
+            "title": "Autoridade territorial",
+            "text": "Paineis para gestores federais, estaduais e municipais com radar territorial, fontes oficiais, comunicacao e auditoria institucional.",
+        },
+        {
+            "label": "Farmacia",
+            "title": "Previsibilidade de demanda",
+            "text": "Antecipacao de demanda, giro, ruptura e insumos com gestao conectada ao risco regional.",
+        },
+        {
+            "label": "Hospital",
+            "title": "Preparo assistencial",
+            "text": "Leitos, triagem, equipes e pressao assistencial com visibilidade antes do pico chegar ao pronto atendimento.",
+        },
+        {
+            "label": "SST",
+            "title": "Operacao ocupacional",
+            "text": "ASO, CAT, afastamentos, NR, EPI/EPC, PGR, eSocial SST, app do trabalhador e bem-estar em ambiente proprio.",
+        },
+        {
+            "label": "Plano de Saude",
+            "title": "Gestao especializada de operadora",
+            "text": "Beneficiarios, contratos, guias, sinistros, reembolsos e leitura territorial no mesmo ambiente.",
+        },
+        {
+            "label": "Privacidade",
+            "title": "Confianca por segregacao",
+            "text": "Cada ambiente tem login, permissao, dados e auditoria proprios. Governo, farmacia, hospital, SST e plano de saude nao compartilham base operacional.",
+        },
+    ]
+    site["values"]["title"] = "Confianca para comprar, implantar e renovar."
+    site["values"]["lead"] = (
+        "A SolusCRT precisa convencer no comercial e sustentar essa promessa na operacao. Produto, privacidade, linguagem "
+        "e governanca foram desenhados para vender bem sem parecer improvisados."
+    )
+    site["app"]["title"] = "Dois apps, duas jornadas, uma venda mais clara."
+    site["app"]["lead"] = (
+        "A app da populacao gera inteligencia territorial. A app do trabalhador pertence ao ambiente SST. Separar as "
+        "jornadas deixa a proposta mais simples para o cliente e mais clara para a compra."
+    )
+    site["app"]["note"] = "O app do trabalhador e ativado por contrato dentro do ambiente SST. O app listado nas lojas e o app da populacao."
+    site["app"]["risks"] = [
+        {"title": "App da populacao", "text": "Sintomas anonimos, radar local e alertas oficiais."},
+        {"title": "App do trabalhador", "text": "ASO, notificacoes e bem-estar no fluxo SST."},
+        {"title": "Leitura territorial", "text": "Focos e sintomas por regiao com localizacao atual."},
+        {"title": "Privacidade por contexto", "text": "Dois apps, duas promessas e duas governancas distintas."},
+    ]
+    site["cta"]["title"] = "Quando cada segmento se reconhece no produto, a decisao avanca mais rapido."
+    site["cta"]["lead"] = (
+        "Se o seu cliente e Governo, Farmacia, Hospital, SST ou Plano de Saude, o SolusCRT ja chega com narrativa "
+        "comercial, oferta e governanca coerentes."
+    )
+    site["footer"] = "SolusCRT Saude. Cinco ambientes privados para Governo, Farmacia, Hospital, SST e Plano de Saude."
+    return site
+
+
+def _commercial_presentation_copy(language, deck):
+    if language != "pt":
+        return deck
+    deck = deepcopy(deck)
+    deck["title"] = "Apresentacao comercial SolusCRT Saude"
+    deck["vision"]["title"] = "Uma plataforma comercial com cinco ambientes privados."
+    deck["vision"]["body"] = (
+        "O SolusCRT Saude organiza a conversa por segmento. Governo, Farmacia, Hospital, SST e Plano de Saude entram em "
+        "jornadas distintas, com linguagem propria, prova de valor e governanca clara."
+    )
+    deck["vision"]["labels"] = {"resp": "Governo", "deng": "Farmacia", "covid": "Hospital"}
+    deck["problem"]["title"] = "Quando tudo parece generico, o comprador perde contexto e a venda esfria."
+    deck["problem"]["cards"] = [
+        {
+            "title": "Governo demora para decidir",
+            "text": "Secretarias e gestores dependem de fontes dispersas, planilhas e leitura tardia para definir alerta, comunicacao e resposta territorial.",
+        },
+        {
+            "title": "Farmacia perde margem",
+            "text": "Sem previsibilidade, a demanda por medicamentos e insumos aparece tarde demais e a ruptura vira custo.",
+        },
+        {
+            "title": "Hospital reage em cima do pico",
+            "text": "Sem antecipacao assistencial, leitos, triagem, escala e suprimentos correm atras da pressao.",
+        },
+        {
+            "title": "SST precisa de fluxo proprio",
+            "text": "ASO, CAT, eSocial SST, exames, PGR, app do trabalhador e bem-estar exigem um ambiente independente para vender valor.",
+        },
+    ]
+    deck["solution"]["title"] = "Cada segmento entra no ambiente certo, com proposta e processo certos."
+    deck["solution"]["body"] = (
+        "SolusCRT separa contratos, acesso e narrativa por segmento. Governo, Farmacia e Hospital usam inteligencia "
+        "territorial com linguagem de negocio. SST opera como ambiente independente de gestao ocupacional, com assinatura "
+        "propria, trial e app do trabalhador."
+    )
+    deck["solution"]["cards"] = [
+        {"title": "Governo", "text": "Sala de situacao, alertas, auditoria e leitura territorial para uniao, estados e municipios."},
+        {"title": "Farmacia", "text": "Estoque, lotes, compras e previsao de demanda ligados ao risco regional."},
+        {"title": "Hospital", "text": "Leitos, triagem, internacoes, equipes e pressao assistencial com antecipacao do pico."},
+        {"title": "SST", "text": "ASO, CAT, exames, NRs, eSocial, bem-estar anonimo e app do trabalhador em um ambiente proprio."},
+    ]
+    deck["ecosystem"]["eyebrow"] = "Ecossistema"
+    deck["ecosystem"]["title"] = "Cinco ambientes que fazem sentido para quem compra."
+    deck["ecosystem"]["cards"] = [
+        {"title": "Governo", "text": "Sala de situacao, alertas oficiais, matriz de decisao, auditoria e contrato institucional."},
+        {"title": "Farmacia", "text": "Gestao farmacêutica, FEFO, lotes, ruptura, compras e previsao de demanda por loja ou rede."},
+        {"title": "Hospital", "text": "Gestao de leitos, atendimento, triagem, internacao e preparacao assistencial."},
+        {"title": "SST e Empresas", "text": "SST completo, bem-estar anonimo, app do trabalhador e prova de valor em 15 dias."},
+        {"title": "Plano de Saude", "text": "Beneficiarios, contratos, guias, sinistros, reembolsos e leitura territorial em um ambiente especializado."},
+    ]
+    deck["differential"]["eyebrow"] = "Diferencial"
+    deck["differential"]["title"] = "Nao e um sistema para todos. E uma proposta para cada frente."
+    deck["differential"]["body"] = (
+        "SolusCRT respeita a forma como cada segmento decide: Governo compra clareza e governanca; Farmacia compra "
+        "previsibilidade; Hospital compra capacidade; SST compra adesao e recorrencia; Plano de Saude compra operacao "
+        "especializada."
+    )
+    deck["differential"]["quote"] = "Governo ve autoridade. Farmacia ve demanda. Hospital ve preparo. SST ve adesao. Plano de Saude ve operacao."
+    deck["governance"]["title"] = "Privacidade e segregacao fazem parte do produto."
+    deck["values"]["title"] = "Tecnologia que merece confianca."
+    deck["values"]["body"] = (
+        "SolusCRT foi pensado para cooperar com pessoas e instituicoes: proteger vidas, antecipar riscos, respeitar "
+        "privacidade, comunicar com responsabilidade e ajudar lideres a agir sem distorcer a verdade."
+    )
+    deck["app"]["title"] = "Dois apps, duas promessas, uma arquitetura clara."
+    deck["app"]["body"] = (
+        "A app da populacao alimenta a inteligencia territorial. A app do trabalhador fica no ambiente SST. Separar as "
+        "jornadas torna a venda mais clara e a operacao mais simples."
+    )
+    deck["app"]["quote"] = "App da populacao para territorio. App do trabalhador para SST."
+    deck["closing"]["eyebrow"] = "Fechamento"
+    deck["closing"]["title"] = "Uma apresentacao pensada para converter interesse em reuniao, demo e proposta."
+    deck["closing"]["body"] = (
+        "Na demonstracao, cada decisor enxerga o seu valor: governo com leitura territorial, farmacia com previsibilidade, "
+        "hospital com capacidade e SST com conformidade e adesao."
+    )
+    deck["closing"]["meeting"] = "Solicitar demonstracao comercial"
+    deck["closing"]["back"] = "Voltar ao site principal"
+    return deck
+
+
 def _normalize_site_language(value):
     if not value:
         return None
@@ -868,11 +1227,12 @@ def site_principal(request):
     if host.startswith("admin."):
         return redirect("/operacao-central/")
     language = _resolve_site_language(request)
+    site = _commercial_site_copy(language, SITE_TRANSLATIONS[language])
     response = render(
         request,
         "site_principal.html",
         {
-            "site": SITE_TRANSLATIONS[language],
+            "site": site,
             "site_lang": language,
             "html_lang": SITE_LANGUAGE_META[language]["html"],
             "language_options": _site_language_options(request, language),
@@ -886,11 +1246,12 @@ def site_principal(request):
 
 def apresentacao_comercial(request):
     language = _resolve_site_language(request)
+    deck = _commercial_presentation_copy(language, PRESENTATION_TRANSLATIONS[language])
     response = render(
         request,
         "apresentacao.html",
         {
-            "deck": PRESENTATION_TRANSLATIONS[language],
+            "deck": deck,
             "site_lang": language,
             "html_lang": SITE_LANGUAGE_META[language]["html"],
             "language_options": _site_language_options(request, language),
