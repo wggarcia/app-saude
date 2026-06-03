@@ -3490,6 +3490,8 @@ class SolicitacaoExameEmailTests(TestCase):
 
 @override_settings(DJANGO_ENV="test")
 class SolicitacaoExameAppSyncTests(TestCase):
+    databases = {"default", "owner"}
+
     def setUp(self):
         self.client = Client()
         self.empresa = Empresa.objects.create(
@@ -3505,8 +3507,23 @@ class SolicitacaoExameAppSyncTests(TestCase):
             cargo="Operador de Produção",
             ativo=True,
         )
-        CredencialAppFuncionario.objects.create(
-            funcionario=self.funcionario,
+        self.empresa_owner = Empresa.objects.using("owner").create(
+            id=self.empresa.id,
+            nome=self.empresa.nome,
+            email="sst@teste.com",
+            senha=make_password("senha123"),
+            ativo=True,
+        )
+        self.funcionario_owner = FuncionarioSST.objects.using("owner").create(
+            id=self.funcionario.id,
+            empresa=self.empresa_owner,
+            nome=self.funcionario.nome,
+            cpf=self.funcionario.cpf,
+            cargo=self.funcionario.cargo,
+            ativo=True,
+        )
+        CredencialAppFuncionario.objects.using("owner").create(
+            funcionario=self.funcionario_owner,
             email="carlos@app.com",
             senha=make_password("app12345"),
         )
