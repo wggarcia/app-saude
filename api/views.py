@@ -629,7 +629,7 @@ PRESENTATION_TRANSLATIONS = {
         },
         "values": {
             "eyebrow": "Valores",
-            "title": "Valores que fazem a tecnologia merecer confianca.",
+            "title": "Valores que fazem a tecnologia merecer confianca",
             "body": "O SolusCRT foi pensado para cooperar com pessoas e instituicoes: proteger vidas, antecipar riscos, respeitar privacidade, comunicar com responsabilidade e ajudar lideres a agir sem distorcer a verdade.",
             "cards": [
                 {"title": "Vida primeiro", "text": "SST, bem-estar e IA existem para reduzir dano real a pessoas reais."},
@@ -840,16 +840,16 @@ def _commercial_site_copy(language, site):
     site["nav"]["contato"] = "Contato"
     site["nav_note"] = "Uma plataforma. Cinco segmentos. Um caminho claro para compra."
     site["hero_eyebrow"] = "Pronta para demonstracao comercial."
-    site["hero_title"] = "Uma plataforma comercial para cada decisor em saude."
+    site["hero_title"] = "Cinco ambientes privados para cada decisor em saude."
     site["hero_title_desktop_lines"] = [
-        "Uma plataforma",
-        "comercial para",
+        "Cinco ambientes",
+        "privados para",
         "cada decisor",
         "em saude.",
     ]
     site["hero_title_lines"] = [
-        "Uma plataforma",
-        "comercial para",
+        "Cinco ambientes",
+        "privados para",
         "cada decisor",
         "em saude.",
     ]
@@ -1075,7 +1075,7 @@ def _commercial_site_copy(language, site):
             "text": "Cada ambiente tem login, permissao, dados e auditoria proprios. Governo, farmacia, hospital, SST e plano de saude nao compartilham base operacional.",
         },
     ]
-    site["values"]["title"] = "Confianca para comprar, implantar e renovar."
+    site["values"]["title"] = "Valores que fazem a tecnologia merecer confianca"
     site["values"]["lead"] = (
         "A SolusCRT precisa convencer no comercial e sustentar essa promessa na operacao. Produto, privacidade, linguagem "
         "e governanca foram desenhados para vender bem sem parecer improvisados."
@@ -1162,7 +1162,7 @@ def _commercial_presentation_copy(language, deck):
     )
     deck["differential"]["quote"] = "Um motor. Cinco ambientes. Nenhum cliente misturado."
     deck["governance"]["title"] = "Privacidade e segregacao fazem parte de cada ambiente."
-    deck["values"]["title"] = "Tecnologia que merece confianca em ambientes isolados."
+    deck["values"]["title"] = "Valores que fazem a tecnologia merecer confianca"
     deck["values"]["body"] = (
         "SolusCRT foi pensado para cooperar com pessoas e instituicoes: proteger vidas, antecipar riscos, respeitar "
         "privacidade, comunicar com responsabilidade e ajudar lideres a agir sem distorcer a verdade ou misturar "
