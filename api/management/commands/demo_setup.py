@@ -230,6 +230,11 @@ class Command(BaseCommand):
         # encontrado" (causa da rejeição Apple Guideline 2.1).
         self._garantir_credenciais_app()
 
+        # Popular dados ocupacionais dos trabalhadores demo (ASO, EPIs,
+        # treinamentos, notificações) para que as telas do app não fiquem
+        # vazias na revisão da App Store (Guideline 2.3.3 — screenshots).
+        self._garantir_dados_app_demo()
+
         self._recria_dono_saas()
 
         self.out(f"\n  {criados} conta(s) demo criada(s). ✅\n", self.style.SUCCESS)
@@ -319,6 +324,190 @@ class Command(BaseCommand):
         cred.ativo = True
         cred.save()
         self.out(f"  ✅ {email_app} garantido", self.style.SUCCESS)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # DADOS OCUPACIONAIS DO APP — idempotente, seguro em produção
+    # ─────────────────────────────────────────────────────────────────────────
+    def _garantir_dados_app_demo(self):
+        """Garante que os trabalhadores demo do app (Luiz e Carlos) tenham
+        dados ocupacionais visíveis — ASO, exames, treinamentos NR, EPIs e
+        notificações — para que as telas do app NÃO apareçam vazias na revisão
+        da App Store (Guideline 2.3.3 — screenshots "app em uso").
+
+        Por que aqui (e não no _criar_dados_sst)? Em produção a empresa demo
+        SST já existe, então o bloco rico de _criar_dados_sst é PULADO pelo
+        --upsert; os trabalhadores são criados só por _garantir_credenciais_app
+        (sem dado ocupacional). Este método preenche esse vão.
+
+        Idempotente: cada bloco só cria o que falta (exists/get_or_create),
+        nunca deleta nada e roda em savepoints para nunca abortar o deploy.
+        """
+        from api.models import (
+            Empresa, FuncionarioSST,
+            ASOOcupacional, ExameOcupacional, TreinamentoNR,
+            EPIItem, EntregaEPI, NotificacaoFuncionario,
+        )
+
+        empresa = Empresa.objects.filter(email="demo.sst@soluscrt.com").first()
+        if not empresa:
+            self.out("  ⚠ empresa demo SST inexistente — sem dados ocupacionais a criar", self.style.WARNING)
+            return
+
+        def _func(cpf, nome):
+            f = FuncionarioSST.objects.filter(empresa=empresa, cpf=cpf).first()
+            if not f:
+                f = FuncionarioSST.objects.filter(empresa=empresa, nome=nome).first()
+            return f
+
+        luiz = _func("111.222.333-44", "Luiz Oliveira")
+        carlos = _func("333.444.555-66", "Carlos Alberto Lima")
+
+        # Catálogo de EPI compartilhado (get_or_create por empresa + nº do CA).
+        # (CA: nome, tipo, validade_ca, fornecedor, descrição)
+        catalogo = {
+            "22347": ("Protetor Auditivo de Inserção Espuma 3M 1100", "auditiva",
+                      datetime.date(2027, 8, 31), "3M Brasil", "Espuma de PU, NRRsf 27 dB, descartável"),
+            "15943": ("Óculos de Proteção Ampla Visão Incolor", "visual",
+                      datetime.date(2027, 9, 30), "Uvex do Brasil", "Policarbonato, antirrisco, antiembaçante"),
+            "31469": ("Capacete de Segurança ABS Aba Total Classe A", "cabeca",
+                      datetime.date(2028, 9, 30), "Planat Proteções", "ABS, aba completa, classe A, suspensão 8 pontos"),
+            "26694": ("Bota de Borracha PVC Bicolor Cano 28 cm", "pes",
+                      datetime.date(2028, 8, 31), "Bracol Safety", "PVC bicolor, cano 28 cm, bico de aço, antiderrapante"),
+            "25261": ("Cinto de Segurança Tipo Paraquedista 5 Pontos", "altura",
+                      datetime.date(2027, 11, 30), "Pioner Equipamentos", "Trava dupla, 5 pontos, ABNT NBR 14626"),
+            "13071": ("Óculos de Segurança Lente Incolor Steelflex", "visual",
+                      datetime.date(2028, 1, 31), "Steelflex Safety", "Haste ajustável, impacto médio"),
+            "13026": ("Luva de Raspa de Couro Cano Curto", "maos",
+                      datetime.date(2028, 2, 28), "Capivaseg EPIs", "Raspa bovino, proteção contra cortes e calor moderado"),
+            "11697": ("Sapato de Segurança Couro c/ Bico de Aço", "pes",
+                      datetime.date(2027, 5, 31), "Marluvas Calçados", "Couro bovino, bico aço, solado antiderrapante"),
+        }
+
+        def _epi(ca):
+            nome, tipo, val_ca, forn, desc = catalogo[ca]
+            obj, _ = EPIItem.objects.get_or_create(
+                empresa=empresa, ca_numero=ca,
+                defaults=dict(nome=nome, tipo=tipo, validade_ca=val_ca,
+                              fornecedor=forn, descricao=desc, ativo=True),
+            )
+            return obj
+
+        plano = []
+        if luiz:
+            plano.append(dict(
+                func=luiz,
+                aso=("periodico", "apto", datetime.date(2026, 3, 29), datetime.date(2027, 3, 29),
+                     "Audiometria, Hemograma, Glicemia, Acuidade Visual"),
+                exames=[
+                    ("audiometria",     "Normal — limiar auditivo dentro dos padrões"),
+                    ("acuidade_visual", "20/20 binocular — dentro do padrão"),
+                    ("laboratorial",    "Hemograma: normal / Glicemia: 92 mg/dL"),
+                ],
+                treinos=[
+                    ("NR-35", "Trabalho em Altura", 8,
+                     datetime.date(2025, 12, 14), datetime.date(2026, 12, 14), "valido"),
+                    ("NR-6", "Utilização e Conservação de EPIs", 4,
+                     datetime.date(2025, 6, 10), datetime.date(2027, 6, 10), "valido"),
+                    ("NR-5", "CIPA — Comissão Interna de Prevenção de Acidentes", 8,
+                     datetime.date(2024, 11, 8), datetime.date(2026, 11, 8), "valido"),
+                    ("NR-10", "Segurança em Instalações e Serviços em Eletricidade", 40,
+                     datetime.date(2025, 5, 23), datetime.date(2026, 5, 23), "vencido"),
+                ],
+                epis=["22347", "15943", "31469", "26694", "25261"],
+                notifs=[
+                    ("treinamento", "NR-10 vencido ⚠️",
+                     "Seu treinamento NR-10 (Eletricidade) venceu em 23/05/2026. Procure o SESMT para reciclagem."),
+                    ("aso", "ASO válido ✅",
+                     "Seu ASO periódico está válido até 29/03/2027."),
+                ],
+            ))
+        if carlos:
+            plano.append(dict(
+                func=carlos,
+                aso=("periodico", "apto", datetime.date(2025, 12, 10), datetime.date(2026, 12, 10),
+                     "Audiometria, Espirometria, Hemograma"),
+                exames=[],
+                treinos=[
+                    ("NR-12", "Segurança no Trabalho em Máquinas e Equipamentos", 8,
+                     datetime.date(2026, 2, 10), datetime.date(2027, 2, 10), "valido"),
+                    ("NR-6", "Utilização e Conservação de EPIs", 4,
+                     datetime.date(2025, 8, 14), datetime.date(2027, 8, 14), "valido"),
+                ],
+                epis=["22347", "13071", "13026", "11697"],
+                notifs=[
+                    ("exame", "Novo pedido de exame 🔬",
+                     "ASO periódico agendado para 10/06/2026. Compareça em jejum de 8h."),
+                ],
+            ))
+
+        if not plano:
+            self.out("  ⚠ trabalhadores demo (Luiz/Carlos) inexistentes — nada a popular", self.style.WARNING)
+            return
+
+        for spec in plano:
+            func = spec["func"]
+
+            # ASO + exames vinculados
+            try:
+                with transaction.atomic():
+                    aso_obj = ASOOcupacional.objects.filter(funcionario=func).order_by("-data_emissao").first()
+                    if not aso_obj:
+                        tipo, resultado, emissao, validade, riscos = spec["aso"]
+                        aso_obj = ASOOcupacional.objects.create(
+                            empresa=empresa, funcionario=func, tipo=tipo, resultado=resultado,
+                            data_emissao=emissao, data_validade=validade,
+                            medico_responsavel="Dra. Patricia Nunes Costa", crm="CRM/SP 34872",
+                            riscos_ocupacionais=riscos,
+                        )
+                    for tipo_ex, resultado_ex in spec["exames"]:
+                        if not ExameOcupacional.objects.filter(funcionario=func, tipo_exame=tipo_ex).exists():
+                            ExameOcupacional.objects.create(
+                                empresa=empresa, funcionario=func, aso=aso_obj,
+                                tipo_exame=tipo_ex, status="realizado", resultado=resultado_ex,
+                                data_realizacao=aso_obj.data_emissao, data_validade=aso_obj.data_validade,
+                            )
+            except Exception as exc:  # noqa: BLE001
+                self.out(f"  ⚠ ASO/exames {func.nome} falhou: {exc}", self.style.WARNING)
+
+            # Treinamentos NR
+            try:
+                with transaction.atomic():
+                    for nr, titulo, horas, realiz, validade, status_t in spec["treinos"]:
+                        if not TreinamentoNR.objects.filter(funcionario=func, nr=nr).exists():
+                            TreinamentoNR.objects.create(
+                                empresa=empresa, funcionario=func, nr=nr, titulo=titulo,
+                                carga_horaria=horas, data_realizacao=realiz, data_validade=validade,
+                                status=status_t, instrutor="SolusCRT Treinamentos Ltda",
+                            )
+            except Exception as exc:  # noqa: BLE001
+                self.out(f"  ⚠ treinamentos {func.nome} falhou: {exc}", self.style.WARNING)
+
+            # EPIs entregues
+            try:
+                with transaction.atomic():
+                    for ca in spec["epis"]:
+                        epi_item = _epi(ca)
+                        if not EntregaEPI.objects.filter(funcionario=func, epi=epi_item).exists():
+                            EntregaEPI.objects.create(
+                                empresa=empresa, funcionario=func, epi=epi_item,
+                                data_entrega=datetime.date(2026, 3, 1), quantidade=1,
+                            )
+            except Exception as exc:  # noqa: BLE001
+                self.out(f"  ⚠ EPIs {func.nome} falhou: {exc}", self.style.WARNING)
+
+            # Notificações in-app
+            try:
+                with transaction.atomic():
+                    for tipo_n, titulo_n, msg_n in spec["notifs"]:
+                        if not NotificacaoFuncionario.objects.filter(funcionario=func, titulo=titulo_n).exists():
+                            NotificacaoFuncionario.objects.create(
+                                empresa=empresa, funcionario=func,
+                                tipo=tipo_n, titulo=titulo_n, mensagem=msg_n,
+                            )
+            except Exception as exc:  # noqa: BLE001
+                self.out(f"  ⚠ notificações {func.nome} falhou: {exc}", self.style.WARNING)
+
+            self.out(f"  ✅ dados ocupacionais garantidos p/ {func.nome}", self.style.SUCCESS)
 
     # ─────────────────────────────────────────────────────────────────────────
     # REFRESH DADOS — recria dados sem deletar contas
