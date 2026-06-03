@@ -17,7 +17,15 @@ from .models import (
     FuncionarioSST, ASOOcupacional, TreinamentoNR, EntregaEPI,
     CredencialAppFuncionario, NotificacaoFuncionario, SolicitacaoExame,
 )
+from .middleware import _rls_set_empresa
 from .services.employee_notifications import solicitacao_portal_dict
+
+
+# Alias da conexão que BYPASSA o RLS (papel dono do banco). Usado apenas em
+# lookups cross-tenant que ocorrem ANTES de termos o empresa_id — login do app,
+# busca por CPF e registro. A conexão "default" usa o papel restrito e, sob RLS
+# sem app.empresa_id, não enxerga nenhuma linha.
+_OWNER_DB = "owner" if "owner" in settings.DATABASES else "default"
 
 
 # ── FCM token ───────────────────────────────────────────────────────────────
@@ -75,6 +83,13 @@ def _autenticar_funcionario(request):
     token = auth.split(" ", 1)[1].strip()
     try:
         data = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
+        # As rotas /api/funcionario/ são "livres" no EmpresaMiddleware, então o
+        # contexto RLS (app.empresa_id) NÃO foi setado para esta requisição. O
+        # JWT já carrega o empresa_id do funcionário — usamos ele para escopar o
+        # RLS antes de qualquer query, preservando o isolamento entre tenants e
+        # permitindo que as tabelas protegidas (FuncionarioSST, Notificacao, ASO,
+        # EPI, Treinamento...) fiquem visíveis apenas para a empresa do token.
+        _rls_set_empresa(data["empresa_id"])
         return FuncionarioSST.objects.select_related("empresa").get(
             id=data["funcionario_id"],
             empresa_id=data["empresa_id"],
@@ -111,7 +126,7 @@ def funcionario_buscar_cpf(request):
         return JsonResponse({"erro": "CPF é obrigatório"}, status=400)
 
     funcs = list(
-        FuncionarioSST.objects
+        FuncionarioSST.objects.using(_OWNER_DB)
         .filter(cpf__icontains=cpf, ativo=True)
         .select_related("empresa")
         .order_by("empresa__nome")
@@ -162,17 +177,22 @@ def funcionario_registrar(request):
     if not senha or len(senha) < 6:
         return JsonResponse({"erro": "Senha deve ter pelo menos 6 caracteres"}, status=400)
 
-    func = FuncionarioSST.objects.filter(id=funcionario_id, ativo=True).select_related("empresa").first()
+    func = (
+        FuncionarioSST.objects.using(_OWNER_DB)
+        .filter(id=funcionario_id, ativo=True)
+        .select_related("empresa")
+        .first()
+    )
     if not func:
         return JsonResponse({"erro": "Funcionário não encontrado."}, status=404)
 
-    if CredencialAppFuncionario.objects.filter(email=email).exists():
+    if CredencialAppFuncionario.objects.using(_OWNER_DB).filter(email=email).exists():
         return JsonResponse({"erro": "E-mail já cadastrado. Use outro ou recupere sua senha."}, status=409)
 
-    if hasattr(func, "credencial_app"):
+    if CredencialAppFuncionario.objects.using(_OWNER_DB).filter(funcionario=func).exists():
         return JsonResponse({"erro": "Conta já existe para este CPF. Faça login com seu e-mail."}, status=409)
 
-    cred = CredencialAppFuncionario.objects.create(
+    cred = CredencialAppFuncionario.objects.using(_OWNER_DB).create(
         funcionario=func,
         email=email,
         senha=make_password(senha),
@@ -209,7 +229,7 @@ def funcionario_login(request):
         if not senha:
             return JsonResponse({"erro": "Senha é obrigatória"}, status=400)
         try:
-            cred = CredencialAppFuncionario.objects.select_related(
+            cred = CredencialAppFuncionario.objects.using(_OWNER_DB).select_related(
                 "funcionario__empresa"
             ).get(email=email, ativo=True)
         except CredencialAppFuncionario.DoesNotExist:
@@ -236,7 +256,7 @@ def funcionario_login(request):
         return JsonResponse({"erro": "E-mail ou CPF é obrigatório"}, status=400)
 
     func = (
-        FuncionarioSST.objects
+        FuncionarioSST.objects.using(_OWNER_DB)
         .filter(cpf__icontains=cpf, ativo=True)
         .select_related("empresa")
         .order_by("-criado_em")

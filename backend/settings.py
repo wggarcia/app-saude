@@ -184,7 +184,8 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Se APP_DATABASE_URL não estiver definida (cron jobs, preDeployCommand com override),
 # o Django usa DATABASE_URL normalmente — sem quebrar nada.
 _APP_DB_URL = os.environ.get("APP_DATABASE_URL") or ""
-DATABASE_URL = _APP_DB_URL or os.environ.get("DATABASE_URL")
+_OWNER_DB_URL = os.environ.get("DATABASE_URL") or ""
+DATABASE_URL = _APP_DB_URL or _OWNER_DB_URL
 
 if DATABASE_URL:
     import dj_database_url
@@ -199,6 +200,23 @@ if DATABASE_URL:
     DATABASES = {
         "default": default_database
     }
+
+    # Conexão "owner" — usa DATABASE_URL (papel dono do banco, que BYPASSA o RLS).
+    # Necessária para lookups cross-tenant que acontecem ANTES de sabermos o
+    # empresa_id (ex.: login do app do funcionário, que resolve a credencial pelo
+    # e-mail antes de ter qualquer contexto de tenant). A conexão "default" usa o
+    # papel restrito soluscrt_app e, sob RLS sem app.empresa_id setado, não enxerga
+    # nenhuma linha — por isso o login do portal precisa do papel owner.
+    if _OWNER_DB_URL and _OWNER_DB_URL != _APP_DB_URL:
+        DATABASES["owner"] = dj_database_url.parse(
+            _OWNER_DB_URL,
+            conn_max_age=600,
+            ssl_require=IS_PRODUCTION,
+        )
+    else:
+        # Sem URL de owner distinta (dev, ou APP_DATABASE_URL ausente): o alias
+        # "owner" aponta para a mesma config da default — sem RLS a contornar.
+        DATABASES["owner"] = dict(default_database)
 else:
     if IS_PRODUCTION:
         raise RuntimeError("Configure DATABASE_URL com PostgreSQL gerenciado antes de subir em producao.")
@@ -208,6 +226,9 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+    # SQLite não tem RLS; o alias "owner" espelha a default só para que
+    # `.using("owner")` funcione igual em dev e em produção.
+    DATABASES["owner"] = dict(DATABASES["default"])
 
 # ── Multi-tenant RLS ──────────────────────────────────────────────────────────
 # Envolve cada requisição HTTP em uma única transação PostgreSQL.
