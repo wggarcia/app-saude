@@ -260,31 +260,65 @@ class Command(BaseCommand):
         ]
 
         for cpf, nome, cargo, setor, email_app, senha_app in trabalhadores:
-            func = FuncionarioSST.objects.filter(empresa=empresa, cpf=cpf).first()
-            if not func:
-                func = FuncionarioSST.objects.filter(empresa=empresa, nome=nome).first()
-            if not func:
-                func = FuncionarioSST.objects.create(
-                    empresa=empresa, ativo=True, nome=nome, cpf=cpf,
-                    cargo=cargo, setor=setor,
+            # Cada trabalhador roda em seu próprio savepoint: uma falha aqui
+            # NÃO pode abortar a transação inteira do upsert (senão nenhuma
+            # credencial é persistida e os avaliadores recebem 404).
+            try:
+                with transaction.atomic():
+                    self._upsert_credencial_app(
+                        FuncionarioSST, CredencialAppFuncionario,
+                        empresa, cpf, nome, cargo, setor, email_app, senha_app,
+                    )
+            except Exception as exc:  # noqa: BLE001
+                self.out(
+                    f"  ⚠ credencial {email_app} falhou: {exc}",
+                    self.style.WARNING,
                 )
-            elif not func.ativo:
-                func.ativo = True
-                func.save(update_fields=["ativo"])
 
-            cred = CredencialAppFuncionario.objects.filter(email=email_app).first()
-            if cred:
-                cred.funcionario = func
-                cred.senha = make_password(senha_app)
-                cred.ativo = True
-                cred.save(update_fields=["funcionario", "senha", "ativo"])
-                self.out(f"  ~ {email_app} (senha redefinida)", self.style.SUCCESS)
-            else:
-                CredencialAppFuncionario.objects.create(
-                    funcionario=func, email=email_app,
-                    senha=make_password(senha_app), ativo=True,
-                )
-                self.out(f"  ✅ {email_app} criado", self.style.SUCCESS)
+    def _upsert_credencial_app(
+        self, FuncionarioSST, CredencialAppFuncionario,
+        empresa, cpf, nome, cargo, setor, email_app, senha_app,
+    ):
+        """Garante 1 FuncionarioSST + 1 CredencialAppFuncionario de forma
+        idempotente, tratando explicitamente todos os conflitos do vínculo
+        OneToOne (funcionario↔credencial) para nunca levantar IntegrityError."""
+        func = FuncionarioSST.objects.filter(empresa=empresa, cpf=cpf).first()
+        if not func:
+            func = FuncionarioSST.objects.filter(empresa=empresa, nome=nome).first()
+        if not func:
+            func = FuncionarioSST.objects.create(
+                empresa=empresa, ativo=True, nome=nome, cpf=cpf,
+                cargo=cargo, setor=setor,
+            )
+        elif not func.ativo:
+            func.ativo = True
+            func.save(update_fields=["ativo"])
+
+        cred_por_email = CredencialAppFuncionario.objects.filter(email=email_app).first()
+        cred_do_func = CredencialAppFuncionario.objects.filter(funcionario=func).first()
+
+        if cred_por_email and cred_do_func and cred_por_email.pk != cred_do_func.pk:
+            # O e-mail-alvo pertence a OUTRO funcionário e este func já tem uma
+            # credencial diferente. Remove a credencial atual do func e
+            # reaponta a credencial do e-mail para ele (OneToOne fica consistente).
+            cred_do_func.delete()
+            cred = cred_por_email
+            cred.funcionario = func
+        elif cred_por_email:
+            # Existe credencial com o e-mail-alvo (pode já ser deste func).
+            cred = cred_por_email
+            cred.funcionario = func
+        elif cred_do_func:
+            # Func tem credencial com OUTRO e-mail — atualiza o e-mail dele.
+            cred = cred_do_func
+            cred.email = email_app
+        else:
+            cred = CredencialAppFuncionario(funcionario=func, email=email_app)
+
+        cred.senha = make_password(senha_app)
+        cred.ativo = True
+        cred.save()
+        self.out(f"  ✅ {email_app} garantido", self.style.SUCCESS)
 
     # ─────────────────────────────────────────────────────────────────────────
     # REFRESH DADOS — recria dados sem deletar contas
