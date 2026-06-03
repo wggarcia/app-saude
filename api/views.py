@@ -103,7 +103,7 @@ SITE_TRANSLATIONS = {
         ],
         "platform": {
             "title_html": "Uma IA epidemiologica.<br>Cinco ambientes isolados prontos para assinar.",
-            "lead": "A mesma inteligencia explica o risco, o territorio e o momento de agir. Depois disso, cada ambiente isolado entra por assinatura, trial, proposta comercial ou contrato institucional, sem compartilhamento de base entre clientes.",
+            "lead": "Cada ambiente isolado recebe uma IA feita para o proprio contexto, o proprio risco e o proprio momento de agir. Depois disso, cada ambiente entra por assinatura, trial, proposta comercial ou contrato institucional, sem compartilhamento de base entre clientes.",
             "cards": [
                 {
                     "title": "SST & Clinicas Ocupacionais",
@@ -602,7 +602,7 @@ PRESENTATION_TRANSLATIONS = {
         },
         "ecosystem": {
             "eyebrow": "Ecossistema",
-            "title": "Uma plataforma. Cinco mercados para a mesma IA.",
+            "title": "Uma plataforma. Cinco mercados para IA especializada por segmento.",
             "cards": [
                 {"title": "Governo", "text": "Uma sala de situacao epidemiologica feita para autoridade publica, leitura territorial e resposta institucional."},
                 {"title": "Farmacia", "text": "Gestao farmaceutica, FEFO, lotes, ruptura, compras e inteligencia territorial para antecipar demanda."},
@@ -914,11 +914,12 @@ def _commercial_site_copy(language, site):
         },
     ]
     site["differential"]["title"] = (
-        "Quando o cliente se reconhece no ambiente certo, a conversa encurta e a compra avanca."
+        "Quando a IA fala a linguagem do segmento certo, a conversa encurta e a compra avanca."
     )
     site["differential"]["lead"] = (
         "A proposta certa reduz explicacao, diminui objecao e acelera demo, negociacao e assinatura. O SolusCRT "
-        "organiza a conversa por segmento para que cada cliente veja o valor sem precisar traduzir a plataforma."
+        "organiza a conversa por segmento para que cada cliente veja uma IA desenhada para o proprio contexto, sem "
+        "precisar traduzir a plataforma."
     )
     site["differential"]["traditional_title"] = "Oferta generica"
     site["differential"]["traditional_items"] = [
@@ -928,7 +929,7 @@ def _commercial_site_copy(language, site):
     ]
     site["differential"]["solus_title"] = "Arquitetura comercial SolusCRT"
     site["differential"]["solus_items"] = [
-        "Cada segmento abre um ambiente com linguagem, rotina e caminho de compra proprios.",
+        "Cada segmento abre um ambiente com linguagem, rotina e IA proprias.",
         "A prova de valor aparece no ponto certo: Governo, Farmacia, Hospital, SST e Plano de Saude.",
         "O SST fica separado, com assinatura propria, app do trabalhador e experiencia ocupacional sem mistura de contexto.",
     ]
@@ -1030,7 +1031,7 @@ def _commercial_site_copy(language, site):
         },
     ]
     site["enterprise"]["metrics"] = [
-        {"value": "5 segmentos", "text": "cada decisor encontra um ambiente com linguagem, risco e compra proprios"},
+        {"value": "5 segmentos", "text": "cada decisor encontra um ambiente com linguagem, risco, compra e IA proprios"},
         {"value": "2 apps separados", "text": "app da populacao para territorio e app do trabalhador para SST"},
         {"value": "Contato comercial", "text": "sem tabela publica e com proposta ajustada ao segmento"},
     ]
@@ -1100,8 +1101,8 @@ def _commercial_presentation_copy(language, deck):
     deck["vision"]["title"] = "Monitoramento epidemiologico com IA em cinco ambientes privados e isolados."
     deck["vision"]["body"] = (
         "O SolusCRT Saude organiza a conversa por segmento, mas nunca mistura clientes: Governo, Farmacia, Hospital, "
-        "SST e Plano de Saude entram em jornadas distintas, com ambiente, acesso e privacidade proprios. A IA e a "
-        "mesma, mas cada assinatura e cada contrato vivem dentro do seu proprio espaco isolado."
+        "SST e Plano de Saude entram em jornadas distintas, com ambiente, acesso e privacidade proprios. A IA e "
+        "desenhada para cada ambiente, com contexto, leitura e recomendacao proprios para cada contrato."
     )
     deck["vision"]["labels"] = {"resp": "Sinais", "deng": "IA", "covid": "Risco"}
     deck["problem"]["title"] = "Quando tudo parece um unico pacote, o comprador nao enxerga seu proprio contexto."
@@ -1145,11 +1146,12 @@ def _commercial_presentation_copy(language, deck):
         {"title": "Plano de Saude", "text": "Beneficiarios, contratos, guias, sinistros, reembolsos e leitura territorial em ambiente proprio."},
     ]
     deck["differential"]["eyebrow"] = "Diferencial"
-    deck["differential"]["title"] = "Nao e um sistema para todos. E um motor comum com cinco ambientes isolados."
+    deck["differential"]["title"] = "Nao e uma IA generica. E inteligencia epidemiologica desenhada por segmento."
     deck["differential"]["body"] = (
         "SolusCRT respeita a forma como cada segmento decide: Governo compra clareza e governanca; Farmacia compra "
         "previsibilidade; Hospital compra capacidade; SST compra adesao e recorrencia; Plano de Saude compra operacao "
-        "especializada. Cada um entra no seu proprio ambiente, com dados segregados e experiencia protegida."
+        "especializada. Cada um entra no seu proprio ambiente com uma IA ajustada ao contexto, com dados segregados e "
+        "experiencia protegida."
     )
     deck["differential"]["quote"] = "Um motor. Cinco ambientes. Nenhum cliente misturado."
     deck["governance"]["title"] = "Privacidade e segregacao fazem parte de cada ambiente."
