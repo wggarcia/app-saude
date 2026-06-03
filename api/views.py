@@ -909,8 +909,8 @@ def _commercial_site_copy(language, site):
             "text": "Segregacao, auditoria e controle de acesso tratados como parte central da confianca",
         },
         {
-            "value": "15 dias gratis",
-            "text": "Entrada rapida para provar valor antes da assinatura",
+            "value": "Contato comercial",
+            "text": "A conversa sai da vitrine e vai direto para o enquadramento certo do cliente",
         },
     ]
     site["differential"]["title"] = (
@@ -964,50 +964,41 @@ def _commercial_site_copy(language, site):
             "text": "Beneficiarios, contratos, guias, sinistros, reembolsos e radar territorial em um ambiente proprio.",
         },
     ]
-    site["platform"]["title_html"] = "Cinco ofertas.<br>Cinco caminhos claros para compra."
+    site["platform"]["title_html"] = "Quer proposta?<br>Fale com comercial."
     site["platform"]["lead"] = (
-        "Cada cliente entra por assinatura, demo ou proposta sem precisar adivinhar qual e o proximo passo."
+        "Cada cliente entra pelo caminho certo. Se o segmento faz sentido, a gente aprofunda por contato comercial, "
+        "sem tabela publica e sem expor valores antes da hora."
     )
     site["platform"]["cards"] = [
         {
             "title": "SST & Clinicas Ocupacionais",
             "badge": "Assinatura recorrente",
-            "text": "Uma assinatura que organiza a rotina, valoriza o colaborador e reduz atrito operacional.",
-            "price": "R$ 799",
-            "caption": "/mes · assinatura recorrente com trial",
-            "cta": "Comecar com teste",
+            "text": "Uma conversa de negocio que organiza a rotina, valoriza o colaborador e reduz atrito operacional.",
+            "cta": "Falar com comercial",
         },
         {
             "title": "Farmacia & Rede Farmaceutica",
             "badge": "Operacao por loja ou rede",
             "text": "Um ambiente para antecipar demanda, proteger margem e preparar a farmacia antes da ruptura.",
-            "price": "R$ 859",
-            "caption": "/mes · por loja ou operacao",
-            "cta": "Solicitar demonstracao",
+            "cta": "Falar com comercial",
         },
         {
             "title": "Hospital & Rede Assistencial",
             "badge": "Estrutura ou rede",
             "text": "Uma plataforma para proteger capacidade assistencial, ordenar fluxo e preparar equipes antes da pressao.",
-            "price": "R$ 7.250",
-            "caption": "/mes · por estrutura ou rede",
-            "cta": "Solicitar proposta",
+            "cta": "Falar com comercial",
         },
         {
             "title": "Governo & Vigilancia Publica",
             "badge": "Contrato institucional",
             "text": "Unifique vigilancia territorial, e-SUS/RNDS, faturamento SUS, auditoria e governanca LGPD em uma operacao publica unica.",
-            "price": "Sob proposta",
-            "caption": "licitacao e proposta tecnica institucional",
-            "cta": "Falar com especialista",
+            "cta": "Falar com comercial",
         },
         {
             "title": "Operadora de Plano de Saude",
             "badge": "Operadora especializada",
             "text": "Gestao completa para operadoras: beneficiarios, contratos, guias, sinistros, reembolsos e leitura territorial.",
-            "price": "R$ 36.250",
-            "caption": "/mes · anual R$ 435.000 · por operadora",
-            "cta": "Solicitar proposta",
+            "cta": "Falar com comercial",
         },
     ]
     site["enterprise"]["eyebrow"] = "Mercado e assinatura"
@@ -1041,7 +1032,7 @@ def _commercial_site_copy(language, site):
     site["enterprise"]["metrics"] = [
         {"value": "5 segmentos", "text": "cada decisor encontra um ambiente com linguagem, risco e compra proprios"},
         {"value": "2 apps separados", "text": "app da populacao para territorio e app do trabalhador para SST"},
-        {"value": "15 dias gratis", "text": "entrada rapida para experimentar valor real antes da assinatura"},
+        {"value": "Contato comercial", "text": "sem tabela publica e com proposta ajustada ao segmento"},
     ]
     site["matrix"] = [
         {
