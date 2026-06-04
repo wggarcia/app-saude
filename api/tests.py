@@ -7,7 +7,7 @@ import jwt
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.core.management import call_command
-from django.test import Client, TestCase, override_settings
+from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.template.loader import render_to_string
 from django.urls import resolve
 from django.utils import timezone
@@ -3488,9 +3488,69 @@ class SolicitacaoExameEmailTests(TestCase):
         self.assertEqual(kwargs["from_email"], "SolusCRT <mailer@soluscrt.com.br>")
 
 
+def _owner_e_banco_distinto():
+    """True quando a conexao "owner" aponta para um banco fisico diferente da
+    "default". Em CI (Postgres) ambos os aliases usam o MESMO banco
+    (DATABASE_URL unica) -> retorna False. Em dev/teste com sqlite, o Django
+    cria bancos in-memory separados por alias -> retorna True."""
+    from django.db import connections
+
+    d = connections["default"].settings_dict
+    o = connections["owner"].settings_dict
+    chave = lambda s: (s.get("NAME"), s.get("HOST"), s.get("PORT"))
+    return chave(d) != chave(o)
+
+
+def _provisiona_login_funcionario_owner(empresa, funcionario, email, senha):
+    """Garante que o login do portal do funcionario (que consulta a conexao
+    "owner") encontre a credencial. Em CI (owner == default) basta criar na
+    "default": o TransactionTestCase commita e a conexao "owner" enxerga a
+    linha. Em sqlite (owner != default) espelha empresa, funcionario e
+    credencial na conexao "owner". Escrever nos dois quando sao o mesmo banco
+    duplicaria o PK e travaria esperando o lock — por isso o desvio por ambiente."""
+    if _owner_e_banco_distinto():
+        empresa_owner = Empresa.objects.using("owner").create(
+            id=empresa.id,
+            nome=empresa.nome,
+            email=empresa.email,
+            senha=empresa.senha,
+            ativo=empresa.ativo,
+        )
+        funcionario_owner = FuncionarioSST.objects.using("owner").create(
+            id=funcionario.id,
+            empresa=empresa_owner,
+            nome=funcionario.nome,
+            cpf=funcionario.cpf,
+            cargo=funcionario.cargo,
+            setor=getattr(funcionario, "setor", "") or "",
+            ativo=funcionario.ativo,
+        )
+        CredencialAppFuncionario.objects.using("owner").create(
+            funcionario=funcionario_owner,
+            email=email,
+            senha=make_password(senha),
+        )
+    else:
+        CredencialAppFuncionario.objects.create(
+            funcionario=funcionario,
+            email=email,
+            senha=make_password(senha),
+        )
+
+
 @override_settings(DJANGO_ENV="test")
-class SolicitacaoExameAppSyncTests(TestCase):
+class SolicitacaoExameAppSyncTests(TransactionTestCase):
+    # Usa TransactionTestCase (em vez de TestCase) porque o login do app do
+    # funcionario le pela conexao "owner". Em TestCase, a transacao atomica do
+    # teste fica aberta na conexao "default" e a conexao "owner" (segunda
+    # conexao para o MESMO banco fisico em CI/dev) nunca enxerga as linhas — e,
+    # ao inserir os mesmos PKs nas duas conexoes, trava esperando o lock para
+    # sempre. Com TransactionTestCase as escritas na "default" sao commitadas e
+    # ficam visiveis para a conexao "owner" quando os dois aliases compartilham
+    # o mesmo banco (CI Postgres). Quando "owner" e um banco distinto (sqlite
+    # local), espelhamos as linhas explicitamente na conexao "owner".
     databases = {"default", "owner"}
+    reset_sequences = True
 
     def setUp(self):
         self.client = Client()
@@ -3507,25 +3567,8 @@ class SolicitacaoExameAppSyncTests(TestCase):
             cargo="Operador de Produção",
             ativo=True,
         )
-        self.empresa_owner = Empresa.objects.using("owner").create(
-            id=self.empresa.id,
-            nome=self.empresa.nome,
-            email="sst@teste.com",
-            senha=make_password("senha123"),
-            ativo=True,
-        )
-        self.funcionario_owner = FuncionarioSST.objects.using("owner").create(
-            id=self.funcionario.id,
-            empresa=self.empresa_owner,
-            nome=self.funcionario.nome,
-            cpf=self.funcionario.cpf,
-            cargo=self.funcionario.cargo,
-            ativo=True,
-        )
-        CredencialAppFuncionario.objects.using("owner").create(
-            funcionario=self.funcionario_owner,
-            email="carlos@app.com",
-            senha=make_password("app12345"),
+        _provisiona_login_funcionario_owner(
+            self.empresa, self.funcionario, "carlos@app.com", "app12345"
         )
         login = self.client.post(
             "/api/login",
@@ -3626,7 +3669,16 @@ class SolicitacaoExameAppSyncTests(TestCase):
 
 
 @override_settings(DJANGO_ENV="test")
-class FuncionarioPortalEndpointsTests(TestCase):
+class FuncionarioPortalEndpointsTests(TransactionTestCase):
+    # O login do portal do funcionario consulta a conexao "owner" (que ignora
+    # RLS). Em CI a conexao "owner" aponta para o mesmo banco fisico da
+    # "default", entao precisamos de TransactionTestCase para que as escritas
+    # sejam visiveis entre conexoes (TestCase deixaria tudo em transacao nao
+    # commitada, causando deadlock/invisibilidade). Localmente (sqlite) "owner"
+    # e um banco separado e o helper espelha as linhas necessarias.
+    reset_sequences = True
+    databases = {"default", "owner"}
+
     def setUp(self):
         self.client = Client()
         self.empresa = Empresa.objects.create(
@@ -3643,10 +3695,8 @@ class FuncionarioPortalEndpointsTests(TestCase):
             setor="Operações",
             ativo=True,
         )
-        CredencialAppFuncionario.objects.create(
-            funcionario=self.funcionario,
-            email="aline@app.com",
-            senha=make_password("app12345"),
+        _provisiona_login_funcionario_owner(
+            self.empresa, self.funcionario, "aline@app.com", "app12345"
         )
         ASOOcupacional.objects.create(
             empresa=self.empresa,
