@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'public_api_service.dart';
 
 class LegalConsentService {
-  static const currentVersion = '2026.04.23';
+  static const currentVersion = '2026.06.04';
   static const _acceptedVersionKey = 'soluscrt_legal_accepted_version';
   static const _acceptedAtKey = 'soluscrt_legal_accepted_at';
 

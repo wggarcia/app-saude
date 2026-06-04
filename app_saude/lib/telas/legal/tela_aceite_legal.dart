@@ -78,7 +78,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
           builder: (context) => AlertDialog(
             title: const Text('Aceite necessario'),
             content: const Text(
-              'Para proteger voce e a integridade do radar epidemiologico, o app so pode funcionar apos a aceitacao dos Termos de Uso e da Politica de Privacidade.',
+              'Para proteger voce e a integridade do radar de sinais de saude, o app so pode funcionar apos a aceitacao dos Termos de Uso e da Politica de Privacidade.',
             ),
             actions: [
               TextButton(
@@ -121,7 +121,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                       icon: Icons.verified_user_outlined,
                       title: 'Termos de Uso',
                       summary:
-                          'O SolusCRT Saude e uma plataforma de monitoramento epidemiologico populacional. O app permite envio voluntario sem cadastro nominal de sinais de saude para apoiar leitura territorial de risco.',
+                          'O SolusCRT Saude e um aplicativo privado e gratuito da SolusCRT para acompanhamento de sinais de saude da comunidade. O app permite envio voluntario sem cadastro nominal de sinais de saude para apoiar uma leitura territorial de tendencias.',
                       items: [
                         'Use o app de boa-fe, com informacoes verdadeiras e sem tentar manipular focos, volumes ou localidades.',
                         'O app nao substitui consulta medica, diagnostico, prescricao, emergencia, SAMU, pronto atendimento ou orientacao de profissional de saude.',
@@ -133,7 +133,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                       icon: Icons.privacy_tip_outlined,
                       title: 'Politica de Privacidade e LGPD',
                       summary:
-                          'Tratamos dados com finalidade de vigilancia epidemiologica, seguranca, prevencao a fraude, melhoria do radar e comunicacao de alertas publicos.',
+                          'Tratamos dados com finalidade de inteligencia de dados de saude, seguranca, prevencao a fraude, melhoria do radar e comunicacao de alertas.',
                       items: [
                         'O app pode tratar sintomas informados, localizacao aproximada ou precisa, cidade, bairro, estado, data, identificador tecnico aleatorio do app e dados de seguranca.',
                         'Sinais de saude sao usados preferencialmente de forma agregada, estatistica e territorial, reduzindo exposicao individual.',
@@ -145,7 +145,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                       icon: Icons.health_and_safety_outlined,
                       title: 'Consentimento de Saude e Localizacao',
                       summary:
-                          'Dados de saude e localizacao sao sensiveis. Ao continuar, voce autoriza o tratamento necessario para o funcionamento do radar epidemiologico.',
+                          'Dados de saude e localizacao sao sensiveis. Ao continuar, voce autoriza o tratamento necessario para o funcionamento do radar de sinais de saude.',
                       items: [
                         'O envio de sintomas e voluntario e deve representar a sua situacao real no momento do envio.',
                         'O SolusCRT pode aplicar filtros antifraude por aparelho, rede, repeticao, qualidade de GPS e padroes de uso.',
@@ -160,7 +160,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                           'A plataforma busca apoiar decisao responsavel, mas depende de conectividade, permissoes, disponibilidade de fontes, qualidade dos envios e validacoes tecnicas.',
                       items: [
                         'Podemos atualizar controles, regras antifraude, formas de exibicao, termos e politicas para melhorar seguranca e conformidade.',
-                        'Autoridades, empresas e parceiros institucionais podem visualizar dados agregados conforme perfil contratado, permissao e finalidade adequada.',
+                        'A SolusCRT pode exibir indicadores agregados e anonimos conforme finalidade adequada, permissao e perfil contratado.',
                         'Incidentes, abuso, fraude ou risco de seguranca podem gerar bloqueio, auditoria, descarte de sinais e comunicacoes cabiveis.',
                         'Versao dos termos: ${LegalConsentService.currentVersion}.',
                       ],
@@ -181,7 +181,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                       value: _health,
                       onChanged: (value) => setState(() => _health = value),
                       text:
-                          'Entendo que o app nao substitui atendimento medico e autorizo o uso de localizacao e sinais de saude para o radar epidemiologico.',
+                          'Entendo que o app nao substitui atendimento medico e autorizo o uso de localizacao e sinais de saude para o funcionamento do radar.',
                     ),
                     const SizedBox(height: 20),
                     Row(
