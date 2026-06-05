@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>SolusCRT Plano de Saúde Intelligence</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #07131d;
+      --panel: rgba(6, 16, 26, 0.8);
+      --panel-strong: rgba(4, 11, 18, 0.92);
+      --panel-soft: rgba(12, 28, 41, 0.72);
+      --stroke: rgba(255, 182, 214, 0.14);
+      --text: #fff0f6;
+      --muted: #d9a3bc;
+      --accent: #ff6b9d;
+      --accent-2: #ffd166;
+      --accent-3: #ff9ec4;
+      --critico: #ff365f;
+      --alto: #ff7a18;
+      --moderado: #ffd166;
+      --baixo: #06d6a0;
+      --shadow: 0 22px 60px rgba(0, 0, 0, 0.42);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(255, 107, 157, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 107, 157, 0.06) 1px, transparent 1px);
+      background-size: 46px 46px;
+      opacity: 0.22;
+      z-index: 1;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at top left, rgba(255, 107, 157, 0.16), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(255, 122, 24, 0.14), transparent 28%),
+        linear-gradient(180deg, rgba(4, 11, 18, 0.1), rgba(4, 11, 18, 0.38));
+      z-index: 1;
+    }
+
+    #map {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .topbar, .dock, .floating-button { pointer-events: auto; }
+
+    .topbar {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: grid;
+      grid-template-columns: minmax(260px, 1.1fr) minmax(300px, 1.5fr) minmax(0, 1fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .topbar-card, .dock, .detail-card, .metric-card {
+      border: 1px solid var(--stroke);
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .topbar-card {
+      border-radius: 24px;
+      padding: 14px 16px;
+    }
+
+    .eyebrow {
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      color: var(--accent);
+    }
+
+    .brand-title {
+      margin-top: 8px;
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .brand-subtitle, .mini {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .metrics-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric-card {
+      border-radius: 18px;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, rgba(17, 37, 53, 0.88), rgba(7, 19, 29, 0.92));
+    }
+
+    .metric-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .metric-card strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 1.2rem;
+    }
+
+    .metric-card strong.metric-text {
+      font-size: 0.95rem;
+      line-height: 1.3;
+    }
+
+    .topbar > *,
+    .metrics-strip > *,
+    .actions > *,
+    .filters > *,
+    .detail-grid > *,
+    .legend > *,
+    .dock-scroll > *,
+    .stack > * {
+      min-width: 0;
+    }
+
+    .brand-title,
+    .brand-subtitle,
+    .mini,
+    .metric-card span,
+    .metric-card strong,
+    .risk-badge,
+    .section h2,
+    .detail-card,
+    .legend span,
+    .btn,
+    select,
+    .filters label,
+    .leaflet-popup-content {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .btn, select {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      padding: 10px 14px;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+      font: inherit;
+    }
+
+    .btn {
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .actions .btn,
+    .actions a.btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.25;
+      min-height: 42px;
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, rgba(255, 107, 157, 0.88), rgba(200, 50, 110, 0.88));
+    }
+
+    .btn.secondary {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .btn.warn {
+      background: linear-gradient(135deg, rgba(174, 32, 65, 0.92), rgba(127, 29, 29, 0.92));
+    }
+
+    .dock {
+      position: absolute;
+      top: 104px;
+      bottom: 20px;
+      width: 350px;
+      border-radius: 28px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.28s ease, opacity 0.28s ease;
+    }
+
+    .dock-left { left: 14px; }
+    .dock-right { right: 14px; width: 390px; }
+
+    .dock.hidden-left { transform: translateX(-104%); opacity: 0; }
+    .dock.hidden-right { transform: translateX(104%); opacity: 0; }
+
+    .dock-header {
+      padding: 16px 18px 10px;
+      background: linear-gradient(180deg, rgba(9, 24, 36, 0.96), rgba(9, 24, 36, 0.84));
+      border-bottom: 1px solid var(--stroke);
+    }
+
+    .dock-title { font-size: 1rem; font-weight: 800; }
+
+    .dock-scroll {
+      padding: 14px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .section {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 22px;
+      background: var(--panel-soft);
+      padding: 14px;
+    }
+
+    .alert-stack { display: grid; gap: 10px; }
+
+    .alert-card {
+      border-radius: 18px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .tag {
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(255, 107, 157, 0.14);
+      border: 1px solid rgba(255, 107, 157, 0.22);
+      color: #ffd0e4;
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .section h2 { margin: 0 0 10px; font-size: 0.98rem; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .filters label {
+      display: grid;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    select { background: rgba(255, 255, 255, 0.06); }
+
+    .list {
+      display: grid;
+      gap: 10px;
+      max-height: 38vh;
+      overflow: auto;
+    }
+
+    .kpi-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .kpi-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .kpi-item-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .kpi-item-value {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .kpi-item-value.warn { color: var(--alto); }
+    .kpi-item-value.ok { color: var(--baixo); }
+    .kpi-item-value.neutral { color: var(--accent-2); }
+
+    .list-item {
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .list-item:hover, .list-item.active {
+      transform: translateY(-1px);
+      background: rgba(255, 107, 157, 0.1);
+      border-color: rgba(255, 107, 157, 0.44);
+    }
+
+    .list-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .risk-badge {
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .risk-CRITICO { background: var(--critico); }
+    .risk-ALTO { background: var(--alto); }
+    .risk-MODERADO { background: var(--moderado); color: #111; }
+    .risk-BAIXO { background: var(--baixo); color: #062b24; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: 6px;
+      border-radius: 999px;
+      vertical-align: middle;
+    }
+
+    .legend .critico::before { background: var(--critico); }
+    .legend .alto::before { background: var(--alto); }
+    .legend .moderado::before { background: var(--moderado); }
+    .legend .baixo::before { background: var(--baixo); }
+
+    .chart-wrap { height: 220px; }
+
+    .detail-card {
+      border-radius: 22px;
+      padding: 14px;
+      background: rgba(7, 19, 29, 0.76);
+    }
+
+    .floating-button {
+      position: absolute;
+      top: 120px;
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      background: rgba(7, 19, 29, 0.88);
+      border: 1px solid var(--stroke);
+      color: var(--text);
+      font-size: 1.15rem;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+
+    .toggle-left { left: 14px; }
+    .toggle-right { right: 14px; }
+    .toggle-left.shifted { left: 378px; }
+    .toggle-right.shifted { right: 418px; }
+
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+      background: rgba(6, 16, 26, 0.94);
+      color: var(--text);
+      border: 1px solid var(--stroke);
+    }
+
+    .leaflet-popup-content {
+      min-width: 220px;
+      max-width: min(320px, 76vw);
+      line-height: 1.45;
+    }
+
+    .quick-link {
+      position: fixed;
+      bottom: 24px;
+      z-index: 900;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      max-width: calc(100vw - 32px);
+      padding: 11px 20px;
+      border-radius: 50px;
+      text-decoration: none;
+      font-family: "Avenir Next", sans-serif;
+      font-weight: 800;
+      font-size: 13px;
+      line-height: 1.2;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.32);
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .quick-link-right {
+      right: 24px;
+      background: #ff6b9d;
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(255, 107, 157, 0.4);
+    }
+
+    .quick-link-center {
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #c83272, #ff6b9d);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(255, 107, 157, 0.4);
+    }
+
+    .leaflet-control-zoom a {
+      background: rgba(7, 19, 29, 0.9);
+      color: var(--text);
+      border-color: var(--stroke);
+    }
+
+    .pulse-marker {
+      box-shadow: 0 0 0 rgba(255, 107, 157, 0.4);
+      animation: pulse 1.8s infinite;
+    }
+
+    .bairro-hotspot {
+      width: 14px;
+      height: 14px;
+      display: block;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0 18px rgba(255, 107, 157, 0.55);
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 107, 157, 0.5); }
+      70% { box-shadow: 0 0 0 16px rgba(255, 107, 157, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 107, 157, 0); }
+    }
+
+    @media (max-width: 1280px) {
+      .topbar { grid-template-columns: 1fr; }
+      .dock-right { width: 360px; }
+      .toggle-right.shifted { right: 388px; }
+    }
+
+    @media (max-width: 980px) {
+      html, body { overflow: auto; }
+      #map { position: absolute; height: 62vh; }
+      .hud { position: relative; min-height: 100vh; padding-top: 62vh; }
+      .topbar { position: absolute; top: 12px; left: 12px; right: 12px; }
+      .topbar-card { padding: 13px 14px; }
+      .dock, .dock-left, .dock-right {
+        position: relative; top: auto; left: auto; right: auto; bottom: auto;
+        width: auto; margin: 12px; transform: none !important; opacity: 1 !important;
+      }
+      .floating-button { display: none; }
+      .actions .btn,
+      .actions a.btn,
+      .actions select { flex: 1 1 180px; }
+      .quick-link { font-size: 12px; padding: 10px 16px; }
+      .quick-link-right { right: 12px; bottom: 68px; }
+      .quick-link-center { left: 12px; right: 12px; bottom: 12px; transform: none; }
+    }
+
+    @media (max-width: 720px) {
+      .metrics-strip, .filters { grid-template-columns: 1fr; }
+      .actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-content: stretch;
+      }
+      .topbar-card { border-radius: 20px; padding: 12px; }
+      .brand-title { font-size: 1rem; line-height: 1.25; }
+      .brand-subtitle,
+      .mini { font-size: 0.8rem; line-height: 1.5; }
+      .risk-badge { font-size: 0.7rem; line-height: 1.3; }
+      .metric-card strong { font-size: 1.05rem; }
+      .metric-card span { font-size: 0.68rem; }
+      .actions .btn,
+      .actions a.btn,
+      .actions select { width: 100%; }
+      .dock, .dock-left, .dock-right { margin: 10px; border-radius: 22px; }
+      .dock-header { padding: 14px 16px 10px; }
+      .dock-scroll { padding: 12px; gap: 12px; }
+      .section { padding: 12px; }
+      .section h2 { font-size: 0.92rem; line-height: 1.35; }
+      .leaflet-popup-content { min-width: 0; width: min(220px, 68vw); }
+      .quick-link-right,
+      .quick-link-center { left: 12px; right: 12px; justify-content: center; }
+      .quick-link-right { bottom: 64px; }
+      .quick-link-center { bottom: 12px; }
+    }
+
+    @media (max-width: 520px) {
+      #map { height: 54vh; }
+      .hud { padding-top: 54vh; }
+      .topbar { top: 10px; left: 10px; right: 10px; }
+      .actions { grid-template-columns: 1fr; }
+      .brand-title { font-size: 0.96rem; }
+      .brand-subtitle,
+      .mini { font-size: 0.76rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="hud">
+    <div class="topbar">
+      <!-- Card 1: Brand -->
+      <section class="topbar-card">
+        <div class="eyebrow">SolusCRT Plano de Saúde</div>
+        <div class="brand-title">Centro Executivo de Gestão de Operadora</div>
+        <div class="brand-subtitle">Vigilância epidemiológica, gestão de sinistros, guias e beneficiários orientada por foco territorial e risco clínico.</div>
+        <div class="mini" id="generatedAt" style="margin-top:10px;">Atualizando leitura operacional...</div>
+      </section>
+
+      <!-- Card 2: KPIs rápidos -->
+      <section class="topbar-card">
+        <div class="metrics-strip">
+          <div class="metric-card">
+            <span>Beneficiários</span>
+            <strong id="metricBeneficiarios" style="color:var(--accent)">—</strong>
+          </div>
+          <div class="metric-card">
+            <span>Guias Pend.</span>
+            <strong id="metricGuias" style="color:var(--alto)">—</strong>
+          </div>
+          <div class="metric-card">
+            <span>Sinistros</span>
+            <strong id="metricSinistros" style="color:var(--accent-2)">—</strong>
+          </div>
+          <div class="metric-card">
+            <span>Aprovação</span>
+            <strong id="metricAprovacao" style="color:var(--baixo)">—</strong>
+          </div>
+          <div class="metric-card">
+            <span>Empresa</span>
+            <strong class="metric-text">{{ empresa_nome }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 3: Ações -->
+      <section class="topbar-card">
+        <div class="actions">
+          <span class="risk-badge baixo" id="metricRiskBadge">BAIXO</span>
+          <button class="btn secondary" id="toggleLeftDock">KPIs</button>
+          <button class="btn secondary" id="toggleRightDock">Sinistros</button>
+          <a href="/plano-saude/gestao/" class="btn primary" style="text-decoration:none">Gestão</a>
+          <button class="btn warn" id="logoutBtn">Sair</button>
+        </div>
+        <div class="legend" style="margin-top:12px;">
+          <span class="critico">Crítico</span>
+          <span class="alto">Alto</span>
+          <span class="moderado">Moderado</span>
+          <span class="baixo">Baixo</span>
+        </div>
+      </section>
+    </div>
+
+    <button class="floating-button toggle-left shifted" id="leftHandle">‹</button>
+    <button class="floating-button toggle-right shifted" id="rightHandle">›</button>
+
+    <!-- Painel Esquerdo: KPIs da operadora -->
+    <aside class="dock dock-left" id="leftDock">
+      <div class="dock-header">
+        <div class="dock-title">KPIs da Operadora</div>
+        <div class="mini">Indicadores operacionais e epidemiológicos em tempo real.</div>
+      </div>
+      <div class="dock-scroll">
+
+        <section class="section">
+          <h2>Indicadores Principais</h2>
+          <div class="kpi-list" id="kpiList">
+            <div class="kpi-item">
+              <span class="kpi-item-label">Beneficiários Ativos</span>
+              <span class="kpi-item-value" id="kpiBenef">—</span>
+            </div>
+            <div class="kpi-item">
+              <span class="kpi-item-label">Guias Pendentes</span>
+              <span class="kpi-item-value warn" id="kpiGuiasPend">—</span>
+            </div>
+            <div class="kpi-item">
+              <span class="kpi-item-label">Sinistros Abertos</span>
+              <span class="kpi-item-value warn" id="kpiSinistrosAbertos">—</span>
+            </div>
+            <div class="kpi-item">
+              <span class="kpi-item-label">Reembolsos Pendentes</span>
+              <span class="kpi-item-value neutral" id="kpiReembolsosPend">—</span>
+            </div>
+            <div class="kpi-item">
+              <span class="kpi-item-label">Custo Médio Sinistro</span>
+              <span class="kpi-item-value neutral" id="kpiCustoMedio">—</span>
+            </div>
+            <div class="kpi-item">
+              <span class="kpi-item-label">Taxa Aprovação Guias</span>
+              <span class="kpi-item-value ok" id="kpiTaxaAprov">—</span>
+            </div>
+            <div class="kpi-item">
+              <span class="kpi-item-label">Registros Epi 30d</span>
+              <span class="kpi-item-value" id="kpiRegistrosEpi">—</span>
+            </div>
+            <div class="kpi-item">
+              <span class="kpi-item-label">Suspeitos 30d</span>
+              <span class="kpi-item-value warn" id="kpiSuspeitos">—</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Filtros do Mapa</h2>
+          <div class="filters">
+            <label>
+              Modo do mapa
+              <select id="modeFilter">
+                <option value="radar">Radar epidemiológico</option>
+                <option value="surtos">Surto detalhado</option>
+                <option value="risco">Mapa de risco</option>
+              </select>
+            </label>
+            <label>
+              Granularidade
+              <select id="levelFilter">
+                <option value="municipios">Municípios</option>
+                <option value="bairros">Bairros</option>
+                <option value="estados">Estados</option>
+              </select>
+            </label>
+            <label>
+              Estado
+              <select id="stateFilter"><option value="">Todos</option></select>
+            </label>
+            <label>
+              Cidade
+              <select id="cityFilter"><option value="">Todas</option></select>
+            </label>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Alertas SolusCRT</h2>
+          <div class="alert-stack" id="alertStack">Carregando alertas...</div>
+        </section>
+
+        <section class="section">
+          <h2>Zonas Epidemiológicas</h2>
+          <div class="list" id="focusList">Carregando...</div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- Painel Direito: Radar, CIDs, Série temporal, Alertas -->
+    <aside class="dock dock-right" id="rightDock">
+      <div class="dock-header">
+        <div class="dock-title">Painel de Sinistros e Epidemiologia</div>
+        <div class="mini">Radar territorial, CIDs dominantes e série temporal de sinistros.</div>
+      </div>
+      <div class="dock-scroll">
+
+        <section class="section" id="secRadar">
+          <h2>Radar Territorial</h2>
+          <div class="filters" style="margin-bottom:10px">
+            <label>
+              Cidade
+              <input id="radarCidade" placeholder="Ex: São Paulo" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 10px;color:var(--text);font:inherit;font-size:0.82rem">
+            </label>
+            <label>
+              Estado (sigla)
+              <input id="radarEstado" placeholder="SP" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 10px;color:var(--text);font:inherit;font-size:0.82rem">
+            </label>
+          </div>
+          <button class="btn secondary" style="font-size:0.78rem;padding:7px 14px" onclick="carregarRadar()">Consultar Radar</button>
+          <div id="radarResultado" class="mini" style="margin-top:10px">Informe cidade e estado para carregar o radar local.</div>
+        </section>
+
+        <section class="section" id="secTopCids">
+          <h2>Top 5 CIDs — Sinistros</h2>
+          <div id="topCidsList" class="mini">Carregando...</div>
+        </section>
+
+        <section class="section" id="secSerieSinistros">
+          <h2>Série Temporal de Sinistros (6 meses)</h2>
+          <div class="chart-wrap">
+            <canvas id="sinistrosChart"></canvas>
+          </div>
+        </section>
+
+        <section class="section" id="secDistSinistros">
+          <h2>Distribuição por Tipo de Sinistro</h2>
+          <div class="chart-wrap" style="height:180px">
+            <canvas id="distSinistrosChart"></canvas>
+          </div>
+        </section>
+
+        <section class="section" id="secAlertasEpi">
+          <h2>Alertas Epidemiológicos Ativos</h2>
+          <div class="alert-stack" id="alertasEpiStack">Carregando...</div>
+        </section>
+
+        <section class="detail-card">
+          <h2 style="margin:0 0 10px; font-size:0.98rem;">Detalhes da Localidade</h2>
+          <div id="detailsBody" class="mini">
+            Selecione um foco no mapa ou na lista para abrir a leitura detalhada.
+          </div>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const empresaId = "{{ empresa_id|escapejs }}";
+
+    // ── Auth ─────────────────────────────────────────────────────
+    function getScopedValue(key) {
+      return sessionStorage.getItem(key) || localStorage.getItem(key) || "";
+    }
+
+    async function syncScopedAuth() {
+      const token = getScopedValue("auth_token") || getScopedValue("token");
+      if (!token) return null;
+      try {
+        const response = await fetch("/api/sessao/aba", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "same-origin",
+        });
+        if (!response.ok) return null;
+        const payload = await response.json();
+        sessionStorage.setItem("empresa_id", String(payload.empresa_id || ""));
+        sessionStorage.setItem("tipo_conta", payload.tipo_conta || "empresa");
+        if (payload.tab_key) {
+          sessionStorage.setItem("tab_session_key", payload.tab_key);
+          const url = new URL(window.location.href);
+          if (url.searchParams.get("tab") !== payload.tab_key) {
+            url.searchParams.set("tab", payload.tab_key);
+            window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+          }
+        }
+        return payload;
+      } catch(e) { return null; }
+    }
+
+    sessionStorage.setItem("empresa_id", empresaId);
+    localStorage.setItem("empresa_id", empresaId);
+
+    syncScopedAuth();
+    window.addEventListener("focus", syncScopedAuth);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) syncScopedAuth(); });
+
+    // ── Dock toggles ─────────────────────────────────────────────
+    const leftDock = document.getElementById("leftDock");
+    const rightDock = document.getElementById("rightDock");
+    const leftHandle = document.getElementById("leftHandle");
+    const rightHandle = document.getElementById("rightHandle");
+    let leftVisible = true;
+    let rightVisible = true;
+
+    function updateDockState() {
+      leftDock.classList.toggle("hidden-left", !leftVisible);
+      rightDock.classList.toggle("hidden-right", !rightVisible);
+      leftHandle.classList.toggle("shifted", leftVisible);
+      rightHandle.classList.toggle("shifted", rightVisible);
+      leftHandle.textContent = leftVisible ? "‹" : "›";
+      rightHandle.textContent = rightVisible ? "›" : "‹";
+    }
+
+    function toggleLeftDock() { leftVisible = !leftVisible; updateDockState(); }
+    function toggleRightDock() { rightVisible = !rightVisible; updateDockState(); }
+
+    leftHandle.addEventListener("click", toggleLeftDock);
+    rightHandle.addEventListener("click", toggleRightDock);
+    document.getElementById("toggleLeftDock").addEventListener("click", toggleLeftDock);
+    document.getElementById("toggleRightDock").addEventListener("click", toggleRightDock);
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      sessionStorage.clear();
+      localStorage.removeItem("token");
+      localStorage.removeItem("empresa_id");
+      localStorage.removeItem("tipo_conta");
+      window.location.href = "/logout/";
+    });
+
+    // ── Mapa Leaflet ─────────────────────────────────────────────
+    const modeFilter = document.getElementById("modeFilter");
+    const levelFilter = document.getElementById("levelFilter");
+    const stateFilter = document.getElementById("stateFilter");
+    const cityFilter = document.getElementById("cityFilter");
+
+    const map = L.map("map", { zoomControl: false, preferCanvas: true, minZoom: 2, maxZoom: 18, worldCopyJump: true }).setView([-15.7, -47.9], 4);
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+
+    let mapUserMoved = false;
+    let _mapFitting = false;
+    map.on("zoomstart dragstart", () => { if (!_mapFitting) mapUserMoved = true; });
+
+    const mapboxToken = "{{ MAPBOX_ACCESS_TOKEN|escapejs }}";
+    L.tileLayer(
+      mapboxToken
+        ? `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      mapboxToken
+        ? { tileSize: 512, zoomOffset: -1, maxZoom: 18, attribution: "&copy; Mapbox & OpenStreetMap" }
+        : { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }
+    ).addTo(map);
+
+    let panorama = null;
+    let selectedAreaId = null;
+    let heatLayer = null;
+    let circlesLayer = L.layerGroup().addTo(map);
+    let markersLayer = L.layerGroup().addTo(map);
+    let sinistrosChart = null;
+    let distSinistrosChart = null;
+    let pulseMarkers = [];
+
+    function riskColor(level) {
+      if (level === "CRITICO") return "#ff365f";
+      if (level === "ALTO") return "#ff7a18";
+      if (level === "MODERADO") return "#ffd166";
+      return "#06d6a0";
+    }
+
+    function riskTextColor(level) {
+      return level === "MODERADO" || level === "BAIXO" ? "#07131d" : "#ffffff";
+    }
+
+    function intensity(area, maxCases) {
+      if (!maxCases) return 0.2;
+      return Math.max(0.14, area.total_cases / maxCases);
+    }
+
+    function getFilteredAreas() {
+      if (!panorama) return [];
+      const areas = panorama.layers[levelFilter.value] || [];
+      return areas.filter((area) => {
+        if (stateFilter.value && area.estado !== stateFilter.value) return false;
+        if (cityFilter.value && area.cidade !== cityFilter.value) return false;
+        return true;
+      });
+    }
+
+    function aggregateSummary(areas) {
+      const totals = { total_cases: 0, growth_sum: 0, symptoms: {}, diseases: {}, maxRisk: 0 };
+      areas.forEach((area) => {
+        totals.total_cases += (area.raw_total_cases ?? Math.round(area.total_cases));
+        totals.growth_sum += area.growth_percent;
+        totals.maxRisk = Math.max(totals.maxRisk, area.risk_score);
+        area.symptoms.forEach((s) => { totals.symptoms[s.label] = (totals.symptoms[s.label] || 0) + s.count; });
+        area.probable_diseases.forEach((d) => { totals.diseases[d.name] = (totals.diseases[d.name] || 0) + d.estimated_cases; });
+      });
+      return {
+        totalCases: totals.total_cases,
+        activeAreas: areas.length,
+        averageGrowth: areas.length ? (totals.growth_sum / areas.length) : 0,
+        riskLevel: totals.maxRisk >= 75 ? "CRITICO" : totals.maxRisk >= 55 ? "ALTO" : totals.maxRisk >= 35 ? "MODERADO" : "BAIXO",
+        symptoms: Object.entries(totals.symptoms).sort((a, b) => b[1] - a[1]),
+        diseases: Object.entries(totals.diseases).sort((a, b) => b[1] - a[1]),
+      };
+    }
+
+    function updateMetrics(summary) {
+      const badge = document.getElementById("metricRiskBadge");
+      badge.textContent = summary.riskLevel;
+      badge.className = `risk-badge risk-${summary.riskLevel}`;
+      badge.style.color = riskTextColor(summary.riskLevel);
+    }
+
+    function renderAlerts() {
+      const container = document.getElementById("alertStack");
+      const alerts = (panorama?.overview?.operational_alerts || []).slice(0, 4);
+      if (!alerts.length) { container.innerHTML = "Sem alertas operacionais no momento."; return; }
+      container.innerHTML = alerts.map((alert) => `
+        <div class="alert-card">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+            <strong>${alert.title}</strong>
+            <span class="risk-badge risk-${alert.risk_level}" style="color:${riskTextColor(alert.risk_level)}">${alert.risk_level}</span>
+          </div>
+          <div class="mini" style="margin-top:8px;"><strong>${alert.stage}</strong><br>${alert.message}</div>
+        </div>
+      `).join("");
+    }
+
+    function areaPopup(area) {
+      const diseaseLines = area.probable_diseases.slice(0, 4)
+        .map((d) => `<li>${d.name}: ${d.probability.toFixed(1)}%</li>`).join("");
+      const symptomLines = area.symptoms.slice(0, 4)
+        .map((s) => `<li>${s.label}: ${s.percentage.toFixed(1)}%</li>`).join("");
+      return `
+        <strong>${area.label}</strong><br>
+        Focos ativos: ${Math.round(area.total_cases).toLocaleString("pt-BR")}<br>
+        Registros 30d: ${(area.raw_total_cases ?? area.total_registros_30d ?? Math.round(area.total_cases)).toLocaleString("pt-BR")}<br>
+        Crescimento: ${area.growth_percent.toFixed(1)}%<br>
+        Risco: ${area.risk_level}<br><br>
+        <strong>Foco predominante:</strong> ${area.dominant_symptom}<br>
+        <strong>Doença provável:</strong> ${area.dominant_disease}<br>
+        <strong>Fase operacional:</strong> ${area.alert_stage}<br>
+        <strong>Prioridade:</strong> P${area.response_priority}
+        <hr>
+        <strong>Sintomas:</strong><ul>${symptomLines}</ul>
+        <strong>Doenças prováveis:</strong><ul>${diseaseLines}</ul>
+      `;
+    }
+
+    function selectArea(area, options = {}) {
+      const { shouldCenter = true } = options;
+      selectedAreaId = area.id;
+      renderFocusList();
+      renderDetails(area);
+      if (shouldCenter && area.latitude && area.longitude) {
+        map.flyTo([area.latitude, area.longitude],
+          levelFilter.value === "bairros" ? 11 : levelFilter.value === "municipios" ? 8 : 5,
+          { duration: 0.8 });
+      }
+    }
+
+    function renderDetails(area) {
+      const symptoms = area.symptoms.map((s) =>
+        `<li>${s.label}: ${s.count.toLocaleString("pt-BR")} (${s.percentage.toFixed(1)}%)</li>`).join("");
+      const diseases = area.probable_diseases.map((d) =>
+        `<li>${d.name}: ${d.probability.toFixed(1)}% (${d.estimated_cases.toLocaleString("pt-BR")} casos est.)</li>`).join("");
+      document.getElementById("detailsBody").innerHTML = `
+        <div style="font-size:1rem;font-weight:800;">${area.label}</div>
+        <div class="mini" style="margin-top:8px;">${area.focus_message}</div>
+        <div class="tag-row">
+          ${(area.strategic_tags || []).map((t) => `<span class="tag">${t}</span>`).join("")}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+          <div style="border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
+            <strong>Radar do foco</strong>
+            <ul style="margin:8px 0 0;padding-left:16px;color:var(--muted);font-size:0.8rem">
+              <li>Focos ativos: ${Math.round(area.total_cases).toLocaleString("pt-BR")}</li>
+              <li>Registros 30d: ${(area.raw_total_cases ?? area.total_registros_30d ?? Math.round(area.total_cases)).toLocaleString("pt-BR")}</li>
+              <li>Crescimento: ${area.growth_percent.toFixed(1)}%</li>
+              <li>Risco: ${area.risk_level}</li>
+              <li>Fase: ${area.alert_stage}</li>
+            </ul>
+          </div>
+          <div style="border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
+            <strong>Impacto Operadora</strong>
+            <ul style="margin:8px 0 0;padding-left:16px;color:var(--muted);font-size:0.8rem">
+              <li>Foco dominante: ${area.dominant_symptom}</li>
+              <li>Doença provável: ${area.dominant_disease}</li>
+              <li>Vigilância: ${area.surveillance_index.toFixed(1)}</li>
+              <li>Pressão recursos: ${area.resource_pressure.toFixed(1)}</li>
+            </ul>
+          </div>
+          <div style="border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
+            <strong>Sintomas predominantes</strong>
+            <ul style="margin:8px 0 0;padding-left:16px;color:var(--muted);font-size:0.8rem">${symptoms}</ul>
+          </div>
+          <div style="border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)">
+            <strong>Doenças prováveis</strong>
+            <ul style="margin:8px 0 0;padding-left:16px;color:var(--muted);font-size:0.8rem">${diseases}</ul>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFocusList() {
+      const container = document.getElementById("focusList");
+      const areas = getFilteredAreas().slice().sort((a, b) => b.risk_score - a.risk_score || b.total_cases - a.total_cases).slice(0, 10);
+      if (!areas.length) { container.innerHTML = "Sem focos para o filtro atual."; return; }
+      container.innerHTML = areas.map((area) => `
+        <div class="list-item ${selectedAreaId === area.id ? "active" : ""}" data-area-id="${area.id}">
+          <div class="list-top">
+            <strong>${area.label}</strong>
+            <span class="risk-badge risk-${area.risk_level}" style="color:${riskTextColor(area.risk_level)}">${area.risk_level}</span>
+          </div>
+          <div class="mini">
+            ${Math.round(area.total_cases).toLocaleString("pt-BR")} focos | cresc. ${area.growth_percent.toFixed(1)}%<br>
+            ${area.dominant_disease}
+          </div>
+        </div>
+      `).join("");
+      container.querySelectorAll(".list-item").forEach((item) => {
+        item.addEventListener("click", () => {
+          const area = getFilteredAreas().find((e) => e.id === item.dataset.areaId);
+          if (area) selectArea(area);
+        });
+      });
+    }
+
+    function clearMapLayers() {
+      circlesLayer.clearLayers();
+      markersLayer.clearLayers();
+      pulseMarkers = [];
+      if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+    }
+
+    function bindHoverTooltip(layer, label) {
+      layer.bindTooltip(label, { sticky: true, direction: "top", opacity: 0.96 });
+      layer.on("mouseover", () => layer.openTooltip());
+      layer.on("mouseout", () => layer.closeTooltip());
+      return layer;
+    }
+
+    function addPulseMarker(area) {
+      const marker = L.circleMarker([area.latitude, area.longitude], {
+        radius: levelFilter.value === "bairros" ? 8 : 10,
+        color: "#ffffff", weight: 1.5,
+        fillColor: riskColor(area.risk_level),
+        fillOpacity: 0.95,
+        className: "pulse-marker",
+      });
+      marker.bindPopup(areaPopup(area));
+      bindHoverTooltip(marker, `${area.label} | ${area.dominant_symptom}`);
+      marker.on("click", () => selectArea(area));
+      marker.addTo(markersLayer);
+      pulseMarkers.push(marker);
+    }
+
+    function renderMap() {
+      clearMapLayers();
+      const areas = getFilteredAreas();
+      if (!areas.length) return;
+      const maxCases = Math.max(...areas.map((a) => a.total_cases), 1);
+      const bounds = [];
+      const isBairroView = levelFilter.value === "bairros";
+
+      if (modeFilter.value === "radar" || isBairroView) {
+        const heatPoints = areas
+          .filter((a) => a.latitude && a.longitude)
+          .map((a) => [a.latitude, a.longitude, intensity(a, maxCases)]);
+        heatLayer = L.heatLayer(heatPoints, {
+          radius: isBairroView ? 55 : 42,
+          blur: isBairroView ? 42 : 34,
+          maxZoom: 10,
+          gradient: {
+            0.18: "#ff6b9d",
+            0.42: "#ff9ec4",
+            0.7: "#ff7a18",
+            1.0: "#ff365f",
+          },
+        }).addTo(map);
+      }
+
+      areas.forEach((area) => {
+        if (!area.latitude || !area.longitude) return;
+        const color = riskColor(area.risk_level);
+        bounds.push([area.latitude, area.longitude]);
+
+        if (isBairroView) {
+          const hotspot = L.marker([area.latitude, area.longitude], {
+            icon: L.divIcon({
+              className: "",
+              html: `<div class="bairro-hotspot" style="background:${color};"></div>`,
+              iconSize: [22, 22], iconAnchor: [11, 11],
+            }),
+          });
+          bindHoverTooltip(hotspot, `${area.label} | ${area.dominant_symptom}`);
+          hotspot.bindPopup(areaPopup(area));
+          hotspot.on("click", () => selectArea(area));
+          hotspot.addTo(markersLayer);
+          return;
+        }
+
+        const opacityBase = modeFilter.value === "risco" ? 0.5 : 0.22 + intensity(area, maxCases) * 0.3;
+        const circle = L.circle([area.latitude, area.longitude], {
+          radius: area.radius, color, fillColor: color, fillOpacity: opacityBase,
+          weight: modeFilter.value === "surtos" ? 3.2 : 2.2,
+        });
+        bindHoverTooltip(circle, `${area.label} | ${area.dominant_symptom}`);
+        circle.bindPopup(areaPopup(area));
+        circle.on("click", () => selectArea(area));
+        circle.addTo(circlesLayer);
+
+        if (modeFilter.value !== "risco" || area.risk_level === "CRITICO" || area.risk_level === "ALTO") {
+          addPulseMarker(area);
+        }
+      });
+
+      if (bounds.length && !mapUserMoved) {
+        _mapFitting = true;
+        map.fitBounds(bounds, {
+          paddingTopLeft: leftVisible && window.innerWidth > 980 ? [390, 120] : [40, 120],
+          paddingBottomRight: rightVisible && window.innerWidth > 980 ? [430, 60] : [40, 60],
+          maxZoom: levelFilter.value === "bairros" ? 11 : levelFilter.value === "municipios" ? 8 : 5,
+        });
+        map.once("zoomend moveend", () => { _mapFitting = false; });
+      }
+    }
+
+    function populateFilters() {
+      const currentState = stateFilter.value;
+      const currentCity = cityFilter.value;
+      const states = panorama.filters.estados || [];
+      const cities = (panorama.layers.bairros || [])
+        .filter((a) => !currentState || a.estado === currentState)
+        .map((a) => a.cidade).filter(Boolean);
+      const uniqueCities = [...new Set(cities)].sort();
+      stateFilter.innerHTML = `<option value="">Todos</option>` + states.map((s) => `<option value="${s}">${s}</option>`).join("");
+      cityFilter.innerHTML = `<option value="">Todas</option>` + uniqueCities.map((c) => `<option value="${c}">${c}</option>`).join("");
+      stateFilter.value = states.includes(currentState) ? currentState : "";
+      cityFilter.value = uniqueCities.includes(currentCity) ? currentCity : "";
+    }
+
+    function renderDashboard() {
+      const areas = getFilteredAreas();
+      const summary = aggregateSummary(areas);
+      updateMetrics(summary);
+      renderAlerts();
+      renderFocusList();
+      renderMap();
+      if (!selectedAreaId && areas.length) {
+        selectArea(areas.slice().sort((a, b) => b.risk_score - a.risk_score || b.total_cases - a.total_cases)[0]);
+      } else {
+        const selected = areas.find((a) => a.id === selectedAreaId);
+        if (selected) renderDetails(selected);
+        else if (areas.length) selectArea(areas[0]);
+      }
+    }
+
+    async function loadPanorama() {
+      try {
+        const response = await fetch("/api/epidemiologia");
+        panorama = await response.json();
+        document.getElementById("generatedAt").textContent =
+          `Atualizado em ${new Date(panorama.generated_at || Date.now()).toLocaleString("pt-BR")}`;
+        populateFilters();
+        renderDashboard();
+      } catch(e) {
+        console.warn("Erro ao carregar panorama:", e);
+        document.getElementById("generatedAt").textContent = "Erro ao carregar dados epidemiológicos.";
+      }
+    }
+
+    // ── KPIs da operadora ────────────────────────────────────────
+    async function loadKpisDashboard() {
+      try {
+        const [dashRes, kpisRes] = await Promise.all([
+          fetch("/api/plano-saude/dashboard", { credentials: "include" }),
+          fetch("/api/plano-saude/kpis", { credentials: "include" }),
+        ]);
+        if (dashRes.ok) {
+          const dash = await dashRes.json();
+          const kpis = dash.kpis || {};
+          document.getElementById("metricBeneficiarios").textContent = (kpis.total_beneficiarios ?? "—").toLocaleString?.("pt-BR") ?? kpis.total_beneficiarios ?? "—";
+          document.getElementById("metricGuias").textContent = kpis.guias_pendentes ?? "—";
+          document.getElementById("metricSinistros").textContent = kpis.sinistros_abertos ?? "—";
+          document.getElementById("kpiBenef").textContent = (kpis.total_beneficiarios ?? "—").toLocaleString?.("pt-BR") ?? kpis.total_beneficiarios ?? "—";
+          document.getElementById("kpiGuiasPend").textContent = kpis.guias_pendentes ?? "—";
+          document.getElementById("kpiSinistrosAbertos").textContent = kpis.sinistros_abertos ?? "—";
+          document.getElementById("kpiReembolsosPend").textContent = kpis.reembolsos_pendentes ?? "—";
+          document.getElementById("kpiRegistrosEpi").textContent = (dash.registros_epi_30d ?? kpis.registros_epi_30d ?? "—").toLocaleString?.("pt-BR") ?? "—";
+          document.getElementById("kpiSuspeitos").textContent = kpis.suspeitos_30d ?? "—";
+
+          // Top CIDs
+          const cids = dash.top_cids || [];
+          if (cids.length) {
+            document.getElementById("topCidsList").innerHTML = cids.slice(0, 5).map((c, i) => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);margin-bottom:6px">
+                <div>
+                  <span style="font-weight:700;color:var(--accent)">${c.cid}</span>
+                  <span style="margin-left:8px;font-size:0.8rem;color:var(--muted)">${c.descricao || ""}</span>
+                </div>
+                <span style="font-weight:800;color:var(--accent-2)">${c.total ?? c.quantidade ?? 0}</span>
+              </div>
+            `).join("");
+          } else {
+            document.getElementById("topCidsList").textContent = "Nenhum CID disponível.";
+          }
+        }
+
+        if (kpisRes.ok) {
+          const k = await kpisRes.json();
+          const taxa = k.taxa_aprovacao_guias;
+          const custo = k.custo_medio_sinistro;
+          document.getElementById("metricAprovacao").textContent = taxa != null ? `${Number(taxa).toFixed(1)}%` : "—";
+          document.getElementById("kpiTaxaAprov").textContent = taxa != null ? `${Number(taxa).toFixed(1)}%` : "—";
+          document.getElementById("kpiCustoMedio").textContent = custo != null ? `R$ ${Number(custo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—";
+
+          // Série temporal de sinistros
+          const serie = k.serie_sinistros || [];
+          renderSerieSinistros(serie);
+
+          // Distribuição por tipo
+          const dist = k.dist_tipo_sinistro || {};
+          renderDistSinistros(dist);
+        }
+      } catch(e) {
+        console.warn("Erro ao carregar KPIs plano de saúde:", e);
+      }
+    }
+
+    function renderSerieSinistros(serie) {
+      const ctx = document.getElementById("sinistrosChart");
+      if (!ctx) return;
+      if (sinistrosChart) sinistrosChart.destroy();
+      const labels = serie.map((s) => s.mes || s.label || s.periodo || "");
+      const data = serie.map((s) => s.total || s.quantidade || s.valor || 0);
+      sinistrosChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: "Sinistros",
+            data,
+            borderColor: "#ff6b9d",
+            backgroundColor: "rgba(255,107,157,0.18)",
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: "#ff6b9d",
+            pointRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: "#d9a3bc" } } },
+          scales: {
+            x: { ticks: { color: "#d9a3bc" }, grid: { color: "rgba(255,255,255,0.05)" } },
+            y: { beginAtZero: true, ticks: { color: "#d9a3bc" }, grid: { color: "rgba(255,255,255,0.06)" } },
+          },
+        },
+      });
+    }
+
+    function renderDistSinistros(dist) {
+      const ctx = document.getElementById("distSinistrosChart");
+      if (!ctx) return;
+      if (distSinistrosChart) distSinistrosChart.destroy();
+      const labels = Object.keys(dist);
+      const data = Object.values(dist);
+      const colors = ["#ff6b9d", "#ff9ec4", "#ffd166", "#ff7a18", "#06d6a0", "#74c0fc"];
+      distSinistrosChart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 0 }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "right", labels: { color: "#d9a3bc", font: { size: 11 } } } },
+        },
+      });
+    }
+
+    // ── Alertas epidemiológicos ─────────────────────────────────
+    async function loadAlertasPublicos() {
+      try {
+        const res = await fetch("/api/public/alertas");
+        if (!res.ok) return;
+        const data = await res.json();
+        const alertas = data.alertas || data || [];
+        const container = document.getElementById("alertasEpiStack");
+        if (!alertas.length) { container.textContent = "Sem alertas epidemiológicos ativos."; return; }
+        container.innerHTML = alertas.slice(0, 5).map((a) => `
+          <div class="alert-card">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+              <strong>${a.titulo || a.title || a.doenca || "Alerta"}</strong>
+              <span class="risk-badge risk-${a.nivel || a.risk_level || "MODERADO"}" style="color:${riskTextColor(a.nivel || a.risk_level || "MODERADO")}">${a.nivel || a.risk_level || "ALERTA"}</span>
+            </div>
+            <div class="mini" style="margin-top:6px">${a.mensagem || a.message || a.descricao || ""}</div>
+          </div>
+        `).join("");
+      } catch(e) {
+        console.warn("Erro ao carregar alertas:", e);
+      }
+    }
+
+    // ── Radar local ─────────────────────────────────────────────
+    async function carregarRadar() {
+      const cidade = document.getElementById("radarCidade").value.trim();
+      const estado = document.getElementById("radarEstado").value.trim();
+      const container = document.getElementById("radarResultado");
+      if (!cidade || !estado) { container.textContent = "Informe cidade e estado."; return; }
+      container.textContent = "Carregando radar local...";
+      try {
+        const res = await fetch(`/api/public/radar-local?cidade=${encodeURIComponent(cidade)}&estado=${encodeURIComponent(estado)}`);
+        if (!res.ok) { container.textContent = "Erro ao carregar radar."; return; }
+        const data = await res.json();
+        const r = data.radar || data;
+        container.innerHTML = `
+          <strong>${r.cidade || cidade} / ${r.estado || estado}</strong><br>
+          Risco: <span class="risk-badge risk-${r.nivel_risco || "BAIXO"}" style="color:${riskTextColor(r.nivel_risco||"BAIXO")};display:inline-block;margin:4px 0">${r.nivel_risco || "—"}</span><br>
+          Casos ativos: <strong>${(r.casos_ativos || 0).toLocaleString("pt-BR")}</strong><br>
+          Crescimento: <strong>${r.crescimento_percent != null ? Number(r.crescimento_percent).toFixed(1) + "%" : "—"}</strong><br>
+          Foco dominante: <strong>${r.sintoma_dominante || r.dominant_symptom || "—"}</strong><br>
+          Doença provável: <strong>${r.doenca_dominante || r.dominant_disease || "—"}</strong><br>
+          ${r.mensagem || r.market_recommendation || ""}
+        `;
+      } catch(e) {
+        container.textContent = "Erro ao carregar radar territorial.";
+      }
+    }
+
+    // ── Filtros do mapa ──────────────────────────────────────────
+    modeFilter.addEventListener("change", () => { selectedAreaId = null; mapUserMoved = false; renderDashboard(); });
+    levelFilter.addEventListener("change", () => {
+      if (levelFilter.value === "estados") cityFilter.value = "";
+      selectedAreaId = null; mapUserMoved = false; renderDashboard();
+    });
+    stateFilter.addEventListener("change", () => { selectedAreaId = null; mapUserMoved = false; populateFilters(); renderDashboard(); });
+    cityFilter.addEventListener("change", () => { selectedAreaId = null; mapUserMoved = false; renderDashboard(); });
+
+    // ── Init ─────────────────────────────────────────────────────
+    updateDockState();
+    loadPanorama();
+    loadKpisDashboard();
+    loadAlertasPublicos();
+    setInterval(loadPanorama, 30000);
+    setInterval(loadKpisDashboard, 30000);
+    setInterval(loadAlertasPublicos, 60000);
+  </script>
+</body>
+</html>

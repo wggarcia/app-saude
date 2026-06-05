@@ -1165,6 +1165,19 @@ class _FocusVisual {
     final faixa = ((item['semaforo'] as Map<String, dynamic>?)?['faixa'] ?? '')
         .toString()
         .toLowerCase();
+    double? toD(dynamic v) {
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v.trim().replaceAll(',', '.'));
+      return null;
+    }
+
+    final rawCount = toD(item['total_registros_30d']) ??
+        toD(item['raw_total_cases']) ??
+        toD(item['raw_total']) ??
+        toD(item['indice_ativo']) ??
+        toD(item['active_cases']) ??
+        toD(item['total']) ??
+        0.0;
     final indice = item['indice_ativo'] ?? item['total'] ?? 0;
     final icon = switch (grupo) {
       String value when value.contains('covid') => Icons.coronavirus,
@@ -1210,7 +1223,7 @@ class _FocusVisual {
     return _FocusVisual(
       icon: icon,
       color: color,
-      label: '$indice',
+      label: rawCount.toStringAsFixed(0),
       shortLabel: shortLabel,
     );
   }

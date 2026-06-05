@@ -836,7 +836,7 @@
     }
 
     function updateMetrics(areas) {
-      const totalCases = areas.reduce((sum, area) => sum + area.total_cases, 0);
+      const totalCases = areas.reduce((sum, area) => sum + (area.raw_total_cases ?? Math.round(area.total_cases)), 0);
       const avgGrowth = areas.length ? areas.reduce((sum, area) => sum + area.growth_percent, 0) / areas.length : 0;
       const topRisk = areas.reduce((acc, area) => Math.max(acc, area.risk_score), 0);
       const riskLevel = topRisk >= 75 ? "CRITICO" : topRisk >= 55 ? "ALTO" : topRisk >= 35 ? "MODERADO" : "BAIXO";
@@ -1313,7 +1313,7 @@
             <span class="badge ${badgeClass(area.risk_level)}">P${area.response_priority}</span>
           </div>
           <div class="mini" style="margin-top:8px;">
-            ${area.total_cases.toLocaleString("pt-BR")} casos ativos | registros 30d ${(area.raw_total_cases ?? area.total_registros_30d ?? area.total_cases).toLocaleString("pt-BR")} |
+            ${Math.round(area.total_cases).toLocaleString("pt-BR")} focos ativos | registros 30d ${Math.round(area.raw_total_cases ?? area.total_registros_30d ?? area.total_cases).toLocaleString("pt-BR")} |
             crescimento ${area.growth_percent.toFixed(1)}%<br>
             Vigilancia ${area.surveillance_index.toFixed(1)} |
             Pressao ${area.resource_pressure.toFixed(1)}
@@ -1407,8 +1407,8 @@
     function areaPopup(area) {
       return `
         <strong>${area.label}</strong><br>
-        Casos ativos: ${area.total_cases.toLocaleString("pt-BR")}<br>
-        Registros 30d: ${(area.raw_total_cases ?? area.total_registros_30d ?? area.total_cases).toLocaleString("pt-BR")}<br>
+        Focos ativos: ${Math.round(area.total_cases).toLocaleString("pt-BR")}<br>
+        Registros 30d: ${(area.raw_total_cases ?? area.total_registros_30d ?? Math.round(area.total_cases)).toLocaleString("pt-BR")}<br>
         Crescimento: ${area.growth_percent.toFixed(1)}%<br>
         Prioridade: P${area.response_priority}<br>
         Vigilancia: ${area.surveillance_index.toFixed(1)}<br>
@@ -1438,8 +1438,8 @@
           <div class="detail-box">
             <strong>Indicadores principais</strong>
             <ul>
-              <li>Casos ativos temporais: ${area.total_cases.toLocaleString("pt-BR")}</li>
-              <li>Registros 30d: ${(area.raw_total_cases ?? area.total_registros_30d ?? area.total_cases).toLocaleString("pt-BR")}</li>
+              <li>Focos ativos: ${Math.round(area.total_cases).toLocaleString("pt-BR")}</li>
+              <li>Registros 30d: ${(area.raw_total_cases ?? area.total_registros_30d ?? Math.round(area.total_cases)).toLocaleString("pt-BR")}</li>
               <li>Ultimas 24h: ${area.recent_24h.toLocaleString("pt-BR")}</li>
               <li>Janela anterior: ${area.previous_24h.toLocaleString("pt-BR")}</li>
               <li>Crescimento: ${area.growth_percent.toFixed(1)}%</li>
