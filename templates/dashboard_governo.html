@@ -795,8 +795,8 @@
 
       <section class="card">
         <div class="metrics-strip">
-          <div class="metric-card"><span>Focos ativos</span><strong id="metricCases">0</strong></div>
-          <div class="metric-card"><span>Focos</span><strong id="metricAreas">0</strong></div>
+          <div class="metric-card"><span>Registros 30d</span><strong id="metricCases">0</strong></div>
+          <div class="metric-card"><span>Regiões ativas</span><strong id="metricAreas">0</strong></div>
           <div class="metric-card"><span>Crescimento</span><strong id="metricGrowth">0%</strong></div>
           <div class="metric-card"><span>Limiar</span><strong id="metricThreshold">0,00</strong></div>
         </div>
@@ -1100,6 +1100,8 @@
     let diseaseChart = null;
     let timelineChart = null;
     let heatLayer = null;
+    let _mapaRegistrosTotal = 0;
+    let _mapaRegioesTotal = 0;
     let circlesLayer = L.layerGroup().addTo(map);
     let markersLayer = L.layerGroup().addTo(map);
     let leftVisible = false;
@@ -1178,15 +1180,18 @@
     }
 
     function updateMetrics(areas) {
-      const totalCases = areas.reduce((sum, area) => sum + activeFocusValue(area), 0);
+      const totalRegistros = areas.reduce((sum, area) => sum + Math.round(rawFocusValue(area)), 0);
       const avgGrowth = areas.length ? areas.reduce((sum, area) => sum + area.growth_percent, 0) / areas.length : 0;
       const topRisk = areas.reduce((acc, area) => Math.max(acc, area.risk_score), 0);
       const riskLevel = topRisk >= 75 ? "CRITICO" : topRisk >= 55 ? "ALTO" : topRisk >= 35 ? "MODERADO" : "BAIXO";
       const thresholdRaw = Number(panorama?.overview?.timeline?.epidemic_threshold ?? 0);
       const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 0;
       const riskBadge = document.getElementById("metricRiskBadge");
+      // Store totals for popup context
+      _mapaRegistrosTotal = totalRegistros;
+      _mapaRegioesTotal = areas.length;
 
-      document.getElementById("metricCases").textContent = Math.round(totalCases).toLocaleString("pt-BR");
+      document.getElementById("metricCases").textContent = totalRegistros.toLocaleString("pt-BR");
       document.getElementById("metricAreas").textContent = areas.length.toLocaleString("pt-BR");
       document.getElementById("metricGrowth").textContent = `${avgGrowth.toFixed(1)}%`;
       document.getElementById("metricThreshold").textContent = threshold.toLocaleString("pt-BR", {
@@ -1752,14 +1757,20 @@
     }
 
     function areaPopup(area) {
+      const local = Math.round(rawFocusValue(area));
+      const total = _mapaRegistrosTotal || local;
+      const regioes = _mapaRegioesTotal || 1;
       return `
         <strong>${area.label}</strong><br>
-        Focos ativos: ${activeFocusValue(area).toLocaleString("pt-BR")}<br>
-        Registros 30d: ${rawFocusValue(area).toLocaleString("pt-BR")}<br>
+        Registros nesta região: <strong>${local.toLocaleString("pt-BR")}</strong><br>
+        <span style="font-size:.85em;color:#aaa">Total no mapa: ${total.toLocaleString("pt-BR")} registros em ${regioes} região${regioes !== 1 ? 'ões' : ''}</span><br>
         Crescimento: ${area.growth_percent.toFixed(1)}%<br>
+        Risco: ${area.risk_level}<br>
+        Foco predominante: ${area.dominant_symptom}<br>
+        Doenca provavel: ${area.dominant_disease}<br>
+        Resposta tatica: ${area.alert_stage}<br>
         Prioridade: P${area.response_priority}<br>
-        Vigilancia: ${area.surveillance_index.toFixed(1)}<br>
-        Pressao: ${area.resource_pressure.toFixed(1)}<br><br>
+        Leitura do foco: ${area.focus_message}<br><br>
         <strong>Resposta governamental:</strong><br>
         ${area.government_recommendation}
       `;

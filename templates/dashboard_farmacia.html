@@ -853,11 +853,11 @@
       <section class="topbar-card">
         <div class="metrics-strip">
           <div class="metric-card">
-            <span>Casos</span>
+            <span>Registros 30d</span>
             <strong id="metricCases">0</strong>
           </div>
           <div class="metric-card">
-            <span>Focos</span>
+            <span>Regiões</span>
             <strong id="metricAreas">0</strong>
           </div>
           <div class="metric-card">
@@ -1194,6 +1194,8 @@
     let heatLayer = null;
     let circlesLayer = L.layerGroup().addTo(map);
     let markersLayer = L.layerGroup().addTo(map);
+    let _mapaRegistrosTotal = 0;
+    let _mapaRegioesTotal = 0;
     let chart = null;
     let pulseMarkers = [];
 
@@ -1251,7 +1253,7 @@
       };
 
       areas.forEach((area) => {
-        totals.total_cases += activeFocusValue(area);
+        totals.total_cases += Math.round(rawFocusValue(area));
         totals.growth_sum += area.growth_percent;
         totals.maxRisk = Math.max(totals.maxRisk, area.risk_score);
 
@@ -1278,7 +1280,9 @@
       const thresholdRaw = Number(panorama?.overview?.timeline?.epidemic_threshold ?? 0);
       const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 0;
 
-      document.getElementById("metricCases").textContent = Math.round(summary.totalCases).toLocaleString("pt-BR");
+      _mapaRegistrosTotal = summary.totalCases;
+      _mapaRegioesTotal = summary.activeAreas;
+      document.getElementById("metricCases").textContent = summary.totalCases.toLocaleString("pt-BR");
       document.getElementById("metricAreas").textContent = summary.activeAreas.toLocaleString("pt-BR");
       document.getElementById("metricGrowth").textContent = `${summary.averageGrowth.toFixed(1)}%`;
       document.getElementById("metricThreshold").textContent = threshold.toLocaleString("pt-BR", {
@@ -1437,10 +1441,13 @@
         .map((symptom) => `<li>${symptom.label}: ${symptom.percentage.toFixed(1)}%</li>`)
         .join("");
 
+      const local = Math.round(rawFocusValue(area));
+      const total = _mapaRegistrosTotal || local;
+      const regioes = _mapaRegioesTotal || 1;
       return `
         <strong>${area.label}</strong><br>
-        Casos ativos: ${activeFocusValue(area).toLocaleString("pt-BR")}<br>
-        Registros 30d: ${rawFocusValue(area).toLocaleString("pt-BR")}<br>
+        Registros nesta região: <strong>${local.toLocaleString("pt-BR")}</strong><br>
+        <span style="font-size:.85em;color:#aaa">Total no mapa: ${total.toLocaleString("pt-BR")} em ${regioes} região${regioes !== 1 ? 'ões' : ''}</span><br>
         Crescimento: ${area.growth_percent.toFixed(1)}%<br>
         Risco: ${area.risk_level}<br><br>
         <strong>Foco predominante:</strong> ${area.dominant_symptom}<br>
