@@ -1198,9 +1198,30 @@
       return level === "MODERADO" || level === "BAIXO" ? "#07131d" : "#ffffff";
     }
 
+    function numericAreaValue(area, keys) {
+      for (const key of keys) {
+        const value = Number(area?.[key]);
+        if (Number.isFinite(value)) return value;
+      }
+      return 0;
+    }
+
+    function activeFocusValue(area) {
+      return numericAreaValue(area, ["indice_ativo", "active_cases", "total_cases", "total"]);
+    }
+
+    function rawFocusValue(area) {
+      const raw = numericAreaValue(area, ["raw_total_cases", "total_registros_30d", "raw_total", "total"]);
+      return raw || activeFocusValue(area);
+    }
+
+    function focusSummary(area) {
+      return `${activeFocusValue(area).toLocaleString("pt-BR")} focos ativos | registros 30d ${rawFocusValue(area).toLocaleString("pt-BR")}`;
+    }
+
     function intensity(area, maxCases) {
       if (!maxCases) return 0.2;
-      return Math.max(0.14, area.total_cases / maxCases);
+      return Math.max(0.14, activeFocusValue(area) / maxCases);
     }
 
     function getFilteredAreas() {
@@ -1651,6 +1672,10 @@
           addPulseMarker(area);
         }
       });
+
+      // Bring marker layer above heatmap canvas
+      map.removeLayer(markersLayer);
+      markersLayer.addTo(map);
 
       if (bounds.length && !mapUserMoved) {
         _mapFitting = true;

@@ -1140,6 +1140,10 @@
         }
       });
 
+      // Bring marker layer above heatmap canvas
+      map.removeLayer(markersLayer);
+      markersLayer.addTo(map);
+
       if (bounds.length && !mapUserMoved) {
         _mapFitting = true;
         map.fitBounds(bounds, {

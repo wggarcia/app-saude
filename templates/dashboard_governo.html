@@ -795,7 +795,7 @@
 
       <section class="card">
         <div class="metrics-strip">
-          <div class="metric-card"><span>Casos</span><strong id="metricCases">0</strong></div>
+          <div class="metric-card"><span>Focos ativos</span><strong id="metricCases">0</strong></div>
           <div class="metric-card"><span>Focos</span><strong id="metricAreas">0</strong></div>
           <div class="metric-card"><span>Crescimento</span><strong id="metricGrowth">0%</strong></div>
           <div class="metric-card"><span>Limiar</span><strong id="metricThreshold">0,00</strong></div>
@@ -1128,6 +1128,27 @@
 
     function badgeClass(level) {
       return level === "CRITICO" ? "critico" : level === "ALTO" ? "alto" : level === "MODERADO" ? "moderado" : "baixo";
+    }
+
+    function numericAreaValue(area, keys) {
+      for (const key of keys) {
+        const value = Number(area?.[key]);
+        if (Number.isFinite(value)) return value;
+      }
+      return 0;
+    }
+
+    function activeFocusValue(area) {
+      return numericAreaValue(area, ["indice_ativo", "active_cases", "total_cases", "total"]);
+    }
+
+    function rawFocusValue(area) {
+      const raw = numericAreaValue(area, ["raw_total_cases", "total_registros_30d", "raw_total", "total"]);
+      return raw || activeFocusValue(area);
+    }
+
+    function focusSummary(area) {
+      return `${activeFocusValue(area).toLocaleString("pt-BR")} focos ativos | registros 30d ${rawFocusValue(area).toLocaleString("pt-BR")}`;
     }
 
     function getAreas() {
@@ -1639,7 +1660,7 @@
             <span class="badge ${badgeClass(area.risk_level)}">P${area.response_priority}</span>
           </div>
           <div class="mini" style="margin-top:8px;">
-            ${area.total_cases.toLocaleString("pt-BR")} casos ativos | registros 30d ${(area.raw_total_cases ?? area.total_registros_30d ?? area.total_cases).toLocaleString("pt-BR")} |
+            ${focusSummary(area)} |
             crescimento ${area.growth_percent.toFixed(1)}%<br>
             Vigilancia ${area.surveillance_index.toFixed(1)} |
             Pressao ${area.resource_pressure.toFixed(1)}
@@ -1733,8 +1754,8 @@
     function areaPopup(area) {
       return `
         <strong>${area.label}</strong><br>
-        Casos ativos: ${area.total_cases.toLocaleString("pt-BR")}<br>
-        Registros 30d: ${(area.raw_total_cases ?? area.total_registros_30d ?? area.total_cases).toLocaleString("pt-BR")}<br>
+        Focos ativos: ${activeFocusValue(area).toLocaleString("pt-BR")}<br>
+        Registros 30d: ${rawFocusValue(area).toLocaleString("pt-BR")}<br>
         Crescimento: ${area.growth_percent.toFixed(1)}%<br>
         Prioridade: P${area.response_priority}<br>
         Vigilancia: ${area.surveillance_index.toFixed(1)}<br>
@@ -1764,8 +1785,8 @@
           <div class="detail-box">
             <strong>Indicadores principais</strong>
             <ul>
-              <li>Casos ativos temporais: ${area.total_cases.toLocaleString("pt-BR")}</li>
-              <li>Registros 30d: ${(area.raw_total_cases ?? area.total_registros_30d ?? area.total_cases).toLocaleString("pt-BR")}</li>
+              <li>Focos ativos temporais: ${activeFocusValue(area).toLocaleString("pt-BR")}</li>
+              <li>Registros 30d: ${rawFocusValue(area).toLocaleString("pt-BR")}</li>
               <li>Ultimas 24h: ${area.recent_24h.toLocaleString("pt-BR")}</li>
               <li>Janela anterior: ${area.previous_24h.toLocaleString("pt-BR")}</li>
               <li>Crescimento: ${area.growth_percent.toFixed(1)}%</li>
@@ -1830,11 +1851,11 @@
       const areas = getAreas();
       if (!areas.length) return;
 
-      const maxCases = Math.max(...areas.map((area) => area.total_cases), 1);
+      const maxCases = Math.max(...areas.map((area) => activeFocusValue(area)), 1);
       const isBairroView = levelFilter.value === "bairros";
       const heatPoints = areas
         .filter((area) => area.latitude && area.longitude)
-        .map((area) => [area.latitude, area.longitude, Math.max(0.14, area.total_cases / maxCases)]);
+          .map((area) => [area.latitude, area.longitude, Math.max(0.14, activeFocusValue(area) / maxCases)]);
 
       heatLayer = L.heatLayer(heatPoints, {
         radius: isBairroView ? 58 : 46,
@@ -1875,6 +1896,10 @@
           focusCircle.addTo(circlesLayer);
         }
       });
+
+      // Bring marker layer above heatmap (heatLayer is added to map DOM last → on top by default)
+      map.removeLayer(markersLayer);
+      markersLayer.addTo(map);
 
       if (bounds.length && !mapUserMoved) {
         _mapFitting = true;
