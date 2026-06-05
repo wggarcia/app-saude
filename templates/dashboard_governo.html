@@ -1178,7 +1178,7 @@
     }
 
     function updateMetrics(areas) {
-      const totalCases = areas.reduce((sum, area) => sum + area.total_cases, 0);
+      const totalCases = areas.reduce((sum, area) => sum + activeFocusValue(area), 0);
       const avgGrowth = areas.length ? areas.reduce((sum, area) => sum + area.growth_percent, 0) / areas.length : 0;
       const topRisk = areas.reduce((acc, area) => Math.max(acc, area.risk_score), 0);
       const riskLevel = topRisk >= 75 ? "CRITICO" : topRisk >= 55 ? "ALTO" : topRisk >= 35 ? "MODERADO" : "BAIXO";
@@ -1679,7 +1679,7 @@
     function renderDiseaseChart(areas) {
       const focuses = areas.slice(0, 5);
       const labels = focuses.map((area) => area.label);
-      const cases = focuses.map((area) => area.total_cases);
+      const cases = focuses.map((area) => activeFocusValue(area));
       const pressure = focuses.map((area) => area.resource_pressure);
       const ctx = document.getElementById("diseaseChart");
 

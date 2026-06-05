@@ -2246,6 +2246,38 @@ class PublicApiTests(TestCase):
         self.assertIn("doencas_provaveis", hotspot)
         self.assertTrue(hotspot["doencas_provaveis"])
 
+    def test_mapa_publico_expõe_aliases_equalizados_para_app_e_paineis(self):
+        empresa = Empresa.objects.create(
+            nome="Populacao Aliases",
+            email="populacao-aliases@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        RegistroSintoma.objects.create(
+            empresa=empresa,
+            dor_articular=True,
+            exantema=True,
+            latitude=-22.9068,
+            longitude=-43.1729,
+            cidade="Rio de Janeiro",
+            estado="RJ",
+            bairro="Centro",
+            grupo="Arbovirose",
+        )
+
+        response = Client().get("/api/public/mapa?cidade=Rio de Janeiro&estado=RJ")
+        hotspot = response.json()["hotspots"][0]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(hotspot["total"], hotspot["total_cases"])
+        self.assertEqual(hotspot["total"], hotspot["active_cases"])
+        self.assertEqual(hotspot["total"], hotspot["casos_ativos"])
+        self.assertEqual(hotspot["total_registros_30d"], hotspot["raw_total_cases"])
+        self.assertEqual(hotspot["total_registros_30d"], hotspot["registros_30d"])
+        self.assertEqual(hotspot["sintomas"]["dor_articular"], 1)
+        self.assertEqual(hotspot["sintomas"]["exantema"], 1)
+        self.assertIn("risk_level", hotspot)
+
     def test_mapa_publico_filtra_por_bairro(self):
         empresa = Empresa.objects.create(
             nome="Populacao Bairro",
@@ -2281,6 +2313,34 @@ class PublicApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(bairros, {"Centro"})
+
+    def test_radar_local_publico_expõe_casos_ativos_equalizados(self):
+        empresa = Empresa.objects.create(
+            nome="Populacao Radar",
+            email="populacao-radar@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        RegistroSintoma.objects.create(
+            empresa=empresa,
+            dor_articular=True,
+            latitude=-22.9068,
+            longitude=-43.1729,
+            cidade="Rio de Janeiro",
+            estado="RJ",
+            bairro="Centro",
+            grupo="Arbovirose",
+        )
+
+        response = Client().get("/api/public/radar-local?cidade=Rio de Janeiro&estado=RJ")
+        radar = response.json()["radar"]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(radar["casos_ativos"], radar["active_cases"])
+        self.assertEqual(radar["casos_ativos"], radar["total_cases"])
+        self.assertEqual(radar["registros_30d"], radar["raw_total_cases"])
+        self.assertEqual(radar["registros_30d"], radar["total_registros_30d"])
+        self.assertEqual(radar["sintoma_dominante"], "Dor Articular")
 
     def test_probabilidades_nao_puxam_hantavirose_em_quadro_generico_sem_respiratorio(self):
         probabilidades = epidemiologia._build_disease_probabilities(

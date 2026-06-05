@@ -12,7 +12,7 @@ from api.utils_ia import classificar_padrao
 from api.utils_geo import obter_endereco
 from api.utils_auth import validar_token
 from api.models import Empresa, RegistroSintoma
-from api.epidemiologia import _build_disease_probabilities, clear_panorama_cache
+from api.epidemiologia import SYMPTOM_LABELS, _build_disease_probabilities, clear_panorama_cache
 from django.db.models import Count, Avg, Q
 from django.db.models.functions import TruncDate
 from django.contrib.auth.hashers import check_password, make_password
@@ -2830,6 +2830,7 @@ def app_radar_local(request):
         crescimento = round(((total_atuais - total_anteriores) / total_anteriores) * 100, 2)
 
     nivel = _nivel_local_por_indice_publico(indice_ativo, crescimento)
+    risk_level = "ALTO" if nivel == "alto" else "MODERADO" if nivel in {"moderado", "atencao"} else "BAIXO"
 
     doencas = (
         atuais.exclude(grupo__isnull=True).exclude(grupo="")
@@ -2840,13 +2841,17 @@ def app_radar_local(request):
     grupo_top = doencas[0]["grupo"] if doencas else "monitoramento geral"
 
     sintomas = {
-        "febre": atuais.filter(febre=True).count(),
-        "tosse": atuais.filter(tosse=True).count(),
-        "dor_corpo": atuais.filter(dor_corpo=True).count(),
-        "cansaco": atuais.filter(cansaco=True).count(),
-        "falta_ar": atuais.filter(falta_ar=True).count(),
+        key: atuais.filter(**{key: True}).count()
+        for key in SYMPTOM_LABELS
     }
+    sintoma_dominante_key = max(sintomas, key=sintomas.get) if sintomas else None
+    sintoma_dominante = (
+        SYMPTOM_LABELS.get(sintoma_dominante_key)
+        if sintoma_dominante_key and sintomas.get(sintoma_dominante_key, 0) > 0
+        else "Sem dados"
+    )
     doencas_provaveis = _build_disease_probabilities(sintomas, total_ativos)
+    doenca_dominante = doencas_provaveis[0]["name"] if doencas_provaveis else None
 
     return JsonResponse({
         "local": {
@@ -2860,11 +2865,23 @@ def app_radar_local(request):
             "registros_30d": total_ativos,
             "indice_ativo_7d": indice_ativo,
             "indice_ativo_30d": indice_ativo,
+            "indice_ativo": indice_ativo,
+            "casos_ativos": indice_ativo,
+            "active_cases": indice_ativo,
+            "total_cases": indice_ativo,
+            "raw_total_cases": total_ativos,
+            "total_registros_30d": total_ativos,
             "crescimento_7d": crescimento,
+            "crescimento_percent": crescimento,
             "suspeitos_7d": atuais_7d.filter(suspeito=True).count(),
             "bairro_registros_7d": atuais_bairro_7d.count(),
             "bairro_registros_30d": atuais_bairro.count(),
             "grupo_top": grupo_top,
+            "nivel_risco": risk_level,
+            "sintoma_dominante": sintoma_dominante,
+            "dominant_symptom": sintoma_dominante,
+            "doenca_dominante": doenca_dominante,
+            "dominant_disease": doenca_dominante,
             "decaimento_temporal": "sem novos envios, o indice local permanece preservado por 10 dias; depois a IA reduz gradualmente apenas quando a tendencia local, dados agregados e fontes oficiais sustentam queda real",
         },
         "semaforo": _semaforo_publico(nivel),
@@ -2965,23 +2982,18 @@ def app_mapa_publico(request):
         filtros_area |= cond
 
     sintomas_por_area = {}
+    symptom_annotations = {
+        key: Count("id", filter=Q(**{key: True}))
+        for key in SYMPTOM_LABELS
+    }
     for row in (
         base.filter(filtros_area)
         .values("cidade", "estado", "bairro")
-        .annotate(
-            febre=Count("id", filter=Q(febre=True)),
-            tosse=Count("id", filter=Q(tosse=True)),
-            dor_corpo=Count("id", filter=Q(dor_corpo=True)),
-            cansaco=Count("id", filter=Q(cansaco=True)),
-            falta_ar=Count("id", filter=Q(falta_ar=True)),
-        )
+        .annotate(**symptom_annotations)
     ):
         sintomas_por_area[(row["cidade"], row["estado"], row["bairro"])] = {
-            "febre": row["febre"],
-            "tosse": row["tosse"],
-            "dor_corpo": row["dor_corpo"],
-            "cansaco": row["cansaco"],
-            "falta_ar": row["falta_ar"],
+            key: row[key]
+            for key in SYMPTOM_LABELS
         }
 
     grupo_dominante_por_area = {}
@@ -3000,18 +3012,19 @@ def app_mapa_publico(request):
     resultado = []
     for item in hotspots:
         key = (item["cidade"], item["estado"], item["bairro"])
-        sintomas_area = sintomas_por_area.get(key, {
-            "febre": 0,
-            "tosse": 0,
-            "dor_corpo": 0,
-            "cansaco": 0,
-            "falta_ar": 0,
-        })
+        sintomas_area = sintomas_por_area.get(key, {symptom: 0 for symptom in SYMPTOM_LABELS})
         perfil_sindromico = grupo_dominante_por_area.get(key, "Monitoramento geral")
+        sintoma_dominante_key = max(sintomas_area, key=sintomas_area.get) if sintomas_area else None
+        sintoma_dominante = (
+            SYMPTOM_LABELS.get(sintoma_dominante_key)
+            if sintoma_dominante_key and sintomas_area.get(sintoma_dominante_key, 0) > 0
+            else "Sem dados"
+        )
         doencas_provaveis = _build_disease_probabilities(sintomas_area, item["total"])
         doenca_top = doencas_provaveis[0]["name"] if doencas_provaveis else None
         indice_ativo = round(item["indice_ativo"], 2)
         nivel = "alto" if indice_ativo >= 45 else "moderado" if indice_ativo >= 20 else "atencao" if indice_ativo >= 8 else "baixo"
+        risk_level = "ALTO" if nivel == "alto" else "MODERADO" if nivel in {"moderado", "atencao"} else "BAIXO"
         peso_geo = max(item["peso_geo"], 1)
         latitude = round(item["latitude_soma"] / peso_geo, 6)
         longitude = round(item["longitude_soma"] / peso_geo, 6)
@@ -3022,16 +3035,30 @@ def app_mapa_publico(request):
             "estado": item["estado"],
             "bairro": item["bairro"],
             "total": indice_ativo,
+            "total_cases": indice_ativo,
+            "active_cases": indice_ativo,
+            "casos_ativos": indice_ativo,
             "total_registros_30d": item["total"],
+            "registros_30d": item["total"],
+            "raw_total_cases": item["total"],
             "raw_total": item["total"],
             "indice_ativo": indice_ativo,
+            "growth_percent": 0.0,
+            "crescimento_percent": 0.0,
             "percentual_ativo": round((indice_ativo / total_indice_mapa) * 100, 2),
             "latitude": latitude,
             "longitude": longitude,
             "grupo_dominante": doenca_top or perfil_sindromico,
             "perfil_sindromico": perfil_sindromico,
             "doenca_dominante": doenca_top,
+            "dominant_disease": doenca_top,
+            "dominant_symptom": sintoma_dominante,
+            "sintoma_dominante": sintoma_dominante,
+            "sintomas": sintomas_area,
             "doencas_provaveis": doencas_provaveis[:5],
+            "probable_diseases": doencas_provaveis[:5],
+            "risk_level": risk_level,
+            "nivel_risco": risk_level,
             "semaforo": _semaforo_publico(nivel),
             "decaimento_temporal": "foco preservado por 10 dias sem novos envios; depois a intensidade reduz gradualmente somente quando a IA valida queda real com serie temporal, dados agregados e fontes oficiais",
         })
