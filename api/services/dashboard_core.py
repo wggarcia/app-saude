@@ -893,3 +893,91 @@ def build_owner_saude_sistema(dono=None):
         "componentes": componentes,
         "verificado_em": agora.isoformat(),
     }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  APP FUNCIONÁRIO — adoção e engajamento do app do trabalhador
+# ════════════════════════════════════════════════════════════════════════════
+def build_owner_app_funcionario(dono=None):
+    """
+    Métricas de adoção do app do trabalhador (App Funcionário):
+      • trabalhadores cadastrados, com credencial de app e com app instalado
+        (push token), funil de adesão e instalação
+      • engajamento: check-ins de bem-estar e leitura de notificações (30d)
+      • novas ativações (30d) e ranking de empresas por adesão
+    """
+    from api.models import (
+        FuncionarioSST, CredencialAppFuncionario,
+        CheckinBemEstar, NotificacaoFuncionario,
+    )
+
+    agora = timezone.now()
+    ref_30 = agora - timedelta(days=30)
+
+    trabalhadores = FuncionarioSST.objects.filter(ativo=True)
+    total_trab = trabalhadores.count()
+
+    creds = CredencialAppFuncionario.objects.filter(ativo=True)
+    com_credencial = creds.count()
+    com_push = creds.exclude(fcm_token="").count()
+    novas_30d = creds.filter(criado_em__gte=ref_30).count()
+
+    taxa_adesao = round((com_credencial / total_trab) * 100, 1) if total_trab else 0.0
+    taxa_instalacao = round((com_push / com_credencial) * 100, 1) if com_credencial else 0.0
+
+    # Engajamento (30 dias)
+    checkins_30d = CheckinBemEstar.objects.filter(criado_em__gte=ref_30)
+    checkins_total = checkins_30d.count()
+    func_engajados = checkins_30d.values("funcionario_id").distinct().count()
+    taxa_engajamento = round((func_engajados / com_credencial) * 100, 1) if com_credencial else 0.0
+
+    notif = NotificacaoFuncionario.objects.filter(criado_em__gte=ref_30)
+    notif_enviadas = notif.count()
+    notif_lidas = notif.filter(lida=True).count()
+    taxa_leitura = round((notif_lidas / notif_enviadas) * 100, 1) if notif_enviadas else 0.0
+
+    # Ranking de empresas por adesão (top 8)
+    trab_por_emp = {
+        r["empresa_id"]: r["t"]
+        for r in trabalhadores.values("empresa_id").annotate(t=Count("id"))
+    }
+    cred_por_emp = {}
+    push_por_emp = {}
+    for r in creds.values("funcionario__empresa_id").annotate(
+        t=Count("id"), p=Count("id", filter=~Q(fcm_token=""))
+    ):
+        eid = r["funcionario__empresa_id"]
+        cred_por_emp[eid] = r["t"]
+        push_por_emp[eid] = r["p"]
+
+    nomes = {e.id: e.nome for e in Empresa.objects.filter(id__in=list(trab_por_emp.keys()))}
+    ranking = []
+    for eid, trab in trab_por_emp.items():
+        c = cred_por_emp.get(eid, 0)
+        ranking.append({
+            "empresa": nomes.get(eid, f"#{eid}"),
+            "trabalhadores": trab,
+            "com_credencial": c,
+            "com_push": push_por_emp.get(eid, 0),
+            "adesao": round((c / trab) * 100, 1) if trab else 0.0,
+        })
+    ranking.sort(key=lambda x: (x["adesao"], x["com_credencial"]), reverse=True)
+
+    return {
+        "total_trabalhadores": total_trab,
+        "com_credencial": com_credencial,
+        "com_push": com_push,
+        "sem_credencial": max(total_trab - com_credencial, 0),
+        "taxa_adesao": taxa_adesao,
+        "taxa_instalacao": taxa_instalacao,
+        "novas_ativacoes_30d": novas_30d,
+        "engajamento": {
+            "funcionarios_engajados_30d": func_engajados,
+            "checkins_30d": checkins_total,
+            "taxa_engajamento": taxa_engajamento,
+            "notif_enviadas_30d": notif_enviadas,
+            "notif_lidas_30d": notif_lidas,
+            "taxa_leitura": taxa_leitura,
+        },
+        "ranking_empresas": ranking[:8],
+    }

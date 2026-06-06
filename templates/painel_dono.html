@@ -157,6 +157,7 @@ function _t(msg, tipo) {
       <a href="#secSaude">Saúde do Sistema</a>
       <a href="#secFinanceiroReal">Financeiro Real</a>
       <a href="#secSegmentos">Segmentos</a>
+      <a href="#secAppFunc">App Funcionário</a>
       <a href="#secVigilancia">Vigilância Pública</a>
       <a href="#secCobranca">Cobrança</a>
       <a href="#secCapacidade">Capacidade</a>
@@ -192,6 +193,14 @@ function _t(msg, tipo) {
         <span class="muted small">Carteira por ambiente real: SST · Farmácia · Hospital · Plano · Governo · Rede</span>
       </div>
       <div id="segmentGrid" class="segment-grid">Carregando...</div>
+    </section>
+
+    <section class="card" id="secAppFunc">
+      <div class="row" style="margin-bottom:6px;">
+        <h2 style="margin:0;">App Funcionário — Adoção &amp; Engajamento</h2>
+        <span class="muted small">App do trabalhador: cadastro → credencial → instalação → uso</span>
+      </div>
+      <div id="appFuncBox">Carregando...</div>
     </section>
 
     <section class="card" id="secVigilancia">
@@ -887,9 +896,54 @@ function _t(msg, tipo) {
       }
     }
 
+    // ── App Funcionário (adoção) ─────────────────────────────────────────────
+    async function carregarAppFuncionario() {
+      const box = document.getElementById("appFuncBox");
+      try {
+        const a = await (await fetch("/api/operacao-central/app-funcionario")).json();
+        const e = a.engajamento || {};
+        const maxAd = Math.max(...(a.ranking_empresas || []).map((r) => r.adesao), 1);
+        box.innerHTML = `
+          <div class="fin-grid">
+            <div class="fin-kpi alt"><span>Trabalhadores</span><strong>${a.total_trabalhadores}</strong></div>
+            <div class="fin-kpi alt"><span>Com credencial</span><strong>${a.com_credencial}</strong></div>
+            <div class="fin-kpi"><span>App instalado (push)</span><strong>${a.com_push}</strong></div>
+            <div class="fin-kpi"><span>Novas ativações 30d</span><strong>${a.novas_ativacoes_30d}</strong></div>
+            <div class="fin-kpi ${a.taxa_adesao < 30 ? "warn" : ""}"><span>Taxa de adesão</span><strong>${a.taxa_adesao}%</strong></div>
+            <div class="fin-kpi ${a.taxa_instalacao < 30 ? "warn" : ""}"><span>Taxa de instalação</span><strong>${a.taxa_instalacao}%</strong></div>
+            <div class="fin-kpi alt"><span>Engajados 30d</span><strong>${e.funcionarios_engajados_30d}</strong></div>
+            <div class="fin-kpi ${e.taxa_leitura < 30 ? "warn" : ""}"><span>Leitura de avisos</span><strong>${e.taxa_leitura}%</strong></div>
+          </div>
+          <div class="vig-cols">
+            <div>
+              <div class="muted small" style="margin-bottom:8px;">Funil de adoção</div>
+              ${[["Cadastrados", a.total_trabalhadores], ["Com credencial", a.com_credencial], ["App instalado", a.com_push], ["Engajados 30d", e.funcionarios_engajados_30d]].map(([lbl, v]) => `
+                <div class="vig-bar-row">
+                  <div class="lbl">${lbl}</div>
+                  <div class="vig-bar"><i style="width:${(v / Math.max(a.total_trabalhadores, 1) * 100).toFixed(0)}%;background:linear-gradient(90deg,#7fd7ff,#34d399)"></i></div>
+                  <div class="val">${v}</div>
+                </div>`).join("")}
+              <div class="muted small" style="margin-top:10px;">Check-ins de bem-estar (30d): <strong style="color:#eef8ff">${e.checkins_30d}</strong> · Avisos lidos: <strong style="color:#eef8ff">${e.notif_lidas_30d}/${e.notif_enviadas_30d}</strong></div>
+            </div>
+            <div>
+              <div class="muted small" style="margin-bottom:8px;">Adesão por empresa (top 8)</div>
+              ${(a.ranking_empresas || []).map((r) => `
+                <div class="vig-bar-row">
+                  <div class="lbl">${r.empresa}</div>
+                  <div class="vig-bar"><i style="width:${(r.adesao / maxAd * 100).toFixed(0)}%"></i></div>
+                  <div class="val">${r.adesao}%</div>
+                </div>`).join("") || '<div class="muted small">—</div>'}
+            </div>
+          </div>`;
+      } catch (e) {
+        box.innerHTML = '<div class="muted">Não foi possível carregar a adoção do app funcionário.</div>';
+      }
+    }
+
     loadOwnerPanel();
     carregarFinanceiroReal();
     carregarSaude();
+    carregarAppFuncionario();
     // Saúde re-checa a cada 60s
     setInterval(carregarSaude, 60000);
   </script>

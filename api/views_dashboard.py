@@ -1094,6 +1094,14 @@ def api_dono_saude(request):
     return JsonResponse(build_owner_saude_sistema(dono))
 
 
+def api_dono_app_funcionario(request):
+    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    from .services.dashboard_core import build_owner_app_funcionario
+    return JsonResponse(build_owner_app_funcionario(dono))
+
+
 @csrf_exempt
 def api_dono_atualizar_cliente(request):
     dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
