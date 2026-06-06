@@ -391,6 +391,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
   Widget build(BuildContext context) {
     final resumoData = resumo?['resumo'] as Map<String, dynamic>? ?? {};
     final doencas = resumo?['doencas_top'] as List<dynamic>? ?? [];
+    final casosPorEstado = resumo?['casos_por_estado'] as List<dynamic>? ?? [];
     final radar = radarSelecionado?['radar'] as Map<String, dynamic>? ?? {};
     final local = radarSelecionado?['local'] as Map<String, dynamic>? ?? {};
     final localAtual = radarAtual?['local'] as Map<String, dynamic>? ?? {};
@@ -479,6 +480,13 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                     topDoencas: doencas,
                     semaforo: semaforo,
                   ),
+                if (!loading && casosPorEstado.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _CasosPorEstadoCard(
+                    casosPorEstado: casosPorEstado,
+                    totalNacional: resumoData['registros_30d'] ?? 0,
+                  ),
+                ],
                 const SizedBox(height: 16),
                 if (!loading)
                   _PublicAlertCard(
@@ -604,6 +612,150 @@ class _LiveMetricsCard extends StatelessWidget {
                 );
               }).toList(),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CasosPorEstadoCard extends StatelessWidget {
+  const _CasosPorEstadoCard({
+    required this.casosPorEstado,
+    required this.totalNacional,
+  });
+
+  final List<dynamic> casosPorEstado;
+  final dynamic totalNacional;
+
+  Color _corPorVolume(double frac) {
+    if (frac >= 0.66) return const Color(0xFFFF6B6B);
+    if (frac >= 0.33) return const Color(0xFFFF9B54);
+    if (frac >= 0.12) return const Color(0xFFFFD166);
+    return const Color(0xFF1DD1A1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final itens = casosPorEstado
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+    final maxTotal = itens.isEmpty
+        ? 1
+        : itens
+            .map((e) => (e['total'] as num?)?.toInt() ?? 0)
+            .reduce((a, b) => a > b ? a : b);
+    final total = (totalNacional is num) ? (totalNacional as num).toInt() : 0;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.public, color: Color(0xFF39D0C3), size: 22),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Casos por estado',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF16394F),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$total no Brasil',
+                    style: const TextStyle(
+                      color: Color(0xFF9CC4DB),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${itens.length} estados com sinais ativos (30 dias)',
+              style: const TextStyle(color: Color(0xFF77A0B8), fontSize: 12),
+            ),
+            const SizedBox(height: 14),
+            ...itens.take(12).map((e) {
+              final uf = e['uf']?.toString() ?? '--';
+              final nome = e['estado']?.toString() ?? '';
+              final qtd = (e['total'] as num?)?.toInt() ?? 0;
+              final pct = (e['percentual'] as num?)?.toDouble() ?? 0.0;
+              final frac = maxTotal > 0 ? qtd / maxTotal : 0.0;
+              final cor = _corPorVolume(frac);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 34,
+                      child: Text(
+                        uf,
+                        style: TextStyle(
+                          color: cor,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                nome,
+                                style: const TextStyle(
+                                  color: Color(0xFFCDE3F0),
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                '$qtd  ·  ${pct.toStringAsFixed(0)}%',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 5),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: LinearProgressIndicator(
+                              value: frac.clamp(0.04, 1.0),
+                              minHeight: 7,
+                              backgroundColor: const Color(0xFF0E2A3A),
+                              valueColor: AlwaysStoppedAnimation<Color>(cor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
       ),
