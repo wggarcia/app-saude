@@ -3261,6 +3261,7 @@ def limpar_casos(request):
     return JsonResponse({"apagados": total})
 
 
+@csrf_exempt
 def simular_focos_epidemicos(request):
     """
     Cria dados de simulação epidemiológica reais no banco de produção.
@@ -3410,6 +3411,7 @@ def simular_focos_epidemicos(request):
     })
 
 
+@csrf_exempt
 def regeocodificar_focos(request):
     """Reprocessa cidade/bairro/estado de todos os registros públicos. Requer sessão."""
     empresa_req = getattr(request, "empresa", None)
