@@ -3413,10 +3413,12 @@ def simular_focos_epidemicos(request):
 
 @csrf_exempt
 def regeocodificar_focos(request):
-    """Reprocessa cidade/bairro/estado de todos os registros públicos. Requer sessão."""
+    """Reprocessa cidade/bairro/estado de todos os registros públicos. Aceita GET ou POST. Requer sessão."""
     empresa_req = getattr(request, "empresa", None)
     if not empresa_req:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method not in ("GET", "POST"):
+        return JsonResponse({"erro": "método inválido"}, status=405)
     from api.views import _empresa_app_publico
     from api.utils_geo import _fallback_local as _geo
     from api.epidemiologia import clear_panorama_cache as _clr
