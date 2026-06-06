@@ -2744,6 +2744,17 @@ def mapa_casos(request):
     return JsonResponse(resultado, safe=False)
 
 
+def app_vigilancia_resumo(request):
+    """
+    Resumo epidemiológico nacional (mesma fonte do console admin):
+    casos 30d/24h, focos, estados, crescimento 7d, top doenças e top estados.
+    Endpoint público compartilhado por todos os ambientes (Governo, Farmácia,
+    Hospital, Plano de Saúde e console), garantindo números IDÊNTICOS.
+    """
+    from api.services.dashboard_core import _resumo_vigilancia_publica
+    return JsonResponse(_resumo_vigilancia_publica(timezone.now()))
+
+
 def app_resumo_publico(request):
     # ── RLS: garante visibilidade dos registros públicos ─────────────────────
     from api.middleware import _rls_set_empresa as _set_rls

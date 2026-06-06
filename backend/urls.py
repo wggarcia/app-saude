@@ -22,7 +22,7 @@ from api.views import (
     limpar_casos, mapa_casos, simular_focos_epidemicos, regeocodificar_focos,
     insights_nacional,
     tela_cadastro, tela_login_empresa, tela_login_governo,
-    registrar_sintoma_publico, app_resumo_publico, app_radar_local, app_mapa_publico, app_alertas_publicos, registrar_push_publico,
+    registrar_sintoma_publico, app_resumo_publico, app_radar_local, app_mapa_publico, app_vigilancia_resumo, app_alertas_publicos, registrar_push_publico,
     site_principal, apresentacao_comercial, documento_publico
 )
 
@@ -1337,6 +1337,7 @@ urlpatterns = [
     path('api/public/resumo', app_resumo_publico),
     path('api/public/radar-local', app_radar_local),
     path('api/public/mapa', app_mapa_publico),
+    path('api/public/vigilancia-resumo', app_vigilancia_resumo),
     path('api/public/alertas', app_alertas_publicos),
     path('api/public/legal-consent', views.registrar_aceite_legal_publico),
     path('api/public/push-token', registrar_push_publico),

@@ -2001,5 +2001,83 @@
     // Fontes oficiais externas: 5 min (cache de 15 min no servidor torna polling rápido inútil).
     setInterval(loadOfficialBrazil, 300000);
   </script>
+<!-- ══ Widget Vigilância Nacional (fonte única: /api/public/vigilancia-resumo) ══ -->
+<div id="vgn-root">
+  <button id="vgn-toggle" type="button">🦠 Vigilância&nbsp;Nacional</button>
+  <div id="vgn-panel" role="dialog" aria-label="Vigilância pública nacional">
+    <div class="vgn-head">
+      <span>🦠 Vigilância Pública — Brasil</span>
+      <button id="vgn-close" type="button" aria-label="Fechar">×</button>
+    </div>
+    <div id="vgn-body"><div class="vgn-loading">Carregando…</div></div>
+    <div class="vgn-foot" id="vgn-foot"></div>
+  </div>
+</div>
+<style>
+  #vgn-root{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:1200;font-family:inherit}
+  #vgn-toggle{writing-mode:vertical-rl;transform:rotate(180deg);background:linear-gradient(180deg,#00c2ff,#00e5b0);
+    color:#04131f;border:0;padding:14px 8px;border-radius:0 12px 12px 0;font-weight:800;font-size:.8rem;
+    cursor:pointer;letter-spacing:.04em;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #vgn-panel{position:absolute;left:0;top:50%;transform:translateY(-50%);width:360px;max-height:84vh;overflow-y:auto;
+    display:none;background:rgba(8,20,30,.97);backdrop-filter:blur(14px);border:1px solid rgba(0,194,255,.25);
+    border-radius:0 16px 16px 0;box-shadow:0 24px 70px rgba(0,0,0,.55);padding:16px;color:#e8f4ff}
+  #vgn-root.open #vgn-panel{display:block}
+  #vgn-root.open #vgn-toggle{display:none}
+  .vgn-head{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:.98rem;margin-bottom:12px;color:#7fd7ff}
+  .vgn-head button{background:none;border:0;color:#9cc4db;font-size:1.4rem;cursor:pointer;line-height:1}
+  .vgn-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+  .vgn-kpi{background:rgba(255,255,255,.04);border:1px solid rgba(0,194,255,.18);border-radius:12px;padding:9px 10px}
+  .vgn-kpi span{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;color:#7a9bb5}
+  .vgn-kpi strong{display:block;margin-top:3px;font-size:1.25rem;color:#7fd7ff}
+  .vgn-kpi.up strong{color:#34d399}
+  .vgn-sec{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#7a9bb5;margin:12px 0 8px}
+  .vgn-row{display:flex;align-items:center;gap:8px;font-size:.8rem;margin-bottom:6px}
+  .vgn-row .l{width:118px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#cde3f0}
+  .vgn-bar{flex:1;height:7px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+  .vgn-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#00c2ff,#00e5b0)}
+  .vgn-row .v{width:48px;text-align:right;font-weight:700;color:#fff}
+  .vgn-foot{margin-top:10px;font-size:.66rem;color:#5f7d92}
+  .vgn-loading{color:#7a9bb5;padding:20px 0;text-align:center}
+</style>
+<script>
+(function(){
+  var root=document.getElementById("vgn-root");
+  var toggle=document.getElementById("vgn-toggle");
+  var closeBtn=document.getElementById("vgn-close");
+  var body=document.getElementById("vgn-body");
+  var foot=document.getElementById("vgn-foot");
+  var loaded=false;
+  function nf(n){return Number(n||0).toLocaleString("pt-BR");}
+  function render(d){
+    if(!d || !d.disponivel){ body.innerHTML='<div class="vgn-loading">Sem dados epidemiológicos no período.</div>'; return; }
+    var c=Number(d.crescimento_7d||0);
+    var dz=d.top_doencas||[], es=d.top_estados||[];
+    var maxD=Math.max.apply(null,dz.map(function(x){return x.total;}).concat([1]));
+    var maxE=Math.max.apply(null,es.map(function(x){return x.total;}).concat([1]));
+    body.innerHTML=
+      '<div class="vgn-kpis">'+
+        '<div class="vgn-kpi"><span>Casos 30d</span><strong>'+nf(d.casos_30d)+'</strong></div>'+
+        '<div class="vgn-kpi"><span>Casos 24h</span><strong>'+nf(d.casos_24h)+'</strong></div>'+
+        '<div class="vgn-kpi"><span>Focos ativos</span><strong>'+nf(d.focos)+'</strong></div>'+
+        '<div class="vgn-kpi"><span>Estados</span><strong>'+nf(d.estados)+'</strong></div>'+
+        '<div class="vgn-kpi '+(c>0?'up':'')+'"><span>Crescimento 7d</span><strong>'+(c>0?'+':'')+c+'%</strong></div>'+
+      '</div>'+
+      '<div class="vgn-sec">Doenças predominantes</div>'+
+      dz.map(function(x){return '<div class="vgn-row"><div class="l">'+x.grupo+'</div><div class="vgn-bar"><i style="width:'+(x.total/maxD*100).toFixed(0)+'%"></i></div><div class="v">'+nf(x.total)+'</div></div>';}).join('')+
+      '<div class="vgn-sec">Casos por estado (top 8)</div>'+
+      es.map(function(x){return '<div class="vgn-row"><div class="l">'+x.estado+'</div><div class="vgn-bar"><i style="width:'+(x.total/maxE*100).toFixed(0)+'%"></i></div><div class="v">'+nf(x.total)+'</div></div>';}).join('');
+    foot.textContent="Fonte: app da população (gratuito/anônimo) · atualiza ao reabrir";
+  }
+  function load(){
+    fetch("/api/public/vigilancia-resumo").then(function(r){return r.json();}).then(render)
+      .catch(function(){ body.innerHTML='<div class="vgn-loading">Não foi possível carregar.</div>'; });
+  }
+  function open(){ root.classList.add("open"); if(!loaded){loaded=true;load();} }
+  function close(){ root.classList.remove("open"); }
+  toggle.addEventListener("click",open);
+  closeBtn.addEventListener("click",close);
+})();
+</script>
+
 </body>
 </html>
