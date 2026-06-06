@@ -9,6 +9,7 @@ import secrets
 from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
+from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
@@ -103,6 +104,22 @@ def _cpf_limpo(cpf):
     return "".join(c for c in (cpf or "") if c.isdigit())
 
 
+def _cpf_formatado(cpf):
+    cpf = _cpf_limpo(cpf)
+    if len(cpf) != 11:
+        return ""
+    return f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:]}"
+
+
+def _funcionarios_ativos_por_cpf(cpf):
+    cpf = _cpf_limpo(cpf)
+    cpf_fmt = _cpf_formatado(cpf)
+    filtro = Q(cpf__icontains=cpf)
+    if cpf_fmt:
+        filtro |= Q(cpf__icontains=cpf_fmt)
+    return FuncionarioSST.objects.using(_OWNER_DB).filter(filtro, ativo=True)
+
+
 # ── registro ───────────────────────────────────────────────────────────────
 
 @csrf_exempt
@@ -126,8 +143,7 @@ def funcionario_buscar_cpf(request):
         return JsonResponse({"erro": "CPF é obrigatório"}, status=400)
 
     funcs = list(
-        FuncionarioSST.objects.using(_OWNER_DB)
-        .filter(cpf__icontains=cpf, ativo=True)
+        _funcionarios_ativos_por_cpf(cpf)
         .select_related("empresa")
         .order_by("empresa__nome")
     )
@@ -256,8 +272,7 @@ def funcionario_login(request):
         return JsonResponse({"erro": "E-mail ou CPF é obrigatório"}, status=400)
 
     func = (
-        FuncionarioSST.objects.using(_OWNER_DB)
-        .filter(cpf__icontains=cpf, ativo=True)
+        _funcionarios_ativos_por_cpf(cpf)
         .select_related("empresa")
         .order_by("-criado_em")
         .first()

@@ -454,17 +454,23 @@ class SegmentoAccessMiddleware:
         ("/api/rede/",        "rede"),
     )
 
-    # Subprefixos que são exceção dentro de /api/plano/ (autenticação própria)
-    _EXCECOES_PLANO = {
-        "/api/planos-publicos",  # catálogo público de planos (sem auth)
-        "/api/planos-saude",     # listagem pública
-    }
+    # Subprefixos que são exceção dentro de /api/plano/. Eles servem ao
+    # contrato da empresa autenticada, não ao segmento plano_saude.
+    _EXCECOES_PLANO = (
+        "/api/plano/features",
+        "/api/plano/upgrade",
+        "/api/planos-publicos",
+        "/api/planos-saude",
+    )
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         path = request.path_info
+
+        if any(path.startswith(exc) for exc in self._EXCECOES_PLANO):
+            return self.get_response(request)
 
         # Determina se esta URL exige um setor específico
         setor_obrigatorio = None

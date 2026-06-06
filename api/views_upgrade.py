@@ -12,7 +12,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from .access_control import api_requer_gerencia
-from .planos import PACOTES_SAAS, detalhes_pacote
+from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_codigo_pacote
 
 
 # ── Mapeamento de features legíveis por plano ─────────────────────────────────
@@ -118,7 +118,7 @@ def api_upgrade_opcoes(request):
     Inclui o plano atual marcado e somente planos superiores habilitados.
     """
     empresa = request.empresa
-    plano_atual = empresa.pacote_codigo
+    plano_atual = normalizar_codigo_pacote(empresa.pacote_codigo)
     pacote_atual = detalhes_pacote(plano_atual)
     setor_atual = pacote_atual.get("setor", "empresa")
     idx_atual = _plano_index(plano_atual)
@@ -127,7 +127,7 @@ def api_upgrade_opcoes(request):
     for codigo, pacote in PACOTES_SAAS.items():
         if pacote.get("setor") != setor_atual:
             continue
-        idx = _plano_index(codigo)
+        idx = _plano_index(normalizar_codigo_pacote(codigo))
         if idx <= idx_atual:
             continue  # não mostra downgrades nem plano atual
         features = _FEATURES_LABEL.get(codigo, {})

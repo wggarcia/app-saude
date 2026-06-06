@@ -47,6 +47,10 @@ from .models import (
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 
 
+def _cpf_limpo(cpf):
+    return "".join(c for c in (cpf or "") if c.isdigit())
+
+
 CID_SST_DOENCA_TRABALHO = [
     {
         "grupo": "Transtornos mentais relacionados ao trabalho",
@@ -555,7 +559,7 @@ def api_funcionarios(request):
         f = FuncionarioSST.objects.create(
             empresa=empresa,
             nome=nome,
-            cpf=data.get("cpf", ""),
+            cpf=_cpf_limpo(data.get("cpf", ""))[:11],
             matricula=data.get("matricula", ""),
             cargo=cargo,
             setor=data.get("setor", ""),
@@ -585,7 +589,7 @@ def api_funcionario_detalhe(request, funcionario_id):
         if "nome" in data:
             func.nome = data["nome"].strip()[:200]
         if "cpf" in data:
-            func.cpf = data["cpf"].strip()[:14]
+            func.cpf = _cpf_limpo(data["cpf"])[:11]
         if "matricula" in data:
             func.matricula = data["matricula"].strip()[:40]
         if "cargo" in data:

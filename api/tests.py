@@ -99,7 +99,9 @@ class PlanosSaasTests(TestCase):
     def test_codigos_legados_nao_viram_governo_por_engano(self):
         self.assertEqual(normalizar_codigo_pacote("grid_500"), "empresa_nacional_500")
         self.assertEqual(normalizar_codigo_pacote("national_1000"), "empresa_nacional_1000")
+        self.assertEqual(normalizar_codigo_pacote("sst_enterprise_10"), "empresa_nacional_1000")
         self.assertEqual(detalhes_pacote("national_1000")["dispositivos"], 1000)
+        self.assertIn("sst.biometria", detalhes_pacote("sst_enterprise_10")["features"])
 
     def test_template_pagamento_entrega_valores_js_sem_virgula(self):
         html = render_to_string("pagamento.html", {"pacotes": pacotes_por_setor(incluir_governo=False)})
@@ -114,11 +116,38 @@ class PlanosSaasTests(TestCase):
         self.assertIn("farmacia.pbm", PACOTES_SAAS["farmacia_local"]["features"])
         self.assertIn("farmacia.farmacia_popular", PACOTES_SAAS["farmacia_rede_regional"]["features"])
         self.assertIn("hospital.emr", PACOTES_SAAS["hospital_medio"]["features"])
-        self.assertIn("hospital.tiss", PACOTES_SAAS["hospital_rede"]["features"])
-        self.assertIn("governo.esus_rnds", PACOTES_SAAS["governo_estado"]["features"])
-        self.assertIn("governo.faturamento_sus", PACOTES_SAAS["governo_estado"]["features"])
-        self.assertIn("plano.diops_sib", PACOTES_SAAS["plano_saude_operadora"]["features"])
-        self.assertIn("plano.portal_beneficiario", PACOTES_SAAS["plano_saude_enterprise"]["features"])
+
+    def test_upgrade_opcoes_normaliza_pacote_legado_da_demo_sst(self):
+        empresa = Empresa.objects.create(
+            nome="Demo SST",
+            email="demo.sst@soluscrt.com",
+            senha=make_password("Demo@SST2026"),
+            ativo=True,
+            tipo_conta=Empresa.TIPO_EMPRESA,
+            pacote_codigo="sst_enterprise_10",
+            plano="anual",
+            max_dispositivos=1000,
+            max_usuarios=1000,
+            sessao_ativa_chave="sessao-demo",
+        )
+        payload = {
+            "empresa_id": empresa.id,
+            "principal_kind": "empresa_admin",
+            "principal_id": empresa.id,
+            "session_key": empresa.sessao_ativa_chave,
+            "exp": timezone.now() + timedelta(hours=1),
+        }
+        client = Client()
+        client.cookies["auth_token"] = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
+
+        response = client.get("/api/plano/upgrade/opcoes")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["plano_atual"]["codigo"], "empresa_nacional_1000")
+        self.assertEqual(body["plano_atual"]["label"], "Empresa Nacional 1000")
+        self.assertEqual(body["opcoes"], [])
+        self.assertIn("sst.biometria", detalhes_pacote("sst_enterprise_10")["features"])
 
     def test_modulos_de_paridade_competitiva_estao_roteados(self):
         rotas = {

@@ -372,6 +372,8 @@ LEGACY_PACOTE_MAP = {
     "starter_5": "empresa_starter_5",
     "growth_10": "empresa_profissional_25",
     "scale_25": "empresa_profissional_25",
+    # Demo SST legacy code kept by older bootstrap scripts.
+    "sst_enterprise_10": "empresa_nacional_1000",
     "pro_50": "farmacia_rede_regional",
     "enterprise_100": "empresa_enterprise_100",
     "network_250": "empresa_corporativo_250",

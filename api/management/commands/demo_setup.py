@@ -28,6 +28,7 @@ DEMO_SENHA_FARM  = "Demo@Farm2026"
 DEMO_SENHA_HOSP  = "Demo@Hosp2026"
 DEMO_SENHA_GOV   = "Demo@Gov2026"
 DEMO_SENHA_PLANO = "Demo@Plano2026"
+DEMO_SST_PACOTE   = "empresa_nacional_1000"
 
 HOJE = datetime.date.today()
 
@@ -212,7 +213,17 @@ class Command(BaseCommand):
         criados = 0
         for email, criar_fn, dados_fn in demos:
             if Empresa.objects.filter(email=email).exists():
-                self.out(f"  ↷  {email} já existe — ignorando")
+                if email == "demo.sst@soluscrt.com":
+                    self.out(f"  ↺  {email} já existe — normalizando pacote e dados SST")
+                    e = criar_fn()
+                    try:
+                        with transaction.atomic():
+                            dados_fn(e)
+                    except Exception as exc:
+                        self.out(f"  ⚠ dados demo para {email} falharam (parcial): {exc}", self.style.WARNING)
+                    atualizados += 1
+                else:
+                    self.out(f"  ↷  {email} já existe — ignorando")
             else:
                 e = criar_fn()
                 try:
@@ -649,37 +660,67 @@ class Command(BaseCommand):
     # ── Empresa SST ──────────────────────────────────────────────────────────
     def _criar_empresa_sst(self):
         from api.models import Empresa, EmpresaUsuario
-        from api.planos import pacote_padrao, detalhes_pacote
-        pkg = "sst_enterprise_10"
-        try:
-            det = detalhes_pacote(pkg)
-        except Exception:
-            pkg = pacote_padrao()
-            det = detalhes_pacote(pkg)
+        from api.planos import detalhes_pacote
+        pkg = DEMO_SST_PACOTE
+        det = detalhes_pacote(pkg)
 
-        e = Empresa.objects.create(
-            nome="SolusCRT Demo SST",
+        e, _ = Empresa.objects.update_or_create(
             email="demo.sst@soluscrt.com",
-            senha=make_password(DEMO_SENHA_ADMIN),
-            tipo_conta=Empresa.TIPO_EMPRESA,
-            acesso_governo=False,
-            pacote_codigo=pkg,
-            plano="anual",
-            ativo=True,
-            max_dispositivos=det.get("dispositivos", 50),
-            max_usuarios=det.get("usuarios", 10),
+            defaults=dict(
+                nome="SolusCRT Demo SST",
+                senha=make_password(DEMO_SENHA_ADMIN),
+                tipo_conta=Empresa.TIPO_EMPRESA,
+                acesso_governo=False,
+                pacote_codigo=pkg,
+                plano="anual",
+                ativo=True,
+                max_dispositivos=det.get("dispositivos", 50),
+                max_usuarios=det.get("usuarios", 10),
+            ),
         )
-        EmpresaUsuario.objects.create(
-            empresa=e, nome="TI Demo SST",
+        # Garante que a conta fique sempre alinhada ao pacote mais completo
+        # da linha SST, mesmo quando o banco já possuía a versão antiga.
+        e.nome = "SolusCRT Demo SST"
+        e.senha = make_password(DEMO_SENHA_ADMIN)
+        e.tipo_conta = Empresa.TIPO_EMPRESA
+        e.acesso_governo = False
+        e.pacote_codigo = pkg
+        e.plano = "anual"
+        e.ativo = True
+        e.max_dispositivos = det.get("dispositivos", 50)
+        e.max_usuarios = det.get("usuarios", 10)
+        e.save(update_fields=[
+            "nome",
+            "senha",
+            "tipo_conta",
+            "acesso_governo",
+            "pacote_codigo",
+            "plano",
+            "ativo",
+            "max_dispositivos",
+            "max_usuarios",
+        ])
+        EmpresaUsuario.objects.update_or_create(
+            empresa=e,
             email="ti@demo-sst.com",
-            senha=make_password("Ti@Demo2026"),
-            cargo="TI", ativo=True, is_admin=True,
+            defaults=dict(
+                nome="TI Demo SST",
+                senha=make_password("Ti@Demo2026"),
+                cargo="TI",
+                ativo=True,
+                is_admin=True,
+            ),
         )
-        EmpresaUsuario.objects.create(
-            empresa=e, nome="RH Demo SST",
+        EmpresaUsuario.objects.update_or_create(
+            empresa=e,
             email="rh@demo-sst.com",
-            senha=make_password("Rh@Demo2026"),
-            cargo="RH", ativo=True, is_admin=False,
+            defaults=dict(
+                nome="RH Demo SST",
+                senha=make_password("Rh@Demo2026"),
+                cargo="RH",
+                ativo=True,
+                is_admin=False,
+            ),
         )
         self.out(f"  ✓ SST: {e.nome} (id={e.id})", self.style.SUCCESS)
         return e
