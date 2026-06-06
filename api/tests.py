@@ -1848,6 +1848,79 @@ class AuthDeviceTests(TestCase):
         self.assertContains(response, "Fila de Sucesso do Cliente")
         self.assertContains(response, "Implantação e Go-live")
 
+    def test_console_dono_nao_vaza_dados_privados_de_cliente(self):
+        """Guardião anti-regressão de privacidade (LGPD / multi-tenant).
+
+        Planta valores sensíveis ÚNICOS no ambiente de um cliente (CPF, nome de
+        titular, e-mail de trabalhador) e verifica que NENHUM endpoint do dono
+        os expõe. Se um endpoint passar a vazar PII no futuro, este teste falha.
+        """
+        CPF_CANARIO = "111.222.333-99"
+        NOME_CANARIO = "TITULAR SEGREDO CANARIO XPTO"
+        EMAIL_FUNC_CANARIO = "canario.trabalhador.segredo@cliente-x.local"
+
+        DonoSaaS.objects.create(
+            nome="Operacao Privacy", email="owner-privacy@teste.com",
+            senha=make_password("123456"), ativo=True, papel="admin",
+        )
+        cliente = Empresa.objects.create(
+            nome="Hospital Cliente X", email="hospital-x@cliente.com",
+            senha=make_password("123456"), ativo=True, pacote_codigo="hospital_medio",
+        )
+        func = FuncionarioSST.objects.create(
+            empresa=cliente, nome=NOME_CANARIO, cpf=CPF_CANARIO,
+            cargo="Enfermeiro", ativo=True,
+        )
+        CredencialAppFuncionario.objects.create(
+            funcionario=func, email=EMAIL_FUNC_CANARIO,
+            senha=make_password("x"), ativo=True,
+        )
+        RegistroSintoma.objects.create(
+            empresa=cliente, febre=True, cidade="Rio de Janeiro", estado="RJ",
+        )
+        FinanceiroEventoSaaS.objects.create(
+            empresa=cliente, tipo_evento="ajuste_owner", valor=0,
+        )
+
+        login = self.client.post(
+            "/api/operacao-central/login",
+            data=json.dumps({"email": "owner-privacy@teste.com", "senha": "123456"}),
+            content_type="application/json",
+        )
+        self.assertEqual(login.status_code, 200)
+
+        canarios = [CPF_CANARIO, NOME_CANARIO, EMAIL_FUNC_CANARIO]
+        # Chaves que NUNCA devem aparecer em respostas JSON do dono
+        chaves_pii = ['"cpf"', '"nome_paciente"', '"prontuario"', '"data_nascimento"', '"matricula"']
+
+        endpoints = [
+            "/api/operacao-central/resumo",
+            "/api/operacao-central/financeiro-real",
+            "/api/operacao-central/saude",
+            "/api/operacao-central/app-funcionario",
+            "/api/operacao-central/operadores",
+            "/api/operacao-central/exportar?tipo=clientes",
+            "/api/operacao-central/exportar?tipo=financeiro",
+            "/api/operacao-central/exportar?tipo=auditoria",
+            "/api/operacao/readiness",
+        ]
+        for url in endpoints:
+            resp = self.client.get(url)
+            self.assertEqual(resp.status_code, 200, f"{url} deveria responder 200")
+            corpo = resp.content.decode("utf-8", errors="ignore")
+            for canario in canarios:
+                self.assertNotIn(
+                    canario, corpo,
+                    f"VAZAMENTO DE PII: valor sensível '{canario}' apareceu em {url}",
+                )
+            if "application/json" in resp.get("Content-Type", ""):
+                low = corpo.lower()
+                for chave in chaves_pii:
+                    self.assertNotIn(
+                        chave, low,
+                        f"VAZAMENTO DE PII: chave '{chave}' presente em {url}",
+                    )
+
     def test_readiness_enterprise_disponivel_para_operacao(self):
         DonoSaaS.objects.create(
             nome="Operacao Readiness",
