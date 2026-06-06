@@ -654,3 +654,229 @@ def build_owner_resumo_payload(dono):
         ],
         "clientes": clientes_payload,
     }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  FINANCEIRO REAL — MRR / Churn / LTV (recorrência + pagamentos Asaas)
+# ════════════════════════════════════════════════════════════════════════════
+_EVENTOS_RECEITA = {"pagamento_aprovado", "renovacao_manual", "upgrade", "cobranca_manual", "reativacao_manual"}
+_EVENTOS_CHURN = {"cancelamento_operacional", "inadimplencia", "downgrade"}
+
+
+def build_owner_financeiro_real(dono=None):
+    """
+    Inteligência financeira real do SaaS:
+      • MRR contratado (recorrência das contas ativas)
+      • MRR realizado (pagamentos aprovados/Asaas nos últimos 30 dias)
+      • ARPA, LTV estimado, churn (logo e receita)
+      • Movimentos de MRR (novo/expansão/contração/perdido)
+      • Receita realizada mês a mês (6 meses) e inadimplência
+    """
+    agora = timezone.now()
+    ref_30 = agora - timedelta(days=30)
+    ref_60 = agora - timedelta(days=60)
+
+    ativas = list(Empresa.objects.filter(ativo=True).only("id", "pacote_codigo", "plano", "tipo_conta"))
+
+    mrr_contratado = 0.0
+    arr_contratado = 0.0
+    mrr_por_segmento = {}
+    for empresa in ativas:
+        codigo = normalizar_codigo_pacote(empresa.pacote_codigo)
+        pacote = detalhes_pacote(codigo)
+        plano = "anual" if empresa.tipo_conta == Empresa.TIPO_GOVERNO else normalizar_ciclo(codigo, empresa.plano)
+        mrr_eq = (pacote["anual"] / 12) if plano == "anual" else pacote["mensal"]
+        mrr_contratado += mrr_eq
+        arr_contratado += pacote["anual"] if plano == "anual" else pacote["mensal"] * 12
+        setor = pacote.get("setor") or "empresa"
+        mrr_por_segmento[setor] = mrr_por_segmento.get(setor, 0.0) + mrr_eq
+
+    clientes_ativos = len(ativas)
+    arpa = (mrr_contratado / clientes_ativos) if clientes_ativos else 0.0
+
+    eventos = FinanceiroEventoSaaS.objects.filter(criado_em__gte=ref_60)
+    receita_30 = float(
+        eventos.filter(criado_em__gte=ref_30, tipo_evento__in=_EVENTOS_RECEITA, valor__gt=0)
+        .aggregate(s=Sum("valor"))["s"] or 0
+    )
+    receita_30_anterior = float(
+        eventos.filter(criado_em__gte=ref_60, criado_em__lt=ref_30, tipo_evento__in=_EVENTOS_RECEITA, valor__gt=0)
+        .aggregate(s=Sum("valor"))["s"] or 0
+    )
+
+    # Movimentos de MRR no período (contagem de eventos)
+    novos = eventos.filter(criado_em__gte=ref_30, tipo_evento="pagamento_aprovado").count()
+    expansao = eventos.filter(criado_em__gte=ref_30, tipo_evento="upgrade").count()
+    contracao = eventos.filter(criado_em__gte=ref_30, tipo_evento="downgrade").count()
+    perdidos = eventos.filter(criado_em__gte=ref_30, tipo_evento__in=["cancelamento_operacional", "inadimplencia"]).count()
+
+    # Churn logo (clientes perdidos / base ativa+perdidos)
+    base_churn = max(clientes_ativos + perdidos, 1)
+    churn_logo = round((perdidos / base_churn) * 100, 2)
+    # LTV ≈ ARPA / churn mensal (com piso de churn para não explodir)
+    churn_frac = max(churn_logo / 100, 0.005)
+    ltv = round(arpa / churn_frac, 2) if arpa else 0.0
+
+    # Receita realizada mês a mês (6 meses)
+    receita_mensal_rows = (
+        FinanceiroEventoSaaS.objects
+        .filter(criado_em__gte=agora - timedelta(days=190), tipo_evento__in=_EVENTOS_RECEITA, valor__gt=0)
+        .annotate(month=TruncMonth("criado_em"))
+        .values("month").annotate(valor=Sum("valor")).order_by("month")
+    )
+    receita_series = [
+        {"month": r["month"].date().isoformat(), "valor": float(r["valor"] or 0)}
+        for r in receita_mensal_rows
+    ]
+
+    inadimplencia_valor = float(
+        eventos.filter(criado_em__gte=ref_30, tipo_evento="inadimplencia").aggregate(s=Sum("valor"))["s"] or 0
+    )
+
+    crescimento_receita = 0.0
+    if receita_30_anterior > 0:
+        crescimento_receita = round(((receita_30 - receita_30_anterior) / receita_30_anterior) * 100, 1)
+
+    SEG_LABEL = {
+        "empresa": "SST", "farmacia": "Farmácia", "hospital": "Hospital",
+        "plano_saude": "Plano de Saúde", "governo": "Governo", "rede": "Rede",
+    }
+    mrr_segmentos = sorted(
+        ({"setor": k, "label": SEG_LABEL.get(k, k), "mrr": round(v, 2)} for k, v in mrr_por_segmento.items()),
+        key=lambda x: x["mrr"], reverse=True,
+    )
+
+    return {
+        "mrr_contratado": round(mrr_contratado, 2),
+        "arr_contratado": round(arr_contratado, 2),
+        "mrr_realizado_30d": round(receita_30, 2),
+        "gap_realizado_vs_contratado": round(mrr_contratado - receita_30, 2),
+        "arpa": round(arpa, 2),
+        "ltv_estimado": ltv,
+        "churn_logo_30d": churn_logo,
+        "crescimento_receita_30d": crescimento_receita,
+        "inadimplencia_30d": round(inadimplencia_valor, 2),
+        "clientes_ativos": clientes_ativos,
+        "movimentos": {
+            "novos": novos, "expansao": expansao,
+            "contracao": contracao, "perdidos": perdidos,
+        },
+        "mrr_por_segmento": mrr_segmentos,
+        "receita_mensal": receita_series,
+        "fonte": "Recorrência das contas ativas + eventos de pagamento (Asaas).",
+    }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  SAÚDE DO SISTEMA — infraestrutura e integrações em tempo real
+# ════════════════════════════════════════════════════════════════════════════
+def build_owner_saude_sistema(dono=None):
+    """Diagnóstico de saúde operacional: banco, cache, integrações e frescor."""
+    import os
+    import time as _time
+    from django.db import connection
+    from django.core.cache import cache as _cache
+
+    agora = timezone.now()
+    componentes = []
+
+    def _add(nome, ok, detalhe, latencia_ms=None, nivel=None):
+        componentes.append({
+            "componente": nome,
+            "status": "ok" if ok else "falha",
+            "nivel": nivel or ("ok" if ok else "critico"),
+            "detalhe": detalhe,
+            "latencia_ms": latencia_ms,
+        })
+
+    # Banco de dados
+    try:
+        t0 = _time.monotonic()
+        with connection.cursor() as cur:
+            cur.execute("SELECT 1")
+            cur.fetchone()
+        lat = round((_time.monotonic() - t0) * 1000, 1)
+        nivel = "ok" if lat < 80 else "atencao" if lat < 250 else "critico"
+        _add("Banco de dados", True, f"{connection.vendor} respondeu em {lat} ms", lat, nivel)
+    except Exception as exc:
+        _add("Banco de dados", False, f"erro: {type(exc).__name__}")
+
+    # Cache
+    try:
+        t0 = _time.monotonic()
+        _cache.set("_saude_ping", "1", 10)
+        ok_cache = _cache.get("_saude_ping") == "1"
+        lat = round((_time.monotonic() - t0) * 1000, 1)
+        _add("Cache", ok_cache, "operacional" if ok_cache else "sem retorno", lat,
+             "ok" if ok_cache else "atencao")
+    except Exception as exc:
+        _add("Cache", False, f"erro: {type(exc).__name__}", nivel="atencao")
+
+    # Integração de pagamento (Asaas)
+    asaas_key = bool(os.environ.get("ASAAS_API_KEY") or os.environ.get("ASAAS_TOKEN"))
+    ultimo_pgto = (
+        FinanceiroEventoSaaS.objects.filter(tipo_evento="pagamento_aprovado")
+        .order_by("-criado_em").values_list("criado_em", flat=True).first()
+    )
+    if asaas_key:
+        det = "chave configurada"
+        if ultimo_pgto:
+            dias = (agora - ultimo_pgto).days
+            det += f"; último pagamento há {dias} dia(s)"
+        _add("Pagamentos (Asaas)", True, det, nivel="ok")
+    else:
+        _add("Pagamentos (Asaas)", False, "ASAAS_API_KEY ausente — cobranças via Asaas indisponíveis", nivel="atencao")
+
+    # Geocodificação (vigilância)
+    try:
+        from api.utils_geo import _fallback_local
+        g = _fallback_local(-22.9711, -43.1835)
+        ok_geo = g.get("cidade") == "Rio de Janeiro"
+        _add("Geocodificação", ok_geo, f"referência local ({g.get('cidade')})", nivel="ok" if ok_geo else "atencao")
+    except Exception as exc:
+        _add("Geocodificação", False, f"erro: {type(exc).__name__}", nivel="atencao")
+
+    # Frescor de dados públicos (app população)
+    try:
+        emp_pub = Empresa.objects.filter(email="populacao@soluscrt.com").first()
+        if emp_pub:
+            try:
+                from api.middleware import _rls_set_empresa
+                _rls_set_empresa(emp_pub.id)
+            except Exception:
+                pass
+            ultimo = (
+                RegistroSintoma.objects.filter(empresa=emp_pub)
+                .order_by("-data_registro").values_list("data_registro", flat=True).first()
+            )
+            if ultimo:
+                horas = round((agora - ultimo).total_seconds() / 3600, 1)
+                nivel = "ok" if horas < 48 else "atencao" if horas < 168 else "critico"
+                _add("Ingestão app população", True, f"último sinal há {horas} h", nivel=nivel)
+            else:
+                _add("Ingestão app população", False, "sem registros", nivel="atencao")
+        else:
+            _add("Ingestão app população", False, "empresa pública não provisionada", nivel="atencao")
+    except Exception as exc:
+        _add("Ingestão app população", False, f"erro: {type(exc).__name__}", nivel="atencao")
+
+    total = len(componentes)
+    ok_count = sum(1 for c in componentes if c["status"] == "ok")
+    criticos = sum(1 for c in componentes if c["nivel"] == "critico")
+    atencao = sum(1 for c in componentes if c["nivel"] == "atencao")
+    if criticos:
+        saude_geral = "critico"
+    elif atencao:
+        saude_geral = "atencao"
+    else:
+        saude_geral = "ok"
+
+    return {
+        "saude_geral": saude_geral,
+        "componentes_ok": ok_count,
+        "componentes_total": total,
+        "criticos": criticos,
+        "atencao": atencao,
+        "componentes": componentes,
+        "verificado_em": agora.isoformat(),
+    }

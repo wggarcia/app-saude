@@ -107,6 +107,32 @@ function _t(msg, tipo) {
     .vig-bar-row .val{width:54px;text-align:right;color:#fff;font-weight:700}
     @media(max-width:1100px){.segment-grid{grid-template-columns:repeat(2,1fr)}.vig-grid{grid-template-columns:repeat(2,1fr)}.vig-cols{grid-template-columns:1fr}}
     @media(max-width:700px){.segment-grid{grid-template-columns:1fr}}
+
+    /* ── Financeiro real ── */
+    .fin-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+    .fin-kpi{border-radius:16px;padding:14px;background:linear-gradient(180deg,rgba(5,40,25,.6),rgba(8,18,28,.95));border:1px solid rgba(52,211,153,.2)}
+    .fin-kpi span{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:#7a9bb5}
+    .fin-kpi strong{display:block;margin-top:6px;font-size:1.4rem;color:#34d399}
+    .fin-kpi.alt strong{color:#7fd7ff}
+    .fin-kpi.warn strong{color:#fcd34d}
+    .fin-mov{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+    .fin-mov div{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px;text-align:center}
+    .fin-mov span{display:block;font-size:.68rem;color:#7a9bb5;text-transform:uppercase}
+    .fin-mov strong{display:block;font-size:1.2rem;margin-top:4px;color:#eef8ff}
+
+    /* ── Saúde do sistema ── */
+    .health-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;
+      background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);margin-bottom:8px}
+    .health-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+    .health-dot.ok{background:#34d399;box-shadow:0 0 10px rgba(52,211,153,.6)}
+    .health-dot.atencao{background:#fcd34d;box-shadow:0 0 10px rgba(252,211,77,.6)}
+    .health-dot.critico{background:#ff5c7a;box-shadow:0 0 10px rgba(255,92,122,.6)}
+    .health-row .hc-name{font-weight:700;color:#eef8ff;width:210px}
+    .health-row .hc-det{flex:1;color:#9cc4db;font-size:.85rem}
+    .health-row .hc-lat{color:#7a9bb5;font-size:.8rem;white-space:nowrap}
+    .badge.ok{background:rgba(52,211,153,.18);color:#6ee7b7}
+    .badge.atencao{background:rgba(252,211,77,.18);color:#fcd34d}
+    .badge.critico{background:rgba(255,92,122,.2);color:#ff8fa3}
   </style>
 </head>
 <body>
@@ -128,6 +154,8 @@ function _t(msg, tipo) {
 
     <nav class="topnav">
       <a href="#secResumo">Resumo</a>
+      <a href="#secSaude">Saúde do Sistema</a>
+      <a href="#secFinanceiroReal">Financeiro Real</a>
       <a href="#secSegmentos">Segmentos</a>
       <a href="#secVigilancia">Vigilância Pública</a>
       <a href="#secCobranca">Cobrança</a>
@@ -140,6 +168,22 @@ function _t(msg, tipo) {
     <section class="card" id="secResumo">
       <h2>Resumo Executivo</h2>
       <div id="summaryGrid" class="grid">Carregando...</div>
+    </section>
+
+    <section class="card" id="secSaude">
+      <div class="row" style="margin-bottom:6px;">
+        <h2 style="margin:0;">Saúde do Sistema <span id="saudeBadge" class="badge">—</span></h2>
+        <button class="ghost" onclick="carregarSaude()">Verificar agora</button>
+      </div>
+      <div id="saudeBox">Carregando...</div>
+    </section>
+
+    <section class="card" id="secFinanceiroReal">
+      <div class="row" style="margin-bottom:6px;">
+        <h2 style="margin:0;">Financeiro Real — MRR · Churn · LTV</h2>
+        <span class="muted small">Recorrência das contas ativas + pagamentos Asaas</span>
+      </div>
+      <div id="financeiroRealBox">Carregando...</div>
     </section>
 
     <section class="card" id="secSegmentos">
@@ -777,7 +821,78 @@ function _t(msg, tipo) {
     document.querySelectorAll("#clientTabs .tab-btn").forEach((b) =>
       b.addEventListener("click", () => setActiveTab(b.dataset.seg)));
 
+    // ── Financeiro Real (MRR / Churn / LTV) ──────────────────────────────────
+    async function carregarFinanceiroReal() {
+      const box = document.getElementById("financeiroRealBox");
+      try {
+        const f = await (await fetch("/api/operacao-central/financeiro-real")).json();
+        const cresc = Number(f.crescimento_receita_30d || 0);
+        const maxSeg = Math.max(...(f.mrr_por_segmento || []).map((s) => s.mrr), 1);
+        box.innerHTML = `
+          <div class="fin-grid">
+            <div class="fin-kpi"><span>MRR contratado</span><strong>${money(f.mrr_contratado)}</strong></div>
+            <div class="fin-kpi"><span>ARR contratado</span><strong>${money(f.arr_contratado)}</strong></div>
+            <div class="fin-kpi alt"><span>MRR realizado 30d</span><strong>${money(f.mrr_realizado_30d)}</strong></div>
+            <div class="fin-kpi ${cresc < 0 ? "warn" : ""}"><span>Cresc. receita 30d</span><strong>${cresc > 0 ? "+" : ""}${cresc}%</strong></div>
+            <div class="fin-kpi alt"><span>ARPA (receita/conta)</span><strong>${money(f.arpa)}</strong></div>
+            <div class="fin-kpi alt"><span>LTV estimado</span><strong>${money(f.ltv_estimado)}</strong></div>
+            <div class="fin-kpi warn"><span>Churn (logo) 30d</span><strong>${f.churn_logo_30d}%</strong></div>
+            <div class="fin-kpi warn"><span>Inadimplência 30d</span><strong>${money(f.inadimplencia_30d)}</strong></div>
+          </div>
+          <div class="vig-cols">
+            <div>
+              <div class="muted small" style="margin-bottom:8px;">MRR por segmento</div>
+              ${(f.mrr_por_segmento || []).map((s) => `
+                <div class="vig-bar-row">
+                  <div class="lbl">${s.label}</div>
+                  <div class="vig-bar"><i style="width:${(s.mrr / maxSeg * 100).toFixed(0)}%;background:linear-gradient(90deg,#10b981,#34d399)"></i></div>
+                  <div class="val">${money(s.mrr)}</div>
+                </div>`).join("") || '<div class="muted small">—</div>'}
+            </div>
+            <div>
+              <div class="muted small" style="margin-bottom:8px;">Movimentos de MRR (30 dias)</div>
+              <div class="fin-mov">
+                <div><span>Novos</span><strong style="color:#34d399">${f.movimentos.novos}</strong></div>
+                <div><span>Expansão</span><strong style="color:#7fd7ff">${f.movimentos.expansao}</strong></div>
+                <div><span>Contração</span><strong style="color:#fcd34d">${f.movimentos.contracao}</strong></div>
+                <div><span>Perdidos</span><strong style="color:#ff8fa3">${f.movimentos.perdidos}</strong></div>
+              </div>
+              <div class="muted small" style="margin-top:12px;">Gap realizado × contratado: <strong style="color:#eef8ff">${money(f.gap_realizado_vs_contratado)}</strong></div>
+              <div class="muted small" style="margin-top:6px;">${f.fonte}</div>
+            </div>
+          </div>`;
+      } catch (e) {
+        box.innerHTML = '<div class="muted">Não foi possível carregar o financeiro real.</div>';
+      }
+    }
+
+    // ── Saúde do Sistema ─────────────────────────────────────────────────────
+    async function carregarSaude() {
+      const box = document.getElementById("saudeBox");
+      const badge = document.getElementById("saudeBadge");
+      try {
+        const s = await (await fetch("/api/operacao-central/saude")).json();
+        badge.textContent = `${s.componentes_ok}/${s.componentes_total} OK`;
+        badge.className = "badge " + (s.saude_geral || "ok");
+        box.innerHTML = (s.componentes || []).map((c) => `
+          <div class="health-row">
+            <div class="health-dot ${c.nivel}"></div>
+            <div class="hc-name">${c.componente}</div>
+            <div class="hc-det">${c.detalhe}</div>
+            <div class="hc-lat">${c.latencia_ms != null ? c.latencia_ms + " ms" : ""}</div>
+          </div>`).join("") +
+          `<div class="muted small" style="margin-top:8px;">Verificado em ${new Date(s.verificado_em).toLocaleString("pt-BR")}</div>`;
+      } catch (e) {
+        badge.textContent = "erro"; badge.className = "badge critico";
+        box.innerHTML = '<div class="muted">Não foi possível verificar a saúde do sistema.</div>';
+      }
+    }
+
     loadOwnerPanel();
+    carregarFinanceiroReal();
+    carregarSaude();
+    // Saúde re-checa a cada 60s
+    setInterval(carregarSaude, 60000);
   </script>
 </body>
 </html>
