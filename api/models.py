@@ -597,10 +597,22 @@ class ValidacaoCompetenciaCorporativa(models.Model):
 
 
 class DonoSaaS(models.Model):
+    PAPEL_ADMIN = "admin"        # acesso total + gestão de operadores
+    PAPEL_FINANCEIRO = "financeiro"  # foco em cobrança/financeiro
+    PAPEL_SUPORTE = "suporte"    # operação de clientes/onboarding
+    PAPEL_LEITURA = "leitura"    # somente visualização
+    PAPEIS = [
+        (PAPEL_ADMIN, "Administrador"),
+        (PAPEL_FINANCEIRO, "Financeiro"),
+        (PAPEL_SUPORTE, "Suporte"),
+        (PAPEL_LEITURA, "Leitura"),
+    ]
+
     nome = models.CharField(max_length=120)
     email = models.EmailField(unique=True)
     senha = models.CharField(max_length=255)
     ativo = models.BooleanField(default=True)
+    papel = models.CharField(max_length=20, choices=PAPEIS, default=PAPEL_ADMIN)
     sessao_ativa_chave = models.CharField(max_length=120, null=True, blank=True)
     sessao_ativa_em = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)

@@ -6,7 +6,7 @@ from django.db.models import Count, Avg
 from django.utils import timezone
 from datetime import timedelta
 import json
-from .models import RegistroSintoma, DispositivoAutorizado, EmpresaUsuario, FinanceiroEventoSaaS, DonoAuditoriaAcao, AlertaGovernamental
+from .models import RegistroSintoma, DispositivoAutorizado, EmpresaUsuario, FinanceiroEventoSaaS, DonoAuditoriaAcao, AlertaGovernamental, DonoSaaS
 from .inteligencia import nivel_risco
 from .models import Empresa
 from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_ciclo, normalizar_codigo_pacote
@@ -1100,6 +1100,79 @@ def api_dono_app_funcionario(request):
         return JsonResponse({"erro": "não autenticado"}, status=401)
     from .services.dashboard_core import build_owner_app_funcionario
     return JsonResponse(build_owner_app_funcionario(dono))
+
+
+def api_dono_operadores(request):
+    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    from .services.dashboard_core import build_owner_operadores_payload
+    return JsonResponse(build_owner_operadores_payload(dono))
+
+
+@csrf_exempt
+def api_dono_operador_acao(request):
+    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+    # RBAC: só administradores gerenciam operadores
+    if dono.papel != DonoSaaS.PAPEL_ADMIN:
+        return JsonResponse({"erro": "apenas administradores podem gerenciar operadores"}, status=403)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    from django.contrib.auth.hashers import make_password
+    acao = (dados.get("acao") or "").strip()
+    papeis_validos = {p[0] for p in DonoSaaS.PAPEIS}
+
+    if acao == "criar":
+        nome = (dados.get("nome") or "").strip()
+        email = (dados.get("email") or "").strip().lower()
+        senha = dados.get("senha") or ""
+        papel = (dados.get("papel") or "leitura").strip()
+        if not nome or not email or not senha:
+            return JsonResponse({"erro": "nome, email e senha são obrigatórios"}, status=400)
+        if papel not in papeis_validos:
+            papel = "leitura"
+        if DonoSaaS.objects.filter(email=email).exists():
+            return JsonResponse({"erro": "já existe um operador com este email"}, status=409)
+        op = DonoSaaS.objects.create(
+            nome=nome, email=email, senha=make_password(senha), papel=papel, ativo=True
+        )
+        _registrar_auditoria_dono(dono, "operador_criado", detalhes=f"{email} ({papel})")
+        return JsonResponse({"status": "ok", "id": op.id})
+
+    op = DonoSaaS.objects.filter(id=dados.get("operador_id")).first()
+    if not op:
+        return JsonResponse({"erro": "operador não encontrado"}, status=404)
+    if op.id == dono.id and acao in {"desativar"}:
+        return JsonResponse({"erro": "você não pode desativar a si mesmo"}, status=400)
+
+    if acao == "desativar":
+        op.ativo = False
+        op.sessao_ativa_chave = None
+        op.save(update_fields=["ativo", "sessao_ativa_chave"])
+        _registrar_auditoria_dono(dono, "operador_desativado", detalhes=op.email)
+    elif acao == "reativar":
+        op.ativo = True
+        op.save(update_fields=["ativo"])
+        _registrar_auditoria_dono(dono, "operador_reativado", detalhes=op.email)
+    elif acao == "papel":
+        novo = (dados.get("papel") or "").strip()
+        if novo not in papeis_validos:
+            return JsonResponse({"erro": "papel inválido"}, status=400)
+        op.papel = novo
+        op.save(update_fields=["papel"])
+        _registrar_auditoria_dono(dono, "operador_papel", detalhes=f"{op.email} -> {novo}")
+    else:
+        return JsonResponse({"erro": "ação inválida"}, status=400)
+
+    return JsonResponse({"status": "ok"})
 
 
 @csrf_exempt

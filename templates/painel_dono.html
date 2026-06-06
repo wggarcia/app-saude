@@ -163,6 +163,7 @@ function _t(msg, tipo) {
       <a href="#secCapacidade">Capacidade</a>
       <a href="#secCarteiras">Carteiras</a>
       <a href="#secClientes">Clientes</a>
+      <a href="#secOperadores">Operadores</a>
       <a href="#secAuditoria">Auditoria</a>
     </nav>
 
@@ -281,6 +282,27 @@ function _t(msg, tipo) {
         <h2>Financeiro Recente</h2>
         <div id="financialList" class="list">Carregando...</div>
       </section>
+    </section>
+
+    <section class="card" id="secOperadores">
+      <div class="row" style="margin-bottom:6px;">
+        <h2 style="margin:0;">Operadores do Console <span id="opBadge" class="badge">—</span></h2>
+        <button class="ghost" id="btnNovoOperador" onclick="abrirFormOperador()" style="display:none;">+ Novo operador</button>
+      </div>
+      <div class="muted small" style="margin-bottom:10px;">Equipe com acesso a este console e seus papéis (RBAC). Só administradores gerenciam.</div>
+      <div id="formOperador" style="display:none;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;margin-bottom:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <input id="opNome" placeholder="Nome" style="padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eef8ff;">
+          <input id="opEmail" placeholder="E-mail" style="padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eef8ff;">
+          <input id="opSenha" type="password" placeholder="Senha inicial" style="padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eef8ff;">
+          <select id="opPapel" style="padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eef8ff;"></select>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+          <button class="ghost" onclick="fecharFormOperador()">Cancelar</button>
+          <button class="ghost" style="border-color:rgba(52,211,153,.4);color:#6ee7b7;" onclick="criarOperador()">Criar operador</button>
+        </div>
+      </div>
+      <div id="operadoresList" class="list">Carregando...</div>
     </section>
 
     <section class="card" id="secAuditoria">
@@ -940,10 +962,79 @@ function _t(msg, tipo) {
       }
     }
 
+    // ── Operadores / RBAC ────────────────────────────────────────────────────
+    let _opPodeGerenciar = false;
+    function abrirFormOperador(){ document.getElementById("formOperador").style.display="block"; }
+    function fecharFormOperador(){ document.getElementById("formOperador").style.display="none"; }
+
+    async function carregarOperadores() {
+      const box = document.getElementById("operadoresList");
+      const badge = document.getElementById("opBadge");
+      try {
+        const d = await (await fetch("/api/operacao-central/operadores")).json();
+        _opPodeGerenciar = !!d.pode_gerenciar;
+        badge.textContent = `${d.ativos}/${d.total} ativos`;
+        badge.className = "badge ok";
+        document.getElementById("btnNovoOperador").style.display = _opPodeGerenciar ? "inline-block" : "none";
+        // popular select de papéis
+        const sel = document.getElementById("opPapel");
+        sel.innerHTML = (d.papeis || []).map((p) => `<option value="${p.valor}">${p.label} — ${p.descricao}</option>`).join("");
+        box.innerHTML = (d.operadores || []).map((o) => {
+          const papelOpts = (d.papeis || []).map((p) => `<option value="${p.valor}" ${p.valor===o.papel?"selected":""}>${p.label}</option>`).join("");
+          const acoes = _opPodeGerenciar ? `
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <select onchange="mudarPapel(${o.id}, this.value)" ${o.eh_voce?"disabled":""} style="padding:5px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eef8ff;font-size:.8rem;">${papelOpts}</select>
+              ${o.ativo
+                ? (o.eh_voce ? '<span class="muted small">você</span>' : `<button class="ghost" style="border-color:rgba(255,92,122,.4);color:#ff8fa3;" onclick="acaoOperador(${o.id},'desativar')">Desativar</button>`)
+                : `<button class="ghost" style="border-color:rgba(52,211,153,.4);color:#6ee7b7;" onclick="acaoOperador(${o.id},'reativar')">Reativar</button>`}
+            </div>` : `<span class="badge ${o.ativo?'ok':'critico'}">${o.papel_label}</span>`;
+          return `
+            <div class="health-row">
+              <div class="health-dot ${o.online?'ok':(o.ativo?'atencao':'critico')}"></div>
+              <div class="hc-name">${o.nome}${o.eh_voce?' • <span style="color:#fcd34d">você</span>':''}</div>
+              <div class="hc-det">${o.email} · <strong style="color:#cde3f0">${o.papel_label}</strong><br><span class="muted small">${o.papel_descricao}${o.ultima_sessao?' · última sessão '+new Date(o.ultima_sessao).toLocaleString("pt-BR"):' · nunca acessou'}</span></div>
+              <div>${acoes}</div>
+            </div>`;
+        }).join("");
+      } catch(e) {
+        badge.textContent="erro"; badge.className="badge critico";
+        box.innerHTML = '<div class="muted">Não foi possível carregar os operadores.</div>';
+      }
+    }
+
+    async function _opPost(body){
+      const r = await fetch("/api/operacao-central/operador/acao", {
+        method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)
+      });
+      const d = await r.json().catch(()=>({}));
+      if (!r.ok) { _t(d.erro || "Erro na operação.", "err"); return false; }
+      return true;
+    }
+    async function criarOperador(){
+      const nome=document.getElementById("opNome").value.trim();
+      const email=document.getElementById("opEmail").value.trim();
+      const senha=document.getElementById("opSenha").value;
+      const papel=document.getElementById("opPapel").value;
+      if(!nome||!email||!senha){ _t("Preencha nome, e-mail e senha.","warn"); return; }
+      if(await _opPost({acao:"criar",nome,email,senha,papel})){
+        _t("Operador criado.","ok"); fecharFormOperador();
+        document.getElementById("opNome").value="";document.getElementById("opEmail").value="";document.getElementById("opSenha").value="";
+        carregarOperadores();
+      }
+    }
+    async function acaoOperador(id,acao){
+      if(acao==="desativar" && !confirm("Desativar este operador? Ele perde o acesso ao console.")) return;
+      if(await _opPost({acao,operador_id:id})) carregarOperadores();
+    }
+    async function mudarPapel(id,papel){
+      if(await _opPost({acao:"papel",operador_id:id,papel})) _t("Papel atualizado.","ok");
+    }
+
     loadOwnerPanel();
     carregarFinanceiroReal();
     carregarSaude();
     carregarAppFuncionario();
+    carregarOperadores();
     // Saúde re-checa a cada 60s
     setInterval(carregarSaude, 60000);
   </script>

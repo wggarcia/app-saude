@@ -981,3 +981,48 @@ def build_owner_app_funcionario(dono=None):
         },
         "ranking_empresas": ranking[:8],
     }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  OPERADORES / RBAC — equipe com acesso ao console
+# ════════════════════════════════════════════════════════════════════════════
+PAPEL_DESCRICAO = {
+    "admin": "Acesso total + gestão de operadores",
+    "financeiro": "Cobrança, renovação e financeiro",
+    "suporte": "Operação de clientes e onboarding",
+    "leitura": "Somente visualização",
+}
+
+
+def build_owner_operadores_payload(dono):
+    """Lista os operadores do console (equipe com acesso), com papel e sessão."""
+    from api.models import DonoSaaS
+    agora = timezone.now()
+    operadores = []
+    for op in DonoSaaS.objects.all().order_by("-ativo", "nome"):
+        online = bool(op.sessao_ativa_chave)
+        ultima = op.sessao_ativa_em
+        operadores.append({
+            "id": op.id,
+            "nome": op.nome,
+            "email": op.email,
+            "papel": op.papel,
+            "papel_label": dict(DonoSaaS.PAPEIS).get(op.papel, op.papel),
+            "papel_descricao": PAPEL_DESCRICAO.get(op.papel, ""),
+            "ativo": op.ativo,
+            "online": online,
+            "ultima_sessao": ultima.isoformat() if ultima else None,
+            "criado_em": op.criado_em.isoformat() if op.criado_em else None,
+            "eh_voce": op.id == dono.id,
+        })
+    total = len(operadores)
+    ativos = sum(1 for o in operadores if o["ativo"])
+    return {
+        "operadores": operadores,
+        "total": total,
+        "ativos": ativos,
+        "online": sum(1 for o in operadores if o["online"]),
+        "papeis": [{"valor": v, "label": l, "descricao": PAPEL_DESCRICAO.get(v, "")} for v, l in DonoSaaS.PAPEIS],
+        "seu_papel": dono.papel,
+        "pode_gerenciar": dono.papel == DonoSaaS.PAPEL_ADMIN,
+    }
