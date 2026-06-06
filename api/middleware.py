@@ -355,6 +355,11 @@ class EmpresaMiddleware:
         if request.path == "/api/trial/ativar":
             return self.get_response(request)
 
+        # Endpoints admin de manutenção: bypass de plano (auth por sessão)
+        _ADMIN_BYPASS = {"/api/simular-focos", "/api/regeocodificar-focos", "/api/limpar-casos"}
+        if request.path in _ADMIN_BYPASS:
+            return self.get_response(request)
+
         # 💣 BLOQUEIO: plano vencido
         if _plano_expirado(empresa) or not empresa.ativo:
             if request.path.startswith("/api/"):
