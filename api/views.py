@@ -1613,6 +1613,28 @@ STATE_ALIASES = {
 }
 
 
+def _uf_sigla(estado):
+    """Converte um nome de estado em sigla UF. Aceita já-sigla ou nome completo."""
+    import unicodedata
+    raw = (estado or "").strip()
+    if not raw:
+        return ""
+    if len(raw) == 2 and raw.upper() in STATE_ALIASES:
+        return raw.upper()
+
+    def _norm(s):
+        return "".join(
+            ch for ch in unicodedata.normalize("NFD", (s or "").lower())
+            if unicodedata.category(ch) != "Mn"
+        ).strip()
+
+    alvo = _norm(raw)
+    for uf, nome in STATE_ALIASES.items():
+        if _norm(nome) == alvo:
+            return uf
+    return raw[:2].upper()
+
+
 def _state_terms(value):
     import unicodedata
 
@@ -2736,13 +2758,26 @@ def app_resumo_publico(request):
         data_registro__lt=agora - timedelta(days=7),
     )
 
+    total_24h = ultimas_24h.count()
     total_7d = ultimos_7d.count()
     total_30d = ativos_30d.count()
     indice_ativo_30d = _indice_temporal_publico(ativos_30d, agora)
     base_anterior = dias_anteriores.count()
-    crescimento = 0.0
+
+    # ── Crescimento robusto ────────────────────────────────────────────────
+    # 1ª escolha: 7 dias atuais vs 7 dias anteriores (janela clássica).
+    # Fallback: quando não há histórico de 7-14 dias mas há atividade recente,
+    # usa o momentum das últimas 24h contra a média diária dos 7 dias — assim
+    # um surto novo (todos os casos recentes) não fica travado em 0,0%.
     if base_anterior:
         crescimento = round(((total_7d - base_anterior) / base_anterior) * 100, 2)
+    else:
+        media_diaria_7d = (total_7d / 7.0) if total_7d else 0.0
+        if media_diaria_7d > 0 and total_24h > 0:
+            crescimento = round(((total_24h - media_diaria_7d) / media_diaria_7d) * 100, 2)
+            crescimento = max(0.0, min(crescimento, 999.0))
+        else:
+            crescimento = 0.0
 
     doencas = (
         ativos_30d.exclude(grupo__isnull=True).exclude(grupo="")
@@ -2753,9 +2788,26 @@ def app_resumo_publico(request):
     top_grupo = doencas[0]["grupo"] if doencas else "monitoramento geral"
     nivel_nacional = _nivel_por_indice_publico(indice_ativo_30d, crescimento)
 
+    # ── Casos por estado (visualização fácil no app) ───────────────────────
+    por_estado_rows = (
+        ativos_30d.exclude(estado__isnull=True).exclude(estado="")
+        .values("estado")
+        .annotate(total=Count("id"))
+        .order_by("-total")
+    )
+    casos_por_estado = []
+    for row in por_estado_rows:
+        uf = _uf_sigla(row["estado"])
+        casos_por_estado.append({
+            "estado": row["estado"],
+            "uf": uf,
+            "total": row["total"],
+            "percentual": round((row["total"] / max(total_30d, 1)) * 100, 1),
+        })
+
     return JsonResponse({
         "resumo": {
-            "registros_24h": ultimas_24h.count(),
+            "registros_24h": total_24h,
             "registros_7d": total_7d,
             "registros_30d": total_30d,
             "indice_ativo_7d": indice_ativo_30d,
@@ -2763,11 +2815,13 @@ def app_resumo_publico(request):
             "crescimento_7d": crescimento,
             "suspeitos_24h": ultimas_24h.filter(suspeito=True).count(),
             "nivel_nacional": nivel_nacional,
+            "total_estados": len(casos_por_estado),
             "decaimento_temporal": "o indice ativo fica preservado por 10 dias sem novos envios; depois a IA reduz gradualmente apenas quando serie temporal, dados agregados e fontes oficiais sustentam queda real, evitando falsa melhora precoce",
         },
         "semaforo": _semaforo_publico(nivel_nacional),
         "alerta_publico": _alerta_publico(nivel_nacional, crescimento, top_grupo),
         "orientacao_publica": _orientacao_publica(nivel_nacional, top_grupo),
+        "casos_por_estado": casos_por_estado,
         "doencas_top": [
             {
                 "grupo": item["grupo"],
@@ -2900,170 +2954,105 @@ def app_radar_local(request):
     })
 
 
+def _risk_level_para_nivel_publico(risk_level):
+    """Converte o risk_level do panorama (CRITICO/ALTO/MODERADO/BAIXO) para o
+    nível do semáforo público (alto/moderado/atencao/baixo)."""
+    rl = (risk_level or "").strip().upper()
+    if rl in ("CRITICO", "CRÍTICO", "ALTO"):
+        return "alto"
+    if rl == "MODERADO":
+        return "moderado"
+    if rl in ("ATENCAO", "ATENÇÃO"):
+        return "atencao"
+    return "baixo"
+
+
 def app_mapa_publico(request):
-    # ── RLS: garante visibilidade dos registros públicos ─────────────────────
-    from api.middleware import _rls_set_empresa as _set_rls
-    _emp_pub = _empresa_app_publico()
-    _set_rls(_emp_pub.id)
-    agora = timezone.now()
-    base = RegistroSintoma.objects.filter(
-        data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS),
-        latitude__isnull=False,
-        longitude__isnull=False,
-        latitude__gte=-90,
-        latitude__lte=90,
-        longitude__gte=-180,
-        longitude__lte=180,
-    )
+    """
+    Mapa de focos do app da população.
+
+    FONTE ÚNICA: deriva do MESMO build_panorama_payload() que alimenta os
+    painéis de Governo, Farmácia, Hospital e Plano de Saúde (/api/epidemiologia).
+    Isso garante que coordenadas, contagens, índice ativo, crescimento, nível
+    de risco (cor) e doença dominante sejam IDÊNTICOS no app e em todos os
+    ambientes — sem divergência de agregação.
+    """
+    from api.epidemiologia import build_panorama_payload
+
     cidade = request.GET.get("cidade")
     estado = request.GET.get("estado")
     bairro = request.GET.get("bairro")
-    if cidade:
-        base = base.filter(cidade=cidade)
-    if estado:
-        base = base.filter(estado__in=_state_terms(estado))
-    if bairro:
-        base = base.filter(bairro=bairro)
 
-    hotspots_por_dia = (
-        base.annotate(day=TruncDate("data_registro"))
-        .values("cidade", "estado", "bairro", "day")
-        .annotate(total=Count("id"), latitude_media=Avg("latitude"), longitude_media=Avg("longitude"))
-    )
+    payload = build_panorama_payload()
+    areas = payload.get("layers", {}).get("bairros", []) or []
 
-    areas = {}
-    for row in hotspots_por_dia:
-        latitude_media = row.get("latitude_media")
-        longitude_media = row.get("longitude_media")
-        if latitude_media is None or longitude_media is None:
-            continue
-        try:
-            latitude_media = float(latitude_media)
-            longitude_media = float(longitude_media)
-        except (TypeError, ValueError):
-            continue
-        if not (-90 <= latitude_media <= 90 and -180 <= longitude_media <= 180):
-            continue
-
-        key = (row["cidade"], row["estado"], row["bairro"])
-        peso = _peso_temporal_publico(row["day"], agora)
-        area = areas.setdefault(key, {
-            "cidade": row["cidade"],
-            "estado": row["estado"],
-            "bairro": row["bairro"],
-            "total": 0,
-            "indice_ativo": 0.0,
-            "latitude_soma": 0.0,
-            "longitude_soma": 0.0,
-            "peso_geo": 0,
-        })
-        total = row["total"] or 0
-        if total <= 0:
-            continue
-        area["total"] += total
-        area["indice_ativo"] += total * peso
-        area["latitude_soma"] += latitude_media * total
-        area["longitude_soma"] += longitude_media * total
-        area["peso_geo"] += total
-
-    hotspots = sorted(areas.values(), key=lambda item: item["indice_ativo"], reverse=True)[:250]
-    total_indice_mapa = sum(item["indice_ativo"] for item in hotspots) or 1
-
-    if not hotspots:
-        return JsonResponse({"hotspots": []}, safe=False)
-
-    filtros_area = Q()
-    for item in hotspots:
-        cond = Q(cidade=item["cidade"], estado=item["estado"])
-        if item["bairro"] is None:
-            cond &= Q(bairro__isnull=True)
-        else:
-            cond &= Q(bairro=item["bairro"])
-        filtros_area |= cond
-
-    sintomas_por_area = {}
-    symptom_annotations = {
-        key: Count("id", filter=Q(**{key: True}))
-        for key in SYMPTOM_LABELS
-    }
-    for row in (
-        base.filter(filtros_area)
-        .values("cidade", "estado", "bairro")
-        .annotate(**symptom_annotations)
-    ):
-        sintomas_por_area[(row["cidade"], row["estado"], row["bairro"])] = {
-            key: row[key]
-            for key in SYMPTOM_LABELS
-        }
-
-    grupo_dominante_por_area = {}
-    for row in (
-        base.filter(filtros_area)
-        .exclude(grupo__isnull=True)
-        .exclude(grupo="")
-        .values("cidade", "estado", "bairro", "grupo")
-        .annotate(total=Count("id"))
-        .order_by("cidade", "estado", "bairro", "-total", "grupo")
-    ):
-        key = (row["cidade"], row["estado"], row["bairro"])
-        if key not in grupo_dominante_por_area:
-            grupo_dominante_por_area[key] = row["grupo"]
+    estado_terms = set(_state_terms(estado)) if estado else None
 
     resultado = []
-    for item in hotspots:
-        key = (item["cidade"], item["estado"], item["bairro"])
-        sintomas_area = sintomas_por_area.get(key, {symptom: 0 for symptom in SYMPTOM_LABELS})
-        perfil_sindromico = grupo_dominante_por_area.get(key, "Monitoramento geral")
-        sintoma_dominante_key = max(sintomas_area, key=sintomas_area.get) if sintomas_area else None
-        sintoma_dominante = (
-            SYMPTOM_LABELS.get(sintoma_dominante_key)
-            if sintoma_dominante_key and sintomas_area.get(sintoma_dominante_key, 0) > 0
-            else "Sem dados"
-        )
-        doencas_provaveis = _build_disease_probabilities(sintomas_area, item["total"])
-        doenca_top = doencas_provaveis[0]["name"] if doencas_provaveis else None
-        indice_ativo = round(item["indice_ativo"], 2)
-        nivel = "alto" if indice_ativo >= 45 else "moderado" if indice_ativo >= 20 else "atencao" if indice_ativo >= 8 else "baixo"
-        risk_level = "ALTO" if nivel == "alto" else "MODERADO" if nivel in {"moderado", "atencao"} else "BAIXO"
-        peso_geo = max(item["peso_geo"], 1)
-        latitude = round(item["latitude_soma"] / peso_geo, 6)
-        longitude = round(item["longitude_soma"] / peso_geo, 6)
-        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+    for a in areas:
+        a_estado = a.get("estado")
+        a_cidade = a.get("cidade")
+        a_bairro = a.get("nome")  # no layer de bairro, nome == bairro
+
+        if estado_terms and a_estado not in estado_terms:
             continue
+        if cidade and a_cidade != cidade:
+            continue
+        if bairro and a_bairro != bairro:
+            continue
+
+        latitude = a.get("latitude")
+        longitude = a.get("longitude")
+        if latitude is None or longitude is None:
+            continue
+        if not (-90 <= float(latitude) <= 90 and -180 <= float(longitude) <= 180):
+            continue
+
+        active = a.get("active_cases", a.get("total_cases", 0)) or 0
+        raw = a.get("raw_total_cases", a.get("total_registros_30d", 0)) or 0
+        nivel = _risk_level_para_nivel_publico(a.get("risk_level"))
+        doencas_provaveis = a.get("probable_diseases", []) or []
+        doenca_top = a.get("dominant_disease") or (
+            doencas_provaveis[0]["name"] if doencas_provaveis else None
+        )
+
         resultado.append({
-            "cidade": item["cidade"],
-            "estado": item["estado"],
-            "bairro": item["bairro"],
-            "total": indice_ativo,
-            "total_cases": indice_ativo,
-            "active_cases": indice_ativo,
-            "casos_ativos": indice_ativo,
-            "total_registros_30d": item["total"],
-            "registros_30d": item["total"],
-            "raw_total_cases": item["total"],
-            "raw_total": item["total"],
-            "indice_ativo": indice_ativo,
-            "growth_percent": 0.0,
-            "crescimento_percent": 0.0,
-            "percentual_ativo": round((indice_ativo / total_indice_mapa) * 100, 2),
+            "cidade": a_cidade,
+            "estado": a_estado,
+            "bairro": a_bairro,
+            "label": a.get("label"),
+            "total": active,
+            "total_cases": active,
+            "active_cases": active,
+            "casos_ativos": active,
+            "total_registros_30d": raw,
+            "registros_30d": raw,
+            "raw_total_cases": raw,
+            "raw_total": raw,
+            "indice_ativo": active,
+            "growth_percent": a.get("growth_percent", 0.0),
+            "crescimento_percent": a.get("growth_percent", 0.0),
+            "percentual_ativo": a.get("percentual_ativo", 0.0),
             "latitude": latitude,
             "longitude": longitude,
-            "grupo_dominante": doenca_top or perfil_sindromico,
-            "perfil_sindromico": perfil_sindromico,
+            "grupo_dominante": doenca_top or a.get("dominant_symptom"),
+            "perfil_sindromico": a.get("dominant_symptom"),
             "doenca_dominante": doenca_top,
             "dominant_disease": doenca_top,
-            "dominant_symptom": sintoma_dominante,
-            "sintoma_dominante": sintoma_dominante,
-            "sintomas": sintomas_area,
+            "dominant_symptom": a.get("dominant_symptom"),
+            "sintoma_dominante": a.get("dominant_symptom"),
+            "sintomas": a.get("symptoms", []),
             "doencas_provaveis": doencas_provaveis[:5],
             "probable_diseases": doencas_provaveis[:5],
-            "risk_level": risk_level,
-            "nivel_risco": risk_level,
+            "risk_level": a.get("risk_level"),
+            "nivel_risco": a.get("risk_level"),
             "semaforo": _semaforo_publico(nivel),
             "decaimento_temporal": "foco preservado por 10 dias sem novos envios; depois a intensidade reduz gradualmente somente quando a IA valida queda real com serie temporal, dados agregados e fontes oficiais",
         })
 
-    return JsonResponse({"hotspots": resultado}, safe=False)
+    # Mesma ordenação dos painéis: maior índice ativo primeiro
+    resultado.sort(key=lambda x: x.get("active_cases", 0), reverse=True)
+    return JsonResponse({"hotspots": resultado[:250]}, safe=False)
 
 
 def _filtrar_alertas_publicos(queryset, estado=None, cidade=None, bairro=None, incluir_gerais=True):
