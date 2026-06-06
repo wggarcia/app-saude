@@ -201,6 +201,7 @@ class EmpresaMiddleware:
             "/api/colaborador-mobile/",
             "/api/public/",
             "/api/simular-focos",
+            "/api/regeocodificar-focos",
             "/api/assinatura/",
             "/assinatura/sst/",    # página pública de assinatura SST (link por e-mail)
             "/validar-assinatura/", # página pública de validação de assinatura SST
