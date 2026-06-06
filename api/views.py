@@ -3266,8 +3266,8 @@ def simular_focos_epidemicos(request):
     """
     Cria dados de simulação epidemiológica reais no banco de produção.
     Fases: 1=50 casos/10 focos, 2=~700/46 focos, 3=~5000/46 focos
-    Uso: POST /api/simular-focos  body: {"fase": 1, "limpar": true}
-    Protegido: requer header X-Simula-Key igual a settings.SECRET_KEY[:16]
+    Uso: GET/POST /api/simular-focos?fase=1&limpar=1
+    Protegido: requer sessão empresa autenticada.
     """
     import random as _rnd
     from datetime import timedelta as _td
@@ -3284,10 +3284,17 @@ def simular_focos_epidemicos(request):
     except Exception:
         body = {}
 
-    fase = int(body.get("fase", 1))
-    limpar = bool(body.get("limpar", False))
+    # Aceita parâmetros via GET query string ou body JSON
+    fase = int(request.GET.get("fase") or body.get("fase") or 1)
+    limpar = bool(request.GET.get("limpar") or body.get("limpar", False))
 
     emp = _empresa_app_publico()
+    # Seta RLS para a empresa pública
+    try:
+        from api.middleware import _rls_set_empresa
+        _rls_set_empresa(emp.id)
+    except Exception:
+        pass
     if limpar:
         RegistroSintoma.objects.filter(empresa=emp).delete()
 
