@@ -407,8 +407,16 @@ _FETCH_INTERCEPTOR = b"""
   window.fetch = function(url, opts){
     return _origFetch.apply(this, arguments).then(function(res){
       if(res.status === 401){
-        var tipo = document.cookie.match(/tipo_conta=([^;]+)/);
-        var destino = (tipo && tipo[1]==='governo') ? '/login-governo/' : '/login-empresa/';
+        var p = window.location.pathname;
+        var destino;
+        // Console operacional (dono) tem login proprio - nunca enviar para login-empresa
+        if (p.indexOf('/console-operacional') === 0 || p.indexOf('/financeiro') === 0 ||
+            p.indexOf('/governanca') === 0 || p.indexOf('/gtm') === 0 || p.indexOf('/operacao-central') === 0) {
+          destino = '/operacao-central/';
+        } else {
+          var tipo = document.cookie.match(/tipo_conta=([^;]+)/);
+          destino = (tipo && tipo[1]==='governo') ? '/login-governo/' : '/login-empresa/';
+        }
         window.location.href = destino;
         return new Response(null, {status: 401});
       }
