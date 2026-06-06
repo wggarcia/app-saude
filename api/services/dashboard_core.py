@@ -200,6 +200,89 @@ def onboarding_snapshot(empresa, agora=None):
     return onboarding_cliente(empresa, usuarios_ativos, dispositivos_ativos, registros_24h)
 
 
+def _resumo_vigilancia_publica(agora):
+    """Resumo epidemiológico nacional do app da população para o console.
+
+    Surfacing da camada pública (focos, casos, estados, doenças, crescimento)
+    que antes não aparecia no painel administrativo. Tolerante a falhas.
+    """
+    vazio = {
+        "disponivel": False,
+        "casos_30d": 0, "casos_24h": 0, "focos": 0, "estados": 0,
+        "crescimento_7d": 0.0, "suspeitos_24h": 0,
+        "top_doencas": [], "top_estados": [],
+    }
+    try:
+        empresa = Empresa.objects.filter(email="populacao@soluscrt.com").first()
+        if not empresa:
+            return vazio
+        try:
+            from api.middleware import _rls_set_empresa
+            _rls_set_empresa(empresa.id)
+        except Exception:
+            pass
+
+        base_30d = RegistroSintoma.objects.filter(
+            empresa=empresa, data_registro__gte=agora - timedelta(days=30)
+        )
+        casos_30d = base_30d.count()
+        casos_24h = base_30d.filter(data_registro__gte=agora - timedelta(hours=24)).count()
+        suspeitos_24h = base_30d.filter(
+            data_registro__gte=agora - timedelta(hours=24), suspeito=True
+        ).count()
+
+        focos = (
+            base_30d.exclude(cidade__isnull=True).exclude(cidade="")
+            .values("cidade", "bairro", "estado").distinct().count()
+        )
+        estados = (
+            base_30d.exclude(estado__isnull=True).exclude(estado="")
+            .values("estado").distinct().count()
+        )
+
+        # Crescimento 7d vs 7d anteriores; fallback de momentum 24h
+        c7 = base_30d.filter(data_registro__gte=agora - timedelta(days=7)).count()
+        c_prev = base_30d.filter(
+            data_registro__gte=agora - timedelta(days=14),
+            data_registro__lt=agora - timedelta(days=7),
+        ).count()
+        if c_prev:
+            crescimento = round(((c7 - c_prev) / c_prev) * 100, 1)
+        else:
+            media_dia = c7 / 7.0 if c7 else 0.0
+            crescimento = round(((casos_24h - media_dia) / media_dia) * 100, 1) if media_dia else 0.0
+            crescimento = max(0.0, min(crescimento, 999.0))
+
+        top_doencas = [
+            {"grupo": r["grupo"], "total": r["total"]}
+            for r in (
+                base_30d.exclude(grupo__isnull=True).exclude(grupo="")
+                .values("grupo").annotate(total=Count("id")).order_by("-total")[:5]
+            )
+        ]
+        top_estados = [
+            {"estado": r["estado"], "total": r["total"]}
+            for r in (
+                base_30d.exclude(estado__isnull=True).exclude(estado="")
+                .values("estado").annotate(total=Count("id")).order_by("-total")[:8]
+            )
+        ]
+
+        return {
+            "disponivel": casos_30d > 0,
+            "casos_30d": casos_30d,
+            "casos_24h": casos_24h,
+            "focos": focos,
+            "estados": estados,
+            "crescimento_7d": crescimento,
+            "suspeitos_24h": suspeitos_24h,
+            "top_doencas": top_doencas,
+            "top_estados": top_estados,
+        }
+    except Exception:
+        return vazio
+
+
 def build_owner_resumo_payload(dono):
     empresas = Empresa.objects.all()
     ativas = empresas.filter(ativo=True)
@@ -308,6 +391,37 @@ def build_owner_resumo_payload(dono):
     carteira_empresa = {"clientes": 0, "ativos": 0, "faturamento_mensal_estimado": 0.0, "registros_24h": 0}
     carteira_governo = {"clientes": 0, "ativos": 0, "faturamento_mensal_estimado": 0.0, "registros_24h": 0}
 
+    # ── Carteira por SEGMENTO real (setor do pacote): empresa(SST)/farmacia/
+    # hospital/governo/rede/plano_saude — visão que faltava no console.
+    SEGMENTO_META = {
+        "empresa":     {"label": "Saúde Ocupacional (SST)", "emoji": "🦺", "ordem": 1},
+        "farmacia":    {"label": "Farmácia",                "emoji": "💊", "ordem": 2},
+        "hospital":    {"label": "Hospital",                "emoji": "🏥", "ordem": 3},
+        "plano_saude": {"label": "Plano de Saúde",          "emoji": "🩺", "ordem": 4},
+        "governo":     {"label": "Governo / Vigilância",    "emoji": "🏛️", "ordem": 5},
+        "rede":        {"label": "Rede / Multiunidades",    "emoji": "🌐", "ordem": 6},
+    }
+    seg_carteiras = {
+        codigo: {
+            "setor": codigo,
+            "label": meta["label"],
+            "emoji": meta["emoji"],
+            "ordem": meta["ordem"],
+            "clientes": 0,
+            "ativos": 0,
+            "inativos": 0,
+            "usuarios_ativos": 0,
+            "dispositivos_ativos": 0,
+            "registros_24h": 0,
+            "suspeitos_24h": 0,
+            "faturamento_mensal_estimado": 0.0,
+            "faturamento_anual_estimado": 0.0,
+            "vencendo_7_dias": 0,
+            "onboarding_pendente": 0,
+        }
+        for codigo, meta in SEGMENTO_META.items()
+    }
+
     for empresa in empresas_lista:
         metricas_registro = registros_por_empresa.get(empresa.id, {})
         empresa_registros_24h = metricas_registro.get("registros_24h", 0)
@@ -346,6 +460,25 @@ def build_owner_resumo_payload(dono):
         carteira["ativos"] += 1 if empresa.ativo else 0
         carteira["faturamento_mensal_estimado"] += faturamento_mensal_equivalente if empresa.ativo else 0
         carteira["registros_24h"] += empresa_registros_24h
+
+        # Carteira por segmento real (setor do pacote)
+        setor_real = pacote.get("setor") or "empresa"
+        seg = seg_carteiras.get(setor_real)
+        if seg is not None:
+            seg["clientes"] += 1
+            seg["ativos"] += 1 if empresa.ativo else 0
+            seg["inativos"] += 0 if empresa.ativo else 1
+            seg["usuarios_ativos"] += usuarios_ativos_empresa
+            seg["dispositivos_ativos"] += dispositivos_ativos_empresa
+            seg["registros_24h"] += empresa_registros_24h
+            seg["suspeitos_24h"] += empresa_suspeitos_24h
+            if empresa.ativo:
+                seg["faturamento_mensal_estimado"] += faturamento_mensal_equivalente
+                seg["faturamento_anual_estimado"] += pacote["anual"]
+            if dias_para_expirar is not None and dias_para_expirar <= 7:
+                seg["vencendo_7_dias"] += 1
+            if onboarding["score"] < 100:
+                seg["onboarding_pendente"] += 1
 
         mensagens = []
         if uso_usuarios >= 85:
@@ -432,6 +565,21 @@ def build_owner_resumo_payload(dono):
     elif capacity_pressure == "critica":
         recomendacao_infra = "Prioridade máxima para escalar infraestrutura, filas e réplica de leitura imediatamente."
 
+    carteiras_por_segmento = sorted(
+        (
+            {
+                **seg,
+                "faturamento_mensal_estimado": round(seg["faturamento_mensal_estimado"], 2),
+                "faturamento_anual_estimado": round(seg["faturamento_anual_estimado"], 2),
+            }
+            for seg in seg_carteiras.values()
+        ),
+        key=lambda s: s["ordem"],
+    )
+
+    # ── Vigilância Pública (app da população) — camada epidemiológica ──────
+    vigilancia_publica = _resumo_vigilancia_publica(agora)
+
     return {
         "owner": dono.nome,
         "summary": {
@@ -468,6 +616,8 @@ def build_owner_resumo_payload(dono):
                 "faturamento_mensal_estimado": round(carteira_governo["faturamento_mensal_estimado"], 2),
             },
         },
+        "carteiras_por_segmento": carteiras_por_segmento,
+        "vigilancia_publica": vigilancia_publica,
         "historico": {
             "receita": receita_series,
             "uso": uso_series,

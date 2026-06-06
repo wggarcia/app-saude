@@ -62,6 +62,51 @@ function _t(msg, tipo) {
     .modal input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eef8ff;margin-bottom:14px;font-size:.95rem}
     .modal-actions{display:flex;gap:10px;justify-content:flex-end}
     @media(max-width:1300px){.grid,.split,.triple{grid-template-columns:1fr}}
+
+    /* ── Top nav (jump-to) ── */
+    .topnav{position:sticky;top:0;z-index:50;display:flex;gap:6px;flex-wrap:wrap;
+      padding:10px 12px;margin:-8px 0 4px;border-radius:14px;
+      background:rgba(8,20,30,.92);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.07)}
+    .topnav a{color:#9cc4db;text-decoration:none;font-size:.82rem;font-weight:700;
+      padding:6px 12px;border-radius:999px;border:1px solid transparent;transition:.15s}
+    .topnav a:hover{color:#fff;background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.3)}
+
+    /* ── Segment cards ── */
+    .segment-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .seg-card{border-radius:18px;padding:16px;background:linear-gradient(180deg,rgba(17,35,50,.92),rgba(8,18,28,.9));
+      border:1px solid rgba(255,255,255,.08);transition:border-color .2s}
+    .seg-card:hover{border-color:rgba(245,158,11,.35)}
+    .seg-card.empty{opacity:.5}
+    .seg-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .seg-emoji{font-size:1.6rem;line-height:1}
+    .seg-name{font-weight:800;font-size:1rem;color:#eef8ff}
+    .seg-sub{font-size:.72rem;color:#7a9bb5}
+    .seg-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+    .seg-kpi{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:8px 10px}
+    .seg-kpi span{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:#7a9bb5}
+    .seg-kpi strong{display:block;margin-top:3px;font-size:1.05rem;color:#eef8ff}
+    .seg-kpi.rev strong{color:#34d399}
+    .seg-foot{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap}
+    .seg-pill{font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:999px;
+      background:rgba(255,255,255,.06);color:#9cc4db;border:1px solid rgba(255,255,255,.08)}
+    .seg-pill.warn{background:rgba(245,158,11,.14);color:#fcd34d;border-color:rgba(245,158,11,.3)}
+    .seg-pill.ok{background:rgba(52,211,153,.14);color:#6ee7b7;border-color:rgba(52,211,153,.3)}
+
+    /* ── Vigilância pública ── */
+    .vig-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:14px}
+    .vig-kpi{border-radius:16px;padding:14px;background:linear-gradient(180deg,rgba(13,30,44,.95),rgba(8,18,28,.95));
+      border:1px solid rgba(0,194,255,.18)}
+    .vig-kpi span{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:#7a9bb5}
+    .vig-kpi strong{display:block;margin-top:6px;font-size:1.5rem;color:#7fd7ff}
+    .vig-kpi.up strong{color:#34d399}
+    .vig-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .vig-bar-row{display:flex;align-items:center;gap:8px;font-size:.82rem;margin-bottom:7px}
+    .vig-bar-row .lbl{width:150px;color:#cde3f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .vig-bar{flex:1;height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+    .vig-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#00c2ff,#00e5b0)}
+    .vig-bar-row .val{width:54px;text-align:right;color:#fff;font-weight:700}
+    @media(max-width:1100px){.segment-grid{grid-template-columns:repeat(2,1fr)}.vig-grid{grid-template-columns:repeat(2,1fr)}.vig-cols{grid-template-columns:1fr}}
+    @media(max-width:700px){.segment-grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -81,9 +126,36 @@ function _t(msg, tipo) {
       </div>
     </section>
 
-    <section class="card">
+    <nav class="topnav">
+      <a href="#secResumo">Resumo</a>
+      <a href="#secSegmentos">Segmentos</a>
+      <a href="#secVigilancia">Vigilância Pública</a>
+      <a href="#secCobranca">Cobrança</a>
+      <a href="#secCapacidade">Capacidade</a>
+      <a href="#secCarteiras">Carteiras</a>
+      <a href="#secClientes">Clientes</a>
+      <a href="#secAuditoria">Auditoria</a>
+    </nav>
+
+    <section class="card" id="secResumo">
       <h2>Resumo Executivo</h2>
       <div id="summaryGrid" class="grid">Carregando...</div>
+    </section>
+
+    <section class="card" id="secSegmentos">
+      <div class="row" style="margin-bottom:6px;">
+        <h2 style="margin:0;">Segmentos da Operação</h2>
+        <span class="muted small">Carteira por ambiente real: SST · Farmácia · Hospital · Plano · Governo · Rede</span>
+      </div>
+      <div id="segmentGrid" class="segment-grid">Carregando...</div>
+    </section>
+
+    <section class="card" id="secVigilancia">
+      <div class="row" style="margin-bottom:6px;">
+        <h2 style="margin:0;">Vigilância Pública — App População</h2>
+        <span class="muted small">Camada epidemiológica nacional (gratuita/anônima)</span>
+      </div>
+      <div id="vigilanciaBox">Carregando...</div>
     </section>
 
     <section class="split">
@@ -102,12 +174,12 @@ function _t(msg, tipo) {
       <div id="onboardingQueue" class="list">Carregando...</div>
     </section>
 
-    <section class="split">
+    <section class="split" id="secCobranca">
       <section class="card">
         <h2>Cobrança e Renovação</h2>
         <div id="billingSummary" class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));">Carregando...</div>
       </section>
-      <section class="card">
+      <section class="card" id="secCapacidade">
         <h2>Capacidade do Sistema</h2>
         <div id="capacitySummary" class="list">Carregando...</div>
       </section>
@@ -143,7 +215,7 @@ function _t(msg, tipo) {
       </section>
     </section>
 
-    <section class="triple">
+    <section class="triple" id="secCarteiras">
       <section class="card">
         <h2>Carteiras</h2>
         <div id="portfolioCards" class="list">Carregando...</div>
@@ -158,7 +230,7 @@ function _t(msg, tipo) {
       </section>
     </section>
 
-    <section class="card">
+    <section class="card" id="secAuditoria">
       <h2>Auditoria Operacional</h2>
       <div id="auditList" class="list">Carregando...</div>
     </section>
@@ -172,13 +244,17 @@ function _t(msg, tipo) {
       <div id="auditLogList" class="list" style="max-height:320px;overflow-y:auto;">Clique em "Atualizar" para carregar.</div>
     </section>
 
-    <section class="card">
+    <section class="card" id="secClientes">
       <div class="row" style="margin-bottom:12px;">
         <h2 style="margin:0;">Clientes e Ajustes Rápidos</h2>
-        <div class="tabs">
-          <button class="tab-btn active" id="tabAll">Todos</button>
-          <button class="tab-btn" id="tabEmpresa">Empresas</button>
-          <button class="tab-btn" id="tabGoverno">Governos</button>
+        <div class="tabs" id="clientTabs">
+          <button class="tab-btn active" data-seg="all">Todos</button>
+          <button class="tab-btn" data-seg="empresa">🦺 SST</button>
+          <button class="tab-btn" data-seg="farmacia">💊 Farmácia</button>
+          <button class="tab-btn" data-seg="hospital">🏥 Hospital</button>
+          <button class="tab-btn" data-seg="plano_saude">🩺 Plano</button>
+          <button class="tab-btn" data-seg="governo">🏛️ Governo</button>
+          <button class="tab-btn" data-seg="rede">🌐 Rede</button>
         </div>
       </div>
       <div id="clientsList" class="list">Carregando...</div>
@@ -228,9 +304,8 @@ function _t(msg, tipo) {
 
     function setActiveTab(filter) {
       currentFilter = filter;
-      document.getElementById("tabAll").classList.toggle("active", filter === "all");
-      document.getElementById("tabEmpresa").classList.toggle("active", filter === "empresa");
-      document.getElementById("tabGoverno").classList.toggle("active", filter === "governo");
+      document.querySelectorAll("#clientTabs .tab-btn").forEach((b) =>
+        b.classList.toggle("active", b.dataset.seg === filter));
       if (cachedData) renderClients(cachedData.clientes || []);
     }
 
@@ -397,8 +472,79 @@ function _t(msg, tipo) {
       });
     }
 
+    function renderSegmentos(segmentos) {
+      const el = document.getElementById("segmentGrid");
+      if (!segmentos.length) { el.innerHTML = '<div class="muted">Sem segmentos.</div>'; return; }
+      el.innerHTML = segmentos.map((s) => {
+        const vazio = (s.clientes || 0) === 0;
+        const pills = [];
+        if (s.vencendo_7_dias > 0) pills.push(`<span class="seg-pill warn">${s.vencendo_7_dias} vencendo 7d</span>`);
+        if (s.onboarding_pendente > 0) pills.push(`<span class="seg-pill">${s.onboarding_pendente} onboarding</span>`);
+        if (s.suspeitos_24h > 0) pills.push(`<span class="seg-pill warn">${s.suspeitos_24h} suspeitos 24h</span>`);
+        if (!pills.length && !vazio) pills.push('<span class="seg-pill ok">saudável</span>');
+        return `
+          <div class="seg-card ${vazio ? "empty" : ""}">
+            <div class="seg-head">
+              <span class="seg-emoji">${s.emoji}</span>
+              <div>
+                <div class="seg-name">${s.label}</div>
+                <div class="seg-sub">${s.ativos}/${s.clientes} contratos ativos</div>
+              </div>
+            </div>
+            <div class="seg-kpis">
+              <div class="seg-kpi rev"><span>Receita/mês</span><strong>${money(s.faturamento_mensal_estimado)}</strong></div>
+              <div class="seg-kpi"><span>Receita/ano</span><strong>${money(s.faturamento_anual_estimado)}</strong></div>
+              <div class="seg-kpi"><span>Usuários</span><strong>${s.usuarios_ativos}</strong></div>
+              <div class="seg-kpi"><span>Dispositivos</span><strong>${s.dispositivos_ativos}</strong></div>
+              <div class="seg-kpi"><span>Registros 24h</span><strong>${s.registros_24h}</strong></div>
+              <div class="seg-kpi"><span>Clientes</span><strong>${s.clientes}</strong></div>
+            </div>
+            <div class="seg-foot">${pills.join("")}</div>
+          </div>`;
+      }).join("");
+    }
+
+    function renderVigilancia(v) {
+      const el = document.getElementById("vigilanciaBox");
+      if (!v || !v.disponivel) {
+        el.innerHTML = '<div class="muted">Sem dados epidemiológicos públicos no período.</div>';
+        return;
+      }
+      const cresc = Number(v.crescimento_7d || 0);
+      const maxDoenca = Math.max(...(v.top_doencas || []).map((d) => d.total), 1);
+      const maxEstado = Math.max(...(v.top_estados || []).map((e) => e.total), 1);
+      el.innerHTML = `
+        <div class="vig-grid">
+          <div class="vig-kpi"><span>Casos 30d</span><strong>${Number(v.casos_30d).toLocaleString("pt-BR")}</strong></div>
+          <div class="vig-kpi"><span>Casos 24h</span><strong>${Number(v.casos_24h).toLocaleString("pt-BR")}</strong></div>
+          <div class="vig-kpi"><span>Focos ativos</span><strong>${v.focos}</strong></div>
+          <div class="vig-kpi"><span>Estados</span><strong>${v.estados}</strong></div>
+          <div class="vig-kpi ${cresc > 0 ? "up" : ""}"><span>Crescimento 7d</span><strong>${cresc > 0 ? "+" : ""}${cresc}%</strong></div>
+        </div>
+        <div class="vig-cols">
+          <div>
+            <div class="muted small" style="margin-bottom:8px;">Doenças predominantes</div>
+            ${(v.top_doencas || []).map((d) => `
+              <div class="vig-bar-row">
+                <div class="lbl">${d.grupo}</div>
+                <div class="vig-bar"><i style="width:${(d.total / maxDoenca * 100).toFixed(0)}%"></i></div>
+                <div class="val">${Number(d.total).toLocaleString("pt-BR")}</div>
+              </div>`).join("") || '<div class="muted small">—</div>'}
+          </div>
+          <div>
+            <div class="muted small" style="margin-bottom:8px;">Casos por estado (top 8)</div>
+            ${(v.top_estados || []).map((e) => `
+              <div class="vig-bar-row">
+                <div class="lbl">${e.estado}</div>
+                <div class="vig-bar"><i style="width:${(e.total / maxEstado * 100).toFixed(0)}%"></i></div>
+                <div class="val">${Number(e.total).toLocaleString("pt-BR")}</div>
+              </div>`).join("") || '<div class="muted small">—</div>'}
+          </div>
+        </div>`;
+    }
+
     function renderClients(clientes) {
-      const filtered = clientes.filter((cliente) => currentFilter === "all" ? true : cliente.segmento === currentFilter);
+      const filtered = clientes.filter((cliente) => currentFilter === "all" ? true : (cliente.setor_pacote || cliente.segmento) === currentFilter);
       document.getElementById("clientsList").innerHTML = filtered.map((cliente) => `
         <div class="client">
           <div class="row">
@@ -524,6 +670,9 @@ function _t(msg, tipo) {
       const summary = data.summary || {};
       const carteiras = data.carteiras || {};
 
+      renderSegmentos(data.carteiras_por_segmento || []);
+      renderVigilancia(data.vigilancia_publica || {});
+
       document.getElementById("summaryGrid").innerHTML = [
         ["Clientes totais", summary.clientes_total],
         ["Clientes ativos", summary.clientes_ativos],
@@ -625,9 +774,8 @@ function _t(msg, tipo) {
       renderOnboardingQueue(data.clientes || []);
     }
 
-    document.getElementById("tabAll").addEventListener("click", () => setActiveTab("all"));
-    document.getElementById("tabEmpresa").addEventListener("click", () => setActiveTab("empresa"));
-    document.getElementById("tabGoverno").addEventListener("click", () => setActiveTab("governo"));
+    document.querySelectorAll("#clientTabs .tab-btn").forEach((b) =>
+      b.addEventListener("click", () => setActiveTab(b.dataset.seg)));
 
     loadOwnerPanel();
   </script>
