@@ -146,9 +146,9 @@ function _t(msg, tipo) {
         <a href="/governanca/" style="color:#a855f7;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(19,0,38,.9);border:1px solid #7e22ce;font-weight:700;">🏛 Governança</a>
         <a href="/gtm/" style="color:#f59e0b;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(28,17,0,.9);border:1px solid #92400e;font-weight:700;">🎯 GTM</a>
         <a href="/logout-operacao/" style="color:#eef8ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(140,29,64,.82);">Sair</a>
-        <button class="ghost" onclick="exportar('clientes')">Exportar clientes</button>
-        <button class="ghost" onclick="exportar('financeiro')">Exportar financeiro</button>
-        <button class="ghost" onclick="exportar('auditoria')">Exportar auditoria</button>
+        <button class="ghost" data-perm="exportar" onclick="exportar('clientes')">Exportar clientes</button>
+        <button class="ghost" data-perm="exportar" onclick="exportar('financeiro')">Exportar financeiro</button>
+        <button class="ghost" data-perm="exportar" onclick="exportar('auditoria')">Exportar auditoria</button>
       </div>
     </section>
 
@@ -229,7 +229,7 @@ function _t(msg, tipo) {
     </section>
 
     <section class="split" id="secCobranca">
-      <section class="card">
+      <section class="card" id="cardCobranca">
         <h2>Cobrança e Renovação</h2>
         <div id="billingSummary" class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));">Carregando...</div>
       </section>
@@ -314,7 +314,7 @@ function _t(msg, tipo) {
       <h2>Log de Auditoria Operacional</h2>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
         <button class="ghost" onclick="carregarAuditoria()">Atualizar</button>
-        <button class="ghost" onclick="exportar('auditoria')">Exportar CSV</button>
+        <button class="ghost" data-perm="exportar" onclick="exportar('auditoria')">Exportar CSV</button>
       </div>
       <div id="auditLogList" class="list" style="max-height:320px;overflow-y:auto;">Clique em "Atualizar" para carregar.</div>
     </section>
@@ -617,7 +617,30 @@ function _t(msg, tipo) {
         </div>`;
     }
 
+    function aplicarRBAC(perms, papel) {
+      const hide = (id, cond) => { const el = document.getElementById(id); if (el) el.style.display = cond ? "" : "none"; };
+      // Seções restritas por papel
+      hide("secFinanceiroReal", perms.ver_financeiro !== false);
+      hide("cardCobranca", perms.ver_financeiro !== false);
+      hide("secOperadores", perms.ver_operadores === true);
+      // Botões de exportar (escondidos para Leitura)
+      document.querySelectorAll('[data-perm="exportar"]').forEach((b) => {
+        b.style.display = perms.exportar === false ? "none" : "";
+      });
+      // Selo do papel ao lado do nome do dono
+      const hero = document.querySelector(".hero h1");
+      if (hero && papel && !document.getElementById("papelBadge")) {
+        const labels = {admin:"Administrador", financeiro:"Financeiro", suporte:"Suporte", leitura:"Leitura"};
+        const b = document.createElement("span");
+        b.id = "papelBadge";
+        b.textContent = labels[papel] || papel;
+        b.style.cssText = "margin-left:12px;font-size:.6em;font-weight:800;padding:4px 10px;border-radius:999px;background:rgba(245,158,11,.18);color:#fcd34d;vertical-align:middle;";
+        hero.appendChild(b);
+      }
+    }
+
     function renderClients(clientes) {
+      const P = window._perms || {acao_cliente:true, acao_financeiro:true, acao_onboarding:true, cliente_excluir:true};
       const filtered = clientes.filter((cliente) => currentFilter === "all" ? true : (cliente.setor_pacote || cliente.segmento) === currentFilter);
       document.getElementById("clientsList").innerHTML = filtered.map((cliente) => `
         <div class="client">
@@ -638,6 +661,7 @@ function _t(msg, tipo) {
           <div class="muted small">Em uso: ${cliente.usuarios_ativos}/${cliente.max_usuarios} usuários | ${cliente.dispositivos_ativos}/${cliente.max_dispositivos} dispositivos | ${cliente.registros_24h} registros em 24h</div>
           <div class="muted small">Uso usuários ${cliente.uso_usuarios.toFixed(1)}% | Uso dispositivos ${cliente.uso_dispositivos.toFixed(1)}% | Suspeitos 24h ${cliente.suspeitos_24h}</div>
           <div class="muted small">Faturamento estimado ${money(cliente.faturamento_estimado_cliente)} | expira ${cliente.data_expiracao ? new Date(cliente.data_expiracao).toLocaleDateString("pt-BR") : "não definido"}</div>
+          ${P.acao_cliente ? `
           <div class="controls">
             ${pacoteSelect(cliente.pacote_codigo)}
             ${planoSelect(cliente)}
@@ -648,7 +672,8 @@ function _t(msg, tipo) {
           </div>
           <div style="margin-top:10px;">
             <button onclick="atualizarCliente(${cliente.id}, this)">Salvar ajuste</button>
-          </div>
+          </div>` : ""}
+          ${P.acao_financeiro ? `
           <div class="actions">
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'marcar_cobranca')">Cobrança</button>
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'marcar_inadimplente')">Inadimplência</button>
@@ -657,18 +682,19 @@ function _t(msg, tipo) {
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'carencia_7')">Carência 7d</button>
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'reativar')">Reativar</button>
             <button class="ghost" onclick="executarFinanceiro(${cliente.id}, 'cancelar')">Cancelar</button>
-          </div>
+          </div>` : ""}
+          ${P.acao_onboarding ? `
           <div class="actions">
             <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'kickoff')">Kickoff</button>
             <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'treinamento')">Treinamento</button>
             <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'validacao')">Validação</button>
             <button class="ghost" onclick="executarOnboarding(${cliente.id}, 'go_live')">Go-live</button>
-          </div>
+          </div>` : ""}
           <div class="actions" style="margin-top:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);">
-            ${cliente.segmento !== "governo" ? `<button class="ghost warn-btn" onclick="resetarTrial(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}')">🎁 Resetar trial</button>` : ""}
-            <button class="ghost warn-btn" onclick="forcarLogout(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}')">🔒 Forçar logout</button>
+            ${P.acao_cliente && cliente.segmento !== "governo" ? `<button class="ghost warn-btn" onclick="resetarTrial(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}')">🎁 Resetar trial</button>` : ""}
+            ${P.acao_cliente ? `<button class="ghost warn-btn" onclick="forcarLogout(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}')">🔒 Forçar logout</button>` : ""}
             <button class="ghost" onclick="carregarAuditoria(${cliente.id});document.getElementById('auditLogList').scrollIntoView({behavior:'smooth'})">📋 Ver auditoria</button>
-            <button class="ghost danger" onclick="abrirModalExcluir(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}', '${cliente.email}')">🗑 Excluir conta</button>
+            ${P.cliente_excluir ? `<button class="ghost danger" onclick="abrirModalExcluir(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}', '${cliente.email}')">🗑 Excluir conta</button>` : ""}
           </div>
         </div>
       `).join("") || "Sem clientes para esse filtro.";
@@ -741,6 +767,8 @@ function _t(msg, tipo) {
       const data = await response.json();
       const readiness = await readinessResponse.json().catch(() => null);
       cachedData = data;
+      window._perms = data.permissoes || null;
+      aplicarRBAC(data.permissoes || {}, data.seu_papel || "admin");
       const summary = data.summary || {};
       const carteiras = data.carteiras || {};
 

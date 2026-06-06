@@ -25,6 +25,43 @@ def _segmento_console(setor):
     return _SEGMENTO_CONSOLE.get(base, base)
 
 
+# ── RBAC: papéis × ações sensíveis do console ───────────────────────────────
+# Fonte única de verdade. Usada na trava do backend E para montar a visão.
+ACAO_PAPEIS = {
+    "cliente_editar":  {"admin", "suporte"},
+    "cliente_excluir": {"admin"},                      # exclusão: só admin
+    "cliente_trial":   {"admin", "suporte"},
+    "cliente_logout":  {"admin", "suporte"},
+    "financeiro_acao": {"admin", "financeiro"},
+    "onboarding_acao": {"admin", "suporte"},
+    "exportar":        {"admin", "financeiro", "suporte"},
+    "operadores":      {"admin"},
+}
+
+
+def dono_autorizado(dono, acao):
+    """Trava de backend: o papel do dono pode executar a ação?"""
+    papel = getattr(dono, "papel", "admin") or "admin"
+    return papel in ACAO_PAPEIS.get(acao, {"admin"})
+
+
+def permissoes_dono(papel):
+    """Mapa de permissões resolvido para o frontend montar a visão (RBAC)."""
+    papel = papel or "admin"
+    return {
+        "papel": papel,
+        "somente_leitura": papel == "leitura",
+        "acao_cliente": papel in {"admin", "suporte"},
+        "cliente_excluir": papel == "admin",
+        "acao_financeiro": papel in {"admin", "financeiro"},
+        "acao_onboarding": papel in {"admin", "suporte"},
+        "exportar": papel in {"admin", "financeiro", "suporte"},
+        "ver_financeiro": papel != "suporte",      # Suporte não vê financeiro
+        "ver_operadores": papel == "admin",        # Operadores só para admin
+        "gerenciar_operadores": papel == "admin",
+    }
+
+
 def status_contrato(empresa, agora):
     if not empresa.ativo:
         if empresa.data_expiracao and empresa.data_expiracao < agora:
@@ -595,6 +632,8 @@ def build_owner_resumo_payload(dono):
 
     return {
         "owner": dono.nome,
+        "seu_papel": getattr(dono, "papel", "admin"),
+        "permissoes": permissoes_dono(getattr(dono, "papel", "admin")),
         "summary": {
             "clientes_total": total_empresas,
             "clientes_ativos": total_clientes_ativos,

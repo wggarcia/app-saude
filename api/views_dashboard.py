@@ -28,6 +28,7 @@ from .access_control import (
 from .services.auth_session import dono_autenticado_from_request, empresa_autenticada_from_request
 from .services.dashboard_core import (
     build_owner_resumo_payload,
+    dono_autorizado,
     dashboard_return_url,
     dashboard_url_por_setor,
     onboarding_eventos,
@@ -1180,6 +1181,8 @@ def api_dono_atualizar_cliente(request):
     dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
     if not dono:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not dono_autorizado(dono, "cliente_editar"):
+        return JsonResponse({"erro": "seu papel não permite editar clientes"}, status=403)
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
 
@@ -1246,6 +1249,8 @@ def api_dono_financeiro_acao(request):
     dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
     if not dono:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not dono_autorizado(dono, "financeiro_acao"):
+        return JsonResponse({"erro": "seu papel não permite ações financeiras"}, status=403)
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
 
@@ -1394,6 +1399,8 @@ def api_dono_onboarding_acao(request):
     dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
     if not dono:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not dono_autorizado(dono, "onboarding_acao"):
+        return JsonResponse({"erro": "seu papel não permite ações de onboarding"}, status=403)
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
 
@@ -1448,6 +1455,8 @@ def api_dono_exportar(request):
     dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
     if not dono:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not dono_autorizado(dono, "exportar"):
+        return JsonResponse({"erro": "seu papel não permite exportar dados"}, status=403)
 
     tipo = (request.GET.get("tipo") or "clientes").strip()
     formato = (request.GET.get("formato") or "csv").strip()
@@ -1516,6 +1525,8 @@ def api_dono_excluir_cliente(request):
     dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
     if not dono:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not dono_autorizado(dono, "cliente_excluir"):
+        return JsonResponse({"erro": "apenas administradores podem excluir contas"}, status=403)
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
 
@@ -1570,6 +1581,8 @@ def api_dono_reset_trial(request):
     dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
     if not dono:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not dono_autorizado(dono, "cliente_trial"):
+        return JsonResponse({"erro": "seu papel não permite resetar trials"}, status=403)
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
 
@@ -1619,6 +1632,8 @@ def api_dono_forcar_logout(request):
     dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
     if not dono:
         return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not dono_autorizado(dono, "cliente_logout"):
+        return JsonResponse({"erro": "seu papel não permite forçar logout"}, status=403)
     if request.method != "POST":
         return JsonResponse({"erro": "use POST"}, status=405)
 
