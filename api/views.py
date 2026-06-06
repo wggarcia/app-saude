@@ -3388,6 +3388,15 @@ def simular_focos_epidemicos(request):
             ))
 
     RegistroSintoma.objects.bulk_create(registros)
+
+    # Re-geocodifica usando o fallback local melhorado (sem depender de Nominatim)
+    from api.utils_geo import _fallback_local as _geo
+    for r in RegistroSintoma.objects.filter(empresa=emp, latitude__isnull=False, longitude__isnull=False):
+        g = _geo(r.latitude, r.longitude)
+        if r.bairro != g["bairro"] or r.cidade != g["cidade"] or r.estado != g["estado"]:
+            r.bairro = g["bairro"]; r.cidade = g["cidade"]; r.estado = g["estado"]
+            r.save(update_fields=["bairro", "cidade", "estado"])
+
     _clr()
 
     total = RegistroSintoma.objects.filter(empresa=emp).count()
@@ -3399,6 +3408,29 @@ def simular_focos_epidemicos(request):
         "total_focos": focos_count,
         "criados": len(registros),
     })
+
+
+def regeocodificar_focos(request):
+    """Reprocessa cidade/bairro/estado de todos os registros públicos. Requer sessão."""
+    empresa_req = getattr(request, "empresa", None)
+    if not empresa_req:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    from api.views import _empresa_app_publico
+    from api.utils_geo import _fallback_local as _geo
+    from api.epidemiologia import clear_panorama_cache as _clr
+    emp = _empresa_app_publico()
+    qs = RegistroSintoma.objects.filter(empresa=emp, latitude__isnull=False, longitude__isnull=False)
+    atualizados = 0
+    for r in qs:
+        g = _geo(r.latitude, r.longitude)
+        if r.bairro != g["bairro"] or r.cidade != g["cidade"] or r.estado != g["estado"]:
+            r.bairro = g["bairro"]; r.cidade = g["cidade"]; r.estado = g["estado"]
+            r.save(update_fields=["bairro", "cidade", "estado"])
+            atualizados += 1
+    _clr()
+    total = qs.count()
+    focos = qs.values("cidade","bairro","estado").distinct().count()
+    return JsonResponse({"ok": True, "total": total, "focos": focos, "atualizados": atualizados})
 
 
 def insights_nacional(request):
