@@ -3273,10 +3273,10 @@ def simular_focos_epidemicos(request):
     from django.utils import timezone as _tz
     from api.epidemiologia import clear_panorama_cache as _clr
 
-    chave = request.headers.get("X-Simula-Key", "")
-    from django.conf import settings as _s
-    if chave != _s.SECRET_KEY[:16]:
-        return JsonResponse({"erro": "não autorizado"}, status=403)
+    # Requer sessão autenticada (empresa logada)
+    empresa_req = getattr(request, "empresa", None)
+    if not empresa_req:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
 
     try:
         body = json.loads(request.body or "{}")
