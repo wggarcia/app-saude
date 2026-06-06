@@ -3261,6 +3261,146 @@ def limpar_casos(request):
     return JsonResponse({"apagados": total})
 
 
+def simular_focos_epidemicos(request):
+    """
+    Cria dados de simulação epidemiológica reais no banco de produção.
+    Fases: 1=50 casos/10 focos, 2=~700/46 focos, 3=~5000/46 focos
+    Uso: POST /api/simular-focos  body: {"fase": 1, "limpar": true}
+    Protegido: requer header X-Simula-Key igual a settings.SECRET_KEY[:16]
+    """
+    import random as _rnd
+    from datetime import timedelta as _td
+    from django.utils import timezone as _tz
+    from api.epidemiologia import clear_panorama_cache as _clr
+
+    chave = request.headers.get("X-Simula-Key", "")
+    from django.conf import settings as _s
+    if chave != _s.SECRET_KEY[:16]:
+        return JsonResponse({"erro": "não autorizado"}, status=403)
+
+    try:
+        body = json.loads(request.body or "{}")
+    except Exception:
+        body = {}
+
+    fase = int(body.get("fase", 1))
+    limpar = bool(body.get("limpar", False))
+
+    emp = _empresa_app_publico()
+    if limpar:
+        RegistroSintoma.objects.filter(empresa=emp).delete()
+
+    now = _tz.now()
+
+    SINTOMAS = {
+        "Dengue":         {"febre":True,"dor_corpo":True,"dor_cabeca":True,"cansaco":True,"vomito_nausea":True},
+        "Chikungunya":    {"febre":True,"dor_articular":True,"exantema":True,"dor_corpo":True,"cansaco":True},
+        "Zika":           {"exantema":True,"conjuntivite":True,"febre":True,"dor_articular":True},
+        "COVID-19":       {"febre":True,"tosse":True,"falta_ar":True,"perda_olfato_paladar":True,"cansaco":True},
+        "Gripe":          {"febre":True,"tosse":True,"dor_corpo":True,"dor_cabeca":True,"cansaco":True},
+        "Malária":        {"febre":True,"calafrios":True,"cansaco":True,"dor_corpo":True},
+        "Resfriado Viral":{"coriza":True,"dor_garganta":True,"tosse":True},
+    }
+
+    # Todos os focos do Brasil — RJ com múltiplos municípios e bairros
+    TODOS_FOCOS = [
+        # ── RIO DE JANEIRO ──────────────────────────────────────────────
+        {"b":"Copacabana",       "c":"Rio de Janeiro","e":"Rio de Janeiro","lat":-22.9711,"lng":-43.1835,"d":"Dengue"},
+        {"b":"Icaraí",           "c":"Niterói",       "e":"Rio de Janeiro","lat":-22.8993,"lng":-43.1163,"d":"Dengue"},
+        {"b":"Tijuca",           "c":"Rio de Janeiro","e":"Rio de Janeiro","lat":-22.9218,"lng":-43.2358,"d":"Gripe"},
+        {"b":"Botafogo",         "c":"Rio de Janeiro","e":"Rio de Janeiro","lat":-22.9519,"lng":-43.1869,"d":"Dengue"},
+        {"b":"Madureira",        "c":"Rio de Janeiro","e":"Rio de Janeiro","lat":-22.8762,"lng":-43.3340,"d":"Dengue"},
+        {"b":"Barra da Tijuca",  "c":"Rio de Janeiro","e":"Rio de Janeiro","lat":-22.9999,"lng":-43.3645,"d":"Gripe"},
+        {"b":"Leblon",           "c":"Rio de Janeiro","e":"Rio de Janeiro","lat":-22.9842,"lng":-43.2247,"d":"COVID-19"},
+        {"b":"Méier",            "c":"Rio de Janeiro","e":"Rio de Janeiro","lat":-22.8981,"lng":-43.2797,"d":"Dengue"},
+        {"b":"Centro",           "c":"Nova Iguaçu",   "e":"Rio de Janeiro","lat":-22.7596,"lng":-43.4505,"d":"Dengue"},
+        {"b":"Centro",           "c":"Duque de Caxias","e":"Rio de Janeiro","lat":-22.7853,"lng":-43.3115,"d":"Dengue"},
+        {"b":"Centro",           "c":"São Gonçalo",   "e":"Rio de Janeiro","lat":-22.8267,"lng":-43.0539,"d":"Gripe"},
+        {"b":"Centro",           "c":"Campos dos Goytacazes","e":"Rio de Janeiro","lat":-21.7542,"lng":-41.3244,"d":"Dengue"},
+        {"b":"Centro",           "c":"Petrópolis",    "e":"Rio de Janeiro","lat":-22.5043,"lng":-43.1820,"d":"Resfriado Viral"},
+        {"b":"Centro",           "c":"Volta Redonda", "e":"Rio de Janeiro","lat":-22.5233,"lng":-44.1044,"d":"Resfriado Viral"},
+        {"b":"Centro",           "c":"Angra dos Reis","e":"Rio de Janeiro","lat":-22.9682,"lng":-44.3178,"d":"Chikungunya"},
+        # ── SÃO PAULO ───────────────────────────────────────────────────
+        {"b":"Pinheiros",        "c":"São Paulo",     "e":"São Paulo",     "lat":-23.5629,"lng":-46.6898,"d":"Gripe"},
+        {"b":"Santana",          "c":"São Paulo",     "e":"São Paulo",     "lat":-23.4948,"lng":-46.6387,"d":"Gripe"},
+        {"b":"Centro",           "c":"Campinas",      "e":"São Paulo",     "lat":-22.9058,"lng":-47.0609,"d":"COVID-19"},
+        {"b":"Centro",           "c":"Ribeirão Preto","e":"São Paulo",     "lat":-21.1775,"lng":-47.8103,"d":"Dengue"},
+        {"b":"Centro",           "c":"São José dos Campos","e":"São Paulo","lat":-23.1896,"lng":-45.8841,"d":"COVID-19"},
+        # ── MINAS GERAIS ────────────────────────────────────────────────
+        {"b":"Savassi",          "c":"Belo Horizonte","e":"Minas Gerais",  "lat":-19.9385,"lng":-43.9385,"d":"Dengue"},
+        {"b":"Centro",           "c":"Uberlândia",    "e":"Minas Gerais",  "lat":-18.9186,"lng":-48.2772,"d":"Gripe"},
+        # ── NORDESTE ────────────────────────────────────────────────────
+        {"b":"Boa Viagem",       "c":"Recife",        "e":"Pernambuco",    "lat":-8.1167,"lng":-34.8993,"d":"Dengue"},
+        {"b":"Aldeota",          "c":"Fortaleza",     "e":"Ceará",         "lat":-3.7327,"lng":-38.5024,"d":"Chikungunya"},
+        {"b":"Pelourinho",       "c":"Salvador",      "e":"Bahia",         "lat":-12.9718,"lng":-38.5102,"d":"Dengue"},
+        {"b":"Centro",           "c":"Maceió",        "e":"Alagoas",       "lat":-9.6658,"lng":-35.7350,"d":"Dengue"},
+        {"b":"Centro",           "c":"João Pessoa",   "e":"Paraíba",       "lat":-7.1150,"lng":-34.8633,"d":"Zika"},
+        {"b":"Centro",           "c":"Natal",         "e":"Rio Grande do Norte","lat":-5.7945,"lng":-35.2110,"d":"Dengue"},
+        {"b":"Centro",           "c":"São Luís",      "e":"Maranhão",      "lat":-2.5283,"lng":-44.3068,"d":"Dengue"},
+        {"b":"Centro",           "c":"Teresina",      "e":"Piauí",         "lat":-5.0892,"lng":-42.8019,"d":"Dengue"},
+        # ── NORTE ───────────────────────────────────────────────────────
+        {"b":"Centro",           "c":"Manaus",        "e":"Amazonas",      "lat":-3.1190,"lng":-60.0217,"d":"Malária"},
+        {"b":"Centro",           "c":"Belém",         "e":"Pará",          "lat":-1.4558,"lng":-48.4902,"d":"Dengue"},
+        {"b":"Centro",           "c":"Porto Velho",   "e":"Rondônia",      "lat":-8.7612,"lng":-63.9004,"d":"Malária"},
+        # ── CENTRO-OESTE ────────────────────────────────────────────────
+        {"b":"Asa Sul",          "c":"Brasília",      "e":"Distrito Federal","lat":-15.7949,"lng":-47.8825,"d":"Gripe"},
+        {"b":"Centro",           "c":"Goiânia",       "e":"Goiás",         "lat":-16.6869,"lng":-49.2648,"d":"Dengue"},
+        {"b":"Centro",           "c":"Campo Grande",  "e":"Mato Grosso do Sul","lat":-20.4428,"lng":-54.6460,"d":"Dengue"},
+        # ── SUL ─────────────────────────────────────────────────────────
+        {"b":"Centro",           "c":"Curitiba",      "e":"Paraná",        "lat":-25.4284,"lng":-49.2733,"d":"Gripe"},
+        {"b":"Floresta",         "c":"Porto Alegre",  "e":"Rio Grande do Sul","lat":-30.0346,"lng":-51.2177,"d":"Gripe"},
+        {"b":"Centro",           "c":"Florianópolis", "e":"Santa Catarina","lat":-27.5954,"lng":-48.5480,"d":"COVID-19"},
+    ]
+
+    # Quantidade por foco dependendo da fase
+    CASOS_FASE = {1: 5, 2: 50, 3: 130}
+    qtd_por_foco = CASOS_FASE.get(fase, 5)
+    # Fase 1: apenas 10 primeiros focos
+    focos_usar = TODOS_FOCOS if fase >= 2 else TODOS_FOCOS[:10]
+
+    registros = []
+    for f in focos_usar:
+        sint = SINTOMAS.get(f["d"], {})
+        for _ in range(qtd_por_foco):
+            registros.append(RegistroSintoma(
+                empresa=emp,
+                latitude=f["lat"] + _rnd.uniform(-0.01, 0.01),
+                longitude=f["lng"] + _rnd.uniform(-0.01, 0.01),
+                cidade=f["c"], bairro=f["b"], estado=f["e"], pais="Brasil",
+                grupo=f["d"],
+                febre=sint.get("febre", False),
+                tosse=sint.get("tosse", False),
+                dor_corpo=sint.get("dor_corpo", False),
+                cansaco=sint.get("cansaco", False),
+                falta_ar=sint.get("falta_ar", False),
+                dor_cabeca=sint.get("dor_cabeca", False),
+                dor_articular=sint.get("dor_articular", False),
+                exantema=sint.get("exantema", False),
+                vomito_nausea=sint.get("vomito_nausea", False),
+                calafrios=sint.get("calafrios", False),
+                conjuntivite=sint.get("conjuntivite", False),
+                perda_olfato_paladar=sint.get("perda_olfato_paladar", False),
+                coriza=sint.get("coriza", False),
+                dor_garganta=sint.get("dor_garganta", False),
+                confianca=1.0,
+                origem_dado="cidadao",
+                data_registro=now - _td(hours=_rnd.uniform(0, 6)),
+            ))
+
+    RegistroSintoma.objects.bulk_create(registros)
+    _clr()
+
+    total = RegistroSintoma.objects.filter(empresa=emp).count()
+    focos_count = RegistroSintoma.objects.filter(empresa=emp).values("cidade","bairro","estado").distinct().count()
+    return JsonResponse({
+        "ok": True,
+        "fase": fase,
+        "total_casos": total,
+        "total_focos": focos_count,
+        "criados": len(registros),
+    })
+
+
 def insights_nacional(request):
 
     empresa = getattr(request, "empresa", None)

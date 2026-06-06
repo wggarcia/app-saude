@@ -19,7 +19,7 @@ from api.views import (
     painel,
     diagnostico_ia, analisar_audio,
     resumo_doencas, diagnostico_ia_avancado,
-    limpar_casos, mapa_casos,
+    limpar_casos, mapa_casos, simular_focos_epidemicos,
     insights_nacional,
     tela_cadastro, tela_login_empresa, tela_login_governo,
     registrar_sintoma_publico, app_resumo_publico, app_radar_local, app_mapa_publico, app_alertas_publicos, registrar_push_publico,
@@ -1740,6 +1740,7 @@ urlpatterns = [
 
     path('api/limpar-casos', limpar_casos),
     path('api/mapa-casos', mapa_casos),
+    path('api/simular-focos', simular_focos_epidemicos),
 
     # 🔥 INSIGHTS
     path('api/insights-nacional', insights_nacional),
