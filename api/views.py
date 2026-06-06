@@ -3420,33 +3420,63 @@ def simular_focos_epidemicos(request):
 
 @csrf_exempt
 def regeocodificar_focos(request):
-    """Reprocessa cidade/bairro/estado de todos os registros públicos. Aceita GET ou POST. Requer sessão."""
+    """
+    Reprocessa cidade/bairro/estado de TODOS os registros do app público,
+    aplicando o geocodificador de referência (100+ pontos do Brasil).
+    Não-destrutivo: apenas atualiza os rótulos territoriais.
+
+    Corrige o problema dos registros antigos rotulados genericamente como
+    "Centro, Rio de Janeiro" cujo lat/lng real é Copacabana/Tijuca/Niterói etc.,
+    fazendo o foco agregado deixar de cair na Baía de Guanabara.
+
+    Aceita GET ou POST. Requer sessão autenticada (bypass de plano no middleware).
+    """
     empresa_req = getattr(request, "empresa", None)
     if not empresa_req:
         return JsonResponse({"erro": "não autenticado"}, status=401)
-    if request.method not in ("GET", "POST"):
-        return JsonResponse({"erro": "método inválido"}, status=405)
+
     from api.utils_geo import _fallback_local as _geo
-    from api.epidemiologia import clear_panorama_cache as _clr
-    emp = _empresa_app_publico()
-    # Define RLS para a empresa pública antes de consultar
-    try:
-        from api.middleware import _rls_set_empresa
-        _rls_set_empresa(emp.id)
-    except Exception:
-        pass
-    qs = RegistroSintoma.objects.filter(empresa=emp, latitude__isnull=False, longitude__isnull=False)
+    from api.epidemiologia import (
+        clear_panorama_cache as _clr,
+        _scope_public_population_queryset as _scope,
+    )
+
+    # Usa EXATAMENTE o mesmo caminho de leitura do /api/epidemiologia
+    # (define RLS para a empresa pública e filtra por ela) — caminho comprovado.
+    qs = _scope(
+        RegistroSintoma.objects.filter(
+            latitude__isnull=False, longitude__isnull=False
+        )
+    )
+
     atualizados = 0
-    for r in qs:
+    amostra = []
+    for r in qs.iterator():
         g = _geo(r.latitude, r.longitude)
-        if r.bairro != g["bairro"] or r.cidade != g["cidade"] or r.estado != g["estado"]:
-            r.bairro = g["bairro"]; r.cidade = g["cidade"]; r.estado = g["estado"]
-            r.save(update_fields=["bairro", "cidade", "estado"])
+        if (r.bairro != g["bairro"] or r.cidade != g["cidade"]
+                or r.estado != g["estado"]):
+            if len(amostra) < 12:
+                amostra.append(
+                    f"{r.bairro or '?'}/{r.cidade or '?'} -> "
+                    f"{g['bairro']}/{g['cidade']}"
+                )
+            r.bairro = g["bairro"]
+            r.cidade = g["cidade"]
+            r.estado = g["estado"]
+            r.pais = g.get("pais", "Brasil")
+            r.save(update_fields=["bairro", "cidade", "estado", "pais"])
             atualizados += 1
+
     _clr()
     total = qs.count()
-    focos = qs.values("cidade","bairro","estado").distinct().count()
-    return JsonResponse({"ok": True, "total": total, "focos": focos, "atualizados": atualizados})
+    focos = qs.values("cidade", "bairro", "estado").distinct().count()
+    return JsonResponse({
+        "ok": True,
+        "total": total,
+        "focos": focos,
+        "atualizados": atualizados,
+        "amostra": amostra,
+    })
 
 
 def insights_nacional(request):
