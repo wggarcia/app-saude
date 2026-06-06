@@ -3419,10 +3419,15 @@ def regeocodificar_focos(request):
         return JsonResponse({"erro": "não autenticado"}, status=401)
     if request.method not in ("GET", "POST"):
         return JsonResponse({"erro": "método inválido"}, status=405)
-    from api.views import _empresa_app_publico
     from api.utils_geo import _fallback_local as _geo
     from api.epidemiologia import clear_panorama_cache as _clr
     emp = _empresa_app_publico()
+    # Define RLS para a empresa pública antes de consultar
+    try:
+        from api.middleware import _rls_set_empresa
+        _rls_set_empresa(emp.id)
+    except Exception:
+        pass
     qs = RegistroSintoma.objects.filter(empresa=emp, latitude__isnull=False, longitude__isnull=False)
     atualizados = 0
     for r in qs:
