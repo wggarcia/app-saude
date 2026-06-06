@@ -47,6 +47,28 @@ def _provisionar_dono_por_ambiente(email, senha):
     )
 
 
+def _ressincronizar_senha_owner(dono, email, senha):
+    """
+    Ressincroniza a senha do dono com a variável de ambiente, em runtime.
+
+    Só atua quando o e-mail E a senha digitados batem EXATAMENTE com
+    SOLUSCRT_BOOTSTRAP_OWNER_EMAIL / SOLUSCRT_BOOTSTRAP_OWNER_PASSWORD — ou seja,
+    quem aciona já provou conhecer o segredo configurado no Render. Resolve o
+    caso em que o reset do preDeploy gravou em conexão/banco diferente do que o
+    login lê em runtime. Retorna True se ressincronizou (login pode prosseguir).
+    """
+    env_email = os.environ.get("SOLUSCRT_BOOTSTRAP_OWNER_EMAIL", "").strip().lower()
+    env_senha = os.environ.get("SOLUSCRT_BOOTSTRAP_OWNER_PASSWORD", "").strip()
+    if not env_email or not env_senha:
+        return False
+    if (email or "").strip().lower() != env_email or (senha or "") != env_senha:
+        return False
+    dono.senha = make_password(senha)
+    dono.ativo = True
+    dono.save(update_fields=["senha", "ativo"])
+    return True
+
+
 
 def _destino_ti_empresa(empresa):
     if empresa.tipo_conta == Empresa.TIPO_GOVERNO:
@@ -273,7 +295,12 @@ def login_dono_saas(request):
         return JsonResponse({"status": "erro", "mensagem": "Credencial operacional não encontrada"}, status=404)
 
     if not check_password(senha, dono.senha):
-        return JsonResponse({"status": "erro", "mensagem": "Senha incorreta"}, status=401)
+        # Auto-cura: se as credenciais batem com as variáveis de ambiente do
+        # dono (segredo do Render), ressincroniza a senha gravada NO BANCO DE
+        # RUNTIME. Corrige a divergência quando o bootstrap (preDeploy, papel
+        # owner) gravou em conexão diferente da que o login usa (papel app).
+        if not _ressincronizar_senha_owner(dono, email or "", senha or ""):
+            return JsonResponse({"status": "erro", "mensagem": "Senha incorreta"}, status=401)
 
     token = criar_owner_token(dono)
 
