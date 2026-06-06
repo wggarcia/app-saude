@@ -15,6 +15,16 @@ from api.models import (
 from api.planos import PACOTES_SAAS, detalhes_pacote, normalizar_ciclo, normalizar_codigo_pacote
 
 
+# "rede" (rede hospitalar / multiunidades) não é um segmento próprio no console:
+# é consolidado em Hospital. Mapa setor-do-pacote → segmento do console (5 reais).
+_SEGMENTO_CONSOLE = {"rede": "hospital"}
+
+
+def _segmento_console(setor):
+    base = setor or "empresa"
+    return _SEGMENTO_CONSOLE.get(base, base)
+
+
 def status_contrato(empresa, agora):
     if not empresa.ativo:
         if empresa.data_expiracao and empresa.data_expiracao < agora:
@@ -393,13 +403,15 @@ def build_owner_resumo_payload(dono):
 
     # ── Carteira por SEGMENTO real (setor do pacote): empresa(SST)/farmacia/
     # hospital/governo/rede/plano_saude — visão que faltava no console.
+    # 5 segmentos reais da SolusCRT. "rede" NÃO é um segmento próprio — é a
+    # camada multiunidades (rede hospitalar / rede de farmácias) acessada de
+    # dentro de Hospital/Farmácia; por isso é consolidada em Hospital aqui.
     SEGMENTO_META = {
         "empresa":     {"label": "Saúde Ocupacional (SST)", "emoji": "🦺", "ordem": 1},
         "farmacia":    {"label": "Farmácia",                "emoji": "💊", "ordem": 2},
         "hospital":    {"label": "Hospital",                "emoji": "🏥", "ordem": 3},
         "plano_saude": {"label": "Plano de Saúde",          "emoji": "🩺", "ordem": 4},
         "governo":     {"label": "Governo / Vigilância",    "emoji": "🏛️", "ordem": 5},
-        "rede":        {"label": "Rede / Multiunidades",    "emoji": "🌐", "ordem": 6},
     }
     seg_carteiras = {
         codigo: {
@@ -461,8 +473,9 @@ def build_owner_resumo_payload(dono):
         carteira["faturamento_mensal_estimado"] += faturamento_mensal_equivalente if empresa.ativo else 0
         carteira["registros_24h"] += empresa_registros_24h
 
-        # Carteira por segmento real (setor do pacote)
-        setor_real = pacote.get("setor") or "empresa"
+        # Carteira por segmento real (setor do pacote).
+        # "rede" é a camada multiunidades — consolida em Hospital.
+        setor_real = _segmento_console(pacote.get("setor"))
         seg = seg_carteiras.get(setor_real)
         if seg is not None:
             seg["clientes"] += 1
@@ -515,7 +528,7 @@ def build_owner_resumo_payload(dono):
             "ativo": empresa.ativo,
             "pacote_codigo": pacote_codigo_normalizado,
             "pacote_label": pacote["label"],
-            "setor_pacote": pacote.get("setor"),
+            "setor_pacote": _segmento_console(pacote.get("setor")),
             "ciclos_permitidos": pacote.get("ciclos", ["mensal", "anual"]),
             "plano": plano_normalizado,
             "max_usuarios": empresa.max_usuarios,
@@ -688,7 +701,7 @@ def build_owner_financeiro_real(dono=None):
         mrr_eq = (pacote["anual"] / 12) if plano == "anual" else pacote["mensal"]
         mrr_contratado += mrr_eq
         arr_contratado += pacote["anual"] if plano == "anual" else pacote["mensal"] * 12
-        setor = pacote.get("setor") or "empresa"
+        setor = _segmento_console(pacote.get("setor"))
         mrr_por_segmento[setor] = mrr_por_segmento.get(setor, 0.0) + mrr_eq
 
     clientes_ativos = len(ativas)
@@ -739,7 +752,7 @@ def build_owner_financeiro_real(dono=None):
 
     SEG_LABEL = {
         "empresa": "SST", "farmacia": "Farmácia", "hospital": "Hospital",
-        "plano_saude": "Plano de Saúde", "governo": "Governo", "rede": "Rede",
+        "plano_saude": "Plano de Saúde", "governo": "Governo",
     }
     mrr_segmentos = sorted(
         ({"setor": k, "label": SEG_LABEL.get(k, k), "mrr": round(v, 2)} for k, v in mrr_por_segmento.items()),
