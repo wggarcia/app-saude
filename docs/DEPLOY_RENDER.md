@@ -35,12 +35,12 @@ Use o `render.yaml` versionado na raiz.
 O Blueprint ja define:
 
 - `buildCommand: ./build.sh`
-- `preDeployCommand: python manage.py migrate --noinput && python manage.py bootstrap_acessos`
+- `preDeployCommand: python manage.py migrate --noinput && python manage.py bootstrap_acessos && python manage.py sanear_producao --apply`
 - `startCommand: ./start.sh`
 - `healthCheckPath: /api/public/resumo`
 - `DATABASE_URL` conectado ao Postgres gerenciado
 
-Em producao, o deploy nao executa mais `demo_setup` nem recria dados de demonstracao. As contas demo ficam restritas a staging/homologacao.
+Em producao, o deploy nao executa mais `demo_setup` nem recria dados de demonstracao. O saneamento remove apenas residuos sintéticos explicitamente marcados e contas demo conhecidas.
 
 ## 3. Servico manual ja existente
 
@@ -51,7 +51,7 @@ Build Command:
 ./build.sh
 
 Pre-Deploy Command:
-python manage.py migrate --noinput && python manage.py bootstrap_acessos
+python manage.py migrate --noinput && python manage.py bootstrap_acessos && python manage.py sanear_producao --apply
 
 Start Command:
 ./start.sh

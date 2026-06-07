@@ -12,6 +12,7 @@ from api.models import (
     FinanceiroEventoSaaS,
     RegistroSintoma,
 )
+from api.services.public_integrity import q_registro_sintoma_sintetico
 from api.planos import PACOTES_SAAS, detalhes_pacote, normalizar_ciclo, normalizar_codigo_pacote
 
 
@@ -269,7 +270,7 @@ def _resumo_vigilancia_publica(agora):
         except Exception:
             pass
 
-        base_30d = RegistroSintoma.objects.filter(
+        base_30d = RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico()).filter(
             empresa=empresa, data_registro__gte=agora - timedelta(days=30)
         )
         casos_30d = base_30d.count()
@@ -336,7 +337,8 @@ def build_owner_resumo_payload(dono):
     usuarios_ativos_qs = EmpresaUsuario.objects.filter(ativo=True)
     dispositivos_ativos_qs = DispositivoAutorizado.objects.filter(ativo=True)
     agora = timezone.now()
-    registros_24h = RegistroSintoma.objects.filter(data_registro__gte=agora - timedelta(hours=24))
+    registros_base = RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico())
+    registros_24h = registros_base.filter(data_registro__gte=agora - timedelta(hours=24))
     eventos_financeiros_qs = FinanceiroEventoSaaS.objects.select_related("empresa")
     auditoria_qs = DonoAuditoriaAcao.objects.select_related("empresa", "dono").order_by("-criado_em")
 
@@ -348,7 +350,7 @@ def build_owner_resumo_payload(dono):
     total_dispositivos_ativos = dispositivos_ativos_qs.count()
     total_registros_24h = registros_24h.count()
     total_suspeitos_24h = registros_24h.filter(suspeito=True).count()
-    confianca_media = round(float(RegistroSintoma.objects.aggregate(media=Avg("confianca"))["media"] or 0.0), 2)
+    confianca_media = round(float(registros_base.aggregate(media=Avg("confianca"))["media"] or 0.0), 2)
 
     registros_por_empresa = {
         item["empresa_id"]: {
@@ -392,7 +394,7 @@ def build_owner_resumo_payload(dono):
 
     carga_estimada_mb_dia = round((total_registros_24h * 0.012) + (total_dispositivos_ativos * 0.004), 2)
     historico_uso_rows = (
-        RegistroSintoma.objects.filter(data_registro__gte=agora - timedelta(days=13))
+        registros_base.filter(data_registro__gte=agora - timedelta(days=13))
         .annotate(day=TruncDate("data_registro"))
         .values("day")
         .annotate(total=Count("id"))

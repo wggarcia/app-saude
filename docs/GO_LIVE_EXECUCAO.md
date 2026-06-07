@@ -21,12 +21,12 @@ SKIP_BUILD_MIGRATIONS=true PYTHON_BIN=python3 ./build.sh
 Banco Postgres: soluscrt-saude-db
 Servico web: soluscrt-saude-api
 Build Command: ./build.sh
-Pre-Deploy Command: python manage.py migrate --noinput && python manage.py bootstrap_acessos
+Pre-Deploy Command: python manage.py migrate --noinput && python manage.py bootstrap_acessos && python manage.py sanear_producao --apply
 Start Command: ./start.sh
 Health Check Path: /api/public/resumo
 ```
 
-Observacao: producao nao deve executar `demo_setup` nem expor mutacoes de demonstracao. Demonstracoes interativas ficam no ambiente de homologacao.
+Observacao: producao nao deve executar `demo_setup` nem expor mutacoes de demonstracao. O deploy executa apenas bootstrap de acessos reais e saneamento de residuos sintéticos conhecidos.
 
 3. Preencher segredos no Render usando `.env.production.example` como referencia.
 

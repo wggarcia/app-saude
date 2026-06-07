@@ -13,6 +13,10 @@ from api.utils_geo import obter_endereco
 from api.utils_auth import validar_token
 from api.models import Empresa, RegistroSintoma
 from api.epidemiologia import SYMPTOM_LABELS, _build_disease_probabilities, clear_panorama_cache
+from api.services.public_integrity import (
+    alerta_governamental_sintetico,
+    q_registro_sintoma_sintetico,
+)
 from django.db.models import Count, Avg, Q
 from django.db.models.functions import TruncDate
 from django.contrib.auth.hashers import check_password, make_password
@@ -2146,6 +2150,7 @@ def registrar_sintoma(request):
         device_id=device_id,
         confianca=confianca,
         suspeito=confianca < 0.75,
+        fonte_referencia="simulacao_publica" if simulacao_autorizada else "",
     )
 
     return JsonResponse({
@@ -2761,10 +2766,11 @@ def app_resumo_publico(request):
     _emp_pub = _empresa_app_publico()
     _set_rls(_emp_pub.id)
     agora = timezone.now()
-    ultimas_24h = RegistroSintoma.objects.filter(data_registro__gte=agora - timedelta(hours=24))
-    ultimos_7d = RegistroSintoma.objects.filter(data_registro__gte=agora - timedelta(days=7))
-    ativos_30d = RegistroSintoma.objects.filter(data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS))
-    dias_anteriores = RegistroSintoma.objects.filter(
+    base_publica = RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico())
+    ultimas_24h = base_publica.filter(data_registro__gte=agora - timedelta(hours=24))
+    ultimos_7d = base_publica.filter(data_registro__gte=agora - timedelta(days=7))
+    ativos_30d = base_publica.filter(data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS))
+    dias_anteriores = base_publica.filter(
         data_registro__gte=agora - timedelta(days=14),
         data_registro__lt=agora - timedelta(days=7),
     )
@@ -2866,13 +2872,13 @@ def app_radar_local(request):
         return JsonResponse({"erro": "cidade/estado ou latitude/longitude obrigatórios"}, status=400)
 
     agora = timezone.now()
-    atuais = RegistroSintoma.objects.filter(
+    atuais = RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico()).filter(
         cidade=cidade,
         estado=estado,
         data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS),
     )
     atuais_7d = atuais.filter(data_registro__gte=agora - timedelta(days=7))
-    anteriores = RegistroSintoma.objects.filter(
+    anteriores = RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico()).filter(
         cidade=cidade,
         estado=estado,
         data_registro__gte=agora - timedelta(days=14),
@@ -2996,7 +3002,7 @@ def app_mapa_publico(request):
     agora = timezone.now()
     janela_24h = agora - timedelta(hours=24)
     janela_48h = agora - timedelta(hours=48)
-    base = RegistroSintoma.objects.filter(
+    base = RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico()).filter(
         data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS),
         latitude__isnull=False,
         longitude__isnull=False,
@@ -3267,7 +3273,9 @@ def app_alertas_publicos(request):
             bairro=bairro,
             incluir_gerais=incluir_gerais,
         )
-        alertas_coletados.extend(list(queryset[:12]))
+        alertas_coletados.extend(
+            [alerta for alerta in queryset[:24] if not alerta_governamental_sintetico(alerta)][:12]
+        )
 
     _set_rls(_emp_pub.id)
     alertas = _dedupe_alertas_publicos(alertas_coletados)[:12]
