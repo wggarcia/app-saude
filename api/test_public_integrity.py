@@ -42,6 +42,25 @@ class PublicIntegrityTests(TestCase):
         payload = response.json()
         self.assertEqual([item["id"] for item in payload["alertas"]], [alerta_real.id])
 
+    def test_app_alertas_publicos_nao_descarta_alerta_real_com_label_de_teste_no_autor(self):
+        alerta_real = AlertaGovernamental.objects.create(
+            empresa=self.empresa_publica,
+            titulo="Alerta territorial real",
+            mensagem="Monitoramento oficial com comunicação válida.",
+            nivel="alto",
+            ativo=True,
+            status=AlertaGovernamental.STATUS_PUBLICADO,
+            protocolo="ALR-REAL-002",
+            criado_por="operacao@teste.com",
+            revisado_por="coordenacao@teste.com",
+            aprovado_por="gerencia@teste.com",
+        )
+
+        response = self.client.get("/api/public/alertas")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual([item["id"] for item in payload["alertas"]], [alerta_real.id])
+
     def test_app_resumo_publico_ignora_registro_sintetico(self):
         RegistroSintoma.objects.create(
             empresa=self.empresa_publica,
@@ -135,4 +154,3 @@ class PublicIntegrityTests(TestCase):
         self.assertFalse(AlertaGovernamental.objects.filter(protocolo="ALR-TEST-002").exists())
         self.assertFalse(RegistroSintoma.objects.filter(device_id="sim-br-001").exists())
         self.assertFalse(DispositivoAutorizado.objects.filter(device_id="demo-device-001").exists())
-

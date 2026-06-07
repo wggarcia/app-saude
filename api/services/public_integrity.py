@@ -28,9 +28,6 @@ ALERTA_SYNTHETIC_FIELDS = (
     "titulo",
     "mensagem",
     "justificativa",
-    "criado_por",
-    "revisado_por",
-    "aprovado_por",
 )
 
 REGISTRO_SYNTHETIC_SOURCE_MARKERS = (
