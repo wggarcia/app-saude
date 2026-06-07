@@ -5100,6 +5100,19 @@ class AssinaturaDocumentoSST(models.Model):
         ("assinado", "Assinado"),
         ("cancelado", "Cancelado"),
     ]
+    PAPEL_SIGNATARIO_CHOICES = [
+        ("funcionario", "Funcionário / Trabalhador"),
+        ("responsavel_tecnico", "Responsável técnico"),
+        ("representante_empresa", "Representante legal da empresa"),
+        ("sesmt_rh", "SESMT / RH"),
+        ("outro", "Outro signatário"),
+    ]
+    FINALIDADE_CHOICES = [
+        ("ciencia_trabalhador", "Ciência do trabalhador"),
+        ("validacao_tecnica", "Validação técnica"),
+        ("validacao_empresa", "Validação da empresa"),
+        ("aceite_documento", "Aceite eletrônico do documento"),
+    ]
 
     empresa              = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="assinaturas_sst")
     funcionario          = models.ForeignKey("FuncionarioSST", on_delete=models.SET_NULL, null=True, blank=True, related_name="assinaturas_sst")
@@ -5113,6 +5126,8 @@ class AssinaturaDocumentoSST(models.Model):
     signatario_nome      = models.CharField(max_length=180, blank=True, default="")
     signatario_email     = models.EmailField(blank=True, default="")
     signatario_cpf       = models.CharField(max_length=20, blank=True, default="")
+    papel_signatario     = models.CharField(max_length=40, choices=PAPEL_SIGNATARIO_CHOICES, blank=True, default="")
+    finalidade_assinatura = models.CharField(max_length=40, choices=FINALIDADE_CHOICES, blank=True, default="")
     solicitado_por       = models.CharField(max_length=180, blank=True, default="")
     ip_solicitacao       = models.GenericIPAddressField(null=True, blank=True)
     ip_assinatura        = models.GenericIPAddressField(null=True, blank=True)

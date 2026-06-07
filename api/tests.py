@@ -3416,7 +3416,7 @@ class GestaoApiKeyTests(TestCase):
         self.assertIn("vs_setor_pct", body)
 
 
-class AssinaturaSSTTests(TestCase):
+class AssinaturaSSTApiTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.empresa = Empresa.objects.create(
@@ -3473,6 +3473,40 @@ class AssinaturaSSTTests(TestCase):
         self.assertEqual(body["assinatura"]["status"], "pendente")
         self.assertIn("link_assinatura", body["assinatura"])
 
+    def test_solicitar_assinatura_aso_define_ciencia_do_trabalhador(self):
+        resp = self._post_json("/api/sst/assinaturas", {
+            "tipo_documento": "aso",
+            "objeto_id": self.aso.id,
+        })
+        self.assertEqual(resp.status_code, 201)
+        assinatura = resp.json()["assinatura"]
+        self.assertEqual(assinatura["papel_signatario"], "funcionario")
+        self.assertEqual(assinatura["finalidade_assinatura"], "ciencia_trabalhador")
+        self.assertEqual(assinatura["signatario_nome"], "João da Silva")
+        self.assertEqual(assinatura["signatario_cpf"], "12345678900")
+        self.assertIn("trabalhador", assinatura["quem_deve_assinar"].lower())
+        self.assertIn("não substitui", assinatura["orientacao_assinatura"].lower())
+
+    def test_solicitar_assinatura_documento_sst_define_validacao_tecnica(self):
+        from .models import DocumentoSST
+
+        documento = DocumentoSST.objects.create(
+            empresa=self.empresa,
+            tipo="PGR",
+            titulo="PGR Unidade Operacional",
+            responsavel_tecnico="Eng. Segurança",
+            registro_profissional="CREA-123",
+        )
+        resp = self._post_json("/api/sst/assinaturas", {
+            "tipo_documento": "documento_sst",
+            "objeto_id": documento.id,
+        })
+        self.assertEqual(resp.status_code, 201)
+        assinatura = resp.json()["assinatura"]
+        self.assertEqual(assinatura["papel_signatario"], "responsavel_tecnico")
+        self.assertEqual(assinatura["finalidade_assinatura"], "validacao_tecnica")
+        self.assertIn("responsável técnico", assinatura["quem_deve_assinar"].lower())
+
     def test_listar_assinaturas_retorna_lista(self):
         self._post_json("/api/sst/assinaturas", {
             "tipo_documento": "aso",
@@ -3519,9 +3553,17 @@ class AssinaturaSSTTests(TestCase):
         self.assertEqual(body["funcionario"], "João da Silva")
 
     def test_assinar_sem_nome_retorna_400(self):
+        from .models import DocumentoSST
+
+        documento = DocumentoSST.objects.create(
+            empresa=self.empresa,
+            tipo="PGR",
+            titulo="PGR sem signatário",
+            responsavel_tecnico="Eng. Segurança",
+        )
         resp = self._post_json("/api/sst/assinaturas", {
-            "tipo_documento": "aso",
-            "objeto_id": self.aso.id,
+            "tipo_documento": "documento_sst",
+            "objeto_id": documento.id,
         })
         token = resp.json()["assinatura"]["token"]
         resp_assinar = self.client.post(
@@ -5196,7 +5238,10 @@ class AssinaturaSSTTests(TestCase):
 
         self.assertEqual(response.status_code, 201)
         token = json.loads(response.content)["assinatura"]["token"]
-        self.assertEqual(self.client.get(f"/assinatura/sst/{token}/").status_code, 200)
+        page_response = self.client.get(f"/assinatura/sst/{token}/")
+        self.assertEqual(page_response.status_code, 200)
+        self.assertContains(page_response, "Quem deve assinar")
+        self.assertContains(page_response, "Ciência do trabalhador")
 
         sign_response = self.client.post(
             f"/api/public/sst/assinaturas/{token}/assinar/",

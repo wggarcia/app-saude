@@ -20,6 +20,54 @@ from .models import (
 from .views_dashboard import _empresa_autenticada
 
 
+ASSINATURA_SST_REGRAS = {
+    "aso": {
+        "papel": "funcionario",
+        "finalidade": "ciencia_trabalhador",
+        "titulo_acao": "Ciência do trabalhador sobre ASO",
+        "quem_assina": "Funcionário / trabalhador vinculado ao ASO",
+        "orientacao": (
+            "Use este link para o trabalhador confirmar ciência e recebimento do ASO. "
+            "Isso não substitui a emissão médica do ASO nem o evento eSocial S-2220."
+        ),
+        "aceite": "Declaro que li e recebi ciência do ASO identificado nesta página.",
+    },
+    "cat": {
+        "papel": "funcionario",
+        "finalidade": "ciencia_trabalhador",
+        "titulo_acao": "Ciência do trabalhador sobre CAT",
+        "quem_assina": "Funcionário acidentado ou representante autorizado",
+        "orientacao": (
+            "Use este link para registrar ciência do trabalhador sobre a CAT. "
+            "A responsabilidade de emissão, correção e envio ao eSocial permanece com a empresa/SESMT."
+        ),
+        "aceite": "Declaro que li e recebi ciência das informações da CAT identificada nesta página.",
+    },
+    "prontuario": {
+        "papel": "funcionario",
+        "finalidade": "ciencia_trabalhador",
+        "titulo_acao": "Ciência do trabalhador sobre prontuário SST",
+        "quem_assina": "Funcionário / trabalhador do prontuário",
+        "orientacao": (
+            "Use este link para o trabalhador registrar ciência sobre o prontuário SST. "
+            "Dados médicos sigilosos devem seguir as regras de privacidade e acesso aplicáveis."
+        ),
+        "aceite": "Declaro que li e recebi ciência do prontuário SST identificado nesta página.",
+    },
+    "documento_sst": {
+        "papel": "responsavel_tecnico",
+        "finalidade": "validacao_tecnica",
+        "titulo_acao": "Validação de documento SST",
+        "quem_assina": "Responsável técnico ou representante legal autorizado",
+        "orientacao": (
+            "Use este link para validação técnica ou aceite formal de documento SST geral, "
+            "como PGR, PCMSO, LTCAT, PPP, CIPA ou laudos. Para assinatura ICP-Brasil, conecte um provedor externo."
+        ),
+        "aceite": "Declaro que li, conferi e valido o documento SST identificado nesta página.",
+    },
+}
+
+
 def _client_ip(request):
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
     if forwarded:
@@ -121,8 +169,35 @@ def _hash_payload(payload):
     return hashlib.sha256(raw).hexdigest()
 
 
+def _regra_assinatura(tipo_documento):
+    return ASSINATURA_SST_REGRAS.get(tipo_documento, {
+        "papel": "outro",
+        "finalidade": "aceite_documento",
+        "titulo_acao": "Assinatura eletrônica SST",
+        "quem_assina": "Pessoa autorizada pela empresa",
+        "orientacao": "Use este link para registrar aceite eletrônico auditável do documento SST.",
+        "aceite": "Declaro que li o documento identificado acima e confirmo minha assinatura eletrônica neste registro.",
+    })
+
+
+def _assinatura_meta(assinatura):
+    regra = _regra_assinatura(assinatura.tipo_documento)
+    papel = assinatura.papel_signatario or regra["papel"]
+    finalidade = assinatura.finalidade_assinatura or regra["finalidade"]
+    papel_label = dict(AssinaturaDocumentoSST.PAPEL_SIGNATARIO_CHOICES).get(papel, regra["quem_assina"])
+    finalidade_label = dict(AssinaturaDocumentoSST.FINALIDADE_CHOICES).get(finalidade, regra["titulo_acao"])
+    return {
+        **regra,
+        "papel": papel,
+        "papel_label": papel_label,
+        "finalidade": finalidade,
+        "finalidade_label": finalidade_label,
+    }
+
+
 def _assinatura_to_dict(assinatura, request=None):
     base_url = request.build_absolute_uri("/")[:-1] if request else ""
+    meta = _assinatura_meta(assinatura)
     return {
         "id": assinatura.id,
         "token": assinatura.token,
@@ -136,6 +211,13 @@ def _assinatura_to_dict(assinatura, request=None):
         "signatario_nome": assinatura.signatario_nome,
         "signatario_email": assinatura.signatario_email,
         "signatario_cpf": assinatura.signatario_cpf,
+        "papel_signatario": meta["papel"],
+        "papel_signatario_label": meta["papel_label"],
+        "finalidade_assinatura": meta["finalidade"],
+        "finalidade_assinatura_label": meta["finalidade_label"],
+        "quem_deve_assinar": meta["quem_assina"],
+        "orientacao_assinatura": meta["orientacao"],
+        "aceite_texto": meta["aceite"],
         "criado_em": assinatura.criado_em.strftime("%d/%m/%Y %H:%M"),
         "assinado_em": assinatura.assinado_em.strftime("%d/%m/%Y %H:%M") if assinatura.assinado_em else None,
         "expiracao_em": assinatura.expiracao_em.strftime("%d/%m/%Y %H:%M") if assinatura.expiracao_em else None,
@@ -181,16 +263,25 @@ def api_sst_assinaturas(request):
             return JsonResponse({"erro": "documento não encontrado"}, status=404)
 
         hash_documento = _hash_payload(doc["payload"])
+        regra = _regra_assinatura(tipo_documento)
+        funcionario = doc["funcionario"]
+        signatario_nome = data.get("signatario_nome", "")
+        signatario_cpf = data.get("signatario_cpf", "")
+        if regra["papel"] == "funcionario" and funcionario:
+            signatario_nome = signatario_nome or funcionario.nome
+            signatario_cpf = signatario_cpf or funcionario.cpf
         assinatura = AssinaturaDocumentoSST.objects.create(
             empresa=empresa,
-            funcionario=doc["funcionario"],
+            funcionario=funcionario,
             tipo_documento=tipo_documento,
             objeto_id=int(objeto_id),
             titulo=data.get("titulo") or doc["titulo"],
             hash_documento=hash_documento,
-            signatario_nome=data.get("signatario_nome", ""),
+            signatario_nome=signatario_nome,
             signatario_email=data.get("signatario_email", ""),
-            signatario_cpf=data.get("signatario_cpf", ""),
+            signatario_cpf=signatario_cpf,
+            papel_signatario=data.get("papel_signatario") or regra["papel"],
+            finalidade_assinatura=data.get("finalidade_assinatura") or regra["finalidade"],
             solicitado_por=data.get("solicitado_por", empresa.email or empresa.nome),
             ip_solicitacao=_client_ip(request),
             expiracao_em=timezone.now() + timedelta(days=int(data.get("validade_dias") or 15)),
@@ -214,6 +305,7 @@ def pagina_assinatura_sst(request, token):
     assinatura = AssinaturaDocumentoSST.objects.filter(token=token).select_related("empresa", "funcionario").first()
     return render(request, "assinatura_sst.html", {
         "assinatura": assinatura,
+        "meta": _assinatura_meta(assinatura) if assinatura else None,
         "modo": "assinar",
         "token": token,
     })
@@ -223,6 +315,7 @@ def pagina_validar_assinatura(request, token):
     assinatura = AssinaturaDocumentoSST.objects.filter(token=token).select_related("empresa", "funcionario").first()
     return render(request, "assinatura_sst.html", {
         "assinatura": assinatura,
+        "meta": _assinatura_meta(assinatura) if assinatura else None,
         "modo": "validar",
         "token": token,
     })

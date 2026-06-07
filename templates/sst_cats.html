@@ -342,7 +342,7 @@ function renderTabela(){
         ${isPending?`<button class="btn-row btn-esocial" onclick="transmitirS2210(${c.id},this)">📤 S-2210</button>`:''}
         ${hasXml?`<button class="btn-row btn-xml" onclick="verXml(${c.evento_id})">📄 XML</button>`:''}
         <a class="btn-row" href="/api/sst/cats/${c.id}/pdf" target="_blank">📋 PDF</a>
-        <button class="btn-row" onclick="solicitarAssinatura('cat',${c.id})">✍️ Assinar</button>
+        <button class="btn-row" onclick="solicitarAssinatura('cat',${c.id})">✍️ Ciência do trabalhador</button>
       </div></td>
     </tr>`;
   }).join("");
