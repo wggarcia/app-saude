@@ -3460,6 +3460,16 @@ class AssinaturaSSTApiTests(TestCase):
             **self.auth,
         )
 
+    def _funcionario_auth(self):
+        payload = {
+            "funcionario_id": self.funcionario.id,
+            "empresa_id": self.empresa.id,
+            "iat": int(timezone.now().timestamp()),
+            "exp": int((timezone.now() + timedelta(days=30)).timestamp()),
+        }
+        token = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
+        return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+
     def test_solicitar_assinatura_aso_retorna_201(self):
         resp = self._post_json("/api/sst/assinaturas", {
             "tipo_documento": "aso",
@@ -3486,6 +3496,39 @@ class AssinaturaSSTApiTests(TestCase):
         self.assertEqual(assinatura["signatario_cpf"], "12345678900")
         self.assertIn("trabalhador", assinatura["quem_deve_assinar"].lower())
         self.assertIn("não substitui", assinatura["orientacao_assinatura"].lower())
+
+    def test_assinatura_aso_chega_no_app_e_retorna_feedback(self):
+        resp = self._post_json("/api/sst/assinaturas", {
+            "tipo_documento": "aso",
+            "objeto_id": self.aso.id,
+        })
+        self.assertEqual(resp.status_code, 201)
+        assinatura = resp.json()["assinatura"]
+
+        notificacao = NotificacaoFuncionario.objects.get(
+            funcionario=self.funcionario,
+            tipo=NotificacaoFuncionario.TIPO_ASSINATURA_SST,
+            referencia_id=assinatura["id"],
+        )
+        self.assertFalse(notificacao.lida)
+
+        resp_app = self.client.get("/api/funcionario/notificacoes", **self._funcionario_auth())
+        self.assertEqual(resp_app.status_code, 200)
+        item = resp_app.json()["notificacoes"][0]
+        self.assertEqual(item["tipo"], NotificacaoFuncionario.TIPO_ASSINATURA_SST)
+        self.assertEqual(item["acao_tipo"], "assinatura_sst")
+        self.assertEqual(item["acao_label"], "Assinar pelo app")
+        self.assertEqual(item["assinatura_status"], "pendente")
+        self.assertIn("/assinatura/sst/", item["acao_url"])
+
+        resp_assinar = self.client.post(
+            f"/api/public/sst/assinar/{assinatura['token']}",
+            data=json.dumps({"aceite": True, "nome": "João da Silva", "cpf": "12345678900"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp_assinar.status_code, 200)
+        notificacao.refresh_from_db()
+        self.assertTrue(notificacao.lida)
 
     def test_solicitar_assinatura_documento_sst_define_validacao_tecnica(self):
         from .models import DocumentoSST

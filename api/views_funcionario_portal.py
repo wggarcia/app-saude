@@ -16,7 +16,8 @@ from django.utils import timezone
 
 from .models import (
     FuncionarioSST, ASOOcupacional, TreinamentoNR, EntregaEPI,
-    CredencialAppFuncionario, NotificacaoFuncionario, SolicitacaoExame,
+    AssinaturaDocumentoSST, CredencialAppFuncionario, NotificacaoFuncionario,
+    SolicitacaoExame,
 )
 from .middleware import _rls_set_empresa
 from .services.employee_notifications import solicitacao_portal_dict
@@ -313,6 +314,36 @@ def funcionario_notificacoes(request):
     )
     for i in items:
         i["criado_em"] = i["criado_em"].strftime("%d/%m/%Y %H:%M")
+
+    assinatura_ids = [
+        i["referencia_id"]
+        for i in items
+        if i["tipo"] == NotificacaoFuncionario.TIPO_ASSINATURA_SST and i["referencia_id"]
+    ]
+    assinaturas = {}
+    if assinatura_ids:
+        assinaturas = AssinaturaDocumentoSST.objects.filter(
+            funcionario=func,
+            id__in=assinatura_ids,
+        ).in_bulk()
+    base_url = request.build_absolute_uri("/")[:-1]
+    for i in items:
+        if i["tipo"] != NotificacaoFuncionario.TIPO_ASSINATURA_SST:
+            continue
+        assinatura = assinaturas.get(i["referencia_id"])
+        if not assinatura:
+            continue
+        pendente = assinatura.status == "pendente"
+        i["acao_tipo"] = "assinatura_sst"
+        i["acao_label"] = "Assinar pelo app" if pendente else "Ver assinatura"
+        i["acao_url"] = (
+            f"{base_url}/assinatura/sst/{assinatura.token}/"
+            if pendente
+            else f"{base_url}/validar-assinatura/{assinatura.token}/"
+        )
+        i["assinatura_status"] = assinatura.status
+        i["assinatura_status_label"] = assinatura.get_status_display()
+        i["assinatura_token"] = assinatura.token
 
     return JsonResponse({"notificacoes": items, "nao_lidas": nao_lidas})
 

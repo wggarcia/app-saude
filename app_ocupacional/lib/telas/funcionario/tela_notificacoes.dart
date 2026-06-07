@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../servicos/funcionario_sst_service.dart';
 
@@ -86,11 +87,33 @@ class _TelaNotificacoesState extends State<TelaNotificacoes> {
     setState(() => _items.removeWhere((i) => i['lida'] == true));
   }
 
+  Future<void> _abrirAcao(Map<String, dynamic> notificacao) async {
+    final url = notificacao['acao_url']?.toString() ?? '';
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+
+    final id = notificacao['id'] as int;
+    if (notificacao['lida'] != true) {
+      await _marcarLida(id);
+    }
+
+    try {
+      final aberto = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      if (!aberto) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+    await _carregar();
+  }
+
   IconData _icone(String tipo) {
     switch (tipo) {
       case 'aso': return Icons.medical_information_outlined;
       case 'exame': return Icons.science_outlined;
       case 'treinamento': return Icons.school_outlined;
+      case 'assinatura_sst': return Icons.assignment_turned_in_outlined;
       default: return Icons.notifications_outlined;
     }
   }
@@ -100,6 +123,7 @@ class _TelaNotificacoesState extends State<TelaNotificacoes> {
       case 'aso': return Colors.tealAccent;
       case 'exame': return Colors.blueAccent;
       case 'treinamento': return Colors.amberAccent;
+      case 'assinatura_sst': return Colors.greenAccent;
       default: return Colors.white60;
     }
   }
@@ -169,6 +193,8 @@ class _TelaNotificacoesState extends State<TelaNotificacoes> {
                                 final lida = n['lida'] == true;
                                 final tipo = n['tipo']?.toString() ?? 'geral';
                                 final id = n['id'] as int;
+                                final acaoUrl = n['acao_url']?.toString() ?? '';
+                                final acaoLabel = n['acao_label']?.toString() ?? 'Abrir';
 
                                 final card = Card(
                                   color: lida
@@ -204,6 +230,26 @@ class _TelaNotificacoesState extends State<TelaNotificacoes> {
                                             style: const TextStyle(fontSize: 11, color: Colors.white38),
                                           ),
                                         ),
+                                        if (acaoUrl.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 10),
+                                            child: Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: ElevatedButton.icon(
+                                                onPressed: () => _abrirAcao(n),
+                                                icon: const Icon(Icons.open_in_new, size: 16),
+                                                label: Text(acaoLabel),
+                                                style: ElevatedButton.styleFrom(
+                                                  minimumSize: const Size(0, 36),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                  textStyle: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                       ],
                                     ),
                                     trailing: lida

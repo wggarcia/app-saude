@@ -16,7 +16,9 @@ from .models import (
     ExameOcupacional,
     AfastamentoSST,
     FuncionarioSST,
+    NotificacaoFuncionario,
 )
+from .services.employee_notifications import notificar_assinatura_sst
 from .views_dashboard import _empresa_autenticada
 
 
@@ -286,6 +288,8 @@ def api_sst_assinaturas(request):
             ip_solicitacao=_client_ip(request),
             expiracao_em=timezone.now() + timedelta(days=int(data.get("validade_dias") or 15)),
         )
+        if funcionario and assinatura.papel_signatario == "funcionario":
+            notificar_assinatura_sst(assinatura)
         return JsonResponse({"assinatura": _assinatura_to_dict(assinatura, request)}, status=201)
 
     return JsonResponse({"erro": "método não permitido"}, status=405)
@@ -382,4 +386,11 @@ def api_public_assinar_sst(request, token):
         "hash_assinatura",
         "atualizado_em",
     ])
+    if assinatura.funcionario_id:
+        NotificacaoFuncionario.objects.filter(
+            empresa_id=assinatura.empresa_id,
+            funcionario_id=assinatura.funcionario_id,
+            tipo=NotificacaoFuncionario.TIPO_ASSINATURA_SST,
+            referencia_id=assinatura.id,
+        ).update(lida=True)
     return JsonResponse({"ok": True, "assinatura": _assinatura_to_dict(assinatura, request)})

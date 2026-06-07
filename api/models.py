@@ -958,11 +958,13 @@ class NotificacaoFuncionario(models.Model):
     TIPO_ASO = "aso"
     TIPO_EXAME = "exame"
     TIPO_TREINAMENTO = "treinamento"
+    TIPO_ASSINATURA_SST = "assinatura_sst"
     TIPO_GERAL = "geral"
     TIPOS = [
         (TIPO_ASO, "ASO"),
         (TIPO_EXAME, "Exame"),
         (TIPO_TREINAMENTO, "Treinamento"),
+        (TIPO_ASSINATURA_SST, "Assinatura SST"),
         (TIPO_GERAL, "Geral"),
     ]
 

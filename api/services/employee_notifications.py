@@ -27,6 +27,35 @@ def criar_notificacao_funcionario(funcionario, empresa, tipo, titulo, mensagem, 
         return None
 
 
+def notificar_assinatura_sst(assinatura):
+    funcionario = assinatura.funcionario
+    if not funcionario:
+        return None
+
+    tipo_label = assinatura.get_tipo_documento_display()
+    if assinatura.finalidade_assinatura == "ciencia_trabalhador":
+        titulo = f"{tipo_label} aguardando sua ciência"
+        mensagem = (
+            f"A {assinatura.empresa.nome} enviou {assinatura.titulo} para sua ciência. "
+            "Abra pelo app, confira os dados e assine eletronicamente."
+        )
+    else:
+        titulo = f"{tipo_label} aguardando assinatura"
+        mensagem = (
+            f"A {assinatura.empresa.nome} enviou {assinatura.titulo} para assinatura eletrônica. "
+            "Abra pelo app, confira os dados e conclua o aceite."
+        )
+
+    return criar_notificacao_funcionario(
+        funcionario,
+        assinatura.empresa,
+        NotificacaoFuncionario.TIPO_ASSINATURA_SST,
+        titulo,
+        mensagem,
+        referencia_id=assinatura.id,
+    )
+
+
 def notificar_solicitacao_exame(solicitacao, evento):
     funcionario = solicitacao.funcionario
     empresa = solicitacao.empresa
