@@ -346,6 +346,8 @@ def api_public_assinar_sst(request, token):
         return JsonResponse({"erro": "assinatura não encontrada"}, status=404)
     if assinatura.status == "cancelado":
         return JsonResponse({"erro": "assinatura cancelada"}, status=409)
+    if assinatura.status == "assinado":
+        return JsonResponse({"erro": "assinatura já concluída"}, status=409)
     if assinatura.expiracao_em and assinatura.expiracao_em < timezone.now():
         return JsonResponse({"erro": "solicitação expirada"}, status=410)
 

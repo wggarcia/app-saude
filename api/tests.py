@@ -3576,6 +3576,14 @@ class AssinaturaSSTApiTests(TestCase):
         self.assertEqual(resp_assinar.status_code, 200)
         self.assertEqual(resp_assinar.json()["assinatura"]["status"], "assinado")
 
+        resp_repetido = self.client.post(
+            f"/api/public/sst/assinar/{token}",
+            data=json.dumps({"aceite": True, "nome": "João da Silva", "cpf": "123.456.789-00"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp_repetido.status_code, 409)
+        self.assertEqual(resp_repetido.json()["erro"], "assinatura já concluída")
+
     def test_validar_assinatura_publica(self):
         resp = self._post_json("/api/sst/assinaturas", {
             "tipo_documento": "aso",
