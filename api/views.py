@@ -32,9 +32,9 @@ historico = defaultdict(list)
 
 
 SITE_LANGUAGE_META = {
-    "pt": {"label": "PT", "flag": "🇧🇷", "name": "Portugues", "html": "pt-BR"},
+    "pt": {"label": "PT", "flag": "🇧🇷", "name": "Português", "html": "pt-BR"},
     "en": {"label": "EN", "flag": "🇺🇸", "name": "English", "html": "en"},
-    "es": {"label": "ES", "flag": "🇪🇸", "name": "Espanol", "html": "es"},
+    "es": {"label": "ES", "flag": "🇪🇸", "name": "Español", "html": "es"},
 }
 
 
@@ -42,7 +42,7 @@ SITE_TRANSLATIONS = {
     "pt": {
         "title": "SolusCRT Saude | monitoramento epidemiologico com IA em ambientes isolados",
         "description": "Monitoramento epidemiologico com IA para antecipar risco, apoiar decisao e gerar assinatura em cinco ambientes isolados, protegidos e vendidos separadamente.",
-        "brand": "SolusCRT Saude",
+        "brand": "SolusCRT Saúde",
         "nav": {
             "diferencial": "Por que assinam",
             "ecossistema": "Ambientes",
@@ -177,16 +177,16 @@ SITE_TRANSLATIONS = {
             {"label": "Privacidade", "title": "Confianca por segregacao", "text": "Cada ambiente tem login, permissao, dados e auditoria proprios. Governo, farmacia, hospital, SST e plano de saude nao compartilham base operacional entre si."},
         ],
         "values": {
-            "eyebrow": "Confianca SolusCRT",
-            "title": "Confianca para assinar, implantar e renovar.",
-            "lead": "A SolusCRT precisa convencer no comercial e sustentar essa promessa na operacao. Por isso, monitoramento, IA, privacidade, linguagem e governanca foram desenhados para vender bem sem parecer improvisados e sem misturar ambientes.",
+            "eyebrow": "Confiança SolusCRT",
+            "title": "Confiança para assinar, implantar e renovar.",
+            "lead": "A SolusCRT precisa convencer no comercial e sustentar essa promessa na operação. Por isso, monitoramento, IA, privacidade, linguagem e governança foram desenhados para vender bem sem parecer improvisados e sem misturar ambientes.",
             "items": [
-                {"title": "Vida em primeiro lugar", "text": "Todo indicador, alerta e mapa existe para reduzir atraso, orientar cuidado e apoiar decisoes que preservem pessoas."},
-                {"title": "Verdade antes de impacto", "text": "Separar sinal precoce, dado oficial e inferencia de IA e um compromisso para evitar conclusoes falsas."},
-                {"title": "Privacidade como fundamento", "text": "Dados de saude exigem minimizacao, seguranca, transparencia e exibicao adequada ao perfil autorizado. Cada ambiente tem sua propria segregacao."},
-                {"title": "Cooperacao institucional", "text": "O sistema foi pensado para unir populacao, empresas, hospitais, farmacias e governo sem confundir responsabilidades nem misturar dados."},
-                {"title": "Acesso social", "text": "O app da populacao deve ser gratuito, simples e util, porque vigilancia inteligente comeca quando todos podem contribuir."},
-                {"title": "Coragem operacional", "text": "A SolusCRT existe para antecipar problemas dificeis, mostrar territorios criticos e ajudar lideres a agir antes do pico."},
+                {"title": "Vida em primeiro lugar", "text": "Todo indicador, alerta e mapa existe para reduzir atraso, orientar cuidado e apoiar decisões que preservem pessoas."},
+                {"title": "Verdade antes de impacto", "text": "Separar sinal precoce, dado oficial e inferência de IA é um compromisso para evitar conclusões falsas."},
+                {"title": "Privacidade como fundamento", "text": "Dados de saúde exigem minimização, segurança, transparência e exibição adequada ao perfil autorizado. Cada ambiente tem sua própria segregação."},
+                {"title": "Cooperação institucional", "text": "O sistema foi pensado para unir população, empresas, hospitais, farmácias e governo sem confundir responsabilidades nem misturar dados."},
+                {"title": "Acesso social", "text": "O app da população deve ser gratuito, simples e útil, porque vigilância inteligente começa quando todos podem contribuir."},
+                {"title": "Coragem operacional", "text": "A SolusCRT existe para antecipar problemas difíceis, mostrar territórios críticos e ajudar líderes a agir antes do pico."},
             ],
         },
         "app": {
@@ -211,7 +211,7 @@ SITE_TRANSLATIONS = {
         "footer_links": {
             "privacy": "Privacidade",
             "terms": "Termos",
-            "security": "Seguranca",
+            "security": "Segurança",
             "methodology": "Metodologia",
             "support": "Suporte",
         },
@@ -572,13 +572,13 @@ SITE_TRANSLATIONS = {
 PRESENTATION_TRANSLATIONS = {
     "pt": {
         "title": "Apresentacao SolusCRT Saude",
-        "brand": "SolusCRT Saude",
+        "brand": "SolusCRT Saúde",
         "site": "Site",
         "contact": "Contato",
         "language_aria": "Selecionar idioma",
-        "footer_note": "Use o scroll para avancar pelos slides.",
+        "footer_note": "Use o scroll para avançar pelos slides.",
         "vision": {
-            "eyebrow": "Visao",
+            "eyebrow": "Visão",
             "title": "Monitoramento epidemiologico com IA que antecipa o pico.",
             "body": "O SolusCRT cruza sinais da populacao, fontes oficiais e inferencia de IA para mostrar onde o risco cresce primeiro e onde agir antes da curva subir. Governo, Farmacia, Hospital, SST e Plano de Saude entram depois como os cinco mercados que compram essa inteligencia e a transformam em assinatura ou contrato.",
             "labels": {"resp": "Sinais", "deng": "IA", "covid": "Risco"},
@@ -594,7 +594,7 @@ PRESENTATION_TRANSLATIONS = {
             ],
         },
         "solution": {
-            "eyebrow": "Solucao",
+            "eyebrow": "Solução",
             "title": "A IA transforma sinais dispersos em decisao antes do pico.",
             "body": "O SolusCRT separa contratos, acessos, indicadores e experiencia por segmento. Governo, farmacia e hospital usam inteligencia epidemiologica territorial com a linguagem do seu setor. SST opera como ambiente independente de gestao ocupacional, com assinatura propria, trial de 15 dias e app do funcionario.",
             "cards": [
@@ -622,24 +622,24 @@ PRESENTATION_TRANSLATIONS = {
             "quote": "Sinais viram risco. Risco vira decisao. Decisao vira contrato.",
         },
         "governance": {
-            "eyebrow": "Governanca",
-            "title": "Privacidade, seguranca e segregacao por segmento fazem parte do produto.",
+            "eyebrow": "Governança",
+            "title": "Privacidade, segurança e segregação por segmento fazem parte do produto.",
             "cards": [
-                {"title": "Ambientes isolados", "text": "Governo, farmacia, hospital, SST e plano de saude possuem acessos, sessoes, trilhas e escopos proprios. O que nasce em um ambiente nao aparece em outro."},
-                {"title": "Epidemiologia territorial", "text": "O app da populacao gera sinais anonimos e territoriais para governo, farmacia e hospital, com antifraude, localizacao atual e separacao entre sinal, fonte oficial e inferencia."},
-                {"title": "SST e bem-estar protegidos", "text": "ASO, CAT, exames, afastamentos e eSocial sao dados sensiveis. Check-ins de bem-estar sao anonimos por arquitetura e o nome so aparece mediante iniciativa do funcionario."},
-                {"title": "Apps e auditoria", "text": "App da populacao e app do funcionario cumprem papeis distintos, com tokens, dispositivos autorizados, notificacoes e revogacao por contrato."},
+                {"title": "Ambientes isolados", "text": "Governo, farmácia, hospital, SST e plano de saúde possuem acessos, sessões, trilhas e escopos próprios. O que nasce em um ambiente não aparece em outro."},
+                {"title": "Epidemiologia territorial", "text": "O app da população gera sinais anônimos e territoriais para governo, farmácia e hospital, com antifraude, localização atual e separação entre sinal, fonte oficial e inferência."},
+                {"title": "SST e bem-estar protegidos", "text": "ASO, CAT, exames, afastamentos e eSocial são dados sensíveis. Check-ins de bem-estar são anônimos por arquitetura e o nome só aparece mediante iniciativa do funcionário."},
+                {"title": "Apps e auditoria", "text": "App da população e app do funcionário cumprem papéis distintos, com tokens, dispositivos autorizados, notificações e revogação por contrato."},
             ],
         },
         "values": {
             "eyebrow": "Valores",
-            "title": "Valores que fazem a tecnologia merecer confianca",
-            "body": "O SolusCRT foi pensado para cooperar com pessoas e instituicoes: proteger vidas, antecipar riscos, respeitar privacidade, comunicar com responsabilidade e ajudar lideres a agir sem distorcer a verdade.",
+            "title": "Valores que fazem a tecnologia merecer confiança",
+            "body": "O SolusCRT foi pensado para cooperar com pessoas e instituições: proteger vidas, antecipar riscos, respeitar privacidade, comunicar com responsabilidade e ajudar líderes a agir sem distorcer a verdade.",
             "cards": [
                 {"title": "Vida primeiro", "text": "SST, bem-estar e IA existem para reduzir dano real a pessoas reais."},
                 {"title": "Verdade antes de impacto", "text": "Sinal precoce, dado oficial e IA sempre separados e identificados."},
-                {"title": "Privacidade e anonimato", "text": "Bem-estar anonimo por design. Dados SST com minimizacao e LGPD."},
-                {"title": "Cooperacao", "text": "Empresa, funcionario, governo e populacao atuando na mesma rede de cuidado."},
+                {"title": "Privacidade e anonimato", "text": "Bem-estar anônimo por design. Dados SST com minimização e LGPD."},
+                {"title": "Cooperação", "text": "Empresa, funcionário, governo e população atuando na mesma rede de cuidado."},
             ],
         },
         "app": {
@@ -835,47 +835,47 @@ def _commercial_site_copy(language, site):
     if language != "pt":
         return site
     site = deepcopy(site)
-    site["title"] = "SolusCRT Saude | plataforma comercial para Governo, Farmacia, Hospital, SST e Plano de Saude"
-    site["description"] = "Uma vitrine comercial pronta para demonstracao, proposta e assinatura, com cinco ambientes privados por segmento, dois apps e governanca LGPD."
+    site["title"] = "SolusCRT Saúde | healthtech de inteligência em saúde com IA para Governo, Farmácia, Hospital, SST e Plano de Saúde"
+    site["description"] = "Healthtech brasileira de inteligência em saúde com IA. Cinco ambientes privados por segmento — Governo, Farmácia, Hospital, SST e Plano de Saúde — com dois apps e governança LGPD."
     site["nav"]["diferencial"] = "Por que comprar"
     site["nav"]["ecossistema"] = "Segmentos"
-    site["nav"]["valores"] = "Confianca"
+    site["nav"]["valores"] = "Confiança"
     site["nav"]["app"] = "Apps"
     site["nav"]["contato"] = "Contato"
-    site["nav_note"] = "Uma plataforma. Cinco segmentos. Um caminho claro para compra."
-    site["hero_eyebrow"] = "Pronta para demonstracao comercial."
-    site["hero_title"] = "Cinco ambientes privados para cada decisor em saude."
+    site["nav_note"] = "Uma healthtech. Cinco segmentos. Um caminho claro para compra."
+    site["hero_eyebrow"] = "Healthtech brasileira · pronta para demonstração comercial."
+    site["hero_title"] = "Cinco ambientes privados para cada decisor em saúde."
     site["hero_title_desktop_lines"] = [
         "Cinco ambientes",
         "privados para",
         "cada decisor",
-        "em saude.",
+        "em saúde.",
     ]
     site["hero_title_lines"] = [
         "Cinco ambientes",
         "privados para",
         "cada decisor",
-        "em saude.",
+        "em saúde.",
     ]
     site["hero_lead"] = (
-        "Em vez de um painel unico e tecnico, a home mostra cinco ambientes que o cliente reconhece de imediato: "
-        "Governo, Farmacia, Hospital, SST e Plano de Saude. Cada setor entra com linguagem propria, proposta clara "
+        "A SolusCRT é uma healthtech brasileira de inteligência em saúde com IA. Em vez de um painel único e técnico, a home mostra cinco ambientes que o cliente reconhece de imediato: "
+        "Governo, Farmácia, Hospital, SST e Plano de Saúde. Cada setor entra com linguagem própria, proposta clara "
         "e caminho de compra objetivo."
     )
-    site["actions"]["presentation"] = "Ver apresentacao comercial"
+    site["actions"]["presentation"] = "Ver apresentação comercial"
     site["actions"]["app"] = "Conhecer os apps"
-    site["actions"]["sales"] = "Agendar demonstracao"
-    site["actions"]["open_presentation"] = "Abrir apresentacao"
+    site["actions"]["sales"] = "Agendar demonstração"
+    site["actions"]["open_presentation"] = "Abrir apresentação"
     site["actions"]["meeting"] = "Falar com comercial"
     site["actions"]["login"] = "Acesso cliente"
     site["actions"]["signup"] = "Solicitar demo"
     site["proofs"] = [
         {
             "title": "Governo",
-            "text": "Sala de situacao, alertas e governanca territorial para contratos B2G com leitura executiva.",
+            "text": "Sala de situação, alertas e governança territorial para contratos B2G com leitura executiva.",
         },
         {
-            "title": "Farmacia",
+            "title": "Farmácia",
             "text": "Previsibilidade de demanda, compra mais segura e menos ruptura para loja ou rede.",
         },
         {
@@ -884,33 +884,33 @@ def _commercial_site_copy(language, site):
         },
         {
             "title": "SST",
-            "text": "Assinatura recorrente com app do trabalhador, bem-estar e conformidade em um fluxo proprio.",
+            "text": "Assinatura recorrente com app do trabalhador, bem-estar e conformidade em um fluxo próprio.",
         },
         {
-            "title": "Plano de Saude",
-            "text": "Operadora com beneficiarios, guias, sinistros, reembolsos e radar territorial no mesmo ambiente.",
+            "title": "Plano de Saúde",
+            "text": "Operadora com beneficiários, guias, sinistros, reembolsos e radar territorial no mesmo ambiente.",
         },
     ]
     site["chips"] = [
         "Governo",
-        "Farmacia",
+        "Farmácia",
         "Hospital",
         "SST",
-        "Plano de Saude",
+        "Plano de Saúde",
         "Demo comercial",
     ]
     site["metrics"] = [
         {
             "value": "5 segmentos",
-            "text": "Cada decisor entra numa experiencia pensada para sua rotina e seu contrato",
+            "text": "Cada decisor entra numa experiência pensada para sua rotina e seu contrato",
         },
         {
             "value": "2 apps separados",
-            "text": "App da populacao para territorio e app do trabalhador para SST",
+            "text": "App da população para território e app do trabalhador para SST",
         },
         {
             "value": "LGPD por arquitetura",
-            "text": "Segregacao, auditoria e controle de acesso tratados como parte central da confianca",
+            "text": "Segregação, auditoria e controle de acesso tratados como parte central da confiança",
         },
         {
             "value": "Contato comercial",
@@ -918,182 +918,182 @@ def _commercial_site_copy(language, site):
         },
     ]
     site["differential"]["title"] = (
-        "Quando a IA fala a linguagem do segmento certo, a conversa encurta e a compra avanca."
+        "Quando a IA fala a linguagem do segmento certo, a conversa encurta e a compra avança."
     )
     site["differential"]["lead"] = (
-        "A proposta certa reduz explicacao, diminui objecao e acelera demo, negociacao e assinatura. O SolusCRT "
-        "organiza a conversa por segmento para que cada cliente veja uma IA desenhada para o proprio contexto, sem "
+        "A proposta certa reduz explicação, diminui objeção e acelera demo, negociação e assinatura. O SolusCRT "
+        "organiza a conversa por segmento para que cada cliente veja uma IA desenhada para o próprio contexto, sem "
         "precisar traduzir a plataforma."
     )
-    site["differential"]["traditional_title"] = "Oferta generica"
+    site["differential"]["traditional_title"] = "Oferta genérica"
     site["differential"]["traditional_items"] = [
-        "O mesmo discurso tenta servir governo, farmacia, hospital, SST e operadora ao mesmo tempo.",
-        "O comprador precisa traduzir sozinho onde esta o valor para sua rotina e seu contrato.",
-        "Quando a proposta parece improvisada, a venda perde forca antes da demo ficar memoravel.",
+        "O mesmo discurso tenta servir governo, farmácia, hospital, SST e operadora ao mesmo tempo.",
+        "O comprador precisa traduzir sozinho onde está o valor para sua rotina e seu contrato.",
+        "Quando a proposta parece improvisada, a venda perde força antes da demo ficar memorável.",
     ]
     site["differential"]["solus_title"] = "Arquitetura comercial SolusCRT"
     site["differential"]["solus_items"] = [
-        "Cada segmento abre um ambiente com linguagem, rotina e IA proprias.",
-        "A prova de valor aparece no ponto certo: Governo, Farmacia, Hospital, SST e Plano de Saude.",
-        "O SST fica separado, com assinatura propria, app do trabalhador e experiencia ocupacional sem mistura de contexto.",
+        "Cada segmento abre um ambiente com linguagem, rotina e IA próprias.",
+        "A prova de valor aparece no ponto certo: Governo, Farmácia, Hospital, SST e Plano de Saúde.",
+        "O SST fica separado, com assinatura própria, app do trabalhador e experiência ocupacional sem mistura de contexto.",
     ]
     site["ecosystem_title"] = "Cinco ambientes isolados, comercializados separadamente."
     site["ecosystem_lead"] = (
         "O visitante reconhece o seu setor, o seu risco e o seu modelo de compra sem misturar clientes, bases ou "
-        "permissoes. Cada ambiente nasce para um contrato proprio."
+        "permissões. Cada ambiente nasce para um contrato próprio."
     )
     site["slides"] = [
         {
             "small": "Governo",
-            "title": "Autoridade territorial com governanca",
-            "text": "Sala de situacao para comunicar melhor, agir antes e sustentar resposta publica com clareza.",
+            "title": "Autoridade territorial com governança",
+            "text": "Sala de situação para comunicar melhor, agir antes e sustentar resposta pública com clareza.",
         },
         {
-            "small": "Farmacia",
+            "small": "Farmácia",
             "title": "Previsibilidade de demanda",
-            "text": "Gestao para reduzir ruptura, planejar compras e crescer com mais previsibilidade.",
+            "text": "Gestão para reduzir ruptura, planejar compras e crescer com mais previsibilidade.",
         },
         {
             "small": "Hospital",
             "title": "Capacidade assistencial preparada",
-            "text": "Leitos, triagem, equipes e fluxo organizados antes da pressao ganhar velocidade.",
+            "text": "Leitos, triagem, equipes e fluxo organizados antes da pressão ganhar velocidade.",
         },
         {
             "small": "SST",
-            "title": "Conformidade com adesao",
+            "title": "Conformidade com adesão",
             "text": "SST completo, app do trabalhador e bem-estar em uma jornada mais fluida e comercialmente clara.",
         },
         {
-            "small": "Plano de Saude",
-            "title": "Operacao especializada",
-            "text": "Beneficiarios, contratos, guias, sinistros, reembolsos e radar territorial em um ambiente proprio.",
+            "small": "Plano de Saúde",
+            "title": "Operação especializada",
+            "text": "Beneficiários, contratos, guias, sinistros, reembolsos e radar territorial em um ambiente próprio.",
         },
     ]
     site["platform"]["title_html"] = "Quer proposta?<br>Fale com comercial."
     site["platform"]["lead"] = (
         "Cada cliente entra pelo caminho certo. Se o segmento faz sentido, a gente aprofunda por contato comercial, "
-        "sem tabela publica e sem expor valores antes da hora."
+        "sem tabela pública e sem expor valores antes da hora."
     )
     site["platform"]["cards"] = [
         {
-            "title": "SST & Clinicas Ocupacionais",
+            "title": "SST & Clínicas Ocupacionais",
             "badge": "Assinatura recorrente",
-            "text": "Uma conversa de negocio que organiza a rotina, valoriza o colaborador e reduz atrito operacional.",
+            "text": "Uma conversa de negócio que organiza a rotina, valoriza o colaborador e reduz atrito operacional.",
             "cta": "Falar com comercial",
         },
         {
-            "title": "Farmacia & Rede Farmaceutica",
-            "badge": "Operacao por loja ou rede",
-            "text": "Um ambiente para antecipar demanda, proteger margem e preparar a farmacia antes da ruptura.",
+            "title": "Farmácia & Rede Farmacêutica",
+            "badge": "Operação por loja ou rede",
+            "text": "Um ambiente para antecipar demanda, proteger margem e preparar a farmácia antes da ruptura.",
             "cta": "Falar com comercial",
         },
         {
             "title": "Hospital & Rede Assistencial",
             "badge": "Estrutura ou rede",
-            "text": "Uma plataforma para proteger capacidade assistencial, ordenar fluxo e preparar equipes antes da pressao.",
+            "text": "Uma plataforma para proteger capacidade assistencial, ordenar fluxo e preparar equipes antes da pressão.",
             "cta": "Falar com comercial",
         },
         {
-            "title": "Governo & Vigilancia Publica",
+            "title": "Governo & Vigilância Pública",
             "badge": "Contrato institucional",
-            "text": "Unifique vigilancia territorial, e-SUS/RNDS, faturamento SUS, auditoria e governanca LGPD em uma operacao publica unica.",
+            "text": "Unifique vigilância territorial, e-SUS/RNDS, faturamento SUS, auditoria e governança LGPD em uma operação pública única.",
             "cta": "Falar com comercial",
         },
         {
-            "title": "Operadora de Plano de Saude",
+            "title": "Operadora de Plano de Saúde",
             "badge": "Operadora especializada",
-            "text": "Gestao completa para operadoras: beneficiarios, contratos, guias, sinistros, reembolsos e leitura territorial.",
+            "text": "Gestão completa para operadoras: beneficiários, contratos, guias, sinistros, reembolsos e leitura territorial.",
             "cta": "Falar com comercial",
         },
     ]
     site["enterprise"]["eyebrow"] = "Mercado e assinatura"
     site["enterprise"]["title"] = "Cinco segmentos, cinco motivos claros para assinar."
     site["enterprise"]["lead"] = (
-        "A plataforma nao existe para empurrar o mesmo argumento para todo mundo. Ela foi organizada para que cada "
-        "cliente reconheca o seu proprio caso de uso, o seu tipo de compra e a sua melhor porta de entrada."
+        "A plataforma não existe para empurrar o mesmo argumento para todo mundo. Ela foi organizada para que cada "
+        "cliente reconheça o seu próprio caso de uso, o seu tipo de compra e a sua melhor porta de entrada."
     )
     site["enterprise"]["items"] = [
         {
             "title": "Governo",
-            "text": "Sala de situacao, alertas, auditoria e leitura territorial para uniao, estados e municipios com contrato institucional.",
+            "text": "Sala de situação, alertas, auditoria e leitura territorial para união, estados e municípios com contrato institucional.",
         },
         {
-            "title": "Farmacia",
+            "title": "Farmácia",
             "text": "Previsibilidade de demanda, compras, lotes e ruptura para loja, rede ou distribuidor com leitura regional.",
         },
         {
             "title": "Hospital",
-            "text": "Leitos, triagem, equipes e capacidade assistencial preparados antes da pressao chegar ao pronto atendimento.",
+            "text": "Leitos, triagem, equipes e capacidade assistencial preparados antes da pressão chegar ao pronto atendimento.",
         },
         {
             "title": "SST",
-            "text": "ASO, CAT, eSocial, exames, PGR, bem-estar anonimo e app do trabalhador em um ambiente proprio e recorrente.",
+            "text": "ASO, CAT, eSocial, exames, PGR, bem-estar anônimo e app do trabalhador em um ambiente próprio e recorrente.",
         },
         {
-            "title": "Plano de Saude",
-            "text": "Beneficiarios, contratos, guias, sinistros, reembolsos e radar territorial em uma operacao especializada.",
+            "title": "Plano de Saúde",
+            "text": "Beneficiários, contratos, guias, sinistros, reembolsos e radar territorial em uma operação especializada.",
         },
     ]
     site["enterprise"]["metrics"] = [
-        {"value": "5 segmentos", "text": "cada decisor encontra um ambiente com linguagem, risco, compra e IA proprios"},
-        {"value": "2 apps separados", "text": "app da populacao para territorio e app do trabalhador para SST"},
-        {"value": "Contato comercial", "text": "sem tabela publica e com proposta ajustada ao segmento"},
+        {"value": "5 segmentos", "text": "cada decisor encontra um ambiente com linguagem, risco, compra e IA próprios"},
+        {"value": "2 apps separados", "text": "app da população para território e app do trabalhador para SST"},
+        {"value": "Contato comercial", "text": "sem tabela pública e com proposta ajustada ao segmento"},
     ]
     site["matrix"] = [
         {
             "label": "Governo",
             "title": "Autoridade territorial",
-            "text": "Paineis para gestores federais, estaduais e municipais com radar territorial, fontes oficiais, comunicacao e auditoria institucional.",
+            "text": "Painéis para gestores federais, estaduais e municipais com radar territorial, fontes oficiais, comunicação e auditoria institucional.",
         },
         {
-            "label": "Farmacia",
+            "label": "Farmácia",
             "title": "Previsibilidade de demanda",
-            "text": "Antecipacao de demanda, giro, ruptura e insumos com gestao conectada ao risco regional.",
+            "text": "Antecipação de demanda, giro, ruptura e insumos com gestão conectada ao risco regional.",
         },
         {
             "label": "Hospital",
             "title": "Preparo assistencial",
-            "text": "Leitos, triagem, equipes e pressao assistencial com visibilidade antes do pico chegar ao pronto atendimento.",
+            "text": "Leitos, triagem, equipes e pressão assistencial com visibilidade antes do pico chegar ao pronto atendimento.",
         },
         {
             "label": "SST",
-            "title": "Operacao ocupacional",
-            "text": "ASO, CAT, afastamentos, NR, EPI/EPC, PGR, eSocial SST, app do trabalhador e bem-estar em ambiente proprio.",
+            "title": "Operação ocupacional",
+            "text": "ASO, CAT, afastamentos, NR, EPI/EPC, PGR, eSocial SST, app do trabalhador e bem-estar em ambiente próprio.",
         },
         {
-            "label": "Plano de Saude",
-            "title": "Gestao especializada de operadora",
-            "text": "Beneficiarios, contratos, guias, sinistros, reembolsos e leitura territorial no mesmo ambiente.",
+            "label": "Plano de Saúde",
+            "title": "Gestão especializada de operadora",
+            "text": "Beneficiários, contratos, guias, sinistros, reembolsos e leitura territorial no mesmo ambiente.",
         },
         {
             "label": "Privacidade",
-            "title": "Confianca por segregacao",
-            "text": "Cada ambiente tem login, permissao, dados e auditoria proprios. Governo, farmacia, hospital, SST e plano de saude nao compartilham base operacional.",
+            "title": "Confiança por segregação",
+            "text": "Cada ambiente tem login, permissão, dados e auditoria próprios. Governo, farmácia, hospital, SST e plano de saúde não compartilham base operacional.",
         },
     ]
-    site["values"]["title"] = "Valores que fazem a tecnologia merecer confianca"
+    site["values"]["title"] = "Valores que fazem a tecnologia merecer confiança"
     site["values"]["lead"] = (
-        "A SolusCRT precisa convencer no comercial e sustentar essa promessa na operacao. Produto, privacidade, linguagem "
-        "e governanca foram desenhados para vender bem sem parecer improvisados."
+        "A SolusCRT precisa convencer no comercial e sustentar essa promessa na operação. Produto, privacidade, linguagem "
+        "e governança foram desenhados para vender bem sem parecer improvisados."
     )
     site["app"]["title"] = "Dois apps, duas jornadas, uma venda mais clara."
     site["app"]["lead"] = (
-        "A app da populacao gera inteligencia territorial. A app do trabalhador pertence ao ambiente SST. Separar as "
+        "A app da população gera inteligência territorial. A app do trabalhador pertence ao ambiente SST. Separar as "
         "jornadas deixa a proposta mais simples para o cliente e mais clara para a compra."
     )
-    site["app"]["note"] = "O app do trabalhador e ativado por contrato dentro do ambiente SST. O app listado nas lojas e o app da populacao."
+    site["app"]["note"] = "O app do trabalhador é ativado por contrato dentro do ambiente SST. O app listado nas lojas é o app da população."
     site["app"]["risks"] = [
-        {"title": "App da populacao", "text": "Sintomas anonimos, radar local e alertas oficiais."},
-        {"title": "App do trabalhador", "text": "ASO, notificacoes e bem-estar no fluxo SST."},
-        {"title": "Leitura territorial", "text": "Focos e sintomas por regiao com localizacao atual."},
-        {"title": "Privacidade por contexto", "text": "Dois apps, duas promessas e duas governancas distintas."},
+        {"title": "App da população", "text": "Sintomas anônimos, radar local e alertas oficiais."},
+        {"title": "App do trabalhador", "text": "ASO, notificações e bem-estar no fluxo SST."},
+        {"title": "Leitura territorial", "text": "Focos e sintomas por região com localização atual."},
+        {"title": "Privacidade por contexto", "text": "Dois apps, duas promessas e duas governanças distintas."},
     ]
-    site["cta"]["title"] = "Quando cada segmento se reconhece no produto, a decisao avanca mais rapido."
+    site["cta"]["title"] = "Quando cada segmento se reconhece no produto, a decisão avança mais rápido."
     site["cta"]["lead"] = (
-        "Se o seu cliente e Governo, Farmacia, Hospital, SST ou Plano de Saude, o SolusCRT ja chega com narrativa "
-        "comercial, oferta e governanca coerentes."
+        "Se o seu cliente é Governo, Farmácia, Hospital, SST ou Plano de Saúde, o SolusCRT já chega com narrativa "
+        "comercial, oferta e governança coerentes."
     )
-    site["footer"] = "SolusCRT Saude. Cinco ambientes privados para Governo, Farmacia, Hospital, SST e Plano de Saude."
+    site["footer"] = "SolusCRT Saúde · healthtech de inteligência em saúde com IA. Cinco ambientes privados para Governo, Farmácia, Hospital, SST e Plano de Saúde."
     return site
 
 
@@ -1101,84 +1101,84 @@ def _commercial_presentation_copy(language, deck):
     if language != "pt":
         return deck
     deck = deepcopy(deck)
-    deck["title"] = "Apresentacao comercial SolusCRT Saude"
-    deck["vision"]["title"] = "Monitoramento epidemiologico com IA em cinco ambientes privados e isolados."
+    deck["title"] = "Apresentação comercial SolusCRT Saúde"
+    deck["vision"]["title"] = "Healthtech de monitoramento epidemiológico com IA em cinco ambientes privados e isolados."
     deck["vision"]["body"] = (
-        "O SolusCRT Saude organiza a conversa por segmento, mas nunca mistura clientes: Governo, Farmacia, Hospital, "
-        "SST e Plano de Saude entram em jornadas distintas, com ambiente, acesso e privacidade proprios. A IA e "
-        "desenhada para cada ambiente, com contexto, leitura e recomendacao proprios para cada contrato."
+        "A SolusCRT Saúde é uma healthtech brasileira de inteligência em saúde com IA. Organiza a conversa por segmento, mas nunca mistura clientes: Governo, Farmácia, Hospital, "
+        "SST e Plano de Saúde entram em jornadas distintas, com ambiente, acesso e privacidade próprios. A IA é "
+        "desenhada para cada ambiente, com contexto, leitura e recomendação próprios para cada contrato."
     )
     deck["vision"]["labels"] = {"resp": "Sinais", "deng": "IA", "covid": "Risco"}
-    deck["problem"]["title"] = "Quando tudo parece um unico pacote, o comprador nao enxerga seu proprio contexto."
+    deck["problem"]["title"] = "Quando tudo parece um único pacote, o comprador não enxerga seu próprio contexto."
     deck["problem"]["cards"] = [
         {
             "title": "Governo demora para decidir",
-            "text": "Secretarias e gestores dependem de fontes dispersas, planilhas e leitura tardia para definir alerta, comunicacao e resposta territorial.",
+            "text": "Secretarias e gestores dependem de fontes dispersas, planilhas e leitura tardia para definir alerta, comunicação e resposta territorial.",
         },
         {
-            "title": "Farmacia perde margem",
+            "title": "Farmácia perde margem",
             "text": "Sem previsibilidade, a demanda por medicamentos e insumos aparece tarde demais e a ruptura vira custo.",
         },
         {
             "title": "Hospital reage em cima do pico",
-            "text": "Sem antecipacao assistencial, leitos, triagem, escala e suprimentos correm atras da pressao.",
+            "text": "Sem antecipação assistencial, leitos, triagem, escala e suprimentos correm atrás da pressão.",
         },
         {
-            "title": "SST precisa de fluxo proprio",
+            "title": "SST precisa de fluxo próprio",
             "text": "ASO, CAT, eSocial SST, exames, PGR, app do trabalhador e bem-estar exigem um ambiente independente, sem mistura com outros clientes.",
         },
     ]
-    deck["solution"]["title"] = "Cada segmento entra no ambiente certo, com isolamento, privacidade e proposta propria."
+    deck["solution"]["title"] = "Cada segmento entra no ambiente certo, com isolamento, privacidade e proposta própria."
     deck["solution"]["body"] = (
-        "SolusCRT separa contratos, acesso e narrativa por segmento. Governo, Farmacia e Hospital usam inteligencia "
-        "territorial com linguagem de negocio dentro do seu proprio espaco; SST opera como ambiente independente de "
-        "gestao ocupacional, com assinatura propria, trial e app do trabalhador, sem compartilhamento de base entre clientes."
+        "SolusCRT separa contratos, acesso e narrativa por segmento. Governo, Farmácia e Hospital usam inteligência "
+        "territorial com linguagem de negócio dentro do seu próprio espaço; SST opera como ambiente independente de "
+        "gestão ocupacional, com assinatura própria, trial e app do trabalhador, sem compartilhamento de base entre clientes."
     )
     deck["solution"]["cards"] = [
-        {"title": "Governo", "text": "Sala de situacao, alertas, auditoria e leitura territorial para uniao, estados e municipios."},
-        {"title": "Farmacia", "text": "Estoque, lotes, compras e previsao de demanda ligados ao risco regional."},
-        {"title": "Hospital", "text": "Leitos, triagem, internacoes, equipes e pressao assistencial com antecipacao do pico."},
-        {"title": "SST", "text": "ASO, CAT, exames, NRs, eSocial, bem-estar anonimo e app do trabalhador em um ambiente proprio."},
+        {"title": "Governo", "text": "Sala de situação, alertas, auditoria e leitura territorial para união, estados e municípios."},
+        {"title": "Farmácia", "text": "Estoque, lotes, compras e previsão de demanda ligados ao risco regional."},
+        {"title": "Hospital", "text": "Leitos, triagem, internações, equipes e pressão assistencial com antecipação do pico."},
+        {"title": "SST", "text": "ASO, CAT, exames, NRs, eSocial, bem-estar anônimo e app do trabalhador em um ambiente próprio."},
     ]
     deck["ecosystem"]["eyebrow"] = "Ambientes isolados"
     deck["ecosystem"]["title"] = "Cinco ambientes isolados para cinco compradoras diferentes."
     deck["ecosystem"]["cards"] = [
-        {"title": "Governo", "text": "Sala de situacao, alertas oficiais, matriz de decisao, auditoria e contrato institucional em ambiente proprio."},
-        {"title": "Farmacia", "text": "Gestao farmaceutica, FEFO, lotes, ruptura, compras e previsao de demanda em ambiente proprio."},
-        {"title": "Hospital", "text": "Gestao de leitos, atendimento, triagem, internacao e preparacao assistencial em ambiente proprio."},
-        {"title": "SST e Empresas", "text": "SST completo, bem-estar anonimo, app do trabalhador e prova de valor em ambiente proprio."},
-        {"title": "Plano de Saude", "text": "Beneficiarios, contratos, guias, sinistros, reembolsos e leitura territorial em ambiente proprio."},
+        {"title": "Governo", "text": "Sala de situação, alertas oficiais, matriz de decisão, auditoria e contrato institucional em ambiente próprio."},
+        {"title": "Farmácia", "text": "Gestão farmacêutica, FEFO, lotes, ruptura, compras e previsão de demanda em ambiente próprio."},
+        {"title": "Hospital", "text": "Gestão de leitos, atendimento, triagem, internação e preparação assistencial em ambiente próprio."},
+        {"title": "SST e Empresas", "text": "SST completo, bem-estar anônimo, app do trabalhador e prova de valor em ambiente próprio."},
+        {"title": "Plano de Saúde", "text": "Beneficiários, contratos, guias, sinistros, reembolsos e leitura territorial em ambiente próprio."},
     ]
     deck["differential"]["eyebrow"] = "Diferencial"
-    deck["differential"]["title"] = "Nao e uma IA generica. E inteligencia epidemiologica desenhada por segmento."
+    deck["differential"]["title"] = "Não é uma IA genérica. É inteligência epidemiológica desenhada por segmento."
     deck["differential"]["body"] = (
-        "SolusCRT respeita a forma como cada segmento decide: Governo compra clareza e governanca; Farmacia compra "
-        "previsibilidade; Hospital compra capacidade; SST compra adesao e recorrencia; Plano de Saude compra operacao "
-        "especializada. Cada um entra no seu proprio ambiente com uma IA ajustada ao contexto, com dados segregados e "
-        "experiencia protegida."
+        "SolusCRT respeita a forma como cada segmento decide: Governo compra clareza e governança; Farmácia compra "
+        "previsibilidade; Hospital compra capacidade; SST compra adesão e recorrência; Plano de Saúde compra operação "
+        "especializada. Cada um entra no seu próprio ambiente com uma IA ajustada ao contexto, com dados segregados e "
+        "experiência protegida."
     )
     deck["differential"]["quote"] = "Um motor. Cinco ambientes. Nenhum cliente misturado."
-    deck["governance"]["title"] = "Privacidade e segregacao fazem parte de cada ambiente."
-    deck["values"]["title"] = "Valores que fazem a tecnologia merecer confianca"
+    deck["governance"]["title"] = "Privacidade e segregação fazem parte de cada ambiente."
+    deck["values"]["title"] = "Valores que fazem a tecnologia merecer confiança"
     deck["values"]["body"] = (
-        "SolusCRT foi pensado para cooperar com pessoas e instituicoes: proteger vidas, antecipar riscos, respeitar "
-        "privacidade, comunicar com responsabilidade e ajudar lideres a agir sem distorcer a verdade ou misturar "
+        "SolusCRT foi pensado para cooperar com pessoas e instituições: proteger vidas, antecipar riscos, respeitar "
+        "privacidade, comunicar com responsabilidade e ajudar líderes a agir sem distorcer a verdade ou misturar "
         "clientes."
     )
     deck["app"]["title"] = "Dois apps, duas promessas, uma arquitetura clara."
     deck["app"]["body"] = (
-        "A app da populacao alimenta a inteligencia territorial. A app do trabalhador fica no ambiente SST. Separar as "
+        "A app da população alimenta a inteligência territorial. A app do trabalhador fica no ambiente SST. Separar as "
         "jornadas torna a venda mais clara, preserva a privacidade e evita qualquer mistura entre ambientes."
     )
-    deck["app"]["quote"] = "App da populacao para territorio. App do trabalhador para SST."
+    deck["app"]["quote"] = "App da população para território. App do trabalhador para SST."
     deck["closing"]["eyebrow"] = "Fechamento"
-    deck["closing"]["title"] = "Uma apresentacao que faz cada decisor ver seu proprio ambiente."
+    deck["closing"]["title"] = "Uma apresentação que faz cada decisor ver seu próprio ambiente."
     deck["closing"]["body"] = (
-        "Na demonstracao, cada decisor enxerga o seu valor dentro do seu proprio ambiente: governo com leitura territorial, "
-        "farmacia com previsibilidade, hospital com capacidade e SST com conformidade e adesao, sempre com isolamento e "
+        "Na demonstração, cada decisor enxerga o seu valor dentro do seu próprio ambiente: governo com leitura territorial, "
+        "farmácia com previsibilidade, hospital com capacidade e SST com conformidade e adesão, sempre com isolamento e "
         "privacidade."
     )
-    deck["closing"]["meeting"] = "Solicitar demonstracao comercial"
+    deck["closing"]["meeting"] = "Solicitar demonstração comercial"
     deck["closing"]["back"] = "Voltar ao site principal"
     return deck
 
@@ -1265,7 +1265,7 @@ def apresentacao_comercial(request):
 
 LEGAL_COMMON = {
     "pt": {
-        "brand": "SolusCRT Saude",
+        "brand": "SolusCRT Saúde",
         "back": "Voltar ao site",
         "language_aria": "Selecionar idioma",
         "notice": "O SolusCRT Saude mantem compromisso continuo com transparencia, seguranca, minimizacao de dados e governanca responsavel. A documentacao institucional e mantida atualizada para refletir melhorias da plataforma, requisitos regulatorios e necessidades contratuais.",
