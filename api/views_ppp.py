@@ -3,12 +3,14 @@ PPP — Perfil Profissiográfico Previdenciário (SolusCRT SST)
 Geração automatizada conforme IN INSS 128/2022 e eSocial S-2240.
 
 Endpoints:
-  GET  /api/sst/ppp/                       — lista PPPs da empresa
-  POST /api/sst/ppp/                       — gerar PPP de um funcionário
-  GET  /api/sst/ppp/<id>/                  — detalhe
-  POST /api/sst/ppp/<id>/finalizar/        — finalizar e assinar
-  GET  /api/sst/ppp/<id>/pdf/              — exportar PDF
-  GET  /api/sst/ppp/kpis/                  — painel de cobertura
+  GET  /api/sst/ppp/                            — lista PPPs da empresa
+  POST /api/sst/ppp/                            — gerar PPP de um funcionário
+  GET  /api/sst/ppp/<id>/                       — detalhe
+  PATCH /api/sst/ppp/<id>/                      — editar campos
+  POST /api/sst/ppp/<id>/finalizar/             — finalizar e assinar
+  GET  /api/sst/ppp/<id>/pdf/                   — exportar PDF
+  GET  /api/sst/ppp/kpis/                       — painel de cobertura
+  GET  /api/sst/ppp/preview/<funcionario_id>/   — preview postos+agentes antes de gerar
 """
 from datetime import date, timedelta
 from django.http import JsonResponse, HttpResponse
@@ -37,17 +39,20 @@ def _json(request):
 
 
 def _ppp_dict(ppp):
+    func = ppp.funcionario
     return {
         "id": ppp.id,
         "funcionario_id": ppp.funcionario_id,
-        "funcionario_nome": ppp.funcionario.nome,
-        "funcionario_cpf": ppp.funcionario.cpf,
+        "funcionario_nome": func.nome,
+        "funcionario_cpf": func.cpf,
         "funcionario_nit": ppp.nit_pis,
-        "cargo": ppp.funcionario.cargo,
+        "cargo": func.cargo,
+        "setor": func.setor,
         "cbo": ppp.cbo,
-        "data_admissao": str(ppp.funcionario.data_admissao or ""),
+        "data_admissao": str(func.data_admissao or ""),
         "data_desligamento": str(ppp.data_desligamento or ""),
         "data_geracao": str(ppp.data_geracao),
+        "data_finalizacao": str(ppp.data_finalizacao or ""),
         "status": ppp.status,
         "responsavel_tecnico": ppp.responsavel_tecnico,
         "conselho_registro": ppp.conselho_registro,
@@ -55,6 +60,10 @@ def _ppp_dict(ppp):
         "monitoracao_biologica": ppp.monitoracao_biologica,
         "historico_cargos": ppp.historico_cargos,
         "resultado_conclusao": ppp.resultado_conclusao,
+        "tem_exposicao_nociva": any(
+            not ag.get("epc_eficaz") and not ag.get("epi_eficaz")
+            for ag in (ppp.agentes_nocivos or [])
+        ),
         "criado_em": str(ppp.criado_em.date()),
     }
 
@@ -63,34 +72,62 @@ def _ppp_dict(ppp):
 # HELPERS DE PREENCHIMENTO AUTOMÁTICO
 # ──────────────────────────────────────────────
 
-def _coletar_agentes_nocivos(funcionario, empresa):
-    """Coleta agentes nocivos do S-2240 (PostoTrabalho + AgentesNocivos)."""
+def _postos_do_funcionario(funcionario):
+    """Retorna os postos de trabalho vinculados ao funcionário (FuncionarioPostoTrabalho)."""
     try:
-        from .models import PostoTrabalho, AgenteNocivoSST
-        postos = PostoTrabalho.objects.filter(empresa=empresa, ativo=True)
-        # tenta filtrar por setor do funcionário
-        if funcionario.setor:
-            postos_setor = postos.filter(setor__icontains=funcionario.setor)
-            if postos_setor.exists():
-                postos = postos_setor
-
-        agentes = []
-        for posto in postos:
-            for agente in AgenteNocivoSST.objects.filter(posto=posto):
-                agentes.append({
-                    "codigo_tabela": agente.codigo_tabela,
-                    "descricao": agente.descricao,
-                    "tipo": agente.tipo,          # fisico / quimico / biologico / ergonomico
-                    "tecnica_medicao": agente.tecnica_medicao,
-                    "intensidade_concentracao": agente.intensidade_concentracao,
-                    "limite_tolerancia": agente.limite_tolerancia,
-                    "epc_eficaz": agente.epc_eficaz,
-                    "epi_ca": agente.epi_ca,
-                    "data_avaliacao": str(agente.data_avaliacao or ""),
-                })
-        return agentes
+        from .models import FuncionarioPostoTrabalho
+        return (
+            FuncionarioPostoTrabalho.objects
+            .filter(funcionario=funcionario)
+            .select_related("posto")
+            .order_by("data_inicio")
+        )
     except Exception:
         return []
+
+
+def _agentes_do_posto(posto):
+    """Retorna agentes nocivos de um PostoTrabalho como lista de dicts."""
+    try:
+        from .models import AgenteNocivoPostoTrabalho
+        return [
+            {
+                "codigo_tabela": a.cod_agente,
+                "descricao": a.get_cod_agente_display() if hasattr(a, "get_cod_agente_display") else (a.dsc_agente or a.cod_agente),
+                "descricao_complementar": a.dsc_agente,
+                "tipo": a.tipo_agente,
+                "tecnica_medicao": a.tec_medicao,
+                "intensidade_concentracao": a.intensidade,
+                "limite_tolerancia": a.limite_tolerancia,
+                "epc_descricao": a.epc_descricao,
+                "epc_eficaz": a.epc_eficaz,
+                "epi_descricao": a.epi_descricao,
+                "epi_ca": a.epi_ca,
+                "epi_eficaz": a.epi_eficaz,
+                "posto_nome": posto.nome,
+                "posto_setor": posto.setor,
+            }
+            for a in AgenteNocivoPostoTrabalho.objects.filter(posto=posto)
+        ]
+    except Exception:
+        return []
+
+
+def _coletar_agentes_nocivos(funcionario, empresa):
+    """
+    Coleta agentes nocivos do S-2240 a partir dos postos de trabalho
+    realmente vinculados ao funcionário (FuncionarioPostoTrabalho).
+    """
+    vinculos = _postos_do_funcionario(funcionario)
+    agentes = []
+    vistos = set()
+    for vinculo in vinculos:
+        for ag in _agentes_do_posto(vinculo.posto):
+            chave = (ag["codigo_tabela"], vinculo.posto.id)
+            if chave not in vistos:
+                vistos.add(chave)
+                agentes.append(ag)
+    return agentes
 
 
 def _coletar_monitoracao(funcionario, empresa):
@@ -117,25 +154,171 @@ def _coletar_monitoracao(funcionario, empresa):
 
 
 def _historico_cargos(funcionario, empresa):
-    """Coleta histórico de cargos do funcionário via ASOs."""
+    """
+    Constrói histórico de cargos/postos a partir de FuncionarioPostoTrabalho,
+    complementado com ASOs quando não há vínculos de posto.
+    """
+    try:
+        vinculos = _postos_do_funcionario(funcionario)
+        if vinculos:
+            return [
+                {
+                    "cargo": v.posto.nome,
+                    "setor": v.posto.setor,
+                    "data_inicio": str(v.data_inicio),
+                    "data_fim": str(v.data_fim) if v.data_fim else "",
+                    "posto_id": v.posto.id,
+                    "tem_agentes_nocivos": AgenteNocivoPostoTrabalho_count(v.posto),
+                }
+                for v in vinculos
+            ]
+    except Exception:
+        pass
+
+    # fallback: histórico via ASOs
     try:
         from .models import ASOOcupacional
-        asos = ASOOcupacional.objects.filter(
-            funcionario=funcionario
-        ).order_by("data_exame")
+        asos = ASOOcupacional.objects.filter(funcionario=funcionario).order_by("data_exame")
         cargos = []
         cargo_ant = None
         for aso in asos:
             if aso.cargo != cargo_ant:
                 cargos.append({
                     "cargo": aso.cargo,
-                    "data_inicio": str(aso.data_exame),
                     "setor": aso.setor or funcionario.setor,
+                    "data_inicio": str(aso.data_exame),
+                    "data_fim": "",
+                    "posto_id": None,
+                    "tem_agentes_nocivos": 0,
                 })
                 cargo_ant = aso.cargo
         return cargos
     except Exception:
         return []
+
+
+def AgenteNocivoPostoTrabalho_count(posto):
+    try:
+        from .models import AgenteNocivoPostoTrabalho
+        return AgenteNocivoPostoTrabalho.objects.filter(posto=posto).count()
+    except Exception:
+        return 0
+
+
+def _gerar_conclusao(agentes_nocivos):
+    """Gera texto de conclusão automático baseado nos agentes nocivos encontrados."""
+    if not agentes_nocivos:
+        return (
+            "Não foram identificados agentes nocivos nos postos de trabalho ocupados "
+            "pelo trabalhador. Não há caracterização de exposição a agentes prejudiciais "
+            "à saúde para fins de aposentadoria especial."
+        )
+    nao_neutralizados = [
+        ag for ag in agentes_nocivos
+        if not ag.get("epc_eficaz") and not ag.get("epi_eficaz")
+    ]
+    tipos = list({ag["tipo"] for ag in nao_neutralizados})
+    descricoes = list({ag["descricao"] for ag in nao_neutralizados[:3]})
+    if nao_neutralizados:
+        return (
+            f"O trabalhador esteve exposto a agentes nocivos ({', '.join(descricoes)}) "
+            f"de natureza {', '.join(tipos)}, sem neutralização eficaz por EPC/EPI, "
+            f"nos termos do Anexo IV do Decreto 3.048/1999 e IN INSS 128/2022. "
+            f"Caracterizada exposição habitual e permanente para fins de aposentadoria especial."
+        )
+    return (
+        f"O trabalhador esteve exposto a agentes nocivos ({', '.join(d['descricao'] for d in agentes_nocivos[:2])}), "
+        f"porém os equipamentos de proteção coletiva (EPC) e/ou individual (EPI) fornecidos "
+        f"são eficazes na neutralização da nocividade. "
+        f"Não caracterizada exposição para fins de aposentadoria especial."
+    )
+
+
+# ──────────────────────────────────────────────
+# ENDPOINT: PREVIEW (antes de gerar o PPP)
+# ──────────────────────────────────────────────
+
+@csrf_exempt
+def api_ppp_preview(request, funcionario_id):
+    """
+    Retorna os postos de trabalho e agentes nocivos do funcionário
+    sem criar nenhum registro — usado para pré-visualizar o PPP.
+    """
+    empresa = _empresa(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=403)
+    try:
+        from .models import FuncionarioSST
+        func = FuncionarioSST.objects.get(id=funcionario_id, empresa=empresa)
+
+        vinculos = _postos_do_funcionario(func)
+        postos_preview = []
+        for v in vinculos:
+            agentes = _agentes_do_posto(v.posto)
+            postos_preview.append({
+                "posto_id": v.posto.id,
+                "posto_nome": v.posto.nome,
+                "setor": v.posto.setor,
+                "data_inicio": str(v.data_inicio),
+                "data_fim": str(v.data_fim) if v.data_fim else "",
+                "ativo": v.data_fim is None,
+                "responsavel_tecnico": v.posto.responsavel_tecnico,
+                "conselho_registro": v.posto.responsavel_registro,
+                "data_laudo": str(v.posto.data_laudo or ""),
+                "agentes_nocivos": agentes,
+                "tem_exposicao_nao_neutralizada": any(
+                    not a.get("epc_eficaz") and not a.get("epi_eficaz")
+                    for a in agentes
+                ),
+            })
+
+        todos_agentes = _coletar_agentes_nocivos(func, empresa)
+        monitoracao = _coletar_monitoracao(func, empresa)
+
+        # CBO automático por cargo
+        CBO_MAP = {
+            "gerente": "1231-05", "supervisor": "3517-10", "operador": "7170-35",
+            "tecnico": "3115-10", "engenheiro": "2143-05", "assistente": "4110-05",
+            "auxiliar": "4110-05", "analista": "2521-05", "soldador": "7243-35",
+            "eletricista": "7156-10", "motorista": "7824-05", "enfermeiro": "2235-05",
+            "medico": "2231-20", "seguranca": "7911-10",
+        }
+        cargo_lower = func.cargo.lower()
+        cbo_auto = next((v for k, v in CBO_MAP.items() if k in cargo_lower), "")
+
+        # Responsável técnico do posto ativo mais recente
+        resp_auto = ""
+        conselho_auto = ""
+        if postos_preview:
+            atual = next((p for p in reversed(postos_preview) if p["ativo"]), postos_preview[-1])
+            resp_auto = atual.get("responsavel_tecnico", "")
+            conselho_auto = atual.get("conselho_registro", "")
+
+        return JsonResponse({
+            "funcionario": {
+                "id": func.id,
+                "nome": func.nome,
+                "cpf": func.cpf,
+                "cargo": func.cargo,
+                "setor": func.setor,
+                "data_admissao": str(func.data_admissao or ""),
+                "cbo_sugerido": cbo_auto,
+            },
+            "postos": postos_preview,
+            "agentes_nocivos": todos_agentes,
+            "monitoracao_biologica": monitoracao,
+            "responsavel_tecnico_sugerido": resp_auto,
+            "conselho_registro_sugerido": conselho_auto,
+            "conclusao_sugerida": _gerar_conclusao(todos_agentes),
+            "tem_exposicao_nociva": any(
+                not a.get("epc_eficaz") and not a.get("epi_eficaz")
+                for a in todos_agentes
+            ),
+            "sem_postos_vinculados": len(postos_preview) == 0,
+        })
+    except Exception as e:
+        return JsonResponse({"erro": str(e)}, status=500)
+
 
 
 # ──────────────────────────────────────────────
@@ -173,7 +356,10 @@ def api_ppp_lista(request):
 
 @csrf_exempt
 def api_ppp_criar(request):
-    """Gera PPP automaticamente a partir dos dados existentes (ASO, S2240, exames)."""
+    """
+    Gera PPP automaticamente a partir dos postos de trabalho vinculados
+    ao funcionário (FuncionarioPostoTrabalho → AgenteNocivoPostoTrabalho).
+    """
     empresa = _empresa(request)
     if not empresa:
         return JsonResponse({"erro": "Não autenticado"}, status=403)
@@ -190,28 +376,49 @@ def api_ppp_criar(request):
 
         func = FuncionarioSST.objects.get(id=funcionario_id, empresa=empresa)
 
-        # CBO padrão por cargo (pode ser expandido)
+        # Coleta dados automaticamente dos postos vinculados
+        agentes = _coletar_agentes_nocivos(func, empresa)
+        historico = _historico_cargos(func, empresa)
+        monitoracao = _coletar_monitoracao(func, empresa)
+
+        # CBO automático por cargo
         CBO_MAP = {
             "gerente": "1231-05", "supervisor": "3517-10", "operador": "7170-35",
             "tecnico": "3115-10", "engenheiro": "2143-05", "assistente": "4110-05",
-            "auxiliar": "4110-05", "analista": "2521-05",
+            "auxiliar": "4110-05", "analista": "2521-05", "soldador": "7243-35",
+            "eletricista": "7156-10", "motorista": "7824-05", "enfermeiro": "2235-05",
+            "medico": "2231-20", "seguranca": "7911-10",
         }
         cargo_lower = func.cargo.lower()
-        cbo = next((v for k, v in CBO_MAP.items() if k in cargo_lower), "0000-00")
+        cbo_auto = next((v for k, v in CBO_MAP.items() if k in cargo_lower), "0000-00")
+
+        # Responsável técnico: usa do payload ou tenta pegar do posto ativo
+        resp = data.get("responsavel_tecnico", "")
+        conselho = data.get("conselho_registro", "")
+        if not resp:
+            vinculos = list(_postos_do_funcionario(func))
+            for v in reversed(vinculos):
+                if v.posto.responsavel_tecnico:
+                    resp = v.posto.responsavel_tecnico
+                    conselho = v.posto.responsavel_registro
+                    break
+
+        # Conclusão: usa do payload ou gera automaticamente
+        conclusao = data.get("resultado_conclusao", "") or _gerar_conclusao(agentes)
 
         ppp = PPPFuncionario.objects.create(
             empresa=empresa,
             funcionario=func,
             nit_pis=data.get("nit_pis", ""),
-            cbo=data.get("cbo", cbo),
+            cbo=data.get("cbo", cbo_auto),
             data_geracao=date.today(),
             data_desligamento=data.get("data_desligamento") or None,
-            responsavel_tecnico=data.get("responsavel_tecnico", empresa.nome),
-            conselho_registro=data.get("conselho_registro", ""),
-            agentes_nocivos=_coletar_agentes_nocivos(func, empresa),
-            monitoracao_biologica=_coletar_monitoracao(func, empresa),
-            historico_cargos=_historico_cargos(func, empresa),
-            resultado_conclusao=data.get("resultado_conclusao", "Conforme registros de exposição ocupacional vigentes."),
+            responsavel_tecnico=resp,
+            conselho_registro=conselho,
+            agentes_nocivos=agentes,
+            monitoracao_biologica=monitoracao,
+            historico_cargos=historico,
+            resultado_conclusao=conclusao,
             status="rascunho",
         )
         return JsonResponse({"sucesso": True, "ppp": _ppp_dict(ppp)}, status=201)
@@ -258,6 +465,183 @@ def api_ppp_finalizar(request, ppp_id):
         return JsonResponse({"sucesso": True, "status": "finalizado"})
     except Exception as e:
         return JsonResponse({"erro": str(e)}, status=404)
+
+
+@csrf_exempt
+def api_ppp_transmitir_esocial(request, ppp_id):
+    """
+    Transmite os eventos S-2240 referentes aos postos de trabalho do funcionário
+    para o eSocial — que é o canal oficial pelo qual o INSS recebe os dados do PPP.
+
+    Cria um eSocialEventoSST (S-2240) por posto de trabalho vinculado,
+    gera o XML e chama transmitir_evento() para envio imediato.
+
+    Retorna status de cada transmissão e protocolos recebidos.
+    """
+    empresa = _empresa(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=403)
+    if request.method != "POST":
+        return JsonResponse({"erro": "Use POST"}, status=405)
+    try:
+        from .models import PPPFuncionario, eSocialEventoSST, ConfiguracaoSST
+        from .views_esocial_sst import _gerar_xml_s2240
+        from .esocial_transmissao import transmitir_evento
+        from django.utils import timezone
+
+        ppp = PPPFuncionario.objects.get(id=ppp_id, empresa=empresa)
+        func = ppp.funcionario
+
+        # Configuração eSocial da empresa (certificado, ambiente, CNPJ)
+        try:
+            cfg = empresa.configuracao_sst
+        except ConfiguracaoSST.DoesNotExist:
+            return JsonResponse({
+                "erro": "Configuração eSocial não encontrada. Configure o certificado digital em Configurações SST."
+            }, status=400)
+
+        if not cfg.certificado_pfx_b64:
+            return JsonResponse({
+                "erro": "Certificado digital não configurado. Faça upload do certificado A1 (.pfx) em Configurações SST."
+            }, status=400)
+
+        # Pega os postos vinculados ao funcionário
+        vinculos = list(_postos_do_funcionario(func))
+        if not vinculos:
+            return JsonResponse({
+                "aviso": "Funcionário sem postos de trabalho vinculados. Vincule o funcionário a postos em Postos S-2240 antes de transmitir.",
+                "transmitidos": 0,
+            })
+
+        periodo = date.today().strftime("%Y-%m")
+        resultados = []
+
+        for vinculo in vinculos:
+            posto = vinculo.posto
+            try:
+                # Verifica se já existe evento S-2240 pendente para este posto neste período
+                ev_existente = eSocialEventoSST.objects.filter(
+                    empresa=empresa,
+                    tipo_evento="S-2240",
+                    referencia__contains=f"posto_{posto.id}",
+                    status__in=["transmitido"],
+                ).order_by("-criado_em").first()
+
+                if ev_existente:
+                    resultados.append({
+                        "posto": posto.nome,
+                        "status": "ja_transmitido",
+                        "protocolo": ev_existente.protocolo,
+                        "mensagem": f"S-2240 já transmitido anteriormente (protocolo: {ev_existente.protocolo})",
+                    })
+                    continue
+
+                # Gera XML S-2240 para este posto
+                xml = _gerar_xml_s2240(empresa, cfg, periodo=periodo, posto=posto)
+
+                # Cria o evento na fila
+                evento = eSocialEventoSST.objects.create(
+                    empresa=empresa,
+                    tipo_evento="S-2240",
+                    status="pendente",
+                    referencia=f"PPP#{ppp.id} — {func.nome} — posto_{posto.id} — {posto.nome}",
+                    xml_gerado=xml,
+                )
+
+                # Transmite imediatamente
+                ok, mensagem = transmitir_evento(evento)
+                evento.refresh_from_db()
+
+                resultados.append({
+                    "posto": posto.nome,
+                    "posto_id": posto.id,
+                    "evento_id": evento.id,
+                    "status": evento.status,
+                    "protocolo": evento.protocolo,
+                    "mensagem": mensagem,
+                    "sucesso": ok,
+                })
+
+            except Exception as e_posto:
+                resultados.append({
+                    "posto": posto.nome,
+                    "status": "erro",
+                    "mensagem": str(e_posto),
+                    "sucesso": False,
+                })
+
+        transmitidos = sum(1 for r in resultados if r.get("sucesso"))
+        erros = sum(1 for r in resultados if not r.get("sucesso") and r.get("status") != "ja_transmitido")
+
+        # Atualiza status do PPP se tudo foi transmitido com sucesso
+        if transmitidos > 0 and erros == 0:
+            if ppp.status == "rascunho":
+                ppp.status = "finalizado"
+                ppp.data_finalizacao = date.today()
+                ppp.save(update_fields=["status", "data_finalizacao"])
+
+        return JsonResponse({
+            "sucesso": transmitidos > 0,
+            "postos_processados": len(vinculos),
+            "transmitidos": transmitidos,
+            "ja_transmitidos": sum(1 for r in resultados if r.get("status") == "ja_transmitido"),
+            "erros": erros,
+            "ambiente": cfg.esocial_ambiente or "homologacao",
+            "resultados": resultados,
+        })
+
+    except Exception as e:
+        return JsonResponse({"erro": str(e)}, status=500)
+
+
+@csrf_exempt
+def api_ppp_status_esocial(request, ppp_id):
+    """Retorna o status de transmissão eSocial (S-2240) dos postos do funcionário."""
+    empresa = _empresa(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=403)
+    try:
+        from .models import PPPFuncionario, eSocialEventoSST
+        ppp = PPPFuncionario.objects.get(id=ppp_id, empresa=empresa)
+        func = ppp.funcionario
+
+        vinculos = list(_postos_do_funcionario(func))
+        postos_ids = [v.posto.id for v in vinculos]
+
+        eventos = eSocialEventoSST.objects.filter(
+            empresa=empresa,
+            tipo_evento="S-2240",
+        ).filter(
+            referencia__regex=r"posto_\d+"
+        ).order_by("-criado_em")[:50]
+
+        # Filtra apenas os relacionados aos postos deste funcionário
+        relevantes = [
+            ev for ev in eventos
+            if any(f"posto_{pid}" in ev.referencia for pid in postos_ids)
+        ]
+
+        return JsonResponse({
+            "postos_vinculados": len(vinculos),
+            "eventos": [
+                {
+                    "id": ev.id,
+                    "status": ev.status,
+                    "protocolo": ev.protocolo,
+                    "referencia": ev.referencia,
+                    "data_envio": ev.data_envio.strftime("%d/%m/%Y %H:%M") if ev.data_envio else None,
+                    "mensagem_erro": ev.mensagem_erro,
+                }
+                for ev in relevantes
+            ],
+            "todos_transmitidos": len(vinculos) > 0 and all(
+                any(f"posto_{v.posto.id}" in ev.referencia and ev.status == "transmitido"
+                    for ev in relevantes)
+                for v in vinculos
+            ),
+        })
+    except Exception as e:
+        return JsonResponse({"erro": str(e)}, status=500)
 
 
 @csrf_exempt
@@ -454,17 +838,6 @@ def sst_ppp_page(request):
     empresa = _empresa_sst_autenticada(request)
     if not empresa:
         return redirect("/login-empresa/")
-    return render(request, "sst_expansao_modulo.html", {
-        "modulo_id":      "ppp",
-        "modulo_area":    "Previdência Social · SST",
-        "modulo_titulo":  "PPP — Perfil Profissiográfico Previdenciário",
-        "modulo_descricao": (
-            "Geração automática do PPP por IN INSS 128/2022. "
-            "Consolida agentes nocivos, monitoração biológica e histórico de cargos "
-            "para aposentadoria especial e emissão de benefícios previdenciários."
-        ),
-        "api_base":     "/api/sst/ppp/",
-        "api_kpi":      "/api/sst/ppp/kpis/",
-        "accent_color": "#00c9a7",
+    return render(request, "sst_ppp.html", {
         "empresa_nome": empresa.nome,
     })

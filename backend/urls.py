@@ -266,6 +266,7 @@ from api.views_postos_trabalho import (
 from api.views_ppp import (
     api_ppp_lista, api_ppp_criar, api_ppp_detalhe,
     api_ppp_finalizar, api_ppp_pdf, api_ppp_kpis,
+    api_ppp_preview, api_ppp_transmitir_esocial, api_ppp_status_esocial,
     sst_ppp_page,
 )
 from api.views_laudos_tecnicos import (
@@ -1209,9 +1210,12 @@ urlpatterns = [
     # ── PPP ──────────────────────────────────────────────────
     path('api/sst/ppp/', api_ppp_lista),
     path('api/sst/ppp/kpis/', api_ppp_kpis),
+    path('api/sst/ppp/preview/<int:funcionario_id>/', api_ppp_preview),
     path('api/sst/ppp/<int:ppp_id>/', api_ppp_detalhe),
     path('api/sst/ppp/<int:ppp_id>/finalizar/', api_ppp_finalizar),
     path('api/sst/ppp/<int:ppp_id>/pdf/', api_ppp_pdf),
+    path('api/sst/ppp/<int:ppp_id>/transmitir-esocial/', api_ppp_transmitir_esocial),
+    path('api/sst/ppp/<int:ppp_id>/status-esocial/', api_ppp_status_esocial),
     # ── Laudos Técnicos (LTCAT / LIP / PGR / PCMSO) ─────────
     path('api/sst/laudos/', api_laudos_lista),
     path('api/sst/laudos/kpis/', api_laudos_kpis),
