@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · Financeiro da Clínica</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2233;--surface3:#1e2d40;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.13);--text:#e2eeff;--muted:#7b90b0;--purple:#a374ff;--blue:#3b82f6;--amber:#f59e0b;--red:#ef4444;--green:#22c55e;--teal:#00c9a7}
+html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:52px;display:flex;align-items:center;background:rgba(10,14,26,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(14px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:210px;border-right:1px solid var(--line);height:100%}
+.tb-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--purple),#6b21e8);display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#fff;flex-shrink:0}
+.tb-nome{font-size:.8rem;font-weight:700}.tb-sub{font-size:.6rem;color:var(--muted);margin-top:1px}
+.tb-nav{display:flex;align-items:center;gap:1px;padding:0 14px;flex:1;overflow-x:auto}
+.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{padding:5px 11px;border-radius:6px;font-size:.75rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap}
+.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tb-nav a.active{color:var(--purple);background:rgba(163,116,255,.08)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.btn-main{padding:6px 13px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--purple),#6b21e8);color:#fff;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .2s}
+.btn-main:hover{opacity:.88}
+.btn-ghost{padding:6px 13px;border-radius:7px;border:1px solid var(--line2);background:none;color:var(--muted);font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s}
+.btn-ghost:hover{color:var(--text)}
+.btn-amber{padding:5px 11px;border-radius:7px;border:1px solid rgba(245,158,11,.25);background:rgba(245,158,11,.1);color:var(--amber);font-size:.73rem;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-amber:hover{background:rgba(245,158,11,.2)}
+.btn-sm{padding:4px 9px;border-radius:6px;border:1px solid var(--line2);background:none;color:var(--muted);font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-sm:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.app{display:flex;min-height:100vh;padding-top:52px}
+.sidebar{width:200px;flex-shrink:0;background:rgba(17,24,39,.55);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:52px;bottom:0;overflow-y:auto}
+.main{flex:1;margin-left:200px;padding:20px 24px;display:flex;flex-direction:column;gap:14px}
+
+/* ── DRE Hero ── */
+.dre-hero{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.dre-card{padding:18px;border-radius:12px;background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
+.dre-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--dc,var(--purple));opacity:.8}
+.dre-label{font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.dre-val{font-size:1.5rem;font-weight:900;line-height:1}
+.dre-sub{font-size:.7rem;color:var(--muted);margin-top:6px}
+
+/* ── Fluxo de caixa (barras) ── */
+.fluxo-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.fluxo-title{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px}
+.fluxo-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.fluxo-row:last-child{border-bottom:none}
+.fluxo-mes{font-size:.72rem;font-weight:700;color:var(--muted);width:48px;flex-shrink:0}
+.fluxo-bars{flex:1;display:flex;flex-direction:column;gap:3px}
+.fluxo-bar-row{display:flex;align-items:center;gap:6px}
+.fluxo-bar-label{font-size:.6rem;color:var(--muted);width:52px;flex-shrink:0}
+.fluxo-bar-wrap{flex:1;height:7px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.fluxo-bar-fill{height:100%;border-radius:3px}
+.fluxo-bar-fill.rec{background:linear-gradient(90deg,rgba(163,116,255,.5),rgba(163,116,255,.8))}
+.fluxo-bar-fill.desp{background:linear-gradient(90deg,rgba(239,68,68,.4),rgba(239,68,68,.7))}
+.fluxo-saldo{font-size:.78rem;font-weight:800;width:80px;text-align:right;flex-shrink:0}
+.fluxo-saldo.pos{color:var(--green)}
+.fluxo-saldo.neg{color:var(--red)}
+
+/* ── Two col ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:2px;padding:4px;background:var(--surface2);border-radius:10px;width:fit-content}
+.tab{padding:6px 14px;border-radius:7px;font-size:.76rem;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s;border:none;background:none;font-family:inherit}
+.tab.active{background:var(--surface3);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+
+/* ── Filtros ── */
+.filters{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.filters input,.filters select{padding:6px 10px;border-radius:7px;border:1px solid var(--line2);background:var(--surface2);color:var(--text);font-size:.78rem;outline:none;font-family:inherit}
+.filters input:focus,.filters select:focus{border-color:var(--purple)}
+.filters select option{background:var(--surface2)}
+
+/* ── Tabela ── */
+.tbl-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tbl-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);gap:10px;flex-wrap:wrap}
+.tbl{width:100%;border-collapse:collapse}
+.tbl thead th{padding:8px 12px;text-align:left;font-size:.63rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+.tbl tbody td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-size:.8rem;vertical-align:middle}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover{background:rgba(255,255,255,.025);cursor:pointer}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:.67rem;font-weight:700}
+.b-ok{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.2)}
+.b-pend{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
+.b-venc{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.b-canc{background:rgba(123,144,176,.1);color:var(--muted);border:1px solid var(--line)}
+.b-glosa{background:rgba(163,116,255,.12);color:var(--purple);border:1px solid rgba(163,116,255,.2)}
+.b-parc{background:rgba(59,130,246,.12);color:#3b82f6;border:1px solid rgba(59,130,246,.2)}
+
+/* ── Modal ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(5px);z-index:200;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface2);border:1px solid var(--line2);border-radius:16px;padding:28px;width:640px;max-width:100%;position:relative}
+.modal h2{font-size:1rem;font-weight:800;margin-bottom:16px}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:4px 8px;border-radius:6px}
+.modal-close:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.form-row{margin-bottom:12px}
+.form-row label{display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--line2);background:var(--surface3);color:var(--text);font-size:.84rem;outline:none;font-family:inherit;transition:border .15s}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--purple)}
+.form-row select option{background:var(--surface2)}
+.form-cols{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+
+/* ── Itens fatura ── */
+.itens-header{display:grid;grid-template-columns:80px 1fr 60px 100px 100px 32px;gap:6px;padding:6px 0;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--line)}
+.item-row{display:grid;grid-template-columns:80px 1fr 60px 100px 100px 32px;gap:6px;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.item-row input{padding:5px 8px;border-radius:6px;border:1px solid var(--line2);background:var(--surface3);color:var(--text);font-size:.78rem;outline:none;font-family:inherit}
+.item-row input:focus{border-color:var(--purple)}
+.item-total{font-size:.82rem;font-weight:700;text-align:right}
+.fatura-resumo{background:var(--surface);border:1px solid var(--line2);border-radius:10px;padding:12px;margin-top:12px;display:flex;flex-direction:column;gap:4px;font-size:.82rem}
+.fatura-resumo-row{display:flex;justify-content:space-between}
+.fatura-resumo-row.total{font-weight:900;font-size:.95rem;color:var(--purple)}
+
+/* ── Toast ── */
+.toast-wrap{position:fixed;bottom:22px;right:22px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{padding:10px 16px;border-radius:10px;font-size:.8rem;font-weight:600;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#4ade80;backdrop-filter:blur(8px);animation:tin .2s}
+.toast.err{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.3);color:#f87171}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="tb-logo">
+    <div class="tb-icon">SC</div>
+    <div>
+      <div class="tb-nome">SolusCRT</div>
+      <div class="tb-sub">{{ empresa_nome }}</div>
+    </div>
+  </div>
+  <nav class="tb-nav">
+    <a href="/dashboard-empresa/">Painel</a>
+    <a href="/sst/aso/">ASO</a>
+    <a href="/sst/laboratorios/">Laboratórios</a>
+    <a href="/clinica/financeiro/" class="active">Financeiro</a>
+  </nav>
+  <div class="tb-actions">
+    <button class="btn-amber" onclick="abrirModalDespesa()">＋ Despesa</button>
+    <button class="btn-main" onclick="abrirModalFatura()">＋ Nova Fatura</button>
+    <a href="/logout-empresa/" class="btn-ghost">Sair</a>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+
+  <main class="main">
+
+    <!-- Cabeçalho -->
+    <div>
+      <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--purple);margin-bottom:4px">Financeiro · Clínica Ocupacional</div>
+      <h1 style="font-size:1.4rem;font-weight:900">Financeiro da Clínica</h1>
+      <p style="font-size:.84rem;color:var(--muted);margin-top:5px;max-width:640px" id="mes-referencia">
+        DRE mensal, fluxo de caixa, faturas e despesas do exercício.
+      </p>
+    </div>
+
+    <!-- Alerta prejuízo -->
+    <div id="alerta-dre" style="display:none;padding:12px 16px;border-radius:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#fca5a5;font-size:.82rem">
+      ⚠️ Resultado negativo no mês atual. Receita abaixo das despesas.
+    </div>
+
+    <!-- DRE Hero ── -->
+    <div class="dre-hero">
+      <div class="dre-card" style="--dc:var(--purple)">
+        <div class="dre-label">Receita Realizada</div>
+        <div class="dre-val" id="d-receita">—</div>
+        <div class="dre-sub" id="d-mes-sub">este mês</div>
+      </div>
+      <div class="dre-card" style="--dc:var(--amber)">
+        <div class="dre-label">Faturado Emitido</div>
+        <div class="dre-val" id="d-faturado">—</div>
+        <div class="dre-sub">faturas emitidas</div>
+      </div>
+      <div class="dre-card" style="--dc:var(--red)">
+        <div class="dre-label">Despesas</div>
+        <div class="dre-val" id="d-desp">—</div>
+        <div class="dre-sub">no período</div>
+      </div>
+      <div class="dre-card" style="--dc:var(--green)">
+        <div class="dre-label">Lucro Líquido</div>
+        <div class="dre-val" id="d-lucro">—</div>
+        <div class="dre-sub" id="d-margem">margem —%</div>
+      </div>
+    </div>
+
+    <!-- Segunda linha ── -->
+    <div class="dre-hero">
+      <div class="dre-card" style="--dc:var(--blue)">
+        <div class="dre-label">A Receber</div>
+        <div class="dre-val" id="d-areceber">—</div>
+        <div class="dre-sub">faturas abertas</div>
+      </div>
+      <div class="dre-card" style="--dc:var(--amber)">
+        <div class="dre-label">Faturas Vencidas</div>
+        <div class="dre-val" id="d-vencidas">—</div>
+        <div class="dre-sub">aguardando cobrança</div>
+      </div>
+      <div class="dre-card" style="--dc:var(--purple)">
+        <div class="dre-label">Glosas</div>
+        <div class="dre-val" id="d-glosas">—</div>
+        <div class="dre-sub" id="d-glosa-val">em análise</div>
+      </div>
+      <div class="dre-card" style="--dc:var(--teal)">
+        <div class="dre-label">Tabela TISS</div>
+        <div class="dre-val" style="font-size:1rem;font-weight:700;margin-top:4px" id="d-tiss">
+          <span style="font-size:.78rem">15 serviços</span>
+        </div>
+        <div class="dre-sub">prontos para faturar</div>
+      </div>
+    </div>
+
+    <!-- Fluxo de caixa ── -->
+    <div class="fluxo-wrap">
+      <div class="fluxo-title">Fluxo de Caixa — Últimos 6 Meses</div>
+      <div id="fluxo-bars"><div style="color:var(--muted);font-size:.82rem">Carregando…</div></div>
+    </div>
+
+    <!-- Tabs: Faturas / Despesas / Glosas ── -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div class="tabs">
+        <button class="tab active" onclick="trocarTab('faturas',this)">💳 Faturas</button>
+        <button class="tab" onclick="trocarTab('despesas',this)">📤 Despesas</button>
+        <button class="tab" onclick="trocarTab('glosas',this)">⚠️ Glosas</button>
+      </div>
+      <span id="tab-contagem" style="font-size:.72rem;color:var(--muted)">—</span>
+    </div>
+
+    <!-- Tabela faturas ── -->
+    <div class="tbl-wrap" id="tab-faturas">
+      <div class="filters">
+        <input id="f-cliente" type="text" placeholder="🔍 Cliente" oninput="buscarFaturas()" style="width:180px">
+        <select id="f-status-fat" onchange="buscarFaturas()">
+          <option value="">Todos os status</option>
+          <option value="pendente">Pendente</option>
+          <option value="enviada">Enviada</option>
+          <option value="paga">Paga</option>
+          <option value="vencida">Vencida</option>
+          <option value="em_glosa">Em glosa</option>
+          <option value="parcial">Parcial</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+        <input id="f-mes-fat" type="month" onchange="buscarFaturas()" title="Filtrar por mês">
+      </div>
+      <table class="tbl">
+        <thead>
+          <tr><th>Nº Fatura</th><th>Cliente</th><th>Emissão</th><th>Vencimento</th><th>Total</th><th>Pago</th><th>Status</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="fat-tbody">
+          <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Tabela despesas ── -->
+    <div class="tbl-wrap" id="tab-despesas" style="display:none">
+      <div class="filters">
+        <input id="f-mes-desp" type="month" onchange="buscarDespesas()" title="Filtrar por mês">
+      </div>
+      <table class="tbl">
+        <thead>
+          <tr><th>Descrição</th><th>Categoria</th><th>Fornecedor</th><th>Competência</th><th>Valor</th><th>Status</th></tr>
+        </thead>
+        <tbody id="desp-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Tabela glosas ── -->
+    <div class="tbl-wrap" id="tab-glosas" style="display:none">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(163,116,255,.05)">
+        <div style="font-size:.78rem;color:var(--purple);font-weight:600" id="glosa-orientacao"></div>
+      </div>
+      <table class="tbl">
+        <thead>
+          <tr><th>Fatura</th><th>Cliente</th><th>Valor Total</th><th>Valor Glosado</th><th>Motivo</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="glo-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Modal Nova Fatura ── -->
+<div class="modal-bg" id="modal-fatura">
+  <div class="modal" style="width:720px">
+    <button class="modal-close" onclick="fecharModal('modal-fatura')">✕</button>
+    <h2>💳 Nova Fatura de Serviços</h2>
+
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Cliente (Empresa) *</label>
+        <input type="text" id="fat-cliente" placeholder="Razão Social">
+      </div>
+      <div class="form-row">
+        <label>CNPJ do Cliente *</label>
+        <input type="text" id="fat-cnpj" placeholder="00.000.000/0000-00">
+      </div>
+    </div>
+
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Data de Emissão</label>
+        <input type="date" id="fat-emissao">
+      </div>
+      <div class="form-row">
+        <label>Data de Vencimento</label>
+        <input type="date" id="fat-vencimento">
+      </div>
+    </div>
+
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Forma de Pagamento</label>
+        <select id="fat-forma">
+          <option value="transferencia">Transferência Bancária</option>
+          <option value="boleto">Boleto Bancário</option>
+          <option value="pix">PIX</option>
+          <option value="cartao">Cartão</option>
+          <option value="dinheiro">Dinheiro</option>
+          <option value="cheque">Cheque</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Desconto (R$)</label>
+        <input type="number" id="fat-desconto" value="0" min="0" step="0.01" oninput="calcularTotal()">
+      </div>
+    </div>
+
+    <!-- Itens -->
+    <div style="margin-top:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Itens de Serviço *</label>
+        <div style="display:flex;gap:6px">
+          <select id="tabela-servicos" onchange="adicionarDoTabelaSelec()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--line2);background:var(--surface3);color:var(--text);font-size:.75rem;outline:none;font-family:inherit;max-width:280px">
+            <option value="">Adicionar da tabela TISS…</option>
+          </select>
+          <button class="btn-sm" onclick="adicionarItem()">＋ Item</button>
+        </div>
+      </div>
+      <div class="itens-header"><span>Código</span><span>Descrição</span><span>Qtd</span><span>Vlr Unit.</span><span>Total</span><span></span></div>
+      <div id="itens-fatura"></div>
+    </div>
+
+    <div class="fatura-resumo">
+      <div class="fatura-resumo-row"><span>Subtotal</span><span id="fat-subtotal">R$ 0,00</span></div>
+      <div class="fatura-resumo-row"><span>Desconto</span><span id="fat-desc-show">R$ 0,00</span></div>
+      <div class="fatura-resumo-row total"><span>TOTAL</span><span id="fat-total">R$ 0,00</span></div>
+    </div>
+
+    <div class="form-row" style="margin-top:12px">
+      <label>Observações</label>
+      <input type="text" id="fat-obs" placeholder="ex: Referente ao período 01/06 a 30/06/2026">
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="fecharModal('modal-fatura')">Cancelar</button>
+      <button class="btn-main" id="btn-emitir" onclick="emitirFatura()">Emitir Fatura</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Baixar Pagamento ── -->
+<div class="modal-bg" id="modal-baixar">
+  <div class="modal" style="width:420px">
+    <button class="modal-close" onclick="fecharModal('modal-baixar')">✕</button>
+    <h2 id="baixar-titulo">Registrar Pagamento</h2>
+    <input type="hidden" id="baixar-fat-id">
+    <div class="form-row">
+      <label>Valor Recebido (R$) *</label>
+      <input type="number" id="baixar-valor" step="0.01" min="0.01" placeholder="0.00">
+    </div>
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Data do Pagamento</label>
+        <input type="date" id="baixar-data">
+      </div>
+      <div class="form-row">
+        <label>Forma</label>
+        <select id="baixar-forma">
+          <option value="transferencia">Transferência</option>
+          <option value="pix">PIX</option>
+          <option value="boleto">Boleto</option>
+          <option value="dinheiro">Dinheiro</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="fecharModal('modal-baixar')">Cancelar</button>
+      <button class="btn-main" id="btn-baixar" onclick="confirmarBaixa()">Confirmar Pagamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Despesa ── -->
+<div class="modal-bg" id="modal-despesa">
+  <div class="modal" style="width:480px">
+    <button class="modal-close" onclick="fecharModal('modal-despesa')">✕</button>
+    <h2>📤 Lançar Despesa</h2>
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Descrição *</label>
+        <input type="text" id="desp-desc" placeholder="ex: Aluguel sala, Salários, Exames">
+      </div>
+      <div class="form-row">
+        <label>Categoria *</label>
+        <select id="desp-cat">
+          <option value="pessoal">Pessoal / RH</option>
+          <option value="infraestrutura">Infraestrutura</option>
+          <option value="equipamentos">Equipamentos / Manutenção</option>
+          <option value="insumos">Insumos / Reagentes</option>
+          <option value="tecnologia">Tecnologia / Software</option>
+          <option value="impostos">Impostos / Taxas</option>
+          <option value="marketing">Marketing</option>
+          <option value="outros">Outros</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Valor (R$) *</label>
+        <input type="number" id="desp-valor" step="0.01" min="0.01" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label>Competência *</label>
+        <input type="date" id="desp-comp">
+      </div>
+    </div>
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Fornecedor</label>
+        <input type="text" id="desp-forn" placeholder="Nome do fornecedor">
+      </div>
+      <div class="form-row">
+        <label>Vencimento</label>
+        <input type="date" id="desp-venc">
+      </div>
+    </div>
+    <div class="form-row" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="desp-pago" style="width:auto">
+      <label for="desp-pago" style="font-size:.82rem;font-weight:500;color:var(--text);text-transform:none;letter-spacing:0;margin:0;cursor:pointer">Já foi pago</label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="fecharModal('modal-despesa')">Cancelar</button>
+      <button class="btn-main" id="btn-desp" onclick="salvarDespesa()">Salvar Despesa</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+const API_KPI   = '/api/clinica/financeiro/kpis/';
+const API_FLUX  = '/api/clinica/financeiro/fluxo-caixa/';
+const API_FAT   = '/api/clinica/financeiro/faturas/';
+const API_DESP  = '/api/clinica/financeiro/despesas/';
+const API_GLOS  = '/api/clinica/financeiro/glosas/';
+
+function csrf(){ const m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
+function hdr(){ return {'Content-Type':'application/json','X-CSRFToken':csrf()}; }
+async function _get(u){ const r=await fetch(u,{credentials:'same-origin'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+async function _post(u,b){ const r=await fetch(u,{method:'POST',credentials:'same-origin',headers:hdr(),body:JSON.stringify(b||{})}); const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.erro||'Erro '+r.status); return d; }
+function brl(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2}); }
+function toast(msg,t='ok'){ const w=document.getElementById('toast-wrap'); const el=document.createElement('div'); el.className='toast'+(t==='err'?' err':''); el.textContent=msg; w.appendChild(el); setTimeout(()=>el.remove(),3500); }
+
+// ── KPIs ──────────────────────────────────────────────────────────────────
+async function carregarKpis(){
+  try {
+    const d=await _get(API_KPI);
+    document.getElementById('mes-referencia').textContent='DRE de '+d.mes_referencia+' — receita, despesas e resultado financeiro da clínica';
+    document.getElementById('d-receita').textContent=brl(d.receita_realizada);
+    document.getElementById('d-faturado').textContent=brl(d.faturado_emitido);
+    document.getElementById('d-desp').textContent=brl(d.despesas);
+    document.getElementById('d-lucro').textContent=brl(d.lucro_liquido);
+    document.getElementById('d-lucro').style.color=d.lucro_liquido>=0?'var(--green)':'var(--red)';
+    document.getElementById('d-margem').textContent='margem '+d.margem_pct+'%';
+    document.getElementById('d-areceber').textContent=brl(d.a_receber);
+    document.getElementById('d-vencidas').textContent=d.faturas_vencidas||'0';
+    if(d.alerta) document.getElementById('alerta-dre').style.display='block';
+
+    // Tabela TISS no select
+    const sel=document.getElementById('tabela-servicos');
+    sel.innerHTML='<option value="">Adicionar da tabela TISS…</option>'+(d.tabela_servicos||[]).map(s=>`<option value="${JSON.stringify(s).replace(/"/g,'&quot;')}">${s.codigo} · ${s.descricao} (${brl(s.preco_tabela)})</option>`).join('');
+  } catch(e){ console.warn('KPI err',e); }
+}
+
+async function carregarGlosaKpi(){
+  try {
+    const d=await _get(API_GLOS);
+    document.getElementById('d-glosas').textContent=d.total_glosas||'0';
+    document.getElementById('d-glosa-val').textContent=brl(d.valor_em_glosa)+' em glosa';
+    document.getElementById('glosa-orientacao').textContent=d.orientacao||'';
+    const tb=document.getElementById('glo-tbody');
+    const gs=d.glosas||[];
+    document.getElementById('tab-contagem').textContent=gs.length+' glosa(s)';
+    if(!gs.length){ tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma glosa ativa.</td></tr>'; return; }
+    tb.innerHTML=gs.map(f=>`<tr>
+      <td><strong>${f.numero}</strong></td>
+      <td>${f.empresa_cliente_nome}</td>
+      <td>${brl(f.total)}</td>
+      <td style="color:var(--purple);font-weight:700">${brl(f.glosa_valor)}</td>
+      <td style="font-size:.75rem;color:var(--muted)">${f.glosa_motivo||'—'}</td>
+      <td><button class="btn-sm" onclick="baixarPdf(${f.id})">PDF</button></td>
+    </tr>`).join('');
+  } catch(e){ console.warn('Glosa err',e); }
+}
+
+// ── Fluxo de caixa ────────────────────────────────────────────────────────
+async function carregarFluxo(){
+  try {
+    const d=await _get(API_FLUX);
+    const meses=d.fluxo_caixa||[];
+    const maxVal=Math.max(1,...meses.map(m=>Math.max(m.receita,m.despesas)));
+    document.getElementById('fluxo-bars').innerHTML=meses.map(m=>`
+      <div class="fluxo-row">
+        <span class="fluxo-mes">${m.mes_fmt}</span>
+        <div class="fluxo-bars">
+          <div class="fluxo-bar-row"><span class="fluxo-bar-label">Receita</span><div class="fluxo-bar-wrap"><div class="fluxo-bar-fill rec" style="width:${Math.round(m.receita/maxVal*100)}%"></div></div></div>
+          <div class="fluxo-bar-row"><span class="fluxo-bar-label">Despesas</span><div class="fluxo-bar-wrap"><div class="fluxo-bar-fill desp" style="width:${Math.round(m.despesas/maxVal*100)}%"></div></div></div>
+        </div>
+        <span class="fluxo-saldo ${m.saldo>=0?'pos':'neg'}">${brl(m.saldo)}</span>
+      </div>`).join('');
+  } catch(e){ console.warn('Fluxo err',e); }
+}
+
+// ── Faturas ───────────────────────────────────────────────────────────────
+let _busTimer=null;
+function buscarFaturas(){
+  clearTimeout(_busTimer);
+  _busTimer=setTimeout(()=>carregarFaturas(),280);
+}
+async function carregarFaturas(){
+  try {
+    const cliente=document.getElementById('f-cliente').value.trim();
+    const status=document.getElementById('f-status-fat').value;
+    const mes=document.getElementById('f-mes-fat').value;
+    const p=new URLSearchParams();
+    if(cliente) p.append('cliente',cliente);
+    if(status) p.append('status',status);
+    if(mes) p.append('mes',mes);
+    const d=await _get(API_FAT+'?'+p.toString());
+    const fats=d.faturas||[];
+    document.getElementById('tab-contagem').textContent=fats.length+' fatura(s)';
+    const tb=document.getElementById('fat-tbody');
+    if(!fats.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma fatura encontrada.</td></tr>'; return; }
+    tb.innerHTML=fats.map(f=>{
+      const badge={'pendente':'<span class="badge b-pend">Pendente</span>','paga':'<span class="badge b-ok">Paga</span>','vencida':'<span class="badge b-venc">Vencida</span>','cancelada':'<span class="badge b-canc">Cancelada</span>','em_glosa':'<span class="badge b-glosa">Glosa</span>','parcial':'<span class="badge b-parc">Parcial</span>','enviada':'<span class="badge b-pend">Enviada</span>'}[f.status]||f.status;
+      const isVenc=f.vencida&&f.status!=='paga'&&f.status!=='cancelada';
+      return `<tr style="${isVenc?'background:rgba(239,68,68,.04)':''}">
+        <td><strong>${f.numero}</strong></td>
+        <td>${f.empresa_cliente_nome}</td>
+        <td>${f.data_emissao}</td>
+        <td style="${isVenc?'color:var(--red);font-weight:700':''}">
+          ${f.data_vencimento}${isVenc?' ⚠️':''}
+        </td>
+        <td style="font-weight:800">${brl(f.total)}</td>
+        <td style="color:var(--muted)">${brl(f.valor_pago)}</td>
+        <td>${badge}</td>
+        <td style="display:flex;gap:4px;flex-wrap:nowrap">
+          ${f.status==='pendente'||f.status==='enviada'||f.status==='parcial'?`<button class="btn-sm" onclick="abrirBaixar(${f.id},'${f.numero}',${f.total})">💰</button>`:''}
+          <button class="btn-sm" onclick="baixarPdf(${f.id})">PDF</button>
+          ${f.status==='pendente'?`<button class="btn-sm" style="color:var(--red)" onclick="cancelarFatura(${f.id})">✕</button>`:''}
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e){ console.warn('Faturas err',e); }
+}
+
+// ── Despesas ──────────────────────────────────────────────────────────────
+async function buscarDespesas(){
+  const mes=document.getElementById('f-mes-desp').value;
+  const p=new URLSearchParams(); if(mes) p.append('mes',mes);
+  try {
+    const d=await _get(API_DESP+'?'+p.toString());
+    const desps=d.despesas||[];
+    document.getElementById('tab-contagem').textContent=desps.length+' despesa(s) · Total: '+brl(d.total_despesas);
+    const tb=document.getElementById('desp-tbody');
+    if(!desps.length){ tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma despesa no período.</td></tr>'; return; }
+    tb.innerHTML=desps.map(d=>`<tr>
+      <td>${d.descricao||'—'}</td>
+      <td><span class="badge b-parc">${d.categoria||'—'}</span></td>
+      <td style="color:var(--muted)">${d.fornecedor||'—'}</td>
+      <td>${d.data_competencia}</td>
+      <td style="font-weight:800;color:var(--red)">${brl(d.valor)}</td>
+      <td>${d.pago?'<span class="badge b-ok">Pago</span>':'<span class="badge b-pend">Aberto</span>'}</td>
+    </tr>`).join('');
+  } catch(e){ console.warn('Desp err',e); }
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+function trocarTab(aba,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-faturas').style.display=aba==='faturas'?'block':'none';
+  document.getElementById('tab-despesas').style.display=aba==='despesas'?'block':'none';
+  document.getElementById('tab-glosas').style.display=aba==='glosas'?'block':'none';
+  if(aba==='faturas') carregarFaturas();
+  if(aba==='despesas') buscarDespesas();
+  if(aba==='glosas') carregarGlosaKpi();
+}
+
+// ── Itens fatura ──────────────────────────────────────────────────────────
+function adicionarItem(cod='',desc='',qty=1,preco=0){
+  const div=document.createElement('div');
+  div.className='item-row';
+  div.innerHTML=`
+    <input type="text" placeholder="Código" value="${cod}" oninput="calcularTotal()">
+    <input type="text" placeholder="Descrição" value="${desc}" oninput="calcularTotal()">
+    <input type="number" value="${qty}" min="1" oninput="calcularTotal()" style="text-align:center">
+    <input type="number" value="${preco}" step="0.01" min="0" oninput="calcularTotal()">
+    <span class="item-total">${brl(qty*preco)}</span>
+    <button class="btn-sm" onclick="this.parentElement.remove();calcularTotal()">✕</button>`;
+  document.getElementById('itens-fatura').appendChild(div);
+  calcularTotal();
+}
+
+function adicionarDoTabelaSelec(){
+  const sel=document.getElementById('tabela-servicos');
+  const val=sel.value;
+  if(!val) return;
+  try {
+    const s=JSON.parse(val.replace(/&quot;/g,'"'));
+    adicionarItem(s.codigo,s.descricao,1,s.preco_tabela);
+  } catch(e){}
+  sel.value='';
+}
+
+function calcularTotal(){
+  const rows=document.querySelectorAll('#itens-fatura .item-row');
+  let sub=0;
+  rows.forEach(row=>{
+    const inputs=row.querySelectorAll('input');
+    const qty=parseInt(inputs[2].value)||0;
+    const preco=parseFloat(inputs[3].value)||0;
+    const tot=qty*preco;
+    sub+=tot;
+    row.querySelector('.item-total').textContent=brl(tot);
+  });
+  const desc=parseFloat(document.getElementById('fat-desconto').value)||0;
+  document.getElementById('fat-subtotal').textContent=brl(sub);
+  document.getElementById('fat-desc-show').textContent='- '+brl(desc);
+  document.getElementById('fat-total').textContent=brl(sub-desc);
+}
+
+// ── Modais ────────────────────────────────────────────────────────────────
+function abrirModalFatura(){
+  document.getElementById('modal-fatura').classList.add('open');
+  const hoje=new Date().toISOString().split('T')[0];
+  const trinta=new Date(Date.now()+30*86400000).toISOString().split('T')[0];
+  document.getElementById('fat-emissao').value=hoje;
+  document.getElementById('fat-vencimento').value=trinta;
+  document.getElementById('fat-desconto').value='0';
+  document.getElementById('itens-fatura').innerHTML='';
+  calcularTotal();
+}
+
+function abrirModalDespesa(){
+  document.getElementById('modal-despesa').classList.add('open');
+  document.getElementById('desp-comp').value=new Date().toISOString().split('T')[0];
+}
+
+function fecharModal(id){ document.getElementById(id).classList.remove('open'); }
+['modal-fatura','modal-baixar','modal-despesa'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{ if(e.target===e.currentTarget) fecharModal(id); });
+});
+
+async function emitirFatura(){
+  const cliente=document.getElementById('fat-cliente').value.trim();
+  const cnpj=document.getElementById('fat-cnpj').value.replace(/\D/g,'');
+  if(!cliente||!cnpj){ toast('Preencha cliente e CNPJ.','err'); return; }
+  const rows=document.querySelectorAll('#itens-fatura .item-row');
+  if(!rows.length){ toast('Adicione pelo menos um item.','err'); return; }
+  const itens=Array.from(rows).map(row=>{
+    const inp=row.querySelectorAll('input');
+    return {codigo:inp[0].value,descricao:inp[1].value,quantidade:parseInt(inp[2].value)||1,preco_unitario:parseFloat(inp[3].value)||0};
+  });
+  const btn=document.getElementById('btn-emitir');
+  btn.textContent='Emitindo…'; btn.disabled=true;
+  try {
+    await _post(API_FAT,{
+      empresa_cliente_nome:cliente, empresa_cliente_cnpj:cnpj,
+      data_emissao:document.getElementById('fat-emissao').value,
+      data_vencimento:document.getElementById('fat-vencimento').value,
+      forma_pagamento:document.getElementById('fat-forma').value,
+      desconto:parseFloat(document.getElementById('fat-desconto').value)||0,
+      observacoes:document.getElementById('fat-obs').value,
+      itens,
+    });
+    toast('Fatura emitida ✅');
+    fecharModal('modal-fatura');
+    await Promise.all([carregarKpis(), carregarFaturas()]);
+  } catch(e){ toast(e.message,'err'); }
+  btn.textContent='Emitir Fatura'; btn.disabled=false;
+}
+
+function abrirBaixar(id, num, total){
+  document.getElementById('baixar-fat-id').value=id;
+  document.getElementById('baixar-titulo').textContent='Pagar fatura '+num;
+  document.getElementById('baixar-valor').value=total.toFixed(2);
+  document.getElementById('baixar-data').value=new Date().toISOString().split('T')[0];
+  document.getElementById('modal-baixar').classList.add('open');
+}
+
+async function confirmarBaixa(){
+  const id=document.getElementById('baixar-fat-id').value;
+  const valor=parseFloat(document.getElementById('baixar-valor').value);
+  if(!valor||valor<=0){ toast('Informe o valor recebido.','err'); return; }
+  const btn=document.getElementById('btn-baixar');
+  btn.textContent='Confirmando…'; btn.disabled=true;
+  try {
+    await _post(`/api/clinica/financeiro/faturas/${id}/baixar/`,{
+      valor_pago:valor,
+      data_pagamento:document.getElementById('baixar-data').value,
+      forma_pagamento:document.getElementById('baixar-forma').value,
+    });
+    toast('Pagamento registrado ✅');
+    fecharModal('modal-baixar');
+    await Promise.all([carregarKpis(), carregarFaturas()]);
+  } catch(e){ toast(e.message,'err'); }
+  btn.textContent='Confirmar Pagamento'; btn.disabled=false;
+}
+
+async function cancelarFatura(id){
+  if(!confirm('Cancelar esta fatura?')) return;
+  try {
+    await _post(`/api/clinica/financeiro/faturas/${id}/cancelar/`);
+    toast('Fatura cancelada');
+    carregarFaturas();
+  } catch(e){ toast(e.message,'err'); }
+}
+
+function baixarPdf(id){
+  window.open(`/api/clinica/financeiro/faturas/${id}/pdf/`, '_blank');
+}
+
+async function salvarDespesa(){
+  const desc=document.getElementById('desp-desc').value.trim();
+  const valor=parseFloat(document.getElementById('desp-valor').value);
+  const comp=document.getElementById('desp-comp').value;
+  if(!desc||!valor||!comp){ toast('Preencha descrição, valor e competência.','err'); return; }
+  const btn=document.getElementById('btn-desp');
+  btn.textContent='Salvando…'; btn.disabled=true;
+  try {
+    await _post(API_DESP,{
+      descricao:desc,
+      categoria:document.getElementById('desp-cat').value,
+      valor,
+      data_competencia:comp,
+      data_vencimento:document.getElementById('desp-venc').value||null,
+      fornecedor:document.getElementById('desp-forn').value.trim(),
+      pago:document.getElementById('desp-pago').checked,
+    });
+    toast('Despesa lançada ✅');
+    fecharModal('modal-despesa');
+    await Promise.all([carregarKpis(), buscarDespesas()]);
+  } catch(e){ toast(e.message,'err'); }
+  btn.textContent='Salvar Despesa'; btn.disabled=false;
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+Promise.all([carregarKpis(), carregarFluxo(), carregarFaturas(), carregarGlosaKpi()]);
+</script>
+</body>
+</html>
