@@ -2076,13 +2076,13 @@ class AuthDeviceTests(TestCase):
         response = Client(HTTP_HOST="soluscrt.com.br").get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Cinco ambientes privados para cada decisor em saude.")
+        self.assertContains(response, "Cinco ambientes privados para cada decisor em saúde.")
         self.assertNotContains(response, "sistema nervoso")
         self.assertNotContains(response, "empresa.soluscrt.com.br")
         self.assertNotContains(response, "governo.soluscrt.com.br")
         self.assertContains(response, "/apresentacao/")
         self.assertContains(response, "https://play.google.com/store/apps/details?id=com.soluscrt.saude")
-        self.assertContains(response, "Confianca SolusCRT")
+        self.assertContains(response, "Confiança SolusCRT")
 
     def test_subdominios_raiz_separam_ambientes(self):
         empresa = Client(HTTP_HOST="empresa.soluscrt.com.br").get("/")
@@ -2124,7 +2124,7 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cinco ambientes privados")
         self.assertContains(response, "Google Play")
-        self.assertContains(response, "Valores que fazem a tecnologia merecer confianca")
+        self.assertContains(response, "Valores que fazem a tecnologia merecer confiança")
         self.assertNotContains(response, "Slide 01")
         self.assertNotContains(response, "Slide 09")
 
