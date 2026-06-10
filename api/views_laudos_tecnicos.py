@@ -394,16 +394,6 @@ def sst_laudos_page(request):
     empresa = _empresa_sst_autenticada(request)
     if not empresa:
         return redirect("/login-empresa/")
-    return render(request, "sst_expansao_modulo.html", {
-        "modulo_id":      "laudos",
-        "modulo_area":    "Documentação Legal · SST",
-        "modulo_titulo":  "Laudos Técnicos",
-        "modulo_descricao": (
-            "LTCAT, LIP, LTIP, PGR e PCMSO com controle de vigência, "
-            "alertas de vencimento (≤ 60 dias) e assinatura digital do responsável técnico."
-        ),
-        "api_base":     "/api/sst/laudos/",
-        "api_kpi":      "/api/sst/laudos/kpis/",
-        "accent_color": "#52a6ff",
+    return render(request, "sst_laudos.html", {
         "empresa_nome": empresa.nome,
     })
