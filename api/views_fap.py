@@ -552,17 +552,6 @@ def sst_fap_page(request):
     empresa = _empresa_sst_autenticada(request)
     if not empresa:
         return redirect("/login-empresa/")
-    return render(request, "sst_expansao_modulo.html", {
-        "modulo_id":      "fap",
-        "modulo_area":    "Previdência Social · SST",
-        "modulo_titulo":  "Gestão FAP",
-        "modulo_descricao": (
-            "Fator Acidentário de Prevenção publicado pelo INSS. "
-            "Monitore o multiplicador RAT, simule economia ou custo adicional "
-            "e gerencie o prazo de contestação (30 dias após publicação)."
-        ),
-        "api_base":     "/api/sst/fap/historico/",
-        "api_kpi":      "/api/sst/fap/kpis/",
-        "accent_color": "#f59e0b",
+    return render(request, "sst_fap.html", {
         "empresa_nome": empresa.nome,
     })

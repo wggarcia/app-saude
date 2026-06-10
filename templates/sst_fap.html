@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SolusCRT · Gestão FAP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2233;--surface3:#1e2d40;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.13);--text:#e2eeff;--muted:#7b90b0;--teal:#00c9a7;--blue:#3b82f6;--amber:#f59e0b;--red:#ef4444;--green:#22c55e;--purple:#8b5cf6}
+html,body{min-height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:52px;display:flex;align-items:center;background:rgba(10,14,26,.95);border-bottom:1px solid var(--line);backdrop-filter:blur(14px)}
+.tb-logo{display:flex;align-items:center;gap:10px;padding:0 18px;min-width:210px;border-right:1px solid var(--line);height:100%}
+.tb-icon{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0077ff);display:grid;place-items:center;font-weight:900;font-size:.8rem;color:#0a0e1a;flex-shrink:0}
+.tb-nome{font-size:.8rem;font-weight:700}.tb-sub{font-size:.6rem;color:var(--muted);margin-top:1px}
+.tb-nav{display:flex;align-items:center;gap:1px;padding:0 14px;flex:1;overflow-x:auto}
+.tb-nav::-webkit-scrollbar{display:none}
+.tb-nav a{padding:5px 11px;border-radius:6px;font-size:.75rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .15s;white-space:nowrap}
+.tb-nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tb-nav a.active{color:var(--amber);background:rgba(245,158,11,.08)}
+.tb-actions{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.btn-main{padding:6px 13px;border-radius:7px;border:none;background:linear-gradient(135deg,var(--amber),#f97316);color:#0a0e1a;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .2s}
+.btn-main:hover{opacity:.88}
+.btn-ghost{padding:6px 13px;border-radius:7px;border:1px solid var(--line2);background:none;color:var(--muted);font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s}
+.btn-ghost:hover{color:var(--text)}
+.app{display:flex;min-height:100vh;padding-top:52px}
+.sidebar{width:200px;flex-shrink:0;background:rgba(17,24,39,.55);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 0;position:fixed;top:52px;bottom:0;overflow-y:auto}
+.sb-label{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 14px 4px}
+.sb-link{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:.77rem;font-weight:500;color:var(--muted);text-decoration:none;transition:all .12s;border-left:2px solid transparent}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{color:var(--teal);background:rgba(0,201,167,.06);border-left-color:var(--teal);font-weight:600}
+.sb-icon{font-size:.95rem;flex-shrink:0;width:18px;text-align:center}
+.sb-badge{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:999px;font-size:.6rem;font-weight:800;background:rgba(245,158,11,.18);color:#f59e0b;margin-left:auto;flex-shrink:0}
+.sb-badge:empty{display:none}
+.sb-group{border:none}.sb-group-summary{list-style:none;cursor:pointer;user-select:none}
+.sb-group-summary::-webkit-details-marker{display:none}
+.sb-group-body{display:flex;flex-direction:column}
+.main{flex:1;margin-left:200px;padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+
+/* ── FAP Hero ── */
+.fap-hero{display:grid;grid-template-columns:auto 1fr auto;gap:20px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;position:relative;overflow:hidden}
+.fap-hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 10% 50%,rgba(245,158,11,.08) 0%,transparent 60%);pointer-events:none}
+.fap-number{font-size:3.8rem;font-weight:900;line-height:1;letter-spacing:-.02em}
+.fap-number.bonus{color:var(--green)}
+.fap-number.neutro{color:var(--muted)}
+.fap-number.malus{color:var(--amber)}
+.fap-number.malus-grave{color:var(--red)}
+.fap-number.sem-dados{color:var(--muted);font-size:2.5rem}
+.fap-info{display:flex;flex-direction:column;gap:4px}
+.fap-tipo{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em}
+.fap-tipo.bonus{color:var(--green)}
+.fap-tipo.malus{color:var(--amber)}
+.fap-tipo.malus-grave{color:var(--red)}
+.fap-desc{font-size:.84rem;color:var(--muted);max-width:360px;line-height:1.5}
+.fap-ano{font-size:.72rem;color:var(--muted);margin-top:6px}
+.fap-impacto-box{text-align:right}
+.fap-impacto-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+.fap-impacto-val{font-size:1.5rem;font-weight:900}
+.fap-impacto-val.economia{color:var(--green)}
+.fap-impacto-val.custo{color:var(--red)}
+.fap-impacto-sub{font-size:.7rem;color:var(--muted);margin-top:2px}
+
+/* ── RAT formula ── */
+.rat-formula{display:flex;align-items:center;gap:10px;padding:14px 18px;background:var(--surface);border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
+.rat-box{text-align:center;padding:8px 14px;border-radius:8px;background:var(--surface2);border:1px solid var(--line2)}
+.rat-box-label{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:3px}
+.rat-box-val{font-size:1.1rem;font-weight:900}
+.rat-op{font-size:1.3rem;color:var(--muted);font-weight:300}
+.rat-result{padding:8px 16px;border-radius:8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2)}
+.rat-result .rat-box-label{color:var(--amber)}
+.rat-result .rat-box-val{color:var(--amber)}
+
+/* ── Grid ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.panel-title{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px}
+.kpi-strip{display:flex;gap:10px}
+.kpi-card{flex:1;padding:14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
+.kpi-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--amber));opacity:.7}
+.kpi-label{font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi-val{font-size:1.6rem;font-weight:900;line-height:1}
+.kpi-sub{font-size:.67rem;color:var(--muted);margin-top:5px}
+
+/* ── Histórico ── */
+.hist-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.hist-row:last-child{border-bottom:none}
+.hist-ano{font-size:.72rem;font-weight:700;color:var(--muted);width:40px;flex-shrink:0}
+.hist-bar-wrap{flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden;position:relative}
+.hist-bar{height:100%;border-radius:4px;transition:width .5s ease;position:relative}
+.hist-bar.bonus{background:linear-gradient(90deg,rgba(34,197,94,.4),rgba(34,197,94,.7))}
+.hist-bar.malus{background:linear-gradient(90deg,rgba(245,158,11,.4),rgba(245,158,11,.7))}
+.hist-bar.malus-grave{background:linear-gradient(90deg,rgba(239,68,68,.4),rgba(239,68,68,.7))}
+.hist-val{font-size:.8rem;font-weight:800;width:60px;text-align:right;flex-shrink:0}
+.hist-val.bonus{color:var(--green)}
+.hist-val.malus{color:var(--amber)}
+.hist-val.malus-grave{color:var(--red)}
+.hist-mark{position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.15)}
+.hist-mark-label{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:.55rem;color:var(--muted);white-space:nowrap}
+
+/* ── Alertas ── */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;font-size:.82rem;margin-bottom:8px}
+.alert.danger{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#fca5a5}
+.alert.warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:var(--amber)}
+.alert.ok{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);color:#86efac}
+.alert.info{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);color:#93c5fd}
+
+/* ── Simulação ── */
+.sim-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;font-size:.82rem;margin-bottom:4px}
+.sim-row:nth-child(odd){background:var(--surface2)}
+.sim-fap{font-weight:700;width:70px}
+.sim-custo{width:120px;text-align:right;font-weight:700}
+.sim-delta{width:120px;text-align:right;font-size:.75rem}
+
+/* ── Contestação ── */
+.prazo-box{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:10px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.18)}
+.prazo-dias{font-size:2rem;font-weight:900;color:var(--amber);line-height:1}
+.prazo-urgente{color:var(--red)}
+
+/* ── Tabela histório ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl thead th{padding:8px 12px;text-align:left;font-size:.63rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+.tbl tbody td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-size:.8rem}
+.tbl tbody tr:last-child td{border-bottom:none}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:.67rem;font-weight:700}
+.b-verde{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.2)}
+.b-amber{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
+.b-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.b-cinza{background:rgba(123,144,176,.1);color:var(--muted);border:1px solid var(--line)}
+
+/* ── Modal ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(5px);z-index:200;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface2);border:1px solid var(--line2);border-radius:16px;padding:28px;width:520px;max-width:100%;position:relative}
+.modal h2{font-size:1rem;font-weight:800;margin-bottom:18px}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:4px 8px;border-radius:6px}
+.modal-close:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:8px 11px;border-radius:8px;border:1px solid var(--line2);background:var(--surface3);color:var(--text);font-size:.84rem;outline:none;font-family:inherit;transition:border .15s}
+.form-row input:focus,.form-row select:focus{border-color:var(--amber)}
+.form-row select option{background:var(--surface2)}
+.form-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
+.fap-preview{background:var(--surface);border:1px solid var(--line2);border-radius:10px;padding:14px;margin-top:14px;font-size:.82rem}
+.fap-preview strong{color:var(--amber)}
+
+/* ── Toast ── */
+.toast-wrap{position:fixed;bottom:22px;right:22px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{padding:10px 16px;border-radius:10px;font-size:.8rem;font-weight:600;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#4ade80;backdrop-filter:blur(8px);animation:tin .2s}
+.toast.err{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.3);color:#f87171}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="tb-logo">
+    <div class="tb-icon">SC</div>
+    <div>
+      <div class="tb-nome">SolusCRT</div>
+      <div class="tb-sub">{{ empresa_nome }}</div>
+    </div>
+  </div>
+  <nav class="tb-nav">
+    <a href="/dashboard-empresa/">Painel</a>
+    <a href="/sst/funcionarios/">Funcionários</a>
+    <a href="/sst/cats/">CAT / Acidentes</a>
+    <a href="/sst/ppp/">PPP</a>
+    <a href="/sst/fap/" class="active">FAP</a>
+  </nav>
+  <div class="tb-actions">
+    <button class="btn-main" onclick="abrirModalRegistrar()">＋ Registrar FAP</button>
+    <a href="/logout-empresa/" class="btn-ghost">Sair</a>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">{% include "partials/sst_sidebar.html" %}</aside>
+
+  <main class="main">
+
+    <!-- Cabeçalho -->
+    <div>
+      <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--amber);margin-bottom:4px">Previdência Social · SST</div>
+      <h1 style="font-size:1.4rem;font-weight:900">Gestão FAP — Fator Acidentário de Prevenção</h1>
+      <p style="font-size:.84rem;color:var(--muted);margin-top:5px;max-width:640px">
+        Multiplicador publicado anualmente pelo INSS que ajusta o RAT sobre a folha.
+        FAP &lt; 1,0 = bônus (menos acidentes que a média do setor) · FAP &gt; 1,0 = malus (mais acidentes).
+      </p>
+    </div>
+
+    <!-- Hero FAP atual -->
+    <div class="fap-hero" id="fap-hero">
+      <div>
+        <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px">FAP do Exercício</div>
+        <div class="fap-number sem-dados" id="fap-numero">—</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:8px" id="fap-exercicio">Nenhum FAP registrado</div>
+      </div>
+      <div class="fap-info">
+        <div class="fap-tipo" id="fap-tipo-label">—</div>
+        <div class="fap-desc" id="fap-desc">Registre o FAP publicado pelo INSS para acompanhar o impacto financeiro na sua empresa.</div>
+        <div class="fap-ano" id="fap-acao"></div>
+      </div>
+      <div class="fap-impacto-box" id="fap-impacto-box" style="display:none">
+        <div class="fap-impacto-label" id="fap-imp-label">Impacto Mensal</div>
+        <div class="fap-impacto-val" id="fap-imp-val">—</div>
+        <div class="fap-impacto-sub" id="fap-imp-sub">—</div>
+      </div>
+    </div>
+
+    <!-- Fórmula RAT -->
+    <div class="rat-formula" id="rat-formula" style="display:none">
+      <div class="rat-box">
+        <div class="rat-box-label">RAT Base</div>
+        <div class="rat-box-val" id="rat-base">—%</div>
+      </div>
+      <div class="rat-op">×</div>
+      <div class="rat-box">
+        <div class="rat-box-label">FAP</div>
+        <div class="rat-box-val" id="rat-fap">—</div>
+      </div>
+      <div class="rat-op">=</div>
+      <div class="rat-box rat-result">
+        <div class="rat-box-label">RAT Ajustado</div>
+        <div class="rat-box-val" id="rat-ajustado">—%</div>
+      </div>
+      <div style="flex:1"></div>
+      <div style="font-size:.78rem;color:var(--muted);text-align:right">
+        <div id="rat-folha">Folha: —</div>
+        <div id="rat-custo">Custo RAT/mês: —</div>
+        <div id="rat-custo-anual" style="font-weight:700;color:var(--text)">—</div>
+      </div>
+    </div>
+
+    <!-- Alertas -->
+    <div id="alertas-area"></div>
+
+    <!-- Prazo contestação -->
+    <div id="prazo-contestacao" style="display:none" class="prazo-box">
+      <div>
+        <div class="prazo-dias" id="prazo-dias">—</div>
+        <div style="font-size:.7rem;color:var(--muted)">dias restantes</div>
+      </div>
+      <div>
+        <div style="font-size:.84rem;font-weight:700;color:var(--amber)">⚖️ Prazo de Contestação</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:3px">O FAP pode ser contestado em até 30 dias da publicação pelo INSS via portal Meu INSS / PLENUS.</div>
+        <div style="margin-top:8px">
+          <a href="https://www.gov.br/trabalho-e-emprego/pt-br/acesso-a-informacao/participacao-social/conselhos-e-orgaos-colegiados/CTPS/fap" target="_blank" style="color:var(--amber);font-size:.75rem;font-weight:700;text-decoration:none">Acessar PLENUS →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs de acidentes -->
+    <div class="kpi-strip">
+      <div class="kpi-card" style="--kc:var(--amber)">
+        <div class="kpi-label">FAP Atual</div>
+        <div class="kpi-val" id="k-fap">—</div>
+        <div class="kpi-sub" id="k-fap-ano">exercício —</div>
+      </div>
+      <div class="kpi-card" style="--kc:var(--blue)">
+        <div class="kpi-label">Funcionários Ativos</div>
+        <div class="kpi-val" id="k-funcs">—</div>
+        <div class="kpi-sub">vínculos ativos</div>
+      </div>
+      <div class="kpi-card" style="--kc:var(--red)">
+        <div class="kpi-label">CATs (12 meses)</div>
+        <div class="kpi-val" id="k-cats">—</div>
+        <div class="kpi-sub">acidentes registrados</div>
+      </div>
+      <div class="kpi-card" style="--kc:var(--purple)">
+        <div class="kpi-label">Taxa de Frequência</div>
+        <div class="kpi-val" id="k-taxa">—</div>
+        <div class="kpi-sub">por 1.000 vínculos</div>
+      </div>
+    </div>
+
+    <!-- 2 colunas: histórico + simulação -->
+    <div class="two-col">
+
+      <!-- Histórico FAP -->
+      <div class="panel">
+        <div class="panel-title">Evolução FAP por Ano</div>
+        <div id="historico-fap">
+          <div style="color:var(--muted);font-size:.82rem">Carregando histórico…</div>
+        </div>
+      </div>
+
+      <!-- Simulação de cenários -->
+      <div class="panel">
+        <div class="panel-title">Simulação de Cenários</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-bottom:12px">
+          Impacto na folha atual com diferentes valores de FAP
+        </div>
+        <div id="simulacao-fap">
+          <div style="color:var(--muted);font-size:.82rem">Registre o FAP para ver a simulação.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Histórico tabela -->
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)">
+        <h3 style="font-size:.8rem;font-weight:700">📋 Histórico Completo FAP</h3>
+        <span id="hist-contagem" style="font-size:.72rem;color:var(--muted)">—</span>
+      </div>
+      <table class="tbl">
+        <thead>
+          <tr><th>Ano</th><th>FAP</th><th>Tipo</th><th>RAT Base</th><th>RAT Ajustado</th><th>Folha Mensal</th><th>Custo RAT/ano</th><th>Contestado</th></tr>
+        </thead>
+        <tbody id="hist-tbody">
+          <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL REGISTRAR FAP -->
+<div class="modal-bg" id="modal-fap">
+  <div class="modal">
+    <button class="modal-close" onclick="fecharModal()">✕</button>
+    <h2>📊 Registrar FAP do Exercício</h2>
+
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Ano do Exercício *</label>
+        <input type="number" id="m-ano" min="2018" max="2035" placeholder="2026">
+      </div>
+      <div class="form-row">
+        <label>Valor FAP (0,5000 a 2,0000) *</label>
+        <input type="number" id="m-fap" step="0.0001" min="0.5" max="2.0" placeholder="ex: 0.8762" oninput="previewFap()">
+      </div>
+    </div>
+
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Folha Salarial Mensal (R$) *</label>
+        <input type="number" id="m-folha" step="1000" placeholder="ex: 150000" oninput="previewFap()">
+      </div>
+      <div class="form-row">
+        <label>Grau de Risco (CNAE)</label>
+        <select id="m-grau" onchange="previewFap()">
+          <option value="1">Grau 1 — Risco Leve (RAT 1%)</option>
+          <option value="2" selected>Grau 2 — Risco Médio (RAT 2%)</option>
+          <option value="3">Grau 3 — Risco Grave (RAT 3%)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Data de Publicação INSS</label>
+        <input type="date" id="m-publicado">
+      </div>
+      <div class="form-row">
+        <label>Prazo de Contestação</label>
+        <input type="date" id="m-prazo">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>Observações</label>
+      <input type="text" id="m-obs" placeholder="ex: FAP publicado no DOU 15/11/2026">
+    </div>
+
+    <!-- Preview cálculo -->
+    <div class="fap-preview" id="fap-modal-preview" style="display:none">
+      <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Preview do Impacto</div>
+      <div id="fap-preview-text"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-main" id="btn-registrar" onclick="registrarFap()">Registrar FAP</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+const API_FAP  = '/api/sst/fap/';
+const API_KPI  = '/api/sst/fap/kpis/';
+const API_HIST = '/api/sst/fap/historico/';
+const API_REG  = '/api/sst/fap/registrar/';
+
+function csrf(){ const m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
+function hdr(){ return {'Content-Type':'application/json','X-CSRFToken':csrf()}; }
+async function _get(u){ const r=await fetch(u,{credentials:'same-origin'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+async function _post(u,b){ const r=await fetch(u,{method:'POST',credentials:'same-origin',headers:hdr(),body:JSON.stringify(b||{})}); const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.erro||'Erro '+r.status); return d; }
+
+function brl(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2}); }
+function pct(v){ return (v||0).toFixed(4)+'%'; }
+function toast(msg,tipo='ok'){
+  const w=document.getElementById('toast-wrap');
+  const el=document.createElement('div');
+  el.className='toast'+(tipo==='err'?' err':'');
+  el.textContent=msg;
+  w.appendChild(el);
+  setTimeout(()=>el.remove(),3500);
+}
+
+function tipoFap(v){
+  if(v<=0.6667) return 'bonus';
+  if(v<1.0)     return 'bonus';
+  if(v===1.0)   return 'neutro';
+  if(v<=1.5)    return 'malus';
+  return 'malus-grave';
+}
+function tipoLabel(v){
+  if(v<=0.9999) return '🟢 BÔNUS — Abaixo da média do setor';
+  if(v===1.0)   return '⚪ NEUTRO';
+  if(v<=1.5)    return '🟡 MALUS — Acima da média do setor';
+  return '🔴 MALUS GRAVE — Custo adicional severo';
+}
+
+// ── KPIs ───────────────────────────────────────────────────────────────────
+async function carregarKpis(){
+  try {
+    const d=await _get(API_KPI);
+    const fv=d.fap_valor;
+    const imp=d.impacto_financeiro;
+    const ind=d.indicadores_acidente||{};
+
+    // Hero
+    if(fv!=null){
+      const tipo=tipoFap(fv);
+      document.getElementById('fap-numero').textContent=fv.toFixed(4);
+      document.getElementById('fap-numero').className='fap-number '+tipo;
+      document.getElementById('fap-tipo-label').textContent=tipoLabel(fv);
+      document.getElementById('fap-tipo-label').className='fap-tipo '+tipo;
+      document.getElementById('fap-exercicio').textContent='Exercício '+(d.ano_atual||'—');
+      document.getElementById('fap-desc').textContent=d.acao_sugerida||'';
+      document.getElementById('fap-acao').textContent='';
+
+      if(imp){
+        const econ=imp.delta_mensal;
+        const box=document.getElementById('fap-impacto-box');
+        box.style.display='block';
+        document.getElementById('fap-imp-label').textContent=econ>=0?'Economia Mensal':'Custo Extra Mensal';
+        document.getElementById('fap-imp-val').textContent=brl(Math.abs(econ));
+        document.getElementById('fap-imp-val').className='fap-impacto-val '+(econ>=0?'economia':'custo');
+        document.getElementById('fap-imp-sub').textContent=brl(Math.abs(imp.delta_anual))+(econ>=0?' economizados/ano':' extras/ano');
+
+        // Fórmula RAT
+        document.getElementById('rat-formula').style.display='flex';
+        document.getElementById('rat-base').textContent=imp.rat_base_pct+'%';
+        document.getElementById('rat-fap').textContent=fv.toFixed(4);
+        document.getElementById('rat-ajustado').textContent=imp.rat_ajustado_pct+'%';
+        document.getElementById('rat-folha').textContent='Folha: '+brl(imp.folha_mensal)+'/mês';
+        document.getElementById('rat-custo').textContent='RAT/mês: '+brl(imp.custo_rat_mensal);
+        document.getElementById('rat-custo-anual').textContent='RAT/ano: '+brl(imp.custo_rat_anual);
+
+        // Simulação
+        renderSimulacao(imp);
+      }
+    } else {
+      document.getElementById('fap-numero').textContent='Sem dados';
+      document.getElementById('fap-tipo-label').textContent='FAP não registrado';
+      document.getElementById('fap-desc').textContent='Registre o FAP publicado pelo INSS para monitorar o impacto na sua folha salarial.';
+    }
+
+    // KPIs
+    document.getElementById('k-fap').textContent=fv!=null?fv.toFixed(4):'—';
+    document.getElementById('k-fap-ano').textContent='exercício '+(d.ano_atual||'—');
+    document.getElementById('k-funcs').textContent=ind.total_funcionarios_ativos??'—';
+    document.getElementById('k-cats').textContent=ind.cats_ultimos_12_meses??'—';
+    document.getElementById('k-taxa').textContent=ind.taxa_frequencia_por_mil??'—';
+
+    // Alertas
+    const alertas=d.alertas||[];
+    const alertaArea=document.getElementById('alertas-area');
+    alertaArea.innerHTML=alertas.map(a=>`
+      <div class="alert ${a.nivel==='critico'||a.nivel==='urgente'?'danger':a.nivel==='atencao'?'warn':'ok'}">
+        <span>${a.msg}</span>
+      </div>`).join('');
+
+    // Prazo contestação
+    if(d.fap_registrado){
+      // Carrega contestação
+      _get('/api/sst/fap/contestacao/').then(c=>{
+        if(c.prazo_contestacao && c.dias_restantes!=null && c.dias_restantes>=0){
+          document.getElementById('prazo-contestacao').style.display='flex';
+          const dias=document.getElementById('prazo-dias');
+          dias.textContent=c.dias_restantes;
+          dias.className='prazo-dias'+(c.dias_restantes<=5?' prazo-urgente':'');
+        }
+      }).catch(()=>{});
+    }
+
+  } catch(e){ console.warn('KPI error',e); }
+}
+
+// ── Histórico ──────────────────────────────────────────────────────────────
+async function carregarHistorico(){
+  try {
+    const d=await _get(API_HIST);
+    const hist=d.historico||[];
+    document.getElementById('hist-contagem').textContent=hist.length+' registro(s)';
+
+    // Gráfico de barras
+    const histEl=document.getElementById('historico-fap');
+    if(!hist.length){
+      histEl.innerHTML='<div style="color:var(--muted);font-size:.82rem">Nenhum FAP registrado ainda.</div>';
+    } else {
+      histEl.innerHTML=hist.map(h=>{
+        const fv=parseFloat(h.fap_valor);
+        const tipo=tipoFap(fv);
+        // Barra: 50% = FAP 1.0. Range 0.5-2.0 → 0-100%
+        const largura=Math.min(100,((fv-0.5)/1.5)*100);
+        const marca=((1.0-0.5)/1.5)*100; // posição do "neutro 1.0"
+        return `<div class="hist-row">
+          <div class="hist-ano">${h.ano}</div>
+          <div class="hist-bar-wrap">
+            <div class="hist-mark" style="left:${marca}%"></div>
+            <div class="hist-bar ${tipo}" style="width:${largura}%"></div>
+          </div>
+          <div class="hist-val ${tipo}">${fv.toFixed(4)}</div>
+        </div>`;
+      }).join('');
+    }
+
+    // Tabela
+    const tb=document.getElementById('hist-tbody');
+    if(!hist.length){
+      tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Nenhum FAP registrado</td></tr>';
+      return;
+    }
+    tb.innerHTML=hist.map(h=>{
+      const fv=parseFloat(h.fap_valor);
+      const tipo=tipoFap(fv);
+      const ratAdj=((parseFloat(h.rat_base_pct)||2)*fv).toFixed(4);
+      const custoAnual=((parseFloat(h.folha_salarial_mensal)||0)*(parseFloat(h.rat_base_pct)||2)*fv/100*12);
+      return `<tr>
+        <td><strong>${h.ano}</strong></td>
+        <td style="font-family:monospace;font-weight:800;color:${tipo==='bonus'?'var(--green)':tipo==='malus-grave'?'var(--red)':'var(--amber)'}">${fv.toFixed(4)}</td>
+        <td>${tipo==='bonus'?'<span class="badge b-verde">Bônus</span>':tipo==='malus-grave'?'<span class="badge b-red">Malus Grave</span>':'<span class="badge b-amber">Malus</span>'}</td>
+        <td>${(h.rat_base_pct||2)}%</td>
+        <td style="font-weight:700">${ratAdj}%</td>
+        <td style="color:var(--muted)">${brl(h.folha_salarial_mensal)}</td>
+        <td style="font-weight:700">${brl(custoAnual)}</td>
+        <td>${h.contestado?'<span class="badge b-azul" style="background:rgba(59,130,246,.12);color:#3b82f6;border:1px solid rgba(59,130,246,.2)">Sim</span>':'<span class="badge b-cinza">Não</span>'}</td>
+      </tr>`;
+    }).join('');
+
+  } catch(e){ console.warn('Histórico error',e); }
+}
+
+// ── Simulação ──────────────────────────────────────────────────────────────
+function renderSimulacao(imp){
+  const folha=imp.folha_mensal;
+  const rat=imp.rat_base_pct;
+  const custo_sem=imp.custo_rat_sem_fap_mensal;
+  const faps=[0.5,0.6667,0.8,1.0,1.2,1.5,2.0];
+  const el=document.getElementById('simulacao-fap');
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:0 12px 6px">
+    <span>FAP</span><span>RAT Ajustado</span><span>Custo/mês</span><span>vs. Neutro</span>
+  </div>`+faps.map(f=>{
+    const ratAdj=(rat*f).toFixed(4);
+    const custo=folha*rat*f/100;
+    const delta=custo_sem-custo; // positivo=economia
+    const tipo=tipoFap(f);
+    const isCurrent=Math.abs(f-imp.fap_valor)<0.001;
+    return `<div class="sim-row" style="${isCurrent?'background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);':''}">
+      <span class="sim-fap" style="color:${tipo==='bonus'?'var(--green)':tipo==='malus-grave'?'var(--red)':'var(--amber)'}">${f.toFixed(4)}${isCurrent?' ←':''}</span>
+      <span style="color:var(--muted)">${ratAdj}%</span>
+      <span class="sim-custo">${brl(custo)}</span>
+      <span class="sim-delta" style="color:${delta>=0?'var(--green)':'var(--red)'}">${delta>=0?'−'+brl(delta):'+'+brl(-delta)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Modal Registrar ────────────────────────────────────────────────────────
+function abrirModalRegistrar(){
+  document.getElementById('modal-fap').classList.add('open');
+  document.getElementById('m-ano').value=new Date().getFullYear();
+  document.getElementById('m-fap').value='';
+  document.getElementById('m-folha').value='';
+  document.getElementById('fap-modal-preview').style.display='none';
+}
+function fecharModal(){ document.getElementById('modal-fap').classList.remove('open'); }
+
+function previewFap(){
+  const fap=parseFloat(document.getElementById('m-fap').value);
+  const folha=parseFloat(document.getElementById('m-folha').value);
+  const grau=parseInt(document.getElementById('m-grau').value)||2;
+  const ratMap={1:1,2:2,3:3};
+  const rat=ratMap[grau]||2;
+  const el=document.getElementById('fap-modal-preview');
+  if(!fap||!folha||isNaN(fap)||isNaN(folha)){
+    el.style.display='none'; return;
+  }
+  const ratAdj=rat*fap;
+  const custo=folha*ratAdj/100;
+  const custoSem=folha*rat/100;
+  const delta=custoSem-custo;
+  el.style.display='block';
+  document.getElementById('fap-preview-text').innerHTML=`
+    RAT base <strong>${rat}%</strong> × FAP <strong>${fap.toFixed(4)}</strong> = RAT ajustado <strong>${ratAdj.toFixed(4)}%</strong><br>
+    Custo RAT mensal: <strong>${brl(custo)}</strong> &nbsp;·&nbsp; Anual: <strong>${brl(custo*12)}</strong><br>
+    ${delta>=0
+      ? `<span style="color:var(--green)">💰 Economia de <strong>${brl(delta)}/mês</strong> (${brl(delta*12)}/ano) vs. FAP neutro 1,0</span>`
+      : `<span style="color:var(--red)">⚠️ Custo extra de <strong>${brl(-delta)}/mês</strong> (${brl(-delta*12)}/ano) vs. FAP neutro 1,0</span>`
+    }`;
+}
+
+async function registrarFap(){
+  const ano=parseInt(document.getElementById('m-ano').value);
+  const fap=parseFloat(document.getElementById('m-fap').value);
+  const folha=parseFloat(document.getElementById('m-folha').value);
+  const grau=parseInt(document.getElementById('m-grau').value)||2;
+  if(!ano||!fap||!folha){ toast('Preencha ano, FAP e folha salarial.','err'); return; }
+  const btn=document.getElementById('btn-registrar');
+  btn.textContent='Registrando…'; btn.disabled=true;
+  try {
+    await _post(API_REG,{
+      ano, fap_valor:fap, folha_salarial_mensal:folha, grau_risco:grau,
+      publicado_em: document.getElementById('m-publicado').value||null,
+      prazo_contestacao: document.getElementById('m-prazo').value||null,
+      observacoes: document.getElementById('m-obs').value.trim(),
+    });
+    toast('FAP registrado ✅');
+    fecharModal();
+    await Promise.all([carregarKpis(), carregarHistorico()]);
+  } catch(e){ toast(e.message,'err'); }
+  btn.textContent='Registrar FAP'; btn.disabled=false;
+}
+
+document.getElementById('modal-fap').addEventListener('click',e=>{ if(e.target===e.currentTarget) fecharModal(); });
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+Promise.all([carregarKpis(), carregarHistorico()]);
+</script>
+</body>
+</html>
