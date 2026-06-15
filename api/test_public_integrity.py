@@ -1,10 +1,19 @@
 from io import StringIO
+from datetime import timedelta
 
 from django.contrib.auth.hashers import make_password
 from django.core.management import call_command
 from django.test import Client, TestCase
+from django.utils import timezone
 
-from api.models import AlertaGovernamental, DispositivoAutorizado, Empresa, RegistroSintoma
+from api import epidemiologia
+from api.models import (
+    AlertaGovernamental,
+    DispositivoAutorizado,
+    DispositivoPushPublico,
+    Empresa,
+    RegistroSintoma,
+)
 from api.views import _empresa_app_publico
 
 
@@ -102,6 +111,39 @@ class PublicIntegrityTests(TestCase):
         self.assertEqual(payload["resumo"]["registros_7d"], 1)
         self.assertEqual(payload["resumo"]["registros_30d"], 1)
 
+    def test_app_resumo_publico_expoe_total_ativo_por_estado(self):
+        agora = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
+        for _ in range(4):
+            registro = RegistroSintoma.objects.create(
+                empresa=self.empresa_publica,
+                febre=True,
+                tosse=False,
+                dor_corpo=True,
+                cansaco=True,
+                falta_ar=False,
+                latitude=-22.9,
+                longitude=-43.1,
+                estado="Rio de Janeiro",
+                cidade="Rio de Janeiro",
+                bairro="Centro",
+                grupo="Respiratorio",
+            )
+            RegistroSintoma.objects.filter(id=registro.id).update(
+                data_registro=agora - timedelta(days=15)
+            )
+
+        response = self.client.get("/api/public/resumo")
+        payload = response.json()
+        resumo = payload["resumo"]
+        estados_ativos = payload["casos_por_estado_ativos"]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(resumo["registros_30d"], 4)
+        self.assertLess(resumo["total_ativo_30d"], resumo["registros_30d"])
+        self.assertTrue(estados_ativos)
+        self.assertEqual(estados_ativos[0]["total_bruto"], 4)
+        self.assertLess(estados_ativos[0]["total"], estados_ativos[0]["total_bruto"])
+
     def test_sanear_producao_remove_demo_and_sinteticos(self):
         demo = Empresa.objects.create(
             nome="Demo Legacy",
@@ -154,3 +196,39 @@ class PublicIntegrityTests(TestCase):
         self.assertFalse(AlertaGovernamental.objects.filter(protocolo="ALR-TEST-002").exists())
         self.assertFalse(RegistroSintoma.objects.filter(device_id="sim-br-001").exists())
         self.assertFalse(DispositivoAutorizado.objects.filter(device_id="demo-device-001").exists())
+
+    def test_limpar_demo_reuniao_publico_zerar_tudo(self):
+        RegistroSintoma.objects.create(
+            empresa=self.empresa_publica,
+            febre=True,
+            tosse=False,
+            dor_corpo=True,
+            cansaco=True,
+            falta_ar=False,
+            latitude=-23.55,
+            longitude=-46.63,
+            estado="São Paulo",
+            cidade="São Paulo",
+            bairro="Centro",
+            grupo="Gripe",
+            device_id="qualquer-device",
+        )
+        DispositivoAutorizado.objects.create(
+            empresa=self.empresa_publica,
+            device_id="publico-device-001",
+            ativo=True,
+        )
+        DispositivoPushPublico.objects.create(
+            device_id="publico-device-001",
+            token="token-publico-001",
+            plataforma="android",
+            ativo=True,
+        )
+
+        out = StringIO()
+        call_command("limpar_demo_reuniao", yes=True, publico=True, stdout=out)
+
+        self.assertFalse(RegistroSintoma.objects.filter(empresa=self.empresa_publica).exists())
+        self.assertFalse(DispositivoAutorizado.objects.filter(empresa=self.empresa_publica).exists())
+        self.assertFalse(DispositivoPushPublico.objects.filter(token="token-publico-001").exists())
+        self.assertEqual(epidemiologia._PANORAMA_CACHE["payload"], None)

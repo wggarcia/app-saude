@@ -1676,7 +1676,7 @@ def _state_terms(value):
 
 JANELA_ESTABILIDADE_FOCO_DIAS = 10
 JANELA_DECAIMENTO_FOCO_DIAS = 30
-PESO_MINIMO_FOCO_PUBLICO = 0.01
+PESO_MINIMO_FOCO_PUBLICO = 0.1
 
 
 def _peso_temporal_publico(day, agora=None):
@@ -2790,6 +2790,20 @@ def app_resumo_publico(request):
     indice_ativo_30d = _indice_temporal_publico(ativos_30d, agora)
     base_anterior = dias_anteriores.count()
 
+    ativos_por_estado = defaultdict(float)
+    totais_por_estado = defaultdict(int)
+    ativos_por_estado_rows = (
+        ativos_30d.exclude(estado__isnull=True).exclude(estado="")
+        .annotate(day=TruncDate("data_registro"))
+        .values("estado", "day")
+        .annotate(total=Count("id"))
+    )
+    for item in ativos_por_estado_rows:
+        estado = item["estado"]
+        peso = _peso_temporal_publico(item["day"], agora)
+        totais_por_estado[estado] += int(item["total"] or 0)
+        ativos_por_estado[estado] += int(item["total"] or 0) * peso
+
     # ── Crescimento robusto ────────────────────────────────────────────────
     # 1ª escolha: 7 dias atuais vs 7 dias anteriores (janela clássica).
     # Fallback: quando não há histórico de 7-14 dias mas há atividade recente,
@@ -2831,11 +2845,24 @@ def app_resumo_publico(request):
             "percentual": round((row["total"] / max(total_30d, 1)) * 100, 1),
         })
 
+    casos_por_estado_ativos = []
+    for estado, total_ativo in sorted(ativos_por_estado.items(), key=lambda item: item[1], reverse=True):
+        uf = _uf_sigla(estado)
+        total_bruto = totais_por_estado.get(estado, 0)
+        casos_por_estado_ativos.append({
+            "estado": estado,
+            "uf": uf,
+            "total": round(total_ativo, 2),
+            "total_bruto": total_bruto,
+            "percentual": round((total_ativo / max(indice_ativo_30d, 1)) * 100, 1),
+        })
+
     return JsonResponse({
         "resumo": {
             "registros_24h": total_24h,
             "registros_7d": total_7d,
             "registros_30d": total_30d,
+            "total_ativo_30d": round(indice_ativo_30d, 2),
             "indice_ativo_7d": indice_ativo_30d,
             "indice_ativo_30d": indice_ativo_30d,
             "crescimento_7d": crescimento,
@@ -2848,6 +2875,7 @@ def app_resumo_publico(request):
         "alerta_publico": _alerta_publico(nivel_nacional, crescimento, top_grupo),
         "orientacao_publica": _orientacao_publica(nivel_nacional, top_grupo),
         "casos_por_estado": casos_por_estado,
+        "casos_por_estado_ativos": casos_por_estado_ativos,
         "doencas_top": [
             {
                 "grupo": item["grupo"],
@@ -3297,6 +3325,7 @@ def limpar_casos(request):
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     total = RegistroSintoma.objects.filter(empresa=empresa).count()
     RegistroSintoma.objects.filter(empresa=empresa).delete()
+    clear_panorama_cache()
     return JsonResponse({"apagados": total})
 
 

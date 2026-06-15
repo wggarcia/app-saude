@@ -6,6 +6,7 @@ from unittest.mock import patch
 import jwt
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
+from django.core.cache import cache
 from django.core.management import call_command
 from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.template.loader import render_to_string
@@ -2972,10 +2973,10 @@ class TemporalDecayTests(TestCase):
         vinte_dias = _indice_temporal_publico(qs, agora + timedelta(days=20))
         trinta_dias = _indice_temporal_publico(qs, agora + timedelta(days=30))
 
-        self.assertEqual(atual, 4.75)
-        self.assertEqual(dez_dias, 3.27)
+        self.assertEqual(atual, 4.78)
+        self.assertEqual(dez_dias, 3.42)
         self.assertGreater(dez_dias, vinte_dias)
-        self.assertEqual(trinta_dias, 0.05)
+        self.assertEqual(trinta_dias, 0.5)
 
     def test_mapa_publico_mostra_total_ativo_reduzido(self):
         from .views import _empresa_app_publico
@@ -3078,6 +3079,33 @@ class TemporalDecayTests(TestCase):
         self.assertEqual(area["raw_total_cases"], 1)
         self.assertEqual(area["total_cases"], area["active_cases"])
         self.assertEqual(payload["overview"]["raw_total_cases"], 1)
+
+    def test_panorama_cache_recalcula_quando_version_global_muda(self):
+        empresa = Empresa.objects.create(
+            nome="Populacao Cache",
+            email="cache-panorama@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        RegistroSintoma.objects.create(
+            empresa=empresa,
+            febre=True,
+            latitude=-22.9,
+            longitude=-43.1,
+            cidade="Rio de Janeiro",
+            estado="RJ",
+            bairro="Centro",
+            grupo="Respiratorio",
+        )
+
+        epidemiologia.clear_panorama_cache()
+        payload1 = epidemiologia.build_panorama_payload()
+        cache_key = "epidemiologia:panorama:version"
+        cache.set(cache_key, int(cache.get(cache_key) or 0) + 1)
+        payload2 = epidemiologia.build_panorama_payload()
+
+        self.assertIsNot(payload1, payload2)
+        self.assertEqual(payload2["overview"]["raw_total_cases"], 1)
 
     def test_radar_local_e_mapa_publico_usam_o_mesmo_recorte_publico(self):
         empresa_publica = Empresa.objects.create(

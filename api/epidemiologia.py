@@ -5,6 +5,7 @@ from datetime import timedelta
 import json
 from time import time
 
+from django.core.cache import cache
 from django.db.models import Avg, Count, Q
 from django.db.models.functions import TruncDate
 from django.http import JsonResponse, HttpResponse
@@ -128,18 +129,31 @@ DISEASE_WEIGHTS = {
     },
 }
 
-_PANORAMA_CACHE = {"created_at": 0.0, "payload": None}
+_PANORAMA_CACHE = {"created_at": 0.0, "payload": None, "version": None}
 # TTL maior que o intervalo de polling dos painéis (15s) para que os requests
 # concorrentes reaproveitem o payload já calculado em vez de refazer as 4
 # agregações pesadas a cada ciclo. O cache é invalidado em tempo real por
 # clear_panorama_cache() quando um novo registro chega.
 _CACHE_TTL_SECONDS = 45
+_PANORAMA_CACHE_VERSION_KEY = "epidemiologia:panorama:version"
 PUBLIC_APP_EMAIL = "populacao@soluscrt.com"
 
 
+def _current_panorama_cache_version():
+    try:
+        return int(cache.get(_PANORAMA_CACHE_VERSION_KEY, 0) or 0)
+    except Exception:
+        return 0
+
+
 def clear_panorama_cache():
+    try:
+        cache.set(_PANORAMA_CACHE_VERSION_KEY, _current_panorama_cache_version() + 1, None)
+    except Exception:
+        pass
     _PANORAMA_CACHE["created_at"] = 0.0
     _PANORAMA_CACHE["payload"] = None
+    _PANORAMA_CACHE["version"] = _current_panorama_cache_version()
 
 
 def _public_population_empresa():
@@ -161,8 +175,8 @@ def _scope_public_population_queryset(queryset):
 _CITY_TO_UF = None
 FOCUS_STABILITY_DAYS = 10
 FOCUS_DECAY_WINDOW_DAYS = 30
-FOCUS_MIN_WEIGHT = 0.0
-FOCUS_VISIBILITY_THRESHOLD = 0.1
+FOCUS_MIN_WEIGHT = 0.1
+FOCUS_VISIBILITY_THRESHOLD = 0.01
 
 UF_CODES = {
     11: "RO", 12: "AC", 13: "AM", 14: "RR", 15: "PA", 16: "AP", 17: "TO",
@@ -1097,9 +1111,11 @@ def _aggregate_overview(layers):
 
 def build_panorama_payload():
     now = time()
+    current_version = _current_panorama_cache_version()
 
     if (
         _PANORAMA_CACHE["payload"] is not None
+        and _PANORAMA_CACHE.get("version") == current_version
         and now - _PANORAMA_CACHE["created_at"] < _CACHE_TTL_SECONDS
     ):
         return _PANORAMA_CACHE["payload"]
@@ -1125,6 +1141,7 @@ def build_panorama_payload():
 
     _PANORAMA_CACHE["created_at"] = now
     _PANORAMA_CACHE["payload"] = payload
+    _PANORAMA_CACHE["version"] = current_version
     return payload
 
 
