@@ -9,7 +9,7 @@ from django.db.models import F, Q
 from django.utils import timezone
 
 from api.epidemiologia import clear_panorama_cache
-from api.models import RegistroSintoma
+from api.models import Empresa, RegistroSintoma
 from api.views import _empresa_app_publico
 
 from .stress_soluscrt_brasil import REGIOES_BRASIL
@@ -84,8 +84,7 @@ class Command(BaseCommand):
 
         random.seed(options["seed"])
         step_seconds = max((options["duracao_minutos"] * 60.0) / max(options["dias_simulados"], 1), 0.1)
-        empresa = _empresa_app_publico()
-        self._set_rls(empresa.id)
+        empresa = self._empresa_owner_publica()
 
         if options["limpar_antes"]:
             self._limpar_demo(empresa, limpar_publico=options["limpar_publico"])
@@ -154,7 +153,7 @@ class Command(BaseCommand):
         if quantidade <= 0:
             return 0
 
-        self._set_rls(empresa.id)
+        qs = RegistroSintoma.objects.using("owner")
         agora = timezone.now()
         objetos = []
         for index in range(quantidade):
@@ -179,26 +178,25 @@ class Command(BaseCommand):
                     data_registro=agora,
                 )
             )
-        RegistroSintoma.objects.bulk_create(objetos, batch_size=100)
+        qs.bulk_create(objetos, batch_size=100)
         return len(objetos)
 
     def _envelhecer_demo(self):
-        self._set_rls(_empresa_app_publico().id)
-        RegistroSintoma.objects.filter(device_id__startswith=DEVICE_PREFIX).update(
+        RegistroSintoma.objects.using("owner").filter(device_id__startswith=DEVICE_PREFIX).update(
             data_registro=F("data_registro") - timedelta(days=1)
         )
 
     def _reduzir_excesso(self, excesso):
         if excesso <= 0:
             return
-        self._set_rls(_empresa_app_publico().id)
+        qs = RegistroSintoma.objects.using("owner")
         ids = list(
-            RegistroSintoma.objects.filter(device_id__startswith=DEVICE_PREFIX)
+            qs.filter(device_id__startswith=DEVICE_PREFIX)
             .order_by("data_registro", "id")
             .values_list("id", flat=True)[:excesso]
         )
         if ids:
-            RegistroSintoma.objects.filter(id__in=ids).delete()
+            qs.filter(id__in=ids).delete()
 
     def _target_total(self, criado_total, dia, dias_sem_novos, dias_simulados):
         if criado_total <= 0:
@@ -211,19 +209,16 @@ class Command(BaseCommand):
         return max(1, round(criado_total * ratio))
 
     def _indice_atual(self):
-        self._set_rls(_empresa_app_publico().id)
-        qs = RegistroSintoma.objects.filter(device_id__startswith=DEVICE_PREFIX)
+        qs = RegistroSintoma.objects.using("owner").filter(device_id__startswith=DEVICE_PREFIX)
         from api.views import _indice_temporal_publico
 
         return _indice_temporal_publico(qs, timezone.now()) if qs.exists() else 0.0
 
     def _total_atual(self):
-        self._set_rls(_empresa_app_publico().id)
-        return RegistroSintoma.objects.filter(device_id__startswith=DEVICE_PREFIX).count()
+        return RegistroSintoma.objects.using("owner").filter(device_id__startswith=DEVICE_PREFIX).count()
 
     def _limpar_demo(self, empresa, limpar_publico=False):
-        self._set_rls(empresa.id)
-        qs = RegistroSintoma.objects.filter(empresa=empresa)
+        qs = RegistroSintoma.objects.using("owner").filter(empresa=empresa)
         if not limpar_publico:
             qs = qs.filter(
                 Q(device_id__startswith=DEVICE_PREFIX) | Q(fonte_referencia__icontains=SOURCE_MARKER)
@@ -235,10 +230,33 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.WARNING(f"Demo nacional removida: {removidos} registros."))
 
-    def _set_rls(self, empresa_id):
-        from django.db import connection
-
-        if connection.vendor != "postgresql":
-            return
-        with connection.cursor() as cur:
-            cur.execute("SELECT set_config('app.empresa_id', %s, false)", [str(empresa_id)])
+    def _empresa_owner_publica(self):
+        empresa = _empresa_app_publico()
+        if empresa is None:
+            raise CommandError("Empresa pública não encontrada.")
+        owner_qs = Empresa.objects.using("owner")
+        owner_empresa = owner_qs.filter(pk=empresa.pk).first()
+        if owner_empresa:
+            return owner_empresa
+        owner_empresa, _ = owner_qs.get_or_create(
+            pk=empresa.pk,
+            defaults={
+                "nome": empresa.nome,
+                "email": empresa.email,
+                "senha": empresa.senha,
+                "tipo_conta": empresa.tipo_conta,
+                "pacote_codigo": empresa.pacote_codigo,
+                "plano": empresa.plano,
+                "ativo": empresa.ativo,
+                "acesso_governo": empresa.acesso_governo,
+                "max_dispositivos": empresa.max_dispositivos,
+                "max_usuarios": empresa.max_usuarios,
+                "sessao_ativa_chave": empresa.sessao_ativa_chave,
+                "sessao_ativa_device_id": empresa.sessao_ativa_device_id,
+                "sessao_ativa_em": empresa.sessao_ativa_em,
+                "data_pagamento": empresa.data_pagamento,
+                "data_expiracao": empresa.data_expiracao,
+                "codigo_acesso_corporativo": empresa.codigo_acesso_corporativo,
+            },
+        )
+        return owner_empresa

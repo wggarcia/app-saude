@@ -18,6 +18,8 @@ from api.views import _empresa_app_publico
 
 
 class PublicIntegrityTests(TestCase):
+    databases = {"default", "owner"}
+
     def setUp(self):
         self.client = Client()
         self.empresa_publica = _empresa_app_publico()
@@ -232,3 +234,24 @@ class PublicIntegrityTests(TestCase):
         self.assertFalse(DispositivoAutorizado.objects.filter(empresa=self.empresa_publica).exists())
         self.assertFalse(DispositivoPushPublico.objects.filter(token="token-publico-001").exists())
         self.assertEqual(epidemiologia._PANORAMA_CACHE["payload"], None)
+
+    def test_demo_reuniao_soluscrt_cria_focos_no_owner(self):
+        out = StringIO()
+        call_command(
+            "demo_reuniao_soluscrt",
+            total=12,
+            dias_simulados=2,
+            dias_sem_novos=1,
+            duracao_minutos=0,
+            seed=20260615,
+            limpar_publico=True,
+            limpar_antes=True,
+            stdout=out,
+            verbosity=0,
+        )
+
+        self.assertGreater(
+            RegistroSintoma.objects.using("owner").filter(empresa_id=self.empresa_publica.id).count(),
+            0,
+        )
+        self.assertIn("Demo nacional concluida", out.getvalue())
