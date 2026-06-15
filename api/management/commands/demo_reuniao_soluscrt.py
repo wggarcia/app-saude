@@ -85,6 +85,7 @@ class Command(BaseCommand):
         random.seed(options["seed"])
         step_seconds = max((options["duracao_minutos"] * 60.0) / max(options["dias_simulados"], 1), 0.1)
         empresa = _empresa_app_publico()
+        self._set_rls(empresa.id)
 
         if options["limpar_antes"]:
             self._limpar_demo(empresa, limpar_publico=options["limpar_publico"])
@@ -153,6 +154,7 @@ class Command(BaseCommand):
         if quantidade <= 0:
             return 0
 
+        self._set_rls(empresa.id)
         agora = timezone.now()
         objetos = []
         for index in range(quantidade):
@@ -181,6 +183,7 @@ class Command(BaseCommand):
         return len(objetos)
 
     def _envelhecer_demo(self):
+        self._set_rls(_empresa_app_publico().id)
         RegistroSintoma.objects.filter(device_id__startswith=DEVICE_PREFIX).update(
             data_registro=F("data_registro") - timedelta(days=1)
         )
@@ -188,6 +191,7 @@ class Command(BaseCommand):
     def _reduzir_excesso(self, excesso):
         if excesso <= 0:
             return
+        self._set_rls(_empresa_app_publico().id)
         ids = list(
             RegistroSintoma.objects.filter(device_id__startswith=DEVICE_PREFIX)
             .order_by("data_registro", "id")
@@ -207,15 +211,18 @@ class Command(BaseCommand):
         return max(1, round(criado_total * ratio))
 
     def _indice_atual(self):
+        self._set_rls(_empresa_app_publico().id)
         qs = RegistroSintoma.objects.filter(device_id__startswith=DEVICE_PREFIX)
         from api.views import _indice_temporal_publico
 
         return _indice_temporal_publico(qs, timezone.now()) if qs.exists() else 0.0
 
     def _total_atual(self):
+        self._set_rls(_empresa_app_publico().id)
         return RegistroSintoma.objects.filter(device_id__startswith=DEVICE_PREFIX).count()
 
     def _limpar_demo(self, empresa, limpar_publico=False):
+        self._set_rls(empresa.id)
         qs = RegistroSintoma.objects.filter(empresa=empresa)
         if not limpar_publico:
             qs = qs.filter(
@@ -227,3 +234,11 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f"Demo nacional removida: {removidos} registros publicos."))
         else:
             self.stdout.write(self.style.WARNING(f"Demo nacional removida: {removidos} registros."))
+
+    def _set_rls(self, empresa_id):
+        from django.db import connection
+
+        if connection.vendor != "postgresql":
+            return
+        with connection.cursor() as cur:
+            cur.execute("SELECT set_config('app.empresa_id', %s, false)", [str(empresa_id)])
