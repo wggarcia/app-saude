@@ -67,6 +67,12 @@ class Command(BaseCommand):
         parser.add_argument("--total", type=int, default=540)
         parser.add_argument("--dias-simulados", type=int, default=30)
         parser.add_argument("--dias-sem-novos", type=int, default=10)
+        parser.add_argument(
+            "--dias-zerar",
+            type=int,
+            default=41,
+            help="Dia em que os focos somem totalmente da tela/mapa (decai de 10%% ate 0%%).",
+        )
         parser.add_argument("--duracao-minutos", type=float, default=5.0)
         parser.add_argument("--seed", type=int, default=20260615)
         parser.add_argument("--limpar-antes", action="store_true")
@@ -81,9 +87,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if options["dias_sem_novos"] >= options["dias_simulados"]:
             raise CommandError("--dias-sem-novos precisa ser menor que --dias-simulados.")
+        if options["dias_simulados"] >= options["dias_zerar"]:
+            raise CommandError("--dias-simulados precisa ser menor que --dias-zerar.")
 
         random.seed(options["seed"])
-        step_seconds = max((options["duracao_minutos"] * 60.0) / max(options["dias_simulados"], 1), 0.1)
+        # A duracao total cobre todo o arco ate o sumiço (dias_zerar), para que a
+        # demonstracao inteira caiba no tempo pedido (ex.: 5 min ate o dia 41).
+        step_seconds = max((options["duracao_minutos"] * 60.0) / max(options["dias_zerar"], 1), 0.1)
         empresa = self._empresa_owner_publica()
 
         if options["limpar_antes"]:
@@ -97,8 +107,9 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.NOTICE(
-                "Iniciando demo nacional: 10 dias com entrada de casos, depois decaimento "
-                f"ate o dia {options['dias_simulados']}."
+                f"Iniciando demo nacional: {options['dias_sem_novos']} dias com entrada de casos, "
+                f"queda ate ~10% no dia {options['dias_simulados']} e sumiço total no dia "
+                f"{options['dias_zerar']} (os registros permanecem na trilha, mas saem da janela ativa)."
             )
         )
 
@@ -109,7 +120,7 @@ class Command(BaseCommand):
         region_iter = cycle(region_pool)
         created_total = 0
 
-        for day in range(options["dias_simulados"] + 1):
+        for day in range(options["dias_zerar"] + 1):
             if day > 0:
                 self._envelhecer_demo()
 
@@ -123,7 +134,13 @@ class Command(BaseCommand):
                 )
                 created_total += created_today
 
-            target_total = self._target_total(created_total, day, options["dias_sem_novos"], options["dias_simulados"])
+            target_total = self._target_total(
+                created_total,
+                day,
+                options["dias_sem_novos"],
+                options["dias_simulados"],
+                options["dias_zerar"],
+            )
             atual_total = self._total_atual()
             if atual_total > target_total:
                 self._reduzir_excesso(atual_total - target_total)
@@ -132,11 +149,11 @@ class Command(BaseCommand):
             indice_ativo = self._indice_atual()
             total_atual = self._total_atual()
             self.stdout.write(
-                f"[dia {day:02d}/{options['dias_simulados']}] "
+                f"[dia {day:02d}/{options['dias_zerar']}] "
                 f"novos={created_today} total={total_atual} ativo={indice_ativo:.2f}"
             )
 
-            if day < options["dias_simulados"]:
+            if day < options["dias_zerar"]:
                 time.sleep(step_seconds)
 
         if options["limpar_depois"]:
@@ -198,15 +215,22 @@ class Command(BaseCommand):
         if ids:
             qs.filter(id__in=ids).delete()
 
-    def _target_total(self, criado_total, dia, dias_sem_novos, dias_simulados):
+    def _target_total(self, criado_total, dia, dias_sem_novos, dias_simulados, dias_zerar):
         if criado_total <= 0:
             return 0
         if dia <= dias_sem_novos:
             return criado_total
-        janela_queda = max(dias_simulados - dias_sem_novos, 1)
-        progresso = min(max(dia - dias_sem_novos, 0), janela_queda)
-        ratio = 1.0 - (0.9 * (progresso / janela_queda))
-        return max(1, round(criado_total * ratio))
+        if dia <= dias_simulados:
+            # Fase 1: do fim das entradas (ex.: dia 10) ate o dia 30 → cai de 100% a 10%.
+            janela_queda = max(dias_simulados - dias_sem_novos, 1)
+            progresso = min(max(dia - dias_sem_novos, 0), janela_queda)
+            ratio = 1.0 - (0.9 * (progresso / janela_queda))
+            return max(1, round(criado_total * ratio))
+        # Fase 2: do dia 30 ao dia 41 → cai dos 10% restantes a 0% (sumiço total).
+        janela_zero = max(dias_zerar - dias_simulados, 1)
+        progresso = min(max(dia - dias_simulados, 0), janela_zero)
+        ratio = 0.1 * (1.0 - (progresso / janela_zero))
+        return max(0, round(criado_total * ratio))
 
     def _indice_atual(self):
         qs = RegistroSintoma.objects.using("owner").filter(device_id__startswith=DEVICE_PREFIX)
