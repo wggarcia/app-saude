@@ -2762,7 +2762,10 @@ def app_vigilancia_resumo(request):
     Hospital, Plano de Saúde e console), garantindo números IDÊNTICOS.
     """
     from api.services.dashboard_core import _resumo_vigilancia_publica
-    return JsonResponse(_resumo_vigilancia_publica(timezone.now()))
+    response = JsonResponse(_resumo_vigilancia_publica(timezone.now()))
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    return response
 
 
 def app_resumo_publico(request):
@@ -2857,7 +2860,7 @@ def app_resumo_publico(request):
             "percentual": round((total_ativo / max(indice_ativo_30d, 1)) * 100, 1),
         })
 
-    return JsonResponse({
+    response = JsonResponse({
         "resumo": {
             "registros_24h": total_24h,
             "registros_7d": total_7d,
@@ -2885,6 +2888,9 @@ def app_resumo_publico(request):
             for item in doencas
         ],
     })
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    return response
 
 
 def app_radar_local(request):
@@ -2965,7 +2971,7 @@ def app_radar_local(request):
     doencas_provaveis = _build_disease_probabilities(sintomas, total_ativos)
     doenca_dominante = doencas_provaveis[0]["name"] if doencas_provaveis else None
 
-    return JsonResponse({
+    response = JsonResponse({
         "local": {
             "bairro": bairro or geo.get("bairro"),
             "cidade": cidade,
@@ -3010,6 +3016,9 @@ def app_radar_local(request):
         "doencas_provaveis": doencas_provaveis,
         "sintomas": sintomas,
     })
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    return response
 
 
 def _risk_level_para_nivel_publico(risk_level):
@@ -3128,7 +3137,10 @@ def app_mapa_publico(request):
             2,
         )
 
-    return JsonResponse({"hotspots": hotspots}, safe=False)
+    response = JsonResponse({"hotspots": hotspots}, safe=False)
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    return response
 
 
 def _filtrar_alertas_publicos(queryset, estado=None, cidade=None, bairro=None, incluir_gerais=True):

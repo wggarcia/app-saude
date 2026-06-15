@@ -1146,7 +1146,10 @@ def build_panorama_payload():
 
 
 def panorama_epidemiologico(request):
-    return JsonResponse(build_panorama_payload())
+    response = JsonResponse(build_panorama_payload())
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    return response
 
 
 def exportar_briefing_governo(request):

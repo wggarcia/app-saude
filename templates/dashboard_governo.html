@@ -1918,7 +1918,7 @@
     }
 
     async function loadPanorama() {
-      const response = await fetch("/api/epidemiologia");
+      const response = await fetch("/api/epidemiologia", { cache: "no-store" });
       panorama = await response.json();
       document.getElementById("generatedAt").textContent = `Atualizado em ${new Date(panorama.generated_at).toLocaleString("pt-BR")}`;
       document.getElementById("institutionalNote").textContent = panorama?.overview?.institutional_note || "";
@@ -2069,7 +2069,7 @@
     foot.textContent="Fonte: app da população (gratuito/anônimo) · atualiza ao reabrir";
   }
   function load(){
-    fetch("/api/public/vigilancia-resumo").then(function(r){return r.json();}).then(render)
+    fetch("/api/public/vigilancia-resumo", { cache: "no-store" }).then(function(r){return r.json();}).then(render)
       .catch(function(){ body.innerHTML='<div class="vgn-loading">Não foi possível carregar.</div>'; });
   }
   function open(){ root.classList.add("open"); if(!loaded){loaded=true;load();} }

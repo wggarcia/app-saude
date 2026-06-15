@@ -1563,7 +1563,7 @@
     }
 
     async function loadPanorama() {
-      const response = await fetch("/api/epidemiologia");
+      const response = await fetch("/api/epidemiologia", { cache: "no-store" });
       panorama = await response.json();
       document.getElementById("generatedAt").textContent = `Atualizado em ${new Date(panorama.generated_at).toLocaleString("pt-BR")}`;
       populateFilters();
