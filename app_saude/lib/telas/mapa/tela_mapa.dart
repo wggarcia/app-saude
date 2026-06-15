@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -5,6 +7,38 @@ import 'package:latlong2/latlong.dart';
 import '../../servicos/location_service.dart';
 import '../../servicos/public_api_service.dart';
 import '../../servicos/regiao_base_service.dart';
+
+double _activeValue(Map<String, dynamic> item) {
+  double? toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value.trim().replaceAll(',', '.'));
+    }
+    return null;
+  }
+
+  return toDouble(item['indice_ativo']) ??
+      toDouble(item['active_cases']) ??
+      toDouble(item['total_cases']) ??
+      toDouble(item['total']) ??
+      0.0;
+}
+
+double _rawValue(Map<String, dynamic> item) {
+  double? toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value.trim().replaceAll(',', '.'));
+    }
+    return null;
+  }
+
+  return toDouble(item['total_registros_30d']) ??
+      toDouble(item['raw_total_cases']) ??
+      toDouble(item['raw_total']) ??
+      toDouble(item['total']) ??
+      _activeValue(item);
+}
 
 class TelaMapa extends StatefulWidget {
   const TelaMapa({super.key});
@@ -100,34 +134,20 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
   Future<List<dynamic>> _carregarMapaTerritorial(
       Map<String, dynamic> local) async {
     final estado = _cleanLocationValue(local['estado']);
-    final cidade = _cleanLocationValue(local['cidade']);
-    final bairro = _cleanLocationValue(local['bairro']);
 
-    final tentativas = <Map<String, String?>>[];
-    if (estado != null && cidade != null && bairro != null) {
-      tentativas.add({'estado': estado, 'cidade': cidade, 'bairro': bairro});
-    }
-    if (estado != null && cidade != null) {
-      tentativas.add({'estado': estado, 'cidade': cidade, 'bairro': null});
-    }
+    // Mostrar TODO o estado de origem (todos os municipios e bairros com foco),
+    // nao apenas o bairro do usuario. O backend agrega por (cidade, estado,
+    // bairro), entao filtrar somente por estado retorna o estado inteiro,
+    // por municipio. O radar local (painel) continua sendo do bairro/cidade.
     if (estado != null) {
-      tentativas.add({'estado': estado, 'cidade': null, 'bairro': null});
-    }
-    if (tentativas.isEmpty) {
-      return PublicApiService.fetchMapa();
-    }
-
-    for (final tentativa in tentativas) {
-      final mapa = await PublicApiService.fetchMapa(
-        estado: tentativa['estado'],
-        cidade: tentativa['cidade'],
-        bairro: tentativa['bairro'],
-      );
-      if (mapa.isNotEmpty) {
-        return mapa;
+      final mapaEstado = await PublicApiService.fetchMapa(estado: estado);
+      if (mapaEstado.isNotEmpty) {
+        return mapaEstado;
       }
     }
-    return const [];
+
+    // Sem estado resolvido (ou estado ainda sem focos): mapa publico nacional.
+    return PublicApiService.fetchMapa();
   }
 
   Future<void> _load() async {
@@ -168,19 +188,21 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
       );
       final localPreferido =
           radarPreferido['local'] as Map<String, dynamic>? ?? {};
+      final mapaFuture = _carregarMapaTerritorial(localPreferido);
+      final alertasFuture = PublicApiService.fetchAlertas(
+        cidade: localPreferido['cidade']?.toString(),
+        estado: localPreferido['estado']?.toString(),
+        bairro: localPreferido['bairro']?.toString(),
+      );
       List<dynamic> mapa;
       List<dynamic> alertas;
       try {
-        mapa = await _carregarMapaTerritorial(localPreferido);
+        mapa = await mapaFuture;
       } catch (_) {
         mapa = const [];
       }
       try {
-        alertas = await PublicApiService.fetchAlertas(
-          cidade: localPreferido['cidade']?.toString(),
-          estado: localPreferido['estado']?.toString(),
-          bairro: localPreferido['bairro']?.toString(),
-        );
+        alertas = await alertasFuture;
         if (alertas.isEmpty) {
           alertas = await PublicApiService.fetchAlertas();
         }
@@ -205,6 +227,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
             ? 'Ainda nao ha focos publicos recentes neste territorio.'
             : null;
       });
+      _syncMapCamera();
     } catch (err) {
       if (!mounted) {
         return;
@@ -221,6 +244,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
             'Nao foi possivel atualizar o radar local agora. O mapa publico continua disponivel para consulta.';
         loading = false;
       });
+      _syncMapCamera();
     }
   }
 
@@ -274,14 +298,61 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
     return LatLng(latitude / hotspots.length, longitude / hotspots.length);
   }
 
+  LatLng _cameraCenter() {
+    final regiaoLatitude = _toDouble(regiaoBase?['latitude']);
+    final regiaoLongitude = _toDouble(regiaoBase?['longitude']);
+    final hotspotCenter = _centerFromHotspots();
+
+    if (localizacaoAtual != null) {
+      return LatLng(localizacaoAtual!.latitude, localizacaoAtual!.longitude);
+    }
+    if (hotspotCenter != null) {
+      return hotspotCenter;
+    }
+    if (regiaoLatitude != null && regiaoLongitude != null) {
+      return LatLng(regiaoLatitude, regiaoLongitude);
+    }
+    return const LatLng(-14.235, -51.9253);
+  }
+
+  double _cameraZoom() {
+    if (hotspots.length > 1) {
+      return 6.6;
+    }
+    if (localizacaoAtual != null) {
+      return 12.2;
+    }
+    if (regiaoBase != null) {
+      return 10.2;
+    }
+    return 4.8;
+  }
+
+  void _syncMapCamera() {
+    if (!mounted) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final zoom = _cameraZoom();
+      if (mounted) {
+        setState(() => _currentZoom = zoom);
+      }
+      _mapController.move(_cameraCenter(), zoom);
+    });
+  }
+
   double _circleRadius(double total) {
+    final base = total <= 0 ? 0.0 : math.sqrt(total);
     if (_currentZoom <= 5.8) {
-      return (14 + total.clamp(1, 120) * 3.4).clamp(18, 58).toDouble();
+      return (12 + base * 5.5).clamp(14, 54).toDouble();
     }
     if (_currentZoom <= 8.8) {
-      return (24 + total.clamp(1, 100) * 2.5).clamp(28, 92).toDouble();
+      return (20 + base * 6.6).clamp(24, 84).toDouble();
     }
-    return (42 + total.clamp(1, 80) * 1.8).clamp(46, 150).toDouble();
+    return (30 + base * 7.4).clamp(34, 128).toDouble();
   }
 
   double _markerSize() {
@@ -365,38 +436,21 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final regiaoLatitude = _toDouble(regiaoBase?['latitude']);
-    final regiaoLongitude = _toDouble(regiaoBase?['longitude']);
-    final hotspotCenter = _centerFromHotspots();
     final isNationalScale = _currentZoom <= 5.8;
     final isRegionalScale = _currentZoom <= 8.8;
-    final center = localizacaoAtual != null
-        ? LatLng(localizacaoAtual!.latitude, localizacaoAtual!.longitude)
-        : hotspotCenter ??
-            (regiaoLatitude != null && regiaoLongitude != null
-                ? LatLng(
-                    regiaoLatitude,
-                    regiaoLongitude,
-                  )
-                : const LatLng(-14.235, -51.9253));
+    final center = _cameraCenter();
     final localAtual = radarAtual?['local'] as Map<String, dynamic>? ?? {};
     final estaForaDaBase = RegiaoBaseService.estaForaDaRegiaoBase(
       regiaoBase: regiaoBase,
       localAtual: localAtual,
     );
-    final zoom = localizacaoAtual != null
-        ? 12.2
-        : regiaoBase != null && hotspots.length <= 1
-            ? 10.2
-            : 4.8;
+    final zoom = _cameraZoom();
     final userPoint = localizacaoAtual == null
         ? null
         : LatLng(localizacaoAtual!.latitude, localizacaoAtual!.longitude);
     final circles = hotspots.map((item) {
       final visual = _FocusVisual.fromItem(item);
-      final total = (item['indice_ativo'] as num?)?.toDouble() ??
-          (item['total'] as num?)?.toDouble() ??
-          1;
+      final total = _activeValue(item);
       return CircleMarker(
         point: LatLng(
           item['latitude'] as double,
@@ -577,6 +631,8 @@ class _MapHeroPanel extends StatelessWidget {
     final principal = doencas.isNotEmpty
         ? (doencas.first as Map)['grupo']?.toString() ?? 'Monitoramento'
         : 'Monitoramento';
+    final focosAtivos = hotspots.fold<double>(0, (sum, item) => sum + _activeValue(item));
+    final registros30d = hotspots.fold<double>(0, (sum, item) => sum + _rawValue(item));
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
@@ -630,7 +686,7 @@ class _MapHeroPanel extends StatelessWidget {
                 ),
               ),
               Text(
-                '${hotspots.length}',
+                focosAtivos.toStringAsFixed(focosAtivos >= 100 ? 0 : 1),
                 style: const TextStyle(
                   color: Color(0xFFE85F18),
                   fontSize: 24,
@@ -651,7 +707,7 @@ class _MapHeroPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '$principal | nivel ${radar['nivel']?.toString() ?? 'baixo'} | ${radar['registros_7d'] ?? 0} sinais em 7 dias',
+            '$principal | nivel ${radar['nivel']?.toString() ?? 'baixo'} | ${radar['registros_7d'] ?? 0} sinais em 7 dias | ${focosAtivos.toStringAsFixed(1)} focos ativos | ${registros30d.toStringAsFixed(0)} registros 30d',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -1137,10 +1193,10 @@ class _CompactHotspotMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visual = _FocusVisual.fromItem(item);
-    final total = item['indice_ativo'] ?? item['total'] ?? 0;
+    final total = _activeValue(item);
     return Tooltip(
       message:
-          '${item['cidade'] ?? 'Regiao'} / ${item['estado'] ?? 'BR'} | foco $total',
+          '${item['cidade'] ?? 'Regiao'} / ${item['estado'] ?? 'BR'} | foco ${total.toStringAsFixed(1)}',
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -1196,7 +1252,7 @@ class _HotspotMarker extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Foco ativo: ${item['indice_ativo'] ?? item['total']} | registros 30d: ${item['total_registros_30d'] ?? item['raw_total'] ?? item['total']}',
+                    'Foco ativo: ${_activeValue(item).toStringAsFixed(1)} | registros 30d: ${_rawValue(item).toStringAsFixed(0)}',
                     style: const TextStyle(color: Color(0xFF9CC4DB)),
                   ),
                   const SizedBox(height: 4),
@@ -1325,7 +1381,7 @@ class _FocusVisual {
     final faixa = ((item['semaforo'] as Map<String, dynamic>?)?['faixa'] ?? '')
         .toString()
         .toLowerCase();
-    final indice = item['indice_ativo'] ?? item['total'] ?? 0;
+    final indice = _safeDisplayIndex(item);
     final icon = switch (grupo) {
       String value when value.contains('covid') => Icons.coronavirus,
       String value when value.contains('febre amarela') => Icons.vaccines,
@@ -1370,8 +1426,16 @@ class _FocusVisual {
     return _FocusVisual(
       icon: icon,
       color: color,
-      label: '$indice',
+      label: indice,
       shortLabel: shortLabel,
     );
+  }
+
+  static String _safeDisplayIndex(Map<String, dynamic> item) {
+    final raw = item['indice_ativo'] ?? item['active_cases'] ?? item['total'] ?? 0;
+    final value = raw is num
+        ? raw.toDouble()
+        : double.tryParse(raw.toString()) ?? 0.0;
+    return value >= 100 ? value.toStringAsFixed(0) : value.toStringAsFixed(1);
   }
 }

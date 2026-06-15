@@ -3046,6 +3046,45 @@ class TemporalDecayTests(TestCase):
         self.assertEqual(payload["overview"]["raw_total_cases"], 4)
         self.assertLess(payload["overview"]["total_cases"], payload["overview"]["raw_total_cases"])
 
+    def test_panorama_epidemiologico_ignora_registros_sinteticos_publicos(self):
+        empresa = Empresa.objects.create(
+            nome="Populacao Sintetico",
+            email="sintetico-panorama@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        RegistroSintoma.objects.create(
+            empresa=empresa,
+            febre=True,
+            latitude=-22.9,
+            longitude=-43.1,
+            cidade="Rio de Janeiro",
+            estado="RJ",
+            bairro="Centro",
+            grupo="Respiratorio",
+        )
+        RegistroSintoma.objects.create(
+            empresa=empresa,
+            febre=True,
+            latitude=-22.9,
+            longitude=-43.1,
+            cidade="Rio de Janeiro",
+            estado="RJ",
+            bairro="Centro",
+            grupo="Respiratorio",
+            device_id="demo-panorama-001",
+            fonte_referencia="stress-test-map",
+        )
+
+        epidemiologia._PANORAMA_CACHE["created_at"] = 0.0
+        epidemiologia._PANORAMA_CACHE["payload"] = None
+        payload = epidemiologia.build_panorama_payload()
+        area = payload["layers"]["bairros"][0]
+
+        self.assertEqual(area["raw_total_cases"], 1)
+        self.assertEqual(area["total_cases"], area["active_cases"])
+        self.assertEqual(payload["overview"]["raw_total_cases"], 1)
+
     def test_panorama_epidemiologico_reduz_risco_quando_foco_envelhece(self):
         empresa = Empresa.objects.create(
             nome="Populacao Risco Temporal",

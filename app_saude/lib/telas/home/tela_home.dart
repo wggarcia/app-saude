@@ -6,6 +6,7 @@ import '../../servicos/public_api_service.dart';
 import '../../servicos/push_service.dart';
 import '../../servicos/regiao_base_service.dart';
 import '../alertas/tela_alertas.dart';
+import '../fontes/tela_fontes.dart';
 import '../mapa/tela_mapa.dart';
 import '../sintomas/tela_sintomas.dart';
 
@@ -213,6 +214,8 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
       final location = await LocationService.getBestEffortLocation(
         fallbackRegion: base,
       );
+      final resumoFuture = PublicApiService.fetchResumo()
+          .catchError((_) => <String, dynamic>{});
       final radarAgora = await PublicApiService.fetchRadarLocal(
         latitude: location.latitude,
         longitude: location.longitude,
@@ -230,7 +233,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
         radarAgora: radarAgora,
         base: updatedBase,
       );
-      final resumoData = await PublicApiService.fetchResumo();
+      final resumoData = await resumoFuture;
       var alertas = await PublicApiService.fetchAlertas(
         cidade: (radarPreferido['local'] as Map<String, dynamic>?)?['cidade']
             ?.toString(),
@@ -426,6 +429,17 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
           title: const Text('SolusCRT Saude'),
           backgroundColor: const Color(0xFF04131F),
           foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              tooltip: 'Fontes e referências',
+              icon: const Icon(Icons.menu_book_outlined),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TelaFontes()),
+                );
+              },
+            ),
+          ],
         ),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(18, 6, 18, 28),
@@ -444,6 +458,8 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                     );
                   },
                 ),
+                const SizedBox(height: 16),
+                const FontesResumoCard(),
                 const SizedBox(height: 16),
                 if (!loading)
                   _ModoMonitoramentoCard(
@@ -637,9 +653,8 @@ class _CasosPorEstadoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final itens = casosPorEstado
-        .map((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
+    final itens =
+        casosPorEstado.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     final maxTotal = itens.isEmpty
         ? 1
         : itens
@@ -718,8 +733,7 @@ class _CasosPorEstadoCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
                                 nome,

@@ -11,6 +11,7 @@ from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 
 from .models import Empresa, RegistroSintoma
+from .services.public_integrity import q_registro_sintoma_sintetico
 from .utils_cidades import carregar_base
 
 
@@ -148,6 +149,8 @@ def _public_population_empresa():
 def _scope_public_population_queryset(queryset):
     empresa = _public_population_empresa()
     if not empresa:
+        return queryset
+    if not RegistroSintoma.objects.filter(empresa=empresa).exists():
         return queryset
     try:
         from api.middleware import _rls_set_empresa
@@ -616,6 +619,7 @@ def _build_layer_queryset(group_fields):
         .filter(data_registro__gte=window_start)
         .exclude(latitude__isnull=True)
         .exclude(longitude__isnull=True)
+        .exclude(q_registro_sintoma_sintetico())
     )
     queryset = _scope_public_population_queryset(queryset)
 

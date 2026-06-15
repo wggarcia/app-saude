@@ -208,7 +208,8 @@ class LocationService {
   static Future<LocationSnapshot> getBestEffortLocation({
     Map<String, dynamic>? fallbackRegion,
   }) async {
-    final current = await getCurrentPositionOrNull();
+    final current = await getCurrentPositionOrNull()
+        .timeout(const Duration(seconds: 4), onTimeout: () => null);
     if (current != null) {
       return LocationSnapshot(
         latitude: current.latitude,
