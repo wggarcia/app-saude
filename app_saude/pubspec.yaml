@@ -3,7 +3,7 @@ description: App de monitoramento de saúde em tempo real
 
 publish_to: 'none'
 
-version: 1.0.0+18
+version: 1.0.0+21
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -30,6 +30,9 @@ dependencies:
   flutter_map: ^6.1.0
   latlong2: ^0.9.0
   geocoding: ^4.0.0
+
+  # 🔗 LINKS (citações de fontes)
+  url_launcher: ^6.2.6
 
 dev_dependencies:
   flutter_test:
