@@ -150,13 +150,13 @@ def _scope_public_population_queryset(queryset):
     empresa = _public_population_empresa()
     if not empresa:
         return queryset
-    if not RegistroSintoma.objects.filter(empresa=empresa).exists():
-        return queryset
     try:
         from api.middleware import _rls_set_empresa
         _rls_set_empresa(empresa.id)
     except Exception:
         pass
+    if not RegistroSintoma.objects.filter(empresa=empresa).exists():
+        return queryset
     return queryset.filter(empresa=empresa)
 _CITY_TO_UF = None
 FOCUS_STABILITY_DAYS = 10

@@ -2349,12 +2349,9 @@ class PublicApiTests(TestCase):
         self.assertTrue(hotspot["doencas_provaveis"])
 
     def test_mapa_publico_expõe_aliases_equalizados_para_app_e_paineis(self):
-        empresa = Empresa.objects.create(
-            nome="Populacao Aliases",
-            email="populacao-aliases@teste.com",
-            senha=make_password("123456"),
-            ativo=True,
-        )
+        from .views import _empresa_app_publico
+
+        empresa = _empresa_app_publico()
         RegistroSintoma.objects.create(
             empresa=empresa,
             dor_articular=True,
@@ -2367,6 +2364,7 @@ class PublicApiTests(TestCase):
             grupo="Arbovirose",
         )
 
+        epidemiologia.clear_panorama_cache()
         response = Client().get("/api/public/mapa?cidade=Rio de Janeiro&estado=RJ")
         hotspot = response.json()["hotspots"][0]
 
@@ -2381,12 +2379,9 @@ class PublicApiTests(TestCase):
         self.assertIn("risk_level", hotspot)
 
     def test_mapa_publico_filtra_por_bairro(self):
-        empresa = Empresa.objects.create(
-            nome="Populacao Bairro",
-            email="populacao-bairro@teste.com",
-            senha=make_password("123456"),
-            ativo=True,
-        )
+        from .views import _empresa_app_publico
+
+        empresa = _empresa_app_publico()
         RegistroSintoma.objects.create(
             empresa=empresa,
             febre=True,
@@ -2408,6 +2403,7 @@ class PublicApiTests(TestCase):
             grupo="Respiratorio",
         )
 
+        epidemiologia.clear_panorama_cache()
         response = Client().get(
             "/api/public/mapa?estado=RJ&cidade=Rio%20de%20Janeiro&bairro=Centro"
         )
@@ -2982,12 +2978,9 @@ class TemporalDecayTests(TestCase):
         self.assertEqual(trinta_dias, 0.05)
 
     def test_mapa_publico_mostra_total_ativo_reduzido(self):
-        empresa = Empresa.objects.create(
-            nome="Populacao Decaimento",
-            email="decaimento-mapa@teste.com",
-            senha=make_password("123456"),
-            ativo=True,
-        )
+        from .views import _empresa_app_publico
+
+        empresa = _empresa_app_publico()
         agora = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
         for _ in range(4):
             registro = RegistroSintoma.objects.create(
@@ -3004,6 +2997,7 @@ class TemporalDecayTests(TestCase):
                 data_registro=agora - timedelta(days=15)
             )
 
+        epidemiologia.clear_panorama_cache()
         response = Client().get("/api/public/mapa?cidade=Rio de Janeiro&estado=RJ")
         hotspot = response.json()["hotspots"][0]
 
