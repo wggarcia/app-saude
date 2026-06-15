@@ -2771,7 +2771,11 @@ def app_resumo_publico(request):
     _emp_pub = _empresa_app_publico()
     _set_rls(_emp_pub.id)
     agora = timezone.now()
-    base_publica = RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico())
+    from api.epidemiologia import _scope_public_population_queryset as _scope_public
+
+    base_publica = _scope_public(
+        RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico())
+    )
     ultimas_24h = base_publica.filter(data_registro__gte=agora - timedelta(hours=24))
     ultimos_7d = base_publica.filter(data_registro__gte=agora - timedelta(days=7))
     ativos_30d = base_publica.filter(data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS))
@@ -2858,6 +2862,7 @@ def app_resumo_publico(request):
 def app_radar_local(request):
     # ── RLS: garante visibilidade dos registros públicos ─────────────────────
     from api.middleware import _rls_set_empresa as _set_rls
+    from api.epidemiologia import _scope_public_population_queryset as _scope_public
     _emp_pub = _empresa_app_publico()
     _set_rls(_emp_pub.id)
     latitude = request.GET.get("latitude")
@@ -2877,13 +2882,16 @@ def app_radar_local(request):
         return JsonResponse({"erro": "cidade/estado ou latitude/longitude obrigatórios"}, status=400)
 
     agora = timezone.now()
-    atuais = RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico()).filter(
+    base_publica = _scope_public(
+        RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico())
+    )
+    atuais = base_publica.filter(
         cidade=cidade,
         estado=estado,
         data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS),
     )
     atuais_7d = atuais.filter(data_registro__gte=agora - timedelta(days=7))
-    anteriores = RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico()).filter(
+    anteriores = base_publica.filter(
         cidade=cidade,
         estado=estado,
         data_registro__gte=agora - timedelta(days=14),

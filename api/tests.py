@@ -3085,6 +3085,47 @@ class TemporalDecayTests(TestCase):
         self.assertEqual(area["total_cases"], area["active_cases"])
         self.assertEqual(payload["overview"]["raw_total_cases"], 1)
 
+    def test_radar_local_e_mapa_publico_usam_o_mesmo_recorte_publico(self):
+        empresa_publica = Empresa.objects.create(
+            nome="SolusCRT Populacao",
+            email="populacao@soluscrt.com",
+            senha=make_password("publico_app"),
+            ativo=True,
+            plano="publico",
+            pacote_codigo="governo_estado",
+        )
+        empresa_privada = Empresa.objects.create(
+            nome="Empresa Privada",
+            email="privada-radar@teste.com",
+            senha=make_password("123456"),
+            ativo=True,
+        )
+        for empresa in (empresa_publica, empresa_privada):
+            RegistroSintoma.objects.create(
+                empresa=empresa,
+                febre=True,
+                latitude=-22.9,
+                longitude=-43.1,
+                cidade="Niterói",
+                estado="Rio de Janeiro",
+                bairro="Icaraí",
+                grupo="Respiratorio",
+            )
+
+        epidemiologia.clear_panorama_cache()
+        response_mapa = Client().get(
+            "/api/public/mapa?cidade=Niterói&estado=Rio%20de%20Janeiro"
+        )
+        response_radar = Client().get(
+            "/api/public/radar-local?cidade=Niterói&estado=Rio%20de%20Janeiro&bairro=Icaraí"
+        )
+
+        self.assertEqual(response_mapa.status_code, 200)
+        self.assertEqual(response_radar.status_code, 200)
+        self.assertEqual(len(response_mapa.json()["hotspots"]), 1)
+        self.assertEqual(response_mapa.json()["hotspots"][0]["raw_total_cases"], 1)
+        self.assertEqual(response_radar.json()["radar"]["raw_total_cases"], 1)
+
     def test_panorama_epidemiologico_reduz_risco_quando_foco_envelhece(self):
         empresa = Empresa.objects.create(
             nome="Populacao Risco Temporal",
