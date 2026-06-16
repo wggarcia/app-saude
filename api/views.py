@@ -9,6 +9,7 @@ from .utils_cidades import buscar_coordenada
 from .utils import obter_localizacao
 from django.conf import settings
 from api.utils_ia import classificar_padrao
+from api.classificador_doencas import classificar_para_cidadao as _classificar_cidadao
 from api.utils_geo import obter_endereco
 from api.utils_auth import validar_token
 from api.models import Empresa, RegistroSintoma
@@ -2105,8 +2106,10 @@ def registrar_sintoma(request):
     # 🌎 GEOLOCALIZAÇÃO (BRASIL INTEIRO)
     geo = obter_endereco(latitude, longitude)
 
-    # 🧠 classificação
-    grupo, classificacao = classificar_padrao(dados)
+    # 🧠 classificação bayesiana — passa estado para prior geográfico
+    dados_classificacao = {**dados, "estado": geo.get("estado", ""), "cidade": geo.get("cidade", "")}
+    grupo, classificacao = classificar_padrao(dados_classificacao, setor="governo")
+    resultado_cidadao = _classificar_cidadao(dados_classificacao, estado=geo.get("estado", ""))
     confianca, motivos_suspeita, ip, device_id = _score_suspeita(empresa, request, dados)
 
     if confianca <= 0.3:
@@ -2139,8 +2142,18 @@ def registrar_sintoma(request):
         dor_garganta=bool(dados.get("dor_garganta", False)),
         coriza=bool(dados.get("coriza", False)),
         calafrios=bool(dados.get("calafrios", False)),
+        sudorese=bool(dados.get("sudorese", False)),
         intensidade_febre=dados.get("intensidade_febre", ""),
         intensidade_articular=dados.get("intensidade_articular", ""),
+        # Anamnese epidemiológica
+        dias_sintomas=dados.get("dias_sintomas"),
+        inicio_abrupto=dados.get("inicio_abrupto"),
+        viagem_area_endemica=dados.get("viagem_area_endemica"),
+        exposicao_agua_enchente=dados.get("exposicao_agua_enchente"),
+        contato_roedores=dados.get("contato_roedores"),
+        contato_caso_confirmado=dados.get("contato_caso_confirmado"),
+        vacinado_febre_amarela=dados.get("vacinado_febre_amarela"),
+        tem_comorbidade=dados.get("tem_comorbidade"),
         latitude=latitude,
         longitude=longitude,
         pais=geo.get("pais"),
@@ -2168,7 +2181,8 @@ def registrar_sintoma(request):
             "bairro": geo.get("bairro"),
             "cidade": geo.get("cidade"),
             "estado": geo.get("estado")
-        }
+        },
+        "cidadao": resultado_cidadao,
     })
 
 
@@ -2212,7 +2226,9 @@ def registrar_sintoma_publico(request):
         }
     else:
         geo = obter_endereco(latitude, longitude)
-    grupo, classificacao = classificar_padrao(dados)
+    dados_classificacao = {**dados, "estado": geo.get("estado", ""), "cidade": geo.get("cidade", "")}
+    grupo, classificacao = classificar_padrao(dados_classificacao, setor="governo")
+    resultado_cidadao = _classificar_cidadao(dados_classificacao, estado=geo.get("estado", ""))
     confianca, motivos_suspeita, ip, device_id = _score_suspeita(empresa, request, dados)
     if location_source != "current":
         # Mantem o fluxo resiliente para versões antigas do app e cenários de
@@ -2275,8 +2291,18 @@ def registrar_sintoma_publico(request):
         dor_garganta=bool(dados.get("dor_garganta", False)),
         coriza=bool(dados.get("coriza", False)),
         calafrios=bool(dados.get("calafrios", False)),
+        sudorese=bool(dados.get("sudorese", False)),
         intensidade_febre=dados.get("intensidade_febre", ""),
         intensidade_articular=dados.get("intensidade_articular", ""),
+        # Anamnese epidemiológica
+        dias_sintomas=dados.get("dias_sintomas"),
+        inicio_abrupto=dados.get("inicio_abrupto"),
+        viagem_area_endemica=dados.get("viagem_area_endemica"),
+        exposicao_agua_enchente=dados.get("exposicao_agua_enchente"),
+        contato_roedores=dados.get("contato_roedores"),
+        contato_caso_confirmado=dados.get("contato_caso_confirmado"),
+        vacinado_febre_amarela=dados.get("vacinado_febre_amarela"),
+        tem_comorbidade=dados.get("tem_comorbidade"),
         latitude=latitude,
         longitude=longitude,
         pais=geo.get("pais"),
@@ -2311,6 +2337,7 @@ def registrar_sintoma_publico(request):
             "longitude": registro.longitude,
             "fonte": location_source,
         },
+        "cidadao": resultado_cidadao,
     })
 
 def listar_sintomas(request):

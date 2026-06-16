@@ -78,12 +78,25 @@ class RegistroSintoma(models.Model):
     dor_garganta = models.BooleanField(default=False)        # gripe, COVID, estreptococo, resfriado
     coriza = models.BooleanField(default=False)              # resfriado, gripe, RSV
     calafrios = models.BooleanField(default=False)           # malária (ciclico), dengue, leptospirose
+    sudorese = models.BooleanField(default=False)            # malária (ciclo febril), leptospirose, hantavirose
     # Intensidade da febre (escala: None, baixa<38.5, moderada 38.5-39.5, alta>39.5)
     intensidade_febre = models.CharField(max_length=10, blank=True, default="",
         choices=[("", "Não informado"), ("baixa", "Baixa"), ("moderada", "Moderada"), ("alta", "Alta")])
     # Intensidade da dor articular (diferencia chikungunya de dengue)
     intensidade_articular = models.CharField(max_length=12, blank=True, default="",
         choices=[("", "Não informado"), ("leve", "Leve"), ("moderada", "Moderada"), ("intensa", "Intensa — incapacitante")])
+
+    # ── Anamnese epidemiológica (contexto para IA bayesiana)
+    # Estes campos refinam enormemente a classificação: viagem, exposição e
+    # vacinação mudam as probabilidades de doenças raras de forma decisiva.
+    dias_sintomas           = models.IntegerField(null=True, blank=True)
+    inicio_abrupto          = models.BooleanField(null=True, blank=True)
+    viagem_area_endemica    = models.BooleanField(null=True, blank=True)
+    exposicao_agua_enchente = models.BooleanField(null=True, blank=True)
+    contato_roedores        = models.BooleanField(null=True, blank=True)
+    contato_caso_confirmado = models.BooleanField(null=True, blank=True)
+    vacinado_febre_amarela  = models.BooleanField(null=True, blank=True)
+    tem_comorbidade         = models.BooleanField(null=True, blank=True)
 
     latitude = models.FloatField(null=True)
     longitude = models.FloatField(null=True)

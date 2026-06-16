@@ -131,8 +131,61 @@ class PublicApiService {
     String locationSource = 'current',
     String? intensidadeFebre,
     String? intensidadeArticular,
+    // Anamnese epidemiológica (todos opcionais — null = não respondeu)
+    int? diasSintomas,
+    bool? inicioAbrupto,
+    bool? viagemAreaEndemica,
+    bool? exposicaoAguaEnchente,
+    bool? contatoRoedores,
+    bool? contatoConfirmado,
+    bool? vacinadoFebreAmarela,
+    bool? temComorbidade,
   }) async {
     final deviceId = await DeviceService.getDeviceId();
+
+    final body = <String, dynamic>{
+      // Sintomas base
+      'febre': sintomas['febre'] ?? false,
+      'tosse': sintomas['tosse'] ?? false,
+      'dor_corpo': sintomas['dor_corpo'] ?? false,
+      'cansaco': sintomas['cansaco'] ?? false,
+      'falta_ar': sintomas['falta_ar'] ?? false,
+      // Sintomas expandidos — arbovirose
+      'dor_cabeca': sintomas['dor_cabeca'] ?? false,
+      'dor_articular': sintomas['dor_articular'] ?? false,
+      'exantema': sintomas['exantema'] ?? false,
+      'conjuntivite': sintomas['conjuntivite'] ?? false,
+      'vomito_nausea': sintomas['vomito_nausea'] ?? false,
+      'dor_abdominal': sintomas['dor_abdominal'] ?? false,
+      'calafrios': sintomas['calafrios'] ?? false,
+      'sudorese': sintomas['sudorese'] ?? false,
+      // Sintomas expandidos — respiratorio
+      'dor_garganta': sintomas['dor_garganta'] ?? false,
+      'coriza': sintomas['coriza'] ?? false,
+      'perda_olfato_paladar': sintomas['perda_olfato_paladar'] ?? false,
+      // Sintomas expandidos — geral / urgencia
+      'diarreia': sintomas['diarreia'] ?? false,
+      'ictericia': sintomas['ictericia'] ?? false,
+      'rigidez_nuca': sintomas['rigidez_nuca'] ?? false,
+      'manchas_hemorragicas': sintomas['manchas_hemorragicas'] ?? false,
+      // Intensidades (dropdowns)
+      'intensidade_febre': intensidadeFebre ?? '',
+      'intensidade_articular': intensidadeArticular ?? '',
+      'latitude': latitude,
+      'longitude': longitude,
+      'location_source': locationSource,
+    };
+
+    // Anamnese — inclui apenas os campos respondidos (null = backend ignora)
+    if (diasSintomas != null) body['dias_sintomas'] = diasSintomas;
+    if (inicioAbrupto != null) body['inicio_abrupto'] = inicioAbrupto;
+    if (viagemAreaEndemica != null) body['viagem_area_endemica'] = viagemAreaEndemica;
+    if (exposicaoAguaEnchente != null) body['exposicao_agua_enchente'] = exposicaoAguaEnchente;
+    if (contatoRoedores != null) body['contato_roedores'] = contatoRoedores;
+    if (contatoConfirmado != null) body['contato_caso_confirmado'] = contatoConfirmado;
+    if (vacinadoFebreAmarela != null) body['vacinado_febre_amarela'] = vacinadoFebreAmarela;
+    if (temComorbidade != null) body['tem_comorbidade'] = temComorbidade;
+
     final response = await http
         .post(
           _uri('/api/public/registrar'),
@@ -140,37 +193,7 @@ class PublicApiService {
             'Content-Type': 'application/json',
             'X-Device-Id': deviceId,
           },
-          body: jsonEncode({
-            // Sintomas base
-            'febre': sintomas['febre'] ?? false,
-            'tosse': sintomas['tosse'] ?? false,
-            'dor_corpo': sintomas['dor_corpo'] ?? false,
-            'cansaco': sintomas['cansaco'] ?? false,
-            'falta_ar': sintomas['falta_ar'] ?? false,
-            // Sintomas expandidos — arbovirose
-            'dor_cabeca': sintomas['dor_cabeca'] ?? false,
-            'dor_articular': sintomas['dor_articular'] ?? false,
-            'exantema': sintomas['exantema'] ?? false,
-            'conjuntivite': sintomas['conjuntivite'] ?? false,
-            'vomito_nausea': sintomas['vomito_nausea'] ?? false,
-            'dor_abdominal': sintomas['dor_abdominal'] ?? false,
-            'calafrios': sintomas['calafrios'] ?? false,
-            // Sintomas expandidos — respiratorio
-            'dor_garganta': sintomas['dor_garganta'] ?? false,
-            'coriza': sintomas['coriza'] ?? false,
-            'perda_olfato_paladar': sintomas['perda_olfato_paladar'] ?? false,
-            // Sintomas expandidos — geral / urgencia
-            'diarreia': sintomas['diarreia'] ?? false,
-            'ictericia': sintomas['ictericia'] ?? false,
-            'rigidez_nuca': sintomas['rigidez_nuca'] ?? false,
-            'manchas_hemorragicas': sintomas['manchas_hemorragicas'] ?? false,
-            // Intensidades (dropdowns)
-            'intensidade_febre': intensidadeFebre ?? '',
-            'intensidade_articular': intensidadeArticular ?? '',
-            'latitude': latitude,
-            'longitude': longitude,
-            'location_source': locationSource,
-          }),
+          body: jsonEncode(body),
         )
         .timeout(_timeout);
 

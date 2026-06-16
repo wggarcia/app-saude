@@ -14,12 +14,15 @@ from __future__ import annotations
 from .classificador_doencas import (
     DOENCAS_BRASIL,
     TODOS_SINTOMAS,
+    CAMPOS_ANAMNESE,
     URGENCIA_ABSOLUTA,
     classificar,
+    classificar_para_cidadao,
     analisar_populacao,
     calibrar_pesos_feedback,
     sintomas_do_registro,
     CONTEXTO_SETOR,
+    SINDROME_CIDADAO,
 )
 
 
@@ -64,6 +67,16 @@ def analisar_populacao_setor(registros_qs, setor: str = "governo") -> dict:
     Cada setor recebe apenas o contexto relevante para ele.
     """
     return analisar_populacao(registros_qs, setor=setor)
+
+
+def classificar_cidadao(dados: dict, estado: str | None = None) -> dict:
+    """
+    Classificação para exibição ao cidadão no app móvel.
+    Retorna síndrome genérica (não nome de doença rara) + conduta.
+    Usa prior geográfico bayesiano para evitar falsos alarmes como
+    "Febre Amarela" em área sem prevalência.
+    """
+    return classificar_para_cidadao(dados, estado=estado)
 
 
 def verificar_urgencias(dados: dict) -> list[dict]:

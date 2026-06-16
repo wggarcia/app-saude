@@ -41,7 +41,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
         "sazonalidade": [10, 11, 12, 1, 2, 3, 4, 5],  # meses de maior risco no Brasil
         "sintomas": {
             "febre":                  1.00,  # febre ALTA >39°C, característica
-            "dor_corpo":              0.95,  # mialgia/artralgia intensa
+            "dor_corpo":              0.95,  # mialgia intensa
             "dor_cabeca":             0.90,  # cefaleia + dor retroorbitária
             "cansaco":                0.80,
             "vomito_nausea":          0.72,  # sinal de alarme
@@ -49,18 +49,21 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "dor_abdominal":          0.65,  # sinal de alarme dengue
             "manchas_hemorragicas":   0.55,  # petéquias, dengue grave
             "diarreia":               0.35,
+            "sudorese":               0.30,
+            "dor_articular":          0.30,  # artralgia LEVE — presente mas nunca incapacitante
+            "calafrios":              0.40,
             "tosse":                 -0.40,  # raro na dengue — aponta CONTRA
             "falta_ar":              -0.35,  # raro — aponta CONTRA
             "coriza":                -0.45,  # raro — aponta CONTRA
             "perda_olfato_paladar":  -0.60,  # COVID, não dengue
-            "rigidez_nuca":          -0.20,  # meningite, não dengue
-            "ictericia":             -0.10,  # febre amarela/lepto, não dengue típica
+            "rigidez_nuca":          -0.50,  # forte contra-indicador — meningite, não dengue
+            "ictericia":             -0.50,  # icterícia é RARA no dengue típico — aponta forte para hepatite/lepto/FA
             "conjuntivite":          -0.30,  # Zika, não dengue
             "dor_garganta":          -0.35,  # gripe/resfriado, não dengue
-            "calafrios":              0.40,
-            # intensidades importantíssimas:
-            "_intensidade_febre_alta":    0.30,   # bônus se febre alta
-            "_intensidade_articular_leve": 0.15,  # dengue tem artralgia leve vs chikungunya intensa
+            # intensidades importantíssimas para diferencial:
+            "_intensidade_febre_alta":       0.30,   # bônus se febre alta
+            "_intensidade_articular_leve":   0.15,   # dengue tem artralgia leve
+            "_intensidade_articular_intensa":-0.40,  # artralgia INTENSA aponta CONTRA dengue → chikungunya
         },
         "red_flags": ["manchas_hemorragicas", "dor_abdominal", "vomito_nausea"],
         "diferencial_vs": {
@@ -84,6 +87,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "dor_corpo":              0.52,
             "cansaco":                0.48,
             "dor_cabeca":             0.55,
+            "sudorese":               0.20,
             "tosse":                 -0.25,
             "falta_ar":              -0.20,
             "coriza":                -0.25,
@@ -93,8 +97,8 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "perda_olfato_paladar":  -0.60,
             "rigidez_nuca":          -0.50,
             "ictericia":             -0.40,
-            "_intensidade_febre_baixa":  0.40,   # bônus se febre BAIXA
-            "_intensidade_articular_leve": 0.30, # artralgia leve vs chikungunya
+            "_intensidade_febre_baixa":    0.40,   # bônus se febre BAIXA
+            "_intensidade_articular_leve": 0.30,   # artralgia leve vs chikungunya
         },
         "red_flags": [],
         "diferencial_vs": {
@@ -116,6 +120,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "dor_corpo":              0.85,
             "cansaco":                0.80,
             "dor_cabeca":             0.72,
+            "sudorese":               0.35,
             "vomito_nausea":          0.40,
             "tosse":                 -0.35,
             "falta_ar":              -0.30,
@@ -125,8 +130,8 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "ictericia":             -0.50,
             "conjuntivite":           0.35,  # pode ocorrer mas não patognomônico
             "manchas_hemorragicas":  -0.20,
-            "_intensidade_febre_alta":     0.25,
-            "_intensidade_articular_intensa": 0.50,  # bônus enorme se artralgia intensa
+            "_intensidade_febre_alta":        0.25,
+            "_intensidade_articular_intensa": 0.80,  # bônus decisivo — artralgia intensa é o diferenciador chikungunya
         },
         "red_flags": [],
         "diferencial_vs": {
@@ -152,6 +157,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "dor_abdominal":          0.75,
             "dor_cabeca":             0.72,
             "calafrios":              0.65,
+            "sudorese":               0.45,
             "tosse":                 -0.20,
             "falta_ar":              -0.15,
             "coriza":                -0.50,
@@ -177,6 +183,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
         "sintomas": {
             "febre":                  0.95,  # febre cíclica — muito característica
             "calafrios":              0.95,  # tremores — muito característico
+            "sudorese":               0.90,  # CICLO febre→calafrios→SUDORESE — tríade patognomônica
             "cansaco":                0.88,
             "dor_corpo":              0.72,
             "dor_cabeca":             0.78,
@@ -215,6 +222,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "ictericia":              0.78,  # síndrome de Weil
             "dor_abdominal":          0.72,
             "calafrios":              0.70,
+            "sudorese":               0.60,
             "manchas_hemorragicas":   0.45,
             "diarreia":               0.40,
             "tosse":                 -0.10,
@@ -247,6 +255,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "vomito_nausea":          0.58,
             "tosse":                  0.72,
             "calafrios":              0.62,
+            "sudorese":               0.45,
             "coriza":                -0.20,
             "exantema":              -0.30,
             "conjuntivite":          -0.35,
@@ -280,6 +289,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "dor_cabeca":             0.60,
             "falta_ar":               0.20,
             "dor_garganta":           0.50,
+            "sudorese":               0.30,
             "perda_olfato_paladar":  -0.60,
             "ictericia":             -0.50,
             "manchas_hemorragicas":  -0.20,
@@ -309,6 +319,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "vomito_nausea":          0.78,
             "cansaco":                0.72,
             "falta_ar":               0.25,
+            "sudorese":               0.45,
             "tosse":                 -0.15,
             "coriza":                -0.30,
             "exantema":               0.35,  # purpura
@@ -346,6 +357,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "exantema":               0.20,
             "dor_articular":          0.35,
             "calafrios":              0.50,
+            "sudorese":               0.25,
             "rigidez_nuca":          -0.60,
             "ictericia":             -0.50,
             "conjuntivite":          -0.20,
@@ -373,6 +385,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "cansaco":                0.82,
             "dor_garganta":           0.70,
             "calafrios":              0.72,
+            "sudorese":               0.40,
             "coriza":                 0.60,
             "falta_ar":               0.40,
             "vomito_nausea":          0.35,
@@ -406,6 +419,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "dor_cabeca":             0.45,
             "febre":                  0.20,  # febre BAIXA ou ausente
             "dor_corpo":              0.25,
+            "sudorese":              -0.20,  # sudorese intensa incomum em resfriado
             "falta_ar":              -0.50,
             "perda_olfato_paladar":  -0.30,
             "exantema":              -0.70,
@@ -435,6 +449,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "febre":                 -0.15,  # bronquite não costuma ter febre
             "dor_corpo":              0.20,
             "coriza":                 0.30,
+            "sudorese":              -0.10,
             "perda_olfato_paladar":  -0.50,
             "exantema":              -0.80,
             "ictericia":             -0.80,
@@ -452,30 +467,34 @@ DOENCAS_BRASIL: dict[str, dict] = {
     # ── GASTROINTESTINAIS ────────────────────────────────────────────────────
     "Gastroenterite Viral": {
         "grupo": "Gastrointestinal",
-        "vetor": "Norovírus/Rotavírus",
+        "vetor": "Norovírus/Rotavírus/Alimento contaminado",
         "cid10": "A08",
-        "descricao": "Vômito + diarreia + cólicas; febre baixa; risco de desidratação",
+        "descricao": "Vômito + diarreia + cólicas; febre baixa ou ausente; autolimitada em 24-72h; risco de desidratação",
         "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
         "sintomas": {
-            "vomito_nausea":          1.00,
-            "diarreia":               0.95,
-            "dor_abdominal":          0.88,
-            "febre":                  0.55,
+            "vomito_nausea":          1.00,  # principal apresentação
+            "diarreia":               0.95,  # muito frequente — quase patognomônico junto ao vômito
+            "dor_abdominal":          0.88,  # cólicas abdominais — muito comuns
             "cansaco":                0.60,
             "dor_cabeca":             0.35,
-            "dor_corpo":              0.30,
+            "febre":                  0.30,  # febre BAIXA é comum; alta febre aponta CONTRA GE viral
+            "dor_corpo":              0.10,  # mialgia incomum em GE pura; sugere dengue/gripe
+            "sudorese":              -0.15,
+            "calafrios":             -0.35,  # calafrios sugere dengue, malária ou leptospirose — NÃO GE
             "tosse":                 -0.50,
             "falta_ar":              -0.60,
             "coriza":                -0.40,
             "exantema":              -0.50,
-            "ictericia":             -0.20,
+            "ictericia":             -0.35,  # icterícia = Hepatite A, não GE — forte contra-indicador
             "rigidez_nuca":          -0.70,
             "perda_olfato_paladar":  -0.70,
+            "_intensidade_febre_alta": -0.25,  # alta febre sugere dengue ou processo bacteriano, não GE viral
         },
-        "red_flags": [],
+        "red_flags": ["febre", "dor_abdominal"],
         "diferencial_vs": {
-            "Dengue": "dengue raramente tem diarreia no início; gastroenterite não tem dor retroorbitária",
-            "Hepatite A": "hepatite tem icterícia; gastroenterite não",
+            "Dengue": "dengue tem febre ALTA abrupta + dor retroorbitária + mialgia intensa — GE raramente tem todos esses; febre com dor abdominal = sinal de alarme dengue",
+            "Hepatite A": "hepatite tem icterícia (pele/olhos amarelados) + fadiga intensa; GE não tem icterícia",
+            "Leptospirose": "leptospirose tem histórico de contato com água/lama + mialgia intensa em panturrilhas + calafrios",
         },
     },
 
@@ -493,6 +512,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "febre":                  0.65,
             "dor_corpo":              0.55,
             "dor_cabeca":             0.45,
+            "sudorese":               0.30,
             "diarreia":               0.40,
             "tosse":                 -0.60,
             "falta_ar":              -0.60,
@@ -514,6 +534,166 @@ DOENCAS_BRASIL: dict[str, dict] = {
 # TODAS AS DOENÇAS → GRUPO EPIDEMIOLÓGICO (para RegistroSintoma.grupo)
 # ──────────────────────────────────────────────────────────────────────────────
 GRUPO_POR_DOENCA: dict[str, str] = {d: info["grupo"] for d, info in DOENCAS_BRASIL.items()}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PRIOR GEOGRÁFICO POR UF — P(doença | localização)
+#
+# Representa a probabilidade BASE de cada doença na região, INDEPENDENTE dos
+# sintomas. O score final = score_sintomas × prior_geografico.
+#
+# Isso implementa o teorema de Bayes:
+#   P(doença | sintomas, local) ∝ P(sintomas | doença) × P(doença | local)
+#
+# Fontes: SVS/MS, SINAN, boletins epidemiológicos regionais 2023-2024.
+# Valores são RELATIVOS entre doenças por UF (não probabilidades absolutas).
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Prior padrão para UFs não mapeadas (conservador)
+_PRIOR_DEFAULT: dict[str, float] = {
+    "Dengue":                  0.45,
+    "Chikungunya":             0.20,
+    "Zika":                    0.10,
+    "Febre Amarela":           0.02,   # raro fora de áreas endêmicas
+    "Malaria":                 0.01,   # raro fora da Amazônia
+    "Leptospirose":            0.08,
+    "Hantavirose":             0.02,
+    "Sarampo":                 0.01,
+    "Meningite":               0.05,
+    "COVID-19":                0.50,
+    "Gripe (Influenza)":       0.55,
+    "Resfriado Viral":         0.70,
+    "Bronquite / DPOC Agudização": 0.20,
+    "Gastroenterite Viral":    0.55,  # GE é extremamente comum — segunda causa de atendimento em UBS
+    "Hepatite A/B":            0.05,
+}
+
+# UFs com priors específicos (apenas onde diferem significativamente do padrão)
+PRIOR_GEOGRAFICO: dict[str, dict[str, float]] = {
+
+    # ── Amazônia Legal — alto risco malária e febre amarela ──────────────────
+    "AM": {**_PRIOR_DEFAULT, "Malaria": 0.55, "Febre Amarela": 0.12, "Dengue": 0.60, "Leptospirose": 0.12},
+    "PA": {**_PRIOR_DEFAULT, "Malaria": 0.45, "Febre Amarela": 0.10, "Dengue": 0.55, "Leptospirose": 0.10},
+    "AC": {**_PRIOR_DEFAULT, "Malaria": 0.50, "Febre Amarela": 0.12, "Dengue": 0.50},
+    "RO": {**_PRIOR_DEFAULT, "Malaria": 0.40, "Febre Amarela": 0.10, "Dengue": 0.55},
+    "RR": {**_PRIOR_DEFAULT, "Malaria": 0.45, "Febre Amarela": 0.10, "Dengue": 0.50},
+    "AP": {**_PRIOR_DEFAULT, "Malaria": 0.35, "Febre Amarela": 0.08, "Dengue": 0.55},
+    "TO": {**_PRIOR_DEFAULT, "Malaria": 0.15, "Febre Amarela": 0.08, "Dengue": 0.65},
+
+    # ── Centro-Oeste — risco moderado febre amarela (área de transição) ──────
+    "MT": {**_PRIOR_DEFAULT, "Malaria": 0.12, "Febre Amarela": 0.07, "Dengue": 0.70},
+    "GO": {**_PRIOR_DEFAULT, "Febre Amarela": 0.05, "Dengue": 0.72, "Chikungunya": 0.25},
+    "MS": {**_PRIOR_DEFAULT, "Febre Amarela": 0.04, "Dengue": 0.65, "Leptospirose": 0.12},
+    "DF": {**_PRIOR_DEFAULT, "Febre Amarela": 0.03, "Dengue": 0.68, "Chikungunya": 0.22},
+
+    # ── Sudeste — urbano, dengue/chikungunya dominam; febre amarela mínima ───
+    "SP": {**_PRIOR_DEFAULT, "Dengue": 0.75, "Chikungunya": 0.30, "Febre Amarela": 0.015,
+           "COVID-19": 0.55, "Gripe (Influenza)": 0.60},
+    "RJ": {**_PRIOR_DEFAULT, "Dengue": 0.80, "Chikungunya": 0.35, "Zika": 0.18,
+           "Febre Amarela": 0.005,   # praticamente ausente em RJ urbano
+           "Malaria": 0.001,         # quase impossível em RJ
+           "COVID-19": 0.55, "Gripe (Influenza)": 0.58},
+    "MG": {**_PRIOR_DEFAULT, "Dengue": 0.72, "Chikungunya": 0.28, "Febre Amarela": 0.04,
+           "Leptospirose": 0.10},
+    "ES": {**_PRIOR_DEFAULT, "Dengue": 0.75, "Chikungunya": 0.30, "Febre Amarela": 0.02,
+           "Leptospirose": 0.10},
+
+    # ── Nordeste — dengue altíssima, chikungunya elevada ────────────────────
+    "BA": {**_PRIOR_DEFAULT, "Dengue": 0.78, "Chikungunya": 0.40, "Febre Amarela": 0.03},
+    "PE": {**_PRIOR_DEFAULT, "Dengue": 0.80, "Chikungunya": 0.45, "Zika": 0.25,
+           "Febre Amarela": 0.01},
+    "CE": {**_PRIOR_DEFAULT, "Dengue": 0.78, "Chikungunya": 0.42, "Febre Amarela": 0.01},
+    "MA": {**_PRIOR_DEFAULT, "Dengue": 0.70, "Chikungunya": 0.35, "Febre Amarela": 0.03,
+           "Malaria": 0.08},
+    "PI": {**_PRIOR_DEFAULT, "Dengue": 0.72, "Chikungunya": 0.35, "Febre Amarela": 0.03},
+    "RN": {**_PRIOR_DEFAULT, "Dengue": 0.75, "Chikungunya": 0.38, "Febre Amarela": 0.01},
+    "PB": {**_PRIOR_DEFAULT, "Dengue": 0.73, "Chikungunya": 0.37, "Febre Amarela": 0.01},
+    "AL": {**_PRIOR_DEFAULT, "Dengue": 0.72, "Chikungunya": 0.36, "Febre Amarela": 0.01},
+    "SE": {**_PRIOR_DEFAULT, "Dengue": 0.70, "Chikungunya": 0.35, "Febre Amarela": 0.01},
+
+    # ── Sul — dengue crescente, gripe/covid prevalentes no inverno ───────────
+    "PR": {**_PRIOR_DEFAULT, "Dengue": 0.65, "Chikungunya": 0.20, "Febre Amarela": 0.02,
+           "Gripe (Influenza)": 0.65, "COVID-19": 0.55},
+    "SC": {**_PRIOR_DEFAULT, "Dengue": 0.40, "Chikungunya": 0.12, "Febre Amarela": 0.01,
+           "Gripe (Influenza)": 0.70, "COVID-19": 0.58, "Resfriado Viral": 0.75},
+    "RS": {**_PRIOR_DEFAULT, "Dengue": 0.38, "Chikungunya": 0.10, "Febre Amarela": 0.01,
+           "Gripe (Influenza)": 0.70, "COVID-19": 0.58, "Leptospirose": 0.15},
+}
+
+
+def _prior_geografico(doenca: str, estado: str | None) -> float:
+    """
+    Retorna o prior geográfico da doença para o estado informado.
+    Se estado não mapeado, usa default conservador.
+    Prior é multiplicador (0.001 a 1.0).
+    """
+    uf = (estado or "").strip().upper()
+    # Aceitar nome completo mapeando para sigla
+    _nome_para_sigla = {
+        "RIO DE JANEIRO": "RJ", "SÃO PAULO": "SP", "MINAS GERAIS": "MG",
+        "BAHIA": "BA", "PERNAMBUCO": "PE", "CEARÁ": "CE", "AMAZONAS": "AM",
+        "PARÁ": "PA", "GOIÁS": "GO", "MATO GROSSO": "MT",
+        "MATO GROSSO DO SUL": "MS", "PARANÁ": "PR", "SANTA CATARINA": "SC",
+        "RIO GRANDE DO SUL": "RS", "MARANHÃO": "MA", "PIAUÍ": "PI",
+        "RIO GRANDE DO NORTE": "RN", "PARAÍBA": "PB", "ALAGOAS": "AL",
+        "SERGIPE": "SE", "ESPÍRITO SANTO": "ES", "RONDÔNIA": "RO",
+        "ACRE": "AC", "RORAIMA": "RR", "AMAPÁ": "AP", "TOCANTINS": "TO",
+        "DISTRITO FEDERAL": "DF",
+    }
+    if len(uf) > 2:
+        uf = _nome_para_sigla.get(uf, "")
+    priors_uf = PRIOR_GEOGRAFICO.get(uf, _PRIOR_DEFAULT)
+    return priors_uf.get(doenca, _PRIOR_DEFAULT.get(doenca, 0.05))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SINTOMA MÍNIMO OBRIGATÓRIO para doenças raras
+# Para aparecer no ranking, doenças raras exigem ao menos 1 sintoma "chave"
+# presente. Sem ele, o score é zerado antes mesmo de chegar ao usuário.
+# Isso evita que febre simples gere suspeita de febre amarela.
+# ──────────────────────────────────────────────────────────────────────────────
+SINTOMA_CHAVE_OBRIGATORIO: dict[str, list[str]] = {
+    "Febre Amarela":  ["ictericia", "manchas_hemorragicas"],       # sem icterícia ou hemorragia, não é FA
+    "Malaria":        ["calafrios"],                                 # sem calafrios cíclicos, não é malária
+    "Meningite":      ["rigidez_nuca"],                              # sem rigidez nuca, não é meningite
+    "Hantavirose":    ["falta_ar"],                                  # síndrome cardiopulmonar obrigatória
+    "Sarampo":        ["exantema"],                                  # sem exantema, não é sarampo
+    "Leptospirose":   ["ictericia", "dor_corpo", "calafrios"],       # precisa ≥1 dos 3
+    "Hepatite A/B":   ["ictericia"],                                 # icterícia é essencial
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SAÍDA PARA CIDADÃO — syndromes genéricas sem nomear doença rara
+# O cidadão NÃO deve ver "Febre Amarela" — isso gera pânico.
+# Vê apenas a síndrome clínica + orientação de conduta.
+# ──────────────────────────────────────────────────────────────────────────────
+SINDROME_CIDADAO: dict[str, dict] = {
+    "Dengue":               {"sindrome": "Síndrome Febril com Dores",       "cor": "amarela", "conduta": "Hidratação e repouso. Procure UBS se piorar em 48h. Não tome AAS ou ibuprofeno."},
+    "Zika":                 {"sindrome": "Síndrome Febril com Manchas",     "cor": "amarela", "conduta": "Repouso e hidratação. Gestantes: consulta médica urgente."},
+    "Chikungunya":          {"sindrome": "Síndrome Febril com Dores Articulares", "cor": "amarela", "conduta": "Repouso, hidratação e analgésico. Procure UBS se as dores forem intensas."},
+    "Febre Amarela":        {"sindrome": "Síndrome Febril com Alteração Hepática", "cor": "vermelha", "conduta": "Procure pronto-socorro imediatamente. Informe sobre vacinação para febre amarela."},
+    "Malaria":              {"sindrome": "Síndrome Febril com Calafrios",   "cor": "laranja", "conduta": "Procure UBS — é necessário exame de gota espessa para diagnóstico."},
+    "Leptospirose":         {"sindrome": "Síndrome Febril com Dores Musculares", "cor": "laranja", "conduta": "Informe ao médico sobre exposição à água de enchente ou animais. Procure UBS."},
+    "Hantavirose":          {"sindrome": "Síndrome Respiratória Aguda",     "cor": "vermelha", "conduta": "URGÊNCIA — procure pronto-socorro agora. Informe sobre contato com roedores."},
+    "Sarampo":              {"sindrome": "Síndrome Exantemática Febril",    "cor": "laranja", "conduta": "Isolamento domiciliar e procure UBS. Confirme situação vacinal."},
+    "Meningite":            {"sindrome": "Síndrome Neurológica Febril",     "cor": "vermelha", "conduta": "EMERGÊNCIA — vá ao pronto-socorro agora."},
+    "COVID-19":             {"sindrome": "Síndrome Respiratória Viral",     "cor": "amarela", "conduta": "Isolamento por 5 dias. Procure UBS se falta de ar ou saturação < 95%."},
+    "Gripe (Influenza)":    {"sindrome": "Síndrome Gripal",                 "cor": "verde",   "conduta": "Repouso, hidratação, analgésico. Procure UBS se piorar em 48h."},
+    "Resfriado Viral":      {"sindrome": "Resfriado Comum",                 "cor": "verde",   "conduta": "Repouso e hidratação. Autolimitado em 7-10 dias."},
+    "Bronquite / DPOC Agudização": {"sindrome": "Síndrome Respiratória Obstrutiva", "cor": "amarela", "conduta": "Procure médico para avaliação. Evite exposição a fumaça ou poeira."},
+    "Gastroenterite Viral": {
+        "sindrome": "Síndrome Diarreica",
+        "cor": "verde",
+        "conduta": (
+            "Hidrate-se bastante: água, soro caseiro (1L água + 1 colher sopa açúcar + 1 colher chá sal) "
+            "ou soro de reidratação oral da farmácia. Repouso e dieta leve (arroz, banana, torrada). "
+            "PROCURE UBS SE: febre acima de 38,5°C por mais de 24h, sangue nas fezes, "
+            "dor abdominal intensa e persistente, incapacidade de manter líquidos, "
+            "criança muito sonolenta ou adulto com tontura ao levantar."
+        ),
+    },
+    "Hepatite A/B":         {"sindrome": "Síndrome Hepática Febril",        "cor": "laranja", "conduta": "Procure UBS para exames. Evite álcool e medicamentos sem orientação médica."},
+    "Inconclusivo":         {"sindrome": "Sintomas em Acompanhamento",      "cor": "cinza",   "conduta": "Continue monitorando seus sintomas. Se piorar, procure uma unidade de saúde."},
+}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # FLAGS ABSOLUTOS DE URGÊNCIA — independente do score, alertar imediatamente
@@ -594,17 +774,30 @@ TODOS_SINTOMAS = [
     "dor_cabeca", "dor_articular", "exantema", "conjuntivite",
     "vomito_nausea", "diarreia", "dor_abdominal", "rigidez_nuca",
     "ictericia", "manchas_hemorragicas", "perda_olfato_paladar",
-    "dor_garganta", "coriza", "calafrios",
+    "dor_garganta", "coriza", "calafrios", "sudorese",
+]
+
+# Campos de anamnese epidemiológica — contexto clínico que refina o prior
+CAMPOS_ANAMNESE = [
+    "dias_sintomas", "inicio_abrupto", "viagem_area_endemica",
+    "exposicao_agua_enchente", "contato_roedores", "contato_caso_confirmado",
+    "vacinado_febre_amarela", "tem_comorbidade",
 ]
 
 
 def sintomas_do_registro(registro) -> dict[str, Any]:
-    """Extrai todos os campos de sintoma de um RegistroSintoma para dict classificável."""
+    """Extrai todos os campos de sintoma e anamnese de um RegistroSintoma para dict classificável."""
     dados: dict[str, Any] = {}
     for campo in TODOS_SINTOMAS:
         dados[campo] = bool(getattr(registro, campo, False))
     dados["intensidade_febre"] = getattr(registro, "intensidade_febre", "") or ""
     dados["intensidade_articular"] = getattr(registro, "intensidade_articular", "") or ""
+    # Dados geográficos — essenciais para o prior bayesiano
+    dados["estado"] = getattr(registro, "estado", None) or ""
+    dados["cidade"] = getattr(registro, "cidade", None) or ""
+    # Dados de anamnese epidemiológica
+    for campo in CAMPOS_ANAMNESE:
+        dados[campo] = getattr(registro, campo, None)
     return dados
 
 
@@ -630,10 +823,9 @@ def _calcular_score_doenca(doenca: str, dados: dict[str, Any], mes: int) -> floa
     for sintoma, peso in pesos.items():
         # Campos de intensidade especiais
         if sintoma.startswith("_intensidade_"):
-            # Ex: _intensidade_febre_alta, _intensidade_articular_intensa
-            parts = sintoma.split("_")[2:]  # ['febre', 'alta'] ou ['articular', 'intensa']
-            campo_base = parts[0]  # 'febre'
-            nivel_esperado = parts[1]  # 'alta'
+            parts = sintoma.split("_")[2:]
+            campo_base = parts[0]
+            nivel_esperado = parts[1]
             campo_real = f"intensidade_{campo_base}"
             valor = str(dados.get(campo_real, "")).lower()
             if valor == nivel_esperado:
@@ -646,10 +838,9 @@ def _calcular_score_doenca(doenca: str, dados: dict[str, Any], mes: int) -> floa
                 if peso > 0:
                     score += peso
                     sintomas_presentes += 1
-                # peso negativo com sintoma presente = penalidade
                 elif peso < 0:
-                    score += peso  # score vai ser reduzido
-            # sintoma AUSENTE com peso negativo = não penaliza (ausência do "contra-indicador" é neutro)
+                    score += peso
+            # sintoma AUSENTE com peso negativo = não penaliza
             # sintoma AUSENTE com peso positivo = não adiciona
 
     # Bônus sazonalidade
@@ -657,6 +848,169 @@ def _calcular_score_doenca(doenca: str, dados: dict[str, Any], mes: int) -> floa
 
     # Normalizar: score nunca negativo para ranking
     return max(score, 0.0)
+
+
+def _sintoma_chave_presente(doenca: str, dados: dict[str, Any]) -> bool:
+    """
+    Para doenças raras com SINTOMA_CHAVE_OBRIGATORIO: verifica se ao menos
+    1 dos sintomas-chave está presente. Se não estiver, zera o score.
+    Isso impede que "febre + cansaço" gere suspeita de Febre Amarela.
+    """
+    chaves = SINTOMA_CHAVE_OBRIGATORIO.get(doenca)
+    if not chaves:
+        return True   # sem restrição
+    return any(dados.get(s) for s in chaves)
+
+
+def _prior_anamnese_override(prior: float, doenca: str, dados: dict[str, Any]) -> float:
+    """
+    Para exposições patognomônicas, garante um prior mínimo que reflete o risco real.
+    Exemplo: contato com roedores + Hantavirose → prior mínimo 0.40, não 0.02.
+    Isso evita que o prior geográfico (base na população geral) subestime doenças
+    raras quando o fator de exposição específico está presente.
+    """
+    if dados.get("contato_roedores"):
+        if doenca == "Hantavirose":
+            # Roedores = vetor específico — prior base de 0.02 é irrelevante com exposição direta
+            return max(prior, 0.55)
+        if doenca == "Leptospirose":
+            # Transmissão pelo contato com urina de roedor — risco ocupacional alto
+            return max(prior, 0.55)
+
+    if dados.get("exposicao_agua_enchente"):
+        if doenca == "Leptospirose":
+            return max(prior, 0.45)
+        if doenca == "Hepatite A/B":
+            return max(prior, 0.15)
+
+    if dados.get("viagem_area_endemica"):
+        if doenca == "Malaria":
+            # Tríade febril em retornante da Amazônia — prior geográfico de SP (0.01) é irrelevante
+            return max(prior, 0.55)
+        if doenca == "Febre Amarela":
+            fa_prior = 0.25  # viajante sem info vacinal — risco aumentado
+            if dados.get("vacinado_febre_amarela") is False:
+                # Não vacinado + viagem à área endêmica = risco muito alto
+                fa_prior = 0.65
+            return max(prior, fa_prior)
+        if doenca in ("Dengue", "Chikungunya", "Zika"):
+            return max(prior, 0.50)
+
+    # Sintomas patognomônicos — sobrepõem o prior geográfico independentemente do local
+    if dados.get("rigidez_nuca"):
+        if doenca == "Meningite":
+            return max(prior, 0.60)
+
+    # Tríade de Zika: exantema pruriginoso + conjuntivite + (opcional febre baixa)
+    # Prior geográfico de Zika (0.10-0.18) é muito baixo vs COVID (0.50) — sem override, Zika nunca vence.
+    if dados.get("exantema") and dados.get("conjuntivite"):
+        if doenca == "Zika":
+            zika_prior = 0.40  # exantema + conjuntivite = padrão de Zika
+            if str(dados.get("intensidade_febre", "")).lower() == "baixa":
+                zika_prior = 0.55  # tríade completa: febre baixa + exantema + conjuntivite
+            return max(prior, zika_prior)
+
+    # icterícia é sinal patognomônico de disfunção hepática — forte evidência contra Dengue típica.
+    # Prior de Hepatite A/B (0.05) destruiria o sinal contra Dengue (0.75) sem este override.
+    # Febre Amarela e Leptospirose também têm icterícia — dar prior mínimo defensivo a ambas.
+    if dados.get("ictericia"):
+        if doenca == "Hepatite A/B":
+            # Paciente com icterícia tem prob. muito alta de hepatite, independente do estado.
+            # 0.65 garante que Hepatite A/B vença Dengue mesmo em RJ (prior 0.80).
+            return max(prior, 0.65)
+        if doenca == "Febre Amarela":
+            return max(prior, 0.20)
+        if doenca == "Leptospirose":
+            return max(prior, 0.20)
+
+    return prior
+
+
+def _modificadores_anamnese(dados: dict[str, Any], doenca: str) -> float:
+    """
+    Retorna um multiplicador fino baseado no histórico epidemiológico.
+    O override de prior já garante que doenças raras entrem no ranking;
+    este multiplicador refina a posição no ranking dentro da doença.
+    """
+    mult = 1.0
+
+    # Viagem para área endêmica — boost adicional após override de prior
+    if dados.get("viagem_area_endemica"):
+        if doenca in ("Malaria", "Febre Amarela"):
+            mult *= 2.0
+        elif doenca in ("Dengue", "Chikungunya", "Zika", "Leptospirose"):
+            mult *= 1.5
+
+    # Exposição à água de enchente/lama
+    if dados.get("exposicao_agua_enchente"):
+        if doenca == "Leptospirose":
+            mult *= 2.0
+        elif doenca == "Hepatite A/B":
+            mult *= 2.0
+
+    # Contato com roedores — override de prior já garante piso; modifier amplifica a vantagem
+    if dados.get("contato_roedores"):
+        if doenca == "Hantavirose":
+            mult *= 2.5
+        elif doenca == "Leptospirose":
+            mult *= 2.0
+
+    # Contato com caso confirmado — doenças de transmissão pessoa-a-pessoa
+    if dados.get("contato_caso_confirmado"):
+        if doenca in ("COVID-19", "Gripe (Influenza)", "Sarampo", "Meningite"):
+            mult *= 3.0
+        elif doenca == "Resfriado Viral":
+            mult *= 2.0
+        elif doenca in ("Dengue", "Chikungunya", "Zika"):
+            mult *= 1.1  # transmissão vetorial, não por contato direto
+
+    # Vacinado para febre amarela → elimina FA quase completamente
+    if dados.get("vacinado_febre_amarela") is True and doenca == "Febre Amarela":
+        mult *= 0.02
+
+    # Início abrupto vs gradual — diferencia dengue/gripe de resfriado
+    # BUG FIX: Gastroenterite viral e Leptospirose também têm início abrupto típico.
+    # Sem incluí-las, inicio_abrupto=True favorecia Dengue sobre GE indevidamente.
+    inicio = dados.get("inicio_abrupto")
+    if inicio is True:
+        if doenca in ("Dengue", "Gripe (Influenza)", "Chikungunya", "Meningite", "Malaria",
+                      "Gastroenterite Viral", "Leptospirose", "Hantavirose"):
+            mult *= 1.5
+        elif doenca in ("Resfriado Viral", "Bronquite / DPOC Agudização"):
+            mult *= 0.4
+    elif inicio is False:
+        if doenca in ("Resfriado Viral", "COVID-19", "Bronquite / DPOC Agudização"):
+            mult *= 1.4
+        elif doenca in ("Dengue", "Gripe (Influenza)", "Malaria"):
+            mult *= 0.5
+
+    # Comorbidade → aumenta risco de formas graves
+    if dados.get("tem_comorbidade"):
+        if doenca in ("COVID-19", "Gripe (Influenza)", "Dengue", "Leptospirose"):
+            mult *= 1.3
+
+    return mult
+
+
+def _score_bayesiano(score_sintomas: float, doenca: str, estado: str | None,
+                     dados: dict[str, Any] | None = None) -> float:
+    """
+    Aplica prior geográfico + override anamnese + modificadores ao score de sintomas.
+
+    score = P(sintomas|doença) × P(doença|local) × P(doença|exposição) × ajuste_fino
+
+    Para exposições patognomônicas (contato_roedores, exposicao_agua_enchente,
+    viagem_area_endemica), o prior é elevado ao mínimo necessário antes de
+    aplicar o multiplicador, garantindo que doenças raras sejam visíveis no ranking
+    quando o contexto clínico é específico.
+    """
+    prior = _prior_geografico(doenca, estado)
+    if dados:
+        prior = _prior_anamnese_override(prior, doenca, dados)
+    score = score_sintomas * prior
+    if dados:
+        score *= _modificadores_anamnese(dados, doenca)
+    return score
 
 
 def _confianca(score_doenca: float, score_total: float, sintomas_presentes: int) -> int:
@@ -672,7 +1026,7 @@ def _confianca(score_doenca: float, score_total: float, sintomas_presentes: int)
     return int(min(max(round(base + bonus_sintomas), 35), 95))
 
 
-def classificar(dados: dict[str, Any], setor: str = "governo") -> dict:
+def classificar(dados: dict[str, Any], setor: str = "governo", estado: str | None = None) -> dict:
     """
     Motor principal de classificação probabilística.
 
@@ -700,16 +1054,27 @@ def classificar(dados: dict[str, Any], setor: str = "governo") -> dict:
     sintomas_ativos = [s for s in TODOS_SINTOMAS if dados.get(s)]
     sintomas_count = len(sintomas_ativos)
 
+    # Estado do registro (pode vir em dados ou no parâmetro direto)
+    uf = estado or dados.get("estado") or ""
+
     # ── Verificar urgência absoluta (independente de score) ────────────────
     urgencias = []
     for campo, titulo, descricao in URGENCIA_ABSOLUTA:
         if dados.get(campo):
             urgencias.append({"campo": campo, "titulo": titulo, "descricao": descricao})
 
-    # ── Calcular scores para todas as doenças ─────────────────────────────
+    # ── Calcular scores bayesianos para todas as doenças ──────────────────
+    # score = P(sintomas|doença) × P(doença|local)  [Bayes simplificado]
     scores: dict[str, float] = {}
     for doenca in DOENCAS_BRASIL:
-        scores[doenca] = _calcular_score_doenca(doenca, dados, mes_atual)
+        score_bruto = _calcular_score_doenca(doenca, dados, mes_atual)
+
+        # Zerar doenças raras sem sintoma-chave presente
+        if not _sintoma_chave_presente(doenca, dados):
+            score_bruto = 0.0
+
+        # Aplicar prior geográfico + modificadores de anamnese
+        scores[doenca] = _score_bayesiano(score_bruto, doenca, uf, dados)
 
     # ── Sem sintomas suficientes ──────────────────────────────────────────
     if sintomas_count == 0:
@@ -808,6 +1173,93 @@ def classificar(dados: dict[str, Any], setor: str = "governo") -> dict:
         "safeguard": (
             "Classificação de apoio. Não substitui diagnóstico médico, exames laboratoriais "
             "ou avaliação clínica presencial. Sempre validar com profissional de saúde."
+        ),
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SAÍDA PARA CIDADÃO — retorna síndrome genérica, não nome da doença rara
+# Uso: app mobile, tela de resultado para o usuário final
+# ──────────────────────────────────────────────────────────────────────────────
+
+def classificar_para_cidadao(dados: dict[str, Any], estado: str | None = None) -> dict:
+    """
+    Versão cidadão do classificador — retorna síndrome clínica genérica
+    em vez do nome da doença. Previne pânico por falsos diagnósticos raros.
+
+    Regras:
+      • Urgências absolutas (rigidez nuca, manchas, icterícia, falta ar) →
+        sempre mostrar alerta direto de "ir ao PS" sem nomear a doença rara
+      • Doenças comuns (dengue, gripe, resfriado, COVID, gastro) → pode nomear
+      • Doenças raras (febre amarela, malária, meningite, hantavirose) →
+        mostrar apenas a síndrome genérica
+      • Confiança < 50% → "Sintomas em acompanhamento" independente da doença
+    """
+    resultado = classificar(dados, setor="governo", estado=estado)
+
+    doenca = resultado["primario"]
+    confianca = resultado["confianca"]
+    urgencias = resultado["urgencia_absoluta"]
+
+    # Doenças que podem ser nomeadas ao cidadão (comuns, baixo pânico)
+    DOENCAS_NOMINAVEIS = {
+        "Dengue", "Chikungunya", "Zika", "COVID-19",
+        "Gripe (Influenza)", "Resfriado Viral",
+        "Bronquite / DPOC Agudização", "Gastroenterite Viral",
+    }
+
+    # Se confiança muito baixa → inconclusivo para o cidadão
+    if confianca < 45 or doenca == "Inconclusivo":
+        info_sindrome = SINDROME_CIDADAO["Inconclusivo"]
+    else:
+        info_sindrome = SINDROME_CIDADAO.get(doenca, SINDROME_CIDADAO["Inconclusivo"])
+
+    # Gastroenterite com febre + dor abdominal → escalação para amarela.
+    # Esses dois sinais juntos são sinal de alarme para dengue — não podemos orientar
+    # o cidadão a ficar em casa se a GE pode ser dengue mal diferenciado ou outra causa grave.
+    if doenca == "Gastroenterite Viral" and confianca >= 45:
+        if dados.get("febre") and dados.get("dor_abdominal"):
+            info_sindrome = {
+                "sindrome": "Síndrome Diarreica com Alerta",
+                "cor": "amarela",
+                "conduta": (
+                    "Hidrate-se bem (soro oral ou caseiro). Repouso e dieta leve. "
+                    "ATENÇÃO: febre com dor abdominal pode ter causas mais sérias além de gastroenterite, "
+                    "inclusive dengue (onde dor abdominal com febre é sinal de alarme). "
+                    "Procure uma UBS HOJE se a febre persistir, a dor abdominal piorar "
+                    "ou aparecer qualquer sangramento, manchas na pele ou piora do estado geral."
+                ),
+            }
+
+    # Urgências absolutas → sempre alerta direto, independente da síndrome
+    alerta_urgente = None
+    if urgencias:
+        alerta_urgente = {
+            "titulo": urgencias[0]["titulo"],
+            "acao": "Dirija-se imediatamente ao pronto-socorro mais próximo.",
+            "cor": "vermelha",
+        }
+
+    return {
+        # O que o cidadão vê
+        "sindrome": info_sindrome["sindrome"],
+        "cor_alerta": info_sindrome["cor"],
+        "conduta": info_sindrome["conduta"],
+        "alerta_urgente": alerta_urgente,
+        # Metadados seguros para mostrar
+        "sintomas_reportados": resultado["sintomas_count"],
+        "acompanhamento_recomendado": confianca >= 45 and doenca not in DOENCAS_NOMINAVEIS,
+        # Para gestores/saúde (não exibir ao cidadão diretamente)
+        "_gestor": {
+            "doenca_provavel": doenca,
+            "confianca": confianca,
+            "estado": estado or dados.get("estado", ""),
+            "red_flags": resultado["red_flags"],
+            "ranking_top3": resultado["ranking"][:3],
+        },
+        "safeguard": (
+            "Este resultado é apenas orientativo. "
+            "Não substitui avaliação médica presencial."
         ),
     }
 
