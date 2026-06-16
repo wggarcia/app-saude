@@ -2974,7 +2974,9 @@ class TemporalDecayTests(TestCase):
         trinta_dias = _indice_temporal_publico(qs, agora + timedelta(days=30))
 
         self.assertEqual(atual, 4.78)
-        self.assertEqual(dez_dias, 3.42)
+        # Theoretical value is 3.425; banker's rounding vs PostgreSQL float
+        # accumulation order produces 3.42 (SQLite) or 3.43 (PostgreSQL).
+        self.assertAlmostEqual(dez_dias, 3.42, delta=0.015)
         self.assertGreater(dez_dias, vinte_dias)
         self.assertEqual(trinta_dias, 0.5)
 
