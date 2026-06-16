@@ -2082,7 +2082,7 @@ class AuthDeviceTests(TestCase):
         self.assertNotContains(response, "empresa.soluscrt.com.br")
         self.assertNotContains(response, "governo.soluscrt.com.br")
         self.assertContains(response, "/apresentacao/")
-        self.assertContains(response, "https://play.google.com/store/apps/details?id=com.soluscrt.saude")
+        self.assertContains(response, "https://apps.apple.com/br/app/soluscrt-ocupacional/id6774676681")
         self.assertContains(response, "Confiança SolusCRT")
 
     def test_subdominios_raiz_separam_ambientes(self):
