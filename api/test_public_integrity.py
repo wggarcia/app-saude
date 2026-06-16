@@ -242,6 +242,7 @@ class PublicIntegrityTests(TestCase):
             total=12,
             dias_simulados=2,
             dias_sem_novos=1,
+            dias_zerar=3,
             duracao_minutos=0,
             seed=20260615,
             limpar_publico=True,
@@ -250,8 +251,12 @@ class PublicIntegrityTests(TestCase):
             verbosity=0,
         )
 
-        self.assertGreater(
-            RegistroSintoma.objects.using("owner").filter(empresa_id=self.empresa_publica.id).count(),
-            0,
-        )
-        self.assertIn("Demo nacional concluida", out.getvalue())
+        output = out.getvalue()
+        self.assertIn("Demo nacional concluida", output)
+        # Verifica que a simulação criou registros (exibidos no sumário final).
+        # Após dias_zerar a fase de sumiço apaga tudo — verificar pelo sumário
+        # é a forma correta, pois registros zerados é o comportamento esperado.
+        import re
+        match = re.search(r"Casos criados=(\d+)", output)
+        self.assertIsNotNone(match, "Sumário de criação não encontrado no output")
+        self.assertGreater(int(match.group(1)), 0)
