@@ -631,8 +631,8 @@ class _MapHeroPanel extends StatelessWidget {
     final principal = doencas.isNotEmpty
         ? (doencas.first as Map)['grupo']?.toString() ?? 'Monitoramento'
         : 'Monitoramento';
-    final registros30d =
-        hotspots.fold<double>(0, (sum, item) => sum + _rawValue(item));
+    final focosAtivos =
+        hotspots.fold<double>(0, (sum, item) => sum + _activeValue(item));
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
@@ -686,7 +686,7 @@ class _MapHeroPanel extends StatelessWidget {
                 ),
               ),
               Text(
-                registros30d.toStringAsFixed(registros30d >= 100 ? 0 : 1),
+                focosAtivos.toStringAsFixed(focosAtivos >= 100 ? 0 : 1),
                 style: const TextStyle(
                   color: Color(0xFFE85F18),
                   fontSize: 24,
@@ -707,7 +707,7 @@ class _MapHeroPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '$principal | nivel ${radar['nivel']?.toString() ?? 'baixo'} | ${radar['registros_7d'] ?? 0} sinais em 7 dias | ${registros30d.toStringAsFixed(0)} registros 30d',
+            '$principal | nivel ${radar['nivel']?.toString() ?? 'baixo'} | ${radar['registros_7d'] ?? 0} sinais em 7 dias | ${focosAtivos.toStringAsFixed(0)} focos ativos',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -1193,10 +1193,10 @@ class _CompactHotspotMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visual = _FocusVisual.fromItem(item);
-    final total = _rawValue(item);
+    final total = _activeValue(item);
     return Tooltip(
       message:
-          '${item['cidade'] ?? 'Regiao'} / ${item['estado'] ?? 'BR'} | registros 30d ${total.toStringAsFixed(0)}',
+          '${item['cidade'] ?? 'Regiao'} / ${item['estado'] ?? 'BR'} | foco ativo ${total.toStringAsFixed(1)}',
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -1252,7 +1252,7 @@ class _HotspotMarker extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Registros 30d: ${_rawValue(item).toStringAsFixed(0)} | foco ativo: ${_activeValue(item).toStringAsFixed(1)}',
+                    'Foco ativo: ${_activeValue(item).toStringAsFixed(1)} | Registros 30d: ${_rawValue(item).toStringAsFixed(0)}',
                     style: const TextStyle(color: Color(0xFF9CC4DB)),
                   ),
                   const SizedBox(height: 4),
@@ -1432,11 +1432,12 @@ class _FocusVisual {
   }
 
   static String _safeDisplayIndex(Map<String, dynamic> item) {
-    final raw = item['raw_total_cases'] ??
+    final raw = item['indice_ativo'] ??
+        item['active_cases'] ??
+        item['total_cases'] ??
+        item['raw_total_cases'] ??
         item['total_registros_30d'] ??
         item['registros_30d'] ??
-        item['indice_ativo'] ??
-        item['active_cases'] ??
         item['total'] ??
         0;
     final value =

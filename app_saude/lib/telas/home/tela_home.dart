@@ -499,8 +499,8 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                 if (!loading && casosPorEstado.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _CasosPorEstadoCard(
-                    casosPorEstado: casosPorEstado,
-                    totalNacional: resumoData['registros_30d'] ?? 0,
+                    casosPorEstado: (resumo?['casos_por_estado_ativos'] as List<dynamic>?) ?? casosPorEstado,
+                    totalNacional: resumoData['total_ativo_30d'] ?? resumoData['indice_ativo_30d'] ?? resumoData['registros_30d'] ?? 0,
                   ),
                 ],
                 const SizedBox(height: 16),

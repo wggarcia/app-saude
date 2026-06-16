@@ -4,6 +4,7 @@ import '../../servicos/alerta_inbox_service.dart';
 import '../../servicos/location_service.dart';
 import '../../servicos/public_api_service.dart';
 import '../../servicos/regiao_base_service.dart';
+import '../fontes/tela_fontes.dart';
 
 class TelaAlertas extends StatefulWidget {
   const TelaAlertas({super.key});
@@ -109,7 +110,8 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF6B6B)),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFFF6B6B)),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Limpar tudo'),
           ),
@@ -245,7 +247,8 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
                   value: 'limpar',
                   child: Row(
                     children: [
-                      Icon(Icons.delete_sweep_outlined, size: 18, color: Color(0xFFFF6B6B)),
+                      Icon(Icons.delete_sweep_outlined,
+                          size: 18, color: Color(0xFFFF6B6B)),
                       SizedBox(width: 10),
                       Text('Limpar todos os alertas',
                           style: TextStyle(color: Color(0xFFFF6B6B))),
@@ -262,6 +265,8 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
           padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
           children: [
             _AlertsHero(unread: unread, total: _alertas.length),
+            const SizedBox(height: 16),
+            const FontesResumoCard(),
             const SizedBox(height: 16),
             const _EmergencyPanel(),
             const SizedBox(height: 16),
@@ -304,7 +309,9 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
                 (alerta) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Dismissible(
-                    key: ValueKey(alerta['inbox_key'] ?? alerta['id'] ?? alerta['titulo']),
+                    key: ValueKey(alerta['inbox_key'] ??
+                        alerta['id'] ??
+                        alerta['titulo']),
                     direction: DismissDirection.endToStart,
                     background: Container(
                       alignment: Alignment.centerRight,
@@ -316,9 +323,12 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
                       child: const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.delete_outline, color: Color(0xFFFF8E8E), size: 28),
+                          Icon(Icons.delete_outline,
+                              color: Color(0xFFFF8E8E), size: 28),
                           SizedBox(height: 4),
-                          Text('Excluir', style: TextStyle(color: Color(0xFFFF8E8E), fontSize: 12)),
+                          Text('Excluir',
+                              style: TextStyle(
+                                  color: Color(0xFFFF8E8E), fontSize: 12)),
                         ],
                       ),
                     ),
@@ -327,7 +337,8 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
                         context: context,
                         builder: (ctx) => AlertDialog(
                           title: const Text('Excluir alerta?'),
-                          content: const Text('Este alerta sera removido da sua caixa.'),
+                          content: const Text(
+                              'Este alerta sera removido da sua caixa.'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, false),

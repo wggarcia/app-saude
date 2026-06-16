@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../servicos/location_service.dart';
 import '../../servicos/public_api_service.dart';
 import '../../servicos/regiao_base_service.dart';
+import '../fontes/tela_fontes.dart';
 
 // ─── Modelo de sintoma ────────────────────────────────────────────────────────
 class _Sintoma {
@@ -255,12 +256,23 @@ class _TelaSintomasState extends State<TelaSintomas> {
               label: const Text('Limpar'),
               style: TextButton.styleFrom(foregroundColor: Colors.white70),
             ),
+          IconButton(
+            tooltip: 'Fontes e referências',
+            icon: const Icon(Icons.menu_book_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const TelaFontes()),
+              );
+            },
+          ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
         children: [
           _HeaderCard(total: _totalSelecionados),
+          const SizedBox(height: 16),
+          const FontesResumoCard(),
           const SizedBox(height: 16),
           for (final grupo in _grupos) ...[
             _GrupoExpansion(
@@ -289,6 +301,21 @@ class _TelaSintomasState extends State<TelaSintomas> {
               'procure atendimento profissional imediatamente.',
               style: TextStyle(
                   color: Color(0xFF88AFC5), height: 1.45, fontSize: 13),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TelaFontes()),
+                );
+              },
+              icon: const Icon(Icons.menu_book_outlined, size: 18),
+              label: const Text(
+                'Fontes: Ministério da Saúde, Fiocruz, DATASUS, IBGE',
+                textAlign: TextAlign.left,
+              ),
             ),
           ),
         ],

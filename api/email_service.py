@@ -892,3 +892,48 @@ h1{{font-size:22px;font-weight:800;margin:0 0 8px}}
         html=html,
         text=text,
     )
+
+
+# ── Renovação / Dunning de cliente PAGANTE ────────────────────────────────────
+def enviar_email_renovacao_proxima(empresa, dias_restantes):
+    """Aviso de renovação para cliente pagante antes do vencimento do contrato."""
+    base_url = _base_url()
+    urg = "🔴 " if dias_restantes <= 1 else "⏳ "
+    quando = "hoje" if dias_restantes <= 0 else (
+        "amanhã" if dias_restantes == 1 else f"em {dias_restantes} dias"
+    )
+    card = f"""
+    <span class="badge-warn">Renovação</span>
+    <h1>Seu plano SolusCRT vence {quando}</h1>
+    <div class="sub">Olá, {empresa.nome}!</div>
+    <div class="warn-bar">Para manter seu acesso ativo e sem interrupção, renove
+    seu plano antes do vencimento.</div>
+    <p style="font-size:14px;color:#b0c4d8">Renovação rápida e segura pelo seu
+    canal de pagamento habitual.</p>
+    <a class="btn" href="{base_url}/pagamento/">Renovar agora</a>
+    <p style="font-size:12px;color:#7b90b0">Dúvidas? comercial@soluscrt.com.br</p>
+    """
+    html = _html_base(card, "SolusCRT · Gestão de Contrato")
+    text = (f"SolusCRT — seu plano vence {quando}.\n"
+            f"Renove em: {base_url}/pagamento/\n"
+            "Dúvidas: comercial@soluscrt.com.br\n")
+    _send(f"{urg}Seu plano SolusCRT vence {quando}", empresa.email, html, text)
+
+
+def enviar_email_contrato_vencido(empresa):
+    """Notificação de contrato pagante vencido (inadimplência)."""
+    base_url = _base_url()
+    card = f"""
+    <span class="badge-err">Contrato vencido</span>
+    <h1>Seu acesso está suspenso por falta de renovação</h1>
+    <div class="sub">Olá, {empresa.nome}!</div>
+    <div class="err-bar">Seu plano venceu e o acesso ao ambiente foi pausado.
+    Seus dados estão preservados — basta renovar para reativar imediatamente.</div>
+    <a class="btn" href="{base_url}/pagamento/">Reativar meu acesso</a>
+    <p style="font-size:12px;color:#7b90b0">Precisa de ajuda? comercial@soluscrt.com.br</p>
+    """
+    html = _html_base(card, "SolusCRT · Gestão de Contrato")
+    text = ("SolusCRT — seu plano venceu e o acesso foi pausado.\n"
+            f"Reative em: {base_url}/pagamento/\n"
+            "Ajuda: comercial@soluscrt.com.br\n")
+    _send("🔴 Seu acesso SolusCRT foi pausado — renove para reativar", empresa.email, html, text)

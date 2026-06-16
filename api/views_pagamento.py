@@ -33,6 +33,15 @@ STATUS_APROVADOS_ASAAS = {
     "PAYMENT_APPROVED",
 }
 
+# Eventos/status de inadimplência do Asaas (cobrança vencida/estornada/devolvida)
+STATUS_INADIMPLENCIA_ASAAS = {
+    "OVERDUE",
+    "PAYMENT_OVERDUE",
+    "PAYMENT_DELETED",
+    "PAYMENT_REFUNDED",
+    "PAYMENT_CHARGEBACK_REQUESTED",
+}
+
 
 def _somente_digitos(valor):
     return "".join(ch for ch in str(valor or "") if ch.isdigit())
@@ -180,6 +189,25 @@ def _pagamento_ja_processado(empresa, payment_id):
     ).exists()
 
 
+def _registrar_inadimplencia_webhook(empresa, payment_id="", valor=None, origem=""):
+    """Registra inadimplência vinda do webhook Asaas, idempotente por payment_id."""
+    if payment_id and FinanceiroEventoSaaS.objects.filter(
+        empresa=empresa,
+        tipo_evento="inadimplencia",
+        observacao__contains=f"payment_id={payment_id}",
+    ).exists():
+        return False
+    sufixo = f" payment_id={payment_id}" if payment_id else ""
+    _registrar_evento_financeiro(
+        empresa,
+        "inadimplencia",
+        "vencido",
+        valor or 0,
+        f"Webhook Asaas {origem}{sufixo}".strip(),
+    )
+    return True
+
+
 def _processar_pagamento_aprovado(empresa, origem, payment_id="", valor=None):
     if _pagamento_ja_processado(empresa, payment_id):
         return False
@@ -260,6 +288,10 @@ def _asaas_cliente_id(empresa, cpf_cnpj):
 
 def _asaas_status_aprovado(status):
     return bool(status) and str(status).strip().upper() in STATUS_APROVADOS_ASAAS
+
+
+def _asaas_status_inadimplente(status):
+    return bool(status) and str(status).strip().upper() in STATUS_INADIMPLENCIA_ASAAS
 
 
 def _asaas_pagamento_por_id(payment_id):
@@ -445,6 +477,16 @@ def webhook(request):
                 "Webhook Asaas",
                 payment_id=payment_id,
                 valor=payment.get("value"),
+            )
+    elif empresa_id and (_asaas_status_inadimplente(status_pag) or _asaas_status_inadimplente(evento)):
+        # Cobrança vencida/estornada — registra inadimplência (idempotente por
+        # payment_id) para alimentar o painel financeiro. Não altera o acesso:
+        # o middleware já bloqueia plano expirado.
+        empresa = Empresa.objects.filter(id=empresa_id).first()
+        if empresa:
+            _registrar_inadimplencia_webhook(
+                empresa, payment_id=payment_id, valor=payment.get("value"),
+                origem=(evento or status_pag),
             )
 
     return JsonResponse({"status": "ok"})

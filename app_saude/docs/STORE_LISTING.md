@@ -38,7 +38,7 @@ saude,epidemiologia,sintomas,mapa,monitoramento,surto,territorio,risco,radaresau
 SolusCRT Saude
 
 ### Short description
-Radar publico da sua regiao com sintomas anonimos, hotspots e orientacoes de saude territorial.
+Radar publico da sua regiao com sintomas anonimos, hotspots e fontes oficiais.
 
 ### Full description
 SolusCRT Saude entrega uma leitura publica e acessivel do monitoramento epidemiologico regional.
@@ -51,6 +51,9 @@ O app foi pensado para a populacao:
 - mapa de hotspots
 - orientacao publica por nivel de risco
 - envio anonimo de sintomas
+- secao visivel de fontes e citacoes com links publicos para as referencias usadas
+
+As orientacoes do app usam fontes publicas oficiais e nao substituem avaliacao, diagnostico ou tratamento medico.
 
 ## Capturas recomendadas
 1. Tela inicial com semaforo epidemiologico

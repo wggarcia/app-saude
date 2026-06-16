@@ -1,4 +1,4 @@
-package com.example.app_ocupacional
+package br.com.soluscrt.ocupacional
 
 import io.flutter.embedding.android.FlutterActivity
 

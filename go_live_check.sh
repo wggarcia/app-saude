@@ -67,6 +67,12 @@ run_check "Check deploy (config de produção)" env \
   DJANGO_ALLOWED_HOSTS='app-saude-p9n8.onrender.com' \
   CSRF_TRUSTED_ORIGINS='https://app-saude-p9n8.onrender.com' \
   SECURE_SSL_REDIRECT=true \
+  ASAAS_API_KEY='asaas_test_key' \
+  ASAAS_BASE_URL='https://api.asaas.com/v3' \
+  ASAAS_WEBHOOK_TOKEN='asaas_webhook_test_token' \
+  ASAAS_USER_AGENT='SolusCRT-Saude/1.0' \
+  PAYMENT_PROVIDER='asaas' \
+  ALLOW_ENTERPRISE_DEMO_MUTATIONS=false \
   DATABASE_URL='postgresql://check:check@localhost:5432/soluscrt_check' \
   "$PYTHON_BIN" manage.py check --deploy
 

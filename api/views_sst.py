@@ -38,6 +38,7 @@ from .models import (
     AfastamentoSST,
     ASOOcupacional,
     CATOcupacional,
+    AssinaturaDocumentoSST,
     DocumentoSST,
     Empresa,
     ExameOcupacional,
@@ -1545,6 +1546,26 @@ def api_prontuario_funcionario(request, funcionario_id):
     if ultimo_aso and ultimo_aso["dias_restantes"] is not None:
         proximo_vencimento = ultimo_aso["dias_restantes"]
 
+    assinatura_prontuario = (
+        AssinaturaDocumentoSST.objects
+        .filter(empresa=empresa, funcionario=func, tipo_documento="prontuario")
+        .order_by("-criado_em")
+        .first()
+    )
+    assinatura_prontuario_assinada = (
+        AssinaturaDocumentoSST.objects
+        .filter(empresa=empresa, funcionario=func, tipo_documento="prontuario", status="assinado")
+        .order_by("-assinado_em", "-criado_em")
+        .first()
+    )
+    assinatura_prontuario_pendente = (
+        AssinaturaDocumentoSST.objects
+        .filter(empresa=empresa, funcionario=func, tipo_documento="prontuario", status="pendente")
+        .order_by("-criado_em")
+        .first()
+    )
+    assinatura_prontuario = assinatura_prontuario_assinada or assinatura_prontuario_pendente or assinatura_prontuario
+
     # App Ocupacional — verifica se funcionário tem credencial
     from .models import CredencialAppFuncionario
     try:
@@ -1581,6 +1602,23 @@ def api_prontuario_funcionario(request, funcionario_id):
         "exames": exames_out,
         "cats": cats_out,
         "afastamentos": afas_out,
+        "assinatura_prontuario": (
+            {
+                "id": assinatura_prontuario.id,
+                "token": assinatura_prontuario.token,
+                "status": assinatura_prontuario.status,
+                "status_label": assinatura_prontuario.get_status_display(),
+                "signatario_nome": assinatura_prontuario.signatario_nome,
+                "signatario_cpf": assinatura_prontuario.signatario_cpf,
+                "signatario_email": assinatura_prontuario.signatario_email,
+                "criado_em": timezone.localtime(assinatura_prontuario.criado_em).strftime("%d/%m/%Y %H:%M"),
+                "assinado_em": timezone.localtime(assinatura_prontuario.assinado_em).strftime("%d/%m/%Y %H:%M") if assinatura_prontuario.assinado_em else None,
+                "link_assinatura": f"/assinatura/sst/{assinatura_prontuario.token}/",
+                "link_validacao": f"/validar-assinatura/{assinatura_prontuario.token}/",
+            }
+            if assinatura_prontuario
+            else None
+        ),
         "app": {
             "registrado": app_registrado,
             "email": app_email,

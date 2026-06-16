@@ -4,7 +4,7 @@ services:
     env: python
     plan: starter
     buildCommand: "./build.sh"
-    preDeployCommand: "APP_DATABASE_URL= python manage.py migrate --noinput && APP_DATABASE_URL= python manage.py bootstrap_acessos && APP_DATABASE_URL= python manage.py sanear_producao --apply"
+    preDeployCommand: "APP_DATABASE_URL= python3 manage.py migrate --noinput && APP_DATABASE_URL= python3 manage.py bootstrap_acessos && APP_DATABASE_URL= python3 manage.py sanear_producao --apply"
     startCommand: "./start.sh"
     healthCheckPath: /api/public/resumo
     envVars:
@@ -106,7 +106,7 @@ services:
     plan: starter
     buildCommand: "./build_cron.sh"
     schedule: "0 11 * * *"
-    startCommand: "python manage.py sst_alertas_email"
+    startCommand: "python3 manage.py sst_alertas_email"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -146,7 +146,7 @@ services:
     plan: starter
     buildCommand: "./build_cron.sh"
     schedule: "0 12 * * *"
-    startCommand: "python manage.py trial_expiry_emails"
+    startCommand: "python3 manage.py trial_expiry_emails"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -184,7 +184,7 @@ services:
     plan: starter
     buildCommand: "./build_cron.sh"
     schedule: "30 12 * * *"
-    startCommand: "python manage.py renovacao_cobranca"
+    startCommand: "python3 manage.py renovacao_cobranca"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -222,7 +222,7 @@ services:
     plan: starter
     buildCommand: "./build_cron.sh"
     schedule: "0 11,17 * * *"
-    startCommand: "python manage.py sla_breach_alertas"
+    startCommand: "python3 manage.py sla_breach_alertas"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
