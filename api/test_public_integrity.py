@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from django.contrib.auth.hashers import make_password
 from django.core.management import call_command
-from django.test import Client, TestCase
+from django.test import Client, TestCase, TransactionTestCase
 from django.utils import timezone
 
 from api import epidemiologia
@@ -235,7 +235,20 @@ class PublicIntegrityTests(TestCase):
         self.assertFalse(DispositivoPushPublico.objects.filter(token="token-publico-001").exists())
         self.assertEqual(epidemiologia._PANORAMA_CACHE["payload"], None)
 
+
+class DemoReuniaoSoluscrtTests(TransactionTestCase):
+    """
+    TransactionTestCase evita deadlock de isolamento entre conexões default/owner.
+    TestCase envolve cada teste numa transação não commitada — o owner não consegue
+    enxergar a empresa criada no default e bloqueia indefinidamente tentando inserir
+    a mesma PK. Com TransactionTestCase cada operação é commitada imediatamente.
+    """
+
+    databases = {"default", "owner"}
+
     def test_demo_reuniao_soluscrt_cria_focos_no_owner(self):
+        import re
+
         out = StringIO()
         call_command(
             "demo_reuniao_soluscrt",
@@ -253,10 +266,9 @@ class PublicIntegrityTests(TestCase):
 
         output = out.getvalue()
         self.assertIn("Demo nacional concluida", output)
-        # Verifica que a simulação criou registros (exibidos no sumário final).
         # Após dias_zerar a fase de sumiço apaga tudo — verificar pelo sumário
         # é a forma correta, pois registros zerados é o comportamento esperado.
-        import re
         match = re.search(r"Casos criados=(\d+)", output)
         self.assertIsNotNone(match, "Sumário de criação não encontrado no output")
         self.assertGreater(int(match.group(1)), 0)
+
