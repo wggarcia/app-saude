@@ -42,6 +42,15 @@ class PushService {
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
       await _setupLocalNotifications();
       await _requestPermission();
+
+      // iOS: exibir banner/som/badge mesmo com o app em primeiro plano.
+      // Sem isso o push chega silenciosamente quando o app está aberto.
+      await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
       await _registerToken();
       FirebaseMessaging.instance.onTokenRefresh.listen((_) async {
         await _registerToken(force: true);
@@ -64,6 +73,20 @@ class PushService {
     const ios = DarwinInitializationSettings();
     const settings = InitializationSettings(android: android, iOS: ios);
     await _localNotifications.initialize(settings);
+
+    // Android 8+: canal precisa ser criado antes do primeiro show().
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'soluscrt_governo',
+            'Alertas governamentais',
+            description: 'Comunicados oficiais para a populacao',
+            importance: Importance.max,
+            playSound: true,
+          ),
+        );
   }
 
   static Future<void> _requestPermission() async {
@@ -158,8 +181,13 @@ class PushService {
       channelDescription: 'Comunicados oficiais para a populacao',
       importance: Importance.max,
       priority: Priority.high,
+      playSound: true,
     );
-    const ios = DarwinNotificationDetails();
+    const ios = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
     const details = NotificationDetails(android: android, iOS: ios);
 
     await _localNotifications.show(
