@@ -18,10 +18,15 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     if (notification == null) {
       return;
     }
+    final data = Map<String, dynamic>.from(message.data);
+    if (!data.containsKey('id') && data.containsKey('alerta_id')) {
+      final raw = data['alerta_id']?.toString();
+      data['id'] = raw != null ? int.tryParse(raw) : null;
+    }
     await AlertaInboxService.storeRemoteNotification(
       title: notification.title ?? 'Comunicado oficial',
       message: notification.body ?? '',
-      data: message.data,
+      data: data,
     );
   } catch (_) {}
 }
@@ -31,6 +36,9 @@ class PushService {
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   static String? _lastRegisteredRegionKey;
+
+  // Exposed so screens can listen for incoming alerts.
+  static final ValueNotifier<int> alertaRecebido = ValueNotifier<int>(0);
 
   static Future<void> initialize() async {
     if (_initialized) {
@@ -172,8 +180,9 @@ class PushService {
     await AlertaInboxService.storeRemoteNotification(
       title: notification.title ?? 'Comunicado oficial',
       message: notification.body ?? '',
-      data: message.data,
+      data: _normalizeData(message.data),
     );
+    alertaRecebido.value++;
 
     const android = AndroidNotificationDetails(
       'soluscrt_governo',
@@ -206,7 +215,19 @@ class PushService {
     await AlertaInboxService.storeRemoteNotification(
       title: notification.title ?? 'Comunicado oficial',
       message: notification.body ?? '',
-      data: message.data,
+      data: _normalizeData(message.data),
     );
+    alertaRecebido.value++;
+  }
+
+  // Maps FCM data keys to the fields expected by AlertaInboxService.
+  // FCM sends 'alerta_id' but the inbox uses 'id'.
+  static Map<String, dynamic> _normalizeData(Map<String, dynamic> data) {
+    final normalized = Map<String, dynamic>.from(data);
+    if (!normalized.containsKey('id') && normalized.containsKey('alerta_id')) {
+      final raw = normalized['alerta_id']?.toString();
+      normalized['id'] = raw != null ? int.tryParse(raw) : null;
+    }
+    return normalized;
   }
 }

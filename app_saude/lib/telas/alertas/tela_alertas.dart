@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../servicos/alerta_inbox_service.dart';
 import '../../servicos/location_service.dart';
 import '../../servicos/public_api_service.dart';
+import '../../servicos/push_service.dart';
 import '../../servicos/regiao_base_service.dart';
 import '../fontes/tela_fontes.dart';
 
@@ -22,13 +23,21 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    PushService.alertaRecebido.addListener(_onPushAlerta);
     _load();
   }
 
   @override
   void dispose() {
+    PushService.alertaRecebido.removeListener(_onPushAlerta);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _onPushAlerta() {
+    if (!_refreshingInBackground) {
+      _refreshOnResume();
+    }
   }
 
   @override

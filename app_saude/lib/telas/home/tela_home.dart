@@ -160,13 +160,19 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    PushService.alertaRecebido.addListener(_onPushAlerta);
     _load();
   }
 
   @override
   void dispose() {
+    PushService.alertaRecebido.removeListener(_onPushAlerta);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _onPushAlerta() {
+    _refreshOnResume();
   }
 
   @override
