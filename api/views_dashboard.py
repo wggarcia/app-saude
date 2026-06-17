@@ -719,6 +719,7 @@ def api_fluxo_alerta_governo(request):
         "alerta_status": alerta.status,
         "ativo": alerta.ativo,
         "push": push_resultado,
+        "push_configurado": push_disponivel(),
     })
 
 

@@ -1565,21 +1565,25 @@
       await loadGovernmentAlerts();
       if (!options.silent) {
         if (acao === "publicar") {
-          const parts = [
-            `Alerta publicado no app.`,
-            `Push: ${data.push?.status || "sem retorno"}`,
-            `enviados: ${data.push?.enviados || 0}`,
-            `falhas: ${data.push?.falhas ?? 0}`,
-            `destinatarios: ${data.push?.destinatarios ?? 0}`,
-            `tokens ativos: ${data.push?.tokens_ativos ?? 0}`,
-          ];
-          if (data.push?.estrategia) {
-            parts.push(`estrategia: ${data.push.estrategia}`);
+          if (data.push_configurado === false) {
+            _t("PUSH NAO CONFIGURADO NO SERVIDOR — As notificacoes nao chegaram nos celulares. Para ativar: acesse render.com → servico app-saude → Environment → adicione a variavel FIREBASE_SERVICE_ACCOUNT_JSON com o conteudo do arquivo secrets/firebase-service-account.json → Save → aguarde o redeploy.",'err');
+          } else {
+            const parts = [
+              `Alerta publicado no app.`,
+              `Push: ${data.push?.status || "sem retorno"}`,
+              `enviados: ${data.push?.enviados || 0}`,
+              `falhas: ${data.push?.falhas ?? 0}`,
+              `destinatarios: ${data.push?.destinatarios ?? 0}`,
+              `tokens ativos: ${data.push?.tokens_ativos ?? 0}`,
+            ];
+            if (data.push?.estrategia) {
+              parts.push(`estrategia: ${data.push.estrategia}`);
+            }
+            if (data.push?.erro) {
+              parts.push(`erro: ${data.push.erro}`);
+            }
+            _t(parts.join(" | "), data.push?.status === "ok" ? 'ok' : 'err');
           }
-          if (data.push?.erro) {
-            parts.push(`erro: ${data.push.erro}`);
-          }
-          _t(parts.join(" | "),'err');
         } else if (acao === "aprovar") {
           _t("Alerta aprovado. Agora clique em Publicar no App para aparecer no telefone da populacao.",'warn');
         } else if (acao === "excluir") {
