@@ -52,6 +52,7 @@ SECRET_KEY = os.environ.get(
     "dev-only-soluscrt-change-me-with-DJANGO_SECRET_KEY-before-production",
 )
 JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 JWT_EXP_HOURS = env_int("JWT_EXP_HOURS", 12, minimum=1, maximum=168)
 
 DEBUG = env_bool("DJANGO_DEBUG", default=not IS_PRODUCTION)

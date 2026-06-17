@@ -34,6 +34,7 @@ _SST_ENTERPRISE = _SST_PROFISSIONAL + [
     "sst.multi_unidade",    # Múltiplas unidades/filiais
     "sst.laudos_tecnicos",  # Laudos técnicos (LTCat, LTIP)
     "sst.rbac",             # Governança RBAC de usuários
+    "sst.assistente_ia",    # Assistente IA (RAG) — perguntas em linguagem natural
 ]
 _SST_CORPORATIVO = _SST_ENTERPRISE + [
     "sst.turnos",                   # Gestão de turnos

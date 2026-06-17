@@ -12,9 +12,12 @@ def public_settings(request):
 
 def profile_navigation(request):
     try:
-        from .access_control import contexto_navegacao_setorial
+        from .access_control import contexto_navegacao_setorial, empresa_tem_feature
 
-        return contexto_navegacao_setorial(request)
+        ctx = contexto_navegacao_setorial(request)
+        empresa = getattr(request, "empresa", None)
+        ctx["tem_assistente_ia"] = bool(empresa and empresa_tem_feature(empresa, "sst.assistente_ia"))
+        return ctx
     except Exception:
         return {
             "setor_atual": "empresa",
@@ -29,4 +32,5 @@ def profile_navigation(request):
             "portal_ti_url": "/ti/",
             "gerencia_url": "/gerencia/",
             "rh_url": "/rh/",
+            "tem_assistente_ia": False,
         }
