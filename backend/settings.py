@@ -103,8 +103,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'api',
     'corsheaders',
-    'django_extensions',
-]
+] + (['django_extensions'] if not IS_PRODUCTION else [])
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

@@ -335,11 +335,17 @@ def api_obstetrico_dnv(request, parto_id):
     except RegistroParto.DoesNotExist:
         return JsonResponse({"erro": "Não encontrado"}, status=404)
 
+    if not parto.dnv_numero:
+        return JsonResponse(
+            {"erro": "Número DNV não registrado para este parto. Preencha o campo antes de emitir a DNV eletrônica."},
+            status=400,
+        )
+
     # Estrutura baseada no formulário DNV IBGE/MS (modelo atual)
     dnv = {
         "tipo": "DNV-eletrônica",
         "sistema": "SINASC/DATASUS",
-        "numero_dnv": parto.dnv_numero or f"DNV-TEMP-{parto.id}",
+        "numero_dnv": parto.dnv_numero or None,
         "data_emissao": date.today().isoformat(),
         "estabelecimento": {
             "nome": empresa.nome,

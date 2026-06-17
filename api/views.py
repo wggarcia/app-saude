@@ -2661,6 +2661,8 @@ def diagnostico_ia(request):
 from .utils import treinar_modelo, prever_com_aprendizado
 
 def diagnostico_ia_avancado(request):
+    if not getattr(request, "empresa", None):
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
     # Dados epidemiológicos são sempre da empresa pública (app da população).
     # Governo, Hospital, Farmácia e Plano de Saúde leem os mesmos dados.
     empresa = _empresa_app_publico()
@@ -3306,37 +3308,11 @@ def registrar_push_publico(request):
     )
     return JsonResponse({"status": "ok", "push_id": registro.id})
 
-@csrf_exempt
 def analisar_audio(request):
-
-    if request.method == "POST":
-        audio_file = request.FILES.get("audio")
-
-        if not audio_file:
-            return JsonResponse({"erro": "sem áudio"})
-
-        # 🔥 versão simplificada (sem numpy / soundfile)
-        tamanho = audio_file.size
-
-        if tamanho > 500000:
-            return JsonResponse({
-                "classificacao": "Tosse forte",
-                "nivel": "ALTO"
-            })
-
-        elif tamanho > 100000:
-            return JsonResponse({
-                "classificacao": "Tosse moderada",
-                "nivel": "MODERADO"
-            })
-
-        else:
-            return JsonResponse({
-                "classificacao": "Som leve",
-                "nivel": "NORMAL"
-            })
-
-    return JsonResponse({"erro": "método inválido"})
+    return JsonResponse(
+        {"erro": "Análise de áudio não disponível nesta versão."},
+        status=501,
+    )
 
 from api.models import RegistroSintoma
 
