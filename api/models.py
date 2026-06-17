@@ -155,11 +155,30 @@ class DispositivoAutorizado(models.Model):
 
 
 class EmpresaUsuario(models.Model):
+    PERFIL_ADMIN         = "admin"
+    PERFIL_GESTOR        = "gestor"
+    PERFIL_MEDICO        = "medico"
+    PERFIL_TECNICO_SESMT = "tecnico_sesmt"
+    PERFIL_RH            = "rh"
+    PERFIL_TI            = "ti"
+    PERFIL_AUXILIAR      = "auxiliar"
+
+    PERFIS = [
+        (PERFIL_ADMIN,         "Administrador"),
+        (PERFIL_GESTOR,        "Gestor / Diretor"),
+        (PERFIL_MEDICO,        "Médico do Trabalho"),
+        (PERFIL_TECNICO_SESMT, "Técnico de Segurança (SESMT)"),
+        (PERFIL_RH,            "RH / Departamento Pessoal"),
+        (PERFIL_TI,            "TI / Administrador de Sistemas"),
+        (PERFIL_AUXILIAR,      "Auxiliar Administrativo"),
+    ]
+
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="usuarios")
     nome = models.CharField(max_length=120)
     email = models.EmailField()
     senha = models.CharField(max_length=255)
     cargo = models.CharField(max_length=100, null=True, blank=True)
+    perfil = models.CharField(max_length=20, choices=PERFIS, null=True, blank=True)
     ativo = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
     sessao_ativa_chave = models.CharField(max_length=120, null=True, blank=True)

@@ -901,6 +901,7 @@ def api_usuarios_empresa(request):
                 "nome": usuario.nome,
                 "email": usuario.email,
                 "cargo": usuario.cargo,
+                "perfil": usuario.perfil or "",
                 "ativo": usuario.ativo,
                 "is_admin": usuario.is_admin,
                 "criado_em": usuario.criado_em.isoformat(),
@@ -930,6 +931,11 @@ def api_criar_usuario_empresa(request):
     email = (dados.get("email") or "").strip().lower()
     senha = dados.get("senha") or ""
     cargo = (dados.get("cargo") or "").strip()
+    perfil = (dados.get("perfil") or "").strip() or None
+
+    PERFIS_VALIDOS = {"admin", "gestor", "medico", "tecnico_sesmt", "rh", "ti", "auxiliar"}
+    if perfil and perfil not in PERFIS_VALIDOS:
+        return JsonResponse({"erro": f"perfil inválido. Use: {', '.join(sorted(PERFIS_VALIDOS))}"}, status=400)
 
     if not nome or not email or not senha:
         return JsonResponse({"erro": "nome, email e senha são obrigatórios"}, status=400)
@@ -947,6 +953,7 @@ def api_criar_usuario_empresa(request):
         email=email,
         senha=make_password(senha),
         cargo=cargo,
+        perfil=perfil,
     )
 
     return JsonResponse({"status": "ok", "usuario_id": usuario.id})

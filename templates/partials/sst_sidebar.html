@@ -3,48 +3,73 @@
   <span class="sb-icon">📊</span><span>Painel SST</span>
 </a>
 
+{% if pf_ver_nucleo %}
 <details class="sb-group" data-sst-group data-sst-group-key="nucleo-operacional">
   <summary class="sb-group-summary">
     <span class="sb-label">Núcleo Operacional</span>
   </summary>
   <div class="sb-group-body">
+    {% if pf_ver_funcionario %}
     <a class="sb-link {% if '/sst/funcionarios/' in p %}active{% endif %}" href="/sst/funcionarios/"><span class="sb-icon">👥</span><span>Funcionários</span><span class="sb-badge" data-sst-badge="funcionarios_ativos"></span></a>
+    {% endif %}
+    {% if pf_ver_aso %}
     <a class="sb-link {% if p == '/sst/asos/' %}active{% endif %}" href="/sst/asos/" data-sst-severity="attention"><span class="sb-icon">📋</span><span>ASO e Pedidos</span><span class="sb-badge" data-sst-badge="asos_vencidos|asos_vencendo_30d"></span></a>
     <a class="sb-link {% if p == '/sst/exames/' %}active{% endif %}" href="/sst/exames/" data-sst-severity="critical"><span class="sb-icon">🔬</span><span>Exames</span><span class="sb-badge" data-sst-badge="exames_atrasados"></span></a>
+    {% endif %}
+    {% if pf_ver_agenda %}
     <a class="sb-link {% if p == '/sst/exames/agendar/' %}active{% endif %}" href="/sst/exames/agendar/"><span class="sb-icon">📅</span><span>Agendamentos</span></a>
     <a class="sb-link {% if p == '/sst/solicitacoes/' %}active{% endif %}" href="/sst/solicitacoes/"><span class="sb-icon">📨</span><span>Solicitações</span></a>
+    {% endif %}
   </div>
 </details>
+{% endif %}
 
+{% if pf_ver_legal %}
 <details class="sb-group" data-sst-group data-sst-group-key="legal-regulatorio">
   <summary class="sb-group-summary">
     <span class="sb-label">Legal e Regulatório</span>
   </summary>
   <div class="sb-group-body">
+    {% if pf_ver_afastamento %}
     <a class="sb-link {% if p == '/sst/afastamentos/' %}active{% endif %}" href="/sst/afastamentos/" data-sst-severity="critical"><span class="sb-icon">🏥</span><span>Afastamentos</span><span class="sb-badge" data-sst-badge="afastamentos_ativos"></span></a>
+    {% endif %}
+    {% if pf_ver_cat %}
     <a class="sb-link {% if p == '/sst/cats/' %}active{% endif %}" href="/sst/cats/" data-sst-severity="critical"><span class="sb-icon">⚠️</span><span>CAT / Acidentes</span><span class="sb-badge" data-sst-badge="cats_abertas"></span></a>
+    {% endif %}
+    {% if pf_ver_esocial %}
     <a class="sb-link {% if p == '/sst/esocial/' %}active{% endif %}" href="/sst/esocial/" data-sst-severity="critical"><span class="sb-icon">🔗</span><span>eSocial SST</span><span class="sb-badge" data-sst-badge="esocial_erros|esocial_pendentes"></span></a>
+    <a class="sb-link {% if p == '/sst/fap/' %}active{% endif %}" href="/sst/fap/"><span class="sb-icon">📉</span><span>Gestão FAP</span></a>
+    {% endif %}
+    {% if pf_ver_postos %}
     <a class="sb-link {% if p == '/sst/postos/' %}active{% endif %}" href="/sst/postos/" data-sst-severity="attention"><span class="sb-icon">🏭</span><span>Postos S-2240</span></a>
     <a class="sb-link {% if p == '/sst/ppp/' %}active{% endif %}" href="/sst/ppp/" data-sst-severity="attention"><span class="sb-icon">🧾</span><span>PPP</span><span class="sb-badge" data-sst-badge="ppp_pendentes"></span></a>
-    <a class="sb-link {% if p == '/sst/fap/' %}active{% endif %}" href="/sst/fap/"><span class="sb-icon">📉</span><span>Gestão FAP</span></a>
+    {% endif %}
   </div>
 </details>
+{% endif %}
 
+{% if pf_ver_prevencao %}
 <details class="sb-group" data-sst-group data-sst-group-key="prevencao-saude">
   <summary class="sb-group-summary">
     <span class="sb-label">Prevenção e Saúde</span>
   </summary>
   <div class="sb-group-body">
+    {% if pf_ver_riscos %}
     <a class="sb-link {% if p == '/sst/riscos/' %}active{% endif %}" href="/sst/riscos/"><span class="sb-icon">🔴</span><span>Riscos e PGR</span></a>
     <a class="sb-link {% if p == '/sst/epis/' %}active{% endif %}" href="/sst/epis/" data-sst-severity="attention"><span class="sb-icon">🦺</span><span>EPI e EPC</span><span class="sb-badge" data-sst-badge="epis_sem_entrega"></span></a>
     <a class="sb-link {% if p == '/sst/treinamentos/' %}active{% endif %}" href="/sst/treinamentos/" data-sst-severity="attention"><span class="sb-icon">🎓</span><span>Treinamentos NR</span><span class="sb-badge" data-sst-badge="treinamentos_vencidos"></span></a>
+    {% endif %}
+    {% if pf_ver_saude %}
     <a class="sb-link {% if p == '/sst/saude-comunicacao/' %}active{% endif %}" href="/sst/saude-comunicacao/"><span class="sb-icon">💚</span><span>Saúde & Comunicação</span></a>
     <a class="sb-link {% if p == '/sst/bem-estar/' %}active{% endif %}" href="/sst/bem-estar/"><span class="sb-icon">❤️</span><span>Bem-estar da Equipe</span></a>
     <a class="sb-link {% if p == '/sst/psicossocial/' %}active{% endif %}" href="/sst/psicossocial/" data-sst-severity="attention"><span class="sb-icon">🧠</span><span>Psicossocial NR-01</span><span class="sb-badge" data-sst-badge="psicossocial_ativas"></span></a>
+    {% endif %}
     <a class="sb-link {% if '/sst/comunicacao/' in p %}active{% endif %}" href="/sst/comunicacao/"><span class="sb-icon">💬</span><span>Comunicação SST</span></a>
   </div>
 </details>
+{% endif %}
 
+{% if pf_ver_governanca %}
 <details class="sb-group" data-sst-group data-sst-group-key="governanca-gestao">
   <summary class="sb-group-summary">
     <span class="sb-label">Governança e Gestão</span>
@@ -65,17 +90,20 @@
     <a class="sb-link {% if p == '/sst/relatorios/' %}active{% endif %}" href="/sst/relatorios/"><span class="sb-icon">📈</span><span>Relatórios</span></a>
   </div>
 </details>
+{% endif %}
 
 <details class="sb-group" data-sst-group data-sst-group-key="conta-plataforma">
   <summary class="sb-group-summary">
     <span class="sb-label">Conta e Plataforma</span>
   </summary>
   <div class="sb-group-body">
+    {% if pf_ver_config %}
     <a class="sb-link {% if p == '/sst/configuracoes/' %}active{% endif %}" href="/sst/configuracoes/"><span class="sb-icon">⚙️</span><span>Config. SST</span></a>
+    {% endif %}
     {% if mostrar_link_rh %}
     <a class="sb-link {% if '/rh/' in p or '/usuarios/' in p %}active{% endif %}" href="/rh/"><span class="sb-icon">👤</span><span>Portal RH</span></a>
     {% endif %}
-    {% if mostrar_link_ti %}
+    {% if mostrar_link_ti and pf_ver_ti_link %}
     <a class="sb-link {% if '/ti/' in p or '/gestao/plataforma/' in p %}active{% endif %}" href="/ti/"><span class="sb-icon">🖥️</span><span>Plataforma TI</span></a>
     {% endif %}
     <a class="sb-link" href="/logout/" style="color:#f87171"><span class="sb-icon">↩</span><span>Sair</span></a>

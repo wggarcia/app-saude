@@ -327,13 +327,20 @@ def _principal_gestor_ti(request):
     return _cargo_tem_marcador_rh(getattr(principal, "cargo", ""))
 
 
+def _perfil_usuario(principal) -> str | None:
+    """Retorna o perfil granular do EmpresaUsuario, ou None se não aplicável."""
+    if principal.__class__.__name__ != "EmpresaUsuario":
+        return None
+    return getattr(principal, "perfil", None) or None
+
+
 def principal_e_gerencia(request):
     """
-    Detecta perfil de gerência de forma pragmática por cargo/permissões.
-    Regra:
-      - conta principal da empresa: gerência
-      - usuário admin: gerência
-      - cargos com marcadores de liderança: gerência
+    Perfil de gerência:
+      - conta principal da empresa
+      - perfil admin ou gestor (campo granular)
+      - is_admin legacy
+      - fallback: inferência pelo cargo (texto)
     """
     empresa = getattr(request, "empresa", None)
     if not empresa:
@@ -345,38 +352,27 @@ def principal_e_gerencia(request):
     if getattr(principal, "is_admin", False):
         return True
 
+    perfil = _perfil_usuario(principal)
+    if perfil in ("admin", "gestor"):
+        return True
+    if perfil is not None:
+        return False  # perfil definido explicitamente e não é gerência
+
+    # Fallback legacy: inferência pelo cargo (texto livre)
     cargo = _texto_normalizado(getattr(principal, "cargo", ""))
     if not cargo:
         return False
-
     palavras = set(cargo.replace("/", " ").replace("-", " ").split())
     marcadores = {
-        "gerencia",
-        "gerente",
-        "gestor",
-        "coordenador",
-        "supervisor",
-        "diretor",
-        "diretoria",
-        "lider",
-        "lideranca",
-        "administrador",
+        "gerencia", "gerente", "gestor", "coordenador", "supervisor",
+        "diretor", "diretoria", "lider", "lideranca", "administrador",
     }
     if palavras & marcadores:
         return True
-
     return any(
         trecho in cargo
-        for trecho in (
-            "gerente",
-            "gestor",
-            "diretor",
-            "lider de",
-            "head",
-            "chief",
-            "coordenacao",
-            "supervisao",
-        )
+        for trecho in ("gerente", "gestor", "diretor", "lider de", "head",
+                       "chief", "coordenacao", "supervisao")
     )
 
 
@@ -392,6 +388,13 @@ def principal_e_rh(request):
         return False
     if principal.__class__.__name__ != "EmpresaUsuario":
         return False
+
+    perfil = _perfil_usuario(principal)
+    if perfil == "rh":
+        return True
+    if perfil is not None:
+        return False  # perfil definido explicitamente e não é RH
+
     if principal_e_gerencia(request):
         return False
     return _cargo_tem_marcador_rh(getattr(principal, "cargo", ""))
@@ -402,6 +405,13 @@ def principal_e_ti(request):
     if not empresa:
         return False
     principal = getattr(request, "principal", None) or empresa
+
+    perfil = _perfil_usuario(principal)
+    if perfil in ("admin", "ti"):
+        return True
+    if perfil is not None:
+        return principal_tem_acesso_ti(empresa, principal)  # RBAC ainda vale
+
     return principal_tem_acesso_ti(empresa, principal)
 
 
@@ -409,6 +419,15 @@ def principal_e_operacao(request):
     empresa = getattr(request, "empresa", None)
     if not empresa:
         return False
+    principal = getattr(request, "principal", None) or empresa
+
+    perfil = _perfil_usuario(principal)
+    if perfil in ("medico", "tecnico_sesmt", "auxiliar"):
+        return True
+    if perfil in ("admin", "gestor", "rh", "ti"):
+        return False
+
+    # Fallback legacy
     if principal_e_gerencia(request):
         return False
     if principal_e_rh(request):
@@ -442,6 +461,11 @@ def _gerencia_usuario_empresa(request):
 
 
 def perfil_principal(request):
+    principal = getattr(request, "principal", None)
+    perfil = _perfil_usuario(principal) if principal else None
+    if perfil:
+        return perfil  # retorna o perfil granular diretamente
+    # Fallback legacy
     if principal_e_gerencia(request):
         return "gerencia"
     if principal_e_rh(request):
