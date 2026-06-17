@@ -215,8 +215,26 @@ const _anamneseItems = [
   ),
   _ItemAnamnese(
     tipo: _TipoAnamnese.simNao,
-    pergunta: 'Tem diabetes, pressão alta ou doença pulmonar?',
-    dica: 'Ou imunossupressão, tratamento oncológico — aumenta risco de gravidade',
+    pergunta: 'Tem diabetes?',
+    dica: 'Diabetes tipo 1 ou tipo 2, mesmo controlada com medicamento',
+    emoji: '🩸',
+  ),
+  _ItemAnamnese(
+    tipo: _TipoAnamnese.simNao,
+    pergunta: 'Tem pressão alta (hipertensão)?',
+    dica: 'Mesmo que esteja tomando remédio e esteja controlada',
+    emoji: '💊',
+  ),
+  _ItemAnamnese(
+    tipo: _TipoAnamnese.simNao,
+    pergunta: 'Tem doença pulmonar, asma ou DPOC?',
+    dica: 'Asma, bronquite crônica, enfisema ou qualquer doença respiratória crônica',
+    emoji: '🫁',
+  ),
+  _ItemAnamnese(
+    tipo: _TipoAnamnese.simNao,
+    pergunta: 'Tem imunossupressão ou faz tratamento oncológico?',
+    dica: 'Quimioterapia, transplante, HIV, uso de corticoide por longa data',
     emoji: '🏥',
   ),
 ];
@@ -257,7 +275,17 @@ class _TelaSintomasState extends State<TelaSintomas> {
   bool? _contatoRoedores;
   bool? _contatoConfirmado;
   bool? _vacinadoFebreAmarela;
-  bool? _temComorbidade;
+  bool? _temDiabetes;
+  bool? _temHipertensao;
+  bool? _temDoencaPulmonar;
+  bool? _temImunossupressao;
+
+  // Computed: true se qualquer condição crônica foi marcada Sim
+  bool? get _temComorbidade {
+    final respostas = [_temDiabetes, _temHipertensao, _temDoencaPulmonar, _temImunossupressao];
+    if (respostas.every((r) => r == null)) return null;
+    return respostas.any((r) => r == true);
+  }
 
   // ── Envio ──
   bool _loading = false;
@@ -286,7 +314,10 @@ class _TelaSintomasState extends State<TelaSintomas> {
       _contatoRoedores = null;
       _contatoConfirmado = null;
       _vacinadoFebreAmarela = null;
-      _temComorbidade = null;
+      _temDiabetes = null;
+      _temHipertensao = null;
+      _temDoencaPulmonar = null;
+      _temImunossupressao = null;
       _lastResult = null;
       _fase = 0;
       _index = 0;
@@ -391,7 +422,13 @@ class _TelaSintomasState extends State<TelaSintomas> {
         case 6:
           _vacinadoFebreAmarela = valor as bool?;
         case 7:
-          _temComorbidade = valor as bool?;
+          _temDiabetes = valor as bool?;
+        case 8:
+          _temHipertensao = valor as bool?;
+        case 9:
+          _temDoencaPulmonar = valor as bool?;
+        case 10:
+          _temImunossupressao = valor as bool?;
       }
     });
     if (valor != null) {
@@ -409,7 +446,10 @@ class _TelaSintomasState extends State<TelaSintomas> {
       4 => _contatoRoedores,
       5 => _contatoConfirmado,
       6 => _vacinadoFebreAmarela,
-      7 => _temComorbidade,
+      7 => _temDiabetes,
+      8 => _temHipertensao,
+      9 => _temDoencaPulmonar,
+      10 => _temImunossupressao,
       _ => null,
     };
   }
@@ -1026,7 +1066,10 @@ class _TelaSintomasState extends State<TelaSintomas> {
             _contatoRoedores != null ||
             _contatoConfirmado != null ||
             _vacinadoFebreAmarela != null ||
-            _temComorbidade != null) ...[
+            _temDiabetes != null ||
+            _temHipertensao != null ||
+            _temDoencaPulmonar != null ||
+            _temImunossupressao != null) ...[
           const Text(
             'Contexto clínico',
             style: TextStyle(
@@ -1065,9 +1108,14 @@ class _TelaSintomasState extends State<TelaSintomas> {
                 if (_vacinadoFebreAmarela != null)
                   _InfoRow('Vacina Febre Amarela',
                       _vacinadoFebreAmarela! ? 'Sim' : 'Não'),
-                if (_temComorbidade != null)
-                  _InfoRow(
-                      'Comorbidade', _temComorbidade! ? 'Sim' : 'Não'),
+                if (_temDiabetes != null)
+                  _InfoRow('Diabetes', _temDiabetes! ? 'Sim' : 'Não'),
+                if (_temHipertensao != null)
+                  _InfoRow('Hipertensão', _temHipertensao! ? 'Sim' : 'Não'),
+                if (_temDoencaPulmonar != null)
+                  _InfoRow('D. pulmonar/asma', _temDoencaPulmonar! ? 'Sim' : 'Não'),
+                if (_temImunossupressao != null)
+                  _InfoRow('Imunossupressão', _temImunossupressao! ? 'Sim' : 'Não'),
               ],
             ),
           ),

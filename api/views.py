@@ -2244,6 +2244,15 @@ def registrar_sintoma_publico(request):
     )
 
     if not permitido:
+        # Injeta aviso no resultado cidadao para a tela mostrar que
+        # o relato anterior ja esta sendo monitorado (nao contabiliza de novo).
+        resultado_cidadao_ja = dict(resultado_cidadao)
+        resultado_cidadao_ja["ja_monitorado"] = True
+        resultado_cidadao_ja["conduta"] = (
+            "Seus sintomas já estão sendo acompanhados no mapa epidemiológico regional. "
+            "Não é necessário enviar novamente — um relato por período é suficiente para o monitoramento. "
+            + resultado_cidadao.get("conduta", "")
+        )
         return JsonResponse({
             "status": "ja_considerado",
             "mensagem": "Seu envio recente ja foi considerado no monitoramento regional.",
@@ -2257,6 +2266,7 @@ def registrar_sintoma_publico(request):
                 "cidade": geo.get("cidade"),
                 "estado": geo.get("estado"),
             },
+            "cidadao": resultado_cidadao_ja,
             "erro": motivo_bloqueio,
             "codigo": "rate_limit_publico",
         })
