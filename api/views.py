@@ -185,7 +185,7 @@ SITE_TRANSLATIONS = {
         "values": {
             "eyebrow": "Confiança SolusCRT",
             "title": "Confiança para assinar, implantar e renovar.",
-            "lead": "A SolusCRT precisa convencer no comercial e sustentar essa promessa na operação. Por isso, monitoramento, IA, privacidade, linguagem e governança foram desenhados para vender bem sem parecer improvisados e sem misturar ambientes.",
+            "lead": "A SolusCRT nasceu de uma pergunta que incomodava: por que a informação de saúde sempre chega tarde? Tarde para o gestor agir, tarde para o hospital se preparar, tarde para o trabalhador ser amparado. Cada decisão de produto, privacidade e governança começa daqui — do compromisso de que tecnologia de saúde existe para chegar a tempo e proteger vidas reais.",
             "items": [
                 {"title": "Vida em primeiro lugar", "text": "Todo indicador, alerta e mapa existe para reduzir atraso, orientar cuidado e apoiar decisões que preservem pessoas."},
                 {"title": "Verdade antes de impacto", "text": "Separar sinal precoce, dado oficial e inferência de IA é um compromisso para evitar conclusões falsas."},
@@ -1079,8 +1079,10 @@ def _commercial_site_copy(language, site):
     ]
     site["values"]["title"] = "Valores que fazem a tecnologia merecer confiança"
     site["values"]["lead"] = (
-        "A SolusCRT precisa convencer no comercial e sustentar essa promessa na operação. Produto, privacidade, linguagem "
-        "e governança foram desenhados para vender bem sem parecer improvisados."
+        "A SolusCRT nasceu de uma pergunta que incomodava: por que a informação de saúde sempre chega tarde? "
+        "Tarde para o gestor agir, tarde para o hospital se preparar, tarde para o trabalhador ser amparado. "
+        "Cada decisão de produto, privacidade e governança começa daqui — do compromisso de que tecnologia "
+        "de saúde existe para chegar a tempo e proteger vidas reais."
     )
     site["app"]["title"] = "Dois apps, duas jornadas, uma venda mais clara."
     site["app"]["lead"] = (
