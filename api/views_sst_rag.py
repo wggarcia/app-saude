@@ -174,7 +174,7 @@ def _executar_tool(nome: str, inputs: dict, empresa) -> dict:
             data_validade__lte=hoje + timedelta(days=30),
         ).values("funcionario__nome").distinct().count()
         treinamentos_vencidos = TreinamentoNR.objects.filter(
-            empresa=empresa, validade__lt=hoje
+            empresa=empresa, data_validade__lt=hoje
         ).count()
         afastamentos_ativos = AfastamentoSST.objects.filter(
             empresa=empresa, status=AfastamentoSST.STATUS_ATIVO
@@ -235,8 +235,8 @@ def _executar_tool(nome: str, inputs: dict, empresa) -> dict:
         dias = int(inputs.get("dias", 0))
         limite = hoje + timedelta(days=dias)
         treinamentos = TreinamentoNR.objects.filter(
-            empresa=empresa, validade__lte=limite
-        ).select_related("funcionario").order_by("validade")[:50]
+            empresa=empresa, data_validade__lte=limite
+        ).select_related("funcionario").order_by("data_validade")[:50]
         return {
             "total": treinamentos.count(),
             "treinamentos": [
@@ -244,8 +244,8 @@ def _executar_tool(nome: str, inputs: dict, empresa) -> dict:
                     "funcionario": t.funcionario.nome,
                     "nr": t.nr,
                     "descricao": t.get_nr_display(),
-                    "vencimento": t.validade.isoformat() if t.validade else None,
-                    "vencido": t.validade < hoje if t.validade else False,
+                    "vencimento": t.data_validade.isoformat() if t.data_validade else None,
+                    "vencido": t.data_validade < hoje if t.data_validade else False,
                 }
                 for t in treinamentos
             ],
@@ -299,7 +299,7 @@ def _executar_tool(nome: str, inputs: dict, empresa) -> dict:
         for f in funcs:
             aso_recente = f.asos.order_by("-data_emissao").first()
             afastamento_ativo = f.afastamentos.filter(status=AfastamentoSST.STATUS_ATIVO).first()
-            treinamentos_vencidos_count = f.treinamentos_nr.filter(validade__lt=hoje).count()
+            treinamentos_vencidos_count = f.treinamentos_nr.filter(data_validade__lt=hoje).count()
             resultado.append({
                 "nome": f.nome,
                 "cargo": f.cargo,
