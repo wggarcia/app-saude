@@ -1915,67 +1915,39 @@ def _empresa_app_publico():
 
 def _bloqueio_envio_publico(empresa, ip, device_id, dados=None, geo=None):
     agora = timezone.now()
-    janela_curta = agora - timedelta(hours=6)
-    janela_longa = agora - timedelta(hours=24)
+    janela_7d = agora - timedelta(days=7)
+    janela_1h = agora - timedelta(hours=1)
     dados = dados or {}
-    geo = geo or {}
 
-    sintomas_contexto = {
-        "cidade": geo.get("cidade"),
-        "estado": geo.get("estado"),
-        "febre": bool(dados.get("febre", False)),
-        "tosse": bool(dados.get("tosse", False)),
-        "dor_corpo": bool(dados.get("dor_corpo", False)),
-        "cansaco": bool(dados.get("cansaco", False)),
-        "falta_ar": bool(dados.get("falta_ar", False)),
-    }
-
-    # Primeiro protege contra repeticao muito proxima do mesmo aparelho.
-    # O bloqueio por IP isolado era agressivo demais em redes movel/NAT.
+    # Regra principal: 1 envio por aparelho em 7 dias, sem excecao por sintoma.
+    # Qualquer variacao de sintoma do mesmo device é bloqueada igualmente —
+    # isso impede que um atacante envie N vezes trocando um campo bool.
     if device_id:
-        duplicado_device = RegistroSintoma.objects.filter(
+        ja_enviou = RegistroSintoma.objects.filter(
             empresa=empresa,
             device_id=device_id,
-            data_registro__gte=janela_curta,
-            **sintomas_contexto,
+            data_registro__gte=janela_7d,
         ).exists()
-        if duplicado_device:
-            return False, "Sinal semelhante ja considerado recentemente deste aparelho."
-
-        envios_device_6h = RegistroSintoma.objects.filter(
-            empresa=empresa,
-            device_id=device_id,
-            data_registro__gte=janela_curta,
-        ).count()
-        if envios_device_6h >= 3:
-            return False, "Limite de envio por aparelho atingido nas ultimas horas."
-
-        envios_device_24h = RegistroSintoma.objects.filter(
-            empresa=empresa,
-            device_id=device_id,
-            data_registro__gte=janela_longa,
-        ).count()
-        if envios_device_24h >= 8:
-            return False, "Limite diario de envios deste aparelho atingido."
+        if ja_enviou:
+            return False, "Voce ja contribuiu com um relato nos ultimos 7 dias. Um envio por semana e suficiente para o monitoramento."
 
     if ip:
-        # Em redes compartilhadas muitos aparelhos podem sair pelo mesmo IP.
-        # Portanto, so tratamos IP como anomalia em volumes realmente altos.
-        envios_ip_6h = RegistroSintoma.objects.filter(
+        # IP so bloqueia em volumes altissimos (redes NAT/CGNAT compartilham IP).
+        envios_ip_1h = RegistroSintoma.objects.filter(
             empresa=empresa,
             ip=ip,
-            data_registro__gte=janela_curta,
+            data_registro__gte=janela_1h,
         ).count()
-        if envios_ip_6h >= 80:
+        if envios_ip_1h >= 60:
             return False, "Volume recente alto nesta rede. Tente novamente mais tarde."
 
-        envios_ip_24h = RegistroSintoma.objects.filter(
+        envios_ip_7d = RegistroSintoma.objects.filter(
             empresa=empresa,
             ip=ip,
-            data_registro__gte=janela_longa,
+            data_registro__gte=janela_7d,
         ).count()
-        if envios_ip_24h >= 220:
-            return False, "Limite diario de envios desta rede atingido."
+        if envios_ip_7d >= 180:
+            return False, "Limite semanal de envios desta rede atingido."
 
     return True, None
 
