@@ -22,7 +22,7 @@ class LocationService {
   static const Map<String, dynamic> referenciaPublicaInicial = {
     'bairro': 'Centro',
     'cidade': 'Rio de Janeiro',
-    'estado': 'RJ',
+    'estado': 'Rio de Janeiro',
     'latitude': -22.9068,
     'longitude': -43.1729,
   };

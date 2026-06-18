@@ -1681,6 +1681,25 @@ JANELA_ESTABILIDADE_FOCO_DIAS = 10
 JANELA_DECAIMENTO_FOCO_DIAS = 30
 PESO_MINIMO_FOCO_PUBLICO = 0.1
 
+_UF_PARA_NOME = {
+    "AC": "Acre", "AL": "Alagoas", "AP": "Amapá", "AM": "Amazonas",
+    "BA": "Bahia", "CE": "Ceará", "DF": "Distrito Federal", "ES": "Espírito Santo",
+    "GO": "Goiás", "MA": "Maranhão", "MT": "Mato Grosso", "MS": "Mato Grosso do Sul",
+    "MG": "Minas Gerais", "PA": "Pará", "PB": "Paraíba", "PR": "Paraná",
+    "PE": "Pernambuco", "PI": "Piauí", "RJ": "Rio de Janeiro", "RN": "Rio Grande do Norte",
+    "RS": "Rio Grande do Sul", "RO": "Rondônia", "RR": "Roraima", "SC": "Santa Catarina",
+    "SP": "São Paulo", "SE": "Sergipe", "TO": "Tocantins",
+}
+
+
+def _normalizar_estado(estado: str | None) -> str | None:
+    if not estado:
+        return estado
+    uf = estado.strip().upper()
+    if len(uf) == 2 and uf in _UF_PARA_NOME:
+        return _UF_PARA_NOME[uf]
+    return estado
+
 
 def _peso_temporal_publico(day, agora=None):
     agora = agora or timezone.now()
@@ -2917,7 +2936,7 @@ def app_radar_local(request):
     latitude = request.GET.get("latitude")
     longitude = request.GET.get("longitude")
     cidade = request.GET.get("cidade")
-    estado = request.GET.get("estado")
+    estado = _normalizar_estado(request.GET.get("estado"))
     bairro = request.GET.get("bairro")
 
     geo = {}
@@ -3061,7 +3080,7 @@ def app_mapa_publico(request):
     _set_rls(_emp_pub.id)
 
     cidade = request.GET.get("cidade")
-    estado = request.GET.get("estado")
+    estado = _normalizar_estado(request.GET.get("estado"))
     bairro = request.GET.get("bairro")
     def _norm(value):
         return " ".join(str(value or "").strip().split()).casefold()
@@ -3209,7 +3228,7 @@ def app_alertas_publicos(request):
     from api.middleware import _rls_set_empresa as _set_rls
     _emp_pub = _empresa_app_publico()
     cidade = request.GET.get("cidade")
-    estado = request.GET.get("estado")
+    estado = _normalizar_estado(request.GET.get("estado"))
     bairro = request.GET.get("bairro")
     incluir_gerais = request.GET.get("incluir_gerais", "1").lower() not in {"0", "false", "nao", "não"}
 
