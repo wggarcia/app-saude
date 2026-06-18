@@ -22,7 +22,7 @@ class TelaAlerta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Alerta de Saude")),
+      appBar: AppBar(title: const Text('Alerta de Saúde')),
       body: Center(
         child: Container(
           padding: const EdgeInsets.all(20),
@@ -34,21 +34,18 @@ class TelaAlerta extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("📍 $cidade", style: const TextStyle(fontSize: 22)),
+              Text('📍 $cidade', style: const TextStyle(fontSize: 22)),
               const SizedBox(height: 10),
               Text(
                 mensagem,
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
-
-              const Text("Recomendacoes:"),
-
+              const Text('Recomendações:'),
               const SizedBox(height: 10),
-
-              const Text("• Use mascara"),
-              const Text("• Evite aglomeracoes"),
-              const Text("• Procure atendimento se piorar"),
+              const Text('• Use máscara'),
+              const Text('• Evite aglomerações'),
+              const Text('• Procure atendimento se piorar'),
             ],
           ),
         ),

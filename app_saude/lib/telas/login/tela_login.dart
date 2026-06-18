@@ -8,7 +8,7 @@ class TelaLogin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Acesso populacao')),
+      appBar: AppBar(title: const Text('Acesso à população')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -18,7 +18,7 @@ class TelaLogin extends StatelessWidget {
               const Icon(Icons.health_and_safety, size: 82, color: Color(0xFF39D0C3)),
               const SizedBox(height: 20),
               const Text(
-                'O app da populacao funciona sem login obrigatorio.',
+                'O app da população funciona sem login obrigatório.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
@@ -28,7 +28,7 @@ class TelaLogin extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Seu envio de sintomas nao exige cadastro nominal e ajuda a alimentar o radar epidemiologico do SolusCRT.',
+                'Seu envio de sintomas não exige cadastro e ajuda a alimentar o radar epidemiológico do SolusCRT.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Color(0xFF9CC4DB), height: 1.4),
               ),

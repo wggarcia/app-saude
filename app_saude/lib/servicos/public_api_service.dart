@@ -25,7 +25,7 @@ class PublicApiService {
     final response =
         await http.get(_uri('/api/public/resumo')).timeout(_timeout);
     if (response.statusCode != 200) {
-      throw Exception('Nao foi possivel carregar o panorama nacional.');
+      throw Exception('Não foi possível carregar o panorama nacional.');
     }
     return _decodeObject(response.body);
   }
@@ -58,7 +58,7 @@ class PublicApiService {
         )
         .timeout(_timeout);
     if (response.statusCode != 200) {
-      throw Exception('Nao foi possivel carregar o radar da sua regiao.');
+      throw Exception('Não foi possível carregar o radar da sua região.');
     }
     return _decodeObject(response.body);
   }
@@ -82,7 +82,7 @@ class PublicApiService {
     final response =
         await http.get(_uri('/api/public/mapa', query)).timeout(_timeout);
     if (response.statusCode != 200) {
-      throw Exception('Nao foi possivel carregar o mapa publico.');
+      throw Exception('Não foi possível carregar o mapa público.');
     }
     final data = _decodeObject(response.body);
     return (data['hotspots'] as List<dynamic>? ?? <dynamic>[]);
@@ -275,18 +275,18 @@ class PublicApiService {
       }
     } catch (_) {}
     throw Exception(
-        'Servico temporariamente indisponivel. Tente novamente em instantes.');
+        'Serviço temporariamente indisponível. Tente novamente em instantes.');
   }
 
   static String _mensagemPublicaErro(String? codigo, String? fallback) {
     if (codigo == 'rate_limit_publico') {
-      return 'Ja recebemos um envio recente deste aparelho ou rede. Tente novamente mais tarde.';
+      return 'Já recebemos um envio recente deste aparelho ou rede. Tente novamente mais tarde.';
     }
     if (fallback != null && fallback.toLowerCase().contains('antifraude')) {
-      return 'Nao foi possivel validar este envio agora. Tente novamente mais tarde.';
+      return 'Não foi possível validar este envio agora. Tente novamente mais tarde.';
     }
     return fallback ??
-        'Nao foi possivel enviar agora. Tente novamente em instantes.';
+        'Não foi possível enviar agora. Tente novamente em instantes.';
   }
 
   static Future<void> registrarPushToken({

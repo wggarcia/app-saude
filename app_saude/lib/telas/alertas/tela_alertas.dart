@@ -110,8 +110,8 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
       builder: (ctx) => AlertDialog(
         title: const Text('Limpar todos os alertas?'),
         content: const Text(
-          'Todos os alertas salvos serao removidos da sua caixa. '
-          'Novos alertas continuarao chegando normalmente.',
+          'Todos os alertas salvos serão removidos da sua caixa. '
+          'Novos alertas continuarão chegando normalmente.',
         ),
         actions: [
           TextButton(
@@ -303,7 +303,7 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Quando houver comunicados oficiais para sua regiao ou para o Brasil, eles aparecerao aqui mesmo se voce perder a notificacao.',
+                        'Quando houver comunicados oficiais para sua região ou para o Brasil, eles aparecerão aqui mesmo se você perder a notificação.',
                         style: TextStyle(
                           color: Color(0xFF9CC4DB),
                           height: 1.45,
@@ -347,7 +347,7 @@ class _TelaAlertasState extends State<TelaAlertas> with WidgetsBindingObserver {
                         builder: (ctx) => AlertDialog(
                           title: const Text('Excluir alerta?'),
                           content: const Text(
-                              'Este alerta sera removido da sua caixa.'),
+                              'Este alerta será removido da sua caixa.'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, false),
@@ -406,7 +406,7 @@ class _AlertsHero extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: const Text(
-              'Central oficial da populacao',
+              'Central oficial da população',
               style: TextStyle(
                 color: Color(0xFFBEE9FF),
                 fontWeight: FontWeight.w700,
@@ -416,7 +416,7 @@ class _AlertsHero extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Veja alertas publicados pela operacao governamental e mantenha orientacoes importantes sempre ao alcance.',
+            'Veja alertas publicados pela operação governamental e mantenha orientações importantes sempre ao alcance.',
             style: TextStyle(
               color: Colors.white,
               fontSize: 24,
@@ -429,8 +429,8 @@ class _AlertsHero extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _HeroPill(label: 'Nao lidos', value: '$unread'),
-              _HeroPill(label: 'Historico salvo', value: '$total'),
+              _HeroPill(label: 'Não lidos', value: '$unread'),
+              _HeroPill(label: 'Histórico salvo', value: '$total'),
             ],
           ),
         ],
@@ -586,7 +586,7 @@ class _SeverityChip extends StatelessWidget {
       'critica' || 'critico' => (
           const Color(0xFF5C1E22),
           const Color(0xFFFFB9B5),
-          'Critico'
+          'Crítico'
         ),
       'alta' || 'alto' => (
           const Color(0xFF5B3A12),
@@ -653,12 +653,12 @@ class _EmergencyPanel extends StatelessWidget {
           ),
           SizedBox(height: 12),
           Text(
-            'Procure atendimento profissional urgente se houver falta de ar intensa, dor no peito, confusao, desmaio, febre muito alta persistente, rigidez de nuca, sangramento importante ou piora rapida do estado geral.',
+            'Procure atendimento profissional urgente se houver falta de ar intensa, dor no peito, confusão, desmaio, febre muito alta persistente, rigidez de nuca, sangramento importante ou piora rápida do estado geral.',
             style: TextStyle(color: Color(0xFFFFD6D6), height: 1.45),
           ),
           SizedBox(height: 12),
           Text(
-            'Este app apoia monitoramento populacional. Ele nao faz diagnostico nem substitui medico, UPA, hospital, SAMU ou orientacao clinica.',
+            'Este app apoia monitoramento populacional. Ele não faz diagnóstico nem substitui médico, UPA, hospital, SAMU ou orientação clínica.',
             style: TextStyle(color: Color(0xFFFFC2C2), height: 1.45),
           ),
         ],

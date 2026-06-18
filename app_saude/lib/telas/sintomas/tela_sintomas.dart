@@ -1174,7 +1174,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Já recebemos seus sintomas esta semana. Você pode enviar novamente — seu novo relato será registrado normalmente.',
+                    'Já recebemos seus sintomas.',
                     style: const TextStyle(
                         color: Color(0xFF88AFC5), fontSize: 13, height: 1.4),
                   ),

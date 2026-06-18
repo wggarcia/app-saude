@@ -30,7 +30,7 @@ class LocationService {
   static Future<void> _ensurePermission() async {
     final enabled = await Geolocator.isLocationServiceEnabled();
     if (!enabled) {
-      throw Exception('Ative a localizacao do aparelho para continuar.');
+      throw Exception('Ative a localização do aparelho para continuar.');
     }
 
     var permission = await Geolocator.checkPermission();
@@ -40,7 +40,7 @@ class LocationService {
 
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      throw Exception('Permissao de localizacao negada.');
+      throw Exception('Permissão de localização negada.');
     }
   }
 
@@ -171,30 +171,30 @@ class LocationService {
     final raw = error.toString();
 
     if (raw.contains('gps_antigo')) {
-      return 'O iPhone retornou uma localizacao antiga. Abra o app Mapas por alguns segundos, volte ao SolusCRT e toque em Enviar novamente.';
+      return 'O iPhone retornou uma localização antiga. Abra o app Mapas por alguns segundos, volte ao SolusCRT e toque em Enviar novamente.';
     }
     if (raw.contains('gps_impreciso')) {
       final meters = RegExp(r'gps_impreciso_(\d+)m').firstMatch(raw)?.group(1);
-      return 'O GPS atual esta impreciso${meters == null ? '' : ' (${meters}m)'}. Ative Localizacao Precisa e tente em area aberta ou perto de uma janela.';
+      return 'O GPS atual está impreciso${meters == null ? '' : ' (${meters}m)'}. Ative Localização Precisa e tente em área aberta ou perto de uma janela.';
     }
     if (raw.contains('deniedForever')) {
-      return 'A permissao de localizacao esta bloqueada. Abra Ajustes > SolusCRT Saude > Localizacao e marque Durante o Uso com Localizacao Precisa.';
+      return 'A permissão de localização está bloqueada. Abra Ajustes > SolusCRT Saúde > Localização e marque Durante o Uso com Localização Precisa.';
     }
     if (raw.contains('denied')) {
-      return 'Permissao de localizacao negada. Autorize o SolusCRT Saude a usar localizacao Durante o Uso.';
+      return 'Permissão de localização negada. Autorize o SolusCRT Saúde a usar localização Durante o Uso.';
     }
     if (raw.contains('Location services are disabled') ||
-        raw.contains('Ative a localizacao')) {
-      return 'O servico de localizacao do iPhone esta desligado. Ative Localizacao nos Ajustes do aparelho.';
+        raw.contains('Ative a localização')) {
+      return 'O serviço de localização do iPhone está desligado. Ative Localização nos Ajustes do aparelho.';
     }
     if (raw.contains('TimeoutException') || raw.contains('timeout')) {
-      return 'O iPhone nao entregou uma posicao GPS dentro do tempo limite. No simulador, escolha uma localizacao em Debug > Simulate Location. No iPhone real, abra o app Mapas por alguns segundos e tente novamente. Detalhe tecnico: $raw';
+      return 'O iPhone não entregou uma posição GPS dentro do tempo limite. No simulador, escolha uma localização em Debug > Simulate Location. No iPhone real, abra o app Mapas por alguns segundos e tente novamente. Detalhe técnico: $raw';
     }
     if (raw.contains('gps_falhou')) {
-      return 'O iPhone nao retornou localizacao atual pelo metodo direto nem pelo monitoramento em tempo real. No simulador, configure Debug > Simulate Location. No iPhone real, confirme Ajustes > Privacidade e Seguranca > Servicos de Localizacao ligado. Detalhe tecnico: $raw';
+      return 'O iPhone não retornou localização atual pelo método direto nem pelo monitoramento em tempo real. No simulador, configure Debug > Simulate Location. No iPhone real, confirme Ajustes > Privacidade e Segurança > Serviços de Localização ligado. Detalhe técnico: $raw';
     }
 
-    return 'Nao foi possivel confirmar seu GPS atual agora. O envio foi bloqueado para nao registrar seu sintoma na cidade errada. Detalhe tecnico: $raw';
+    return 'Não foi possível confirmar seu GPS atual agora. O envio foi bloqueado para não registrar seu sintoma na cidade errada. Detalhe técnico: $raw';
   }
 
   static bool _isFresh(Position? position) {

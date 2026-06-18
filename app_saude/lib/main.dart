@@ -21,7 +21,7 @@ class SolusCrtAppSaude extends StatelessWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'SolusCRT Saude',
+      title: 'SolusCRT Saúde',
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: background,

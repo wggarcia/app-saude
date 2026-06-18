@@ -76,9 +76,9 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
     final sair = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Aceite necessario'),
+            title: const Text('Aceite necessário'),
             content: const Text(
-              'Para proteger voce e a integridade do radar de sinais de saude, o app so pode funcionar apos a aceitacao dos Termos de Uso e da Politica de Privacidade.',
+              'Para proteger você e a integridade do radar de sinais de saúde, o app só pode funcionar após a aceitação dos Termos de Uso e da Política de Privacidade.',
             ),
             actions: [
               TextButton(
@@ -121,67 +121,67 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                       icon: Icons.verified_user_outlined,
                       title: 'Termos de Uso',
                       summary:
-                          'O SolusCRT Saude e um aplicativo privado e gratuito da SolusCRT para acompanhamento de sinais de saude da comunidade. O app permite envio voluntario sem cadastro nominal de sinais de saude para apoiar uma leitura territorial de tendencias.',
+                          'O SolusCRT Saúde é um aplicativo privado e gratuito da SolusCRT para acompanhamento de sinais de saúde da comunidade. O app permite envio voluntário de sinais de saúde para apoiar uma leitura territorial de tendências.',
                       items: [
-                        'Use o app de boa-fe, com informacoes verdadeiras e sem tentar manipular focos, volumes ou localidades.',
-                        'O app nao substitui consulta medica, diagnostico, prescricao, emergencia, SAMU, pronto atendimento ou orientacao de profissional de saude.',
+                        'Use o app de boa-fé, com informações verdadeiras e sem tentar manipular focos, volumes ou localidades.',
+                        'O app não substitui consulta médica, diagnóstico, prescrição, emergência, SAMU, pronto atendimento ou orientação de profissional de saúde.',
                         'Alertas exibidos no app possuem finalidade informativa e preventiva, podendo variar conforme disponibilidade de dados, fontes oficiais e sinais colaborativos.',
-                        'E proibido usar automacao, envio massivo, dados falsos, engenharia reversa, tentativa de invasao ou qualquer ato que comprometa o sistema.',
+                        'É proibido usar automação, envio massivo, dados falsos, engenharia reversa, tentativa de invasão ou qualquer ato que comprometa o sistema.',
                       ],
                     ),
                     const _LegalSection(
                       icon: Icons.privacy_tip_outlined,
-                      title: 'Politica de Privacidade e LGPD',
+                      title: 'Política de Privacidade e LGPD',
                       summary:
-                          'Tratamos dados com finalidade de inteligencia de dados de saude, seguranca, prevencao a fraude, melhoria do radar e comunicacao de alertas.',
+                          'Tratamos dados com finalidade de inteligência epidemiológica, segurança, prevenção à fraude, melhoria do radar e comunicação de alertas.',
                       items: [
-                        'O app pode tratar sintomas informados, localizacao aproximada ou precisa, cidade, bairro, estado, data, identificador tecnico aleatorio do app e dados de seguranca.',
-                        'Sinais de saude sao usados preferencialmente de forma agregada, estatistica e territorial, reduzindo exposicao individual.',
-                        'A localizacao e usada para registrar sinais no municipio correto, mostrar focos proximos e reduzir risco de informacao falsa.',
-                        'Voce pode revogar permissoes no iPhone a qualquer momento. Sem localizacao atual, algumas funcoes podem ser limitadas para proteger a confiabilidade do mapa.',
+                        'O app pode tratar sintomas informados, localização aproximada ou precisa, cidade, bairro, estado, data, identificador técnico aleatório do app e dados de segurança.',
+                        'Sinais de saúde são usados preferencialmente de forma agregada, estatística e territorial, reduzindo exposição individual.',
+                        'A localização é usada para registrar sinais no município correto, mostrar focos próximos e reduzir risco de informação falsa.',
+                        'Você pode revogar permissões no iPhone a qualquer momento. Sem localização atual, algumas funções podem ser limitadas para proteger a confiabilidade do mapa.',
                       ],
                     ),
                     const _LegalSection(
                       icon: Icons.health_and_safety_outlined,
-                      title: 'Consentimento de Saude e Localizacao',
+                      title: 'Consentimento de Saúde e Localização',
                       summary:
-                          'Dados de saude e localizacao sao sensiveis. Ao continuar, voce autoriza o tratamento necessario para o funcionamento do radar de sinais de saude.',
+                          'Dados de saúde e localização são sensíveis. Ao continuar, você autoriza o tratamento necessário para o funcionamento do radar de sinais de saúde.',
                       items: [
-                        'O envio de sintomas e voluntario e deve representar a sua situacao real no momento do envio.',
-                        'O SolusCRT pode aplicar filtros antifraude por aparelho, rede, repeticao, qualidade de GPS e padroes de uso.',
-                        'Casos suspeitos exibidos no mapa nao significam diagnostico confirmado; dados oficiais e sinais colaborativos sao camadas diferentes.',
-                        'Em caso de falta de ar intensa, dor forte, confusao, agravamento ou emergencia, procure atendimento medico imediatamente.',
+                        'O envio de sintomas é voluntário e deve representar a sua situação real no momento do envio.',
+                        'O SolusCRT pode aplicar filtros antifraude por aparelho, rede, repetição, qualidade de GPS e padrões de uso.',
+                        'Casos suspeitos exibidos no mapa não significam diagnóstico confirmado; dados oficiais e sinais colaborativos são camadas diferentes.',
+                        'Em caso de falta de ar intensa, dor forte, confusão, agravamento ou emergência, procure atendimento médico imediatamente.',
                       ],
                     ),
                     const _LegalSection(
                       icon: Icons.gavel_outlined,
-                      title: 'Responsabilidade e Seguranca',
+                      title: 'Responsabilidade e Segurança',
                       summary:
-                          'A plataforma busca apoiar decisao responsavel, mas depende de conectividade, permissoes, disponibilidade de fontes, qualidade dos envios e validacoes tecnicas.',
+                          'A plataforma busca apoiar decisão responsável, mas depende de conectividade, permissões, disponibilidade de fontes, qualidade dos envios e validações técnicas.',
                       items: [
-                        'Podemos atualizar controles, regras antifraude, formas de exibicao, termos e politicas para melhorar seguranca e conformidade.',
-                        'A SolusCRT pode exibir indicadores agregados e anonimos conforme finalidade adequada, permissao e perfil contratado.',
-                        'Incidentes, abuso, fraude ou risco de seguranca podem gerar bloqueio, auditoria, descarte de sinais e comunicacoes cabiveis.',
-                        'Versao dos termos: ${LegalConsentService.currentVersion}.',
+                        'Podemos atualizar controles, regras antifraude, formas de exibição, termos e políticas para melhorar segurança e conformidade.',
+                        'A SolusCRT pode exibir indicadores agregados e anônimos conforme finalidade adequada, permissão e perfil contratado.',
+                        'Incidentes, abuso, fraude ou risco de segurança podem gerar bloqueio, auditoria, descarte de sinais e comunicações cabíveis.',
+                        'Versão dos termos: ${LegalConsentService.currentVersion}.',
                       ],
                     ),
                     const SizedBox(height: 8),
                     _ConsentCheckbox(
                       value: _terms,
                       onChanged: (value) => setState(() => _terms = value),
-                      text: 'Li e aceito os Termos de Uso do SolusCRT Saude.',
+                      text: 'Li e aceito os Termos de Uso do SolusCRT Saúde.',
                     ),
                     _ConsentCheckbox(
                       value: _privacy,
                       onChanged: (value) => setState(() => _privacy = value),
                       text:
-                          'Li e aceito a Politica de Privacidade e o tratamento de dados conforme a LGPD.',
+                          'Li e aceito a Política de Privacidade e o tratamento de dados conforme a LGPD.',
                     ),
                     _ConsentCheckbox(
                       value: _health,
                       onChanged: (value) => setState(() => _health = value),
                       text:
-                          'Entendo que o app nao substitui atendimento medico e autorizo o uso de localizacao e sinais de saude para o funcionamento do radar.',
+                          'Entendo que o app não substitui atendimento médico e autorizo o uso de localização e sinais de saúde para o funcionamento do radar.',
                     ),
                     const SizedBox(height: 20),
                     Row(
@@ -189,7 +189,7 @@ class _TelaAceiteLegalState extends State<TelaAceiteLegal> {
                         Expanded(
                           child: OutlinedButton(
                             onPressed: _saving ? null : _decline,
-                            child: const Text('Nao aceito'),
+                            child: const Text('Não aceito'),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -254,7 +254,7 @@ class _LegalHero extends StatelessWidget {
           ),
           SizedBox(height: 10),
           Text(
-            'Leia e aceite os termos para usar o SolusCRT Saude com seguranca, transparencia e responsabilidade.',
+            'Leia e aceite os termos para usar o SolusCRT Saúde com segurança, transparência e responsabilidade.',
             style: TextStyle(
               color: Color(0xFFC1D6E2),
               fontSize: 16,
