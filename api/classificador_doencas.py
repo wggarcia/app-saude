@@ -888,6 +888,19 @@ def _prior_anamnese_override(prior: float, doenca: str, dados: dict[str, Any]) -
         if doenca == "Hepatite A/B":
             return max(prior, 0.15)
 
+    # Reduzir prior de Leptospirose quando AMBAS as vias de transmissão são negadas
+    if dados.get("exposicao_agua_enchente") is False and dados.get("contato_roedores") is False:
+        if doenca == "Leptospirose":
+            return min(prior, 0.01)   # praticamente impossível sem exposição confirmada
+
+    # Reduzir prior de Malária quando viagem endêmica é negada
+    if dados.get("viagem_area_endemica") is False and doenca == "Malaria":
+        return min(prior, 0.005)  # sem viagem à Amazônia/pantanal, malária urbana é rarissima
+
+    # Reduzir prior de Hantavirose quando contato com roedores é negado
+    if dados.get("contato_roedores") is False and doenca == "Hantavirose":
+        return min(prior, 0.005)
+
     if dados.get("viagem_area_endemica"):
         if doenca == "Malaria":
             # Tríade febril em retornante da Amazônia — prior geográfico de SP (0.01) é irrelevante
@@ -959,6 +972,25 @@ def _modificadores_anamnese(dados: dict[str, Any], doenca: str) -> float:
             mult *= 2.5
         elif doenca == "Leptospirose":
             mult *= 2.0
+
+    # Leptospirose sem vias de transmissão: penalidade forte quando AMBAS são explicitamente negadas.
+    # Transmissão da leptospirose é quase exclusivamente via exposição a água contaminada
+    # ou contato com urina de roedor. Sem as duas, é epidemiologicamente improvável.
+    if doenca == "Leptospirose":
+        agua = dados.get("exposicao_agua_enchente")
+        ratos = dados.get("contato_roedores")
+        if agua is False and ratos is False:
+            mult *= 0.05   # ambas as vias negadas → praticamente excluída
+        elif agua is False or ratos is False:
+            mult *= 0.30   # uma via negada → ainda possível mas improvável
+
+    # Hantavirose sem contato com roedores → quase impossível (transmissão é aerossol de roedor)
+    if doenca == "Hantavirose" and dados.get("contato_roedores") is False:
+        mult *= 0.05
+
+    # Malária sem viagem para área endêmica → praticamente impossível no Brasil urbano
+    if doenca == "Malaria" and dados.get("viagem_area_endemica") is False:
+        mult *= 0.05
 
     # Contato com caso confirmado — doenças de transmissão pessoa-a-pessoa
     if dados.get("contato_caso_confirmado"):
@@ -1224,6 +1256,19 @@ def classificar_para_cidadao(dados: dict[str, Any], estado: str | None = None) -
     # nenhuma febre foi marcada (o prior geográfico pode ter inflado Dengue/arbovírus).
     if not dados.get("febre") and "Febril" in info_sindrome.get("sindrome", ""):
         info_sindrome = SINDROME_CIDADAO["Inconclusivo"]
+
+    # Guarda: se Leptospirose é primária mas ambas as vias de exposição foram negadas,
+    # não mencionar "enchente/animais" na conduta — seria clinicamente enganoso.
+    if doenca == "Leptospirose":
+        agua = dados.get("exposicao_agua_enchente")
+        ratos = dados.get("contato_roedores")
+        if agua is False and ratos is False:
+            # Reclassificar como síndrome febril genérica — sem menção a leptospirose
+            info_sindrome = {
+                "sindrome": "Síndrome Febril com Dores Musculares",
+                "cor": "amarela",
+                "conduta": "Repouso e hidratação. Procure UBS se a febre persistir por mais de 48h ou se surgirem manchas, icterícia ou piora do estado geral.",
+            }
 
     # Gastroenterite com febre + dor abdominal → escalação para amarela.
     # Esses dois sinais juntos são sinal de alarme para dengue — não podemos orientar

@@ -706,7 +706,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
                 _avancar();
               },
               style: TextButton.styleFrom(
-                foregroundColor: Colors.white30,
+                foregroundColor: Colors.white,
               ),
               child: Text(
                 _fase == 0 ? 'Não tenho certeza — pular' : 'Pular esta pergunta',
