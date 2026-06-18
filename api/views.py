@@ -1978,22 +1978,22 @@ def _semaforo_publico(nivel):
         "baixo": {
             "faixa": "Verde",
             "cor": "#1DD1A1",
-            "descricao": "Sinais sob monitoramento, sem pressao relevante no momento.",
+            "descricao": "Sinais sob monitoramento, sem pressão relevante no momento.",
         },
         "atencao": {
             "faixa": "Amarelo",
             "cor": "#FFD166",
-            "descricao": "Oscilacao perceptivel de sinais, com necessidade de atencao local.",
+            "descricao": "Oscilação perceptível de sinais, com necessidade de atenção local.",
         },
         "moderado": {
             "faixa": "Laranja",
             "cor": "#FF9B54",
-            "descricao": "Crescimento consistente de sinais na regiao, com foco reforcado de vigilancia.",
+            "descricao": "Crescimento consistente de sinais na região, com foco reforçado de vigilância.",
         },
         "alto": {
             "faixa": "Vermelho",
             "cor": "#FF6B6B",
-            "descricao": "Alta concentracao de sinais e crescimento acima do esperado para a area.",
+            "descricao": "Alta concentração de sinais e crescimento acima do esperado para a área.",
         },
     }
     return mapa.get(nivel, mapa["baixo"])

@@ -90,7 +90,7 @@ class PushService {
           const AndroidNotificationChannel(
             'soluscrt_governo',
             'Alertas governamentais',
-            description: 'Comunicados oficiais para a populacao',
+            description: 'Comunicados oficiais para a população',
             importance: Importance.max,
             playSound: true,
           ),
@@ -187,7 +187,7 @@ class PushService {
     const android = AndroidNotificationDetails(
       'soluscrt_governo',
       'Alertas governamentais',
-      channelDescription: 'Comunicados oficiais para a populacao',
+      channelDescription: 'Comunicados oficiais para a população',
       importance: Importance.max,
       priority: Priority.high,
       playSound: true,

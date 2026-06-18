@@ -589,7 +589,7 @@ class _LiveMetricsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Semaforo epidemiologico',
+              'Semáforo epidemiológico',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,

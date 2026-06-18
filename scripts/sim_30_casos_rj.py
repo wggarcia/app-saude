@@ -9,7 +9,7 @@ Ou interativo:
     >>> exec(open('scripts/sim_30_casos_rj.py').read())
 
 Para apagar os casos de simulação depois:
-    RegistroSintoma.objects.filter(ip='simulacao').delete()
+    RegistroSintoma.objects.filter(device_id__startswith='sim_').delete()
 """
 
 import uuid
@@ -40,26 +40,26 @@ _set_rls(empresa.id)
 # ── Localizações ──────────────────────────────────────────────────────────────
 # (bairro, cidade, estado, lat, lon)
 LOCAIS = [
-    ("Copacabana",     "Rio de Janeiro", "RJ", -22.9711, -43.1823),  # 0
-    ("Ipanema",        "Rio de Janeiro", "RJ", -22.9838, -43.2096),  # 1
-    ("Leblon",         "Rio de Janeiro", "RJ", -22.9860, -43.2247),  # 2
-    ("Botafogo",       "Rio de Janeiro", "RJ", -22.9444, -43.1867),  # 3
-    ("Flamengo",       "Rio de Janeiro", "RJ", -22.9333, -43.1770),  # 4
-    ("Centro",         "Rio de Janeiro", "RJ", -22.9068, -43.1729),  # 5
-    ("Tijuca",         "Rio de Janeiro", "RJ", -22.9274, -43.2348),  # 6
-    ("Méier",          "Rio de Janeiro", "RJ", -22.8939, -43.2769),  # 7
-    ("Madureira",      "Rio de Janeiro", "RJ", -22.8736, -43.3395),  # 8
-    ("Penha",          "Rio de Janeiro", "RJ", -22.8369, -43.2705),  # 9
-    ("Barra da Tijuca","Rio de Janeiro", "RJ", -23.0000, -43.3654),  # 10
-    ("Jacarepaguá",    "Rio de Janeiro", "RJ", -22.9364, -43.3690),  # 11
-    ("Campo Grande",   "Rio de Janeiro", "RJ", -22.9009, -43.5628),  # 12
-    ("Realengo",       "Rio de Janeiro", "RJ", -22.8798, -43.4165),  # 13
-    ("Bangu",          "Rio de Janeiro", "RJ", -22.8774, -43.4636),  # 14
-    ("Santa Cruz",     "Rio de Janeiro", "RJ", -22.9065, -43.6876),  # 15
-    ("Icaraí",         "Niterói",        "RJ", -22.8897, -43.1286),  # 16
-    ("Centro",         "Niterói",        "RJ", -22.8983, -43.1185),  # 17
-    ("Nova Iguaçu",    "Nova Iguaçu",    "RJ", -22.7594, -43.4511),  # 18
-    ("Duque de Caxias","Duque de Caxias","RJ", -22.7856, -43.3116),  # 19
+    ("Copacabana",     "Rio de Janeiro", "Rio de Janeiro", -22.9711, -43.1823),  # 0
+    ("Ipanema",        "Rio de Janeiro", "Rio de Janeiro", -22.9838, -43.2096),  # 1
+    ("Leblon",         "Rio de Janeiro", "Rio de Janeiro", -22.9860, -43.2247),  # 2
+    ("Botafogo",       "Rio de Janeiro", "Rio de Janeiro", -22.9444, -43.1867),  # 3
+    ("Flamengo",       "Rio de Janeiro", "Rio de Janeiro", -22.9333, -43.1770),  # 4
+    ("Centro",         "Rio de Janeiro", "Rio de Janeiro", -22.9068, -43.1729),  # 5
+    ("Tijuca",         "Rio de Janeiro", "Rio de Janeiro", -22.9274, -43.2348),  # 6
+    ("Méier",          "Rio de Janeiro", "Rio de Janeiro", -22.8939, -43.2769),  # 7
+    ("Madureira",      "Rio de Janeiro", "Rio de Janeiro", -22.8736, -43.3395),  # 8
+    ("Penha",          "Rio de Janeiro", "Rio de Janeiro", -22.8369, -43.2705),  # 9
+    ("Barra da Tijuca","Rio de Janeiro", "Rio de Janeiro", -23.0000, -43.3654),  # 10
+    ("Jacarepaguá",    "Rio de Janeiro", "Rio de Janeiro", -22.9364, -43.3690),  # 11
+    ("Campo Grande",   "Rio de Janeiro", "Rio de Janeiro", -22.9009, -43.5628),  # 12
+    ("Realengo",       "Rio de Janeiro", "Rio de Janeiro", -22.8798, -43.4165),  # 13
+    ("Bangu",          "Rio de Janeiro", "Rio de Janeiro", -22.8774, -43.4636),  # 14
+    ("Santa Cruz",     "Rio de Janeiro", "Rio de Janeiro", -22.9065, -43.6876),  # 15
+    ("Icaraí",         "Niterói",        "Rio de Janeiro", -22.8897, -43.1286),  # 16
+    ("Centro",         "Niterói",        "Rio de Janeiro", -22.8983, -43.1185),  # 17
+    ("Nova Iguaçu",    "Nova Iguaçu",    "Rio de Janeiro", -22.7594, -43.4511),  # 18
+    ("Duque de Caxias","Duque de Caxias","Rio de Janeiro", -22.7856, -43.3116),  # 19
 ]
 
 # ── Casos ─────────────────────────────────────────────────────────────────────
