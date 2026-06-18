@@ -1156,7 +1156,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
         ),
         const SizedBox(height: 24),
 
-        // Aviso de cooldown ativo
+        // Aviso informativo — já recebemos sintomas esta semana (não bloqueia)
         if (_cooldown != null) ...[
           const SizedBox(height: 4),
           Container(
@@ -1174,7 +1174,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Você já contribuiu esta semana. Próximo envio liberado em ${_formatarCooldown(_cooldown!)}.',
+                    'Já recebemos seus sintomas esta semana. Você pode enviar novamente — seu novo relato será registrado normalmente.',
                     style: const TextStyle(
                         color: Color(0xFF88AFC5), fontSize: 13, height: 1.4),
                   ),
@@ -1187,7 +1187,7 @@ class _TelaSintomasState extends State<TelaSintomas> {
 
         // Botão enviar
         FilledButton.icon(
-          onPressed: _loading || _totalSintomas == 0 || _cooldown != null
+          onPressed: _loading || _totalSintomas == 0
               ? null
               : _enviar,
           icon: _loading
@@ -1201,18 +1201,16 @@ class _TelaSintomasState extends State<TelaSintomas> {
           label: Text(
             _loading
                 ? 'Enviando...'
-                : _cooldown != null
-                    ? 'Envio bloqueado por 7 dias'
-                    : _totalSintomas == 0
-                        ? 'Nenhum sintoma selecionado'
-                        : 'Enviar $_totalSintomas sintoma${_totalSintomas > 1 ? 's' : ''} agora',
+                : _totalSintomas == 0
+                    ? 'Nenhum sintoma selecionado'
+                    : 'Enviar $_totalSintomas sintoma${_totalSintomas > 1 ? 's' : ''} agora',
           ),
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(54),
-            backgroundColor: _totalSintomas > 0 && _cooldown == null
+            backgroundColor: _totalSintomas > 0
                 ? const Color(0xFF39D0C3)
                 : const Color(0xFF1A3A50),
-            foregroundColor: _totalSintomas > 0 && _cooldown == null
+            foregroundColor: _totalSintomas > 0
                 ? Colors.black
                 : Colors.white38,
           ),
