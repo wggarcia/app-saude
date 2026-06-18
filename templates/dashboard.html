@@ -1947,20 +1947,35 @@ marker.bindPopup(`
           fillOpacity: 1
         }).addTo(map);
 
-        let bairrosTexto = Object.entries(g.bairros || {})
-  .sort((a, b) => b[1] - a[1])
-  .slice(0, 5)
-  .map(b => `📍 ${b[0]} (${b[1]})`)
-  .join("<br>");
+        // compute probability locally from this surto's symptom fields
+        let _rProb = {};
+        let _rFebre = d.febre || 0, _rTosse = d.tosse || 0, _rFaltaAr = d.falta_ar || 0;
+        let _rDor = d.dor_corpo || 0, _rCansaco = d.cansaco || 0;
+        let _rTotalSint = _rFebre + _rTosse + _rFaltaAr + _rDor + _rCansaco;
+        if (_rTotalSint > 0) {
+          _rProb = {
+            dengue: _rFebre + _rDor + _rCansaco,
+            covid: _rFebre + _rTosse + _rFaltaAr,
+            influenza: _rFebre + _rTosse + _rDor,
+          };
+          let _rSoma = Object.values(_rProb).reduce((a, b) => a + b, 0);
+          if (_rSoma > 0) Object.keys(_rProb).forEach(k => { _rProb[k] = Math.round((_rProb[k] / _rSoma) * 100); });
+        }
+        let principalDoenca = Object.keys(_rProb).length > 0
+          ? Object.entries(_rProb).sort((a, b) => b[1] - a[1])[0][0].toUpperCase()
+          : "Indefinido";
+        let probTexto = Object.entries(_rProb).sort((a, b) => b[1] - a[1]).slice(0, 3)
+          .map(p => `• ${p[0].toUpperCase()} (${p[1]}%)`).join("<br>");
+        let bairrosTexto = d.bairro ? `📍 ${d.bairro} (${d.total || 0})` : "Sem dados";
 
-marker.bindPopup(`
+        marker.bindPopup(`
   <b>📍 Região:</b><br>
-  ${[...g.cidades].join(", ")}<br><br>
+  ${d.cidade || "Desconhecida"}<br><br>
 
-  <b>📊 Casos:</b> ${g.total}<br><br>
+  <b>📊 Casos:</b> ${d.total}<br><br>
 
   <b>📍 Bairros afetados:</b><br>
-  ${bairrosTexto || "Sem dados"}<br><br>
+  ${bairrosTexto}<br><br>
 
   <b>🦠 Doença provável:</b><br>
   ${principalDoenca}<br><br>
