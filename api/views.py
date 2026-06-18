@@ -1983,42 +1983,42 @@ def _semaforo_publico(nivel):
 def _orientacao_publica(nivel, grupo_top=None):
     if nivel == "alto":
         return {
-            "titulo": "Momento de cautela reforcada",
-            "resumo": "Reduza exposicao desnecessaria, acompanhe sinais respiratorios ou febris e procure atendimento se houver piora.",
+            "titulo": "Momento de cautela reforçada",
+            "resumo": "Reduza exposição desnecessária, acompanhe sinais respiratórios ou febris e procure atendimento se houver piora.",
             "acoes": [
-                "Evite exposicoes prolongadas em locais fechados e muito cheios.",
-                "Acompanhe febre persistente, falta de ar ou agravamento rapido.",
-                "Busque avaliacao profissional diante de sinais de alerta.",
+                "Evite exposições prolongadas em locais fechados e muito cheios.",
+                "Acompanhe febre persistente, falta de ar ou agravamento rápido.",
+                "Busque avaliação profissional diante de sinais de alerta.",
             ],
         }
     if nivel == "moderado":
         return {
-            "titulo": "Atencao preventiva na regiao",
-            "resumo": "Ha crescimento relevante de sinais locais. Mantenha observacao ativa da sua saude e das pessoas proximas.",
+            "titulo": "Atenção preventiva na região",
+            "resumo": "Há crescimento relevante de sinais locais. Mantenha observação ativa da sua saúde e das pessoas próximas.",
             "acoes": [
-                "Observe evolucao de sintomas nas proximas 24 a 48 horas.",
-                "Reforce medidas basicas de higiene e ventilacao.",
-                "Se houver pessoas vulneraveis em casa, redobre a atencao.",
+                "Observe evolução de sintomas nas próximas 24 a 48 horas.",
+                "Reforce medidas básicas de higiene e ventilação.",
+                "Se houver pessoas vulneráveis em casa, redobre a atenção.",
             ],
         }
     if nivel == "atencao":
         return {
-            "titulo": "Sinais em observacao",
-            "resumo": "O territorio apresenta variacao acima do habitual, mas ainda sem pressao alta.",
+            "titulo": "Sinais em observação",
+            "resumo": "O território apresenta variação acima do habitual, mas ainda sem pressão alta.",
             "acoes": [
                 "Monitore como os sintomas evoluem ao longo do dia.",
-                "Evite automedicacao inadequada.",
-                "Consulte orientacao profissional se o quadro persistir.",
+                "Evite automedicação inadequada.",
+                "Consulte orientação profissional se o quadro persistir.",
             ],
         }
     grupo = grupo_top or "monitoramento geral"
     return {
-        "titulo": "Cenario estavel no momento",
-        "resumo": f"A regiao segue em observacao publica, com predominio recente de {grupo.lower()}.",
+        "titulo": "Cenário estável no momento",
+        "resumo": f"A região segue em observação pública, com predomínio recente de {grupo.lower()}.",
         "acoes": [
-            "Mantenha cuidados basicos de saude e hidratação.",
-            "Use o app para acompanhar mudancas no seu territorio.",
-            "Se surgirem sintomas, registre apenas uma vez por periodo.",
+            "Mantenha cuidados básicos de saúde e hidratação.",
+            "Use o app para acompanhar mudanças no seu território.",
+            "Se surgirem sintomas, registre apenas uma vez por período.",
         ],
     }
 
@@ -2026,26 +2026,26 @@ def _orientacao_publica(nivel, grupo_top=None):
 def _alerta_publico(nivel, crescimento, grupo_top=None):
     if nivel == "alto":
         return {
-            "titulo": "Alerta elevado na sua area",
-            "mensagem": f"Crescimento de {crescimento}% com concentracao relevante de sinais recentes.",
+            "titulo": "Alerta elevado na sua área",
+            "mensagem": f"Crescimento de {crescimento}% com concentração relevante de sinais recentes.",
             "gravidade": "critica",
         }
     if nivel == "moderado":
         return {
-            "titulo": "Atencao reforcada para a sua area",
-            "mensagem": f"A regiao apresenta crescimento de {crescimento}% e exige observacao preventiva.",
+            "titulo": "Atenção reforçada para a sua área",
+            "mensagem": f"A região apresenta crescimento de {crescimento}% e exige observação preventiva.",
             "gravidade": "alta",
         }
     if nivel == "atencao":
         return {
-            "titulo": "Mudanca detectada no territorio",
-            "mensagem": "Ha oscilacao de sinais locais. Continue acompanhando o radar da sua regiao.",
+            "titulo": "Mudança detectada no território",
+            "mensagem": "Há oscilação de sinais locais. Continue acompanhando o radar da sua região.",
             "gravidade": "moderada",
         }
     grupo = grupo_top or "sinais gerais"
     return {
-        "titulo": "Situacao sob controle",
-        "mensagem": f"Nao ha alerta elevado no momento. O principal sinal recente e {grupo.lower()}.",
+        "titulo": "Situação sob controle",
+        "mensagem": f"Não há alerta elevado no momento. O principal sinal recente é {grupo.lower()}.",
         "gravidade": "leve",
     }
 
