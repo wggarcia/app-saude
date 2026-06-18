@@ -44,9 +44,9 @@ class _TelaHomeState extends State<TelaHome> {
     final abrirAjustes = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Ativar localizacao do SolusCRT'),
+            title: const Text('Ativar localização do SolusCRT'),
             content: const Text(
-              'O app precisa pedir permissao de localizacao ao iPhone para mostrar focos perto de voce e enviar sintomas no municipio correto. Toque em Permitir quando o iPhone solicitar.',
+              'O app precisa pedir permissão de localização ao iPhone para mostrar focos perto de você e enviar sintomas no município correto. Toque em Permitir quando o iPhone solicitar.',
             ),
             actions: [
               TextButton(
@@ -432,7 +432,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
       slivers: [
         SliverAppBar.large(
           pinned: true,
-          title: const Text('SolusCRT Saude'),
+          title: const Text('SolusCRT Saúde'),
           backgroundColor: const Color(0xFF04131F),
           foregroundColor: Colors.white,
           actions: [
@@ -471,7 +471,7 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                   _ModoMonitoramentoCard(
                     modo: modoMonitoramento,
                     regiaoBaseLabel: regiaoBase == null
-                        ? 'Ainda aprendendo sua regiao principal'
+                        ? 'Ainda aprendendo sua região principal'
                         : '${regiaoBase!['bairro'] ?? 'Base'} • ${regiaoBase!['cidade']} / ${regiaoBase!['estado']}',
                     localAtualLabel: localAtual.isEmpty
                         ? 'Sem leitura atual'
@@ -493,10 +493,10 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                     registros7d: resumoData['registros_7d'] ?? 0,
                     crescimento7d: resumoData['crescimento_7d'] ?? 0,
                     localLabel: local.isEmpty
-                        ? 'Localizacao pendente'
+                        ? 'Localização pendente'
                         : '${local['cidade']} / ${local['estado']}',
                     regiaoBaseLabel: regiaoBase == null
-                        ? 'Aprendendo sua regiao principal'
+                        ? 'Aprendendo sua região principal'
                         : '${regiaoBase!['bairro'] ?? 'Base'} • ${regiaoBase!['cidade']} / ${regiaoBase!['estado']}',
                     localNivel: radar['nivel']?.toString() ?? 'baixo',
                     topDoencas: doencas,
@@ -531,23 +531,23 @@ class _TelaPainelCidadaoState extends State<TelaPainelCidadao>
                 if (!loading) _GuidanceCard(orientacao: orientacao),
                 const SizedBox(height: 16),
                 const _ValueCard(
-                  title: 'Monitoramento regional para a populacao',
+                  title: 'Monitoramento regional para a população',
                   body:
-                      'O app mostra sinais relevantes da sua regiao, como variacao de sintomas, doencas predominantes e hotspots recentes.',
+                      'O app mostra sinais relevantes da sua região, como variação de sintomas, doenças predominantes e hotspots recentes.',
                   icon: Icons.insights,
                 ),
                 const SizedBox(height: 16),
                 const _ValueCard(
-                  title: 'Privacidade e confianca do dado',
+                  title: 'Privacidade e confiança do dado',
                   body:
-                      'Os envios nao exigem cadastro nominal e passam por protecoes contra repeticao e abuso para manter a leitura epidemiologica mais confiavel.',
+                      'Os envios são anônimos e passam por proteções contra repetição e abuso para manter a leitura epidemiológica mais confiável.',
                   icon: Icons.verified_user,
                 ),
                 const SizedBox(height: 16),
                 const _ValueCard(
-                  title: 'Informacao simples e responsavel',
+                  title: 'Informação simples e responsável',
                   body:
-                      'Acompanhe o radar local, o mapa publico e comunicados oficiais para tomar decisoes melhores no seu dia a dia.',
+                      'Acompanhe o radar local, o mapa público e comunicados oficiais para tomar decisões melhores no seu dia a dia.',
                   icon: Icons.language,
                 ),
               ],
@@ -606,14 +606,14 @@ class _LiveMetricsCard extends StatelessWidget {
                 _MetricPill(label: 'Registros 24h', value: '$registros24h'),
                 _MetricPill(label: 'Registros 7d', value: '$registros7d'),
                 _MetricPill(label: 'Crescimento', value: '$crescimento7d%'),
-                _MetricPill(label: 'Regiao-base', value: regiaoBaseLabel),
+                _MetricPill(label: 'Região-base', value: regiaoBaseLabel),
                 _MetricPill(label: 'Leitura atual', value: localLabel),
-                _MetricPill(label: 'Nivel local', value: localNivel),
+                _MetricPill(label: 'Nível local', value: localNivel),
               ],
             ),
             const SizedBox(height: 14),
             Text(
-              'Principais sinais recentes da sua regiao',
+              'Principais sinais recentes da sua região',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.9),
                 fontWeight: FontWeight.w600,
@@ -807,7 +807,7 @@ class _ModoMonitoramentoCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Territorio monitorado',
+              'Território monitorado',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -827,7 +827,7 @@ class _ModoMonitoramentoCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Regiao-base: $regiaoBaseLabel',
+              'Região-base: $regiaoBaseLabel',
               style: const TextStyle(color: Color(0xFF9CC4DB)),
             ),
             const SizedBox(height: 4),
@@ -844,7 +844,7 @@ class _ModoMonitoramentoCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Text(
-                  'Voce esta fora da sua regiao-base. O app pode acompanhar sua base principal ou a localizacao atual.',
+                  'Você está fora da sua região-base. O app pode acompanhar sua base principal ou a localização atual.',
                   style: TextStyle(color: Colors.white, height: 1.35),
                 ),
               ),
@@ -952,7 +952,7 @@ class _GuidanceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Orientacao para a populacao',
+              'Orientação para a população',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -1271,7 +1271,7 @@ class _HeroCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: const Text(
-              'Monitoramento publico de saude',
+              'Monitoramento público de saúde',
               style: TextStyle(
                 color: Color(0xFFBEE9FF),
                 fontSize: 12,
@@ -1281,7 +1281,7 @@ class _HeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           const Text(
-            'Acompanhe sua regiao, envie sintomas sem cadastro nominal e veja sinais de alerta do seu territorio.',
+            'Acompanhe sua região, envie sintomas de forma anônima e veja sinais de alerta do seu território.',
             style: TextStyle(
               fontSize: 28,
               height: 1.15,
@@ -1291,7 +1291,7 @@ class _HeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Veja sinais da sua regiao, acompanhe comunicados oficiais e contribua sem cadastro nominal para o monitoramento de saude publica.',
+            'Veja sinais da sua região, acompanhe comunicados oficiais e contribua de forma anônima para o monitoramento de saúde pública.',
             style: TextStyle(
               color: Color(0xFF9FC5D9),
               fontSize: 15,
@@ -1311,7 +1311,7 @@ class _HeroCard extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onSecondary,
                 icon: const Icon(Icons.map_outlined),
-                label: const Text('Abrir mapa publico'),
+                label: const Text('Abrir mapa público'),
               ),
             ],
           ),

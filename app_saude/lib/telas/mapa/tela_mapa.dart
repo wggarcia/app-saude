@@ -224,7 +224,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
         modoMonitoramento = modo;
         loading = false;
         notice = mapaSeguro.isEmpty
-            ? 'Ainda nao ha focos publicos recentes neste territorio.'
+            ? 'Ainda não há focos públicos recentes neste território.'
             : null;
       });
       _syncMapCamera();
@@ -241,7 +241,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
         localizacaoAtual = null;
         alertasPublicos = const [];
         notice =
-            'Nao foi possivel atualizar o radar local agora. O mapa publico continua disponivel para consulta.';
+            'Não foi possível atualizar o radar local agora. O mapa público continua disponível para consulta.';
         loading = false;
       });
       _syncMapCamera();
@@ -386,7 +386,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
       _mapController.move(point, 16.2);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Localizacao atual centralizada no mapa.'),
+          content: Text('Localização atual centralizada no mapa.'),
           duration: Duration(seconds: 3),
         ),
       );
@@ -397,9 +397,9 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
       final abrir = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('GPS indisponivel'),
+              title: const Text('GPS indisponível'),
               content: const Text(
-                'Nao consegui acessar sua localizacao exata agora. No simulador do Xcode, configure uma localizacao em Debug > Simulate Location. No iPhone real, confira se a permissao de localizacao esta ativa.',
+                'Não consegui acessar sua localização exata agora. No simulador do Xcode, configure uma localização em Debug > Simulate Location. No iPhone real, confira se a permissão de localização está ativa.',
               ),
               actions: [
                 TextButton(
@@ -420,7 +420,7 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Abra Ajustes > SolusCRT Saude > Localizacao e ative Localizacao Precisa.',
+                'Abra Ajustes > SolusCRT Saúde > Localização e ative Localização Precisa.',
               ),
               duration: Duration(seconds: 5),
             ),
@@ -670,7 +670,7 @@ class _MapHeroPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Radar epidemiologico vivo',
+                      'Radar epidemiológico vivo',
                       style: TextStyle(
                         color: Color(0xFF082033),
                         fontWeight: FontWeight.w900,
@@ -707,7 +707,7 @@ class _MapHeroPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '$principal | nivel ${radar['nivel']?.toString() ?? 'baixo'} | ${radar['registros_7d'] ?? 0} sinais em 7 dias | ${focosAtivos.toStringAsFixed(0)} focos ativos',
+            '$principal | nível ${radar['nivel']?.toString() ?? 'baixo'} | ${radar['registros_7d'] ?? 0} sinais em 7 dias | ${focosAtivos.toStringAsFixed(0)} focos ativos',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -973,7 +973,7 @@ class _RadarCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
-                  'Regiao-base aprendida: ${regiaoBase!['bairro'] ?? 'Base'} • ${regiaoBase!['cidade']} / ${regiaoBase!['estado']}',
+                  'Região-base aprendida: ${regiaoBase!['bairro'] ?? 'Base'} • ${regiaoBase!['cidade']} / ${regiaoBase!['estado']}',
                   style: const TextStyle(color: Color(0xFF9CC4DB)),
                 ),
               ),
@@ -998,7 +998,7 @@ class _RadarCard extends StatelessWidget {
             if (estaForaDaBase) ...[
               const SizedBox(height: 10),
               const Text(
-                'Voce esta fora da sua regiao-base. Alterne para acompanhar sua base principal ou o territorio atual.',
+                'Você está fora da sua região-base. Alterne para acompanhar sua base principal ou o território atual.',
                 style: TextStyle(color: Color(0xFF9CC4DB), height: 1.35),
               ),
             ],
@@ -1020,7 +1020,7 @@ class _RadarCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Nivel ${radar['nivel'] ?? 'baixo'} | ${radar['registros_7d'] ?? 0} registros em 7 dias | indice ativo 30d ${radar['indice_ativo_30d'] ?? radar['indice_ativo_7d'] ?? 0} | crescimento ${radar['crescimento_7d'] ?? 0}%',
+              'Nível ${radar['nivel'] ?? 'baixo'} | ${radar['registros_7d'] ?? 0} registros em 7 dias | índice ativo 30d ${radar['indice_ativo_30d'] ?? radar['indice_ativo_7d'] ?? 0} | crescimento ${radar['crescimento_7d'] ?? 0}%',
               style: const TextStyle(color: Color(0xFF97BDD2)),
             ),
             const SizedBox(height: 12),
@@ -1196,7 +1196,7 @@ class _CompactHotspotMarker extends StatelessWidget {
     final total = _activeValue(item);
     return Tooltip(
       message:
-          '${item['cidade'] ?? 'Regiao'} / ${item['estado'] ?? 'BR'} | foco ativo ${total.toStringAsFixed(1)}',
+          '${item['cidade'] ?? 'Região'} / ${item['estado'] ?? 'BR'} | foco ativo ${total.toStringAsFixed(1)}',
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -1262,13 +1262,13 @@ class _HotspotMarker extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Doenca provavel: ${item['doenca_dominante'] ?? item['grupo_dominante']}',
+                    'Doença provável: ${item['doenca_dominante'] ?? item['grupo_dominante'] ?? 'Monitoramento geral'}',
                     style: const TextStyle(color: Color(0xFF9CC4DB)),
                   ),
                   if (item['perfil_sindromico'] != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      'Perfil sindromico: ${item['perfil_sindromico']}',
+                      'Perfil sindrômico: ${item['perfil_sindromico']}',
                       style: const TextStyle(color: Color(0xFF9CC4DB)),
                     ),
                   ],
@@ -1389,14 +1389,23 @@ class _FocusVisual {
       String value when value.contains('malaria') => Icons.bug_report,
       String value when value.contains('sarampo') => Icons.masks,
       String value when value.contains('mening') => Icons.emergency,
+      String value when value.contains('hanta') => Icons.air,
+      String value when value.contains('bronq') => Icons.air,
       String value when value.contains('resp') || value.contains('gripe') =>
         Icons.air,
+      String value when value.contains('resfri') => Icons.air,
       String value
           when value.contains('arb') ||
               value.contains('deng') ||
               value.contains('zika') ||
               value.contains('chik') =>
         Icons.bug_report,
+      String value when value.contains('gastro') ||
+          value.contains('gastroint') ||
+          value.contains('diarr') =>
+        Icons.sick,
+      String value when value.contains('hepat') => Icons.medication_liquid,
+      String value when value.contains('virose') => Icons.healing,
       String value when value.contains('alert') => Icons.emergency,
       String value when value.contains('leve') => Icons.healing,
       _ => Icons.biotech,
@@ -1408,14 +1417,23 @@ class _FocusVisual {
       String value when value.contains('malaria') => 'MAL',
       String value when value.contains('sarampo') => 'SAR',
       String value when value.contains('mening') => 'MEN',
+      String value when value.contains('hanta') => 'HAN',
       String value when value.contains('gripe') => 'GRIPE',
+      String value when value.contains('bronq') => 'BRON',
+      String value when value.contains('resfri') => 'RESF',
       String value when value.contains('resp') => 'RESP',
       String value when value.contains('deng') => 'DENG',
       String value when value.contains('zika') => 'ZIKA',
       String value when value.contains('chik') => 'CHIK',
       String value when value.contains('arb') => 'ARBO',
+      String value when value.contains('gastro') ||
+          value.contains('gastroint') ||
+          value.contains('diarr') =>
+        'GAST',
+      String value when value.contains('hepat') => 'HEP',
+      String value when value.contains('virose') => 'VIRO',
       String value when value.contains('leve') => 'LEVE',
-      _ => 'FOCO',
+      _ => 'CASO',
     };
     final color = switch (faixa) {
       String value when value.contains('vermel') => const Color(0xFFE94747),

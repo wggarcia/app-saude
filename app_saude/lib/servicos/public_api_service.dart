@@ -1,9 +1,14 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
 import 'device_service.dart';
+
+// Chave SharedPreferences para persistir o timestamp do último envio de sintomas.
+const _kUltimoEnvioSintomas = 'sintoma_ultimo_envio_utc';
+const _kCooldownHoras = 168; // 7 dias
 
 class PublicApiService {
   static const _timeout = Duration(seconds: 12);
@@ -204,6 +209,8 @@ class PublicApiService {
             data['codigo']?.toString(), data['erro']?.toString()),
       );
     }
+    // Salva o timestamp apenas quando o servidor aceitou (status ok ou ja_considerado).
+    await _salvarUltimoEnvio();
     return data;
   }
 
@@ -230,6 +237,34 @@ class PublicApiService {
           }),
         )
         .timeout(_timeout);
+  }
+
+  // ── Cooldown local: 1 envio de sintomas por 24 h ────────────────────────────
+
+  /// Retorna quanto tempo falta para liberar o próximo envio.
+  /// Retorna null se já pode enviar.
+  static Future<Duration?> cooldownRestante() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kUltimoEnvioSintomas);
+      if (raw == null) return null;
+      final ultimo = DateTime.tryParse(raw);
+      if (ultimo == null) return null;
+      final proximo = ultimo.toUtc().add(const Duration(hours: _kCooldownHoras));
+      final agora = DateTime.now().toUtc();
+      if (agora.isBefore(proximo)) return proximo.difference(agora);
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _salvarUltimoEnvio() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+          _kUltimoEnvioSintomas, DateTime.now().toUtc().toIso8601String());
+    } catch (_) {}
   }
 
   static Map<String, dynamic> _decodeObject(String body) {

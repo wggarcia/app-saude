@@ -291,6 +291,9 @@ class _TelaSintomasState extends State<TelaSintomas> {
   bool _loading = false;
   Map<String, dynamic>? _lastResult;
 
+  // ── Cooldown: 1 envio por 24 h ──
+  Duration? _cooldown;
+
   // ── Totais ──
   int get _totalSintomas => _sintomas.values.where((v) => v).length;
 
@@ -590,6 +593,23 @@ class _TelaSintomasState extends State<TelaSintomas> {
       }
       return fallback;
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    PublicApiService.cooldownRestante().then((d) {
+      if (mounted && d != null) setState(() => _cooldown = d);
+    });
+  }
+
+  String _formatarCooldown(Duration d) {
+    final dias = d.inDays;
+    final horas = d.inHours % 24;
+    final minutos = d.inMinutes % 60;
+    if (dias > 0) return '${dias}d${horas > 0 ? ' ${horas}h' : ''}';
+    if (horas > 0) return '${horas}h${minutos > 0 ? ' ${minutos}min' : ''}';
+    return '${minutos > 0 ? minutos : 1} min';
   }
 
   @override
@@ -1136,9 +1156,40 @@ class _TelaSintomasState extends State<TelaSintomas> {
         ),
         const SizedBox(height: 24),
 
+        // Aviso de cooldown ativo
+        if (_cooldown != null) ...[
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D2233),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF1A4A6A)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_outline,
+                    color: Color(0xFF39D0C3), size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Você já contribuiu esta semana. Próximo envio liberado em ${_formatarCooldown(_cooldown!)}.',
+                    style: const TextStyle(
+                        color: Color(0xFF88AFC5), fontSize: 13, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+
         // Botão enviar
         FilledButton.icon(
-          onPressed: _loading || _totalSintomas == 0 ? null : _enviar,
+          onPressed: _loading || _totalSintomas == 0 || _cooldown != null
+              ? null
+              : _enviar,
           icon: _loading
               ? const SizedBox(
                   width: 18,
@@ -1150,17 +1201,20 @@ class _TelaSintomasState extends State<TelaSintomas> {
           label: Text(
             _loading
                 ? 'Enviando...'
-                : _totalSintomas == 0
-                    ? 'Nenhum sintoma selecionado'
-                    : 'Enviar $_totalSintomas sintoma${_totalSintomas > 1 ? 's' : ''} agora',
+                : _cooldown != null
+                    ? 'Envio bloqueado por 7 dias'
+                    : _totalSintomas == 0
+                        ? 'Nenhum sintoma selecionado'
+                        : 'Enviar $_totalSintomas sintoma${_totalSintomas > 1 ? 's' : ''} agora',
           ),
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(54),
-            backgroundColor: _totalSintomas > 0
+            backgroundColor: _totalSintomas > 0 && _cooldown == null
                 ? const Color(0xFF39D0C3)
                 : const Color(0xFF1A3A50),
-            foregroundColor:
-                _totalSintomas > 0 ? Colors.black : Colors.white38,
+            foregroundColor: _totalSintomas > 0 && _cooldown == null
+                ? Colors.black
+                : Colors.white38,
           ),
         ),
       ],
