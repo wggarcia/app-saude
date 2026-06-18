@@ -863,7 +863,7 @@ class _MapAlertBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  alerta['titulo']?.toString() ?? 'Alerta publico',
+                  alerta['titulo']?.toString() ?? 'Alerta público',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,

@@ -888,7 +888,7 @@ class _PublicAlertCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Alerta publico',
+                'Alerta público',
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: 12,
@@ -1092,7 +1092,7 @@ class _GovernmentAlertsCard extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   alerta['titulo']?.toString() ??
-                                      'Alerta publico',
+                                      'Alerta público',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w700,
