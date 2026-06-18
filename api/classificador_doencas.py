@@ -652,6 +652,11 @@ def _prior_geografico(doenca: str, estado: str | None) -> float:
 # Isso evita que febre simples gere suspeita de febre amarela.
 # ──────────────────────────────────────────────────────────────────────────────
 SINTOMA_CHAVE_OBRIGATORIO: dict[str, list[str]] = {
+    # Arboviroses: são doenças febris por definição — sem febre reportada,
+    # não classificar como arbovirose (evita "Síndrome Febril" quando não há febre).
+    "Dengue":         ["febre"],
+    "Zika":           ["febre"],
+    "Chikungunya":    ["febre"],
     "Febre Amarela":  ["ictericia", "manchas_hemorragicas"],       # sem icterícia ou hemorragia, não é FA
     "Malaria":        ["calafrios"],                                 # sem calafrios cíclicos, não é malária
     "Meningite":      ["rigidez_nuca"],                              # sem rigidez nuca, não é meningite
@@ -1213,6 +1218,12 @@ def classificar_para_cidadao(dados: dict[str, Any], estado: str | None = None) -
         info_sindrome = SINDROME_CIDADAO["Inconclusivo"]
     else:
         info_sindrome = SINDROME_CIDADAO.get(doenca, SINDROME_CIDADAO["Inconclusivo"])
+
+    # Guarda: se a síndrome contém "Febril" mas o cidadão NÃO reportou febre,
+    # rebaixar para síndrome genérica — evita "Síndrome Febril com Dores" quando
+    # nenhuma febre foi marcada (o prior geográfico pode ter inflado Dengue/arbovírus).
+    if not dados.get("febre") and "Febril" in info_sindrome.get("sindrome", ""):
+        info_sindrome = SINDROME_CIDADAO["Inconclusivo"]
 
     # Gastroenterite com febre + dor abdominal → escalação para amarela.
     # Esses dois sinais juntos são sinal de alarme para dengue — não podemos orientar

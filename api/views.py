@@ -2698,7 +2698,9 @@ def classificar_padrao(dados, setor: str = "governo"):
     Para resultado completo usar api.utils_ia.classificar_padrao diretamente.
     """
     from api.classificador_doencas import classificar, DOENCAS_BRASIL
-    resultado = classificar(dados, setor=setor)
+    # Passa estado para que o prior geográfico seja consistente com o classificador cidadão.
+    estado = dados.get("estado") or dados.get("uf") or ""
+    resultado = classificar(dados, setor=setor, estado=estado)
     doenca = resultado["primario"]
     grupo = resultado["grupo"]
     confianca = resultado["confianca"]
