@@ -843,7 +843,7 @@
               Modo do mapa
               <select id="modeFilter">
                 <option value="surtos">Surto detalhado</option>
-                <option value="radar">Radar saude</option>
+                <option value="radar">Radar saúde</option>
                 <option value="risco">Mapa de risco</option>
               </select>
             </label>
@@ -851,7 +851,7 @@
               Granularidade
               <select id="levelFilter">
                 <option value="bairros">Bairros</option>
-                <option value="municipios">Municipios</option>
+                <option value="municipios">Municípios</option>
                 <option value="estados">Estados</option>
               </select>
             </label>
@@ -881,7 +881,7 @@
         </section>
 
         <section class="section">
-          <h2>Alertas para a Populacao</h2>
+          <h2>Alertas para a População</h2>
           <p class="mini">Fluxo seguro: criar rascunho, revisar, aprovar e somente depois publicar no app da populacao.</p>
           <div class="stack">
             <label class="mini">Titulo
@@ -966,18 +966,18 @@
       <div class="sheet-body">
         <div>
           <div class="section">
-            <h2>Serie Historica e Vigilancia</h2>
+            <h2>Série Histórica e Vigilância</h2>
             <div class="chart-wrap"><canvas id="timelineChart"></canvas></div>
           </div>
           <div class="section" style="margin-top:14px;">
-            <h2>Doencas Provaveis por Foco Lider</h2>
+            <h2>Doenças Prováveis por Foco Líder</h2>
             <div class="chart-wrap"><canvas id="diseaseChart"></canvas></div>
           </div>
         </div>
         <div class="section">
           <h2>Detalhes da Localidade</h2>
           <div id="detailsBody" class="mini">
-            Selecione um foco no mapa ou na lista para abrir risco, prioridade, serie recente, recomendacao governamental e doencas provaveis.
+            Selecione um foco no mapa ou na lista para abrir risco, prioridade, série recente, recomendação governamental e doenças prováveis.
           </div>
           <div id="institutionalNote" class="mini" style="margin-top:14px;"></div>
         </div>
@@ -1218,8 +1218,8 @@
             <span class="badge critico">P${item.priority}</span>
           </div>
           <div class="mini" style="margin-top:8px;">
-            Vigilancia <strong>${item.surveillance_index.toFixed(1)}</strong> |
-            Pressao <strong>${item.resource_pressure.toFixed(1)}</strong><br>
+            Vigilância <strong>${item.surveillance_index.toFixed(1)}</strong> |
+            Pressão <strong>${item.resource_pressure.toFixed(1)}</strong><br>
             ${item.message}
           </div>
         </div>
@@ -1274,11 +1274,11 @@
           <div class="mini" style="margin-top:8px;">Leitura oficial municipal cruzada com sinais recentes do app. Use esta tela para diferenciar sinal colaborativo de dado confirmado por fonte externa.</div>
           <div class="official-detail-grid" style="margin-top:14px;">
             <div class="official-detail-box">
-              <strong>Territorio e populacao</strong>
+              <strong>Território e população</strong>
               <ul>
-                <li>Municipio: ${escapeHtml(payload.cidade)}/${escapeHtml(payload.estado)}</li>
-                <li>Codigo IBGE: ${escapeHtml(payload.codigo_ibge)}</li>
-                <li>Populacao: ${payload.populacao ? Number(payload.populacao).toLocaleString("pt-BR") : "nao disponivel"}</li>
+                <li>Município: ${escapeHtml(payload.cidade)}/${escapeHtml(payload.estado)}</li>
+                <li>Código IBGE: ${escapeHtml(payload.codigo_ibge)}</li>
+                <li>População: ${payload.populacao ? Number(payload.populacao).toLocaleString("pt-BR") : "não disponível"}</li>
                 <li>Fonte populacional: ${escapeHtml(payload.populacao_fonte || "pendente")}</li>
               </ul>
             </div>
@@ -1287,21 +1287,21 @@
               <ul>
                 <li>Sinais app 14 dias: ${Number(payload.sinais_app_14d || 0).toLocaleString("pt-BR")}</li>
                 <li>Sinais por 100 mil: ${payload.sinais_app_14d_por_100k ?? "sem denominador"}</li>
-                <li>Uso correto: alerta precoce, nao diagnostico clinico.</li>
+                <li>Uso correto: alerta precoce, não diagnóstico clínico.</li>
               </ul>
             </div>
             <div class="official-detail-box">
               <strong>InfoDengue / Fiocruz</strong>
               <ul>
-                ${arboviroses.map((arb) => `<li>${escapeHtml(arb.doenca)}: nivel ${escapeHtml(arb.nivel_alerta ?? "-")} | incidencia ${Number(arb.incidencia_100k || 0).toFixed(2)}/100k | casos ${escapeHtml(arb.casos_notificados ?? "-")}</li>`).join("")}
+                ${arboviroses.map((arb) => `<li>${escapeHtml(arb.doenca)}: nível ${escapeHtml(arb.nivel_alerta ?? "-")} | incidência ${Number(arb.incidencia_100k || 0).toFixed(2)}/100k | casos ${escapeHtml(arb.casos_notificados ?? "-")}</li>`).join("")}
               </ul>
             </div>
             <div class="official-detail-box">
               <strong>Como interpretar</strong>
               <ul>
-                <li>Se app sobe antes da fonte oficial, tratar como vigilancia antecipada.</li>
-                <li>Se fonte oficial confirma incidencia alta, priorizar resposta territorial.</li>
-                <li>Se fonte indisponivel, manter painel colaborativo separado e auditavel.</li>
+                <li>Se app sobe antes da fonte oficial, tratar como vigilância antecipada.</li>
+                <li>Se fonte oficial confirma incidência alta, priorizar resposta territorial.</li>
+                <li>Se fonte indisponível, manter painel colaborativo separado e auditável.</li>
               </ul>
             </div>
           </div>
@@ -1380,19 +1380,19 @@
           </div>
           <div class="info-card">
             <strong>${indicadores.municipios_com_populacao || 0}</strong>
-            <div class="mini">municipios com denominador populacional IBGE/SIDRA</div>
+            <div class="mini">municípios com denominador populacional IBGE/SIDRA</div>
           </div>
           <div class="info-card">
             <strong>${arboviroses.length}</strong>
-            <div class="mini">municipios cruzados com InfoDengue a partir dos sinais do app</div>
+            <div class="mini">municípios cruzados com InfoDengue a partir dos sinais do app</div>
           </div>
           <div class="mini">
-            Formula oficial aplicada: ${indicadores.formula || "casos / populacao * 100000"}.
-            Populacao: ${indicadores.fonte_populacao_prioritaria || "IBGE"}.
+            Fórmula oficial aplicada: ${indicadores.formula || "casos / população * 100000"}.
+            População: ${indicadores.fonte_populacao_prioritaria || "IBGE"}.
           </div>
           <div class="mini">${data.principio || ""}</div>
           <div class="alert-card">
-            <strong>Respiratorio oficial - InfoGripe</strong>
+            <strong>Respiratório oficial - InfoGripe</strong>
             <div class="mini">
               Status: ${(respiratorio.status || "pendente").replaceAll("_", " ")}<br>
               ${respiratorio.status === "ativo"
@@ -1458,10 +1458,10 @@
             <div class="alert-card">
               <strong>${item.cidade}/${item.estado}</strong>
               <div class="mini">
-                Populacao: ${item.populacao ? Number(item.populacao).toLocaleString("pt-BR") : "nao disponivel"} (${item.populacao_fonte || "fonte pendente"})<br>
+                População: ${item.populacao ? Number(item.populacao).toLocaleString("pt-BR") : "não disponível"} (${item.populacao_fonte || "fonte pendente"})<br>
                 Sinais app 14d: ${item.sinais_app_14d}<br>
                 Sinais app 14d por 100 mil: ${item.sinais_app_14d_por_100k ?? "-"}<br>
-                ${(item.arboviroses || []).map((arb) => `${arb.doenca}: nivel ${arb.nivel_alerta ?? "-"} | inc. ${Number(arb.incidencia_100k || 0).toFixed(2)}/100k`).join("<br>") || "Sem retorno oficial recente para arboviroses."}
+                ${(item.arboviroses || []).map((arb) => `${arb.doenca}: nível ${arb.nivel_alerta ?? "-"} | inc. ${Number(arb.incidencia_100k || 0).toFixed(2)}/100k`).join("<br>") || "Sem retorno oficial recente para arboviroses."}
               </div>
               ${registerOfficialDetail(`${item.cidade}/${item.estado}`, item)}
             </div>
@@ -1471,7 +1471,7 @@
         container.innerHTML = `
           <div class="info-card">
             <strong>Fontes oficiais Brasil</strong>
-            <div class="mini">Nao foi possivel atualizar as fontes oficiais neste momento. A camada colaborativa segue ativa.</div>
+            <div class="mini">Não foi possível atualizar as fontes oficiais neste momento. A camada colaborativa segue ativa.</div>
           </div>
         `;
       }
@@ -1671,8 +1671,8 @@
           <div class="mini" style="margin-top:8px;">
             ${focusSummary(area)} |
             crescimento ${area.growth_percent.toFixed(1)}%<br>
-            Vigilancia ${area.surveillance_index.toFixed(1)} |
-            Pressao ${area.resource_pressure.toFixed(1)}
+            Vigilância ${area.surveillance_index.toFixed(1)} |
+            Pressão ${area.resource_pressure.toFixed(1)}
           </div>
         </div>
       `).join("");
@@ -1700,7 +1700,7 @@
           labels,
           datasets: [
             { label: "Casos", data: cases, backgroundColor: "#5af0d3", borderRadius: 12 },
-            { label: "Pressao", data: pressure, backgroundColor: "#ff9b54", borderRadius: 12 },
+            { label: "Pressão", data: pressure, backgroundColor: "#ff9b54", borderRadius: 12 },
           ],
         },
         options: {
@@ -1769,8 +1769,8 @@
         Crescimento: ${area.growth_percent.toFixed(1)}%<br>
         Risco: ${area.risk_level}<br>
         Foco predominante: ${area.dominant_symptom}<br>
-        Doenca provavel: ${area.dominant_disease}<br>
-        Resposta tatica: ${area.alert_stage}<br>
+        Doença provável: ${area.dominant_disease}<br>
+        Resposta tática: ${area.alert_stage}<br>
         Prioridade: P${area.response_priority}<br>
         Leitura do foco: ${area.focus_message}<br><br>
         <strong>Resposta governamental:</strong><br>
@@ -1804,17 +1804,17 @@
               <li>Janela anterior: ${area.previous_24h.toLocaleString("pt-BR")}</li>
               <li>Crescimento: ${area.growth_percent.toFixed(1)}%</li>
               <li>Atividade recente: ${area.activity_percent.toFixed(1)}%</li>
-              <li>Desaceleracao: ${area.decay_percent.toFixed(1)}%</li>
+              <li>Desaceleração: ${area.decay_percent.toFixed(1)}%</li>
               <li>Tendencia: ${area.trend_status}</li>
               <li>Risco: ${area.risk_level}</li>
               <li>Prioridade: P${area.response_priority}</li>
             </ul>
           </div>
           <div class="detail-box">
-            <strong>Resposta e prontidao</strong>
+            <strong>Resposta e prontidão</strong>
             <ul>
-              <li>Indice de vigilancia: ${area.surveillance_index.toFixed(1)}</li>
-              <li>Pressao de recursos: ${area.resource_pressure.toFixed(1)}</li>
+              <li>Índice de vigilância: ${area.surveillance_index.toFixed(1)}</li>
+              <li>Pressão de recursos: ${area.resource_pressure.toFixed(1)}</li>
               <li>Fase operacional: ${area.alert_stage}</li>
               <li>${area.government_recommendation}</li>
             </ul>
@@ -1824,7 +1824,7 @@
             <ul>${symptoms}</ul>
           </div>
           <div class="detail-box">
-            <strong>Doencas provaveis</strong>
+            <strong>Doenças prováveis</strong>
             <ul>${diseases}</ul>
           </div>
         </div>
@@ -1866,21 +1866,28 @@
 
       const maxCases = Math.max(...areas.map((area) => activeFocusValue(area)), 1);
       const isBairroView = levelFilter.value === "bairros";
-      const heatPoints = areas
-        .filter((area) => area.latitude && area.longitude)
+      const mode = modeFilter.value;
+      const bounds = [];
+
+      // Heatmap: surtos e radar sim; risco não
+      if (mode !== "risco") {
+        const heatPoints = areas
+          .filter((area) => area.latitude && area.longitude)
           .map((area) => [area.latitude, area.longitude, Math.max(0.14, activeFocusValue(area) / maxCases)]);
 
-      heatLayer = L.heatLayer(heatPoints, {
-        radius: isBairroView ? 58 : 46,
-        blur: isBairroView ? 42 : 34,
-        gradient: { 0.2: "#17d7a0", 0.45: "#5af0d3", 0.7: "#ff9b54", 1.0: "#ff5574" },
-      }).addTo(map);
-
-      const bounds = [];
+        heatLayer = L.heatLayer(heatPoints, {
+          radius: isBairroView ? 58 : 46,
+          blur: isBairroView ? 42 : 34,
+          gradient: { 0.2: "#17d7a0", 0.45: "#5af0d3", 0.7: "#ff9b54", 1.0: "#ff5574" },
+        }).addTo(map);
+      }
 
       areas.forEach((area) => {
         if (!area.latitude || !area.longitude) return;
         bounds.push([area.latitude, area.longitude]);
+
+        // radar em bairros: apenas heatmap, sem marcadores
+        if (mode === "radar" && isBairroView) return;
 
         const marker = L.circleMarker([area.latitude, area.longitude], {
           radius: isBairroView ? 6 : 8,
@@ -1900,7 +1907,7 @@
             radius: area.radius,
             color: riskColor(area.risk_level),
             fillColor: riskColor(area.risk_level),
-            fillOpacity: 0.16,
+            fillOpacity: mode === "risco" ? 0.28 : 0.16,
             weight: 2.1,
           });
           bindHoverTooltip(focusCircle, `${area.label} | P${area.response_priority}`);
@@ -1910,7 +1917,7 @@
         }
       });
 
-      // Bring marker layer above heatmap (heatLayer is added to map DOM last → on top by default)
+      // Bring marker layer above heatmap
       map.removeLayer(markersLayer);
       markersLayer.addTo(map);
 
