@@ -273,9 +273,13 @@ if _REDIS_URL:
         }
     }
 else:
+    # FileBasedCache é compartilhado entre workers do mesmo processo Gunicorn,
+    # evitando que caches por processo (LocMemCache) causem inconsistência
+    # entre workers ao servir dados diferentes para o mesmo endpoint.
     CACHES = {
         "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+            "LOCATION": "/tmp/django_cache",
         }
     }
 
