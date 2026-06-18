@@ -923,9 +923,11 @@ def _prior_anamnese_override(prior: float, doenca: str, dados: dict[str, Any]) -
     # Prior geográfico de Zika (0.10-0.18) é muito baixo vs COVID (0.50) — sem override, Zika nunca vence.
     if dados.get("exantema") and dados.get("conjuntivite"):
         if doenca == "Zika":
-            zika_prior = 0.40  # exantema + conjuntivite = padrão de Zika
+            # exantema pruriginoso + conjuntivite não-purulenta = tríade clássica de Zika
+            # Prior de 0.40 era insuficiente para vencer Dengue (prior 0.80 em RJ)
+            zika_prior = 0.55  # elevado: exantema+conjuntivite juntos são patognomônicos de Zika
             if str(dados.get("intensidade_febre", "")).lower() == "baixa":
-                zika_prior = 0.55  # tríade completa: febre baixa + exantema + conjuntivite
+                zika_prior = 0.70  # tríade completa: febre baixa + exantema + conjuntivite
             return max(prior, zika_prior)
 
     # icterícia é sinal patognomônico de disfunção hepática — forte evidência contra Dengue típica.
@@ -961,28 +963,31 @@ def _modificadores_anamnese(dados: dict[str, Any], doenca: str) -> float:
 
     # Exposição à água de enchente/lama
     if dados.get("exposicao_agua_enchente"):
-        if doenca == "Leptospirose":
+        if doenca == "Hepatite A/B":
             mult *= 2.0
-        elif doenca == "Hepatite A/B":
-            mult *= 2.0
+        # Leptospirose: prior_override JÁ eleva de 0.08→0.45; modifier é refinamento leve
+        # (não aplicar 2.0 aqui — seria double-counting com o override de prior)
 
-    # Contato com roedores — override de prior já garante piso; modifier amplifica a vantagem
+    # Contato com roedores — override de prior já eleva Lepto/Hanta para 0.55
     if dados.get("contato_roedores"):
         if doenca == "Hantavirose":
-            mult *= 2.5
-        elif doenca == "Leptospirose":
-            mult *= 2.0
+            mult *= 2.5  # mantém: Hantavirose é muito rara, precisa do boost forte
 
-    # Leptospirose sem vias de transmissão: penalidade forte quando AMBAS são explicitamente negadas.
-    # Transmissão da leptospirose é quase exclusivamente via exposição a água contaminada
-    # ou contato com urina de roedor. Sem as duas, é epidemiologicamente improvável.
+    # Leptospirose — lógica unificada de exposição epidemiológica:
+    # - single exposure (uma via): refinamento leve (prior override já fez o trabalho pesado)
+    # - double exposure (ambas as vias): boost justificado — risco real duplicado
+    # - nenhuma via explicitamente negada: penalidade forte
     if doenca == "Leptospirose":
         agua = dados.get("exposicao_agua_enchente")
         ratos = dados.get("contato_roedores")
-        if agua is False and ratos is False:
-            mult *= 0.05   # ambas as vias negadas → praticamente excluída
+        if agua and ratos:
+            mult *= 3.0   # ambas as vias confirmadas → situação de risco real elevado
+        elif agua or ratos:
+            mult *= 1.5   # single exposure: refinamento (não segundo boost completo)
+        elif agua is False and ratos is False:
+            mult *= 0.05  # ambas negadas explicitamente → praticamente excluída
         elif agua is False or ratos is False:
-            mult *= 0.30   # uma via negada → ainda possível mas improvável
+            mult *= 0.30  # uma via negada → ainda possível mas improvável
 
     # Hantavirose sem contato com roedores → quase impossível (transmissão é aerossol de roedor)
     if doenca == "Hantavirose" and dados.get("contato_roedores") is False:
