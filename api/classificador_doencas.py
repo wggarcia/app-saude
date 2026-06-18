@@ -658,7 +658,7 @@ SINTOMA_CHAVE_OBRIGATORIO: dict[str, list[str]] = {
     "Zika":           ["febre"],
     "Chikungunya":    ["febre"],
     "Febre Amarela":  ["ictericia", "manchas_hemorragicas"],       # sem icterícia ou hemorragia, não é FA
-    "Malaria":        ["calafrios"],                                 # sem calafrios cíclicos, não é malária
+    "Malaria":        ["calafrios", "viagem_area_endemica"],         # calafrios cíclicos OU viagem endêmica
     "Meningite":      ["rigidez_nuca"],                              # sem rigidez nuca, não é meningite
     "Hantavirose":    ["falta_ar"],                                  # síndrome cardiopulmonar obrigatória
     "Sarampo":        ["exantema"],                                  # sem exantema, não é sarampo
@@ -943,6 +943,31 @@ def _prior_anamnese_override(prior: float, doenca: str, dados: dict[str, Any]) -
         if doenca == "Leptospirose":
             return max(prior, 0.20)
 
+    # Artralgia intensa é praticamente patognomônica de Chikungunya.
+    # Dengue causa mialgia/artralgia leve; incapacitante (intensidade='intensa') aponta Chikungunya.
+    # Sem este override, Dengue (prior 0.80 RJ) sempre vence Chikungunya (prior 0.35) no Sudeste.
+    if str(dados.get("intensidade_articular", "")).lower() == "intensa":
+        if doenca == "Chikungunya":
+            return max(prior, 0.65)
+        if doenca == "Dengue":
+            return min(prior, 0.25)  # dengue raramente causa artralgia incapacitante
+
+    # Tríade clássica de Sarampo: exantema + tosse + coriza.
+    # Prior 0.01 (doença rara pós-vacinação) tornaria o Sarampo invisível mesmo com triade perfeita.
+    # Override defensivo para garantir alerta ao profissional de saúde.
+    if dados.get("exantema") and dados.get("tosse") and dados.get("coriza"):
+        if doenca == "Sarampo":
+            sarampo_prior = 0.40
+            if dados.get("conjuntivite"):
+                sarampo_prior = 0.55  # tétrade: exantema+tosse+coriza+conjuntivite
+            return max(prior, sarampo_prior)
+
+    # Comorbidade + início gradual → padrão de exacerbação de DPOC/Bronquite crónica.
+    # Prior base 0.20 perde para COVID (prior 0.55 RJ) mesmo em apresentação atípica de COVID.
+    if dados.get("tem_comorbidade") and dados.get("inicio_abrupto") is False:
+        if doenca == "Bronquite / DPOC Agudização":
+            return max(prior, 0.65)
+
     return prior
 
 
@@ -1026,9 +1051,10 @@ def _modificadores_anamnese(dados: dict[str, Any], doenca: str) -> float:
         elif doenca in ("Dengue", "Gripe (Influenza)", "Malaria"):
             mult *= 0.5
 
-    # Comorbidade → aumenta risco de formas graves
+    # Comorbidade → aumenta risco de formas graves / padrão de DPOC crônica
     if dados.get("tem_comorbidade"):
-        if doenca in ("COVID-19", "Gripe (Influenza)", "Dengue", "Leptospirose"):
+        if doenca in ("COVID-19", "Gripe (Influenza)", "Dengue", "Leptospirose",
+                      "Bronquite / DPOC Agudização"):
             mult *= 1.3
 
     return mult
