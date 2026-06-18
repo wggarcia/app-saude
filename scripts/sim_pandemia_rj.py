@@ -42,10 +42,10 @@ BAIRROS = [
     ("Penha",           "Rio de Janeiro", "Rio de Janeiro", -22.8369, -43.2705),
     ("Barra da Tijuca", "Rio de Janeiro", "Rio de Janeiro", -23.0000, -43.3654),
     ("Bangu",           "Rio de Janeiro", "Rio de Janeiro", -22.8774, -43.4636),
-    ("Nova Iguaçu",     "Nova Iguaçu",    "RJ", -22.7594, -43.4511),
-    ("Duque de Caxias", "Duque de Caxias","RJ", -22.7856, -43.3116),
-    ("Icaraí",          "Niterói",        "RJ", -22.8897, -43.1286),
-    ("São Gonçalo",     "São Gonçalo",    "RJ", -22.8268, -43.0549),
+    ("Nova Iguaçu",     "Nova Iguaçu",    "Rio de Janeiro", -22.7594, -43.4511),
+    ("Duque de Caxias", "Duque de Caxias","Rio de Janeiro", -22.7856, -43.3116),
+    ("Icaraí",          "Niterói",        "Rio de Janeiro", -22.8897, -43.1286),
+    ("São Gonçalo",     "São Gonçalo",    "Rio de Janeiro", -22.8268, -43.0549),
 ]
 
 F = ["febre","tosse","dor_corpo","cansaco","falta_ar","dor_cabeca","dor_articular",
