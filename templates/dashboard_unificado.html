@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>SolusCRT Saude Monitoramento</title>
+  <title>SolusCRT Saúde — Monitoramento Epidemiológico</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -717,17 +717,17 @@
       <section class="topbar-card">
         <div class="brand-line">
           <div>
-            <div class="brand-title">SolusCRT Saude Monitoramento</div>
+            <div class="brand-title">SolusCRT Saúde — Monitoramento</div>
             <div class="environment-badge">Ambiente {{ setor_label }}</div>
             <div class="brand-subtitle">
               {% if dashboard_variant == "farmacia" %}
-                Radar epidemiologico para empresas, farmacias e decisao de estoque em tempo real.
+                Radar epidemiológico para empresas, farmácias e decisão de estoque em tempo real.
               {% elif dashboard_variant == "hospital" %}
-                Centro hospitalar de prontidao clinica para emergencias, capacidade assistencial e resposta rapida.
+                Centro hospitalar de prontidão clínica para emergências, capacidade assistencial e resposta rápida.
               {% elif dashboard_variant == "governo" %}
-                Centro premium de vigilancia governamental com inteligencia territorial profunda, prioridade de resposta e pressao de recursos.
+                Centro premium de vigilância governamental com inteligência territorial profunda, prioridade de resposta e pressão de recursos.
               {% else %}
-                Centro de comando epidemiologico com leitura de focos, sintomas, crescimento e risco.
+                Centro de comando epidemiológico com leitura de focos, sintomas, crescimento e risco.
               {% endif %}
             </div>
           </div>
@@ -808,7 +808,7 @@
               Granularidade
               <select id="levelFilter">
                 <option value="bairros">Bairros</option>
-                <option value="municipios">Municipios</option>
+                <option value="municipios">Municípios</option>
                 <option value="estados">Estados</option>
               </select>
             </label>
@@ -855,20 +855,20 @@
       <div class="dock-header">
         <div class="dock-title">
           {% if dashboard_variant == "farmacia" %}
-            Painel Tatico de Mercado e Saude
+            Painel Tático de Mercado e Saúde
           {% elif dashboard_variant == "hospital" %}
-            Painel Tatico de Capacidade Hospitalar
+            Painel Tático de Capacidade Hospitalar
           {% elif dashboard_variant == "governo" %}
-            Painel Premium de Vigilancia Governamental
+            Painel Premium de Vigilância Governamental
           {% else %}
-            Painel Tatico de Surto e Risco
+            Painel Tático de Surto e Risco
           {% endif %}
         </div>
-        <div class="mini">Sintomas, doencas provaveis, crescimento e foco detalhado equalizados.</div>
+        <div class="mini">Sintomas, doenças prováveis, crescimento e foco detalhado equalizados.</div>
       </div>
       <div class="dock-scroll">
         <section class="section">
-          <h2>Distribuicao de Doencas Provaveis</h2>
+          <h2>Distribuição de Doenças Prováveis</h2>
           <div class="chart-wrap">
             <canvas id="diseaseChart"></canvas>
           </div>
@@ -877,7 +877,7 @@
         <section class="detail-card">
           <h2 style="margin:0 0 10px; font-size:0.98rem;">Detalhes da Localidade</h2>
           <div id="detailsBody" class="mini">
-            Selecione um foco no mapa ou na lista para abrir a leitura detalhada por sintomas, doencas provaveis e crescimento.
+            Selecione um foco no mapa ou na lista para abrir a leitura detalhada por sintomas, doenças prováveis e crescimento.
           </div>
         </section>
       </div>
@@ -951,29 +951,29 @@
 
     const variantProfile = {
       populacao: {
-        summaryLabel: "Leitura publica e governamental do territorio",
-        actionLabel: "Acao empresa e farmacia",
+        summaryLabel: "Leitura pública e governamental do território",
+        actionLabel: "Ação empresa e farmácia",
         actionField: "market_recommendation",
-        extraLabel: "Acao populacao e governo",
+        extraLabel: "Ação população e governo",
         extraField: "public_recommendation",
       },
       farmacia: {
-        summaryLabel: "Inteligencia de demanda para abastecimento e estoque",
-        actionLabel: "Acao empresa e farmacia",
+        summaryLabel: "Inteligência de demanda para abastecimento e estoque",
+        actionLabel: "Ação empresa e farmácia",
         actionField: "market_recommendation",
-        extraLabel: "Leitura populacao e territorio",
+        extraLabel: "Leitura população e território",
         extraField: "public_recommendation",
       },
       hospital: {
-        summaryLabel: "Prontidao clinica para triagem, leitos e atendimento de emergencia",
-        actionLabel: "Acao hospitalar",
+        summaryLabel: "Prontidão clínica para triagem, leitos e atendimento de emergência",
+        actionLabel: "Ação hospitalar",
         actionField: "hospital_recommendation",
-        extraLabel: "Leitura populacao e governo",
+        extraLabel: "Leitura população e governo",
         extraField: "public_recommendation",
       },
       governo: {
-        summaryLabel: "Inteligencia premium de vigilancia governamental, prioridade territorial e pressao de recursos",
-        actionLabel: "Acao governamental",
+        summaryLabel: "Inteligência premium de vigilância governamental, prioridade territorial e pressão de recursos",
+        actionLabel: "Ação governamental",
         actionField: "government_recommendation",
         extraLabel: "Leitura hospitalar e rede local",
         extraField: "hospital_recommendation",
@@ -1159,8 +1159,8 @@
       executiveSummary.innerHTML = `
         <strong>${variantProfile.summaryLabel}</strong><br>
         Foco dominante da leitura atual: <strong>${topSymptom}</strong>.<br>
-        Doenca provavel mais incidente: <strong>${topDisease}</strong>.<br>
-        Crescimento medio observado: <strong>${summary.averageGrowth.toFixed(1)}%</strong> com status <strong>${summary.riskLevel}</strong>.
+        Doença provável mais incidente: <strong>${topDisease}</strong>.<br>
+        Crescimento médio observado: <strong>${summary.averageGrowth.toFixed(1)}%</strong> com status <strong>${summary.riskLevel}</strong>.
       `;
 
       renderAlerts();
@@ -1209,8 +1209,8 @@
             <span class="risk-badge risk-CRITICO">P${item.priority}</span>
           </div>
           <div class="mini" style="margin-top:8px;">
-            Vigilancia: <strong>${item.surveillance_index.toFixed(1)}</strong> |
-            Pressao: <strong>${item.resource_pressure.toFixed(1)}</strong><br>
+            Vigilância: <strong>${item.surveillance_index.toFixed(1)}</strong> |
+            Pressão: <strong>${item.resource_pressure.toFixed(1)}</strong><br>
             ${item.message}
           </div>
         </div>
@@ -1233,7 +1233,7 @@
           labels: diseaseLabels,
           datasets: [
             {
-              label: "Casos estimados por doenca provavel",
+              label: "Casos estimados por doença provável",
               data: diseaseData,
               backgroundColor: chartColors,
               borderRadius: 14,
@@ -1283,14 +1283,14 @@
         Crescimento: ${area.growth_percent.toFixed(1)}%<br>
         Risco: ${area.risk_level}<br><br>
         <strong>Foco predominante:</strong> ${area.dominant_symptom}<br>
-        <strong>Doenca provavel:</strong> ${area.dominant_disease}<br>
+        <strong>Doença provável:</strong> ${area.dominant_disease}<br>
         <strong>Resposta tatica:</strong> ${area.alert_stage}<br>
         <strong>Prioridade:</strong> P${area.response_priority}<br>
         <strong>Leitura do foco:</strong> ${area.focus_message}
         <hr>
         <strong>Sintomas:</strong>
         <ul>${symptomLines}</ul>
-        <strong>Doencas provaveis:</strong>
+        <strong>Doenças prováveis:</strong>
         <ul>${diseaseLines}</ul>
       `;
     }
@@ -1343,18 +1343,18 @@
             <ul>${symptoms}</ul>
           </div>
           <div class="detail-box">
-            <strong>Doencas provaveis</strong>
+            <strong>Doenças prováveis</strong>
             <ul>${diseases}</ul>
           </div>
           <div class="detail-box">
-            <strong>Indicacao operacional</strong>
+            <strong>Indicação operacional</strong>
             <ul>
               <li>Foco dominante: ${area.dominant_symptom}</li>
-              <li>Doenca predominante: ${area.dominant_disease}</li>
+              <li>Doença predominante: ${area.dominant_disease}</li>
               <li>Camada de leitura: ${area.level}</li>
               <li>Prioridade: ${area.risk_level}</li>
-              <li>Indice de vigilancia: ${area.surveillance_index.toFixed(1)}</li>
-              <li>Pressao de recursos: ${area.resource_pressure.toFixed(1)}</li>
+              <li>Índice de vigilância: ${area.surveillance_index.toFixed(1)}</li>
+              <li>Pressão de recursos: ${area.resource_pressure.toFixed(1)}</li>
             </ul>
           </div>
           <div class="detail-box">
@@ -1394,7 +1394,7 @@
           <div class="mini">
             ${activeFocusValue(area).toLocaleString("pt-BR")} casos ativos | registros 30d ${rawFocusValue(area).toLocaleString("pt-BR")} | crescimento ${area.growth_percent.toFixed(1)}%<br>
             Sintoma dominante: ${area.dominant_symptom}<br>
-            Doenca provavel: ${area.dominant_disease}
+            Doença provável: ${area.dominant_disease}
           </div>
         </div>
       `).join("");
@@ -1451,8 +1451,10 @@
       const maxCases = Math.max(...areas.map((area) => activeFocusValue(area)), 1);
       const bounds = [];
       const isBairroView = levelFilter.value === "bairros";
+      const mode = modeFilter.value;
 
-      if (modeFilter.value === "radar" || isBairroView) {
+      // Heatmap: surtos e radar mostram calor; risco mostra apenas pontos coloridos
+      if (mode !== "risco") {
         const heatPoints = areas
           .filter((area) => area.latitude && area.longitude)
           .map((area) => [area.latitude, area.longitude, intensity(area, maxCases)]);
@@ -1477,6 +1479,10 @@
         bounds.push([area.latitude, area.longitude]);
 
         if (isBairroView) {
+          // radar: apenas heatmap, sem marcadores individuais
+          if (mode === "radar") return;
+
+          // surtos e risco: pontos coloridos por nível de risco
           const hotspot = L.marker([area.latitude, area.longitude], {
             icon: L.divIcon({
               className: "",
@@ -1490,16 +1496,21 @@
           hotspot.bindPopup(areaPopup(area));
           hotspot.on("click", () => selectArea(area));
           hotspot.addTo(markersLayer);
+
+          // risco: pulse em todos; surtos: pulse apenas em crítico/alto
+          if (mode === "risco" || area.risk_level === "CRITICO" || area.risk_level === "ALTO") {
+            addPulseMarker(area);
+          }
           return;
         }
 
-        const opacityBase = modeFilter.value === "risco" ? 0.5 : 0.22 + intensity(area, maxCases) * 0.3;
+        const opacityBase = mode === "risco" ? 0.5 : 0.22 + intensity(area, maxCases) * 0.3;
         const circle = L.circle([area.latitude, area.longitude], {
           radius: area.radius,
           color,
           fillColor: color,
           fillOpacity: opacityBase,
-          weight: modeFilter.value === "surtos" ? 3.2 : 2.2,
+          weight: mode === "surtos" ? 3.2 : 2.2,
         });
 
         bindHoverTooltip(circle, `${area.label} | ${area.dominant_symptom}`);
@@ -1507,7 +1518,7 @@
         circle.on("click", () => selectArea(area));
         circle.addTo(circlesLayer);
 
-        if (modeFilter.value !== "risco" || area.risk_level === "CRITICO" || area.risk_level === "ALTO") {
+        if (mode !== "risco" || area.risk_level === "CRITICO" || area.risk_level === "ALTO") {
           addPulseMarker(area);
         }
       });
