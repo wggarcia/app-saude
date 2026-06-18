@@ -1295,8 +1295,8 @@
       executiveSummary.innerHTML = `
         <strong>${variantProfile.summaryLabel}</strong><br>
         Foco dominante da leitura atual: <strong>${topSymptom}</strong>.<br>
-        Doenca provavel mais incidente: <strong>${topDisease}</strong>.<br>
-        Crescimento medio observado: <strong>${summary.averageGrowth.toFixed(1)}%</strong> com status <strong>${summary.riskLevel}</strong>.
+        Doença provável mais incidente: <strong>${topDisease}</strong>.<br>
+        Crescimento médio observado: <strong>${summary.averageGrowth.toFixed(1)}%</strong> com status <strong>${summary.riskLevel}</strong>.
       `;
 
       renderAlerts();
@@ -1345,8 +1345,8 @@
             <span class="risk-badge risk-CRITICO">P${item.priority}</span>
           </div>
           <div class="mini" style="margin-top:8px;">
-            Vigilancia: <strong>${item.surveillance_index.toFixed(1)}</strong> |
-            Pressao: <strong>${item.resource_pressure.toFixed(1)}</strong><br>
+            Vigilância: <strong>${item.surveillance_index.toFixed(1)}</strong> |
+            Pressão: <strong>${item.resource_pressure.toFixed(1)}</strong><br>
             ${item.message}
           </div>
         </div>
@@ -1366,11 +1366,11 @@
         <div class="alert-card">
           <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
             <strong>${item.label}</strong>
-            <span class="risk-badge risk-CRITICO">${item.hospital_load_estimate.toFixed(1)}</span>
+            <span class="risk-badge risk-CRITICO">${Number(item.hospital_load_estimate ?? 0).toFixed(1)}</span>
           </div>
           <div class="mini" style="margin-top:8px;">
-            ${item.triage_priority}<br>
-            <strong>${item.readiness_level}</strong>
+            ${item.triage_priority ?? '—'}<br>
+            <strong>${item.readiness_level ?? '—'}</strong>
           </div>
         </div>
       `).join("");
@@ -1392,7 +1392,7 @@
           labels: diseaseLabels,
           datasets: [
             {
-              label: "Casos estimados por doenca provavel",
+              label: "Casos estimados por doença provável",
               data: diseaseData,
               backgroundColor: chartColors,
               borderRadius: 14,
@@ -1443,14 +1443,14 @@
         Crescimento: ${area.growth_percent.toFixed(1)}%<br>
         Risco: ${area.risk_level}<br><br>
         <strong>Foco predominante:</strong> ${area.dominant_symptom}<br>
-        <strong>Doenca provavel:</strong> ${area.dominant_disease}<br>
+        <strong>Doença provável:</strong> ${area.dominant_disease}<br>
         <strong>Resposta tatica:</strong> ${area.alert_stage}<br>
         <strong>Prioridade:</strong> P${area.response_priority}<br>
         <strong>Leitura do foco:</strong> ${area.focus_message}
         <hr>
         <strong>Sintomas:</strong>
         <ul>${symptomLines}</ul>
-        <strong>Doencas provaveis:</strong>
+        <strong>Doenças prováveis:</strong>
         <ul>${diseaseLines}</ul>
       `;
     }
@@ -1492,11 +1492,11 @@
               <li>Registros 30d: ${rawFocusValue(area).toLocaleString("pt-BR")}</li>
               <li>Ultimas 24h: ${area.recent_24h.toLocaleString("pt-BR")}</li>
               <li>Janela anterior: ${area.previous_24h.toLocaleString("pt-BR")}</li>
-              <li>Crescimento: ${area.growth_percent.toFixed(1)}%</li>
-              <li>Atividade recente: ${area.activity_percent.toFixed(1)}%</li>
-              <li>Desaceleracao: ${area.decay_percent.toFixed(1)}%</li>
-              <li>Tendencia: ${area.trend_status}</li>
-              <li>Nivel de risco: ${area.risk_level}</li>
+              <li>Crescimento: ${Number(area.growth_percent ?? 0).toFixed(1)}%</li>
+              <li>Atividade recente: ${Number(area.activity_percent ?? 0).toFixed(1)}%</li>
+              <li>Desaceleração: ${Number(area.decay_percent ?? 0).toFixed(1)}%</li>
+              <li>Tendência: ${area.trend_status ?? '—'}</li>
+              <li>Nível de risco: ${area.risk_level}</li>
               <li>Fase operacional: ${area.alert_stage}</li>
               <li>Prioridade de resposta: P${area.response_priority}</li>
             </ul>
@@ -1506,18 +1506,18 @@
             <ul>${symptoms}</ul>
           </div>
           <div class="detail-box">
-            <strong>Doencas provaveis</strong>
+            <strong>Doenças prováveis</strong>
             <ul>${diseases}</ul>
           </div>
           <div class="detail-box">
-            <strong>Indicacao operacional</strong>
+            <strong>Indicação operacional</strong>
             <ul>
               <li>Foco dominante: ${area.dominant_symptom}</li>
-              <li>Doenca predominante: ${area.dominant_disease}</li>
+              <li>Doença predominante: ${area.dominant_disease}</li>
               <li>Camada de leitura: ${area.level}</li>
               <li>Prioridade: ${area.risk_level}</li>
-              <li>Indice de vigilancia: ${area.surveillance_index.toFixed(1)}</li>
-              <li>Pressao de recursos: ${area.resource_pressure.toFixed(1)}</li>
+              <li>Índice de vigilância: ${Number(area.surveillance_index ?? 0).toFixed(1)}</li>
+              <li>Pressão de recursos: ${Number(area.resource_pressure ?? 0).toFixed(1)}</li>
             </ul>
           </div>
           <div class="detail-box">
@@ -1530,9 +1530,9 @@
             <strong>${variantProfile.actionLabel}</strong>
             <ul>
               <li>${area[variantProfile.actionField]}</li>
-              <li>Carga hospitalar estimada: ${area.hospital_load_estimate.toFixed(1)}</li>
-              <li>Triagem: ${area.triage_priority}</li>
-              <li>Nivel de prontidao: ${area.readiness_level}</li>
+              <li>Carga hospitalar estimada: ${Number(area.hospital_load_estimate ?? 0).toFixed(1)}</li>
+              <li>Triagem: ${area.triage_priority ?? '—'}</li>
+              <li>Nível de prontidão: ${area.readiness_level ?? '—'}</li>
             </ul>
           </div>
         </div>
@@ -1560,7 +1560,7 @@
           <div class="mini">
             ${activeFocusValue(area).toLocaleString("pt-BR")} casos ativos | registros 30d ${rawFocusValue(area).toLocaleString("pt-BR")} | crescimento ${area.growth_percent.toFixed(1)}%<br>
             Sintoma dominante: ${area.dominant_symptom}<br>
-            Doenca provavel: ${area.dominant_disease}
+            Doença provável: ${area.dominant_disease}
           </div>
         </div>
       `).join("");
@@ -1816,7 +1816,7 @@
               const cor = z.carga >= 80 ? "var(--danger)" : z.carga >= 55 ? "var(--warn)" : "var(--ok)";
               return `<div style="margin-bottom:8px;border-left:3px solid ${cor};padding-left:8px;">
                 <strong>${z.zona}</strong><br>
-                <span style="font-size:0.82rem;">Carga: ${z.carga.toFixed(1)}% · ${z.prontidao}</span><br>
+                <span style="font-size:0.82rem;">Carga: ${z.carga.toFixed(1)}% · ${z.prontidao ?? '—'}</span><br>
                 <span style="font-size:0.8rem;color:var(--muted);">${z.triagem}</span>
               </div>`;
             }).join("");

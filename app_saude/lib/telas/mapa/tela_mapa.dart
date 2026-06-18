@@ -950,7 +950,8 @@ class _RadarCard extends StatelessWidget {
     final orientacao =
         radarLocal['orientacao_publica'] as Map<String, dynamic>? ?? {};
     final corHex = semaforo['cor']?.toString() ?? '#1DD1A1';
-    final cor = Color(int.parse(corHex.substring(1), radix: 16) + 0xFF000000);
+    final _hex = corHex.startsWith('#') && corHex.length == 7 ? corHex.substring(1) : '1DD1A1';
+    final cor = Color((int.tryParse(_hex, radix: 16) ?? 0x1DD1A1) + 0xFF000000);
 
     return Card(
       child: Padding(

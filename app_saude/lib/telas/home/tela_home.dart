@@ -1160,7 +1160,8 @@ class _SemaforoBanner extends StatelessWidget {
     final faixa = semaforo['faixa']?.toString() ?? 'Verde';
     final descricao = semaforo['descricao']?.toString() ?? '';
     final corHex = semaforo['cor']?.toString() ?? '#1DD1A1';
-    final color = Color(int.parse(corHex.substring(1), radix: 16) + 0xFF000000);
+    final _hex = corHex.startsWith('#') && corHex.length == 7 ? corHex.substring(1) : '1DD1A1';
+    final color = Color((int.tryParse(_hex, radix: 16) ?? 0x1DD1A1) + 0xFF000000);
 
     return Container(
       padding: const EdgeInsets.all(16),

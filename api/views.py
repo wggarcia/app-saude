@@ -3912,7 +3912,7 @@ def mapa_risco(request):
 def bairros_por_cidade(request):
 
     cidade = request.GET.get("cidade")
-    estado = request.GET.get("estado")
+    estado = _normalizar_estado(request.GET.get("estado"))
 
     if not cidade or not estado:
         return JsonResponse([], safe=False)
