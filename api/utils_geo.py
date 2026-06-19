@@ -1,6 +1,8 @@
 import requests
 from math import cos, radians, sqrt
 
+from django.core.cache import cache
+
 
 # ── Mapa de referência abrangente do Brasil ────────────────────────────────
 # Cobertura: todas as capitais + principais cidades + bairros do RJ e SP
@@ -144,6 +146,21 @@ KNOWN_BRAZIL_POINTS = [
 ]
 
 
+def _distancia_graus(lat, lon):
+    """Retorna a distância em graus até o ponto conhecido mais próximo."""
+    try:
+        lat, lon = float(lat), float(lon)
+    except Exception:
+        return 999.0
+
+    def dist(point):
+        x = (lon - point[1]) * cos(radians((lat + point[0]) / 2))
+        y = lat - point[0]
+        return sqrt(x * x + y * y)
+
+    return min(dist(p) for p in KNOWN_BRAZIL_POINTS)
+
+
 def _fallback_local(lat, lon):
     """Retorna o município/bairro mais próximo da lista de referência."""
     try:
@@ -168,18 +185,45 @@ def _fallback_local(lat, lon):
     }
 
 
+_NEARBY_THRESHOLD = 0.18  # ~20 km em graus — cobre a maioria das cidades do Brasil
+
+
 def obter_endereco(lat, lon):
     """
     Geocodificação reversa: lat/lon → bairro, cidade, estado.
-    Tenta Nominatim primeiro; usa fallback de referência se falhar.
+
+    Ordem de prioridade (da mais rápida para a mais lenta):
+    1. Cache Redis/arquivo (TTL 24h) — retorno imediato em requests repetidos
+    2. KNOWN_BRAZIL_POINTS — lookup local instantâneo se ponto estiver a ≤20 km
+    3. Nominatim (API externa) — apenas se fora da cobertura local; timeout 3s
     """
+    try:
+        lat = float(lat)
+        lon = float(lon)
+    except Exception:
+        return _fallback_local(lat, lon)
+
+    # 1. Cache — mesma coordenada (±~110 m) retorna imediatamente
+    cache_key = f"geo_{round(lat, 3)}_{round(lon, 3)}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    # 2. Lookup local — se o ponto conhecido mais próximo estiver a ≤20 km, usa sem rede
+    resultado_local = _fallback_local(lat, lon)
+    nearest_dist = _distancia_graus(lat, lon)
+    if nearest_dist <= _NEARBY_THRESHOLD:
+        cache.set(cache_key, resultado_local, timeout=86400)
+        return resultado_local
+
+    # 3. Nominatim — só para coordenadas fora da cobertura local
     try:
         url = (
             f"https://nominatim.openstreetmap.org/reverse"
             f"?lat={lat}&lon={lon}&format=json&accept-language=pt-BR"
         )
         headers = {"User-Agent": "SolusCRT-Saude/2.0 (contato@soluscrt.com.br)"}
-        res = requests.get(url, headers=headers, timeout=4)
+        res = requests.get(url, headers=headers, timeout=3)
         res.raise_for_status()
         data = res.json()
         address = data.get("address", {})
@@ -206,17 +250,19 @@ def obter_endereco(lat, lon):
         estado = address.get("state")
 
         if cidade and estado:
-            return {
+            resultado = {
                 "bairro": bairro or "Centro",
                 "cidade": cidade,
                 "estado": estado,
                 "pais": address.get("country") or "Brasil",
             }
+            cache.set(cache_key, resultado, timeout=86400)
+            return resultado
 
-        # Nominatim respondeu mas sem cidade/estado: usa fallback
-        return _fallback_local(lat, lon)
+        cache.set(cache_key, resultado_local, timeout=86400)
+        return resultado_local
 
     except Exception as exc:
-        # Timeout, erro de rede, JSON inválido — usa fallback local
-        print(f"[geo] fallback para ({lat},{lon}): {exc}")
-        return _fallback_local(lat, lon)
+        print(f"[geo] Nominatim falhou para ({lat},{lon}): {exc}")
+        cache.set(cache_key, resultado_local, timeout=3600)
+        return resultado_local
