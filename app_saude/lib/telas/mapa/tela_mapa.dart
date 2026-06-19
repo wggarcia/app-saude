@@ -532,10 +532,19 @@ class _TelaMapaState extends State<TelaMapa> with WidgetsBindingObserver {
                 TileLayer(
                   urlTemplate: _tipoMapa == 'satelite'
                       ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  subdomains: _tipoMapa == 'satelite'
+                      ? const []
+                      : const ['a', 'b', 'c'],
                   userAgentPackageName: 'com.soluscrt.saude',
+                  tileProvider: NetworkTileProvider(
+                    headers: {
+                      'User-Agent': 'SolusCRTSaude/1.0 (iOS; com.soluscrt.saude)',
+                    },
+                  ),
                   minNativeZoom: 2,
                   maxNativeZoom: 19,
+                  evictErrorTileStrategy: EvictErrorTileStrategy.notVisible,
                 ),
                 CircleLayer(circles: circles),
                 MarkerLayer(markers: markers),
