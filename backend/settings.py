@@ -249,15 +249,16 @@ STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ── Mídia (arquivos enviados pelo usuário, ex. DICOM do RIS/PACS) ────────────
-# Sem disco persistente configurado no Render ainda: hoje os arquivos ficam no
-# filesystem local e SOMEM em cada redeploy. Funciona para dev/teste. Antes de
-# usar em produção real, configure um disco persistente do Render ou um bucket
-# S3-compatível e ajuste MEDIA_ROOT/DEFAULT_FILE_STORAGE de acordo.
+# Em produção (Render), MEDIA_ROOT_OVERRIDE aponta para o disco persistente
+# montado via render.yaml — arquivos sobrevivem a redeploys. Sem essa env var
+# (dev local), cai no filesystem local em BASE_DIR/mediafiles (não persiste
+# entre deploys, mas funciona para desenvolvimento e teste).
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "mediafiles"
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT_OVERRIDE") or (BASE_DIR / "mediafiles")
 # Importante: MEDIA_URL não é servido publicamente em nenhuma urlpattern —
-# arquivos DICOM são clínicos/sensíveis e só devem ser acessados via view
-# autenticada (ver api_ris_dicom_arquivo), nunca por URL estática direta.
+# arquivos DICOM/laudos são clínicos/sensíveis e só devem ser acessados via
+# view autenticada (ver api_ris_dicom_arquivo, api_resultado_arquivo), nunca
+# por URL estática direta.
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

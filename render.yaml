@@ -7,7 +7,13 @@ services:
     preDeployCommand: "APP_DATABASE_URL= python3 manage.py migrate --noinput && APP_DATABASE_URL= python3 manage.py bootstrap_acessos && APP_DATABASE_URL= python3 manage.py sanear_producao --apply"
     startCommand: "./start.sh"
     healthCheckPath: /api/public/resumo
+    disk:
+      name: soluscrt-media
+      mountPath: /var/data/media
+      sizeGB: 5
     envVars:
+      - key: MEDIA_ROOT_OVERRIDE
+        value: /var/data/media
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: DJANGO_ENV
