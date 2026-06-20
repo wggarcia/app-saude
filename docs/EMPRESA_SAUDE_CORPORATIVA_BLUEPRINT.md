@@ -35,7 +35,7 @@ O produto deve funcionar como a combinacao de tres camadas:
 
 O modulo corporativo nao deve ser um painel unico tentando fazer tudo. Ele precisa ser dividido em tres superficies claras.
 
-### 3.1 SaaS institucional da empresa
+### 3.1 plataforma healthtech institucional da empresa
 
 Uso por:
 
@@ -74,8 +74,8 @@ Responsabilidade:
 Regra de produto:
 
 - este app e um produto mobile dedicado
-- ele nao deve ser tratado como "um app dentro da SaaS"
-- a SaaS da empresa o apresenta como parte do ecossistema, mas a experiencia do colaborador e separada
+- ele nao deve ser tratado como "um app dentro da plataforma healthtech"
+- a healthtech da empresa o apresenta como parte do ecossistema, mas a experiencia do colaborador e separada
 
 ### 3.3 Motor corporativo de IA e analytics
 
@@ -234,7 +234,7 @@ Ferramentas principais:
 
 ## 7. O que fica em cada superficie
 
-## 7.1 SaaS institucional da empresa
+## 7.1 plataforma healthtech institucional da empresa
 
 Deve conter:
 
@@ -270,7 +270,7 @@ Deve conter:
 
 Nao deve depender de:
 
-- navegação da SaaS institucional
+- navegação da plataforma healthtech institucional
 - contexto de dashboard executivo
 - linguagem de produto voltada para RH
 
@@ -285,7 +285,7 @@ Deve conter:
 - matching de mentoria
 - explicacao executiva acionavel
 
-## 8. Mapa de telas do SaaS institucional
+## 8. Mapa de telas do plataforma healthtech institucional
 
 ### 8.1 Home Executiva
 
@@ -645,6 +645,6 @@ O modulo corporativo deve produzir recomendacoes com explicacao, nao apenas scor
 O caminho correto e:
 
 - manter o epidemiologico intacto
-- separar a SaaS institucional do app mobile do colaborador
+- separar a plataforma healthtech institucional do app mobile do colaborador
 - criar um motor corporativo proprio de IA e analytics
 - posicionar `empresa` como saude ocupacional, desenvolvimento e continuidade operacional

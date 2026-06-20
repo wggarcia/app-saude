@@ -2,7 +2,7 @@
 
 Este repositório mantém três superfícies separadas. A regra é simples: código de um ambiente não deve nascer dentro do outro.
 
-## Backend SaaS
+## Backend Healthtech
 
 - Raiz do repositório: `manage.py`, `backend/`, `api/`, `templates/`, `static/`.
 - Responsável por APIs, dashboards web, autenticação, billing, gestão, SST, hospital, farmácia, governo e integrações.

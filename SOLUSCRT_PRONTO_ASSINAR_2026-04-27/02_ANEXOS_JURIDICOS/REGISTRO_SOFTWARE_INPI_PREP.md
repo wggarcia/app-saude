@@ -42,7 +42,7 @@
 ### Descrição do Programa (copie este texto no formulário)
 
 ```
-SolusCRT Saude é uma plataforma SaaS (Software como Serviço) de gestão
+SolusCRT Saude é uma plataforma healthtech (Software como Serviço) de gestão
 integrada em saúde, composta por seis módulos independentes e dois
 aplicativos móveis:
 

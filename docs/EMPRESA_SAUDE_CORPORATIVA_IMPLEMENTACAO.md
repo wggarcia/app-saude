@@ -10,7 +10,7 @@ Construir o novo produto em camadas, validando contrato de dados, privacidade, e
 
 - nao quebrar `governo`, `hospital` e `farmacia`
 - nao reutilizar o motor epidemiologico como base principal do corporativo
-- separar SaaS institucional de app mobile do colaborador
+- separar plataforma healthtech institucional de app mobile do colaborador
 - preservar autenticacao, billing e tenancy
 - ativar o novo ambiente por feature flag, pacote ou rollout controlado
 - desenhar o produto para parecer premium e operar como ferramenta real de empresa
@@ -19,11 +19,11 @@ Construir o novo produto em camadas, validando contrato de dados, privacidade, e
 
 O produto sera construido em tres trilhos paralelos:
 
-1. `SaaS institucional`
+1. `plataforma healthtech institucional`
 2. `App mobile do colaborador`
 3. `Motor corporativo de IA e analytics`
 
-## 3.1 SaaS institucional
+## 3.1 plataforma healthtech institucional
 
 Responsavel por:
 
@@ -59,7 +59,7 @@ Responsavel por:
 ### Entregas
 
 - blueprint aprovado
-- definicao da separacao entre SaaS e app mobile
+- definicao da separacao entre healthtech e app mobile
 - mapa de modulos
 - definicao de nomenclatura premium
 - definicao de regras de anonimato
@@ -112,7 +112,7 @@ Responsavel por:
 
 - nao tocar nos fluxos de `dashboard_farmacia`, `dashboard_hospital` e `dashboard_governo`
 
-## 6. Fase 2: SaaS institucional premium
+## 6. Fase 2: plataforma healthtech institucional premium
 
 ### Escopo do MVP institucional
 
@@ -131,7 +131,7 @@ Responsavel por:
 - visual de control room premium
 - acao clara por modulo
 - leitura de 30 segundos para decisores
-- ausencia de fluxo "mobile-like" dentro da SaaS
+- ausencia de fluxo "mobile-like" dentro da plataforma healthtech
 
 ### Rotas sugeridas
 
@@ -147,7 +147,7 @@ Responsavel por:
 
 ### Direcao
 
-Este app deve ser tratado como produto mobile dedicado para funcionarios, e nao como um painel ou subpagina da SaaS institucional.
+Este app deve ser tratado como produto mobile dedicado para funcionarios, e nao como um painel ou subpagina da plataforma healthtech institucional.
 
 ### Escopo MVP mobile
 
@@ -282,13 +282,13 @@ Quando o modulo novo estiver maduro:
 
 - `empresa` aponta definitivamente para `/dashboard-empresa/`
 - o app mobile vira o canal oficial do colaborador
-- a antiga nocao de "app dentro da SaaS" e removida
+- a antiga nocao de "app dentro da plataforma healthtech" e removida
 - hospital/farmacia/governo permanecem intactos
 
 ## 12. Ordem sugerida das proximas entregas
 
 1. consolidar o blueprint e encerrar desalinhamento conceitual
-2. refatorar a SaaS institucional para os modulos premium corretos
+2. refatorar a plataforma healthtech institucional para os modulos premium corretos
 3. separar tecnicamente o app mobile do colaborador
 4. implementar APIs mobile dedicadas
 5. implementar cultura/comunicacao, escalas, mentoria e saude mental no modelo de dados
@@ -300,7 +300,7 @@ Quando o modulo novo estiver maduro:
 O MVP pode ser considerado pronto quando:
 
 - empresa entra em um dashboard premium coerente com saude ocupacional
-- colaborador usa um app mobile proprio, nao uma extensao da SaaS
+- colaborador usa um app mobile proprio, nao uma extensão da plataforma healthtech
 - check-ins, apoio e leituras por unidade/escala funcionam
 - IA produz alertas institucionais utilizaveis
 - pelo menos um fluxo de cultura, um de escala e um de mentoria estao ativos

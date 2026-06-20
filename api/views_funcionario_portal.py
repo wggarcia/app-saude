@@ -613,7 +613,7 @@ def funcionario_comunicados(request):
                 "link": c.url_conteudo or "",
                 "remetente": c.publicado_por or "Empresa",
                 "criado_em": c.publicado_em.strftime("%Y-%m-%d %H:%M"),
-                # Comunicados do SaaS não têm campo lido por funcionário —
+                # Comunicados da plataforma healthtech não têm campo lido por funcionário —
                 # retornamos False e deixamos o app marcar localmente
                 "lido": False,
             }

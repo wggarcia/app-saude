@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>SolusCRT Console Operacional</title>
+  <title>SolusCRT Centro de Operações</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js">
 function _t(msg, tipo) {
@@ -138,9 +138,9 @@ function _t(msg, tipo) {
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">Gestão Central da SolusCRT</div>
+      <div class="eyebrow">Centro de Operações SolusCRT — CEO</div>
       <h1>{{ owner_nome }}</h1>
-      <div class="muted">Console operacional restrito para cobrança, renovação, carga, crescimento e separação entre carteira empresarial e governamental.</div>
+      <div class="muted">Centro de Operações restrito ao CEO e equipe autorizada — cobrança, renovação, cortesia de planos, crescimento e separação entre carteira empresarial e governamental.</div>
       <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
         <a href="/financeiro/" style="color:#10b981;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(5,46,22,.9);border:1px solid #166534;font-weight:700;">💰 Financial OS</a>
         <a href="/governanca/" style="color:#a855f7;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(19,0,38,.9);border:1px solid #7e22ce;font-weight:700;">🏛 Governança</a>
@@ -335,6 +335,22 @@ function _t(msg, tipo) {
     </section>
   </main>
 
+  <!-- Modal de upgrade de cortesia -->
+  <div class="modal-overlay" id="modalCortesia">
+    <div class="modal" style="border-color:rgba(124,58,237,.5);max-width:480px;">
+      <h3 style="color:#a78bfa;">⬆ Upgrade de Cortesia</h3>
+      <p id="modalCortesiaDesc" style="color:#c4b5fd;"></p>
+      <label style="display:block;margin-bottom:6px;color:#9cc4db;font-size:.85rem;">Plano de cortesia</label>
+      <select id="cortesiaPacoteSelect" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(167,139,250,.3);background:rgba(124,58,237,.08);color:#eef8ff;margin-bottom:14px;font-size:.9rem;"></select>
+      <label style="display:block;margin-bottom:6px;color:#9cc4db;font-size:.85rem;">Válido até</label>
+      <input type="date" id="cortesiaExpira" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(167,139,250,.3);background:rgba(124,58,237,.08);color:#eef8ff;margin-bottom:14px;font-size:.9rem;">
+      <div class="modal-actions">
+        <button class="ghost" onclick="fecharModalCortesia()">Cancelar</button>
+        <button style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;border:none;padding:10px 20px;border-radius:10px;cursor:pointer;font-weight:700;" onclick="confirmarCortesia()">Aplicar cortesia</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de confirmação de exclusão -->
   <div class="modal-overlay" id="modalExcluir">
     <div class="modal">
@@ -438,6 +454,61 @@ function _t(msg, tipo) {
       document.getElementById("modalExcluir").classList.remove("open");
       _excluirId = null;
       _excluirEmail = null;
+    }
+
+    let _cortesiaId = null;
+    let _cortesiaPacoteAtual = null;
+
+    function abrirModalCortesia(empresaId, empresaNome, pacoteAtual) {
+      _cortesiaId = empresaId;
+      _cortesiaPacoteAtual = pacoteAtual;
+      document.getElementById("modalCortesiaDesc").textContent =
+        `Selecione um plano superior para oferecer como cortesia a ${empresaNome}. O plano original será restaurado ao reverter.`;
+      const sel = document.getElementById("cortesiaPacoteSelect");
+      sel.innerHTML = Object.entries(pacoteOptions)
+        .filter(([codigo]) => codigo !== pacoteAtual)
+        .map(([codigo, p]) => {
+          const ciclo = p.ciclos?.length === 1 && p.ciclos[0] === "anual" ? "ano" : "mês";
+          const valor = ciclo === "ano" ? p.anual : p.mensal;
+          return `<option value="${codigo}">${p.label} (${p.setor}) — R$ ${valor.toLocaleString("pt-BR")}/${ciclo}</option>`;
+        }).join("");
+      const hoje = new Date();
+      hoje.setMonth(hoje.getMonth() + 1);
+      document.getElementById("cortesiaExpira").value = hoje.toISOString().split("T")[0];
+      document.getElementById("modalCortesia").classList.add("open");
+    }
+
+    function fecharModalCortesia() {
+      document.getElementById("modalCortesia").classList.remove("open");
+      _cortesiaId = null;
+      _cortesiaPacoteAtual = null;
+    }
+
+    async function confirmarCortesia() {
+      const pacote = document.getElementById("cortesiaPacoteSelect").value;
+      const expira = document.getElementById("cortesiaExpira").value;
+      if (!pacote || !expira) { _t("Selecione o plano e a data de validade.", "warn"); return; }
+      const res = await fetch("/api/operacao-central/cliente/cortesia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empresa_id: _cortesiaId, acao: "aplicar", pacote_codigo: pacote, expira_em: expira }),
+      });
+      const data = await res.json();
+      fecharModalCortesia();
+      _t(data.mensagem || data.erro, data.status === "ok" ? "ok" : "err");
+      if (data.status === "ok") setTimeout(() => location.reload(), 1200);
+    }
+
+    async function reverterCortesia(empresaId, empresaNome) {
+      if (!confirm(`Reverter cortesia de ${empresaNome} e restaurar o plano original?`)) return;
+      const res = await fetch("/api/operacao-central/cliente/cortesia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empresa_id: empresaId, acao: "reverter" }),
+      });
+      const data = await res.json();
+      _t(data.mensagem || data.erro, data.status === "ok" ? "ok" : "err");
+      if (data.status === "ok") setTimeout(() => location.reload(), 1200);
     }
 
     async function confirmarExclusao() {
@@ -647,6 +718,7 @@ function _t(msg, tipo) {
           <div class="row">
             <strong>${cliente.nome}</strong>
             <span class="badge ${cliente.risco || (cliente.ativo ? "active" : "inactive")}">${cliente.risco || cliente.status_contrato}</span>
+            ${cliente.cortesia_ativa ? `<span class="badge" style="background:#7c3aed;color:#fff;margin-left:6px;">🎁 Cortesia até ${new Date(cliente.cortesia_expira_em).toLocaleDateString("pt-BR")}</span>` : ""}
           </div>
           <div class="muted">${cliente.email}</div>
           <div class="muted small">${cliente.segmento} | ${cliente.pacote_label} | ${cliente.plano || "sem ciclo"}</div>
@@ -694,6 +766,9 @@ function _t(msg, tipo) {
             ${P.acao_cliente && cliente.segmento !== "governo" ? `<button class="ghost warn-btn" onclick="resetarTrial(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}')">🎁 Resetar trial</button>` : ""}
             ${P.acao_cliente ? `<button class="ghost warn-btn" onclick="forcarLogout(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}')">🔒 Forçar logout</button>` : ""}
             <button class="ghost" onclick="carregarAuditoria(${cliente.id});document.getElementById('auditLogList').scrollIntoView({behavior:'smooth'})">📋 Ver auditoria</button>
+            ${P.acao_cliente ? (cliente.cortesia_ativa
+              ? `<button class="ghost" style="border-color:#7c3aed;color:#a78bfa;" onclick="reverterCortesia(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}')">↩ Reverter cortesia</button>`
+              : `<button class="ghost" style="border-color:#7c3aed;color:#a78bfa;" onclick="abrirModalCortesia(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}', '${cliente.pacote_codigo}')">⬆ Upgrade de cortesia</button>`) : ""}
             ${P.cliente_excluir ? `<button class="ghost danger" onclick="abrirModalExcluir(${cliente.id}, '${cliente.nome.replace(/'/g, "\\'")}', '${cliente.email}')">🗑 Excluir conta</button>` : ""}
           </div>
         </div>

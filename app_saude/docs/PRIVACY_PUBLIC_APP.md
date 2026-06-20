@@ -13,7 +13,7 @@
 
 ## O que o app nao faz
 - nao entrega diagnostico medico
-- nao expõe a camada institucional do SaaS
+- nao expõe a camada institucional da plataforma healthtech
 - nao libera envio irrestrito da mesma rede ou aparelho
 
 ## Mensagem sugerida para politica publica

@@ -17,7 +17,7 @@ Caso não concorde com qualquer disposição, o Usuário deve cessar imediatamen
 
 ## 2. Descrição dos Serviços
 
-A SolusCRT Saude é uma plataforma SaaS (Software como Serviço) que oferece, conforme o plano contratado:
+A SolusCRT Saude é uma plataforma healthtech (Software como Serviço) que oferece, conforme o plano contratado:
 
 - **Módulo Empresa:** monitoramento de saúde ocupacional, SST, e-Social, epidemiologia territorial;
 - **Módulo Farmácia:** gestão de estoque, dispensação, controle de controlados, indicadores;

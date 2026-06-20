@@ -2,7 +2,7 @@
 
 ## 1. O que e o SolusCRT
 
-O SolusCRT Saude e uma plataforma SaaS de sala de controle epidemiologica. Ela combina app populacional, mapas de risco, IA, fontes oficiais brasileiras, alertas territoriais e paineis separados para empresas, farmacias, hospitais, governo e operacao interna.
+O SolusCRT Saude e uma plataforma healthtech de sala de controle epidemiologica. Ela combina app populacional, mapas de risco, IA, fontes oficiais brasileiras, alertas territoriais e paineis separados para empresas, farmacias, hospitais, governo e operacao interna.
 
 O produto nao deve ser explicado como "um mapa". A forma correta e:
 
@@ -20,7 +20,7 @@ Usa o app gratuito para:
 
 ### Empresas
 
-Usam o SaaS para:
+Usam a plataforma healthtech para:
 
 - Monitorar riscos de surtos que afetam colaboradores.
 - Reduzir afastamentos.
@@ -29,7 +29,7 @@ Usam o SaaS para:
 
 ### Farmacias
 
-Usam o SaaS para:
+Usam a plataforma healthtech para:
 
 - Identificar crescimento de sintomas por bairro e municipio.
 - Planejar estoque de medicamentos e produtos.
@@ -37,7 +37,7 @@ Usam o SaaS para:
 
 ### Hospitais, clinicas e laboratorios
 
-Usam o SaaS para:
+Usam a plataforma healthtech para:
 
 - Preparar triagem e pronto atendimento.
 - Monitorar pressao assistencial por territorio.
@@ -55,7 +55,7 @@ Usa ambiente dedicado e separado para:
 
 ### Operacao interna SolusCRT
 
-Ambiente da empresa dona da SaaS para:
+Ambiente da empresa dona da plataforma healthtech para:
 
 - Gerenciar clientes.
 - Ajustar pacotes.
@@ -77,7 +77,7 @@ Nunca envie um cliente empresarial para o ambiente de governo. Nunca envie gover
 
 ## 4. Conceitos essenciais
 
-### SaaS
+### Healthtech
 
 Software como Servico. O cliente acessa pela internet e paga pelo direito de uso, suporte, infraestrutura e evolucao da plataforma.
 

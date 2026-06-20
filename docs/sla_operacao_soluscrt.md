@@ -1,7 +1,7 @@
 # SolusCRT Saude - Padrao de SLA e Operacao de Suporte
 
 ## 1. Objetivo
-Padronizar como o time de apoio atua em incidentes, chamados, comunicacao com clientes e escalonamento tecnico, mantendo previsibilidade e qualidade na operacao da SaaS.
+Padronizar como o time de apoio atua em incidentes, chamados, comunicacao com clientes e escalonamento tecnico, mantendo previsibilidade e qualidade na operação da plataforma healthtech.
 
 **Diretriz obrigatoria:** a operacao interna de monitoramento e resposta a incidentes criticos e **24x7**, independentemente do plano comercial do cliente.
 

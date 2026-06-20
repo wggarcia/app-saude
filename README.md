@@ -7,7 +7,7 @@ Este repositório possui **2 apps Flutter separados** e um backend Django:
 - Sem acesso empresarial e sem portal do trabalhador.
 
 ## 2) `app_ocupacional` (SAÚDE OCUPACIONAL)
-- App dedicado ao ambiente SaaS ocupacional.
+- App dedicado ao ambiente healthtech ocupacional.
 - Entradas:
   - Acesso Empresarial
   - Portal do Trabalhador

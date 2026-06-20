@@ -9,7 +9,7 @@
 
 ## 1. Apresentação e Âmbito
 
-Esta Política de Privacidade descreve como a **SolusCRT Saude** ("SolusCRT", "nós") coleta, usa, armazena, compartilha e protege dados pessoais no contexto da plataforma SaaS, do aplicativo móvel e dos serviços correlatos.
+Esta Política de Privacidade descreve como a **SolusCRT Saude** ("SolusCRT", "nós") coleta, usa, armazena, compartilha e protege dados pessoais no contexto da plataforma healthtech, do aplicativo móvel e dos serviços correlatos.
 
 Aplica-se a:
 - **Administradores e usuários corporativos** de empresas, hospitais, farmácias, operadoras de planos de saúde e órgãos governamentais contratantes ("Clientes");

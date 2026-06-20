@@ -1,6 +1,6 @@
 # app_ocupacional
 
-App mobile separado do app populacional (`app_saude`) para o ambiente SaaS de Saúde Ocupacional.
+App mobile separado do app populacional (`app_saude`) para o ambiente healthtech de Saúde Ocupacional.
 
 ## Entradas
 - Acesso Empresarial

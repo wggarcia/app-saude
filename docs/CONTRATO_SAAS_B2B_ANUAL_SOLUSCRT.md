@@ -1,4 +1,4 @@
-# CONTRATO DE PRESTACAO DE SERVICOS SaaS (B2B) - PLANO ANUAL
+# CONTRATO DE PRESTACAO DE SERVICOS healthtech (B2B) - PLANO ANUAL
 
 **SOLUSCRT SAUDE - SALA DE CONTROLE EPIDEMIOLOGICA**
 
@@ -15,7 +15,7 @@ E, de outro lado:
 
 **CONTRATANTE:** **[RAZAO SOCIAL DO CLIENTE]**, inscrita no CNPJ sob o no **[CNPJ CLIENTE]**, com sede em **[ENDERECO CLIENTE]**, neste ato representada por **[NOME/CPF/CARGO]**, doravante denominada **"CLIENTE"** ou **"CONTRATANTE"**.
 
-As Partes resolvem celebrar o presente **Contrato de Prestacao de Servicos SaaS - Plano Anual**, que se regera pelas clausulas e condicoes abaixo.
+As Partes resolvem celebrar o presente **Contrato de Prestacao de Servicos healthtech - Plano Anual**, que se regera pelas clausulas e condicoes abaixo.
 
 ---
 
@@ -34,7 +34,7 @@ As Partes resolvem celebrar o presente **Contrato de Prestacao de Servicos SaaS 
 
 ## 2. DEFINICOES
 2.1. Para fins deste Contrato:
-- **Plataforma:** ambiente SaaS SolusCRT Saude;
+- **Plataforma:** ambiente healthtech SolusCRT Saude;
 - **Dados do Cliente:** dados inseridos, gerados ou enviados pela CONTRATANTE;
 - **Dados Sensiveis de Saude:** dados enquadrados no art. 5o, II, da LGPD;
 - **SLA:** niveis de servico, prazos de resposta e disponibilidade;

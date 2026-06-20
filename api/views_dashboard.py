@@ -1253,6 +1253,125 @@ def api_dono_atualizar_cliente(request):
 
 
 @csrf_exempt
+def api_dono_cortesia_plano(request):
+    """
+    Aplica ou reverte um upgrade de cortesia para um cliente.
+
+    POST { empresa_id, acao: "aplicar"|"reverter", pacote_codigo?, ciclo?, expira_em? }
+
+    Ao aplicar: salva o plano atual como original, muda para o plano de cortesia e
+    define a data de expiração da cortesia.
+    Ao reverter: restaura o plano original e limpa os campos de cortesia.
+    """
+    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not dono_autorizado(dono, "cliente_editar"):
+        return JsonResponse({"erro": "seu papel não permite editar clientes"}, status=403)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    empresa = Empresa.objects.filter(id=dados.get("empresa_id")).first()
+    if not empresa:
+        return JsonResponse({"erro": "cliente não encontrado"}, status=404)
+
+    acao = dados.get("acao")
+
+    if acao == "aplicar":
+        novo_pacote = normalizar_codigo_pacote(dados.get("pacote_codigo"))
+        if not novo_pacote:
+            return JsonResponse({"erro": "pacote_codigo obrigatório"}, status=400)
+        novo_ciclo = normalizar_ciclo(novo_pacote, dados.get("ciclo") or "mensal")
+
+        expira_raw = dados.get("expira_em")
+        if not expira_raw:
+            return JsonResponse({"erro": "expira_em obrigatório"}, status=400)
+        from django.utils import timezone as tz
+        from datetime import datetime as _dt
+        try:
+            expira = _dt.fromisoformat(expira_raw)
+            if expira.tzinfo is None:
+                expira = tz.make_aware(expira)
+        except ValueError:
+            return JsonResponse({"erro": "expira_em inválido (use ISO 8601)"}, status=400)
+
+        pacote = detalhes_pacote(novo_pacote)
+
+        empresa.cortesia_plano_original = empresa.pacote_codigo
+        empresa.cortesia_ciclo_original = empresa.plano or "mensal"
+        empresa.cortesia_ativa = True
+        empresa.cortesia_expira_em = expira
+        empresa.pacote_codigo = novo_pacote
+        empresa.plano = novo_ciclo
+        empresa.max_usuarios = pacote["usuarios"]
+        empresa.max_dispositivos = pacote["dispositivos"]
+        empresa.save(update_fields=[
+            "cortesia_plano_original", "cortesia_ciclo_original",
+            "cortesia_ativa", "cortesia_expira_em",
+            "pacote_codigo", "plano", "max_usuarios", "max_dispositivos",
+        ])
+
+        FinanceiroEventoSaaS.objects.create(
+            empresa=empresa,
+            tipo_evento="cortesia_upgrade",
+            pacote_codigo=novo_pacote,
+            ciclo=novo_ciclo,
+            valor=0,
+            status="cortesia",
+            observacao=f"Cortesia CEO: {pacote['label']} até {expira.date()}",
+        )
+        _registrar_auditoria_dono(
+            dono, "cortesia_upgrade", empresa=empresa,
+            detalhes=f"Cortesia aplicada: {novo_pacote}/{novo_ciclo} — expira {expira.date()}. Original: {empresa.cortesia_plano_original}/{empresa.cortesia_ciclo_original}",
+        )
+        return JsonResponse({"status": "ok", "mensagem": f"Cortesia aplicada até {expira.date()}"})
+
+    elif acao == "reverter":
+        if not empresa.cortesia_ativa:
+            return JsonResponse({"erro": "cliente não está em cortesia"}, status=400)
+
+        original_pacote = empresa.cortesia_plano_original or empresa.pacote_codigo
+        original_ciclo = empresa.cortesia_ciclo_original or "mensal"
+        pacote = detalhes_pacote(original_pacote)
+
+        empresa.pacote_codigo = original_pacote
+        empresa.plano = original_ciclo
+        empresa.max_usuarios = pacote["usuarios"]
+        empresa.max_dispositivos = pacote["dispositivos"]
+        empresa.cortesia_ativa = False
+        empresa.cortesia_plano_original = None
+        empresa.cortesia_ciclo_original = None
+        empresa.cortesia_expira_em = None
+        empresa.save(update_fields=[
+            "pacote_codigo", "plano", "max_usuarios", "max_dispositivos",
+            "cortesia_ativa", "cortesia_plano_original",
+            "cortesia_ciclo_original", "cortesia_expira_em",
+        ])
+
+        FinanceiroEventoSaaS.objects.create(
+            empresa=empresa,
+            tipo_evento="cortesia_revertida",
+            pacote_codigo=original_pacote,
+            ciclo=original_ciclo,
+            valor=0,
+            status="manual",
+            observacao=f"Cortesia encerrada. Plano restaurado: {pacote['label']}",
+        )
+        _registrar_auditoria_dono(
+            dono, "cortesia_revertida", empresa=empresa,
+            detalhes=f"Cortesia encerrada. Plano restaurado: {original_pacote}/{original_ciclo}",
+        )
+        return JsonResponse({"status": "ok", "mensagem": "Plano original restaurado"})
+
+    return JsonResponse({"erro": "acao inválida (use 'aplicar' ou 'reverter')"}, status=400)
+
+
+@csrf_exempt
 def api_dono_financeiro_acao(request):
     dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
     if not dono:

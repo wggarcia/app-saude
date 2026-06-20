@@ -11,7 +11,7 @@
 - Telefone: ______________________________________________
 
 ## 2. Objetivo
-Disponibilizar plataforma SaaS de monitoramento epidemiologico territorial para antecipacao de risco, gestao de alerta e suporte operacional.
+Disponibilizar plataforma healthtech de monitoramento epidemiologico territorial para antecipacao de risco, gestao de alerta e suporte operacional.
 
 ## 3. Escopo
 - Painel de monitoramento

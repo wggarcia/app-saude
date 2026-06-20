@@ -8,7 +8,7 @@
 
 ## Preâmbulo
 
-Este Addendum complementa o Contrato de Prestação de Serviços SaaS SolusCRT e o Anexo DPA/LGPD para regular especificamente o tratamento de dados pessoais e sensíveis de beneficiários de planos de saúde, em conformidade com:
+Este Addendum complementa o Contrato de Prestação de Serviços Healthtech SolusCRT e o Anexo DPA/LGPD para regular especificamente o tratamento de dados pessoais e sensíveis de beneficiários de planos de saúde, em conformidade com:
 
 - **LGPD** — Lei n.º 13.709/2018, especialmente Art. 11 (dados sensíveis de saúde);
 - **Lei n.º 9.656/1998** — Lei dos Planos de Saúde;

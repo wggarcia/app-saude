@@ -280,7 +280,7 @@ def build_empresa_corporativo_payload(empresa):
         },
         "ecosystem": {
             "name": "Ecossistema Institucional SolusCRT",
-            "segments": ["SaaS empresarial", "Farmacia", "Hospital", "Operacao territorial"],
+            "segments": ["Healthtech empresarial", "Farmacia", "Hospital", "Operacao territorial"],
             "promise": (
                 "Uma unica camada institucional para autenticar operacoes setoriais e abrir "
                 "o ambiente adequado apos o login."
@@ -352,7 +352,7 @@ def build_empresa_corporativo_payload(empresa):
         },
         "surfaces": [
             {
-                "title": "SaaS institucional",
+                "title": "Plataforma healthtech institucional",
                 "summary": "Painel premium para RH, SESMT, diretoria e liderancas acompanharem risco, programas e continuidade.",
                 "owner": "empresa",
             },
@@ -543,7 +543,7 @@ def build_empresa_corporativo_payload(empresa):
         },
         "mobile_product": {
             "title": "Produto mobile do colaborador",
-            "summary": "O colaborador nao usa a SaaS institucional. Ele participa por um app mobile proprio, com experiencia discreta e orientada a uso cotidiano.",
+            "summary": "O colaborador nao usa a plataforma healthtech institucional. Ele participa por um app mobile proprio, com experiencia discreta e orientada a uso cotidiano.",
             "note": "A empresa coordena programas pelo painel; o funcionario usa o mobile para check-ins, apoio, microlearning, mentoria e trilhas on/off.",
             "capabilities": [
                 "check-in diario e semanal sem exposicao ao gestor",

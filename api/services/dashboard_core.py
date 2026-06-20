@@ -582,6 +582,9 @@ def build_owner_resumo_payload(dono):
             "status_contrato": status_cliente,
             "faturamento_estimado_cliente": faturamento_estimado_cliente,
             "onboarding": onboarding,
+            "cortesia_ativa": getattr(empresa, "cortesia_ativa", False),
+            "cortesia_expira_em": empresa.cortesia_expira_em.isoformat() if getattr(empresa, "cortesia_expira_em", None) else None,
+            "cortesia_plano_original": getattr(empresa, "cortesia_plano_original", None),
             **playbook,
         })
         comparativo_clientes.append({
@@ -719,7 +722,7 @@ _EVENTOS_CHURN = {"cancelamento_operacional", "inadimplencia", "downgrade"}
 
 def build_owner_financeiro_real(dono=None):
     """
-    Inteligência financeira real do SaaS:
+    Inteligência financeira real da plataforma healthtech:
       • MRR contratado (recorrência das contas ativas)
       • MRR realizado (pagamentos aprovados/Asaas nos últimos 30 dias)
       • ARPA, LTV estimado, churn (logo e receita)

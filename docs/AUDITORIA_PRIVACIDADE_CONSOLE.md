@@ -7,7 +7,7 @@ privados dos clientes** ou apenas **metadados de gestão do contrato**.
 **Resultado geral:** ✅ **Aprovado.** Nenhum endpoint do dono expõe dado pessoal
 sensível dos titulares dos clientes (pacientes, trabalhadores, beneficiários,
 cidadãos). O console trata exclusivamente metadados comerciais/operacionais e
-métricas agregadas (contagens), necessários para administrar o SaaS.
+métricas agregadas (contagens), necessários para administrar a plataforma healthtech.
 
 Data da auditoria: 2026-06-06 · Escopo: branch `main` (commit no momento da auditoria).
 
@@ -56,12 +56,12 @@ faturamento_estimado_cliente, onboarding, playbook`.
   **números**, não o conteúdo dos registros.
 - Demais blocos: `summary` (agregados globais), `carteiras`/`segmentos`
   (agregados), `vigilancia_publica` (app população, anônimo), `historico`/
-  `comparativos` (séries agregadas), `financeiro` (eventos do SaaS), `auditoria`.
+  `comparativos` (séries agregadas), `financeiro` (eventos da plataforma healthtech), `auditoria`.
 - **Veredito:** ✅ sem conteúdo privado de cliente.
 
 ### 3.2 `GET /api/operacao-central/financeiro-real`
 MRR/ARR contratado, MRR realizado, ARPA, LTV, churn, inadimplência, movimentos,
-MRR por segmento, receita mensal. **Tudo agregado financeiro do SaaS.** ✅
+MRR por segmento, receita mensal. **Tudo agregado financeiro da plataforma healthtech.** ✅
 
 ### 3.3 `GET /api/operacao-central/saude`
 Latência de banco, cache, Asaas (só presença de chave + data do último
@@ -74,19 +74,19 @@ ranking **por empresa** (nome da empresa + contagens). **Sem nome/CPF de
 trabalhador individual.** ✅
 
 ### 3.5 `GET /api/operacao-central/operadores`
-Lista os **operadores da própria SolusCRT** (equipe interna do SaaS), não
+Lista os **operadores da própria SolusCRT** (equipe interna da plataforma healthtech), não
 clientes. Campos: nome, e-mail, papel, status, última sessão. ✅
 
 ### 3.6 `GET /api/operacao-central/exportar` (CSV)
 - `clientes`: nome, email, segmento, pacote, plano, ativo, usuarios, dispositivos,
   registros_24h, suspeitos_24h, expira_em → **metadado + contagens**.
 - `financeiro`: cliente, tipo_evento, pacote, ciclo, valor, status, observacao
-  (nota do próprio SaaS), criado_em.
+  (nota da própria plataforma healthtech), criado_em.
 - `auditoria`: operador, empresa, acao, detalhes, criado_em.
 - **Veredito:** ✅ sem conteúdo privado de cliente.
 
 ### 3.7 `GET /api/operacao-central/auditoria`
-Registro das ações dos operadores do SaaS. ✅
+Registro das ações dos operadores da plataforma healthtech. ✅
 
 ### 3.8 Ações de escrita (gated por RBAC)
 `cliente/atualizar`, `cliente/excluir`, `cliente/reset-trial`,

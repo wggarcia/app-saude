@@ -1,5 +1,5 @@
 """
-Financial OS — painel executivo de métricas financeiras SaaS.
+Financial OS — painel executivo de métricas financeiras healthtech.
 ARR, NRR, churn receita, CAC payback, burn multiple, LTV:CAC.
 Endpoint: GET /api/financeiro/metricas
           GET /api/financeiro/cohorts
@@ -101,7 +101,7 @@ def _nrr_estimado():
         # Sem histórico de mudança de plano ainda → estimativa conservadora
         arr_anual, mrr, clientes = _arr_atual()
         canceladas, base, churn_rate = _churn_ultimos_90()
-        # NRR simples: (1 - churn) + expansão estimada (2% média SaaS B2B early)
+        # NRR simples: (1 - churn) + expansão estimada (2% média healthtech B2B early)
         churn_anual = churn_rate / 100 * (90 / 365 * 4)  # anualize
         nrr = round((1 - churn_anual + 0.02) * 100, 1)
         return min(nrr, 140.0)  # cap razoável

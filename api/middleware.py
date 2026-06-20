@@ -431,7 +431,7 @@ class SegmentoAccessMiddleware:
     """
     Isolamento de segmento por prefixo de URL.
 
-    A SolusCRT tem 5 SaaS distintos — cada cliente assina UM segmento.
+    A SolusCRT tem 5 ambientes healthtech/govtech distintos — cada cliente assina UM segmento.
     Um cliente de Farmácia não pode acessar endpoints de Hospital, e vice-versa.
 
     Esta middleware garante esse isolamento verificando o prefixo da URL contra

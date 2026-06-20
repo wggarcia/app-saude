@@ -32,6 +32,10 @@ class Empresa(models.Model):
     sessao_ativa_em = models.DateTimeField(null=True, blank=True)
     data_pagamento = models.DateField(null=True, blank=True)
     data_expiracao = models.DateTimeField(null=True, blank=True)
+    cortesia_ativa = models.BooleanField(default=False)
+    cortesia_plano_original = models.CharField(max_length=40, null=True, blank=True)
+    cortesia_ciclo_original = models.CharField(max_length=20, null=True, blank=True)
+    cortesia_expira_em = models.DateTimeField(null=True, blank=True)
     codigo_acesso_corporativo = models.CharField(max_length=32, unique=True, default=_codigo_acesso)
 
     def __str__(self):
@@ -679,8 +683,8 @@ class CaixaPlataformaSaaS(models.Model):
 
     class Meta:
         ordering = ["-data_referencia"]
-        verbose_name = "Caixa da Plataforma SaaS"
-        verbose_name_plural = "Registros de Caixa da Plataforma SaaS"
+        verbose_name = "Caixa da Plataforma Healthtech"
+        verbose_name_plural = "Registros de Caixa da Plataforma Healthtech"
 
     def __str__(self):
         return f"Caixa R$ {self.saldo:,.2f} em {self.data_referencia}"
