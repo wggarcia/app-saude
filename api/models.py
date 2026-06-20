@@ -4819,7 +4819,8 @@ class ResultadoExame(models.Model):
     interpretacao       = models.CharField(max_length=20, choices=INTERPRETACAO_CHOICES, default="pendente")
     responsavel_laudo   = models.CharField(max_length=200, blank=True, default="")
     crm_responsavel     = models.CharField(max_length=30, blank=True, default="")
-    url_imagem          = models.URLField(blank=True, default="", help_text="Link do DICOM / PDF do laudo")
+    url_imagem          = models.URLField(blank=True, default="", help_text="Link externo do laudo (legado/PACS de terceiros)")
+    arquivo_laudo       = models.FileField(upload_to="laudos_lis/%Y/%m/", blank=True, null=True, help_text="PDF ou imagem do laudo, armazenado no sistema")
     visualizado_por     = models.CharField(max_length=200, blank=True, default="")
     visualizado_em      = models.DateTimeField(null=True, blank=True)
     criado_em           = models.DateTimeField(auto_now_add=True)
@@ -6491,6 +6492,21 @@ class ExameRIS(models.Model):
     solicitado_em = models.DateTimeField(auto_now_add=True)
     class Meta:
         ordering = ["-solicitado_em"]
+
+
+class InstanciaDicom(models.Model):
+    """Arquivo DICOM real (imagem médica) vinculado a um exame RIS — base do PACS."""
+    exame = models.ForeignKey(ExameRIS, on_delete=models.CASCADE, related_name="instancias_dicom")
+    arquivo = models.FileField(upload_to="dicom/%Y/%m/")
+    sop_instance_uid = models.CharField(max_length=128, blank=True)
+    series_instance_uid = models.CharField(max_length=128, blank=True)
+    study_instance_uid = models.CharField(max_length=128, blank=True)
+    modalidade_dicom = models.CharField(max_length=16, blank=True)
+    numero_instancia = models.PositiveIntegerField(default=1)
+    tamanho_bytes = models.PositiveIntegerField(default=0)
+    enviado_em = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ["numero_instancia", "enviado_em"]
 
 
 class GuiaTISS(models.Model):

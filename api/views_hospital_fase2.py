@@ -10,7 +10,7 @@ import json
 from datetime import datetime, date, time as dtime
 
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -79,6 +79,8 @@ def _resultado_to_dict(r):
         "responsavel_laudo": r.responsavel_laudo,
         "crm_responsavel": r.crm_responsavel,
         "url_imagem": r.url_imagem,
+        "tem_arquivo": bool(r.arquivo_laudo),
+        "url_arquivo": f"/api/hospital/exames/resultados/{r.id}/arquivo/" if r.arquivo_laudo else None,
         "visualizado_por": r.visualizado_por,
         "visualizado_em": r.visualizado_em.strftime("%d/%m/%Y %H:%M") if r.visualizado_em else None,
     }
@@ -275,6 +277,49 @@ def api_resultado_visualizar(request, resultado_id):
     resultado.visualizado_em = timezone.now()
     resultado.save(update_fields=["visualizado_por", "visualizado_em"])
     return JsonResponse({"ok": True})
+
+
+MAX_LAUDO_UPLOAD_BYTES = 30 * 1024 * 1024  # 30MB — PDF/imagem de laudo, não série DICOM completa
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def api_resultado_arquivo(request, resultado_id):
+    """Anexa (POST, multipart, campo 'arquivo') ou baixa (GET) o arquivo do laudo de um resultado."""
+    empresa = _empresa_autenticada(request)
+    if isinstance(empresa, JsonResponse):
+        return empresa
+
+    try:
+        resultado = ResultadoExame.objects.select_related("paciente").get(
+            pk=resultado_id, pedido__empresa=empresa,
+        )
+    except ResultadoExame.DoesNotExist:
+        return JsonResponse({"erro": "Resultado não encontrado"}, status=404)
+
+    if request.method == "GET":
+        if not resultado.arquivo_laudo:
+            raise Http404
+        return FileResponse(
+            resultado.arquivo_laudo.open("rb"),
+            filename=f"laudo_{resultado.id}{_ext(resultado.arquivo_laudo.name)}",
+        )
+
+    arquivo = request.FILES.get("arquivo")
+    if not arquivo:
+        return JsonResponse({"erro": "Nenhum arquivo enviado. Use o campo 'arquivo'."}, status=400)
+    if arquivo.size > MAX_LAUDO_UPLOAD_BYTES:
+        return JsonResponse({"erro": f"Arquivo maior que {MAX_LAUDO_UPLOAD_BYTES // (1024*1024)}MB"}, status=400)
+
+    resultado.arquivo_laudo = arquivo
+    resultado.save(update_fields=["arquivo_laudo"])
+    return JsonResponse({"ok": True, "resultado": _resultado_to_dict(resultado)})
+
+
+def _ext(nome_arquivo):
+    if "." in nome_arquivo:
+        return "." + nome_arquivo.rsplit(".", 1)[-1]
+    return ""
 
 
 # ─── Administração de Medicamentos ────────────────────────────────────────────

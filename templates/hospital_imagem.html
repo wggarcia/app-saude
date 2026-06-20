@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RIS/PACS — Imagem — HospitalOS</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/dicom-parser@1.8.21/dist/dicomParser.min.js"></script>
 <style>
 :root{
   --bg:#041018;--surface:#072030;--surface2:#0a2d45;
@@ -224,6 +225,40 @@ tr:hover td{background:rgba(255,255,255,.018)}
   </div>
 </div>
 
+<!-- MODAL: DICOM / PACS -->
+<div class="modal-bg" id="modalDicom">
+  <div class="modal" style="max-width:880px">
+    <h3>🩻 Imagens DICOM <span id="dicomPacInfo" style="color:var(--muted);font-weight:500;font-size:13px"></span></h3>
+    <input type="hidden" id="dicomExameId">
+
+    <div class="form-group">
+      <label>Enviar arquivo(s) DICOM (.dcm)</label>
+      <input type="file" id="dicomFileInput" multiple accept=".dcm,application/dicom">
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button class="btn btn-primary btn-sm" onclick="enviarDicom()">⬆ Enviar</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:200px 1fr;gap:14px;margin-top:10px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Instâncias</div>
+        <div id="dicomLista" style="display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Visualização</div>
+        <div style="background:#000;border:1px solid var(--border);border-radius:8px;min-height:300px;display:flex;align-items:center;justify-content:center;overflow:hidden">
+          <canvas id="dicomCanvas" style="max-width:100%;max-height:340px"></canvas>
+        </div>
+        <div id="dicomInfo" style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5"></div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalDicom')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-container"></div>
 <script>
 const MOD_LABEL = {rx:'Raio-X',us:'Ultrassom',tc:'Tomografia',rm:'Ressonância',mg:'Mamografia',ec:'Ecocardiograma',out:'Outro'};
@@ -289,6 +324,7 @@ function renderTable(){
       <td style="color:var(--muted);font-size:12px">${e.laudado_em||'—'}</td>
       <td>
         ${!e.laudado ? `<button class="btn btn-ok btn-sm" onclick="openLaudo(${e.id},'${e.paciente_nome.replace(/'/g,"\\'")}','${(e.modalidade_label||'').replace(/'/g,"\\'")}','${(e.regiao_anatomica||'').replace(/'/g,"\\'")}')">📋 Laudar</button>` : `<button class="btn btn-ghost btn-sm" onclick="openLaudo(${e.id},'${e.paciente_nome.replace(/'/g,"\\'")}','${(e.modalidade_label||'').replace(/'/g,"\\'")}','${(e.regiao_anatomica||'').replace(/'/g,"\\'")}')">✏️ Reeditar</button>`}
+        <button class="btn btn-ghost btn-sm" onclick="openDicom(${e.id},'${e.paciente_nome.replace(/'/g,"\\'")}')">🩻 DICOM${e.total_instancias_dicom ? ` (${e.total_instancias_dicom})` : ''}</button>
       </td>
     </tr>
   `).join('');
@@ -326,6 +362,138 @@ async function salvarLaudo(){
   const d = await res.json();
   if(d.ok){ toast('Laudo registrado'); closeModal('modalLaudo'); loadExames(); loadKpis(); }
   else toast(d.erro||'Erro','error');
+}
+
+// ── DICOM / PACS ──────────────────────────────────────────────────────────────
+
+function openDicom(exameId, pacNome){
+  document.getElementById('dicomExameId').value = exameId;
+  document.getElementById('dicomPacInfo').textContent = `— ${pacNome}`;
+  document.getElementById('dicomFileInput').value = '';
+  document.getElementById('dicomInfo').textContent = '';
+  const ctx = document.getElementById('dicomCanvas').getContext('2d');
+  ctx.clearRect(0, 0, 9999, 9999);
+  openModal('modalDicom');
+  carregarInstancias(exameId);
+}
+
+async function carregarInstancias(exameId){
+  const lista = document.getElementById('dicomLista');
+  lista.innerHTML = '<div style="color:var(--muted);font-size:12px">Carregando…</div>';
+  const res = await fetch(`/api/hospital/imagem/${exameId}/dicom/`);
+  if(!res.ok){ lista.innerHTML = '<div style="color:var(--muted);font-size:12px">Erro ao carregar.</div>'; return; }
+  const {instancias} = await res.json();
+  if(!instancias.length){ lista.innerHTML = '<div style="color:var(--muted);font-size:12px">Nenhuma imagem enviada ainda.</div>'; return; }
+  lista.innerHTML = instancias.map(i => `
+    <button class="btn btn-ghost btn-sm" style="justify-content:flex-start;width:100%" onclick="visualizarInstancia('${i.url_arquivo}', this)">
+      #${i.numero_instancia} · ${i.modalidade_dicom || '—'} · ${(i.tamanho_bytes/1024).toFixed(0)}KB
+    </button>
+  `).join('');
+}
+
+async function enviarDicom(){
+  const exameId = document.getElementById('dicomExameId').value;
+  const input = document.getElementById('dicomFileInput');
+  if(!input.files.length){ toast('Selecione ao menos um arquivo .dcm', 'error'); return; }
+  const fd = new FormData();
+  for(const f of input.files) fd.append('arquivos', f);
+  const res = await fetch(`/api/hospital/imagem/${exameId}/dicom/`, {method:'POST', body:fd});
+  const d = await res.json();
+  if(d.ok){
+    toast(`${d.criadas.length} imagem(ns) enviada(s)` + (d.erros.length ? ` · ${d.erros.length} com erro` : ''));
+    input.value = '';
+    carregarInstancias(exameId);
+    loadExames();
+  } else {
+    toast((d.erros && d.erros[0]) || d.erro || 'Erro ao enviar', 'error');
+  }
+}
+
+async function visualizarInstancia(url, btnEl){
+  document.querySelectorAll('#dicomLista .btn').forEach(b => b.classList.remove('btn-primary'));
+  if(btnEl) btnEl.classList.add('btn-primary');
+  const info = document.getElementById('dicomInfo');
+  const canvas = document.getElementById('dicomCanvas');
+  const ctx = canvas.getContext('2d');
+  info.textContent = 'Carregando imagem…';
+
+  let buffer;
+  try {
+    const res = await fetch(url, {credentials: 'same-origin'});
+    if(!res.ok) throw new Error('download falhou');
+    buffer = await res.arrayBuffer();
+  } catch(e) {
+    info.textContent = 'Erro ao baixar o arquivo DICOM.';
+    return;
+  }
+
+  const byteArray = new Uint8Array(buffer);
+  let dataSet;
+  try {
+    dataSet = dicomParser.parseDicom(byteArray);
+  } catch(e) {
+    info.textContent = 'Não foi possível interpretar este arquivo como DICOM.';
+    return;
+  }
+
+  const modalidade = dataSet.string('x00080060') || '—';
+  const paciente = dataSet.string('x00100010') || '—';
+  const cols = dataSet.uint16('x00280011');
+  const rows = dataSet.uint16('x00280010');
+
+  const pixelDataElement = dataSet.elements.x7fe00010;
+  if(!pixelDataElement){
+    info.textContent = `Modalidade: ${modalidade} · Paciente: ${paciente} · Sem dados de pixel legíveis neste arquivo.`;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+  if(pixelDataElement.encapsulatedPixelData){
+    info.textContent = `Modalidade: ${modalidade} · Paciente: ${paciente} · Imagem comprimida (JPEG/JPEG2000) — visualização embutida ainda não suportada. Baixe o arquivo ou use o link externo do PACS.`;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  const bitsAllocated = dataSet.uint16('x00280100') || 16;
+  const pixelRepresentation = dataSet.uint16('x00280103') || 0;
+  const rescaleSlope = dataSet.floatString('x00281053') ?? 1;
+  const rescaleIntercept = dataSet.floatString('x00281052') ?? 0;
+  let windowCenter = dataSet.floatString('x00281050');
+  let windowWidth = dataSet.floatString('x00281051');
+
+  let pixels;
+  if(bitsAllocated === 16){
+    pixels = pixelRepresentation === 1
+      ? new Int16Array(byteArray.buffer, byteArray.byteOffset + pixelDataElement.dataOffset, pixelDataElement.length/2)
+      : new Uint16Array(byteArray.buffer, byteArray.byteOffset + pixelDataElement.dataOffset, pixelDataElement.length/2);
+  } else {
+    pixels = new Uint8Array(byteArray.buffer, byteArray.byteOffset + pixelDataElement.dataOffset, pixelDataElement.length);
+  }
+
+  if(windowCenter === undefined || windowWidth === undefined){
+    let min = Infinity, max = -Infinity;
+    for(let i = 0; i < pixels.length; i++){
+      const v = pixels[i] * rescaleSlope + rescaleIntercept;
+      if(v < min) min = v;
+      if(v > max) max = v;
+    }
+    windowCenter = (max + min) / 2;
+    windowWidth = (max - min) || 1;
+  }
+
+  canvas.width = cols;
+  canvas.height = rows;
+  const imgData = ctx.createImageData(cols, rows);
+  const low = windowCenter - windowWidth / 2;
+  const high = windowCenter + windowWidth / 2;
+  for(let i = 0; i < pixels.length; i++){
+    const v = pixels[i] * rescaleSlope + rescaleIntercept;
+    let g = (v - low) / (high - low) * 255;
+    g = Math.max(0, Math.min(255, g));
+    const idx = i * 4;
+    imgData.data[idx] = g; imgData.data[idx+1] = g; imgData.data[idx+2] = g; imgData.data[idx+3] = 255;
+  }
+  ctx.putImageData(imgData, 0, 0);
+  info.textContent = `Modalidade: ${modalidade} · Paciente: ${paciente} · ${cols}×${rows}px`;
 }
 
 function openModal(id){ document.getElementById(id).classList.add('open'); }

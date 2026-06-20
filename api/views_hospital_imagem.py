@@ -1,11 +1,14 @@
 """
 Hospital — RIS/PACS (Radiology Information System)
   • ExameRIS — modalidade, laudo, link PACS, workflow de status
+  • InstanciaDicom — armazenamento real de arquivo DICOM + metadados (PACS)
 """
 import json
+from io import BytesIO
 
+import pydicom
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
@@ -18,7 +21,7 @@ from .access_control import (
     requer_setor,
     requer_operacao_page,
 )
-from .models import ExameRIS
+from .models import ExameRIS, InstanciaDicom
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
 
 
@@ -51,6 +54,19 @@ def _ris_to_dict(e):
         "laudado": bool(e.laudo),
         "laudado_em": e.laudado_em.strftime("%d/%m/%Y %H:%M") if e.laudado_em else None,
         "solicitado_em": e.solicitado_em.strftime("%d/%m/%Y %H:%M"),
+        "total_instancias_dicom": e.instancias_dicom.count(),
+    }
+
+
+def _instancia_to_dict(inst):
+    return {
+        "id": inst.id,
+        "modalidade_dicom": inst.modalidade_dicom,
+        "numero_instancia": inst.numero_instancia,
+        "tamanho_bytes": inst.tamanho_bytes,
+        "sop_instance_uid": inst.sop_instance_uid,
+        "enviado_em": inst.enviado_em.strftime("%d/%m/%Y %H:%M"),
+        "url_arquivo": f"/api/hospital/imagem/dicom/{inst.id}/arquivo/",
     }
 
 
@@ -220,3 +236,84 @@ def api_ris_kpis(request):
         "laudados_hoje": laudados_hoje,
         "por_modalidade": por_modalidade,
     })
+
+
+# ─── API: Instâncias DICOM (upload + listagem) ────────────────────────────────
+
+MAX_DICOM_UPLOAD_BYTES = 60 * 1024 * 1024  # 60MB por arquivo — exames de imagem são grandes
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def api_ris_dicom(request, exame_id):
+    empresa = _empresa(request)
+    if isinstance(empresa, JsonResponse):
+        return empresa
+
+    try:
+        exame = ExameRIS.objects.get(pk=exame_id, empresa=empresa)
+    except ExameRIS.DoesNotExist:
+        return JsonResponse({"erro": "Exame não encontrado"}, status=404)
+
+    if request.method == "GET":
+        instancias = exame.instancias_dicom.all()
+        return JsonResponse({"instancias": [_instancia_to_dict(i) for i in instancias]})
+
+    arquivos = request.FILES.getlist("arquivos")
+    if not arquivos:
+        return JsonResponse({"erro": "Nenhum arquivo enviado. Use o campo 'arquivos'."}, status=400)
+
+    ultima = exame.instancias_dicom.order_by("-numero_instancia").first()
+    proximo_numero = (ultima.numero_instancia + 1) if ultima else 1
+
+    criadas, erros = [], []
+    for f in arquivos:
+        if f.size > MAX_DICOM_UPLOAD_BYTES:
+            erros.append(f"{f.name}: arquivo maior que {MAX_DICOM_UPLOAD_BYTES // (1024*1024)}MB")
+            continue
+        try:
+            conteudo = f.read()
+            ds = pydicom.dcmread(BytesIO(conteudo), force=True, stop_before_pixels=True)
+        except Exception:
+            erros.append(f"{f.name}: não é um arquivo DICOM válido")
+            continue
+
+        f.seek(0)
+        inst = InstanciaDicom.objects.create(
+            exame=exame,
+            arquivo=f,
+            sop_instance_uid=str(getattr(ds, "SOPInstanceUID", "")),
+            series_instance_uid=str(getattr(ds, "SeriesInstanceUID", "")),
+            study_instance_uid=str(getattr(ds, "StudyInstanceUID", "")),
+            modalidade_dicom=str(getattr(ds, "Modality", "")),
+            numero_instancia=proximo_numero,
+            tamanho_bytes=len(conteudo),
+        )
+        proximo_numero += 1
+        criadas.append(_instancia_to_dict(inst))
+
+    status = 201 if criadas else 400
+    return JsonResponse({"ok": bool(criadas), "criadas": criadas, "erros": erros}, status=status)
+
+
+# ─── API: Download/visualização do arquivo DICOM (autenticado) ───────────────
+
+@require_http_methods(["GET"])
+def api_ris_dicom_arquivo(request, instancia_id):
+    empresa = _empresa(request)
+    if isinstance(empresa, JsonResponse):
+        return empresa
+
+    try:
+        inst = InstanciaDicom.objects.select_related("exame").get(
+            pk=instancia_id, exame__empresa=empresa,
+        )
+    except InstanciaDicom.DoesNotExist:
+        raise Http404
+
+    nome_arquivo = f"{inst.sop_instance_uid or inst.id}.dcm"
+    return FileResponse(
+        inst.arquivo.open("rb"),
+        content_type="application/dicom",
+        filename=nome_arquivo,
+    )

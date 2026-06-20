@@ -495,6 +495,7 @@ from api.views_hospital_fase2 import (
     api_pedido_exame_detalhe,
     api_resultados_exame,
     api_resultado_visualizar,
+    api_resultado_arquivo,
     api_administracoes,
     api_exames_dashboard,
 )
@@ -546,6 +547,8 @@ from api.views_hospital_imagem import (
     api_ris,
     api_ris_laudar,
     api_ris_kpis,
+    api_ris_dicom,
+    api_ris_dicom_arquivo,
 )
 from api.views_hospital_tiss import (
     hospital_tiss_page,
@@ -1485,6 +1488,7 @@ urlpatterns = [
     path('api/hospital/exames/<int:pedido_id>/', api_pedido_exame_detalhe),
     path('api/hospital/exames/<int:pedido_id>/resultados/', api_resultados_exame),
     path('api/hospital/exames/resultados/<int:resultado_id>/visualizar/', api_resultado_visualizar),
+    path('api/hospital/exames/resultados/<int:resultado_id>/arquivo/', api_resultado_arquivo),
     path('api/hospital/prescricoes/<int:presc_id>/administracoes/', api_administracoes),
     # ── Hospital Fase 3: Faturamento + Analytics ─────────────────
     path('api/hospital/analytics/', api_hospital_analytics),
@@ -1511,6 +1515,8 @@ urlpatterns = [
     path('api/hospital/imagem/', api_ris),
     path('api/hospital/imagem/kpis/', api_ris_kpis),
     path('api/hospital/imagem/<int:exame_id>/laudo/', api_ris_laudar),
+    path('api/hospital/imagem/<int:exame_id>/dicom/', api_ris_dicom),
+    path('api/hospital/imagem/dicom/<int:instancia_id>/arquivo/', api_ris_dicom_arquivo),
     path('api/hospital/tiss/', api_tiss),
     path('api/hospital/tiss/kpis/', api_tiss_kpis),
     path('api/hospital/tiss/<int:guia_id>/status/', api_tiss_atualizar_status),

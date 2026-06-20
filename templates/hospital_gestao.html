@@ -911,7 +911,9 @@ tr:hover td{background:rgba(255,255,255,.018)}
       <div class="mf"><label>Valores (JSON ou texto livre)</label>
         <textarea id="resResultadoJSON" rows="2" placeholder='[{"exame":"Hemoglobina","valor":"12.3","unidade":"g/dL"}]'></textarea>
       </div>
-      <div class="mf"><label>URL do Laudo / DICOM (opcional)</label>
+      <div class="mf"><label>Arquivo do laudo — PDF ou imagem (opcional)</label>
+        <input id="resArquivoLaudo" type="file" accept=".pdf,image/*"></div>
+      <div class="mf"><label>URL externa do laudo (opcional, legado)</label>
         <input id="resUrlImagem" type="url" placeholder="https://..."></div>
       <div class="mf"><label>Responsável pelo laudo</label>
         <input id="resResponsavel" type="text" placeholder="Nome do médico/bioquímico"></div>
@@ -2837,6 +2839,8 @@ async function abrirDetalhePedido(pedidoId) {
   // Reutiliza modalResultado como painel de detalhe
   document.getElementById('resultadoPedidoInfo').textContent =
     `Pedido #${p.id} · ${p.paciente_nome} · ${p.tipo} · ${(p.exames||[]).join(', ')}`;
+  const inputArquivo = document.getElementById('resArquivoLaudo');
+  if (inputArquivo) inputArquivo.value = '';
 
   // Lista resultados existentes
   const lista = document.getElementById('listaResultados');
@@ -2848,6 +2852,7 @@ async function abrirDetalhePedido(pedidoId) {
           <div style="font-weight:600">${r.responsavel_laudo || 'Sem responsável'} — <span style="color:${r.interpretacao==='critico'?'var(--danger)':r.interpretacao==='normal'?'var(--success)':'var(--warning)'}">${r.interpretacao}</span></div>
           <div style="font-size:13px;margin-top:4px">${r.laudo || '—'}</div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${r.data_resultado}${r.visualizado_por?' · Visto por '+r.visualizado_por:''}</div>
+          ${r.tem_arquivo ? `<a href="${r.url_arquivo}" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent)">📎 Ver laudo anexado</a>` : ''}
         </div>`).join('');
   }
 
@@ -2926,6 +2931,15 @@ async function salvarResultado() {
     method:'POST', body: JSON.stringify(body)
   });
   if (d?.ok) {
+    const arquivo = document.getElementById('resArquivoLaudo')?.files?.[0];
+    if (arquivo) {
+      const fd = new FormData();
+      fd.append('arquivo', arquivo);
+      const up = await fetch(`/api/hospital/exames/resultados/${d.resultado.id}/arquivo/`, {
+        method: 'POST', headers: {'X-CSRFToken': getCsrf()}, body: fd,
+      });
+      if (!up.ok) toast('Resultado lançado, mas o arquivo do laudo falhou ao enviar.', 'warn');
+    }
     fecharModal('modalResultado');
     carregarExames();
     toast('Resultado lançado com sucesso!', 'ok');
