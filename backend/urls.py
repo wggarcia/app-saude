@@ -508,6 +508,11 @@ from api.views_hospital_fase1 import (
     api_hospital_uti_dashboard,
     api_isolamento_paciente,
 )
+from api.views_hospital_multi import (
+    api_avaliacoes_enfermagem,
+    api_avaliacoes_fisioterapia,
+    api_avaliacoes_nutricionais,
+)
 from api.views_hospital_ops import (
     api_departamentos_hospital, api_departamento_hospital_detalhe,
     api_leitos_hospital, api_leito_status,
@@ -1477,6 +1482,9 @@ urlpatterns = [
     # ── Hospital Fase 1: Alta, UTI, Centro Cirúrgico, Isolamento ────────────
     path('api/hospital/pacientes/<int:pac_id>/evolucoes/', api_evolucoes_paciente),
     path('api/hospital/pacientes/<int:pac_id>/monitoramento-uti/', api_monitoramento_uti),
+    path('api/hospital/pacientes/<int:pac_id>/avaliacoes-enfermagem/', api_avaliacoes_enfermagem),
+    path('api/hospital/pacientes/<int:pac_id>/avaliacoes-fisioterapia/', api_avaliacoes_fisioterapia),
+    path('api/hospital/pacientes/<int:pac_id>/avaliacoes-nutricionais/', api_avaliacoes_nutricionais),
     path('api/hospital/pacientes/<int:pac_id>/sumario-alta/', api_sumario_alta),
     path('api/hospital/pacientes/<int:pac_id>/isolamento/', api_isolamento_paciente),
     path('api/hospital/centro-cirurgico/', api_centro_cirurgico),

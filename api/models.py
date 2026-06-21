@@ -6509,6 +6509,109 @@ class InstanciaDicom(models.Model):
         ordering = ["numero_instancia", "enviado_em"]
 
 
+# ── Equipe multiprofissional (SAE Enfermagem, Fisioterapia, Nutrição) ────────
+# Avaliações estruturadas por profissão, vinculadas a PacienteInternado.
+# Antes só existia EvolucaoClinicaInternado (texto livre com etiqueta de tipo) —
+# aqui cada profissão ganha campos próprios e escalas clínicas reconhecidas.
+class AvaliacaoEnfermagem(models.Model):
+    """SAE — Sistematização da Assistência de Enfermagem (Resolução COFEN 358/2009)."""
+    STATUS_CHOICES = [
+        ("ativa", "Ativa"),
+        ("reavaliada", "Reavaliada"),
+        ("encerrada", "Encerrada"),
+    ]
+
+    paciente            = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="avaliacoes_enfermagem")
+    historico_enfermagem = models.TextField(blank=True, default="", help_text="Coleta de dados / anamnese de enfermagem")
+    exame_fisico         = models.JSONField(default=dict, help_text='{"neurologico":"...","respiratorio":"...","cardiovascular":"...","pele_mucosas":"...","eliminacoes":"..."}')
+    escala_braden         = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Risco de lesão por pressão: 6-23 (quanto menor, maior risco)")
+    escala_morse          = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Risco de queda: 0-125 (quanto maior, maior risco)")
+    diagnosticos_enfermagem = models.JSONField(default=list, help_text='[{"diagnostico":"Risco de queda","dominio":"Segurança/Proteção"}]')
+    plano_cuidados        = models.JSONField(default=list, help_text='[{"intervencao":"Grades elevadas","meta":"Sem episódios de queda","prazo":"Durante internação"}]')
+    responsavel           = models.CharField(max_length=200, blank=True, default="")
+    coren                 = models.CharField(max_length=30, blank=True, default="")
+    status                = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ativa")
+    criado_em             = models.DateTimeField(auto_now_add=True)
+    atualizado_em         = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["paciente", "status"], name="avalenferm_pac_status_idx")]
+
+    def __str__(self):
+        return f"SAE — {self.paciente.nome} ({self.status})"
+
+
+class AvaliacaoFisioterapia(models.Model):
+    """Avaliação funcional fisioterapêutica — admissão e reavaliações."""
+    STATUS_CHOICES = [
+        ("ativa", "Ativa"),
+        ("reavaliada", "Reavaliada"),
+        ("encerrada", "Encerrada"),
+    ]
+
+    paciente             = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="avaliacoes_fisioterapia")
+    queixa_principal      = models.TextField(blank=True, default="")
+    amplitude_movimento   = models.JSONField(default=dict, help_text='{"ombro_d":"180°","joelho_e":"90°"}')
+    forca_muscular        = models.JSONField(default=dict, help_text='Escala MRC 0-5 por grupo muscular: {"MSD":4,"MSE":4,"MID":3,"MIE":3}')
+    escala_dor_eva        = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Escala visual analógica de dor: 0-10")
+    capacidade_funcional  = models.CharField(max_length=200, blank=True, default="", help_text="Ex: dependente total, deambula com auxílio, independente")
+    diagnostico_fisioterapeutico = models.TextField(blank=True, default="")
+    plano_terapeutico     = models.JSONField(default=list, help_text='[{"conduta":"Cinesioterapia respiratória","frequencia":"2x/dia"}]')
+    objetivos             = models.TextField(blank=True, default="")
+    responsavel           = models.CharField(max_length=200, blank=True, default="")
+    crefito               = models.CharField(max_length=30, blank=True, default="")
+    status                = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ativa")
+    criado_em             = models.DateTimeField(auto_now_add=True)
+    atualizado_em         = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["paciente", "status"], name="avalfisio_pac_status_idx")]
+
+    def __str__(self):
+        return f"Fisioterapia — {self.paciente.nome} ({self.status})"
+
+
+class AvaliacaoNutricional(models.Model):
+    """Avaliação e plano nutricional — admissão e reavaliações."""
+    VIA_CHOICES = [
+        ("oral", "Via oral"),
+        ("enteral", "Via enteral (sonda)"),
+        ("parenteral", "Via parenteral"),
+        ("oral_enteral", "Oral + enteral"),
+    ]
+    STATUS_CHOICES = [
+        ("ativa", "Ativa"),
+        ("reavaliada", "Reavaliada"),
+        ("encerrada", "Encerrada"),
+    ]
+
+    paciente              = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="avaliacoes_nutricionais")
+    peso_kg                = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    altura_cm              = models.PositiveSmallIntegerField(null=True, blank=True)
+    imc                    = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Calculado: peso / (altura_m²)")
+    circunferencias        = models.JSONField(default=dict, help_text='{"braquial_cm":28,"panturrilha_cm":32}')
+    diagnostico_nutricional = models.CharField(max_length=200, blank=True, default="", help_text="Ex: desnutrição moderada, eutrofia, obesidade grau I")
+    via_alimentacao        = models.CharField(max_length=20, choices=VIA_CHOICES, default="oral")
+    necessidade_calorica_kcal = models.PositiveIntegerField(null=True, blank=True)
+    necessidade_proteica_g   = models.PositiveSmallIntegerField(null=True, blank=True)
+    restricoes_alergias    = models.TextField(blank=True, default="")
+    plano_dietetico         = models.JSONField(default=list, help_text='[{"tipo_dieta":"Branda hipossódica","horario":"6 refeições/dia"}]')
+    responsavel             = models.CharField(max_length=200, blank=True, default="")
+    crn                     = models.CharField(max_length=30, blank=True, default="")
+    status                  = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ativa")
+    criado_em               = models.DateTimeField(auto_now_add=True)
+    atualizado_em           = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["paciente", "status"], name="avalnutri_pac_status_idx")]
+
+    def __str__(self):
+        return f"Nutrição — {self.paciente.nome} ({self.status})"
+
+
 class GuiaTISS(models.Model):
     TIPO_CHOICES = [("consulta","Consulta"),("sadt","SADT"),("internacao","Internação"),
                     ("sp_sadt","SP/SADT"),("resumo","Resumo de Internação")]

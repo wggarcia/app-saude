@@ -515,6 +515,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
                 <option value="obito">Óbito</option>
               </select>
               <a href="/api/hospital/pdf/internacoes/" target="_blank" class="btn btn-ghost" style="font-size:12px">📄 PDF Geral</a>
+              <button class="btn btn-ghost" onclick="abrirModalMulti(null,'')">👥 Equipe Multiprofissional</button>
               <button class="btn btn-primary" onclick="abrirModalInternacao()">+ Internar Paciente</button>
             </div>
           </div>
@@ -1345,6 +1346,126 @@ tr:hover td{background:rgba(255,255,255,.018)}
   </div>
 </div>
 
+<!-- Modal: Equipe Multiprofissional (Enfermagem SAE / Fisioterapia / Nutrição) -->
+<div class="modal-bg" id="modalMulti">
+  <div class="modal" style="max-width:760px">
+    <h3 id="multiTitle">👥 Equipe Multiprofissional</h3>
+    <div class="form-group" id="multiPacPickerWrap" style="margin-bottom:10px">
+      <label>Paciente Internado</label>
+      <select id="multiPacId" onchange="onMultiPacChange()"><option value="">— selecione o paciente —</option></select>
+    </div>
+    <div class="tabs" style="margin-bottom:0">
+      <button class="tab-btn active" id="multiTabBtn-enfermagem" onclick="setMultiTab('enfermagem')">🩺 Enfermagem (SAE)</button>
+      <button class="tab-btn" id="multiTabBtn-fisio" onclick="setMultiTab('fisio')">🏃 Fisioterapia</button>
+      <button class="tab-btn" id="multiTabBtn-nutri" onclick="setMultiTab('nutri')">🥗 Nutrição</button>
+    </div>
+
+    <!-- ENFERMAGEM -->
+    <div class="tab-panel active" id="multiTab-enfermagem">
+      <div class="section-divider">Histórico de Avaliações (SAE)</div>
+      <div class="evolucao-list" id="listaEnfermagem">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nenhuma avaliação registrada</div>
+      </div>
+      <div class="section-divider" style="margin-top:14px">Nova Avaliação de Enfermagem</div>
+      <div class="form-group"><label>Histórico de Enfermagem (coleta de dados)</label>
+        <textarea id="enfHistorico" rows="2" placeholder="Queixas, anamnese, condições gerais…"></textarea>
+      </div>
+      <div class="form-group"><label>Exame Físico (uma linha por sistema: "Sistema: achado")</label>
+        <textarea id="enfExameFisico" rows="2" placeholder="Neurológico: orientado, Glasgow 15&#10;Respiratório: eupneico, SpO2 96%&#10;Pele/mucosas: íntegras, normocoradas"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Escala de Braden (6-23, risco de lesão por pressão)</label><input id="enfBraden" type="number" min="6" max="23" placeholder="Ex: 14"></div>
+        <div class="form-group"><label>Escala de Morse (0-125, risco de queda)</label><input id="enfMorse" type="number" min="0" max="125" placeholder="Ex: 45"></div>
+      </div>
+      <div class="form-group"><label>Diagnósticos de Enfermagem (um por linha)</label>
+        <textarea id="enfDiagnosticos" rows="2" placeholder="Risco de queda&#10;Risco de infecção&#10;Mobilidade física prejudicada"></textarea>
+      </div>
+      <div class="form-group"><label>Plano de Cuidados (uma intervenção por linha)</label>
+        <textarea id="enfPlano" rows="2" placeholder="Manter grades elevadas&#10;Trocar decúbito a cada 2h&#10;Orientar deambulação assistida"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Responsável</label><input id="enfResp" placeholder="Nome do enfermeiro"></div>
+        <div class="form-group"><label>COREN</label><input id="enfCoren" placeholder="Ex: 123456-SP"></div>
+      </div>
+      <div class="modal-actions"><button class="btn btn-primary" onclick="salvarAvaliacaoEnfermagem()">Registrar Avaliação de Enfermagem</button></div>
+    </div>
+
+    <!-- FISIOTERAPIA -->
+    <div class="tab-panel" id="multiTab-fisio">
+      <div class="section-divider">Histórico de Avaliações</div>
+      <div class="evolucao-list" id="listaFisio">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nenhuma avaliação registrada</div>
+      </div>
+      <div class="section-divider" style="margin-top:14px">Nova Avaliação Fisioterapêutica</div>
+      <div class="form-group"><label>Queixa Principal</label><textarea id="fisQueixa" rows="2" placeholder="Dor, limitação funcional, dispneia ao esforço…"></textarea></div>
+      <div class="form-group"><label>Amplitude de Movimento — ADM (uma linha "Articulação: valor")</label>
+        <textarea id="fisAdm" rows="2" placeholder="Ombro D: 180°&#10;Joelho E: 90°"></textarea>
+      </div>
+      <div class="form-group"><label>Força Muscular — escala MRC 0-5 (uma linha "Grupo: valor")</label>
+        <textarea id="fisForca" rows="2" placeholder="MSD: 4&#10;MSE: 4&#10;MID: 3&#10;MIE: 3"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Escala de Dor — EVA (0-10)</label><input id="fisDor" type="number" min="0" max="10" placeholder="Ex: 5"></div>
+        <div class="form-group"><label>Capacidade Funcional</label><input id="fisFuncional" placeholder="Ex: deambula com auxílio"></div>
+      </div>
+      <div class="form-group"><label>Diagnóstico Fisioterapêutico</label><textarea id="fisDiagnostico" rows="2"></textarea></div>
+      <div class="form-group"><label>Plano Terapêutico (uma conduta por linha)</label>
+        <textarea id="fisPlano" rows="2" placeholder="Cinesioterapia respiratória 2x/dia&#10;Mobilização passiva de MMII"></textarea>
+      </div>
+      <div class="form-group"><label>Objetivos Terapêuticos</label><textarea id="fisObjetivos" rows="2"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Responsável</label><input id="fisResp" placeholder="Nome do fisioterapeuta"></div>
+        <div class="form-group"><label>CREFITO</label><input id="fisCrefito" placeholder="Ex: 12345-F"></div>
+      </div>
+      <div class="modal-actions"><button class="btn btn-primary" onclick="salvarAvaliacaoFisio()">Registrar Avaliação de Fisioterapia</button></div>
+    </div>
+
+    <!-- NUTRIÇÃO -->
+    <div class="tab-panel" id="multiTab-nutri">
+      <div class="section-divider">Histórico de Avaliações</div>
+      <div class="evolucao-list" id="listaNutri">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nenhuma avaliação registrada</div>
+      </div>
+      <div class="section-divider" style="margin-top:14px">Nova Avaliação Nutricional</div>
+      <div class="form-row">
+        <div class="form-group"><label>Peso (kg)</label><input id="nutPeso" type="number" step="0.1" placeholder="Ex: 68.5"></div>
+        <div class="form-group"><label>Altura (cm)</label><input id="nutAltura" type="number" placeholder="Ex: 170"></div>
+      </div>
+      <div class="form-group"><label>Circunferências (uma linha "Medida: valor")</label>
+        <textarea id="nutCircunferencias" rows="2" placeholder="braquial_cm: 28&#10;panturrilha_cm: 32"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Diagnóstico Nutricional</label><input id="nutDiagnostico" placeholder="Ex: desnutrição moderada, eutrofia"></div>
+        <div class="form-group"><label>Via de Alimentação</label>
+          <select id="nutVia">
+            <option value="oral">Via oral</option>
+            <option value="enteral">Via enteral (sonda)</option>
+            <option value="parenteral">Via parenteral</option>
+            <option value="oral_enteral">Oral + enteral</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Necessidade Calórica (kcal/dia)</label><input id="nutCalorias" type="number" placeholder="Ex: 1800"></div>
+        <div class="form-group"><label>Necessidade Proteica (g/dia)</label><input id="nutProteina" type="number" placeholder="Ex: 80"></div>
+      </div>
+      <div class="form-group"><label>Restrições / Alergias Alimentares</label><textarea id="nutRestricoes" rows="2"></textarea></div>
+      <div class="form-group"><label>Plano Dietético (uma linha por item)</label>
+        <textarea id="nutPlano" rows="2" placeholder="Dieta branda hipossódica&#10;6 refeições/dia"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Responsável</label><input id="nutResp" placeholder="Nome do nutricionista"></div>
+        <div class="form-group"><label>CRN</label><input id="nutCrn" placeholder="Ex: 12345"></div>
+      </div>
+      <div class="modal-actions"><button class="btn btn-primary" onclick="salvarAvaliacaoNutri()">Registrar Avaliação Nutricional</button></div>
+    </div>
+
+    <div class="modal-actions" style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
+      <button class="btn btn-ghost" onclick="fecharModal('modalMulti')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast Container -->
 <div id="toast-container"></div>
 
@@ -1885,6 +2006,153 @@ function abrirPrescricaoIntId(intId, nome) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// EQUIPE MULTIPROFISSIONAL (Enfermagem SAE / Fisioterapia / Nutrição)
+// ══════════════════════════════════════════════════════════════
+function linesToKV(text) {
+  const out = {};
+  (text||'').split('\n').forEach(line=>{
+    const i = line.indexOf(':');
+    if (i<0) return;
+    const k = line.slice(0,i).trim();
+    const val = line.slice(i+1).trim();
+    if (k && val) out[k] = val;
+  });
+  return out;
+}
+function linesToList(text, field) {
+  return (text||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>({[field]: l}));
+}
+function setMultiTab(tab) {
+  ['enfermagem','fisio','nutri'].forEach(t=>{
+    document.getElementById('multiTabBtn-'+t).classList.toggle('active', t===tab);
+    document.getElementById('multiTab-'+t).classList.toggle('active', t===tab);
+  });
+}
+function renderAvaliacoesList(elId, items, linhaFn) {
+  const el = document.getElementById(elId);
+  el.innerHTML = items.length
+    ? items.map(a=>`
+        <div class="evolucao-item">
+          <div style="font-size:13px">${linhaFn(a)}</div>
+          <div class="evolucao-meta">
+            <span>👤 ${a.responsavel||'—'}</span>
+            <span>🕐 ${a.criado_em}</span>
+            <span class="badge ${a.status==='ativa'?'badge-ok':'badge-muted'}">${a.status}</span>
+          </div>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nenhuma avaliação registrada</div>';
+}
+function limparFormulariosMulti() {
+  ['enfHistorico','enfExameFisico','enfBraden','enfMorse','enfDiagnosticos','enfPlano','enfResp','enfCoren',
+   'fisQueixa','fisAdm','fisForca','fisDor','fisFuncional','fisDiagnostico','fisPlano','fisObjetivos','fisResp','fisCrefito',
+   'nutPeso','nutAltura','nutCircunferencias','nutDiagnostico','nutCalorias','nutProteina','nutRestricoes','nutPlano','nutResp','nutCrn'
+  ].forEach(id=>{ const el=document.getElementById(id); if (el) el.value=''; });
+}
+async function abrirModalMulti(pacId, nome) {
+  document.getElementById('multiTitle').textContent = '👥 Equipe Multiprofissional';
+  setMultiTab('enfermagem');
+  limparFormulariosMulti();
+  const sel = document.getElementById('multiPacId');
+  try {
+    const d = await api('/api/hospital/pacientes?status=internado&limit=100');
+    const lista = d.pacientes || [];
+    sel.innerHTML = '<option value="">— selecione o paciente —</option>' +
+      lista.map(p => `<option value="${p.id}">${p.nome}${p.leito_numero?(' — Leito '+p.leito_numero):''}</option>`).join('');
+  } catch(e) { console.error('[abrirModalMulti] erro ao listar pacientes', e); }
+  if (pacId) sel.value = String(pacId);
+  abrirModal('modalMulti');
+  if (sel.value) await onMultiPacChange();
+}
+async function onMultiPacChange() {
+  const pacId = document.getElementById('multiPacId').value;
+  limparFormulariosMulti();
+  if (!pacId) {
+    ['listaEnfermagem','listaFisio','listaNutri'].forEach(id=>{
+      document.getElementById(id).innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Selecione um paciente</div>';
+    });
+    return;
+  }
+  await carregarAvaliacoesMulti(pacId);
+}
+async function carregarAvaliacoesMulti(pacId) {
+  try {
+    const [enf, fis, nut] = await Promise.all([
+      api(`/api/hospital/pacientes/${pacId}/avaliacoes-enfermagem/`),
+      api(`/api/hospital/pacientes/${pacId}/avaliacoes-fisioterapia/`),
+      api(`/api/hospital/pacientes/${pacId}/avaliacoes-nutricionais/`),
+    ]);
+    renderAvaliacoesList('listaEnfermagem', enf.avaliacoes||[], a=>
+      `Braden: ${a.escala_braden??'—'} · Morse: ${a.escala_morse??'—'}<br>${(a.historico_enfermagem||'').slice(0,140)}`);
+    renderAvaliacoesList('listaFisio', fis.avaliacoes||[], a=>
+      `EVA: ${a.escala_dor_eva??'—'} · Funcional: ${a.capacidade_funcional||'—'}<br>${(a.queixa_principal||'').slice(0,140)}`);
+    renderAvaliacoesList('listaNutri', nut.avaliacoes||[], a=>
+      `IMC: ${a.imc??'—'} · Via: ${a.via_alimentacao}<br>${(a.diagnostico_nutricional||'').slice(0,140)}`);
+  } catch(e) { console.error('[carregarAvaliacoesMulti] erro', e); }
+}
+async function salvarAvaliacaoEnfermagem() {
+  const pacId = document.getElementById('multiPacId').value;
+  if (!pacId) return toast('Selecione o paciente','warn');
+  const body = {
+    historico_enfermagem: v('enfHistorico'),
+    exame_fisico: linesToKV(document.getElementById('enfExameFisico').value),
+    escala_braden: v('enfBraden')||null,
+    escala_morse: v('enfMorse')||null,
+    diagnosticos_enfermagem: linesToList(document.getElementById('enfDiagnosticos').value, 'diagnostico'),
+    plano_cuidados: linesToList(document.getElementById('enfPlano').value, 'intervencao'),
+    responsavel: v('enfResp'),
+    coren: v('enfCoren'),
+  };
+  try {
+    await api(`/api/hospital/pacientes/${pacId}/avaliacoes-enfermagem/`, {method:'POST', body:JSON.stringify(body)});
+    toast('Avaliação de enfermagem registrada','ok');
+    await carregarAvaliacoesMulti(pacId);
+  } catch(e) { toast('Erro ao salvar: '+e.message,'error'); }
+}
+async function salvarAvaliacaoFisio() {
+  const pacId = document.getElementById('multiPacId').value;
+  if (!pacId) return toast('Selecione o paciente','warn');
+  const body = {
+    queixa_principal: v('fisQueixa'),
+    amplitude_movimento: linesToKV(document.getElementById('fisAdm').value),
+    forca_muscular: linesToKV(document.getElementById('fisForca').value),
+    escala_dor_eva: v('fisDor')||null,
+    capacidade_funcional: v('fisFuncional'),
+    diagnostico_fisioterapeutico: v('fisDiagnostico'),
+    plano_terapeutico: linesToList(document.getElementById('fisPlano').value, 'conduta'),
+    objetivos: v('fisObjetivos'),
+    responsavel: v('fisResp'),
+    crefito: v('fisCrefito'),
+  };
+  try {
+    await api(`/api/hospital/pacientes/${pacId}/avaliacoes-fisioterapia/`, {method:'POST', body:JSON.stringify(body)});
+    toast('Avaliação de fisioterapia registrada','ok');
+    await carregarAvaliacoesMulti(pacId);
+  } catch(e) { toast('Erro ao salvar: '+e.message,'error'); }
+}
+async function salvarAvaliacaoNutri() {
+  const pacId = document.getElementById('multiPacId').value;
+  if (!pacId) return toast('Selecione o paciente','warn');
+  const body = {
+    peso_kg: v('nutPeso')||null,
+    altura_cm: v('nutAltura')||null,
+    circunferencias: linesToKV(document.getElementById('nutCircunferencias').value),
+    diagnostico_nutricional: v('nutDiagnostico'),
+    via_alimentacao: document.getElementById('nutVia').value,
+    necessidade_calorica_kcal: v('nutCalorias')||null,
+    necessidade_proteica_g: v('nutProteina')||null,
+    restricoes_alergias: v('nutRestricoes'),
+    plano_dietetico: linesToList(document.getElementById('nutPlano').value, 'tipo_dieta'),
+    responsavel: v('nutResp'),
+    crn: v('nutCrn'),
+  };
+  try {
+    await api(`/api/hospital/pacientes/${pacId}/avaliacoes-nutricionais/`, {method:'POST', body:JSON.stringify(body)});
+    toast('Avaliação nutricional registrada','ok');
+    await carregarAvaliacoesMulti(pacId);
+  } catch(e) { toast('Erro ao salvar: '+e.message,'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
 // PACIENTES
 // ══════════════════════════════════════════════════════════════
 async function carregarPacientes(q='') {
@@ -2324,7 +2592,10 @@ async function carregarUTI() {
     <td>${isolBadge(p.tipo_isolamento)}</td>
     <td style="font-size:11px;color:var(--muted)">${p.ultimo_registro || '—'}</td>
     <td>
-      <button class="btn btn-outline" style="font-size:11px;padding:3px 8px" onclick="abrirModalUTI(${p.id},'${p.nome.replace(/'/g,"\\'")}')">+ Registro</button>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-outline" style="font-size:11px;padding:3px 8px" onclick="abrirModalUTI(${p.id},'${p.nome.replace(/'/g,"\\'")}')">+ Registro</button>
+        <button class="btn btn-outline" style="font-size:11px;padding:3px 8px" onclick="abrirModalMulti(${p.id},'${p.nome.replace(/'/g,"\\'")}')">👥 Equipe</button>
+      </div>
     </td>
   </tr>`).join('');
 }
