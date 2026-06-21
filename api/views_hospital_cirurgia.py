@@ -145,14 +145,18 @@ def api_cirurgia_nova(request):
     except ValueError:
         return JsonResponse({"erro": "data_hora inválida (use ISO 8601)"}, status=400)
 
+    from .models import ProntuarioHospitalar
     prontuario_id = data.get("prontuario_id")
     prontuario = None
     if prontuario_id:
-        from .models import ProntuarioHospitalar
         try:
             prontuario = ProntuarioHospitalar.objects.get(pk=prontuario_id, empresa=empresa)
         except ProntuarioHospitalar.DoesNotExist:
             pass
+    if prontuario is None:
+        prontuario, _ = ProntuarioHospitalar.objects.get_or_create(
+            empresa=empresa, paciente_nome=paciente_nome,
+        )
 
     cir = BlocoCirurgico.objects.create(
         empresa=empresa,

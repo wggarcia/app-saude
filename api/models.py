@@ -2139,6 +2139,10 @@ class InternacaoHospital(models.Model):
     status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ativa")
     data_entrada        = models.DateTimeField(auto_now_add=True)
     data_saida          = models.DateTimeField(null=True, blank=True)
+    paciente_interno_sync = models.ForeignKey(
+        "PacienteInternado", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+        help_text="Sincronização interna com o cadastro moderno de paciente — não exposta na UI",
+    )
 
     class Meta:
         ordering = ["-data_entrada"]
@@ -4688,6 +4692,7 @@ class TriagemManchester(models.Model):
 
 class PacienteInternado(models.Model):
     STATUS_CHOICES = [
+        ("cadastrado", "Cadastrado — ainda não internado"),
         ("internado", "Internado"),
         ("alta", "Alta"),
         ("transferido", "Transferido"),

@@ -116,14 +116,20 @@ def api_lis_solicitar(request):
     if not paciente_nome or not tipo_exame or not solicitante:
         return JsonResponse({"erro": "paciente_nome, tipo_exame e solicitante são obrigatórios"}, status=400)
 
+    from .models import ProntuarioHospitalar
     prontuario_id = data.get("prontuario_id")
     prontuario = None
     if prontuario_id:
-        from .models import ProntuarioHospitalar
         try:
             prontuario = ProntuarioHospitalar.objects.get(pk=prontuario_id, empresa=empresa)
         except ProntuarioHospitalar.DoesNotExist:
             pass
+    if prontuario is None:
+        # Sem prontuario_id explícito: amarra pelo nome em vez de deixar NULL,
+        # senão o exame nunca aparece no histórico do paciente.
+        prontuario, _ = ProntuarioHospitalar.objects.get_or_create(
+            empresa=empresa, paciente_nome=paciente_nome,
+        )
 
     exame = ExameLIS.objects.create(
         empresa=empresa,

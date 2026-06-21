@@ -144,14 +144,18 @@ def api_ris_solicitar(request):
     if modalidade not in modalidades_validas:
         return JsonResponse({"erro": f"modalidade inválida. Opções: {modalidades_validas}"}, status=400)
 
+    from .models import ProntuarioHospitalar
     prontuario_id = data.get("prontuario_id")
     prontuario = None
     if prontuario_id:
-        from .models import ProntuarioHospitalar
         try:
             prontuario = ProntuarioHospitalar.objects.get(pk=prontuario_id, empresa=empresa)
         except ProntuarioHospitalar.DoesNotExist:
             pass
+    if prontuario is None:
+        prontuario, _ = ProntuarioHospitalar.objects.get_or_create(
+            empresa=empresa, paciente_nome=paciente_nome,
+        )
 
     exame = ExameRIS.objects.create(
         empresa=empresa,

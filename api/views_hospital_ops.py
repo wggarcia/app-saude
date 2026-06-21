@@ -9,7 +9,7 @@ from .models import (
     TriagemHospital, InternacaoHospital, EvolucaoClinica,
     ProntuarioHospitalar, EvolucaoProntuario, PrescricaoProntuario,
     BlocoCirurgico, FarmaciaHospitalarItem, ExameLIS, ExameRIS, GuiaTISS,
-    ResultadoExame, MonitoramentoUTI, FaturaHospitalar,
+    ResultadoExame, MonitoramentoUTI, FaturaHospitalar, PacienteInternado,
 )
 from .views_dashboard import _empresa_autenticada
 from .access_control import (
@@ -260,7 +260,38 @@ def api_internacoes_hospital(request):
         diagnostico=data.get("diagnostico", ""),
         medico_responsavel=data.get("medico_responsavel", ""),
     )
+    i.paciente_interno_sync = _sincronizar_paciente_interno(e, pac, i, "internado")
+    i.save(update_fields=["paciente_interno_sync"])
     return JsonResponse({"id": i.id}, status=201)
+
+
+def _sincronizar_paciente_interno(empresa, pac_legado, internacao, status):
+    """Mantém um PacienteInternado (sistema moderno) coerente com a internação
+    feita pela tela legada — para que módulos como Equipe Multiprofissional,
+    Visitantes, Óbito e Dose Unitária encontrem o paciente certo."""
+    moderno = None
+    if pac_legado.cpf:
+        moderno = PacienteInternado.objects.filter(empresa=empresa, cpf=pac_legado.cpf).order_by("-id").first()
+    if not moderno:
+        moderno = PacienteInternado.objects.filter(empresa=empresa, nome=pac_legado.nome).order_by("-id").first()
+    if moderno:
+        moderno.status = status
+        moderno.diagnostico_descricao = internacao.diagnostico or moderno.diagnostico_descricao
+        moderno.medico_responsavel = internacao.medico_responsavel or moderno.medico_responsavel
+        moderno.save(update_fields=["status", "diagnostico_descricao", "medico_responsavel"])
+        return moderno
+    return PacienteInternado.objects.create(
+        empresa=empresa,
+        nome=pac_legado.nome,
+        cpf=pac_legado.cpf,
+        data_nascimento=pac_legado.data_nascimento,
+        data_internacao=timezone.now().date(),
+        diagnostico_descricao=internacao.diagnostico or "",
+        medico_responsavel=internacao.medico_responsavel or "",
+        tipo_sanguineo=pac_legado.tipo_sanguineo,
+        alergias=pac_legado.alergias,
+        status=status,
+    )
 
 
 @require_http_methods(["PUT"])
@@ -282,6 +313,12 @@ def api_internacao_status(request, internacao_id):
             i.leito.status = "disponivel"
             i.leito.save()
     i.save()
+    if i.status in ("alta", "transferido", "obito"):
+        if i.paciente_interno_sync:
+            i.paciente_interno_sync.status = i.status
+            i.paciente_interno_sync.save(update_fields=["status"])
+        else:
+            _sincronizar_paciente_interno(e, i.paciente, i, i.status)
     return JsonResponse({"ok": True})
 
 

@@ -372,6 +372,10 @@ def api_hospital_pacientes(request):
             except LeitoHospitalar.DoesNotExist:
                 return JsonResponse({"erro": "Leito não encontrado"}, status=404)
 
+        # Cadastro simples (sem leito) não significa internação real — só fica
+        # "internado" quando admitido de fato (leito informado ou status explícito).
+        status_default = "internado" if leito else "cadastrado"
+
         paciente = PacienteInternado.objects.create(
             empresa=empresa,
             nome=nome,
@@ -382,7 +386,7 @@ def api_hospital_pacientes(request):
             diagnostico_cid=data.get("diagnostico_cid", ""),
             medico_responsavel=data.get("medico_responsavel", ""),
             convenio=data.get("convenio", ""),
-            status=data.get("status", "internado"),
+            status=data.get("status", status_default),
             prescricao_atual=data.get("prescricao_atual") or {},
             evolucao=data.get("evolucao") or [],
         )
