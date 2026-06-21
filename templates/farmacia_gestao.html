@@ -406,6 +406,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <button class="btn btn-ghost" id="iaBtn-previsao" onclick="iaSetSubtab('previsao')">📈 Previsão de Demanda</button>
         <button class="btn btn-ghost" id="iaBtn-abc" onclick="iaSetSubtab('abc')">📊 Curva ABC</button>
         <button class="btn btn-ghost" id="iaBtn-interacoes" onclick="iaSetSubtab('interacoes')">⚠️ Interações Medicamentosas</button>
+        <button class="btn btn-ghost" id="iaBtn-relatorio" onclick="iaSetSubtab('relatorio')">📄 Relatório Executivo</button>
       </div>
 
       <!-- Dashboard IA -->
@@ -503,6 +504,19 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <button class="btn btn-primary" onclick="verificarInteracoesIA()">🔍 Verificar Interações</button>
         </div>
         <div id="resultadoInteracoes"></div>
+      </div>
+
+      <!-- Relatório Executivo IA -->
+      <div id="ia-sub-relatorio" style="display:none">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><span class="card-title">📄 Relatório Executivo com IA</span></div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px">
+            Gera uma análise em português sobre as vendas e o estoque dos últimos 30 dias: tendências de venda,
+            alertas de ruptura e recomendações práticas — escrita por IA a partir dos dados reais da farmácia.
+          </p>
+          <button class="btn btn-primary" id="btnGerarRelatorioIa" onclick="gerarRelatorioIA()">🤖 Gerar Relatório com IA</button>
+        </div>
+        <div id="relatorioIaResultado"></div>
       </div>
     </div>
 
@@ -1741,7 +1755,7 @@ let _medsInteracao = [];
 let _medsInteracaoSelecionados = [];
 
 function iaSetSubtab(sub) {
-  ['dashboard','previsao','abc','interacoes'].forEach(s => {
+  ['dashboard','previsao','abc','interacoes','relatorio'].forEach(s => {
     document.getElementById('ia-sub-'+s).style.display = s === sub ? '' : 'none';
     const btn = document.getElementById('iaBtn-'+s);
     if (btn) { btn.className = s === sub ? 'btn btn-primary' : 'btn btn-ghost'; }
@@ -1750,6 +1764,25 @@ function iaSetSubtab(sub) {
   else if (sub === 'previsao') carregarPrevisao();
   else if (sub === 'abc') carregarCurvaAbcIA();
   else if (sub === 'interacoes') carregarSeletorInteracoes();
+}
+
+async function gerarRelatorioIA() {
+  const box = document.getElementById('relatorioIaResultado');
+  const btn = document.getElementById('btnGerarRelatorioIa');
+  btn.disabled = true; btn.textContent = '⏳ Gerando...';
+  box.innerHTML = '<div class="empty">Analisando vendas e estoque dos últimos 30 dias...</div>';
+  try {
+    const r = await fetch('/api/farmacia/relatorio-ia/', {headers:{'Content-Type':'application/json'}});
+    const d = await r.json();
+    if (d.ok) {
+      box.innerHTML = `<div class="card"><div style="white-space:pre-wrap;font-size:14px;line-height:1.7">${d.relatorio.replace(/</g,'&lt;')}</div></div>`;
+    } else {
+      box.innerHTML = `<div class="empty" style="color:var(--danger)">${d.erro || 'Erro ao gerar relatório'}</div>`;
+    }
+  } catch (e) {
+    box.innerHTML = '<div class="empty" style="color:var(--danger)">Erro de conexão</div>';
+  }
+  btn.disabled = false; btn.textContent = '🤖 Gerar Relatório com IA';
 }
 
 async function carregarIA() {
