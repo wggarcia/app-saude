@@ -17,6 +17,7 @@ from .access_control import (
     principal_pode_operacao_setorial,
     requer_setor,
     requer_operacao_page,
+    requer_permissao_modulo,
 )
 from .models import ExameLIS
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
@@ -58,6 +59,7 @@ def _exame_to_dict(e):
 @ensure_csrf_cookie
 @requer_setor("hospital")
 @requer_operacao_page
+@requer_permissao_modulo("hospital.clinico")
 def hospital_lis_page(request):
     return render(request, "hospital_lis.html", contexto_navegacao_setorial(request, "hospital"))
 

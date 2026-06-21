@@ -18,6 +18,7 @@ from .access_control import (
     principal_pode_operacao_setorial,
     requer_setor,
     requer_operacao_page,
+    requer_permissao_modulo,
 )
 from .models import FarmaciaHospitalarItem
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
@@ -61,6 +62,7 @@ def _item_to_dict(i):
 @ensure_csrf_cookie
 @requer_setor("hospital")
 @requer_operacao_page
+@requer_permissao_modulo("hospital.operacional")
 def hospital_farmacia_page(request):
     return render(request, "hospital_farmacia_hospitalar.html", contexto_navegacao_setorial(request, "hospital"))
 

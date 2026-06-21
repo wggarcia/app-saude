@@ -20,6 +20,7 @@ from .access_control import (
     principal_pode_operacao_setorial,
     requer_setor,
     requer_operacao_page,
+    requer_permissao_modulo,
 )
 from .models import GuiaTISS
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
@@ -73,6 +74,7 @@ def _guia_to_dict(g):
 @ensure_csrf_cookie
 @requer_setor("hospital")
 @requer_operacao_page
+@requer_permissao_modulo("hospital.operacional")
 def hospital_tiss_page(request):
     return render(request, "hospital_faturamento_tiss.html", contexto_navegacao_setorial(request, "hospital"))
 

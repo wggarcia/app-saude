@@ -312,6 +312,147 @@ def api_requer_plataforma_ti(view_func):
     return wrapper
 
 
+# ─── Acesso por módulo interno (credencial própria por área operacional) ─────
+#
+# Cada segmento é dividido em "módulos" (ex: Hospital = operacional/clínico/rede).
+# Reaproveita o mesmo RBACPermissao/RBACAtribuicao já usado para "plataforma_ti",
+# só que com um código por módulo em vez de um único código fixo.
+
+MODULOS_POR_SETOR = {
+    "hospital": [
+        {"codigo": "hospital.operacional", "label": "Operacional"},
+        {"codigo": "hospital.clinico", "label": "Clínico"},
+        {"codigo": "hospital.rede", "label": "Rede de Gestão"},
+    ],
+    "farmacia": [
+        {"codigo": "farmacia.pdv", "label": "PDV / Caixa"},
+        {"codigo": "farmacia.gestao", "label": "Gestão / Farmacêutico"},
+        {"codigo": "farmacia.rede", "label": "Rede de Gestão"},
+    ],
+    "empresa": [  # setor "empresa" = SST
+        {"codigo": "sst.operacional", "label": "Operacional (técnico/auxiliar)"},
+        {"codigo": "sst.clinico", "label": "Clínico (médico do trabalho)"},
+        {"codigo": "sst.gestao_conformidade", "label": "Gestão / Conformidade"},
+        {"codigo": "sst.administracao", "label": "Administração"},
+    ],
+    "governo": [
+        {"codigo": "governo.administrativo", "label": "Administrativo"},
+        {"codigo": "governo.vigilancia_acs", "label": "Vigilância / ACS"},
+        {"codigo": "governo.atencao_clinica", "label": "Atenção Clínica"},
+        {"codigo": "governo.regulacao_urgencia", "label": "Regulação / Urgência"},
+    ],
+    "plano_saude": [
+        {"codigo": "plano.autorizacao", "label": "Autorização / Sinistro"},
+        {"codigo": "plano.rede_credenciada", "label": "Rede Credenciada"},
+        {"codigo": "plano.comercial", "label": "Comercial / Corretores"},
+        {"codigo": "plano.compliance_ans", "label": "Compliance ANS"},
+    ],
+}
+
+MODULOS_LABEL = {
+    m["codigo"]: m["label"]
+    for modulos in MODULOS_POR_SETOR.values()
+    for m in modulos
+}
+
+
+def _garantir_permissao_modulo(codigo):
+    try:
+        from .models import RBACPermissao
+        modulo = codigo.split(".", 1)[0]
+        permissao, _ = RBACPermissao.objects.get_or_create(
+            codigo=codigo,
+            defaults={"descricao": MODULOS_LABEL.get(codigo, codigo), "modulo": modulo},
+        )
+        return permissao
+    except Exception:
+        return None
+
+
+def principal_tem_modulo(empresa, principal, codigo_modulo):
+    if principal is None or principal == empresa or principal_e_gerencia_principal(principal):
+        return True
+    return _principal_tem_permissao(empresa, principal, codigo_modulo)
+
+
+def principal_e_gerencia_principal(principal):
+    """Versão sem request: gerência é EmpresaUsuario com perfil 'admin'/'gestor', ou a própria Empresa."""
+    if principal is None:
+        return False
+    if principal.__class__.__name__ != "EmpresaUsuario":
+        return True  # é a conta principal da Empresa
+    perfil = _perfil_usuario(principal)
+    return perfil in ("admin", "gestor") or getattr(principal, "is_admin", False)
+
+
+def requer_permissao_modulo(codigo):
+    """
+    Decorator para views de página: se a sessão atual não tiver a permissão do
+    módulo (e não for gerência), renderiza a tela de credencial em vez do
+    conteúdo — sem fricção quando já autorizado, igual ao padrão de
+    requer_plataforma_ti_page.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            empresa = getattr(request, "empresa", None)
+            if not empresa:
+                return redirect("/login-empresa/")
+            principal = getattr(request, "principal", None) or empresa
+            if principal_tem_modulo(empresa, principal, codigo):
+                return view_func(request, *args, **kwargs)
+            return render(request, "modulo_credencial.html", {
+                "codigo_modulo": codigo,
+                "modulo_label": MODULOS_LABEL.get(codigo, codigo),
+                "return_url": request.path,
+            }, status=403)
+        return wrapper
+    return decorator
+
+
+def api_requer_permissao_modulo(codigo):
+    """Decorator para views de API: 403 JSON em vez de tela de credencial."""
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            empresa = getattr(request, "empresa", None)
+            if not empresa:
+                return JsonResponse({"erro": "Não autenticado"}, status=401)
+            principal = getattr(request, "principal", None) or empresa
+            if not principal_tem_modulo(empresa, principal, codigo):
+                return JsonResponse({
+                    "erro": "Acesso restrito a este módulo.",
+                    "codigo_modulo": codigo,
+                    "modulo_label": MODULOS_LABEL.get(codigo, codigo),
+                }, status=403)
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def meus_modulos(request):
+    """Lista de códigos de módulo que o principal atual já tem acesso, para o gate client-side de abas."""
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return []
+    setor = get_setor(empresa)
+    principal = getattr(request, "principal", None) or empresa
+    if principal_e_gerencia_principal(principal):
+        return [m["codigo"] for m in MODULOS_POR_SETOR.get(setor, [])]
+    return [
+        m["codigo"] for m in MODULOS_POR_SETOR.get(setor, [])
+        if _principal_tem_permissao(empresa, principal, m["codigo"])
+    ]
+
+
+def api_meus_modulos(request):
+    """GET /api/permissoes/meus-modulos — usado pelo gate client-side de abas (ex: governo_gestao.html)."""
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+    return JsonResponse({"modulos": meus_modulos(request)})
+
+
 def _principal_gestor_ti(request):
     empresa = getattr(request, "empresa", None)
     if not empresa:

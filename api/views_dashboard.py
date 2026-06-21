@@ -17,10 +17,15 @@ from .access_control import (
     api_requer_operacao_ou_gerencia,
     contexto_navegacao_setorial,
     destino_por_perfil,
+    get_setor,
+    MODULOS_LABEL,
+    MODULOS_POR_SETOR,
     perfil_principal,
     principal_pode_configurar_ti,
+    principal_tem_modulo,
     requer_gerencia_page,
     requer_operacao_page,
+    requer_permissao_modulo,
     requer_plataforma_ti_page,
     requer_rh_page,
     requer_setor,
@@ -338,6 +343,7 @@ def farmacia_gestao_page(request):
 @ensure_csrf_cookie
 @requer_setor('hospital')
 @requer_operacao_page
+@requer_permissao_modulo("hospital.operacional")
 def hospital_gestao_page(request):
     return render(request, "hospital_gestao.html", contexto_navegacao_setorial(request, "hospital"))
 
@@ -360,9 +366,16 @@ def governo_plataforma_page(request):
 @requer_setor('farmacia', 'hospital')
 @requer_operacao_page
 def rede_gestao_page(request):
-    from .access_control import get_setor
     empresa = getattr(request, "empresa", None)
     setor = get_setor(empresa) if empresa else "farmacia"
+    codigo_modulo = f"{setor}.rede"
+    principal = getattr(request, "principal", None) or empresa
+    if not principal_tem_modulo(empresa, principal, codigo_modulo):
+        return render(request, "modulo_credencial.html", {
+            "codigo_modulo": codigo_modulo,
+            "modulo_label": MODULOS_LABEL.get(codigo_modulo, codigo_modulo),
+            "return_url": request.path,
+        }, status=403)
     return render(request, "rede_gestao.html", {"setor": setor, **contexto_navegacao_setorial(request, setor)})
 
 
@@ -890,11 +903,18 @@ def api_usuarios_empresa(request):
     if not _principal_pode_configurar_ti(request, empresa):
         return JsonResponse({"erro": "Acesso restrito a RH/gerência."}, status=403)
 
+    from .models import RBACAtribuicao
+
     usuarios = EmpresaUsuario.objects.filter(empresa=empresa).order_by("nome")
+    modulos_por_usuario = {}
+    for atrib in RBACAtribuicao.objects.filter(empresa=empresa, ativo=True, usuario__in=usuarios).select_related("permissao"):
+        modulos_por_usuario.setdefault(atrib.usuario_id, []).append(atrib.permissao.codigo)
+
     return JsonResponse({
         "max_usuarios": empresa.max_usuarios,
         "usuarios_ativos": usuarios.filter(ativo=True).count(),
         "pode_configurar_ti": _principal_pode_configurar_ti(request, empresa),
+        "modulos_setor": MODULOS_POR_SETOR.get(get_setor(empresa), []),
         "usuarios": [
             {
                 "id": usuario.id,
@@ -905,6 +925,7 @@ def api_usuarios_empresa(request):
                 "ativo": usuario.ativo,
                 "is_admin": usuario.is_admin,
                 "criado_em": usuario.criado_em.isoformat(),
+                "modulos": modulos_por_usuario.get(usuario.id, []),
             }
             for usuario in usuarios
         ],
@@ -1060,6 +1081,51 @@ def api_desativar_usuario_empresa(request):
     usuario.sessao_ativa_em = None
     usuario.save(update_fields=["ativo", "sessao_ativa_chave", "sessao_ativa_device_id", "sessao_ativa_em"])
     return JsonResponse({"status": "ok"})
+
+
+@csrf_exempt
+def api_atribuir_modulos_usuario(request):
+    """POST /api/usuarios/modulos — RH/gerência concede/revoga acesso por módulo a um EmpresaUsuario."""
+    empresa = _empresa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not _principal_pode_configurar_ti(request, empresa):
+        return JsonResponse({"erro": "Acesso restrito a RH/gerência."}, status=403)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    usuario_id = dados.get("usuario_id")
+    codigos_marcados = set(dados.get("modulos") or [])
+
+    usuario = EmpresaUsuario.objects.filter(id=usuario_id, empresa=empresa).first()
+    if not usuario:
+        return JsonResponse({"erro": "usuário não encontrado"}, status=404)
+
+    codigos_validos = {m["codigo"] for m in MODULOS_POR_SETOR.get(get_setor(empresa), [])}
+    codigos_marcados &= codigos_validos
+
+    from .models import RBACPermissao, RBACAtribuicao
+
+    for codigo in codigos_marcados:
+        modulo = codigo.split(".", 1)[0]
+        permissao, _ = RBACPermissao.objects.get_or_create(
+            codigo=codigo, defaults={"descricao": codigo, "modulo": modulo},
+        )
+        RBACAtribuicao.objects.update_or_create(
+            empresa=empresa, usuario=usuario, permissao=permissao,
+            defaults={"ativo": True, "concedido_por": _principal_label(request)},
+        )
+
+    RBACAtribuicao.objects.filter(
+        empresa=empresa, usuario=usuario, permissao__codigo__in=codigos_validos - codigos_marcados,
+    ).update(ativo=False)
+
+    return JsonResponse({"status": "ok", "modulos": sorted(codigos_marcados)})
 
 
 def login_operacao(request):

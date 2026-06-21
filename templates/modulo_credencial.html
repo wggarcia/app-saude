@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Acesso ao módulo — SolusCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05070a;--ink:#f7f2e9;--muted:#aeb9c4;--line:rgba(255,255,255,.14);--gold:#d9b86f;--cyan:#45ead9}
+html,body{min-height:100%;font-family:Manrope,Arial,sans-serif;color:var(--ink);background:radial-gradient(circle at 50% 0%,rgba(69,234,217,.1),transparent 40rem),linear-gradient(135deg,#05070a,#07121a 60%,#030507)}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.card{width:100%;max-width:400px;padding:34px;border-radius:24px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.03));box-shadow:0 30px 100px rgba(0,0,0,.45)}
+.lock-icon{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--gold),#f6e9bd);display:grid;place-items:center;font-size:22px;margin-bottom:18px}
+.title{font-size:1.3rem;font-weight:800}
+.sub{margin-top:8px;font-size:.88rem;color:var(--muted);line-height:1.6}
+.sub strong{color:var(--cyan)}
+.fields{margin-top:24px;display:flex;flex-direction:column;gap:14px}
+.field label{display:block;font-size:.72rem;font-weight:700;color:rgba(247,242,233,.58);letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px}
+.field input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(4,8,12,.66);color:var(--ink);font-size:.95rem;outline:none;font-family:inherit}
+.field input:focus{border-color:var(--cyan)}
+.btn-main{width:100%;margin-top:20px;padding:13px;border:none;border-radius:11px;background:linear-gradient(135deg,#f6e7b7,var(--gold));color:#070a0e;font-size:.95rem;font-weight:800;cursor:pointer;font-family:inherit}
+.btn-main:hover{opacity:.92}
+.btn-back{display:block;margin-top:14px;text-align:center;font-size:.82rem;color:var(--muted);text-decoration:none}
+.btn-back:hover{color:var(--ink)}
+.err{display:none;margin-top:14px;padding:10px 13px;border-radius:9px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;font-size:.82rem}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="lock-icon">🔒</div>
+  <div class="title">Acesso restrito por módulo</div>
+  <div class="sub">A credencial usada agora não tem permissão para o módulo <strong>{{ modulo_label }}</strong>. Confirme as credenciais de quem tem acesso a esta área.</div>
+
+  <div class="fields">
+    <div class="field"><label for="email">E-mail</label><input id="email" type="email" placeholder="voce@instituicao.com" autocomplete="email"></div>
+    <div class="field"><label for="senha">Senha</label><input id="senha" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+  </div>
+
+  <button class="btn-main" onclick="entrarNoModulo()">Desbloquear módulo →</button>
+  <a class="btn-back" href="javascript:history.back()">← Voltar</a>
+
+  <div id="erro" class="err"></div>
+</div>
+
+<script>
+const CODIGO_MODULO = "{{ codigo_modulo|default:''|escapejs }}";
+const RETURN_URL = "{{ return_url|default:'/'|escapejs }}";
+function getDeviceId(){
+  let d = localStorage.getItem("device_id");
+  if(!d){ d = "dev-"+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem("device_id", d); }
+  return d;
+}
+async function entrarNoModulo(force=false){
+  const email = document.getElementById("email").value.trim();
+  const senha = document.getElementById("senha").value;
+  const err = document.getElementById("erro");
+  err.style.display = "none";
+  if(!email || !senha){ err.textContent = "Informe email e senha"; err.style.display = "block"; return; }
+  const r = await fetch("/api/login-modulo", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({email, senha, codigo_modulo: CODIGO_MODULO, device_id: getDeviceId(), device_name: navigator.platform || "Computador", force_login: force}),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (r.ok && data.ok) {
+    if (data.token) localStorage.setItem("token", data.token);
+    window.location.href = RETURN_URL || "/";
+    return;
+  }
+  if (data.codigo === "sessao_em_uso" && !force) {
+    if (confirm(`${data.mensagem}\n\nEncerrar sessão anterior?`)) return entrarNoModulo(true);
+    return;
+  }
+  err.textContent = data.erro || data.mensagem || "Credenciais inválidas";
+  err.style.display = "block";
+}
+document.addEventListener("keydown", e => { if (e.key === "Enter") entrarNoModulo(); });
+</script>
+</body>
+</html>

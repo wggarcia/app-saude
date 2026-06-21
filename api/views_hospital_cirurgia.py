@@ -18,6 +18,7 @@ from .access_control import (
     principal_pode_operacao_setorial,
     requer_setor,
     requer_operacao_page,
+    requer_permissao_modulo,
 )
 from .models import BlocoCirurgico
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
@@ -63,6 +64,7 @@ def _cir_to_dict(c):
 @ensure_csrf_cookie
 @requer_setor("hospital")
 @requer_operacao_page
+@requer_permissao_modulo("hospital.clinico")
 def hospital_cirurgia_page(request):
     return render(request, "hospital_cirurgia.html", contexto_navegacao_setorial(request, "hospital"))
 

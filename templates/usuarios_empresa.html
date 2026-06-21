@@ -27,6 +27,12 @@
     .tip{padding:12px 14px;border-radius:12px;background:rgba(90,240,211,.09);border:1px solid rgba(90,240,211,.2);font-size:.83rem;color:#bceee3}
     .warn{padding:12px 14px;border-radius:12px;background:rgba(255,143,163,.12);border:1px solid rgba(255,143,163,.25);font-size:.83rem;color:#ffd3dc}
     input:disabled,.btn:disabled{opacity:.45;cursor:not-allowed}
+    .modulos-box{margin-top:10px;padding:12px;border-radius:14px;background:rgba(111,180,255,.06);border:1px solid rgba(111,180,255,.18)}
+    .modulos-title{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#9cc4db;margin-bottom:8px}
+    .modulos-list{display:flex;flex-wrap:wrap;gap:10px}
+    .modulo-check{display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer}
+    .modulo-check input{width:auto;padding:0}
+    .btn-modulos{margin-top:10px;padding:8px 12px;font-size:.82rem}
     @media(max-width:900px){.top,.grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -90,6 +96,7 @@
 
   <script>
     let podeConfigurarTi = {{ pode_configurar_ti|yesno:"true,false" }};
+    let modulosSetor = [];  // populado via /api/usuarios em loadUsers()
 
     function isTiCargo(cargo) {
       const texto = (cargo || "").toLowerCase();
@@ -127,6 +134,7 @@
         return;
       }
 
+      modulosSetor = data.modulos_setor || modulosSetor;
       list.innerHTML = data.usuarios.map((usuario) => `
         <div class="user">
           <div class="row">
@@ -135,6 +143,19 @@
           </div>
           <div class="muted">${usuario.email}</div>
           <div class="muted">${usuario.cargo || "Sem cargo"}</div>
+          ${modulosSetor.length ? `
+          <div class="modulos-box">
+            <div class="modulos-title">Módulos de acesso</div>
+            <div class="modulos-list">
+              ${modulosSetor.map((m) => `
+                <label class="modulo-check">
+                  <input type="checkbox" data-usuario="${usuario.id}" value="${m.codigo}" ${usuario.modulos.includes(m.codigo) ? "checked" : ""}>
+                  ${m.label}
+                </label>
+              `).join("")}
+            </div>
+            <button class="btn secondary btn-modulos" onclick="salvarModulos(${usuario.id})">Salvar módulos</button>
+          </div>` : ""}
           <div class="row">
             <span class="muted">Criado em ${new Date(usuario.criado_em).toLocaleString("pt-BR")}</span>
             ${usuario.ativo ? `<button class="btn secondary" onclick="desativarUsuario(${usuario.id})">Desativar</button>` : ""}
@@ -180,6 +201,20 @@
         document.getElementById("senha").value = "";
         loadUsers();
       }
+    }
+
+    async function salvarModulos(usuarioId) {
+      const checks = document.querySelectorAll(`input[type="checkbox"][data-usuario="${usuarioId}"]`);
+      const modulos = Array.from(checks).filter((c) => c.checked).map((c) => c.value);
+      const response = await fetch("/api/usuarios/modulos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuario_id: usuarioId, modulos }),
+      });
+      const data = await response.json();
+      if (!response.ok) { alert(data.erro || "Erro ao salvar módulos"); return; }
+      const btn = document.querySelector(`input[data-usuario="${usuarioId}"]`)?.closest(".modulos-box")?.querySelector(".btn-modulos");
+      if (btn) { const original = btn.textContent; btn.textContent = "Salvo ✓"; setTimeout(() => { btn.textContent = original; }, 1500); }
     }
 
     async function desativarUsuario(usuarioId) {

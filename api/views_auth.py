@@ -206,6 +206,76 @@ def login_portal_governo(request):
     return _login_conta(request, Empresa.TIPO_GOVERNO)
 
 
+# 🔐 LOGIN POR MÓDULO — credencial própria por área operacional interna
+#
+# Diferente do login normal: a empresa já está autenticada na sessão atual
+# (request.empresa). Aqui só promovemos request.principal para o EmpresaUsuario
+# informado, SE a senha bater E ele tiver permissão do módulo pedido — evita
+# resolver o email globalmente (como _login_conta faz) e fica restrito à
+# empresa já em sessão.
+@csrf_exempt
+def api_login_modulo(request):
+    if request.method != "POST":
+        return JsonResponse({"erro": "Use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"erro": "JSON inválido"}, status=400)
+
+    email = (dados.get("email") or "").strip().lower()
+    senha = dados.get("senha") or ""
+    codigo_modulo = (dados.get("codigo_modulo") or "").strip()
+    if not email or not senha or not codigo_modulo:
+        return JsonResponse({"erro": "email, senha e codigo_modulo são obrigatórios"}, status=400)
+
+    empresa = getattr(request, "empresa", None)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    usuario = EmpresaUsuario.objects.filter(email=email, empresa=empresa, ativo=True).first()
+    principal = usuario
+    senha_hash = usuario.senha if usuario else None
+    if not usuario and empresa.email == email:
+        principal = empresa
+        senha_hash = empresa.senha
+
+    if not principal or not check_password(senha, senha_hash):
+        return JsonResponse({"erro": "Credenciais inválidas"}, status=401)
+
+    from .access_control import principal_tem_modulo, MODULOS_LABEL
+    if not principal_tem_modulo(empresa, principal, codigo_modulo):
+        return JsonResponse({
+            "erro": f"Este usuário não tem acesso ao módulo {MODULOS_LABEL.get(codigo_modulo, codigo_modulo)}.",
+        }, status=403)
+
+    autorizado, device_id, dispositivos_em_uso, erro_dispositivo = _registrar_dispositivo_login(empresa, request, dados)
+    if not autorizado:
+        return JsonResponse({"erro": erro_dispositivo}, status=403)
+
+    sessao_ok, erro_sessao = _validar_sessao_principal(principal, device_id)
+    if not sessao_ok:
+        if dados.get("force_login") is True:
+            _limpar_sessao_principal(principal)
+        else:
+            return JsonResponse({
+                "status": "erro", "codigo": "sessao_em_uso",
+                "mensagem": erro_sessao, "acao": "force_login",
+            }, status=409)
+
+    session_key = _ativar_sessao(principal, device_id)
+    principal_kind = "usuario_empresa" if usuario else "empresa_admin"
+    token = _criar_token(empresa, session_key, principal_kind, principal.id, device_id=device_id)
+    clear_login_rate_limit(request)
+    payload = _payload_resposta(
+        empresa, token, device_id, dispositivos_em_uso,
+        principal_kind, principal.id, principal.nome if usuario else principal.nome,
+    )
+    payload["ok"] = True
+    response = JsonResponse(payload)
+    return _aplicar_cookies_autenticacao(response, empresa, token)
+
+
 # 🚀 CADASTRO
 @csrf_exempt
 def registrar_empresa(request):
