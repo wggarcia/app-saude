@@ -206,6 +206,16 @@ tr:hover td{background:rgba(255,255,255,.02)}
               <span class="pdv-total-val" id="trocoVenda" style="color:var(--ok)">R$ 0,00</span>
             </div>
           </div>
+          <div id="convenioFields" style="display:none">
+            <div class="form-group">
+              <label>Convênio (PBM)</label>
+              <select id="convenioSelect"><option value="">Selecione o convênio</option></select>
+            </div>
+            <div class="pdv-total-row">
+              <span class="pdv-total-lbl">Desconto do convênio</span>
+              <span class="pdv-total-val" id="descontoPbmPreview" style="color:var(--ok)">R$ 0,00</span>
+            </div>
+          </div>
           <button class="btn btn-ok btn-lg" style="width:100%;margin-top:12px;justify-content:center" onclick="finalizarVenda()">
             ✅ Finalizar Venda
           </button>
@@ -470,11 +480,38 @@ function calcularTroco(){
   document.getElementById('trocoVenda').textContent=fmt(troco);
 }
 
+let _conveniosCarregados = false;
 function selecionarPgto(btn){
   document.querySelectorAll('.pgto-btn').forEach(b=>b.classList.remove('selected'));
   btn.classList.add('selected');
   const pgto = btn.dataset.pgto;
   document.getElementById('dinheiroFields').style.display = pgto==='dinheiro'?'block':'none';
+  document.getElementById('convenioFields').style.display = pgto==='convenio'?'block':'none';
+  if(pgto==='convenio' && !_conveniosCarregados) carregarConvenios();
+}
+async function carregarConvenios(){
+  try{
+    const r = await fetch('/api/farmacia/pbm/convenios', {headers});
+    const d = await r.json();
+    const sel = document.getElementById('convenioSelect');
+    (d.convenios||[]).filter(c=>c.ativo).forEach(c=>{
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.nome} (${c.percentual_desconto_padrao}% desconto)`;
+      opt.dataset.pct = c.percentual_desconto_padrao;
+      sel.appendChild(opt);
+    });
+    _conveniosCarregados = true;
+    sel.onchange = atualizarPreviewPbm;
+  }catch(e){}
+}
+function atualizarPreviewPbm(){
+  const sel = document.getElementById('convenioSelect');
+  const opt = sel.options[sel.selectedIndex];
+  const pct = opt && opt.dataset.pct ? parseFloat(opt.dataset.pct) : 0;
+  const subtotal = carrinho.reduce((s,i)=>s+i.total_item,0);
+  const descontoPbm = subtotal * pct / 100;
+  document.getElementById('descontoPbmPreview').textContent = fmt(descontoPbm);
 }
 
 async function finalizarVenda(){
@@ -488,12 +525,15 @@ async function finalizarVenda(){
   const total = Math.max(subtotal-desconto,0);
   const valor_pago = +document.getElementById('valorPago').value||total;
   const cpf_cliente = document.getElementById('cpfCliente').value.trim();
+  const convenio_id = forma_pagamento==='convenio' ? (document.getElementById('convenioSelect').value || null) : null;
+  if(forma_pagamento==='convenio' && !convenio_id){alert('Selecione o convênio');return}
   const body = {
     itens: carrinho,
     forma_pagamento,
     desconto,
     valor_pago,
-    cpf_cliente
+    cpf_cliente,
+    convenio_id
   };
   try{
     const r = await fetch(`/api/farmacia/pdv/venda/${sessaoAtual.id}`, {method:'POST',headers,body:JSON.stringify(body)});
@@ -507,7 +547,8 @@ async function finalizarVenda(){
       // Recarregar sessão para atualizar totais
       await carregarSessao();
       carregarVendasSessao();
-      alert(`Venda ${d.venda.numero_cupom} registrada! Total: ${fmt(d.venda.total)}`);
+      const msgPbm = d.desconto_pbm_aplicado>0 ? ` (desconto convênio: ${fmt(d.desconto_pbm_aplicado)})` : '';
+      alert(`Venda ${d.venda.numero_cupom} registrada! Total: ${fmt(d.venda.total)}${msgPbm}`);
     }else{
       alert(d.erro||'Erro ao registrar venda');
     }

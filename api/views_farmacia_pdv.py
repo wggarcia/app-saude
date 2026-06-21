@@ -19,8 +19,28 @@ from .models import (
     PDVVenda,
     PDVItemVenda,
     MedicamentoFarmacia,
+    EstoqueMovimento,
 )
 from .access_control import api_requer_gerencia
+
+
+def _proximo_lote_fefo(empresa, medicamento):
+    """Lote com saldo disponível e validade mais próxima (FEFO), calculado a
+    partir do histórico de EstoqueMovimento — não existe tabela de saldo por
+    lote para MedicamentoFarmacia, então o saldo é derivado das entradas/saídas."""
+    saldos = {}
+    movs = EstoqueMovimento.objects.filter(empresa=empresa, medicamento=medicamento).exclude(lote="").order_by("criado_em")
+    for m in movs:
+        s = saldos.setdefault(m.lote, {"lote": m.lote, "data_validade": None, "saldo": Decimal("0")})
+        if m.data_validade and not s["data_validade"]:
+            s["data_validade"] = m.data_validade
+        if m.tipo == "entrada":
+            s["saldo"] += m.quantidade
+        elif m.tipo in ("saida", "descarte"):
+            s["saldo"] -= m.quantidade
+    disponiveis = [s for s in saldos.values() if s["saldo"] > 0]
+    disponiveis.sort(key=lambda s: s["data_validade"] or date.max)
+    return disponiveis[0] if disponiveis else None
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -243,6 +263,16 @@ def api_pdv_registrar_venda(request, sessao_id):
             "medicamento_id": item.get("medicamento_id"),
         })
 
+    # PBM: desconto do convênio é calculado pelo sistema, não digitado pelo operador
+    desconto_pbm = Decimal("0")
+    convenio_id = data.get("convenio_id")
+    if forma_pagamento == "convenio" and convenio_id:
+        from .models import PBMConvenio
+        convenio = PBMConvenio.objects.filter(pk=convenio_id, empresa=empresa, ativo=True).first()
+        if convenio:
+            desconto_pbm = (subtotal * convenio.percentual_desconto_padrao / Decimal("100")).quantize(Decimal("0.01"))
+            desconto_total += desconto_pbm
+
     total = subtotal - desconto_total
     if total < 0:
         total = Decimal("0")
@@ -269,7 +299,7 @@ def api_pdv_registrar_venda(request, sessao_id):
 
     # Criar itens e descontar estoque
     for item in itens_validados:
-        PDVItemVenda.objects.create(
+        item_venda = PDVItemVenda.objects.create(
             venda=venda,
             codigo_barras=item["codigo_barras"],
             descricao=item["descricao"],
@@ -284,25 +314,38 @@ def api_pdv_registrar_venda(request, sessao_id):
 
         # Descontar do estoque se houver medicamento vinculado
         med_id = item.get("medicamento_id")
+        med = None
         if med_id:
-            try:
-                med = MedicamentoFarmacia.objects.get(pk=med_id, empresa=empresa)
-                med.quantidade_atual = max(med.quantidade_atual - item["quantidade"], Decimal("0"))
-                med.save(update_fields=["quantidade_atual", "atualizado_em"])
-            except MedicamentoFarmacia.DoesNotExist:
-                pass
+            med = MedicamentoFarmacia.objects.filter(pk=med_id, empresa=empresa).first()
         elif item["codigo_barras"]:
-            # Tentativa de encontrar pelo código de barras
             med = MedicamentoFarmacia.objects.filter(
-                empresa=empresa,
-                codigo_barras=item["codigo_barras"],
-                ativo=True,
+                empresa=empresa, codigo_barras=item["codigo_barras"], ativo=True,
             ).first()
-            if med:
-                med.quantidade_atual = max(med.quantidade_atual - item["quantidade"], Decimal("0"))
-                med.save(update_fields=["quantidade_atual", "atualizado_em"])
 
-    return JsonResponse({"ok": True, "venda": _venda_to_dict(venda)}, status=201)
+        if med:
+            med.quantidade_atual = max(med.quantidade_atual - item["quantidade"], Decimal("0"))
+            med.save(update_fields=["quantidade_atual", "atualizado_em"])
+
+            # FEFO: se a tela não informou o lote, sai o de validade mais próxima
+            lote_usado = item["lote"]
+            data_validade_usada = None
+            if not lote_usado:
+                proximo = _proximo_lote_fefo(empresa, med)
+                if proximo:
+                    lote_usado = proximo["lote"]
+                    data_validade_usada = proximo["data_validade"]
+                    item_venda.lote = lote_usado
+                    item_venda.save(update_fields=["lote"])
+
+            if lote_usado:
+                EstoqueMovimento.objects.create(
+                    empresa=empresa, medicamento=med, tipo="saida",
+                    quantidade=item["quantidade"], lote=lote_usado,
+                    data_validade=data_validade_usada,
+                    motivo=f"Venda PDV — cupom {numero_cupom}",
+                )
+
+    return JsonResponse({"ok": True, "venda": _venda_to_dict(venda), "desconto_pbm_aplicado": float(desconto_pbm)}, status=201)
 
 
 # ─── Histórico de vendas ──────────────────────────────────────────────────────
