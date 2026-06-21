@@ -15,6 +15,7 @@ import math
 from datetime import date
 
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
 from .services.auth_session import empresa_autenticada_from_request
@@ -25,6 +26,10 @@ def _farm(request):
     if emp and emp.tipo_conta == "farmacia":
         return emp
     return None
+
+
+def farmacia_magistral_page(request):
+    return render(request, "farmacia_magistral.html")
 
 
 # ── Matérias-primas ───────────────────────────────────────────────────────────

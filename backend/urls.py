@@ -692,6 +692,7 @@ from api.views_farmacia_magistral import (
     api_magistral_ordem_status,
     api_magistral_controle_qualidade,
     api_magistral_kpis,
+    farmacia_magistral_page,
 )
 from api.views_hospital_opme import (
     api_opme_catalogo,
@@ -875,6 +876,7 @@ from api.views_sngpc_transmissao import (
     api_sngpc_gerar_xml,
     api_sngpc_transmitir,
     api_sngpc_download,
+    farmacia_sngpc_page,
 )
 from api.views_credenciais import (
     api_credenciais_status,
@@ -1011,6 +1013,8 @@ urlpatterns = [
     path('farmacia/pbm/', farmacia_pbm_page),
     path('farmacia/financeiro/', farmacia_financeiro_page),
     path('farmacia/delivery/', farmacia_ecommerce_page),
+    path('farmacia/magistral/', farmacia_magistral_page),
+    path('farmacia/sngpc/', farmacia_sngpc_page),
     path('hospital/gestao/', hospital_gestao_page),
     path('hospital/prontuario/', hospital_prontuario_page),
     path('hospital/cirurgia/', hospital_cirurgia_page),

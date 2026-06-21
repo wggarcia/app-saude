@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Farmácia Magistral — Manipulação</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:220px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2);color:#ffc6d3}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+.page-header{display:flex;align-items:center;justify-content:space-between}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab-btn{padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--muted);font-family:Manrope,sans-serif}
+.tab-btn.active{background:var(--accent);color:#041018;border-color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:8px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}
+.kpi.ok::before{background:var(--ok)}
+.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:24px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}
+.kpi.ok .kpi-val{color:var(--ok)}
+.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-muted{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:420px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:60px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">💊 Farmácia</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/farmacia/">📊 Inteligência</a>
+  <a class="nav-link" href="/farmacia/gestao/">🏪 Gestão Operacional</a>
+  <div class="nav-section">Módulos PDV</div>
+  <a class="nav-link" href="/farmacia/pdv/">🖥️ PDV / Caixa</a>
+  <a class="nav-link" href="/farmacia/pbm/">💳 PBM / Convênios</a>
+  <a class="nav-link" href="/farmacia/financeiro/">📈 Financeiro / DRE</a>
+  <a class="nav-link" href="/farmacia/delivery/">🛵 Delivery</a>
+  <a class="nav-link active" href="/farmacia/magistral/">🧪 Magistral</a>
+  <a class="nav-link" href="/farmacia/sngpc/">📋 SNGPC</a>
+  <div class="nav-section" style="margin-top:8px">Rede</div>
+  <a class="nav-link" href="/rede/gestao/">🌐 Rede &amp; Comunicação</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/">🚪 Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Farmácia Magistral</div>
+      <div class="page-sub">Manipulação conforme RDC 67/2007 ANVISA — matérias-primas, fórmulas, ordens e controle de qualidade</div>
+    </div>
+  </div>
+
+  <div class="kpi-row" id="kpiRow">
+    <div class="kpi"><div class="kpi-val" id="kMps">—</div><div class="kpi-lbl">Matérias-Primas</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kLotesQuarentena">—</div><div class="kpi-lbl">Lotes em Quarentena</div></div>
+    <div class="kpi" id="kOmsAguardando-card"><div class="kpi-val" id="kOmsAguardando">—</div><div class="kpi-lbl">OMs Aguardando</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kTaxaAprovacao">—</div><div class="kpi-lbl">Taxa de Aprovação CQ</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabBtn-mp" onclick="setTab('mp')">🧂 Matérias-Primas</button>
+    <button class="tab-btn" id="tabBtn-lotes" onclick="setTab('lotes')">📦 Lotes (Quarentena)</button>
+    <button class="tab-btn" id="tabBtn-formulas" onclick="setTab('formulas')">📜 Fórmulas</button>
+    <button class="tab-btn" id="tabBtn-ordens" onclick="setTab('ordens')">🧪 Ordens de Manipulação</button>
+  </div>
+
+  <!-- Matérias-Primas -->
+  <div class="tab-panel active" id="tab-mp">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Matérias-Primas</span>
+        <button class="btn btn-primary" onclick="abrirModalMp()">+ Nova Matéria-Prima</button>
+      </div>
+      <table>
+        <thead><tr><th>Nome</th><th>Categoria</th><th>Estoque</th><th>Mínimo</th><th>Controlado</th><th>Status</th></tr></thead>
+        <tbody id="tbodyMp"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Lotes -->
+  <div class="tab-panel" id="tab-lotes">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Lotes de Matéria-Prima</span>
+        <button class="btn btn-primary" onclick="abrirModalLote()">+ Registrar Lote</button>
+      </div>
+      <table>
+        <thead><tr><th>Matéria-Prima</th><th>Lote</th><th>Qtd. Disponível</th><th>Validade</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody id="tbodyLotes"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Fórmulas -->
+  <div class="tab-panel" id="tab-formulas">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Fórmulas Magistrais</span>
+        <button class="btn btn-primary" onclick="abrirModalFormula()">+ Nova Fórmula</button>
+      </div>
+      <table>
+        <thead><tr><th>Nome</th><th>Forma</th><th>Concentração</th><th>Qtd. Padrão</th><th>Controle Especial</th></tr></thead>
+        <tbody id="tbodyFormulas"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Ordens de Manipulação -->
+  <div class="tab-panel" id="tab-ordens">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Ordens de Manipulação</span>
+        <button class="btn btn-primary" onclick="abrirModalOrdem()">+ Nova Ordem</button>
+      </div>
+      <table>
+        <thead><tr><th>Nº OM</th><th>Fórmula</th><th>Paciente</th><th>Qtd.</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody id="tbodyOrdens"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Modal: Matéria-Prima -->
+<div class="modal-bg" id="modalMp">
+  <div class="modal">
+    <h3>🧂 Nova Matéria-Prima</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="mpNome" placeholder="Nome da matéria-prima"></div>
+      <div class="form-group"><label>Categoria</label>
+        <select id="mpCategoria"><option value="ativo">Ativo</option><option value="excipiente">Excipiente</option><option value="veiculo">Veículo</option><option value="conservante">Conservante</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Unidade de Medida</label><input id="mpUnidade" placeholder="g, ml, unid…" value="g"></div>
+      <div class="form-group"><label>Estoque Mínimo</label><input id="mpEstoqueMinimo" type="number" min="0" value="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Fornecedor</label><input id="mpFornecedor" placeholder="Fornecedor"></div>
+      <div class="form-group"><label>Controlado ANVISA?</label><select id="mpControlado"><option value="false">Não</option><option value="true">Sim</option></select></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalMp')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarMp()">💾 Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Lote de Matéria-Prima -->
+<div class="modal-bg" id="modalLote">
+  <div class="modal">
+    <h3>📦 Registrar Lote de Matéria-Prima</h3>
+    <div class="form-group"><label>Matéria-Prima *</label><select id="loteMpId"></select></div>
+    <div class="form-row">
+      <div class="form-group"><label>Número do Lote *</label><input id="loteNumero" placeholder="Número do lote"></div>
+      <div class="form-group"><label>Quantidade Inicial *</label><input id="loteQuantidade" type="number" min="0" step="0.01"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Data de Validade *</label><input id="loteValidade" type="date"></div>
+      <div class="form-group"><label>Fornecedor</label><input id="loteFornecedor" placeholder="Fornecedor"></div>
+    </div>
+    <div class="form-group"><label>Laudo CoA (Certificado de Análise)</label><input id="loteLaudoCoa" placeholder="Número/referência do laudo"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalLote')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarLote()">💾 Registrar — entra em Quarentena</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Aprovar/Rejeitar Lote -->
+<div class="modal-bg" id="modalAprovarLote">
+  <div class="modal">
+    <h3>✅ Aprovar Lote (sai da Quarentena)</h3>
+    <input type="hidden" id="aprovarLoteId">
+    <div class="form-group"><label>Resultado</label>
+      <select id="aprovarResultado"><option value="aprovado">Aprovado</option><option value="rejeitado">Rejeitado</option></select>
+    </div>
+    <div class="form-group"><label>Aprovado por (farmacêutico) *</label><input id="aprovarPor" placeholder="Nome do farmacêutico — CRF"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalAprovarLote')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarAprovacaoLote()">💾 Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Fórmula -->
+<div class="modal-bg" id="modalFormula">
+  <div class="modal">
+    <h3>📜 Nova Fórmula Magistral</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="formNome" placeholder="Nome da fórmula"></div>
+      <div class="form-group"><label>Forma Farmacêutica</label>
+        <select id="formForma"><option value="capsula">Cápsula</option><option value="creme">Creme</option><option value="pomada">Pomada</option><option value="solucao">Solução</option><option value="xarope">Xarope</option><option value="gel">Gel</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Concentração</label><input id="formConcentracao" placeholder="Ex: 50mg"></div>
+      <div class="form-group"><label>Quantidade Padrão</label><input id="formQuantidadePadrao" type="number" min="0" value="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Unidade Padrão</label><input id="formUnidadePadrao" value="unid"></div>
+      <div class="form-group"><label>Prazo de Validade (dias)</label><input id="formPrazoValidade" type="number" min="1" value="30"></div>
+    </div>
+    <div class="form-group"><label>Método de Manipulação</label><textarea id="formMetodo" placeholder="Descreva o método de manipulação"></textarea></div>
+    <div class="form-group"><label>Controle Especial?</label><select id="formControleEspecial"><option value="false">Não</option><option value="true">Sim</option></select></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalFormula')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarFormula()">💾 Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ordem de Manipulação -->
+<div class="modal-bg" id="modalOrdem">
+  <div class="modal">
+    <h3>🧪 Nova Ordem de Manipulação</h3>
+    <div class="form-group"><label>Fórmula *</label><select id="ordemFormulaId"></select></div>
+    <div class="form-row">
+      <div class="form-group"><label>Paciente *</label><input id="ordemPacienteNome" placeholder="Nome do paciente"></div>
+      <div class="form-group"><label>CPF do Paciente</label><input id="ordemPacienteCpf" placeholder="CPF"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Prescrito por</label><input id="ordemPrescritoPor" placeholder="Nome do médico"></div>
+      <div class="form-group"><label>CRM</label><input id="ordemCrm" placeholder="CRM"></div>
+    </div>
+    <div class="form-group"><label>Observações</label><textarea id="ordemObs"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalOrdem')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarOrdem()">💾 Criar Ordem</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Avançar Status da OM -->
+<div class="modal-bg" id="modalStatusOrdem">
+  <div class="modal">
+    <h3>🔄 Avançar Status da Ordem</h3>
+    <input type="hidden" id="statusOrdemId">
+    <div class="form-group"><label>Novo Status</label>
+      <select id="statusOrdemNovo">
+        <option value="aguardando">Aguardando</option>
+        <option value="em_manipulacao">Em Manipulação</option>
+        <option value="controle">Em Controle de Qualidade</option>
+        <option value="aprovado">Aprovado</option>
+        <option value="entregue">Entregue</option>
+        <option value="cancelado">Cancelado</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Manipulado por</label><input id="statusOrdemManipuladoPor" placeholder="Nome do manipulador"></div>
+    <div class="form-group"><label>Nº do Lote do Produto</label><input id="statusOrdemLoteProduto" placeholder="Lote final do produto manipulado"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalStatusOrdem')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarStatusOrdem()">💾 Atualizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Controle de Qualidade -->
+<div class="modal-bg" id="modalCq">
+  <div class="modal">
+    <h3>🔬 Registrar Controle de Qualidade</h3>
+    <input type="hidden" id="cqOrdemId">
+    <div class="form-row">
+      <div class="form-group"><label>Aspecto Visual</label><input id="cqAspectoVisual" placeholder="Ex: homogêneo, sem partículas"></div>
+      <div class="form-group"><label>Resultado</label>
+        <select id="cqResultado"><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option><option value="pendente">Pendente</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Peso Médio (g)</label><input id="cqPesoMedio" type="number" step="0.001"></div>
+      <div class="form-group"><label>Variação de Peso (%)</label><input id="cqVariacaoPeso" type="number" step="0.01" placeholder="Limite RDC: ±7,5%"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>pH</label><input id="cqPh" type="number" step="0.01"></div>
+      <div class="form-group"><label>Farmacêutico (CRF) *</label><input id="cqFarmaceutico" placeholder="Nome — CRF"></div>
+    </div>
+    <div class="form-group"><label>Observações</label><textarea id="cqObs"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalCq')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCq()">💾 Registrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const headers = {'Content-Type':'application/json'};
+async function api(url, opts={}) {
+  try {
+    const r = await fetch(url, {headers, ...opts});
+    const d = await r.json().catch(()=>({}));
+    if (!r.ok) { alert(d.erro || 'Erro na requisição'); return null; }
+    return d;
+  } catch(e) { alert('Erro de conexão'); return null; }
+}
+function v(id) { return document.getElementById(id)?.value?.trim()||''; }
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')})});
+
+function setTab(tab) {
+  ['mp','lotes','formulas','ordens'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('tabBtn-'+t).classList.toggle('active', t===tab);
+  });
+  if (tab==='mp') carregarMps();
+  else if (tab==='lotes') carregarLotes();
+  else if (tab==='formulas') carregarFormulas();
+  else if (tab==='ordens') carregarOrdens();
+}
+
+async function carregarKpis() {
+  const d = await api('/api/farmacia/magistral/kpis');
+  if (!d) return;
+  document.getElementById('kMps').textContent = d.materias_primas.total;
+  document.getElementById('kLotesQuarentena').textContent = d.lotes.quarentena;
+  document.getElementById('kOmsAguardando').textContent = d.ordens_manipulacao.aguardando;
+  document.getElementById('kTaxaAprovacao').textContent = d.controle_qualidade.taxa_aprovacao_pct!=null ? d.controle_qualidade.taxa_aprovacao_pct+'%' : '—';
+}
+
+// ── Matérias-Primas ──────────────────────────────────────────────
+let _mps = [];
+async function carregarMps() {
+  const d = await api('/api/farmacia/magistral/materias-primas');
+  if (!d) return;
+  _mps = d.materias_primas || [];
+  const tb = document.getElementById('tbodyMp');
+  if (!_mps.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma matéria-prima cadastrada</td></tr>'; return; }
+  tb.innerHTML = _mps.map(m => `
+    <tr>
+      <td>${m.nome}</td>
+      <td>${m.categoria_display}</td>
+      <td>${m.estoque_atual} ${m.unidade_medida}</td>
+      <td>${m.estoque_minimo} ${m.unidade_medida}</td>
+      <td>${m.controlado_anvisa ? '<span class="badge badge-danger">Sim</span>' : '—'}</td>
+      <td>${m.estoque_critico ? '<span class="badge badge-warn">Estoque Crítico</span>' : '<span class="badge badge-ok">OK</span>'}</td>
+    </tr>`).join('');
+}
+
+function abrirModalMp() {
+  ['mpNome','mpFornecedor'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mpUnidade').value='g';
+  document.getElementById('mpEstoqueMinimo').value='0';
+  document.getElementById('mpCategoria').value='ativo';
+  document.getElementById('mpControlado').value='false';
+  abrirModal('modalMp');
+}
+
+async function salvarMp() {
+  const body = {
+    nome: v('mpNome'), categoria: v('mpCategoria'), unidade_medida: v('mpUnidade'),
+    estoque_minimo: parseFloat(v('mpEstoqueMinimo'))||0, fornecedor: v('mpFornecedor'),
+    controlado_anvisa: v('mpControlado')==='true',
+  };
+  if (!body.nome) return alert('Nome é obrigatório');
+  const d = await api('/api/farmacia/magistral/materias-primas', {method:'POST', body:JSON.stringify(body)});
+  if (d) { fecharModal('modalMp'); carregarMps(); carregarKpis(); }
+}
+
+// ── Lotes ─────────────────────────────────────────────────────────
+async function carregarLotes() {
+  if (!_mps.length) await carregarMps();
+  const sel = document.getElementById('loteMpId');
+  sel.innerHTML = _mps.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+
+  const d = await api('/api/farmacia/magistral/lotes-mp');
+  if (!d) return;
+  const statusLabel = {quarentena:'<span class="badge badge-warn">Quarentena</span>',aprovado:'<span class="badge badge-ok">Aprovado</span>',rejeitado:'<span class="badge badge-danger">Rejeitado</span>',vencido:'<span class="badge badge-danger">Vencido</span>',consumido:'<span class="badge badge-muted">Consumido</span>'};
+  const tb = document.getElementById('tbodyLotes');
+  const lotes = d.lotes || [];
+  if (!lotes.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum lote registrado</td></tr>'; return; }
+  tb.innerHTML = lotes.map(l => `
+    <tr>
+      <td>${l.materia_prima_nome}</td>
+      <td>${l.numero_lote}</td>
+      <td>${l.quantidade_disponivel}</td>
+      <td>${l.data_validade}</td>
+      <td>${statusLabel[l.status]||l.status}</td>
+      <td>${l.status==='quarentena' ? `<button class="btn btn-ghost btn-sm" onclick="abrirModalAprovarLote(${l.id})">✅ Aprovar/Rejeitar</button>` : '—'}</td>
+    </tr>`).join('');
+}
+
+function abrirModalLote() {
+  ['loteNumero','loteQuantidade','loteFornecedor','loteLaudoCoa'].forEach(id=>document.getElementById(id).value='');
+  abrirModal('modalLote');
+}
+
+async function salvarLote() {
+  const body = {
+    materia_prima_id: v('loteMpId'), numero_lote: v('loteNumero'),
+    quantidade_inicial: parseFloat(v('loteQuantidade'))||0, data_validade: v('loteValidade'),
+    fornecedor: v('loteFornecedor'), laudo_coa: v('loteLaudoCoa'),
+  };
+  if (!body.materia_prima_id || !body.numero_lote || !body.quantidade_inicial || !body.data_validade) return alert('Matéria-prima, número do lote, quantidade e validade são obrigatórios');
+  const d = await api('/api/farmacia/magistral/lotes-mp', {method:'POST', body:JSON.stringify(body)});
+  if (d) { fecharModal('modalLote'); carregarLotes(); carregarKpis(); }
+}
+
+function abrirModalAprovarLote(loteId) {
+  document.getElementById('aprovarLoteId').value = loteId;
+  document.getElementById('aprovarResultado').value='aprovado';
+  document.getElementById('aprovarPor').value='';
+  abrirModal('modalAprovarLote');
+}
+
+async function confirmarAprovacaoLote() {
+  const loteId = document.getElementById('aprovarLoteId').value;
+  const resultado = v('aprovarResultado');
+  const aprovado_por = v('aprovarPor');
+  if (!aprovado_por) return alert('Informe quem está aprovando/rejeitando');
+  const d = await api(`/api/farmacia/magistral/lotes-mp/${loteId}/aprovar`, {method:'POST', body:JSON.stringify({resultado, aprovado_por})});
+  if (d) { fecharModal('modalAprovarLote'); carregarLotes(); carregarKpis(); }
+}
+
+// ── Fórmulas ──────────────────────────────────────────────────────
+let _formulas = [];
+async function carregarFormulas() {
+  const d = await api('/api/farmacia/magistral/formulas');
+  if (!d) return;
+  _formulas = d.formulas || [];
+  const tb = document.getElementById('tbodyFormulas');
+  if (!_formulas.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Nenhuma fórmula cadastrada</td></tr>'; return; }
+  tb.innerHTML = _formulas.map(f => `
+    <tr>
+      <td>${f.nome}</td>
+      <td>${f.forma_display}</td>
+      <td>${f.concentracao||'—'}</td>
+      <td>${f.quantidade_padrao} ${f.unidade_padrao}</td>
+      <td>${f.controle_especial ? '<span class="badge badge-danger">Sim</span>' : '—'}</td>
+    </tr>`).join('');
+}
+
+function abrirModalFormula() {
+  ['formNome','formConcentracao'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('formForma').value='capsula';
+  document.getElementById('formQuantidadePadrao').value='1';
+  document.getElementById('formUnidadePadrao').value='unid';
+  document.getElementById('formPrazoValidade').value='30';
+  document.getElementById('formMetodo').value='';
+  document.getElementById('formControleEspecial').value='false';
+  abrirModal('modalFormula');
+}
+
+async function salvarFormula() {
+  const body = {
+    nome: v('formNome'), forma_farmaceutica: v('formForma'), concentracao: v('formConcentracao'),
+    quantidade_padrao: parseFloat(v('formQuantidadePadrao'))||1, unidade_padrao: v('formUnidadePadrao'),
+    prazo_validade_dias: parseInt(v('formPrazoValidade'))||30, metodo_manipulacao: v('formMetodo'),
+    controle_especial: v('formControleEspecial')==='true',
+  };
+  if (!body.nome) return alert('Nome é obrigatório');
+  const d = await api('/api/farmacia/magistral/formulas', {method:'POST', body:JSON.stringify(body)});
+  if (d) { fecharModal('modalFormula'); carregarFormulas(); carregarKpis(); }
+}
+
+// ── Ordens de Manipulação ────────────────────────────────────────
+let _ordens = [];
+async function carregarOrdens() {
+  if (!_formulas.length) await carregarFormulas();
+  const sel = document.getElementById('ordemFormulaId');
+  sel.innerHTML = _formulas.map(f => `<option value="${f.id}">${f.nome} (${f.forma_display})</option>`).join('');
+
+  const d = await api('/api/farmacia/magistral/ordens');
+  if (!d) return;
+  _ordens = d.ordens || [];
+  const statusLabel = {aguardando:'<span class="badge badge-warn">Aguardando</span>',em_manipulacao:'<span class="badge badge-info">Em Manipulação</span>',controle:'<span class="badge badge-info">Em Controle</span>',aprovado:'<span class="badge badge-ok">Aprovado</span>',entregue:'<span class="badge badge-ok">Entregue</span>',cancelado:'<span class="badge badge-danger">Cancelado</span>'};
+  const tb = document.getElementById('tbodyOrdens');
+  if (!_ordens.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma ordem registrada</td></tr>'; return; }
+  tb.innerHTML = _ordens.map(o => `
+    <tr>
+      <td>${o.numero_om}</td>
+      <td>${o.formula_nome}</td>
+      <td>${o.paciente_nome}</td>
+      <td>${o.quantidade} ${o.unidade}</td>
+      <td>${statusLabel[o.status]||o.status}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalStatusOrdem(${o.id},'${o.status}')">🔄 Status</button>
+        ${o.status==='controle' ? `<button class="btn btn-ghost btn-sm" onclick="abrirModalCq(${o.id})">🔬 CQ</button>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+function abrirModalOrdem() {
+  ['ordemPacienteNome','ordemPacienteCpf','ordemPrescritoPor','ordemCrm','ordemObs'].forEach(id=>document.getElementById(id).value='');
+  abrirModal('modalOrdem');
+}
+
+async function salvarOrdem() {
+  const body = {
+    formula_id: v('ordemFormulaId'), paciente_nome: v('ordemPacienteNome'),
+    paciente_cpf: v('ordemPacienteCpf'), prescrito_por: v('ordemPrescritoPor'),
+    crm_prescritor: v('ordemCrm'), observacoes: v('ordemObs'),
+  };
+  if (!body.formula_id || !body.paciente_nome) return alert('Fórmula e paciente são obrigatórios');
+  const d = await api('/api/farmacia/magistral/ordens', {method:'POST', body:JSON.stringify(body)});
+  if (d) { fecharModal('modalOrdem'); carregarOrdens(); carregarKpis(); }
+}
+
+function abrirModalStatusOrdem(omId, statusAtual) {
+  document.getElementById('statusOrdemId').value = omId;
+  document.getElementById('statusOrdemNovo').value = statusAtual;
+  document.getElementById('statusOrdemManipuladoPor').value = '';
+  document.getElementById('statusOrdemLoteProduto').value = '';
+  abrirModal('modalStatusOrdem');
+}
+
+async function salvarStatusOrdem() {
+  const omId = document.getElementById('statusOrdemId').value;
+  const body = {
+    status: v('statusOrdemNovo'), manipulado_por: v('statusOrdemManipuladoPor'),
+    numero_lote_produto: v('statusOrdemLoteProduto'),
+  };
+  const d = await api(`/api/farmacia/magistral/ordens/${omId}/status`, {method:'PATCH', body:JSON.stringify(body)});
+  if (d) { fecharModal('modalStatusOrdem'); carregarOrdens(); carregarKpis(); }
+}
+
+function abrirModalCq(omId) {
+  document.getElementById('cqOrdemId').value = omId;
+  ['cqAspectoVisual','cqPesoMedio','cqVariacaoPeso','cqPh','cqFarmaceutico','cqObs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cqResultado').value='aprovado';
+  abrirModal('modalCq');
+}
+
+async function salvarCq() {
+  const omId = document.getElementById('cqOrdemId').value;
+  const body = {
+    ordem_manipulacao_id: omId, aspecto_visual: v('cqAspectoVisual'), resultado: v('cqResultado'),
+    peso_medio: v('cqPesoMedio')||null, variacao_peso_pct: v('cqVariacaoPeso')||null,
+    ph: v('cqPh')||null, farmaceutico: v('cqFarmaceutico'), observacoes: v('cqObs'),
+  };
+  if (!body.farmaceutico) return alert('Informe o farmacêutico responsável');
+  const d = await api('/api/farmacia/magistral/controle-qualidade', {method:'POST', body:JSON.stringify(body)});
+  if (d) { fecharModal('modalCq'); carregarOrdens(); carregarKpis(); }
+}
+
+carregarKpis();
+carregarMps();
+</script>
+</body>
+</html>

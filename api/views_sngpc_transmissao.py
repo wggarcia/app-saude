@@ -31,10 +31,15 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
 
 from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.conf import settings
+
+
+def farmacia_sngpc_page(request):
+    return render(request, "farmacia_sngpc.html")
 
 from .models import (
     Empresa, LivroRegistroControlado, MedicamentoFarmacia, LoteMedicamento,

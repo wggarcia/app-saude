@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SNGPC — Controlados ANVISA</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:220px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2);color:#ffc6d3}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:20px;max-width:920px}
+.page-header{display:flex;align-items:center;justify-content:space-between}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.row-info{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.row-info:last-child{border-bottom:none}
+.row-info .lbl{color:var(--muted)}
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;line-height:1.6}
+.alert-info{background:rgba(0,194,255,.08);border:1px solid rgba(0,194,255,.2)}
+.xml-box{background:#020810;border:1px solid var(--border);border-radius:8px;padding:14px;font-family:monospace;font-size:11px;white-space:pre-wrap;max-height:300px;overflow:auto;margin-top:12px}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">💊 Farmácia</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/farmacia/">📊 Inteligência</a>
+  <a class="nav-link" href="/farmacia/gestao/">🏪 Gestão Operacional</a>
+  <div class="nav-section">Módulos PDV</div>
+  <a class="nav-link" href="/farmacia/pdv/">🖥️ PDV / Caixa</a>
+  <a class="nav-link" href="/farmacia/pbm/">💳 PBM / Convênios</a>
+  <a class="nav-link" href="/farmacia/financeiro/">📈 Financeiro / DRE</a>
+  <a class="nav-link" href="/farmacia/delivery/">🛵 Delivery</a>
+  <a class="nav-link" href="/farmacia/magistral/">🧪 Magistral</a>
+  <a class="nav-link active" href="/farmacia/sngpc/">📋 SNGPC</a>
+  <div class="nav-section" style="margin-top:8px">Rede</div>
+  <a class="nav-link" href="/rede/gestao/">🌐 Rede &amp; Comunicação</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/">🚪 Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">SNGPC — Controlados ANVISA</div>
+      <div class="page-sub">Geração e transmissão do arquivo de controlados (Portaria 344/98) ao webservice da ANVISA</div>
+    </div>
+  </div>
+
+  <div class="alert alert-info">
+    ℹ️ As credenciais SNGPC são obtidas no portal ANVISA: <strong>gov.br/anvisa/pt-br/sistemas/sngpc</strong>.
+    A senha é criptografada e nunca é exibida de volta — nem para a equipe SolusCRT.
+  </div>
+
+  <!-- Credenciais -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🔐 Credenciais ANVISA SNGPC</span>
+      <span id="sngpcStatusBadge"></span>
+    </div>
+    <div class="card-body">
+      <div class="form-row">
+        <div class="form-group"><label>Usuário SNGPC *</label><input id="credUsuario" placeholder="usuário cadastrado na ANVISA"></div>
+        <div class="form-group"><label>Ambiente</label>
+          <select id="credAmbiente"><option value="homologacao">Homologação (testes)</option><option value="producao">Produção</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Senha</label><input id="credSenha" type="password" placeholder="Deixe vazio para manter a atual"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="salvarCredenciais()">💾 Salvar Credenciais</button>
+        <button class="btn btn-ghost" id="btnTestar" onclick="testarConexao()">🔌 Testar Conexão</button>
+      </div>
+      <div id="infoCredenciais" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <!-- Geração / Transmissão -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">📤 Gerar e Transmitir Arquivo</span></div>
+    <div class="card-body">
+      <div class="form-row">
+        <div class="form-group"><label>Data Início *</label><input id="periodoInicio" type="date"></div>
+        <div class="form-group"><label>Data Fim *</label><input id="periodoFim" type="date"></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="gerarXml()">📄 Gerar XML (pré-visualizar)</button>
+        <button class="btn btn-ghost" onclick="baixarXml()">⬇️ Baixar XML</button>
+        <button class="btn btn-primary" id="btnTransmitir" onclick="transmitirSngpc()">📡 Transmitir à ANVISA</button>
+      </div>
+      <div id="resultadoSngpc"></div>
+      <div id="xmlPreview"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const headers = {'Content-Type':'application/json'};
+async function api(url, opts={}) {
+  try {
+    const r = await fetch(url, {headers, ...opts});
+    const d = await r.json().catch(()=>({}));
+    return {ok:r.ok, status:r.status, data:d};
+  } catch(e) { return {ok:false, status:0, data:{erro:'Erro de conexão'}}; }
+}
+function v(id) { return document.getElementById(id)?.value?.trim()||''; }
+
+function setPeriodoDefault() {
+  const hoje = new Date();
+  const seteAtras = new Date(hoje.getTime() - 7*24*60*60*1000);
+  document.getElementById('periodoFim').value = hoje.toISOString().slice(0,10);
+  document.getElementById('periodoInicio').value = seteAtras.toISOString().slice(0,10);
+}
+
+async function carregarStatusCredenciais() {
+  const r = await api('/api/integracoes/credenciais/');
+  if (!r.ok) return;
+  const s = r.data.sngpc || {};
+  document.getElementById('credUsuario').value = s.usuario || '';
+  document.getElementById('credAmbiente').value = s.ambiente || 'homologacao';
+  document.getElementById('sngpcStatusBadge').innerHTML = s.configurado
+    ? '<span class="badge badge-ok">✅ Configurado</span>'
+    : '<span class="badge badge-warn">⚠️ Não configurado</span>';
+
+  const info = document.getElementById('infoCredenciais');
+  info.innerHTML = `
+    <div class="row-info"><span class="lbl">Senha salva</span><span>${s.senha_salva ? '✅ Sim' : '❌ Não'}</span></div>
+    <div class="row-info"><span class="lbl">Última transmissão</span><span>${s.ultima_transmissao ? new Date(s.ultima_transmissao).toLocaleString('pt-BR') : '—'}</span></div>
+    <div class="row-info"><span class="lbl">Último protocolo</span><span>${s.ultimo_protocolo || '—'}</span></div>
+  `;
+}
+
+async function salvarCredenciais() {
+  const usuario = v('credUsuario');
+  const senha = v('credSenha');
+  const ambiente = v('credAmbiente');
+  if (!usuario) return alert('Informe o usuário SNGPC');
+  const r = await api('/api/integracoes/credenciais/sngpc/', {method:'POST', body:JSON.stringify({usuario, senha, ambiente})});
+  if (r.ok) {
+    alert('Credenciais salvas com sucesso.');
+    document.getElementById('credSenha').value = '';
+    carregarStatusCredenciais();
+  } else {
+    alert(r.data.erro || 'Erro ao salvar credenciais');
+  }
+}
+
+async function testarConexao() {
+  const btn = document.getElementById('btnTestar');
+  btn.disabled = true; btn.textContent = '⏳ Testando...';
+  const r = await api('/api/integracoes/credenciais/sngpc/testar/', {method:'POST', body:JSON.stringify({})});
+  btn.disabled = false; btn.textContent = '🔌 Testar Conexão';
+  alert(r.data.mensagem || r.data.erro || 'Sem resposta da ANVISA');
+}
+
+async function gerarXml() {
+  const data_inicio = v('periodoInicio'), data_fim = v('periodoFim');
+  if (!data_inicio || !data_fim) return alert('Informe o período');
+  const box = document.getElementById('resultadoSngpc');
+  box.innerHTML = '<div class="alert alert-info">Gerando XML...</div>';
+  const r = await api('/api/farmacia/sngpc/gerar/', {method:'POST', body:JSON.stringify({data_inicio, data_fim})});
+  if (!r.ok) { box.innerHTML = `<div class="alert alert-info">${r.data.erro||'Erro ao gerar XML'}</div>`; return; }
+  if (r.data.aviso) { box.innerHTML = `<div class="alert alert-info">${r.data.aviso}</div>`; document.getElementById('xmlPreview').innerHTML=''; return; }
+  box.innerHTML = `<div class="alert alert-info">✅ XML gerado — ${r.data.total_registros} registro(s), ${r.data.tamanho_xml} bytes</div>`;
+  document.getElementById('xmlPreview').innerHTML = `<div class="xml-box">${r.data.xml.replace(/</g,'&lt;')}</div>`;
+}
+
+function baixarXml() {
+  const data_inicio = v('periodoInicio'), data_fim = v('periodoFim');
+  if (!data_inicio || !data_fim) return alert('Informe o período');
+  window.open(`/api/farmacia/sngpc/download/?data_inicio=${data_inicio}&data_fim=${data_fim}`, '_blank');
+}
+
+async function transmitirSngpc() {
+  const data_inicio = v('periodoInicio'), data_fim = v('periodoFim');
+  if (!data_inicio || !data_fim) return alert('Informe o período');
+  if (!confirm(`Confirma a transmissão real do arquivo SNGPC à ANVISA para o período ${data_inicio} a ${data_fim}?`)) return;
+  const btn = document.getElementById('btnTransmitir');
+  btn.disabled = true; btn.textContent = '⏳ Transmitindo...';
+  const box = document.getElementById('resultadoSngpc');
+  box.innerHTML = '<div class="alert alert-info">Transmitindo à ANVISA...</div>';
+  const r = await api('/api/farmacia/sngpc/transmitir/', {method:'POST', body:JSON.stringify({data_inicio, data_fim})});
+  btn.disabled = false; btn.textContent = '📡 Transmitir à ANVISA';
+  if (r.data.aviso) { box.innerHTML = `<div class="alert alert-info">${r.data.aviso}</div>`; return; }
+  if (r.data.ok) {
+    box.innerHTML = `<div class="alert alert-info">✅ Transmitido com sucesso! Protocolo: <strong>${r.data.protocolo||'—'}</strong></div>`;
+    carregarStatusCredenciais();
+  } else {
+    box.innerHTML = `<div class="alert alert-info">❌ ${r.data.erro || 'Falha na transmissão'}</div>`;
+  }
+}
+
+setPeriodoDefault();
+carregarStatusCredenciais();
+</script>
+</body>
+</html>
