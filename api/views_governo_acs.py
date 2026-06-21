@@ -272,7 +272,7 @@ def api_visita_detalhe(request, visita_id):
 
     data = json.loads(request.body)
     campos = ["desfecho", "peso_kg", "pa_sistolica", "pa_diastolica",
-              "glicemia", "gestante", "ig_semanas", "obs"]
+              "glicemia", "gestante", "ig_semanas", "obs", "transmitido_esus"]
     for c in campos:
         if c in data:
             setattr(visita, c, data[c])

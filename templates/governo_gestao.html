@@ -126,6 +126,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="tab-btn-side" onclick="setTab('atos')"><span>📜</span> Atos Normativos</button>
       <button class="tab-btn-side" onclick="setTab('rede')"><span>🏥</span> Rede de Saúde</button>
       <button class="tab-btn-side" onclick="setTab('vigilancia')"><span>🦠</span> Vigilância</button>
+      <button class="tab-btn-side" onclick="setTab('acs')"><span>🚶</span> ACS / Visitas</button>
       <button class="tab-btn-side" onclick="setTab('regulacao')"><span>🏨</span> Regulação</button>
       <button class="tab-btn-side" onclick="setTab('producao')"><span>📋</span> Produção</button>
       <button class="tab-btn-side" onclick="setTab('previne')"><span>🎯</span> Previne Brasil</button>
@@ -413,6 +414,59 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <table>
           <thead><tr><th>Razão Social</th><th>Tipo</th><th>Bairro</th><th>Status</th><th>Alvarás</th><th>Inspeções</th><th>Ações</th></tr></thead>
           <tbody id="tbodyEstabSanitario"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ ACS / VISITAS DOMICILIARES ══════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-acs" style="margin-top:16px">
+      <div class="kpi-row" id="acsKpis" style="margin-bottom:16px">
+        <div class="kpi"><div class="kpi-val" id="acsAtivos">—</div><div class="kpi-lbl">ACS Ativos</div></div>
+        <div class="kpi ok"><div class="kpi-val" id="acsVisitasMes">—</div><div class="kpi-lbl">Visitas no Mês</div></div>
+        <div class="kpi warn"><div class="kpi-val" id="acsPendentesEsus">—</div><div class="kpi-lbl">Pendentes Transmissão e-SUS</div></div>
+        <div class="kpi info"><div class="kpi-val" id="acsGestantes">—</div><div class="kpi-lbl">Gestantes em Acompanhamento</div></div>
+      </div>
+
+      <!-- Agentes Comunitários -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🚶 Agentes Comunitários de Saúde</span>
+          <button class="btn btn-primary" onclick="abrirModalAcs()">+ Cadastrar ACS</button>
+        </div>
+        <table>
+          <thead><tr><th>Nome</th><th>Micro-área</th><th>CNES USF</th><th>INE Equipe</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyAcs"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Visitas Domiciliares -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-header">
+          <span class="card-title">🏠 Visitas Domiciliares (e-SUS CDS)</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="filtroVisitaPendente" onchange="carregarVisitasDomiciliares()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;color:var(--text)">
+              <option value="">Todas as visitas</option>
+              <option value="true">Pendentes de transmissão e-SUS</option>
+            </select>
+            <button class="btn btn-ghost" onclick="exportarCdsEsus()">⬇️ Exportar CDS e-SUS</button>
+            <button class="btn btn-primary" onclick="abrirModalVisita()">+ Registrar Visita</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Data</th><th>ACS</th><th>Paciente</th><th>Motivo</th><th>Desfecho</th><th>e-SUS</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyVisitas"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Fichas de Acompanhamento -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-header">
+          <span class="card-title">📋 Fichas de Acompanhamento</span>
+          <button class="btn btn-primary" onclick="abrirModalFicha()">+ Nova Ficha</button>
+        </div>
+        <table>
+          <thead><tr><th>Paciente</th><th>Condição</th><th>Micro-área</th><th>ACS</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyFichas"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1126,6 +1180,7 @@ function setTab(tab) {
   else if (tab==='atos') carregarAtos();
   else if (tab==='rede') { carregarRede(); carregarRedeKpis(); }
   else if (tab==='vigilancia') { carregarVigilDash(); carregarNotificacoes(); carregarSurtos(); carregarEndemias(); carregarEstabelecimentosSanitarios(); }
+  else if (tab==='acs') { carregarAcsKpis(); carregarAgentesAcs(); carregarVisitasDomiciliares(); carregarFichasAcompanhamento(); }
   else if (tab==='regulacao') { carregarRegDash(); carregarRegulacao(); }
   else if (tab==='producao') { carregarProdDash(); carregarProducao(); }
   else if (tab==='previne') { carregarPrevineDash(); carregarPrevineLista(); }
@@ -1583,6 +1638,184 @@ async function salvarInspecao() {
   await api(`/api/governo/vigilancia-sanitaria/estabelecimentos/${estabId}/inspecoes/`, {method:'POST', body:JSON.stringify(body)});
   fecharModal('modalInspecao');
   carregarEstabelecimentosSanitarios();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ACS — AGENTE COMUNITÁRIO DE SAÚDE / VISITAS DOMICILIARES / FICHAS
+// ══════════════════════════════════════════════════════════════════
+let _agentesAcs = [];
+let _visitas = [];
+let _fichasAcomp = [];
+
+async function carregarAcsKpis() {
+  const d = await api('/api/governo/acs/kpis');
+  document.getElementById('acsAtivos').textContent = d.acs_ativos ?? '—';
+  document.getElementById('acsVisitasMes').textContent = d.visitas_mes ?? '—';
+  document.getElementById('acsPendentesEsus').textContent = d.pendentes_transmissao_esus ?? '—';
+  document.getElementById('acsGestantes').textContent = d.gestantes_em_acompanhamento ?? '—';
+}
+
+async function carregarAgentesAcs() {
+  const d = await api('/api/governo/acs/');
+  _agentesAcs = d.agentes || [];
+  const tb = document.getElementById('tbodyAcs');
+  if (!_agentesAcs.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum ACS cadastrado</td></tr>'; return; }
+  tb.innerHTML = _agentesAcs.map(a => `<tr>
+    <td>${a.nome}</td>
+    <td>${a.microarea || '—'}</td>
+    <td>${a.cnes_usf || '—'}</td>
+    <td>${a.ine_equipe || '—'}</td>
+    <td>${a.ativo ? '<span style="color:var(--ok)">Ativo</span>' : '<span style="color:var(--muted)">Inativo</span>'}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="toggleAtivoAcs(${a.id}, ${!a.ativo})">${a.ativo ? 'Desativar' : 'Reativar'}</button></td>
+  </tr>`).join('');
+  popularSelectAcs();
+}
+
+function popularSelectAcs() {
+  ['visitaAcsId','fichaAcsId'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const atual = sel.value;
+    sel.innerHTML = '<option value="">Selecione o ACS</option>' +
+      _agentesAcs.filter(a => a.ativo).map(a => `<option value="${a.id}">${a.nome} (${a.microarea || 's/ área'})</option>`).join('');
+    if (atual) sel.value = atual;
+  });
+}
+
+function abrirModalAcs() {
+  ['acsNome','acsCpf','acsCns','acsCnesUsf','acsIneEquipe','acsMicroarea'].forEach(id => document.getElementById(id).value = '');
+  abrirModal('modalAcs');
+}
+
+async function salvarAcs() {
+  const body = {
+    nome: v('acsNome'), cpf: v('acsCpf'), cns: v('acsCns'),
+    cnes_usf: v('acsCnesUsf'), ine_equipe: v('acsIneEquipe'), microarea: v('acsMicroarea'),
+  };
+  if (!body.nome) return _t('Informe o nome do ACS', 'warn');
+  await api('/api/governo/acs/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalAcs');
+  _t('ACS cadastrado', 'ok');
+  carregarAgentesAcs();
+}
+
+async function toggleAtivoAcs(acsId, novoAtivo) {
+  await api(`/api/governo/acs/${acsId}/`, {method:'PATCH', body:JSON.stringify({ativo: novoAtivo})});
+  carregarAgentesAcs();
+  carregarAcsKpis();
+}
+
+async function carregarVisitasDomiciliares() {
+  const pendente = document.getElementById('filtroVisitaPendente')?.value || '';
+  let url = '/api/governo/acs/visitas/?';
+  if (pendente) url += `nao_transmitido=${pendente}`;
+  const d = await api(url);
+  _visitas = d.visitas || [];
+  const tb = document.getElementById('tbodyVisitas');
+  if (!_visitas.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma visita registrada</td></tr>'; return; }
+  tb.innerHTML = _visitas.map(vi => `<tr>
+    <td>${new Date(vi.data_visita+'T00:00:00').toLocaleDateString('pt-BR')}</td>
+    <td>${vi.acs_nome}</td>
+    <td>${vi.paciente_nome}</td>
+    <td>${vi.motivo_display}</td>
+    <td>${vi.desfecho_display}</td>
+    <td>${vi.transmitido_esus ? '<span style="color:var(--ok)">Transmitido</span>' : '<span style="color:var(--warn)">Pendente</span>'}</td>
+    <td><button class="btn btn-ghost btn-sm" onclick="verVisita(${vi.id})">👁 Ver</button></td>
+  </tr>`).join('');
+}
+
+function abrirModalVisita() {
+  ['visitaPacienteNome','visitaCpf','visitaCns','visitaPeso','visitaPaSist','visitaPaDiast','visitaGlicemia','visitaIgSemanas','visitaObs'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('visitaData').value = new Date().toISOString().slice(0,10);
+  document.getElementById('visitaGestante').checked = false;
+  popularSelectAcs();
+  abrirModal('modalVisita');
+}
+
+async function salvarVisita() {
+  const body = {
+    acs_id: v('visitaAcsId'), paciente_nome: v('visitaPacienteNome'),
+    cpf_paciente: v('visitaCpf'), cns_paciente: v('visitaCns'),
+    data_visita: v('visitaData'), turno: v('visitaTurno'),
+    motivo: v('visitaMotivo'), desfecho: v('visitaDesfecho'),
+    peso_kg: v('visitaPeso') || null,
+    pa_sistolica: v('visitaPaSist') || null, pa_diastolica: v('visitaPaDiast') || null,
+    glicemia: v('visitaGlicemia') || null,
+    gestante: document.getElementById('visitaGestante').checked,
+    ig_semanas: v('visitaIgSemanas') || null,
+    obs: v('visitaObs'),
+  };
+  if (!body.acs_id || !body.paciente_nome || !body.motivo) return _t('ACS, paciente e motivo são obrigatórios', 'warn');
+  await api('/api/governo/acs/visitas/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalVisita');
+  _t('Visita registrada', 'ok');
+  carregarVisitasDomiciliares();
+  carregarAcsKpis();
+}
+
+function verVisita(visitaId) {
+  const vi = _visitas.find(x => x.id === visitaId);
+  if (!vi) return;
+  alert(`Visita de ${vi.acs_nome}\nPaciente: ${vi.paciente_nome}\nData: ${vi.data_visita}\nMotivo: ${vi.motivo_display}\nDesfecho: ${vi.desfecho_display}\nUUID e-SUS: ${vi.uuid_esus || '—'}\nTransmitido: ${vi.transmitido_esus ? 'Sim' : 'Não'}`);
+}
+
+async function exportarCdsEsus() {
+  const r = await api('/api/governo/acs/visitas/transmitir-esus/', {method:'POST', body:JSON.stringify({})});
+  if (!r.fichas) { _t(r.mensagem || 'Nenhuma ficha pendente para exportação', 'info'); return; }
+  window.open('/api/governo/acs/visitas/exportar-cds/', '_blank');
+  if (confirm(`${r.fichas} ficha(s) exportada(s) em CDS para o e-SUS.\n\nApós importar o arquivo no PEC (Configurações → Importar CDS), confirmar a transmissão dessas visitas?`)) {
+    const pendentes = _visitas.filter(vi => !vi.transmitido_esus).map(vi => vi.id);
+    for (const id of pendentes) {
+      await api(`/api/governo/acs/visitas/${id}/`, {method:'PATCH', body:JSON.stringify({transmitido_esus: true})});
+    }
+    _t('Visitas marcadas como transmitidas', 'ok');
+    carregarVisitasDomiciliares();
+    carregarAcsKpis();
+  }
+}
+
+async function carregarFichasAcompanhamento() {
+  const d = await api('/api/governo/acs/fichas/');
+  _fichasAcomp = d.fichas || [];
+  const tb = document.getElementById('tbodyFichas');
+  if (!_fichasAcomp.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma ficha cadastrada</td></tr>'; return; }
+  tb.innerHTML = _fichasAcomp.map(f => `<tr>
+    <td>${f.paciente_nome}</td>
+    <td>${f.condicao_saude_display}</td>
+    <td>${f.microarea || '—'}</td>
+    <td>${f.acs_nome || '—'}</td>
+    <td>${f.em_acompanhamento ? '<span style="color:var(--ok)">Em acompanhamento</span>' : '<span style="color:var(--muted)">Encerrado</span>'}</td>
+    <td>${f.em_acompanhamento ? `<button class="btn btn-ghost btn-sm" onclick="encerrarFicha(${f.id})">Encerrar</button>` : ''}</td>
+  </tr>`).join('');
+}
+
+function abrirModalFicha() {
+  ['fichaPacienteNome','fichaCpf','fichaCns','fichaLogradouro','fichaBairro','fichaMicroarea','fichaObs'].forEach(id => document.getElementById(id).value = '');
+  popularSelectAcs();
+  abrirModal('modalFicha');
+}
+
+async function salvarFicha() {
+  const body = {
+    acs_id: v('fichaAcsId') || null, paciente_nome: v('fichaPacienteNome'),
+    cpf_paciente: v('fichaCpf'), cns_paciente: v('fichaCns'),
+    condicao_saude: v('fichaCondicao'),
+    logradouro: v('fichaLogradouro'), bairro: v('fichaBairro'), microarea: v('fichaMicroarea'),
+    obs: v('fichaObs'),
+  };
+  if (!body.paciente_nome || !body.condicao_saude) return _t('Paciente e condição de saúde são obrigatórios', 'warn');
+  await api('/api/governo/acs/fichas/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalFicha');
+  _t('Ficha de acompanhamento criada', 'ok');
+  carregarFichasAcompanhamento();
+  carregarAcsKpis();
+}
+
+async function encerrarFicha(fichaId) {
+  if (!confirm('Encerrar este acompanhamento?')) return;
+  await api(`/api/governo/acs/fichas/${fichaId}/`, {method:'PATCH', body:JSON.stringify({em_acompanhamento: false, data_fim_acomp: new Date().toISOString().slice(0,10)})});
+  carregarFichasAcompanhamento();
+  carregarAcsKpis();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -2291,6 +2524,136 @@ function _t(msg, tipo) {
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalInspecao')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarInspecao()">💾 Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Cadastro de ACS ═════════════════════════════════════════════ -->
+<div class="modal-bg" id="modalAcs">
+  <div class="modal">
+    <h3>🚶 Cadastro de Agente Comunitário de Saúde</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="acsNome" placeholder="Nome completo"></div>
+      <div class="form-group"><label>Micro-área</label><input id="acsMicroarea" placeholder="Ex: 03"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CPF</label><input id="acsCpf" placeholder="Somente números"></div>
+      <div class="form-group"><label>CNS</label><input id="acsCns" placeholder="Cartão Nacional de Saúde"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CNES da USF</label><input id="acsCnesUsf" placeholder="Código CNES"></div>
+      <div class="form-group"><label>INE da Equipe</label><input id="acsIneEquipe" placeholder="Código INE"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalAcs')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAcs()">💾 Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Visita Domiciliar ═══════════════════════════════════════════ -->
+<div class="modal-bg" id="modalVisita">
+  <div class="modal">
+    <h3>🏠 Registrar Visita Domiciliar</h3>
+    <div class="form-row">
+      <div class="form-group"><label>ACS *</label><select id="visitaAcsId"></select></div>
+      <div class="form-group"><label>Data da Visita *</label><input id="visitaData" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Paciente *</label><input id="visitaPacienteNome" placeholder="Nome do paciente"></div>
+      <div class="form-group"><label>Turno</label>
+        <select id="visitaTurno"><option value="M">Manhã</option><option value="T">Tarde</option><option value="N">Noite</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CPF do Paciente</label><input id="visitaCpf" placeholder="Somente números"></div>
+      <div class="form-group"><label>CNS do Paciente</label><input id="visitaCns" placeholder="Cartão Nacional de Saúde"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Motivo da Visita *</label>
+        <select id="visitaMotivo">
+          <option value="cadastramento">Cadastramento/Atualização</option>
+          <option value="visita_rotineira">Visita de Rotina</option>
+          <option value="acompanhamento">Acompanhamento de Condicionalidades</option>
+          <option value="busca_ativa">Busca Ativa</option>
+          <option value="pre_natal">Pré-natal</option>
+          <option value="puericultura">Puericultura</option>
+          <option value="pessoa_idosa">Atenção à Pessoa Idosa</option>
+          <option value="portador_doenca_cronica">Portador de Doença Crônica</option>
+          <option value="saude_mental">Saúde Mental</option>
+          <option value="domiciliado">Acamado/Domiciliado</option>
+          <option value="egresso_internacao">Egresso de Internação</option>
+          <option value="obito">Verificação de Óbito</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Desfecho</label>
+        <select id="visitaDesfecho">
+          <option value="visita_realizada">Visita Realizada</option>
+          <option value="ausente">Ausente</option>
+          <option value="recusou">Recusou Atendimento</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Peso (kg)</label><input id="visitaPeso" type="number" min="0" step="0.1"></div>
+      <div class="form-group"><label>Glicemia (mg/dL)</label><input id="visitaGlicemia" type="number" min="0" step="0.1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>PA Sistólica</label><input id="visitaPaSist" type="number" min="0"></div>
+      <div class="form-group"><label>PA Diastólica</label><input id="visitaPaDiast" type="number" min="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="visitaGestante" style="width:auto"><label style="margin:0">Gestante</label></div>
+      <div class="form-group"><label>IG (semanas, se gestante)</label><input id="visitaIgSemanas" type="number" min="0"></div>
+    </div>
+    <div class="form-group"><label>Observações</label><textarea id="visitaObs" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalVisita')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarVisita()">💾 Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Ficha de Acompanhamento ═════════════════════════════════════ -->
+<div class="modal-bg" id="modalFicha">
+  <div class="modal">
+    <h3>📋 Nova Ficha de Acompanhamento</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Paciente *</label><input id="fichaPacienteNome" placeholder="Nome do paciente"></div>
+      <div class="form-group"><label>Condição de Saúde *</label>
+        <select id="fichaCondicao">
+          <option value="hipertensao">Hipertensão Arterial</option>
+          <option value="diabetes">Diabetes Mellitus</option>
+          <option value="tuberculose">Tuberculose</option>
+          <option value="hanseníase">Hanseníase</option>
+          <option value="gestante">Gestante</option>
+          <option value="cancer">Câncer</option>
+          <option value="saude_mental">Saúde Mental</option>
+          <option value="deficiencia">Deficiência</option>
+          <option value="usuario_drogas">Usuário de Álcool/Drogas</option>
+          <option value="acamado">Acamado</option>
+          <option value="domiciliado">Domiciliado</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CPF do Paciente</label><input id="fichaCpf" placeholder="Somente números"></div>
+      <div class="form-group"><label>CNS do Paciente</label><input id="fichaCns" placeholder="Cartão Nacional de Saúde"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>ACS Responsável</label><select id="fichaAcsId"></select></div>
+      <div class="form-group"><label>Micro-área</label><input id="fichaMicroarea" placeholder="Ex: 03"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Logradouro</label><input id="fichaLogradouro" placeholder="Rua/Avenida"></div>
+      <div class="form-group"><label>Bairro</label><input id="fichaBairro" placeholder="Bairro"></div>
+    </div>
+    <div class="form-group"><label>Observações</label><textarea id="fichaObs" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalFicha')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarFicha()">💾 Criar Ficha</button>
     </div>
   </div>
 </div>
