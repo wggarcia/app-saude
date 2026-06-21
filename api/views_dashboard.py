@@ -18,7 +18,7 @@ from .access_control import (
     contexto_navegacao_setorial,
     destino_por_perfil,
     get_setor,
-    MODULOS_LABEL,
+    MODULOS_INFO,
     MODULOS_POR_SETOR,
     perfil_principal,
     principal_pode_configurar_ti,
@@ -371,9 +371,12 @@ def rede_gestao_page(request):
     codigo_modulo = f"{setor}.rede"
     principal = getattr(request, "principal", None) or empresa
     if not principal_tem_modulo(empresa, principal, codigo_modulo):
+        info = MODULOS_INFO.get(codigo_modulo, {})
         return render(request, "modulo_credencial.html", {
             "codigo_modulo": codigo_modulo,
-            "modulo_label": MODULOS_LABEL.get(codigo_modulo, codigo_modulo),
+            "modulo_label": info.get("label", codigo_modulo),
+            "modulo_funcao": info.get("funcao", ""),
+            "modulo_area": info.get("area", ""),
             "return_url": request.path,
         }, status=403)
     return render(request, "rede_gestao.html", {"setor": setor, **contexto_navegacao_setorial(request, setor)})

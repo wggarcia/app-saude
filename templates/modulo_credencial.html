@@ -24,6 +24,10 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;pad
 .btn-back{display:block;margin-top:14px;text-align:center;font-size:.82rem;color:var(--muted);text-decoration:none}
 .btn-back:hover{color:var(--ink)}
 .err{display:none;margin-top:14px;padding:10px 13px;border-radius:9px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;font-size:.82rem}
+.meta-box{margin-top:18px;padding:12px 14px;border-radius:12px;background:rgba(69,234,217,.06);border:1px solid rgba(69,234,217,.18)}
+.meta-row{font-size:.82rem;color:var(--muted);line-height:1.5;margin-top:4px}
+.meta-row:first-child{margin-top:0}
+.meta-row strong{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -31,6 +35,13 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;pad
   <div class="lock-icon">🔒</div>
   <div class="title">Acesso restrito por módulo</div>
   <div class="sub">A credencial usada agora não tem permissão para o módulo <strong>{{ modulo_label }}</strong>. Confirme as credenciais de quem tem acesso a esta área.</div>
+
+  {% if modulo_funcao or modulo_area %}
+  <div class="meta-box">
+    {% if modulo_funcao %}<div class="meta-row"><strong>Função esperada:</strong> {{ modulo_funcao }}</div>{% endif %}
+    {% if modulo_area %}<div class="meta-row"><strong>Área liberada:</strong> {{ modulo_area }}</div>{% endif %}
+  </div>
+  {% endif %}
 
   <div class="fields">
     <div class="field"><label for="email">E-mail</label><input id="email" type="email" placeholder="voce@instituicao.com" autocomplete="email"></div>

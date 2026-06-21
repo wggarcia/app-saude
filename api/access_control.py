@@ -320,37 +320,79 @@ def api_requer_plataforma_ti(view_func):
 
 MODULOS_POR_SETOR = {
     "hospital": [
-        {"codigo": "hospital.operacional", "label": "Operacional"},
-        {"codigo": "hospital.clinico", "label": "Clínico"},
-        {"codigo": "hospital.rede", "label": "Rede de Gestão"},
+        {"codigo": "hospital.operacional", "label": "Operacional",
+         "funcao": "Enfermagem, Recepção, Faturamento",
+         "area": "Leitos, Internações, Triagem, Prescrições, UTI, Alta, Faturamento, Farmácia Hospitalar, TISS"},
+        {"codigo": "hospital.clinico", "label": "Clínico",
+         "funcao": "Médico, Enfermagem Clínica, Laboratório, Imagem",
+         "area": "Prontuário Eletrônico, Laboratório (LIS), Imagem (RIS/PACS), Bloco Cirúrgico"},
+        {"codigo": "hospital.rede", "label": "Rede de Gestão",
+         "funcao": "Gestão multi-unidade",
+         "area": "Gestão de rede entre unidades hospitalares"},
     ],
     "farmacia": [
-        {"codigo": "farmacia.pdv", "label": "PDV / Caixa"},
-        {"codigo": "farmacia.gestao", "label": "Gestão / Farmacêutico"},
-        {"codigo": "farmacia.rede", "label": "Rede de Gestão"},
+        {"codigo": "farmacia.pdv", "label": "PDV / Caixa",
+         "funcao": "Atendente de balcão / Operador de caixa",
+         "area": "Ponto de venda, abertura e fechamento de caixa"},
+        {"codigo": "farmacia.gestao", "label": "Gestão / Farmacêutico",
+         "funcao": "Farmacêutico responsável, Gerente",
+         "area": "Estoque, Financeiro/DRE, Magistral, SNGPC, PBM, E-commerce/Delivery"},
+        {"codigo": "farmacia.rede", "label": "Rede de Gestão",
+         "funcao": "Gestão multi-loja",
+         "area": "Gestão de rede entre lojas"},
     ],
     "empresa": [  # setor "empresa" = SST
-        {"codigo": "sst.operacional", "label": "Operacional (técnico/auxiliar)"},
-        {"codigo": "sst.clinico", "label": "Clínico (médico do trabalho)"},
-        {"codigo": "sst.gestao_conformidade", "label": "Gestão / Conformidade"},
-        {"codigo": "sst.administracao", "label": "Administração"},
+        {"codigo": "sst.operacional", "label": "Operacional",
+         "funcao": "Técnico de Segurança (SESMT), Auxiliar Administrativo",
+         "area": "Agendamento de exames, ASOs, cadastro de funcionários, documentos, comunicação, bem-estar"},
+        {"codigo": "sst.clinico", "label": "Clínico",
+         "funcao": "Médico do Trabalho",
+         "area": "Prontuário ocupacional, laudos técnicos, PPP, psicossocial, laboratório, rede credenciada"},
+        {"codigo": "sst.gestao_conformidade", "label": "Gestão / Conformidade",
+         "funcao": "RH, Gestor de SST",
+         "area": "Relatórios, conformidade, eSocial, afastamentos, CAT, FAP, treinamentos, normas, EPI, riscos, PGR, CIPA, biometria"},
+        {"codigo": "sst.administracao", "label": "Administração",
+         "funcao": "Administrador, TI",
+         "area": "Configurações do sistema"},
     ],
     "governo": [
-        {"codigo": "governo.administrativo", "label": "Administrativo"},
-        {"codigo": "governo.vigilancia_acs", "label": "Vigilância / ACS"},
-        {"codigo": "governo.atencao_clinica", "label": "Atenção Clínica"},
-        {"codigo": "governo.regulacao_urgencia", "label": "Regulação / Urgência"},
+        {"codigo": "governo.administrativo", "label": "Administrativo",
+         "funcao": "Gestor Público, Planejamento",
+         "area": "Programas, indicadores, planos de ação, orçamento, atos normativos, contratos"},
+        {"codigo": "governo.vigilancia_acs", "label": "Vigilância / ACS",
+         "funcao": "Agente de Vigilância, Agente Comunitário de Saúde",
+         "area": "Vigilância epidemiológica e sanitária, visitas domiciliares, combate a endemias"},
+        {"codigo": "governo.atencao_clinica", "label": "Atenção Clínica",
+         "funcao": "Profissional de Saúde, Recepção UBS",
+         "area": "Prontuário Eletrônico do Cidadão, e-SUS, Farmácia Básica, Faturamento SUS, Teleconsulta"},
+        {"codigo": "governo.regulacao_urgencia", "label": "Regulação / Urgência",
+         "funcao": "Regulador de Leitos, Equipe SAMU",
+         "area": "Regulação de leitos, Urgência/SAMU, Produção, Previne Brasil"},
     ],
     "plano_saude": [
-        {"codigo": "plano.autorizacao", "label": "Autorização / Sinistro"},
-        {"codigo": "plano.rede_credenciada", "label": "Rede Credenciada"},
-        {"codigo": "plano.comercial", "label": "Comercial / Corretores"},
-        {"codigo": "plano.compliance_ans", "label": "Compliance ANS"},
+        {"codigo": "plano.autorizacao", "label": "Autorização / Sinistro",
+         "funcao": "Analista de Autorização",
+         "area": "Autorização de guias com IA, análise de sinistro"},
+        {"codigo": "plano.rede_credenciada", "label": "Rede Credenciada",
+         "funcao": "Gestor de Rede Credenciada",
+         "area": "Prestadores e credenciamento"},
+        {"codigo": "plano.comercial", "label": "Comercial / Corretores",
+         "funcao": "Corretor, Comercial",
+         "area": "Corretoras e comissões"},
+        {"codigo": "plano.compliance_ans", "label": "Compliance ANS",
+         "funcao": "Compliance, Regulatório",
+         "area": "Obrigações ANS, DIOPS, SIB"},
     ],
 }
 
 MODULOS_LABEL = {
     m["codigo"]: m["label"]
+    for modulos in MODULOS_POR_SETOR.values()
+    for m in modulos
+}
+
+MODULOS_INFO = {
+    m["codigo"]: m
     for modulos in MODULOS_POR_SETOR.values()
     for m in modulos
 }
@@ -401,9 +443,12 @@ def requer_permissao_modulo(codigo):
             principal = getattr(request, "principal", None) or empresa
             if principal_tem_modulo(empresa, principal, codigo):
                 return view_func(request, *args, **kwargs)
+            info = MODULOS_INFO.get(codigo, {})
             return render(request, "modulo_credencial.html", {
                 "codigo_modulo": codigo,
-                "modulo_label": MODULOS_LABEL.get(codigo, codigo),
+                "modulo_label": info.get("label", codigo),
+                "modulo_funcao": info.get("funcao", ""),
+                "modulo_area": info.get("area", ""),
                 "return_url": request.path,
             }, status=403)
         return wrapper
