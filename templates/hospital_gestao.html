@@ -442,6 +442,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
         <button class="tab-btn" id="tabBtn-alta" onclick="setTab('alta')">📄 Alta Hospitalar</button>
         <button class="tab-btn" id="tabBtn-faturamento" onclick="setTab('faturamento')">💰 Faturamento</button>
         <button class="tab-btn" id="tabBtn-equipamentos" onclick="setTab('equipamentos')">🔧 Equipamentos</button>
+        <button class="tab-btn" id="tabBtn-assinatura" onclick="setTab('assinatura')">✍️ Assinatura</button>
         <button class="tab-btn" id="tabBtn-analytics" onclick="setTab('analytics')">📊 Analytics</button>
         <button class="tab-btn" id="tabBtn-orquestracao" onclick="setTab('orquestracao')">🧠 Comando 360</button>
       </div>
@@ -772,6 +773,34 @@ tr:hover td{background:rgba(255,255,255,.018)}
               <th>Nome</th><th>Categoria</th><th>Nº Série</th><th>Localização</th><th>Status</th><th>Próx. Calibração</th><th>Ações</th>
             </tr></thead>
             <tbody id="tbodyEquipamentos"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════ TAB: ASSINATURA ELETRÔNICA ══════ -->
+      <div class="tab-panel" id="tab-assinatura">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
+          <div class="kpi-card"><div class="kpi-val" id="assTotal">—</div><div class="kpi-lbl">📄 Total de Evoluções</div></div>
+          <div class="kpi-card"><div class="kpi-val" id="assAssinadas">—</div><div class="kpi-lbl">✅ Assinadas</div></div>
+          <div class="kpi-card"><div class="kpi-val" id="assPendentes">—</div><div class="kpi-lbl">⏳ Pendentes</div></div>
+          <div class="kpi-card"><div class="kpi-val" id="assCobertura">—</div><div class="kpi-lbl">📊 Cobertura</div></div>
+        </div>
+        <div class="alert" id="assModoAlert" style="margin-bottom:12px;padding:12px 16px;border-radius:8px;font-size:13px"></div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">✍️ Evoluções Pendentes de Assinatura Digital</span>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="assFiltroProfissional" placeholder="Filtrar por profissional" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;color:var(--text);font-family:inherit" onkeyup="if(event.key==='Enter')carregarAssinaturasPendentes()">
+              <button class="btn btn-ghost btn-sm" onclick="carregarAssinaturasPendentes()">🔍 Filtrar</button>
+              <button class="btn btn-primary btn-sm" id="btnAssinarLote" onclick="assinarLoteSelecionados()" disabled>✍️ Assinar Selecionadas</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr>
+              <th><input type="checkbox" id="assSelecionarTodos" onchange="toggleSelecionarTodosAssinatura(this)"></th>
+              <th>Paciente</th><th>Profissional</th><th>CRM/COREN</th><th>Tipo</th><th>Resumo</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="tbodyAssinaturaPendentes"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -2818,7 +2847,7 @@ function popularSelectDeps(sid) {
 // ══════════════════════════════════════════════════════════════
 // TAB NAVIGATION
 // ══════════════════════════════════════════════════════════════
-const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes','uti','cirurgias','exames','alta','faturamento','equipamentos','analytics','orquestracao'];
+const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes','uti','cirurgias','exames','alta','faturamento','equipamentos','assinatura','analytics','orquestracao'];
 
 function scrollMainToTop() {
   const main = document.querySelector('.main');
@@ -2850,6 +2879,7 @@ function setTab(tab) {
   else if (tab==='alta') carregarAltaTab();
   else if (tab==='faturamento') carregarFaturamento();
   else if (tab==='equipamentos') carregarEquipamentos();
+  else if (tab==='assinatura') { carregarAssinaturaKpis(); carregarAssinaturasPendentes(); }
   else if (tab==='analytics') carregarAnalytics();
   else if (tab==='orquestracao') carregarOrquestracao();
 }
@@ -3688,6 +3718,83 @@ async function concluirOS(osId) {
     await carregarOS(equipId);
     carregarEquipamentos();
   } catch(e) { toast('Erro ao concluir OS: '+e.message,'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ASSINATURA ELETRÔNICA — evoluções de prontuário (CFM Res. 2.299/2021)
+// ══════════════════════════════════════════════════════════════
+let _assinaturaPendentes = [];
+async function carregarAssinaturaKpis() {
+  try {
+    const d = await api('/api/hospital/assinatura/kpis');
+    document.getElementById('assTotal').textContent = d.total_evolucoes;
+    document.getElementById('assAssinadas').textContent = d.assinadas;
+    document.getElementById('assPendentes').textContent = d.pendentes;
+    document.getElementById('assCobertura').textContent = d.cobertura_pct + '%';
+    const alertEl = document.getElementById('assModoAlert');
+    if (d.certificado_icp_configurado) {
+      alertEl.style.background = 'rgba(0,229,176,.08)'; alertEl.style.border = '1px solid rgba(0,229,176,.25)';
+      alertEl.innerHTML = `✅ Modo: <strong>${d.modo_assinatura}</strong> — assinaturas têm validade jurídica plena.`;
+    } else {
+      alertEl.style.background = 'rgba(255,179,71,.08)'; alertEl.style.border = '1px solid rgba(255,179,71,.25)';
+      alertEl.innerHTML = `⚠️ Modo: <strong>${d.modo_assinatura}</strong> — sem certificado ICP-Brasil configurado. Para validade jurídica plena (CFM Res. 2.299/2021), configure o certificado em Configurações → Integrações → RNDS.`;
+    }
+  } catch(e) { console.error('[carregarAssinaturaKpis] erro', e); }
+}
+async function carregarAssinaturasPendentes() {
+  try {
+    const profissional = v('assFiltroProfissional');
+    const qs = profissional ? `?profissional=${encodeURIComponent(profissional)}` : '';
+    const d = await api(`/api/hospital/assinatura/pendentes${qs}`);
+    _assinaturaPendentes = d.pendentes || [];
+    const tb = document.getElementById('tbodyAssinaturaPendentes');
+    tb.innerHTML = _assinaturaPendentes.length ? _assinaturaPendentes.map(e=>`
+      <tr>
+        <td><input type="checkbox" class="ass-check" value="${e.id}" onchange="atualizarBtnAssinarLote()"></td>
+        <td>${e.paciente_nome||'—'}</td>
+        <td>${e.profissional||'—'}</td>
+        <td>${e.crm_coren||'—'}</td>
+        <td>${e.tipo||'—'}</td>
+        <td style="font-size:12px;color:var(--muted)">${e.texto_resumo||''}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="assinarEvolucao(${e.id})">✍️ Assinar</button></td>
+      </tr>`).join('') : '<tr><td colspan="7" class="empty">Nenhuma evolução pendente de assinatura</td></tr>';
+    document.getElementById('assSelecionarTodos').checked = false;
+    atualizarBtnAssinarLote();
+  } catch(e) {
+    document.getElementById('tbodyAssinaturaPendentes').innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar evoluções pendentes</td></tr>';
+  }
+}
+function toggleSelecionarTodosAssinatura(checkbox) {
+  document.querySelectorAll('.ass-check').forEach(c => c.checked = checkbox.checked);
+  atualizarBtnAssinarLote();
+}
+function atualizarBtnAssinarLote() {
+  const marcados = document.querySelectorAll('.ass-check:checked').length;
+  const btn = document.getElementById('btnAssinarLote');
+  btn.disabled = marcados === 0;
+  btn.textContent = marcados ? `✍️ Assinar Selecionadas (${marcados})` : '✍️ Assinar Selecionadas';
+}
+async function assinarEvolucao(evolucaoId) {
+  const crm = prompt('Confirme seu CRM/CRO/COREN para assinar digitalmente esta evolução:');
+  if (crm === null) return;
+  try {
+    const d = await api(`/api/hospital/assinatura/assinar/${evolucaoId}`, {method:'POST', body:JSON.stringify({crm_coren: crm.trim()})});
+    toast(d.aviso || 'Evolução assinada digitalmente', d.aviso ? 'warn' : 'ok');
+    carregarAssinaturaKpis();
+    carregarAssinaturasPendentes();
+  } catch(e) { toast('Erro ao assinar: '+e.message,'error'); }
+}
+async function assinarLoteSelecionados() {
+  const ids = Array.from(document.querySelectorAll('.ass-check:checked')).map(c => parseInt(c.value));
+  if (!ids.length) return;
+  const crm = prompt(`Confirme seu CRM/CRO/COREN para assinar ${ids.length} evolução(ões):`);
+  if (crm === null) return;
+  try {
+    const d = await api('/api/hospital/assinatura/assinar-lote', {method:'POST', body:JSON.stringify({ids, crm_coren: crm.trim()})});
+    toast(`${d.assinados} assinada(s)${d.erros ? ', ' + d.erros + ' erro(s)' : ''}`, d.erros ? 'warn' : 'ok');
+    carregarAssinaturaKpis();
+    carregarAssinaturasPendentes();
+  } catch(e) { toast('Erro ao assinar em lote: '+e.message,'error'); }
 }
 </script>
 <script>
