@@ -1358,6 +1358,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
       <button class="tab-btn active" id="multiTabBtn-enfermagem" onclick="setMultiTab('enfermagem')">🩺 Enfermagem (SAE)</button>
       <button class="tab-btn" id="multiTabBtn-fisio" onclick="setMultiTab('fisio')">🏃 Fisioterapia</button>
       <button class="tab-btn" id="multiTabBtn-nutri" onclick="setMultiTab('nutri')">🥗 Nutrição</button>
+      <button class="tab-btn" id="multiTabBtn-visitantes" onclick="setMultiTab('visitantes')">🚪 Visitantes</button>
     </div>
 
     <!-- ENFERMAGEM -->
@@ -1458,6 +1459,26 @@ tr:hover td{background:rgba(255,255,255,.018)}
         <div class="form-group"><label>CRN</label><input id="nutCrn" placeholder="Ex: 12345"></div>
       </div>
       <div class="modal-actions"><button class="btn btn-primary" onclick="salvarAvaliacaoNutri()">Registrar Avaliação Nutricional</button></div>
+    </div>
+
+    <!-- VISITANTES -->
+    <div class="tab-panel" id="multiTab-visitantes">
+      <div class="section-divider">Visitantes — Histórico e Status</div>
+      <div class="evolucao-list" id="listaVisitantes">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nenhum visitante registrado</div>
+      </div>
+      <div class="section-divider" style="margin-top:14px">Registrar Entrada de Visitante</div>
+      <div class="form-row">
+        <div class="form-group"><label>Nome do Visitante *</label><input id="visNome" placeholder="Nome completo"></div>
+        <div class="form-group"><label>Documento (RG/CPF)</label><input id="visDocumento" placeholder="Opcional"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Parentesco/Vínculo</label><input id="visParentesco" placeholder="Ex: filho(a), cônjuge, amigo(a)"></div>
+        <div class="form-group"><label>Telefone</label><input id="visTelefone" placeholder="Opcional"></div>
+      </div>
+      <div class="form-group"><label>Registrado por (recepção/portaria)</label><input id="visRegistradoPor" placeholder="Nome do funcionário"></div>
+      <div class="form-group"><label>Observações</label><textarea id="visObs" rows="2" placeholder="Opcional"></textarea></div>
+      <div class="modal-actions"><button class="btn btn-primary" onclick="salvarVisitante()">Registrar Entrada</button></div>
     </div>
 
     <div class="modal-actions" style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
@@ -2023,7 +2044,7 @@ function linesToList(text, field) {
   return (text||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>({[field]: l}));
 }
 function setMultiTab(tab) {
-  ['enfermagem','fisio','nutri'].forEach(t=>{
+  ['enfermagem','fisio','nutri','visitantes'].forEach(t=>{
     document.getElementById('multiTabBtn-'+t).classList.toggle('active', t===tab);
     document.getElementById('multiTab-'+t).classList.toggle('active', t===tab);
   });
@@ -2045,7 +2066,8 @@ function renderAvaliacoesList(elId, items, linhaFn) {
 function limparFormulariosMulti() {
   ['enfHistorico','enfExameFisico','enfBraden','enfMorse','enfDiagnosticos','enfPlano','enfResp','enfCoren',
    'fisQueixa','fisAdm','fisForca','fisDor','fisFuncional','fisDiagnostico','fisPlano','fisObjetivos','fisResp','fisCrefito',
-   'nutPeso','nutAltura','nutCircunferencias','nutDiagnostico','nutCalorias','nutProteina','nutRestricoes','nutPlano','nutResp','nutCrn'
+   'nutPeso','nutAltura','nutCircunferencias','nutDiagnostico','nutCalorias','nutProteina','nutRestricoes','nutPlano','nutResp','nutCrn',
+   'visNome','visDocumento','visParentesco','visTelefone','visRegistradoPor','visObs'
   ].forEach(id=>{ const el=document.getElementById(id); if (el) el.value=''; });
 }
 async function abrirModalMulti(pacId, nome) {
@@ -2067,7 +2089,7 @@ async function onMultiPacChange() {
   const pacId = document.getElementById('multiPacId').value;
   limparFormulariosMulti();
   if (!pacId) {
-    ['listaEnfermagem','listaFisio','listaNutri'].forEach(id=>{
+    ['listaEnfermagem','listaFisio','listaNutri','listaVisitantes'].forEach(id=>{
       document.getElementById(id).innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Selecione um paciente</div>';
     });
     return;
@@ -2076,10 +2098,11 @@ async function onMultiPacChange() {
 }
 async function carregarAvaliacoesMulti(pacId) {
   try {
-    const [enf, fis, nut] = await Promise.all([
+    const [enf, fis, nut, vis] = await Promise.all([
       api(`/api/hospital/pacientes/${pacId}/avaliacoes-enfermagem/`),
       api(`/api/hospital/pacientes/${pacId}/avaliacoes-fisioterapia/`),
       api(`/api/hospital/pacientes/${pacId}/avaliacoes-nutricionais/`),
+      api(`/api/hospital/pacientes/${pacId}/visitantes/`),
     ]);
     renderAvaliacoesList('listaEnfermagem', enf.avaliacoes||[], a=>
       `Braden: ${a.escala_braden??'—'} · Morse: ${a.escala_morse??'—'}<br>${(a.historico_enfermagem||'').slice(0,140)}`);
@@ -2087,7 +2110,47 @@ async function carregarAvaliacoesMulti(pacId) {
       `EVA: ${a.escala_dor_eva??'—'} · Funcional: ${a.capacidade_funcional||'—'}<br>${(a.queixa_principal||'').slice(0,140)}`);
     renderAvaliacoesList('listaNutri', nut.avaliacoes||[], a=>
       `IMC: ${a.imc??'—'} · Via: ${a.via_alimentacao}<br>${(a.diagnostico_nutricional||'').slice(0,140)}`);
+    renderVisitantesList(vis.visitantes||[]);
   } catch(e) { console.error('[carregarAvaliacoesMulti] erro', e); }
+}
+function renderVisitantesList(items) {
+  const el = document.getElementById('listaVisitantes');
+  el.innerHTML = items.length
+    ? items.map(vi=>`
+        <div class="evolucao-item">
+          <div style="font-size:13px"><strong>${vi.nome}</strong> ${vi.parentesco?'· '+vi.parentesco:''} ${vi.documento?'· '+vi.documento:''}</div>
+          <div class="evolucao-meta">
+            <span>🕐 entrada ${vi.entrada}</span>
+            <span>${vi.saida ? '🚪 saída '+vi.saida : ''}</span>
+            <span class="badge ${vi.status==='dentro'?'badge-ok':'badge-muted'}">${vi.status}</span>
+            ${vi.status==='dentro' ? `<button class="btn btn-ghost btn-sm" onclick="registrarSaidaVisitante(${vi.id})">Registrar saída</button>` : ''}
+          </div>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nenhum visitante registrado</div>';
+}
+async function registrarSaidaVisitante(visitanteId) {
+  const pacId = document.getElementById('multiPacId').value;
+  try {
+    await api(`/api/hospital/visitantes/${visitanteId}/saida/`, {method:'PATCH', body:JSON.stringify({})});
+    toast('Saída registrada','ok');
+    await carregarAvaliacoesMulti(pacId);
+  } catch(e) { toast('Erro ao registrar saída: '+e.message,'error'); }
+}
+async function salvarVisitante() {
+  const pacId = document.getElementById('multiPacId').value;
+  if (!pacId) return toast('Selecione o paciente','warn');
+  const nome = v('visNome');
+  if (!nome) return toast('Informe o nome do visitante','warn');
+  const body = {
+    nome, documento: v('visDocumento'), parentesco: v('visParentesco'),
+    telefone: v('visTelefone'), registrado_por: v('visRegistradoPor'), observacoes: v('visObs'),
+  };
+  try {
+    const d = await api(`/api/hospital/pacientes/${pacId}/visitantes/`, {method:'POST', body:JSON.stringify(body)});
+    toast('Entrada de visitante registrada','ok');
+    if (d?.alerta) toast(d.alerta,'warn',6000);
+    await carregarAvaliacoesMulti(pacId);
+  } catch(e) { toast('Erro ao salvar: '+e.message,'error'); }
 }
 async function salvarAvaliacaoEnfermagem() {
   const pacId = document.getElementById('multiPacId').value;

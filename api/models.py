@@ -6612,6 +6612,32 @@ class AvaliacaoNutricional(models.Model):
         return f"Nutrição — {self.paciente.nome} ({self.status})"
 
 
+class VisitanteHospitalar(models.Model):
+    """Controle de visitantes — registro de entrada/saída de não-funcionários."""
+    STATUS_CHOICES = [
+        ("dentro", "Dentro do hospital"),
+        ("saiu", "Saiu"),
+    ]
+
+    paciente        = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="visitantes")
+    nome            = models.CharField(max_length=200)
+    documento       = models.CharField(max_length=30, blank=True, default="", help_text="RG ou CPF")
+    parentesco      = models.CharField(max_length=100, blank=True, default="", help_text="Ex: filho(a), cônjuge, amigo(a)")
+    telefone        = models.CharField(max_length=30, blank=True, default="")
+    entrada         = models.DateTimeField(auto_now_add=True)
+    saida           = models.DateTimeField(null=True, blank=True)
+    status          = models.CharField(max_length=10, choices=STATUS_CHOICES, default="dentro")
+    registrado_por  = models.CharField(max_length=200, blank=True, default="", help_text="Funcionário da portaria/recepção que registrou")
+    observacoes     = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-entrada"]
+        indexes = [models.Index(fields=["paciente", "status"], name="visitante_pac_status_idx")]
+
+    def __str__(self):
+        return f"Visitante {self.nome} — {self.paciente.nome} ({self.status})"
+
+
 class GuiaTISS(models.Model):
     TIPO_CHOICES = [("consulta","Consulta"),("sadt","SADT"),("internacao","Internação"),
                     ("sp_sadt","SP/SADT"),("resumo","Resumo de Internação")]

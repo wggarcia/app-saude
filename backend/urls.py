@@ -513,6 +513,10 @@ from api.views_hospital_multi import (
     api_avaliacoes_fisioterapia,
     api_avaliacoes_nutricionais,
 )
+from api.views_hospital_visitantes import (
+    api_visitantes_paciente,
+    api_visitante_saida,
+)
 from api.views_hospital_ops import (
     api_departamentos_hospital, api_departamento_hospital_detalhe,
     api_leitos_hospital, api_leito_status,
@@ -1485,6 +1489,8 @@ urlpatterns = [
     path('api/hospital/pacientes/<int:pac_id>/avaliacoes-enfermagem/', api_avaliacoes_enfermagem),
     path('api/hospital/pacientes/<int:pac_id>/avaliacoes-fisioterapia/', api_avaliacoes_fisioterapia),
     path('api/hospital/pacientes/<int:pac_id>/avaliacoes-nutricionais/', api_avaliacoes_nutricionais),
+    path('api/hospital/pacientes/<int:pac_id>/visitantes/', api_visitantes_paciente),
+    path('api/hospital/visitantes/<int:visitante_id>/saida/', api_visitante_saida),
     path('api/hospital/pacientes/<int:pac_id>/sumario-alta/', api_sumario_alta),
     path('api/hospital/pacientes/<int:pac_id>/isolamento/', api_isolamento_paciente),
     path('api/hospital/centro-cirurgico/', api_centro_cirurgico),
