@@ -482,6 +482,10 @@ from api.views_farmacia_ecommerce import (
     api_delivery_atualizar_status,
     api_delivery_kpis,
 )
+from api.views_farmacia_ifood import (
+    api_ifood_config,
+    api_ifood_webhook,
+)
 from api.views_hospital_fase3 import (
     api_fatura_paciente,
     api_fatura_acao,
@@ -803,6 +807,10 @@ from api.views_governo_acs import (
     api_fichas_acompanhamento,
     api_ficha_detalhe,
     api_acs_kpis,
+)
+from api.views_governo_endemias import (
+    api_endemias_visitas,
+    api_endemias_indicadores,
 )
 from api.views_rede import (
     api_redes, api_rede_convidar, api_rede_entrar, api_rede_estoque, api_rede_item_disponibilidade,
@@ -1433,6 +1441,9 @@ urlpatterns = [
     path('api/farmacia/delivery/novo', api_delivery_novo),
     path('api/farmacia/delivery/<int:pedido_id>/status', api_delivery_atualizar_status),
     path('api/farmacia/delivery/kpis', api_delivery_kpis),
+    path('api/farmacia/ifood/config', api_ifood_config),
+    path('api/farmacia/ifood/config/', api_ifood_config),
+    path('api/farmacia/ifood/webhook/', api_ifood_webhook),
     # ── Farmácia Operacional ──────────────────────────────────
     path('api/farmacia/ops/kpis/', api_farmacia_ops_kpis),
     path('api/farmacia/fornecedores/', api_fornecedores_farmacia),
@@ -2351,6 +2362,8 @@ urlpatterns = [
     # ── ACS + Visitas Domiciliares + Fichas (Governo / Atenção Básica) ────────
     path('api/governo/acs',                                     api_acs_lista),
     path('api/governo/acs/',                                    api_acs_lista),
+    path('api/governo/endemias/visitas/',                       api_endemias_visitas),
+    path('api/governo/endemias/indicadores/',                   api_endemias_indicadores),
     path('api/governo/acs/kpis',                                api_acs_kpis),
     path('api/governo/acs/kpis/',                               api_acs_kpis),
     path('api/governo/acs/<int:acs_id>',                        api_acs_detalhe),

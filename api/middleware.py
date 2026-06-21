@@ -204,6 +204,7 @@ class EmpresaMiddleware:
             "/assinatura/sst/",    # página pública de assinatura SST (link por e-mail)
             "/validar-assinatura/", # página pública de validação de assinatura SST
             "/api/gestao/integracoes/webhook/",  # webhook de sistemas de RH (auth própria via HMAC)
+            "/api/farmacia/ifood/webhook/",      # webhook do iFood (auth própria via assinatura por farmácia)
             "/api/v1/dados",        # dados via API Key (BI/ERP externo)
             "/api/planos-publicos",
             "/api/status-pagamento",

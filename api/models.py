@@ -6351,13 +6351,34 @@ class PedidoDelivery(models.Model):
     cliente_telefone = models.CharField(max_length=20)
     cliente_endereco = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="aguardando")
-    origem = models.CharField(max_length=40, default="whatsapp")  # whatsapp, site, app
+    origem = models.CharField(max_length=40, default="whatsapp")  # whatsapp, site, app, ifood
+    id_externo = models.CharField(max_length=80, blank=True, default="", help_text="ID do pedido na plataforma de origem (ex: orderId do iFood)")
     total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     observacoes = models.TextField(blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
     class Meta:
         ordering = ["-criado_em"]
+
+
+class IntegracaoIfood(models.Model):
+    """Configuração da integração com o iFood (Merchant API) por farmácia.
+
+    Cada farmácia tem seu próprio estabelecimento (merchantId) e credenciais no
+    iFood — diferente de integrações de plataforma única (ex: Asaas), aqui é
+    por tenant.
+    """
+    empresa               = models.OneToOneField(Empresa, on_delete=models.CASCADE, related_name="integracao_ifood")
+    merchant_id           = models.CharField(max_length=80, blank=True, default="", help_text="ID do estabelecimento no iFood")
+    client_id             = models.CharField(max_length=120, blank=True, default="")
+    client_secret         = models.CharField(max_length=200, blank=True, default="")
+    webhook_signature_key = models.CharField(max_length=200, blank=True, default="", help_text="Usado para validar a assinatura dos webhooks recebidos do iFood")
+    ativo                 = models.BooleanField(default=False)
+    conectado_em          = models.DateTimeField(null=True, blank=True)
+    atualizado_em         = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"iFood — {self.empresa.nome} ({'ativo' if self.ativo else 'inativo'})"
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -9500,6 +9521,72 @@ class VisitaDomiciliar(models.Model):
 
     def __str__(self):
         return f"Visita {self.data_visita} — {self.paciente_nome} ({self.get_motivo_display()})"
+
+
+class VisitaCombateEndemias(models.Model):
+    """Visita de combate a endemias (LIRAa/Aedes aegypti) — vigilância ambiental municipal.
+
+    Distinta de VisitaDomiciliar (ficha clínica do ACS, e-SUS CDS): aqui o foco é
+    entomológico — inspeção de imóvel, criadouro encontrado, ação de controle.
+    """
+    TIPO_IMOVEL_CHOICES = [
+        ("residencial", "Residencial"),
+        ("comercial", "Comercial"),
+        ("terreno_baldio", "Terreno Baldio"),
+        ("ponto_estrategico", "Ponto Estratégico (PE)"),
+        ("outro", "Outro"),
+    ]
+    TIPO_CRIADOURO_CHOICES = [
+        ("a1", "A1 — Caixa d'água/depósito elevado"),
+        ("a2", "A2 — Tanque/depósito de reservação"),
+        ("b", "B — Reservatório ao nível do solo"),
+        ("c", "C — Recipientes móveis (vasos, pratos, garrafas)"),
+        ("d1", "D1 — Pneus e sucatas"),
+        ("d2", "D2 — Depósitos naturais (bromélias, troncos, axilas de folha)"),
+        ("e", "E — Outros depósitos"),
+    ]
+    ACAO_CHOICES = [
+        ("tratamento_focal", "Tratamento focal (larvicida)"),
+        ("tratamento_perifocal", "Tratamento perifocal (adulticida)"),
+        ("eliminacao_mecanica", "Eliminação mecânica do depósito"),
+        ("orientacao", "Orientação ao morador"),
+        ("nenhuma", "Nenhuma ação necessária"),
+    ]
+    STATUS_VISITA_CHOICES = [
+        ("realizada", "Realizada"),
+        ("imovel_fechado", "Imóvel fechado"),
+        ("imovel_recusado", "Morador recusou"),
+        ("imovel_ausente", "Morador ausente"),
+    ]
+
+    empresa                  = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="visitas_endemias")
+    agente_nome              = models.CharField(max_length=160, help_text="Agente de Combate a Endemias (ACE)")
+    data_visita              = models.DateField()
+    endereco                 = models.CharField(max_length=255, blank=True, default="")
+    bairro                   = models.CharField(max_length=120, blank=True, default="")
+    municipio_ibge           = models.CharField(max_length=7, blank=True, default="")
+    tipo_imovel              = models.CharField(max_length=20, choices=TIPO_IMOVEL_CHOICES, default="residencial")
+    status_visita            = models.CharField(max_length=20, choices=STATUS_VISITA_CHOICES, default="realizada")
+    depositos_inspecionados  = models.PositiveSmallIntegerField(default=0)
+    foco_encontrado          = models.BooleanField(default=False)
+    tipo_criadouro           = models.CharField(max_length=10, choices=TIPO_CRIADOURO_CHOICES, blank=True, default="")
+    acao_realizada           = models.CharField(max_length=30, choices=ACAO_CHOICES, blank=True, default="")
+    larvas_coletadas         = models.BooleanField(default=False, help_text="Amostra coletada para identificação em laboratório")
+    observacoes              = models.TextField(blank=True, default="")
+    criado_em                = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Visita de Combate a Endemias"
+        verbose_name_plural = "Visitas de Combate a Endemias"
+        ordering = ["-data_visita"]
+        indexes = [
+            models.Index(fields=["empresa", "data_visita"]),
+            models.Index(fields=["empresa", "foco_encontrado"]),
+            models.Index(fields=["empresa", "bairro"]),
+        ]
+
+    def __str__(self):
+        return f"Endemias {self.data_visita} — {self.endereco or self.bairro} ({'foco' if self.foco_encontrado else 'sem foco'})"
 
 
 class FichaAcompanhamento(models.Model):
