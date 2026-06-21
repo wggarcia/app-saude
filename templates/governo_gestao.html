@@ -383,6 +383,38 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <tbody id="tbodyNotif"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
         </table>
       </div>
+
+      <!-- Combate a Endemias (Aedes aegypti) -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-header">
+          <span class="card-title">🦟 Combate a Endemias — Aedes aegypti</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input id="filtroEndemiasBairro" placeholder="Filtrar por bairro" oninput="carregarEndemias()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:Manrope,sans-serif;font-size:13px">
+            <button class="btn btn-primary" onclick="abrirModalEndemias()">+ Registrar Visita</button>
+          </div>
+        </div>
+        <div class="kpi-row" id="endemiasKpis" style="margin-bottom:12px">
+          <div class="kpi danger"><div class="kpi-val" id="endemiasIndiceGeral">—</div><div class="kpi-lbl">Índice de Infestação Geral</div></div>
+          <div class="kpi"><div class="kpi-val" id="endemiasTotalVisitas">—</div><div class="kpi-lbl">Total de Visitas</div></div>
+          <div class="kpi warn"><div class="kpi-val" id="endemiasComFoco">—</div><div class="kpi-lbl">Imóveis com Foco</div></div>
+        </div>
+        <table>
+          <thead><tr><th>Data</th><th>Agente</th><th>Bairro</th><th>Imóvel</th><th>Status</th><th>Foco?</th><th>Criadouro</th><th>Ação</th></tr></thead>
+          <tbody id="tbodyEndemias"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Vigilância Sanitária Municipal -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-header">
+          <span class="card-title">🏪 Vigilância Sanitária Municipal</span>
+          <button class="btn btn-primary" onclick="abrirModalEstabelecimento()">+ Cadastrar Estabelecimento</button>
+        </div>
+        <table>
+          <thead><tr><th>Razão Social</th><th>Tipo</th><th>Bairro</th><th>Status</th><th>Alvarás</th><th>Inspeções</th><th>Ações</th></tr></thead>
+          <tbody id="tbodyEstabSanitario"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ══ REGULAÇÃO DE LEITOS ═════════════════════════════════════════════════ -->
@@ -1093,7 +1125,7 @@ function setTab(tab) {
   else if (tab==='orcamento') carregarOrcamentos();
   else if (tab==='atos') carregarAtos();
   else if (tab==='rede') { carregarRede(); carregarRedeKpis(); }
-  else if (tab==='vigilancia') { carregarVigilDash(); carregarNotificacoes(); carregarSurtos(); }
+  else if (tab==='vigilancia') { carregarVigilDash(); carregarNotificacoes(); carregarSurtos(); carregarEndemias(); carregarEstabelecimentosSanitarios(); }
   else if (tab==='regulacao') { carregarRegDash(); carregarRegulacao(); }
   else if (tab==='producao') { carregarProdDash(); carregarProducao(); }
   else if (tab==='previne') { carregarPrevineDash(); carregarPrevineLista(); }
@@ -1406,6 +1438,151 @@ async function salvarSurto() {
   await api(url, {method, body:JSON.stringify(body)});
   fecharModal('modalSurto');
   carregarSurtos(); carregarVigilDash();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// COMBATE A ENDEMIAS (AEDES AEGYPTI)
+// ══════════════════════════════════════════════════════════════════
+async function carregarEndemias() {
+  const bairro = v('filtroEndemiasBairro');
+  const [lista, ind] = await Promise.all([
+    api('/api/governo/endemias/visitas/' + (bairro ? '?bairro='+encodeURIComponent(bairro) : '')),
+    api('/api/governo/endemias/indicadores/' + (bairro ? '?bairro='+encodeURIComponent(bairro) : '')),
+  ]);
+  document.getElementById('endemiasIndiceGeral').textContent = (ind.indice_infestacao_geral_pct ?? 0) + '%';
+  document.getElementById('endemiasTotalVisitas').textContent = _fmtNum(ind.total_visitas);
+  document.getElementById('endemiasComFoco').textContent = _fmtNum(ind.total_com_foco);
+
+  const tipoImovelLabel = {residencial:'Residencial',comercial:'Comercial',terreno_baldio:'Terreno Baldio',ponto_estrategico:'Ponto Estratégico',outro:'Outro'};
+  const statusLabel = {realizada:'Realizada',imovel_fechado:'Fechado',imovel_recusado:'Recusado',imovel_ausente:'Ausente'};
+  const visitas = (lista.visitas||[]);
+  const tb = document.getElementById('tbodyEndemias');
+  if (!visitas.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma visita registrada</td></tr>'; return; }
+  tb.innerHTML = visitas.map(vv => `
+    <tr>
+      <td>${vv.data_visita}</td>
+      <td>${vv.agente_nome}</td>
+      <td>${vv.bairro||'—'}</td>
+      <td>${tipoImovelLabel[vv.tipo_imovel]||vv.tipo_imovel}</td>
+      <td>${statusLabel[vv.status_visita]||vv.status_visita}</td>
+      <td>${vv.foco_encontrado ? '🔴 Sim' : '🟢 Não'}</td>
+      <td>${vv.tipo_criadouro ? vv.tipo_criadouro.toUpperCase() : '—'}</td>
+      <td>${vv.acao_realizada||'—'}</td>
+    </tr>`).join('');
+}
+
+function abrirModalEndemias() {
+  ['endAgente','endEndereco','endBairro','endObs'].forEach(id=>{const e=document.getElementById(id); if(e) e.value='';});
+  document.getElementById('endData').value = new Date().toISOString().slice(0,10);
+  document.getElementById('endTipoImovel').value='residencial';
+  document.getElementById('endStatusVisita').value='realizada';
+  document.getElementById('endDepositos').value='0';
+  document.getElementById('endFoco').value='false';
+  document.getElementById('endCriadouro').value='';
+  document.getElementById('endAcao').value='';
+  abrirModal('modalEndemias');
+}
+
+async function salvarEndemias() {
+  const body = {
+    agente_nome: v('endAgente'), data_visita: v('endData'),
+    endereco: v('endEndereco'), bairro: v('endBairro'),
+    tipo_imovel: v('endTipoImovel'), status_visita: v('endStatusVisita'),
+    depositos_inspecionados: parseInt(v('endDepositos'))||0,
+    foco_encontrado: v('endFoco')==='true',
+    tipo_criadouro: v('endCriadouro'), acao_realizada: v('endAcao'),
+    observacoes: v('endObs'),
+  };
+  if (!body.agente_nome || !body.data_visita) return _t('Agente e data da visita são obrigatórios','warn');
+  await api('/api/governo/endemias/visitas/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalEndemias');
+  carregarEndemias();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// VIGILÂNCIA SANITÁRIA MUNICIPAL
+// ══════════════════════════════════════════════════════════════════
+let _estabsSanitarios = [];
+
+async function carregarEstabelecimentosSanitarios() {
+  const d = await api('/api/governo/vigilancia-sanitaria/estabelecimentos/');
+  _estabsSanitarios = d.estabelecimentos || [];
+  const tipoLabel = {alimentos:'Alimentos',estetica:'Estética',saude:'Serviço de Saúde',farmacia:'Farmácia',industria:'Indústria',outro:'Outro'};
+  const statusLabel = {regular:'🟢 Regular',pendente:'🟡 Pendente',interditado:'🔴 Interditado',cancelado:'⚫ Cancelado'};
+  const tb = document.getElementById('tbodyEstabSanitario');
+  if (!_estabsSanitarios.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum estabelecimento cadastrado</td></tr>'; return; }
+  tb.innerHTML = _estabsSanitarios.map(e => `
+    <tr>
+      <td>${e.razao_social}</td>
+      <td>${tipoLabel[e.tipo]||e.tipo}</td>
+      <td>${e.bairro||'—'}</td>
+      <td>${statusLabel[e.status]||e.status}</td>
+      <td>${e.total_alvaras}</td>
+      <td>${e.total_inspecoes}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalAlvara(${e.id})">📜 Alvará</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalInspecao(${e.id})">🔍 Inspeção</button>
+      </td>
+    </tr>`).join('');
+}
+
+function abrirModalEstabelecimento() {
+  ['estabRazaoSocial','estabNomeFantasia','estabCnpjCpf','estabEndereco','estabBairro','estabResponsavel'].forEach(id=>{const e=document.getElementById(id); if(e) e.value='';});
+  document.getElementById('estabTipo').value='alimentos';
+  abrirModal('modalEstabelecimento');
+}
+
+async function salvarEstabelecimento() {
+  const body = {
+    razao_social: v('estabRazaoSocial'), nome_fantasia: v('estabNomeFantasia'),
+    cnpj_cpf: v('estabCnpjCpf'), tipo: v('estabTipo'),
+    endereco: v('estabEndereco'), bairro: v('estabBairro'),
+    responsavel_tecnico: v('estabResponsavel'),
+  };
+  if (!body.razao_social) return _t('Razão social é obrigatória','warn');
+  await api('/api/governo/vigilancia-sanitaria/estabelecimentos/', {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalEstabelecimento');
+  carregarEstabelecimentosSanitarios();
+}
+
+function abrirModalAlvara(estabId) {
+  document.getElementById('alvaraEstabId').value = estabId;
+  ['alvaraNumero','alvaraEmissao','alvaraValidade','alvaraResponsavel'].forEach(id=>{const e=document.getElementById(id); if(e) e.value='';});
+  document.getElementById('alvaraEmissao').value = new Date().toISOString().slice(0,10);
+  abrirModal('modalAlvara');
+}
+
+async function salvarAlvara() {
+  const estabId = document.getElementById('alvaraEstabId').value;
+  const body = {
+    numero: v('alvaraNumero'), data_emissao: v('alvaraEmissao'),
+    data_validade: v('alvaraValidade'), responsavel_emissao: v('alvaraResponsavel'),
+  };
+  if (!body.numero || !body.data_emissao || !body.data_validade) return _t('Número, emissão e validade são obrigatórios','warn');
+  await api(`/api/governo/vigilancia-sanitaria/estabelecimentos/${estabId}/alvaras/`, {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalAlvara');
+  carregarEstabelecimentosSanitarios();
+}
+
+function abrirModalInspecao(estabId) {
+  document.getElementById('inspecaoEstabId').value = estabId;
+  ['inspecaoFiscalNome','inspecaoAutoInfracao','inspecaoMulta','inspecaoObs'].forEach(id=>{const e=document.getElementById(id); if(e) e.value='';});
+  document.getElementById('inspecaoData').value = new Date().toISOString().slice(0,10);
+  document.getElementById('inspecaoResultado').value='conforme';
+  abrirModal('modalInspecao');
+}
+
+async function salvarInspecao() {
+  const estabId = document.getElementById('inspecaoEstabId').value;
+  const body = {
+    fiscal_nome: v('inspecaoFiscalNome'), data_inspecao: v('inspecaoData'),
+    resultado: v('inspecaoResultado'), numero_auto_infracao: v('inspecaoAutoInfracao'),
+    valor_multa: v('inspecaoMulta') || null, observacoes: v('inspecaoObs'),
+  };
+  if (!body.fiscal_nome || !body.data_inspecao) return _t('Fiscal e data da inspeção são obrigatórios','warn');
+  await api(`/api/governo/vigilancia-sanitaria/estabelecimentos/${estabId}/inspecoes/`, {method:'POST', body:JSON.stringify(body)});
+  fecharModal('modalInspecao');
+  carregarEstabelecimentosSanitarios();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1969,6 +2146,151 @@ function _t(msg, tipo) {
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('modalSurto')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarSurto()">💾 Salvar Surto</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Visita de Combate a Endemias ═══════════════════════════════════ -->
+<div class="modal-bg" id="modalEndemias">
+  <div class="modal">
+    <h3>🦟 Visita de Combate a Endemias</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Agente (ACE) *</label><input id="endAgente" placeholder="Nome do agente"></div>
+      <div class="form-group"><label>Data da Visita *</label><input id="endData" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Endereço</label><input id="endEndereco" placeholder="Rua, número"></div>
+      <div class="form-group"><label>Bairro</label><input id="endBairro" placeholder="Bairro"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Imóvel</label>
+        <select id="endTipoImovel">
+          <option value="residencial">Residencial</option><option value="comercial">Comercial</option>
+          <option value="terreno_baldio">Terreno Baldio</option><option value="ponto_estrategico">Ponto Estratégico (PE)</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Status da Visita</label>
+        <select id="endStatusVisita">
+          <option value="realizada">Realizada</option><option value="imovel_fechado">Imóvel Fechado</option>
+          <option value="imovel_recusado">Morador Recusou</option><option value="imovel_ausente">Morador Ausente</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Depósitos Inspecionados</label><input id="endDepositos" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Foco Encontrado?</label>
+        <select id="endFoco"><option value="false">Não</option><option value="true">Sim</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Criadouro</label>
+        <select id="endCriadouro">
+          <option value="">—</option>
+          <option value="a1">A1 — Caixa d'água/depósito elevado</option>
+          <option value="a2">A2 — Tanque/depósito de reservação</option>
+          <option value="b">B — Reservatório ao nível do solo</option>
+          <option value="c">C — Recipientes móveis (vasos, pratos, garrafas)</option>
+          <option value="d1">D1 — Pneus e sucatas</option>
+          <option value="d2">D2 — Depósitos naturais</option>
+          <option value="e">E — Outros depósitos</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Ação Realizada</label>
+        <select id="endAcao">
+          <option value="">—</option>
+          <option value="tratamento_focal">Tratamento focal (larvicida)</option>
+          <option value="tratamento_perifocal">Tratamento perifocal (adulticida)</option>
+          <option value="eliminacao_mecanica">Eliminação mecânica do depósito</option>
+          <option value="orientacao">Orientação ao morador</option>
+          <option value="nenhuma">Nenhuma ação necessária</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Observações</label><textarea id="endObs" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalEndemias')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEndemias()">💾 Registrar Visita</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Cadastro de Estabelecimento Sanitário ══════════════════════════ -->
+<div class="modal-bg" id="modalEstabelecimento">
+  <div class="modal">
+    <h3>🏪 Cadastro de Estabelecimento</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Razão Social *</label><input id="estabRazaoSocial" placeholder="Razão social"></div>
+      <div class="form-group"><label>Nome Fantasia</label><input id="estabNomeFantasia" placeholder="Nome fantasia"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>CNPJ/CPF</label><input id="estabCnpjCpf" placeholder="CNPJ ou CPF"></div>
+      <div class="form-group"><label>Tipo</label>
+        <select id="estabTipo">
+          <option value="alimentos">Alimentos (restaurante, padaria…)</option>
+          <option value="estetica">Estética/Salão de Beleza</option>
+          <option value="saude">Serviço de Saúde</option>
+          <option value="farmacia">Farmácia/Drogaria</option>
+          <option value="industria">Indústria/Manipulação</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Endereço</label><input id="estabEndereco" placeholder="Endereço"></div>
+      <div class="form-group"><label>Bairro</label><input id="estabBairro" placeholder="Bairro"></div>
+    </div>
+    <div class="form-group"><label>Responsável Técnico</label><input id="estabResponsavel" placeholder="Nome do responsável técnico"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalEstabelecimento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEstabelecimento()">💾 Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Alvará Sanitário ════════════════════════════════════════════ -->
+<div class="modal-bg" id="modalAlvara">
+  <div class="modal">
+    <h3>📜 Emitir Alvará Sanitário</h3>
+    <input type="hidden" id="alvaraEstabId">
+    <div class="form-group"><label>Número do Alvará *</label><input id="alvaraNumero" placeholder="Número"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Data de Emissão *</label><input id="alvaraEmissao" type="date"></div>
+      <div class="form-group"><label>Data de Validade *</label><input id="alvaraValidade" type="date"></div>
+    </div>
+    <div class="form-group"><label>Responsável pela Emissão</label><input id="alvaraResponsavel" placeholder="Nome do fiscal/setor"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalAlvara')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAlvara()">💾 Emitir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Modal: Inspeção Sanitária ══════════════════════════════════════════ -->
+<div class="modal-bg" id="modalInspecao">
+  <div class="modal">
+    <h3>🔍 Registrar Inspeção/Fiscalização</h3>
+    <input type="hidden" id="inspecaoEstabId">
+    <div class="form-row">
+      <div class="form-group"><label>Fiscal Responsável *</label><input id="inspecaoFiscalNome" placeholder="Nome do fiscal"></div>
+      <div class="form-group"><label>Data da Inspeção *</label><input id="inspecaoData" type="date"></div>
+    </div>
+    <div class="form-group"><label>Resultado</label>
+      <select id="inspecaoResultado">
+        <option value="conforme">Conforme</option>
+        <option value="nao_conforme">Não Conforme — notificado</option>
+        <option value="auto_infracao">Auto de Infração</option>
+        <option value="interdicao">Interdição</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Nº Auto de Infração</label><input id="inspecaoAutoInfracao" placeholder="Se aplicável"></div>
+      <div class="form-group"><label>Valor da Multa (R$)</label><input id="inspecaoMulta" type="number" min="0" step="0.01"></div>
+    </div>
+    <div class="form-group"><label>Observações</label><textarea id="inspecaoObs" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalInspecao')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarInspecao()">💾 Registrar</button>
     </div>
   </div>
 </div>
