@@ -1219,7 +1219,8 @@ class eSocialEventoSST(models.Model):
         ("S-2245", "S-2245 — Treinamentos, Capacitações e Exercícios Simulados"),
     ]
     STATUS = [
-        ("pendente", "Pendente"),
+        ("pendente", "Pendente de Aprovação"),
+        ("aprovado", "Aprovado — pronto para envio"),
         ("enviado", "Enviado"),
         ("transmitido", "Transmitido com Sucesso"),
         ("erro", "Erro"),
@@ -1233,6 +1234,8 @@ class eSocialEventoSST(models.Model):
     protocolo = models.CharField(max_length=60, blank=True)
     mensagem_erro = models.TextField(blank=True)
     xml_gerado = models.TextField(blank=True, default="")
+    aprovado_por = models.CharField(max_length=200, blank=True, default="", help_text="Responsável que validou o evento antes da transmissão ao eSocial")
+    aprovado_em = models.DateTimeField(null=True, blank=True)
     data_envio = models.DateTimeField(null=True, blank=True)
     data_retorno = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -9587,6 +9590,96 @@ class VisitaCombateEndemias(models.Model):
 
     def __str__(self):
         return f"Endemias {self.data_visita} — {self.endereco or self.bairro} ({'foco' if self.foco_encontrado else 'sem foco'})"
+
+
+class EstabelecimentoSanitario(models.Model):
+    """Cadastro de estabelecimento sujeito à vigilância sanitária municipal."""
+    TIPO_CHOICES = [
+        ("alimentos", "Estabelecimento de Alimentos (restaurante, lanchonete, padaria)"),
+        ("estetica", "Estética/Salão de Beleza"),
+        ("saude", "Serviço de Saúde (clínica, consultório, laboratório)"),
+        ("farmacia", "Farmácia/Drogaria"),
+        ("industria", "Indústria/Manipulação"),
+        ("outro", "Outro"),
+    ]
+    STATUS_CHOICES = [
+        ("regular", "Regular"),
+        ("pendente", "Pendente de regularização"),
+        ("interditado", "Interditado"),
+        ("cancelado", "Cancelado"),
+    ]
+
+    empresa            = models.ForeignKey("Empresa", on_delete=models.CASCADE, related_name="estabelecimentos_sanitarios")
+    razao_social        = models.CharField(max_length=200)
+    nome_fantasia        = models.CharField(max_length=200, blank=True, default="")
+    cnpj_cpf             = models.CharField(max_length=18, blank=True, default="")
+    tipo                 = models.CharField(max_length=20, choices=TIPO_CHOICES, default="alimentos")
+    endereco             = models.CharField(max_length=255, blank=True, default="")
+    bairro               = models.CharField(max_length=120, blank=True, default="")
+    responsavel_tecnico  = models.CharField(max_length=200, blank=True, default="")
+    status               = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pendente")
+    criado_em            = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["razao_social"]
+        indexes = [models.Index(fields=["empresa", "status"], name="estabsan_emp_status_idx")]
+
+    def __str__(self):
+        return f"{self.razao_social} ({self.status})"
+
+
+class AlvaraSanitario(models.Model):
+    """Licença sanitária de funcionamento do estabelecimento."""
+    STATUS_CHOICES = [
+        ("ativo", "Ativo"),
+        ("vencido", "Vencido"),
+        ("suspenso", "Suspenso"),
+        ("cancelado", "Cancelado"),
+    ]
+
+    estabelecimento  = models.ForeignKey(EstabelecimentoSanitario, on_delete=models.CASCADE, related_name="alvaras")
+    numero           = models.CharField(max_length=40)
+    data_emissao     = models.DateField()
+    data_validade    = models.DateField()
+    status           = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ativo")
+    responsavel_emissao = models.CharField(max_length=200, blank=True, default="")
+    observacoes      = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_emissao"]
+
+    def __str__(self):
+        return f"Alvará {self.numero} — {self.estabelecimento.razao_social} ({self.status})"
+
+
+class InspecaoSanitaria(models.Model):
+    """Fiscalização/inspeção sanitária realizada em um estabelecimento."""
+    RESULTADO_CHOICES = [
+        ("conforme", "Conforme"),
+        ("nao_conforme", "Não Conforme — notificado"),
+        ("auto_infracao", "Auto de Infração"),
+        ("interdicao", "Interdição"),
+    ]
+
+    estabelecimento  = models.ForeignKey(EstabelecimentoSanitario, on_delete=models.CASCADE, related_name="inspecoes")
+    fiscal_nome      = models.CharField(max_length=200)
+    fiscal_matricula = models.CharField(max_length=40, blank=True, default="")
+    data_inspecao    = models.DateField()
+    itens_verificados = models.JSONField(default=list, help_text='[{"item":"Higiene da cozinha","conforme":true}]')
+    resultado        = models.CharField(max_length=20, choices=RESULTADO_CHOICES, default="conforme")
+    numero_auto_infracao = models.CharField(max_length=40, blank=True, default="")
+    valor_multa      = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    prazo_regularizacao = models.DateField(null=True, blank=True)
+    observacoes      = models.TextField(blank=True, default="")
+    criado_em        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-data_inspecao"]
+        indexes = [models.Index(fields=["estabelecimento", "resultado"], name="inspsan_estab_result_idx")]
+
+    def __str__(self):
+        return f"Inspeção {self.data_inspecao} — {self.estabelecimento.razao_social} ({self.resultado})"
 
 
 class FichaAcompanhamento(models.Model):

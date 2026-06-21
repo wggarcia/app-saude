@@ -29,7 +29,7 @@ from .models import (
     PostoTrabalho, AgenteNocivoPostoTrabalho, FuncionarioPostoTrabalho,
 )
 from .views_dashboard import _empresa_autenticada
-from .access_control import api_requer_feature
+from .access_control import api_requer_feature, api_requer_gerencia
 
 
 def _e(req):
@@ -726,6 +726,47 @@ def _comp_dict(c):
     }
 
 
+# ── Aprovação prévia (maker-checker) ──────────────────────────────────────────
+
+@api_requer_feature("sst.esocial")
+@api_requer_gerencia
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_esocial_aprovar(request, evento_id):
+    """Aprova um evento pendente, liberando-o para transmissão ao eSocial.
+    Só gerência pode aprovar — separa quem gera o evento de quem autoriza o envio."""
+    e = _e(request)
+    if not e:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    try:
+        ev = eSocialEventoSST.objects.get(pk=evento_id, empresa=e)
+    except eSocialEventoSST.DoesNotExist:
+        return JsonResponse({"erro": "Evento não encontrado"}, status=404)
+
+    if ev.status not in ("pendente", "erro", "retificacao"):
+        return JsonResponse({"erro": f"Evento com status '{ev.status}' não pode ser aprovado."}, status=400)
+
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        data = {}
+
+    aprovado_por = (data.get("aprovado_por") or "").strip()
+    if not aprovado_por:
+        return JsonResponse({"erro": "aprovado_por é obrigatório"}, status=400)
+
+    ev.status = "aprovado"
+    ev.aprovado_por = aprovado_por
+    ev.aprovado_em = timezone.now()
+    ev.save(update_fields=["status", "aprovado_por", "aprovado_em"])
+
+    return JsonResponse({
+        "ok": True, "status": ev.status,
+        "aprovado_por": ev.aprovado_por, "aprovado_em": ev.aprovado_em.isoformat(),
+    })
+
+
 # ── eSocial Real Transmission ────────────────────────────────────────────────
 
 @api_requer_feature("sst.esocial")
@@ -744,6 +785,11 @@ def api_esocial_transmitir(request, evento_id):
 
     if ev.status == "transmitido":
         return JsonResponse({"ok": True, "status": ev.status, "protocolo": ev.protocolo, "mensagem": "Evento já transmitido."}, status=200)
+
+    if ev.status == "pendente":
+        return JsonResponse({
+            "erro": "Evento precisa ser aprovado pela gerência antes da transmissão ao eSocial.",
+        }, status=403)
 
     from .esocial_transmissao import transmitir_evento
     ok, mensagem = transmitir_evento(ev)

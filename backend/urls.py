@@ -144,6 +144,7 @@ from api.views_esocial_sst import (
     api_aso_revogar_compartilhamento,
     portal_aso_publico,
     api_esocial_transmitir,
+    api_esocial_aprovar,
     api_esocial_transmitir_pendentes,
     api_esocial_certificado,
     api_esocial_diagnostico,
@@ -486,6 +487,9 @@ from api.views_farmacia_ifood import (
     api_ifood_config,
     api_ifood_webhook,
 )
+from api.views_farmacia_relatorio_ia import (
+    api_farmacia_relatorio_ia,
+)
 from api.views_hospital_fase3 import (
     api_fatura_paciente,
     api_fatura_acao,
@@ -811,6 +815,11 @@ from api.views_governo_acs import (
 from api.views_governo_endemias import (
     api_endemias_visitas,
     api_endemias_indicadores,
+)
+from api.views_governo_vigilancia_sanitaria import (
+    api_vigsan_estabelecimentos,
+    api_vigsan_alvaras,
+    api_vigsan_inspecoes,
 )
 from api.views_rede import (
     api_redes, api_rede_convidar, api_rede_entrar, api_rede_estoque, api_rede_item_disponibilidade,
@@ -1317,6 +1326,7 @@ urlpatterns = [
     path('api/sst/esocial/kpis/', api_esocial_kpis),
     path('api/sst/esocial/eventos/<int:evento_id>/xml/', api_esocial_gerar_xml),
     path('api/sst/esocial/eventos/<int:evento_id>/transmitir/', api_esocial_transmitir),
+    path('api/sst/esocial/eventos/<int:evento_id>/aprovar/',    api_esocial_aprovar),
     path('api/sst/esocial/transmitir-pendentes/', api_esocial_transmitir_pendentes),
     path('api/sst/esocial/certificado/', api_esocial_certificado),
     path('api/sst/esocial/diagnostico/', api_esocial_diagnostico),
@@ -1444,6 +1454,7 @@ urlpatterns = [
     path('api/farmacia/ifood/config', api_ifood_config),
     path('api/farmacia/ifood/config/', api_ifood_config),
     path('api/farmacia/ifood/webhook/', api_ifood_webhook),
+    path('api/farmacia/relatorio-ia/', api_farmacia_relatorio_ia),
     # ── Farmácia Operacional ──────────────────────────────────
     path('api/farmacia/ops/kpis/', api_farmacia_ops_kpis),
     path('api/farmacia/fornecedores/', api_fornecedores_farmacia),
@@ -2364,6 +2375,9 @@ urlpatterns = [
     path('api/governo/acs/',                                    api_acs_lista),
     path('api/governo/endemias/visitas/',                       api_endemias_visitas),
     path('api/governo/endemias/indicadores/',                   api_endemias_indicadores),
+    path('api/governo/vigilancia-sanitaria/estabelecimentos/',  api_vigsan_estabelecimentos),
+    path('api/governo/vigilancia-sanitaria/estabelecimentos/<int:estab_id>/alvaras/',   api_vigsan_alvaras),
+    path('api/governo/vigilancia-sanitaria/estabelecimentos/<int:estab_id>/inspecoes/', api_vigsan_inspecoes),
     path('api/governo/acs/kpis',                                api_acs_kpis),
     path('api/governo/acs/kpis/',                               api_acs_kpis),
     path('api/governo/acs/<int:acs_id>',                        api_acs_detalhe),
