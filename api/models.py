@@ -6678,6 +6678,162 @@ class DeclaracaoObito(models.Model):
         return f"DO — {self.paciente.nome} ({self.data_obito.date()})"
 
 
+class EquipamentoMedico(models.Model):
+    """Equipamento médico-assistencial (monitor, respirador, bomba de infusão etc), com calibração."""
+    STATUS_CHOICES = [
+        ("operacional", "Operacional"),
+        ("manutencao", "Em manutenção"),
+        ("inativo", "Inativo/baixado"),
+    ]
+
+    empresa             = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="equipamentos_medicos")
+    nome                = models.CharField(max_length=200)
+    categoria           = models.CharField(max_length=100, blank=True, default="", help_text="Ex: monitor multiparamétrico, respirador, bomba de infusão")
+    numero_serie        = models.CharField(max_length=100, blank=True, default="")
+    fabricante          = models.CharField(max_length=120, blank=True, default="")
+    modelo              = models.CharField(max_length=120, blank=True, default="")
+    setor_localizacao   = models.CharField(max_length=120, blank=True, default="", help_text="Ex: UTI, Centro Cirúrgico, Enfermaria 2")
+    leito               = models.ForeignKey(LeitoHospitalar, on_delete=models.SET_NULL, null=True, blank=True, related_name="equipamentos_medicos")
+    data_aquisicao      = models.DateField(null=True, blank=True)
+    criticidade         = models.PositiveSmallIntegerField(default=3, help_text="1=baixa, 5=crítica (suporte à vida)")
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="operacional")
+    ultima_calibracao_em = models.DateField(null=True, blank=True)
+    proxima_calibracao_em = models.DateField(null=True, blank=True)
+    ativo               = models.BooleanField(default=True)
+    criado_em           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome"]
+        indexes = [models.Index(fields=["empresa", "status"], name="equipmed_emp_status_idx")]
+
+    def __str__(self):
+        return f"{self.nome} ({self.numero_serie or 's/n'}) — {self.status}"
+
+
+class ManutencaoEquipamentoMedico(models.Model):
+    """Ordem de serviço de manutenção/calibração para equipamento médico."""
+    TIPO_CHOICES = [
+        ("preventiva", "Preventiva"),
+        ("corretiva", "Corretiva"),
+        ("calibracao", "Calibração"),
+    ]
+    STATUS_CHOICES = [
+        ("aberta", "Aberta"),
+        ("em_andamento", "Em andamento"),
+        ("concluida", "Concluída"),
+        ("cancelada", "Cancelada"),
+    ]
+
+    equipamento         = models.ForeignKey(EquipamentoMedico, on_delete=models.CASCADE, related_name="ordens_manutencao")
+    tipo                = models.CharField(max_length=20, choices=TIPO_CHOICES, default="preventiva")
+    descricao_problema  = models.TextField(blank=True, default="")
+    descricao_servico   = models.TextField(blank=True, default="", help_text="O que foi feito/constatado")
+    responsavel_tecnico = models.CharField(max_length=200, blank=True, default="")
+    empresa_terceirizada = models.CharField(max_length=200, blank=True, default="", help_text="Se a manutenção foi feita por empresa externa")
+    custo               = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="aberta")
+    aberta_em           = models.DateTimeField(auto_now_add=True)
+    concluida_em        = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-aberta_em"]
+        indexes = [models.Index(fields=["equipamento", "status"], name="manutencaoeq_eq_status_idx")]
+
+    def __str__(self):
+        return f"OS {self.tipo} — {self.equipamento.nome} ({self.status})"
+
+
+class DispensacaoDoseUnitaria(models.Model):
+    """Dispensação de dose unitária da farmácia hospitalar para o leito do paciente.
+
+    Diferente de AdministracaoMedicamento (que registra os 5 certos no momento
+    da administração pela enfermagem): aqui é o ciclo da farmácia — preparo,
+    conferência e entrega da dose individual até o leito, antes de chegar à
+    enfermagem para administração.
+    """
+    STATUS_CHOICES = [
+        ("aguardando_preparo", "Aguardando preparo"),
+        ("preparada", "Preparada/conferida"),
+        ("dispensada_leito", "Dispensada para o leito"),
+        ("devolvida", "Devolvida à farmácia"),
+    ]
+
+    prescricao          = models.ForeignKey(PrescricaoHospitalar, on_delete=models.CASCADE, related_name="dispensacoes_dose_unitaria")
+    paciente            = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="dispensacoes_dose_unitaria")
+    nome_medicamento    = models.CharField(max_length=200)
+    dose                = models.CharField(max_length=100, blank=True, default="")
+    leito_numero        = models.CharField(max_length=20, blank=True, default="", help_text="Denormalizado no momento da dispensação, para rastreio mesmo após troca de leito")
+    horario_previsto    = models.TimeField(null=True, blank=True)
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="aguardando_preparo")
+    farmaceutico_responsavel = models.CharField(max_length=200, blank=True, default="")
+    crf                 = models.CharField(max_length=30, blank=True, default="", help_text="Conselho Regional de Farmácia")
+    preparada_em        = models.DateTimeField(null=True, blank=True)
+    dispensada_em       = models.DateTimeField(null=True, blank=True)
+    observacoes         = models.TextField(blank=True, default="")
+    criado_em           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        indexes = [models.Index(fields=["paciente", "status"], name="doseunit_pac_status_idx")]
+
+    def __str__(self):
+        return f"Dose {self.nome_medicamento} — {self.paciente.nome} ({self.status})"
+
+
+class RegistroLimpezaLeito(models.Model):
+    """Controle de higienização/liberação de leito — fundamental para giro de leito."""
+    STATUS_CHOICES = [
+        ("sujo", "Sujo / aguardando limpeza"),
+        ("em_limpeza", "Em limpeza"),
+        ("limpo", "Limpo / liberado"),
+        ("interditado", "Interditado"),
+    ]
+    TIPO_LIMPEZA_CHOICES = [
+        ("concorrente", "Concorrente (rotina diária)"),
+        ("terminal", "Terminal (após alta/óbito/transferência)"),
+        ("interdicao", "Interdição (surto/contaminação)"),
+    ]
+
+    leito               = models.ForeignKey(LeitoHospitalar, on_delete=models.CASCADE, related_name="registros_limpeza")
+    status              = models.CharField(max_length=20, choices=STATUS_CHOICES, default="sujo")
+    tipo_limpeza        = models.CharField(max_length=20, choices=TIPO_LIMPEZA_CHOICES, default="concorrente")
+    responsavel         = models.CharField(max_length=200, blank=True, default="")
+    iniciada_em         = models.DateTimeField(auto_now_add=True)
+    concluida_em        = models.DateTimeField(null=True, blank=True)
+    observacoes         = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-iniciada_em"]
+        indexes = [models.Index(fields=["leito", "status"], name="limpleito_leito_status_idx")]
+
+    def __str__(self):
+        return f"Limpeza {self.leito.numero} — {self.status}"
+
+
+class RegistroRouparia(models.Model):
+    """Controle de troca de roupa de cama/hospitalar por leito ou setor."""
+    TIPO_CHOICES = [
+        ("entrega_limpa", "Entrega de roupa limpa"),
+        ("coleta_sujo", "Coleta de roupa suja"),
+    ]
+
+    empresa             = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="registros_rouparia")
+    leito               = models.ForeignKey(LeitoHospitalar, on_delete=models.SET_NULL, null=True, blank=True, related_name="registros_rouparia")
+    setor               = models.CharField(max_length=120, blank=True, default="", help_text="Usado quando não é por leito específico, ex: Centro Cirúrgico")
+    tipo                = models.CharField(max_length=20, choices=TIPO_CHOICES, default="entrega_limpa")
+    quantidade_pecas    = models.PositiveIntegerField(default=0)
+    responsavel         = models.CharField(max_length=200, blank=True, default="")
+    registrado_em       = models.DateTimeField(auto_now_add=True)
+    observacoes         = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-registrado_em"]
+
+    def __str__(self):
+        local = self.leito.numero if self.leito else self.setor
+        return f"Rouparia {self.tipo} — {local} ({self.quantidade_pecas} peças)"
+
+
 class GuiaTISS(models.Model):
     TIPO_CHOICES = [("consulta","Consulta"),("sadt","SADT"),("internacao","Internação"),
                     ("sp_sadt","SP/SADT"),("resumo","Resumo de Internação")]

@@ -441,6 +441,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
         <button class="tab-btn" id="tabBtn-exames" onclick="setTab('exames')">🧪 Exames</button>
         <button class="tab-btn" id="tabBtn-alta" onclick="setTab('alta')">📄 Alta Hospitalar</button>
         <button class="tab-btn" id="tabBtn-faturamento" onclick="setTab('faturamento')">💰 Faturamento</button>
+        <button class="tab-btn" id="tabBtn-equipamentos" onclick="setTab('equipamentos')">🔧 Equipamentos</button>
         <button class="tab-btn" id="tabBtn-analytics" onclick="setTab('analytics')">📊 Analytics</button>
         <button class="tab-btn" id="tabBtn-orquestracao" onclick="setTab('orquestracao')">🧠 Comando 360</button>
       </div>
@@ -756,6 +757,22 @@ tr:hover td{background:rgba(255,255,255,.018)}
               <tbody id="tbodyFaturas"><tr><td colspan="8" class="empty">Carregando…</td></tr></tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <!-- ══════ TAB: EQUIPAMENTOS MÉDICOS ══════ -->
+      <div class="tab-panel" id="tab-equipamentos">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🔧 Equipamentos Médicos</span>
+            <button class="btn btn-primary" onclick="abrirModalEquipamento()">+ Cadastrar Equipamento</button>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Nome</th><th>Categoria</th><th>Nº Série</th><th>Localização</th><th>Status</th><th>Próx. Calibração</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="tbodyEquipamentos"><tr><td colspan="7" class="empty">Carregando…</td></tr></tbody>
+          </table>
         </div>
       </div>
 
@@ -1169,6 +1186,40 @@ tr:hover td{background:rgba(255,255,255,.018)}
       <button class="btn btn-ghost" onclick="fecharModal('modalBedStatus')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarStatusLeito()">Atualizar Status</button>
     </div>
+
+    <div class="section-divider" style="margin-top:16px">🧹 Limpeza / Liberação</div>
+    <div class="evolucao-list" id="listaLimpezaLeito" style="max-height:140px">
+      <div style="color:var(--muted);font-size:13px;text-align:center;padding:10px">Carregando…</div>
+    </div>
+    <div class="form-row" style="margin-top:8px">
+      <div class="form-group"><label>Tipo</label>
+        <select id="limpTipo">
+          <option value="concorrente">Concorrente (rotina)</option>
+          <option value="terminal">Terminal (pós-alta/óbito)</option>
+          <option value="interdicao">Interdição (surto)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Responsável</label><input id="limpResp" placeholder="Nome"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="registrarLimpeza('sujo')">🔴 Marcar Sujo</button>
+      <button class="btn btn-ghost btn-sm" onclick="registrarLimpeza('em_limpeza')">🟡 Em Limpeza</button>
+      <button class="btn btn-ok btn-sm" onclick="registrarLimpeza('limpo')">✅ Limpo/Liberado</button>
+    </div>
+
+    <div class="section-divider" style="margin-top:16px">👕 Rouparia</div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo</label>
+        <select id="roupTipo">
+          <option value="entrega_limpa">Entrega de roupa limpa</option>
+          <option value="coleta_sujo">Coleta de roupa suja</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Quantidade de peças</label><input id="roupQtd" type="number" min="0" value="0"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="registrarRouparia()">Registrar Rouparia</button>
+    </div>
   </div>
 </div>
 
@@ -1360,6 +1411,7 @@ tr:hover td{background:rgba(255,255,255,.018)}
       <button class="tab-btn" id="multiTabBtn-nutri" onclick="setMultiTab('nutri')">🥗 Nutrição</button>
       <button class="tab-btn" id="multiTabBtn-visitantes" onclick="setMultiTab('visitantes')">🚪 Visitantes</button>
       <button class="tab-btn" id="multiTabBtn-obito" onclick="setMultiTab('obito')">💔 Óbito</button>
+      <button class="tab-btn" id="multiTabBtn-dose" onclick="setMultiTab('dose')">💉 Dose Unitária</button>
     </div>
 
     <!-- ENFERMAGEM -->
@@ -1531,8 +1583,81 @@ tr:hover td{background:rgba(255,255,255,.018)}
       <div class="modal-actions"><button class="btn btn-danger" onclick="salvarDeclaracaoObito()">Registrar Declaração de Óbito</button></div>
     </div>
 
+    <!-- DOSE UNITÁRIA -->
+    <div class="tab-panel" id="multiTab-dose">
+      <div class="section-divider">Dispensações de Dose Unitária</div>
+      <div class="evolucao-list" id="listaDoseUnitaria">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nenhuma dispensação registrada</div>
+      </div>
+      <div class="section-divider" style="margin-top:14px">Nova Dispensação</div>
+      <div class="form-group"><label>Prescrição *</label>
+        <select id="doseyPrescricaoId"><option value="">— selecione a prescrição —</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Medicamento *</label><input id="doseMedicamento" placeholder="Ex: Dipirona 500mg"></div>
+        <div class="form-group"><label>Dose</label><input id="doseDose" placeholder="Ex: 1 ampola"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Horário Previsto</label><input id="doseHorario" type="time"></div>
+        <div class="form-group"><label>CRF</label><input id="doseCrf" placeholder="Ex: 12345-SP"></div>
+      </div>
+      <div class="form-group"><label>Farmacêutico Responsável</label><input id="doseResponsavel" placeholder="Nome"></div>
+      <div class="modal-actions"><button class="btn btn-primary" onclick="salvarDoseUnitaria()">Registrar Dispensação</button></div>
+    </div>
+
     <div class="modal-actions" style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
       <button class="btn btn-ghost" onclick="fecharModal('modalMulti')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Cadastrar Equipamento Médico -->
+<div class="modal-bg" id="modalEquipamento">
+  <div class="modal">
+    <h3>🔧 Cadastrar Equipamento Médico</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="eqNome" placeholder="Ex: Monitor Multiparamétrico"></div>
+      <div class="form-group"><label>Categoria</label><input id="eqCategoria" placeholder="Ex: monitor, respirador, bomba de infusão"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Nº de Série</label><input id="eqNumeroSerie"></div>
+      <div class="form-group"><label>Criticidade (1-5)</label><input id="eqCriticidade" type="number" min="1" max="5" value="3"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Fabricante</label><input id="eqFabricante"></div>
+      <div class="form-group"><label>Modelo</label><input id="eqModelo"></div>
+    </div>
+    <div class="form-group"><label>Setor/Localização</label><input id="eqSetor" placeholder="Ex: UTI, Centro Cirúrgico"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalEquipamento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEquipamento()">Salvar Equipamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ordem de Serviço de Equipamento -->
+<div class="modal-bg" id="modalOS">
+  <div class="modal" style="max-width:600px">
+    <h3 id="osTitle">🛠 Ordens de Serviço</h3>
+    <input type="hidden" id="osEquipId">
+    <div class="evolucao-list" id="listaOS">
+      <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nenhuma OS registrada</div>
+    </div>
+    <div class="section-divider" style="margin-top:14px">Nova Ordem de Serviço</div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo</label>
+        <select id="osTipo">
+          <option value="preventiva">Preventiva</option>
+          <option value="corretiva">Corretiva</option>
+          <option value="calibracao">Calibração</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Responsável Técnico</label><input id="osResponsavel" placeholder="Nome ou empresa"></div>
+    </div>
+    <div class="form-group"><label>Descrição do Problema</label><textarea id="osProblema" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modalOS')">Fechar</button>
+      <button class="btn btn-primary" onclick="salvarOS()">Abrir Ordem de Serviço</button>
     </div>
   </div>
 </div>
@@ -1820,12 +1945,52 @@ function renderBedGrid() {
   }).join('');
 }
 
-function abrirBedStatus(id, num, status) {
+async function abrirBedStatus(id, num, status) {
   if (status === 'ocupado') { toast('Leito ocupado — gerencie via Internações', 'warn'); return; }
   document.getElementById('bedStatusId').value = id;
   document.getElementById('bedStatusTitle').textContent = `🔧 Leito ${num} — Alterar Status`;
   document.getElementById('bedStatusVal').value = status;
+  document.getElementById('limpResp').value = '';
+  document.getElementById('roupQtd').value = '0';
   abrirModal('modalBedStatus');
+  await carregarLimpezaLeito(id);
+}
+async function carregarLimpezaLeito(leitoId) {
+  try {
+    const d = await api(`/api/hospital/leitos/${leitoId}/limpeza/`);
+    const itens = d.registros || [];
+    document.getElementById('listaLimpezaLeito').innerHTML = itens.length
+      ? itens.slice(0,5).map(r=>`
+          <div class="evolucao-item">
+            <div style="font-size:12px">${r.tipo_limpeza} · ${r.responsavel||'—'}</div>
+            <div class="evolucao-meta">
+              <span>🕐 ${r.iniciada_em}</span>
+              <span class="badge ${r.status==='limpo'?'badge-ok':r.status==='interditado'?'badge-danger':'badge-warn'}">${r.status}</span>
+            </div>
+          </div>`).join('')
+      : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:10px">Nenhum registro de limpeza</div>';
+  } catch(e) { console.error('[carregarLimpezaLeito] erro', e); }
+}
+async function registrarLimpeza(status) {
+  const id = document.getElementById('bedStatusId').value;
+  const body = { status, tipo_limpeza: document.getElementById('limpTipo').value, responsavel: v('limpResp') };
+  try {
+    await api(`/api/hospital/leitos/${id}/limpeza/`, {method:'POST', body:JSON.stringify(body)});
+    toast('Limpeza registrada','ok');
+    await carregarLimpezaLeito(id);
+  } catch(e) { toast('Erro ao registrar limpeza: '+e.message,'error'); }
+}
+async function registrarRouparia() {
+  const id = document.getElementById('bedStatusId').value;
+  const body = {
+    leito_id: parseInt(id), tipo: document.getElementById('roupTipo').value,
+    quantidade_pecas: parseInt(v('roupQtd'))||0,
+  };
+  try {
+    await api('/api/hospital/rouparia/', {method:'POST', body:JSON.stringify(body)});
+    toast('Rouparia registrada','ok');
+    document.getElementById('roupQtd').value = '0';
+  } catch(e) { toast('Erro ao registrar rouparia: '+e.message,'error'); }
 }
 async function salvarStatusLeito() {
   const id = document.getElementById('bedStatusId').value;
@@ -2094,7 +2259,7 @@ function linesToList(text, field) {
   return (text||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>({[field]: l}));
 }
 function setMultiTab(tab) {
-  ['enfermagem','fisio','nutri','visitantes','obito'].forEach(t=>{
+  ['enfermagem','fisio','nutri','visitantes','obito','dose'].forEach(t=>{
     document.getElementById('multiTabBtn-'+t).classList.toggle('active', t===tab);
     document.getElementById('multiTab-'+t).classList.toggle('active', t===tab);
   });
@@ -2119,7 +2284,8 @@ function limparFormulariosMulti() {
    'nutPeso','nutAltura','nutCircunferencias','nutDiagnostico','nutCalorias','nutProteina','nutRestricoes','nutPlano','nutResp','nutCrn',
    'visNome','visDocumento','visParentesco','visTelefone','visRegistradoPor','visObs',
    'oboDataObito','oboNumero','oboLocal','oboImediataCid','oboImediataDesc','oboIntermediariaCid','oboIntermediariaDesc',
-   'oboBasicaCid','oboBasicaDesc','oboContribuintes','oboMedico','oboCrm','oboObs'
+   'oboBasicaCid','oboBasicaDesc','oboContribuintes','oboMedico','oboCrm','oboObs',
+   'doseMedicamento','doseDose','doseHorario','doseCrf','doseResponsavel'
   ].forEach(id=>{ const el=document.getElementById(id); if (el) el.value=''; });
   ['oboNecropsia','oboSvoIml'].forEach(id=>{ const el=document.getElementById(id); if (el) el.checked=false; });
 }
@@ -2142,7 +2308,7 @@ async function onMultiPacChange() {
   const pacId = document.getElementById('multiPacId').value;
   limparFormulariosMulti();
   if (!pacId) {
-    ['listaEnfermagem','listaFisio','listaNutri','listaVisitantes','listaObito'].forEach(id=>{
+    ['listaEnfermagem','listaFisio','listaNutri','listaVisitantes','listaObito','listaDoseUnitaria'].forEach(id=>{
       document.getElementById(id).innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Selecione um paciente</div>';
     });
     return;
@@ -2151,12 +2317,14 @@ async function onMultiPacChange() {
 }
 async function carregarAvaliacoesMulti(pacId) {
   try {
-    const [enf, fis, nut, vis, obo] = await Promise.all([
+    const [enf, fis, nut, vis, obo, presc, dose] = await Promise.all([
       api(`/api/hospital/pacientes/${pacId}/avaliacoes-enfermagem/`),
       api(`/api/hospital/pacientes/${pacId}/avaliacoes-fisioterapia/`),
       api(`/api/hospital/pacientes/${pacId}/avaliacoes-nutricionais/`),
       api(`/api/hospital/pacientes/${pacId}/visitantes/`),
       api(`/api/hospital/pacientes/${pacId}/declaracoes-obito/`),
+      api(`/api/hospital/prescricao?paciente_id=${pacId}`),
+      api(`/api/hospital/pacientes/${pacId}/dose-unitaria/`),
     ]);
     renderAvaliacoesList('listaEnfermagem', enf.avaliacoes||[], a=>
       `Braden: ${a.escala_braden??'—'} · Morse: ${a.escala_morse??'—'}<br>${(a.historico_enfermagem||'').slice(0,140)}`);
@@ -2166,7 +2334,60 @@ async function carregarAvaliacoesMulti(pacId) {
       `IMC: ${a.imc??'—'} · Via: ${a.via_alimentacao}<br>${(a.diagnostico_nutricional||'').slice(0,140)}`);
     renderVisitantesList(vis.visitantes||[]);
     renderObitoList(obo.declaracoes||[]);
+    const selPresc = document.getElementById('doseyPrescricaoId');
+    const listaPresc = presc.prescricoes || [];
+    selPresc.innerHTML = '<option value="">— selecione a prescrição —</option>' +
+      listaPresc.map(p => `<option value="${p.id}">Prescrição ${p.data} (${(p.medicamentos||[]).length} itens)</option>`).join('');
+    renderDoseUnitariaList(dose.dispensacoes||[]);
   } catch(e) { console.error('[carregarAvaliacoesMulti] erro', e); }
+}
+function renderDoseUnitariaList(items) {
+  const el = document.getElementById('listaDoseUnitaria');
+  const statusLabel = {aguardando_preparo:'badge-muted', preparada:'badge-warn', dispensada_leito:'badge-ok', devolvida:'badge-danger'};
+  el.innerHTML = items.length
+    ? items.map(d=>`
+        <div class="evolucao-item">
+          <div style="font-size:13px"><strong>${d.nome_medicamento}</strong> ${d.dose?'· '+d.dose:''} ${d.horario_previsto?'· '+d.horario_previsto:''}</div>
+          <div class="evolucao-meta">
+            <span>💊 ${d.farmaceutico_responsavel||'—'}</span>
+            <span>🕐 ${d.criado_em}</span>
+            <span class="badge ${statusLabel[d.status]||'badge-muted'}">${d.status}</span>
+            ${d.status!=='dispensada_leito' && d.status!=='devolvida' ? `
+              <select onchange="atualizarStatusDose(${d.id}, this.value)" style="font-size:11px;padding:2px 4px">
+                <option value="">avançar status…</option>
+                <option value="preparada">Preparada</option>
+                <option value="dispensada_leito">Dispensada ao leito</option>
+                <option value="devolvida">Devolvida</option>
+              </select>` : ''}
+          </div>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nenhuma dispensação registrada</div>';
+}
+async function atualizarStatusDose(doseId, status) {
+  if (!status) return;
+  const pacId = document.getElementById('multiPacId').value;
+  try {
+    await api(`/api/hospital/dose-unitaria/${doseId}/status/`, {method:'PATCH', body:JSON.stringify({status})});
+    toast('Status atualizado','ok');
+    await carregarAvaliacoesMulti(pacId);
+  } catch(e) { toast('Erro ao atualizar: '+e.message,'error'); }
+}
+async function salvarDoseUnitaria() {
+  const pacId = document.getElementById('multiPacId').value;
+  if (!pacId) return toast('Selecione o paciente','warn');
+  const prescricaoId = document.getElementById('doseyPrescricaoId').value;
+  if (!prescricaoId) return toast('Selecione a prescrição','warn');
+  const nomeMed = v('doseMedicamento');
+  if (!nomeMed) return toast('Informe o medicamento','warn');
+  const body = {
+    prescricao_id: parseInt(prescricaoId), nome_medicamento: nomeMed, dose: v('doseDose'),
+    horario_previsto: v('doseHorario') || null, farmaceutico_responsavel: v('doseResponsavel'), crf: v('doseCrf'),
+  };
+  try {
+    await api(`/api/hospital/pacientes/${pacId}/dose-unitaria/`, {method:'POST', body:JSON.stringify(body)});
+    toast('Dispensação registrada','ok');
+    await carregarAvaliacoesMulti(pacId);
+  } catch(e) { toast('Erro ao salvar: '+e.message,'error'); }
 }
 function renderObitoList(items) {
   const el = document.getElementById('listaObito');
@@ -2597,7 +2818,7 @@ function popularSelectDeps(sid) {
 // ══════════════════════════════════════════════════════════════
 // TAB NAVIGATION
 // ══════════════════════════════════════════════════════════════
-const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes','uti','cirurgias','exames','alta','faturamento','analytics','orquestracao'];
+const ALL_TABS = ['leitos','triagem','internacoes','pacientes','departamentos','prescricoes','uti','cirurgias','exames','alta','faturamento','equipamentos','analytics','orquestracao'];
 
 function scrollMainToTop() {
   const main = document.querySelector('.main');
@@ -2628,6 +2849,7 @@ function setTab(tab) {
   else if (tab==='exames') carregarExames();
   else if (tab==='alta') carregarAltaTab();
   else if (tab==='faturamento') carregarFaturamento();
+  else if (tab==='equipamentos') carregarEquipamentos();
   else if (tab==='analytics') carregarAnalytics();
   else if (tab==='orquestracao') carregarOrquestracao();
 }
@@ -3380,6 +3602,92 @@ async function salvarResultado() {
     carregarExames();
     toast('Resultado lançado com sucesso!', 'ok');
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// EQUIPAMENTOS MÉDICOS — cadastro e ordens de serviço
+// ══════════════════════════════════════════════════════════════
+let _equipamentos = [];
+async function carregarEquipamentos() {
+  try {
+    const d = await api('/api/hospital/equipamentos/');
+    _equipamentos = d.equipamentos || [];
+    const tb = document.getElementById('tbodyEquipamentos');
+    tb.innerHTML = _equipamentos.length ? _equipamentos.map(e=>`<tr>
+        <td><strong>${e.nome}</strong></td>
+        <td>${e.categoria||'—'}</td>
+        <td>${e.numero_serie||'—'}</td>
+        <td>${e.leito_numero?('Leito '+e.leito_numero):(e.setor_localizacao||'—')}</td>
+        <td><span class="badge ${e.status==='operacional'?'badge-ok':e.status==='manutencao'?'badge-warn':'badge-muted'}">${e.status}</span></td>
+        <td style="font-size:12px">${e.proxima_calibracao_em||'—'}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="abrirModalOS(${e.id},'${e.nome.replace(/'/g,"\\'")}')">🛠 OS (${e.total_manutencoes})</button></td>
+      </tr>`).join('') : '<tr><td colspan="7" class="empty">Nenhum equipamento cadastrado</td></tr>';
+  } catch(e) {
+    document.getElementById('tbodyEquipamentos').innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar equipamentos</td></tr>';
+  }
+}
+function abrirModalEquipamento() {
+  ['eqNome','eqCategoria','eqNumeroSerie','eqFabricante','eqModelo','eqSetor'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('eqCriticidade').value = '3';
+  abrirModal('modalEquipamento');
+}
+async function salvarEquipamento() {
+  const body = {
+    nome: v('eqNome'), categoria: v('eqCategoria'), numero_serie: v('eqNumeroSerie'),
+    fabricante: v('eqFabricante'), modelo: v('eqModelo'), setor_localizacao: v('eqSetor'),
+    criticidade: parseInt(v('eqCriticidade'))||3,
+  };
+  if (!body.nome) return toast('Nome é obrigatório','warn');
+  try {
+    await api('/api/hospital/equipamentos/', {method:'POST', body:JSON.stringify(body)});
+    fecharModal('modalEquipamento');
+    toast('Equipamento cadastrado','ok');
+    carregarEquipamentos();
+  } catch(e) { toast('Erro ao salvar: '+e.message,'error'); }
+}
+async function abrirModalOS(equipId, nome) {
+  document.getElementById('osEquipId').value = equipId;
+  document.getElementById('osTitle').textContent = `🛠 Ordens de Serviço — ${nome}`;
+  document.getElementById('osProblema').value = '';
+  document.getElementById('osResponsavel').value = '';
+  await carregarOS(equipId);
+  abrirModal('modalOS');
+}
+async function carregarOS(equipId) {
+  try {
+    const d = await api(`/api/hospital/equipamentos/${equipId}/manutencoes/`);
+    const itens = d.ordens || [];
+    document.getElementById('listaOS').innerHTML = itens.length ? itens.map(o=>`
+        <div class="evolucao-item">
+          <div style="font-size:13px">${o.tipo} · ${o.descricao_problema||'(sem descrição)'}</div>
+          <div class="evolucao-meta">
+            <span>👤 ${o.responsavel_tecnico||o.empresa_terceirizada||'—'}</span>
+            <span>🕐 ${o.aberta_em}</span>
+            <span class="badge ${o.status==='concluida'?'badge-ok':o.status==='cancelada'?'badge-muted':'badge-warn'}">${o.status}</span>
+            ${o.status!=='concluida' && o.status!=='cancelada' ? `<button class="btn btn-ghost btn-sm" onclick="concluirOS(${o.id})">Concluir</button>` : ''}
+          </div>
+        </div>`).join('') : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nenhuma OS registrada</div>';
+  } catch(e) { console.error('[carregarOS] erro', e); }
+}
+async function salvarOS() {
+  const equipId = document.getElementById('osEquipId').value;
+  const body = { tipo: document.getElementById('osTipo').value, descricao_problema: v('osProblema'), responsavel_tecnico: v('osResponsavel') };
+  try {
+    await api(`/api/hospital/equipamentos/${equipId}/manutencoes/`, {method:'POST', body:JSON.stringify(body)});
+    toast('Ordem de serviço aberta','ok');
+    document.getElementById('osProblema').value = '';
+    await carregarOS(equipId);
+    carregarEquipamentos();
+  } catch(e) { toast('Erro ao abrir OS: '+e.message,'error'); }
+}
+async function concluirOS(osId) {
+  const equipId = document.getElementById('osEquipId').value;
+  try {
+    await api(`/api/hospital/equipamentos/manutencoes/${osId}/concluir/`, {method:'PATCH', body:JSON.stringify({})});
+    toast('Ordem de serviço concluída','ok');
+    await carregarOS(equipId);
+    carregarEquipamentos();
+  } catch(e) { toast('Erro ao concluir OS: '+e.message,'error'); }
 }
 </script>
 <script>

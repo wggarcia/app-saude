@@ -520,6 +520,20 @@ from api.views_hospital_visitantes import (
 from api.views_hospital_obito import (
     api_declaracoes_obito,
 )
+from api.views_hospital_equipamentos import (
+    api_equipamentos_medicos,
+    api_manutencoes_equipamento,
+    api_manutencao_concluir,
+)
+from api.views_hospital_dose_unitaria import (
+    api_dose_unitaria_paciente,
+    api_dose_unitaria_status,
+)
+from api.views_hospital_limpeza import (
+    api_limpeza_leito,
+    api_limpeza_status,
+    api_rouparia,
+)
 from api.views_hospital_ops import (
     api_departamentos_hospital, api_departamento_hospital_detalhe,
     api_leitos_hospital, api_leito_status,
@@ -1495,6 +1509,14 @@ urlpatterns = [
     path('api/hospital/pacientes/<int:pac_id>/visitantes/', api_visitantes_paciente),
     path('api/hospital/visitantes/<int:visitante_id>/saida/', api_visitante_saida),
     path('api/hospital/pacientes/<int:pac_id>/declaracoes-obito/', api_declaracoes_obito),
+    path('api/hospital/equipamentos/', api_equipamentos_medicos),
+    path('api/hospital/equipamentos/<int:equip_id>/manutencoes/', api_manutencoes_equipamento),
+    path('api/hospital/equipamentos/manutencoes/<int:os_id>/concluir/', api_manutencao_concluir),
+    path('api/hospital/pacientes/<int:pac_id>/dose-unitaria/', api_dose_unitaria_paciente),
+    path('api/hospital/dose-unitaria/<int:dose_id>/status/', api_dose_unitaria_status),
+    path('api/hospital/leitos/<int:leito_id>/limpeza/', api_limpeza_leito),
+    path('api/hospital/limpeza/<int:registro_id>/status/', api_limpeza_status),
+    path('api/hospital/rouparia/', api_rouparia),
     path('api/hospital/pacientes/<int:pac_id>/sumario-alta/', api_sumario_alta),
     path('api/hospital/pacientes/<int:pac_id>/isolamento/', api_isolamento_paciente),
     path('api/hospital/centro-cirurgico/', api_centro_cirurgico),
