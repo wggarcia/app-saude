@@ -6638,6 +6638,46 @@ class VisitanteHospitalar(models.Model):
         return f"Visitante {self.nome} — {self.paciente.nome} ({self.status})"
 
 
+class DeclaracaoObito(models.Model):
+    """Declaração de Óbito (DO) — dados exigidos para o SIM (Sistema de Informação sobre Mortalidade)."""
+    TIPO_MORTE_CHOICES = [
+        ("natural", "Morte natural"),
+        ("nao_natural", "Morte não natural (causas externas)"),
+    ]
+    STATUS_CHOICES = [
+        ("emitida", "Emitida"),
+        ("retificada", "Retificada"),
+    ]
+
+    paciente                    = models.ForeignKey(PacienteInternado, on_delete=models.CASCADE, related_name="declaracoes_obito")
+    numero_do                   = models.CharField(max_length=30, blank=True, default="", help_text="Numeração oficial da DO, se já emitida em papel/sistema do cartório")
+    data_obito                  = models.DateTimeField()
+    local_obito                 = models.CharField(max_length=200, blank=True, default="", help_text="Ex: Hospital X, leito 12")
+    tipo_morte                  = models.CharField(max_length=20, choices=TIPO_MORTE_CHOICES, default="natural")
+    causa_imediata_cid          = models.CharField(max_length=10, blank=True, default="")
+    causa_imediata_descricao    = models.TextField(blank=True, default="")
+    causa_intermediaria_cid     = models.CharField(max_length=10, blank=True, default="")
+    causa_intermediaria_descricao = models.TextField(blank=True, default="")
+    causa_basica_cid            = models.CharField(max_length=10, blank=True, default="")
+    causa_basica_descricao      = models.TextField(blank=True, default="")
+    causas_contribuintes        = models.TextField(blank=True, default="", help_text="Causas que contribuíram mas não entraram na cadeia causal direta")
+    necropsia_realizada         = models.BooleanField(default=False)
+    removido_svo_iml            = models.BooleanField(default=False, help_text="Removido para Serviço de Verificação de Óbito / Instituto Médico Legal")
+    medico_atestante            = models.CharField(max_length=200, blank=True, default="")
+    medico_crm                  = models.CharField(max_length=30, blank=True, default="")
+    status                      = models.CharField(max_length=20, choices=STATUS_CHOICES, default="emitida")
+    observacoes                 = models.TextField(blank=True, default="")
+    emitida_em                  = models.DateTimeField(auto_now_add=True)
+    atualizada_em                = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-emitida_em"]
+        indexes = [models.Index(fields=["paciente"], name="declobito_paciente_idx")]
+
+    def __str__(self):
+        return f"DO — {self.paciente.nome} ({self.data_obito.date()})"
+
+
 class GuiaTISS(models.Model):
     TIPO_CHOICES = [("consulta","Consulta"),("sadt","SADT"),("internacao","Internação"),
                     ("sp_sadt","SP/SADT"),("resumo","Resumo de Internação")]
