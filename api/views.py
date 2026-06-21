@@ -2936,7 +2936,7 @@ def app_radar_local(request):
     latitude = request.GET.get("latitude")
     longitude = request.GET.get("longitude")
     cidade = request.GET.get("cidade")
-    estado = _normalizar_estado(request.GET.get("estado"))
+    estado = request.GET.get("estado")
     bairro = request.GET.get("bairro")
 
     geo = {}
@@ -2949,19 +2949,24 @@ def app_radar_local(request):
     if not cidade or not estado:
         return JsonResponse({"erro": "cidade/estado ou latitude/longitude obrigatórios"}, status=400)
 
+    # Registros podem estar salvos como sigla ("RJ") ou nome completo
+    # ("Rio de Janeiro") dependendo da origem (app antigo vs. geocodificação
+    # Nominatim) — _state_terms cobre as duas formas, igual ao app_mapa_publico.
+    estado_termos = _state_terms(estado) or [estado]
+
     agora = timezone.now()
     base_publica = _scope_public(
         RegistroSintoma.objects.exclude(q_registro_sintoma_sintetico())
     )
     atuais = base_publica.filter(
         cidade=cidade,
-        estado=estado,
+        estado__in=estado_termos,
         data_registro__gte=agora - timedelta(days=JANELA_DECAIMENTO_FOCO_DIAS),
     )
     atuais_7d = atuais.filter(data_registro__gte=agora - timedelta(days=7))
     anteriores = base_publica.filter(
         cidade=cidade,
-        estado=estado,
+        estado__in=estado_termos,
         data_registro__gte=agora - timedelta(days=14),
         data_registro__lt=agora - timedelta(days=7),
     )
