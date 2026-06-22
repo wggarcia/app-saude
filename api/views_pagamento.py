@@ -189,6 +189,7 @@ def _pagamento_ja_processado(empresa, payment_id):
     ).exists()
 
 
+
 def _registrar_inadimplencia_webhook(empresa, payment_id="", valor=None, origem=""):
     """Registra inadimplência vinda do webhook Asaas, idempotente por payment_id."""
     if payment_id and FinanceiroEventoSaaS.objects.filter(
@@ -409,6 +410,12 @@ def criar_pagamento(request, empresa_id=None):
             "redirect": "/contrato-governo/",
         }, status=403)
 
+    if pacote.get("setup_fee_negociavel"):
+        return JsonResponse({
+            "erro": "Este pacote e fechado por proposta comercial negociada. Fale com nosso time.",
+            "proposta_negociada": True,
+        }, status=403)
+
     if not valor or valor <= 0:
         return JsonResponse({"erro": "Pacote sem valor de checkout configurado."}, status=400)
 
@@ -434,6 +441,7 @@ def criar_pagamento(request, empresa_id=None):
             valor,
             f"Asaas payment_id={payment_id}",
         )
+
         return JsonResponse({
             "status": "ok",
             "payment_id": payment_id,

@@ -1395,6 +1395,79 @@ def api_dono_criar_cliente(request):
 
 
 @csrf_exempt
+def api_dono_cobrar_setup(request):
+    """
+    Cobra a taxa de implantacao (setup fee) de qualquer pacote. Nunca e exibida
+    nem cobrada automaticamente pro cliente — o valor (fixo de catalogo ou
+    negociado) e sempre informado pelo time comercial por contato direto, e
+    cobrado manualmente por aqui via operacao central.
+    """
+    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not dono_autorizado(dono, "financeiro_acao"):
+        return JsonResponse({"erro": "seu papel não permite essa ação"}, status=403)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    try:
+        empresa = Empresa.objects.get(pk=dados.get("empresa_id"))
+    except (Empresa.DoesNotExist, ValueError, TypeError):
+        return JsonResponse({"erro": "empresa não encontrada"}, status=404)
+
+    ja_cobrado = FinanceiroEventoSaaS.objects.filter(
+        empresa=empresa,
+        tipo_evento__in=["setup_fee_cobrado", "setup_fee_negociado"],
+    ).exists()
+    if ja_cobrado and not dados.get("forcar"):
+        return JsonResponse({
+            "erro": "Taxa de implantacao ja foi cobrada para essa empresa. Envie forcar=true para cobrar de novo.",
+        }, status=409)
+
+    try:
+        valor = float(dados.get("valor"))
+    except (TypeError, ValueError):
+        return JsonResponse({"erro": "valor inválido"}, status=400)
+    if valor <= 0:
+        return JsonResponse({"erro": "valor deve ser positivo"}, status=400)
+
+    cpf_cnpj = (dados.get("cpf_cnpj") or "").strip()
+
+    from .views_pagamento import _asaas_criar_pagamento
+    try:
+        payment_id, checkout_url = _asaas_criar_pagamento(
+            empresa, valor,
+            f"Taxa de implantacao negociada - {empresa.nome}",
+            cpf_cnpj,
+        )
+    except Exception as exc:
+        return JsonResponse({"erro": f"Asaas: {exc}"}, status=500)
+
+    FinanceiroEventoSaaS.objects.create(
+        empresa=empresa,
+        tipo_evento="setup_fee_negociado",
+        pacote_codigo=empresa.pacote_codigo,
+        ciclo=empresa.plano,
+        valor=valor,
+        status="pendente",
+        observacao=f"Taxa de implantacao negociada via operacao central. Asaas payment_id={payment_id}",
+    )
+    _registrar_auditoria_dono(
+        dono,
+        "cobrar_setup_fee",
+        empresa=empresa,
+        detalhes=f"valor={valor}; payment_id={payment_id}",
+    )
+
+    return JsonResponse({"status": "ok", "payment_id": payment_id, "init_point": checkout_url})
+
+
+@csrf_exempt
 def api_dono_cortesia_plano(request):
     """
     Aplica ou reverte um upgrade de cortesia para um cliente.

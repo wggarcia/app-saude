@@ -262,6 +262,7 @@ PACOTES_SAAS = {
         "ciclos": ["mensal", "anual"],
         "features": _HOSPITAL_MEDIO,
         "limites": {"max_usuarios": 50, "max_unidades": 1},
+        "setup_fee": 9900.00,
     },
     "hospital_rede": {
         "label": "Rede Hospitalar",
@@ -274,6 +275,8 @@ PACOTES_SAAS = {
         "ciclos": ["mensal", "anual"],
         "features": _HOSPITAL_REDE,
         "limites": {"max_usuarios": 250, "max_unidades": 999},
+        "setup_fee": 59700.00,
+        "setup_fee_negociavel": True,
     },
     "hospital_grupo": {
         "label": "Grupo Hospitalar",
@@ -286,6 +289,8 @@ PACOTES_SAAS = {
         "ciclos": ["mensal", "anual"],
         "features": _HOSPITAL_REDE,
         "limites": {"max_usuarios": 600, "max_unidades": 999},
+        "setup_fee": 128700.00,
+        "setup_fee_negociavel": True,
     },
     # ── Governo (contratos anuais via licitação) ───────────────────────────────
     "governo_municipio_pequeno": {
@@ -377,6 +382,7 @@ PACOTES_SAAS = {
         "ciclos": ["mensal", "anual"],
         "features": _PLANO_OPERADORA,
         "limites": {"max_usuarios": 100},
+        "setup_fee": 14900.00,
     },
     "plano_saude_enterprise": {
         "label": "Operadora Enterprise",
@@ -389,6 +395,8 @@ PACOTES_SAAS = {
         "ciclos": ["mensal", "anual"],
         "features": _PLANO_ENTERPRISE,
         "limites": {"max_usuarios": 500},
+        "setup_fee": 89700.00,
+        "setup_fee_negociavel": True,
     },
 }
 
