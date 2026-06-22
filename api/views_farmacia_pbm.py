@@ -10,10 +10,10 @@ from django.db.models import Sum, Count
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .models import PBMConvenio, FarmaciaPopularRegistro
-from .access_control import api_requer_gerencia
+from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -50,6 +50,10 @@ def _registro_to_dict(r):
 
 # ─── Page view ────────────────────────────────────────────────────────────────
 
+@ensure_csrf_cookie
+@requer_setor("farmacia")
+@requer_operacao_page
+@requer_permissao_modulo("farmacia.gestao")
 def farmacia_pbm_page(request):
     return render(request, "farmacia_pbm.html")
 

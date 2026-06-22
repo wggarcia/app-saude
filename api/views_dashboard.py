@@ -336,6 +336,7 @@ def dashboard_governo(request):
 @ensure_csrf_cookie
 @requer_setor('farmacia')
 @requer_operacao_page
+@requer_permissao_modulo("farmacia.gestao")
 def farmacia_gestao_page(request):
     return render(request, "farmacia_gestao.html", contexto_navegacao_setorial(request, "farmacia"))
 

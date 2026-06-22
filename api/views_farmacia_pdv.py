@@ -11,7 +11,7 @@ from django.db.models import Sum, Count, Q
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET
 
 from .models import (
@@ -21,7 +21,7 @@ from .models import (
     MedicamentoFarmacia,
     EstoqueMovimento,
 )
-from .access_control import api_requer_gerencia
+from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo
 
 
 def _proximo_lote_fefo(empresa, medicamento):
@@ -103,6 +103,10 @@ def _venda_to_dict(v):
 
 # ─── Page view ────────────────────────────────────────────────────────────────
 
+@ensure_csrf_cookie
+@requer_setor("farmacia")
+@requer_operacao_page
+@requer_permissao_modulo("farmacia.pdv")
 def farmacia_pdv_page(request):
     return render(request, "farmacia_pdv.html")
 

@@ -16,7 +16,9 @@ from datetime import date
 
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+
+from .access_control import requer_setor, requer_operacao_page, requer_permissao_modulo
 
 from .services.auth_session import empresa_autenticada_from_request
 
@@ -28,6 +30,10 @@ def _farm(request):
     return None
 
 
+@ensure_csrf_cookie
+@requer_setor("farmacia")
+@requer_operacao_page
+@requer_permissao_modulo("farmacia.gestao")
 def farmacia_magistral_page(request):
     return render(request, "farmacia_magistral.html")
 

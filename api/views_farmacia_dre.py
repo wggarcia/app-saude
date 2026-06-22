@@ -8,10 +8,10 @@ from decimal import Decimal, InvalidOperation
 
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .models import DREFarmacia
-from .access_control import api_requer_gerencia
+from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -70,6 +70,10 @@ def _dre_to_dict(dre):
 
 # ─── Page view ────────────────────────────────────────────────────────────────
 
+@ensure_csrf_cookie
+@requer_setor("farmacia")
+@requer_operacao_page
+@requer_permissao_modulo("farmacia.gestao")
 def farmacia_financeiro_page(request):
     return render(request, "farmacia_financeiro.html")
 

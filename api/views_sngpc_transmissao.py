@@ -33,11 +33,17 @@ from xml.dom import minidom
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.utils import timezone
 from django.conf import settings
 
+from .access_control import requer_setor, requer_operacao_page, requer_permissao_modulo
 
+
+@ensure_csrf_cookie
+@requer_setor("farmacia")
+@requer_operacao_page
+@requer_permissao_modulo("farmacia.gestao")
 def farmacia_sngpc_page(request):
     return render(request, "farmacia_sngpc.html")
 

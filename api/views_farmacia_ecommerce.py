@@ -11,10 +11,10 @@ from django.db.models import Sum, Count, Q, Avg
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .models import PedidoDelivery
-from .access_control import api_requer_gerencia
+from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -47,6 +47,10 @@ STATUS_VALIDOS = ["aguardando", "confirmado", "em_preparo", "saiu", "entregue", 
 
 # ─── Page view ────────────────────────────────────────────────────────────────
 
+@ensure_csrf_cookie
+@requer_setor("farmacia")
+@requer_operacao_page
+@requer_permissao_modulo("farmacia.gestao")
 def farmacia_ecommerce_page(request):
     return render(request, "farmacia_ecommerce.html")
 
