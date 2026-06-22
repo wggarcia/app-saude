@@ -9,9 +9,9 @@ from datetime import date, timedelta
 
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
-from .access_control import contexto_navegacao_setorial
+from .access_control import contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo
 from .models import (
     BeneficiarioPlano, PortalBeneficiarioToken,
     RedeCredenciadaPlano, IAAutorizacaoGuia,
@@ -52,6 +52,10 @@ def _benef_dict(b, token_obj=None):
 
 # ── Admin page ────────────────────────────────────────────────────────────────
 
+@ensure_csrf_cookie
+@requer_setor("plano_saude")
+@requer_operacao_page
+@requer_permissao_modulo("plano.autorizacao")
 def plano_portal_admin_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:

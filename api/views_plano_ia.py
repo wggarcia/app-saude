@@ -9,9 +9,9 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Count, Avg
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
-from .access_control import api_requer_gerencia, contexto_navegacao_setorial
+from .access_control import api_requer_gerencia, contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo
 from .models import IAAutorizacaoGuia
 from .views_dashboard import _empresa_autenticada
 
@@ -85,6 +85,10 @@ def _analisar_guia(procedimento: str, cid10: str):
 
 # ── page ─────────────────────────────────────────────────────────────────────
 
+@ensure_csrf_cookie
+@requer_setor("plano_saude")
+@requer_operacao_page
+@requer_permissao_modulo("plano.autorizacao")
 def plano_ia_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:

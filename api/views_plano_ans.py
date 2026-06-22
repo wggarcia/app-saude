@@ -9,9 +9,9 @@ from datetime import date
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
-from .access_control import api_requer_gerencia, contexto_navegacao_setorial
+from .access_control import api_requer_gerencia, contexto_navegacao_setorial, requer_setor, requer_operacao_page, requer_permissao_modulo
 from .models import CredenciaisIntegracoes, DIOPSDeclaracao, SIBRegistro
 from .views_dashboard import _empresa_autenticada
 from .views_diops_real import gerar_diops_3_0
@@ -62,6 +62,10 @@ def _sib_dict(s):
 
 # ── page ─────────────────────────────────────────────────────────────────────
 
+@ensure_csrf_cookie
+@requer_setor("plano_saude")
+@requer_operacao_page
+@requer_permissao_modulo("plano.compliance_ans")
 def plano_ans_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
