@@ -9,7 +9,7 @@ import json
 from .models import RegistroSintoma, DispositivoAutorizado, EmpresaUsuario, FinanceiroEventoSaaS, DonoAuditoriaAcao, AlertaGovernamental, DonoSaaS
 from .inteligencia import nivel_risco
 from .models import Empresa
-from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_ciclo, normalizar_codigo_pacote
+from .planos import PACOTES_SAAS, detalhes_pacote, normalizar_ciclo, normalizar_codigo_pacote, pacote_padrao, pacote_governo_padrao
 from .push_service import enviar_alerta_governamental, push_disponivel
 from .governanca import registrar_auditoria_institucional
 from .command_ai import build_command_ai_payload
@@ -1320,6 +1320,78 @@ def api_dono_atualizar_cliente(request):
     )
 
     return JsonResponse({"status": "ok"})
+
+
+@csrf_exempt
+def api_dono_criar_cliente(request):
+    dono = getattr(request, "dono_saas", None) or _dono_autenticado(request)
+    if not dono:
+        return JsonResponse({"erro": "não autenticado"}, status=401)
+    if not dono_autorizado(dono, "cliente_criar"):
+        return JsonResponse({"erro": "seu papel não permite criar clientes"}, status=403)
+    if request.method != "POST":
+        return JsonResponse({"erro": "use POST"}, status=405)
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except Exception:
+        return JsonResponse({"erro": "json inválido"}, status=400)
+
+    nome = (dados.get("nome") or "").strip()
+    email = (dados.get("email") or "").strip().lower()
+    senha = dados.get("senha") or ""
+    tipo_conta = dados.get("tipo_conta") or Empresa.TIPO_EMPRESA
+
+    if not nome or not email or not senha:
+        return JsonResponse({"erro": "nome, email e senha são obrigatórios"}, status=400)
+    if tipo_conta not in (Empresa.TIPO_EMPRESA, Empresa.TIPO_GOVERNO):
+        return JsonResponse({"erro": "tipo_conta inválido"}, status=400)
+    if Empresa.objects.filter(email=email).exists():
+        return JsonResponse({"erro": "já existe uma conta com esse e-mail"}, status=409)
+
+    pacote_solicitado = dados.get("pacote_codigo") or (
+        pacote_governo_padrao() if tipo_conta == Empresa.TIPO_GOVERNO else pacote_padrao()
+    )
+    pacote_codigo = normalizar_codigo_pacote(pacote_solicitado)
+    pacote = detalhes_pacote(pacote_codigo)
+    plano = (
+        "anual"
+        if tipo_conta == Empresa.TIPO_GOVERNO or pacote.get("setor") == "governo"
+        else normalizar_ciclo(pacote_codigo, dados.get("plano") or "mensal")
+    )
+
+    from django.contrib.auth.hashers import make_password
+
+    empresa = Empresa.objects.create(
+        nome=nome,
+        email=email,
+        senha=make_password(senha),
+        tipo_conta=tipo_conta,
+        acesso_governo=(tipo_conta == Empresa.TIPO_GOVERNO),
+        pacote_codigo=pacote_codigo,
+        plano=plano,
+        ativo=True,
+        max_usuarios=pacote["usuarios"],
+        max_dispositivos=pacote["dispositivos"],
+    )
+
+    FinanceiroEventoSaaS.objects.create(
+        empresa=empresa,
+        tipo_evento="criacao_owner",
+        pacote_codigo=empresa.pacote_codigo,
+        ciclo=empresa.plano,
+        valor=0,
+        status="manual",
+        observacao=f"Conta criada manualmente via operação central (pacote {pacote['label']})",
+    )
+    _registrar_auditoria_dono(
+        dono,
+        "criar_cliente",
+        empresa=empresa,
+        detalhes=f"tipo_conta={tipo_conta}; pacote={empresa.pacote_codigo}; plano={empresa.plano}",
+    )
+
+    return JsonResponse({"status": "ok", "empresa_id": empresa.id})
 
 
 @csrf_exempt

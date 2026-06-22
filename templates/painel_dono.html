@@ -146,6 +146,7 @@ function _t(msg, tipo) {
         <a href="/governanca/" style="color:#a855f7;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(19,0,38,.9);border:1px solid #7e22ce;font-weight:700;">🏛 Governança</a>
         <a href="/gtm/" style="color:#f59e0b;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(28,17,0,.9);border:1px solid #92400e;font-weight:700;">🎯 GTM</a>
         <a href="/logout-operacao/" style="color:#eef8ff;text-decoration:none;padding:10px 14px;border-radius:12px;background:rgba(140,29,64,.82);">Sair</a>
+        <button class="ghost" data-perm="cliente_criar" style="border-color:rgba(52,211,153,.4);color:#6ee7b7;" onclick="abrirModalCriarCliente()">+ Criar nova conta</button>
         <button class="ghost" data-perm="exportar" onclick="exportar('clientes')">Exportar clientes</button>
         <button class="ghost" data-perm="exportar" onclick="exportar('financeiro')">Exportar financeiro</button>
         <button class="ghost" data-perm="exportar" onclick="exportar('auditoria')">Exportar auditoria</button>
@@ -351,6 +352,31 @@ function _t(msg, tipo) {
     </div>
   </div>
 
+  <!-- Modal de criação de nova conta -->
+  <div class="modal-overlay" id="modalCriarCliente">
+    <div class="modal" style="border-color:rgba(52,211,153,.4);max-width:480px;">
+      <h3 style="color:#6ee7b7;">+ Criar nova conta</h3>
+      <p style="color:#9cc4db;">Cria a conta diretamente no banco, sem precisar do shell do Render. Use isto para liberar credencial de um cliente novo (inclusive governo).</p>
+      <label style="display:block;margin-bottom:6px;color:#9cc4db;font-size:.85rem;">Tipo de conta</label>
+      <select id="criarTipoConta" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(52,211,153,.3);background:rgba(5,46,22,.3);color:#eef8ff;margin-bottom:14px;font-size:.9rem;" onchange="atualizarPacotesCriarCliente()">
+        <option value="empresa">Empresa (SST/Hospital/Farmácia/Plano)</option>
+        <option value="governo">Governo</option>
+      </select>
+      <label style="display:block;margin-bottom:6px;color:#9cc4db;font-size:.85rem;">Nome</label>
+      <input type="text" id="criarNome" placeholder="Nome do cliente / município" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(52,211,153,.3);background:rgba(5,46,22,.3);color:#eef8ff;margin-bottom:14px;font-size:.9rem;">
+      <label style="display:block;margin-bottom:6px;color:#9cc4db;font-size:.85rem;">E-mail de acesso</label>
+      <input type="email" id="criarEmail" placeholder="email@cliente.com" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(52,211,153,.3);background:rgba(5,46,22,.3);color:#eef8ff;margin-bottom:14px;font-size:.9rem;">
+      <label style="display:block;margin-bottom:6px;color:#9cc4db;font-size:.85rem;">Senha inicial</label>
+      <input type="password" id="criarSenha" placeholder="Senha inicial" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(52,211,153,.3);background:rgba(5,46,22,.3);color:#eef8ff;margin-bottom:14px;font-size:.9rem;">
+      <label style="display:block;margin-bottom:6px;color:#9cc4db;font-size:.85rem;">Pacote</label>
+      <select id="criarPacoteSelect" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(52,211,153,.3);background:rgba(5,46,22,.3);color:#eef8ff;margin-bottom:14px;font-size:.9rem;"></select>
+      <div class="modal-actions">
+        <button class="ghost" onclick="fecharModalCriarCliente()">Cancelar</button>
+        <button style="background:linear-gradient(135deg,#10b981,#065f46);color:#fff;border:none;padding:10px 20px;border-radius:10px;cursor:pointer;font-weight:700;" onclick="confirmarCriarCliente()">Criar conta</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de confirmação de exclusão -->
   <div class="modal-overlay" id="modalExcluir">
     <div class="modal">
@@ -454,6 +480,53 @@ function _t(msg, tipo) {
       document.getElementById("modalExcluir").classList.remove("open");
       _excluirId = null;
       _excluirEmail = null;
+    }
+
+    function atualizarPacotesCriarCliente() {
+      const tipo = document.getElementById("criarTipoConta").value;
+      const sel = document.getElementById("criarPacoteSelect");
+      sel.innerHTML = Object.entries(pacoteOptions)
+        .filter(([, p]) => (tipo === "governo" ? p.setor === "governo" : p.setor !== "governo"))
+        .map(([codigo, p]) => {
+          const ciclo = p.ciclos?.length === 1 && p.ciclos[0] === "anual" ? "ano" : "mês";
+          const valor = ciclo === "ano" ? p.anual : p.mensal;
+          return `<option value="${codigo}">${p.label} (${p.setor}) — R$ ${valor.toLocaleString("pt-BR")}/${ciclo}</option>`;
+        }).join("");
+    }
+
+    function abrirModalCriarCliente() {
+      document.getElementById("criarNome").value = "";
+      document.getElementById("criarEmail").value = "";
+      document.getElementById("criarSenha").value = "";
+      document.getElementById("criarTipoConta").value = "empresa";
+      atualizarPacotesCriarCliente();
+      document.getElementById("modalCriarCliente").classList.add("open");
+    }
+
+    function fecharModalCriarCliente() {
+      document.getElementById("modalCriarCliente").classList.remove("open");
+    }
+
+    async function confirmarCriarCliente() {
+      const nome = document.getElementById("criarNome").value.trim();
+      const email = document.getElementById("criarEmail").value.trim();
+      const senha = document.getElementById("criarSenha").value;
+      const tipo_conta = document.getElementById("criarTipoConta").value;
+      const pacote_codigo = document.getElementById("criarPacoteSelect").value;
+      if (!nome || !email || !senha) { _t("Preencha nome, email e senha.", "warn"); return; }
+      const res = await fetch("/api/operacao-central/cliente/criar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome, email, senha, tipo_conta, pacote_codigo }),
+      });
+      const data = await res.json();
+      if (data.status === "ok") {
+        fecharModalCriarCliente();
+        _t("Conta criada com sucesso.", "ok");
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        _t(data.erro || "Não foi possível criar a conta.", "err");
+      }
     }
 
     let _cortesiaId = null;
@@ -697,6 +770,10 @@ function _t(msg, tipo) {
       // Botões de exportar (escondidos para Leitura)
       document.querySelectorAll('[data-perm="exportar"]').forEach((b) => {
         b.style.display = perms.exportar === false ? "none" : "";
+      });
+      // Criar conta nova: só admin
+      document.querySelectorAll('[data-perm="cliente_criar"]').forEach((b) => {
+        b.style.display = perms.cliente_criar === true ? "" : "none";
       });
       // Selo do papel ao lado do nome do dono
       const hero = document.querySelector(".hero h1");

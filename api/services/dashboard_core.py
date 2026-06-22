@@ -29,6 +29,7 @@ def _segmento_console(setor):
 # ── RBAC: papéis × ações sensíveis do console ───────────────────────────────
 # Fonte única de verdade. Usada na trava do backend E para montar a visão.
 ACAO_PAPEIS = {
+    "cliente_criar":   {"admin"},                      # criação de conta: só admin
     "cliente_editar":  {"admin", "suporte"},
     "cliente_excluir": {"admin"},                      # exclusão: só admin
     "cliente_trial":   {"admin", "suporte"},
@@ -53,6 +54,7 @@ def permissoes_dono(papel):
         "papel": papel,
         "somente_leitura": papel == "leitura",
         "acao_cliente": papel in {"admin", "suporte"},
+        "cliente_criar": papel == "admin",
         "cliente_excluir": papel == "admin",
         "acao_financeiro": papel in {"admin", "financeiro"},
         "acao_onboarding": papel in {"admin", "suporte"},
