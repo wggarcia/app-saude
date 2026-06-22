@@ -14,7 +14,7 @@ from django.views.decorators.http import require_http_methods
 from .access_control import api_requer_gerencia, get_setor, principal_pode_operacao_setorial
 from .models import ProntuarioCidadao, AtendimentoUBS
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
-from .access_control import requer_setor, requer_operacao_page
+from .access_control import requer_setor, requer_operacao_page, requer_permissao_modulo
 
 
 def _e(request):
@@ -31,6 +31,7 @@ def _e(request):
 @ensure_csrf_cookie
 @requer_setor("governo")
 @requer_operacao_page
+@requer_permissao_modulo("governo.atencao_clinica")
 def governo_pec_page(request):
     return render(request, "governo_pec.html", contexto_navegacao_setorial(request, "governo"))
 
