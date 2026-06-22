@@ -12,10 +12,12 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
+    api_requer_feature,
     api_requer_gerencia,
     get_setor,
     principal_pode_operacao_setorial,
     requer_setor,
+    requer_feature_pacote,
     requer_operacao_page,
     requer_permissao_modulo,
 )
@@ -58,6 +60,7 @@ def _exame_to_dict(e):
 
 @ensure_csrf_cookie
 @requer_setor("hospital")
+@requer_feature_pacote("hospital.lis", "Laboratório (LIS)")
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_lis_page(request):
@@ -66,6 +69,7 @@ def hospital_lis_page(request):
 
 # ─── API: Lista exames ────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.lis")
 @require_http_methods(["GET"])
 def api_lis_exames(request):
     empresa = _empresa(request)
@@ -99,6 +103,7 @@ def api_lis_exames(request):
 
 # ─── API: Solicitar exame ─────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.lis")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_lis_solicitar(request):
@@ -146,6 +151,7 @@ def api_lis_solicitar(request):
     return JsonResponse({"ok": True, "exame": _exame_to_dict(exame)}, status=201)
 
 
+@api_requer_feature("hospital.lis")
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def api_lis(request):
@@ -156,6 +162,7 @@ def api_lis(request):
 
 # ─── API: Registrar resultado ─────────────────────────────────────────────────
 
+@api_requer_feature("hospital.lis")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_lis_resultado(request, exame_id):
@@ -193,6 +200,7 @@ def api_lis_resultado(request, exame_id):
 
 # ─── API: KPIs ────────────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.lis")
 @require_http_methods(["GET"])
 def api_lis_kpis(request):
     empresa = _empresa(request)

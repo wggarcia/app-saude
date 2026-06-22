@@ -2,7 +2,7 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from .models import (
-    FornecedorFarmacia, ItemFarmacia, MovimentoEstoque,
+    EmpresaUnidade, FornecedorFarmacia, ItemFarmacia, MovimentoEstoque,
     PedidoCompraFarmacia, ItemPedidoCompra, DispensacaoMedicamento,
 )
 from .views_dashboard import _empresa_autenticada
@@ -82,7 +82,10 @@ def api_itens_farmacia(request):
     if not e:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
     if request.method == "GET":
-        qs = ItemFarmacia.objects.filter(empresa=e).select_related("fornecedor")
+        qs = ItemFarmacia.objects.filter(empresa=e).select_related("fornecedor", "unidade_fisica")
+        unidade_id = request.GET.get("unidade_id")
+        if unidade_id:
+            qs = qs.filter(unidade_fisica_id=unidade_id)
         return JsonResponse({"itens": [
             {"id": i.id, "nome": i.nome, "codigo": i.codigo,
              "categoria": i.categoria, "unidade_medida": i.unidade_medida,
@@ -90,7 +93,9 @@ def api_itens_farmacia(request):
              "ativo": i.ativo,
              "abaixo_minimo": i.estoque_atual < i.estoque_minimo,
              "fornecedor_id": i.fornecedor_id,
-             "fornecedor_nome": i.fornecedor.nome if i.fornecedor else ""}
+             "fornecedor_nome": i.fornecedor.nome if i.fornecedor else "",
+             "unidade_fisica_id": i.unidade_fisica_id,
+             "unidade_fisica_nome": i.unidade_fisica.nome if i.unidade_fisica else ""}
             for i in qs
         ]})
     data = json.loads(request.body or "{}")
@@ -99,6 +104,12 @@ def api_itens_farmacia(request):
         try:
             forn = FornecedorFarmacia.objects.get(pk=data["fornecedor_id"], empresa=e)
         except FornecedorFarmacia.DoesNotExist:
+            pass
+    unidade_fisica = None
+    if data.get("unidade_id"):
+        try:
+            unidade_fisica = EmpresaUnidade.objects.get(pk=data["unidade_id"], empresa=e)
+        except EmpresaUnidade.DoesNotExist:
             pass
     item = ItemFarmacia.objects.create(
         empresa=e,
@@ -109,6 +120,7 @@ def api_itens_farmacia(request):
         unidade_medida=data.get("unidade_medida", "unidade"),
         estoque_minimo=int(data.get("estoque_minimo", 0)),
         fornecedor=forn,
+        unidade_fisica=unidade_fisica,
     )
     return JsonResponse({"id": item.id, "nome": item.nome}, status=201)
 

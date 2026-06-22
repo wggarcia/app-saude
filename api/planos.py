@@ -74,17 +74,17 @@ _HOSPITAL_MEDIO = [
     "hospital.taxa_ocupacao",       # Taxa de ocupação por departamento
     "hospital.epidemiologia",       # Alertas epidemiológicos (App Cidadão)
     "hospital.emr",                 # Prontuário Eletrônico (EMR)
-    "hospital.lis",                 # Laboratório integrado (LIS)
-    "hospital.ris_pacs",            # Imagem médica RIS/PACS
-    "hospital.cirurgia",            # Bloco cirúrgico
-    "hospital.farmacia_hospitalar", # Farmácia hospitalar
-    "hospital.tiss",                # Faturamento SUS/TISS
-    "hospital.ia_autorizacao",      # IA para autorização clínica
 ]
 _HOSPITAL_REDE = _HOSPITAL_MEDIO + [
-    "hospital.multi_unidade",       # Gestão multi-unidade (EXCLUSIVO REDE)
-    "hospital.benchmarking",        # Benchmarking entre unidades (EXCLUSIVO REDE)
-    "hospital.painel_executivo",    # Painel executivo consolidado de rede (EXCLUSIVO REDE)
+    "hospital.lis",                 # Laboratório integrado (LIS) — EXCLUSIVO REDE/GRUPO
+    "hospital.ris_pacs",            # Imagem médica RIS/PACS — EXCLUSIVO REDE/GRUPO
+    "hospital.cirurgia",            # Bloco cirúrgico — EXCLUSIVO REDE/GRUPO
+    "hospital.farmacia_hospitalar", # Farmácia hospitalar — EXCLUSIVO REDE/GRUPO
+    "hospital.tiss",                # Faturamento SUS/TISS — EXCLUSIVO REDE/GRUPO
+    "hospital.ia_autorizacao",      # IA para autorização clínica — EXCLUSIVO REDE/GRUPO
+    "hospital.multi_unidade",       # Gestão multi-unidade (EXCLUSIVO REDE/GRUPO)
+    "hospital.benchmarking",        # Benchmarking entre unidades (EXCLUSIVO REDE/GRUPO)
+    "hospital.painel_executivo",    # Painel executivo consolidado de rede (EXCLUSIVO REDE/GRUPO)
 ]
 
 # ── Governo ──────────────────────────────────────────────────────────────────
@@ -229,20 +229,32 @@ PACOTES_SAAS = {
     "farmacia_rede_regional": {
         "label": "Rede Farmaceutica Regional",
         "setor": "farmacia",
-        "descricao": "Rastreabilidade de lotes, transferencias entre filiais, painel central e gestao de controlados por rede.",
+        "descricao": "Rastreabilidade de lotes, transferencias entre filiais, painel central e gestao de controlados por rede, para redes de até 25 unidades.",
         "usuarios": 50,
         "dispositivos": 50,
         "mensal": 4990.00,
         "anual": 49900.00,
         "ciclos": ["mensal", "anual"],
         "features": _FARMACIA_REDE,
-        "limites": {"max_usuarios": 50, "max_unidades": 999},
+        "limites": {"max_usuarios": 50, "max_unidades": 25},
+    },
+    "farmacia_rede_nacional": {
+        "label": "Rede Farmaceutica Nacional",
+        "setor": "farmacia",
+        "descricao": "Tudo do Rede Regional, dimensionado para redes nacionais de até 100 unidades.",
+        "usuarios": 200,
+        "dispositivos": 200,
+        "mensal": 17900.00,
+        "anual": 179000.00,
+        "ciclos": ["mensal", "anual"],
+        "features": _FARMACIA_REDE,
+        "limites": {"max_usuarios": 200, "max_unidades": 100},
     },
     # ── Hospital ───────────────────────────────────────────────────────────────
     "hospital_medio": {
         "label": "Hospital Medio",
         "setor": "hospital",
-        "descricao": "Leitos, internacoes, triagem Manchester, EMR, LIS, RIS/PACS, bloco cirurgico, farmacia hospitalar, TISS e IA para autorizacao.",
+        "descricao": "Leitos, internacoes, triagem Manchester, taxa de ocupacao, epidemiologia e prontuario eletronico (EMR).",
         "usuarios": 50,
         "dispositivos": 50,
         "mensal": 9900.00,
@@ -254,7 +266,7 @@ PACOTES_SAAS = {
     "hospital_rede": {
         "label": "Rede Hospitalar",
         "setor": "hospital",
-        "descricao": "Gestao multi-unidade hospitalar com consolidacao de KPIs, benchmarking, leitos e painel executivo.",
+        "descricao": "Tudo do Hospital Medio + LIS, RIS/PACS, bloco cirurgico, farmacia hospitalar, TISS, IA de autorizacao, gestao multi-unidade hospitalar, benchmarking e painel executivo.",
         "usuarios": 250,
         "dispositivos": 250,
         "mensal": 19900.00,
@@ -262,6 +274,18 @@ PACOTES_SAAS = {
         "ciclos": ["mensal", "anual"],
         "features": _HOSPITAL_REDE,
         "limites": {"max_usuarios": 250, "max_unidades": 999},
+    },
+    "hospital_grupo": {
+        "label": "Grupo Hospitalar",
+        "setor": "hospital",
+        "descricao": "Tudo do Rede Hospitalar, dimensionado para grupos com varios hospitais e maior volume de usuarios (600 usuarios).",
+        "usuarios": 600,
+        "dispositivos": 600,
+        "mensal": 42900.00,
+        "anual": 429000.00,
+        "ciclos": ["mensal", "anual"],
+        "features": _HOSPITAL_REDE,
+        "limites": {"max_usuarios": 600, "max_unidades": 999},
     },
     # ── Governo (contratos anuais via licitação) ───────────────────────────────
     "governo_municipio_pequeno": {

@@ -79,6 +79,29 @@ def api_requer_feature(feature: str):
     return decorator
 
 
+def requer_feature_pacote(feature: str, modulo_label: str = ""):
+    """
+    Decorator para views de página (HTML). Renderiza tela de upgrade se a
+    feature não estiver no plano da empresa, em vez de retornar JSON.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            empresa = getattr(request, "empresa", None)
+            if not empresa:
+                return redirect("/login-empresa/")
+            if not empresa_tem_feature(empresa, feature):
+                pacote_atual = detalhes_pacote(empresa.pacote_codigo)
+                return render(request, "upgrade_necessario.html", {
+                    "modulo_label": modulo_label or feature,
+                    "plano_atual": pacote_atual.get("label", empresa.pacote_codigo),
+                    "feature_requerida": feature,
+                }, status=403)
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
 def requer_feature(feature: str):
     """
     Decorator para views de página (HTML). Renderiza tela de bloqueio se a

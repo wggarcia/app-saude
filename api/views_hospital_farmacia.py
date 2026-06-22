@@ -13,10 +13,12 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
+    api_requer_feature,
     api_requer_gerencia,
     get_setor,
     principal_pode_operacao_setorial,
     requer_setor,
+    requer_feature_pacote,
     requer_operacao_page,
     requer_permissao_modulo,
 )
@@ -61,6 +63,7 @@ def _item_to_dict(i):
 
 @ensure_csrf_cookie
 @requer_setor("hospital")
+@requer_feature_pacote("hospital.farmacia_hospitalar", "Farmácia Hospitalar")
 @requer_operacao_page
 @requer_permissao_modulo("hospital.operacional")
 def hospital_farmacia_page(request):
@@ -69,6 +72,7 @@ def hospital_farmacia_page(request):
 
 # ─── API: Itens (lista) ───────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.farmacia_hospitalar")
 @require_http_methods(["GET"])
 def api_farmacia_hosp_itens(request):
     empresa = _empresa(request)
@@ -97,6 +101,7 @@ def api_farmacia_hosp_itens(request):
 
 # ─── API: Novo item ───────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.farmacia_hospitalar")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_farmacia_hosp_novo_item(request):
@@ -134,6 +139,7 @@ def api_farmacia_hosp_novo_item(request):
     return JsonResponse({"ok": True, "item": _item_to_dict(item)}, status=201)
 
 
+@api_requer_feature("hospital.farmacia_hospitalar")
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def api_farmacia_hosp(request):
@@ -144,6 +150,7 @@ def api_farmacia_hosp(request):
 
 # ─── API: Movimentar estoque (entrada/saída) ──────────────────────────────────
 
+@api_requer_feature("hospital.farmacia_hospitalar")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_farmacia_hosp_atualizar_estoque(request, item_id):
@@ -189,6 +196,7 @@ def api_farmacia_hosp_atualizar_estoque(request, item_id):
 
 # ─── API: KPIs ────────────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.farmacia_hospitalar")
 @require_http_methods(["GET"])
 def api_farmacia_hosp_kpis(request):
     empresa = _empresa(request)

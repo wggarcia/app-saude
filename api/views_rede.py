@@ -91,11 +91,35 @@ def _verificar_acesso_rede(request):
             }, status=403)
         return empresa, None
 
+    if setor == "hospital":
+        if not empresa_tem_feature(empresa, "hospital.multi_unidade"):
+            pacote = detalhes_pacote(empresa.pacote_codigo)
+            return None, JsonResponse({
+                "erro": "Rede multi-unidade disponível apenas no plano Rede Hospitalar.",
+                "feature_requerida": "hospital.multi_unidade",
+                "plano_atual": pacote.get("label", ""),
+                "upgrade_necessario": True,
+            }, status=403)
+        return empresa, None
+
     # Outros setores não têm acesso à funcionalidade de rede
     return None, JsonResponse(
         {"erro": f"Módulo de rede não disponível para o setor '{setor}'."},
         status=403,
     )
+
+
+def _rede_dentro_do_limite(rede):
+    """
+    Verifica se a rede ainda tem espaço para mais uma unidade, usando o limite
+    de max_unidades do plano da unidade fundadora (primeira a entrar na rede).
+    """
+    from .access_control import dentro_do_limite
+    primeira = rede.unidades.filter(ativa=True).order_by("criada_em").first()
+    if not primeira:
+        return True
+    contagem_atual = rede.unidades.filter(ativa=True).count()
+    return dentro_do_limite(primeira.empresa, "max_unidades", contagem_atual)
 
 
 # ─── REDE ────────────────────────────────────────────────────────────────────
@@ -181,6 +205,12 @@ def api_rede_convidar(request):
                     'codigo_convite': rede.codigo_convite,
                     'aviso': 'Empresa não encontrada no sistema. Compartilhe o código do convite diretamente.'
                 })
+            ja_e_membro = UnidadeRede.objects.filter(empresa=empresa_destino, rede=rede, ativa=True).exists()
+            if not ja_e_membro and not _rede_dentro_do_limite(rede):
+                return JsonResponse({
+                    'erro': 'Limite de unidades do plano atingido. Faça upgrade para adicionar mais unidades.',
+                    'upgrade_necessario': True,
+                }, status=403)
             u, created = UnidadeRede.objects.get_or_create(empresa=empresa_destino)
             u.rede = rede
             u.tipo = data.get('tipo', 'farmacia')
@@ -218,6 +248,12 @@ def api_rede_entrar(request):
     u, created = UnidadeRede.objects.get_or_create(empresa=empresa)
     if u.rede and u.rede != rede:
         return JsonResponse({'erro': 'Você já pertence a outra rede'}, status=400)
+    ja_e_membro = u.rede == rede
+    if not ja_e_membro and not _rede_dentro_do_limite(rede):
+        return JsonResponse({
+            'erro': 'Limite de unidades do plano atingido nesta rede. Peça à unidade fundadora um upgrade de plano.',
+            'upgrade_necessario': True,
+        }, status=403)
     u.rede = rede
     u.nome_unidade = data.get('nome_unidade', empresa.nome) or empresa.nome
     u.codigo_unidade = data.get('codigo_unidade', '')
@@ -288,6 +324,71 @@ def api_rede_item_disponibilidade(request, nome_item):
             })
 
     return JsonResponse({'item': nome_item, 'disponibilidade': disponibilidade})
+
+
+# ─── KPIS HOSPITALARES CONSOLIDADOS DA REDE ──────────────────────────────────
+
+def api_rede_hospital_kpis(request):
+    """Painel executivo consolidado + benchmarking entre unidades hospitalares da rede."""
+    from datetime import date
+    from .models import LeitoHospitalar, PacienteInternado, TriagemManchester
+
+    empresa, err = _verificar_acesso_rede(request)
+    if err:
+        return err
+
+    unidade = get_unidade(empresa)
+    if not unidade or not unidade.rede:
+        return JsonResponse({'rede': None, 'unidades': [], 'consolidado': None})
+
+    rede = unidade.rede
+    unidades_rede = rede.unidades.filter(ativa=True)
+    hoje = date.today()
+
+    unidades_kpis = []
+    tot_leitos = tot_ocupados = tot_internados = tot_triagens = 0
+
+    for u in unidades_rede:
+        emp = u.empresa
+        total_leitos = LeitoHospitalar.objects.filter(empresa=emp).count()
+        leitos_ocupados = LeitoHospitalar.objects.filter(empresa=emp, status="ocupado").count()
+        taxa_ocupacao_pct = round(leitos_ocupados / total_leitos * 100, 1) if total_leitos else 0.0
+        pacientes_internados = PacienteInternado.objects.filter(empresa=emp, status="internado").count()
+        triagens_hoje = TriagemManchester.objects.filter(empresa=emp, data_hora__date=hoje).count()
+        triagens_vermelhas = TriagemManchester.objects.filter(
+            empresa=emp, nivel="vermelho", status__in=["aguardando", "em_atendimento"]
+        ).count()
+
+        tot_leitos += total_leitos
+        tot_ocupados += leitos_ocupados
+        tot_internados += pacientes_internados
+        tot_triagens += triagens_hoje
+
+        unidades_kpis.append({
+            'unidade_id': u.id,
+            'unidade_nome': u.nome_unidade or emp.nome,
+            'codigo': u.codigo_unidade,
+            'cidade': u.cidade,
+            'estado': u.estado,
+            'eh_minha': emp.id == empresa.id,
+            'total_leitos': total_leitos,
+            'leitos_ocupados': leitos_ocupados,
+            'taxa_ocupacao_pct': taxa_ocupacao_pct,
+            'pacientes_internados': pacientes_internados,
+            'triagens_hoje': triagens_hoje,
+            'triagens_vermelhas_pendentes': triagens_vermelhas,
+        })
+
+    consolidado = {
+        'total_unidades': len(unidades_kpis),
+        'total_leitos': tot_leitos,
+        'total_ocupados': tot_ocupados,
+        'taxa_ocupacao_media_pct': round(tot_ocupados / tot_leitos * 100, 1) if tot_leitos else 0.0,
+        'total_internados': tot_internados,
+        'total_triagens_hoje': tot_triagens,
+    }
+
+    return JsonResponse({'rede': rede.nome, 'unidades': unidades_kpis, 'consolidado': consolidado})
 
 
 # ─── TRANSFERÊNCIAS ───────────────────────────────────────────────────────────

@@ -13,10 +13,12 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
+    api_requer_feature,
     api_requer_gerencia,
     get_setor,
     principal_pode_operacao_setorial,
     requer_setor,
+    requer_feature_pacote,
     requer_operacao_page,
     requer_permissao_modulo,
 )
@@ -63,6 +65,7 @@ def _cir_to_dict(c):
 
 @ensure_csrf_cookie
 @requer_setor("hospital")
+@requer_feature_pacote("hospital.cirurgia", "Bloco Cirúrgico")
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_cirurgia_page(request):
@@ -71,6 +74,7 @@ def hospital_cirurgia_page(request):
 
 # ─── API: Agenda (hoje + 7 dias) ──────────────────────────────────────────────
 
+@api_requer_feature("hospital.cirurgia")
 @require_http_methods(["GET"])
 def api_cirurgia_agenda(request):
     empresa = _empresa(request)
@@ -90,6 +94,7 @@ def api_cirurgia_agenda(request):
 
 # ─── API: Lista (todos, com filtros) ──────────────────────────────────────────
 
+@api_requer_feature("hospital.cirurgia")
 @require_http_methods(["GET"])
 def api_cirurgia_lista(request):
     empresa = _empresa(request)
@@ -119,6 +124,7 @@ def api_cirurgia_lista(request):
 
 # ─── API: Nova cirurgia ───────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.cirurgia")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_cirurgia_nova(request):
@@ -177,6 +183,7 @@ def api_cirurgia_nova(request):
     return JsonResponse({"ok": True, "cirurgia": _cir_to_dict(cir)}, status=201)
 
 
+@api_requer_feature("hospital.cirurgia")
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def api_cirurgia(request):
@@ -187,6 +194,7 @@ def api_cirurgia(request):
 
 # ─── API: Atualizar situação / relatório ──────────────────────────────────────
 
+@api_requer_feature("hospital.cirurgia")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_cirurgia_atualizar(request, cir_id):
@@ -223,6 +231,7 @@ def api_cirurgia_atualizar(request, cir_id):
 
 # ─── API: KPIs ────────────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.cirurgia")
 @require_http_methods(["GET"])
 def api_cirurgia_kpis(request):
     empresa = _empresa(request)

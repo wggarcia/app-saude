@@ -15,10 +15,12 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
+    api_requer_feature,
     api_requer_gerencia,
     get_setor,
     principal_pode_operacao_setorial,
     requer_setor,
+    requer_feature_pacote,
     requer_operacao_page,
     requer_permissao_modulo,
 )
@@ -73,6 +75,7 @@ def _guia_to_dict(g):
 
 @ensure_csrf_cookie
 @requer_setor("hospital")
+@requer_feature_pacote("hospital.tiss", "Faturamento TISS")
 @requer_operacao_page
 @requer_permissao_modulo("hospital.operacional")
 def hospital_tiss_page(request):
@@ -81,6 +84,7 @@ def hospital_tiss_page(request):
 
 # ─── API: Lista guias ─────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.tiss")
 @require_http_methods(["GET"])
 def api_tiss_guias(request):
     empresa = _empresa(request)
@@ -118,6 +122,7 @@ def api_tiss_guias(request):
 
 # ─── API: Nova guia ───────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.tiss")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_tiss_nova_guia(request):
@@ -165,6 +170,7 @@ def api_tiss_nova_guia(request):
     return JsonResponse({"ok": True, "guia": _guia_to_dict(guia)}, status=201)
 
 
+@api_requer_feature("hospital.tiss")
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def api_tiss(request):
@@ -175,6 +181,7 @@ def api_tiss(request):
 
 # ─── API: Atualizar status ────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.tiss")
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_tiss_atualizar_status(request, guia_id):
@@ -220,6 +227,7 @@ def api_tiss_atualizar_status(request, guia_id):
 
 # ─── API: KPIs TISS ───────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.tiss")
 @require_http_methods(["GET"])
 def api_tiss_kpis(request):
     empresa = _empresa(request)
@@ -490,6 +498,7 @@ def _gerar_guia_internacao(corpo, guia, codigo_prestador, nome_empresa, cnes_pre
 
 # ─── API: Gerar XML TISS 3.05.00 ─────────────────────────────────────────────
 
+@api_requer_feature("hospital.tiss")
 @require_http_methods(["GET"])
 def api_tiss_gerar_xml(request, guia_id):
     """

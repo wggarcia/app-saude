@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Recurso não disponível no plano — SolusCRT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05070a;--ink:#f7f2e9;--muted:#aeb9c4;--line:rgba(255,255,255,.14);--gold:#d9b86f;--cyan:#45ead9}
+html,body{min-height:100%;font-family:Manrope,Arial,sans-serif;color:var(--ink);background:radial-gradient(circle at 50% 0%,rgba(69,234,217,.1),transparent 40rem),linear-gradient(135deg,#05070a,#07121a 60%,#030507)}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.card{width:100%;max-width:400px;padding:34px;border-radius:24px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.03));box-shadow:0 30px 100px rgba(0,0,0,.45)}
+.lock-icon{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--gold),#f6e9bd);display:grid;place-items:center;font-size:22px;margin-bottom:18px}
+.title{font-size:1.3rem;font-weight:800}
+.sub{margin-top:8px;font-size:.88rem;color:var(--muted);line-height:1.6}
+.sub strong{color:var(--cyan)}
+.meta-box{margin-top:18px;padding:12px 14px;border-radius:12px;background:rgba(69,234,217,.06);border:1px solid rgba(69,234,217,.18)}
+.meta-row{font-size:.82rem;color:var(--muted);line-height:1.5;margin-top:4px}
+.meta-row:first-child{margin-top:0}
+.meta-row strong{color:var(--ink)}
+.btn-main{display:block;width:100%;margin-top:20px;padding:13px;border:none;border-radius:11px;background:linear-gradient(135deg,#f6e7b7,var(--gold));color:#070a0e;font-size:.95rem;font-weight:800;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none}
+.btn-main:hover{opacity:.92}
+.btn-back{display:block;margin-top:14px;text-align:center;font-size:.82rem;color:var(--muted);text-decoration:none}
+.btn-back:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="lock-icon">🔒</div>
+  <div class="title">Recurso não incluído no seu plano</div>
+  <div class="sub">O módulo <strong>{{ modulo_label }}</strong> não está disponível no seu plano atual. Faça upgrade para liberar este recurso.</div>
+
+  <div class="meta-box">
+    <div class="meta-row"><strong>Plano atual:</strong> {{ plano_atual }}</div>
+  </div>
+
+  <a class="btn-main" href="/pagamento/">Ver planos de upgrade →</a>
+  <a class="btn-back" href="javascript:history.back()">← Voltar</a>
+</div>
+</body>
+</html>

@@ -445,8 +445,16 @@ const PLANOS = {
       nome: "Rede Regional",
       preco: "R$ 4.990",
       ciclo: "/mês",
-      desc: "Gestão centralizada de rede com transferências, rastreabilidade e painel central.",
-      feats: ["50 usuários", "Multi-unidade", "Transferências entre filiais", "Painel central de rede"]
+      desc: "Gestão centralizada de rede com transferências, rastreabilidade e painel central, para até 25 unidades.",
+      feats: ["50 usuários", "Até 25 unidades", "Transferências entre filiais", "Painel central de rede"]
+    },
+    {
+      codigo: "farmacia_rede_nacional",
+      nome: "Rede Nacional",
+      preco: "R$ 17.900",
+      ciclo: "/mês",
+      desc: "Tudo do Rede Regional, dimensionado para redes nacionais de até 100 unidades.",
+      feats: ["200 usuários", "Até 100 unidades", "Transferências entre filiais", "Painel central de rede"]
     }
   ],
   hospital: [
@@ -455,16 +463,24 @@ const PLANOS = {
       nome: "Hospital Médio",
       preco: "R$ 9.900",
       ciclo: "/mês",
-      desc: "EMR, LIS, RIS/PACS, bloco cirúrgico, farmácia hospitalar, TISS e IA para autorização.",
-      feats: ["50 usuários", "Prontuário eletrônico (EMR)", "LIS + RIS/PACS", "TISS + IA autorização"]
+      desc: "Leitos, internações, triagem Manchester, taxa de ocupação e prontuário eletrônico (EMR).",
+      feats: ["50 usuários", "Leitos + internações", "Triagem Manchester", "Prontuário eletrônico (EMR)"]
     },
     {
       codigo: "hospital_rede",
       nome: "Rede Hospitalar",
       preco: "R$ 19.900",
       ciclo: "/mês",
-      desc: "Gestão multi-hospitalar com benchmarking, painel executivo e consolidação de KPIs.",
-      feats: ["250 usuários", "Multi-hospital", "Benchmarking entre unidades", "Painel executivo"]
+      desc: "Tudo do Hospital Médio + LIS, RIS/PACS, bloco cirúrgico, farmácia hospitalar, TISS, IA, gestão multi-hospitalar, benchmarking e painel executivo.",
+      feats: ["250 usuários", "LIS + RIS/PACS + cirurgia", "TISS + IA autorização", "Multi-hospital + benchmarking"]
+    },
+    {
+      codigo: "hospital_grupo",
+      nome: "Grupo Hospitalar",
+      preco: "R$ 42.900",
+      ciclo: "/mês",
+      desc: "Tudo do Rede Hospitalar, dimensionado para grupos com vários hospitais (600 usuários).",
+      feats: ["600 usuários", "Multi-hospital", "Benchmarking entre unidades", "Painel executivo"]
     }
   ],
   plano_saude: [

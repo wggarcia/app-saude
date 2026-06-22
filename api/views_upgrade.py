@@ -90,20 +90,24 @@ _FEATURES_LABEL = {
     },
 }
 
-# Ordem crescente de planos por setor para determinar "upgrade"
-_ORDEM_EMPRESA = [
-    "empresa_starter_5",
-    "empresa_profissional_25",
-    "empresa_enterprise_100",
-    "empresa_corporativo_250",
-    "empresa_nacional_500",
-    "empresa_nacional_1000",
-]
-
-
 def _plano_index(codigo):
+    """
+    Posição do plano dentro da ordem crescente de preço do seu setor.
+    Genérico por setor (não hardcoded por código) — funciona para qualquer
+    setor (empresa, hospital, farmacia, governo, plano_saude, rede) e para
+    novos pacotes adicionados a PACOTES_SAAS sem precisar atualizar este arquivo.
+    """
+    codigo = normalizar_codigo_pacote(codigo)
+    pacote = PACOTES_SAAS.get(codigo)
+    if not pacote:
+        return -1
+    setor = pacote.get("setor")
+    ordenados = sorted(
+        (c for c, p in PACOTES_SAAS.items() if p.get("setor") == setor),
+        key=lambda c: PACOTES_SAAS[c]["mensal"],
+    )
     try:
-        return _ORDEM_EMPRESA.index(codigo)
+        return ordenados.index(codigo)
     except ValueError:
         return -1
 

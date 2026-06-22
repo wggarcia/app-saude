@@ -36,8 +36,8 @@ def _ticket_mensal(pacote_codigo: str) -> float:
 TICKETS = {k: _ticket_mensal(k) for k in [
     "empresa_starter_5", "empresa_profissional_25", "empresa_enterprise_100",
     "empresa_corporativo_250", "empresa_nacional_500", "empresa_nacional_1000",
-    "farmacia_local", "farmacia_rede_regional",
-    "hospital_medio", "hospital_rede",
+    "farmacia_local", "farmacia_rede_regional", "farmacia_rede_nacional",
+    "hospital_medio", "hospital_rede", "hospital_grupo",
     "governo_municipio_pequeno", "governo_municipio_medio",
     "governo_capital_regiao", "governo_estado",
     "plano_saude_operadora", "plano_saude_enterprise",

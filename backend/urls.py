@@ -456,6 +456,7 @@ from api.views_farmacia_ops import (
     api_pedidos_compra_farmacia, api_pedido_compra_status,
     api_farmacia_ops_kpis, api_farmacia_pdf_estoque, api_farmacia_pdf_dispensacoes,
 )
+from api.views_farmacia_unidades import api_farmacia_unidades, api_farmacia_unidade_detalhe
 from api.views_farmacia_pdv import (
     farmacia_pdv_page,
     api_pdv_sessao_atual,
@@ -825,6 +826,7 @@ from api.views_governo_vigilancia_sanitaria import (
 )
 from api.views_rede import (
     api_redes, api_rede_convidar, api_rede_entrar, api_rede_estoque, api_rede_item_disponibilidade,
+    api_rede_hospital_kpis,
     api_transferencias, api_transferencia_detalhe,
     api_mensagens_rede, api_mensagem_marcar_lida,
     api_planos_saude, api_plano_saude_detalhe,
@@ -1472,6 +1474,8 @@ urlpatterns = [
     path('api/farmacia/fornecedores/<int:fornecedor_id>/', api_fornecedor_farmacia_detalhe),
     path('api/farmacia/itens/', api_itens_farmacia),
     path('api/farmacia/itens/<int:item_id>/', api_item_farmacia_detalhe),
+    path('api/farmacia/unidades/', api_farmacia_unidades),
+    path('api/farmacia/unidades/<int:unidade_id>/', api_farmacia_unidade_detalhe),
     path('api/farmacia/movimentos/', api_movimentos_estoque),
     path('api/farmacia/dispensacoes/', api_dispensacoes_farmacia),
     path('api/farmacia/pedidos/', api_pedidos_compra_farmacia),
@@ -1599,6 +1603,7 @@ urlpatterns = [
     path('api/rede/convidar/', api_rede_convidar),
     path('api/rede/entrar/', api_rede_entrar),
     path('api/rede/estoque/', api_rede_estoque),
+    path('api/rede/hospital-kpis/', api_rede_hospital_kpis),
     path('api/rede/disponibilidade/<str:nome_item>/', api_rede_item_disponibilidade),
     path('api/rede/transferencias/', api_transferencias),
     path('api/rede/transferencias/<int:transferencia_id>/', api_transferencia_detalhe),
