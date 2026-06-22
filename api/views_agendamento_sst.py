@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from .models import AgendamentoSST, FuncionarioSST
 from .views_dashboard import _empresa_autenticada
-from .access_control import get_setor
+from .access_control import api_requer_feature, get_setor
 
 
 def _agenda_to_dict(a):
@@ -32,6 +32,7 @@ def _agenda_to_dict(a):
 
 
 @csrf_exempt
+@api_requer_feature("sst.agenda_medica")
 def api_agendamentos_sst(request):
     """GET list / POST create agendamentos."""
     empresa = _empresa_autenticada(request)
@@ -125,6 +126,7 @@ def api_agendamentos_sst(request):
 
 
 @csrf_exempt
+@api_requer_feature("sst.agenda_medica")
 def api_agendamento_sst_detalhe(request, ag_id):
     """GET / PUT / DELETE single agendamento."""
     empresa = _empresa_autenticada(request)
@@ -162,6 +164,7 @@ def api_agendamento_sst_detalhe(request, ag_id):
 
 
 @csrf_exempt
+@api_requer_feature("sst.agenda_medica")
 def api_agendamentos_sst_kpis(request):
     """KPIs for the scheduling dashboard."""
     empresa = _empresa_autenticada(request)

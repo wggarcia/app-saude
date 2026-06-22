@@ -22,6 +22,7 @@ from .models import (
     PedidoApoioCorporativo,
     TrilhaCompetenciaCorporativa,
 )
+from .access_control import api_requer_feature, dentro_do_limite, empresa_tem_feature
 from .services.dashboard_core import setor_conta
 from .views_dashboard import _empresa_autenticada
 
@@ -47,8 +48,13 @@ def _obter_ou_criar_unidade(empresa, nome):
     nome = (nome or "").strip()
     if not nome:
         return None
-    unidade, _ = EmpresaUnidade.objects.get_or_create(empresa=empresa, nome=nome, defaults={"codigo": ""})
-    return unidade
+    existente = EmpresaUnidade.objects.filter(empresa=empresa, nome=nome).first()
+    if existente:
+        return existente
+    contagem_atual = EmpresaUnidade.objects.filter(empresa=empresa, ativo=True).count()
+    if not dentro_do_limite(empresa, "max_unidades", contagem_atual):
+        return None
+    return EmpresaUnidade.objects.create(empresa=empresa, nome=nome, codigo="")
 
 
 def _obter_ou_criar_setor(empresa, nome, unidade=None):
@@ -63,8 +69,12 @@ def _obter_ou_criar_turno(empresa, nome):
     nome = (nome or "").strip()
     if not nome:
         return None
-    turno, _ = EmpresaTurno.objects.get_or_create(empresa=empresa, nome=nome, defaults={"janela": ""})
-    return turno
+    existente = EmpresaTurno.objects.filter(empresa=empresa, nome=nome).first()
+    if existente:
+        return existente
+    if not empresa_tem_feature(empresa, "sst.turnos"):
+        return None
+    return EmpresaTurno.objects.create(empresa=empresa, nome=nome, janela="")
 
 
 def _normalizar_score(valor, default=3):
@@ -365,6 +375,7 @@ def api_colaborador_trilhas(request, codigo):
 
 
 @csrf_exempt
+@api_requer_feature("sst.painel_rh")
 def api_corporativo_rh_resumo(request):
     """GET /api/corporativo/rh/resumo/ — Headcount & turnover analytics from FuncionarioSST"""
     empresa = _empresa_corporativa_autenticada(request)
@@ -420,6 +431,7 @@ def api_corporativo_rh_resumo(request):
 
 
 @csrf_exempt
+@api_requer_feature("sst.painel_rh")
 def api_corporativo_rh_sincronizar(request):
     """
     Sincroniza dados SST → corporativo para a empresa autenticada.

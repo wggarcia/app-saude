@@ -16,6 +16,7 @@ from datetime import date, timedelta, datetime
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .views_dashboard import _empresa_autenticada
+from .access_control import empresa_tem_feature
 
 
 def _alerta(modulo, severidade, titulo, descricao, link=""):
@@ -318,7 +319,7 @@ def api_alertas(request):
     hoje = date.today()
 
     todos = (
-        _alertas_sst(empresa, hoje)
+        (_alertas_sst(empresa, hoje) if empresa_tem_feature(empresa, "sst.alertas") else [])
         + _alertas_farmacia(empresa, hoje)
         + _alertas_hospital(empresa, hoje)
         + _alertas_governo(empresa, hoje)

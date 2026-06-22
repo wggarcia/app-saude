@@ -33,7 +33,14 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from .access_control import get_setor, principal_pode_operacao_setorial, requer_permissao_modulo
+from .access_control import (
+    api_requer_feature,
+    dentro_do_limite,
+    get_setor,
+    principal_pode_operacao_setorial,
+    requer_feature_pacote,
+    requer_permissao_modulo,
+)
 from .models import (
     AfastamentoSST,
     ASOOcupacional,
@@ -557,6 +564,14 @@ def api_funcionarios(request):
         cargo = (data.get("cargo") or "").strip()
         if not nome or not cargo:
             return JsonResponse({"erro": "nome e cargo são obrigatórios"}, status=400)
+
+        contagem_atual = FuncionarioSST.objects.filter(empresa=empresa, ativo=True).count()
+        if not dentro_do_limite(empresa, "max_funcionarios", contagem_atual):
+            return JsonResponse({
+                "erro": "Limite de funcionarios do seu plano atingido. Faca upgrade para cadastrar mais.",
+                "upgrade_necessario": True,
+            }, status=403)
+
         f = FuncionarioSST.objects.create(
             empresa=empresa,
             nome=nome,
@@ -951,6 +966,7 @@ def api_documentos_sst(request):
 # ── Afastamentos ──────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("sst.afastamentos")
 def api_afastamentos_sst(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1040,6 +1056,7 @@ def api_afastamentos_sst(request):
 
 
 @csrf_exempt
+@api_requer_feature("sst.afastamentos")
 def api_afastamento_retorno(request, afastamento_id):
     """Registra retorno real de um afastamento."""
     empresa = _empresa_autenticada(request)
@@ -1146,6 +1163,7 @@ def sst_exames_page(request):
     return render(request, "sst_exames.html", {"empresa_nome": empresa.nome})
 
 
+@requer_feature_pacote("sst.afastamentos", "Afastamentos")
 @requer_permissao_modulo("sst.gestao_conformidade")
 def sst_afastamentos_page(request):
     empresa = _empresa_autenticada(request)
@@ -1307,6 +1325,7 @@ def sst_relatorios_page(request):
     return render(request, "sst_relatorios.html", {"empresa_nome": empresa.nome})
 
 
+@requer_feature_pacote("sst.agenda_medica", "Agenda Médica")
 @requer_permissao_modulo("sst.operacional")
 def sst_agendamento_page(request):
     empresa = _empresa_autenticada(request)
@@ -2519,6 +2538,7 @@ def api_sst_conformidade_pdf(request):
     return resp
 
 
+@api_requer_feature("sst.relatorio_consolidado")
 def api_sst_relatorio_consolidado_pdf(request):
     """Gera PDF consolidado de SST com conformidade, ASOs, exames, afastamentos, CATs e agenda."""
     from datetime import date, timedelta

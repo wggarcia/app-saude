@@ -287,6 +287,8 @@ class AuthDeviceTests(TestCase):
         self.assertEqual(cat.parte_corpo, "Coluna lombar")
 
     def test_sst_afastamento_doenca_ocupacional_salva_com_cid_da_lista(self):
+        self.empresa.pacote_codigo = "empresa_profissional_25"
+        self.empresa.save()
         login = self._login("afastamento-cid-device")
         self.assertEqual(login.status_code, 200)
         funcionario = FuncionarioSST.objects.create(
