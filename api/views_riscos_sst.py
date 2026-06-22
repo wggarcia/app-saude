@@ -292,6 +292,10 @@ def api_plano_acao_sst_detalhe(request, plano_id):
     return JsonResponse({"erro": "Metodo nao suportado"}, status=405)
 
 
+from .access_control import requer_permissao_modulo
+
+
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_riscos_page(request):
     from django.shortcuts import render, redirect
     from .views_dashboard import _empresa_autenticada

@@ -546,6 +546,10 @@ def api_fap_kpis(request):
 
 # ── Página HTML ───────────────────────────────────────────────────────────────
 
+from .access_control import requer_permissao_modulo
+
+
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_fap_page(request):
     from .views_dashboard import _empresa_autenticada
     from .views_sst import _empresa_sst_autenticada

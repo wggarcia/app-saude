@@ -16,7 +16,7 @@ from datetime import date
 from django.http import JsonResponse
 from django.utils import timezone
 
-from .access_control import api_requer_feature
+from .access_control import api_requer_feature, requer_permissao_modulo
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -244,6 +244,7 @@ def api_biometria_kpis(request):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_biometria_page(request):
     """Página Biometria — renderiza template."""
     from django.shortcuts import render, redirect

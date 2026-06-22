@@ -15,7 +15,7 @@ from .models import (
     FuncionarioSST, ConfiguracaoSST,
 )
 from .views_dashboard import _empresa_autenticada
-from .access_control import requer_setor
+from .access_control import requer_setor, requer_permissao_modulo
 
 
 def _empresa(request):
@@ -79,6 +79,7 @@ def _agente_dict(a):
 # ── Página ─────────────────────────────────────────────────────────────────────
 
 @requer_setor("empresa")
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_postos_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:

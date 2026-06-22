@@ -391,6 +391,10 @@ def api_laboratorio_kpis(request):
 
 # ── Página HTML ───────────────────────────────────────────────────────────────
 
+from .access_control import requer_permissao_modulo
+
+
+@requer_permissao_modulo("sst.clinico")
 def sst_laboratorio_page(request):
     from django.shortcuts import render, redirect
     from .views_sst import _empresa_sst_autenticada

@@ -23,7 +23,7 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
 )
 
-from .access_control import api_requer_feature
+from .access_control import api_requer_feature, requer_permissao_modulo
 
 # ── Palette ──────────────────────────────────────────────────────────────────
 TEAL  = colors.HexColor("#00c9a7")
@@ -426,6 +426,7 @@ def api_pcmso_pdf(request, doc_id):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_pgr_page(request):
     """Página PGR/PCMSO — renderiza template."""
     from django.shortcuts import render, redirect

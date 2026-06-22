@@ -20,7 +20,7 @@ from .models import (
     SolicitacaoExame, FuncionarioSST, VinculoClinicaEmpresa, Empresa,
 )
 from .views_dashboard import _empresa_autenticada
-from .access_control import requer_setor
+from .access_control import requer_setor, requer_permissao_modulo
 from .services.employee_notifications import (
     notificar_solicitacao_exame,
     status_notificacoes_por_referencia,
@@ -695,6 +695,7 @@ https://empresa.soluscrt.com.br
 # ── Página empresa ─────────────────────────────────────────────────────────────
 
 @requer_setor("empresa")
+@requer_permissao_modulo("sst.operacional")
 def sst_solicitacoes_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:

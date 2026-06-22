@@ -33,7 +33,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, requer_permissao_modulo
 from .models import (
     AfastamentoSST,
     ASOOcupacional,
@@ -1122,6 +1122,7 @@ def sst_configuracoes_redirect(request):
     return redirect("/dashboard-empresa/#sst")
 
 
+@requer_permissao_modulo("sst.operacional")
 def sst_funcionarios_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1129,6 +1130,7 @@ def sst_funcionarios_page(request):
     return render(request, "sst_funcionarios.html", {"empresa_nome": empresa.nome})
 
 
+@requer_permissao_modulo("sst.operacional")
 def sst_asos_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1136,6 +1138,7 @@ def sst_asos_page(request):
     return render(request, "sst_asos.html", {"empresa_nome": empresa.nome})
 
 
+@requer_permissao_modulo("sst.operacional")
 def sst_exames_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1143,6 +1146,7 @@ def sst_exames_page(request):
     return render(request, "sst_exames.html", {"empresa_nome": empresa.nome})
 
 
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_afastamentos_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1150,6 +1154,7 @@ def sst_afastamentos_page(request):
     return render(request, "sst_afastamentos.html", {"empresa_nome": empresa.nome})
 
 
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_cats_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1157,6 +1162,7 @@ def sst_cats_page(request):
     return render(request, "sst_cats.html", {"empresa_nome": empresa.nome})
 
 
+@requer_permissao_modulo("sst.operacional")
 def sst_documentos_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1164,6 +1170,7 @@ def sst_documentos_page(request):
     return render(request, "sst_documentos.html", {"empresa_nome": empresa.nome})
 
 
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_esocial_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1292,6 +1299,7 @@ def api_esocial_eventos(request):
 
 # ── Páginas: Relatórios e Agendamento ────────────────────────────────────────
 
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_relatorios_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1299,6 +1307,7 @@ def sst_relatorios_page(request):
     return render(request, "sst_relatorios.html", {"empresa_nome": empresa.nome})
 
 
+@requer_permissao_modulo("sst.operacional")
 def sst_agendamento_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1446,6 +1455,7 @@ def _exportar_csv_relatorio(serie, empresa_nome):
 
 # ── Prontuário do Funcionário ─────────────────────────────────────────────────
 
+@requer_permissao_modulo("sst.clinico")
 def sst_prontuario_page(request, funcionario_id):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1682,6 +1692,7 @@ def api_convidar_app_funcionario(request, funcionario_id):
 from .models import TreinamentoNR
 
 
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_treinamentos_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1810,6 +1821,7 @@ def api_treinamentos_resumo(request):
     })
 
 
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_normas_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1824,6 +1836,7 @@ def sst_normas_page(request):
 # ─────────────────────────────────────────────────────────────────────────────
 from .models import ConfiguracaoSST, EPIItem, EntregaEPI
 
+@requer_permissao_modulo("sst.administracao")
 def sst_configuracoes_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -1978,6 +1991,7 @@ def api_sst_configuracoes(request):
 #  SST — EPI / EPC
 # ─────────────────────────────────────────────────────────────────────────────
 
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_epis_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -2395,6 +2409,7 @@ def api_sst_conformidade(request):
     })
 
 
+@requer_permissao_modulo("sst.gestao_conformidade")
 def sst_conformidade_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:
@@ -2402,6 +2417,7 @@ def sst_conformidade_page(request):
     return render(request, "sst_conformidade.html", {"empresa_nome": empresa.nome})
 
 
+@requer_permissao_modulo("sst.operacional")
 def sst_bem_estar_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:

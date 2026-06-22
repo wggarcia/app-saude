@@ -33,7 +33,7 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
 )
 
-from .access_control import api_requer_feature
+from .access_control import api_requer_feature, requer_permissao_modulo
 
 # ── Palette ──────────────────────────────────────────────────────────────────
 TEAL   = colors.HexColor("#00c9a7")
@@ -620,6 +620,7 @@ def api_psicossocial_kpis(request):
         return JsonResponse({"erro": str(e)}, status=500)
 
 
+@requer_permissao_modulo("sst.clinico")
 def sst_psicossocial_page(request):
     """Página Psicossocial — renderiza template."""
     from django.shortcuts import render, redirect

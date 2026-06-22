@@ -24,6 +24,10 @@ from .views_dashboard import _empresa_autenticada
 
 # ─── pages ────────────────────────────────────────────────────────────────────
 
+from .access_control import requer_permissao_modulo
+
+
+@requer_permissao_modulo("sst.operacional")
 def sst_saude_comunicacao_page(request):
     empresa = _empresa_autenticada(request)
     if not empresa:

@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import Empresa, FuncionarioSST, ReuniaoSST, NotificacaoFuncionario, VinculoClinicaEmpresa
 from .views_dashboard import _empresa_autenticada
-from .access_control import get_setor
+from .access_control import get_setor, requer_permissao_modulo
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
@@ -53,6 +53,7 @@ def _autenticar(request):
 
 # ── Página web ─────────────────────────────────────────────────────────────────
 
+@requer_permissao_modulo("sst.operacional")
 def sst_comunicacao_page(request):
     empresa, redir = _autenticar(request)
     if redir:
