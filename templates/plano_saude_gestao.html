@@ -3905,12 +3905,13 @@ async function salvarGuiaOdonto() {
   loadOdonto();
 }
 
-(async function(){
+// Init — disparado pelo gate de módulo no fim da página (gate de aba por
+// módulo), não direto aqui, para não carregar dados de quem não tem permissão.
+async function _planoInitDefault() {
   await carregarPlanos();
-  await carregarPrestadores();
   await carregarKpisTopo();
   await carregarVisaoGeral();
-})();
+}
 
 function showToastPS(msg, tipo='ok') {
   const el = document.createElement('div');
@@ -4076,6 +4077,142 @@ function closeModulePanel() {
   setTimeout(function(){ if (iframe) iframe.src = ''; }, 320);
 }
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModulePanel(); });
+</script>
+
+<!-- ── Gate de aba por módulo (credencial própria por área) ──────────────── -->
+<style>
+.gm-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;align-items:center;justify-content:center}
+.gm-bg.open{display:flex}
+.gm-card{background:var(--surface,#0e1b26);border:1px solid var(--border,rgba(255,255,255,.1));border-radius:16px;padding:28px;min-width:340px;max-width:440px;width:100%}
+.gm-icon{font-size:2rem;text-align:center;margin-bottom:6px}
+.gm-title{font-size:1.05rem;font-weight:800;text-align:center;color:var(--ink,#e8f4f1);margin-bottom:6px}
+.gm-sub{font-size:.84rem;color:var(--muted,#9cc4db);text-align:center;line-height:1.5;margin-bottom:14px}
+.gm-field{margin-top:12px}
+.gm-field label{display:block;font-size:.72rem;font-weight:700;color:var(--muted,#9cc4db);margin-bottom:4px}
+.gm-field input{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border,rgba(255,255,255,.15));background:rgba(255,255,255,.04);color:var(--ink,#e8f4f1);font-size:.88rem}
+.gm-err{display:none;margin-top:12px;padding:9px 12px;border-radius:9px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;font-size:.8rem}
+.gm-actions{display:flex;gap:10px;margin-top:16px}
+.gm-actions button{flex:1;padding:10px;border-radius:9px;font-size:.85rem;font-weight:700;cursor:pointer}
+.gm-btn-cancel{background:transparent;border:1px solid var(--border,rgba(255,255,255,.15));color:var(--muted,#9cc4db)}
+.gm-btn-confirm{background:var(--accent,#00c9a7);border:none;color:#04121b}
+</style>
+<div class="gm-bg" id="gmModalBg">
+  <div class="gm-card">
+    <div class="gm-icon">🔒</div>
+    <div class="gm-title">Acesso restrito por módulo</div>
+    <div class="gm-sub">A credencial usada agora não tem permissão para <strong id="gmModuloLabel">esta área</strong>. Confirme as credenciais de quem tem acesso.</div>
+    <div class="gm-field">
+      <label>E-mail</label>
+      <input type="email" id="gmEmail" autocomplete="username">
+    </div>
+    <div class="gm-field">
+      <label>Senha</label>
+      <input type="password" id="gmSenha" autocomplete="current-password">
+    </div>
+    <div class="gm-err" id="gmErr"></div>
+    <div class="gm-actions">
+      <button class="gm-btn-cancel" onclick="gmCancelar()">Cancelar</button>
+      <button class="gm-btn-confirm" onclick="gmConfirmar()">Confirmar acesso</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var TAB_MODULO = {
+    visao: 'plano.autorizacao', dashboard: 'plano.autorizacao', beneficiarios: 'plano.autorizacao',
+    planos: 'plano.autorizacao', guias: 'plano.autorizacao', sla: 'plano.autorizacao',
+    fila: 'plano.autorizacao', sinistralidade: 'plano.autorizacao', auditoria: 'plano.autorizacao',
+    prestadores: 'plano.rede_credenciada', portal: 'plano.rede_credenciada', integracoes: 'plano.rede_credenciada',
+    faturamento: 'plano.rede_credenciada', coparticipacao: 'plano.rede_credenciada', reembolsos: 'plano.rede_credenciada',
+    glosas: 'plano.rede_credenciada', sinistros: 'plano.rede_credenciada',
+    carencias: 'plano.compliance_ans', portabilidade: 'plano.compliance_ans', regulatorio: 'plano.compliance_ans',
+    comunicacao: 'plano.compliance_ans', programas: 'plano.compliance_ans', telemedicina: 'plano.compliance_ans',
+    odontologia: 'plano.compliance_ans', contratos: 'plano.compliance_ans',
+  };
+  var MODULO_LABEL = {
+    'plano.autorizacao': 'Autorização / Sinistro',
+    'plano.rede_credenciada': 'Rede Credenciada',
+    'plano.compliance_ans': 'Compliance ANS',
+  };
+  var meusModulos = [];
+  var pendente = null;
+
+  function carregarMeusModulos(){
+    return fetch('/api/permissoes/meus-modulos').then(function(r){ return r.json(); }).then(function(d){
+      meusModulos = d.modulos || [];
+    }).catch(function(){ meusModulos = []; });
+  }
+
+  function gmAbrirModal(tab, codigo){
+    pendente = { tab: tab, codigo: codigo };
+    document.getElementById('gmModuloLabel').textContent = MODULO_LABEL[codigo] || codigo;
+    document.getElementById('gmErr').style.display = 'none';
+    document.getElementById('gmEmail').value = '';
+    document.getElementById('gmSenha').value = '';
+    document.getElementById('gmModalBg').classList.add('open');
+  }
+  window.gmCancelar = function(){
+    document.getElementById('gmModalBg').classList.remove('open');
+    pendente = null;
+  };
+  window.gmConfirmar = function(){
+    if (!pendente) return;
+    var email = document.getElementById('gmEmail').value.trim();
+    var senha = document.getElementById('gmSenha').value;
+    var errEl = document.getElementById('gmErr');
+    errEl.style.display = 'none';
+    if (!email || !senha) {
+      errEl.textContent = 'Informe e-mail e senha.';
+      errEl.style.display = 'block';
+      return;
+    }
+    fetch('/api/login-modulo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, senha: senha, codigo_modulo: pendente.codigo }),
+    }).then(function(r){ return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
+      .then(function(res){
+        if (!res.ok) {
+          errEl.textContent = res.data.erro || 'Credenciais inválidas.';
+          errEl.style.display = 'block';
+          return;
+        }
+        meusModulos.push(pendente.codigo);
+        var tab = pendente.tab;
+        document.getElementById('gmModalBg').classList.remove('open');
+        pendente = null;
+        if (tab === '__init__') { _planoInitDefault(); }
+        else { setTab(tab); }
+      })
+      .catch(function(){
+        errEl.textContent = 'Erro de conexão. Tente novamente.';
+        errEl.style.display = 'block';
+      });
+  };
+
+  carregarMeusModulos().then(function(){
+    var _setTabComGate = setTab;
+    setTab = function(tab){
+      var codigo = TAB_MODULO[tab];
+      if (codigo && meusModulos.indexOf(codigo) === -1) {
+        gmAbrirModal(tab, codigo);
+        return;
+      }
+      _setTabComGate(tab);
+    };
+    // Aba padrão (Visão Geral) já vem ativa no HTML — replica o mesmo gate aqui.
+    if (meusModulos.indexOf('plano.autorizacao') === -1) {
+      gmAbrirModal('__init__', 'plano.autorizacao');
+    } else {
+      _planoInitDefault();
+    }
+    // Prestadores é pré-carregado mesmo fora da aba padrão — só dispara se já
+    // tiver o módulo; sem modal, pois o usuário ainda não pediu essa aba.
+    if (meusModulos.indexOf('plano.rede_credenciada') !== -1) {
+      carregarPrestadores();
+    }
+  });
+}());
 </script>
 </body>
 </html>
