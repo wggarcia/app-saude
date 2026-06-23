@@ -3,13 +3,13 @@ from datetime import date, datetime
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Q, Sum
+from django.db.models import F, Q, Sum
 from .models import (
     Empresa, Rede, UnidadeRede, TransferenciaEstoque, MensagemRede,
     PlanoSaude, BeneficiarioPlano, GuiaAutorizacao, ItemFarmacia,
     CarenciaBeneficiario,
 )
-from .access_control import api_requer_feature, get_setor
+from .access_control import get_setor
 
 
 def get_empresa(request):
@@ -332,10 +332,21 @@ def api_rede_hospital_kpis(request):
     """Painel executivo consolidado + benchmarking entre unidades hospitalares da rede."""
     from datetime import date
     from .models import LeitoHospitalar, PacienteInternado, TriagemManchester
+    from .access_control import empresa_tem_feature
 
     empresa, err = _verificar_acesso_rede(request)
     if err:
         return err
+
+    setor = get_setor(empresa)
+    feature_consolidado = "hospital.painel_executivo" if setor == "hospital" else "rede.kpis_consolidados"
+    feature_benchmark = "hospital.benchmarking" if setor == "hospital" else "rede.benchmarking"
+    if not empresa_tem_feature(empresa, feature_consolidado) and not empresa_tem_feature(empresa, feature_benchmark):
+        return JsonResponse({
+            "erro": "Funcionalidade não disponível no seu plano atual.",
+            "feature_requerida": feature_consolidado,
+            "upgrade_necessario": True,
+        }, status=403)
 
     unidade = get_unidade(empresa)
     if not unidade or not unidade.rede:
@@ -388,7 +399,11 @@ def api_rede_hospital_kpis(request):
         'total_triagens_hoje': tot_triagens,
     }
 
-    return JsonResponse({'rede': rede.nome, 'unidades': unidades_kpis, 'consolidado': consolidado})
+    return JsonResponse({
+        'rede': rede.nome,
+        'unidades': unidades_kpis if empresa_tem_feature(empresa, feature_benchmark) else [],
+        'consolidado': consolidado if empresa_tem_feature(empresa, feature_consolidado) else None,
+    })
 
 
 # ─── TRANSFERÊNCIAS ───────────────────────────────────────────────────────────
@@ -994,6 +1009,11 @@ def api_plano_kpis(request, plano_id):
 Dashboard Executivo de Rede — comparação entre unidades, ranking e KPIs consolidados.
 Endpoint: GET /api/rede/kpis
 Page:     GET /dashboard-rede/
+
+Nota: apesar do nome do endpoint, isto consolida EmpresaUnidade (multi-unidade
+corporativa de SST/bem-estar), NÃO UnidadeRede (rede de Hospital/Farmácia do
+setor "rede"). Para benchmarking/KPIs consolidados da rede Hospital/Farmácia,
+ver api_rede_hospital_kpis (acima) e o painel central de Farmácia.
 """
 from datetime import date, timedelta
 from django.http import JsonResponse
@@ -1158,3 +1178,90 @@ def api_rede_kpis(request):
 def dashboard_rede_page(request):
     from django.shortcuts import render
     return render(request, "dashboard_rede.html")
+
+
+def api_rede_sala_situacao(request):
+    """GET /api/rede/sala-situacao/ — painel situacional consolidado da rede (unidades críticas, transferências urgentes, alertas)."""
+    from .models import ItemFarmacia, LeitoHospitalar, TriagemManchester
+    from .access_control import empresa_tem_feature
+
+    empresa, err = _verificar_acesso_rede(request)
+    if err:
+        return err
+
+    setor = get_setor(empresa)
+    feature_situacao = {
+        "hospital": "hospital.painel_executivo",
+        "farmacia": "farmacia.painel_central",
+    }.get(setor, "rede.sala_situacao")
+    if not empresa_tem_feature(empresa, feature_situacao):
+        return JsonResponse({
+            "erro": "Sala de Situação não disponível no seu plano atual.",
+            "feature_requerida": feature_situacao,
+            "upgrade_necessario": True,
+        }, status=403)
+
+    unidade = get_unidade(empresa)
+    if not unidade or not unidade.rede:
+        return JsonResponse({"rede": None, "nivel_situacional": "verde", "unidades_criticas": [], "transferencias_urgentes": [], "alertas_recentes": []})
+
+    rede = unidade.rede
+    unidades_rede = rede.unidades.filter(ativa=True)
+
+    unidades_criticas = []
+    for u in unidades_rede:
+        emp = u.empresa
+        if u.tipo == "hospital":
+            total_leitos = LeitoHospitalar.objects.filter(empresa=emp).count()
+            ocupados = LeitoHospitalar.objects.filter(empresa=emp, status="ocupado").count()
+            taxa = round(ocupados / total_leitos * 100, 1) if total_leitos else 0.0
+            triagens_vermelhas = TriagemManchester.objects.filter(
+                empresa=emp, nivel="vermelho", status__in=["aguardando", "em_atendimento"]
+            ).count()
+            if taxa >= 90 or triagens_vermelhas > 0:
+                unidades_criticas.append({
+                    "unidade_id": u.id, "unidade_nome": u.nome_unidade or emp.nome, "tipo": "hospital",
+                    "motivo": f"Ocupação {taxa}%" + (f" · {triagens_vermelhas} triagem(ns) vermelha(s) pendente(s)" if triagens_vermelhas else ""),
+                    "nivel": "vermelho" if (taxa >= 95 or triagens_vermelhas > 0) else "laranja",
+                })
+        else:
+            itens_criticos = ItemFarmacia.objects.filter(empresa=emp, ativo=True, estoque_atual__lte=F("estoque_minimo")).count()
+            if itens_criticos > 0:
+                unidades_criticas.append({
+                    "unidade_id": u.id, "unidade_nome": u.nome_unidade or emp.nome, "tipo": "farmacia",
+                    "motivo": f"{itens_criticos} item(ns) em estoque crítico",
+                    "nivel": "vermelho" if itens_criticos >= 5 else "laranja",
+                })
+
+    transferencias_urgentes_qs = TransferenciaEstoque.objects.filter(
+        rede=rede, urgente=True, status__in=["pendente", "aprovada"]
+    ).select_related("unidade_solicitante", "unidade_fornecedora").order_by("-solicitado_em")
+    transferencias_urgentes = [{
+        "id": t.id, "item": t.nome_item or (t.item_farmacia.nome if t.item_farmacia else ""),
+        "solicitante": t.unidade_solicitante.nome_unidade, "fornecedora": t.unidade_fornecedora.nome_unidade,
+        "status": t.status, "solicitado_em": t.solicitado_em.isoformat(),
+    } for t in transferencias_urgentes_qs[:50]]
+
+    alertas_qs = MensagemRede.objects.filter(rede=rede, tipo="alerta").select_related("remetente").order_by("-enviada_em")[:20]
+    alertas_recentes = [{
+        "id": a.id, "assunto": a.assunto, "corpo": a.corpo,
+        "remetente": a.remetente.nome_unidade, "lida": a.lida, "enviada_em": a.enviada_em.isoformat(),
+    } for a in alertas_qs]
+
+    vermelhos = sum(1 for u in unidades_criticas if u["nivel"] == "vermelho")
+    if vermelhos > 0:
+        nivel_situacional = "vermelho"
+    elif unidades_criticas or transferencias_urgentes:
+        nivel_situacional = "laranja"
+    elif alertas_recentes:
+        nivel_situacional = "amarelo"
+    else:
+        nivel_situacional = "verde"
+
+    return JsonResponse({
+        "rede": rede.nome,
+        "nivel_situacional": nivel_situacional,
+        "unidades_criticas": unidades_criticas,
+        "transferencias_urgentes": transferencias_urgentes,
+        "alertas_recentes": alertas_recentes,
+    })

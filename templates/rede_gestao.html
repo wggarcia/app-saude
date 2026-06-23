@@ -397,6 +397,7 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
       <button class="tab-btn" onclick="switchTab('transferencias',this)" data-tab="transferencias">🔄 Transferências</button>
       {% endif %}
       <button class="tab-btn" onclick="switchTab('msgs',this)" data-tab="msgs">💬 Mensagens</button>
+      <button class="tab-btn" onclick="switchTab('situacao',this)" data-tab="situacao">🚨 Sala de Situação</button>
     </div>
 
     <!-- ── TAB: PAINEL ──────────────────────────────────────────────────── -->
@@ -618,6 +619,39 @@ html,body{margin:0;overflow-x:hidden;min-height:100vh;background:var(--bg);color
             <tr><td colspan="8"><div class="skel" style="height:40px;margin:8px 14px"></div></td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ── TAB: SALA DE SITUAÇÃO ──────────────────────────────────────────── -->
+    <div class="tab-pane" id="tab-situacao">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Sala de Situação</div>
+          <div class="page-sub">Visão consolidada de unidades críticas, transferências urgentes e alertas em toda a rede</div>
+        </div>
+        <div id="situacao-nivel" class="badge b-muted">Carregando...</div>
+      </div>
+
+      <div class="kpi-strip" style="grid-template-columns:repeat(3,1fr)">
+        <div class="panel" style="padding:14px"><div style="font-size:.7rem;color:var(--muted);font-weight:700;text-transform:uppercase">Unidades Críticas</div><div id="sit-cnt-unidades" style="font-size:1.6rem;font-weight:800;margin-top:4px">—</div></div>
+        <div class="panel" style="padding:14px"><div style="font-size:.7rem;color:var(--muted);font-weight:700;text-transform:uppercase">Transferências Urgentes</div><div id="sit-cnt-transf" style="font-size:1.6rem;font-weight:800;margin-top:4px">—</div></div>
+        <div class="panel" style="padding:14px"><div style="font-size:.7rem;color:var(--muted);font-weight:700;text-transform:uppercase">Alertas Recentes</div><div id="sit-cnt-alertas" style="font-size:1.6rem;font-weight:800;margin-top:4px">—</div></div>
+      </div>
+
+      <div class="analytics-grid">
+        <div class="panel">
+          <div class="panel-header"><h3>🏥 Unidades em Estado Crítico</h3></div>
+          <div id="sit-lista-unidades"><div class="empty-state" style="padding:24px"><p>Carregando...</p></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><h3>🔄 Transferências Urgentes Pendentes</h3></div>
+          <div id="sit-lista-transf"><div class="empty-state" style="padding:24px"><p>Carregando...</p></div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>🚨 Alertas Recentes</h3></div>
+        <div id="sit-lista-alertas"><div class="empty-state" style="padding:24px"><p>Carregando...</p></div></div>
       </div>
     </div>
 
@@ -855,6 +889,40 @@ function switchTab(name, srcEl) {
   if (name === 'estoque') renderEstoque();
   if (name === 'bench') { SETOR === 'hospital' ? renderBenchmarkingHospital() : renderBenchmarking(); }
   if (name === 'transferencias') carregarTransferencias('todas');
+  if (name === 'situacao') carregarSalaSituacao();
+}
+
+const SIT_NIVEL_LABEL = { verde: 'Situação Normal', amarelo: 'Atenção', laranja: 'Alerta', vermelho: 'Crítico' };
+const SIT_NIVEL_CLASS = { verde: 'b-green', amarelo: 'b-amber', laranja: 'b-amber', vermelho: 'b-red' };
+
+async function carregarSalaSituacao() {
+  const r = await fetch('/api/rede/sala-situacao/');
+  const d = await r.json();
+  if (d.erro) {
+    document.getElementById('situacao-nivel').textContent = d.erro;
+    return;
+  }
+
+  document.getElementById('situacao-nivel').textContent = SIT_NIVEL_LABEL[d.nivel_situacional] || d.nivel_situacional;
+  document.getElementById('situacao-nivel').className = 'badge ' + (SIT_NIVEL_CLASS[d.nivel_situacional] || 'b-muted');
+  document.getElementById('sit-cnt-unidades').textContent = d.unidades_criticas.length;
+  document.getElementById('sit-cnt-transf').textContent = d.transferencias_urgentes.length;
+  document.getElementById('sit-cnt-alertas').textContent = d.alertas_recentes.length;
+
+  const listaU = document.getElementById('sit-lista-unidades');
+  listaU.innerHTML = d.unidades_criticas.length
+    ? d.unidades_criticas.map(u => `<div class="activity-item"><div style="flex:1"><strong>${u.unidade_nome}</strong> (${u.tipo})<div style="font-size:.78rem;color:var(--muted)">${u.motivo}</div></div><span class="badge ${u.nivel === 'vermelho' ? 'b-red' : 'b-amber'}">${u.nivel}</span></div>`).join('')
+    : '<div class="empty-state" style="padding:24px"><p>Nenhuma unidade em estado crítico.</p></div>';
+
+  const listaT = document.getElementById('sit-lista-transf');
+  listaT.innerHTML = d.transferencias_urgentes.length
+    ? d.transferencias_urgentes.map(t => `<div class="activity-item"><div style="flex:1"><strong>${t.item}</strong><div style="font-size:.78rem;color:var(--muted)">${t.solicitante} ← ${t.fornecedora}</div></div><span class="badge b-amber">${t.status}</span></div>`).join('')
+    : '<div class="empty-state" style="padding:24px"><p>Nenhuma transferência urgente pendente.</p></div>';
+
+  const listaA = document.getElementById('sit-lista-alertas');
+  listaA.innerHTML = d.alertas_recentes.length
+    ? d.alertas_recentes.map(a => `<div class="alert-item"><span class="alert-dot ${a.lida ? 'teal' : 'red'}"></span><span class="alert-text"><strong>${a.assunto}</strong> — ${a.corpo} <span style="color:var(--muted)">(${a.remetente})</span></span></div>`).join('')
+    : '<div class="empty-state" style="padding:24px"><p>Nenhum alerta recente.</p></div>';
 }
 
 // ── LOAD ALL ───────────────────────────────────────────────────────────────
