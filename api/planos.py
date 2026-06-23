@@ -58,12 +58,14 @@ _FARMACIA_LOCAL = [
     "farmacia.farmacia_popular",    # Farmácia Popular (convênio governo)
     "farmacia.dre",                 # DRE / DFC / Conciliação financeira
     "farmacia.delivery",            # E-commerce / Delivery integrado
+    "farmacia.relatorio_ia",        # Relatório executivo gerado por IA
 ]
 _FARMACIA_REDE = _FARMACIA_LOCAL + [
     "farmacia.multi_unidade",       # Visão consolidada multi-unidade (EXCLUSIVO REDE)
     "farmacia.painel_central",      # Painel central de rede (EXCLUSIVO REDE)
     "farmacia.transferencias",      # Transferências de estoque entre filiais (EXCLUSIVO REDE)
     "farmacia.rastreabilidade_rede",# Rastreabilidade de lote por unidade (EXCLUSIVO REDE)
+    "farmacia.magistral",           # Manipulação magistral RDC 67/2007 — EXCLUSIVO REDE
 ]
 
 # ── Hospital ─────────────────────────────────────────────────────────────────
@@ -74,6 +76,13 @@ _HOSPITAL_MEDIO = [
     "hospital.taxa_ocupacao",       # Taxa de ocupação por departamento
     "hospital.epidemiologia",       # Alertas epidemiológicos (App Cidadão)
     "hospital.emr",                 # Prontuário Eletrônico (EMR)
+    "hospital.visitantes",          # Controle de visitantes
+    "hospital.obito",               # Declaração de Óbito
+    "hospital.equipamentos",        # Manutenção de equipamentos médicos
+    "hospital.limpeza",             # Rouparia / limpeza de leito
+    "hospital.dose_unitaria",       # Dose unitária por leito (farmácia)
+    "hospital.assinatura_eletronica", # Assinatura eletrônica ICP-Brasil
+    "hospital.equipe_multi",        # Avaliações de enfermagem/fisioterapia/nutrição
 ]
 _HOSPITAL_REDE = _HOSPITAL_MEDIO + [
     "hospital.lis",                 # Laboratório integrado (LIS) — EXCLUSIVO REDE/GRUPO
@@ -85,6 +94,15 @@ _HOSPITAL_REDE = _HOSPITAL_MEDIO + [
     "hospital.multi_unidade",       # Gestão multi-unidade (EXCLUSIVO REDE/GRUPO)
     "hospital.benchmarking",        # Benchmarking entre unidades (EXCLUSIVO REDE/GRUPO)
     "hospital.painel_executivo",    # Painel executivo consolidado de rede (EXCLUSIVO REDE/GRUPO)
+    "hospital.ccih",                # CCIH — controle de infecção hospitalar — EXCLUSIVO REDE/GRUPO
+    "hospital.hemoterapia",         # Banco de sangue / transfusão — EXCLUSIVO REDE/GRUPO
+    "hospital.obstetrico",          # Partograma / parto / DNV — EXCLUSIVO REDE/GRUPO
+    "hospital.oncologia",           # Protocolos e ciclos de quimioterapia / APAC — EXCLUSIVO REDE/GRUPO
+    "hospital.opme",                # Catálogo e autorização de OPME — EXCLUSIVO REDE/GRUPO
+    "hospital.rnds",                # Transmissão e-SUS / RNDS — EXCLUSIVO REDE/GRUPO
+    "hospital.uti_centro_cirurgico",# Evoluções, UTI (SOFA/Glasgow), centro cirúrgico, alta, isolamento — EXCLUSIVO REDE/GRUPO
+    "hospital.exames_resultados",   # Pedidos de exame, resultados, administração de medicamentos — EXCLUSIVO REDE/GRUPO
+    "hospital.faturamento_avancado",# Faturamento TUSS/CBHPM e analytics — EXCLUSIVO REDE/GRUPO
 ]
 
 # ── Governo ──────────────────────────────────────────────────────────────────
@@ -104,6 +122,11 @@ _GOVERNO_TODOS = [
     "governo.regulacao",        # Regulação Assistencial (SISREG)
     "governo.teleconsulta",     # Teleconsulta para cidadão
     "governo.rag_rdqa",         # Relatórios RAG / RDQA / PAS
+    "governo.painel_chamado",   # Painel Eletrônico de Chamado (fila/senha UBS/UPA)
+    "governo.ged",              # Gestão Eletrônica de Documentos
+    "governo.tfd",              # Gestão de Veículos e Agendamento de Viagens (TFD)
+    "governo.almoxarifado",     # Almoxarifado municipal (FEFO, multi-unidade, transferências)
+    "governo.laboratorio",      # Laboratório municipal — LIS
 ]
 
 # ── Plano de Saúde ───────────────────────────────────────────────────────────

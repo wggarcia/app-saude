@@ -206,6 +206,7 @@ class EmpresaMiddleware:
             "/api/gestao/integracoes/webhook/",  # webhook de sistemas de RH (auth própria via HMAC)
             "/api/farmacia/ifood/webhook/",      # webhook do iFood (auth própria via assinatura por farmácia)
             "/api/v1/dados",        # dados via API Key (BI/ERP externo)
+            "/api/v1/plano-saude/dados",  # dados via API Key (Plano de Saúde — Enterprise)
             "/api/planos-publicos",
             "/api/status-pagamento",
             "/api/webhook",
@@ -438,29 +439,32 @@ class SegmentoAccessMiddleware:
     Esta middleware garante esse isolamento verificando o prefixo da URL contra
     o setor do plano contratado pela empresa autenticada.
 
-    Prefixos → setor obrigatório:
+    Prefixos → setor(es) permitido(s):
         /api/hospital/*    → hospital
         /api/farmacia/*    → farmacia
         /api/governo/*     → governo
         /api/plano-saude/* → plano_saude
         /api/plano/*       → plano_saude
         /api/sst/*         → empresa
-        /api/rede/*        → rede
+        /api/rede/*        → rede, hospital, farmacia (endpoints de benchmarking/
+                              transferências multi-unidade são compartilhados —
+                              ver _verificar_acesso_rede em views_rede.py, que já
+                              libera explicitamente os 3 setores)
 
     Rotas de infraestrutura (/api/governanca/, /api/financeiro/, etc.) são
     protegidas pelos seus próprios decorators (dono_autenticado_from_request)
     e NÃO são alteradas aqui.
     """
 
-    # Mapa de prefixo URL → setor obrigatório
+    # Mapa de prefixo URL → setor(es) permitido(s)
     _PREFIXO_SETOR = (
-        ("/api/hospital/",    "hospital"),
-        ("/api/farmacia/",    "farmacia"),
-        ("/api/governo/",     "governo"),
-        ("/api/plano-saude/", "plano_saude"),
-        ("/api/plano/",       "plano_saude"),
-        ("/api/sst/",         "empresa"),
-        ("/api/rede/",        "rede"),
+        ("/api/hospital/",    {"hospital"}),
+        ("/api/farmacia/",    {"farmacia"}),
+        ("/api/governo/",     {"governo"}),
+        ("/api/plano-saude/", {"plano_saude"}),
+        ("/api/plano/",       {"plano_saude"}),
+        ("/api/sst/",         {"empresa"}),
+        ("/api/rede/",        {"rede", "hospital", "farmacia"}),
     )
 
     # Subprefixos que são exceção dentro de /api/plano/. Eles servem ao
@@ -482,13 +486,13 @@ class SegmentoAccessMiddleware:
             return self.get_response(request)
 
         # Determina se esta URL exige um setor específico
-        setor_obrigatorio = None
-        for prefixo, setor in self._PREFIXO_SETOR:
+        setores_permitidos = None
+        for prefixo, setores in self._PREFIXO_SETOR:
             if path.startswith(prefixo) or path == prefixo.rstrip("/"):
-                setor_obrigatorio = setor
+                setores_permitidos = setores
                 break
 
-        if setor_obrigatorio is None:
+        if setores_permitidos is None:
             # URL não está numa namespace de segmento — passa direto
             return self.get_response(request)
 
@@ -501,18 +505,19 @@ class SegmentoAccessMiddleware:
         from .access_control import get_setor
         setor_empresa = get_setor(empresa)
 
-        if setor_empresa != setor_obrigatorio:
+        if setor_empresa not in setores_permitidos:
             import json
             from django.http import JsonResponse
+            setor_requerido = "/".join(sorted(setores_permitidos))
             return JsonResponse(
                 {
                     "erro": (
-                        f"Módulo '{setor_obrigatorio}' não faz parte do seu plano. "
+                        f"Módulo '{setor_requerido}' não faz parte do seu plano. "
                         f"Seu segmento: '{setor_empresa}'. "
                         f"Cada cliente da SolusCRT acessa apenas o segmento contratado."
                     ),
                     "setor_empresa": setor_empresa,
-                    "setor_requerido": setor_obrigatorio,
+                    "setor_requerido": setor_requerido,
                 },
                 status=403,
             )

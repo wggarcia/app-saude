@@ -1100,11 +1100,16 @@ select option{background:#0b1822}
           <div style="display:grid;gap:8px;margin-top:10px">
             <div>
               <label style="display:block;margin-bottom:4px">Header de autenticação</label>
-              <div class="key-chip">Authorization: Bearer &lt;sua_chave&gt;</div>
+              <div class="key-chip">Authorization: ApiKey &lt;sua_chave&gt;</div>
             </div>
             <div>
               <label style="display:block;margin-bottom:4px">Endpoint base</label>
+              {% if setor_conta == "plano_saude" %}
+              <div class="key-chip">https://app-saude-p9n8.onrender.com/api/v1/plano-saude/dados</div>
+              <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Beneficiários, sinistros e autorizações IA — disponível no plano Enterprise.</div>
+              {% else %}
               <div class="key-chip">https://app-saude-p9n8.onrender.com/api/v1/dados</div>
+              {% endif %}
             </div>
           </div>
         </div>

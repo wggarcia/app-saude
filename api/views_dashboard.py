@@ -364,7 +364,7 @@ def governo_plataforma_page(request):
 
 
 @ensure_csrf_cookie
-@requer_setor('farmacia', 'hospital')
+@requer_setor('farmacia', 'hospital', 'rede')
 @requer_operacao_page
 def rede_gestao_page(request):
     empresa = getattr(request, "empresa", None)

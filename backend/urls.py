@@ -55,6 +55,7 @@ from api.views_plano_saude import (
     api_ps_telemedicina, api_ps_telemedicina_autorizar,
     api_ps_odontologia, api_ps_guia_odonto_detalhe,
     api_ps_regulatorio_gerar,
+    api_plano_saude_painel,
 )
 from api.views_ia import (
     api_ia_classificar,
@@ -75,6 +76,12 @@ from api.views_corporativo import (
     api_colaborador_trilhas,
     api_corporativo_rh_resumo,
     api_corporativo_rh_sincronizar,
+    api_sst_benchmarking_unidades,
+    api_sst_unidades,
+    api_sst_multi_estado,
+    api_turnos_corporativos,
+    api_turno_detalhe,
+    sst_multi_unidade_page,
 )
 from api.views_sst import (
     api_sst_dashboard,
@@ -372,6 +379,7 @@ from api.views_gestao import (
     api_benchmark,
     api_dados_empresa,
 )
+from api.views_plano_integracao import api_dados_plano_saude
 from api.views_competencia import (
     competencia_corporativa,
     api_cargos,
@@ -572,6 +580,13 @@ from api.views_hospital_farmacia import (
     api_farmacia_hosp_atualizar_estoque,
     api_farmacia_hosp_kpis,
 )
+from api.views_hospital_ia_autorizacao import (
+    hospital_ia_autorizacao_page,
+    api_hospital_ia_autorizacoes,
+    api_hospital_ia_analisar,
+    api_hospital_ia_revisar,
+    api_hospital_ia_kpis,
+)
 from api.views_hospital_lis import (
     hospital_lis_page,
     api_lis,
@@ -627,12 +642,62 @@ from api.views_governo_farmacia_basica import (
     api_farmacia_basica_dispensar,
     api_farmacia_basica_dispensacoes,
 )
+from api.views_governo_painel_chamado import (
+    governo_painel_chamado_page,
+    api_painel_gerar_senha,
+    api_painel_chamar_proxima,
+    api_painel_finalizar_senha,
+    api_painel_status,
+)
+from api.views_governo_ged import (
+    governo_ged_page,
+    api_ged_documentos,
+    api_ged_documento_detalhe,
+)
+from api.views_governo_tfd import (
+    governo_tfd_page,
+    api_tfd_kpis,
+    api_tfd_veiculos,
+    api_tfd_veiculo_detalhe,
+    api_tfd_viagens,
+    api_tfd_viagem_detalhe,
+)
+from api.views_governo_almoxarifado import (
+    governo_almoxarifado_page,
+    api_governo_unidades,
+    api_almoxarifado_kpis,
+    api_almoxarifado_produtos,
+    api_almoxarifado_lotes,
+    api_almoxarifado_dispensar,
+    api_almoxarifado_ajustar,
+    api_almoxarifado_transferir,
+    api_almoxarifado_transferencia_responder,
+    api_almoxarifado_transferencias_pendentes,
+)
+from api.views_governo_laboratorio import (
+    governo_laboratorio_page,
+    api_lab_kpis,
+    api_lab_catalogo,
+    api_lab_solicitacoes,
+    api_lab_solicitacao_detalhe,
+    api_lab_resultado_paciente,
+)
 from api.views_governo_regulacao import (
     governo_regulacao_page,
     api_regulacao_kpis,
     api_regulacao_lista,
     api_regulacao_nova,
     api_regulacao_atualizar,
+)
+from api.views_governo_sala_situacao import (
+    governo_sala_situacao_page,
+    api_governo_sala_situacao,
+)
+from api.views_governo_app_cidadao import (
+    governo_app_cidadao_page,
+    api_alertas_cidadao,
+    api_alerta_cidadao_enviar,
+    api_app_cidadao_kpis,
 )
 from api.views_governo_faturamento import (
     governo_faturamento_sus_page,
@@ -684,6 +749,7 @@ from api.views_hospital_rnds import (
     api_hospital_rnds_transmitir_rac,
     api_hospital_rnds_reprocessar,
     api_hospital_rnds_kpis,
+    hospital_rnds_page,
 )
 from api.views_farmacia_magistral import (
     api_magistral_materias_primas,
@@ -703,6 +769,7 @@ from api.views_hospital_opme import (
     api_opme_autorizacao_acao,
     api_opme_implantaveis,
     api_opme_kpis,
+    hospital_opme_page,
 )
 from api.views_governo_odontologia import (
     api_ceo_atendimentos,
@@ -721,6 +788,7 @@ from api.views_hospital_ccih import (
     api_ccih_isolamento_encerrar,
     api_ccih_indicadores,
     api_ccih_kpis,
+    hospital_ccih_page,
 )
 from api.views_governo_ceaf import (
     api_ceaf_medicamentos,
@@ -752,6 +820,7 @@ from api.views_hospital_obstetrico import (
     api_obstetrico_parto_detalhe,
     api_obstetrico_dnv,
     api_obstetrico_kpis,
+    hospital_obstetrico_page,
 )
 from api.views_governo_sipni import (
     api_sipni_status,
@@ -766,6 +835,7 @@ from api.views_hospital_assinatura import (
     api_assinatura_assinar_lote,
     api_assinatura_verificar,
     api_assinatura_kpis,
+    hospital_assinatura_page,
 )
 from api.views_governo_cnes import (
     api_cnes_buscar,
@@ -784,6 +854,7 @@ from api.views_hospital_hemoterapia import (
     api_hemo_notificar_anvisa,
     api_hemo_notivisa_download,
     api_hemo_kpis,
+    hospital_hemoterapia_page,
 )
 from api.views_hospital_oncologia import (
     api_onco_protocolos,
@@ -793,6 +864,7 @@ from api.views_hospital_oncologia import (
     api_onco_apacs,
     api_onco_apac_detalhe,
     api_onco_kpis,
+    hospital_oncologia_page,
 )
 from api.views_plano_tuss import (
     api_tuss_procedimentos,
@@ -826,7 +898,7 @@ from api.views_governo_vigilancia_sanitaria import (
 )
 from api.views_rede import (
     api_redes, api_rede_convidar, api_rede_entrar, api_rede_estoque, api_rede_item_disponibilidade,
-    api_rede_hospital_kpis,
+    api_rede_hospital_kpis, api_rede_sala_situacao,
     api_transferencias, api_transferencia_detalhe,
     api_mensagens_rede, api_mensagem_marcar_lida,
     api_planos_saude, api_plano_saude_detalhe,
@@ -1025,6 +1097,14 @@ urlpatterns = [
     path('hospital/gestao/', hospital_gestao_page),
     path('hospital/prontuario/', hospital_prontuario_page),
     path('hospital/cirurgia/', hospital_cirurgia_page),
+    path('hospital/ia-autorizacao/', hospital_ia_autorizacao_page),
+    path('hospital/assinatura/', hospital_assinatura_page),
+    path('hospital/rnds/', hospital_rnds_page),
+    path('hospital/ccih/', hospital_ccih_page),
+    path('hospital/hemoterapia/', hospital_hemoterapia_page),
+    path('hospital/obstetrico/', hospital_obstetrico_page),
+    path('hospital/oncologia/', hospital_oncologia_page),
+    path('hospital/opme/', hospital_opme_page),
     path('hospital/lis/', hospital_lis_page),
     path('hospital/imagem/', hospital_imagem_page),
     path('hospital/farmacia-hospitalar/', hospital_farmacia_page),
@@ -1032,7 +1112,14 @@ urlpatterns = [
     path('governo/gestao/', governo_gestao_page),
     path('governo/pec/', governo_pec_page),
     path('governo/farmacia-basica/', governo_farmacia_basica_page),
+    path('governo/painel-chamado/', governo_painel_chamado_page),
+    path('governo/ged/', governo_ged_page),
+    path('governo/tfd/', governo_tfd_page),
+    path('governo/almoxarifado/', governo_almoxarifado_page),
+    path('governo/laboratorio/', governo_laboratorio_page),
     path('governo/regulacao/', governo_regulacao_page),
+    path('governo/sala-situacao/', governo_sala_situacao_page),
+    path('governo/app-cidadao/', governo_app_cidadao_page),
     path('governo/regulacao-assistencial/', governo_regulacao_page),
     path('governo/faturamento-sus/', governo_faturamento_sus_page),
     path('governo/teleconsulta/', governo_teleconsulta_page),
@@ -1187,6 +1274,7 @@ urlpatterns = [
     path('sst/bem-estar/', sst_bem_estar_page),
     path('sst/riscos/', sst_riscos_page),
     path('sst/postos/', sst_postos_page),
+    path('sst/multi-unidade/', sst_multi_unidade_page),
     path('sst/comunicacao/grupos/', painel_grupos),
     # 🏥 SST / Saúde Ocupacional — API
     path('api/sst/dashboard', api_sst_dashboard),
@@ -1397,6 +1485,11 @@ urlpatterns = [
     path('api/colaborador-mobile/<str:codigo>/checkin-semanal', api_corporativo_checkin_semanal),
     path('api/colaborador-mobile/<str:codigo>/trilhas', api_colaborador_trilhas),
     path('api/corporativo/rh/resumo/', api_corporativo_rh_resumo),
+    path('api/sst/benchmarking/', api_sst_benchmarking_unidades),
+    path('api/sst/unidades/', api_sst_unidades),
+    path('api/sst/multi-estado/', api_sst_multi_estado),
+    path('api/sst/turnos/', api_turnos_corporativos),
+    path('api/sst/turnos/<int:turno_id>/', api_turno_detalhe),
     path('api/corporativo/rh/sincronizar/', api_corporativo_rh_sincronizar),
     path('api/public/resumo', app_resumo_publico),
     path('api/public/radar-local', app_radar_local),
@@ -1584,6 +1677,10 @@ urlpatterns = [
     path('api/hospital/cirurgia/agenda/', api_cirurgia_agenda),
     path('api/hospital/cirurgia/kpis/', api_cirurgia_kpis),
     path('api/hospital/cirurgia/<int:cir_id>/', api_cirurgia_atualizar),
+    path('api/hospital/ia-autorizacao/lista/', api_hospital_ia_autorizacoes),
+    path('api/hospital/ia-autorizacao/analisar/', api_hospital_ia_analisar),
+    path('api/hospital/ia-autorizacao/kpis/', api_hospital_ia_kpis),
+    path('api/hospital/ia-autorizacao/<int:ia_id>/revisar/', api_hospital_ia_revisar),
     path('api/hospital/farmacia/', api_farmacia_hosp),
     path('api/hospital/farmacia/kpis/', api_farmacia_hosp_kpis),
     path('api/hospital/farmacia/<int:item_id>/estoque/', api_farmacia_hosp_atualizar_estoque),
@@ -1605,6 +1702,7 @@ urlpatterns = [
     path('api/rede/entrar/', api_rede_entrar),
     path('api/rede/estoque/', api_rede_estoque),
     path('api/rede/hospital-kpis/', api_rede_hospital_kpis),
+    path('api/rede/sala-situacao/', api_rede_sala_situacao),
     path('api/rede/disponibilidade/<str:nome_item>/', api_rede_item_disponibilidade),
     path('api/rede/transferencias/', api_transferencias),
     path('api/rede/transferencias/<int:transferencia_id>/', api_transferencia_detalhe),
@@ -1734,10 +1832,39 @@ urlpatterns = [
     path('api/governo/farmacia-basica/itens/', api_farmacia_basica_itens),
     path('api/governo/farmacia-basica/dispensar/', api_farmacia_basica_dispensar),
     path('api/governo/farmacia-basica/dispensacoes/', api_farmacia_basica_dispensacoes),
+    path('api/governo/painel-chamado/gerar/', api_painel_gerar_senha),
+    path('api/governo/painel-chamado/chamar/', api_painel_chamar_proxima),
+    path('api/governo/painel-chamado/<int:senha_id>/finalizar/', api_painel_finalizar_senha),
+    path('api/governo/painel-chamado/status/', api_painel_status),
+    path('api/governo/ged/documentos/', api_ged_documentos),
+    path('api/governo/ged/documentos/<int:doc_id>/', api_ged_documento_detalhe),
+    path('api/governo/tfd/kpis/', api_tfd_kpis),
+    path('api/governo/tfd/veiculos/', api_tfd_veiculos),
+    path('api/governo/tfd/veiculos/<int:veiculo_id>/', api_tfd_veiculo_detalhe),
+    path('api/governo/tfd/viagens/', api_tfd_viagens),
+    path('api/governo/tfd/viagens/<int:viagem_id>/', api_tfd_viagem_detalhe),
+    path('api/governo/almoxarifado/unidades/', api_governo_unidades),
+    path('api/governo/almoxarifado/kpis/', api_almoxarifado_kpis),
+    path('api/governo/almoxarifado/produtos/', api_almoxarifado_produtos),
+    path('api/governo/almoxarifado/lotes/', api_almoxarifado_lotes),
+    path('api/governo/almoxarifado/lotes/<int:lote_id>/ajustar/', api_almoxarifado_ajustar),
+    path('api/governo/almoxarifado/lotes/<int:lote_id>/transferir/', api_almoxarifado_transferir),
+    path('api/governo/almoxarifado/dispensar/', api_almoxarifado_dispensar),
+    path('api/governo/almoxarifado/transferencias-pendentes/', api_almoxarifado_transferencias_pendentes),
+    path('api/governo/almoxarifado/transferencias/<int:mov_id>/responder/', api_almoxarifado_transferencia_responder),
+    path('api/governo/laboratorio/kpis/', api_lab_kpis),
+    path('api/governo/laboratorio/catalogo/', api_lab_catalogo),
+    path('api/governo/laboratorio/solicitacoes/', api_lab_solicitacoes),
+    path('api/governo/laboratorio/solicitacoes/<int:sol_id>/', api_lab_solicitacao_detalhe),
+    path('api/governo/laboratorio/resultado-paciente/', api_lab_resultado_paciente),
     path('api/governo/regulacao-assistencial/kpis/', api_regulacao_kpis),
     path('api/governo/regulacao-assistencial/', api_regulacao_lista),
     path('api/governo/regulacao-assistencial/nova/', api_regulacao_nova),
     path('api/governo/regulacao-assistencial/<int:reg_id>/atualizar/', api_regulacao_atualizar),
+    path('api/governo/sala-situacao/', api_governo_sala_situacao),
+    path('api/governo/app-cidadao/alertas/', api_alertas_cidadao),
+    path('api/governo/app-cidadao/alertas/<int:alerta_id>/enviar/', api_alerta_cidadao_enviar),
+    path('api/governo/app-cidadao/kpis/', api_app_cidadao_kpis),
     path('api/governo/faturamento-sus/kpis/', api_faturamento_sus_kpis),
     path('api/governo/faturamento-sus/lotes/', api_faturamento_sus_lotes),
     path('api/governo/faturamento-sus/<int:lote_id>/transmitir/', api_faturamento_sus_transmitir),
@@ -2069,6 +2196,7 @@ urlpatterns = [
 
     # ── Dados via API Key (BI / ERP externo) ─────────────────────────────────
     path('api/v1/dados', api_dados_empresa),
+    path('api/v1/plano-saude/dados', api_dados_plano_saude),
 
     # ── Assinatura Digital SST ────────────────────────────────────────────────
     path('api/sst/assinaturas', api_sst_assinaturas),
@@ -2115,6 +2243,8 @@ urlpatterns = [
     path('api/plano-saude/inscricoes/<int:inscricao_id>', api_ps_inscricao_detalhe),
     # Sinistralidade + IA
     path('api/plano-saude/sinistralidade-ia', api_ps_sinistralidade_ia),
+    path('api/plano/epidemiologia', api_plano_saude_painel),
+    path('api/plano/epidemiologia/', api_plano_saude_painel),
     # ── Enterprise modules ──────────────────────────────────────────────────
     path('api/plano-saude/dashboard-exec/', api_ps_dashboard_exec),
     path('api/plano-saude/sla/', api_ps_sla),
