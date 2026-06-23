@@ -9,6 +9,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .corporativo_ai import MIN_GROUP_SIZE, build_empresa_corporativo_payload
 from .models import (
+    AfastamentoSST,
+    ASOOcupacional,
     CheckinDiarioCorporativo,
     CheckinSemanalCorporativo,
     ColaboradorAliasCorporativo,
@@ -17,12 +19,17 @@ from .models import (
     EmpresaSetor,
     EmpresaTurno,
     EmpresaUnidade,
+    EntregaEPI,
     EvidenciaCompetenciaCorporativa,
     FuncionarioSST,
     PedidoApoioCorporativo,
     TrilhaCompetenciaCorporativa,
+    TreinamentoNR,
 )
-from .access_control import api_requer_feature, dentro_do_limite, empresa_tem_feature
+from .access_control import (
+    api_requer_feature, dentro_do_limite, empresa_tem_feature,
+    contexto_navegacao_setorial, requer_feature_pacote, requer_operacao_page, requer_setor,
+)
 from .services.dashboard_core import setor_conta
 from .views_dashboard import _empresa_autenticada
 
@@ -526,3 +533,225 @@ def api_corporativo_rh_sincronizar(request):
             *([f"{esocial_erros} evento(s) eSocial com erro."] if esocial_erros else []),
         ],
     })
+
+
+# ─── Página: Multi-Unidade (Turnos, Benchmarking, Multi-Estado) ──────────────
+
+@requer_setor("empresa")
+@requer_feature_pacote("sst.multi_unidade", "Multi-Unidade")
+@requer_operacao_page
+def sst_multi_unidade_page(request):
+    return render(request, "sst_multi_unidade.html", contexto_navegacao_setorial(request, "empresa"))
+
+
+# ─── Benchmarking entre unidades (sst.benchmarking) ───────────────────────────
+
+@csrf_exempt
+@api_requer_feature("sst.benchmarking")
+def api_sst_benchmarking_unidades(request):
+    """GET /api/sst/benchmarking/ — compara métricas SST entre unidades da empresa."""
+    empresa = _empresa_corporativa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    hoje = date.today()
+    inicio_mes = hoje.replace(day=1)
+    unidades = EmpresaUnidade.objects.filter(empresa=empresa, ativo=True).order_by("nome")
+
+    ranking = []
+    for u in unidades:
+        func_qs = FuncionarioSST.objects.filter(empresa=empresa, unidade=u)
+        total_func = func_qs.filter(ativo=True).count()
+
+        asos_vencidos = ASOOcupacional.objects.filter(
+            funcionario__unidade=u, data_validade__lt=hoje
+        ).count()
+        afastamentos_ativos = AfastamentoSST.objects.filter(
+            funcionario__unidade=u, status=AfastamentoSST.STATUS_ATIVO
+        ).count()
+        treinamentos_vencidos = TreinamentoNR.objects.filter(
+            funcionario__unidade=u, status="vencido"
+        ).count()
+        epis_entregues_mes = EntregaEPI.objects.filter(
+            funcionario__unidade=u, data_entrega__gte=inicio_mes
+        ).count()
+
+        # Score de conformidade 0–100: cada pendência por funcionário pesa contra a unidade.
+        pendencias = asos_vencidos + afastamentos_ativos + treinamentos_vencidos
+        score = max(0, 100 - round((pendencias / total_func) * 25)) if total_func else 100
+
+        ranking.append({
+            "unidade_id": u.id,
+            "unidade_nome": u.nome,
+            "codigo": u.codigo,
+            "total_funcionarios": total_func,
+            "asos_vencidos": asos_vencidos,
+            "afastamentos_ativos": afastamentos_ativos,
+            "treinamentos_vencidos": treinamentos_vencidos,
+            "epis_entregues_mes": epis_entregues_mes,
+            "score_conformidade": score,
+        })
+
+    ranking.sort(key=lambda r: r["score_conformidade"], reverse=True)
+    for i, r in enumerate(ranking, start=1):
+        r["posicao"] = i
+
+    media_score = round(sum(r["score_conformidade"] for r in ranking) / len(ranking), 1) if ranking else 0.0
+
+    return JsonResponse({
+        "total_unidades": len(ranking),
+        "media_score_conformidade": media_score,
+        "ranking": ranking,
+    })
+
+
+# ─── Unidades — cadastro com UF (necessário p/ multi-estado) ─────────────────
+
+@csrf_exempt
+def api_sst_unidades(request):
+    """GET lista unidades com UF | PATCH define a UF de uma unidade (?id=)."""
+    empresa = _empresa_corporativa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    if request.method == "GET":
+        unidades = EmpresaUnidade.objects.filter(empresa=empresa, ativo=True).order_by("nome")
+        return JsonResponse({"unidades": [
+            {"id": u.id, "nome": u.nome, "codigo": u.codigo, "estado": u.estado}
+            for u in unidades
+        ]})
+
+    if request.method == "PATCH":
+        try:
+            data = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"erro": "JSON inválido"}, status=400)
+        unidade_id = data.get("id")
+        estado = (data.get("estado") or "").strip().upper()[:2]
+        try:
+            u = EmpresaUnidade.objects.get(pk=unidade_id, empresa=empresa)
+        except EmpresaUnidade.DoesNotExist:
+            return JsonResponse({"erro": "Unidade não encontrada"}, status=404)
+        u.estado = estado
+        u.save(update_fields=["estado"])
+        return JsonResponse({"ok": True, "id": u.id, "estado": u.estado})
+
+    return JsonResponse({"erro": "Método não permitido"}, status=405)
+
+
+# ─── Multi-Estado / Regional (sst.multi_estado) ───────────────────────────────
+
+@csrf_exempt
+@api_requer_feature("sst.multi_estado")
+def api_sst_multi_estado(request):
+    """GET /api/sst/multi-estado/ — rollup regional (por UF) das métricas SST."""
+    empresa = _empresa_corporativa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    hoje = date.today()
+    inicio_mes = hoje.replace(day=1)
+    unidades = EmpresaUnidade.objects.filter(empresa=empresa, ativo=True)
+
+    por_estado = {}
+    for u in unidades:
+        uf = u.estado or "—"
+        por_estado.setdefault(uf, []).append(u)
+
+    regioes = []
+    for uf, unidades_uf in sorted(por_estado.items()):
+        total_func = FuncionarioSST.objects.filter(empresa=empresa, unidade__in=unidades_uf, ativo=True).count()
+        asos_vencidos = ASOOcupacional.objects.filter(
+            funcionario__unidade__in=unidades_uf, data_validade__lt=hoje
+        ).count()
+        afastamentos_ativos = AfastamentoSST.objects.filter(
+            funcionario__unidade__in=unidades_uf, status=AfastamentoSST.STATUS_ATIVO
+        ).count()
+        treinamentos_vencidos = TreinamentoNR.objects.filter(
+            funcionario__unidade__in=unidades_uf, status="vencido"
+        ).count()
+        epis_entregues_mes = EntregaEPI.objects.filter(
+            funcionario__unidade__in=unidades_uf, data_entrega__gte=inicio_mes
+        ).count()
+
+        regioes.append({
+            "estado": uf,
+            "total_unidades": len(unidades_uf),
+            "total_funcionarios": total_func,
+            "asos_vencidos": asos_vencidos,
+            "afastamentos_ativos": afastamentos_ativos,
+            "treinamentos_vencidos": treinamentos_vencidos,
+            "epis_entregues_mes": epis_entregues_mes,
+        })
+
+    return JsonResponse({
+        "total_estados": len([r for r in regioes if r["estado"] != "—"]),
+        "regioes": regioes,
+    })
+
+
+def _turno_dict(t):
+    return {
+        "id": t.id, "nome": t.nome, "janela": t.janela, "ativo": t.ativo,
+        "total_colaboradores": t.aliases.count(),
+        "criado_em": t.criado_em.isoformat(),
+    }
+
+
+@csrf_exempt
+@api_requer_feature("sst.turnos")
+def api_turnos_corporativos(request):
+    """GET lista / POST cria turno de trabalho da empresa."""
+    empresa = _empresa_corporativa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    if request.method == "GET":
+        qs = EmpresaTurno.objects.filter(empresa=empresa)
+        return JsonResponse({"turnos": [_turno_dict(t) for t in qs]})
+
+    if request.method == "POST":
+        dados = json.loads(request.body or "{}")
+        nome = (dados.get("nome") or "").strip()
+        if not nome:
+            return JsonResponse({"erro": "nome é obrigatório"}, status=400)
+        if EmpresaTurno.objects.filter(empresa=empresa, nome=nome).exists():
+            return JsonResponse({"erro": "já existe um turno com esse nome"}, status=400)
+        turno = EmpresaTurno.objects.create(empresa=empresa, nome=nome, janela=(dados.get("janela") or "").strip())
+        return JsonResponse({"ok": True, "turno": _turno_dict(turno)}, status=201)
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)
+
+
+@csrf_exempt
+@api_requer_feature("sst.turnos")
+def api_turno_detalhe(request, turno_id):
+    """PATCH atualiza (nome/janela/ativo) / DELETE desativa um turno."""
+    empresa = _empresa_corporativa_autenticada(request)
+    if not empresa:
+        return JsonResponse({"erro": "Não autenticado"}, status=401)
+
+    turno = EmpresaTurno.objects.filter(id=turno_id, empresa=empresa).first()
+    if not turno:
+        return JsonResponse({"erro": "turno não encontrado"}, status=404)
+
+    if request.method == "PATCH":
+        dados = json.loads(request.body or "{}")
+        if "nome" in dados:
+            nome = (dados.get("nome") or "").strip()
+            if not nome:
+                return JsonResponse({"erro": "nome não pode ser vazio"}, status=400)
+            turno.nome = nome
+        if "janela" in dados:
+            turno.janela = (dados.get("janela") or "").strip()
+        if "ativo" in dados:
+            turno.ativo = bool(dados.get("ativo"))
+        turno.save()
+        return JsonResponse({"ok": True, "turno": _turno_dict(turno)})
+
+    if request.method == "DELETE":
+        turno.ativo = False
+        turno.save(update_fields=["ativo"])
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"erro": "método não permitido"}, status=405)

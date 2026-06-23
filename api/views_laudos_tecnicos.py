@@ -18,6 +18,8 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 
+from .access_control import api_requer_feature
+
 
 def _empresa(request):
     empresa = getattr(request, "empresa", None)
@@ -86,6 +88,7 @@ def _laudo_dict(laudo):
 
 
 @csrf_exempt
+@api_requer_feature("sst.laudos_tecnicos")
 def api_laudos_lista(request):
     empresa = _empresa(request)
     if not empresa:
@@ -121,6 +124,7 @@ def api_laudos_lista(request):
 
 
 @csrf_exempt
+@api_requer_feature("sst.laudos_tecnicos")
 def api_laudos_criar(request):
     empresa = _empresa(request)
     if not empresa:
@@ -169,6 +173,7 @@ def api_laudos_criar(request):
 
 
 @csrf_exempt
+@api_requer_feature("sst.laudos_tecnicos")
 def api_laudo_detalhe(request, laudo_id):
     empresa = _empresa(request)
     if not empresa:
@@ -191,6 +196,7 @@ def api_laudo_detalhe(request, laudo_id):
 
 
 @csrf_exempt
+@api_requer_feature("sst.laudos_tecnicos")
 def api_laudo_assinar(request, laudo_id):
     empresa = _empresa(request)
     if not empresa:
@@ -211,6 +217,7 @@ def api_laudo_assinar(request, laudo_id):
 
 
 @csrf_exempt
+@api_requer_feature("sst.laudos_tecnicos")
 def api_laudo_pdf(request, laudo_id):
     empresa = _empresa(request)
     if not empresa:
@@ -342,6 +349,7 @@ def api_laudo_pdf(request, laudo_id):
 
 
 @csrf_exempt
+@api_requer_feature("sst.laudos_tecnicos")
 def api_laudos_kpis(request):
     """Painel de validade dos laudos — alertas de vencimento."""
     empresa = _empresa(request)
