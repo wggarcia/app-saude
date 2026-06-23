@@ -624,11 +624,21 @@ def api_mensagem_marcar_lida(request, msg_id):
 
 # ─── PLANO DE SAÚDE ──────────────────────────────────────────────────────────
 
-@csrf_exempt
-def api_planos_saude(request):
+def _ps_auth_rede(request):
+    """Retorna (empresa, erro_response). Verifica setor plano_saude."""
     empresa = get_empresa(request)
     if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+        return None, JsonResponse({'erro': 'Não autenticado'}, status=401)
+    if get_setor(empresa) != "plano_saude":
+        return None, JsonResponse({'erro': 'Módulo Plano de Saúde não disponível para este plano.'}, status=403)
+    return empresa, None
+
+
+@csrf_exempt
+def api_planos_saude(request):
+    empresa, err = _ps_auth_rede(request)
+    if err:
+        return err
 
     if request.method == 'GET':
         planos = list(PlanoSaude.objects.filter(empresa=empresa).values(
@@ -660,9 +670,9 @@ def api_planos_saude(request):
 
 @csrf_exempt
 def api_plano_saude_detalhe(request, plano_id):
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _ps_auth_rede(request)
+    if err:
+        return err
 
     try:
         plano = PlanoSaude.objects.get(id=plano_id, empresa=empresa)
@@ -681,9 +691,9 @@ def api_plano_saude_detalhe(request, plano_id):
 
 @csrf_exempt
 def api_beneficiarios(request, plano_id):
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _ps_auth_rede(request)
+    if err:
+        return err
 
     try:
         plano = PlanoSaude.objects.get(id=plano_id, empresa=empresa)
@@ -726,9 +736,9 @@ def api_beneficiarios(request, plano_id):
 
 @csrf_exempt
 def api_beneficiario_detalhe(request, plano_id, ben_id):
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _ps_auth_rede(request)
+    if err:
+        return err
 
     try:
         plano = PlanoSaude.objects.get(id=plano_id, empresa=empresa)
@@ -761,9 +771,9 @@ def api_beneficiario_detalhe(request, plano_id, ben_id):
 def api_carencias(request):
     """GET/POST /api/plano-saude/carencias/ — list or create carências"""
     from datetime import date
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _ps_auth_rede(request)
+    if err:
+        return err
 
     if request.method == 'GET':
         plano_id = request.GET.get('plano_id')
@@ -823,9 +833,9 @@ def api_carencias(request):
 @csrf_exempt
 def api_carencia_detalhe(request, carencia_id):
     """DELETE /api/plano-saude/carencias/<id>/ — remove carência"""
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _ps_auth_rede(request)
+    if err:
+        return err
     try:
         c = CarenciaBeneficiario.objects.get(id=carencia_id, empresa=empresa)
     except CarenciaBeneficiario.DoesNotExist:
@@ -839,9 +849,9 @@ def api_carencia_detalhe(request, carencia_id):
 @csrf_exempt
 def api_portabilidade(request):
     """POST /api/plano-saude/portabilidade/ — transfer beneficiary between plans"""
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _ps_auth_rede(request)
+    if err:
+        return err
     if request.method != 'POST':
         return JsonResponse({'erro': 'Método não permitido'}, status=405)
     try:
@@ -876,9 +886,9 @@ def api_portabilidade(request):
 
 @csrf_exempt
 def api_guias(request, plano_id):
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _ps_auth_rede(request)
+    if err:
+        return err
 
     try:
         plano = PlanoSaude.objects.get(id=plano_id, empresa=empresa)
@@ -949,9 +959,9 @@ def api_guias(request, plano_id):
 
 @csrf_exempt
 def api_guia_detalhe(request, plano_id, guia_id):
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _ps_auth_rede(request)
+    if err:
+        return err
 
     try:
         plano = PlanoSaude.objects.get(id=plano_id, empresa=empresa)
@@ -983,9 +993,9 @@ def api_guia_detalhe(request, plano_id, guia_id):
 # ─── KPIs PLANO DE SAÚDE ─────────────────────────────────────────────────────
 
 def api_plano_kpis(request, plano_id):
-    empresa = get_empresa(request)
-    if not empresa:
-        return JsonResponse({'erro': 'Não autenticado'}, status=401)
+    empresa, err = _ps_auth_rede(request)
+    if err:
+        return err
 
     try:
         plano = PlanoSaude.objects.get(id=plano_id, empresa=empresa)

@@ -630,6 +630,12 @@ tr:hover td{background:rgba(255,107,157,.03)}
 
   <!-- COPARTICIPACAO -->
   <div class="tab-panel" id="tab-coparticipacao" style="margin-top:4px">
+    <div id="cpLockBanner" class="card" style="display:none;padding:28px;text-align:center;margin-bottom:18px">
+      <div style="font-size:28px;margin-bottom:8px">&#128274;</div>
+      <div style="font-size:14px;font-weight:800;margin-bottom:6px">Coparticipação é exclusivo do plano Enterprise</div>
+      <div style="font-size:12px;color:var(--muted);max-width:460px;margin:0 auto">Fale com o time SolusCRT para liberar este módulo.</div>
+    </div>
+    <div id="cpConteudo">
     <div class="card">
       <div class="card-header">
         <span class="card-title">Regras de Coparticipacao por Plano</span>
@@ -645,10 +651,17 @@ tr:hover td{background:rgba(255,107,157,.03)}
         <tbody id="tbodyCopart"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
       </table>
     </div>
+    </div>
   </div>
 
   <!-- FATURAMENTO -->
   <div class="tab-panel" id="tab-faturamento" style="margin-top:4px">
+    <div id="ftLockBanner" class="card" style="display:none;padding:28px;text-align:center;margin-bottom:18px">
+      <div style="font-size:28px;margin-bottom:8px">&#128274;</div>
+      <div style="font-size:14px;font-weight:800;margin-bottom:6px">Faturamento é exclusivo do plano Enterprise</div>
+      <div style="font-size:12px;color:var(--muted);max-width:460px;margin:0 auto">Fale com o time SolusCRT para liberar este módulo.</div>
+    </div>
+    <div id="ftConteudo">
     <div class="summary-grid" id="faturSummary" style="margin-bottom:18px">
       <div class="summary-box"><div class="summary-box-title">Total Mensalidades</div><div class="summary-box-val" id="ftTotalMens">—</div></div>
       <div class="summary-box"><div class="summary-box-title">Total Coparticipacao</div><div class="summary-box-val" id="ftTotalCopart">—</div></div>
@@ -674,6 +687,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
         <thead><tr><th>Competencia</th><th>Beneficiario</th><th>Plano</th><th>Mensalidade</th><th>Copart.</th><th>Total</th><th>Vencimento</th><th>Status</th><th>Acoes</th></tr></thead>
         <tbody id="tbodyFaturas"><tr><td colspan="9" class="empty">Carregando...</td></tr></tbody>
       </table>
+    </div>
     </div>
   </div>
 
@@ -2730,7 +2744,18 @@ async function deletarGlosa(id) {
 async function carregarCoparticipacao() {
   var plano = document.getElementById('filtroPlanoCopart').value;
   var url = '/api/plano-saude/coparticipacao' + (plano ? '?plano_id='+plano : '');
-  var data = await api(url);
+  var r = await fetch(url, { credentials: 'include', headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()} });
+  if (!r.ok) {
+    var err = await r.json().catch(function(){ return {}; });
+    if (r.status === 403 && err.upgrade_necessario) {
+      document.getElementById('cpLockBanner').style.display = '';
+      document.getElementById('cpConteudo').style.display = 'none';
+    }
+    return;
+  }
+  document.getElementById('cpLockBanner').style.display = 'none';
+  document.getElementById('cpConteudo').style.display = '';
+  var data = await r.json();
   if (!data) return;
   var tb = document.getElementById('tbodyCopart');
   var regras = data.regras || [];
@@ -2776,7 +2801,18 @@ async function carregarFaturamento() {
   if (comp) params.push('competencia='+comp);
   if (status) params.push('status='+status);
   var url = '/api/plano-saude/faturamento' + (params.length ? '?'+params.join('&') : '');
-  var data = await api(url);
+  var r = await fetch(url, { credentials: 'include', headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()} });
+  if (!r.ok) {
+    var err = await r.json().catch(function(){ return {}; });
+    if (r.status === 403 && err.upgrade_necessario) {
+      document.getElementById('ftLockBanner').style.display = '';
+      document.getElementById('ftConteudo').style.display = 'none';
+    }
+    return;
+  }
+  document.getElementById('ftLockBanner').style.display = 'none';
+  document.getElementById('ftConteudo').style.display = '';
+  var data = await r.json();
   if (!data) return;
 
   document.getElementById('ftTotalMens').textContent = 'R$ ' + (data.total_mensalidade||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
@@ -2976,7 +3012,15 @@ async function carregarSinistralidade() {
 }
 
 async function carregarEpidemiologia() {
-  var data = await api('/api/plano/epidemiologia/');
+  var r = await fetch('/api/plano/epidemiologia/', { credentials: 'include', headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()} });
+  if (!r.ok) {
+    var err = await r.json().catch(function(){ return {}; });
+    if (r.status === 403 && err.upgrade_necessario) {
+      document.getElementById('epiConteudo').innerHTML = '<div class="card" style="padding:28px;text-align:center"><div style="font-size:28px;margin-bottom:8px">&#128274;</div><div style="font-size:14px;font-weight:800;margin-bottom:6px">Radar Epidemiológico não disponível no plano atual</div><div style="font-size:12px;color:var(--muted)">Fale com o time SolusCRT para liberar este módulo.</div></div>';
+    }
+    return;
+  }
+  var data = await r.json();
   if (!data || data.status !== 'ok') return;
   var p = data.painel || {};
 

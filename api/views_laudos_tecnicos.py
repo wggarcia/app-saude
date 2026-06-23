@@ -396,9 +396,10 @@ def api_laudos_kpis(request):
 
 # ── Página HTML ───────────────────────────────────────────────────────────────
 
-from .access_control import requer_permissao_modulo
+from .access_control import requer_permissao_modulo, requer_feature_pacote
 
 
+@requer_feature_pacote("sst.laudos_tecnicos", "Laudos Técnicos")
 @requer_permissao_modulo("sst.clinico")
 def sst_laudos_page(request):
     from django.shortcuts import render, redirect

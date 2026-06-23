@@ -12,7 +12,8 @@ from django.db.models import Avg
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .access_control import (
-    api_requer_feature, requer_setor, requer_operacao_page, requer_permissao_modulo,
+    api_requer_feature, requer_setor, requer_feature_pacote,
+    requer_operacao_page, requer_permissao_modulo,
 )
 from .models import IAAutorizacaoClinica
 from .views_dashboard import _empresa_autenticada, contexto_navegacao_setorial
@@ -89,6 +90,7 @@ def _analisar_solicitacao(tipo_solicitacao: str, procedimento: str, cid10: str, 
 
 @ensure_csrf_cookie
 @requer_setor("hospital")
+@requer_feature_pacote("hospital.ia_autorizacao", "IA de Autorização Clínica")
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_ia_autorizacao_page(request):

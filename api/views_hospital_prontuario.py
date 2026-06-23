@@ -19,6 +19,7 @@ from .access_control import (
     get_setor,
     principal_pode_operacao_setorial,
     requer_setor,
+    requer_feature_pacote,
     requer_operacao_page,
     requer_permissao_modulo,
 )
@@ -92,6 +93,7 @@ def _presc_to_dict(p):
 
 @ensure_csrf_cookie
 @requer_setor("hospital")
+@requer_feature_pacote("hospital.emr", "Prontuário Eletrônico")
 @requer_operacao_page
 @requer_permissao_modulo("hospital.clinico")
 def hospital_prontuario_page(request):
