@@ -213,6 +213,7 @@ tr:hover td{background:rgba(255,107,157,.03)}
     <summary><div class="nav-section">IA, Compliance e Relacionamento</div></summary>
     <div class="nav-group-body">
       <button class="tab-btn" onclick="setTab('sinistralidade')"><span>&#129504;</span> Sinistralidade IA</button>
+      <button class="tab-btn" onclick="setTab('epidemiologia')"><span>&#127757;</span> Radar Epidemiologico</button>
       <button class="tab-btn" onclick="setTab('auditoria')"><span>&#128269;</span> Auditoria Medica</button>
       <button class="tab-btn" onclick="setTab('carencias')"><span>&#8987;</span> Carencias</button>
       <button class="tab-btn" onclick="setTab('portabilidade')"><span>&#128257;</span> Portabilidade</button>
@@ -701,6 +702,12 @@ tr:hover td{background:rgba(255,107,157,.03)}
 
   <!-- SINISTRALIDADE IA -->
   <div class="tab-panel" id="tab-sinistralidade" style="margin-top:4px">
+    <div id="siaLockBanner" class="card" style="display:none;padding:28px;text-align:center;margin-bottom:18px">
+      <div style="font-size:28px;margin-bottom:8px">&#128274;</div>
+      <div style="font-size:14px;font-weight:800;margin-bottom:6px">Sinistralidade IA é exclusivo do plano Enterprise</div>
+      <div style="font-size:12px;color:var(--muted);max-width:460px;margin:0 auto">Cruzamento de sinistralidade por segmento/produto com radar epidemiológico em tempo real. Fale com o time SolusCRT para liberar este módulo.</div>
+    </div>
+    <div id="siaConteudo">
     <!-- KPIs principais -->
     <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
       <div class="kpi warn"><div class="kpi-val" id="siaTaxaSinistralidade">—</div><div class="kpi-lbl">Sinistralidade % (ano)</div></div>
@@ -750,6 +757,30 @@ tr:hover td{background:rgba(255,107,157,.03)}
           <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Tipos de Sinistros no Periodo</div>
           <div id="siaSinistrosCids"></div>
         </div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- TAB: RADAR EPIDEMIOLOGICO ───────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-epidemiologia" style="margin-top:4px">
+    <div id="epiConteudo">
+      <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+        <div class="kpi warn"><div class="kpi-val" id="epiRisco">—</div><div class="kpi-lbl">Risco Territorial</div></div>
+        <div class="kpi"><div class="kpi-val" id="epiCrescimento">—</div><div class="kpi-lbl">Crescimento de Casos</div></div>
+        <div class="kpi"><div class="kpi-val" id="epiCasos">—</div><div class="kpi-lbl">Casos Totais (regiao)</div></div>
+        <div class="kpi info"><div class="kpi-val" id="epiPressao">—</div><div class="kpi-lbl">Pressao sobre Sinistralidade</div></div>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">&#127757; Doenca Dominante e Sinistros de Urgencia (30d)</span></div>
+        <div id="epiResumo" style="padding:16px;font-size:13px;color:var(--text)">Carregando...</div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">&#128205; Zonas de Risco por Municipio</span></div>
+        <table>
+          <thead><tr><th>Municipio</th><th>UF</th><th>Risco</th><th>Crescimento</th><th>Casos Ativos</th></tr></thead>
+          <tbody id="epiZonas"><tr><td colspan="5" class="empty">Calculando...</td></tr></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -2867,7 +2898,18 @@ async function encerrarInscricao(id) {
 // ── SINISTRALIDADE IA ────────────────────────────────────────────────────────
 
 async function carregarSinistralidade() {
-  var data = await api('/api/plano-saude/sinistralidade-ia');
+  var r = await fetch('/api/plano-saude/sinistralidade-ia', { credentials: 'include', headers: {'Content-Type':'application/json','X-CSRFToken':getCsrf()} });
+  if (!r.ok) {
+    var err = await r.json().catch(function(){ return {}; });
+    if (r.status === 403 && err.upgrade_necessario) {
+      document.getElementById('siaLockBanner').style.display = '';
+      document.getElementById('siaConteudo').style.display = 'none';
+    }
+    return;
+  }
+  document.getElementById('siaLockBanner').style.display = 'none';
+  document.getElementById('siaConteudo').style.display = '';
+  var data = await r.json();
   if (!data) return;
 
   // KPIs
@@ -2933,6 +2975,30 @@ async function carregarSinistralidade() {
   }).join('') : '<div class="empty" style="padding:20px">Sem sinistros no periodo</div>';
 }
 
+async function carregarEpidemiologia() {
+  var data = await api('/api/plano/epidemiologia/');
+  if (!data || data.status !== 'ok') return;
+  var p = data.painel || {};
+
+  document.getElementById('epiRisco').textContent = p.risco_territorial || '—';
+  document.getElementById('epiCrescimento').textContent = (p.crescimento_percent||0).toFixed(1) + '%';
+  document.getElementById('epiCasos').textContent = p.casos_total || 0;
+  document.getElementById('epiPressao').textContent = p.pressao_sinistralidade_estimada || '—';
+
+  document.getElementById('epiResumo').innerHTML =
+    '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>Doenca dominante na regiao</span><strong>'+(p.doenca_dominante || 'Sem dado dominante')+'</strong></div>' +
+    '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>Sinistros de urgencia/internacao (30d)</span><strong>'+(p.sinistros_urgencia_internacao_30d||0)+'</strong></div>' +
+    '<div style="display:flex;justify-content:space-between;padding:6px 0"><span>Total de sinistros (30d)</span><strong>'+(p.total_sinistros_30d||0)+'</strong></div>';
+
+  var zonas = p.zonas_risco || [];
+  var tb = document.getElementById('epiZonas');
+  if (!zonas.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Sem zonas de risco identificadas</td></tr>'; return; }
+  var riscoCor = {ALTO:'badge-danger', CRITICO:'badge-danger', MODERADO:'badge-warn', BAIXO:'badge-ok'};
+  tb.innerHTML = zonas.map(function(z) {
+    return '<tr><td style="font-weight:700">'+z.municipio+'</td><td>'+(z.estado||'—')+'</td><td><span class="badge '+(riscoCor[z.risco]||'badge-gray')+'">'+z.risco+'</span></td><td>'+(z.crescimento_percent||0).toFixed(1)+'%</td><td>'+(z.casos_ativos||0)+'</td></tr>';
+  }).join('');
+}
+
 // ── setTab extended ───────────────────────────────────────────────────────────
 
 var _tabLoaded = {};
@@ -2946,6 +3012,7 @@ setTab = function(name) {
   else if (name === 'faturamento') carregarFaturamento();
   else if (name === 'programas') carregarProgramas();
   else if (name === 'sinistralidade') carregarSinistralidade();
+  else if (name === 'epidemiologia') carregarEpidemiologia();
   else if (name === 'carencias') { carregarCarencias(); popularSelectsCarencia(); }
   else if (name === 'portabilidade') popularSelectsPortabilidade();
   else if (name === 'dashboard') loadDashboard();
@@ -4122,6 +4189,7 @@ document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeM
     visao: 'plano.autorizacao', dashboard: 'plano.autorizacao', beneficiarios: 'plano.autorizacao',
     planos: 'plano.autorizacao', guias: 'plano.autorizacao', sla: 'plano.autorizacao',
     fila: 'plano.autorizacao', sinistralidade: 'plano.autorizacao', auditoria: 'plano.autorizacao',
+    epidemiologia: 'plano.autorizacao',
     prestadores: 'plano.rede_credenciada', portal: 'plano.rede_credenciada', integracoes: 'plano.rede_credenciada',
     faturamento: 'plano.rede_credenciada', coparticipacao: 'plano.rede_credenciada', reembolsos: 'plano.rede_credenciada',
     glosas: 'plano.rede_credenciada', sinistros: 'plano.rede_credenciada',

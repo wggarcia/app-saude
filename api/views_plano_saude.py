@@ -2012,6 +2012,7 @@ def _score_risco_beneficiario(beneficiario, sinistros_qs, epidemio):
     return min(100, score)
 
 
+@api_requer_feature("plano.sinistralidade_avancada")
 def api_ps_sinistralidade_ia(request):
     """
     Analytics avançado de sinistralidade com IA: scoring de risco por beneficiário,
@@ -3086,3 +3087,61 @@ def api_ps_regulatorio_gerar(request):
         return JsonResponse({"erro": f"Tipo '{tipo}' não suportado. Use: DIOPS, SIB, TISS"}, status=400)
 
     return JsonResponse({"ok": True, "tipo": tipo, "payload": payload})
+
+
+@api_requer_feature("plano.epidemiologia")
+def api_plano_saude_painel(request):
+    """GET /api/plano/epidemiologia/ — alertas de risco territorial por município, cruzados com sinistros reais da operadora."""
+    empresa, err = _ps_auth(request)
+    if err:
+        return err
+
+    from .epidemiologia import build_panorama_payload
+
+    try:
+        payload = build_panorama_payload()
+    except Exception:
+        return JsonResponse({"erro": "dados indisponíveis"}, status=503)
+
+    overview = payload.get("overview", {})
+    municipios = payload.get("layers", {}).get("municipios", [])
+
+    zonas_risco = sorted(municipios, key=lambda m: m.get("risk_score", 0), reverse=True)[:8]
+    zonas_risco = [{
+        "municipio": z.get("nome", "—"),
+        "estado": z.get("estado", ""),
+        "risco": z.get("risk_level", "—"),
+        "crescimento_percent": z.get("growth_percent", 0),
+        "casos_ativos": z.get("active_cases", 0),
+    } for z in zonas_risco]
+
+    hoje = date.today()
+    trinta_dias = hoje - timedelta(days=30)
+    sinistros_30d = Sinistro.objects.filter(empresa=empresa, data_abertura__date__gte=trinta_dias)
+    sinistros_urgencia_30d = sinistros_30d.filter(tipo__in=["urgencia", "internacao"]).count()
+    total_sinistros_30d = sinistros_30d.count()
+
+    growth_percent = overview.get("growth_percent", 0)
+    risk_level = overview.get("risk_level", "BAIXO")
+    dominant_disease = ""
+    probable_diseases = overview.get("probable_diseases", [])
+    if probable_diseases:
+        dominant_disease = probable_diseases[0].get("name", "")
+
+    pressao_sinistralidade = "ALTA" if (risk_level in ("ALTO", "CRITICO") and sinistros_urgencia_30d > 0) else (
+        "MEDIA" if risk_level == "ALTO" or sinistros_urgencia_30d >= 5 else "BAIXA"
+    )
+
+    return JsonResponse({
+        "status": "ok",
+        "painel": {
+            "risco_territorial": risk_level,
+            "crescimento_percent": growth_percent,
+            "doenca_dominante": dominant_disease,
+            "casos_total": overview.get("total_cases", 0),
+            "zonas_risco": zonas_risco,
+            "sinistros_urgencia_internacao_30d": sinistros_urgencia_30d,
+            "total_sinistros_30d": total_sinistros_30d,
+            "pressao_sinistralidade_estimada": pressao_sinistralidade,
+        },
+    })
