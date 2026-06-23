@@ -21,7 +21,7 @@ from .models import (
     PedidoFarmacia,
     FarmaciaAuditLog,
 )
-from .access_control import api_requer_operacao_ou_gerencia, api_requer_setor
+from .access_control import api_requer_operacao_ou_gerencia, api_requer_setor, api_requer_feature
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -150,6 +150,7 @@ def _pedido_to_dict(pedido):
 @csrf_exempt
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.estoque")
 def api_farmacia_dashboard(request):
     """KPIs e alertas do módulo de farmácia."""
     empresa = _get_empresa(request)
@@ -211,6 +212,7 @@ def api_farmacia_dashboard(request):
 @csrf_exempt
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.estoque")
 def api_farmacia_estoque(request):
     """Lista e cadastra medicamentos no estoque."""
     empresa = _get_empresa(request)
@@ -299,6 +301,7 @@ def api_farmacia_estoque(request):
 @csrf_exempt
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.dispensacoes")
 def api_farmacia_dispensacao(request):
     """Lista e registra dispensações de medicamentos."""
     empresa = _get_empresa(request)
@@ -447,6 +450,7 @@ def api_farmacia_dispensacao(request):
 @csrf_exempt
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.estoque")
 def api_farmacia_movimentos(request):
     """Lista e registra movimentos de estoque."""
     empresa = _get_empresa(request)
@@ -551,6 +555,7 @@ def api_farmacia_movimentos(request):
 @csrf_exempt
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.pedidos")
 def api_farmacia_fornecedores(request):
     """Lista e cadastra fornecedores de medicamentos."""
     empresa = _get_empresa(request)
@@ -608,6 +613,7 @@ def api_farmacia_fornecedores(request):
 @csrf_exempt
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.pedidos")
 def api_farmacia_pedidos(request):
     """Lista e cadastra pedidos de compra de medicamentos."""
     empresa = _get_empresa(request)

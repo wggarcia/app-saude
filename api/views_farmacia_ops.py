@@ -11,6 +11,7 @@ from .access_control import (
     api_requer_setor,
     get_setor,
     principal_pode_operacao_setorial,
+    api_requer_feature,
 )
 
 
@@ -27,6 +28,7 @@ def _e(req):
 @require_http_methods(["GET", "POST"])
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.pedidos")
 def api_fornecedores_farmacia(request):
     e = _e(request)
     if not e:
@@ -54,6 +56,7 @@ def api_fornecedores_farmacia(request):
 @require_http_methods(["PUT", "DELETE"])
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.pedidos")
 def api_fornecedor_farmacia_detalhe(request, fornecedor_id):
     e = _e(request)
     if not e:
@@ -77,6 +80,7 @@ def api_fornecedor_farmacia_detalhe(request, fornecedor_id):
 @require_http_methods(["GET", "POST"])
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.estoque")
 def api_itens_farmacia(request):
     e = _e(request)
     if not e:
@@ -128,6 +132,7 @@ def api_itens_farmacia(request):
 @require_http_methods(["PUT", "DELETE"])
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.estoque")
 def api_item_farmacia_detalhe(request, item_id):
     e = _e(request)
     if not e:
@@ -151,6 +156,7 @@ def api_item_farmacia_detalhe(request, item_id):
 @require_http_methods(["GET", "POST"])
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.estoque")
 def api_movimentos_estoque(request):
     e = _e(request)
     if not e:
@@ -199,6 +205,7 @@ def api_movimentos_estoque(request):
 @require_http_methods(["GET", "POST"])
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.dispensacoes")
 def api_dispensacoes_farmacia(request):
     e = _e(request)
     if not e:
@@ -243,6 +250,7 @@ def api_dispensacoes_farmacia(request):
 @require_http_methods(["GET", "POST"])
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.pedidos")
 def api_pedidos_compra_farmacia(request):
     e = _e(request)
     if not e:
@@ -288,6 +296,7 @@ def api_pedidos_compra_farmacia(request):
 @require_http_methods(["PUT"])
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.pedidos")
 def api_pedido_compra_status(request, pedido_id):
     e = _e(request)
     if not e:
@@ -320,6 +329,7 @@ def api_pedido_compra_status(request, pedido_id):
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.estoque")
 def api_farmacia_ops_kpis(request):
     e = _e(request)
     if not e:
@@ -341,6 +351,7 @@ def api_farmacia_ops_kpis(request):
 # ── PDFs ───────────────────────────────────────────────────────────────────────
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.estoque")
 def api_farmacia_pdf_estoque(request):
     from django.http import HttpResponse
     from .pdf_ops import gerar_pdf_estoque_farmacia
@@ -356,6 +367,7 @@ def api_farmacia_pdf_estoque(request):
 
 @api_requer_setor("farmacia")
 @api_requer_operacao_ou_gerencia
+@api_requer_feature("farmacia.dispensacoes")
 def api_farmacia_pdf_dispensacoes(request):
     from django.http import HttpResponse
     from .pdf_ops import gerar_pdf_dispensacoes_farmacia

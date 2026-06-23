@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import IntegracaoIfood, PedidoDelivery
-from .access_control import api_requer_gerencia
+from .access_control import api_requer_gerencia, api_requer_feature
 
 STATUS_MAP_IFOOD = {
     "PLACED": "aguardando",
@@ -38,6 +38,7 @@ def _config_to_dict(c):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.delivery")
 def api_ifood_config(request):
     """GET/POST — configura a integração iFood da farmácia (merchantId, credenciais)."""
     empresa = request.empresa

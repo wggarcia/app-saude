@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .models import PBMConvenio, FarmaciaPopularRegistro
-from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo
+from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo, api_requer_feature
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -62,6 +62,7 @@ def farmacia_pbm_page(request):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.pbm")
 def api_pbm_convenios(request):
     """GET — lista convênios PBM. POST — cria convênio."""
     empresa = request.empresa
@@ -105,6 +106,7 @@ def api_pbm_convenios(request):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.pbm")
 def api_pbm_convenio_detalhe(request, conv_id):
     """GET — detalhe. PUT — atualiza. DELETE — remove convênio PBM."""
     empresa = request.empresa
@@ -146,6 +148,7 @@ def api_pbm_convenio_detalhe(request, conv_id):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.farmacia_popular")
 def api_farmacia_popular_registros(request):
     """GET — lista registros mensais. POST — cria/atualiza registro do mês."""
     empresa = request.empresa
@@ -215,6 +218,7 @@ def api_farmacia_popular_registros(request):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.farmacia_popular")
 def api_farmacia_popular_kpis(request):
     """GET — totais do mês corrente para convênios e Farmácia Popular."""
     empresa = request.empresa

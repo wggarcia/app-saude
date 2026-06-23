@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .models import PedidoDelivery
-from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo
+from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo, api_requer_feature
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -59,6 +59,7 @@ def farmacia_ecommerce_page(request):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.delivery")
 def api_delivery_pedidos(request):
     """GET — lista pedidos de delivery com filtros."""
     empresa = request.empresa
@@ -109,6 +110,7 @@ def api_delivery_pedidos(request):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.delivery")
 def api_delivery_novo(request):
     """POST — cria um novo pedido de delivery."""
     empresa = request.empresa
@@ -160,6 +162,7 @@ def api_delivery_novo(request):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.delivery")
 def api_delivery_atualizar_status(request, pedido_id):
     """POST — atualiza o status de um pedido de delivery."""
     empresa = request.empresa
@@ -205,6 +208,7 @@ def api_delivery_atualizar_status(request, pedido_id):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.delivery")
 def api_delivery_kpis(request):
     """GET — KPIs do dia: pedidos hoje, em preparo, entregues, ticket médio."""
     empresa = request.empresa

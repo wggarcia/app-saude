@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import LoteMedicamento, ItemFarmacia, FornecedorFarmacia, MovimentoEstoque
 from .views_dashboard import _empresa_autenticada
-from .access_control import get_setor
+from .access_control import get_setor, api_requer_feature
 
 
 def _e(req):
@@ -41,6 +41,7 @@ def _lote_to_dict(l):
 
 
 @csrf_exempt
+@api_requer_feature("farmacia.lotes")
 def api_lotes_farmacia(request):
     """GET list / POST create lotes de medicamentos."""
     empresa = _e(request)
@@ -127,6 +128,7 @@ def api_lotes_farmacia(request):
 
 
 @csrf_exempt
+@api_requer_feature("farmacia.lotes")
 def api_lote_farmacia_detalhe(request, lote_id):
     """GET / PUT / DELETE lote."""
     empresa = _e(request)
@@ -175,6 +177,7 @@ def api_lote_farmacia_detalhe(request, lote_id):
     return JsonResponse({"erro": "Método não suportado"}, status=405)
 
 
+@api_requer_feature("farmacia.lotes")
 def api_lotes_farmacia_kpis(request):
     """KPIs de rastreabilidade: vencidos, vencendo, alertas."""
     empresa = _e(request)

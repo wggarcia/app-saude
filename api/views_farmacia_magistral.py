@@ -18,14 +18,14 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
-from .access_control import requer_setor, requer_operacao_page, requer_permissao_modulo
+from .access_control import requer_setor, requer_operacao_page, requer_permissao_modulo, api_requer_feature, get_setor
 
 from .services.auth_session import empresa_autenticada_from_request
 
 
 def _farm(request):
     emp = empresa_autenticada_from_request(request)
-    if emp and emp.tipo_conta == "farmacia":
+    if emp and get_setor(emp) == "farmacia":
         return emp
     return None
 
@@ -41,6 +41,7 @@ def farmacia_magistral_page(request):
 # ── Matérias-primas ───────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("farmacia.magistral")
 def api_magistral_materias_primas(request):
     """GET lista | POST cria matéria-prima."""
     empresa = _farm(request)
@@ -105,6 +106,7 @@ def api_magistral_materias_primas(request):
 # ── Lotes de matéria-prima ────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("farmacia.magistral")
 def api_magistral_lotes_mp(request):
     """GET lista | POST registra lote."""
     empresa = _farm(request)
@@ -185,6 +187,7 @@ def api_magistral_lotes_mp(request):
 
 
 @csrf_exempt
+@api_requer_feature("farmacia.magistral")
 def api_magistral_lote_aprovar(request, lote_id):
     """POST /api/farmacia/magistral/lotes-mp/<id>/aprovar — farmacêutico aprova lote."""
     empresa = _farm(request)
@@ -221,6 +224,7 @@ def api_magistral_lote_aprovar(request, lote_id):
 # ── Fórmulas magistrais ───────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("farmacia.magistral")
 def api_magistral_formulas(request):
     """GET lista | POST cria fórmula."""
     empresa = _farm(request)
@@ -277,6 +281,7 @@ def api_magistral_formulas(request):
 # ── Ordens de Manipulação ─────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("farmacia.magistral")
 def api_magistral_ordens(request):
     """GET lista | POST cria Ordem de Manipulação."""
     empresa = _farm(request)
@@ -346,6 +351,7 @@ def api_magistral_ordens(request):
 
 
 @csrf_exempt
+@api_requer_feature("farmacia.magistral")
 def api_magistral_ordem_status(request, om_id):
     """PATCH /api/farmacia/magistral/ordens/<id>/status — avança o status da OM."""
     empresa = _farm(request)
@@ -389,6 +395,7 @@ def api_magistral_ordem_status(request, om_id):
 # ── Controle de Qualidade ─────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("farmacia.magistral")
 def api_magistral_controle_qualidade(request):
     """GET lista | POST registra CQ de uma OM."""
     empresa = _farm(request)
@@ -466,6 +473,7 @@ def api_magistral_controle_qualidade(request):
 
 # ── KPIs magistral ────────────────────────────────────────────────────────────
 
+@api_requer_feature("farmacia.magistral")
 def api_magistral_kpis(request):
     """GET /api/farmacia/magistral/kpis."""
     empresa = _farm(request)

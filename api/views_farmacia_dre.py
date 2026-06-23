@@ -11,7 +11,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .models import DREFarmacia
-from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo
+from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo, api_requer_feature
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -82,6 +82,7 @@ def farmacia_financeiro_page(request):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.dre")
 def api_dre_lista(request):
     """GET — últimos 12 meses de DRE da empresa."""
     empresa = request.empresa
@@ -100,6 +101,7 @@ def api_dre_lista(request):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.dre")
 def api_dre_salvar(request):
     """POST — cria ou atualiza o DRE para o mês de referência."""
     empresa = request.empresa
@@ -161,6 +163,7 @@ def api_dre_salvar(request):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.dre")
 def api_dre_dashboard(request):
     """GET — dashboard financeiro calculado: mês atual e tendência."""
     empresa = request.empresa

@@ -18,7 +18,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import ItemFarmacia, PDVVenda, PDVItemVenda
-from .access_control import api_requer_gerencia
+from .access_control import api_requer_gerencia, api_requer_feature
 
 
 def _coletar_dados_farmacia(empresa):
@@ -59,6 +59,7 @@ def _coletar_dados_farmacia(empresa):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.relatorio_ia")
 def api_farmacia_relatorio_ia(request):
     """GET — gera um relatório executivo com IA a partir dos dados reais da farmácia."""
     empresa = request.empresa

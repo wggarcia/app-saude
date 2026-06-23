@@ -21,7 +21,7 @@ from .models import (
     MedicamentoFarmacia,
     EstoqueMovimento,
 )
-from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo
+from .access_control import api_requer_gerencia, requer_setor, requer_operacao_page, requer_permissao_modulo, api_requer_feature
 
 
 def _proximo_lote_fefo(empresa, medicamento):
@@ -115,6 +115,7 @@ def farmacia_pdv_page(request):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.pdv")
 def api_pdv_sessao_atual(request):
     """GET — retorna a sessão PDV ativa para a empresa."""
     empresa = request.empresa
@@ -133,6 +134,7 @@ def api_pdv_sessao_atual(request):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.pdv")
 def api_pdv_abrir_sessao(request):
     """POST — abre nova sessão PDV (caixa)."""
     empresa = request.empresa
@@ -175,6 +177,7 @@ def api_pdv_abrir_sessao(request):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.pdv")
 def api_pdv_fechar_sessao(request, sessao_id):
     """POST — fecha uma sessão PDV calculando os totais."""
     empresa = request.empresa
@@ -213,6 +216,7 @@ def api_pdv_fechar_sessao(request, sessao_id):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.pdv")
 def api_pdv_registrar_venda(request, sessao_id):
     """POST — registra uma venda na sessão PDV e desconta estoque."""
     empresa = request.empresa
@@ -356,6 +360,7 @@ def api_pdv_registrar_venda(request, sessao_id):
 
 @csrf_exempt
 @api_requer_gerencia
+@api_requer_feature("farmacia.pdv")
 def api_pdv_historico(request):
     """GET — últimas 30 vendas da empresa."""
     empresa = request.empresa
