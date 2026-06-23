@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import (
     FaturaHospitalar, ItemFaturamento,
     PacienteInternado, LeitoHospitalar,
@@ -88,6 +88,7 @@ def _item_to_dict(i):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST", "PUT"])
+@api_requer_feature("hospital.faturamento_avancado")
 def api_fatura_paciente(request, pac_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -141,6 +142,7 @@ def api_fatura_paciente(request, pac_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("hospital.faturamento_avancado")
 def api_fatura_acao(request, pac_id):
     """Transições de status: fechar, enviar, pagar, glosar, cancelar."""
     empresa = _empresa_autenticada(request)
@@ -189,6 +191,7 @@ def api_fatura_acao(request, pac_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.faturamento_avancado")
 def api_itens_faturamento(request, pac_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -251,6 +254,7 @@ def api_itens_faturamento(request, pac_id):
 
 @csrf_exempt
 @require_http_methods(["DELETE"])
+@api_requer_feature("hospital.faturamento_avancado")
 def api_item_faturamento_detalhe(request, item_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -271,6 +275,7 @@ def api_item_faturamento_detalhe(request, item_id):
 # ─── Dashboard de Faturamento ─────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.faturamento_avancado")
 def api_faturamento_dashboard(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -328,6 +333,7 @@ def api_faturamento_dashboard(request):
 # ─── Analytics Hospitalar ─────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.taxa_ocupacao")
 def api_hospital_analytics(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):

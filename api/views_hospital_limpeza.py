@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import LeitoHospitalar, RegistroLimpezaLeito, RegistroRouparia
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 
@@ -46,6 +46,7 @@ def _limpeza_to_dict(r):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.limpeza")
 def api_limpeza_leito(request, leito_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -76,6 +77,7 @@ def api_limpeza_leito(request, leito_id):
 
 @csrf_exempt
 @require_http_methods(["PATCH"])
+@api_requer_feature("hospital.limpeza")
 def api_limpeza_status(request, registro_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -120,6 +122,7 @@ def _rouparia_to_dict(r):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.limpeza")
 def api_rouparia(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):

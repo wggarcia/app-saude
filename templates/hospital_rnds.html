@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RNDS / e-SUS — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px;max-width:640px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;z-index:999;transform:translateY(80px);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast.err{border-color:rgba(255,77,109,.3);color:var(--danger)}
+.aviso-box{background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.25);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--warn);margin:0 0 14px}
+.filter-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:Manrope,sans-serif}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<aside class="sidebar">
+  <div class="logo">🏥 HospitalOS</div>
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span> Prontuários</a>
+  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span> Bloco Cirúrgico</a>
+  <a class="nav-link" href="/hospital/lis/"><span>🔬</span> Laboratório</a>
+  <a class="nav-link" href="/hospital/imagem/"><span>🩻</span> Imagem/PACS</a>
+  <a class="nav-link" href="/hospital/ia-autorizacao/"><span>🧠</span> IA Autorização</a>
+  <a class="nav-link" href="/hospital/assinatura/"><span>✍️</span> Assinatura Eletrônica</a>
+  <a class="nav-link" href="/hospital/ccih/"><span>🦠</span> CCIH</a>
+  <a class="nav-link" href="/hospital/hemoterapia/"><span>🩸</span> Hemoterapia</a>
+  <a class="nav-link" href="/hospital/obstetrico/"><span>🤰</span> Obstétrico</a>
+  <a class="nav-link" href="/hospital/oncologia/"><span>🎗️</span> Oncologia</a>
+  <a class="nav-link" href="/hospital/opme/"><span>🦴</span> OPME</a>
+  <a class="nav-link active" href="/hospital/rnds/"><span>🔗</span> RNDS / e-SUS</a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><span>💊</span> Farmácia Hosp.</a>
+  <a class="nav-link" href="/hospital/faturamento-tiss/"><span>🧾</span> Faturamento TISS</a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span> Dashboard</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🔗 RNDS — Sumário de Alta e RAC</div>
+      <div class="page-sub">Transmissão de Sumário de Alta (IPS-BR) e Registro de Atendimento Clínico (RAC) à Rede Nacional de Dados em Saúde — Portaria GM/MS nº 1.434/2020.</div>
+    </div>
+    <button class="btn btn-ghost" onclick="carregarTudo()">↻ Atualizar</button>
+  </div>
+
+  <div id="statusAviso"></div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiCobertura">—</div><div class="kpi-lbl">Cobertura IPS-BR</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiTransmitidos">—</div><div class="kpi-lbl">IPS-BR Transmitidos</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiRac">—</div><div class="kpi-lbl">RAC Transmitidos</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiErros">—</div><div class="kpi-lbl">Transmissões com Erro</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">⚙️ Status das Credenciais</div></div>
+    <div id="statusBox" style="padding:18px 20px;display:flex;gap:24px;flex-wrap:wrap;font-size:13px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📤 Transmitir Manualmente</div>
+    </div>
+    <div style="padding:18px 20px;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+      <div class="form-group" style="margin-bottom:0"><label>ID da Internação (IPS-BR / Sumário de Alta)</label><input type="number" id="iInternacaoId" placeholder="Ex: 12"></div>
+      <button class="btn btn-primary" onclick="transmitirAlta()">Transmitir IPS-BR</button>
+      <div class="form-group" style="margin-bottom:0"><label>ID do Prontuário (RAC)</label><input type="number" id="iProntuarioId" placeholder="Ex: 34"></div>
+      <button class="btn btn-primary" onclick="transmitirRac()">Transmitir RAC</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📋 Histórico de Transmissões</div>
+      <div style="display:flex;gap:8px">
+        <select class="filter-sel" id="fTipo" onchange="carregarTransmissoes()">
+          <option value="">Todos os tipos</option>
+          <option value="ips_br">IPS-BR (Alta)</option>
+          <option value="rac">RAC</option>
+        </select>
+        <select class="filter-sel" id="fStatus" onchange="carregarTransmissoes()">
+          <option value="">Todos os status</option>
+          <option value="transmitido">Transmitido</option>
+          <option value="erro">Erro</option>
+          <option value="pendente">Pendente</option>
+        </select>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Paciente</th><th>CNS</th><th>Tipo</th><th>Status</th><th>Protocolo</th><th>Tentativas</th><th>Criado em</th><th></th></tr></thead>
+      <tbody id="txBody"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
+function headers(){ return {'Content-Type':'application/json','X-CSRFToken':getCsrf()}; }
+function toast(msg, ok){ var el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+(ok?'ok':'err')+' show'; setTimeout(function(){el.className='toast';},4000); }
+
+var statusMap = {transmitido:'badge-ok', erro:'badge-danger', pendente:'badge-warn'};
+
+async function carregarStatus() {
+  try {
+    var r = await fetch('/api/hospital/rnds/status', { credentials: 'include', headers: headers() });
+    if (!r.ok) return;
+    var d = await r.json();
+    document.getElementById('statusAviso').innerHTML = d.aviso ? ('<div class="aviso-box">⚠ ' + d.aviso + '</div>') : '';
+    document.getElementById('statusBox').innerHTML =
+      '<div><div style="color:var(--muted);font-size:11px;text-transform:uppercase">Configurado</div><strong>' + (d.configurado ? '<span class="badge badge-ok">Sim</span>' : '<span class="badge badge-danger">Não</span>') + '</strong></div>' +
+      '<div><div style="color:var(--muted);font-size:11px;text-transform:uppercase">CNES</div><strong>' + (d.cnes || '—') + '</strong></div>' +
+      '<div><div style="color:var(--muted);font-size:11px;text-transform:uppercase">Ambiente</div><strong>' + (d.ambiente || '—') + '</strong></div>' +
+      '<div><div style="color:var(--muted);font-size:11px;text-transform:uppercase">Última transmissão</div><strong>' + (d.ultima_transmissao_iso ? new Date(d.ultima_transmissao_iso).toLocaleString('pt-BR') : '—') + '</strong></div>';
+  } catch(e) {}
+}
+
+async function carregarKpis() {
+  try {
+    var r = await fetch('/api/hospital/rnds/kpis', { credentials: 'include', headers: headers() });
+    if (!r.ok) return;
+    var d = await r.json();
+    document.getElementById('kpiCobertura').textContent = (d.ips_br.cobertura_pct||0) + '%';
+    document.getElementById('kpiTransmitidos').textContent = d.ips_br.total_transmitidos;
+    document.getElementById('kpiRac').textContent = d.rac.total_transmitidos;
+    document.getElementById('kpiErros').textContent = d.total_erros_pendentes;
+  } catch(e) {}
+}
+
+async function carregarTransmissoes() {
+  var tbody = document.getElementById('txBody');
+  tbody.innerHTML = '<tr><td colspan="8" class="empty">Carregando...</td></tr>';
+  try {
+    var tipo = document.getElementById('fTipo').value;
+    var status = document.getElementById('fStatus').value;
+    var qs = [];
+    if (tipo) qs.push('tipo=' + tipo);
+    if (status) qs.push('status=' + status);
+    var r = await fetch('/api/hospital/rnds/transmissoes' + (qs.length ? '?' + qs.join('&') : ''), { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.transmissoes.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhuma transmissão registrada.</td></tr>'; return; }
+    tbody.innerHTML = d.transmissoes.map(function(t) {
+      return '<tr>' +
+        '<td><strong>' + (t.paciente_nome || '—') + '</strong></td>' +
+        '<td>' + (t.cns_paciente || '—') + '</td>' +
+        '<td><span class="badge badge-info">' + t.tipo_display + '</span></td>' +
+        '<td><span class="badge ' + (statusMap[t.status]||'badge-gray') + '">' + t.status + '</span></td>' +
+        '<td style="font-size:11px;color:var(--muted)">' + (t.protocolo_rnds || '—') + '</td>' +
+        '<td>' + t.tentativas + '</td>' +
+        '<td>' + new Date(t.criado_em).toLocaleString('pt-BR') + '</td>' +
+        '<td>' + (t.status === 'erro' ? ('<button class="btn btn-ok btn-sm" onclick="reprocessar(' + t.id + ')">Reprocessar</button>') : '') + '</td>' +
+        '</tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+async function transmitirAlta() {
+  var id = document.getElementById('iInternacaoId').value;
+  if (!id) return toast('Informe o ID da internação', false);
+  try {
+    var r = await fetch('/api/hospital/rnds/transmitir-alta/' + id, { method: 'POST', credentials: 'include', headers: headers() });
+    var d = await r.json();
+    toast(d.mensagem || (d.erro || 'Erro'), !!d.ok);
+    carregarTudo();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function transmitirRac() {
+  var id = document.getElementById('iProntuarioId').value;
+  if (!id) return toast('Informe o ID do prontuário', false);
+  try {
+    var r = await fetch('/api/hospital/rnds/transmitir-rac/' + id, { method: 'POST', credentials: 'include', headers: headers() });
+    var d = await r.json();
+    toast(d.mensagem || (d.erro || 'Erro'), !!d.ok);
+    carregarTudo();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function reprocessar(id) {
+  try {
+    var r = await fetch('/api/hospital/rnds/reprocessar/' + id, { method: 'POST', credentials: 'include', headers: headers() });
+    var d = await r.json();
+    toast(d.mensagem || (d.erro || 'Erro'), !!d.ok);
+    carregarTudo();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+function carregarTudo() { carregarStatus(); carregarKpis(); carregarTransmissoes(); }
+carregarTudo();
+</script>
+</body>
+</html>

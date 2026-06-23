@@ -22,11 +22,16 @@ from datetime import date, timedelta
 from django.db import transaction
 from django.db.models import Count, Q
 from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .access_control import (
+    api_requer_feature, requer_setor, requer_feature_pacote,
+    requer_operacao_page, requer_permissao_modulo,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +41,20 @@ def _get_hemo_models():
     return BolsaSangue, SolicitacaoHemoterapia, TransfusaoPaciente, ReacaoTransfusional
 
 
+@ensure_csrf_cookie
+@requer_setor("hospital")
+@requer_feature_pacote("hospital.hemoterapia", "Hemoterapia")
+@requer_operacao_page
+@requer_permissao_modulo("hospital.clinico")
+def hospital_hemoterapia_page(request):
+    return render(request, "hospital_hemoterapia.html")
+
+
 # ── Bolsas ─────────────────────────────────────────────────────────────────────
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.hemoterapia")
 def api_hemo_bolsas(request):
     """GET/POST /api/hospital/hemoterapia/bolsas/"""
     empresa = get_empresa(request)
@@ -118,6 +133,7 @@ def api_hemo_bolsas(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
+@api_requer_feature("hospital.hemoterapia")
 def api_hemo_bolsa_detalhe(request, bolsa_id):
     """GET/PUT /api/hospital/hemoterapia/bolsas/<id>/"""
     empresa = get_empresa(request)
@@ -162,6 +178,7 @@ def api_hemo_bolsa_detalhe(request, bolsa_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.hemoterapia")
 def api_hemo_solicitacoes(request):
     """GET/POST /api/hospital/hemoterapia/solicitacoes/"""
     empresa = get_empresa(request)
@@ -232,6 +249,7 @@ def api_hemo_solicitacoes(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.hemoterapia")
 def api_hemo_transfusoes(request):
     """GET/POST /api/hospital/hemoterapia/transfusoes/"""
     empresa = get_empresa(request)
@@ -308,6 +326,7 @@ def api_hemo_transfusoes(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.hemoterapia")
 def api_hemo_reacoes(request):
     """GET/POST /api/hospital/hemoterapia/reacoes/"""
     empresa = get_empresa(request)
@@ -362,6 +381,7 @@ def api_hemo_reacoes(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("hospital.hemoterapia")
 def api_hemo_notificar_anvisa(request, reacao_id):
     """
     POST /api/hospital/hemoterapia/reacoes/<id>/notificar-anvisa/
@@ -419,6 +439,7 @@ def api_hemo_notificar_anvisa(request, reacao_id):
 
 
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.hemoterapia")
 def api_hemo_notivisa_download(request, reacao_id):
     """GET /api/hospital/hemoterapia/reacoes/<id>/notificar-anvisa/download/ — baixa XML NOTIVISA."""
     empresa = get_empresa(request)
@@ -515,6 +536,7 @@ def _gerar_xml_notivisa(reacao, empresa):
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.hemoterapia")
 def api_hemo_kpis(request):
     """GET /api/hospital/hemoterapia/kpis/"""
     empresa = get_empresa(request)

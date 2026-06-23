@@ -12,11 +12,16 @@ from collections import defaultdict
 from django.db import transaction
 from django.db.models import Count, Q, Avg
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .access_control import (
+    api_requer_feature, requer_setor, requer_feature_pacote,
+    requer_operacao_page, requer_permissao_modulo,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +31,20 @@ def _get_obs_models():
     return Partograma, RegistroParto
 
 
+@ensure_csrf_cookie
+@requer_setor("hospital")
+@requer_feature_pacote("hospital.obstetrico", "Centro Obstétrico")
+@requer_operacao_page
+@requer_permissao_modulo("hospital.clinico")
+def hospital_obstetrico_page(request):
+    return render(request, "hospital_obstetrico.html")
+
+
 # ── partograma ────────────────────────────────────────────────────────────────
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.obstetrico")
 def api_obstetrico_partogramas(request):
     """GET/POST /api/hospital/obstetrico/partogramas/"""
     empresa = get_empresa(request)
@@ -95,6 +110,7 @@ def api_obstetrico_partogramas(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.obstetrico")
 def api_obstetrico_partograma_detalhe(request, pt_id):
     """GET/POST /api/hospital/obstetrico/partogramas/<id>/ — GET detalhe ou POST registra evolução."""
     empresa = get_empresa(request)
@@ -176,6 +192,7 @@ def api_obstetrico_partograma_detalhe(request, pt_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.obstetrico")
 def api_obstetrico_partos(request):
     """GET/POST /api/hospital/obstetrico/partos/"""
     empresa = get_empresa(request)
@@ -275,6 +292,7 @@ def api_obstetrico_partos(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
+@api_requer_feature("hospital.obstetrico")
 def api_obstetrico_parto_detalhe(request, parto_id):
     """GET/PUT /api/hospital/obstetrico/partos/<id>/"""
     empresa = get_empresa(request)
@@ -323,6 +341,7 @@ def api_obstetrico_parto_detalhe(request, parto_id):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.obstetrico")
 def api_obstetrico_dnv(request, parto_id):
     """GET /api/hospital/obstetrico/partos/<id>/dnv/ — gera estrutura DNV eletrônica (SINASC)."""
     empresa = get_empresa(request)
@@ -384,6 +403,7 @@ def api_obstetrico_dnv(request, parto_id):
 
 # ── KPIs perinatais ────────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.obstetrico")
 def api_obstetrico_kpis(request):
     """GET /api/hospital/obstetrico/kpis/"""
     empresa = get_empresa(request)

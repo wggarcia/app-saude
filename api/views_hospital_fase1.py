@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import (
     PacienteInternado, LeitoHospitalar,
     EvolucaoClinicaInternado, MonitoramentoUTI, SumarioAlta, CentroCirurgico,
@@ -148,6 +148,7 @@ def _cc_to_dict(c):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.uti_centro_cirurgico")
 def api_evolucoes_paciente(request, pac_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -188,6 +189,7 @@ def api_evolucoes_paciente(request, pac_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.uti_centro_cirurgico")
 def api_monitoramento_uti(request, pac_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -255,6 +257,7 @@ def api_monitoramento_uti(request, pac_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST", "PUT"])
+@api_requer_feature("hospital.uti_centro_cirurgico")
 def api_sumario_alta(request, pac_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -341,6 +344,7 @@ def api_sumario_alta(request, pac_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.uti_centro_cirurgico")
 def api_centro_cirurgico(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -405,6 +409,7 @@ def api_centro_cirurgico(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
+@api_requer_feature("hospital.uti_centro_cirurgico")
 def api_centro_cirurgico_detalhe(request, cc_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -450,6 +455,7 @@ def api_centro_cirurgico_detalhe(request, cc_id):
 # ─── Dashboard UTI ────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.uti_centro_cirurgico")
 def api_hospital_uti_dashboard(request):
     """KPIs e lista de pacientes em UTI com últimos escores SOFA/Glasgow."""
     empresa = _empresa_autenticada(request)
@@ -498,6 +504,7 @@ def api_hospital_uti_dashboard(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PATCH"])
+@api_requer_feature("hospital.uti_centro_cirurgico")
 def api_isolamento_paciente(request, pac_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):

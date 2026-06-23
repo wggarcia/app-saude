@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Oncologia — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px;max-width:640px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.form-card-title{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group select option{background:#0a1a28}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border)}
+.tab-btn{padding:9px 16px;border-radius:8px 8px 0 0;border:none;background:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(0,194,255,.06)}
+.tab-panel{display:none}.tab-panel.active{display:flex;flex-direction:column;gap:16px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;z-index:999;transform:translateY(80px);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast.err{border-color:rgba(255,77,109,.3);color:var(--danger)}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.form-row,.form-row3{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<aside class="sidebar">
+  <div class="logo">🏥 HospitalOS</div>
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span> Prontuários</a>
+  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span> Bloco Cirúrgico</a>
+  <a class="nav-link" href="/hospital/lis/"><span>🔬</span> Laboratório</a>
+  <a class="nav-link" href="/hospital/imagem/"><span>🩻</span> Imagem/PACS</a>
+  <a class="nav-link" href="/hospital/ia-autorizacao/"><span>🧠</span> IA Autorização</a>
+  <a class="nav-link" href="/hospital/assinatura/"><span>✍️</span> Assinatura Eletrônica</a>
+  <a class="nav-link" href="/hospital/ccih/"><span>🦠</span> CCIH</a>
+  <a class="nav-link" href="/hospital/hemoterapia/"><span>🩸</span> Hemoterapia</a>
+  <a class="nav-link" href="/hospital/obstetrico/"><span>🤰</span> Obstétrico</a>
+  <a class="nav-link active" href="/hospital/oncologia/"><span>🎗️</span> Oncologia</a>
+  <a class="nav-link" href="/hospital/opme/"><span>🦴</span> OPME</a>
+  <a class="nav-link" href="/hospital/rnds/"><span>🔗</span> RNDS / e-SUS</a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><span>💊</span> Farmácia Hosp.</a>
+  <a class="nav-link" href="/hospital/faturamento-tiss/"><span>🧾</span> Faturamento TISS</a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span> Dashboard</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🎗️ Oncologia — Quimioterapia e APAC</div>
+      <div class="page-sub">Protocolos quimioterápicos PCDT/INCA, ciclos com cálculo de superfície corporal, toxicidade CTCAE v5.0 e faturamento APAC/SUS.</div>
+    </div>
+    <button class="btn btn-ghost" onclick="carregarTudo()">↻ Atualizar</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiCiclosAtivos">—</div><div class="kpi-lbl">Ciclos Ativos</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiToxGraves">—</div><div class="kpi-lbl">Toxicidade Grau ≥3 (mês)</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiGlosas">—</div><div class="kpi-lbl">APACs Glosadas (mês)</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiValorAprovado">—</div><div class="kpi-lbl">Valor Aprovado APAC (mês)</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="protocolos" onclick="setTab('protocolos')">Protocolos PCDT/INCA</button>
+    <button class="tab-btn" data-tab="ciclos" onclick="setTab('ciclos')">Ciclos de Quimioterapia</button>
+    <button class="tab-btn" data-tab="apacs" onclick="setTab('apacs')">APAC / SUS</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-protocolos">
+    <div class="card">
+      <div class="card-header"><div class="card-title">📋 Catálogo de Protocolos</div></div>
+      <table>
+        <thead><tr><th>Código</th><th>Nome</th><th>CID Indicação</th><th>Via</th><th>Ciclos</th><th>Intervalo</th></tr></thead>
+        <tbody id="protocolosBody"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-ciclos">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">💊 Ciclos de Quimioterapia</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovoCiclo()">+ Novo Ciclo</button>
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>Protocolo</th><th>CID</th><th>Ciclo Nº</th><th>SC (m²)</th><th>Início</th><th>Status</th></tr></thead>
+        <tbody id="ciclosBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formCicloCard" style="display:none">
+      <div class="form-card-title">Novo Ciclo de Quimioterapia</div>
+      <div class="form-row">
+        <div class="form-group"><label>Paciente *</label><input id="cPaciente"></div>
+        <div class="form-group"><label>Protocolo (ID) *</label>
+          <select id="cProtocolo"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>CID-10 Principal *</label><input id="cCid"></div>
+        <div class="form-group"><label>Número do Ciclo</label><input type="number" id="cNumero" value="1"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Data de Início *</label><input type="date" id="cInicio"></div>
+        <div class="form-group"><label>Peso (kg)</label><input type="number" step="0.1" id="cPeso"></div>
+        <div class="form-group"><label>Altura (cm)</label><input type="number" id="cAltura"></div>
+      </div>
+      <div class="form-group"><label>Médico Oncologista</label><input id="cMedico"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formCicloCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarCiclo()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-apacs">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🧾 Autorizações de Procedimento de Alta Complexidade (APAC)</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovaApac()">+ Nova APAC</button>
+      </div>
+      <table>
+        <thead><tr><th>Nº APAC</th><th>Paciente</th><th>CID</th><th>Competência</th><th>Valor Solic.</th><th>Valor Aprov.</th><th>Status</th></tr></thead>
+        <tbody id="apacsBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formApacCard" style="display:none">
+      <div class="form-card-title">Nova APAC</div>
+      <div class="form-row">
+        <div class="form-group"><label>Paciente *</label><input id="aPaciente"></div>
+        <div class="form-group"><label>CID-10 Principal *</label><input id="aCid"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Procedimento Principal</label><input id="aProcedimento"></div>
+        <div class="form-group"><label>Valor Solicitado (R$)</label><input type="number" step="0.01" id="aValor"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formApacCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarApac()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
+function headers(){ return {'Content-Type':'application/json','X-CSRFToken':getCsrf()}; }
+function toast(msg, ok){ var el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+(ok?'ok':'err')+' show'; setTimeout(function(){el.className='toast';},4000); }
+
+function setTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
+  if (tab === 'ciclos') carregarCiclos();
+  if (tab === 'apacs') carregarApacs();
+}
+
+async function carregarKpis() {
+  try {
+    var r = await fetch('/api/hospital/oncologia/kpis', { credentials: 'include', headers: headers() });
+    if (!r.ok) return;
+    var d = await r.json();
+    document.getElementById('kpiCiclosAtivos').textContent = d.ciclos_ativos;
+    document.getElementById('kpiToxGraves').textContent = d.toxicidades_grau3_mais_mes;
+    document.getElementById('kpiGlosas').textContent = d.apac_glosas_mes;
+    document.getElementById('kpiValorAprovado').textContent = 'R$ ' + (d.valor_aprovado_mes||0).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  } catch(e) {}
+}
+
+var protocolosCache = [];
+
+async function carregarProtocolos() {
+  var tbody = document.getElementById('protocolosBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/protocolos', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    protocolosCache = d.protocolos;
+    var sel = document.getElementById('cProtocolo');
+    if (sel) sel.innerHTML = d.protocolos.map(function(p){ return '<option value="' + p.id + '">' + p.codigo + ' — ' + p.nome + '</option>'; }).join('');
+    if (!d.protocolos.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum protocolo cadastrado.</td></tr>'; return; }
+    tbody.innerHTML = d.protocolos.map(function(p) {
+      return '<tr><td><strong>' + p.codigo + '</strong></td><td>' + p.nome + '</td><td>' + p.indicacao_cid + '</td><td>' + p.via + '</td><td>' + p.ciclos_total + '</td><td>' + p.intervalo_dias + 'd</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+var statusCicloMap = {agendado:'badge-info', em_curso:'badge-warn', concluido:'badge-ok', suspenso:'badge-danger'};
+
+async function carregarCiclos() {
+  var tbody = document.getElementById('ciclosBody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/ciclos', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.ciclos.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum ciclo registrado.</td></tr>'; return; }
+    tbody.innerHTML = d.ciclos.map(function(c) {
+      return '<tr><td><strong>' + c.paciente_nome + '</strong></td><td>' + c.protocolo + '</td><td>' + c.cid10_principal + '</td><td>' + c.numero_ciclo + '</td><td>' + (c.sc_m2||'—') + '</td><td>' + new Date(c.data_inicio).toLocaleDateString('pt-BR') + '</td><td><span class="badge ' + (statusCicloMap[c.status]||'badge-gray') + '">' + c.status_display + '</span></td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovoCiclo() { document.getElementById('formCicloCard').style.display = 'block'; }
+async function salvarCiclo() {
+  var paciente = document.getElementById('cPaciente').value.trim();
+  var cid = document.getElementById('cCid').value.trim();
+  var inicio = document.getElementById('cInicio').value;
+  var protocoloId = document.getElementById('cProtocolo').value;
+  if (!paciente || !cid || !inicio || !protocoloId) return toast('Preencha paciente, CID, protocolo e data de início', false);
+  try {
+    var r = await fetch('/api/hospital/oncologia/ciclos', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      paciente_nome: paciente, protocolo_id: parseInt(protocoloId), cid10_principal: cid, numero_ciclo: parseInt(document.getElementById('cNumero').value)||1,
+      data_inicio: inicio, peso_kg: parseFloat(document.getElementById('cPeso').value)||null, altura_cm: parseFloat(document.getElementById('cAltura').value)||null,
+      medico_oncologista: document.getElementById('cMedico').value,
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Ciclo registrado', true);
+    document.getElementById('formCicloCard').style.display = 'none';
+    carregarCiclos(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+var statusApacMap = {submetida:'badge-info', aprovada:'badge-ok', glosada:'badge-danger', pendente:'badge-warn'};
+
+async function carregarApacs() {
+  var tbody = document.getElementById('apacsBody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/oncologia/apacs', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.apacs.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma APAC registrada.</td></tr>'; return; }
+    tbody.innerHTML = d.apacs.map(function(a) {
+      return '<tr><td>' + (a.numero_apac||'—') + '</td><td><strong>' + a.paciente_nome + '</strong></td><td>' + a.cid10_principal + '</td><td>' + a.competencia + '</td><td>' + (a.valor_solicitado!=null?('R$ '+a.valor_solicitado.toLocaleString('pt-BR',{minimumFractionDigits:2})):'—') + '</td><td>' + (a.valor_aprovado!=null?('R$ '+a.valor_aprovado.toLocaleString('pt-BR',{minimumFractionDigits:2})):'—') + '</td><td><span class="badge ' + (statusApacMap[a.status]||'badge-gray') + '">' + a.status_display + '</span></td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovaApac() { document.getElementById('formApacCard').style.display = 'block'; }
+async function salvarApac() {
+  var paciente = document.getElementById('aPaciente').value.trim();
+  var cid = document.getElementById('aCid').value.trim();
+  if (!paciente || !cid) return toast('Informe paciente e CID', false);
+  try {
+    var r = await fetch('/api/hospital/oncologia/apacs', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      paciente_nome: paciente, cid10_principal: cid, procedimento_principal: document.getElementById('aProcedimento').value, valor_solicitado: parseFloat(document.getElementById('aValor').value)||null,
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('APAC registrada', true);
+    document.getElementById('formApacCard').style.display = 'none';
+    carregarApacs();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+function carregarTudo() { carregarKpis(); carregarProtocolos(); }
+carregarTudo();
+</script>
+</body>
+</html>

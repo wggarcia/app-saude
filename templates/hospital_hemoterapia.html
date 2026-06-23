@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hemoterapia — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px;max-width:640px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.form-card-title{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group select option{background:#0a1a28}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.tab-btn{padding:9px 16px;border-radius:8px 8px 0 0;border:none;background:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(0,194,255,.06)}
+.tab-panel{display:none}.tab-panel.active{display:flex;flex-direction:column;gap:16px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;z-index:999;transform:translateY(80px);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast.err{border-color:rgba(255,77,109,.3);color:var(--danger)}
+.aviso-box{background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.25);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--warn)}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.form-row{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<aside class="sidebar">
+  <div class="logo">🏥 HospitalOS</div>
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span> Prontuários</a>
+  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span> Bloco Cirúrgico</a>
+  <a class="nav-link" href="/hospital/lis/"><span>🔬</span> Laboratório</a>
+  <a class="nav-link" href="/hospital/imagem/"><span>🩻</span> Imagem/PACS</a>
+  <a class="nav-link" href="/hospital/ia-autorizacao/"><span>🧠</span> IA Autorização</a>
+  <a class="nav-link" href="/hospital/assinatura/"><span>✍️</span> Assinatura Eletrônica</a>
+  <a class="nav-link" href="/hospital/ccih/"><span>🦠</span> CCIH</a>
+  <a class="nav-link active" href="/hospital/hemoterapia/"><span>🩸</span> Hemoterapia</a>
+  <a class="nav-link" href="/hospital/obstetrico/"><span>🤰</span> Obstétrico</a>
+  <a class="nav-link" href="/hospital/oncologia/"><span>🎗️</span> Oncologia</a>
+  <a class="nav-link" href="/hospital/opme/"><span>🦴</span> OPME</a>
+  <a class="nav-link" href="/hospital/rnds/"><span>🔗</span> RNDS / e-SUS</a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><span>💊</span> Farmácia Hosp.</a>
+  <a class="nav-link" href="/hospital/faturamento-tiss/"><span>🧾</span> Faturamento TISS</a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span> Dashboard</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🩸 Hemoterapia — Banco de Sangue</div>
+      <div class="page-sub">Rastreabilidade de bolsas, solicitações de transfusão, registro de reações adversas e notificação NOTIVISA/ANVISA (RDC 34/2014).</div>
+    </div>
+    <button class="btn btn-ghost" onclick="carregarTudo()">↻ Atualizar</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi warn"><div class="kpi-val" id="kpiVencendo">—</div><div class="kpi-lbl">Bolsas Vencendo (7d)</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiVencidas">—</div><div class="kpi-lbl">Bolsas Vencidas em Estoque</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiTransfusoes">—</div><div class="kpi-lbl">Transfusões no Mês</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiGravesNaoNotif">—</div><div class="kpi-lbl">Reações Graves sem Notificação</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="bolsas" onclick="setTab('bolsas')">Estoque de Bolsas</button>
+    <button class="tab-btn" data-tab="solicitacoes" onclick="setTab('solicitacoes')">Solicitações</button>
+    <button class="tab-btn" data-tab="transfusoes" onclick="setTab('transfusoes')">Transfusões</button>
+    <button class="tab-btn" data-tab="reacoes" onclick="setTab('reacoes')">Reações Transfusionais</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-bolsas">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🩸 Estoque de Bolsas de Sangue</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovaBolsa()">+ Nova Bolsa</button>
+      </div>
+      <table>
+        <thead><tr><th>Código</th><th>Tipo</th><th>ABO/Rh</th><th>Volume</th><th>Validade</th><th>Status</th></tr></thead>
+        <tbody id="bolsasBody"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formBolsaCard" style="display:none">
+      <div class="form-card-title">Nova Bolsa de Sangue</div>
+      <div class="form-row">
+        <div class="form-group"><label>Código da Bolsa *</label><input id="bCodigo"></div>
+        <div class="form-group"><label>ISBT 128</label><input id="bIsbt"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Tipo *</label>
+          <select id="bTipo">
+            <option value="concentrado_hemacias">Concentrado de Hemácias</option>
+            <option value="plasma_fresco">Plasma Fresco Congelado</option>
+            <option value="concentrado_plaquetas">Concentrado de Plaquetas</option>
+            <option value="crioprecipitado">Crioprecipitado</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Volume (ml)</label><input type="number" id="bVolume"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Tipo ABO</label>
+          <select id="bAbo"><option value="A">A</option><option value="B">B</option><option value="AB">AB</option><option value="O">O</option></select>
+        </div>
+        <div class="form-group"><label>Fator Rh</label>
+          <select id="bRh"><option value="+">Positivo</option><option value="-">Negativo</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Validade *</label><input type="date" id="bValidade"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formBolsaCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarBolsa()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-solicitacoes">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📋 Solicitações de Hemoterapia</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovaSolicitacao()">+ Nova Solicitação</button>
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>Hemocomponente</th><th>ABO/Rh</th><th>Qtd</th><th>Urgência</th><th>Status</th></tr></thead>
+        <tbody id="solicitacoesBody"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formSolicitacaoCard" style="display:none">
+      <div class="form-card-title">Nova Solicitação</div>
+      <div class="form-row">
+        <div class="form-group"><label>Paciente *</label><input id="sPaciente"></div>
+        <div class="form-group"><label>Leito</label><input id="sLeito"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Hemocomponente *</label>
+          <select id="sTipoHemo">
+            <option value="concentrado_hemacias">Concentrado de Hemácias</option>
+            <option value="plasma_fresco">Plasma Fresco Congelado</option>
+            <option value="concentrado_plaquetas">Concentrado de Plaquetas</option>
+            <option value="crioprecipitado">Crioprecipitado</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Quantidade</label><input type="number" id="sQuantidade" value="1"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Urgência</label>
+          <select id="sUrgencia"><option value="eletiva">Eletiva</option><option value="urgente">Urgente</option><option value="emergencia">Emergência</option></select>
+        </div>
+        <div class="form-group"><label>Médico Solicitante</label><input id="sMedico"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formSolicitacaoCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarSolicitacao()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-transfusoes">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">💉 Transfusões Realizadas</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovaTransfusao()">+ Registrar Transfusão</button>
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>Bolsa</th><th>Tipo</th><th>Início</th><th>Reação</th><th>Enfermeiro</th></tr></thead>
+        <tbody id="transfusoesBody"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formTransfusaoCard" style="display:none">
+      <div class="form-card-title">Registrar Transfusão</div>
+      <div class="form-row">
+        <div class="form-group"><label>ID da Bolsa *</label><input type="number" id="tBolsaId"></div>
+        <div class="form-group"><label>Paciente *</label><input id="tPaciente"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Enfermeiro</label><input id="tEnfermeiro"></div>
+        <div class="form-group"><label>COREN</label><input id="tCoren"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formTransfusaoCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarTransfusao()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-reacoes">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">⚠️ Reações Transfusionais</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovaReacao()">+ Registrar Reação</button>
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>Tipo</th><th>Gravidade</th><th>Data</th><th>ANVISA</th><th></th></tr></thead>
+        <tbody id="reacoesBody"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formReacaoCard" style="display:none">
+      <div class="form-card-title">Registrar Reação Transfusional</div>
+      <div class="form-row">
+        <div class="form-group"><label>Paciente *</label><input id="rPaciente"></div>
+        <div class="form-group"><label>Tipo de Reação *</label>
+          <select id="rTipo">
+            <option value="febre">Reação Febril Não Hemolítica</option>
+            <option value="alergica_leve">Reação Alérgica Leve</option>
+            <option value="alergica_grave">Reação Alérgica Grave / Anafilaxia</option>
+            <option value="hemolitica_aguda">Hemólise Aguda Intravascular</option>
+            <option value="sobrecarga">Sobrecarga Circulatória (TACO)</option>
+            <option value="trali">Lesão Pulmonar Aguda (TRALI)</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Gravidade *</label>
+        <select id="rGravidade"><option value="leve">Leve</option><option value="moderada">Moderada</option><option value="grave">Grave</option><option value="fatal">Fatal</option></select>
+      </div>
+      <div class="form-group"><label>Descrição Clínica *</label><textarea id="rDescricao" rows="3" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;width:100%"></textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formReacaoCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarReacao()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
+function headers(){ return {'Content-Type':'application/json','X-CSRFToken':getCsrf()}; }
+function toast(msg, ok){ var el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+(ok?'ok':'err')+' show'; setTimeout(function(){el.className='toast';},4000); }
+
+function setTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
+  if (tab === 'solicitacoes') carregarSolicitacoes();
+  if (tab === 'transfusoes') carregarTransfusoes();
+  if (tab === 'reacoes') carregarReacoes();
+}
+
+async function carregarKpis() {
+  try {
+    var r = await fetch('/api/hospital/hemoterapia/kpis', { credentials: 'include', headers: headers() });
+    if (!r.ok) return;
+    var d = await r.json();
+    document.getElementById('kpiVencendo').textContent = d.vencendo_7_dias;
+    document.getElementById('kpiVencidas').textContent = d.bolsas_vencidas_estoque;
+    document.getElementById('kpiTransfusoes').textContent = d.transfusoes_mes;
+    document.getElementById('kpiGravesNaoNotif').textContent = d.graves_nao_notificadas_anvisa;
+  } catch(e) {}
+}
+
+async function carregarBolsas() {
+  var tbody = document.getElementById('bolsasBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/hemoterapia/bolsas', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.bolsas.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma bolsa cadastrada.</td></tr>'; return; }
+    tbody.innerHTML = d.bolsas.map(function(b) {
+      var venceBadge = b.vencida ? '<span class="badge badge-danger">Vencida</span>' : (b.dias_validade <= 7 ? '<span class="badge badge-warn">' + b.dias_validade + 'd</span>' : '<span class="badge badge-gray">' + b.dias_validade + 'd</span>');
+      return '<tr>' +
+        '<td><strong>' + b.codigo_bolsa + '</strong></td>' +
+        '<td>' + b.tipo_display + '</td>' +
+        '<td>' + (b.grupo_sanguineo || '—') + '</td>' +
+        '<td>' + (b.volume_ml || '—') + 'ml</td>' +
+        '<td>' + new Date(b.validade).toLocaleDateString('pt-BR') + ' ' + venceBadge + '</td>' +
+        '<td><span class="badge badge-info">' + b.status_display + '</span></td>' +
+        '</tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovaBolsa() { document.getElementById('formBolsaCard').style.display = 'block'; }
+async function salvarBolsa() {
+  var codigo = document.getElementById('bCodigo').value.trim();
+  var validade = document.getElementById('bValidade').value;
+  if (!codigo || !validade) return toast('Informe código e validade', false);
+  try {
+    var r = await fetch('/api/hospital/hemoterapia/bolsas', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      codigo_bolsa: codigo, isbt128: document.getElementById('bIsbt').value, tipo: document.getElementById('bTipo').value,
+      volume_ml: parseInt(document.getElementById('bVolume').value)||null, tipo_abo: document.getElementById('bAbo').value,
+      fator_rh: document.getElementById('bRh').value, validade: validade,
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Bolsa cadastrada', true);
+    document.getElementById('formBolsaCard').style.display = 'none';
+    carregarBolsas(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+var urgenciaMap = {emergencia:'badge-danger', urgente:'badge-warn', eletiva:'badge-gray'};
+
+async function carregarSolicitacoes() {
+  var tbody = document.getElementById('solicitacoesBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/hemoterapia/solicitacoes', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.solicitacoes.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma solicitação registrada.</td></tr>'; return; }
+    tbody.innerHTML = d.solicitacoes.map(function(s) {
+      return '<tr><td><strong>' + s.paciente_nome + '</strong></td><td>' + s.tipo_hemocomponente_display + '</td><td>' + (s.tipo_abo||'')+(s.fator_rh||'') + '</td><td>' + s.quantidade + '</td><td><span class="badge ' + (urgenciaMap[s.urgencia]||'badge-gray') + '">' + s.urgencia_display + '</span></td><td><span class="badge badge-info">' + s.status_display + '</span></td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovaSolicitacao() { document.getElementById('formSolicitacaoCard').style.display = 'block'; }
+async function salvarSolicitacao() {
+  var paciente = document.getElementById('sPaciente').value.trim();
+  if (!paciente) return toast('Informe o paciente', false);
+  try {
+    var r = await fetch('/api/hospital/hemoterapia/solicitacoes', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      paciente_nome: paciente, leito: document.getElementById('sLeito').value, tipo_hemocomponente: document.getElementById('sTipoHemo').value,
+      quantidade: parseInt(document.getElementById('sQuantidade').value)||1, urgencia: document.getElementById('sUrgencia').value,
+      medico_solicitante: document.getElementById('sMedico').value,
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Solicitação registrada', true);
+    document.getElementById('formSolicitacaoCard').style.display = 'none';
+    carregarSolicitacoes();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function carregarTransfusoes() {
+  var tbody = document.getElementById('transfusoesBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/hemoterapia/transfusoes', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.transfusoes.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma transfusão registrada.</td></tr>'; return; }
+    tbody.innerHTML = d.transfusoes.map(function(t) {
+      return '<tr><td><strong>' + t.paciente_nome + '</strong></td><td>' + t.bolsa_codigo + '</td><td>' + t.bolsa_tipo + '</td><td>' + new Date(t.data_inicio).toLocaleString('pt-BR') + '</td><td>' + (t.houve_reacao ? '<span class="badge badge-danger">Sim</span>' : '<span class="badge badge-ok">Não</span>') + '</td><td>' + (t.enfermeiro||'—') + '</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovaTransfusao() { document.getElementById('formTransfusaoCard').style.display = 'block'; }
+async function salvarTransfusao() {
+  var bolsaId = document.getElementById('tBolsaId').value;
+  var paciente = document.getElementById('tPaciente').value.trim();
+  if (!bolsaId || !paciente) return toast('Informe a bolsa e o paciente', false);
+  try {
+    var r = await fetch('/api/hospital/hemoterapia/transfusoes', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      bolsa_id: parseInt(bolsaId), paciente_nome: paciente, enfermeiro: document.getElementById('tEnfermeiro').value, coren: document.getElementById('tCoren').value,
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Transfusão registrada', true);
+    document.getElementById('formTransfusaoCard').style.display = 'none';
+    carregarTransfusoes(); carregarBolsas(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function carregarReacoes() {
+  var tbody = document.getElementById('reacoesBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/hemoterapia/reacoes', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.reacoes.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma reação registrada.</td></tr>'; return; }
+    tbody.innerHTML = d.reacoes.map(function(rc) {
+      var gravBadge = {leve:'badge-gray', moderada:'badge-warn', grave:'badge-danger', fatal:'badge-danger'}[rc.gravidade]||'badge-gray';
+      return '<tr><td><strong>' + rc.paciente_nome + '</strong></td><td>' + rc.tipo_reacao_display + '</td><td><span class="badge ' + gravBadge + '">' + rc.gravidade_display + '</span></td><td>' + new Date(rc.data_reacao).toLocaleDateString('pt-BR') + '</td><td>' + (rc.notificado_anvisa ? '<span class="badge badge-ok">Notificado</span>' : '<span class="badge badge-warn">Pendente</span>') + '</td>' +
+        '<td>' + (!rc.notificado_anvisa ? ('<button class="btn btn-ok btn-sm" onclick="notificarAnvisa(' + rc.id + ')">Gerar XML NOTIVISA</button>') : '') + '</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovaReacao() { document.getElementById('formReacaoCard').style.display = 'block'; }
+async function salvarReacao() {
+  var paciente = document.getElementById('rPaciente').value.trim();
+  var descricao = document.getElementById('rDescricao').value.trim();
+  if (!paciente || !descricao) return toast('Informe paciente e descrição', false);
+  try {
+    var r = await fetch('/api/hospital/hemoterapia/reacoes', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      paciente_nome: paciente, tipo_reacao: document.getElementById('rTipo').value, gravidade: document.getElementById('rGravidade').value, descricao: descricao,
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Reação registrada', true);
+    document.getElementById('formReacaoCard').style.display = 'none';
+    carregarReacoes(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function notificarAnvisa(id) {
+  try {
+    var r = await fetch('/api/hospital/hemoterapia/reacoes/' + id + '/notificar-anvisa', { method: 'POST', credentials: 'include', headers: headers() });
+    var d = await r.json();
+    if (!r.ok) return toast(d.erro || 'Erro', false);
+    toast('XML NOTIVISA gerado — baixe e importe manualmente em notivisa.anvisa.gov.br', true);
+    window.open('/api/hospital/hemoterapia/reacoes/' + id + '/notificar-anvisa/download', '_blank');
+    carregarReacoes();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+function carregarTudo() { carregarKpis(); carregarBolsas(); }
+carregarTudo();
+</script>
+</body>
+</html>

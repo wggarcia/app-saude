@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import EquipamentoMedico, ManutencaoEquipamentoMedico, LeitoHospitalar
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 
@@ -70,6 +70,7 @@ def _os_to_dict(o):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.equipamentos")
 def api_equipamentos_medicos(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -114,6 +115,7 @@ def api_equipamentos_medicos(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.equipamentos")
 def api_manutencoes_equipamento(request, equip_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -147,6 +149,7 @@ def api_manutencoes_equipamento(request, equip_id):
 
 @csrf_exempt
 @require_http_methods(["PATCH"])
+@api_requer_feature("hospital.equipamentos")
 def api_manutencao_concluir(request, os_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):

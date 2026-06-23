@@ -14,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .access_control import (
+    api_requer_feature,
     api_requer_gerencia,
     get_setor,
     principal_pode_operacao_setorial,
@@ -100,6 +101,7 @@ def hospital_prontuario_page(request):
 # ─── API: Prontuário lista / novo ─────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.emr")
 @require_http_methods(["GET"])
 def api_prontuario_hospitalar_lista(request):
     """GET ?q=nome_ou_cpf"""
@@ -116,6 +118,7 @@ def api_prontuario_hospitalar_lista(request):
 
 
 @csrf_exempt
+@api_requer_feature("hospital.emr")
 @require_http_methods(["POST"])
 def api_prontuario_hospitalar_novo(request):
     """POST → create ProntuarioHospitalar"""
@@ -156,6 +159,7 @@ def api_prontuario_hospitalar_novo(request):
 
 
 @csrf_exempt
+@api_requer_feature("hospital.emr")
 @require_http_methods(["GET", "POST"])
 def api_prontuario_hospitalar(request):
     if request.method == "POST":
@@ -166,6 +170,7 @@ def api_prontuario_hospitalar(request):
 # ─── API: Prontuário detalhe / update ─────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.emr")
 @require_http_methods(["GET", "PUT"])
 def api_prontuario_hospitalar_detalhe(request, pront_id):
     empresa = _empresa(request)
@@ -207,6 +212,7 @@ def api_prontuario_hospitalar_detalhe(request, pront_id):
 # ─── API: Evoluções ────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.emr")
 @require_http_methods(["GET", "POST"])
 def api_prontuario_evolucoes(request, pront_id):
     empresa = _empresa(request)
@@ -246,6 +252,7 @@ def api_prontuario_evolucoes(request, pront_id):
 # ─── API: Prescrições ─────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.emr")
 @require_http_methods(["GET", "POST"])
 def api_prontuario_prescricoes(request, pront_id):
     empresa = _empresa(request)

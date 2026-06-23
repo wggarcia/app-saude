@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import (
     PacienteInternado, PrescricaoHospitalar,
     PedidoExame, ResultadoExame, AdministracaoMedicamento,
@@ -109,6 +109,7 @@ def _adm_to_dict(a):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.exames_resultados")
 def api_pedidos_exame(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -184,6 +185,7 @@ def api_pedidos_exame(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PATCH"])
+@api_requer_feature("hospital.exames_resultados")
 def api_pedido_exame_detalhe(request, pedido_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -216,6 +218,7 @@ def api_pedido_exame_detalhe(request, pedido_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.exames_resultados")
 def api_resultados_exame(request, pedido_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -257,6 +260,7 @@ def api_resultados_exame(request, pedido_id):
 
 @csrf_exempt
 @require_http_methods(["PATCH"])
+@api_requer_feature("hospital.exames_resultados")
 def api_resultado_visualizar(request, resultado_id):
     """Marca resultado como visualizado pelo médico."""
     empresa = _empresa_autenticada(request)
@@ -284,6 +288,7 @@ MAX_LAUDO_UPLOAD_BYTES = 30 * 1024 * 1024  # 30MB — PDF/imagem de laudo, não 
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.exames_resultados")
 def api_resultado_arquivo(request, resultado_id):
     """Anexa (POST, multipart, campo 'arquivo') ou baixa (GET) o arquivo do laudo de um resultado."""
     empresa = _empresa_autenticada(request)
@@ -326,6 +331,7 @@ def _ext(nome_arquivo):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.exames_resultados")
 def api_administracoes(request, presc_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -386,6 +392,7 @@ def api_administracoes(request, presc_id):
 # ─── Dashboard de Exames ──────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.exames_resultados")
 def api_exames_dashboard(request):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):

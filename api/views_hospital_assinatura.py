@@ -18,19 +18,33 @@ import tempfile
 from datetime import datetime
 
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .services.auth_session import empresa_autenticada_from_request
+from .access_control import (
+    api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
+    requer_operacao_page, requer_permissao_modulo,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def _hosp(request):
     emp = empresa_autenticada_from_request(request)
-    if emp and emp.tipo_conta == "hospital":
+    if emp and get_setor(emp) == "hospital":
         return emp
     return None
+
+
+@ensure_csrf_cookie
+@requer_setor("hospital")
+@requer_feature_pacote("hospital.assinatura_eletronica", "Assinatura Eletrônica")
+@requer_operacao_page
+@requer_permissao_modulo("hospital.clinico")
+def hospital_assinatura_page(request):
+    return render(request, "hospital_assinatura.html")
 
 
 def _get_cred(empresa):
@@ -44,6 +58,7 @@ def _get_cred(empresa):
 
 # ── Evoluções pendentes de assinatura ─────────────────────────────────────────
 
+@api_requer_feature("hospital.assinatura_eletronica")
 def api_assinatura_pendentes(request):
     """
     GET /api/hospital/assinatura/pendentes
@@ -86,6 +101,7 @@ def api_assinatura_pendentes(request):
 # ── Assinar uma evolução ──────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.assinatura_eletronica")
 def api_assinatura_assinar(request, evolucao_id):
     """
     POST /api/hospital/assinatura/assinar/<id>
@@ -171,6 +187,7 @@ def api_assinatura_assinar(request, evolucao_id):
 # ── Assinar em lote ───────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.assinatura_eletronica")
 def api_assinatura_assinar_lote(request):
     """
     POST /api/hospital/assinatura/assinar-lote
@@ -244,6 +261,7 @@ def api_assinatura_assinar_lote(request):
 
 # ── Verificar assinatura ──────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.assinatura_eletronica")
 def api_assinatura_verificar(request, evolucao_id):
     """
     GET /api/hospital/assinatura/verificar/<id>
@@ -290,6 +308,7 @@ def api_assinatura_verificar(request, evolucao_id):
 
 # ── KPIs ─────────────────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.assinatura_eletronica")
 def api_assinatura_kpis(request):
     """GET /api/hospital/assinatura/kpis."""
     empresa = _hosp(request)

@@ -11,12 +11,26 @@ import math
 from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .access_control import (
+    api_requer_feature, requer_setor, requer_feature_pacote,
+    requer_operacao_page, requer_permissao_modulo,
+)
 
 logger = logging.getLogger(__name__)
+
+
+@ensure_csrf_cookie
+@requer_setor("hospital")
+@requer_feature_pacote("hospital.oncologia", "Oncologia")
+@requer_operacao_page
+@requer_permissao_modulo("hospital.clinico")
+def hospital_oncologia_page(request):
+    return render(request, "hospital_oncologia.html")
 
 # Protocolos PCDT/INCA mais prevalentes para seed
 _PROTOCOLOS_SEED = [
@@ -66,6 +80,7 @@ def _sc_dubois(peso_kg, altura_cm):
 # ── Protocolos ─────────────────────────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@api_requer_feature("hospital.oncologia")
 def api_onco_protocolos(request):
     """GET /api/hospital/oncologia/protocolos/ — catálogo com seed PCDT."""
     empresa = get_empresa(request)
@@ -121,6 +136,7 @@ def api_onco_protocolos(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
 def api_onco_ciclos(request):
     """GET/POST /api/hospital/oncologia/ciclos/"""
     empresa = get_empresa(request)
@@ -192,6 +208,7 @@ def api_onco_ciclos(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
+@api_requer_feature("hospital.oncologia")
 def api_onco_ciclo_detalhe(request, ciclo_id):
     """GET/PUT /api/hospital/oncologia/ciclos/<id>/"""
     empresa = get_empresa(request)
@@ -250,6 +267,7 @@ def api_onco_ciclo_detalhe(request, ciclo_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("hospital.oncologia")
 def api_onco_toxicidade(request, ciclo_id):
     """POST /api/hospital/oncologia/ciclos/<id>/toxicidade/ — registra toxicidade CTCAE."""
     empresa = get_empresa(request)
@@ -290,6 +308,7 @@ def api_onco_toxicidade(request, ciclo_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.oncologia")
 def api_onco_apacs(request):
     """GET/POST /api/hospital/oncologia/apacs/"""
     empresa = get_empresa(request)
@@ -361,6 +380,7 @@ def api_onco_apacs(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
+@api_requer_feature("hospital.oncologia")
 def api_onco_apac_detalhe(request, apac_id):
     """GET/PUT /api/hospital/oncologia/apacs/<id>/"""
     empresa = get_empresa(request)
@@ -403,6 +423,7 @@ def api_onco_apac_detalhe(request, apac_id):
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.oncologia")
 def api_onco_kpis(request):
     """GET /api/hospital/oncologia/kpis/"""
     empresa = get_empresa(request)

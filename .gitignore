@@ -96,4 +96,14 @@ corrigir_mapa.shx
 simulacao_stress.py
 simular_brasil_completo.py
 simular_dados.py
+
+# Runtime/generated artifacts — not source
+mediafiles/
+ml_models/
+outputs/
+.playwright-cli/
+/screen1.png
+/screen2.png
+/screen3.png
+docs/~$*
 simular_pandemia.py

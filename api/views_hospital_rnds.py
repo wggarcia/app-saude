@@ -15,19 +15,33 @@ import math
 from datetime import date
 
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.utils import timezone
 
 from .services.auth_session import empresa_autenticada_from_request
+from .access_control import (
+    api_requer_feature, get_setor, requer_setor, requer_feature_pacote,
+    requer_operacao_page, requer_permissao_modulo,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def _hosp(request):
     emp = empresa_autenticada_from_request(request)
-    if emp and emp.tipo_conta == "hospital":
+    if emp and get_setor(emp) == "hospital":
         return emp
     return None
+
+
+@ensure_csrf_cookie
+@requer_setor("hospital")
+@requer_feature_pacote("hospital.rnds", "RNDS / e-SUS")
+@requer_operacao_page
+@requer_permissao_modulo("hospital.clinico")
+def hospital_rnds_page(request):
+    return render(request, "hospital_rnds.html")
 
 
 def _get_cred(empresa):
@@ -42,6 +56,7 @@ def _get_cred(empresa):
 
 # ── Status das credenciais ────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.rnds")
 def api_hospital_rnds_status(request):
     """GET /api/hospital/rnds/status — verifica se RNDS está configurado."""
     empresa = _hosp(request)
@@ -77,6 +92,7 @@ def api_hospital_rnds_status(request):
 
 # ── Histórico ─────────────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.rnds")
 def api_hospital_rnds_transmissoes(request):
     """GET /api/hospital/rnds/transmissoes — histórico paginado."""
     empresa = _hosp(request)
@@ -110,6 +126,7 @@ def api_hospital_rnds_transmissoes(request):
 # ── Transmitir IPS-BR (Sumário de Alta) ───────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.rnds")
 def api_hospital_rnds_transmitir_alta(request, internacao_id):
     """
     POST /api/hospital/rnds/transmitir-alta/<internacao_id>
@@ -171,6 +188,7 @@ def api_hospital_rnds_transmitir_alta(request, internacao_id):
 
 
 @csrf_exempt
+@api_requer_feature("hospital.rnds")
 def api_hospital_rnds_transmitir_rac(request, prontuario_id):
     """
     POST /api/hospital/rnds/transmitir-rac/<prontuario_id>
@@ -226,6 +244,7 @@ def api_hospital_rnds_transmitir_rac(request, prontuario_id):
 
 
 @csrf_exempt
+@api_requer_feature("hospital.rnds")
 def api_hospital_rnds_reprocessar(request, tx_id):
     """POST /api/hospital/rnds/reprocessar/<id> — reprocessa transmissão com erro."""
     empresa = _hosp(request)
@@ -263,6 +282,7 @@ def api_hospital_rnds_reprocessar(request, tx_id):
 
 # ── KPIs ─────────────────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.rnds")
 def api_hospital_rnds_kpis(request):
     """GET /api/hospital/rnds/kpis — cobertura e status das transmissões."""
     empresa = _hosp(request)

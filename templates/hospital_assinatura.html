@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Assinatura Eletrônica — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px;max-width:640px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group input:focus{border-color:var(--accent)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;z-index:999;transform:translateY(80px);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast.err{border-color:rgba(255,77,109,.3);color:var(--danger)}
+.aviso-box{background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.25);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--warn);margin-bottom:4px}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<aside class="sidebar">
+  <div class="logo">🏥 HospitalOS</div>
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span> Prontuários</a>
+  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span> Bloco Cirúrgico</a>
+  <a class="nav-link" href="/hospital/lis/"><span>🔬</span> Laboratório</a>
+  <a class="nav-link" href="/hospital/imagem/"><span>🩻</span> Imagem/PACS</a>
+  <a class="nav-link" href="/hospital/ia-autorizacao/"><span>🧠</span> IA Autorização</a>
+  <a class="nav-link active" href="/hospital/assinatura/"><span>✍️</span> Assinatura Eletrônica</a>
+  <a class="nav-link" href="/hospital/ccih/"><span>🦠</span> CCIH</a>
+  <a class="nav-link" href="/hospital/hemoterapia/"><span>🩸</span> Hemoterapia</a>
+  <a class="nav-link" href="/hospital/obstetrico/"><span>🤰</span> Obstétrico</a>
+  <a class="nav-link" href="/hospital/oncologia/"><span>🎗️</span> Oncologia</a>
+  <a class="nav-link" href="/hospital/opme/"><span>🦴</span> OPME</a>
+  <a class="nav-link" href="/hospital/rnds/"><span>🔗</span> RNDS / e-SUS</a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><span>💊</span> Farmácia Hosp.</a>
+  <a class="nav-link" href="/hospital/faturamento-tiss/"><span>🧾</span> Faturamento TISS</a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span> Dashboard</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">✍️ Assinatura Eletrônica de Prontuário</div>
+      <div class="page-sub">Assinatura digital de evoluções clínicas conforme CFM Resolução 2.299/2021 — ICP-Brasil quando configurado, ou hash SHA-256 operacional como alternativa.</div>
+    </div>
+    <button class="btn btn-ghost" onclick="carregarTudo()">↻ Atualizar</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiTotal">—</div><div class="kpi-lbl">Total de Evoluções</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiAssinadas">—</div><div class="kpi-lbl">Assinadas</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiPendentes">—</div><div class="kpi-lbl">Pendentes</div></div>
+    <div class="kpi" id="kpiCoberturaCard"><div class="kpi-val" id="kpiCobertura">—</div><div class="kpi-lbl" id="kpiCoberturaLbl">Cobertura / Modo</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📋 Evoluções Pendentes de Assinatura</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="fProfissional" placeholder="Filtrar por profissional" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:Manrope,sans-serif" onkeydown="if(event.key==='Enter')carregarPendentes()">
+        <button class="btn btn-ghost btn-sm" onclick="carregarPendentes()">Filtrar</button>
+        <button class="btn btn-ok btn-sm" id="btnLote" onclick="assinarSelecionados()" disabled>✍️ Assinar Selecionadas</button>
+      </div>
+    </div>
+    <div id="pendentesAviso"></div>
+    <table>
+      <thead><tr><th style="width:30px"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th><th>Paciente</th><th>Profissional</th><th>CRM/COREN</th><th>Tipo</th><th>Resumo</th><th></th></tr></thead>
+      <tbody id="pendentesBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-title">🔍 Verificar Integridade de Assinatura</div></div>
+    <div style="padding:18px 20px;display:flex;gap:10px;align-items:flex-end">
+      <div class="form-group" style="margin-bottom:0;flex:1"><label>ID da Evolução</label><input type="number" id="vEvolucaoId" placeholder="Ex: 42"></div>
+      <button class="btn btn-primary" onclick="verificarAssinatura()">Verificar</button>
+    </div>
+    <div id="verificarResultado" style="padding:0 20px 18px"></div>
+  </div>
+</main>
+
+<script>
+function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
+function headers(){ return {'Content-Type':'application/json','X-CSRFToken':getCsrf()}; }
+function toast(msg, ok){ var el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+(ok?'ok':'err')+' show'; setTimeout(function(){el.className='toast';},4000); }
+
+async function carregarKpis() {
+  try {
+    var r = await fetch('/api/hospital/assinatura/kpis', { credentials: 'include', headers: headers() });
+    if (!r.ok) return;
+    var d = await r.json();
+    document.getElementById('kpiTotal').textContent = d.total_evolucoes;
+    document.getElementById('kpiAssinadas').textContent = d.assinadas;
+    document.getElementById('kpiPendentes').textContent = d.pendentes;
+    document.getElementById('kpiCobertura').textContent = d.cobertura_pct + '%';
+    document.getElementById('kpiCoberturaLbl').textContent = d.modo_assinatura;
+    document.getElementById('kpiCoberturaCard').className = 'kpi ' + (d.conformidade_cfm ? 'ok' : 'warn');
+  } catch(e) {}
+}
+
+async function carregarPendentes() {
+  var tbody = document.getElementById('pendentesBody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Carregando...</td></tr>';
+  try {
+    var prof = document.getElementById('fProfissional').value.trim();
+    var url = '/api/hospital/assinatura/pendentes' + (prof ? ('?profissional=' + encodeURIComponent(prof)) : '');
+    var r = await fetch(url, { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    document.getElementById('pendentesAviso').innerHTML = d.aviso ? ('<div class="aviso-box">⚠ ' + d.aviso + '</div>') : '';
+    if (!d.pendentes.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma evolução pendente de assinatura.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.pendentes.map(function(e) {
+      return '<tr>' +
+        '<td><input type="checkbox" class="rowCheck" value="' + e.id + '"></td>' +
+        '<td><strong>' + (e.paciente_nome || '—') + '</strong></td>' +
+        '<td>' + (e.profissional || '—') + '</td>' +
+        '<td>' + (e.crm_coren || '—') + '</td>' +
+        '<td><span class="badge badge-info">' + e.tipo + '</span></td>' +
+        '<td style="max-width:280px;font-size:12px;color:var(--muted)">' + (e.texto_resumo || '') + '</td>' +
+        '<td><button class="btn btn-ok btn-sm" onclick="assinarUma(' + e.id + ')">Assinar</button></td>' +
+        '</tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function toggleAll(checkbox) {
+  document.querySelectorAll('.rowCheck').forEach(function(c){ c.checked = checkbox.checked; });
+  atualizarBotaoLote();
+}
+document.addEventListener('change', function(e){ if (e.target.classList.contains('rowCheck')) atualizarBotaoLote(); });
+function atualizarBotaoLote() {
+  var sel = document.querySelectorAll('.rowCheck:checked').length;
+  document.getElementById('btnLote').disabled = sel === 0;
+  document.getElementById('btnLote').textContent = sel ? ('✍️ Assinar Selecionadas (' + sel + ')') : '✍️ Assinar Selecionadas';
+}
+
+async function assinarUma(id) {
+  var crm = prompt('Confirme seu CRM/COREN para assinar esta evolução:');
+  if (crm === null) return;
+  try {
+    var r = await fetch('/api/hospital/assinatura/assinar/' + id, { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({ crm_coren: crm }) });
+    var d = await r.json();
+    if (!r.ok) { toast(d.erro || 'Erro ao assinar', false); return; }
+    toast('Evolução assinada (' + (d.metodo || '') + ')', true);
+    carregarPendentes(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function assinarSelecionados() {
+  var ids = Array.from(document.querySelectorAll('.rowCheck:checked')).map(function(c){ return parseInt(c.value); });
+  if (!ids.length) return;
+  var crm = prompt('Confirme seu CRM/COREN para assinar ' + ids.length + ' evolução(ões):');
+  if (crm === null) return;
+  try {
+    var r = await fetch('/api/hospital/assinatura/assinar-lote', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({ ids: ids, crm_coren: crm }) });
+    var d = await r.json();
+    toast(d.assinados + ' assinada(s), ' + d.erros + ' erro(s)', d.erros === 0);
+    carregarPendentes(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function verificarAssinatura() {
+  var id = document.getElementById('vEvolucaoId').value;
+  if (!id) return;
+  var el = document.getElementById('verificarResultado');
+  el.innerHTML = '<div class="empty">Verificando...</div>';
+  try {
+    var r = await fetch('/api/hospital/assinatura/verificar/' + id, { credentials: 'include', headers: headers() });
+    var d = await r.json();
+    if (!r.ok) { el.innerHTML = '<div class="aviso-box">' + (d.erro || 'Erro') + '</div>'; return; }
+    var cor = d.valido === true ? 'ok' : (d.valido === false ? 'danger' : 'gray');
+    el.innerHTML =
+      '<div class="aviso-box" style="border-color:var(--' + (cor === 'gray' ? 'muted' : cor) + ')">' +
+      '<strong>' + (d.mensagem || '') + '</strong>' +
+      (d.assinado ? ('<div style="margin-top:8px;font-size:11px;color:var(--muted)">Profissional: ' + (d.profissional||'—') + ' · ' + (d.crm_coren||'—') + ' · Assinado em ' + (d.assinado_em ? new Date(d.assinado_em).toLocaleString('pt-BR') : '—') + '</div>') : '') +
+      '</div>';
+  } catch(e) { el.innerHTML = '<div class="aviso-box">Erro de conexão.</div>'; }
+}
+
+function carregarTudo() { carregarKpis(); carregarPendentes(); }
+carregarTudo();
+</script>
+</body>
+</html>

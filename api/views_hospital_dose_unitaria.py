@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import PacienteInternado, PrescricaoHospitalar, DispensacaoDoseUnitaria
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 
@@ -57,6 +57,7 @@ def _dose_to_dict(d):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.dose_unitaria")
 def api_dose_unitaria_paciente(request, pac_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
@@ -108,6 +109,7 @@ def api_dose_unitaria_paciente(request, pac_id):
 
 @csrf_exempt
 @require_http_methods(["PATCH"])
+@api_requer_feature("hospital.dose_unitaria")
 def api_dose_unitaria_status(request, dose_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):

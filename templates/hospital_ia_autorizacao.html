@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IA Autorização Clínica — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.form-card-title{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group select option{background:#0a1a28}
+.checkbox-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.decision-result{border-radius:12px;padding:16px 20px;margin-top:16px;display:none}
+.decision-result.show{display:block}
+.decision-result.aprovada{background:rgba(0,229,176,.08);border:1px solid rgba(0,229,176,.25)}
+.decision-result.negada{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25)}
+.decision-result.revisao{background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.25)}
+.decision-label{font-size:18px;font-weight:800;margin-bottom:8px}
+.decision-result.aprovada .decision-label{color:var(--ok)}
+.decision-result.negada .decision-label{color:var(--danger)}
+.decision-result.revisao .decision-label{color:var(--warn)}
+.score-bar-wrap{display:flex;align-items:center;gap:8px}
+.score-track{flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
+.score-fill{height:100%;border-radius:99px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.review-item{display:flex;align-items:flex-start;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border)}
+.review-item:last-child{border-bottom:none}
+.review-info{flex:1}
+.review-title{font-size:13px;font-weight:700}
+.review-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.review-just{font-size:12px;color:var(--text);margin-top:6px;background:rgba(255,255,255,.03);border-radius:6px;padding:8px 10px}
+.filter-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:Manrope,sans-serif}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.form-row{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">🏥 HospitalOS</div>
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span> Prontuários</a>
+  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span> Bloco Cirúrgico</a>
+  <a class="nav-link" href="/hospital/lis/"><span>🔬</span> Laboratório</a>
+  <a class="nav-link" href="/hospital/imagem/"><span>🩻</span> Imagem/PACS</a>
+  <a class="nav-link active" href="/hospital/ia-autorizacao/"><span>🧠</span> IA Autorização</a>
+  <a class="nav-link" href="/hospital/assinatura/"><span>✍️</span> Assinatura Eletrônica</a>
+  <a class="nav-link" href="/hospital/ccih/"><span>🦠</span> CCIH</a>
+  <a class="nav-link" href="/hospital/hemoterapia/"><span>🩸</span> Hemoterapia</a>
+  <a class="nav-link" href="/hospital/obstetrico/"><span>🤰</span> Obstétrico</a>
+  <a class="nav-link" href="/hospital/oncologia/"><span>🎗️</span> Oncologia</a>
+  <a class="nav-link" href="/hospital/opme/"><span>🦴</span> OPME</a>
+  <a class="nav-link" href="/hospital/rnds/"><span>🔗</span> RNDS / e-SUS</a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><span>💊</span> Farmácia Hosp.</a>
+  <a class="nav-link" href="/hospital/faturamento-tiss/"><span>🧾</span> Faturamento TISS</a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span> Dashboard</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">IA — Autorização Clínica</div>
+      <div class="page-sub">Motor de análise automática de internações, cirurgias e exames de alta complexidade. Urgências aprovadas na hora; demais casos vão para revisão da auditoria médica.</div>
+    </div>
+    <button class="btn btn-ghost" onclick="carregarTudo()">↻ Atualizar</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi ok"><div class="kpi-val" id="kpiAprovadas">—</div><div class="kpi-lbl">% Aprovadas Automático</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiNegadas">—</div><div class="kpi-lbl">% Negadas</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiRevisao">—</div><div class="kpi-lbl">Em Revisão Humana</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiHoje">—</div><div class="kpi-lbl">Processadas Hoje</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+
+    <div class="form-card">
+      <div class="form-card-title">🧠 Analisar Nova Solicitação</div>
+      <div class="form-group">
+        <label>Paciente *</label>
+        <input type="text" id="gPaciente" placeholder="Nome do paciente">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo de Solicitação</label>
+          <select id="gTipo">
+            <option value="internacao">Internação</option>
+            <option value="cirurgia">Cirurgia</option>
+            <option value="exame_alta_complexidade">Exame de Alta Complexidade</option>
+            <option value="procedimento" selected>Procedimento</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>CID-10</label>
+          <input type="text" id="gCid" placeholder="Ex: Z00, I10">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Procedimento *</label>
+        <input type="text" id="gProcedimento" placeholder="Descrição do procedimento solicitado">
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="gUrgente">
+        <label for="gUrgente" style="font-size:13px">Solicitação urgente (aprovação automática)</label>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="analisarSolicitacao()" id="btnAnalisar">
+        🧠 Analisar com IA
+      </button>
+
+      <div class="decision-result" id="decisionResult">
+        <div class="decision-label" id="decisionLabel"></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Score de confiança</div>
+        <div class="score-bar-wrap">
+          <div class="score-track"><div class="score-fill" id="scoreFill" style="width:0%"></div></div>
+          <span id="scoreVal" style="font-weight:700;font-size:13px;width:40px;text-align:right"></span>
+        </div>
+        <div style="margin-top:12px;font-size:13px;line-height:1.6" id="decisionJust"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🔍 Fila de Revisão Humana</div>
+          <span class="badge badge-warn" id="badgeRevisao">0</span>
+        </div>
+        <div id="filaRevisao"><div class="empty">Carregando...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📋 Histórico de Decisões</div>
+      <select class="filter-sel" id="filtroDecisao" onchange="carregarHistorico()">
+        <option value="">Todas</option>
+        <option value="aprovada">Aprovadas</option>
+        <option value="negada">Negadas</option>
+        <option value="revisao">Revisão</option>
+      </select>
+    </div>
+    <div id="tabelaHistorico"><div class="empty">Carregando...</div></div>
+  </div>
+</main>
+
+<script>
+const DECISAO_BADGE = { aprovada:'badge-ok', negada:'badge-danger', revisao:'badge-warn' };
+const DECISAO_LABEL = { aprovada:'Aprovada', negada:'Negada', revisao:'Revisão Humana' };
+const SCORE_COLOR = { aprovada:'var(--ok)', negada:'var(--danger)', revisao:'var(--warn)' };
+
+async function carregarKPIs() {
+  try {
+    const r = await fetch('/api/hospital/ia-autorizacao/kpis/', {credentials:'include'});
+    const d = await r.json();
+    document.getElementById('kpiAprovadas').textContent = (d.pct_aprovadas ?? 0) + '%';
+    document.getElementById('kpiNegadas').textContent = (d.pct_negadas ?? 0) + '%';
+    document.getElementById('kpiRevisao').textContent = d.em_revisao ?? 0;
+    document.getElementById('kpiHoje').textContent = d.processadas_hoje ?? 0;
+    document.getElementById('badgeRevisao').textContent = d.em_revisao ?? 0;
+  } catch(e) {}
+}
+
+async function carregarFilaRevisao() {
+  try {
+    const r = await fetch('/api/hospital/ia-autorizacao/lista/?pendentes=1', {credentials:'include'});
+    const d = await r.json();
+    renderFilaRevisao(d.autorizacoes || []);
+  } catch(e) {
+    document.getElementById('filaRevisao').innerHTML = '<div class="empty">Erro ao carregar.</div>';
+  }
+}
+
+function renderFilaRevisao(lista) {
+  const el = document.getElementById('filaRevisao');
+  if (!lista.length) { el.innerHTML = '<div class="empty">Nenhuma solicitação aguardando revisão.</div>'; return; }
+  let html = '';
+  for (const ia of lista) {
+    html += `<div class="review-item">
+      <div class="review-info">
+        <div class="review-title">${ia.paciente_nome} — ${ia.tipo_solicitacao_label}</div>
+        <div class="review-sub">${ia.procedimento} ${ia.cid10 ? '| CID: ' + ia.cid10 : ''}</div>
+        <div class="review-just">${ia.justificativa_ia}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+        <button class="btn btn-ok btn-sm" onclick="revisar(${ia.id},'aprovada')">✓ Aprovar</button>
+        <button class="btn btn-danger btn-sm" onclick="revisar(${ia.id},'negada')">✗ Negar</button>
+      </div>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+async function revisar(iaId, decisao) {
+  const revisada_por = prompt('Identificação do auditor médico:') || 'Auditor Médico';
+  const r = await fetch(`/api/hospital/ia-autorizacao/${iaId}/revisar/`, {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body: JSON.stringify({decisao_final: decisao, revisada_por})
+  });
+  if (r.ok) { carregarTudo(); }
+}
+
+async function carregarHistorico() {
+  const decisao = document.getElementById('filtroDecisao').value;
+  let url = '/api/hospital/ia-autorizacao/lista/?limit=50';
+  if (decisao) url += '&decisao=' + decisao;
+  try {
+    const r = await fetch(url, {credentials:'include'});
+    const d = await r.json();
+    renderHistorico(d.autorizacoes || []);
+  } catch(e) {
+    document.getElementById('tabelaHistorico').innerHTML = '<div class="empty">Erro.</div>';
+  }
+}
+
+function renderHistorico(lista) {
+  const el = document.getElementById('tabelaHistorico');
+  if (!lista.length) { el.innerHTML = '<div class="empty">Nenhuma autorização registrada.</div>'; return; }
+  let html = `<table><thead><tr>
+    <th>Paciente</th><th>Tipo</th><th>Procedimento</th><th>CID</th>
+    <th>Decisão IA</th><th>Score</th><th>Revisão</th><th>Data</th>
+  </tr></thead><tbody>`;
+  for (const ia of lista) {
+    const scorePct = Math.round(ia.score_confianca * 100);
+    const color = SCORE_COLOR[ia.decisao] || 'var(--muted)';
+    html += `<tr>
+      <td style="font-weight:700">${ia.paciente_nome}</td>
+      <td>${ia.tipo_solicitacao_label}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ia.procedimento}</td>
+      <td>${ia.cid10 || '—'}</td>
+      <td><span class="badge ${DECISAO_BADGE[ia.decisao]||'badge-gray'}">${DECISAO_LABEL[ia.decisao]||ia.decisao}</span></td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-track" style="width:80px"><div class="score-fill" style="width:${scorePct}%;background:${color}"></div></div>
+          <span style="font-size:11px;font-weight:700;color:${color}">${scorePct}%</span>
+        </div>
+      </td>
+      <td>${ia.decisao_final ? `<span class="badge ${DECISAO_BADGE[ia.decisao_final]||'badge-gray'}">${DECISAO_LABEL[ia.decisao_final]}</span>` : '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${ia.criado_em}</td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+async function analisarSolicitacao() {
+  const paciente_nome = document.getElementById('gPaciente').value.trim();
+  const procedimento = document.getElementById('gProcedimento').value.trim();
+  if (!paciente_nome || !procedimento) { alert('Paciente e procedimento são obrigatórios.'); return; }
+  const btn = document.getElementById('btnAnalisar');
+  btn.disabled = true;
+  btn.textContent = 'Analisando...';
+  try {
+    const r = await fetch('/api/hospital/ia-autorizacao/analisar/', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body: JSON.stringify({
+        paciente_nome,
+        tipo_solicitacao: document.getElementById('gTipo').value,
+        procedimento,
+        cid10: document.getElementById('gCid').value,
+        urgente: document.getElementById('gUrgente').checked,
+      })
+    });
+    const d = await r.json();
+    if (r.ok) { mostrarDecisao(d.autorizacao); carregarTudo(); }
+    else { alert(d.erro || 'Erro na análise.'); }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🧠 Analisar com IA';
+  }
+}
+
+function mostrarDecisao(ia) {
+  const result = document.getElementById('decisionResult');
+  result.className = 'decision-result show ' + ia.decisao;
+  const labels = { aprovada:'✓ Aprovada Automaticamente', negada:'✗ Negada', revisao:'⚠ Encaminhado para Revisão Humana' };
+  document.getElementById('decisionLabel').innerHTML = labels[ia.decisao] || ia.decisao;
+  const pct = Math.round(ia.score_confianca * 100);
+  const colors = { aprovada:'var(--ok)', negada:'var(--danger)', revisao:'var(--warn)' };
+  document.getElementById('scoreFill').style.width = pct + '%';
+  document.getElementById('scoreFill').style.background = colors[ia.decisao];
+  document.getElementById('scoreVal').textContent = pct + '%';
+  document.getElementById('decisionJust').textContent = ia.justificativa_ia;
+}
+
+function carregarTudo() {
+  carregarKPIs();
+  carregarFilaRevisao();
+  carregarHistorico();
+}
+
+function getCookie(name) {
+  const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+
+window.addEventListener('DOMContentLoaded', carregarTudo);
+</script>
+</body>
+</html>

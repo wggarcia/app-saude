@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CCIH — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px;max-width:640px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.form-card-title{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group select option{background:#0a1a28}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border)}
+.tab-btn{padding:9px 16px;border-radius:8px 8px 0 0;border:none;background:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(0,194,255,.06)}
+.tab-panel{display:none}.tab-panel.active{display:flex;flex-direction:column;gap:16px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;z-index:999;transform:translateY(80px);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast.err{border-color:rgba(255,77,109,.3);color:var(--danger)}
+.filter-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:Manrope,sans-serif}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.form-row{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<aside class="sidebar">
+  <div class="logo">🏥 HospitalOS</div>
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span> Prontuários</a>
+  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span> Bloco Cirúrgico</a>
+  <a class="nav-link" href="/hospital/lis/"><span>🔬</span> Laboratório</a>
+  <a class="nav-link" href="/hospital/imagem/"><span>🩻</span> Imagem/PACS</a>
+  <a class="nav-link" href="/hospital/ia-autorizacao/"><span>🧠</span> IA Autorização</a>
+  <a class="nav-link" href="/hospital/assinatura/"><span>✍️</span> Assinatura Eletrônica</a>
+  <a class="nav-link active" href="/hospital/ccih/"><span>🦠</span> CCIH</a>
+  <a class="nav-link" href="/hospital/hemoterapia/"><span>🩸</span> Hemoterapia</a>
+  <a class="nav-link" href="/hospital/obstetrico/"><span>🤰</span> Obstétrico</a>
+  <a class="nav-link" href="/hospital/oncologia/"><span>🎗️</span> Oncologia</a>
+  <a class="nav-link" href="/hospital/opme/"><span>🦴</span> OPME</a>
+  <a class="nav-link" href="/hospital/rnds/"><span>🔗</span> RNDS / e-SUS</a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><span>💊</span> Farmácia Hosp.</a>
+  <a class="nav-link" href="/hospital/faturamento-tiss/"><span>🧾</span> Faturamento TISS</a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span> Dashboard</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🦠 CCIH — Controle de Infecção Hospitalar</div>
+      <div class="page-sub">Vigilância epidemiológica de IRAS, protocolos de isolamento e indicadores de densidade de incidência conforme RDC 36/2008 ANVISA.</div>
+    </div>
+    <button class="btn btn-ghost" onclick="carregarTudo()">↻ Atualizar</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi warn"><div class="kpi-val" id="kpiInfeccoesMes">—</div><div class="kpi-lbl">IRAS no Mês</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiIsolamentos">—</div><div class="kpi-lbl">Isolamentos Ativos</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiNaoNotificados">—</div><div class="kpi-lbl">Sem Notificação ANVISA</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiResistencia">—</div><div class="kpi-lbl">Alerta de Resistência (MRSA/KPC/VRE)</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="infeccoes" onclick="setTab('infeccoes')">IRAS</button>
+    <button class="tab-btn" data-tab="isolamentos" onclick="setTab('isolamentos')">Isolamentos</button>
+    <button class="tab-btn" data-tab="indicadores" onclick="setTab('indicadores')">Indicadores Mensais</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-infeccoes">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🦠 Infecções Relacionadas à Assistência à Saúde</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovaInfeccao()">+ Nova Notificação</button>
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>Leito/Setor</th><th>Topografia</th><th>Agente</th><th>Status</th><th>Data</th><th>ANVISA</th></tr></thead>
+        <tbody id="infeccoesBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formInfeccaoCard" style="display:none">
+      <div class="form-card-title">Nova Notificação de IRAS</div>
+      <div class="form-row">
+        <div class="form-group"><label>Paciente *</label><input id="iPaciente"></div>
+        <div class="form-group"><label>Leito</label><input id="iLeito"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Setor</label><input id="iSetor"></div>
+        <div class="form-group"><label>Topografia *</label>
+          <select id="iTopografia">
+            <option value="ipcs">Infecção de Corrente Sanguínea (IPCS)</option>
+            <option value="itu">Infecção do Trato Urinário (ITU-RC)</option>
+            <option value="pav">Pneumonia Associada à Ventilação (PAV)</option>
+            <option value="isc">Infecção de Sítio Cirúrgico (ISC)</option>
+            <option value="outra">Outra</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Agente</label>
+          <select id="iAgente">
+            <option value="mrsa">MRSA</option>
+            <option value="kpc">KPC</option>
+            <option value="vre">VRE</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Status</label>
+          <select id="iStatus">
+            <option value="suspeita">Suspeita</option>
+            <option value="confirmada">Confirmada</option>
+            <option value="descartada">Descartada</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formInfeccaoCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarInfeccao()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-isolamentos">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🚧 Protocolos de Isolamento</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovoIsolamento()">+ Novo Isolamento</button>
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>Leito</th><th>Tipo</th><th>Motivo</th><th>Status</th><th>Iniciado em</th><th></th></tr></thead>
+        <tbody id="isolamentosBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formIsolamentoCard" style="display:none">
+      <div class="form-card-title">Novo Protocolo de Isolamento</div>
+      <div class="form-row">
+        <div class="form-group"><label>Paciente *</label><input id="isoPaciente"></div>
+        <div class="form-group"><label>Leito *</label><input id="isoLeito"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Tipo *</label>
+          <select id="isoTipo">
+            <option value="contato">Contato</option>
+            <option value="goticulas">Gotículas</option>
+            <option value="aerossois">Aerossóis</option>
+            <option value="protetor">Protetor (reverso)</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Motivo *</label><input id="isoMotivo"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formIsolamentoCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarIsolamento()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-indicadores">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📊 Indicadores Mensais (DI/ICS, ITU-RC, PAV, ISC)</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovoIndicador()">+ Lançar Competência</button>
+      </div>
+      <table>
+        <thead><tr><th>Competência</th><th>DI-ICS</th><th>DI-ITU-RC</th><th>DI-PAV</th><th>Taxa ISC</th><th>Total IRAS</th><th>Cirurgias</th></tr></thead>
+        <tbody id="indicadoresBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formIndicadorCard" style="display:none">
+      <div class="form-card-title">Lançar Indicador Mensal</div>
+      <div class="form-row">
+        <div class="form-group"><label>Competência (AAAAMM) *</label><input id="indCompetencia" placeholder="Ex: 202606"></div>
+        <div class="form-group"><label>Total de Cirurgias</label><input type="number" id="indCirurgias"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>DI-ICS</label><input type="number" step="0.01" id="indIcs"></div>
+        <div class="form-group"><label>DI-ITU-RC</label><input type="number" step="0.01" id="indItu"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>DI-PAV</label><input type="number" step="0.01" id="indPav"></div>
+        <div class="form-group"><label>Taxa ISC (%)</label><input type="number" step="0.01" id="indIsc"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formIndicadorCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarIndicador()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
+function headers(){ return {'Content-Type':'application/json','X-CSRFToken':getCsrf()}; }
+function toast(msg, ok){ var el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+(ok?'ok':'err')+' show'; setTimeout(function(){el.className='toast';},4000); }
+
+function setTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
+  if (tab === 'isolamentos') carregarIsolamentos();
+  if (tab === 'indicadores') carregarIndicadores();
+}
+
+async function carregarKpis() {
+  try {
+    var r = await fetch('/api/hospital/ccih/kpis/', { credentials: 'include', headers: headers() });
+    if (!r.ok) return;
+    var d = await r.json();
+    document.getElementById('kpiInfeccoesMes').textContent = d.infeccoes_mes;
+    document.getElementById('kpiIsolamentos').textContent = d.isolamentos_ativos;
+    document.getElementById('kpiNaoNotificados').textContent = d.nao_notificados_anvisa;
+    document.getElementById('kpiResistencia').textContent = d.alerta_resistencia;
+  } catch(e) {}
+}
+
+var statusMap = {confirmada:'badge-danger', suspeita:'badge-warn', descartada:'badge-gray'};
+
+async function carregarInfeccoes() {
+  var tbody = document.getElementById('infeccoesBody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/ccih/infeccoes/', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.infeccoes.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma IRAS registrada.</td></tr>'; return; }
+    tbody.innerHTML = d.infeccoes.map(function(i) {
+      return '<tr>' +
+        '<td><strong>' + i.paciente_nome + '</strong></td>' +
+        '<td>' + (i.leito || '—') + ' / ' + (i.setor || '—') + '</td>' +
+        '<td>' + i.topografia_display + '</td>' +
+        '<td>' + i.agente_display + '</td>' +
+        '<td><span class="badge ' + (statusMap[i.status]||'badge-gray') + '">' + i.status_display + '</span></td>' +
+        '<td>' + new Date(i.data_diagnostico).toLocaleDateString('pt-BR') + '</td>' +
+        '<td>' + (i.notificado_anvisa ? '<span class="badge badge-ok">Notificado</span>' : '<span class="badge badge-warn">Pendente</span>') + '</td>' +
+        '</tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovaInfeccao() { document.getElementById('formInfeccaoCard').style.display = 'block'; }
+async function salvarInfeccao() {
+  var paciente = document.getElementById('iPaciente').value.trim();
+  if (!paciente) return toast('Informe o nome do paciente', false);
+  try {
+    var r = await fetch('/api/hospital/ccih/infeccoes/', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      paciente_nome: paciente, leito: document.getElementById('iLeito').value, setor: document.getElementById('iSetor').value,
+      topografia: document.getElementById('iTopografia').value, agente: document.getElementById('iAgente').value, status: document.getElementById('iStatus').value,
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Notificação registrada', true);
+    document.getElementById('formInfeccaoCard').style.display = 'none';
+    carregarInfeccoes(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function carregarIsolamentos() {
+  var tbody = document.getElementById('isolamentosBody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/ccih/isolamentos/', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.isolamentos.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum isolamento registrado.</td></tr>'; return; }
+    tbody.innerHTML = d.isolamentos.map(function(iso) {
+      return '<tr>' +
+        '<td><strong>' + iso.paciente_nome + '</strong></td>' +
+        '<td>' + iso.leito + '</td>' +
+        '<td>' + iso.tipo_display + '</td>' +
+        '<td style="font-size:12px;color:var(--muted)">' + iso.motivo + '</td>' +
+        '<td>' + (iso.ativo ? '<span class="badge badge-warn">Ativo</span>' : '<span class="badge badge-gray">Encerrado</span>') + '</td>' +
+        '<td>' + new Date(iso.iniciado_em).toLocaleDateString('pt-BR') + '</td>' +
+        '<td>' + (iso.ativo ? ('<button class="btn btn-danger btn-sm" onclick="encerrarIsolamento(' + iso.id + ')">Encerrar</button>') : '') + '</td>' +
+        '</tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovoIsolamento() { document.getElementById('formIsolamentoCard').style.display = 'block'; }
+async function salvarIsolamento() {
+  var paciente = document.getElementById('isoPaciente').value.trim();
+  var leito = document.getElementById('isoLeito').value.trim();
+  var motivo = document.getElementById('isoMotivo').value.trim();
+  if (!paciente || !leito || !motivo) return toast('Preencha paciente, leito e motivo', false);
+  try {
+    var r = await fetch('/api/hospital/ccih/isolamentos/', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      paciente_nome: paciente, leito: leito, tipo: document.getElementById('isoTipo').value, motivo: motivo,
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Isolamento registrado', true);
+    document.getElementById('formIsolamentoCard').style.display = 'none';
+    carregarIsolamentos(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function encerrarIsolamento(id) {
+  try {
+    var r = await fetch('/api/hospital/ccih/isolamentos/' + id + '/encerrar/', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({}) });
+    if (!r.ok) return toast('Erro ao encerrar', false);
+    toast('Isolamento encerrado', true);
+    carregarIsolamentos(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function carregarIndicadores() {
+  var tbody = document.getElementById('indicadoresBody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/ccih/indicadores/', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.indicadores.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhum indicador lançado.</td></tr>'; return; }
+    tbody.innerHTML = d.indicadores.map(function(ind) {
+      return '<tr><td><strong>' + ind.competencia + '</strong></td><td>' + ind.di_ics + '</td><td>' + ind.di_itu_rc + '</td><td>' + ind.di_pav + '</td><td>' + ind.taxa_isc + '%</td><td>' + ind.total_infeccoes + '</td><td>' + ind.total_cirurgias + '</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovoIndicador() { document.getElementById('formIndicadorCard').style.display = 'block'; }
+async function salvarIndicador() {
+  var comp = document.getElementById('indCompetencia').value.trim();
+  if (!comp || comp.length !== 6) return toast('Informe a competência no formato AAAAMM', false);
+  try {
+    var r = await fetch('/api/hospital/ccih/indicadores/', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      competencia: comp, di_ics: parseFloat(document.getElementById('indIcs').value)||0, di_itu_rc: parseFloat(document.getElementById('indItu').value)||0,
+      di_pav: parseFloat(document.getElementById('indPav').value)||0, taxa_isc: parseFloat(document.getElementById('indIsc').value)||0,
+      total_cirurgias: parseInt(document.getElementById('indCirurgias').value)||0,
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Indicador lançado', true);
+    document.getElementById('formIndicadorCard').style.display = 'none';
+    carregarIndicadores();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+function carregarTudo() { carregarKpis(); carregarInfeccoes(); }
+carregarTudo();
+</script>
+</body>
+</html>

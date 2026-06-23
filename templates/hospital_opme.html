@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OPME — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px;max-width:640px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-danger{background:rgba(255,77,109,.15);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.form-card-title{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group select option{background:#0a1a28}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border)}
+.tab-btn{padding:9px 16px;border-radius:8px 8px 0 0;border:none;background:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(0,194,255,.06)}
+.tab-panel{display:none}.tab-panel.active{display:flex;flex-direction:column;gap:16px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;z-index:999;transform:translateY(80px);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast.err{border-color:rgba(255,77,109,.3);color:var(--danger)}
+.itens-mini{font-size:11px;color:var(--muted)}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.form-row,.form-row3{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<aside class="sidebar">
+  <div class="logo">🏥 HospitalOS</div>
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span> Prontuários</a>
+  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span> Bloco Cirúrgico</a>
+  <a class="nav-link" href="/hospital/lis/"><span>🔬</span> Laboratório</a>
+  <a class="nav-link" href="/hospital/imagem/"><span>🩻</span> Imagem/PACS</a>
+  <a class="nav-link" href="/hospital/ia-autorizacao/"><span>🧠</span> IA Autorização</a>
+  <a class="nav-link" href="/hospital/assinatura/"><span>✍️</span> Assinatura Eletrônica</a>
+  <a class="nav-link" href="/hospital/ccih/"><span>🦠</span> CCIH</a>
+  <a class="nav-link" href="/hospital/hemoterapia/"><span>🩸</span> Hemoterapia</a>
+  <a class="nav-link" href="/hospital/obstetrico/"><span>🤰</span> Obstétrico</a>
+  <a class="nav-link" href="/hospital/oncologia/"><span>🎗️</span> Oncologia</a>
+  <a class="nav-link active" href="/hospital/opme/"><span>🦴</span> OPME</a>
+  <a class="nav-link" href="/hospital/rnds/"><span>🔗</span> RNDS / e-SUS</a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><span>💊</span> Farmácia Hosp.</a>
+  <a class="nav-link" href="/hospital/faturamento-tiss/"><span>🧾</span> Faturamento TISS</a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span> Dashboard</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🦴 OPME — Órteses, Próteses e Materiais Especiais</div>
+      <div class="page-sub">Catálogo, autorizações prévias e rastreabilidade de implantáveis com número de série/lote — ANVISA RDC 27/2008, CFM Res. 2.307/2022.</div>
+    </div>
+    <button class="btn btn-ghost" onclick="carregarTudo()">↻ Atualizar</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiCatalogo">—</div><div class="kpi-lbl">Itens Ativos no Catálogo</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiPendentes">—</div><div class="kpi-lbl">Autorizações Pendentes</div></div>
+    <div class="kpi ok"><div class="kpi-val" id="kpiTaxaAprov">—</div><div class="kpi-lbl">Taxa de Aprovação</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiImplantes">—</div><div class="kpi-lbl">Implantes (30d)</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="autorizacoes" onclick="setTab('autorizacoes')">Autorizações</button>
+    <button class="tab-btn" data-tab="catalogo" onclick="setTab('catalogo')">Catálogo</button>
+    <button class="tab-btn" data-tab="implantaveis" onclick="setTab('implantaveis')">Implantáveis</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-autorizacoes">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📑 Autorizações Prévias de OPME</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovaAutorizacao()">+ Nova Solicitação</button>
+      </div>
+      <table>
+        <thead><tr><th>Protocolo</th><th>Paciente</th><th>Médico</th><th>CID</th><th>Itens</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody id="autorizacoesBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formAutorizacaoCard" style="display:none">
+      <div class="form-card-title">Nova Solicitação de Autorização OPME</div>
+      <div class="form-row">
+        <div class="form-group"><label>Paciente *</label><input id="oPaciente"></div>
+        <div class="form-group"><label>CID-10</label><input id="oCid"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Médico Solicitante *</label><input id="oMedico"></div>
+        <div class="form-group"><label>CRM</label><input id="oCrm"></div>
+      </div>
+      <div class="form-group"><label>Item do Catálogo (ID) e Quantidade *</label>
+        <div style="display:flex;gap:8px">
+          <select id="oOpmeId" style="flex:2"></select>
+          <input type="number" id="oQtd" value="1" style="flex:1">
+        </div>
+      </div>
+      <div class="form-group"><label>Justificativa Clínica</label><textarea id="oJustificativa" rows="3" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;width:100%"></textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formAutorizacaoCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarAutorizacao()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-catalogo">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📦 Catálogo de OPME</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovoItem()">+ Novo Item</button>
+      </div>
+      <table>
+        <thead><tr><th>Descrição</th><th>Tipo</th><th>ANVISA</th><th>Fabricante</th><th>Preço Máximo</th></tr></thead>
+        <tbody id="catalogoBody"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formItemCard" style="display:none">
+      <div class="form-card-title">Novo Item de Catálogo</div>
+      <div class="form-row">
+        <div class="form-group"><label>Descrição *</label><input id="iDescricao"></div>
+        <div class="form-group"><label>Tipo</label>
+          <select id="iTipo"><option value="orteses">Órtese</option><option value="proteses">Prótese</option><option value="material">Material Especial</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Código ANVISA</label><input id="iAnvisa"></div>
+        <div class="form-group"><label>Código SIGTAP</label><input id="iSigtap"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Fabricante</label><input id="iFabricante"></div>
+        <div class="form-group"><label>Preço Máximo (R$)</label><input type="number" step="0.01" id="iPreco"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formItemCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarItem()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-implantaveis">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🔖 Registro de Implantáveis</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovoImplante()">+ Registrar Implante</button>
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>Item</th><th>Nº de Série</th><th>Lote</th><th>Data Implante</th><th>Médico</th></tr></thead>
+        <tbody id="implantaveisBody"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formImplanteCard" style="display:none">
+      <div class="form-card-title">Registrar Implante</div>
+      <div class="form-row">
+        <div class="form-group"><label>Paciente *</label><input id="mPaciente"></div>
+        <div class="form-group"><label>Item do Catálogo (ID) *</label><select id="mOpmeId"></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Número de Série</label><input id="mSerie"></div>
+        <div class="form-group"><label>Lote do Fabricante</label><input id="mLote"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Data do Implante *</label><input type="date" id="mData"></div>
+        <div class="form-group"><label>Médico Implantador</label><input id="mMedico"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formImplanteCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarImplante()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
+function headers(){ return {'Content-Type':'application/json','X-CSRFToken':getCsrf()}; }
+function toast(msg, ok){ var el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+(ok?'ok':'err')+' show'; setTimeout(function(){el.className='toast';},4000); }
+
+function setTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
+  if (tab === 'implantaveis') carregarImplantaveis();
+}
+
+async function carregarKpis() {
+  try {
+    var r = await fetch('/api/hospital/opme/kpis', { credentials: 'include', headers: headers() });
+    if (!r.ok) return;
+    var d = await r.json();
+    document.getElementById('kpiCatalogo').textContent = d.catalogo_itens_ativos;
+    document.getElementById('kpiPendentes').textContent = d.autorizacoes_pendentes;
+    document.getElementById('kpiTaxaAprov').textContent = d.taxa_aprovacao_pct + '%';
+    document.getElementById('kpiImplantes').textContent = d.implantaveis_ultimos_30d;
+  } catch(e) {}
+}
+
+var statusAutMap = {solicitada:'badge-warn', aprovada:'badge-ok', negada:'badge-danger', parcial:'badge-info', cancelada:'badge-gray'};
+
+async function carregarAutorizacoes() {
+  var tbody = document.getElementById('autorizacoesBody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/opme/autorizacoes', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.autorizacoes.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Nenhuma autorização registrada.</td></tr>'; return; }
+    tbody.innerHTML = d.autorizacoes.map(function(a) {
+      var itensTxt = a.itens.map(function(it){ return it.opme_descricao + ' (x' + it.quantidade + ')'; }).join(', ');
+      var acoes = a.status === 'solicitada' ? (
+        '<button class="btn btn-ok btn-sm" onclick="acaoAutorizacao(' + a.id + ',\'aprovar\')">Aprovar</button> ' +
+        '<button class="btn btn-danger btn-sm" onclick="acaoAutorizacao(' + a.id + ',\'negar\')">Negar</button>'
+      ) : '—';
+      return '<tr><td><strong>' + a.numero_protocolo + '</strong></td><td>' + a.paciente_nome + '</td><td>' + a.medico_solicitante + '</td><td>' + (a.cid10||'—') + '</td><td class="itens-mini">' + itensTxt + '</td><td><span class="badge ' + (statusAutMap[a.status]||'badge-gray') + '">' + a.status_display + '</span></td><td>' + acoes + '</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+async function acaoAutorizacao(id, acao) {
+  try {
+    var r = await fetch('/api/hospital/opme/autorizacoes/' + id + '/acao', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({ acao: acao }) });
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro', false); }
+    toast('Autorização ' + (acao === 'aprovar' ? 'aprovada' : 'negada'), true);
+    carregarAutorizacoes(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+function abrirNovaAutorizacao() { document.getElementById('formAutorizacaoCard').style.display = 'block'; }
+async function salvarAutorizacao() {
+  var paciente = document.getElementById('oPaciente').value.trim();
+  var medico = document.getElementById('oMedico').value.trim();
+  var opmeId = document.getElementById('oOpmeId').value;
+  if (!paciente || !medico || !opmeId) return toast('Informe paciente, médico e item OPME', false);
+  try {
+    var r = await fetch('/api/hospital/opme/autorizacoes', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      paciente_nome: paciente, medico_solicitante: medico, crm_medico: document.getElementById('oCrm').value, cid10: document.getElementById('oCid').value,
+      justificativa: document.getElementById('oJustificativa').value, itens: [{ opme_id: parseInt(opmeId), quantidade: parseInt(document.getElementById('oQtd').value)||1 }],
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Autorização solicitada', true);
+    document.getElementById('formAutorizacaoCard').style.display = 'none';
+    carregarAutorizacoes(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+var catalogoCache = [];
+
+async function carregarCatalogo() {
+  var tbody = document.getElementById('catalogoBody');
+  tbody.innerHTML = '<tr><td colspan="5" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/opme/catalogo', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    catalogoCache = d.itens;
+    var opts = d.itens.map(function(i){ return '<option value="' + i.id + '">' + i.descricao + '</option>'; }).join('');
+    var selO = document.getElementById('oOpmeId'); if (selO) selO.innerHTML = opts;
+    var selM = document.getElementById('mOpmeId'); if (selM) selM.innerHTML = opts;
+    if (!d.itens.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum item cadastrado.</td></tr>'; return; }
+    tbody.innerHTML = d.itens.map(function(i) {
+      return '<tr><td><strong>' + i.descricao + '</strong></td><td>' + i.tipo_display + '</td><td>' + (i.codigo_anvisa||'—') + '</td><td>' + (i.fabricante||'—') + '</td><td>' + (i.preco_maximo!=null?('R$ '+i.preco_maximo.toLocaleString('pt-BR',{minimumFractionDigits:2})):'—') + '</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovoItem() { document.getElementById('formItemCard').style.display = 'block'; }
+async function salvarItem() {
+  var descricao = document.getElementById('iDescricao').value.trim();
+  if (!descricao) return toast('Informe a descrição', false);
+  try {
+    var r = await fetch('/api/hospital/opme/catalogo', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      descricao: descricao, tipo: document.getElementById('iTipo').value, codigo_anvisa: document.getElementById('iAnvisa').value,
+      codigo_sigtap: document.getElementById('iSigtap').value, fabricante: document.getElementById('iFabricante').value, preco_maximo: parseFloat(document.getElementById('iPreco').value)||null,
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Item cadastrado', true);
+    document.getElementById('formItemCard').style.display = 'none';
+    carregarCatalogo(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function carregarImplantaveis() {
+  var tbody = document.getElementById('implantaveisBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/opme/implantaveis', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.implantaveis.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum implante registrado.</td></tr>'; return; }
+    tbody.innerHTML = d.implantaveis.map(function(i) {
+      return '<tr><td><strong>' + i.paciente_nome + '</strong></td><td>' + i.opme_descricao + '</td><td>' + (i.numero_serie||'—') + '</td><td>' + (i.lote_fabricante||'—') + '</td><td>' + new Date(i.data_implante).toLocaleDateString('pt-BR') + '</td><td>' + (i.medico_implantador||'—') + '</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovoImplante() { document.getElementById('formImplanteCard').style.display = 'block'; }
+async function salvarImplante() {
+  var paciente = document.getElementById('mPaciente').value.trim();
+  var opmeId = document.getElementById('mOpmeId').value;
+  var data = document.getElementById('mData').value;
+  if (!paciente || !opmeId || !data) return toast('Informe paciente, item e data', false);
+  try {
+    var r = await fetch('/api/hospital/opme/implantaveis', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      paciente_nome: paciente, opme_id: parseInt(opmeId), numero_serie: document.getElementById('mSerie').value, lote_fabricante: document.getElementById('mLote').value,
+      data_implante: data, medico_implantador: document.getElementById('mMedico').value,
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Implante registrado', true);
+    document.getElementById('formImplanteCard').style.display = 'none';
+    carregarImplantaveis(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+function carregarTudo() { carregarKpis(); carregarAutorizacoes(); carregarCatalogo(); }
+carregarTudo();
+</script>
+</body>
+</html>

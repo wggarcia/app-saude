@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Obstétrico — HospitalOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#0a1a28;--surface2:#0d2236;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f6ff;--muted:#5a8fa8;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(0,194,255,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:230px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px;max-width:640px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.warn::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.danger::before{background:var(--danger)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.warn .kpi-val{color:var(--warn)}.kpi.ok .kpi-val{color:var(--ok)}.kpi.danger .kpi-val{color:var(--danger)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:11px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,194,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif;text-decoration:none}
+.btn-primary{background:var(--accent);color:#001a2e}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:rgba(0,229,176,.15);color:var(--ok);border:1px solid rgba(0,229,176,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.form-card-title{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group select option{background:#0a1a28}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border)}
+.tab-btn{padding:9px 16px;border-radius:8px 8px 0 0;border:none;background:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(0,194,255,.06)}
+.tab-panel{display:none}.tab-panel.active{display:flex;flex-direction:column;gap:16px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;z-index:999;transform:translateY(80px);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:rgba(0,229,176,.3);color:var(--ok)}
+.toast.err{border-color:rgba(255,77,109,.3);color:var(--danger)}
+.aviso-box{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--danger);margin-bottom:8px}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.form-row,.form-row3{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<aside class="sidebar">
+  <div class="logo">🏥 HospitalOS</div>
+  <div class="nav-section">Clínico</div>
+  <a class="nav-link" href="/hospital/prontuario/"><span>📋</span> Prontuários</a>
+  <a class="nav-link" href="/hospital/cirurgia/"><span>🔪</span> Bloco Cirúrgico</a>
+  <a class="nav-link" href="/hospital/lis/"><span>🔬</span> Laboratório</a>
+  <a class="nav-link" href="/hospital/imagem/"><span>🩻</span> Imagem/PACS</a>
+  <a class="nav-link" href="/hospital/ia-autorizacao/"><span>🧠</span> IA Autorização</a>
+  <a class="nav-link" href="/hospital/assinatura/"><span>✍️</span> Assinatura Eletrônica</a>
+  <a class="nav-link" href="/hospital/ccih/"><span>🦠</span> CCIH</a>
+  <a class="nav-link" href="/hospital/hemoterapia/"><span>🩸</span> Hemoterapia</a>
+  <a class="nav-link active" href="/hospital/obstetrico/"><span>🤰</span> Obstétrico</a>
+  <a class="nav-link" href="/hospital/oncologia/"><span>🎗️</span> Oncologia</a>
+  <a class="nav-link" href="/hospital/opme/"><span>🦴</span> OPME</a>
+  <a class="nav-link" href="/hospital/rnds/"><span>🔗</span> RNDS / e-SUS</a>
+  <div class="nav-section" style="margin-top:8px">Administrativo</div>
+  <a class="nav-link" href="/hospital/farmacia-hospitalar/"><span>💊</span> Farmácia Hosp.</a>
+  <a class="nav-link" href="/hospital/faturamento-tiss/"><span>🧾</span> Faturamento TISS</a>
+  <div class="nav-section" style="margin-top:8px">Gestão</div>
+  <a class="nav-link" href="/hospital/gestao/"><span>🏠</span> Dashboard</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🤰 Centro Obstétrico / Maternidade</div>
+      <div class="page-sub">Partograma OMS, registro de parto com APGAR/Capurro e Declaração de Nascido Vivo eletrônica (SINASC/DATASUS) — CFM Res. 2.294/2021.</div>
+    </div>
+    <button class="btn btn-ghost" onclick="carregarTudo()">↻ Atualizar</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiPartosMes">—</div><div class="kpi-lbl">Partos no Mês</div></div>
+    <div class="kpi" id="kpiCesariaCard"><div class="kpi-val" id="kpiCesaria">—</div><div class="kpi-lbl">Taxa de Cesárea</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiApgarBaixo">—</div><div class="kpi-lbl">APGAR 5' ≤ 6 (mês)</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiDnvPendentes">—</div><div class="kpi-lbl">DNV Pendentes</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="partogramas" onclick="setTab('partogramas')">Partogramas Ativos</button>
+    <button class="tab-btn" data-tab="partos" onclick="setTab('partos')">Registros de Parto</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-partogramas">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📈 Partogramas</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovoPartograma()">+ Novo Partograma</button>
+      </div>
+      <table>
+        <thead><tr><th>Paciente</th><th>IG (sem)</th><th>Dilatação Inicial</th><th>Apresentação</th><th>Status</th><th>Pontos Registrados</th></tr></thead>
+        <tbody id="partogramasBody"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formPartogramaCard" style="display:none">
+      <div class="form-card-title">Novo Partograma</div>
+      <div class="form-row">
+        <div class="form-group"><label>Paciente *</label><input id="pPaciente"></div>
+        <div class="form-group"><label>IG (semanas)</label><input type="number" id="pIg"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Nº Gestações</label><input type="number" id="pGestacoes" value="1"></div>
+        <div class="form-group"><label>Dilatação Inicial (cm)</label><input type="number" id="pDilatacao" value="0"></div>
+        <div class="form-group"><label>Apresentação</label><input id="pApresentacao" placeholder="Cefálica, pélvica..."></div>
+      </div>
+      <div class="form-group"><label>Médico Responsável</label><input id="pMedico"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formPartogramaCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarPartograma()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-partos">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">👶 Registros de Parto</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovoParto()">+ Novo Registro de Parto</button>
+      </div>
+      <table>
+        <thead><tr><th>Mãe</th><th>Tipo de Parto</th><th>RN</th><th>APGAR (1'/5')</th><th>Data</th><th>DNV</th></tr></thead>
+        <tbody id="partosBody"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="form-card" id="formPartoCard" style="display:none">
+      <div class="form-card-title">Novo Registro de Parto</div>
+      <div id="partoAlertas"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Mãe *</label><input id="prMae"></div>
+        <div class="form-group"><label>Tipo de Parto *</label>
+          <select id="prTipo"><option value="normal">Normal</option><option value="cesariana">Cesariana</option><option value="cesariana_ur">Cesariana de Urgência</option><option value="forceps">Fórceps</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Data/Hora do Parto *</label><input type="datetime-local" id="prData"></div>
+        <div class="form-group"><label>IG (semanas)</label><input type="number" id="prIg"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>Nome do RN</label><input id="prRnNome"></div>
+        <div class="form-group"><label>Sexo do RN</label><select id="prSexo"><option value="M">Masculino</option><option value="F">Feminino</option><option value="I">Indefinido</option></select></div>
+        <div class="form-group"><label>Peso (g)</label><input type="number" id="prPeso"></div>
+      </div>
+      <div class="form-row3">
+        <div class="form-group"><label>APGAR 1'</label><input type="number" min="0" max="10" id="prApgar1"></div>
+        <div class="form-group"><label>APGAR 5'</label><input type="number" min="0" max="10" id="prApgar5"></div>
+        <div class="form-group"><label>RN Vivo</label><select id="prVivo"><option value="true">Sim</option><option value="false">Não (óbito)</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('formPartoCard').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarParto()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+function getCsrf(){ var m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:''; }
+function headers(){ return {'Content-Type':'application/json','X-CSRFToken':getCsrf()}; }
+function toast(msg, ok){ var el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+(ok?'ok':'err')+' show'; setTimeout(function(){el.className='toast';},4000); }
+
+function setTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
+  if (tab === 'partos') carregarPartos();
+}
+
+async function carregarKpis() {
+  try {
+    var r = await fetch('/api/hospital/obstetrico/kpis', { credentials: 'include', headers: headers() });
+    if (!r.ok) return;
+    var d = await r.json();
+    document.getElementById('kpiPartosMes').textContent = d.partos_mes;
+    document.getElementById('kpiCesaria').textContent = d.taxa_cesaria_pct + '%';
+    document.getElementById('kpiCesariaCard').className = 'kpi ' + (d.alerta_taxa_cesaria ? 'danger' : 'ok');
+    document.getElementById('kpiApgarBaixo').textContent = d.apgar_baixo_5min_mes;
+    document.getElementById('kpiDnvPendentes').textContent = d.dnv_pendentes;
+  } catch(e) {}
+}
+
+var statusPtMap = {ativo:'badge-warn', concluido:'badge-ok', cesariana:'badge-info'};
+
+async function carregarPartogramas() {
+  var tbody = document.getElementById('partogramasBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/obstetrico/partogramas', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.partogramas.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum partograma registrado.</td></tr>'; return; }
+    tbody.innerHTML = d.partogramas.map(function(p) {
+      return '<tr><td><strong>' + p.paciente_nome + '</strong></td><td>' + (p.ig_semanas||'—') + '</td><td>' + p.dilatacao_inicial + 'cm</td><td>' + (p.apresentacao||'—') + '</td><td><span class="badge ' + (statusPtMap[p.status]||'badge-gray') + '">' + p.status_display + '</span></td><td>' + p.evolucoes_count + '</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovoPartograma() { document.getElementById('formPartogramaCard').style.display = 'block'; }
+async function salvarPartograma() {
+  var paciente = document.getElementById('pPaciente').value.trim();
+  if (!paciente) return toast('Informe o nome da paciente', false);
+  try {
+    var r = await fetch('/api/hospital/obstetrico/partogramas', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      paciente_nome: paciente, ig_semanas: parseInt(document.getElementById('pIg').value)||null, numero_gestacoes: parseInt(document.getElementById('pGestacoes').value)||1,
+      dilatacao_inicial: parseInt(document.getElementById('pDilatacao').value)||0, apresentacao: document.getElementById('pApresentacao').value, medico_responsavel: document.getElementById('pMedico').value,
+    })});
+    if (!r.ok) { var d = await r.json(); return toast(d.erro || 'Erro ao salvar', false); }
+    toast('Partograma criado', true);
+    document.getElementById('formPartogramaCard').style.display = 'none';
+    carregarPartogramas(); carregarKpis();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+async function carregarPartos() {
+  var tbody = document.getElementById('partosBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+  try {
+    var r = await fetch('/api/hospital/obstetrico/partos', { credentials: 'include', headers: headers() });
+    if (!r.ok) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar.</td></tr>'; return; }
+    var d = await r.json();
+    if (!d.partos.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum parto registrado.</td></tr>'; return; }
+    tbody.innerHTML = d.partos.map(function(p) {
+      var apgarBaixo = (p.apgar_5min !== null && p.apgar_5min <= 6);
+      return '<tr><td><strong>' + p.mae_nome + '</strong></td><td>' + p.tipo_parto_display + '</td><td>' + (p.rn_nome||'—') + (p.peso_rn?(' · ' + p.peso_rn + 'g'):'') + '</td><td' + (apgarBaixo?' style="color:var(--danger);font-weight:700"':'') + '>' + (p.apgar_1min??'—') + ' / ' + (p.apgar_5min??'—') + '</td><td>' + new Date(p.data_parto).toLocaleString('pt-BR') + '</td><td>' + (p.dnv_emitida ? '<span class="badge badge-ok">Emitida</span>' : '<span class="badge badge-warn">Pendente</span>') + '</td></tr>';
+    }).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Erro de conexão.</td></tr>'; }
+}
+
+function abrirNovoParto() { document.getElementById('formPartoCard').style.display = 'block'; document.getElementById('partoAlertas').innerHTML = ''; }
+async function salvarParto() {
+  var mae = document.getElementById('prMae').value.trim();
+  var dataParto = document.getElementById('prData').value;
+  if (!mae || !dataParto) return toast('Informe a mãe e a data do parto', false);
+  try {
+    var r = await fetch('/api/hospital/obstetrico/partos', { method: 'POST', credentials: 'include', headers: headers(), body: JSON.stringify({
+      mae_nome: mae, tipo_parto: document.getElementById('prTipo').value, data_parto: dataParto, ig_semanas: parseInt(document.getElementById('prIg').value)||null,
+      rn_nome: document.getElementById('prRnNome').value, sexo_rn: document.getElementById('prSexo').value, peso_rn: parseInt(document.getElementById('prPeso').value)||null,
+      apgar_1min: document.getElementById('prApgar1').value ? parseInt(document.getElementById('prApgar1').value) : null,
+      apgar_5min: document.getElementById('prApgar5').value ? parseInt(document.getElementById('prApgar5').value) : null,
+      rn_vivo: document.getElementById('prVivo').value === 'true',
+    })});
+    var d = await r.json();
+    if (!r.ok) return toast(d.erro || 'Erro ao salvar', false);
+    if (d.alertas && d.alertas.length) {
+      document.getElementById('partoAlertas').innerHTML = d.alertas.map(function(a){ return '<div class="aviso-box">' + a + '</div>'; }).join('');
+      toast('Parto registrado com alertas clínicos', true);
+    } else {
+      toast('Parto registrado', true);
+      document.getElementById('formPartoCard').style.display = 'none';
+    }
+    carregarPartos(); carregarKpis(); carregarPartogramas();
+  } catch(e) { toast('Erro de conexão', false); }
+}
+
+function carregarTudo() { carregarKpis(); carregarPartogramas(); }
+carregarTudo();
+</script>
+</body>
+</html>

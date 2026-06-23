@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from .access_control import (
+    api_requer_feature,
     api_requer_operacao_ou_gerencia,
     api_requer_setor,
     get_setor,
@@ -39,6 +40,7 @@ def _get_empresa(request):
 # ── Dashboard / KPIs ─────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.taxa_ocupacao")
 @api_requer_setor("hospital")
 @api_requer_operacao_ou_gerencia
 def api_hospital_dashboard(request):
@@ -121,6 +123,7 @@ def api_hospital_dashboard(request):
 # ── Leitos ────────────────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.leitos")
 @api_requer_setor("hospital")
 @api_requer_operacao_ou_gerencia
 def api_hospital_leitos(request):
@@ -214,6 +217,7 @@ def api_hospital_leitos(request):
 # ── Triagem Manchester ────────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.triagem")
 @api_requer_setor("hospital")
 @api_requer_operacao_ou_gerencia
 def api_hospital_triagem(request):
@@ -308,6 +312,7 @@ def api_hospital_triagem(request):
 # ── Pacientes Internados ──────────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.internacoes")
 @api_requer_setor("hospital")
 @api_requer_operacao_ou_gerencia
 def api_hospital_pacientes(request):
@@ -406,6 +411,7 @@ def api_hospital_pacientes(request):
 # ── Prescrições Hospitalares ──────────────────────────────────────────────────
 
 @csrf_exempt
+@api_requer_feature("hospital.emr")
 @api_requer_setor("hospital")
 @api_requer_operacao_ou_gerencia
 def api_hospital_prescricao(request):

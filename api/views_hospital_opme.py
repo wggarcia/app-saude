@@ -10,13 +10,27 @@ from datetime import date, timedelta
 from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .access_control import (
+    api_requer_feature, requer_setor, requer_feature_pacote,
+    requer_operacao_page, requer_permissao_modulo,
+)
 
 logger = logging.getLogger(__name__)
+
+
+@ensure_csrf_cookie
+@requer_setor("hospital")
+@requer_feature_pacote("hospital.opme", "OPME")
+@requer_operacao_page
+@requer_permissao_modulo("hospital.clinico")
+def hospital_opme_page(request):
+    return render(request, "hospital_opme.html")
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
@@ -30,6 +44,7 @@ def _get_opme_models():
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.opme")
 def api_opme_catalogo(request):
     """GET/POST /api/hospital/opme/catalogo/"""
     empresa = get_empresa(request)
@@ -87,6 +102,7 @@ def api_opme_catalogo(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH", "DELETE"])
+@api_requer_feature("hospital.opme")
 def api_opme_catalogo_detalhe(request, item_id):
     """GET/PUT/DELETE /api/hospital/opme/catalogo/<id>/"""
     empresa = get_empresa(request)
@@ -133,6 +149,7 @@ def api_opme_catalogo_detalhe(request, item_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.opme")
 def api_opme_autorizacoes(request):
     """GET/POST /api/hospital/opme/autorizacoes/"""
     empresa = get_empresa(request)
@@ -221,6 +238,7 @@ def api_opme_autorizacoes(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.opme")
 def api_opme_autorizacao_acao(request, aut_id):
     """POST /api/hospital/opme/autorizacoes/<id>/acao/ — aprovar/negar/cancelar."""
     empresa = get_empresa(request)
@@ -279,6 +297,7 @@ def api_opme_autorizacao_acao(request, aut_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.opme")
 def api_opme_implantaveis(request):
     """GET/POST /api/hospital/opme/implantaveis/"""
     empresa = get_empresa(request)
@@ -338,6 +357,7 @@ def api_opme_implantaveis(request):
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.opme")
 def api_opme_kpis(request):
     """GET /api/hospital/opme/kpis/"""
     empresa = get_empresa(request)

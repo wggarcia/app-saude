@@ -11,11 +11,16 @@ from collections import defaultdict
 from django.db import transaction
 from django.db.models import Count, Q, Avg
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .access_control import (
+    api_requer_feature, requer_setor, requer_feature_pacote,
+    requer_operacao_page, requer_permissao_modulo,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +30,20 @@ def _get_ccih_models():
     return InfeccaoHospitalar, ProtocoloIsolamento, IndicadorCCIH
 
 
+@ensure_csrf_cookie
+@requer_setor("hospital")
+@requer_feature_pacote("hospital.ccih", "CCIH")
+@requer_operacao_page
+@requer_permissao_modulo("hospital.clinico")
+def hospital_ccih_page(request):
+    return render(request, "hospital_ccih.html")
+
+
 # ── IRAS (Infecções Relacionadas à Assistência à Saúde) ───────────────────────
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.ccih")
 def api_ccih_infeccoes(request):
     """GET/POST /api/hospital/ccih/infeccoes/"""
     empresa = get_empresa(request)
@@ -108,6 +123,7 @@ def api_ccih_infeccoes(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
+@api_requer_feature("hospital.ccih")
 def api_ccih_infeccao_detalhe(request, ih_id):
     """GET/PUT /api/hospital/ccih/infeccoes/<id>/"""
     empresa = get_empresa(request)
@@ -156,6 +172,7 @@ def api_ccih_infeccao_detalhe(request, ih_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.ccih")
 def api_ccih_isolamentos(request):
     """GET/POST /api/hospital/ccih/isolamentos/"""
     empresa = get_empresa(request)
@@ -209,6 +226,7 @@ def api_ccih_isolamentos(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_feature("hospital.ccih")
 def api_ccih_isolamento_encerrar(request, iso_id):
     """POST /api/hospital/ccih/isolamentos/<id>/encerrar/"""
     empresa = get_empresa(request)
@@ -233,6 +251,7 @@ def api_ccih_isolamento_encerrar(request, iso_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.ccih")
 def api_ccih_indicadores(request):
     """GET/POST /api/hospital/ccih/indicadores/"""
     empresa = get_empresa(request)
@@ -294,6 +313,7 @@ def api_ccih_indicadores(request):
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
+@api_requer_feature("hospital.ccih")
 def api_ccih_kpis(request):
     """GET /api/hospital/ccih/kpis/"""
     empresa = get_empresa(request)

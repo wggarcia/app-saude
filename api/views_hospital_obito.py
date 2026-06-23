@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import get_setor, principal_pode_operacao_setorial, api_requer_feature
 from .models import PacienteInternado, DeclaracaoObito
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 
@@ -64,6 +64,7 @@ def _do_to_dict(d):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_feature("hospital.obito")
 def api_declaracoes_obito(request, pac_id):
     empresa = _empresa_autenticada(request)
     if isinstance(empresa, JsonResponse):
