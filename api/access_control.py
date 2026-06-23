@@ -102,29 +102,6 @@ def requer_feature_pacote(feature: str, modulo_label: str = ""):
     return decorator
 
 
-def requer_feature(feature: str):
-    """
-    Decorator para views de página (HTML). Renderiza tela de bloqueio se a
-    feature não estiver no plano, em vez de redirecionar.
-    """
-    def decorator(view_func):
-        @wraps(view_func)
-        def wrapper(request, *args, **kwargs):
-            empresa = getattr(request, "empresa", None)
-            if not empresa:
-                return redirect("/login-empresa/")
-            if not empresa_tem_feature(empresa, feature):
-                pacote = detalhes_pacote(empresa.pacote_codigo)
-                return render(request, "feature_restrita.html", {
-                    "feature_requerida": feature,
-                    "plano_atual": pacote.get("label", ""),
-                    "setor": pacote.get("setor", ""),
-                }, status=403)
-            return view_func(request, *args, **kwargs)
-        return wrapper
-    return decorator
-
-
 def get_setor(empresa):
     """Return the sector/module for this empresa based on its plan."""
     setor = detalhes_pacote(empresa.pacote_codigo).get("setor", "empresa")
