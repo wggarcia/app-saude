@@ -28,6 +28,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .access_control import api_requer_permissao_modulo
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ def _get_acs_models():
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_acs_lista(request):
     """GET/POST /api/governo/acs/"""
     empresa = get_empresa(request)
@@ -104,6 +106,7 @@ def api_acs_lista(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
+@api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_acs_detalhe(request, acs_id):
     """GET/PUT /api/governo/acs/<id>/"""
     empresa = get_empresa(request)
@@ -145,6 +148,7 @@ def api_acs_detalhe(request, acs_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_visitas_lista(request):
     """GET/POST /api/governo/acs/visitas/"""
     empresa = get_empresa(request)
@@ -233,6 +237,7 @@ def api_visitas_lista(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
+@api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_visita_detalhe(request, visita_id):
     """GET/PUT /api/governo/acs/visitas/<id>/"""
     empresa = get_empresa(request)
@@ -282,6 +287,7 @@ def api_visita_detalhe(request, visita_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_visitas_transmitir_esus(request):
     """
     POST /api/governo/acs/visitas/transmitir-esus/
@@ -339,6 +345,7 @@ def api_visitas_transmitir_esus(request):
 
 
 @require_http_methods(["GET"])
+@api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_visitas_exportar_cds(request):
     """GET /api/governo/acs/visitas/exportar-cds/ — baixa arquivo CDS JSON para importação no PEC."""
     empresa = get_empresa(request)
@@ -452,6 +459,7 @@ def _gerar_cds_fichas_visita(visitas, empresa):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_fichas_acompanhamento(request):
     """GET/POST /api/governo/acs/fichas/"""
     empresa = get_empresa(request)
@@ -526,6 +534,7 @@ def api_fichas_acompanhamento(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "PUT", "PATCH"])
+@api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_ficha_detalhe(request, ficha_id):
     """GET/PUT /api/governo/acs/fichas/<id>/"""
     empresa = get_empresa(request)
@@ -571,6 +580,7 @@ def api_ficha_detalhe(request, ficha_id):
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_acs_kpis(request):
     """GET /api/governo/acs/kpis/"""
     empresa = get_empresa(request)

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel Eletrônico de Chamado</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-warn{background:rgba(255,179,71,.15);color:var(--warn);border:1px solid rgba(255,179,71,.3)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+/* Modo TV (painel público de exibição) */
+.tv-mode{position:fixed;inset:0;background:#020a12;z-index:2000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:32px}
+.tv-mode.open{display:flex}
+.tv-chamada{font-size:18vw;font-weight:800;color:var(--accent);line-height:1}
+.tv-guiche{font-size:4vw;color:var(--text);font-weight:700}
+.tv-fila{display:flex;gap:24px;font-size:2.4vw;color:var(--muted)}
+.tv-fila span{color:var(--text);font-weight:700}
+.tv-close{position:absolute;top:24px;right:24px;font-size:14px}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/"><span>📊</span> Alertas e Monitoramento</a>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Saúde Pública</div>
+  <a class="nav-link" href="/governo/pec/"><span>📋</span> PEC / e-SUS</a>
+  <a class="nav-link" href="/governo/farmacia-basica/"><span>💊</span> Farmácia Básica</a>
+  <a class="nav-link" href="/governo/regulacao/"><span>🏨</span> Regulação</a>
+  <a class="nav-link active" href="/governo/painel-chamado/"><span>🔔</span> Painel de Chamado</a>
+  <a class="nav-link" href="/governo/ged/"><span>🗂️</span> Gestão de Documentos</a>
+  <a class="nav-link" href="/governo/tfd/"><span>🚐</span> TFD / Veículos</a>
+  <a class="nav-link" href="/governo/almoxarifado/"><span>📦</span> Almoxarifado</a>
+  <a class="nav-link" href="/governo/laboratorio/"><span>🧪</span> Laboratório</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Painel Eletrônico de Chamado</div>
+      <div class="page-sub">Fila de senhas — UBS / UPA</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="gerarSenha('normal')">+ Senha Normal</button>
+      <button class="btn btn-warn" onclick="gerarSenha('prioritario')">+ Senha Prioritária</button>
+      <button class="btn btn-ghost" onclick="abrirModoTV()">🖥️ Modo Painel (TV)</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiAguardando">—</div><div class="kpi-lbl">Aguardando</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiChamada">—</div><div class="kpi-lbl">Chamada Atual</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiGuiche">—</div><div class="kpi-lbl">Guichê</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Chamar Próximo</span>
+    </div>
+    <div style="padding:16px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input id="guicheInput" placeholder="Guichê / Sala" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif">
+      <button class="btn btn-primary" onclick="chamarProxima()">🔔 Chamar Próxima Senha</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Fila de Espera</span></div>
+    <table>
+      <thead><tr><th>Senha</th><th>Tipo</th><th>Paciente</th><th>Aguardando desde</th></tr></thead>
+      <tbody id="tbodyFila"><tr><td colspan="4" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Últimas Chamadas</span></div>
+    <table>
+      <thead><tr><th>Senha</th><th>Guichê</th><th>Status</th><th>Chamado em</th></tr></thead>
+      <tbody id="tbodyUltimas"><tr><td colspan="4" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modo TV -->
+<div class="tv-mode" id="tvMode">
+  <button class="btn btn-ghost tv-close" onclick="fecharModoTV()">Fechar (Esc)</button>
+  <div class="tv-chamada" id="tvSenha">—</div>
+  <div class="tv-guiche" id="tvGuiche">Aguarde a chamada</div>
+  <div class="tv-fila">Próximos: <span id="tvFila">—</span></div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let tvInterval = null;
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+async function gerarSenha(tipo) {
+  const r = await fetchJSON("/api/governo/painel-chamado/gerar/", {
+    method: "POST", body: JSON.stringify({ tipo })
+  });
+  if (r.senha) alert(`Senha gerada: ${r.senha}`);
+  carregarStatus();
+}
+
+async function chamarProxima() {
+  const guiche = document.getElementById("guicheInput").value;
+  const r = await fetchJSON("/api/governo/painel-chamado/chamar/", {
+    method: "POST", body: JSON.stringify({ guiche })
+  });
+  if (r.erro) { alert(r.erro); return; }
+  carregarStatus();
+}
+
+async function carregarStatus() {
+  const d = await fetchJSON("/api/governo/painel-chamado/status/");
+  document.getElementById("kpiAguardando").textContent = d.total_aguardando ?? "—";
+  document.getElementById("kpiChamada").textContent = d.chamada_atual ? d.chamada_atual.senha : "—";
+  document.getElementById("kpiGuiche").textContent = d.chamada_atual ? (d.chamada_atual.guiche || "—") : "—";
+
+  const tbodyFila = document.getElementById("tbodyFila");
+  tbodyFila.innerHTML = (d.fila && d.fila.length)
+    ? d.fila.map(s => `<tr>
+        <td><strong>${s.senha}</strong></td>
+        <td><span class="badge ${s.tipo === 'prioritario' ? 'badge-warn' : 'badge-info'}">${s.tipo === 'prioritario' ? 'Prioritário' : 'Normal'}</span></td>
+        <td>${s.paciente_nome || '—'}</td>
+        <td>${new Date(s.criado_em).toLocaleTimeString('pt-BR')}</td>
+      </tr>`).join("")
+    : '<tr><td colspan="4" class="empty">Fila vazia.</td></tr>';
+
+  const tbodyUlt = document.getElementById("tbodyUltimas");
+  tbodyUlt.innerHTML = (d.ultimas_chamadas && d.ultimas_chamadas.length)
+    ? d.ultimas_chamadas.map(s => `<tr>
+        <td><strong>${s.senha}</strong></td>
+        <td>${s.guiche || '—'}</td>
+        <td><span class="badge ${s.status === 'atendido' ? 'badge-ok' : 'badge-info'}">${s.status}</span></td>
+        <td>${s.chamado_em ? new Date(s.chamado_em).toLocaleTimeString('pt-BR') : '—'}</td>
+      </tr>`).join("")
+    : '<tr><td colspan="4" class="empty">Nenhuma chamada ainda.</td></tr>';
+}
+
+async function atualizarTV() {
+  const d = await fetchJSON("/api/governo/painel-chamado/status/");
+  document.getElementById("tvSenha").textContent = d.chamada_atual ? d.chamada_atual.senha : "—";
+  document.getElementById("tvGuiche").textContent = d.chamada_atual ? `Guichê ${d.chamada_atual.guiche || '—'}` : "Aguarde a chamada";
+  document.getElementById("tvFila").textContent = (d.fila || []).slice(0, 5).map(s => s.senha).join(", ") || "—";
+}
+
+function abrirModoTV() {
+  document.getElementById("tvMode").classList.add("open");
+  atualizarTV();
+  tvInterval = setInterval(atualizarTV, 5000);
+}
+
+function fecharModoTV() {
+  document.getElementById("tvMode").classList.remove("open");
+  if (tvInterval) clearInterval(tvInterval);
+}
+
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharModoTV(); });
+
+carregarStatus();
+setInterval(carregarStatus, 10000);
+</script>
+</body>
+</html>

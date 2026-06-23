@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TFD — Veículos e Viagens</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+select.inline{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--text);font-family:Manrope,sans-serif}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/"><span>📊</span> Alertas e Monitoramento</a>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Saúde Pública</div>
+  <a class="nav-link" href="/governo/regulacao/"><span>🏨</span> Regulação SISREG</a>
+  <a class="nav-link active" href="/governo/tfd/"><span>🚐</span> TFD / Veículos</a>
+  <a class="nav-link" href="/governo/almoxarifado/"><span>📦</span> Almoxarifado</a>
+  <a class="nav-link" href="/governo/laboratorio/"><span>🧪</span> Laboratório</a>
+  <a class="nav-link" href="/governo/painel-chamado/"><span>🔔</span> Painel de Chamado</a>
+  <a class="nav-link" href="/governo/ged/"><span>🗂️</span> Gestão de Documentos</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">TFD — Veículos e Agendamento de Viagens</div>
+      <div class="page-sub">Tratamento Fora de Domicílio — frota e transporte de pacientes</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalViagem()">+ Agendar Viagem</button>
+      <button class="btn btn-ghost" onclick="abrirModalVeiculo()">+ Veículo</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiVeicDisp">—</div><div class="kpi-lbl">Veículos Disponíveis</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiVeicTotal">—</div><div class="kpi-lbl">Frota Total</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiViagensHoje">—</div><div class="kpi-lbl">Viagens Hoje</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiViagensAgendadas">—</div><div class="kpi-lbl">Agendadas/Confirmadas</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Frota</span></div>
+    <table>
+      <thead><tr><th>Placa</th><th>Tipo</th><th>Motorista</th><th>Km</th><th>Status</th></tr></thead>
+      <tbody id="tbodyVeiculos"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Viagens Agendadas</span></div>
+    <table>
+      <thead><tr><th>Paciente</th><th>Destino</th><th>Data</th><th>Veículo</th><th>Status</th><th>Ações</th></tr></thead>
+      <tbody id="tbodyViagens"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Novo Veículo -->
+<div class="modal-bg" id="modalVeiculo">
+  <div class="modal">
+    <h3>Novo Veículo</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Placa *</label><input id="vPlaca"></div>
+      <div class="form-group"><label>Tipo</label>
+        <select id="vTipo"><option value="van">Van</option><option value="ambulancia">Ambulância</option><option value="carro">Carro</option><option value="micro_onibus">Micro-ônibus</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Modelo</label><input id="vModelo"></div>
+      <div class="form-group"><label>Capacidade</label><input id="vCapacidade" type="number" value="4"></div>
+    </div>
+    <div class="form-group"><label>Motorista</label><input id="vMotorista"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalVeiculo()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarVeiculo()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Agendar Viagem -->
+<div class="modal-bg" id="modalViagem">
+  <div class="modal">
+    <h3>Agendar Viagem TFD</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Paciente *</label><input id="jPaciente"></div>
+      <div class="form-group"><label>CPF</label><input id="jCpf" maxlength="11"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Destino (Cidade) *</label><input id="jCidade"></div>
+      <div class="form-group"><label>Estabelecimento</label><input id="jEstabelecimento"></div>
+    </div>
+    <div class="form-group"><label>Motivo / Especialidade</label><input id="jMotivo"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Data/Hora da Viagem *</label><input id="jData" type="datetime-local"></div>
+      <div class="form-group"><label>Acompanhante</label><input id="jAcompanhante"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalViagem()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarViagem()">Agendar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let veiculosCache = [];
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/governo/tfd/kpis/");
+  document.getElementById("kpiVeicDisp").textContent = d.veiculos_disponiveis ?? "—";
+  document.getElementById("kpiVeicTotal").textContent = d.veiculos_total ?? "—";
+  document.getElementById("kpiViagensHoje").textContent = d.viagens_hoje ?? "—";
+  document.getElementById("kpiViagensAgendadas").textContent = d.viagens_agendadas ?? "—";
+}
+
+const STATUS_BADGE = {
+  disponivel: "badge-ok", em_viagem: "badge-info", manutencao: "badge-warn", inativo: "badge-danger",
+  agendada: "badge-info", confirmada: "badge-ok", em_andamento: "badge-warn", concluida: "badge-ok", cancelada: "badge-danger",
+};
+
+async function carregarVeiculos() {
+  const d = await fetchJSON("/api/governo/tfd/veiculos/");
+  veiculosCache = d.veiculos || [];
+  const tbody = document.getElementById("tbodyVeiculos");
+  if (!veiculosCache.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum veículo cadastrado.</td></tr>'; return; }
+  tbody.innerHTML = veiculosCache.map(v => `<tr>
+    <td><strong>${v.placa}</strong> ${v.modelo ? '— ' + v.modelo : ''}</td>
+    <td>${v.tipo_display}</td>
+    <td>${v.motorista_nome || '—'}</td>
+    <td>${v.km_atual} km</td>
+    <td><span class="badge ${STATUS_BADGE[v.status] || 'badge-info'}">${v.status_display}</span></td>
+  </tr>`).join("");
+}
+
+async function carregarViagens() {
+  const d = await fetchJSON("/api/governo/tfd/viagens/");
+  const tbody = document.getElementById("tbodyViagens");
+  if (!d.viagens || !d.viagens.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma viagem agendada.</td></tr>'; return; }
+  tbody.innerHTML = d.viagens.map(v => `<tr>
+    <td><strong>${v.paciente_nome}</strong></td>
+    <td>${v.destino_cidade}${v.destino_estabelecimento ? ' — ' + v.destino_estabelecimento : ''}</td>
+    <td>${new Date(v.data_viagem).toLocaleString('pt-BR')}</td>
+    <td>
+      <select class="inline" onchange="alocarVeiculo(${v.id}, this.value)">
+        <option value="">${v.veiculo_placa || 'Selecionar…'}</option>
+        ${veiculosCache.filter(vv => vv.status === 'disponivel').map(vv => `<option value="${vv.id}">${vv.placa}</option>`).join("")}
+      </select>
+    </td>
+    <td><span class="badge ${STATUS_BADGE[v.status] || 'badge-info'}">${v.status_display}</span></td>
+    <td>
+      ${v.status === 'agendada' ? `<button class="btn btn-ghost btn-sm" onclick="mudarStatusViagem(${v.id},'confirmada')">Confirmar</button>` : ''}
+      ${v.status === 'confirmada' ? `<button class="btn btn-ghost btn-sm" onclick="mudarStatusViagem(${v.id},'em_andamento')">Iniciar</button>` : ''}
+      ${v.status === 'em_andamento' ? `<button class="btn btn-ghost btn-sm" onclick="concluirViagem(${v.id})">Concluir</button>` : ''}
+      ${['agendada','confirmada'].includes(v.status) ? `<button class="btn btn-ghost btn-sm" onclick="mudarStatusViagem(${v.id},'cancelada')">Cancelar</button>` : ''}
+    </td>
+  </tr>`).join("");
+}
+
+async function alocarVeiculo(viagemId, veiculoId) {
+  if (!veiculoId) return;
+  await fetchJSON(`/api/governo/tfd/viagens/${viagemId}/`, { method: "PATCH", body: JSON.stringify({ veiculo_id: veiculoId }) });
+  await Promise.all([carregarViagens(), carregarVeiculos()]);
+}
+
+async function mudarStatusViagem(viagemId, status) {
+  await fetchJSON(`/api/governo/tfd/viagens/${viagemId}/`, { method: "PATCH", body: JSON.stringify({ status }) });
+  await Promise.all([carregarViagens(), carregarVeiculos(), carregarKpis()]);
+}
+
+async function concluirViagem(viagemId) {
+  const km = prompt("Km percorrido nesta viagem:", "0");
+  if (km === null) return;
+  await fetchJSON(`/api/governo/tfd/viagens/${viagemId}/`, { method: "PATCH", body: JSON.stringify({ status: "concluida", km_percorrido: parseInt(km) || 0 }) });
+  await Promise.all([carregarViagens(), carregarVeiculos(), carregarKpis()]);
+}
+
+function abrirModalVeiculo() { document.getElementById("modalVeiculo").classList.add("open"); }
+function fecharModalVeiculo() { document.getElementById("modalVeiculo").classList.remove("open"); }
+function abrirModalViagem() { document.getElementById("modalViagem").classList.add("open"); }
+function fecharModalViagem() { document.getElementById("modalViagem").classList.remove("open"); }
+
+async function salvarVeiculo() {
+  const r = await fetchJSON("/api/governo/tfd/veiculos/", {
+    method: "POST", body: JSON.stringify({
+      placa: document.getElementById("vPlaca").value,
+      tipo: document.getElementById("vTipo").value,
+      modelo: document.getElementById("vModelo").value,
+      capacidade: document.getElementById("vCapacidade").value,
+      motorista_nome: document.getElementById("vMotorista").value,
+    })
+  });
+  if (r.erro) { alert(r.erro); return; }
+  fecharModalVeiculo();
+  await Promise.all([carregarVeiculos(), carregarKpis()]);
+}
+
+async function salvarViagem() {
+  const dataLocal = document.getElementById("jData").value;
+  const r = await fetchJSON("/api/governo/tfd/viagens/", {
+    method: "POST", body: JSON.stringify({
+      paciente_nome: document.getElementById("jPaciente").value,
+      paciente_cpf: document.getElementById("jCpf").value,
+      destino_cidade: document.getElementById("jCidade").value,
+      destino_estabelecimento: document.getElementById("jEstabelecimento").value,
+      motivo: document.getElementById("jMotivo").value,
+      acompanhante_nome: document.getElementById("jAcompanhante").value,
+      data_viagem: dataLocal ? new Date(dataLocal).toISOString() : "",
+    })
+  });
+  if (r.erro) { alert(r.erro); return; }
+  fecharModalViagem();
+  await Promise.all([carregarViagens(), carregarKpis()]);
+}
+
+carregarKpis();
+carregarVeiculos().then(carregarViagens);
+</script>
+</body>
+</html>

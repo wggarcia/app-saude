@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>App Cidadão</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#04131c}.btn-primary:hover{opacity:.9}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ok{background:var(--ok);color:#04131c}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border);vertical-align:top}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:480px;max-width:92vw;display:flex;flex-direction:column;gap:12px}
+.modal h3{font-size:16px;font-weight:800}
+input,select,textarea{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text);font-family:Manrope,sans-serif;font-size:13px}
+textarea{resize:vertical;min-height:80px}
+label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px}
+.field{display:flex;flex-direction:column;gap:2px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.aviso{font-size:12px;color:var(--muted);background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.25);border-radius:8px;padding:10px 12px}
+@media(max-width:1000px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/"><span>📊</span> Alertas e Monitoramento</a>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Vigilância</div>
+  <a class="nav-link" href="/governo/sala-situacao/"><span>🚨</span> Sala de Situação</a>
+  <a class="nav-link active" href="/governo/app-cidadao/"><span>📱</span> App Cidadão</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">App Cidadão</div>
+      <div class="page-sub">Alertas e campanhas de saúde pública direcionados à população cadastrada</div>
+    </div>
+    <button class="btn btn-primary" onclick="abrirModal()">+ Novo Alerta</button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiCidadaos">—</div><div class="kpi-lbl">Cidadãos Alcançáveis</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiEnviados">—</div><div class="kpi-lbl">Alertas Enviados</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiRascunhos">—</div><div class="kpi-lbl">Rascunhos Pendentes</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiTipoTop">—</div><div class="kpi-lbl">Tipo Mais Enviado</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">📋 Alertas</span></div>
+    <table>
+      <thead><tr><th>Título</th><th>Tipo</th><th>Público</th><th>Destinatários</th><th>Status</th><th></th></tr></thead>
+      <tbody id="tbodyAlertas"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<div class="modal-bg" id="modalNovo">
+  <div class="modal">
+    <h3>Novo Alerta à População</h3>
+    <div class="field"><label>Título</label><input id="fTitulo" maxlength="160"></div>
+    <div class="field"><label>Mensagem</label><textarea id="fMensagem"></textarea></div>
+    <div class="field"><label>Tipo</label>
+      <select id="fTipo">
+        <option value="informativo">Informativo</option>
+        <option value="campanha_vacinacao">Campanha de Vacinação</option>
+        <option value="alerta_sanitario">Alerta Sanitário</option>
+        <option value="epidemiologico">Alerta Epidemiológico</option>
+        <option value="convocacao">Convocação</option>
+      </select>
+    </div>
+    <div class="field"><label>Público-Alvo</label>
+      <select id="fPublico" onchange="toggleFiltro()">
+        <option value="todos">Todos os cidadãos cadastrados</option>
+        <option value="por_microarea">Por microárea (ACS)</option>
+        <option value="por_unidade">Por unidade de saúde</option>
+      </select>
+    </div>
+    <div class="field" id="campoFiltro" style="display:none"><label id="lblFiltro">Filtro</label><input id="fFiltro"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="criarAlerta()">Salvar Rascunho</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+
+async function fetchJSON(url, opts) {
+  const res = await fetch(url, Object.assign({ headers: { "X-Empresa-ID": E, "Content-Type": "application/json" }, credentials: "include" }, opts || {}));
+  return res.json();
+}
+
+const TIPO_BADGE = { rascunho: "badge-warn", enviado: "badge-ok" };
+
+function toggleFiltro() {
+  const publico = document.getElementById("fPublico").value;
+  const campo = document.getElementById("campoFiltro");
+  if (publico === "todos") { campo.style.display = "none"; return; }
+  campo.style.display = "block";
+  document.getElementById("lblFiltro").textContent = publico === "por_microarea" ? "Microárea" : "Unidade de Saúde";
+}
+
+function abrirModal() { document.getElementById("modalNovo").classList.add("open"); }
+function fecharModal() { document.getElementById("modalNovo").classList.remove("open"); }
+
+async function criarAlerta() {
+  const titulo = document.getElementById("fTitulo").value.trim();
+  const mensagem = document.getElementById("fMensagem").value.trim();
+  if (!titulo || !mensagem) { alert("Preencha título e mensagem."); return; }
+  const publico_alvo = document.getElementById("fPublico").value;
+  const filtro = document.getElementById("fFiltro").value.trim();
+  const body = {
+    titulo, mensagem, tipo: document.getElementById("fTipo").value, publico_alvo,
+    microarea_filtro: publico_alvo === "por_microarea" ? filtro : "",
+    unidade_filtro: publico_alvo === "por_unidade" ? filtro : "",
+  };
+  const d = await fetchJSON("/api/governo/app-cidadao/alertas/", { method: "POST", body: JSON.stringify(body) });
+  if (d.erro) { alert(d.erro); return; }
+  fecharModal();
+  document.getElementById("fTitulo").value = ""; document.getElementById("fMensagem").value = ""; document.getElementById("fFiltro").value = "";
+  carregar();
+}
+
+async function enviarAlerta(id) {
+  if (!confirm("Confirmar envio deste alerta à população segmentada?")) return;
+  const d = await fetchJSON(`/api/governo/app-cidadao/alertas/${id}/enviar/`, { method: "POST" });
+  if (d.erro) { alert(d.erro); return; }
+  alert(d.aviso);
+  carregar();
+}
+
+async function carregar() {
+  const k = await fetchJSON("/api/governo/app-cidadao/kpis/");
+  document.getElementById("kpiCidadaos").textContent = k.total_cidadaos_alcancaveis ?? "—";
+  document.getElementById("kpiEnviados").textContent = k.total_alertas_enviados ?? "—";
+  document.getElementById("kpiRascunhos").textContent = k.total_rascunhos ?? "—";
+  document.getElementById("kpiTipoTop").textContent = (k.por_tipo_enviado && k.por_tipo_enviado[0]) ? k.por_tipo_enviado[0].tipo_label : "—";
+
+  const d = await fetchJSON("/api/governo/app-cidadao/alertas/");
+  const tbody = document.getElementById("tbodyAlertas");
+  tbody.innerHTML = (d.alertas && d.alertas.length)
+    ? d.alertas.map(a => `<tr>
+        <td><strong>${a.titulo}</strong><div style="color:var(--muted);font-size:12px;margin-top:2px">${a.mensagem.slice(0,80)}${a.mensagem.length>80?'…':''}</div></td>
+        <td>${a.tipo_label}</td>
+        <td>${a.publico_label}${a.microarea_filtro?(' — '+a.microarea_filtro):''}${a.unidade_filtro?(' — '+a.unidade_filtro):''}</td>
+        <td>${a.total_destinatarios_estimado}</td>
+        <td><span class="badge ${TIPO_BADGE[a.status]}">${a.status}</span></td>
+        <td>${a.status==='rascunho' ? `<button class="btn btn-ok" onclick="enviarAlerta(${a.id})">Enviar</button>` : ''}</td>
+      </tr>`).join("")
+    : '<tr><td colspan="6" class="empty">Nenhum alerta cadastrado ainda.</td></tr>';
+}
+
+carregar();
+</script>
+</body>
+</html>

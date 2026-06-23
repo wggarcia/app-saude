@@ -2,7 +2,7 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from .access_control import get_setor, principal_pode_operacao_setorial
+from .access_control import api_requer_permissao_modulo, get_setor, principal_pode_operacao_setorial
 from .models import ProgramaSaudeGov, IndicadorSaudeGov, OrcamentoSaudeGov, PlanoAcaoGov
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base
 
@@ -21,6 +21,7 @@ def _e(req):
 
 
 # ── Programas ──────────────────────────────────────────────────────────────────
+@api_requer_permissao_modulo("governo.administrativo")
 @require_http_methods(["GET", "POST"])
 def api_programas_gov(request):
     e = _e(request)
@@ -54,6 +55,7 @@ def api_programas_gov(request):
     return JsonResponse({"id": p.id, "nome": p.nome}, status=201)
 
 
+@api_requer_permissao_modulo("governo.administrativo")
 @require_http_methods(["PUT", "DELETE"])
 def api_programa_gov_detalhe(request, programa_id):
     e = _e(request)
@@ -77,6 +79,7 @@ def api_programa_gov_detalhe(request, programa_id):
 
 
 # ── Indicadores ────────────────────────────────────────────────────────────────
+@api_requer_permissao_modulo("governo.administrativo")
 @require_http_methods(["GET", "POST"])
 def api_indicadores_gov(request):
     e = _e(request)
@@ -116,6 +119,7 @@ def api_indicadores_gov(request):
     return JsonResponse({"id": i.id}, status=201)
 
 
+@api_requer_permissao_modulo("governo.administrativo")
 @require_http_methods(["PUT", "DELETE"])
 def api_indicador_gov_detalhe(request, indicador_id):
     e = _e(request)
@@ -139,6 +143,7 @@ def api_indicador_gov_detalhe(request, indicador_id):
 
 # ── Orçamento ──────────────────────────────────────────────────────────────────
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.administrativo")
 def api_orcamentos_gov(request):
     e = _e(request)
     if not e:
@@ -174,6 +179,7 @@ def api_orcamentos_gov(request):
 
 # ── Planos de Ação ─────────────────────────────────────────────────────────────
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.administrativo")
 def api_planos_acao_gov(request):
     e = _e(request)
     if not e:
@@ -212,6 +218,7 @@ def api_planos_acao_gov(request):
 
 
 @require_http_methods(["PUT", "DELETE"])
+@api_requer_permissao_modulo("governo.administrativo")
 def api_plano_acao_gov_detalhe(request, plano_id):
     e = _e(request)
     if not e:
@@ -232,6 +239,7 @@ def api_plano_acao_gov_detalhe(request, plano_id):
 
 
 # ── KPIs ───────────────────────────────────────────────────────────────────────
+@api_requer_permissao_modulo("governo.administrativo")
 def api_governo_ops_kpis(request):
     e = _e(request)
     if not e:
@@ -259,6 +267,7 @@ def api_governo_ops_kpis(request):
 
 
 # ── PDF ────────────────────────────────────────────────────────────────────────
+@api_requer_permissao_modulo("governo.administrativo")
 def api_governo_pdf_relatorio(request):
     from django.http import HttpResponse
     from .pdf_ops import gerar_pdf_programas_gov

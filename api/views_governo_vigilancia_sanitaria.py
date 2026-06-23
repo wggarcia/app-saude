@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .services.auth_session import empresa_autenticada_from_request as get_empresa
+from .access_control import api_requer_permissao_modulo
 
 
 def _get_vigilancia_models():
@@ -65,6 +66,7 @@ def _inspecao_to_dict(i):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_vigsan_estabelecimentos(request):
     """GET/POST /api/governo/vigilancia-sanitaria/estabelecimentos/"""
     empresa = get_empresa(request)
@@ -108,6 +110,7 @@ def api_vigsan_estabelecimentos(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_vigsan_alvaras(request, estab_id):
     """GET/POST /api/governo/vigilancia-sanitaria/estabelecimentos/<id>/alvaras/"""
     empresa = get_empresa(request)
@@ -150,6 +153,7 @@ def api_vigsan_alvaras(request, estab_id):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_requer_permissao_modulo("governo.vigilancia_acs")
 def api_vigsan_inspecoes(request, estab_id):
     """GET/POST /api/governo/vigilancia-sanitaria/estabelecimentos/<id>/inspecoes/"""
     empresa = get_empresa(request)

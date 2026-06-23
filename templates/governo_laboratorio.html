@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Laboratório Municipal</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.nav-link-logout:hover{background:rgba(255,77,109,.2)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.danger::before{background:var(--danger)}.kpi.warn::before{background:var(--warn)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.danger .kpi-val{color:var(--danger)}.kpi.warn .kpi-val{color:var(--warn)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.filters{display:flex;gap:10px;padding:16px 20px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.filters select{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-info{background:rgba(0,194,255,.12);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-primary{background:var(--accent);color:#041018}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:440px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:Manrope,sans-serif;outline:none}
+.form-group select option{background:#072030}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/"><span>📊</span> Alertas e Monitoramento</a>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Saúde Pública</div>
+  <a class="nav-link" href="/governo/pec/"><span>📋</span> PEC / e-SUS</a>
+  <a class="nav-link active" href="/governo/laboratorio/"><span>🧪</span> Laboratório</a>
+  <a class="nav-link" href="/governo/almoxarifado/"><span>📦</span> Almoxarifado</a>
+  <a class="nav-link" href="/governo/tfd/"><span>🚐</span> TFD / Veículos</a>
+  <a class="nav-link" href="/governo/painel-chamado/"><span>🔔</span> Painel de Chamado</a>
+  <a class="nav-link" href="/governo/ged/"><span>🗂️</span> Gestão de Documentos</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Laboratório Municipal</div>
+      <div class="page-sub">Solicitação → coleta → digitação → liberação de resultado</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="abrirModalSolicitacao()">+ Nova Solicitação</button>
+      <button class="btn btn-ghost" onclick="abrirModalExame()">+ Exame no Catálogo</button>
+      <a href="/governo/gestao/" class="btn btn-ghost">← Gestão</a>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kpiAguardando">—</div><div class="kpi-lbl">Aguardando Coleta</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiAnalise">—</div><div class="kpi-lbl">Em Análise</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpiLiberadosHoje">—</div><div class="kpi-lbl">Liberados Hoje</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiForaRef">—</div><div class="kpi-lbl">Fora da Referência</div></div>
+  </div>
+
+  <div class="card">
+    <div class="filters">
+      <select id="fStatus" onchange="carregarSolicitacoes()">
+        <option value="">Todos os status</option>
+        <option value="aguardando_coleta">Aguardando Coleta</option>
+        <option value="coletado">Coletado</option>
+        <option value="em_analise">Em Análise</option>
+        <option value="liberado">Liberado</option>
+        <option value="cancelado">Cancelado</option>
+      </select>
+      <button class="btn btn-ghost" onclick="carregarSolicitacoes()">Atualizar</button>
+    </div>
+    <table>
+      <thead><tr><th>Protocolo</th><th>Paciente</th><th>Exame</th><th>Status</th><th>Resultado</th><th>Ações</th></tr></thead>
+      <tbody id="tbodySolicitacoes"><tr><td colspan="6" class="empty">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal: Novo Exame no Catálogo -->
+<div class="modal-bg" id="modalExame">
+  <div class="modal">
+    <h3>Novo Exame no Catálogo</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nome *</label><input id="xNome"></div>
+      <div class="form-group"><label>Sigla</label><input id="xSigla"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tipo de Amostra</label><input id="xAmostra" placeholder="sangue, urina..."></div>
+      <div class="form-group"><label>Prazo de Entrega (dias)</label><input id="xPrazo" type="number" value="2"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor Ref. Mínimo</label><input id="xRefMin" type="number" step="0.01"></div>
+      <div class="form-group"><label>Valor Ref. Máximo</label><input id="xRefMax" type="number" step="0.01"></div>
+    </div>
+    <div class="form-group"><label>Referência em texto (se não numérico)</label><input id="xRefTexto" placeholder="ex: Negativo"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalExame()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarExame()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova Solicitação -->
+<div class="modal-bg" id="modalSolicitacao">
+  <div class="modal">
+    <h3>Nova Solicitação de Exame</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Exame *</label><select id="sExame"></select></div>
+      <div class="form-group"><label>Urgente?</label><select id="sUrgente"><option value="">Não</option><option value="1">Sim</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Paciente *</label><input id="sPaciente"></div>
+      <div class="form-group"><label>CPF</label><input id="sCpf" maxlength="11"></div>
+    </div>
+    <div class="form-group"><label>Profissional Solicitante</label><input id="sProfissional"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalSolicitacao()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarSolicitacao()">Solicitar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Digitar/Retificar Resultado -->
+<div class="modal-bg" id="modalResultado">
+  <div class="modal">
+    <h3 id="resultadoTitulo">Digitar Resultado</h3>
+    <input type="hidden" id="rSolicitacaoId">
+    <div class="form-group"><label>Valor do Resultado *</label><input id="rValor"></div>
+    <div class="form-group"><label>Seu nome (bioquímico/biomédico) *</label><input id="rResponsavel"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalResultado()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarResultado()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+let exameAcao = "digitar_resultado";
+
+function csrfToken() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "X-CSRFToken": csrfToken(), "Content-Type": "application/json", "X-Empresa-ID": E, ...opts.headers },
+    credentials: "include", ...opts
+  });
+  return res.json();
+}
+
+async function carregarKpis() {
+  const d = await fetchJSON("/api/governo/laboratorio/kpis/");
+  document.getElementById("kpiAguardando").textContent = d.aguardando_coleta ?? "—";
+  document.getElementById("kpiAnalise").textContent = d.em_analise ?? "—";
+  document.getElementById("kpiLiberadosHoje").textContent = d.liberados_hoje ?? "—";
+  document.getElementById("kpiForaRef").textContent = d.fora_referencia_pendente ?? "—";
+}
+
+async function carregarCatalogo() {
+  const d = await fetchJSON("/api/governo/laboratorio/catalogo/");
+  const sel = document.getElementById("sExame");
+  sel.innerHTML = (d.exames || []).map(x => `<option value="${x.id}">${x.nome}${x.sigla ? ' ('+x.sigla+')' : ''}</option>`).join("") || '<option value="">Cadastre um exame primeiro</option>';
+}
+
+const STATUS_BADGE = { aguardando_coleta: "badge-info", coletado: "badge-warn", em_analise: "badge-warn", liberado: "badge-ok", cancelado: "badge-danger" };
+
+async function carregarSolicitacoes() {
+  const status = document.getElementById("fStatus").value;
+  const d = await fetchJSON("/api/governo/laboratorio/solicitacoes/" + (status ? `?status=${status}` : ""));
+  const tbody = document.getElementById("tbodySolicitacoes");
+  if (!d.solicitacoes || !d.solicitacoes.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma solicitação encontrada.</td></tr>'; return; }
+  tbody.innerHTML = d.solicitacoes.map(s => `<tr>
+    <td><strong>${s.protocolo}</strong>${s.urgente ? ' <span class="badge badge-danger">Urgente</span>' : ''}</td>
+    <td>${s.paciente_nome}</td>
+    <td>${s.exame_nome}</td>
+    <td><span class="badge ${STATUS_BADGE[s.status] || 'badge-info'}">${s.status_display}</span></td>
+    <td>${s.valor_resultado || '—'} ${s.fora_referencia ? '<span class="badge badge-danger">Fora ref.</span>' : ''}</td>
+    <td>
+      ${s.status === 'aguardando_coleta' ? `<button class="btn btn-ghost btn-sm" onclick="acaoSolicitacao(${s.id},'coletar')">Coletar</button>` : ''}
+      ${s.status === 'coletado' ? `<button class="btn btn-ghost btn-sm" onclick="abrirModalResultado(${s.id},'digitar_resultado')">Digitar Resultado</button>` : ''}
+      ${s.status === 'em_analise' ? `<button class="btn btn-primary btn-sm" onclick="liberarResultado(${s.id})">Liberar</button> <button class="btn btn-ghost btn-sm" onclick="abrirModalResultado(${s.id},'retificar')">Retificar</button>` : ''}
+    </td>
+  </tr>`).join("");
+}
+
+async function acaoSolicitacao(id, acao, extra = {}) {
+  const r = await fetchJSON(`/api/governo/laboratorio/solicitacoes/${id}/`, { method: "PATCH", body: JSON.stringify({ acao, ...extra }) });
+  if (r.erro) { alert(r.erro); return; }
+  await Promise.all([carregarSolicitacoes(), carregarKpis()]);
+}
+
+async function liberarResultado(id) {
+  const nome = prompt("Nome do bioquímico/biomédico responsável pela liberação:");
+  if (!nome) return;
+  await acaoSolicitacao(id, "liberar", { liberado_por: nome });
+}
+
+function abrirModalResultado(id, acao) {
+  exameAcao = acao;
+  document.getElementById("resultadoTitulo").textContent = acao === "retificar" ? "Retificar Resultado" : "Digitar Resultado";
+  document.getElementById("rSolicitacaoId").value = id;
+  document.getElementById("rValor").value = "";
+  document.getElementById("rResponsavel").value = "";
+  document.getElementById("modalResultado").classList.add("open");
+}
+function fecharModalResultado() { document.getElementById("modalResultado").classList.remove("open"); }
+
+async function salvarResultado() {
+  const id = document.getElementById("rSolicitacaoId").value;
+  const valor_resultado = document.getElementById("rValor").value;
+  const responsavel = document.getElementById("rResponsavel").value;
+  if (!valor_resultado || !responsavel) { alert("Preencha o valor e o responsável."); return; }
+  const extra = exameAcao === "retificar"
+    ? { valor_resultado, retificado_por: responsavel }
+    : { valor_resultado };
+  await acaoSolicitacao(id, exameAcao, extra);
+  fecharModalResultado();
+}
+
+function abrirModalExame() { document.getElementById("modalExame").classList.add("open"); }
+function fecharModalExame() { document.getElementById("modalExame").classList.remove("open"); }
+function abrirModalSolicitacao() { document.getElementById("modalSolicitacao").classList.add("open"); }
+function fecharModalSolicitacao() { document.getElementById("modalSolicitacao").classList.remove("open"); }
+
+async function salvarExame() {
+  const r = await fetchJSON("/api/governo/laboratorio/catalogo/", {
+    method: "POST", body: JSON.stringify({
+      nome: document.getElementById("xNome").value,
+      sigla: document.getElementById("xSigla").value,
+      tipo_amostra: document.getElementById("xAmostra").value,
+      prazo_entrega_dias: document.getElementById("xPrazo").value,
+      valor_referencia_min: document.getElementById("xRefMin").value || null,
+      valor_referencia_max: document.getElementById("xRefMax").value || null,
+      valor_referencia_texto: document.getElementById("xRefTexto").value,
+    })
+  });
+  if (r.erro) { alert(r.erro); return; }
+  fecharModalExame();
+  await carregarCatalogo();
+}
+
+async function salvarSolicitacao() {
+  const r = await fetchJSON("/api/governo/laboratorio/solicitacoes/", {
+    method: "POST", body: JSON.stringify({
+      exame_id: document.getElementById("sExame").value,
+      paciente_nome: document.getElementById("sPaciente").value,
+      paciente_cpf: document.getElementById("sCpf").value,
+      profissional_solicitante: document.getElementById("sProfissional").value,
+      urgente: !!document.getElementById("sUrgente").value,
+    })
+  });
+  if (r.erro) { alert(r.erro); return; }
+  alert(`Solicitação criada. Protocolo: ${r.protocolo}`);
+  fecharModalSolicitacao();
+  await Promise.all([carregarSolicitacoes(), carregarKpis()]);
+}
+
+carregarKpis();
+carregarCatalogo();
+carregarSolicitacoes();
+</script>
+</body>
+</html>

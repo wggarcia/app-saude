@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sala de Situação Epidemiológica</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#041018;--surface:#072030;--surface2:#0a2d45;--accent:#00c2ff;--accent2:#00e5b0;--danger:#ff4d6d;--warn:#ffb347;--ok:#00e5b0;--text:#e8f4ff;--muted:#7a9bb5;--radius:12px;--card:rgba(255,255,255,.04);--border:rgba(255,255,255,.07)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:240px;min-height:100vh;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0}
+.logo{padding:0 20px 24px;font-size:18px;font-weight:800;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.nav-section{padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-link{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;border-radius:8px;margin:2px 8px;transition:.15s}
+.nav-link:hover,.nav-link.active{background:rgba(0,194,255,.1);color:var(--accent)}
+.nav-link span{font-size:16px}
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.nav-link-logout{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.35)}
+.main{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;gap:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-title{font-size:22px;font-weight:800}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.alerta-nivel{display:flex;align-items:center;gap:16px;padding:20px 24px;border-radius:var(--radius);border:1px solid var(--border)}
+.alerta-nivel.verde{background:rgba(0,229,176,.08);border-color:rgba(0,229,176,.3)}
+.alerta-nivel.amarelo{background:rgba(255,179,71,.08);border-color:rgba(255,179,71,.3)}
+.alerta-nivel.laranja{background:rgba(255,140,0,.1);border-color:rgba(255,140,0,.35)}
+.alerta-nivel.vermelho{background:rgba(255,77,109,.1);border-color:rgba(255,77,109,.35)}
+.alerta-dot{width:20px;height:20px;border-radius:50%;flex-shrink:0}
+.alerta-dot.verde{background:var(--ok)}.alerta-dot.amarelo{background:var(--warn)}
+.alerta-dot.laranja{background:#ff8c00}.alerta-dot.vermelho{background:var(--danger)}
+.alerta-label{font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.kpi.danger::before{background:var(--danger)}.kpi.warn::before{background:var(--warn)}
+.kpi-val{font-size:30px;font-weight:800;color:var(--accent)}
+.kpi.danger .kpi-val{color:var(--danger)}.kpi.warn .kpi-val{color:var(--warn)}
+.kpi-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.02)}
+td{padding:12px 16px;font-size:13px;border-top:1px solid var(--border)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(0,229,176,.12);color:var(--ok)}
+.badge-warn{background:rgba(255,179,71,.12);color:var(--warn)}
+.badge-danger{background:rgba(255,77,109,.12);color:var(--danger)}
+.badge-laranja{background:rgba(255,140,0,.12);color:#ff8c00}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:Manrope,sans-serif}
+.btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:rgba(255,255,255,.1)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:1000px){.grid-2{grid-template-columns:1fr}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">🏛️ Governo</div>
+  <div class="nav-section">Navegação</div>
+  <a class="nav-link" href="/governo/"><span>📊</span> Alertas e Monitoramento</a>
+  <a class="nav-link" href="/governo/gestao/"><span>🏛️</span> Gestão Governamental</a>
+  <div class="nav-section">Vigilância</div>
+  <a class="nav-link active" href="/governo/sala-situacao/"><span>🚨</span> Sala de Situação</a>
+  <a class="nav-link" href="/governo/app-cidadao/"><span>📱</span> App Cidadão</a>
+  <div class="sidebar-footer">
+    <a class="nav-link nav-link-logout" href="/logout-governo/"><span>🚪</span> Sair</a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Sala de Situação Epidemiológica</div>
+      <div class="page-sub">Painel consolidado — surtos, notificações compulsórias, infestação e sintomas da população</div>
+    </div>
+    <button class="btn btn-ghost" onclick="carregar()">↻ Atualizar</button>
+  </div>
+
+  <div class="alerta-nivel" id="alertaNivel">
+    <div class="alerta-dot" id="alertaDot"></div>
+    <div>
+      <div class="alerta-label" id="alertaLabel">Carregando…</div>
+      <div style="font-size:12px;color:var(--muted)" id="alertaAtualizado"></div>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi danger"><div class="kpi-val" id="kpiSurtosVermelhos">—</div><div class="kpi-lbl">Surtos Nível Vermelho</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiNotif30d">—</div><div class="kpi-lbl">Notificações (30 dias)</div></div>
+    <div class="kpi danger"><div class="kpi-val" id="kpiObitos30d">—</div><div class="kpi-lbl">Óbitos Notificados (30 dias)</div></div>
+    <div class="kpi warn"><div class="kpi-val" id="kpiInfestacao">—</div><div class="kpi-lbl">Índice de Infestação</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><span class="card-title">🚨 Surtos Ativos</span></div>
+      <table>
+        <thead><tr><th>Doença</th><th>Município</th><th>Casos</th><th>Óbitos</th><th>Nível</th></tr></thead>
+        <tbody id="tbodySurtos"><tr><td colspan="5" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">📋 Notificações por Doença (30 dias)</span></div>
+      <table>
+        <thead><tr><th>Doença</th><th>Total</th></tr></thead>
+        <tbody id="tbodyDoencas"><tr><td colspan="2" class="empty">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" id="cardSintomas" style="display:none">
+    <div class="card-header"><span class="card-title">👥 Sintomas Relatados pela População (App Cidadão)</span></div>
+    <div style="padding:16px 20px;font-size:13px" id="sintomasBody"></div>
+  </div>
+</main>
+
+<script>
+const E = sessionStorage.getItem("empresa_id") || localStorage.getItem("empresa_id") || "";
+
+async function fetchJSON(url) {
+  const res = await fetch(url, { headers: { "X-Empresa-ID": E }, credentials: "include" });
+  return res.json();
+}
+
+const NIVEL_LABEL = { verde: "Situação Normal", amarelo: "Atenção", laranja: "Alerta", vermelho: "Emergência" };
+
+async function carregar() {
+  const d = await fetchJSON("/api/governo/sala-situacao/");
+  if (d.erro) { document.getElementById("alertaLabel").textContent = d.erro; return; }
+
+  const nivel = d.nivel_situacional;
+  document.getElementById("alertaNivel").className = "alerta-nivel " + nivel;
+  document.getElementById("alertaDot").className = "alerta-dot " + nivel;
+  document.getElementById("alertaLabel").textContent = NIVEL_LABEL[nivel] || nivel;
+  document.getElementById("alertaAtualizado").textContent = "Atualizado em " + new Date(d.atualizado_em).toLocaleDateString('pt-BR');
+
+  document.getElementById("kpiSurtosVermelhos").textContent = d.surtos.vermelhos;
+  document.getElementById("kpiNotif30d").textContent = d.notificacoes.total_30d;
+  document.getElementById("kpiObitos30d").textContent = d.notificacoes.obitos_30d;
+  document.getElementById("kpiInfestacao").textContent = d.endemias.indice_infestacao_pct + "%";
+
+  const NIVEL_BADGE = { verde: "badge-ok", amarelo: "badge-warn", laranja: "badge-laranja", vermelho: "badge-danger" };
+  const tbodySurtos = document.getElementById("tbodySurtos");
+  tbodySurtos.innerHTML = (d.surtos.lista && d.surtos.lista.length)
+    ? d.surtos.lista.map(s => `<tr>
+        <td><strong>${s.doenca}</strong></td>
+        <td>${s.municipio}/${s.uf}</td>
+        <td>${s.total_casos}</td>
+        <td>${s.total_obitos}</td>
+        <td><span class="badge ${NIVEL_BADGE[s.nivel_alerta] || 'badge-ok'}">${s.nivel_alerta}</span></td>
+      </tr>`).join("")
+    : '<tr><td colspan="5" class="empty">Nenhum surto ativo.</td></tr>';
+
+  const tbodyDoencas = document.getElementById("tbodyDoencas");
+  tbodyDoencas.innerHTML = (d.notificacoes.por_doenca && d.notificacoes.por_doenca.length)
+    ? d.notificacoes.por_doenca.map(x => `<tr><td>${x.doenca_label}</td><td>${x.total}</td></tr>`).join("")
+    : '<tr><td colspan="2" class="empty">Nenhuma notificação nos últimos 30 dias.</td></tr>';
+
+  if (d.sintomas_populacao) {
+    document.getElementById("cardSintomas").style.display = "block";
+    const sp = d.sintomas_populacao;
+    document.getElementById("sintomasBody").innerHTML =
+      `Risco territorial: <strong>${sp.risco}</strong> · Crescimento: <strong>${sp.crescimento_percent}%</strong> · ` +
+      `Casos relatados: <strong>${sp.casos_total}</strong> · Doença dominante: <strong>${sp.doenca_dominante || '—'}</strong>`;
+  }
+}
+
+carregar();
+</script>
+</body>
+</html>

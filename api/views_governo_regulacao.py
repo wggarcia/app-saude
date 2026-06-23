@@ -15,7 +15,10 @@ from django.views.decorators.http import require_http_methods
 from .access_control import get_setor, principal_pode_operacao_setorial
 from .models import RegulacaoAssistencial
 from .views_dashboard import _empresa_autenticada as _empresa_autenticada_base, contexto_navegacao_setorial
-from .access_control import requer_setor, requer_operacao_page
+from .access_control import (
+    requer_setor, requer_operacao_page,
+    requer_permissao_modulo, api_requer_permissao_modulo,
+)
 
 
 def _e(request):
@@ -32,12 +35,14 @@ def _e(request):
 @ensure_csrf_cookie
 @requer_setor("governo")
 @requer_operacao_page
+@requer_permissao_modulo("governo.regulacao_urgencia")
 def governo_regulacao_page(request):
     return render(request, "governo_regulacao.html", contexto_navegacao_setorial(request, "governo"))
 
 
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 @require_http_methods(["GET"])
 def api_regulacao_kpis(request):
     e = _e(request)
@@ -60,6 +65,7 @@ def api_regulacao_kpis(request):
 
 # ── Lista ─────────────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 @require_http_methods(["GET"])
 def api_regulacao_lista(request):
     e = _e(request)
@@ -80,6 +86,7 @@ def api_regulacao_lista(request):
 
 # ── Nova solicitação ──────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 @require_http_methods(["POST"])
 def api_regulacao_nova(request):
     e = _e(request)
@@ -104,6 +111,7 @@ def api_regulacao_nova(request):
 
 # ── Atualizar ─────────────────────────────────────────────────────────────────
 
+@api_requer_permissao_modulo("governo.regulacao_urgencia")
 @require_http_methods(["POST"])
 def api_regulacao_atualizar(request, reg_id):
     e = _e(request)
