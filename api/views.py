@@ -10,7 +10,7 @@ from .utils import obter_localizacao
 from django.conf import settings
 from api.utils_ia import classificar_padrao
 from api.classificador_doencas import classificar_para_cidadao as _classificar_cidadao
-from api.utils_geo import obter_endereco
+from api.utils_geo import obter_endereco, generalizar_coordenada
 from api.utils_auth import validar_token
 from api.models import Empresa, RegistroSintoma
 from api.epidemiologia import (
@@ -2219,6 +2219,11 @@ def registrar_sintoma_publico(request):
         }
     else:
         geo = obter_endereco(latitude, longitude)
+    # Privacidade: o bairro/cidade usa a coordenada precisa acima (geocodificação
+    # correta), mas a coordenada PERSISTIDA é generalizada para uma grade de
+    # ~200m — ninguém, nem o próprio operador do sistema, consegue apontar a
+    # casa de quem enviou a partir do dado salvo.
+    latitude, longitude = generalizar_coordenada(latitude, longitude, raio_metros=200)
     dados_classificacao = {**dados, "estado": geo.get("estado", ""), "cidade": geo.get("cidade", "")}
     grupo, classificacao = classificar_padrao(dados_classificacao, setor="governo")
     resultado_cidadao = _classificar_cidadao(dados_classificacao, estado=geo.get("estado", ""))

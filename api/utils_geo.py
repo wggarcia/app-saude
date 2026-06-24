@@ -266,3 +266,30 @@ def obter_endereco(lat, lon):
         print(f"[geo] Nominatim falhou para ({lat},{lon}): {exc}")
         cache.set(cache_key, resultado_local, timeout=3600)
         return resultado_local
+
+
+_METROS_POR_GRAU_LATITUDE = 111_320.0
+
+
+def generalizar_coordenada(lat, lon, raio_metros: float = 200.0):
+    """
+    Arredonda lat/lon para o centro da célula de uma grade de `raio_metros`,
+    para que o ponto salvo nunca aponte para a casa de quem enviou — só para
+    a vizinhança/região. Usar SEMPRE antes de persistir uma coordenada
+    recebida de um envio voluntário de cidadão (RegistroSintoma público).
+
+    A geocodificação de bairro/cidade/estado deve ser feita com a coordenada
+    ORIGINAL (precisa) — só a coordenada armazenada/exibida é generalizada.
+    """
+    lat = float(lat)
+    lon = float(lon)
+
+    passo_lat = raio_metros / _METROS_POR_GRAU_LATITUDE
+    metros_por_grau_longitude = max(
+        _METROS_POR_GRAU_LATITUDE * cos(radians(lat)), 1.0
+    )
+    passo_lon = raio_metros / metros_por_grau_longitude
+
+    lat_generalizada = round(lat / passo_lat) * passo_lat
+    lon_generalizada = round(lon / passo_lon) * passo_lon
+    return round(lat_generalizada, 6), round(lon_generalizada, 6)
