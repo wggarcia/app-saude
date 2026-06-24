@@ -4,7 +4,7 @@ import unicodedata
 from django.db.models import F, Q, Sum
 from django.utils import timezone
 
-from api.access_control import get_setor
+from api.access_control import empresa_tem_feature, get_setor
 from api.models import (
     ASOOcupacional,
     AcaoCorporativa,
@@ -1027,15 +1027,19 @@ def _plano_saude_cards(empresa):
 
 def _cards_por_setor(empresa, setor):
     if setor == "farmacia":
-        return _farmacia_cards(empresa)
+        cards = _farmacia_cards(empresa)
+        if empresa_tem_feature(empresa, "farmacia.multi_unidade"):
+            cards += _rede_cards(empresa)
+        return cards
     if setor == "hospital":
-        return _hospital_cards(empresa)
+        cards = _hospital_cards(empresa)
+        if empresa_tem_feature(empresa, "hospital.multi_unidade"):
+            cards += _rede_cards(empresa)
+        return cards
     if setor == "empresa":
         return _empresa_cards(empresa)
     if setor == "governo":
         return _governo_cards(empresa)
-    if setor == "rede":
-        return _rede_cards(empresa)
     if setor == "plano_saude":
         return _plano_saude_cards(empresa)
     return _generic_cards(empresa)
