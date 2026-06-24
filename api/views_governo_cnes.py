@@ -181,7 +181,7 @@ def api_cnes_sincronizar_todas(request):
 
     unidades = UnidadeSaude.objects.filter(
         empresa=empresa,
-        ativo=True,
+        status="ativa",
     ).exclude(cnes="").filter(
         atualizado_em__lt=trinta_dias_atras,
     )[:50]  # máximo 50 por requisição
@@ -229,7 +229,7 @@ def api_cnes_status(request):
     from .models import UnidadeSaude
     from datetime import timedelta
 
-    todas        = UnidadeSaude.objects.filter(empresa=empresa, ativo=True)
+    todas        = UnidadeSaude.objects.filter(empresa=empresa, status="ativa")
     com_cnes     = todas.exclude(cnes="")
     sem_cnes     = todas.filter(cnes="")
     trinta_dias  = timezone.now() - timedelta(days=30)
@@ -261,7 +261,7 @@ def api_cnes_kpis(request):
     from .models import UnidadeSaude
     from django.db.models import Count
 
-    qs = UnidadeSaude.objects.filter(empresa=empresa, ativo=True)
+    qs = UnidadeSaude.objects.filter(empresa=empresa, status="ativa")
 
     com_cnes      = qs.exclude(cnes="").count()
     com_geo       = qs.exclude(latitude=None).count()

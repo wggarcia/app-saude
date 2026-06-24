@@ -347,7 +347,7 @@ def api_vigilancia_dashboard(request):
         .order_by("semana")
     )
     for t in tendencia:
-        t["semana"] = str(t["semana"].date()) if t["semana"] else ""
+        t["semana"] = str(t["semana"]) if t["semana"] else ""
 
     # Por município
     por_municipio = list(
@@ -957,17 +957,15 @@ def api_urgencia_dashboard(request):
             "tempo_medio_min": float(round(agg["tem"] or 0, 0)),
         }
 
-    # Evolução diária última semana
-    from django.db.models.functions import TruncDate
+    # Evolução diária última semana (data_atendimento já é DateField, sem necessidade de truncar)
     evolucao = list(
         qs_semana
-        .annotate(dia=TruncDate("data_atendimento"))
-        .values("dia")
+        .values("data_atendimento")
         .annotate(total=Sum("total_atendimentos"), obitos=Sum("obitos"))
-        .order_by("dia")
+        .order_by("data_atendimento")
     )
     for item in evolucao:
-        item["dia"] = str(item["dia"])
+        item["dia"] = str(item.pop("data_atendimento"))
 
     return JsonResponse({
         "semana_atual": {k: float(round(v or 0, 1)) if k == "tempo_medio" else (v or 0) for k, v in sem_atual.items()},
