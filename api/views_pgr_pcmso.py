@@ -121,13 +121,11 @@ def api_pgr_gerar(request):
         return JsonResponse({"erro": "Método não permitido"}, status=405)
 
     try:
-        from .models import (
-            RiscoOcupacional, PostoTrabalho, AgenteNocivoSST, DocumentoSST
-        )
+        from .models import RiscoOcupacional, PostoTrabalho, DocumentoSST
 
         riscos = list(
             RiscoOcupacional.objects.filter(empresa=empresa)
-            .values("id", "descricao", "tipo", "nivel", "setor")[:100]
+            .values("id", "descricao", "tipo_risco", "nivel", "setor")[:100]
         )
         postos = list(
             PostoTrabalho.objects.filter(empresa=empresa, ativo=True)
@@ -176,7 +174,7 @@ def api_pgr_pdf(request, doc_id):
         doc = DocumentoSST.objects.get(id=doc_id, empresa=empresa, tipo="PGR")
         riscos = list(
             RiscoOcupacional.objects.filter(empresa=empresa)
-            .values("descricao", "tipo", "nivel", "setor")[:100]
+            .values("descricao", "tipo_risco", "nivel", "setor")[:100]
         )
         postos = list(
             PostoTrabalho.objects.filter(empresa=empresa, ativo=True)
@@ -224,8 +222,8 @@ def api_pgr_pdf(request, doc_id):
             for r in riscos:
                 risco_data.append([
                     r.get("descricao", "—"),
-                    r.get("tipo", "—").capitalize(),
-                    r.get("nivel", "—").capitalize(),
+                    (r.get("tipo_risco") or "—").capitalize(),
+                    (r.get("nivel") or "—").capitalize(),
                     r.get("setor", "—") or "Geral",
                 ])
             t2 = Table(risco_data, colWidths=[7 * cm, 3 * cm, 3 * cm, W - 15 * cm])
