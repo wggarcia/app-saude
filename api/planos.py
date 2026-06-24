@@ -151,14 +151,8 @@ _PLANO_ENTERPRISE = _PLANO_OPERADORA + [
     "plano.api_integracao",         # API de integração com sistemas legados (EXCLUSIVO ENTERPRISE)
 ]
 
-# ── Rede de Saúde (setor independente) ──────────────────────────────────────
-_REDE_TODOS = [
-    "rede.multi_unidade",
-    "rede.benchmarking",
-    "rede.kpis_consolidados",
-    "rede.transferencias",
-    "rede.sala_situacao",
-]
+# Rede de Saúde NÃO é um setor próprio — é a gestão multi-unidade já incluída
+# nos planos de rede de Farmácia (_FARMACIA_REDE) e Hospital (_HOSPITAL_REDE).
 
 # ─── Definição dos planos ────────────────────────────────────────────────────
 
@@ -368,31 +362,6 @@ PACOTES_SAAS = {
         "features": _GOVERNO_TODOS,
         "limites": {"max_usuarios": 1000, "max_municipios": 999},
     },
-    # ── Rede de Saúde ──────────────────────────────────────────────────────────
-    "rede_regional": {
-        "label": "Rede de Saúde Regional",
-        "setor": "rede",
-        "descricao": "Gestao multi-unidades com benchmarking, consolidacao de KPIs, transferencias e mapa de rede.",
-        "usuarios": 250,
-        "dispositivos": 250,
-        "mensal": 9900.00,
-        "anual": 99000.00,
-        "ciclos": ["mensal", "anual"],
-        "features": _REDE_TODOS,
-        "limites": {"max_usuarios": 250, "max_unidades": 50},
-    },
-    "rede_nacional": {
-        "label": "Rede de Saúde Nacional",
-        "setor": "rede",
-        "descricao": "Operacao de rede nacional com governanca, analytics avancado e sala de situacao epidemiologica.",
-        "usuarios": 1000,
-        "dispositivos": 1000,
-        "mensal": 25900.00,
-        "anual": 259000.00,
-        "ciclos": ["mensal", "anual"],
-        "features": _REDE_TODOS,
-        "limites": {"max_usuarios": 1000, "max_unidades": 999},
-    },
     # ── Plano de Saúde ─────────────────────────────────────────────────────────
     "plano_saude_operadora": {
         "label": "Operadora de Plano de Saúde",
@@ -442,7 +411,7 @@ LEGACY_PACOTE_MAP = {
     "hospital": "hospital_medio",
     "governo": "governo_municipio_pequeno",
     "farmacia": "farmacia_local",
-    "rede": "rede_regional",
+    "rede": "farmacia_rede_regional",
     "plano_saude": "plano_saude_operadora",
 }
 

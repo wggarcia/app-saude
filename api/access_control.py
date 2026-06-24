@@ -8,7 +8,7 @@ from .services.auth_session import dono_autenticado_from_request
 
 logger = logging.getLogger(__name__)
 
-TODOS_SETORES = ("empresa", "farmacia", "hospital", "governo", "rede", "plano_saude")
+TODOS_SETORES = ("empresa", "farmacia", "hospital", "governo", "plano_saude")
 
 
 # ─── Feature gating ──────────────────────────────────────────────────────────
@@ -116,7 +116,6 @@ def _destino_correto(setor):
         "farmacia": "/farmacia/gestao/",
         "hospital": "/hospital/gestao/",
         "governo": "/dashboard-governo/",
-        "rede": "/rede/gestao/",
         "plano_saude": "/plano-saude/gestao/",
     }
     return destinos.get(setor, "/dashboard-empresa/")

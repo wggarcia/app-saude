@@ -41,7 +41,6 @@ TICKETS = {k: _ticket_mensal(k) for k in [
     "governo_municipio_pequeno", "governo_municipio_medio",
     "governo_capital_regiao", "governo_estado",
     "plano_saude_operadora", "plano_saude_enterprise",
-    "rede_regional", "rede_nacional",
 ]}
 
 
