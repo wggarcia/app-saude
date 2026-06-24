@@ -186,6 +186,8 @@ class EmpresaMiddleware:
             "/seguranca-lgpd/",
             "/metodologia/",
             "/suporte/",
+            "/sla/",
+            "/status/",
             "/solicitar-reset-senha/",
             "/reset-senha-sucesso/",
         }
