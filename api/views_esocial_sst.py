@@ -445,6 +445,8 @@ def api_esocial_registrar_cat(request, cat_id):
     e = _e(request)
     if not e:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não permitido"}, status=405)
     try:
         cat = CATOcupacional.objects.get(pk=cat_id, empresa=e)
     except CATOcupacional.DoesNotExist:
@@ -493,6 +495,8 @@ def api_esocial_registrar_aso(request, aso_id):
     e = _e(request)
     if not e:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não permitido"}, status=405)
     try:
         aso = ASOOcupacional.objects.get(pk=aso_id, empresa=e)
     except ASOOcupacional.DoesNotExist:
@@ -532,6 +536,8 @@ def api_esocial_registrar_afastamento(request, afastamento_id):
     e = _e(request)
     if not e:
         return JsonResponse({"erro": "Não autenticado"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"erro": "Método não permitido"}, status=405)
     try:
         af = AfastamentoSST.objects.get(pk=afastamento_id, empresa=e)
     except AfastamentoSST.DoesNotExist:

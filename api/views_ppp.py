@@ -640,6 +640,8 @@ def api_ppp_status_esocial(request, ppp_id):
                 for v in vinculos
             ),
         })
+    except PPPFuncionario.DoesNotExist:
+        return JsonResponse({"erro": "PPP não encontrado"}, status=404)
     except Exception as e:
         return JsonResponse({"erro": str(e)}, status=500)
 
@@ -800,6 +802,8 @@ def api_ppp_pdf(request, ppp_id):
         return resp
     except ImportError:
         return JsonResponse({"erro": "ReportLab não instalado"}, status=500)
+    except PPPFuncionario.DoesNotExist:
+        return JsonResponse({"erro": "PPP não encontrado"}, status=404)
     except Exception as e:
         return JsonResponse({"erro": str(e)}, status=500)
 

@@ -344,6 +344,8 @@ def api_laudo_pdf(request, laudo_id):
         return resp
     except ImportError:
         return JsonResponse({"erro": "ReportLab não instalado"}, status=500)
+    except LaudoTecnicoSST.DoesNotExist:
+        return JsonResponse({"erro": "Laudo não encontrado"}, status=404)
     except Exception as e:
         return JsonResponse({"erro": str(e)}, status=500)
 
