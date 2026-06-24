@@ -45,7 +45,7 @@ def _alertas_sst(empresa, hoje):
         aso_urgente = 0
         aso_atencao = 0
         for f in funcionarios:
-            aso = f.asos.filter(valido=True).order_by("-data_validade").first()
+            aso = f.asos.exclude(resultado="inapto").order_by("-data_validade").first()
             if not aso or not aso.data_validade or aso.data_validade < hoje:
                 sem_aso += 1
             elif aso.data_validade <= urgente:
@@ -147,7 +147,7 @@ def _alertas_sst(empresa, hoje):
         # Afastamentos ativos
         afastados = 0
         for f in funcionarios:
-            if f.afastamentos.filter(data_retorno__isnull=True).exists():
+            if f.afastamentos.filter(data_retorno_real__isnull=True).exists():
                 afastados += 1
         if afastados:
             alertas.append(_alerta("SST", "info",
@@ -206,16 +206,14 @@ def _alertas_hospital(empresa, hoje):
     try:
         from .models import LeitoHospital, InternacaoHospital, TriagemHospital, EvolucaoClinica
 
-        # Leitos em manutenção há mais de 3 dias
-        limite_manut = hoje - timedelta(days=3)
+        # Leitos em manutenção
         leitos_manut = LeitoHospital.objects.filter(
             departamento__empresa=empresa,
             status="manutencao",
-            atualizado_em__date__lt=limite_manut,
         ).count()
         if leitos_manut:
             alertas.append(_alerta("Hospital", "alerta",
-                f"{leitos_manut} leito(s) em manutenção há 3+ dias",
+                f"{leitos_manut} leito(s) em manutenção",
                 "Leitos indisponíveis reduzem a capacidade de atendimento.",
                 "/hospital/gestao/"))
 
@@ -223,18 +221,18 @@ def _alertas_hospital(empresa, hoje):
         limite_evolucao = datetime.now() - timedelta(days=2)
         internacoes_ativas = InternacaoHospital.objects.filter(
             leito__departamento__empresa=empresa,
-            status="ativo",
+            status="ativa",
         ).prefetch_related("evolucoes")
 
         sem_evolucao = 0
         internacoes_longas = 0
         for internacao in internacoes_ativas:
             # Sem evolução nos últimos 2 dias
-            ultima = internacao.evolucoes.order_by("-criado_em").first()
-            if not ultima or ultima.criado_em < limite_evolucao:
+            ultima = internacao.evolucoes.order_by("-registrado_em").first()
+            if not ultima or ultima.registrado_em < limite_evolucao:
                 sem_evolucao += 1
             # Internações longas (>30 dias)
-            if internacao.data_entrada and (hoje - internacao.data_entrada).days > 30:
+            if internacao.data_entrada and (hoje - internacao.data_entrada.date()).days > 30:
                 internacoes_longas += 1
 
         if sem_evolucao:
