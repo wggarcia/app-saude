@@ -328,8 +328,12 @@ def api_ris_dicom_arquivo(request, instancia_id):
         raise Http404
 
     nome_arquivo = f"{inst.sop_instance_uid or inst.id}.dcm"
+    try:
+        arquivo = inst.arquivo.open("rb")
+    except (FileNotFoundError, OSError):
+        return JsonResponse({"erro": "Arquivo DICOM não encontrado no armazenamento"}, status=404)
     return FileResponse(
-        inst.arquivo.open("rb"),
+        arquivo,
         content_type="application/dicom",
         filename=nome_arquivo,
     )
