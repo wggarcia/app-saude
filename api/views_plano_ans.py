@@ -4,6 +4,7 @@ DIOPS: declaração trimestral de informações de saúde suplementar.
 SIB:   sistema de informação de beneficiários (mensal).
 """
 import json
+import re
 from datetime import date
 
 from django.http import JsonResponse, HttpResponse
@@ -99,6 +100,8 @@ def api_diops_lista(request):
         trimestre = (data.get("trimestre") or "").strip()
         if not trimestre:
             return JsonResponse({"erro": "trimestre obrigatório (AAAAQ)"}, status=400)
+        if not re.fullmatch(r"\d{4}[1-4]", trimestre):
+            return JsonResponse({"erro": "trimestre deve estar no formato AAAAQ, ex: 20242"}, status=400)
         d = DIOPSDeclaracao.objects.create(
             empresa=empresa,
             trimestre=trimestre,
@@ -163,6 +166,12 @@ def api_diops_gerar_xml(request, decl_id):
         d = DIOPSDeclaracao.objects.get(id=decl_id, empresa=empresa)
     except DIOPSDeclaracao.DoesNotExist:
         return JsonResponse({"erro": "Declaração não encontrada"}, status=404)
+
+    if not re.fullmatch(r"\d{4}[1-4]", d.trimestre or ""):
+        return JsonResponse(
+            {"erro": f"Trimestre '{d.trimestre}' em formato inválido (esperado AAAAQ, ex: 20242)"},
+            status=422,
+        )
 
     xml_content = gerar_diops_3_0(d, empresa)
     d.xml_gerado = xml_content
