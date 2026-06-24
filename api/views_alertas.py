@@ -32,7 +32,7 @@ def _alerta(modulo, severidade, titulo, descricao, link=""):
 def _alertas_sst(empresa, hoje):
     alertas = []
     try:
-        from .models import FuncionarioSST, ExameMedico, EntregaEPI, TreinamentoNR, AgendamentoSST
+        from .models import FuncionarioSST, ExameMedico, EntregaEPI, TreinamentoNR, AgendamentoSST, DocumentoSST
 
         atencao = hoje + timedelta(days=30)
         urgente  = hoje + timedelta(days=7)
@@ -73,7 +73,7 @@ def _alertas_sst(empresa, hoje):
         vencidos = ExameMedico.objects.filter(
             funcionario__empresa=empresa,
             funcionario__ativo=True,
-            data_vencimento__lt=hoje,
+            data_validade__lt=hoje,
         ).count()
         if vencidos:
             alertas.append(_alerta("SST", "alerta",
@@ -85,7 +85,7 @@ def _alertas_sst(empresa, hoje):
         ids_com_epi = set(
             EntregaEPI.objects.filter(
                 funcionario__empresa=empresa,
-                devolvido=False
+                data_devolucao__isnull=True
             ).values_list("funcionario_id", flat=True)
         )
         ids_ativos = set(funcionarios.values_list("id", flat=True))
@@ -107,6 +107,30 @@ def _alertas_sst(empresa, hoje):
                 f"{trein_vencidos} treinamento(s) NR vencido(s)",
                 "Funcionários com treinamentos expirados estão em não-conformidade.",
                 "/sst/treinamentos/"))
+
+        # PGR/PCMSO vencido ou vencendo — exigência da NR-1 (PGR) e NR-7 (PCMSO)
+        for tipo, label in (("PGR", "PGR"), ("PCMSO", "PCMSO")):
+            doc = DocumentoSST.objects.filter(empresa=empresa, tipo=tipo).order_by("-data_emissao").first()
+            if not doc or not doc.data_validade:
+                alertas.append(_alerta("SST", "critico",
+                    f"{label} não gerado",
+                    f"Nenhum {label} encontrado para esta empresa. Documento obrigatório por norma.",
+                    "/sst/pgr/"))
+            elif doc.data_validade < hoje:
+                alertas.append(_alerta("SST", "critico",
+                    f"{label} vencido",
+                    f"O {label} venceu em {doc.data_validade.strftime('%d/%m/%Y')} e precisa ser revisado e reemitido.",
+                    "/sst/pgr/"))
+            elif doc.data_validade <= urgente:
+                alertas.append(_alerta("SST", "critico",
+                    f"{label} vencendo em até 7 dias",
+                    f"Revise e reemita o {label} antes de {doc.data_validade.strftime('%d/%m/%Y')}.",
+                    "/sst/pgr/"))
+            elif doc.data_validade <= atencao:
+                alertas.append(_alerta("SST", "alerta",
+                    f"{label} vencendo em até 30 dias",
+                    f"Planeje a revisão do {label}, válido até {doc.data_validade.strftime('%d/%m/%Y')}.",
+                    "/sst/pgr/"))
 
         # Agendamentos atrasados
         ag_atrasados = AgendamentoSST.objects.filter(

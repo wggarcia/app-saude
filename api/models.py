@@ -1477,6 +1477,7 @@ class AfastamentoSST(models.Model):
 class TreinamentoNR(models.Model):
     """Treinamentos obrigatórios por NR — registro por funcionário."""
     NR_CHOICES = [
+        ("NR-1",  "NR-1 · Riscos do PGR (inclui psicossociais)"),
         ("NR-5",  "NR-5 · CIPA"),
         ("NR-6",  "NR-6 · EPI"),
         ("NR-10", "NR-10 · Segurança em Eletricidade"),
