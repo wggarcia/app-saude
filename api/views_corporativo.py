@@ -106,6 +106,8 @@ def dashboard_empresa_corporativo(request):
         return redirect("/dashboard-governo/")
     if setor == "plano_saude":
         return redirect("/dashboard-plano-saude/")
+    if setor == "rede":
+        return redirect("/rede/gestao/")
 
     payload = build_empresa_corporativo_payload(empresa)
     return render(request, "dashboard_empresa_corporativo.html", {
