@@ -5415,6 +5415,16 @@ class AssinaturaSSTTests(TestCase):
         self.assertTrue(assinatura.hash_assinatura)
 
 
+class PipelineOficialSivepPeriodoTests(TestCase):
+    def test_periodo_sivep_formata_semana_com_ano(self):
+        from api.pipeline_oficial import _periodo_sivep
+
+        self.assertEqual(_periodo_sivep("2"), "2026-S02")
+        self.assertEqual(_periodo_sivep("13"), "2026-S13")
+        self.assertEqual(_periodo_sivep(""), "semana_nao_informada")
+        self.assertEqual(_periodo_sivep(None), "semana_nao_informada")
+
+
 class EpidemiologiaMLTests(TestCase):
     """ML treinado em dado oficial (DATASUS/SINAN) — api/epidemiologia_ml.py.
 
@@ -5566,11 +5576,20 @@ class EpidemiologiaMLTests(TestCase):
             "SP", n_semanas=25, picos={9, 19},
             fonte_id="sinan_zika", indicador="zika_notificacoes_sinan",
         )
+        self._criar_serie_oficial(
+            "RJ", n_semanas=25, picos={6, 14},
+            fonte_id="sivep_gripe", indicador="srag_notificacoes_amostra",
+        )
+        self._criar_serie_oficial(
+            "SP", n_semanas=25, picos={8, 16},
+            fonte_id="sivep_gripe", indicador="srag_notificacoes_amostra",
+        )
 
         resultados = treinar_todas_doencas_registradas()
 
-        self.assertEqual(set(resultados.keys()), {"Dengue", "Chikungunya", "Zika"})
+        self.assertEqual(set(resultados.keys()), {"Dengue", "Chikungunya", "Zika", "Gripe"})
         self.assertTrue(resultados["Dengue"]["treinado"])
+        self.assertTrue(resultados["Gripe"]["treinado"])
         self.assertTrue(resultados["Zika"]["treinado"])
         self.assertTrue(resultados["Chikungunya"]["treinado"])
 

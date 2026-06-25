@@ -16,6 +16,14 @@ from .models import FonteOficialAgregado, FonteOficialExecucao
 MANIFEST_BY_ID = {item["id"]: item for item in OPENDATASUS_DATASUS_MANIFEST}
 
 SIVEP_GRIPE_2026_CSV_URL = "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SRAG/2026/INFLUD26-23-03-2026.csv"
+SIVEP_GRIPE_2026_ANO = "2026"  # arquivo e por ano; SEM_NOT/SEM_PRI vem so com a semana (sem ano)
+
+
+def _periodo_sivep(semana_raw):
+    semana_raw = (semana_raw or "").strip()
+    if semana_raw.isdigit():
+        return f"{SIVEP_GRIPE_2026_ANO}-S{semana_raw.zfill(2)}"
+    return "semana_nao_informada"
 
 # Fontes oficiais publicadas como CSV puro em S3 (suporte a HTTP Range) que podem
 # ser amostradas de forma controlada pelo mesmo mecanismo do SIVEP-Gripe.
@@ -363,7 +371,7 @@ def _parse_sivep_blocks(
                 continue
             cidade = (row.get("ID_MUNICIP") or row.get("ID_MN_RESI") or "").strip()
             codigo_ibge = (row.get("CO_MUN_NOT") or row.get("CO_MU_RES") or "").strip()
-            periodo = (row.get("SEM_NOT") or row.get("SEM_PRI") or "").strip() or "semana_nao_informada"
+            periodo = _periodo_sivep(row.get("SEM_NOT") or row.get("SEM_PRI"))
 
             aggregations[(row_uf, cidade, codigo_ibge, periodo)] += 1
             registros += 1
@@ -406,9 +414,7 @@ def _parse_sivep_sample(max_bytes: int, max_linhas: int, uf: str | None = None):
             continue
         cidade = (row.get("ID_MUNICIP") or row.get("ID_MN_RESI") or "").strip()
         codigo_ibge = (row.get("CO_MUN_NOT") or row.get("CO_MU_RES") or "").strip()
-        periodo = (row.get("SEM_NOT") or row.get("SEM_PRI") or "").strip()
-        if not periodo:
-            periodo = "semana_nao_informada"
+        periodo = _periodo_sivep(row.get("SEM_NOT") or row.get("SEM_PRI"))
 
         aggregations[(row_uf, cidade, codigo_ibge, periodo)] += 1
         registros += 1

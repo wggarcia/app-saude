@@ -47,6 +47,7 @@ DOENCAS_REGISTRADAS = [
     ("sinan_agravos", "dengue_notificacoes_sinan", "Dengue"),
     ("sinan_chikungunya", "chikungunya_notificacoes_sinan", "Chikungunya"),
     ("sinan_zika", "zika_notificacoes_sinan", "Zika"),
+    ("sivep_gripe", "srag_notificacoes_amostra", "Gripe"),
 ]
 
 _MODELO_CACHE = {}  # indicador -> {"bundle": ..., "mtime": ...}
