@@ -3291,6 +3291,8 @@ class PlatformStatusTests(TestCase):
 
 class LoginRateLimitTests(TestCase):
     def setUp(self):
+        from django.core.cache import cache as _cache
+        _cache.clear()  # evita contaminação de tentativas de outros testes no locmem cache
         self.client = Client()
         Empresa.objects.create(
             nome="Empresa Limite",
