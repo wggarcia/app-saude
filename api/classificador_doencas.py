@@ -528,6 +528,216 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "Febre Amarela": "febre amarela tem hemorragia mais intensa; área endêmica e falta de vacinação",
         },
     },
+
+    # ── RESPIRATÓRIA CRÔNICA ─────────────────────────────────────────────────
+    "Tuberculose": {
+        "grupo": "Respiratória crônica / ILTB",
+        "vetor": "Mycobacterium tuberculosis (aerossol)",
+        "cid10": "A15",
+        "descricao": "Tosse persistente (>3 semanas), sudorese noturna, febre baixa vespertina, fadiga progressiva; principal causa de morte infecciosa no Brasil",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "tosse":                  1.00,  # tosse crônica produtiva — obrigatória
+            "sudorese":               0.85,  # suor noturno — muito característico
+            "cansaco":                0.88,  # fadiga progressiva intensa
+            "febre":                  0.65,  # febre BAIXA vespertina (<38°C típica)
+            "falta_ar":               0.55,  # doença avançada ou TB miliar
+            "dor_corpo":              0.50,  # mialgia leve/moderada
+            "dor_cabeca":             0.30,
+            "vomito_nausea":          0.20,  # TB abdominal ou efeito de medicação
+            "perda_olfato_paladar":  -0.70,  # COVID, não TB
+            "exantema":              -0.65,
+            "dor_articular":         -0.35,
+            "conjuntivite":          -0.55,
+            "rigidez_nuca":          -0.25,
+            "manchas_hemorragicas":  -0.75,
+            "coriza":                -0.40,  # coriza diferencia de resfriado
+            "dor_garganta":          -0.30,
+            "calafrios":             -0.15,
+            "diarreia":              -0.30,
+            "_intensidade_febre_baixa":  0.40,  # febre baixa é típica da TB
+            "_intensidade_febre_alta":  -0.25,  # febre alta aponta contra TB pulmonar
+        },
+        "red_flags": ["falta_ar"],
+        "diferencial_vs": {
+            "Gripe (Influenza)": "gripe tem início abrupto e duração <2 semanas; TB evolui lentamente por semanas a meses",
+            "COVID-19": "COVID tem perda de olfato/paladar; TB não tem",
+            "Bronquite / DPOC Agudização": "TB tem sudorese noturna intensa; bronquite não",
+        },
+    },
+
+    # ── EXANTEMÁTICA VIRAL ───────────────────────────────────────────────────
+    "Varicela": {
+        "grupo": "Viral exantemática",
+        "vetor": "Varicella-zoster (aerossol + contato direto)",
+        "cid10": "B01",
+        "descricao": "Exantema vesicular pruriginoso em múltiplos estágios simultâneos (mácula→pápula→vesícula→crosta), febre baixa a moderada; altamente contagiosa",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "exantema":               1.00,  # vesículas pruriginosas — patognomônico
+            "febre":                  0.72,  # febre moderada
+            "cansaco":                0.68,
+            "dor_corpo":              0.50,
+            "dor_cabeca":             0.45,
+            "calafrios":              0.35,
+            "dor_garganta":           0.25,
+            "tosse":                 -0.40,  # varicela tem pouca tosse — vs sarampo
+            "coriza":                -0.50,
+            "falta_ar":              -0.30,
+            "perda_olfato_paladar":  -0.65,
+            "ictericia":             -0.65,
+            "manchas_hemorragicas":  -0.10,
+            "rigidez_nuca":          -0.55,
+            "dor_articular":         -0.30,
+            "diarreia":              -0.35,
+            "_intensidade_febre_baixa":  0.25,
+            "_intensidade_febre_alta":  -0.15,
+        },
+        "red_flags": ["falta_ar", "rigidez_nuca"],
+        "diferencial_vs": {
+            "Dengue": "varicela tem exantema vesicular pruriginoso; dengue tem exantema macular + dor intensa",
+            "Sarampo": "sarampo tem tosse + coriza intensas e manchas de Koplik; varicela não",
+            "Zika": "Zika tem conjuntivite e exantema macular; varicela tem vesículas em múltiplos estágios",
+        },
+    },
+
+    # ── RIQUETSIOSE ──────────────────────────────────────────────────────────
+    "Febre Maculosa": {
+        "grupo": "Riquetsiose — URGÊNCIA",
+        "vetor": "Amblyomma sculptum (carrapato-estrela)",
+        "cid10": "A77.0",
+        "descricao": "Febre alta abrupta + exantema maculopetequial iniciando em extremidades + mialgia intensa; mortalidade 20-40% sem tratamento nas primeiras 48h",
+        "sazonalidade": [7, 8, 9, 10, 11, 12, 1, 2, 3, 4],  # primavera/verão SP/MG/RJ
+        "sintomas": {
+            "febre":                  1.00,  # febre alta abrupta — obrigatória
+            "dor_cabeca":             0.95,  # cefaleia intensa
+            "dor_corpo":              0.92,  # mialgia intensa generalizada
+            "exantema":               0.88,  # máculas→petéquias — começa em pulsos/tornozelos
+            "calafrios":              0.80,
+            "manchas_hemorragicas":   0.72,  # petéquias/púrpura — gravidade
+            "vomito_nausea":          0.65,
+            "cansaco":                0.75,
+            "sudorese":               0.55,
+            "falta_ar":               0.30,  # forma grave
+            "diarreia":               0.25,
+            "tosse":                 -0.30,
+            "coriza":                -0.55,
+            "perda_olfato_paladar":  -0.70,
+            "rigidez_nuca":          -0.20,
+            "dor_articular":         -0.15,
+            "_intensidade_febre_alta": 0.35,  # febre alta abrupta é a marca da FM
+        },
+        "red_flags": ["febre", "exantema", "manchas_hemorragicas"],
+        "diferencial_vs": {
+            "Dengue": "FM tem exantema iniciando nas extremidades; zona rural e carrapato no contexto",
+            "Meningite": "FM tem exantema antes da rigidez; meningite tem rigidez nuca proeminente",
+            "Leptospirose": "FM tem exantema típico petequial; lepto tem exposição à água/lama",
+        },
+    },
+
+    # ── BACTERIANA RESPIRATÓRIA ──────────────────────────────────────────────
+    "Coqueluche": {
+        "grupo": "Bacteriana respiratória",
+        "vetor": "Bordetella pertussis (aerossol)",
+        "cid10": "A37",
+        "descricao": "Tosse paroxística em accessos com 'guincho' inspiratório, vômito pós-tosse; evolução catarral→paroxística→convalescença; grave em lactentes",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "tosse":                  1.00,  # tosse paroxística — obrigatória
+            "vomito_nausea":          0.85,  # vômito pós-acesso de tosse — muito característico
+            "falta_ar":               0.75,  # engasgos, cianose perioral pós-acesso
+            "cansaco":                0.65,
+            "coriza":                 0.55,  # fase catarral inicial
+            "dor_cabeca":             0.30,
+            "febre":                  0.30,  # baixa ou ausente
+            "dor_corpo":              0.20,
+            "exantema":              -0.72,
+            "dor_articular":         -0.65,
+            "ictericia":             -0.85,
+            "rigidez_nuca":          -0.65,
+            "manchas_hemorragicas":  -0.45,
+            "dor_garganta":          -0.30,
+            "sudorese":              -0.20,
+            "perda_olfato_paladar":  -0.65,
+            "_intensidade_febre_baixa":  0.20,
+            "_intensidade_febre_alta":  -0.30,
+        },
+        "red_flags": ["falta_ar"],
+        "diferencial_vs": {
+            "Gripe (Influenza)": "coqueluche tem tosse paroxística com vômito; gripe tem febre alta e mialgia intensa",
+            "COVID-19": "coqueluche não tem perda de olfato; tosse em accessos com vômito é patognomônica",
+            "Resfriado Viral": "resfriado tem coriza dominante sem acessos de tosse; coqueluche tem acessos prolongados",
+        },
+    },
+
+    # ── BACTERIANA SISTÊMICA / ENTÉRICA ─────────────────────────────────────
+    "Febre Tifoide": {
+        "grupo": "Bacteriana entérica",
+        "vetor": "Salmonella Typhi (fecal-oral, água/alimento contaminado)",
+        "cid10": "A01.0",
+        "descricao": "Febre em platô progressiva (>39°C), dor abdominal difusa, cefaleia intensa; risco de perfuração intestinal; associada a saneamento básico precário",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "febre":                  1.00,  # febre em platô crescente — obrigatória
+            "dor_abdominal":          0.88,
+            "cansaco":                0.85,
+            "dor_cabeca":             0.80,
+            "vomito_nausea":          0.72,
+            "diarreia":               0.65,  # pode alternar com constipação inicial
+            "exantema":               0.50,  # manchas rosadas (rose spots) — 30-50% dos casos
+            "dor_corpo":              0.65,
+            "sudorese":               0.55,
+            "calafrios":              0.60,
+            "tosse":                 -0.50,
+            "coriza":                -0.60,
+            "perda_olfato_paladar":  -0.70,
+            "rigidez_nuca":          -0.45,
+            "manchas_hemorragicas":  -0.20,
+            "conjuntivite":          -0.45,
+            "dor_garganta":          -0.45,
+            "_intensidade_febre_alta": 0.30,  # febre alta em platô é típica da tifoide
+        },
+        "red_flags": ["dor_abdominal", "manchas_hemorragicas"],
+        "diferencial_vs": {
+            "Dengue": "tifoide tem dor abdominal intensa e constante; dengue tem início mais abrupto e mialgia dominante",
+            "Gastroenterite Viral": "GE é autolimitada em 72h; tifoide piora progressivamente",
+            "Leptospirose": "lepto tem histórico de exposição à água/roedores; tifoide tem contexto de saneamento precário",
+        },
+    },
+
+    # ── PARASITÁRIA / HELMINTÍASE ────────────────────────────────────────────
+    "Esquistossomose": {
+        "grupo": "Parasitária / Helmintíase",
+        "vetor": "Schistosoma mansoni (água doce com caramujos Biomphalaria)",
+        "cid10": "B65.1",
+        "descricao": "Diarreia com sangue/muco, dor abdominal, hepatoesplenomegalia, anemia; endêmica no Nordeste e Minas Gerais; exposição a água doce (rios, açudes, irrigação)",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "diarreia":               0.90,  # diarreia mucossanguinolenta
+            "dor_abdominal":          0.85,  # cólicas, hepatoesplenomegalia
+            "cansaco":                0.82,  # anemia crônica
+            "febre":                  0.62,  # fase aguda de Katayama
+            "vomito_nausea":          0.60,
+            "ictericia":              0.42,  # fase crônica avançada — fibrose hepática
+            "dor_corpo":              0.42,
+            "exantema":               0.35,  # dermatite cercarial inicial
+            "calafrios":              0.45,  # fase aguda
+            "dor_cabeca":             0.30,
+            "tosse":                 -0.35,
+            "coriza":                -0.55,
+            "perda_olfato_paladar":  -0.70,
+            "rigidez_nuca":          -0.65,
+            "manchas_hemorragicas":  -0.25,
+            "dor_articular":         -0.30,
+            "falta_ar":              -0.20,
+        },
+        "red_flags": ["ictericia", "dor_abdominal"],
+        "diferencial_vs": {
+            "Hepatite A/B": "esquistossomose tem diarreia e histórico de contato com água doce; hepatite tem icterícia sem diarreia típica",
+            "Gastroenterite Viral": "GE é autolimitada; esquistossomose persiste e tem contexto hídrico",
+            "Febre Tifoide": "tifoide não tem hepatoesplenomegalia precoce; contexto hídrico diferencia",
+        },
+    },
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -565,6 +775,13 @@ _PRIOR_DEFAULT: dict[str, float] = {
     "Bronquite / DPOC Agudização": 0.20,
     "Gastroenterite Viral":    0.55,  # GE é extremamente comum — segunda causa de atendimento em UBS
     "Hepatite A/B":            0.05,
+    # Novas doenças expandidas
+    "Tuberculose":             0.08,  # 70 casos/100k no Brasil — alto no contexto global
+    "Varicela":                0.12,  # endêmica no Brasil, pré-vacina universal
+    "Febre Maculosa":          0.01,  # rara mas alta mortalidade; eleva com exposição
+    "Coqueluche":              0.04,  # reemergente em adultos com waning immunity
+    "Febre Tifoide":           0.03,  # incomum no Sudeste; maior no Norte/Nordeste
+    "Esquistossomose":         0.05,  # endêmica Nordeste/MG — prior baixo no Sul/SP
 }
 
 # UFs com priors específicos (apenas onde diferem significativamente do padrão)
@@ -586,29 +803,46 @@ PRIOR_GEOGRAFICO: dict[str, dict[str, float]] = {
     "DF": {**_PRIOR_DEFAULT, "Febre Amarela": 0.03, "Dengue": 0.68, "Chikungunya": 0.22},
 
     # ── Sudeste — urbano, dengue/chikungunya dominam; febre amarela mínima ───
+    # Febre Maculosa SP/MG/RJ: maior incidência nacional (Ribeirão Preto, Campinas, Vale do Paraíba, Mata Atlântica)
+    # Tuberculose SP/RJ: alta densidade urbana, populações vulneráveis, ILPI
+    # Esquistossomose MG/ES: endêmica no Vale do Rio Doce e Zona da Mata
     "SP": {**_PRIOR_DEFAULT, "Dengue": 0.75, "Chikungunya": 0.30, "Febre Amarela": 0.015,
-           "COVID-19": 0.55, "Gripe (Influenza)": 0.60},
+           "COVID-19": 0.55, "Gripe (Influenza)": 0.60,
+           "Tuberculose": 0.14, "Febre Maculosa": 0.04},
     "RJ": {**_PRIOR_DEFAULT, "Dengue": 0.80, "Chikungunya": 0.35, "Zika": 0.18,
-           "Febre Amarela": 0.005,   # praticamente ausente em RJ urbano
-           "Malaria": 0.001,         # quase impossível em RJ
-           "COVID-19": 0.55, "Gripe (Influenza)": 0.58},
+           "Febre Amarela": 0.005, "Malaria": 0.001,
+           "COVID-19": 0.55, "Gripe (Influenza)": 0.58,
+           "Tuberculose": 0.16, "Febre Maculosa": 0.03},
     "MG": {**_PRIOR_DEFAULT, "Dengue": 0.72, "Chikungunya": 0.28, "Febre Amarela": 0.04,
-           "Leptospirose": 0.10},
+           "Leptospirose": 0.10,
+           "Febre Maculosa": 0.05, "Esquistossomose": 0.15, "Tuberculose": 0.10},
     "ES": {**_PRIOR_DEFAULT, "Dengue": 0.75, "Chikungunya": 0.30, "Febre Amarela": 0.02,
-           "Leptospirose": 0.10},
+           "Leptospirose": 0.10,
+           "Febre Maculosa": 0.03, "Esquistossomose": 0.12},
 
     # ── Nordeste — dengue altíssima, chikungunya elevada ────────────────────
-    "BA": {**_PRIOR_DEFAULT, "Dengue": 0.78, "Chikungunya": 0.40, "Febre Amarela": 0.03},
+    # Esquistossomose PE/AL/BA/SE: faixa endêmica histórica da esquistossomose
+    # Febre Tifoide BA/MA: saneamento precário em áreas periurbanas
+    # Tuberculose CE/PE: alta prevalência em população de rua, presídios
+    "BA": {**_PRIOR_DEFAULT, "Dengue": 0.78, "Chikungunya": 0.40, "Febre Amarela": 0.03,
+           "Esquistossomose": 0.18, "Febre Tifoide": 0.06, "Tuberculose": 0.10},
     "PE": {**_PRIOR_DEFAULT, "Dengue": 0.80, "Chikungunya": 0.45, "Zika": 0.25,
-           "Febre Amarela": 0.01},
-    "CE": {**_PRIOR_DEFAULT, "Dengue": 0.78, "Chikungunya": 0.42, "Febre Amarela": 0.01},
+           "Febre Amarela": 0.01,
+           "Esquistossomose": 0.20, "Febre Tifoide": 0.05, "Tuberculose": 0.12},
+    "CE": {**_PRIOR_DEFAULT, "Dengue": 0.78, "Chikungunya": 0.42, "Febre Amarela": 0.01,
+           "Tuberculose": 0.12, "Febre Tifoide": 0.05},
     "MA": {**_PRIOR_DEFAULT, "Dengue": 0.70, "Chikungunya": 0.35, "Febre Amarela": 0.03,
-           "Malaria": 0.08},
-    "PI": {**_PRIOR_DEFAULT, "Dengue": 0.72, "Chikungunya": 0.35, "Febre Amarela": 0.03},
-    "RN": {**_PRIOR_DEFAULT, "Dengue": 0.75, "Chikungunya": 0.38, "Febre Amarela": 0.01},
-    "PB": {**_PRIOR_DEFAULT, "Dengue": 0.73, "Chikungunya": 0.37, "Febre Amarela": 0.01},
-    "AL": {**_PRIOR_DEFAULT, "Dengue": 0.72, "Chikungunya": 0.36, "Febre Amarela": 0.01},
-    "SE": {**_PRIOR_DEFAULT, "Dengue": 0.70, "Chikungunya": 0.35, "Febre Amarela": 0.01},
+           "Malaria": 0.08, "Esquistossomose": 0.14, "Febre Tifoide": 0.06},
+    "PI": {**_PRIOR_DEFAULT, "Dengue": 0.72, "Chikungunya": 0.35, "Febre Amarela": 0.03,
+           "Esquistossomose": 0.10, "Febre Tifoide": 0.05},
+    "RN": {**_PRIOR_DEFAULT, "Dengue": 0.75, "Chikungunya": 0.38, "Febre Amarela": 0.01,
+           "Esquistossomose": 0.12},
+    "PB": {**_PRIOR_DEFAULT, "Dengue": 0.73, "Chikungunya": 0.37, "Febre Amarela": 0.01,
+           "Esquistossomose": 0.14},
+    "AL": {**_PRIOR_DEFAULT, "Dengue": 0.72, "Chikungunya": 0.36, "Febre Amarela": 0.01,
+           "Esquistossomose": 0.20},
+    "SE": {**_PRIOR_DEFAULT, "Dengue": 0.70, "Chikungunya": 0.35, "Febre Amarela": 0.01,
+           "Esquistossomose": 0.16},
 
     # ── Sul — dengue crescente, gripe/covid prevalentes no inverno ───────────
     "PR": {**_PRIOR_DEFAULT, "Dengue": 0.65, "Chikungunya": 0.20, "Febre Amarela": 0.02,
@@ -664,6 +898,13 @@ SINTOMA_CHAVE_OBRIGATORIO: dict[str, list[str]] = {
     "Sarampo":        ["exantema"],                                  # sem exantema, não é sarampo
     "Leptospirose":   ["ictericia", "dor_corpo", "calafrios"],       # precisa ≥1 dos 3
     "Hepatite A/B":   ["ictericia"],                                 # icterícia é essencial
+    # Novas doenças expandidas
+    "Tuberculose":    ["tosse"],           # TB pulmonar sem tosse é rara no cidadão sintomático
+    "Varicela":       ["exantema"],        # sem exantema, não é varicela
+    "Febre Maculosa": ["febre", "exantema"],  # tríade: febre+exantema+mialgia — precisa de ≥1
+    "Coqueluche":     ["tosse"],           # tosse paroxística é obrigatória
+    "Febre Tifoide":  ["febre"],           # febre em platô é essencial
+    "Esquistossomose": ["diarreia", "dor_abdominal", "exposicao_agua_enchente"],  # ≥1 dos 3
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -697,6 +938,12 @@ SINDROME_CIDADAO: dict[str, dict] = {
         ),
     },
     "Hepatite A/B":         {"sindrome": "Síndrome Hepática Febril",        "cor": "laranja", "conduta": "Procure UBS para exames. Evite álcool e medicamentos sem orientação médica."},
+    "Tuberculose":          {"sindrome": "Síndrome Respiratória Crônica",   "cor": "laranja", "conduta": "Procure a UBS. Tosse por mais de 3 semanas com esses sintomas precisa de raio-X de tórax e exame de escarro."},
+    "Varicela":             {"sindrome": "Síndrome Exantemática Viral",     "cor": "amarela", "conduta": "Isolamento domiciliar por 7 dias ou até as lesões secarem. Confirme na UBS. Não coçar — risco de infecção secundária."},
+    "Febre Maculosa":       {"sindrome": "Síndrome Febril com Manchas",     "cor": "vermelha","conduta": "URGÊNCIA — procure pronto-socorro imediatamente. Informe sobre exposição a carrapatos, mato ou área rural."},
+    "Coqueluche":           {"sindrome": "Síndrome de Tosse Persistente",   "cor": "laranja", "conduta": "Procure a UBS. Tosse intensa em accessos com engasgos ou vômito é notificação compulsória."},
+    "Febre Tifoide":        {"sindrome": "Síndrome Febril Entérica",        "cor": "laranja", "conduta": "Procure a UBS. Febre alta persistente com dor abdominal precisa de avaliação e exames de sangue."},
+    "Esquistossomose":      {"sindrome": "Síndrome Diarreica com Histórico Hídrico", "cor": "amarela", "conduta": "Procure a UBS. Informe sobre contato com água de rio, lagoa ou irrigação."},
     "Inconclusivo":         {"sindrome": "Sintomas em Acompanhamento",      "cor": "cinza",   "conduta": "Continue monitorando seus sintomas. Se piorar, procure uma unidade de saúde."},
 }
 
@@ -721,9 +968,11 @@ URGENCIA_ABSOLUTA: list[tuple[str, str, str]] = [
 # ──────────────────────────────────────────────────────────────────────────────
 CONTEXTO_SETOR: dict[str, dict] = {
     "governo": {
-        "prioridade": ["Meningite", "Febre Amarela", "Sarampo", "Hantavirose", "Leptospirose"],
+        "prioridade": ["Meningite", "Febre Amarela", "Febre Maculosa", "Sarampo", "Hantavirose", "Leptospirose", "Tuberculose", "Coqueluche"],
         "foco": "vigilância sanitária, notificação compulsória, resposta pública",
-        "alerta_notificacao": ["Meningite", "Febre Amarela", "Sarampo", "Hantavirose", "Dengue", "Malaria", "Leptospirose"],
+        "alerta_notificacao": ["Meningite", "Febre Amarela", "Febre Maculosa", "Sarampo", "Hantavirose",
+                               "Dengue", "Malaria", "Leptospirose", "Tuberculose", "Coqueluche",
+                               "Febre Tifoide", "Esquistossomose"],
         "filtro_grupo": None,  # vê tudo
         "mensagem_acao": "Acionar vigilância epidemiológica e preparar notificação compulsória.",
     },
@@ -735,9 +984,10 @@ CONTEXTO_SETOR: dict[str, dict] = {
         "mensagem_acao": "Verificar estoque de itens associados ao padrão dominante.",
     },
     "hospital": {
-        "prioridade": ["Meningite", "Hantavirose", "Febre Amarela", "Dengue", "COVID-19", "Leptospirose"],
+        "prioridade": ["Meningite", "Febre Maculosa", "Hantavirose", "Febre Amarela", "Dengue", "COVID-19", "Leptospirose", "Tuberculose"],
         "foco": "triagem, leitos, insumos críticos, escala de pronto atendimento",
-        "alerta_notificacao": ["Meningite", "Febre Amarela", "Hantavirose", "Sarampo"],
+        "alerta_notificacao": ["Meningite", "Febre Amarela", "Febre Maculosa", "Hantavirose", "Sarampo",
+                               "Tuberculose", "Coqueluche"],
         "filtro_grupo": None,
         "mensagem_acao": "Revisar fluxo de triagem e disponibilidade de leitos.",
     },
@@ -968,6 +1218,80 @@ def _prior_anamnese_override(prior: float, doenca: str, dados: dict[str, Any]) -
         if doenca == "Bronquite / DPOC Agudização":
             return max(prior, 0.65)
 
+    # ── Tuberculose ──────────────────────────────────────────────────────────
+    # Contato com caso confirmado + tosse → prior mínimo defensivo (TB é altamente contagiosa)
+    if dados.get("contato_caso_confirmado") and dados.get("tosse"):
+        if doenca == "Tuberculose":
+            return max(prior, 0.35)
+    # Comorbidade imunossupressora (HIV, DM, IRC) eleva risco de TB ativa
+    if dados.get("tem_comorbidade") and dados.get("tosse"):
+        if doenca == "Tuberculose":
+            return max(prior, 0.20)
+
+    # ── Varicela ─────────────────────────────────────────────────────────────
+    # Contato com caso confirmado + exantema → combinação altamente sugestiva
+    if dados.get("contato_caso_confirmado") and dados.get("exantema"):
+        if doenca == "Varicela":
+            # exantema + contato direto é o padrão de transmissão por excelência da varicela
+            return max(prior, 0.70)
+        if doenca == "Sarampo":
+            # varicela é mais provável que sarampo (erradicado) quando há contato
+            return min(prior, 0.10)
+        # Gripe raramente cursa com exantema proeminente sem tosse/coriza
+        if doenca in ("Gripe (Influenza)",) and not dados.get("tosse") and not dados.get("coriza"):
+            return min(prior, 0.20)
+    # Exantema sem coriza/tosse aponta contra Sarampo/Gripe, favorece Varicela
+    if dados.get("exantema") and not dados.get("tosse") and not dados.get("coriza"):
+        if doenca == "Varicela":
+            return max(prior, 0.45)
+
+    # ── Febre Maculosa ───────────────────────────────────────────────────────
+    # viagem_area_endemica (zona rural, mato, fazenda) + febre + exantema → FM é urgência
+    if dados.get("viagem_area_endemica") and dados.get("febre") and dados.get("exantema"):
+        if doenca == "Febre Maculosa":
+            return max(prior, 0.50)
+    # Febre + manchas petequiais + mialgia intensa → FM antes de tudo
+    if dados.get("febre") and dados.get("manchas_hemorragicas") and dados.get("exantema"):
+        if doenca == "Febre Maculosa":
+            # petéquias + exantema + febre: Febre Maculosa é mais provável que dengue hemorrágico
+            return max(prior, 0.55)
+
+    # ── Coqueluche ───────────────────────────────────────────────────────────
+    # Tosse + vômito pós-tosse + falta ar = tríade patognomônica de Coqueluche
+    if dados.get("tosse") and dados.get("vomito_nausea") and dados.get("falta_ar"):
+        if doenca == "Coqueluche":
+            return max(prior, 0.45)
+        # TB pulmonar raramente causa vômito diretamente relacionado à tosse
+        if doenca == "Tuberculose":
+            return min(prior, 0.10)
+    if dados.get("contato_caso_confirmado") and dados.get("tosse") and dados.get("vomito_nausea"):
+        if doenca == "Coqueluche":
+            return max(prior, 0.50)
+
+    # ── Febre Tifoide ─────────────────────────────────────────────────────────
+    # Água contaminada + febre + dor abdominal = tríade clássica de tifoide
+    if dados.get("exposicao_agua_enchente") and dados.get("febre") and dados.get("dor_abdominal"):
+        if doenca == "Febre Tifoide":
+            # febre+água+abdome é mais característico de tifoide do que de leptospirose
+            return max(prior, 0.35)
+    elif dados.get("exposicao_agua_enchente") and dados.get("febre"):
+        if doenca == "Febre Tifoide":
+            return max(prior, 0.15)
+
+    # ── Esquistossomose ───────────────────────────────────────────────────────
+    # Contato com água doce é a via de transmissão obrigatória
+    if dados.get("exposicao_agua_enchente") and dados.get("diarreia") and dados.get("dor_abdominal"):
+        if doenca == "Esquistossomose":
+            # diarreia + dor abdominal + água doce é a tríade clínica clássica
+            return max(prior, 0.50)
+    elif dados.get("exposicao_agua_enchente") and (dados.get("diarreia") or dados.get("dor_abdominal")):
+        if doenca == "Esquistossomose":
+            return max(prior, 0.30)
+    # Esquistossomose sem qualquer exposição hídrica → praticamente impossível
+    if dados.get("exposicao_agua_enchente") is False:
+        if doenca == "Esquistossomose":
+            return min(prior, 0.01)
+
     return prior
 
 
@@ -981,8 +1305,8 @@ def _modificadores_anamnese(dados: dict[str, Any], doenca: str) -> float:
 
     # Viagem para área endêmica — boost adicional após override de prior
     if dados.get("viagem_area_endemica"):
-        if doenca in ("Malaria", "Febre Amarela"):
-            mult *= 2.0
+        if doenca in ("Malaria", "Febre Amarela", "Febre Maculosa"):
+            mult *= 2.0  # FM é endêmica de zonas rurais com carrapato-estrela
         elif doenca in ("Dengue", "Chikungunya", "Zika", "Leptospirose"):
             mult *= 1.5
 
@@ -1028,6 +1352,8 @@ def _modificadores_anamnese(dados: dict[str, Any], doenca: str) -> float:
             mult *= 3.0
         elif doenca == "Resfriado Viral":
             mult *= 2.0
+        elif doenca in ("Tuberculose", "Varicela", "Coqueluche"):
+            mult *= 2.5  # altamente contagiosas por aerossol
         elif doenca in ("Dengue", "Chikungunya", "Zika"):
             mult *= 1.1  # transmissão vetorial, não por contato direto
 
@@ -1041,21 +1367,65 @@ def _modificadores_anamnese(dados: dict[str, Any], doenca: str) -> float:
     inicio = dados.get("inicio_abrupto")
     if inicio is True:
         if doenca in ("Dengue", "Gripe (Influenza)", "Chikungunya", "Meningite", "Malaria",
-                      "Gastroenterite Viral", "Leptospirose", "Hantavirose"):
+                      "Gastroenterite Viral", "Leptospirose", "Hantavirose",
+                      "Febre Maculosa", "Febre Tifoide"):
             mult *= 1.5
         elif doenca in ("Resfriado Viral", "Bronquite / DPOC Agudização"):
             mult *= 0.4
+        elif doenca == "Tuberculose":
+            mult *= 0.3  # TB tem início insidioso — início abrupto praticamente descarta
     elif inicio is False:
         if doenca in ("Resfriado Viral", "COVID-19", "Bronquite / DPOC Agudização"):
             mult *= 1.4
-        elif doenca in ("Dengue", "Gripe (Influenza)", "Malaria"):
+        elif doenca in ("Dengue", "Gripe (Influenza)", "Malaria", "Febre Maculosa"):
             mult *= 0.5
+        elif doenca == "Tuberculose":
+            mult *= 1.6  # início gradual é característico da TB
+        elif doenca == "Febre Tifoide":
+            mult *= 1.3  # tifoide tem evolução gradual com piora progressiva
 
     # Comorbidade → aumenta risco de formas graves / padrão de DPOC crônica
     if dados.get("tem_comorbidade"):
         if doenca in ("COVID-19", "Gripe (Influenza)", "Dengue", "Leptospirose",
                       "Bronquite / DPOC Agudização"):
             mult *= 1.3
+        elif doenca == "Tuberculose":
+            mult *= 1.6  # HIV, DM, IRC são fatores de risco muito relevantes para TB ativa
+
+    # Tosse + vômito pós-tosse → diferencial TB vs Coqueluche
+    # Vômito diretamente relacionado à tosse é patognomônico de Coqueluche, não TB
+    if dados.get("tosse") and dados.get("vomito_nausea"):
+        if doenca == "Coqueluche":
+            mult *= 2.0  # vômito pós-acesso de tosse é o diferencial clínico chave
+        elif doenca == "Tuberculose":
+            mult *= 0.4  # TB pulmonar raramente causa vômito relacionado à tosse
+
+    # dias_sintomas — TB tem evolução crônica; Febre Tifoide piora por semanas
+    dias = dados.get("dias_sintomas")
+    if dias is not None:
+        try:
+            dias_int = int(dias)
+        except (TypeError, ValueError):
+            dias_int = 0
+
+        if doenca == "Tuberculose" and dados.get("tosse"):
+            if dias_int >= 21:
+                mult *= 3.0  # tosse ≥3 semanas = critério diagnóstico de TB — peso máximo
+            elif dias_int >= 14:
+                mult *= 2.0  # 2 semanas já é suspeito
+            elif dias_int < 7:
+                mult *= 0.3  # TB não aparece em menos de 1 semana de doença aguda
+
+        if doenca == "Febre Tifoide":
+            if dias_int >= 14:
+                mult *= 2.5  # piora progressiva por 2+ semanas é altamente sugestiva
+            elif dias_int >= 7:
+                mult *= 1.8  # febre persistente >7 dias é o padrão clássico da tifoide
+            elif dias_int < 3:
+                mult *= 0.5  # tifoide raramente se apresenta no início (incubação longa)
+
+        if doenca == "Esquistossomose" and dias_int >= 14:
+            mult *= 1.5  # fase aguda dura semanas; sintomas persistentes são típicos
 
     return mult
 
@@ -1274,6 +1644,10 @@ def classificar_para_cidadao(dados: dict[str, Any], estado: str | None = None) -
         "Dengue", "Chikungunya", "Zika", "COVID-19",
         "Gripe (Influenza)", "Resfriado Viral",
         "Bronquite / DPOC Agudização", "Gastroenterite Viral",
+        # Novas — nomeáveis porque o cidadão precisa saber para buscar cuidado adequado
+        "Varicela", "Tuberculose", "Coqueluche", "Febre Tifoide", "Esquistossomose",
+        # Febre Maculosa é urgência (cor=vermelha) — nomeável para reforçar a busca por PS
+        "Febre Maculosa",
     }
 
     # Se confiança muito baixa → inconclusivo para o cidadão
