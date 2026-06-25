@@ -14,6 +14,7 @@ from django.utils import timezone
 from .models import Empresa, RegistroSintoma
 from .services.public_integrity import q_registro_sintoma_sintetico
 from .utils_cidades import carregar_base
+from .epidemiologia_ml import mapa_risco_oficial_por_estado
 
 
 SYMPTOM_LABELS = {
@@ -185,6 +186,35 @@ UF_CODES = {
     42: "SC", 43: "RS", 50: "MS", 51: "MT", 52: "GO", 53: "DF",
 }
 
+NOME_ESTADO_PARA_UF = {
+    "ACRE": "AC", "ALAGOAS": "AL", "AMAPA": "AP", "AMAZONAS": "AM",
+    "BAHIA": "BA", "CEARA": "CE", "DISTRITO FEDERAL": "DF",
+    "ESPIRITO SANTO": "ES", "GOIAS": "GO", "MARANHAO": "MA",
+    "MATO GROSSO": "MT", "MATO GROSSO DO SUL": "MS", "MINAS GERAIS": "MG",
+    "PARA": "PA", "PARAIBA": "PB", "PARANA": "PR", "PERNAMBUCO": "PE",
+    "PIAUI": "PI", "RIO DE JANEIRO": "RJ", "RIO GRANDE DO NORTE": "RN",
+    "RIO GRANDE DO SUL": "RS", "RONDONIA": "RO", "RORAIMA": "RR",
+    "SANTA CATARINA": "SC", "SAO PAULO": "SP", "SERGIPE": "SE",
+    "TOCANTINS": "TO",
+}
+
+
+def _estado_para_uf(estado):
+    """Normaliza nome-completo OU sigla de estado para a sigla UF (chave usada
+    em FonteOficialAgregado/epidemiologia_ml). Sem acento/maiusculo para tolerar
+    variacoes do dado de entrada."""
+    valor = (estado or "").strip().upper()
+    if len(valor) == 2:
+        return valor
+    sem_acento = (
+        valor.replace("Á", "A").replace("Â", "A").replace("Ã", "A")
+        .replace("É", "E").replace("Ê", "E")
+        .replace("Í", "I")
+        .replace("Ó", "O").replace("Ô", "O").replace("Õ", "O")
+        .replace("Ú", "U").replace("Ç", "C")
+    )
+    return NOME_ESTADO_PARA_UF.get(sem_acento, valor)
+
 
 def _city_to_uf_map():
     global _CITY_TO_UF
@@ -250,14 +280,30 @@ def _active_case_value(value):
     return round(float(value or 0), 2)
 
 
-def _risk_score(total, max_total, recent_24h, max_recent, growth, temporal_retention_percent):
+def _risco_oficial_map_seguro():
+    """Mapa {estado: probabilidade_ml} treinado em dado oficial real (DATASUS/SINAN).
+    Nunca derruba o panorama: cai em dict vazio (heuristica pura) em qualquer erro."""
+    try:
+        return mapa_risco_oficial_por_estado()
+    except Exception:
+        return {}
+
+
+def _risk_score(total, max_total, recent_24h, max_recent, growth, temporal_retention_percent, oficial_probability=None):
     total_score = (total / max_total) * 55 if max_total else 0
     recent_score = (recent_24h / max_recent) * 25 if max_recent else 0
     growth_score = min(max(growth, 0), 100) * 0.2
     retention_factor = max(min(float(temporal_retention_percent or 0) / 100, 1.0), 0.0)
     # Resfria o foco conforme os casos envelhecem, sem zerar surtos realmente recentes.
     temporal_factor = 0.25 + (0.75 * (retention_factor ** 2))
-    return round((total_score + recent_score + growth_score) * temporal_factor, 2)
+    score = (total_score + recent_score + growth_score) * temporal_factor
+    if oficial_probability is not None:
+        # Calibra o score relativo (ranking entre areas no momento) com o padrao
+        # sazonal real do estado, aprendido por ML em series oficiais do DATASUS/SINAN
+        # (api/epidemiologia_ml.py). Fator entre 0.85x e 1.25x — ajusta sem dominar
+        # o sinal de autorrelato ao vivo.
+        score *= 0.85 + (0.40 * max(min(oficial_probability, 1.0), 0.0))
+    return round(score, 2)
 
 
 def _risk_level(score):
@@ -698,7 +744,8 @@ def _build_layer_queryset(group_fields):
     return sorted(visible_rows, key=lambda item: item["active_cases"], reverse=True)
 
 
-def _serialize_layer(level, group_fields):
+def _serialize_layer(level, group_fields, risco_oficial_map=None):
+    risco_oficial_map = risco_oficial_map or {}
     rows = _build_layer_queryset(group_fields)
     max_total = max((float(row.get("active_cases") or 0) for row in rows), default=1)
     max_recent = max((row["recent_24h"] for row in rows), default=1)
@@ -721,6 +768,7 @@ def _serialize_layer(level, group_fields):
         disease_probabilities = _attach_active_probabilities(disease_probabilities, activity_percent)
         dominant_disease = disease_probabilities[0]["name"] if disease_probabilities else "Indefinido"
         growth = _safe_growth(int(row["recent_24h"] or 0), int(row["previous_24h"] or 0))
+        oficial_probability = risco_oficial_map.get(_estado_para_uf(normalized_state))
         risk_score = _risk_score(
             total_cases,
             max_total,
@@ -728,6 +776,7 @@ def _serialize_layer(level, group_fields):
             max_recent,
             growth,
             row.get("temporal_retention_percent", 100),
+            oficial_probability=oficial_probability,
         )
         risk_level = _risk_level(risk_score)
         surveillance_index = _surveillance_index(total_cases, int(row["recent_24h"] or 0), growth, max_total, max_recent)
@@ -791,7 +840,8 @@ def _serialize_layer(level, group_fields):
     return areas
 
 
-def _build_state_layer(municipios):
+def _build_state_layer(municipios, risco_oficial_map=None):
+    risco_oficial_map = risco_oficial_map or {}
     grouped = defaultdict(lambda: {
         "estado": None,
         "total_cases": 0,
@@ -840,6 +890,7 @@ def _build_state_layer(municipios):
         probable_diseases = _attach_active_probabilities(probable_diseases, activity_percent)
         dominant_disease = probable_diseases[0]["name"] if probable_diseases else "Indefinido"
         growth = _safe_growth(row["recent_24h"], row["previous_24h"])
+        oficial_probability = risco_oficial_map.get(_estado_para_uf(row["estado"]))
         risk_score = _risk_score(
             total_cases,
             max_total,
@@ -847,6 +898,7 @@ def _build_state_layer(municipios):
             max_recent,
             growth,
             temporal_retention_percent,
+            oficial_probability=oficial_probability,
         )
         weight = row["weight"] or 1
         risk_level = _risk_level(risk_score)
@@ -877,6 +929,7 @@ def _build_state_layer(municipios):
             "trend_status": _trend_status(growth, row["recent_24h"], row["previous_24h"]),
             "risk_score": risk_score,
             "risk_level": risk_level,
+            "calculo_ml_oficial": oficial_probability is not None,
             "surveillance_index": surveillance_index,
             "resource_pressure": resource_pressure,
             "stock_pressure": stock_pressure,
@@ -1120,9 +1173,10 @@ def build_panorama_payload():
     ):
         return _PANORAMA_CACHE["payload"]
 
-    bairros = _serialize_layer("bairro", ("estado", "cidade", "bairro"))
-    municipios = _serialize_layer("municipio", ("estado", "cidade"))
-    estados = _build_state_layer(municipios)
+    risco_oficial_map = _risco_oficial_map_seguro()
+    bairros = _serialize_layer("bairro", ("estado", "cidade", "bairro"), risco_oficial_map=risco_oficial_map)
+    municipios = _serialize_layer("municipio", ("estado", "cidade"), risco_oficial_map=risco_oficial_map)
+    estados = _build_state_layer(municipios, risco_oficial_map=risco_oficial_map)
     layers = {
         "bairros": bairros,
         "municipios": municipios,

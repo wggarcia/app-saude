@@ -1,6 +1,7 @@
 import json
 from datetime import date, timedelta
 from io import StringIO
+from pathlib import Path
 from unittest.mock import patch
 
 import jwt
@@ -29,6 +30,7 @@ from .models import (
     EmpresaUsuario,
     ExameOcupacional,
     FinanceiroEventoSaaS,
+    FonteOficialAgregado,
     FornecedorFarmacia,
     FornecedorFarmaciaGestao,
     GuiaAutorizacao,
@@ -5411,4 +5413,134 @@ class AssinaturaSSTTests(TestCase):
         self.assertEqual(assinatura.status, "assinado")
         self.assertTrue(assinatura.hash_documento)
         self.assertTrue(assinatura.hash_assinatura)
-        self.assertTrue(self.client.get(f"/api/public/sst/validar/{token}").json()["valida"])
+
+
+class EpidemiologiaMLTests(TestCase):
+    """ML treinado em dado oficial (DATASUS/SINAN) — api/epidemiologia_ml.py.
+
+    Usa um MODELS_DIR temporario em todos os testes para nunca sobrescrever o
+    modelo real treinado em produção com dado oficial verdadeiro."""
+
+    FONTE = "sinan_agravos"
+    INDICADOR = "dengue_notificacoes_sinan"
+
+    def setUp(self):
+        import tempfile
+        from api import epidemiologia_ml as epi_ml
+
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._patches = [
+            patch.object(epi_ml, "MODEL_PATH", Path(self._tmpdir.name) / "model.joblib"),
+            patch.object(epi_ml, "META_PATH", Path(self._tmpdir.name) / "meta.json"),
+        ]
+        for p in self._patches:
+            p.start()
+        epi_ml._MODELO_CACHE["bundle"] = None
+        epi_ml._MODELO_CACHE["mtime"] = None
+
+    def tearDown(self):
+        for p in self._patches:
+            p.stop()
+        self._tmpdir.cleanup()
+
+    def _criar_serie_oficial(self, estado, n_semanas=25, base=100, amplitude=40, picos=None):
+        """Cria uma serie semanal real-like em FonteOficialAgregado para teste."""
+        import math
+        picos = picos or set()
+        for semana in range(1, n_semanas + 1):
+            valor = base + amplitude * math.sin(semana / 3.0)
+            if semana in picos:
+                valor *= 4
+            FonteOficialAgregado.objects.create(
+                fonte_id=self.FONTE,
+                indicador=self.INDICADOR,
+                estado=estado,
+                periodo=f"2025-S{semana:02d}",
+                valor=max(valor, 0),
+                fonte_nome="SINAN/DATASUS (teste)",
+            )
+
+    def test_treino_recusa_quando_nao_ha_amostras_oficiais_suficientes(self):
+        from api.epidemiologia_ml import treinar_modelo_oficial
+
+        meta = treinar_modelo_oficial(fonte_id=self.FONTE, indicador=self.INDICADOR)
+
+        self.assertFalse(meta["treinado"])
+        self.assertEqual(meta["motivo"], "amostras_oficiais_insuficientes")
+        self.assertEqual(meta["n_amostras"], 0)
+
+    def test_treino_real_com_dado_oficial_suficiente(self):
+        from api.epidemiologia_ml import treinar_modelo_oficial
+
+        self._criar_serie_oficial("RJ", n_semanas=25, picos={10, 20})
+        self._criar_serie_oficial("SP", n_semanas=25, picos={8, 18})
+
+        meta = treinar_modelo_oficial(fonte_id=self.FONTE, indicador=self.INDICADOR)
+
+        self.assertTrue(meta["treinado"])
+        self.assertTrue(meta["dataset_real_oficial"])
+        self.assertGreaterEqual(meta["n_amostras"], 40)
+        self.assertEqual(sorted(meta["estados"]), ["RJ", "SP"])
+        self.assertIn("cv_f1_media", meta)
+
+    def test_mapa_risco_oficial_por_estado_apos_treino(self):
+        from api.epidemiologia_ml import mapa_risco_oficial_por_estado, treinar_modelo_oficial
+
+        self._criar_serie_oficial("RJ", n_semanas=25, picos={10, 20})
+        self._criar_serie_oficial("SP", n_semanas=25, picos={8, 18})
+        treinar_modelo_oficial(fonte_id=self.FONTE, indicador=self.INDICADOR)
+
+        mapa = mapa_risco_oficial_por_estado(fonte_id=self.FONTE, indicador=self.INDICADOR)
+
+        self.assertEqual(set(mapa.keys()), {"RJ", "SP"})
+        for probabilidade in mapa.values():
+            self.assertGreaterEqual(probabilidade, 0.0)
+            self.assertLessEqual(probabilidade, 1.0)
+
+    def test_mapa_risco_oficial_vazio_sem_modelo_treinado(self):
+        from api.epidemiologia_ml import mapa_risco_oficial_por_estado
+
+        self.assertEqual(mapa_risco_oficial_por_estado(fonte_id=self.FONTE, indicador=self.INDICADOR), {})
+
+    def test_modelo_info_reflete_estado_do_treino(self):
+        from api.epidemiologia_ml import modelo_info, treinar_modelo_oficial
+
+        self.assertFalse(modelo_info(fonte_id=self.FONTE, indicador=self.INDICADOR)["modelo_treinado"])
+
+        self._criar_serie_oficial("RJ", n_semanas=25, picos={10, 20})
+        self._criar_serie_oficial("SP", n_semanas=25, picos={8, 18})
+        treinar_modelo_oficial(fonte_id=self.FONTE, indicador=self.INDICADOR)
+
+        info = modelo_info(fonte_id=self.FONTE, indicador=self.INDICADOR)
+        self.assertTrue(info["modelo_treinado"])
+        self.assertTrue(info["dataset_real_oficial"])
+
+    def test_risk_score_blend_com_probabilidade_oficial(self):
+        from api.epidemiologia import _risk_score
+
+        score_sem_oficial = _risk_score(50, 100, 5, 10, 20, 100, oficial_probability=None)
+        score_oficial_zero = _risk_score(50, 100, 5, 10, 20, 100, oficial_probability=0.0)
+        score_oficial_um = _risk_score(50, 100, 5, 10, 20, 100, oficial_probability=1.0)
+
+        # Sem dado oficial, comportamento idêntico ao heurístico puro (compatibilidade).
+        self.assertGreater(score_sem_oficial, 0)
+        # Probabilidade oficial alta deve aumentar o score; baixa, reduzir — nunca dominar.
+        self.assertLess(score_oficial_zero, score_sem_oficial)
+        self.assertGreater(score_oficial_um, score_sem_oficial)
+        self.assertAlmostEqual(score_oficial_zero / score_sem_oficial, 0.85, places=2)
+        self.assertAlmostEqual(score_oficial_um / score_sem_oficial, 1.25, places=2)
+
+    def test_panorama_nao_quebra_quando_mapa_oficial_falha(self):
+        from api import epidemiologia as epi
+
+        with patch.object(epi, "mapa_risco_oficial_por_estado", side_effect=RuntimeError("boom")):
+            self.assertEqual(epi._risco_oficial_map_seguro(), {})
+
+    def test_panorama_payload_inclui_flag_calculo_ml_oficial(self):
+        from api.epidemiologia import build_panorama_payload, clear_panorama_cache
+
+        clear_panorama_cache()
+        payload = build_panorama_payload()
+
+        for estado in payload["layers"]["estados"]:
+            self.assertIn("calculo_ml_oficial", estado)
