@@ -611,6 +611,40 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "Dengue": "varicela tem exantema vesicular pruriginoso; dengue tem exantema macular + dor intensa",
             "Sarampo": "sarampo tem tosse + coriza intensas e manchas de Koplik; varicela não",
             "Zika": "Zika tem conjuntivite e exantema macular; varicela tem vesículas em múltiplos estágios",
+            "Mpox": "mpox tem lesões mais dolorosas que pruriginosas; começa no rosto/palmas; varicela tem estágios múltiplos simultâneos",
+        },
+    },
+
+    "Mpox": {
+        "grupo": "Viral exantemática / Poxvírus",
+        "vetor": "Orthopoxvirus (contato direto pele-pele, secreções, fômites, gotículas)",
+        "cid10": "B04",
+        "descricao": "Febre ANTES do exantema + lesões vesiculopustulosas mais DOLOROSAS que pruriginosas; início no rosto com disseminação centrífuga; palmas e plantas frequentemente afetadas; linfonodomegalia característica",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "exantema_vesicular":     0.95,  # vesiculopustuloso — quase obrigatório
+            "febre":                  0.92,  # precede o exantema (diferencial chave vs varicela)
+            "dor_corpo":              0.88,  # mialgia intensa — mais que varicela
+            "dor_cabeca":             0.80,
+            "calafrios":              0.75,
+            "cansaco":                0.72,
+            "dor_articular":          0.55,  # artralgia presente, moderada
+            "exantema":               0.80,  # exantema generalizado
+            "vomito_nausea":          0.45,
+            "dor_abdominal":          0.40,
+            "tosse":                 -0.30,  # tosse incomum no mpox
+            "coriza":                -0.45,
+            "perda_olfato_paladar":  -0.70,
+            "rigidez_nuca":          -0.50,
+            "manchas_hemorragicas":  -0.55,
+            "diarreia":              -0.30,
+            "_intensidade_febre_alta":  0.30,  # febre alta antes do rash é característica
+        },
+        "red_flags": ["falta_ar", "exantema_vesicular"],
+        "diferencial_vs": {
+            "Varicela": "varicela é muito pruriginosa com estágios simultâneos; mpox é mais dolorosa, começa no rosto, afeta palmas/plantas",
+            "Dengue": "dengue não tem vesículas; mpox tem lesões em estágio único disseminadas",
+            "Sarampo": "sarampo é maculopapular sem vesículas; mpox tem pústulas dolorosas",
         },
     },
 
@@ -927,6 +961,8 @@ _PRIOR_DEFAULT: dict[str, float] = {
     "Coqueluche":              0.04,  # reemergente em adultos com waning immunity
     "Febre Tifoide":           0.03,  # incomum no Sudeste; maior no Norte/Nordeste
     "Esquistossomose":         0.05,  # endêmica Nordeste/MG — prior baixo no Sul/SP
+    # Mpox — baixo prior nacional mas surtos urbanos são possíveis
+    "Mpox":                    0.01,  # prior muito baixo; eleva com contato confirmado
     # Phase 2 — doenças tropicais negligenciadas
     "Doença de Chagas":        0.04,  # 1-2 milhões de infectados no Brasil; muitos sem diagnóstico
     "Hanseníase":              0.03,  # Brasil é 2º país em casos; endêmica no Centro-Norte
@@ -966,11 +1002,11 @@ PRIOR_GEOGRAFICO: dict[str, dict[str, float]] = {
     # Esquistossomose MG/ES: endêmica no Vale do Rio Doce e Zona da Mata
     "SP": {**_PRIOR_DEFAULT, "Dengue": 0.75, "Chikungunya": 0.30, "Febre Amarela": 0.015,
            "COVID-19": 0.55, "Gripe (Influenza)": 0.60,
-           "Tuberculose": 0.14, "Febre Maculosa": 0.04},
+           "Tuberculose": 0.14, "Febre Maculosa": 0.04, "Mpox": 0.02},
     "RJ": {**_PRIOR_DEFAULT, "Dengue": 0.80, "Chikungunya": 0.35, "Zika": 0.18,
            "Febre Amarela": 0.005, "Malaria": 0.001,
            "COVID-19": 0.55, "Gripe (Influenza)": 0.58,
-           "Tuberculose": 0.16, "Febre Maculosa": 0.03},
+           "Tuberculose": 0.16, "Febre Maculosa": 0.03, "Mpox": 0.02},
     "MG": {**_PRIOR_DEFAULT, "Dengue": 0.72, "Chikungunya": 0.28, "Febre Amarela": 0.04,
            "Leptospirose": 0.10,
            "Febre Maculosa": 0.05, "Esquistossomose": 0.15, "Tuberculose": 0.10,
@@ -1065,6 +1101,7 @@ SINTOMA_CHAVE_OBRIGATORIO: dict[str, list[str]] = {
     # Novas doenças expandidas
     "Tuberculose":    ["tosse"],           # TB pulmonar sem tosse é rara no cidadão sintomático
     "Varicela":       ["exantema"],        # sem exantema, não é varicela
+    "Mpox":           ["exantema_vesicular", "febre"],  # tríade: vesículas + febre + contato
     "Febre Maculosa": ["febre", "exantema"],  # tríade: febre+exantema+mialgia — precisa de ≥1
     "Coqueluche":     ["tosse"],           # tosse paroxística é obrigatória
     "Febre Tifoide":  ["febre"],           # febre em platô é essencial
@@ -1109,6 +1146,7 @@ SINDROME_CIDADAO: dict[str, dict] = {
     "Hepatite A/B":         {"sindrome": "Síndrome Hepática Febril",        "cor": "laranja", "conduta": "Procure UBS para exames. Evite álcool e medicamentos sem orientação médica."},
     "Tuberculose":          {"sindrome": "Síndrome Respiratória Crônica",   "cor": "laranja", "conduta": "Procure a UBS. Tosse por mais de 3 semanas com esses sintomas precisa de raio-X de tórax e exame de escarro."},
     "Varicela":             {"sindrome": "Síndrome Exantemática Viral",     "cor": "amarela", "conduta": "Isolamento domiciliar por 7 dias ou até as lesões secarem. Confirme na UBS. Não coçar — risco de infecção secundária."},
+    "Mpox":                 {"sindrome": "Síndrome Exantemática Pustulosa", "cor": "laranja", "conduta": "Procure a UBS. Evite contato pele-pele com outras pessoas até avaliação médica. Mpox é notificação compulsória."},
     "Febre Maculosa":       {"sindrome": "Síndrome Febril com Manchas",     "cor": "vermelha","conduta": "URGÊNCIA — procure pronto-socorro imediatamente. Informe sobre exposição a carrapatos, mato ou área rural."},
     "Coqueluche":           {"sindrome": "Síndrome de Tosse Persistente",   "cor": "laranja", "conduta": "Procure a UBS. Tosse intensa em accessos com engasgos ou vômito é notificação compulsória."},
     "Febre Tifoide":        {"sindrome": "Síndrome Febril Entérica",        "cor": "laranja", "conduta": "Procure a UBS. Febre alta persistente com dor abdominal precisa de avaliação e exames de sangue."},
@@ -1147,7 +1185,8 @@ CONTEXTO_SETOR: dict[str, dict] = {
         "alerta_notificacao": ["Meningite", "Febre Amarela", "Febre Maculosa", "Sarampo", "Hantavirose",
                                "Dengue", "Malaria", "Leptospirose", "Tuberculose", "Coqueluche",
                                "Febre Tifoide", "Esquistossomose",
-                               "Doença de Chagas", "Hanseníase", "Leishmaniose Visceral", "Leishmaniose Tegumentar"],
+                               "Doença de Chagas", "Hanseníase", "Leishmaniose Visceral", "Leishmaniose Tegumentar",
+                               "Mpox"],
         "filtro_grupo": None,  # vê tudo
         "mensagem_acao": "Acionar vigilância epidemiológica e preparar notificação compulsória.",
     },
@@ -1164,7 +1203,8 @@ CONTEXTO_SETOR: dict[str, dict] = {
         "foco": "triagem, leitos, insumos críticos, escala de pronto atendimento",
         "alerta_notificacao": ["Meningite", "Febre Amarela", "Febre Maculosa", "Hantavirose", "Sarampo",
                                "Tuberculose", "Coqueluche",
-                               "Hanseníase", "Doença de Chagas", "Leishmaniose Visceral", "Leishmaniose Tegumentar"],
+                               "Hanseníase", "Doença de Chagas", "Leishmaniose Visceral", "Leishmaniose Tegumentar",
+                               "Mpox"],
         "filtro_grupo": None,
         "mensagem_acao": "Revisar fluxo de triagem e disponibilidade de leitos.",
     },
@@ -1524,10 +1564,18 @@ def _prior_anamnese_override(prior: float, doenca: str, dados: dict[str, Any]) -
                       "Febre Maculosa", "Chikungunya", "Zika", "Malaria"):
             return min(prior, 0.05)
 
-    # ── Varicela Phase 2 — exantema vesicular é patognomônico ────────────────
+    # ── Varicela / Mpox — exantema vesicular: diferenciação pela exposição ────
     if dados.get("exantema_vesicular"):
         if doenca == "Varicela":
-            return max(prior, 0.80)
+            # Sem contato confirmado: Varicela domina (muito mais comum que Mpox)
+            mpox_contato = dados.get("contato_caso_confirmado") and dados.get("febre")
+            return max(prior, 0.50 if mpox_contato else 0.80)
+        if doenca == "Mpox":
+            # Vesículas + contato direto: Mpox considerado clinicamente
+            if dados.get("contato_caso_confirmado") and dados.get("febre"):
+                return max(prior, 0.55)
+            elif dados.get("febre") and dados.get("dor_corpo"):
+                return max(prior, 0.25)  # febre antes das vesículas aponta para Mpox
         # Vesículas com líquido tornam outras arboviroses muito menos prováveis
         if doenca in ("Dengue", "Chikungunya", "Zika"):
             return min(prior, 0.10)
@@ -1608,6 +1656,8 @@ def _modificadores_anamnese(dados: dict[str, Any], doenca: str) -> float:
             mult *= 2.0
         elif doenca in ("Tuberculose", "Varicela", "Coqueluche"):
             mult *= 2.5  # altamente contagiosas por aerossol
+        elif doenca == "Mpox":
+            mult *= 3.0  # Mpox transmitida principalmente por contato direto
         elif doenca in ("Dengue", "Chikungunya", "Zika"):
             mult *= 1.1  # transmissão vetorial, não por contato direto
 
@@ -1940,7 +1990,7 @@ def classificar_para_cidadao(dados: dict[str, Any], estado: str | None = None) -
         "Gripe (Influenza)", "Resfriado Viral",
         "Bronquite / DPOC Agudização", "Gastroenterite Viral",
         # Novas — nomeáveis porque o cidadão precisa saber para buscar cuidado adequado
-        "Varicela", "Tuberculose", "Coqueluche", "Febre Tifoide", "Esquistossomose",
+        "Varicela", "Tuberculose", "Coqueluche", "Febre Tifoide", "Esquistossomose", "Mpox",
         # Febre Maculosa é urgência (cor=vermelha) — nomeável para reforçar a busca por PS
         "Febre Maculosa",
         # Phase 2 — nomeáveis para orientar busca ao cuidado correto
