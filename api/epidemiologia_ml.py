@@ -46,6 +46,7 @@ FEATURE_NAMES = ["valor_atual", "media_movel", "desvio_movel", "razao_media", "s
 DOENCAS_REGISTRADAS = [
     ("sinan_agravos", "dengue_notificacoes_sinan", "Dengue"),
     ("sinan_chikungunya", "chikungunya_notificacoes_sinan", "Chikungunya"),
+    ("sinan_zika", "zika_notificacoes_sinan", "Zika"),
 ]
 
 _MODELO_CACHE = {}  # indicador -> {"bundle": ..., "mtime": ...}

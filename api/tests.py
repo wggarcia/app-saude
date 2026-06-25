@@ -5558,11 +5558,20 @@ class EpidemiologiaMLTests(TestCase):
             "SP", n_semanas=25, picos={6, 16},
             fonte_id="sinan_chikungunya", indicador="chikungunya_notificacoes_sinan",
         )
+        self._criar_serie_oficial(
+            "RJ", n_semanas=25, picos={7, 17},
+            fonte_id="sinan_zika", indicador="zika_notificacoes_sinan",
+        )
+        self._criar_serie_oficial(
+            "SP", n_semanas=25, picos={9, 19},
+            fonte_id="sinan_zika", indicador="zika_notificacoes_sinan",
+        )
 
         resultados = treinar_todas_doencas_registradas()
 
-        self.assertEqual(set(resultados.keys()), {"Dengue", "Chikungunya"})
+        self.assertEqual(set(resultados.keys()), {"Dengue", "Chikungunya", "Zika"})
         self.assertTrue(resultados["Dengue"]["treinado"])
+        self.assertTrue(resultados["Zika"]["treinado"])
         self.assertTrue(resultados["Chikungunya"]["treinado"])
 
     def test_build_disease_probabilities_blend_por_doenca(self):
