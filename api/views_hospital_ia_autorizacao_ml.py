@@ -24,7 +24,13 @@ from .models import IAAutorizacaoClinica
 # via MEDIA_ROOT_OVERRIDE) — usar o mesmo caminho evita que o modelo treinado
 # seja apagado a cada deploy (BASE_DIR e efemero, recriado do zero no build).
 MODELS_DIR = Path(settings.MEDIA_ROOT) / "ml_models" / "autorizacao_hospital"
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    # build/preDeployCommand do Render roda sem o disco persistente montado
+    # (so a instancia em execucao tem /var/data gravavel) — nao pode travar
+    # a importacao do modulo so porque esse mkdir falhou nesse contexto.
+    pass
 
 MODEL_PATH = MODELS_DIR / "autorizacao_hospital_model.joblib"
 ENCODER_PATH = MODELS_DIR / "autorizacao_hospital_encoder.joblib"
@@ -154,6 +160,7 @@ def treinar_modelo(empresa_id: int = None):
 
     cv_scores = cross_val_score(ensemble, X, y, cv=min(5, len(solicitacoes) // 10 + 2), scoring="f1_weighted")
 
+    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(ensemble, MODEL_PATH)
     joblib.dump(le, ENCODER_PATH)
 

@@ -33,7 +33,14 @@ from .models import FonteOficialAgregado
 # via MEDIA_ROOT_OVERRIDE) — usar o mesmo caminho evita que o modelo treinado
 # seja apagado a cada deploy (BASE_DIR e efemero, recriado do zero no build).
 MODELS_DIR = Path(settings.MEDIA_ROOT) / "ml_models" / "epidemiologia"
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    # build/preDeployCommand do Render roda sem o disco persistente montado
+    # (so a instancia em execucao tem /var/data gravavel) — nao pode travar
+    # a importacao do modulo so porque esse mkdir falhou nesse contexto;
+    # o diretorio e recriado defensivamente em treinar_modelo_oficial().
+    pass
 
 MIN_AMOSTRAS_TREINO = 40  # minimo de observacoes (estado x semana) reais para treinar
 JANELA_MEDIA_MOVEL = 4
@@ -206,6 +213,7 @@ def treinar_modelo_oficial(fonte_id="sinan_agravos", indicador="dengue_notificac
     cv_folds = min(5, len(X) // 20 + 2)
     cv_scores = cross_val_score(ensemble, X, y, cv=cv_folds, scoring="f1_weighted")
 
+    model_path.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump({"model": ensemble, "estados": estados, "fonte_id": fonte_id, "indicador": indicador}, model_path)
 
     meta = {

@@ -38,7 +38,13 @@ from .access_control import api_requer_feature
 # via MEDIA_ROOT_OVERRIDE) — usar o mesmo caminho evita que o modelo treinado
 # seja apagado a cada deploy (BASE_DIR e efemero, recriado do zero no build).
 MODELS_DIR = Path(settings.MEDIA_ROOT) / "ml_models" / "autorizacao"
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    # build/preDeployCommand do Render roda sem o disco persistente montado
+    # (so a instancia em execucao tem /var/data gravavel) — nao pode travar
+    # a importacao do modulo so porque esse mkdir falhou nesse contexto.
+    pass
 
 MODEL_PATH    = MODELS_DIR / "autorizacao_model.joblib"
 ENCODER_PATH  = MODELS_DIR / "autorizacao_encoder.joblib"
@@ -214,6 +220,7 @@ def treinar_modelo(empresa_id: int = None):
     cv_scores = cross_val_score(ensemble, X, y, cv=min(5, len(guias)//10 + 2), scoring="f1_weighted")
 
     # Salva modelo e metadata
+    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(ensemble, MODEL_PATH)
     joblib.dump(le, ENCODER_PATH)
 
