@@ -83,6 +83,14 @@ class RegistroSintoma(models.Model):
     coriza = models.BooleanField(default=False)              # resfriado, gripe, RSV
     calafrios = models.BooleanField(default=False)           # malária (ciclico), dengue, leptospirose
     sudorese = models.BooleanField(default=False)            # malária (ciclo febril), leptospirose, hantavirose
+
+    # ── Sintomas Phase 2 (doenças tropicais negligenciadas + respiratórias crônicas)
+    hemoptise          = models.BooleanField(default=False)  # tosse com sangue → TB hemoptóica, hantavirose
+    exantema_vesicular = models.BooleanField(default=False)  # bolhas com líquido → varicela (vs macular dengue)
+    perda_peso         = models.BooleanField(default=False)  # emagrecimento → TB, leishmaniose visceral, chagas
+    ulcera_cutanea     = models.BooleanField(default=False)  # úlcera de Bauru → leishmaniose tegumentar
+    mancha_anestesia   = models.BooleanField(default=False)  # mancha insensível ao toque → hanseníase
+
     # Intensidade da febre (escala: None, baixa<38.5, moderada 38.5-39.5, alta>39.5)
     intensidade_febre = models.CharField(max_length=10, blank=True, default="",
         choices=[("", "Não informado"), ("baixa", "Baixa"), ("moderada", "Moderada"), ("alta", "Alta")])
@@ -101,6 +109,8 @@ class RegistroSintoma(models.Model):
     contato_caso_confirmado = models.BooleanField(null=True, blank=True)
     vacinado_febre_amarela  = models.BooleanField(null=True, blank=True)
     tem_comorbidade         = models.BooleanField(null=True, blank=True)
+    exposicao_carrapato     = models.BooleanField(null=True, blank=True)  # contato carrapato → febre maculosa
+    exposicao_triatomideo   = models.BooleanField(null=True, blank=True)  # contato barbeiro → doença de chagas
 
     latitude = models.FloatField(null=True)
     longitude = models.FloatField(null=True)

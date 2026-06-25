@@ -60,6 +60,9 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "ictericia":             -0.50,  # icterícia é RARA no dengue típico — aponta forte para hepatite/lepto/FA
             "conjuntivite":          -0.30,  # Zika, não dengue
             "dor_garganta":          -0.35,  # gripe/resfriado, não dengue
+            "exantema_vesicular":    -0.75,  # dengue é macular — bolhas aponta CONTRA
+            "hemoptise":             -0.45,  # incomum no dengue
+            "perda_peso":            -0.55,  # doença aguda, não causa emagrecimento
             # intensidades importantíssimas para diferencial:
             "_intensidade_febre_alta":       0.30,   # bônus se febre alta
             "_intensidade_articular_leve":   0.15,   # dengue tem artralgia leve
@@ -97,6 +100,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "perda_olfato_paladar":  -0.60,
             "rigidez_nuca":          -0.50,
             "ictericia":             -0.40,
+            "exantema_vesicular":    -0.65,  # Zika é macular, não vesicular
             "_intensidade_febre_baixa":    0.40,   # bônus se febre BAIXA
             "_intensidade_articular_leve": 0.30,   # artralgia leve vs chikungunya
         },
@@ -130,6 +134,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "ictericia":             -0.50,
             "conjuntivite":           0.35,  # pode ocorrer mas não patognomônico
             "manchas_hemorragicas":  -0.20,
+            "exantema_vesicular":    -0.55,  # chikungunya é macular, não vesicular
             "_intensidade_febre_alta":        0.25,
             "_intensidade_articular_intensa": 0.80,  # bônus decisivo — artralgia intensa é o diferenciador chikungunya
         },
@@ -263,6 +268,8 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "perda_olfato_paladar":  -0.60,
             "ictericia":             -0.20,
             "rigidez_nuca":          -0.40,
+            "hemoptise":              0.65,  # síndrome cardiopulmonar por hantavírus
+            "exantema_vesicular":    -0.65,  # hantavirose não tem rash vesicular
         },
         "red_flags": ["falta_ar", "cansaco", "febre"],
         "diferencial_vs": {
@@ -295,6 +302,7 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "manchas_hemorragicas":  -0.20,
             "rigidez_nuca":          -0.25,
             "dor_articular":         -0.15,
+            "exantema_vesicular":    -0.65,  # sarampo é maculopapular confluente, não vesicular
             "calafrios":              0.30,
         },
         "red_flags": ["falta_ar", "rigidez_nuca"],
@@ -555,6 +563,9 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "dor_garganta":          -0.30,
             "calafrios":             -0.15,
             "diarreia":              -0.30,
+            "hemoptise":              0.75,  # tosse com sangue — TB hemoptóica
+            "exantema_vesicular":    -0.70,  # varicela, não TB
+            "perda_peso":             0.82,  # emagrecimento é sintoma cardinal da TB
             "_intensidade_febre_baixa":  0.40,  # febre baixa é típica da TB
             "_intensidade_febre_alta":  -0.25,  # febre alta aponta contra TB pulmonar
         },
@@ -590,6 +601,8 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "rigidez_nuca":          -0.55,
             "dor_articular":         -0.30,
             "diarreia":              -0.35,
+            "exantema_vesicular":     1.00,  # PATOGNOMÔNICO — vesículas com líquido em múltiplos estágios
+            "hemoptise":             -0.85,  # varicela não causa tosse com sangue
             "_intensidade_febre_baixa":  0.25,
             "_intensidade_febre_alta":  -0.15,
         },
@@ -625,6 +638,8 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "perda_olfato_paladar":  -0.70,
             "rigidez_nuca":          -0.20,
             "dor_articular":         -0.15,
+            "hemoptise":              0.35,  # FM grave pode ter envolvimento pulmonar
+            "exantema_vesicular":    -0.65,  # FM é macular→petequial, não vesicular
             "_intensidade_febre_alta": 0.35,  # febre alta abrupta é a marca da FM
         },
         "red_flags": ["febre", "exantema", "manchas_hemorragicas"],
@@ -738,6 +753,136 @@ DOENCAS_BRASIL: dict[str, dict] = {
             "Febre Tifoide": "tifoide não tem hepatoesplenomegalia precoce; contexto hídrico diferencia",
         },
     },
+
+    # ── DOENÇAS TROPICAIS NEGLIGENCIADAS — Phase 2 ────────────────────────────
+    "Doença de Chagas": {
+        "grupo": "Parasitária / Tripanossomíase",
+        "vetor": "Triatoma infestans (barbeiro) — fezes contaminadas, transfusão, vertical",
+        "cid10": "B57",
+        "descricao": "Fase aguda: febre, mal-estar, sinal de Romaña (edema palpebral unilateral); fase crônica: cardiomiopatia, megaviscerais, emagrecimento; endêmica no Brasil Central/Nordeste",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "febre":                  0.75,  # fase aguda
+            "cansaco":                0.88,  # fase aguda e crônica
+            "dor_corpo":              0.65,
+            "vomito_nausea":          0.55,  # fase aguda
+            "dor_abdominal":          0.52,  # megacólon/megaesôfago
+            "perda_peso":             0.78,  # emagrecimento — fase crônica cardinal
+            "exantema":               0.42,  # lesão eritematosa no sítio de inoculação
+            "diarreia":               0.30,  # megacólon
+            "calafrios":              0.45,
+            "sudorese":               0.40,
+            "ictericia":             -0.55,
+            "tosse":                 -0.45,
+            "coriza":                -0.60,
+            "rigidez_nuca":          -0.80,
+            "manchas_hemorragicas":  -0.60,
+            "perda_olfato_paladar":  -0.70,
+            "exantema_vesicular":    -0.75,  # Chagas não causa vesículas
+            "hemoptise":             -0.65,
+            "mancha_anestesia":      -0.85,  # hanseníase, não Chagas
+        },
+        "red_flags": ["febre", "cansaco", "perda_peso"],
+        "diferencial_vs": {
+            "Tuberculose": "TB tem tosse crônica dominante; Chagas tem exposição ao barbeiro e sem tosse dominante",
+            "Leishmaniose Visceral": "calazar tem esplenomegalia e febre mais prolongada; Chagas tem contato com triatomíneo",
+        },
+    },
+
+    "Hanseníase": {
+        "grupo": "Infectoparasitária / Micobacteriana",
+        "vetor": "Mycobacterium leprae — aerossol (convívio domiciliar prolongado)",
+        "cid10": "A30",
+        "descricao": "Manchas hipocromáticas/eritematosas com PERDA DE SENSIBILIDADE; espessamento de nervos periféricos; evolução crônica e insidiosa; endêmica no Mato Grosso, Pará, Maranhão e Tocantins",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "mancha_anestesia":       1.00,  # PATOGNOMÔNICO — mancha insensível ao toque
+            "exantema":               0.65,  # mácula/pápula eritematosa ou hipocromática
+            "cansaco":                0.45,
+            "dor_corpo":              0.42,  # neurite periférica
+            "febre":                  0.20,  # reação hansênica tipo I/II
+            "perda_peso":             0.35,  # formas avançadas
+            "tosse":                 -0.65,
+            "diarreia":              -0.70,
+            "vomito_nausea":         -0.60,
+            "dor_cabeca":            -0.40,
+            "coriza":                -0.70,
+            "manchas_hemorragicas":  -0.80,
+            "rigidez_nuca":          -0.80,
+            "perda_olfato_paladar":  -0.75,
+            "hemoptise":             -0.80,
+            "exantema_vesicular":    -0.75,  # hanseníase não tem vesículas
+            "ulcera_cutanea":         0.40,  # reação tipo II (eritema nodoso) pode ulcerar
+        },
+        "red_flags": ["mancha_anestesia"],
+        "diferencial_vs": {
+            "Varicela": "varicela tem vesículas e febre aguda; hanseníase tem manchas insensíveis sem vesículas",
+            "Febre Maculosa": "FM tem febre alta abrupta com manchas hemorrágicas; hanseníase é crônica e insidiosa",
+        },
+    },
+
+    "Leishmaniose Visceral": {
+        "grupo": "Parasitária / Leishmaniose",
+        "vetor": "Lutzomyia longipalpis (mosquito palha) — reservatório canino",
+        "cid10": "B55.0",
+        "descricao": "Calazar: febre prolongada irregular, perda de peso acentuada, hepatoesplenomegalia, anemia grave; endêmica no Nordeste, Centro-Oeste e periurbano; alta letalidade sem tratamento",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "febre":                  0.90,  # prolongada (semanas a meses), irregular
+            "perda_peso":             0.95,  # acentuada — sinal cardinal (caquexia)
+            "cansaco":                0.88,
+            "dor_abdominal":          0.72,  # esplenomegalia/hepatomegalia
+            "vomito_nausea":          0.55,
+            "ictericia":              0.50,  # hepatite/colestase
+            "dor_corpo":              0.55,
+            "calafrios":              0.55,
+            "diarreia":               0.40,
+            "exantema":               0.20,
+            "tosse":                 -0.45,
+            "coriza":                -0.65,
+            "rigidez_nuca":          -0.70,
+            "manchas_hemorragicas":  -0.50,
+            "perda_olfato_paladar":  -0.80,
+            "hemoptise":             -0.60,
+            "exantema_vesicular":    -0.75,
+            "mancha_anestesia":      -0.85,  # hanseníase, não calazar
+        },
+        "red_flags": ["febre", "perda_peso", "ictericia"],
+        "diferencial_vs": {
+            "Doença de Chagas": "calazar tem esplenomegalia e febre mais prolongada; Chagas tem contato com barbeiro",
+            "Tuberculose": "TB tem tosse crônica e lesão pulmonar; calazar tem esplenomegalia e maior perda de peso",
+            "Hepatite A/B": "hepatite tem icterícia precoce proeminente sem emagrecimento maciço",
+        },
+    },
+
+    "Leishmaniose Tegumentar": {
+        "grupo": "Parasitária / Leishmaniose",
+        "vetor": "Lutzomyia spp. (mosquito palha) — reservatório silvestre",
+        "cid10": "B55.1",
+        "descricao": "Úlcera indolor de bordas elevadas e endurecidas em áreas expostas (úlcera de Bauru); pode comprometer mucosas (nariz, boca); transmitida em áreas florestais e periurbanas",
+        "sazonalidade": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "sintomas": {
+            "ulcera_cutanea":         1.00,  # PATOGNOMÔNICO — úlcera indolor bordo elevado
+            "exantema":               0.55,  # lesão papular inicial antes da úlcera
+            "febre":                  0.35,  # febre baixa ocasional
+            "cansaco":                0.30,
+            "perda_peso":             0.30,  # formas mucosas extensas
+            "tosse":                 -0.75,
+            "diarreia":              -0.75,
+            "vomito_nausea":         -0.60,
+            "coriza":                -0.70,
+            "rigidez_nuca":          -0.80,
+            "manchas_hemorragicas":  -0.80,
+            "hemoptise":             -0.75,
+            "exantema_vesicular":    -0.70,  # úlcera ≠ vesícula
+            "mancha_anestesia":      -0.70,  # hanseníase, não LT
+        },
+        "red_flags": ["ulcera_cutanea"],
+        "diferencial_vs": {
+            "Hanseníase": "hanseníase tem mancha insensível sem úlcera típica; LT tem úlcera indolor de bordas elevadas",
+            "Febre Maculosa": "FM tem febre alta abrupta com petéquias; LT é crônica e localizada",
+        },
+    },
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -782,24 +927,37 @@ _PRIOR_DEFAULT: dict[str, float] = {
     "Coqueluche":              0.04,  # reemergente em adultos com waning immunity
     "Febre Tifoide":           0.03,  # incomum no Sudeste; maior no Norte/Nordeste
     "Esquistossomose":         0.05,  # endêmica Nordeste/MG — prior baixo no Sul/SP
+    # Phase 2 — doenças tropicais negligenciadas
+    "Doença de Chagas":        0.04,  # 1-2 milhões de infectados no Brasil; muitos sem diagnóstico
+    "Hanseníase":              0.03,  # Brasil é 2º país em casos; endêmica no Centro-Norte
+    "Leishmaniose Visceral":   0.02,  # calazar — fatal sem tratamento; reservatório canino
+    "Leishmaniose Tegumentar": 0.02,  # úlcera de Bauru — zonas florestais e periurbanas
 }
 
 # UFs com priors específicos (apenas onde diferem significativamente do padrão)
 PRIOR_GEOGRAFICO: dict[str, dict[str, float]] = {
 
     # ── Amazônia Legal — alto risco malária e febre amarela ──────────────────
-    "AM": {**_PRIOR_DEFAULT, "Malaria": 0.55, "Febre Amarela": 0.12, "Dengue": 0.60, "Leptospirose": 0.12},
-    "PA": {**_PRIOR_DEFAULT, "Malaria": 0.45, "Febre Amarela": 0.10, "Dengue": 0.55, "Leptospirose": 0.10},
-    "AC": {**_PRIOR_DEFAULT, "Malaria": 0.50, "Febre Amarela": 0.12, "Dengue": 0.50},
-    "RO": {**_PRIOR_DEFAULT, "Malaria": 0.40, "Febre Amarela": 0.10, "Dengue": 0.55},
+    "AM": {**_PRIOR_DEFAULT, "Malaria": 0.55, "Febre Amarela": 0.12, "Dengue": 0.60, "Leptospirose": 0.12,
+           "Leishmaniose Tegumentar": 0.06, "Leishmaniose Visceral": 0.04, "Hanseníase": 0.08},
+    "PA": {**_PRIOR_DEFAULT, "Malaria": 0.45, "Febre Amarela": 0.10, "Dengue": 0.55, "Leptospirose": 0.10,
+           "Leishmaniose Tegumentar": 0.05, "Leishmaniose Visceral": 0.05, "Hanseníase": 0.10},
+    "AC": {**_PRIOR_DEFAULT, "Malaria": 0.50, "Febre Amarela": 0.12, "Dengue": 0.50,
+           "Leishmaniose Tegumentar": 0.05},
+    "RO": {**_PRIOR_DEFAULT, "Malaria": 0.40, "Febre Amarela": 0.10, "Dengue": 0.55,
+           "Leishmaniose Tegumentar": 0.04},
     "RR": {**_PRIOR_DEFAULT, "Malaria": 0.45, "Febre Amarela": 0.10, "Dengue": 0.50},
     "AP": {**_PRIOR_DEFAULT, "Malaria": 0.35, "Febre Amarela": 0.08, "Dengue": 0.55},
-    "TO": {**_PRIOR_DEFAULT, "Malaria": 0.15, "Febre Amarela": 0.08, "Dengue": 0.65},
+    "TO": {**_PRIOR_DEFAULT, "Malaria": 0.15, "Febre Amarela": 0.08, "Dengue": 0.65,
+           "Hanseníase": 0.10, "Doença de Chagas": 0.06, "Leishmaniose Visceral": 0.05},
 
     # ── Centro-Oeste — risco moderado febre amarela (área de transição) ──────
-    "MT": {**_PRIOR_DEFAULT, "Malaria": 0.12, "Febre Amarela": 0.07, "Dengue": 0.70},
-    "GO": {**_PRIOR_DEFAULT, "Febre Amarela": 0.05, "Dengue": 0.72, "Chikungunya": 0.25},
-    "MS": {**_PRIOR_DEFAULT, "Febre Amarela": 0.04, "Dengue": 0.65, "Leptospirose": 0.12},
+    "MT": {**_PRIOR_DEFAULT, "Malaria": 0.12, "Febre Amarela": 0.07, "Dengue": 0.70,
+           "Hanseníase": 0.12, "Doença de Chagas": 0.07},
+    "GO": {**_PRIOR_DEFAULT, "Febre Amarela": 0.05, "Dengue": 0.72, "Chikungunya": 0.25,
+           "Doença de Chagas": 0.06, "Leishmaniose Visceral": 0.04},
+    "MS": {**_PRIOR_DEFAULT, "Febre Amarela": 0.04, "Dengue": 0.65, "Leptospirose": 0.12,
+           "Leishmaniose Visceral": 0.04},
     "DF": {**_PRIOR_DEFAULT, "Febre Amarela": 0.03, "Dengue": 0.68, "Chikungunya": 0.22},
 
     # ── Sudeste — urbano, dengue/chikungunya dominam; febre amarela mínima ───
@@ -815,7 +973,8 @@ PRIOR_GEOGRAFICO: dict[str, dict[str, float]] = {
            "Tuberculose": 0.16, "Febre Maculosa": 0.03},
     "MG": {**_PRIOR_DEFAULT, "Dengue": 0.72, "Chikungunya": 0.28, "Febre Amarela": 0.04,
            "Leptospirose": 0.10,
-           "Febre Maculosa": 0.05, "Esquistossomose": 0.15, "Tuberculose": 0.10},
+           "Febre Maculosa": 0.05, "Esquistossomose": 0.15, "Tuberculose": 0.10,
+           "Doença de Chagas": 0.06, "Leishmaniose Tegumentar": 0.04, "Leishmaniose Visceral": 0.03},
     "ES": {**_PRIOR_DEFAULT, "Dengue": 0.75, "Chikungunya": 0.30, "Febre Amarela": 0.02,
            "Leptospirose": 0.10,
            "Febre Maculosa": 0.03, "Esquistossomose": 0.12},
@@ -825,16 +984,21 @@ PRIOR_GEOGRAFICO: dict[str, dict[str, float]] = {
     # Febre Tifoide BA/MA: saneamento precário em áreas periurbanas
     # Tuberculose CE/PE: alta prevalência em população de rua, presídios
     "BA": {**_PRIOR_DEFAULT, "Dengue": 0.78, "Chikungunya": 0.40, "Febre Amarela": 0.03,
-           "Esquistossomose": 0.18, "Febre Tifoide": 0.06, "Tuberculose": 0.10},
+           "Esquistossomose": 0.18, "Febre Tifoide": 0.06, "Tuberculose": 0.10,
+           "Doença de Chagas": 0.06, "Leishmaniose Visceral": 0.07, "Leishmaniose Tegumentar": 0.05, "Hanseníase": 0.05},
     "PE": {**_PRIOR_DEFAULT, "Dengue": 0.80, "Chikungunya": 0.45, "Zika": 0.25,
            "Febre Amarela": 0.01,
-           "Esquistossomose": 0.20, "Febre Tifoide": 0.05, "Tuberculose": 0.12},
+           "Esquistossomose": 0.20, "Febre Tifoide": 0.05, "Tuberculose": 0.12,
+           "Leishmaniose Visceral": 0.05, "Doença de Chagas": 0.05},
     "CE": {**_PRIOR_DEFAULT, "Dengue": 0.78, "Chikungunya": 0.42, "Febre Amarela": 0.01,
-           "Tuberculose": 0.12, "Febre Tifoide": 0.05},
+           "Tuberculose": 0.12, "Febre Tifoide": 0.05,
+           "Leishmaniose Visceral": 0.06, "Doença de Chagas": 0.05},
     "MA": {**_PRIOR_DEFAULT, "Dengue": 0.70, "Chikungunya": 0.35, "Febre Amarela": 0.03,
-           "Malaria": 0.08, "Esquistossomose": 0.14, "Febre Tifoide": 0.06},
+           "Malaria": 0.08, "Esquistossomose": 0.14, "Febre Tifoide": 0.06,
+           "Hanseníase": 0.10, "Leishmaniose Visceral": 0.06, "Doença de Chagas": 0.05},
     "PI": {**_PRIOR_DEFAULT, "Dengue": 0.72, "Chikungunya": 0.35, "Febre Amarela": 0.03,
-           "Esquistossomose": 0.10, "Febre Tifoide": 0.05},
+           "Esquistossomose": 0.10, "Febre Tifoide": 0.05,
+           "Doença de Chagas": 0.07, "Leishmaniose Visceral": 0.06, "Hanseníase": 0.06},
     "RN": {**_PRIOR_DEFAULT, "Dengue": 0.75, "Chikungunya": 0.38, "Febre Amarela": 0.01,
            "Esquistossomose": 0.12},
     "PB": {**_PRIOR_DEFAULT, "Dengue": 0.73, "Chikungunya": 0.37, "Febre Amarela": 0.01,
@@ -905,6 +1069,11 @@ SINTOMA_CHAVE_OBRIGATORIO: dict[str, list[str]] = {
     "Coqueluche":     ["tosse"],           # tosse paroxística é obrigatória
     "Febre Tifoide":  ["febre"],           # febre em platô é essencial
     "Esquistossomose": ["diarreia", "dor_abdominal", "exposicao_agua_enchente"],  # ≥1 dos 3
+    # Phase 2 — doenças tropicais negligenciadas
+    "Doença de Chagas":        ["perda_peso", "exposicao_triatomideo"],   # ≥1 dos 2 obrigatório
+    "Hanseníase":              ["mancha_anestesia"],                       # patognomônico obrigatório
+    "Leishmaniose Visceral":   ["perda_peso", "febre"],                   # ambos (febre prolongada + emagrecimento)
+    "Leishmaniose Tegumentar": ["ulcera_cutanea"],                        # patognomônico obrigatório
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -944,6 +1113,11 @@ SINDROME_CIDADAO: dict[str, dict] = {
     "Coqueluche":           {"sindrome": "Síndrome de Tosse Persistente",   "cor": "laranja", "conduta": "Procure a UBS. Tosse intensa em accessos com engasgos ou vômito é notificação compulsória."},
     "Febre Tifoide":        {"sindrome": "Síndrome Febril Entérica",        "cor": "laranja", "conduta": "Procure a UBS. Febre alta persistente com dor abdominal precisa de avaliação e exames de sangue."},
     "Esquistossomose":      {"sindrome": "Síndrome Diarreica com Histórico Hídrico", "cor": "amarela", "conduta": "Procure a UBS. Informe sobre contato com água de rio, lagoa ou irrigação."},
+    # Phase 2 — doenças tropicais negligenciadas
+    "Doença de Chagas":        {"sindrome": "Síndrome Febril com Histórico de Exposição",  "cor": "laranja", "conduta": "Procure a UBS. Se você teve contato com inseto barbeiro ou áreas rurais, relate ao médico."},
+    "Hanseníase":              {"sindrome": "Síndrome de Mancha Cutânea",                  "cor": "laranja", "conduta": "Procure a UBS. Mancha na pele sem sensibilidade ao toque precisa de avaliação médica — é tratável."},
+    "Leishmaniose Visceral":   {"sindrome": "Síndrome Febril Crônica com Emagrecimento",  "cor": "laranja", "conduta": "Procure a UBS. Febre prolongada com perda de peso em área endêmica precisa de exames de sangue."},
+    "Leishmaniose Tegumentar": {"sindrome": "Síndrome de Úlcera Cutânea",                 "cor": "laranja", "conduta": "Procure a UBS. Úlcera indolor que não cicatriza em área de pele exposta precisa de avaliação médica."},
     "Inconclusivo":         {"sindrome": "Sintomas em Acompanhamento",      "cor": "cinza",   "conduta": "Continue monitorando seus sintomas. Se piorar, procure uma unidade de saúde."},
 }
 
@@ -972,7 +1146,8 @@ CONTEXTO_SETOR: dict[str, dict] = {
         "foco": "vigilância sanitária, notificação compulsória, resposta pública",
         "alerta_notificacao": ["Meningite", "Febre Amarela", "Febre Maculosa", "Sarampo", "Hantavirose",
                                "Dengue", "Malaria", "Leptospirose", "Tuberculose", "Coqueluche",
-                               "Febre Tifoide", "Esquistossomose"],
+                               "Febre Tifoide", "Esquistossomose",
+                               "Doença de Chagas", "Hanseníase", "Leishmaniose Visceral", "Leishmaniose Tegumentar"],
         "filtro_grupo": None,  # vê tudo
         "mensagem_acao": "Acionar vigilância epidemiológica e preparar notificação compulsória.",
     },
@@ -984,10 +1159,12 @@ CONTEXTO_SETOR: dict[str, dict] = {
         "mensagem_acao": "Verificar estoque de itens associados ao padrão dominante.",
     },
     "hospital": {
-        "prioridade": ["Meningite", "Febre Maculosa", "Hantavirose", "Febre Amarela", "Dengue", "COVID-19", "Leptospirose", "Tuberculose"],
+        "prioridade": ["Meningite", "Febre Maculosa", "Hantavirose", "Febre Amarela", "Dengue", "COVID-19", "Leptospirose", "Tuberculose",
+                       "Leishmaniose Visceral", "Doença de Chagas"],
         "foco": "triagem, leitos, insumos críticos, escala de pronto atendimento",
         "alerta_notificacao": ["Meningite", "Febre Amarela", "Febre Maculosa", "Hantavirose", "Sarampo",
-                               "Tuberculose", "Coqueluche"],
+                               "Tuberculose", "Coqueluche",
+                               "Hanseníase", "Doença de Chagas", "Leishmaniose Visceral", "Leishmaniose Tegumentar"],
         "filtro_grupo": None,
         "mensagem_acao": "Revisar fluxo de triagem e disponibilidade de leitos.",
     },
@@ -1030,6 +1207,8 @@ TODOS_SINTOMAS = [
     "vomito_nausea", "diarreia", "dor_abdominal", "rigidez_nuca",
     "ictericia", "manchas_hemorragicas", "perda_olfato_paladar",
     "dor_garganta", "coriza", "calafrios", "sudorese",
+    # Phase 2 — doenças tropicais negligenciadas + respiratórias crônicas
+    "hemoptise", "exantema_vesicular", "perda_peso", "ulcera_cutanea", "mancha_anestesia",
 ]
 
 # Campos de anamnese epidemiológica — contexto clínico que refina o prior
@@ -1037,6 +1216,8 @@ CAMPOS_ANAMNESE = [
     "dias_sintomas", "inicio_abrupto", "viagem_area_endemica",
     "exposicao_agua_enchente", "contato_roedores", "contato_caso_confirmado",
     "vacinado_febre_amarela", "tem_comorbidade",
+    # Phase 2
+    "exposicao_carrapato", "exposicao_triatomideo",
 ]
 
 
@@ -1292,6 +1473,77 @@ def _prior_anamnese_override(prior: float, doenca: str, dados: dict[str, Any]) -
         if doenca == "Esquistossomose":
             return min(prior, 0.01)
 
+    # ── Febre Maculosa — exposição a carrapato é o vetor obrigatório ─────────
+    if dados.get("exposicao_carrapato"):
+        if doenca == "Febre Maculosa":
+            # carrapato-estrela + febre = Febre Maculosa até prova em contrário
+            return max(prior, 0.60 if dados.get("febre") else 0.40)
+        # Dengue não é transmitida por carrapato
+        if doenca == "Dengue":
+            return min(prior, 0.25)
+    if dados.get("exposicao_carrapato") is False:
+        if doenca == "Febre Maculosa":
+            return min(prior, 0.008)  # sem carrapato, FM é rara demais para o cidadão
+
+    # ── Doença de Chagas — barbeiro é o vetor obrigatório ────────────────────
+    if dados.get("exposicao_triatomideo"):
+        if doenca == "Doença de Chagas":
+            # contato com barbeiro é altamente específico para Chagas
+            return max(prior, 0.55 if dados.get("febre") else 0.35)
+    if dados.get("exposicao_triatomideo") is False:
+        if doenca == "Doença de Chagas":
+            return min(prior, 0.005)  # sem barbeiro, Chagas quase impossível no app
+
+    # ── Leishmaniose Visceral — emagrecimento + febre prolongada ─────────────
+    if dados.get("perda_peso") and dados.get("febre"):
+        if doenca == "Leishmaniose Visceral":
+            # calazar: febre prolongada + emagrecimento = combinação cardinal
+            lv_prior = 0.50 if dados.get("dor_abdominal") else 0.35
+            return max(prior, lv_prior)
+        if doenca == "Tuberculose":
+            return max(prior, 0.30)
+        # Emagrecimento + febre prolongada é atípico de doenças agudas (dengue, gripe)
+        if doenca in ("Dengue", "Chikungunya", "Gripe (Influenza)", "Zika"):
+            return min(prior, 0.25)
+
+    # ── Hanseníase — mancha insensível é patognomônica ────────────────────────
+    if dados.get("mancha_anestesia"):
+        if doenca == "Hanseníase":
+            # mancha insensível → hanseníase até prova em contrário
+            return max(prior, 0.75)
+        # Praticamente todas as outras doenças ficam muito menos prováveis
+        if doenca in ("Dengue", "Gripe (Influenza)", "COVID-19", "Resfriado Viral", "Gastroenterite Viral"):
+            return min(prior, 0.05)
+
+    # ── Leishmaniose Tegumentar — úlcera indolor é patognomônica ─────────────
+    if dados.get("ulcera_cutanea"):
+        if doenca == "Leishmaniose Tegumentar":
+            return max(prior, 0.70)
+        # Úlcera cutânea indolor é incompatível com doenças agudas febris / arboviroses
+        if doenca in ("Dengue", "Gripe (Influenza)", "COVID-19", "Gastroenterite Viral",
+                      "Febre Maculosa", "Chikungunya", "Zika", "Malaria"):
+            return min(prior, 0.05)
+
+    # ── Varicela Phase 2 — exantema vesicular é patognomônico ────────────────
+    if dados.get("exantema_vesicular"):
+        if doenca == "Varicela":
+            return max(prior, 0.80)
+        # Vesículas com líquido tornam outras arboviroses muito menos prováveis
+        if doenca in ("Dengue", "Chikungunya", "Zika"):
+            return min(prior, 0.10)
+        if doenca == "Febre Maculosa":
+            return min(prior, 0.05)  # FM é macular/petequial, nunca vesicular
+
+    # ── Tuberculose Phase 2 — hemoptise eleva probabilidade de TB ────────────
+    if dados.get("hemoptise"):
+        if doenca == "Tuberculose":
+            return max(prior, 0.45)
+        if doenca == "Hantavirose":
+            return max(prior, 0.30)
+        # Doenças gastrintestinais/arboviroses sem componente pulmonar
+        if doenca in ("Gastroenterite Viral", "Dengue", "Resfriado Viral"):
+            return min(prior, 0.05)
+
     return prior
 
 
@@ -1309,6 +1561,8 @@ def _modificadores_anamnese(dados: dict[str, Any], doenca: str) -> float:
             mult *= 2.0  # FM é endêmica de zonas rurais com carrapato-estrela
         elif doenca in ("Dengue", "Chikungunya", "Zika", "Leptospirose"):
             mult *= 1.5
+        elif doenca in ("Leishmaniose Tegumentar", "Leishmaniose Visceral"):
+            mult *= 2.0  # leishmanioses são doenças de zonas endêmicas — viagem é fator chave
 
     # Exposição à água de enchente/lama
     if dados.get("exposicao_agua_enchente"):
@@ -1426,6 +1680,47 @@ def _modificadores_anamnese(dados: dict[str, Any], doenca: str) -> float:
 
         if doenca == "Esquistossomose" and dias_int >= 14:
             mult *= 1.5  # fase aguda dura semanas; sintomas persistentes são típicos
+
+        # Doenças com evolução crônica (semanas a meses)
+        if doenca == "Hanseníase":
+            if dias_int >= 30:
+                mult *= 2.0  # evolução > 30 dias é muito característico de hanseníase
+            elif dias_int < 7:
+                mult *= 0.2  # hanseníase não se apresenta em menos de 1 semana
+
+        if doenca == "Leishmaniose Visceral":
+            if dias_int >= 14:
+                mult *= 2.0  # febre prolongada por 2+ semanas é padrão do calazar
+            elif dias_int < 7:
+                mult *= 0.3  # calazar não se apresenta em menos de 1 semana
+
+        if doenca == "Doença de Chagas":
+            if dias_int >= 14:
+                mult *= 1.8  # fase aguda dura 4-8 semanas; 2+ semanas é sugestivo
+            elif dias_int < 5:
+                mult *= 0.4  # fase aguda raramente cursa tão rapidamente
+
+    # Chagas — contato com barbeiro eleva multiplicador fortemente
+    if dados.get("exposicao_triatomideo"):
+        if doenca == "Doença de Chagas":
+            mult *= 3.0  # barbeiro é o vetor quase exclusivo — contato é definitivo
+        if doenca in ("Dengue", "Gripe (Influenza)", "Resfriado Viral", "Gastroenterite Viral"):
+            mult *= 0.5  # exposição a barbeiro não tem relação com essas doenças
+
+    # Febre Maculosa — carrapato é o vetor
+    if dados.get("exposicao_carrapato"):
+        if doenca == "Febre Maculosa":
+            mult *= 3.0
+        if doenca in ("Dengue", "Gripe (Influenza)", "Resfriado Viral"):
+            mult *= 0.5
+
+    # Hanseníase sem mancha anestésica — quase impossível para cidadão sintomático
+    if dados.get("mancha_anestesia") is False and doenca == "Hanseníase":
+        mult *= 0.05
+
+    # Leishmaniose Tegumentar sem úlcera → muito improvável para app cidadão
+    if dados.get("ulcera_cutanea") is False and doenca == "Leishmaniose Tegumentar":
+        mult *= 0.05
 
     return mult
 
@@ -1648,6 +1943,8 @@ def classificar_para_cidadao(dados: dict[str, Any], estado: str | None = None) -
         "Varicela", "Tuberculose", "Coqueluche", "Febre Tifoide", "Esquistossomose",
         # Febre Maculosa é urgência (cor=vermelha) — nomeável para reforçar a busca por PS
         "Febre Maculosa",
+        # Phase 2 — nomeáveis para orientar busca ao cuidado correto
+        "Doença de Chagas", "Hanseníase", "Leishmaniose Visceral", "Leishmaniose Tegumentar",
     }
 
     # Se confiança muito baixa → inconclusivo para o cidadão
