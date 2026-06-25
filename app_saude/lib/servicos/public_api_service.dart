@@ -145,6 +145,9 @@ class PublicApiService {
     bool? contatoConfirmado,
     bool? vacinadoFebreAmarela,
     bool? temComorbidade,
+    // Phase 2 — novos campos de anamnese
+    bool? exposicaoCarrapato,
+    bool? exposicaoTriatomideo,
   }) async {
     final deviceId = await DeviceService.getDeviceId();
 
@@ -173,6 +176,12 @@ class PublicApiService {
       'ictericia': sintomas['ictericia'] ?? false,
       'rigidez_nuca': sintomas['rigidez_nuca'] ?? false,
       'manchas_hemorragicas': sintomas['manchas_hemorragicas'] ?? false,
+      // Sintomas Phase 2 — doenças tropicais negligenciadas
+      'hemoptise': sintomas['hemoptise'] ?? false,
+      'exantema_vesicular': sintomas['exantema_vesicular'] ?? false,
+      'perda_peso': sintomas['perda_peso'] ?? false,
+      'ulcera_cutanea': sintomas['ulcera_cutanea'] ?? false,
+      'mancha_anestesia': sintomas['mancha_anestesia'] ?? false,
       // Intensidades (dropdowns)
       'intensidade_febre': intensidadeFebre ?? '',
       'intensidade_articular': intensidadeArticular ?? '',
@@ -190,6 +199,9 @@ class PublicApiService {
     if (contatoConfirmado != null) body['contato_caso_confirmado'] = contatoConfirmado;
     if (vacinadoFebreAmarela != null) body['vacinado_febre_amarela'] = vacinadoFebreAmarela;
     if (temComorbidade != null) body['tem_comorbidade'] = temComorbidade;
+    // Phase 2
+    if (exposicaoCarrapato != null) body['exposicao_carrapato'] = exposicaoCarrapato;
+    if (exposicaoTriatomideo != null) body['exposicao_triatomideo'] = exposicaoTriatomideo;
 
     final response = await http
         .post(

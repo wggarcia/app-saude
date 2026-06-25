@@ -152,6 +152,38 @@ const _perguntas = [
     emoji: '🚨',
     isUrgencia: true,
   ),
+  // Phase 2 — doenças tropicais negligenciadas
+  _PerguntaSintoma(
+    key: 'hemoptise',
+    pergunta: 'Tossiu sangue?',
+    dica: 'Sangue ao tossir — pode ser um fio ou mais',
+    emoji: '🩸',
+    isUrgencia: true,
+  ),
+  _PerguntaSintoma(
+    key: 'exantema_vesicular',
+    pergunta: 'As manchas na pele têm bolhinhas com líquido?',
+    dica: 'Vesículas pruriginosas — bolinhas transparentes que coçam muito',
+    emoji: '💧',
+  ),
+  _PerguntaSintoma(
+    key: 'perda_peso',
+    pergunta: 'Emagreceu sem dieta ou motivo aparente?',
+    dica: 'Perda de peso involuntária nas últimas semanas',
+    emoji: '⚖️',
+  ),
+  _PerguntaSintoma(
+    key: 'ulcera_cutanea',
+    pergunta: 'Tem uma ferida ou úlcera na pele que não cicatriza?',
+    dica: 'Ferida com bordas elevadas, indolor — comum em áreas expostas',
+    emoji: '🔵',
+  ),
+  _PerguntaSintoma(
+    key: 'mancha_anestesia',
+    pergunta: 'Tem mancha na pele sem sensibilidade ao toque?',
+    dica: 'Mancha clara ou avermelhada que não sente quando tocada',
+    emoji: '🟤',
+  ),
 ];
 
 // ─── Perguntas de anamnese epidemiológica ────────────────────────────────────
@@ -237,6 +269,19 @@ const _anamneseItems = [
     dica: 'Quimioterapia, transplante, HIV, uso de corticoide por longa data',
     emoji: '🏥',
   ),
+  // Phase 2 — vetores específicos
+  _ItemAnamnese(
+    tipo: _TipoAnamnese.simNao,
+    pergunta: 'Teve contato com carrapatos?',
+    dica: 'Carrapato-estrela — zona rural, mato, fazenda, capim alto',
+    emoji: '🕷️',
+  ),
+  _ItemAnamnese(
+    tipo: _TipoAnamnese.simNao,
+    pergunta: 'Viu ou tocou um barbeiro (percevejo preto)?',
+    dica: 'Inseto preto achatado que pica à noite — Doença de Chagas',
+    emoji: '🦟',
+  ),
 ];
 
 // ─── Tela principal ───────────────────────────────────────────────────────────
@@ -279,6 +324,9 @@ class _TelaSintomasState extends State<TelaSintomas> {
   bool? _temHipertensao;
   bool? _temDoencaPulmonar;
   bool? _temImunossupressao;
+  // Phase 2
+  bool? _exposicaoCarrapato;
+  bool? _exposicaoTriatomideo;
 
   // Computed: true se qualquer condição crônica foi marcada Sim
   bool? get _temComorbidade {
@@ -321,6 +369,8 @@ class _TelaSintomasState extends State<TelaSintomas> {
       _temHipertensao = null;
       _temDoencaPulmonar = null;
       _temImunossupressao = null;
+      _exposicaoCarrapato = null;
+      _exposicaoTriatomideo = null;
       _lastResult = null;
       _fase = 0;
       _index = 0;
@@ -432,6 +482,10 @@ class _TelaSintomasState extends State<TelaSintomas> {
           _temDoencaPulmonar = valor as bool?;
         case 10:
           _temImunossupressao = valor as bool?;
+        case 11:
+          _exposicaoCarrapato = valor as bool?;
+        case 12:
+          _exposicaoTriatomideo = valor as bool?;
       }
     });
     if (valor != null) {
@@ -453,6 +507,8 @@ class _TelaSintomasState extends State<TelaSintomas> {
       8 => _temHipertensao,
       9 => _temDoencaPulmonar,
       10 => _temImunossupressao,
+      11 => _exposicaoCarrapato,
+      12 => _exposicaoTriatomideo,
       _ => null,
     };
   }
@@ -530,6 +586,8 @@ class _TelaSintomasState extends State<TelaSintomas> {
         contatoConfirmado: _contatoConfirmado,
         vacinadoFebreAmarela: _vacinadoFebreAmarela,
         temComorbidade: _temComorbidade,
+        exposicaoCarrapato: _exposicaoCarrapato,
+        exposicaoTriatomideo: _exposicaoTriatomideo,
       );
 
       final local = result['local'] as Map<String, dynamic>? ?? {};
