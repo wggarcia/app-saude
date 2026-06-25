@@ -20,7 +20,10 @@ from django.conf import settings
 
 from .models import IAAutorizacaoClinica
 
-MODELS_DIR = Path(getattr(settings, "BASE_DIR", "/tmp")) / "ml_models" / "autorizacao_hospital"
+# settings.MEDIA_ROOT ja resolve pro disco persistente em produção (Render,
+# via MEDIA_ROOT_OVERRIDE) — usar o mesmo caminho evita que o modelo treinado
+# seja apagado a cada deploy (BASE_DIR e efemero, recriado do zero no build).
+MODELS_DIR = Path(settings.MEDIA_ROOT) / "ml_models" / "autorizacao_hospital"
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
 MODEL_PATH = MODELS_DIR / "autorizacao_hospital_model.joblib"
