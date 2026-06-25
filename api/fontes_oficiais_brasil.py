@@ -197,6 +197,45 @@ OPENDATASUS_DATASUS_MANIFEST = [
         "recurso_inicial": "https://s3.sa-east-1.amazonaws.com/ckan.saude.gov.br/SINAN/Zikavirus/csv/ZIKABR25.csv.zip",
         "status": "download_habilitado",
     },
+] + [
+    {
+        "id": f"tabnet_{slug}",
+        "nome": f"SINAN / {nome} (TabNet)",
+        "fonte": "DATASUS / Ministerio da Saude",
+        "finalidade": f"Notificacoes de {nome} por UF e mes para vigilancia epidemiologica.",
+        "indicadores": [
+            f"casos confirmados de {nome.lower()} por UF",
+            "serie historica mensal",
+        ],
+        "periodicidade_recomendada": "conforme publicacao oficial",
+        "estrategia": (
+            "worker preenche o mesmo formulario publico do TabNet/DATASUS (sem login) "
+            "que um navegador preencheria — Linha=UF, Coluna=mes, Incremento=casos "
+            "confirmados — e le a tabela de agregados ja calculada pelo proprio TabNet; "
+            "nunca baixa microdado individual"
+        ),
+        "risco_operacional": "medio",
+        "motivo_cuidado": (
+            "formulario legado (HTML antigo, charset iso-8859-1); qualquer mudanca de "
+            "layout no TabNet pode exigir reajuste dos nomes de campo"
+        ),
+        "fonte_exata_inicial": f"http://tabnet.datasus.gov.br/cgi/tabcgi.exe?{def_path}",
+        "recurso_inicial": f"http://tabnet.datasus.gov.br/cgi/tabcgi.exe?{def_path}",
+        "status": "download_habilitado",
+    }
+    for slug, nome, def_path in [
+        ("tuberculose", "Tuberculose", "sinannet/cnv/tubercbr.def"),
+        ("meningite", "Meningite", "sinannet/cnv/meninbr.def"),
+        ("leptospirose", "Leptospirose", "sinannet/cnv/leptobr.def"),
+        ("hantavirose", "Hantavirose", "sinannet/cnv/hantabr.def"),
+        ("chagas", "Doenca de Chagas Aguda", "sinannet/cnv/chagasbr.def"),
+        ("hepatites", "Hepatites Virais", "sinannet/cnv/hepabr.def"),
+        ("coqueluche", "Coqueluche", "sinannet/cnv/coquebr.def"),
+        ("esquistossomose", "Esquistossomose", "sinannet/cnv/esquistobr.def"),
+        ("difteria", "Difteria", "sinannet/cnv/difteribr.def"),
+        ("febre_maculosa", "Febre Maculosa", "sinannet/cnv/febremaculosabr.def"),
+    ]
+] + [
     {
         "id": "vacinacao",
         "nome": "Vacinacao / Campanhas",

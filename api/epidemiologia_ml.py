@@ -48,6 +48,26 @@ DOENCAS_REGISTRADAS = [
     ("sinan_chikungunya", "chikungunya_notificacoes_sinan", "Chikungunya"),
     ("sinan_zika", "zika_notificacoes_sinan", "Zika"),
     ("sivep_gripe", "srag_notificacoes_amostra", "Gripe"),
+    # Fontes via TabNet/DATASUS (formulario publico, sem export .csv.zip
+    # direto — ver api/pipeline_oficial.py FONTES_TABNET_CONFIG). Treinam e
+    # ficam disponiveis em mapa_risco_oficial_por_doenca() normalmente, mas
+    # so Meningite/Leptospirose/Hantavirose/Hepatite A/B tem categoria
+    # equivalente em DISEASE_WEIGHTS (api/epidemiologia.py) — as outras
+    # (Tuberculose, Chagas, Coqueluche, Esquistossomose, Difteria, Febre
+    # Maculosa) nao tem sintoma correspondente no app de cidadao hoje, por
+    # isso nao aparecem ainda em _build_disease_probabilities. Isso e
+    # intencional: nao criamos peso de sintoma artificial so para ter
+    # consumidor do modelo.
+    ("tabnet_tuberculose", "tuberculose_notificacoes_sinan", "Tuberculose"),
+    ("tabnet_meningite", "meningite_notificacoes_sinan", "Meningite"),
+    ("tabnet_leptospirose", "leptospirose_notificacoes_sinan", "Leptospirose"),
+    ("tabnet_hantavirose", "hantavirose_notificacoes_sinan", "Hantavirose"),
+    ("tabnet_chagas", "chagas_notificacoes_sinan", "Doenca de Chagas"),
+    ("tabnet_hepatites", "hepatites_virais_notificacoes_sinan", "Hepatite A/B"),
+    ("tabnet_coqueluche", "coqueluche_notificacoes_sinan", "Coqueluche"),
+    ("tabnet_esquistossomose", "esquistossomose_notificacoes_sinan", "Esquistossomose"),
+    ("tabnet_difteria", "difteria_notificacoes_sinan", "Difteria"),
+    ("tabnet_febre_maculosa", "febre_maculosa_notificacoes_sinan", "Febre Maculosa"),
 ]
 
 _MODELO_CACHE = {}  # indicador -> {"bundle": ..., "mtime": ...}
@@ -72,7 +92,11 @@ META_PATH = _meta_path("dengue_notificacoes_sinan")
 
 
 def _parse_periodo(periodo: str):
-    m = re.match(r"^(\d{4})-S(\d{2})$", periodo or "")
+    """Aceita semana epidemiologica ("AAAA-Sww", fontes .csv.zip do SINAN) e
+    mes ("AAAA-Mmm", fontes TabNet) — o numero apos a letra e usado so como
+    posicao relativa dentro do ano para a janela movel, a unidade (semana ou
+    mes) nao muda o calculo do canal endemico."""
+    m = re.match(r"^(\d{4})-[SM](\d{2})$", periodo or "")
     if not m:
         return None, None
     return int(m.group(1)), int(m.group(2))

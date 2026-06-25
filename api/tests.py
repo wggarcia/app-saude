@@ -5425,6 +5425,99 @@ class PipelineOficialSivepPeriodoTests(TestCase):
         self.assertEqual(_periodo_sivep(None), "semana_nao_informada")
 
 
+class PipelineOficialTabnetTests(TestCase):
+    """Parser do TabNet/DATASUS (formulario publico legado) — protege contra
+    os dois bugs reais encontrados ao ligar Tuberculose/Difteria/etc:
+    1) TabNet usa "-" para zero, nao "0";
+    2) doencas raras fazem o TabNet OMITIR do cabecalho os meses em que
+       NENHUM estado teve caso algum (tabela com menos de 12 colunas)."""
+
+    def test_parse_tabela_mensal_completa_12_meses(self):
+        from api.pipeline_oficial import _parse_tabnet_tabela_mensal
+
+        texto = (
+            "<PRE>\n"
+            "UF de notificação             Jan        Fev        Mar        Abr"
+            "        Mai        Jun        Jul        Ago        Set        Out"
+            "        Nov        Dez     Total\n\n"
+            "33 Rio de Janeiro           100        110        120        130"
+            "        140        150        160        170        180        190"
+            "        200        210     1.860\n"
+            "TOTAL                       100        110        120        130"
+            "        140        150        160        170        180        190"
+            "        200        210     1.860\n"
+            "</PRE>"
+        )
+        resultado = _parse_tabnet_tabela_mensal(texto)
+
+        self.assertEqual(len(resultado), 12)
+        self.assertIn((33, 1, 100), resultado)
+        self.assertIn((33, 12, 210), resultado)
+        # linha TOTAL nunca deve ser interpretada como um estado (codigo 33 != TOTAL)
+        self.assertTrue(all(uf == 33 for uf, _, _ in resultado))
+
+    def test_parse_tabela_mensal_trata_traco_como_zero(self):
+        from api.pipeline_oficial import _parse_tabnet_tabela_mensal
+
+        texto = (
+            "<PRE>\n"
+            "UF de notificação             Jan        Fev        Mar        Abr"
+            "        Mai        Jun        Jul        Ago        Set        Out"
+            "        Nov        Dez     Total\n\n"
+            "15 Pará                         -          -          1          -"
+            "          -          -          -          -          -          -"
+            "          -          -         1\n"
+            "</PRE>"
+        )
+        resultado = _parse_tabnet_tabela_mensal(texto)
+
+        self.assertEqual(len(resultado), 12)
+        valores_por_mes = {mes: valor for _, mes, valor in resultado}
+        self.assertEqual(valores_por_mes[3], 1)
+        self.assertEqual(valores_por_mes[1], 0)
+        self.assertEqual(valores_por_mes[12], 0)
+
+    def test_parse_tabela_mensal_cabecalho_esparso_doenca_rara(self):
+        from api.pipeline_oficial import _parse_tabnet_tabela_mensal
+
+        # Difteria real: TabNet so mostra os meses em que ALGUM estado teve
+        # caso (aqui so Jan, Jun, Jul, Ago) — sem isso o parser desalinharia
+        # mes->valor para as doencas mais raras.
+        texto = (
+            "<PRE>\n"
+            "UF de notificação             Jan        Jun        Jul        Ago     Total\n\n"
+            "41 Paraná                       -          1          -          -         1\n"
+            "43 Rio Grande do Sul             1          -          1          1         3\n"
+            "</PRE>"
+        )
+        resultado = _parse_tabnet_tabela_mensal(texto)
+
+        valores_pr = {mes: valor for uf, mes, valor in resultado if uf == 41}
+        self.assertEqual(valores_pr[1], 0)
+        self.assertEqual(valores_pr[6], 1)
+        self.assertEqual(valores_pr[7], 0)
+        self.assertEqual(valores_pr[8], 0)
+        # so 4 meses na tabela (esparsa), nao 12
+        self.assertEqual(len(valores_pr), 4)
+
+    def test_parse_tabela_mensal_sem_pre_retorna_vazio(self):
+        from api.pipeline_oficial import _parse_tabnet_tabela_mensal
+
+        self.assertEqual(_parse_tabnet_tabela_mensal("<html>sem tabela</html>"), [])
+
+    def test_tabnet_escolher_prefere_padrao_mais_especifico(self):
+        from api.pipeline_oficial import _TABNET_COLUNA_PADROES, _TABNET_LINHA_PADROES, _tabnet_escolher
+
+        opcoes_linha = ["Região_de_notificação", "UF_de_notificação", "Município_de_notificação"]
+        self.assertEqual(_tabnet_escolher(opcoes_linha, _TABNET_LINHA_PADROES), "UF_de_notificação")
+
+        # Hantavirose real: nao tem "Mês_Notificação", so "Mês_1º_Sintoma(s)"
+        opcoes_coluna_hantavirose = ["Ano_1º_Sintoma(s)", "Mês_1º_Sintoma(s)", "UF_de_notificação"]
+        self.assertEqual(
+            _tabnet_escolher(opcoes_coluna_hantavirose, _TABNET_COLUNA_PADROES), "Mês_1º_Sintoma(s)"
+        )
+
+
 class EpidemiologiaMLTests(TestCase):
     """ML treinado em dado oficial (DATASUS/SINAN) — api/epidemiologia_ml.py.
 
@@ -5585,12 +5678,19 @@ class EpidemiologiaMLTests(TestCase):
             fonte_id="sivep_gripe", indicador="srag_notificacoes_amostra",
         )
 
+        from api.epidemiologia_ml import DOENCAS_REGISTRADAS
+
         resultados = treinar_todas_doencas_registradas()
 
-        self.assertEqual(set(resultados.keys()), {"Dengue", "Chikungunya", "Zika", "Gripe"})
+        # treinar_todas_doencas_registradas reporta TODAS as doencas
+        # cadastradas (treinadas ou nao) — so as 4 com fixture acima de
+        # MIN_AMOSTRAS_TREINO devem reportar treinado=True aqui; as
+        # doencas via TabNet sem fixture continuam no dict, mas recusadas.
+        self.assertEqual(set(resultados.keys()), {nome for _, _, nome in DOENCAS_REGISTRADAS})
         self.assertTrue(resultados["Dengue"]["treinado"])
         self.assertTrue(resultados["Gripe"]["treinado"])
         self.assertTrue(resultados["Zika"]["treinado"])
+        self.assertFalse(resultados["Tuberculose"]["treinado"])
         self.assertTrue(resultados["Chikungunya"]["treinado"])
 
     def test_build_disease_probabilities_blend_por_doenca(self):

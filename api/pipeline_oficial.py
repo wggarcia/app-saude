@@ -137,6 +137,305 @@ FONTES_ZIP_CONFIG = {
     },
 }
 
+# Doencas do SINAN que NAO tem export semanal em .csv.zip no S3 (so as
+# arboviroses + SRAG tem isso), mas tem cubo publico no TabNet/DATASUS
+# (tabcgi.exe), um formulario antigo sem login. Verificado manualmente via
+# HTTP que cada .def abaixo responde com o titulo certo antes de cadastrar.
+# A automacao preenche o mesmo formulario que um navegador preencheria
+# (Linha=UF, Coluna=mes, Incremento=Casos confirmados, formato=pre) e
+# devolve uma tabela de texto, sem nenhum microdado individual.
+FONTES_TABNET_CONFIG = {
+    "tabnet_tuberculose": {
+        "def_path": "sinannet/cnv/tubercbr.def",
+        "indicador": "tuberculose_notificacoes_sinan",
+        "fonte_nome": "SINAN / Tuberculose (TabNet)",
+    },
+    "tabnet_meningite": {
+        "def_path": "sinannet/cnv/meninbr.def",
+        "indicador": "meningite_notificacoes_sinan",
+        "fonte_nome": "SINAN / Meningite (TabNet)",
+    },
+    "tabnet_leptospirose": {
+        "def_path": "sinannet/cnv/leptobr.def",
+        "indicador": "leptospirose_notificacoes_sinan",
+        "fonte_nome": "SINAN / Leptospirose (TabNet)",
+    },
+    "tabnet_hantavirose": {
+        "def_path": "sinannet/cnv/hantabr.def",
+        "indicador": "hantavirose_notificacoes_sinan",
+        "fonte_nome": "SINAN / Hantavirose (TabNet)",
+    },
+    "tabnet_chagas": {
+        "def_path": "sinannet/cnv/chagasbr.def",
+        "indicador": "chagas_notificacoes_sinan",
+        "fonte_nome": "SINAN / Doenca de Chagas Aguda (TabNet)",
+    },
+    "tabnet_hepatites": {
+        "def_path": "sinannet/cnv/hepabr.def",
+        "indicador": "hepatites_virais_notificacoes_sinan",
+        "fonte_nome": "SINAN / Hepatites Virais (TabNet)",
+    },
+    "tabnet_coqueluche": {
+        "def_path": "sinannet/cnv/coquebr.def",
+        "indicador": "coqueluche_notificacoes_sinan",
+        "fonte_nome": "SINAN / Coqueluche (TabNet)",
+    },
+    "tabnet_esquistossomose": {
+        "def_path": "sinannet/cnv/esquistobr.def",
+        "indicador": "esquistossomose_notificacoes_sinan",
+        "fonte_nome": "SINAN / Esquistossomose (TabNet)",
+    },
+    "tabnet_difteria": {
+        "def_path": "sinannet/cnv/difteribr.def",
+        "indicador": "difteria_notificacoes_sinan",
+        "fonte_nome": "SINAN / Difteria (TabNet)",
+    },
+    "tabnet_febre_maculosa": {
+        "def_path": "sinannet/cnv/febremaculosabr.def",
+        "indicador": "febre_maculosa_notificacoes_sinan",
+        "fonte_nome": "SINAN / Febre Maculosa (TabNet)",
+    },
+}
+
+TABNET_BASE_URL = "http://tabnet.datasus.gov.br/cgi/tabcgi.exe"
+
+# Preferencia de campo de "Coluna" (granularidade temporal) e "Linha" (UF) —
+# nem todo .def usa o mesmo nome de campo (ex.: Hantavirose so tem
+# "Mês_1º_Sintoma(s)", nao "Mês_Notificação"), por isso a escolha e por
+# padrao regex contra as opcoes reais do formulario, nao um nome fixo.
+_TABNET_COLUNA_PADROES = [
+    r"^m[eê]s.*notifica",
+    r"^m[eê]s.*1.*sintoma",
+    r"^m[eê]s.*diagn[oó]stico",
+    r"^m[eê]s",
+]
+_TABNET_LINHA_PADROES = [
+    r"^uf.*notifica",
+    r"^uf.*resid",
+    r"^uf",
+]
+
+
+def _tabnet_escolher(opcoes, padroes):
+    import unicodedata
+
+    def _sem_acento(s):
+        return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+
+    opcoes_norm = [(_sem_acento(o).lower(), o) for o in opcoes]
+    for padrao in padroes:
+        for norm, original in opcoes_norm:
+            if re.search(padrao, norm):
+                return original
+    return None
+
+
+def _tabnet_form_defaults(def_path):
+    """GET na pagina do formulario; retorna (defaults, opcoes) — defaults e
+    {nome_campo: primeira_opcao}, opcoes e {nome_campo: [todas_as_opcoes]}
+    so para os campos que importam (Linha/Coluna/Arquivos)."""
+    response = requests.get(
+        f"{TABNET_BASE_URL}?{def_path}", timeout=40, headers={"User-Agent": "Mozilla/5.0"}
+    )
+    response.raise_for_status()
+    html = response.content.decode("iso-8859-1", errors="ignore")
+
+    form_start = html.find("<FORM")
+    form_end = html.find("</FORM>", form_start)
+    form = html[form_start:form_end]
+
+    defaults = {}
+    opcoes_relevantes = {}
+    for m in re.finditer(r'<SELECT[^>]*NAME="([^"]+)"[^>]*>(.*?)</SELECT>', form, re.I | re.S):
+        nome = m.group(1)
+        corpo = m.group(2)
+        opcoes = re.findall(r'<OPTION[^>]*VALUE="([^"]*)"', corpo, re.I)
+        defaults[nome] = opcoes[0] if opcoes else ""
+        if nome in ("Linha", "Coluna", "Arquivos", "Incremento"):
+            opcoes_relevantes[nome] = opcoes
+
+    return defaults, opcoes_relevantes
+
+
+def _tabnet_post_tabela(def_path, defaults, *, linha, coluna, arquivo):
+    overrides = {"Linha": linha, "Coluna": coluna, "Arquivos": arquivo, "formato": "pre"}
+    partes = []
+    for nome, valor in defaults.items():
+        valor_final = overrides.get(nome, valor)
+        partes.append((nome, valor_final))
+    partes.append(("formato", "pre"))
+    partes.append(("mostre", "Mostra"))
+
+    def _quote_latin1(s):
+        from urllib.parse import quote
+
+        return quote(s.encode("iso-8859-1", errors="ignore"))
+
+    corpo = "&".join(f"{_quote_latin1(k)}={_quote_latin1(v)}" for k, v in partes)
+    response = requests.post(
+        f"{TABNET_BASE_URL}?{def_path}",
+        data=corpo.encode("ascii"),
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "Mozilla/5.0",
+        },
+        timeout=40,
+    )
+    response.raise_for_status()
+    return response.content.decode("iso-8859-1", errors="ignore")
+
+
+_TABNET_MESES_ABREV = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+_TABNET_MES_IDX = {nome: i + 1 for i, nome in enumerate(_TABNET_MESES_ABREV)}
+
+
+def _parse_tabnet_tabela_mensal(texto):
+    """Extrai (codigo_uf_ibge, mes_1_a_12, valor) do bloco <PRE> de uma
+    tabela UF x mes do TabNet. Ignora a linha TOTAL e qualquer linha que nao
+    comece com um codigo de UF de 2 digitos.
+
+    Doencas raras (ex.: Difteria) fazem o TabNet OMITIR do cabecalho os meses
+    em que nenhum estado teve caso algum — a tabela fica com menos de 12
+    colunas. Por isso o cabecalho real e lido a cada chamada (nao se assume
+    sempre Jan..Dez) e os valores sao casados pela posicao dos nomes de mes
+    encontrados, nao por um intervalo fixo de 12."""
+    pre_match = re.search(r"<PRE>(.*?)</PRE>", texto, re.S | re.I)
+    if not pre_match:
+        return []
+
+    linhas = pre_match.group(1).splitlines()
+
+    meses_da_tabela = []
+    for linha_txt in linhas:
+        encontrados = re.findall(
+            r"\b(Jan|Fev|Mar|Abr|Mai|Jun|Jul|Ago|Set|Out|Nov|Dez)\b", linha_txt
+        )
+        if encontrados:
+            meses_da_tabela = encontrados
+            break
+    if not meses_da_tabela:
+        return []
+
+    resultados = []
+    for linha_txt in linhas:
+        cabecalho = re.match(r"\s*(\d{2})\s+\D", linha_txt)
+        if not cabecalho:
+            continue
+        codigo_uf = int(cabecalho.group(1))
+        # TabNet usa "-" para zero (nao "0"); precisa entrar na contagem de
+        # colunas tanto quanto um numero, senao a posicao mes->valor desalinha.
+        numeros = re.findall(r"-|[\d.]+", linha_txt)
+        if len(numeros) < len(meses_da_tabela) + 1:
+            continue
+        valores = numeros[1 : 1 + len(meses_da_tabela)]
+        for nome_mes, valor_str in zip(meses_da_tabela, valores):
+            mes_idx = _TABNET_MES_IDX[nome_mes]
+            if valor_str == "-":
+                resultados.append((codigo_uf, mes_idx, 0))
+                continue
+            try:
+                valor = int(valor_str.replace(".", ""))
+            except ValueError:
+                continue
+            resultados.append((codigo_uf, mes_idx, valor))
+
+    return resultados
+
+
+def _processar_tabnet_doenca(execucao, fonte_id, config, *, anos_recentes=3):
+    """Coleta agregados mensais por UF de um cubo TabNet (formulario publico,
+    sem login). Le N anos mais recentes disponiveis no proprio formulario —
+    nunca baixa microdado, so o agregado pronto que o TabNet ja calcula."""
+    def_path = config["def_path"]
+
+    try:
+        defaults, opcoes = _tabnet_form_defaults(def_path)
+    except requests.RequestException as exc:
+        execucao.status = FonteOficialExecucao.STATUS_FALHOU
+        execucao.mensagem = f"Falha ao acessar o formulario TabNet: {exc}"
+        execucao.finalizado_em = timezone.now()
+        execucao.save(update_fields=["status", "mensagem", "finalizado_em"])
+        return execucao
+
+    linha = _tabnet_escolher(opcoes.get("Linha", []), _TABNET_LINHA_PADROES)
+    coluna = _tabnet_escolher(opcoes.get("Coluna", []), _TABNET_COLUNA_PADROES)
+    arquivos_disponiveis = opcoes.get("Arquivos", [])
+
+    if not linha or not coluna or not arquivos_disponiveis:
+        execucao.status = FonteOficialExecucao.STATUS_FALHOU
+        execucao.mensagem = (
+            "Nao foi possivel localizar os campos de UF/mes ou os anos disponiveis "
+            "no formulario TabNet desta doenca."
+        )
+        execucao.finalizado_em = timezone.now()
+        execucao.save(update_fields=["status", "mensagem", "finalizado_em"])
+        return execucao
+
+    agregados = 0
+    registros = 0
+    anos_processados = []
+
+    for arquivo in arquivos_disponiveis[:anos_recentes]:
+        ano_match = re.search(r"(\d{2})\.dbf$", arquivo, re.I)
+        if not ano_match:
+            continue
+        ano = 2000 + int(ano_match.group(1))
+
+        try:
+            texto = _tabnet_post_tabela(def_path, defaults, linha=linha, coluna=coluna, arquivo=arquivo)
+        except requests.RequestException:
+            continue
+
+        linhas_tabela = _parse_tabnet_tabela_mensal(texto)
+        if not linhas_tabela:
+            continue
+
+        anos_processados.append(ano)
+        for codigo_uf, mes_idx, valor in linhas_tabela:
+            uf = UF_CODES.get(codigo_uf)
+            if not uf:
+                continue
+            registros += 1
+            FonteOficialAgregado.objects.update_or_create(
+                fonte_id=fonte_id,
+                indicador=config["indicador"],
+                codigo_ibge=None,
+                estado=uf,
+                cidade=None,
+                periodo=f"{ano}-M{mes_idx:02d}",
+                defaults={
+                    "valor": valor,
+                    "unidade": "notificacoes",
+                    "fonte_nome": config["fonte_nome"],
+                    "versao_fonte": arquivo,
+                    "metadados": {
+                        "tipo": "tabnet_formulario_publico",
+                        "def_path": def_path,
+                        "linha": linha,
+                        "coluna": coluna,
+                    },
+                },
+            )
+            agregados += 1
+
+    if not anos_processados:
+        execucao.status = FonteOficialExecucao.STATUS_FALHOU
+        execucao.mensagem = "Nenhum dos anos recentes do TabNet retornou dados parseaveis."
+    else:
+        execucao.status = FonteOficialExecucao.STATUS_CONCLUIDA
+        execucao.mensagem = (
+            f"Coleta TabNet ({config['fonte_nome']}) processada com sucesso para os anos "
+            f"{', '.join(str(a) for a in sorted(anos_processados))}. "
+            "Gravados somente agregados mensais por UF, sem armazenar microdados brutos."
+        )
+    execucao.registros_lidos = registros
+    execucao.agregados_gerados = agregados
+    execucao.finalizado_em = timezone.now()
+    execucao.save(
+        update_fields=["status", "mensagem", "registros_lidos", "agregados_gerados", "finalizado_em"]
+    )
+    return execucao
+
 
 def _numero(valor):
     try:
@@ -660,6 +959,10 @@ def preparar_execucao_fonte_oficial(
             bloco_bytes=min(max(bloco_bytes, 20_000), 1_000_000),
             max_blocos=min(max(max_blocos, 1), 20),
         )
+
+    tabnet_config = FONTES_TABNET_CONFIG.get(fonte_id)
+    if tabnet_config:
+        return _processar_tabnet_doenca(execucao, fonte_id, tabnet_config)
 
     config = FONTES_CSV_CONFIG.get(fonte_id)
     if config:
